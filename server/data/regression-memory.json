@@ -1,0 +1,16 @@
+[
+  {
+    "id": "reg_1777196519986_301869",
+    "category": "upload_multer",
+    "rootCause": "req.file null",
+    "patchFiles": [
+      "aiRoutes.js"
+    ],
+    "failureReason": "pass_gold_failed",
+    "failureType": "pass_gold_failed",
+    "blockedAt": "2026-04-26T09:41:59.988Z",
+    "unblockedAt": "2026-04-26T09:41:59.991Z",
+    "active": false,
+    "unblockGold": 88
+  }
+]

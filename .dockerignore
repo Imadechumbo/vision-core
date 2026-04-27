@@ -1,0 +1,16 @@
+.git
+.github
+.gitness
+node_modules
+server/node_modules
+agent/node_modules
+**/.vault
+**/*.db
+**/*.sqlite
+**/*.log
+server/data/*.tmp
+web/downloads/*.zip
+C__
+server/C__
+.DS_Store
+npm-debug.log*

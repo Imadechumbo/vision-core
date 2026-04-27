@@ -1,0 +1,50 @@
+{
+  "enabled": true,
+  "maxPatchLines": 80,
+  "maxChangedPercent": 25,
+  "protectedFiles": [
+    "server/src/services/missionRunner.js",
+    "server/src/services/openclawRouter.js",
+    "server/src/services/passGoldEngine.js",
+    "server/src/services/hermesRca.js",
+    "server/src/services/hermesMemory.js",
+    "server/src/services/aegis.js",
+    "server/src/services/patchEngine.js",
+    "scripts/checkPassGold.js"
+  ],
+  "protectedGlobs": [
+    "server/src/services/aegis/**/*.js",
+    "server/src/services/gitness/**/*.js"
+  ],
+  "rules": {
+    "noFullRewrite": true,
+    "requirePatchMode": true,
+    "requireNodeCheck": true,
+    "requirePassGold": true,
+    "requireAegis": true,
+    "requireOpenClawBeforeHermes": true,
+    "requireScanResultForHermes": true
+  },
+  "bypass_allowed": false,
+  "forbiddenPatterns": [
+    "forceHighRisk",
+    "bypassAegis",
+    "bypassAllowed: true",
+    "allowPromotionWithoutPassGold",
+    "PASS_GOLD optional",
+    "skipValidation",
+    "noValidate",
+    "disableAegis",
+    "skipAegis",
+    "aegis = false",
+    "pass_gold = false"
+  ],
+  "requiredExports": {
+    "server/src/services/missionRunner.js":   ["runMission"],
+    "server/src/services/openclawRouter.js":  ["route", "buildPlanContext"],
+    "server/src/services/passGoldEngine.js":  ["evaluate"],
+    "server/src/services/hermesRca.js":       ["analyzeError"],
+    "server/src/services/hermesMemory.js":    ["recordMission", "findRelevantMemory"],
+    "server/src/services/patchEngine.js":     ["applyPatches", "rollbackMission"]
+  }
+}

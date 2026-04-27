@@ -1,0 +1,71 @@
+/* VISION CORE V2.3.4 — REAL-TIME MODE
+   Mantém o layout do print 1. Só adiciona estados vivos, animação e SSE. */
+:root{
+  --vc-purple:#a855f7;
+  --vc-purple-2:#7c3aed;
+  --vc-green:#00d084;
+  --vc-yellow:#facc15;
+  --vc-red:#ef4444;
+  --vc-cyan:#22d3ee;
+  --vc-chat-gray:#5b5b64;
+}
+
+/* chat/textarea cinza como pedido */
+textarea.mission,
+#missionText{
+  background:linear-gradient(180deg,#5f5f68,#55555e) !important;
+  border:1px solid rgba(255,255,255,.13) !important;
+  color:#f7f7fb !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+textarea.mission::placeholder,
+#missionText::placeholder{color:#d6d6df !important;opacity:.72}
+
+/* botão/menus nas cores do print 1 */
+.btn,
+.top-actions .btn,
+#executeBtn{
+  background:linear-gradient(135deg,#7c3aed,#b14cff) !important;
+  border:1px solid rgba(168,85,247,.70) !important;
+  color:#fff !important;
+  box-shadow:0 0 18px rgba(168,85,247,.20) !important;
+}
+.btn.ghost{background:#101014 !important;border-color:rgba(255,255,255,.14) !important;box-shadow:none !important}
+.btn.github{background:linear-gradient(135deg,#7c3aed,#a855f7) !important}
+.btn.agent-download{background:linear-gradient(135deg,#06b6d4,#22c55e) !important;color:#020405 !important;border-color:rgba(34,197,94,.45) !important}
+.menu a.active,
+.v231-topnav a.active{background:linear-gradient(90deg,rgba(168,85,247,.32),rgba(124,58,237,.18)) !important;border-color:rgba(168,85,247,.60) !important}
+
+/* status vivo no orb pequeno do canto e no painel direito */
+.v23-top-eye.vc-running .v23-eye,
+.eye-wrap.vc-running .ai-eye{animation:vcEyePulse 1.05s infinite ease-in-out;border-color:var(--vc-purple)}
+.v23-top-eye.vc-gold .v23-eye,
+.eye-wrap.vc-gold .ai-eye{border-color:var(--vc-yellow);box-shadow:0 0 28px rgba(250,204,21,.50), inset 0 0 18px rgba(250,204,21,.18)}
+.v23-top-eye.vc-fail .v23-eye,
+.eye-wrap.vc-fail .ai-eye{border-color:var(--vc-red);box-shadow:0 0 24px rgba(239,68,68,.45), inset 0 0 18px rgba(239,68,68,.18)}
+@keyframes vcEyePulse{0%,100%{box-shadow:0 0 18px rgba(168,85,247,.40)}50%{box-shadow:0 0 34px rgba(168,85,247,.85)}}
+
+#mcCore.vc-running .mc-core-hex{animation:vcCoreSpin 1.8s linear infinite;filter:drop-shadow(0 0 18px rgba(168,85,247,.75))}
+#mcCore.vc-gold .mc-core-hex{filter:drop-shadow(0 0 20px rgba(250,204,21,.78)) hue-rotate(65deg)}
+#mcCore.vc-fail .mc-core-hex{filter:drop-shadow(0 0 18px rgba(239,68,68,.72)) hue-rotate(150deg)}
+@keyframes vcCoreSpin{to{transform:rotate(360deg)}}
+
+/* logs SSE */
+.v233-sse-line{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;line-height:1.55;color:#d7d3df}
+.v233-sse-line .ts{color:var(--vc-green);margin-right:6px}
+.v233-sse-line.ok,.v233-sse-line.green{color:#d7ffe9}
+.v233-sse-line.running,.v233-sse-line.yellow{color:#fde68a}
+.v233-sse-line.fail,.v233-sse-line.red{color:#fecaca}
+.v233-sse-line.info{color:#c7d2fe}
+.v233-sse-line.event{color:#c084fc}
+
+/* painel de timeline atualizado em tempo real */
+.timelineStep.live{border-color:rgba(168,85,247,.60);box-shadow:0 0 18px rgba(168,85,247,.12)}
+.timelineStep.ok{border-color:rgba(0,208,132,.40)}
+.timelineStep.running{border-color:rgba(250,204,21,.50)}
+.timelineStep.fail{border-color:rgba(239,68,68,.55)}
+
+/* barra LIVE inferior */
+#runtimeMonitor.realtime{border-color:rgba(168,85,247,.55);box-shadow:0 0 22px rgba(168,85,247,.20)}
+#runtimeMonitor.gold{border-color:rgba(250,204,21,.55);color:var(--vc-yellow)}
+#runtimeMonitor.fail{border-color:rgba(239,68,68,.55);color:var(--vc-red)}

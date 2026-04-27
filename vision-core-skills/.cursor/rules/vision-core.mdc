@@ -1,0 +1,10 @@
+# VISION CORE Cursor Rules
+
+Always follow:
+- OpenClaw before Scanner.
+- Scanner before Hermes.
+- Hermes requires scanResult.
+- Aegis is mandatory.
+- PASS GOLD is mandatory.
+- Critical files require patch mode.
+- Community learning requires sanitization, reproduction, benchmark, and PASS GOLD.

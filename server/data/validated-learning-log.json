@@ -1,0 +1,273 @@
+[
+  {
+    "id": "promo_1777197792692_c8cf87",
+    "feedbackId": "fb_full",
+    "category": "upload_multer",
+    "state": "regression_guarded",
+    "history": [
+      {
+        "state": "submitted",
+        "at": "2026-04-26T10:03:12.693Z"
+      },
+      {
+        "state": "sanitized",
+        "at": "2026-04-26T10:03:12.693Z"
+      },
+      {
+        "state": "reproduced",
+        "at": "2026-04-26T10:03:12.693Z"
+      },
+      {
+        "state": "benchmark_candidate",
+        "at": "2026-04-26T10:03:12.693Z"
+      },
+      {
+        "state": "aegis_validated",
+        "at": "2026-04-26T10:03:12.693Z",
+        "aegisScore": 5
+      },
+      {
+        "state": "pass_gold",
+        "at": "2026-04-26T10:03:12.693Z",
+        "goldScore": 88,
+        "goldLevel": "GOLD"
+      },
+      {
+        "state": "promoted",
+        "at": "2026-04-26T10:03:12.736Z"
+      },
+      {
+        "state": "regression_guarded",
+        "at": "2026-04-26T10:03:12.740Z"
+      }
+    ],
+    "aegisOk": true,
+    "passGold": true,
+    "promoted": true,
+    "blocked": false,
+    "blockReason": null,
+    "createdAt": "2026-04-26T10:03:12.693Z",
+    "regressionKey": "upload_multer::req.file null"
+  },
+  {
+    "id": "promo_1777197792691_32e651",
+    "feedbackId": "fb_dryrun",
+    "category": "generic",
+    "state": "blocked",
+    "history": [
+      {
+        "state": "submitted",
+        "at": "2026-04-26T10:03:12.691Z"
+      },
+      {
+        "state": "sanitized",
+        "at": "2026-04-26T10:03:12.691Z"
+      },
+      {
+        "state": "blocked",
+        "at": "2026-04-26T10:03:12.691Z",
+        "reason": "Status 'dry_run' não elegível — apenas 'success' promove memória"
+      }
+    ],
+    "aegisOk": null,
+    "passGold": null,
+    "promoted": false,
+    "blocked": true,
+    "blockReason": "Status 'dry_run' não elegível — apenas 'success' promove memória",
+    "createdAt": "2026-04-26T10:03:12.691Z"
+  },
+  {
+    "id": "promo_1777197792689_c93d80",
+    "feedbackId": "fb_aegisfail",
+    "category": "generic",
+    "state": "blocked",
+    "history": [
+      {
+        "state": "submitted",
+        "at": "2026-04-26T10:03:12.689Z"
+      },
+      {
+        "state": "sanitized",
+        "at": "2026-04-26T10:03:12.689Z"
+      },
+      {
+        "state": "reproduced",
+        "at": "2026-04-26T10:03:12.690Z"
+      },
+      {
+        "state": "benchmark_candidate",
+        "at": "2026-04-26T10:03:12.690Z"
+      },
+      {
+        "state": "blocked",
+        "at": "2026-04-26T10:03:12.690Z",
+        "reason": "Aegis bloqueou: bloqueado"
+      }
+    ],
+    "aegisOk": null,
+    "passGold": null,
+    "promoted": false,
+    "blocked": true,
+    "blockReason": "Aegis bloqueou: bloqueado",
+    "createdAt": "2026-04-26T10:03:12.689Z"
+  },
+  {
+    "id": "promo_1777197792686_fdd4e5",
+    "feedbackId": "fb_noaegis",
+    "category": "generic",
+    "state": "blocked",
+    "history": [
+      {
+        "state": "submitted",
+        "at": "2026-04-26T10:03:12.687Z"
+      },
+      {
+        "state": "sanitized",
+        "at": "2026-04-26T10:03:12.687Z"
+      },
+      {
+        "state": "reproduced",
+        "at": "2026-04-26T10:03:12.688Z"
+      },
+      {
+        "state": "benchmark_candidate",
+        "at": "2026-04-26T10:03:12.688Z"
+      },
+      {
+        "state": "blocked",
+        "at": "2026-04-26T10:03:12.688Z",
+        "reason": "Aegis ausente — resultado sem verificação de segurança"
+      }
+    ],
+    "aegisOk": null,
+    "passGold": null,
+    "promoted": false,
+    "blocked": true,
+    "blockReason": "Aegis ausente — resultado sem verificação de segurança",
+    "createdAt": "2026-04-26T10:03:12.687Z"
+  },
+  {
+    "id": "promo_1777196519984_7474cf",
+    "feedbackId": "fb_004",
+    "category": "generic",
+    "state": "blocked",
+    "history": [
+      {
+        "state": "submitted",
+        "at": "2026-04-26T09:41:59.984Z"
+      },
+      {
+        "state": "blocked",
+        "at": "2026-04-26T09:41:59.984Z",
+        "reason": "Secrets detectados no missionResult"
+      }
+    ],
+    "aegisOk": null,
+    "passGold": null,
+    "promoted": false,
+    "blocked": true,
+    "blockReason": "Secrets detectados no missionResult",
+    "createdAt": "2026-04-26T09:41:59.984Z"
+  },
+  {
+    "id": "promo_1777196519982_c651ea",
+    "feedbackId": "fb_003",
+    "category": "generic",
+    "state": "blocked",
+    "history": [
+      {
+        "state": "submitted",
+        "at": "2026-04-26T09:41:59.983Z"
+      },
+      {
+        "state": "sanitized",
+        "at": "2026-04-26T09:41:59.983Z"
+      },
+      {
+        "state": "blocked",
+        "at": "2026-04-26T09:41:59.983Z",
+        "reason": "Missão não reproduziu com sucesso (status: validation_failed)"
+      }
+    ],
+    "aegisOk": null,
+    "passGold": null,
+    "promoted": false,
+    "blocked": true,
+    "blockReason": "Missão não reproduziu com sucesso (status: validation_failed)",
+    "createdAt": "2026-04-26T09:41:59.983Z"
+  },
+  {
+    "id": "promo_1777196519981_dfd04d",
+    "feedbackId": "fb_002",
+    "category": "generic",
+    "state": "blocked",
+    "history": [
+      {
+        "state": "submitted",
+        "at": "2026-04-26T09:41:59.981Z"
+      },
+      {
+        "state": "sanitized",
+        "at": "2026-04-26T09:41:59.981Z"
+      },
+      {
+        "state": "reproduced",
+        "at": "2026-04-26T09:41:59.981Z"
+      },
+      {
+        "state": "benchmark_candidate",
+        "at": "2026-04-26T09:41:59.981Z"
+      },
+      {
+        "state": "blocked",
+        "at": "2026-04-26T09:41:59.981Z",
+        "reason": "Aegis bloqueou: x"
+      }
+    ],
+    "aegisOk": null,
+    "passGold": null,
+    "promoted": false,
+    "blocked": true,
+    "blockReason": "Aegis bloqueou: x",
+    "createdAt": "2026-04-26T09:41:59.981Z"
+  },
+  {
+    "id": "promo_1777196519978_f7236d",
+    "feedbackId": "fb_001",
+    "category": "generic",
+    "state": "blocked",
+    "history": [
+      {
+        "state": "submitted",
+        "at": "2026-04-26T09:41:59.978Z"
+      },
+      {
+        "state": "sanitized",
+        "at": "2026-04-26T09:41:59.979Z"
+      },
+      {
+        "state": "reproduced",
+        "at": "2026-04-26T09:41:59.979Z"
+      },
+      {
+        "state": "benchmark_candidate",
+        "at": "2026-04-26T09:41:59.979Z"
+      },
+      {
+        "state": "aegis_validated",
+        "at": "2026-04-26T09:41:59.979Z"
+      },
+      {
+        "state": "blocked",
+        "at": "2026-04-26T09:41:59.979Z",
+        "reason": "PASS GOLD não atingido (score: 40/100)"
+      }
+    ],
+    "aegisOk": true,
+    "passGold": null,
+    "promoted": false,
+    "blocked": true,
+    "blockReason": "PASS GOLD não atingido (score: 40/100)",
+    "createdAt": "2026-04-26T09:41:59.979Z"
+  }
+]

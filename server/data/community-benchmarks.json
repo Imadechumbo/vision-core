@@ -1,0 +1,18 @@
+[
+  {
+    "id": "bm_1777153552754_641c9b",
+    "title": "req.file null no multer",
+    "category": "upload_multer",
+    "framework": "Node.js/Express",
+    "language": "",
+    "severity": "high",
+    "input": "Cannot read properties of null reading mimetype",
+    "sanitizedStackTrace": "at aiRoutes.js:45:12\n  at Layer.handle",
+    "expectedRootCause": "",
+    "expectedTargets": [],
+    "expectedStatus": "PASS_GOLD",
+    "tags": [],
+    "sourceFeedbackId": "fb_1777153552750_eb0a03",
+    "createdAt": "2026-04-25T21:45:52.754Z"
+  }
+]

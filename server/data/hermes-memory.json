@@ -1,0 +1,77 @@
+{
+  "validated_memory": [
+    {
+      "id": "hm_1777197792734_5dd830",
+      "timestamp": "2026-04-26T10:03:12.734Z",
+      "input": "req.file null",
+      "category": "upload_multer",
+      "signals": [
+        "multer",
+        "req.file"
+      ],
+      "agentTargets": {},
+      "approvedTargets": [],
+      "rootCause": "req.file null",
+      "fix": "",
+      "patchSummary": "no patches",
+      "status": "PASS_GOLD",
+      "finalStatus": "success",
+      "aegisRisk": "",
+      "aegisScore": 5,
+      "aegisIssues": [],
+      "validationOk": false,
+      "confidence": 90
+    }
+  ],
+  "failure_memory": [
+    {
+      "id": "hm_1777134783909_231d62",
+      "timestamp": "2026-04-25T16:33:03.909Z",
+      "input": "req.file null + multer em aiRoutes.js",
+      "category": "upload_multer",
+      "signals": [
+        "multer",
+        "req.file",
+        "upload.single",
+        "upload.array",
+        "mimetype",
+        "diskStorage",
+        "memoryStorage",
+        "file",
+        "aiRoutes",
+        "agent:upload:multer",
+        "agent:upload:req.file",
+        "agent:upload:upload.single",
+        "agent:upload:upload.array",
+        "agent:upload:mimetype",
+        "agent:upload:memoryStorage",
+        "agent:upload:upload",
+        "agent:upload:file",
+        "agent:upload:storage",
+        "agent:upload:image",
+        "agent:upload:vision",
+        "keyword: multer"
+      ],
+      "agentTargets": {
+        "upload": "src/routes/aiRoutes.js",
+        "backend": "src/routes/projectIngestRoutes.js"
+      },
+      "approvedTargets": [
+        "src/routes/aiRoutes.js",
+        "src/routes/projectIngestRoutes.js"
+      ],
+      "rootCause": "Causa desconhecida",
+      "fix": "Revisão manual necessária",
+      "patchSummary": "no patches",
+      "status": "validation_failed",
+      "finalStatus": "requires_review",
+      "aegisRisk": "",
+      "aegisScore": 0,
+      "aegisIssues": [],
+      "validationOk": false,
+      "confidence": 0
+    }
+  ],
+  "blocked_memory": [],
+  "target_miss_memory": []
+}

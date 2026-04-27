@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VISION CORE V2.3.4 HARDENED REAL-TIME</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/v23-ui-system.css">
+<link rel="stylesheet" href="assets/v231-colors-agents.css">
+<link rel="stylesheet" href="assets/v233-realtime.css">
+<link rel="stylesheet" href="assets/v233-topbar-final-fix.css">
+</head>
+<body>
+<header class="top">
+  <div class="shell topin">
+    <div class="brand-block v23-brand-block">
+      <div class="v23-top-eye" title="VISION CORE ativo">
+        <div class="v23-eye"><div class="v23-pupil"></div></div>
+      </div>
+      <div>
+        <div class="brand">VISION CORE</div>
+        <div class="sub">V2.3.4 HARDENED REAL-TIME • BLACK/PURPLE • SSE • LIVE PIPELINE</div>
+      </div>
+    </div>
+    <nav class="v231-topnav" aria-label="Navegação principal">
+      <a class="active" href="#mission">▣ Mission</a>
+      <a href="#vault">▤ Vault</a>
+      <a href="#githubPanel">⌬ GitHub</a>
+      <a href="#marketplace">☷ Tools</a>
+      <a href="#metricsBoard">▥ Métricas</a>
+      <a href="#agentsBoard">⚙ Agentes</a>
+    </nav>
+    <div class="top-actions">
+      <a class="btn ghost" href="landing.html">LANDING STARTUP</a>
+      <a class="btn github" href="https://github.com/Imadechumbo/vision-core-master" target="_blank" rel="noopener">GITHUB</a>
+      <a class="btn agent-download" href="downloads/vision_agent_v1_1_streaming.zip" download>BAIXAR AGENT</a>
+      <button class="btn ghost" id="openAuthBtn" type="button">SIGN IN</button>
+      <a class="btn" href="#mission">ENVIAR MISSÃO</a>
+    </div>
+  </div>
+</header>
+
+<main class="shell grid">
+  <aside>
+    <section class="panel logo premium-logo">
+      <div class="eye-wrap" title="VISION CORE ativo">
+        <div class="ai-eye"><div class="pupil"></div></div>
+      </div>
+      <h1>VISION CORE</h1>
+      <p class="cyan">SEE. DECIDE. EXECUTE.</p>
+      <a class="marketing-link" href="about.html">um sistema que corrige sistemas</a>
+    </section>
+<nav class="panel menu premium-menu">
+      <a class="active" href="#mission">◎ MISSION CONTROL</a>
+      <a href="#timeline">⌁ MISSION TIMELINE</a>
+      <a href="#runtime">⌁ EXECUTION MONITOR</a>
+      <a href="#hermes">☷ DIAGNOSTICS / HERMES</a>
+      <a href="#score">☑ VALIDATION / SDDF</a>
+      <a href="#diff">☷ DIFF PREVIEW</a>
+      <a href="#vault">⌂ VAULT / ROLLBACK</a>
+      <a href="#memory">▤ MEMORY / OBSIDIAN</a>
+      <a href="#opensquad" class="menu-reserved">⌘ OPENCLAW / OPENSQUAD <span class="menu-badge">SCALE</span></a>
+      <a href="#osint">◇ OSINT DOCKER</a>
+      <a href="#githubPanel">⌬ GITHUB / PR REAL</a>
+      <a href="#saasAuth">◉ SAAS / PLANOS</a>
+      <a href="#v10">◇ V10 ENTERPRISE</a>
+      <a href="#aiApiVault">AI API VAULT</a>
+      <a href="#marketplace">▣ TOOLS MARKETPLACE</a>
+      <a href="#metricsBoard">▥ MÉTRICAS</a>
+      <a href="#agentsBoard">⚙ AGENTES EXTRAS</a>
+    </nav>
+  </aside>
+
+  <section>
+    <div class="panel hero-copy">
+      <p class="eyebrow">DEPLOY SEGURO • PASS GOLD • GITHUB PR REAL • DIFF • CI • VAULT • AUTO-ROLLBACK</p>
+      <h2>Sistema operacional para desenvolvimento com IA.</h2>
+      <p>IAs criam software rápido. O VISION CORE fecha o loop: diagnostica, executa, valida, protege e mostra tudo em logs vivos.</p>
+      <div class="mini-pipeline"><span>Missão</span><b>→</b><span>Diagnóstico</span><b>→</b><span>Diff</span><b>→</b><span>PASS GOLD</span><b>→</b><span>PR</span><b>→</b><span>Stable Vault</span></div>
+    </div>
+
+    <br>
+    <div class="panel" id="mission">
+      <h2>MISSION CONTROL</h2>
+      <p>Operador técnico multi-projeto, multi-stack, com aprendizado contínuo.</p>
+      <div class="project-strip">
+        <label>Projeto ativo</label>
+        <select class="select" id="projectSelector"><option>Carregando projetos...</option></select>
+        <button class="btn mini" id="enqueueBtn" type="button">ENFILEIRAR WORKER</button>
+      </div>
+      <textarea class="mission" id="missionText" placeholder="Descreva a missão, cole erro, log, endpoint, stack ou contexto..."></textarea>
+      <br><br>
+      <div class="row">
+        <select class="select">
+          <option>MODELO: AUTO melhor disponível</option>
+          <option>Gemini 2.0 Flash</option>
+          <option>Llama 3.3 70B Groq</option>
+          <option>OpenRouter Auto</option>
+          <option>DeepSeek Reasoner</option>
+          <option>Ollama Local</option>
+        </select>
+        <select class="select compact-select" id="runMode"><option value="dry-run">DRY RUN</option><option value="safe-patch">SAFE PATCH</option><option value="pr">PR MODE</option></select><button class="btn" id="executeBtn">▷ EXECUTAR</button>
+      </div>
+    </div>
+
+    <br>
+    <div class="panel saas-panel" id="saasAuth">
+      <p class="eyebrow">SAAS ONBOARDING • SOCIAL LOGIN / OAUTH SIGNUP POPUP • PLANS</p>
+      <h2>Cadastro SaaS automático, simples e popular.</h2>
+      <p><strong>Autonomous Software Repair System.</strong> Isso não é chat, copiloto ou automação simples. É um sistema que detecta → entende → corrige → valida → protege → aprende.</p>
+      <p>O cadastro agora abre em popup preto pelo botão <strong>Sign in</strong> no header. Google, GitHub e SSO criam usuário automaticamente com plano FREE por padrão, preparado para OAuth real depois.</p>
+      <div class="plans" id="plansBox">
+        <div class="plan active" data-plan="free"><strong>FREE</strong><span>5 missões/mês</span><small>sem auto-merge</small></div>
+        <div class="plan" data-plan="pro"><strong>PRO</strong><span>missões ilimitadas</span><small>GitHub auto PR + rollback</small></div>
+        <div class="plan" data-plan="enterprise"><strong>ENTERPRISE</strong><span>multi-projeto + workers</span><small>dashboard completo</small></div>
+      </div>
+      <div class="operator-auth-card inline-auth-card">
+        <p class="side-auth-kicker">OPERADOR</p>
+        <button class="btn ghost side-signin" id="openAuthBtn2" type="button">SIGN IN</button>
+        <small>Social Login / OAuth Signup Popup</small>
+      </div>
+      <div id="signupResult" class="signup-result inline-result">Plano selecionado: <b>FREE</b></div>
+    </div>
+
+    <br>
+    <br>
+    <div class="panel" id="timeline">
+      <h2>MISSION TIMELINE</h2>
+      <p>Fluxo visual: missão recebida → Hermes → snapshot → diff → validação → GitHub PR.</p>
+      <div id="timelineBox" class="timelineBox"></div>
+    </div>
+
+    <br>
+    <div class="panel" id="diff">
+      <h2>DIFF PREVIEW</h2>
+      <p>Mostra o patch antes de criar branch, commit ou Pull Request.</p>
+      <button class="btn mini" id="diffBtn">GERAR DIFF DEMO</button>
+      <pre id="diffViewer" class="diffViewer">Aguardando diff...</pre>
+    </div>
+
+    <br>
+    <div class="panel" id="score">
+      <h2>PASS GOLD SCORE</h2>
+      <p>Promoção só é liberada acima do corte GOLD.</p>
+      <div id="scoreBox" class="scoreGrid"></div>
+    </div>
+
+    <br>
+    <div class="panel github-panel" id="githubPanel">
+      <h2>GitHub Integration Real</h2>
+      <p>Cria branch, aplica commit e abre Pull Request real via GitHub REST API. Bloqueado sem PASS GOLD.</p>
+      <div class="github-status" id="githubStatus">Verificando GitHub...</div>
+      <div class="github-actions">
+        <button class="btn github" id="githubStatusBtn">Verificar GitHub</button>
+        <button class="btn" id="githubPrBtn">Criar PR PASS GOLD</button>
+        <button class="btn ghost" id="policyBtn">Auto-merge Policy</button>
+      </div>
+      <div class="github-result" id="githubResult"></div>
+    </div>
+
+    <br>
+    <div class="panel" id="v10">
+      <h2>V10 ENTERPRISE FOUNDATION</h2>
+      <div class="cards">
+        <div class="card"><strong>Multi-projeto</strong><span>gestão por stack e estado GOLD</span></div>
+        <div class="card"><strong>Métricas reais</strong><span>runtime, delivery e GitHub</span></div>
+        <div class="card"><strong>Hermes votando</strong><span>consenso antes do PR</span></div>
+        <div class="card"><strong>Auto-merge condicionado</strong><span>só com checks + GOLD</span></div>
+        <div class="card"><strong>Workers distribuídos</strong><span>filas por execução/rollback</span></div>
+        <div class="card"><strong>Billing SaaS</strong><span>planos prontos para Stripe</span></div>
+      </div>
+    </div>
+
+    <br>
+    <br>
+    <div class="panel ai-api-panel" id="aiApiVault">
+      <p class="eyebrow">AI API VAULT - PROVEDORES PAGOS - ROTEAMENTO INTELIGENTE</p>
+      <h2>Menu para adicionar APIs de IAs pagas</h2>
+      <p>Conecte provedores comerciais e defina prioridade/fallback. As chaves ficam preparadas para uso via variaveis de ambiente ou vault local em desenvolvimento.</p>
+      <div class="provider-grid">
+        <button class="provider active" data-provider="openai"><strong>OpenAI</strong><span>GPT / Vision / Assistants</span></button>
+        <button class="provider" data-provider="anthropic"><strong>Anthropic</strong><span>Claude</span></button>
+        <button class="provider" data-provider="gemini"><strong>Google Gemini</strong><span>Flash / Pro / Vision</span></button>
+        <button class="provider" data-provider="openrouter"><strong>OpenRouter</strong><span>multi-model fallback</span></button>
+        <button class="provider" data-provider="groq"><strong>Groq</strong><span>alta velocidade</span></button>
+        <button class="provider" data-provider="deepseek"><strong>DeepSeek</strong><span>reasoner/code</span></button>
+      </div>
+      <div class="api-form">
+        <label>Provider</label><select class="select" id="aiProviderSelect"><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="gemini">Google Gemini</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="deepseek">DeepSeek</option></select>
+        <label>API Key</label><input class="api-input" id="aiApiKey" type="password" placeholder="cole sua chave aqui...">
+        <label>Modelo padrao</label><input class="api-input" id="aiModel" type="text" placeholder="ex: gpt-4.1, claude-3.7-sonnet, gemini-2.0-flash">
+        <label>Prioridade</label><select class="select" id="aiPriority"><option>primary</option><option>fallback</option><option>disabled</option></select>
+      </div>
+      <div class="github-actions"><button class="btn github" id="saveAiProviderBtn" type="button">SALVAR PROVIDER</button><button class="btn ghost" id="testAiProviderBtn" type="button">TESTAR MOCK</button><a class="btn ghost" href="landing.html">VER LANDING STARTUP</a></div>
+      <div class="ai-provider-status" id="aiProviderStatus">Nenhuma API salva nesta sessao.</div>
+    </div>
+
+    <br>
+    <div class="panel" id="marketplace">
+      <h2>TOOLS MARKETPLACE</h2>
+      <p>Conectores preparados para GitHub, Cloudflare, Railway, Docker, Langfuse e billing.</p>
+      <div id="toolsBox" class="toolGrid"></div>
+    </div>
+
+    <br>
+    <div class="panel logs-panel" id="logsPanel" aria-live="polite">
+      <div class="log-head">
+        <h2>LIVE EXECUTION STREAM</h2>
+        <button class="btn mini" id="downloadLogsBtn">BAIXAR LOGS</button>
+      </div>
+      <div class="logs empty" id="logsBox"><span class="muted">Aguardando eventos SSE / polling do missionRunner v1.1...</span></div>
+    </div>
+    <br>
+    <div class="panel metrics-board" id="metricsBoard">
+      <div class="section-headline">
+        <div>
+          <p class="eyebrow">AGENT METRICS • CUSTO POR AGENTE • PIPELINE</p>
+          <h2>MÉTRICAS DOS AGENTES</h2>
+          <p>Ligado ao backend em <code>/api/metrics/agents</code>. Quando o backend estiver offline, a tela mantém fallback local marcado como UI local.</p>
+        </div>
+        <span class="live-pill">● LIVE</span>
+      </div>
+      <div class="metrics-bars-large" id="agentMetricsLarge"></div>
+    </div>
+
+    <br>
+    <div class="panel agents-board" id="agentsBoard">
+      <div class="section-headline">
+        <div>
+          <p class="eyebrow">OPENSQUAD RESERVE • AGENTES QUE TRABALHAM FORA DO MENU PRINCIPAL</p>
+          <h2>AGENTES EXTRAS EM EXECUÇÃO</h2>
+          <p>Catálogo lido do backend em <code>/api/agents/catalog</code>, usando os nomes e funções reais do projeto.</p>
+        </div>
+        <a class="btn ghost mini" href="#opensquad">Ver OpenSquad</a>
+      </div>
+      <div class="agents-grid-real" id="agentsCatalogGrid"></div>
+    </div>
+  </section>
+
+  <aside>
+    <!-- ── Mission Control Orb + VISION AGENT LOCAL ────────────────── -->
+    <section class="panel mc-panel" id="agentDownload">
+      <p class="eyebrow">VISION AGENT LOCAL</p>
+
+      <!-- Orb interativo -->
+      <div class="mc-orb-wrap">
+        <div class="mc-ring mc-ring-3"></div>
+        <div class="mc-ring mc-ring-2"></div>
+        <div class="mc-ring mc-ring-1"></div>
+
+        <!-- Nós orbitais -->
+        <div class="mc-node mc-node--top"    data-key="openclaw">
+          <div class="mc-node-icon">⬡</div>
+          <div class="mc-node-label">OPENCLAW<br><small>ORQUESTRA</small></div>
+        </div>
+        <div class="mc-node mc-node--tr"     data-key="metrics">
+          <div class="mc-node-icon">◈</div>
+          <div class="mc-node-label">METRICS<br><small>OBSERVA</small></div>
+        </div>
+        <div class="mc-node mc-node--right"  data-key="memory">
+          <div class="mc-node-icon">▤</div>
+          <div class="mc-node-label">MEMORY<br><small>APRENDE</small></div>
+        </div>
+        <div class="mc-node mc-node--br"     data-key="benchmark">
+          <div class="mc-node-icon">⊕</div>
+          <div class="mc-node-label">BENCHMARK<br><small>VALIDA</small></div>
+        </div>
+        <div class="mc-node mc-node--bottom" data-key="opensquad">
+          <div class="mc-node-icon">⌘</div>
+          <div class="mc-node-label">OPENSQUAD<br><small>ESCALA</small></div>
+        </div>
+        <div class="mc-node mc-node--left"   data-key="aegis">
+          <div class="mc-node-icon">◉</div>
+          <div class="mc-node-label">AEGIS<br><small>PROTEGE</small></div>
+        </div>
+        <div class="mc-node mc-node--tl"     data-key="hermes">
+          <div class="mc-node-icon">⬖</div>
+          <div class="mc-node-label">HERMES<br><small>DIAGNOSTICA</small></div>
+        </div>
+
+        <!-- Núcleo central -->
+        <div class="mc-core" id="mcCore">
+          <div class="mc-core-hex"></div>
+          <div class="mc-core-status" id="mcCoreStatus">READY</div>
+          <div class="mc-core-sub" id="mcCoreSub">VISION CORE</div>
+        </div>
+
+        <!-- Tooltip ao hover nos nós -->
+        <div class="mc-tooltip" id="mcTooltip"></div>
+      </div>
+
+      <!-- Métricas estilo LionClaw abaixo do orb -->
+      <div class="mc-metrics-header">
+        <span class="eyebrow">AGENT METRICS</span>
+        <span class="mc-live-badge" id="mcLiveBadge">● LIVE</span>
+      </div>
+
+      <div class="mc-metrics-grid" id="mcMetricsGrid">
+        <!-- preenchido via JS -->
+        <div class="mc-metric-row">
+          <div class="mc-metric-name">OpenClaw</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:88%;background:var(--purple2)"></div></div>
+          <div class="mc-metric-val cyan">$0.163</div>
+        </div>
+        <div class="mc-metric-row">
+          <div class="mc-metric-name">Hermes RCA</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:72%;background:#8b5cf6"></div></div>
+          <div class="mc-metric-val cyan">$0.815</div>
+        </div>
+        <div class="mc-metric-row">
+          <div class="mc-metric-name">Scanner</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:65%;background:#22c55e"></div></div>
+          <div class="mc-metric-val green">$0.377</div>
+        </div>
+        <div class="mc-metric-row">
+          <div class="mc-metric-name">Aegis</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:91%;background:#22d3ee"></div></div>
+          <div class="mc-metric-val cyan">$0.264</div>
+        </div>
+        <div class="mc-metric-row">
+          <div class="mc-metric-name">PatchEngine</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:58%;background:#f59e0b"></div></div>
+          <div class="mc-metric-val yellow">$0.668</div>
+        </div>
+        <div class="mc-metric-row">
+          <div class="mc-metric-name">PASS GOLD</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:82%;background:#facc15"></div></div>
+          <div class="mc-metric-val yellow">$0.471</div>
+        </div>
+        <div class="mc-metric-row">
+          <div class="mc-metric-name">Benchmark</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:76%;background:#f472b6"></div></div>
+          <div class="mc-metric-val" style="color:#f472b6">$1.469</div>
+        </div>
+      </div>
+
+      <!-- Custo total -->
+      <div class="mc-cost-row">
+        <span class="mc-cost-label">TOTAL PIPELINE</span>
+        <span class="mc-cost-val" id="mcTotalCost">$4.227</span>
+      </div>
+
+      <!-- Tabs PIPELINE / AGENT -->
+      <div class="mc-tabs">
+        <button class="mc-tab active" data-tab="pipeline">PIPELINE</button>
+        <button class="mc-tab" data-tab="agent">AGENT LOCAL</button>
+      </div>
+
+      <div id="mc-tab-pipeline" class="mc-tab-pane active">
+        <div class="mc-pipeline-status" id="mcPipelineStatus">
+          <div class="mc-ps-row"><span class="mc-ps-label">OpenClaw</span><span class="mc-ps-badge ok">OK</span></div>
+          <div class="mc-ps-row"><span class="mc-ps-label">Scanner</span><span class="mc-ps-badge ok">OK</span></div>
+          <div class="mc-ps-row"><span class="mc-ps-label">Hermes</span><span class="mc-ps-badge ok">OK</span></div>
+          <div class="mc-ps-row"><span class="mc-ps-label">Aegis</span><span class="mc-ps-badge ok">PASS</span></div>
+          <div class="mc-ps-row"><span class="mc-ps-label">PASS GOLD</span><span class="mc-ps-badge gold">GOLD</span></div>
+        </div>
+      </div>
+
+      <div id="mc-tab-agent" class="mc-tab-pane">
+        <a class="btn agent-download full" href="downloads/vision_agent_v1_1_streaming.zip" download>⬇ BAIXAR VISION AGENT v1.1</a>
+        <div class="agent-cmd">npm install<br>npm link<br>vision-agent status</div>
+      </div>
+    </section>
+
+    <br>
+    <section class="panel">
+      <h2>GATES (SDDF)</h2>
+      <div class="gate"><span>SECURITY</span><span class="green">PASS</span></div>
+      <div class="gate"><span>COMPATIBILITY</span><span class="green">PASS</span></div>
+      <div class="gate"><span>STABILITY</span><span class="green">PASS</span></div>
+      <div class="gate"><span>RUNTIME</span><span class="cyan">LIVE</span></div>
+      <div class="gate"><span>DIFF</span><span class="cyan">READY</span></div>
+      <div class="gate"><span>VAULT</span><span class="green">ACTIVE</span></div>
+      <div class="gate"><span>PROMOTION</span><span class="yellow">REQUIRES GOLD</span></div>
+      <div class="gate"><span>GITHUB PR</span><span class="cyan">REAL API</span></div>
+    </section>
+
+    <br>
+    <section class="panel" id="hermes">
+      <h2>HERMES CONSENSUS</h2>
+      <div id="votesBox"></div>
+    </section>
+
+    <br>
+    <section class="panel" id="vault">
+      <h2>STABLE VAULT</h2>
+      <div class="gate"><span>Snapshots</span><span class="green">ACTIVE</span></div>
+      <div class="gate"><span>Patches</span><span class="cyan">TRACKED</span></div>
+      <div class="gate"><span>Rollback</span><span class="yellow">READY</span></div>
+    </section>
+
+    <br>
+    <section class="panel" id="memory">
+      <h2>MEMORY / OBSIDIAN</h2>
+      <div class="gate"><span>Vault</span><span class="cyan">LINKED</span></div>
+      <div class="gate"><span>Incidents</span><span class="green">PERSIST</span></div>
+    </section>
+
+    <br>
+    <section class="panel opensquad-panel" id="opensquad">
+      <div class="opensquad-header">
+        <div>
+          <p class="eyebrow" style="color:var(--purple2);margin:0 0 6px">ARQUITETURA ESCALÁVEL — RESERVADO</p>
+          <h2 style="margin:0">OPENCLAW / OPENSQUAD</h2>
+        </div>
+        <div class="opensquad-badge">SCALE TIER</div>
+      </div>
+
+      <p style="color:var(--muted);font-size:13px;line-height:1.65;margin:14px 0">
+        Infraestrutura de agentes paralelos para problemas que exigem trabalho simultâneo em múltiplas camadas — banco de dados, backend e frontend ao mesmo tempo. Reservado para casos de escala onde um único agente não é suficiente.
+      </p>
+
+      <div class="opensquad-agents">
+        <div class="agent-slot active">
+          <div class="agent-dot" style="background:var(--green)"></div>
+          <div>
+            <strong>HERMES</strong>
+            <span>RCA · Orquestrador principal</span>
+          </div>
+          <span class="agent-status green">ATIVO</span>
+        </div>
+        <div class="agent-slot reserved">
+          <div class="agent-dot" style="background:var(--purple2)"></div>
+          <div>
+            <strong>OPENCLAW</strong>
+            <span>Router · Distribuição de missões</span>
+          </div>
+          <span class="agent-status" style="color:var(--purple2)">RESERVADO</span>
+        </div>
+        <div class="agent-slot reserved">
+          <div class="agent-dot" style="background:#555"></div>
+          <div>
+            <strong>SQUAD α</strong>
+            <span>Agente especialista · Database layer</span>
+          </div>
+          <span class="agent-status muted">ESCALA</span>
+        </div>
+        <div class="agent-slot reserved">
+          <div class="agent-dot" style="background:#555"></div>
+          <div>
+            <strong>SQUAD β</strong>
+            <span>Agente especialista · API layer</span>
+          </div>
+          <span class="agent-status muted">ESCALA</span>
+        </div>
+        <div class="agent-slot reserved">
+          <div class="agent-dot" style="background:#555"></div>
+          <div>
+            <strong>SQUAD γ</strong>
+            <span>Agente especialista · Frontend layer</span>
+          </div>
+          <span class="agent-status muted">ESCALA</span>
+        </div>
+      </div>
+
+      <div class="opensquad-flow">
+        <span>Erro complexo</span><b>→</b>
+        <span>OPENCLAW</span><b>→</b>
+        <span>N squads paralelos</span><b>→</b>
+        <span>Consolidação</span><b>→</b>
+        <span class="green">PASS GOLD</span>
+      </div>
+
+      <div class="gate" style="margin-top:14px;border-color:rgba(139,92,246,.25);background:rgba(139,92,246,.04);border-radius:10px;padding:10px 12px">
+        <span style="font-size:12px;color:var(--muted)">Ativação automática quando missão exige &gt; 1 agente</span>
+        <span style="font-size:11px;color:var(--purple2);font-weight:600">MULTI-TENANT TIER</span>
+      </div>
+    </section>
+
+    <br>
+    <section class="panel" id="osint">
+      <h2>OSINT TOOLS</h2>
+      <div class="gate"><span>SpiderFoot</span><span class="green">DOCKER</span></div>
+      <div class="gate"><span>Recon-ng</span><span class="yellow">SANDBOX</span></div>
+      <div class="gate"><span>Maryam</span><span class="yellow">SANDBOX</span></div>
+    </section>
+
+    <br>
+    <section class="panel">
+      <h2>WORKERS</h2>
+      <div id="workersBox"></div><br><button class="btn mini" id="workerRefreshBtn" type="button">ATUALIZAR FILA</button><div id="queueBox" class="queueBox"></div>
+    </section>
+  </aside>
+</main>
+
+
+<div class="auth-backdrop" id="authBackdrop" aria-hidden="true">
+  <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <button class="auth-close" id="closeAuthBtn" type="button" aria-label="Fechar">×</button>
+    <h2 id="authTitle">Sign in</h2>
+    <p>Use seu email ou entre automaticamente com um provedor popular.</p>
+
+    <label for="signupEmail">Username or email address*</label>
+    <input class="signup-input" id="signupEmail" type="email" autocomplete="email" placeholder="operator@visioncore.local">
+
+    <button class="auth-primary" id="signupBtn" type="button">Continue</button>
+
+    <div class="or"><span></span><b>OR</b><span></span></div>
+
+    <button class="oauth" type="button" data-provider="google"><b class="google-mark">G</b><span>Continue with Google</span></button>
+    <button class="oauth" type="button" data-provider="github"><b>●</b><span>Continue with GitHub</span></button>
+    <button class="oauth" type="button" data-provider="sso"><b>⌁</b><span>Continue with SSO</span></button>
+
+    <small>Mock SaaS: cria usuário automaticamente com plano FREE. Preparado para OAuth real depois.</small>
+  </div>
+</div>
+
+<div id="runtimeMonitor" class="stable" title="Runtime protegido por GOLD state • Auto-rollback ativo">
+  <span id="runtimeDot"></span>
+  <span id="runtimeText">LIVE</span>
+  <span>▂▄▆█</span>
+</div>
+
+<script>
+const API = (window.RUNTIME_CONFIG?.API_BASE_URL || window.API_BASE_URL || document.querySelector('meta[name="vision-api-base"]')?.content || '').replace(/\/$/, '');
+if(!API) console.warn('VISION CORE: API_BASE_URL obrigatório para backend real.');
+const logsBox=document.getElementById('logsBox'), logsPanel=document.getElementById('logsPanel');
+function showLog(scope,msg,cls=''){logsPanel.classList.add('active');logsBox.classList.remove('empty');logsBox.innerHTML+=`<div class="${cls}">[${new Date().toLocaleTimeString()}] ${scope}: ${msg}</div>`;logsBox.scrollTop=logsBox.scrollHeight}
+function setRuntimeState(s){runtimeMonitor.className=s;runtimeText.textContent=s.toUpperCase()}
+async function api(path,opts={}){const res=await fetch(API+path,opts);return await res.json()}
+async function loadTimeline(){const d=await api('/api/missions/timeline'); timelineBox.innerHTML=d.timeline.map(x=>`<div class="timelineStep ${x.status}"><strong>${x.step}</strong><span>${x.status}</span><small>${x.detail}</small></div>`).join('')}
+async function loadScore(){const d=await api('/api/pass-gold/score'); scoreBox.innerHTML=`<div class="scoreBig ${d.status==='GOLD'?'green':'red'}">${d.final} / GOLD</div><div>Status: <b>${d.status}</b></div><div>Promoção: <b>${d.promotion_allowed?'LIBERADA':'BLOQUEADA'}</b></div>`}
+async function loadMetrics(){const d=await api('/api/metrics/summary'); const r=d.runtime; metricsBox.innerHTML=['cpu','memory','disk','network'].map(k=>`<div class="health"><span>${k.toUpperCase()}</span><div class="bar"><span style="width:${r[k]}%"></span></div><span>${r[k]}%</span></div>`).join('')}
+async function loadVotes(){const d=await api('/api/hermes/vote'); votesBox.innerHTML=d.votes.map(v=>`<div class="gate"><span>${v.agent}</span><span class="green">${v.vote} ${v.confidence}%</span></div>`).join('')+`<p class="cyan">${d.consensus}</p>`}
+async function loadWorkers(){const d=await api('/api/workers/status'); workersBox.innerHTML=d.workers.map(w=>`<div class="gate"><span>${w.id} <small>${w.queue||''}</small></span><span class="cyan">${w.status}</span></div>`).join(''); if(window.queueBox){queueBox.innerHTML=`<div class="gate"><span>Jobs na fila</span><span class="yellow">${d.queued||0}</span></div><div class="gate"><span>Processados</span><span class="green">${d.processed||0}</span></div>`}}
+async function loadProjects(){const d=await api('/api/projects'); if(window.projectSelector){projectSelector.innerHTML=d.projects.map(p=>`<option value="${p.id}">${p.id} • ${p.stack} • ${p.status}</option>`).join('')}}
+async function enqueueMission(){const mission=(missionText.value.trim()||'demo mission worker queue'); const project=(projectSelector&&projectSelector.value)||'vision-core-master'; const res=await fetch(API+'/api/workers/enqueue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({project_id:project,type:'MISSION',payload:mission})}); const data=await res.json(); showLog('WORKER','job enfileirado: '+data.job_id,'cyan'); await loadWorkers();}
+async function loadTools(){const d=await api('/api/tools/marketplace'); toolsBox.innerHTML=d.tools.map(t=>`<div class="tool"><strong>${t.name}</strong><span>${t.status}</span></div>`).join('')}
+async function loadPlans(){const d=await api('/api/billing/plans'); if(!d.plans)return; plansBox.innerHTML=d.plans.map((p,i)=>`<div class="plan ${i===0?'active':''}" data-plan="${p.id}"><strong>${p.name}</strong><span>${p.missions}</span><small>${p.features.join(' • ')}</small></div>`).join(''); bindPlans();}
+async function checkGithub(){const d=await api('/api/github/status'); githubStatus.innerHTML=`Configured: <b class="${d.configured?'green':'yellow'}">${d.configured}</b><br>Repo: ${d.owner}/${d.repo}<br>Policy: ${d.policy}<br>Token: ${d.token}`; showLog('GITHUB','status verificado')}
+let selectedPlan='free';
+function $(id){return document.getElementById(id)}
+const authBackdrop=$('authBackdrop'), signupEmail=$('signupEmail'), signupBtn=$('signupBtn'), closeAuthBtn=$('closeAuthBtn'), openAuthBtn=$('openAuthBtn'), openAuthBtn2=$('openAuthBtn2');
+function openAuth(){if(!authBackdrop)return;authBackdrop.classList.add('show');authBackdrop.setAttribute('aria-hidden','false');setTimeout(()=>signupEmail&&signupEmail.focus(),80)}
+function closeAuth(){if(!authBackdrop)return;authBackdrop.classList.remove('show');authBackdrop.setAttribute('aria-hidden','true')}
+if(openAuthBtn)openAuthBtn.onclick=openAuth;if(openAuthBtn2)openAuthBtn2.onclick=openAuth;if(closeAuthBtn)closeAuthBtn.onclick=closeAuth;if(authBackdrop)authBackdrop.addEventListener('click',e=>{if(e.target===authBackdrop)closeAuth()});
+window.addEventListener('keydown',e=>{if(e.key==='Escape')closeAuth()});
+
+function bindPlans(){document.querySelectorAll('.plan').forEach(p=>p.onclick=()=>{document.querySelectorAll('.plan').forEach(x=>x.classList.remove('active'));p.classList.add('active');selectedPlan=p.dataset.plan;signupResult.innerHTML='Plano selecionado: <b>'+selectedPlan.toUpperCase()+'</b>';});}
+bindPlans();
+if(signupBtn)signupBtn.onclick=async()=>{const email=signupEmail.value.trim(); if(!email){signupResult.innerHTML='<span class="red">Digite um email para continuar.</span>';return;} showLog('SAAS','criando conta automática para '+email,'cyan'); const res=await fetch(API+'/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,plan:selectedPlan,provider:'email'})}); const data=await res.json(); if(!res.ok||!data.ok){signupResult.innerHTML='<span class="red">'+(data.error||'Falha no cadastro')+'</span>'; return;} signupResult.innerHTML='<span class="green">Conta criada: '+data.user.email+'</span><br>Plano: '+data.user.plan+'<br>Token demo: '+data.token; showLog('SAAS','conta criada no plano '+data.user.plan,'green'); closeAuth();};
+document.querySelectorAll('.oauth').forEach(btn=>btn.onclick=async()=>{const provider=btn.dataset.provider; const email=(signupEmail.value.trim()||('operator+'+provider+'@visioncore.local')); const res=await fetch(API+'/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,plan:selectedPlan,provider})}); const data=await res.json(); signupResult.innerHTML=data.ok?('<span class="green">Login '+provider+' conectado</span><br>'+data.user.email+' • '+data.user.plan):('<span class="red">'+data.error+'</span>'); if(data.ok){showLog('SAAS','login social '+provider+' criou usuário FREE automático','green'); closeAuth();}});
+
+function maskKey(k){if(!k)return 'empty';return k.length<=8?'....':k.slice(0,4)+'......'+k.slice(-4)}
+document.querySelectorAll('.provider').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.provider').forEach(x=>x.classList.remove('active'));btn.classList.add('active'); if(window.aiProviderSelect) aiProviderSelect.value=btn.dataset.provider;});
+if(window.aiProviderSelect){aiProviderSelect.onchange=()=>{document.querySelectorAll('.provider').forEach(x=>x.classList.toggle('active',x.dataset.provider===aiProviderSelect.value));};}
+if(window.saveAiProviderBtn){saveAiProviderBtn.onclick=async()=>{const payload={provider:aiProviderSelect.value,api_key:aiApiKey.value.trim(),model:aiModel.value.trim(),priority:aiPriority.value}; if(!payload.api_key){aiProviderStatus.innerHTML='<span class="red">Cole uma API key para salvar.</span>';return;} try{const res=await fetch(API+'/api/ai/providers/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const data=await res.json(); aiProviderStatus.innerHTML=data.ok?('<span class="green">Provider salvo:</span> '+data.provider+' - '+data.model+' - key '+data.masked_key):('<span class="red">'+(data.error||'falha')+'</span>'); showLog('AI API','provider '+payload.provider+' salvo como '+payload.priority,'green');}catch(e){aiProviderStatus.innerHTML='<span class="yellow">Modo estatico: '+payload.provider+' configurado localmente - key '+maskKey(payload.api_key)+'</span>'; showLog('AI API','provider local salvo em UI demo','yellow');}}}
+if(window.testAiProviderBtn){testAiProviderBtn.onclick=()=>{const p=aiProviderSelect.value; aiProviderStatus.innerHTML='<span class="cyan">Teste mock OK:</span> '+p+' pronto para roteamento inteligente.'; showLog('AI API','teste mock OK para '+p,'cyan')}}
+githubStatusBtn.onclick=checkGithub;
+policyBtn.onclick=async()=>{const d=await api('/api/github/automerge-policy'); githubResult.innerHTML='Auto-merge: '+d.default+'<br>Required: '+d.required.join(', ')};
+githubPrBtn.onclick=async()=>{setRuntimeState('analyzing');showLog('GITHUB','criando PR com PASS GOLD...','cyan');const stamp=new Date().toISOString();const res=await fetch(API+'/api/github/create-pr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pass_gold:true,title:'VISION CORE V2.3.4 MARKET READY patch',message:'chore(vision-core): validate V2.3.4 static hardened',changes:[{path:'VISION_CORE_V9_5_1_PROOF.md',content:'# VISION CORE V2.3.4\n\nPASS GOLD confirmado em '+stamp+'\n\nFront V2.3.4 HARDENED REAL-TIME.\n'}]})});const data=await res.json();if(!res.ok||!data.ok){githubResult.innerHTML=`<span class="red">${data.message||data.error||'Falha ao criar PR'}</span>`;showLog('GITHUB',data.message||'Falha ao criar PR','red');setRuntimeState('stable');return}githubResult.innerHTML=`PR criado: <a href="${data.pr_url}" target="_blank">${data.pr_url}</a><br>Vault: ${data.vault_manifest}`;showLog('GITHUB','PR criado com sucesso','green');setRuntimeState('stable')};
+diffBtn.onclick=async()=>{const d=await api('/api/diff/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:'README.md',before:'VISION CORE V9.4',after:'VISION CORE V2.3.4 MARKET READY\nV2.3.4 HARDENED REAL-TIME'})});diffViewer.textContent=d.patch;showLog('DIFF','preview gerado')};
+executeBtn.onclick=async()=>{
+  const mission=(missionText.value.trim()||"diagnosticar runtime do projeto");
+  const project=(projectSelector&&projectSelector.value)||"technetgame";
+  const mode=(window.runMode&&runMode.value)||"dry-run";
+  showLog("MISSION","iniciando "+mode+" em "+project,"cyan");
+  setRuntimeState("analyzing");
+  try{
+    const res=await fetch(API+"/api/missions/run",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({project_id:project,error:mission,dry_run:mode==="dry-run",mode})});
+    const data=await res.json();
+    if(!res.ok||!data.ok){showLog("MISSION",data.error||"falha ao executar missão","red");setRuntimeState("stable");return;}
+    const mid=data.id||data.mission_id||(data.result&&data.result.id);
+    showLog("MISSION","missão concluída: "+(mid||"sem id"),"green");
+    const steps=data.timeline||((data.result&&data.result.timeline)||[]);
+    steps.forEach(x=>showLog(x.status||"STEP",(x.step||"")+" "+(x.detail||""),x.status==="fail"?"red":x.status==="running"?"yellow":"green"));
+    if(mid) await loadMissionPoll(mid);
+    await loadTimeline(); await loadScore();
+  }catch(e){showLog("MISSION","erro de conexão: "+e.message,"red");}
+  setRuntimeState("stable");
+};
+async function loadMissionPoll(mid){try{const d=await api("/api/missions/"+mid+"/poll?since=0");(d.steps||[]).forEach(x=>showLog("LIVE",x.step+" • "+(x.detail||""),x.status==="fail"?"red":x.status==="running"?"yellow":"green"));}catch{}}
+enqueueBtn.onclick=enqueueMission;workerRefreshBtn.onclick=loadWorkers;
+downloadLogsBtn.onclick=()=>{window.location.href=API+'/api/logs/download'};
+loadTimeline().catch(()=>showLog('TIMELINE','backend offline ou CORS','yellow'));
+loadScore().catch(()=>showLog('SCORE','backend offline ou CORS','yellow'));
+loadMetrics().catch(()=>showLog('METRICS','backend offline ou CORS','yellow'));
+loadVotes().catch(()=>showLog('HERMES','backend offline ou CORS','yellow'));
+loadProjects().catch(()=>showLog('PROJECTS','backend offline ou CORS','yellow'));
+loadWorkers().catch(()=>showLog('WORKERS','backend offline ou CORS','yellow'));
+loadTools().catch(()=>showLog('TOOLS','backend offline ou CORS','yellow'));
+loadPlans().catch(()=>showLog('SAAS','plans offline ou CORS','yellow'));
+checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
+
+// ── MISSION CONTROL ORB — V2.0 ─────────────────────────────────────────
+(function initMissionControlOrb(){
+  const TOOLTIPS = {
+    openclaw:   'OpenClaw: interpreta, classifica e roteia a missão.',
+    hermes:     'Hermes: diagnóstico e root cause. Exige scanResult válido.',
+    metrics:    'Harness Metrics: observa performance do pipeline em tempo real.',
+    memory:     'Memory: aprende só com PASS GOLD confirmado.',
+    benchmark:  'Benchmark: valida qualidade dos agentes ao longo do tempo.',
+    opensquad:  'OpenSquad: escala agentes reserva quando necessário.',
+    aegis:      'Aegis: protege — sem Aegis OK nada continua.',
+  };
+
+  const NODE_COLORS = {
+    openclaw:'#a855f7', hermes:'#a855f7', metrics:'#22d3ee',
+    memory:'#22d3ee', benchmark:'#facc15', opensquad:'#22c55e', aegis:'#22d3ee',
+  };
+
+  const tooltip = document.getElementById('mcTooltip');
+  const coreEl  = document.getElementById('mcCore');
+  const coreStatus = document.getElementById('mcCoreStatus');
+  const coreSub    = document.getElementById('mcCoreSub');
+
+  // Hover nos nós
+  document.querySelectorAll('.mc-node').forEach(node => {
+    const key = node.dataset.key;
+    const icon = node.querySelector('.mc-node-icon');
+    const color = NODE_COLORS[key] || '#a855f7';
+
+    node.addEventListener('mouseenter', e => {
+      tooltip.textContent = TOOLTIPS[key] || key;
+      tooltip.style.color = color;
+      tooltip.style.borderColor = color + '60';
+      const r = node.getBoundingClientRect();
+      const wrap = node.closest('.mc-orb-wrap').getBoundingClientRect();
+      let left = r.left - wrap.left + 15;
+      let top  = r.top  - wrap.top  - 36;
+      if (left + 180 > wrap.width) left = wrap.width - 186;
+      if (top < 0) top = r.bottom - wrap.top + 4;
+      tooltip.style.left = left + 'px';
+      tooltip.style.top  = top + 'px';
+      tooltip.classList.add('visible');
+    });
+    node.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+  });
+
+  // Atualizar orb com estado da missão
+  function updateOrb(state) {
+    coreEl.className = 'mc-core ' + (state || '');
+    const states = { running:'RUNNING', blocked:'BLOCKED', success:'PASS GOLD', '':'READY' };
+    const subs   = { running:'EXECUTANDO', blocked:'BLOQUEADO', success:'VALIDADO', '':'VISION CORE' };
+    coreStatus.textContent = states[state] || 'READY';
+    coreSub.textContent    = subs[state]   || 'VISION CORE';
+  }
+
+  // Observer: sincronizar orb com estado do runtime
+  const obs = new MutationObserver(() => {
+    const rm = document.getElementById('runtimeMonitor');
+    if (!rm) return;
+    if (rm.classList.contains('analyzing')) updateOrb('running');
+    else updateOrb('');
+  });
+  const rm = document.getElementById('runtimeMonitor');
+  if (rm) obs.observe(rm, { attributes: true });
+
+  // Tabs
+  document.querySelectorAll('.mc-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.mc-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.mc-tab-pane').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      const pane = document.getElementById('mc-tab-' + tab.dataset.tab);
+      if (pane) pane.classList.add('active');
+    });
+  });
+
+  // Métricas ao vivo — atualizar barras com harness metrics se disponível
+  async function updateMcMetrics() {
+    try {
+      const r = await fetch(API + '/api/runtime/harness-stats');
+      if (!r.ok) return;
+      const d = await r.json();
+      if (!d.ok) return;
+      const grid = document.getElementById('mcMetricsGrid');
+      const cost = document.getElementById('mcTotalCost');
+      // Atualizar com dados reais se disponível
+      if (d.avg_tokens) {
+        const bar = grid.querySelector('.mc-metric-bar');
+        if (bar) bar.style.width = Math.min(100, d.pass_gold_rate || 82) + '%';
+      }
+      if (d.total) cost.textContent = d.total + ' runs';
+    } catch { /* backend offline — manter demo */ }
+  }
+
+  // Pulsar nó benchmark quando PASS GOLD chegar
+  function pulseNode(key) {
+    const node = document.querySelector(`.mc-node[data-key="${key}"]`);
+    if (!node) return;
+    node.querySelector('.mc-node-icon').style.boxShadow = '0 0 28px ' + (NODE_COLORS[key]||'#a855f7');
+    setTimeout(() => node.querySelector('.mc-node-icon').style.boxShadow = '', 1200);
+  }
+
+  // Monitorar logs para animar o orb
+  const logsBox = document.getElementById('logsBox');
+  if (logsBox) {
+    const logObs = new MutationObserver(() => {
+      const text = logsBox.textContent.toLowerCase();
+      if (text.includes('pass gold') || text.includes('pass_gold')) {
+        updateOrb('success');
+        pulseNode('benchmark');
+        setTimeout(() => updateOrb(''), 3000);
+      } else if (text.includes('aegis') && text.includes('bloqueou')) {
+        updateOrb('blocked');
+        pulseNode('aegis');
+        setTimeout(() => updateOrb(''), 2500);
+      } else if (text.includes('hermes') || text.includes('rca')) {
+        pulseNode('hermes');
+      } else if (text.includes('scanner') || text.includes('scan')) {
+        pulseNode('openclaw');
+      }
+    });
+    logObs.observe(logsBox, { childList: true, subtree: true });
+  }
+
+  setInterval(updateMcMetrics, 8000);
+  updateMcMetrics();
+
+})(); // fim initMissionControlOrb
+</script>
+<script src="assets/v23-ui-system.js"></script>
+<script src="assets/v231-backend-agents.js"></script>
+<script src="assets/v233-realtime.js"></script>
+</body>
+</html>

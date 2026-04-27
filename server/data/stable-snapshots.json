@@ -1,0 +1,36 @@
+[
+  {
+    "id": "snap_1777197792745_fda1e9",
+    "missionId": "m2",
+    "projectId": null,
+    "category": "x",
+    "goldScore": 85,
+    "goldLevel": "GOLD",
+    "passGold": true,
+    "aegisOk": true,
+    "ciPassed": true,
+    "promotedAt": "2026-04-26T10:03:12.745Z",
+    "rca": {
+      "cause": "c",
+      "confidence": 90,
+      "risk": null
+    }
+  },
+  {
+    "id": "snap_1777196520002_36fc66",
+    "missionId": "m1",
+    "projectId": null,
+    "category": "upload_multer",
+    "goldScore": 85,
+    "goldLevel": "GOLD",
+    "passGold": true,
+    "aegisOk": true,
+    "ciPassed": null,
+    "promotedAt": "2026-04-26T09:42:00.002Z",
+    "rca": {
+      "cause": "req.file null",
+      "confidence": 90,
+      "risk": "low"
+    }
+  }
+]

@@ -1,0 +1,101 @@
+kind: pipeline
+type: docker
+name: vision-pass-gold
+
+# Pipeline de validação interna do VISION CORE no Gitness
+# Roda em CADA branch push — valida antes de qualquer merge
+
+trigger:
+  branch:
+    - main
+    - "vision-core/*"
+    - "fix/*"
+  event:
+    - push
+    - pull_request
+
+clone:
+  depth: 1
+
+steps:
+  # ── 1. Instalar dependências ─────────────────────────────────────────────
+  - name: install-deps
+    image: node:20-alpine
+    pull: if-not-exists
+    commands:
+      - cd server
+      - npm ci --prefer-offline || npm install
+    when:
+      event: [ push, pull_request ]
+
+  # ── 2. Verificar sintaxe de todos os serviços críticos ─────────────────
+  - name: syntax-check
+    image: node:20-alpine
+    pull: if-not-exists
+    commands:
+      - echo "=== Verificando sintaxe dos serviços VISION CORE ==="
+      - node --check server/src/services/missionRunner.js    && echo "✔ missionRunner"
+      - node --check server/src/services/hermesRca.js        && echo "✔ hermesRca"
+      - node --check server/src/services/hermesMemory.js     && echo "✔ hermesMemory"
+      - node --check server/src/services/aegis.js            && echo "✔ aegis"
+      - node --check server/src/services/fileScanner.js      && echo "✔ fileScanner"
+      - node --check server/src/services/openclawRouter.js   && echo "✔ openclawRouter"
+      - node --check server/src/services/escalationPolicy.js && echo "✔ escalationPolicy"
+      - node --check server/src/services/passGoldEngine.js   && echo "✔ passGoldEngine"
+      - node --check server/src/services/patchEngine.js      && echo "✔ patchEngine"
+      - node --check server/src/services/gitness/gitnessService.js   && echo "✔ gitnessService"
+      - node --check server/src/services/gitness/hybridGitService.js && echo "✔ hybridGitService"
+      - node --check server/src/services/criticalFileGuard.js && echo "✔ criticalFileGuard"
+      - node --check server/src/services/harnessMetrics.js    && echo "✔ harnessMetrics"
+      - echo "=== Sintaxe OK ==="
+    when:
+      event: [ push, pull_request ]
+
+  # ── 3. Validar PASS GOLD (script de verificação) ────────────────────────
+  - name: pass-gold-check
+    image: node:20-alpine
+    pull: if-not-exists
+    commands:
+      - node scripts/checkPassGold.js
+    when:
+      event: [ push, pull_request ]
+
+  # ── 4. Self-test do servidor (sem providers externos) ───────────────────
+  - name: self-test
+    image: node:20-alpine
+    pull: if-not-exists
+    environment:
+      NODE_ENV: test
+      DB_PATH: .vault/test_ci.db
+      AI_PROVIDER_ORDER: ""
+      CONFIDENCE_THRESHOLD: "60"
+    commands:
+      - cd server
+      - node -e "
+          const st = require('./src/self-test');
+          st.runSelfTest().then(r => {
+            console.log('Self-test:', r.passed + '/' + r.total + ' checks');
+            if (!r.ok) { console.error('FAIL:', r.errors); process.exit(1); }
+            process.exit(0);
+          }).catch(e => { console.error(e); process.exit(1); });
+        "
+    when:
+      event: [ push, pull_request ]
+
+  # ── 5. Relatório final ───────────────────────────────────────────────────
+  - name: report
+    image: node:20-alpine
+    pull: if-not-exists
+    commands:
+      - echo "================================="
+      - echo "VISION CORE — Pipeline Gitness"
+      - echo "Branch = $DRONE_BRANCH"
+      - echo "Commit = $DRONE_COMMIT_SHA"
+      - echo "================================="
+      - echo "✔ Sintaxe OK"
+      - echo "✔ PASS GOLD verificado"
+      - echo "✔ Self-test passou"
+      - echo "Pipeline concluído com sucesso"
+    when:
+      event: [ push, pull_request ]
+      status: [ success ]

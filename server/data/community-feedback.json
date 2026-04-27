@@ -1,0 +1,37 @@
+[
+  {
+    "id": "fb_1777153552750_eb0a03",
+    "status": "solved_PASS_GOLD",
+    "submittedAt": "2026-04-25T21:45:52.751Z",
+    "redactions": [],
+    "obsidianNote": "req-file-null-no-multer-1777153552752.md",
+    "benchmarkId": "bm_1777153552754_641c9b",
+    "missionId": null,
+    "promotedToHermes": true,
+    "title": "req.file null no multer",
+    "category": "upload_multer",
+    "framework": "Node.js/Express",
+    "language": "",
+    "environment": "",
+    "severity": "high",
+    "errorSignature": "Cannot read properties of null reading mimetype",
+    "stackTraceSanitized": "at aiRoutes.js:45:12\n  at Layer.handle",
+    "reproductionSteps": "1. POST /api/upload sem arquivo",
+    "attemptedSolution": "",
+    "tags": [],
+    "convertedAt": "2026-04-25T21:45:52.756Z",
+    "solvedAt": "2026-04-25T21:45:52.762Z",
+    "passGoldResult": {
+      "pass_gold": true,
+      "final": 82,
+      "level": "GOLD"
+    }
+  },
+  {
+    "id": "fb_rej_1777153552749",
+    "status": "rejected_sensitive",
+    "reason": "Conteúdo de alto risco detectado: password, openai_key",
+    "category": "auth_token",
+    "submittedAt": "2026-04-25T21:45:52.749Z"
+  }
+]

@@ -1,0 +1,106 @@
+{
+  "version": "1.0",
+  "description": "VISION CORE Observability Harness — thresholds e configuração de escalação",
+
+  "escalation_levels": {
+    "LEVEL_0": {
+      "label": "trivial",
+      "description": "1 agente, baixo contexto, patch simples",
+      "max_targets": 1,
+      "min_confidence": 80,
+      "max_patches": 1,
+      "opensquad_reserve": false
+    },
+    "LEVEL_1": {
+      "label": "bug_comum",
+      "description": "OpenClaw + scanner + Hermes + Aegis standard",
+      "max_targets": 1,
+      "min_confidence": 60,
+      "max_patches": 3,
+      "opensquad_reserve": false
+    },
+    "LEVEL_2": {
+      "label": "multi_file",
+      "description": "Mais contexto, mais targets, validação reforçada",
+      "max_targets": 5,
+      "min_confidence": 50,
+      "max_patches": 6,
+      "opensquad_reserve": false,
+      "locator_reserve": true
+    },
+    "LEVEL_3": {
+      "label": "high_risk",
+      "description": "OpenSquad reserva: Security, Backend, Validator",
+      "max_targets": 10,
+      "min_confidence": 40,
+      "max_patches": 10,
+      "opensquad_reserve": true,
+      "agents_reserve": ["security", "backend", "validator"]
+    },
+    "LEVEL_4": {
+      "label": "architecture_unknown",
+      "description": "OpenSquad completo + revisão humana obrigatória",
+      "max_targets": 99,
+      "min_confidence": 0,
+      "max_patches": 99,
+      "opensquad_reserve": true,
+      "agents_reserve": ["security", "backend", "validator", "architect", "memory"],
+      "human_review_required": true
+    }
+  },
+
+  "escalation_rules": {
+    "confidence_below_60":          { "escalate_to": "LEVEL_2", "reason": "LLM confidence abaixo do threshold" },
+    "confidence_below_40":          { "escalate_to": "LEVEL_4", "reason": "LLM confidence muito baixa — causa desconhecida" },
+    "target_count_gt_1":            { "escalate_to": "LEVEL_2", "reason": "Múltiplos targets detectados" },
+    "aegis_risk_medium":            { "escalate_to": "LEVEL_3", "reason": "Aegis detectou risco médio" },
+    "aegis_risk_high":              { "escalate_to": "LEVEL_3", "reason": "Aegis detectou risco alto" },
+    "validation_failed_repeat":     { "escalate_to": "LEVEL_3", "reason": "Validação falhou em repetição" },
+    "needs_target":                 { "escalate_to": "LEVEL_2", "reason": "Scanner não encontrou target — reforçar locator" },
+    "patch_count_gt_3":             { "escalate_to": "LEVEL_3", "reason": "Muitos patches — revisão multi-agente" },
+    "unknown_root_cause":           { "escalate_to": "LEVEL_4", "reason": "Causa raiz desconhecida — revisão humana" },
+    "blocked_pattern_match":        { "escalate_to": "LEVEL_3", "reason": "Padrão bloqueado similar detectado" }
+  },
+
+  "metrics_fields": [
+    "input_complexity_score",
+    "target_count",
+    "files_scanned",
+    "scan_confidence",
+    "hermes_confidence",
+    "patch_count",
+    "aegis_risk_score",
+    "validation_status",
+    "pass_gold",
+    "retry_count",
+    "memory_hits",
+    "blocked_patterns",
+    "tokens_estimated",
+    "context_window_needed",
+    "agents_used",
+    "escalation_level",
+    "escalation_reasons",
+    "opensquad_activated",
+    "opensquad_agents",
+    "duration_ms"
+  ],
+
+  "token_estimation": {
+    "base_prompt_tokens": 800,
+    "per_file_context_tokens": 600,
+    "per_memory_record_tokens": 80,
+    "per_log_line_tokens": 10,
+    "response_budget_tokens": 1024
+  },
+
+  "opensquad_reserve_agents": {
+    "locator":   { "role": "Localizar arquivo alvo quando scanner falhar" },
+    "backend":   { "role": "Revisar lógica de servidor e rotas" },
+    "frontend":  { "role": "Revisar código de cliente e componentes" },
+    "infra":     { "role": "Revisar configuração, deploy e ambiente" },
+    "security":  { "role": "Revisar patches de alto risco e autenticação" },
+    "validator": { "role": "Reforçar validação de sintaxe e testes" },
+    "memory":    { "role": "Consultar histórico de missões similares" },
+    "architect": { "role": "Revisar impacto arquitetural de mudanças grandes" }
+  }
+}

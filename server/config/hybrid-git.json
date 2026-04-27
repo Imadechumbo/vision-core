@@ -1,0 +1,87 @@
+{
+  "version": "1.0",
+  "description": "VISION CORE — Arquitetura Híbrida GitHub + Gitness",
+
+  "architecture": {
+    "github": {
+      "role": "production",
+      "description": "Repositório principal, PR oficial, branch protection, histórico público",
+      "required": true,
+      "triggers": ["push", "pull_request"],
+      "branch_protection": {
+        "require_status_checks": true,
+        "required_checks": ["vision-syntax", "vision-pass-gold"],
+        "require_pr_review": false
+      }
+    },
+    "gitness": {
+      "role": "laboratory",
+      "description": "Ambiente self-hosted, validação interna, sandbox de auto-correção",
+      "required": false,
+      "triggers": ["push", "pull_request"],
+      "pipeline_file": ".gitness/pipeline.yml"
+    }
+  },
+
+  "modes": {
+    "github_only": {
+      "label": "Apenas GitHub",
+      "description": "GitHub como único destino. Gitness desabilitado.",
+      "use_when": "Início do projeto ou sem infraestrutura Gitness disponível"
+    },
+    "hybrid": {
+      "label": "Híbrido GitHub + Gitness",
+      "description": "GitHub = produção/PR oficial. Gitness = laboratório/validação interna.",
+      "use_when": "Produção com validação extra self-hosted",
+      "gitness_blocks_merge": false,
+      "gitness_is_informative": true
+    },
+    "gitness_only": {
+      "label": "Apenas Gitness",
+      "description": "Gitness como único destino. Para ambientes offline/privados.",
+      "use_when": "Ambiente air-gapped ou totalmente self-hosted"
+    }
+  },
+
+  "pass_gold_rule": {
+    "enforcement": "strict",
+    "description": "PASS GOLD é obrigatório antes de qualquer push. Sem PASS GOLD, nenhum remote é tocado.",
+    "applies_to": ["github", "gitness", "hybrid"],
+    "bypass_allowed": false
+  },
+
+  "flow": [
+    "1. VISION CORE aplica patch e valida localmente",
+    "2. PASS GOLD calculado no servidor (nunca pelo cliente)",
+    "3. Se PASS GOLD falha → rollback automático, nenhum push",
+    "4. Se PASS GOLD OK → push para branch GitHub",
+    "5. Se modo hybrid → push também para branch Gitness",
+    "6. Abre PR no GitHub (sempre em hybrid/github_only)",
+    "7. Abre PR no Gitness (em hybrid/gitness_only)",
+    "8. Pipeline Gitness valida internamente",
+    "9. Merge só com GitHub CI verde (e Gitness se required=true)"
+  ],
+
+  "environment_variables": {
+    "HYBRID_GIT_MODE":               "github_only | gitness_only | hybrid",
+    "GITNESS_HOST":                   "localhost",
+    "GITNESS_PORT":                   "3000",
+    "GITNESS_PROTOCOL":               "http | https",
+    "GITNESS_TOKEN":                  "token gerado no Gitness",
+    "GITNESS_ACCOUNT":                "seu-usuario-gitness",
+    "GITNESS_REPO":                   "nome-do-repo-no-gitness",
+    "GITNESS_SPACE":                  "default",
+    "GITNESS_BASE_BRANCH":            "main",
+    "GITNESS_VALIDATION_REQUIRED":    "false (informativo) | true (bloqueia merge)",
+    "GITNESS_WAIT_PIPELINE_MS":       "0 (não aguarda) | 30000 (aguarda 30s)"
+  },
+
+  "quick_start": {
+    "step1_docker": "docker run -d --name gitness -p 3000:3000 -v gitness-data:/data harness/gitness",
+    "step2_open":   "Abrir http://localhost:3000 e criar conta",
+    "step3_import": "Repositories → Import Repository → colar URL do GitHub",
+    "step4_token":  "User Settings → Tokens → Generate Token",
+    "step5_env":    "Copiar token para GITNESS_TOKEN no .env",
+    "step6_mode":   "Definir HYBRID_GIT_MODE=hybrid no .env"
+  }
+}

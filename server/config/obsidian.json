@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "vaultPath": "C:/Users/imadechumbo/Documents/VISION_CORE_VAULT",
+  "folders": {
+    "inbox":     "00_INBOX_COMMUNITY",
+    "triaged":   "01_TRIAGED",
+    "benchmarks":"02_BENCHMARKS",
+    "solved":    "03_SOLVED_PASS_GOLD",
+    "rejected":  "04_REJECTED_SENSITIVE",
+    "templates": "90_TEMPLATES"
+  }
+}

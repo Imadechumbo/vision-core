@@ -1,0 +1,49 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: vision-core-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - vision_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vision-core-api
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8787:8787"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8787
+      DB_PATH: /app/server/.vault/vision_core.db
+      REDIS_URL: redis://redis:6379
+      AUTO_PR: "false"
+      CONFIDENCE_THRESHOLD: "60"
+      CORS_ORIGINS: "http://localhost:8787,http://localhost:3000,http://localhost:5173"
+    volumes:
+      - vision_api_vault:/app/server/.vault
+      - vision_api_data:/app/server/data
+    healthcheck:
+      test: ["CMD", "node", "scripts/docker-healthcheck.js"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  vision_redis_data:
+  vision_api_vault:
+  vision_api_data:

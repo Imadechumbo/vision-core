@@ -1,0 +1,30 @@
+{
+  "name": "vision-core-skills",
+  "version": "0.1.0",
+  "description": "Operational skill system for VISION CORE autonomous engineering runtime",
+  "canonicalPipeline": [
+    "Input humano",
+    "OpenClaw Router",
+    "Scanner with targetHints/signals",
+    "Hermes RCA with mandatory scanResult",
+    "PatchEngine",
+    "Aegis",
+    "Validation / SDDF",
+    "PASS GOLD",
+    "GitHub + Gitness PR",
+    "CI hybrid validation",
+    "Stable snapshot"
+  ],
+  "learningCore": {
+    "states": [
+      "candidate",
+      "triaged",
+      "reproduced",
+      "benchmarked",
+      "solved_PASS_GOLD",
+      "validated_memory",
+      "regression_guard"
+    ],
+    "absoluteRule": "No learning enters Hermes Memory without sanitization, reproduction, Aegis OK, and PASS GOLD."
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "vision-core",
+  "version": "2.3.4-hardened-realtime",
+  "description": "VISION CORE V2.3.4 HARDENED REAL-TIME — pipeline vivo, métricas reais, PASS GOLD rigoroso e boot CI completo",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0 <21.0.0"
+  },
+  "scripts": {
+    "install:all": "cd server && npm ci && cd ../agent && npm ci",
+    "install:server": "cd server && npm install",
+    "install:agent": "cd agent && npm install",
+    "server": "cd server && npm start",
+    "dev": "cd server && npm run dev",
+    "migrate": "cd server && npm run migrate",
+    "self-test": "cd server && npm run self-test",
+    "start": "cd server && npm start",
+    "bootstrap": "powershell -ExecutionPolicy Bypass -File ./bootstrap.ps1",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f api",
+    "healthcheck": "cd server && npm run healthcheck"
+  },
+  "workspaces": [],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/vision-core.git"
+  },
+  "keywords": [
+    "vision-core",
+    "ai",
+    "autonomous-repair",
+    "pass-gold"
+  ],
+  "license": "UNLICENSED"
+}

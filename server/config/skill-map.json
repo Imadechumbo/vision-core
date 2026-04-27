@@ -1,0 +1,81 @@
+{
+  "default": [
+    "openclaw-routing",
+    "scanner-targeting",
+    "pass-gold-validation",
+    "aegis-enforcement"
+  ],
+  "byIntent": {
+    "bug_fix": [
+      "scanner-targeting",
+      "hermes-rca",
+      "patch-engine-safe",
+      "aegis-enforcement",
+      "pass-gold-validation"
+    ],
+    "feature": [
+      "openclaw-routing",
+      "scanner-targeting",
+      "patch-engine-safe",
+      "aegis-enforcement",
+      "pass-gold-validation"
+    ],
+    "refactor": [
+      "critical-file-guard",
+      "patch-engine-safe",
+      "aegis-enforcement",
+      "pass-gold-validation"
+    ],
+    "validation": [
+      "ci-validation",
+      "pass-gold-validation",
+      "benchmark-engine"
+    ],
+    "deployment": [
+      "ci-validation",
+      "hybrid-github-gitness",
+      "rollback-stable",
+      "pass-gold-validation"
+    ]
+  },
+  "byCategory": {
+    "upload_multer":  ["scanner-targeting", "hermes-rca", "patch-engine-safe"],
+    "server_port":    ["scanner-targeting", "hermes-rca", "patch-engine-safe"],
+    "cors":           ["scanner-targeting", "hermes-rca", "patch-engine-safe"],
+    "auth_token":     ["scanner-targeting", "hermes-rca", "aegis-enforcement", "patch-engine-safe"],
+    "database":       ["scanner-targeting", "hermes-rca", "patch-engine-safe"],
+    "vision":         ["scanner-targeting", "hermes-rca", "patch-engine-safe"],
+    "security":       ["aegis-enforcement", "critical-file-guard"],
+    "git_integration":["hybrid-github-gitness", "ci-validation"],
+    "validation":     ["pass-gold-validation", "benchmark-engine"],
+    "memory":         ["hermes-memory", "validated-learning", "regression-memory"],
+    "learning":       [
+      "community-feedback", "obsidian-vault", "benchmark-engine",
+      "validated-learning", "hermes-memory", "regression-memory"
+    ]
+  },
+  "always": [
+    "pass-gold-validation",
+    "aegis-enforcement"
+  ],
+  "references": [
+    "canonical-pipeline.md",
+    "pass-gold-doctrine.md",
+    "protected-files.md",
+    "learning-core.md"
+  ],
+  "gates": {
+    "hermesRequiresScanResult": true,
+    "patchRequiresAegis":       true,
+    "promotionRequiresPassGold": true
+  },
+  "intentDetection": {
+    "keywords": {
+      "bug_fix":    ["fix", "bug", "error", "falha", "corrigir", "crash", "quebrado", "null", "undefined", "EADDRINUSE", "cannot read"],
+      "feature":    ["add", "adicionar", "feature", "novo", "implementar", "criar"],
+      "refactor":   ["refactor", "refatorar", "reorganizar", "limpar", "melhorar"],
+      "validation": ["test", "validar", "benchmark", "testar", "ci", "check"],
+      "deployment": ["deploy", "release", "PR", "merge", "publicar", "subir"]
+    }
+  }
+}
