@@ -45,6 +45,12 @@
     if(s.includes('visionapi.technetgame.com.ime')) s=s.replace('visionapi.technetgame.com.ime','visionapi.technetgame.com.br');
     try{
       const u=new URL(s, location.origin);
+      // PROXY MODE: if active base is relative ("/"), keep calls relative to origin
+      if(clean(active)==='/' || clean(active)==='') {
+        if(u.origin===location.origin && u.pathname.startsWith('/api/')) return u.pathname+u.search+u.hash;
+        if(isKnownBadBase(u.href)) return u.pathname+u.search+u.hash;
+        return u.href;
+      }
       if(u.origin===location.origin && u.pathname.startsWith('/api/')) return withBase(u.pathname+u.search+u.hash);
       if(isKnownBadBase(u.href) && active){ return withBase(u.pathname+u.search+u.hash); }
       return u.href;

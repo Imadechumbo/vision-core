@@ -9,11 +9,11 @@
 // VISION CORE V2.9.4 ULTRA runtime resolver
 // Priority: localStorage.VISION_CORE_API_BASE_URL > ?api= > runtime config > auto candidates
 window.RUNTIME_CONFIG = window.RUNTIME_CONFIG || {};
-window.RUNTIME_CONFIG.API_BASE_URL = window.RUNTIME_CONFIG.API_BASE_URL || "";
+window.RUNTIME_CONFIG.API_BASE_URL = window.RUNTIME_CONFIG.API_BASE_URL || "/";
 window.API_BASE_URL = window.RUNTIME_CONFIG.API_BASE_URL;
 window.__VISION_API__ = window.RUNTIME_CONFIG.API_BASE_URL;
 </script>
-<meta name="vision-api-base" content="">
+<meta name="vision-api-base" content="/">
 <link rel="stylesheet" href="assets/style.css">
 <link rel="stylesheet" href="assets/v23-ui-system.css">
 <link rel="stylesheet" href="assets/v231-colors-agents.css">
