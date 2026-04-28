@@ -1,0 +1,9 @@
+/* VISION CORE V2.9 HARDENED */
+html,body{max-width:100%;overflow-x:hidden}
+*,*::before,*::after{box-sizing:border-box}
+.v273-chat-msg .text{white-space:pre-wrap;overflow-wrap:anywhere}
+.v28-api-status{position:fixed;right:18px;bottom:58px;z-index:9999;display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;border:1px solid rgba(168,85,247,.35);background:rgba(10,8,18,.86);backdrop-filter:blur(10px);color:rgba(255,255,255,.78);font:700 11px/1 Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 0 22px rgba(168,85,247,.20)}
+.v28-api-status::before{content:"";width:8px;height:8px;border-radius:50%;background:#f59e0b;box-shadow:0 0 10px #f59e0b}
+.v28-api-status.ok::before{background:#00e887;box-shadow:0 0 10px #00e887}
+.v28-api-status.fail::before{background:#ef4444;box-shadow:0 0 10px #ef4444}
+@media(max-width:900px){body{overflow-x:hidden!important}.topbar,header,nav,.shell,.main-grid,.layout,.dashboard,main{max-width:100vw;overflow-x:hidden}.mission-actions,.control-row,.actions-row{flex-wrap:wrap!important}button,.btn{max-width:100%}.v28-api-status{right:10px;bottom:52px;transform:scale(.92);transform-origin:right bottom}}
