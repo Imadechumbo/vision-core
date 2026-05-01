@@ -1,0 +1,21 @@
+node_modules/
+desktop-agent/node_modules/
+desktop-agent/dist/win-unpacked/
+desktop-agent/dist/*.blockmap
+
+.env
+.env.local
+.env.production
+.env.development
+
+*.log
+*.sqlite
+*.db
+*.bak
+coverage/
+desktop-agent/dist/
+desktop-agent/node_modules/-e 
+# Go Safe Core
+bin/
+**/.vision-snapshots/
+go-core/vendor/

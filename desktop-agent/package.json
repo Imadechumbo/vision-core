@@ -1,0 +1,65 @@
+{
+  "name": "vision-agent-desktop",
+  "version": "1.0.0",
+  "description": "Vision Agent Desktop — Mission runner com tray, live logs e report viewer",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npx electron-builder --win nsis portable --x64",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build:win:nosign": "set CSC_IDENTITY_AUTO_DISCOVERY=false && electron-builder --win portable --x64",
+    "build:portable": "set CSC_IDENTITY_AUTO_DISCOVERY=false && electron-builder --win portable --x64",
+    "build:dir": "electron-builder --win --dir --x64",
+    "build:win:nsis": "set CSC_IDENTITY_AUTO_DISCOVERY=false && npx electron-builder --win nsis --x64"
+  },
+  "build": {
+    "appId": "ai.visioncore.agent",
+    "productName": "Vision Agent",
+    "copyright": "Copyright © 2026 Vision Core",
+    "files": [
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "VisionAgentSetup.${ext}",
+      "forceCodeSigning": false
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Vision Agent"
+    }
+  },
+  "devDependencies": {
+    "electron": "^30.5.1",
+    "electron-builder": "^24.13.3",
+    "cross-env": "^7.0.3"
+  }
+}

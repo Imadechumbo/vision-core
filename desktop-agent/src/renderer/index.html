@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>Vision Agent Desktop</title>
+<style>
+:root{--bg:#06060f;--surface:rgba(255,255,255,.04);--border:rgba(255,255,255,.08);--green:#22c55e;--yellow:#facc15;--purple:#a855f7;--cyan:#22d3ee;--red:#ef4444;--muted:#6b7280;--text:#e5e7eb}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',monospace;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden;user-select:none}
+.topbar{height:44px;display:flex;align-items:center;padding:0 16px;gap:12px;border-bottom:1px solid var(--border);-webkit-app-region:drag;flex-shrink:0}
+.topbar .brand{font-weight:800;font-size:14px;letter-spacing:-.01em;-webkit-app-region:no-drag}
+.topbar .live-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.topbar .live-dot.running{background:var(--green);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.topbar .status-label{font-size:11px;color:var(--muted)}
+.topbar .spacer{flex:1}
+.topbar .btn-sm{-webkit-app-region:no-drag;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-size:11px}
+.topbar .btn-sm:hover{background:var(--surface)}
+
+.main{display:flex;flex:1;overflow:hidden}
+.sidebar{width:180px;border-right:1px solid var(--border);padding:12px 0;display:flex;flex-direction:column;gap:2px;flex-shrink:0}
+.nav-item{padding:8px 16px;cursor:pointer;border-radius:0;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;transition:all .15s}
+.nav-item:hover,.nav-item.active{background:var(--surface);color:var(--text)}
+.nav-item.active{border-left:2px solid var(--purple)}
+
+.content{flex:1;overflow-y:auto;padding:20px}
+
+/* Mission panel */
+.mission-input-wrap{display:flex;gap:8px;margin-bottom:16px}
+.mission-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;resize:none;height:80px}
+.mission-input:focus{outline:none;border-color:rgba(168,85,247,.5)}
+.btn-run{padding:10px 20px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;align-self:flex-end}
+.btn-run:hover{opacity:.9}
+.btn-run:disabled{opacity:.5;cursor:not-allowed}
+.btn-stop{padding:10px 20px;background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);color:var(--red);border-radius:8px;font-weight:700;cursor:pointer}
+
+/* Logs */
+.logs-container{background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:10px;padding:12px;height:340px;overflow-y:auto;font-family:monospace;font-size:12px;line-height:1.6}
+.log-line{padding:1px 0;word-break:break-all}
+.log-line.step{color:var(--cyan)}
+.log-line.pass{color:var(--green)}
+.log-line.fail{color:var(--red)}
+.log-line.gold{color:var(--yellow);font-weight:700}
+.log-line.info{color:var(--muted)}
+
+/* Orbit indicator */
+.orbit-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.orbit-node{padding:5px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid rgba(255,255,255,.1);color:var(--muted);background:rgba(255,255,255,.03);transition:all .3s}
+.orbit-node.running{border-color:var(--cyan);color:var(--cyan);background:rgba(34,211,238,.08);animation:pulse 1s infinite}
+.orbit-node.done{border-color:var(--green);color:var(--green);background:rgba(34,197,94,.08)}
+.orbit-node.fail{border-color:var(--red);color:var(--red)}
+
+/* Settings */
+.settings-form{display:flex;flex-direction:column;gap:14px;max-width:480px}
+.field-label{font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:600;letter-spacing:.06em}
+.field-input{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;width:100%}
+.field-input:focus{outline:none;border-color:rgba(168,85,247,.5)}
+.btn-save{padding:9px 20px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;align-self:flex-start}
+
+/* Update banner */
+.update-banner{background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.3);border-radius:8px;padding:10px 14px;margin-bottom:16px;display:none;align-items:center;gap:10px;font-size:12px}
+.update-banner.show{display:flex}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">⬡ VISION AGENT</div>
+  <div class="live-dot" id="liveDot"></div>
+  <div class="status-label" id="statusLabel">IDLE</div>
+  <div class="spacer"></div>
+  <button class="btn-sm" onclick="openBrowser()">Abrir no Browser ↗</button>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="nav-item active" data-page="mission" onclick="showPage('mission')">🚀 Missão</div>
+    <div class="nav-item" data-page="logs"    onclick="showPage('logs')">📋 Logs</div>
+    <div class="nav-item" data-page="report"  onclick="showPage('report')">📊 Relatório</div>
+    <div class="nav-item" data-page="settings"onclick="showPage('settings')">⚙️ Config</div>
+  </div>
+
+  <div class="content">
+    <!-- Update banner -->
+    <div class="update-banner" id="updateBanner">
+      ⬆ Nova versão disponível: <strong id="updateVersion"></strong>
+      <button class="btn-sm" onclick="openUpdate()">Ver</button>
+    </div>
+
+    <!-- MISSION PAGE -->
+    <div id="page-mission">
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:16px">Executar Missão</h2>
+
+      <div class="orbit-row" id="orbitRow">
+        <div class="orbit-node" data-stage="openclaw">OpenClaw</div>
+        <div class="orbit-node" data-stage="scanner">Scanner</div>
+        <div class="orbit-node" data-stage="hermes">Hermes</div>
+        <div class="orbit-node" data-stage="patchengine">PatchEngine</div>
+        <div class="orbit-node" data-stage="aegis">Aegis</div>
+        <div class="orbit-node" data-stage="passgold">PASS GOLD</div>
+      </div>
+
+      <div class="mission-input-wrap">
+        <textarea class="mission-input" id="missionText" placeholder="Descreva a missão em linguagem natural...
+Ex: corrigir erro de CORS no endpoint /api/data"></textarea>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn-run" id="btnRun" onclick="runMission()">▷ EXECUTAR</button>
+          <button class="btn-stop" id="btnStop" onclick="stopMission()" style="display:none">■ PARAR</button>
+        </div>
+      </div>
+
+      <div class="logs-container" id="logsBox">
+        <div class="log-line info">[VISION AGENT] Pronto. Descreva uma missão acima.</div>
+      </div>
+    </div>
+
+    <!-- LOGS PAGE -->
+    <div id="page-logs" style="display:none">
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:16px">Logs completos</h2>
+      <div class="logs-container" id="fullLogs" style="height:calc(100vh - 120px)">
+        <div class="log-line info">Logs aparecerão aqui durante a missão...</div>
+      </div>
+    </div>
+
+    <!-- REPORT PAGE -->
+    <div id="page-report" style="display:none">
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:16px">Último Relatório</h2>
+      <div id="reportContent" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:12px;line-height:1.8">
+        <div style="color:var(--muted)">Nenhum relatório ainda. Execute uma missão primeiro.</div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div id="page-settings" style="display:none">
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:20px">Configurações</h2>
+      <div class="settings-form">
+        <div>
+          <div class="field-label">API URL</div>
+          <input class="field-input" id="cfgApiUrl" type="text" placeholder="https://...">
+        </div>
+        <div>
+          <div class="field-label">Token JWT</div>
+          <input class="field-input" id="cfgToken" type="password" placeholder="Bearer token da sua conta">
+        </div>
+        <div>
+          <div class="field-label">Project ID</div>
+          <input class="field-input" id="cfgProject" type="text" placeholder="proj_...">
+        </div>
+        <button class="btn-save" onclick="saveSettings()">Salvar</button>
+        <div id="settingsSaved" style="color:var(--green);font-size:12px;display:none">✔ Configurações salvas</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────
+let running = false;
+let allLogs = [];
+let lastReport = null;
+let lastMissionId = null;
+
+// ── Navigation ────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('[id^="page-"]').forEach(el => el.style.display = 'none');
+  document.getElementById('page-' + name).style.display = 'block';
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === name);
+  });
+}
+
+// ── Orbit nodes ───────────────────────────────────────────────────
+function setNode(stage, state) {
+  const node = document.querySelector(`[data-stage="${stage}"]`);
+  if (!node) return;
+  node.className = 'orbit-node ' + (state || '');
+}
+function resetNodes() {
+  document.querySelectorAll('.orbit-node').forEach(n => n.className = 'orbit-node');
+}
+
+const STAGE_MAP = {
+  openclaw:'openclaw', scanner:'scanner', hermes:'hermes',
+  patchengine:'patchengine', patch:'patchengine',
+  aegis:'aegis', sddf:'aegis',
+  passgold:'passgold', 'pass gold':'passgold', pass_gold:'passgold',
+};
+
+// ── Logs ──────────────────────────────────────────────────────────
+function addLog(text, cls) {
+  const div = document.createElement('div');
+  div.className = 'log-line ' + (cls || 'info');
+  div.textContent = '[' + new Date().toLocaleTimeString() + '] ' + text;
+  const logsBox = document.getElementById('logsBox');
+  const fullLogs = document.getElementById('fullLogs');
+  logsBox.appendChild(div.cloneNode(true));
+  fullLogs.appendChild(div);
+  logsBox.scrollTop = logsBox.scrollHeight;
+  fullLogs.scrollTop = fullLogs.scrollHeight;
+  allLogs.push({ text, cls, time: Date.now() });
+}
+
+// ── Run mission ───────────────────────────────────────────────────
+async function runMission() {
+  const text = document.getElementById('missionText').value.trim();
+  if (!text || running) return;
+
+  running = true;
+  resetNodes();
+  allLogs = [];
+  document.getElementById('btnRun').style.display = 'none';
+  document.getElementById('btnStop').style.display = 'inline-block';
+  document.getElementById('liveDot').className = 'live-dot running';
+  document.getElementById('statusLabel').textContent = 'RUNNING';
+  document.getElementById('logsBox').innerHTML = '';
+  addLog('Iniciando missão: ' + text, 'info');
+
+  const result = await window.visionAgent.startMission(text);
+  if (!result.ok) {
+    addLog('Erro: ' + result.error, 'fail');
+    stopMissionUI();
+  } else {
+    addLog('Missão aceita — SSE ativo', 'info');
+    if (result.mission_id) { lastMissionId = result.mission_id; addLog('Mission ID: ' + result.mission_id, 'info'); }
+  }
+}
+
+async function stopMission() {
+  await window.visionAgent.stopMission();
+  addLog('Missão interrompida pelo usuário.', 'fail');
+  stopMissionUI();
+}
+
+function stopMissionUI() {
+  running = false;
+  document.getElementById('btnRun').style.display = 'inline-block';
+  document.getElementById('btnStop').style.display = 'none';
+  document.getElementById('liveDot').className = 'live-dot';
+  document.getElementById('statusLabel').textContent = 'IDLE';
+}
+
+// ── SSE event handler ─────────────────────────────────────────────
+window.visionAgent.onSseEvent(({ data }) => {
+  try {
+    const d = JSON.parse(data);
+    const stage = (d.stage || '').toLowerCase().replace(/\s/g,'');
+    const key = STAGE_MAP[stage];
+
+    if (d.status === 'running' || d.event === 'step') {
+      if (key) setNode(key, 'running');
+      addLog((d.stage || 'STEP') + ': ' + (d.message || '...'), 'step');
+    } else if (d.status === 'done' || d.status === 'PASS') {
+      if (key) setNode(key, 'done');
+      addLog((d.stage || 'STEP') + ': PASS ✔', 'pass');
+    } else if (d.status === 'fail' || d.status === 'FAIL') {
+      if (key) setNode(key, 'fail');
+      addLog((d.stage || 'STEP') + ': FAIL ✗', 'fail');
+    }
+
+    if (stage === 'passgold' || d.pass_gold === true) {
+      setNode('passgold', 'done');
+      addLog('★ PASS GOLD CONFIRMADO ★', 'gold');
+      window.visionAgent.showNotification({ title: 'PASS GOLD ✔', body: 'Missão concluída com sucesso!' });
+    }
+  } catch(e) {
+    addLog(data, 'info');
+  }
+});
+
+window.visionAgent.onMissionDone(() => {
+  addLog('Missão concluída.', 'pass');
+  stopMissionUI();
+  fetchReport();
+});
+
+// ── Fetch report ──────────────────────────────────────────────────
+async function safeFetch(path) {
+  try { const res = await window.visionAgent.fetchApi({ path }); return res && res.ok ? res.data : null; }
+  catch (e) { return null; }
+}
+function valueOrDash(v) {
+  if (v === true) return 'TRUE'; if (v === false) return 'FALSE'; if (v === 0) return '0';
+  if (v === null || v === undefined || v === '') return '—';
+  if (Array.isArray(v)) return v.length ? v.join(', ') : '—';
+  if (typeof v === 'object') return Object.keys(v).length ? JSON.stringify(v) : '—';
+  return String(v);
+}
+function row(k, v, accent) {
+  const safe = valueOrDash(v); const color = accent ? 'var(--yellow)' : 'var(--text)';
+  return `<div style="display:flex;justify-content:space-between;gap:16px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span style="color:var(--muted)">${k}:</span><span style="color:${color};text-align:right;max-width:65%;word-break:break-word">${safe}</span></div>`;
+}
+async function fetchReport() {
+  const missionId = lastMissionId || '';
+  const [mission, passGold, github, hermes, workers, logs] = await Promise.all([
+    missionId ? safeFetch('/api/mission/' + encodeURIComponent(missionId)) : Promise.resolve(null),
+    safeFetch('/api/pass-gold/score'), safeFetch('/api/github/status'), safeFetch('/api/hermes/vote'), safeFetch('/api/workers/status'), safeFetch('/api/logs/download')
+  ]);
+  const m = mission?.mission || mission || {}; const pg = passGold || {};
+  lastReport = { mission, passGold, github, hermes, workers, logs };
+  document.getElementById('reportContent').innerHTML = [
+    '<div style="font-weight:800;color:var(--purple);letter-spacing:.08em;margin-bottom:8px">MISSION REPORT</div>',
+    row('Mission ID', m.id || m.mission_id || missionId), row('Project', m.project || m.project_id || m.projeto), row('Root Cause', m.root_cause || m.rca),
+    row('Files Changed', m.changed_files || m.files_changed), row('Duration', m.duration || m.total_time), row('PASS GOLD', pg.pass_gold ?? m.pass_gold, Boolean(pg.pass_gold ?? m.pass_gold)),
+    row('GitHub Status', github?.configured === true ? 'configured' : github?.status || github?.connected), row('Hermes Vote', hermes?.vote || hermes?.consensus || hermes?.status),
+    row('Worker Status', workers?.status || workers?.state || workers?.queue), row('Logs Available', logs ? 'YES' : '—')
+  ].join('');
+}
+
+// ── Settings ──────────────────────────────────────────────────────
+async function loadSettings() {
+  const cfg = await window.visionAgent.getConfig();
+  document.getElementById('cfgApiUrl').value  = cfg.apiUrl  || '';
+  document.getElementById('cfgToken').value   = cfg.token   || '';
+  document.getElementById('cfgProject').value = cfg.project || '';
+}
+
+async function saveSettings() {
+  const cfg = {
+    apiUrl:  document.getElementById('cfgApiUrl').value.trim(),
+    token:   document.getElementById('cfgToken').value.trim(),
+    project: document.getElementById('cfgProject').value.trim(),
+  };
+  await window.visionAgent.saveConfig(cfg);
+  const saved = document.getElementById('settingsSaved');
+  saved.style.display = 'block';
+  setTimeout(() => saved.style.display = 'none', 3000);
+}
+
+// ── Navigation from tray ──────────────────────────────────────────
+window.visionAgent.onNavigate(page => showPage(page));
+
+// ── Update ────────────────────────────────────────────────────────
+window.visionAgent.onUpdateAvailable(({ version, url }) => {
+  const banner = document.getElementById('updateBanner');
+  document.getElementById('updateVersion').textContent = version;
+  banner.classList.add('show');
+  banner.dataset.url = url;
+});
+
+function openUpdate() {
+  const url = document.getElementById('updateBanner').dataset.url;
+  if (url) window.visionAgent.openExternal(url);
+}
+
+function openBrowser() {
+  window.visionAgent.getConfig().then(cfg => window.visionAgent.openExternal(cfg.apiUrl));
+}
+
+// ── Boot ──────────────────────────────────────────────────────────
+loadSettings();
+</script>
+</body>
+</html>

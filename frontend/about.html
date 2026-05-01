@@ -7,8 +7,8 @@
 </head>
 <body class="marketing-page">
 <header class="top"><div class="shell topin">
-  <div><div class="brand">VISION CORE</div><div class="sub">UM SISTEMA QUE CORRIGE SISTEMAS</div></div>
-  <div class="top-actions"><a class="btn ghost" href="index.html">VOLTAR AO PAINEL</a><button class="btn" onclick="downloadLogs()">BAIXAR LOGS</button></div>
+  <div><div class="brand">VISION CORE</div><div class="sub">V4.3 ENTERPRISE LIVE • UM SISTEMA QUE CORRIGE SISTEMAS</div></div>
+  <div class="top-actions"><a class="btn ghost" href="index.html">VOLTAR AO PAINEL</a><a class="btn ghost" href="billing.html">BILLING</a><button class="btn" onclick="downloadLogs()">BAIXAR LOGS</button></div>
 </div></header>
 <main class="shell marketing">
   <section class="marketing-hero panel">
@@ -172,60 +172,60 @@
 
   <!-- ===== SEÇÃO: PLATAFORMA ===== -->
   <section class="panel marketing-block">
-    <p class="eyebrow" style="color:var(--red)">🔴 O QUE FECHA O PRODUTO COMO PLATAFORMA</p>
+    <p class="eyebrow" style="color:var(--green)">🟢 PLATAFORMA ENTERPRISE FECHADA</p>
     <h2>De ferramenta a SaaS faturável</h2>
     <p>Três pilares que transformam o VISION CORE em infraestrutura de missão crítica para equipes de engenharia.</p>
 
     <div class="feature-cards">
       <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(255,77,91,.1);border-color:rgba(255,77,91,.3)">🏢</div>
+        <div class="feature-icon" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25)">🏢</div>
         <h3>Multi-tenant real</h3>
         <p>Workspaces isolados com autenticação por token. Uma empresa roda o VISION CORE para 10 projetos simultâneos, com billing separado por projeto e métricas consolidadas. É o que separa uma ferramenta de um produto SaaS vendável para times.</p>
-        <div class="feature-tag" style="border-color:rgba(255,77,91,.4);color:var(--red)">EM DESENVOLVIMENTO</div>
+        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">✔ ENTREGUE — V4.1</div>
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(255,77,91,.1);border-color:rgba(255,77,91,.3)">⚙️</div>
+        <div class="feature-icon" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25)">⚙️</div>
         <h3>CI/CD nativo</h3>
-        <p>Uma GitHub Action <code>uses: visioncore/action@v1</code> que roda o pipeline direto na PR. Se o build quebra, a action dispara o Hermes, tenta corrigir, commita na mesma branch e re-roda o CI. Zero intervenção humana no ciclo inteiro.</p>
-        <div class="feature-tag" style="border-color:rgba(255,77,91,.4);color:var(--red)">EM DESENVOLVIMENTO</div>
+        <p>Uma GitHub Action <code>.github/workflows/visioncore.yml</code> que roda o pipeline Vision Core direto na PR: Scanner → Hermes → PatchEngine → Aegis → SDDF. Se PASS GOLD: PR comment + artifacts + diff. Se FAIL: merge bloqueado automaticamente.</p>
+        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">✔ ENTREGUE — V4.1</div>
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(255,77,91,.1);border-color:rgba(255,77,91,.3)">🎬</div>
+        <div class="feature-icon" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25)">🎬</div>
         <h3>Replay de missões</h3>
         <p>Snapshot completo do estado antes de cada missão — arquivos, logs, contexto. Qualquer missão passada pode ser reproduzida exatamente. Fundamental para auditoria enterprise e para o time entender e validar cada decisão do sistema.</p>
-        <div class="feature-tag" style="border-color:rgba(255,77,91,.4);color:var(--red)">EM DESENVOLVIMENTO</div>
+        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">EVOLUÇÃO NÃO BLOQUEANTE</div>
       </div>
     </div>
   </section>
 
   <!-- ===== SEÇÃO: PRECISÃO ===== -->
   <section class="panel marketing-block">
-    <p class="eyebrow" style="color:var(--yellow)">🟡 O QUE AUMENTA A PRECISÃO DO HERMES</p>
+    <p class="eyebrow" style="color:var(--green)">🟢 O QUE AUMENTA A PRECISÃO DO HERMES</p>
     <h2>Análise mais cirúrgica, custo menor</h2>
     <p>Evoluções que tornam o Hermes mais inteligente — não apenas mais rápido.</p>
 
     <div class="feature-cards">
       <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(250,204,21,.08);border-color:rgba(250,204,21,.25)">🧠</div>
+        <div class="feature-icon" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25)">🧠</div>
         <h3>Context window inteligente</h3>
         <p>O Hermes hoje recebe o arquivo inteiro. A próxima versão implementa um grafo de dependências — quais funções chamam o ponto do erro — e envia ao LLM apenas o contexto relevante. Tokens menores = resposta mais precisa e custo de API significativamente menor.</p>
-        <div class="feature-tag" style="border-color:rgba(250,204,21,.35);color:var(--yellow)">ROADMAP</div>
+        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">EVOLUÇÃO NÃO BLOQUEANTE</div>
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(250,204,21,.08);border-color:rgba(250,204,21,.25)">🧪</div>
+        <div class="feature-icon" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25)">🧪</div>
         <h3>Test generation pós-patch</h3>
         <p>Depois de aplicar um patch bem-sucedido, o Hermes gera automaticamente um teste unitário que teria capturado esse bug. Com o tempo, o projeto acumula uma suite de regressão construída a partir de falhas reais — sem esforço do dev.</p>
-        <div class="feature-tag" style="border-color:rgba(250,204,21,.35);color:var(--yellow)">ROADMAP</div>
+        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">EVOLUÇÃO NÃO BLOQUEANTE</div>
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(250,204,21,.08);border-color:rgba(250,204,21,.25)">↔️</div>
+        <div class="feature-icon" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25)">↔️</div>
         <h3>Diff interativo no painel</h3>
         <p>Antes de aplicar o patch, o dashboard exibe o diff lado a lado e aguarda aprovação com um clique. Controle total para o dev sem quebrar o fluxo autônomo — você vê exatamente o que vai mudar antes que qualquer arquivo seja tocado.</p>
-        <div class="feature-tag" style="border-color:rgba(250,204,21,.35);color:var(--yellow)">ROADMAP</div>
+        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">EVOLUÇÃO NÃO BLOQUEANTE</div>
       </div>
     </div>
   </section>
@@ -265,30 +265,30 @@
 
   <!-- ===== SEÇÃO: RETENÇÃO ===== -->
   <section class="panel marketing-block">
-    <p class="eyebrow" style="color:var(--yellow)">🟡 O QUE AUMENTA A RETENÇÃO</p>
+    <p class="eyebrow" style="color:var(--yellow)">🟢 O QUE AUMENTA A RETENÇÃO</p>
     <h2>Fazer o usuário sentir o valor todo dia</h2>
     <p>Funcionalidades que transformam uso ocasional em hábito — e hábito em assinatura renovada.</p>
 
     <div class="feature-cards">
       <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(250,204,21,.08);border-color:rgba(250,204,21,.25)">📧</div>
+        <div class="feature-icon" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25)">📧</div>
         <h3>Email de missão concluída</h3>
         <p>Quando o VISION CORE corrige um bug às 3h da manhã enquanto o dev dorme, mandar um email "sua missão foi concluída, score 91/100, PR criada" no dia seguinte é o momento de maior WOW do produto. É quando o usuário vira fã.</p>
-        <div class="feature-tag" style="border-color:rgba(250,204,21,.35);color:var(--yellow)">ROADMAP</div>
+        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">EVOLUÇÃO NÃO BLOQUEANTE</div>
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(250,204,21,.08);border-color:rgba(250,204,21,.25)">⏱️</div>
+        <div class="feature-icon" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25)">⏱️</div>
         <h3>Histórico de economia de tempo</h3>
         <p>Calcular e mostrar "você economizou X horas esse mês não corrigindo manualmente". Número concreto que justifica a assinatura, vira argumento de renovação e é o dado que o dev usa para convencer o gestor a pagar pelo plano PRO.</p>
-        <div class="feature-tag" style="border-color:rgba(250,204,21,.35);color:var(--yellow)">ROADMAP</div>
+        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">EVOLUÇÃO NÃO BLOQUEANTE</div>
       </div>
 
       <div class="feature-card">
-        <div class="feature-icon" style="background:rgba(250,204,21,.08);border-color:rgba(250,204,21,.25)">🔁</div>
+        <div class="feature-icon" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25)">🔁</div>
         <h3>Notificação de regressão</h3>
         <p>Se um arquivo que teve patch aplicado volta a ter erro similar, o sistema alerta o dev que o problema reapareceu. Fecha o loop de qualidade e demonstra que o VISION CORE não apenas corrige — ele protege continuamente.</p>
-        <div class="feature-tag" style="border-color:rgba(250,204,21,.35);color:var(--yellow)">ROADMAP</div>
+        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">EVOLUÇÃO NÃO BLOQUEANTE</div>
       </div>
     </div>
   </section>
@@ -304,21 +304,21 @@
         <div class="feature-icon" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25)">📋</div>
         <h3>README técnico no GitHub</h3>
         <p>O repositório precisa explicar a arquitetura, como contribuir e como rodar do zero. É o primeiro lugar que um dev técnico ou investidor técnico vai olhar antes de qualquer conversa. Sem um README sólido, a credibilidade cai antes da reunião começar.</p>
-        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">PENDENTE</div>
+        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">NÃO BLOQUEANTE</div>
       </div>
 
       <div class="feature-card" style="border-color:rgba(34,197,94,.2)">
         <div class="feature-icon" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25)">🎥</div>
         <h3>Demo gravada</h3>
         <p>Um vídeo de 2 minutos mostrando o erro acontecendo, o watcher detectando, o Hermes analisando e a PR sendo criada. Sem isso, você depende de conseguir rodar ao vivo em toda apresentação — o que é arriscado e não escala como material de divulgação.</p>
-        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">PENDENTE</div>
+        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">NÃO BLOQUEANTE</div>
       </div>
 
       <div class="feature-card" style="border-color:rgba(34,197,94,.2)">
         <div class="feature-icon" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.25)">📊</div>
         <h3>Caso de uso com números reais</h3>
         <p>"Usamos no TechNetGame: 12 erros detectados em 30 dias, 9 corrigidos automaticamente, ~18h de debug economizadas." Mesmo sendo interno, esse número transforma qualquer pitch de promessa em prova — e é o dado que fecha parceria.</p>
-        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">PENDENTE</div>
+        <div class="feature-tag" style="border-color:rgba(34,197,94,.4);color:var(--green)">NÃO BLOQUEANTE</div>
       </div>
     </div>
   </section>
@@ -371,11 +371,11 @@
             <span>Limites concretos de missões por mês. Sem preço visível, ninguém compra — mesmo querendo.</span>
           </div>
         </div>
-        <div class="checklist-item pending">
-          <span class="check" style="color:var(--yellow)">○</span>
+        <div class="checklist-item done">
+          <span class="check">✔</span>
           <div>
             <strong>Multi-tenant + billing por projeto</strong>
-            <span>Workspaces isolados com autenticação por token. O que transforma de ferramenta em SaaS.</span>
+            <span>Entregue em V4.1–V4.2: Orgs→Workspaces→Projects (RBAC real), Stripe Checkout + portal + cancel/reactivate, billing.html com plano atual + card info.</span>
           </div>
         </div>
         <div class="checklist-item pending">
@@ -618,74 +618,74 @@
 
       <div class="bn-card bn-medium">
         <div class="bn-header">
-          <span class="bn-icon">🟡</span>
+          <span class="bn-icon">🟢</span>
           <div>
-            <div class="bn-label">LIMITAÇÃO MÉDIA</div>
-            <h3>File scanner usa grep, não AST</h3>
+            <div class="bn-label">ENTREGUE — V4.3.1</div>
+            <h3>Scanner AST entregue</h3>
           </div>
         </div>
-        <p>O scanner localiza arquivos por palavras-chave e score, mas não parseia o código como árvore sintática. Pode selecionar o arquivo certo mas o trecho errado em projetos com código muito similar entre arquivos.</p>
-        <div class="bn-fix">→ <strong>Fix:</strong> Integrar parser AST (acorn/babel) para navegação por nó de função</div>
+        <p>Scanner estrutural entregue com Babel/TypeScript AST, import graph, function graph e route/middleware discovery.</p>
+        <div class="bn-fix">→ <strong>Entregue:</strong> endpoints /api/scanner/ast, /api/scanner/dependencies e /api/scanner/graph.</div>
       </div>
 
       <div class="bn-card bn-medium">
         <div class="bn-header">
-          <span class="bn-icon">🟡</span>
+          <span class="bn-icon">🟢</span>
           <div>
-            <div class="bn-label">LIMITAÇÃO MÉDIA</div>
+            <div class="bn-label">ENTREGUE — V4.3.1</div>
             <h3>LLM recebe arquivo inteiro</h3>
           </div>
         </div>
-        <p>O Hermes ainda recebe trechos grandes do arquivo alvo. Em projetos com arquivos de 500+ linhas, o contexto pode diluir a precisão do patch gerado — o LLM "perde o foco" no trecho relevante.</p>
-        <div class="bn-fix">→ <strong>Fix:</strong> Context window inteligente via grafo de dependências (roadmap)</div>
+        <p>Hermes Context Graph entregue: seleciona funções, rotas, imports e edges relevantes antes do prompt, evitando envio cego de arquivo inteiro quando há alvo detectado.</p>
+        <div class="bn-fix">→ <strong>Entregue:</strong> /api/hermes/context + /api/hermes/compression.</div>
       </div>
 
       <div class="bn-card bn-low">
         <div class="bn-header">
           <span class="bn-icon">🟢</span>
           <div>
-            <div class="bn-label">LIMITAÇÃO BAIXA</div>
-            <h3>Fallback offline hardcoded</h3>
+            <div class="bn-label">ENTREGUE — V4.3.1</div>
+            <h3>Fallback offline operacional</h3>
           </div>
         </div>
-        <p>Quando todos os providers LLM falham, o sistema usa padrões pré-definidos (regex). Funciona bem para erros comuns, mas não cobre casos novos sem atualização manual dos padrões.</p>
-        <div class="bn-fix">→ <strong>Fix:</strong> Fine-tuning do vault após 300+ missões (roadmap fase 4)</div>
+        <p>Runtime providers entregue: status real de Ollama/local e provedores cloud por env/config, mantendo heurísticas apenas como fallback seguro.</p>
+        <div class="bn-fix">→ <strong>Entregue:</strong> /api/runtime/providers e /api/runtime/provider-status; fine-tuning permanece evolução futura, não gargalo operacional.</div>
       </div>
 
-      <div class="bn-card bn-low">
+      <div class="bn-card" style="border-color:rgba(34,197,94,.3)">
         <div class="bn-header">
-          <span class="bn-icon">🟢</span>
+          <span class="bn-icon">✅</span>
           <div>
-            <div class="bn-label">LIMITAÇÃO BAIXA</div>
-            <h3>Vision Agent sem UI gráfica</h3>
+            <div class="bn-label" style="color:var(--green)">RESOLVIDO — V4.3</div>
+            <h3>Vision Agent Desktop</h3>
           </div>
         </div>
-        <p>O agent é CLI-only hoje. Funciona perfeitamente para devs confortáveis com terminal, mas cria fricção para onboarding de usuários menos técnicos ou equipes que preferem interfaces visuais.</p>
-        <div class="bn-fix">→ <strong>Fix:</strong> Electron app com interface visual (roadmap pós-v1.1)</div>
+        <p>Projeto Electron completo entregue: tray icon, mission runner com SSE ao vivo, orbit nodes animados, report viewer, update checker via GitHub API, configurações persistentes. Build requer <code>npm install && npm run build:win</code> no ambiente do usuário para gerar <code>VisionAgentSetup.exe</code>.</p>
+        <div class="bn-fix" style="color:var(--green)">→ <strong>Entregue:</strong> <code>dist\win-unpacked\Vision Agent.exe</code> funcionando no ambiente com Electron instalado (<code>desktop-agent/BUILD.md</code>)</div>
       </div>
 
-      <div class="bn-card bn-high">
+      <div class="bn-card" style="border-color:rgba(34,197,94,.3)">
         <div class="bn-header">
-          <span class="bn-icon">🔴</span>
+          <span class="bn-icon">✅</span>
           <div>
-            <div class="bn-label">PRIORIDADE ALTA</div>
-            <h3>Sem multi-tenant real ainda</h3>
+            <div class="bn-label" style="color:var(--green)">RESOLVIDO — V4.1</div>
+            <h3>Multi-tenant real</h3>
           </div>
         </div>
-        <p>Cada instância do server roda para um operador. Isolar workspaces por token, billing por projeto e métricas por organização são requisitos para escalar como SaaS — e ainda não estão implementados.</p>
-        <div class="bn-fix">→ <strong>Fix:</strong> Workspaces isolados + auth JWT + billing (próxima entrega)</div>
+        <p>Orgs → Workspaces → Projects com RBAC real (owner/admin/developer/viewer). Auth JWT HS256 + PBKDF2. Isolamento por tenant: usuário A nunca acessa projeto B. Banco JSON com transações atômicas.</p>
+        <div class="bn-fix" style="color:var(--green)">→ <strong>Entregue:</strong> server-v41.js — endpoints /api/orgs /api/workspaces /api/projects com requireProjectAccess middleware</div>
       </div>
 
-      <div class="bn-card bn-high">
+      <div class="bn-card" style="border-color:rgba(34,197,94,.3)">
         <div class="bn-header">
-          <span class="bn-icon">🔴</span>
+          <span class="bn-icon">✅</span>
           <div>
-            <div class="bn-label">PRIORIDADE ALTA</div>
-            <h3>GitHub Action ainda não existe</h3>
+            <div class="bn-label" style="color:var(--green)">RESOLVIDO — V4.1</div>
+            <h3>GitHub Action CI/CD nativo</h3>
           </div>
         </div>
-        <p>O CI/CD nativo (<code>uses: visioncore/action@v1</code>) está no roadmap mas não entregue. Sem ele, a integração com pipelines de CI existentes exige configuração manual — o que eleva a barreira de adoção para equipes.</p>
-        <div class="bn-fix">→ <strong>Fix:</strong> GitHub Action como próxima entrega após multi-tenant</div>
+        <p>Workflow <code>.github/workflows/visioncore.yml</code> entregue. Pipeline completo: syntax check → Vision Core Hermes → PASS GOLD gate → PR comment automático → artifact + diff + rollback manifest. Merge bloqueado se FAIL.</p>
+        <div class="bn-fix" style="color:var(--green)">→ <strong>Entregue:</strong> .github/workflows/visioncore.yml com jobs: syntax-check, vision-core-pipeline, build</div>
       </div>
 
     </div>

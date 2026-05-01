@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VISION CORE — Billing & Plano</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+:root{--green:#22c55e;--yellow:#facc15;--red:#ef4444;--purple2:#a855f7;--cyan:#22d3ee;--muted:#6b7280}
+body{background:#06060f;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+.billing-shell{max-width:900px;margin:0 auto;padding:32px 20px}
+.billing-header{margin-bottom:32px}
+.billing-header h1{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.billing-header p{color:var(--muted);margin-top:6px;font-size:14px}
+
+/* Current plan card */
+.plan-current{background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(14,165,233,.06));border:1px solid rgba(168,85,247,.3);border-radius:14px;padding:24px;margin-bottom:28px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.plan-badge{font-size:11px;font-weight:700;letter-spacing:.1em;padding:4px 10px;border-radius:20px}
+.plan-free{background:rgba(107,114,128,.2);color:#9ca3af;border:1px solid rgba(107,114,128,.3)}
+.plan-pro{background:rgba(168,85,247,.2);color:#c084fc;border:1px solid rgba(168,85,247,.4)}
+.plan-enterprise{background:rgba(250,204,21,.15);color:#facc15;border:1px solid rgba(250,204,21,.35)}
+.plan-meta{display:flex;flex-direction:column;gap:4px}
+.plan-name{font-size:20px;font-weight:700}
+.plan-status{font-size:12px;color:var(--muted)}
+.plan-status.active{color:var(--green)}
+.plan-status.past_due{color:var(--yellow)}
+.plan-status.canceled{color:var(--red)}
+.plan-status.cancel_at_period_end{color:var(--yellow)}
+.plan-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* Card info */
+.card-info{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:14px}
+.card-icon{font-size:28px}
+.card-meta{flex:1}
+.card-brand{font-weight:600;font-size:14px;text-transform:capitalize}
+.card-last4{color:var(--muted);font-size:13px}
+.card-exp{color:var(--muted);font-size:12px;margin-top:2px}
+.no-card{color:var(--muted);font-style:italic;font-size:13px}
+
+/* Plans grid */
+.plans-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:32px}
+.plan-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:22px;position:relative;transition:border-color .2s}
+.plan-card:hover{border-color:rgba(168,85,247,.4)}
+.plan-card.current-plan{border-color:rgba(168,85,247,.5);background:rgba(168,85,247,.06)}
+.plan-card.recommended{border-color:rgba(250,204,21,.4);background:rgba(250,204,21,.04)}
+.plan-pill{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:rgba(250,204,21,.9);color:#000;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.08em}
+.plan-price{font-size:32px;font-weight:800;margin:10px 0 4px}
+.plan-price span{font-size:14px;font-weight:400;color:var(--muted)}
+.plan-features{list-style:none;padding:0;margin:14px 0 20px;display:flex;flex-direction:column;gap:6px}
+.plan-features li{font-size:13px;color:#d1d5db;display:flex;gap:8px;align-items:baseline}
+.plan-features li::before{content:'✔';color:var(--green);font-size:11px;flex-shrink:0}
+.plan-cta{display:block;width:100%;padding:10px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;border:none;text-align:center;transition:opacity .2s}
+.plan-cta:hover{opacity:.85}
+.cta-free{background:rgba(107,114,128,.25);color:#e5e7eb;border:1px solid rgba(107,114,128,.3)}
+.cta-pro{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff}
+.cta-enterprise{background:linear-gradient(135deg,#facc15,#d97706);color:#000}
+.cta-current{background:transparent;border:1px solid rgba(255,255,255,.1);color:var(--muted);cursor:default}
+
+/* Usage */
+.usage-bar-wrap{background:rgba(255,255,255,.05);border-radius:4px;height:6px;margin:8px 0 4px}
+.usage-bar{height:6px;border-radius:4px;background:var(--purple2);transition:width .5s}
+.usage-text{font-size:11px;color:var(--muted)}
+
+/* Alerts */
+.billing-alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:20px;display:none}
+.billing-alert.show{display:block}
+.billing-alert.warn{background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.3);color:#fcd34d}
+.billing-alert.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#86efac}
+.billing-alert.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5}
+
+/* Buttons */
+.btn-billing{padding:9px 18px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;border:none;transition:opacity .2s}
+.btn-billing:hover{opacity:.85}
+.btn-primary{background:var(--purple2);color:#fff}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.2);color:#e5e7eb}
+.btn-danger{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:var(--red)}
+.btn-success{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);color:var(--green)}
+.btn-sm{padding:6px 12px;font-size:11px}
+.btn-loading{opacity:.6;cursor:wait}
+
+/* Sections */
+.section-title{font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.section-sep{height:1px;background:rgba(255,255,255,.06);margin:28px 0}
+</style>
+</head>
+<body>
+<header class="top"><div class="shell topin">
+  <div>
+    <div class="brand">VISION CORE</div>
+    <div class="sub">BILLING & PLANO</div>
+  </div>
+  <div class="top-actions">
+    <a class="btn ghost" href="index.html">VOLTAR AO PAINEL</a>
+    <a class="btn ghost" href="account.html">CONTA</a>
+  </div>
+</div></header>
+
+<main class="billing-shell">
+  <div class="billing-header">
+    <h1>Billing & Plano</h1>
+    <p>Gerencie sua assinatura, método de pagamento e uso de missões.</p>
+  </div>
+
+  <div id="billingAlert" class="billing-alert"></div>
+  <div id="pastDueAlert" class="billing-alert warn" style="display:none">
+    ⚠️ Pagamento pendente. Atualize seu método de pagamento para manter o acesso PRO.
+    <button class="btn-billing btn-ghost btn-sm" style="margin-left:12px" onclick="openPortal()">Gerenciar pagamento</button>
+  </div>
+
+  <!-- Current Plan -->
+  <div id="planCurrentCard" class="plan-current">
+    <div class="plan-meta">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div class="plan-name" id="planName">Carregando...</div>
+        <span class="plan-badge plan-free" id="planBadge">FREE</span>
+      </div>
+      <div class="plan-status" id="planStatusText">—</div>
+      <div style="margin-top:10px" id="usageWrap">
+        <div class="usage-bar-wrap"><div class="usage-bar" id="usageBar" style="width:0%"></div></div>
+        <div class="usage-text" id="usageText">Carregando uso...</div>
+      </div>
+    </div>
+    <div class="plan-actions">
+      <button class="btn-billing btn-ghost" id="btnPortal" onclick="openPortal()" style="display:none">⚙️ Gerenciar assinatura</button>
+      <button class="btn-billing btn-danger btn-sm" id="btnCancel" onclick="cancelSub()" style="display:none">Cancelar</button>
+      <button class="btn-billing btn-success btn-sm" id="btnReactivate" onclick="reactivateSub()" style="display:none">Reativar</button>
+    </div>
+  </div>
+
+  <!-- Card info -->
+  <div class="section-title">💳 Método de Pagamento</div>
+  <div class="card-info" id="cardInfoEl">
+    <div class="card-icon">💳</div>
+    <div class="card-meta">
+      <div class="no-card" id="cardText">Carregando...</div>
+    </div>
+    <button class="btn-billing btn-ghost btn-sm" onclick="openPortal()" style="margin-left:auto">Atualizar</button>
+  </div>
+
+  <div class="section-sep"></div>
+
+  <!-- Plans -->
+  <div class="section-title">📦 Planos disponíveis</div>
+  <div class="plans-grid">
+
+    <div class="plan-card" id="cardFree">
+      <h3 style="font-size:15px;font-weight:700">FREE</h3>
+      <div class="plan-price">$0 <span>/mês</span></div>
+      <ul class="plan-features">
+        <li>5 missões por mês</li>
+        <li>Hermes RCA básico</li>
+        <li>PASS GOLD local</li>
+        <li>Vision Agent CLI</li>
+      </ul>
+      <button class="plan-cta cta-free cta-current" id="ctaFree" disabled>Plano atual</button>
+    </div>
+
+    <div class="plan-card recommended" id="cardPro">
+      <div class="plan-pill">⭐ MAIS POPULAR</div>
+      <h3 style="font-size:15px;font-weight:700">PRO</h3>
+      <div class="plan-price">$19 <span>/mês</span></div>
+      <ul class="plan-features">
+        <li>200 missões por mês</li>
+        <li>Hermes RCA avançado</li>
+        <li>Multi-tenant (5 projetos)</li>
+        <li>GitHub CI nativo</li>
+        <li>Mission Report automático</li>
+        <li>Suporte por email</li>
+      </ul>
+      <button class="plan-cta cta-pro" id="ctaPro" onclick="checkout('pro')">Assinar PRO</button>
+    </div>
+
+    <div class="plan-card" id="cardEnterprise">
+      <h3 style="font-size:15px;font-weight:700">ENTERPRISE</h3>
+      <div class="plan-price">$99 <span>/mês</span></div>
+      <ul class="plan-features">
+        <li>Missões ilimitadas</li>
+        <li>Multi-tenant ilimitado</li>
+        <li>RBAC completo (org/ws/proj)</li>
+        <li>SLA garantido</li>
+        <li>Fine-tuning do vault</li>
+        <li>Suporte dedicado</li>
+      </ul>
+      <button class="plan-cta cta-enterprise" id="ctaEnterprise" onclick="checkout('enterprise')">Assinar ENTERPRISE</button>
+    </div>
+
+  </div>
+
+  <div class="section-sep"></div>
+  <div style="text-align:center;color:var(--muted);font-size:12px">
+    Pagamentos processados com segurança via <strong style="color:#fff">Stripe</strong>.
+    Dados de cartão nunca passam pelo Vision Core — processados diretamente pelo Stripe.
+    <br>Cancele a qualquer momento sem taxa.
+  </div>
+</main>
+
+<script>
+const API = (window.__VISION_API__ || '').replace(/\/$/,'');
+function apiUrl(p){ return API + p; }
+
+// ── Recuperar token ────────────────────────────────────────────────
+function getToken(){
+  return sessionStorage.getItem('vc_token') || localStorage.getItem('vc_token') || '';
+}
+function authHeaders(){
+  const t = getToken();
+  return t ? { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+}
+
+// ── Alert helper ───────────────────────────────────────────────────
+function showAlert(msg, type){
+  const el = document.getElementById('billingAlert');
+  el.textContent = msg;
+  el.className = 'billing-alert show ' + (type || 'ok');
+  setTimeout(() => el.classList.remove('show'), 6000);
+}
+
+// ── Carregar dados de billing ──────────────────────────────────────
+async function loadBilling(){
+  try {
+    const [subRes, cardRes, quotaRes] = await Promise.all([
+      fetch(apiUrl('/api/billing/subscription'), { headers: authHeaders() }).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(apiUrl('/api/billing/card'),         { headers: authHeaders() }).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(apiUrl('/api/usage/quota'),          { headers: authHeaders() }).then(r => r.ok ? r.json() : null).catch(() => null),
+    ]);
+
+    const plan   = subRes?.plan || quotaRes?.plan || 'free';
+    const status = subRes?.subscription?.status || subRes?.subscription_status || (subRes?.active ? 'active' : 'inactive');
+    const cancelAtEnd = subRes?.cancel_at_period_end || false;
+
+    // Plan badge
+    document.getElementById('planName').textContent = plan.toUpperCase();
+    const badge = document.getElementById('planBadge');
+    badge.textContent = plan.toUpperCase();
+    badge.className = 'plan-badge plan-' + plan;
+
+    // Status
+    const statusEl = document.getElementById('planStatusText');
+    statusEl.className = 'plan-status ' + status;
+    if (status === 'active') statusEl.textContent = '● Ativo';
+    else if (status === 'cancel_at_period_end' || cancelAtEnd) statusEl.textContent = '⏳ Cancela no fim do ciclo';
+    else if (status === 'past_due') { statusEl.textContent = '⚠️ Pagamento pendente'; document.getElementById('pastDueAlert').style.display = 'block'; }
+    else if (status === 'canceled') statusEl.textContent = '✕ Cancelado';
+    else if (plan === 'free') statusEl.textContent = 'Plano gratuito';
+    else statusEl.textContent = status;
+
+    // Usage bar
+    const used  = quotaRes?.used || 0;
+    const quota = quotaRes?.quota === 'unlimited' ? null : (quotaRes?.quota || 5);
+    const pct   = quota ? Math.min(100, Math.round(used/quota*100)) : 0;
+    document.getElementById('usageBar').style.width = pct + '%';
+    document.getElementById('usageText').textContent = quota
+      ? used + ' / ' + quota + ' missões usadas este mês (' + pct + '%)'
+      : used + ' missões usadas — ilimitado';
+
+    // Action buttons
+    const isPaid = ['pro','enterprise'].includes(plan);
+    document.getElementById('btnPortal').style.display = isPaid ? 'inline-block' : 'none';
+    document.getElementById('btnCancel').style.display = (isPaid && status === 'active') ? 'inline-block' : 'none';
+    document.getElementById('btnReactivate').style.display = (isPaid && (status === 'cancel_at_period_end' || cancelAtEnd)) ? 'inline-block' : 'none';
+
+    // Plan CTAs
+    if (plan === 'free') {
+      document.getElementById('ctaFree').textContent = 'Plano atual ✔';
+      document.getElementById('ctaFree').disabled = true;
+    } else if (plan === 'pro') {
+      document.getElementById('ctaPro').textContent = 'Plano atual ✔';
+      document.getElementById('ctaPro').disabled = true;
+      document.getElementById('ctaPro').classList.replace('cta-pro','cta-current');
+    } else if (plan === 'enterprise') {
+      document.getElementById('ctaEnterprise').textContent = 'Plano atual ✔';
+      document.getElementById('ctaEnterprise').disabled = true;
+      document.getElementById('ctaEnterprise').classList.replace('cta-enterprise','cta-current');
+    }
+
+    // Card info
+    const card = cardRes?.card;
+    const cardText = document.getElementById('cardText');
+    if (card) {
+      cardText.innerHTML =
+        '<div class="card-brand">' + card.brand + ' •••• ' + card.last4 + '</div>' +
+        '<div class="card-exp">Expira ' + card.exp_month + '/' + card.exp_year + '</div>';
+    } else if (isPaid) {
+      cardText.textContent = 'Nenhum cartão encontrado';
+    } else {
+      cardText.textContent = 'Adicione um cartão ao assinar um plano pago';
+    }
+
+  } catch(e) {
+    showAlert('Erro ao carregar dados de billing: ' + e.message, 'err');
+  }
+}
+
+// ── Stripe Checkout ────────────────────────────────────────────────
+async function checkout(plan){
+  const btn = document.getElementById('cta' + plan.charAt(0).toUpperCase() + plan.slice(1));
+  btn.classList.add('btn-loading');
+  btn.textContent = 'Redirecionando...';
+  try {
+    const res = await fetch(apiUrl('/api/billing/create-checkout-session'), {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ plan }),
+    });
+    const data = await res.json();
+    if (!data.ok || !data.checkout_url) throw new Error(data.error || 'Erro ao criar sessão');
+    window.location.href = data.checkout_url;
+  } catch(e) {
+    showAlert('Erro: ' + e.message, 'err');
+    btn.classList.remove('btn-loading');
+    btn.textContent = plan === 'pro' ? 'Assinar PRO' : 'Assinar ENTERPRISE';
+  }
+}
+
+// ── Portal Stripe ──────────────────────────────────────────────────
+async function openPortal(){
+  try {
+    const res = await fetch(apiUrl('/api/billing/portal'), {
+      method: 'POST', headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (!data.ok || !data.portal_url) throw new Error(data.error || 'Sem assinatura ativa');
+    window.open(data.portal_url, '_blank');
+  } catch(e) {
+    showAlert('Erro ao abrir portal: ' + e.message, 'err');
+  }
+}
+
+// ── Cancel ─────────────────────────────────────────────────────────
+async function cancelSub(){
+  if (!confirm('Cancelar assinatura? Você mantém o acesso até o fim do ciclo atual.')) return;
+  try {
+    const res  = await fetch(apiUrl('/api/billing/cancel'), { method: 'POST', headers: authHeaders() });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    showAlert('Assinatura cancelada. Acesso mantido até fim do ciclo.', 'warn');
+    setTimeout(loadBilling, 1000);
+  } catch(e) { showAlert('Erro: ' + e.message, 'err'); }
+}
+
+// ── Reactivate ─────────────────────────────────────────────────────
+async function reactivateSub(){
+  try {
+    const res  = await fetch(apiUrl('/api/billing/reactivate'), { method: 'POST', headers: authHeaders() });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    showAlert('Assinatura reativada com sucesso!', 'ok');
+    setTimeout(loadBilling, 1000);
+  } catch(e) { showAlert('Erro: ' + e.message, 'err'); }
+}
+
+// ── Boot ───────────────────────────────────────────────────────────
+if (!getToken()) {
+  document.querySelector('.billing-shell').innerHTML =
+    '<div style="text-align:center;padding:60px 20px">' +
+    '<h2>Login necessário</h2><p style="color:var(--muted)">Faça login para gerenciar seu plano.</p>' +
+    '<a href="index.html" class="btn" style="margin-top:20px">Ir para o painel</a>' +
+    '</div>';
+} else {
+  loadBilling();
+}
+</script>
+</body>
+</html>

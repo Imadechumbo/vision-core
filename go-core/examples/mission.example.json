@@ -1,0 +1,57 @@
+{
+  "_comment": "Exemplo de entrada e saída da missão Go Safe Core V5.0",
+
+  "input_example": {
+    "root": "C:\\projetos\\meu-projeto",
+    "input": "corrigir erro de CORS no endpoint /api/data",
+    "dry_run": true
+  },
+
+  "cli_example": "vision-core.exe mission --root \"C:\\projetos\\meu-projeto\" --input \"corrigir erro de CORS\"",
+
+  "self_test_example": "vision-core.exe mission --root \".\" --input \"self-test\"",
+
+  "output_example": {
+    "ok": true,
+    "version": "5.0.0-go-safe-core",
+    "mission_id": "mission_a1b2c3d4",
+    "engine": "go-safe-core",
+    "status": "GOLD",
+    "pass_gold": true,
+    "promotion_allowed": true,
+    "rollback_ready": true,
+    "summary": "Mission validated successfully. PASS GOLD confirmed.",
+    "steps": ["scanner", "fileops", "patcher", "validator", "passgold"],
+    "step_results": [
+      { "step": "scanner",   "ok": true, "message": "scanned 23 files, stack: [node]" },
+      { "step": "fileops",   "ok": true, "message": "root path safe, no traversal detected" },
+      { "step": "patcher",   "ok": true, "message": "dry-run validated, 0 ops (V5.0 mode)" },
+      { "step": "validator", "ok": true, "message": "4 checks passed" },
+      { "step": "rollback",  "ok": true, "message": "snapshot dir ready" }
+    ],
+    "gates": {
+      "scanner_ok":     true,
+      "fileops_ok":     true,
+      "patcher_ok":     true,
+      "validator_ok":   true,
+      "rollback_ready": true,
+      "security_ok":    true,
+      "legacy_safe":    true
+    },
+    "duration_ms": 12
+  },
+
+  "fail_example": {
+    "ok": false,
+    "version": "5.0.0-go-safe-core",
+    "mission_id": "mission_deadbeef",
+    "engine": "go-safe-core",
+    "status": "FAIL",
+    "pass_gold": false,
+    "promotion_allowed": false,
+    "rollback_ready": false,
+    "summary": "Mission FAILED. Gates failed: [rollback_ready]",
+    "failed_gates": ["rollback_ready"],
+    "duration_ms": 3
+  }
+}

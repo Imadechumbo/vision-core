@@ -1,0 +1,14 @@
+name = "visioncore-api-gateway"
+main = "src/index.js"
+compatibility_date = "2026-04-30"
+
+[vars]
+ORIGIN_BASE = "http://tngh-aws-final-v2-env.eba-fi8g5gme.us-east-1.elasticbeanstalk.com"
+
+# Depois de publicar, você terá algo como:
+# https://visioncore-api-gateway.<seu-subdominio>.workers.dev
+#
+# Em produção com domínio próprio:
+# routes = [
+#   { pattern = "api.seudominio.com/*", zone_name = "seudominio.com" }
+# ]

@@ -11,13 +11,14 @@
   <div class="shell topin">
     <div>
       <div class="brand">VISION CORE</div>
-      <div class="sub">SISTEMA OPERACIONAL PARA DESENVOLVIMENTO COM IA</div>
+      <div class="sub">V4.3 ENTERPRISE LIVE • SISTEMA QUE CORRIGE SISTEMAS</div>
     </div>
     <div class="top-actions">
       <a class="btn ghost" href="index.html">DASHBOARD</a>
-      <a class="btn agent-download" href="downloads/vision_agent_v1_1_streaming.zip" download>BAIXAR AGENT</a>
+      <a class="btn agent-download" href="downloads/VisionAgentSetup.exe" download>BAIXAR AGENT</a>
       <a class="btn github" href="https://github.com/Imadechumbo/vision-core-master" target="_blank" rel="noopener">GITHUB</a>
       <a class="btn" href="#timeline">VER TRAJETÓRIA</a>
+      <a class="btn ghost" href="billing.html">BILLING</a>
     </div>
   </div>
 </header>
@@ -31,7 +32,7 @@
       <div class="hero-actions">
         <a class="btn github" href="index.html#mission">Abrir Mission Control</a>
         <a class="btn ghost" href="#pillars">Ver os 6 pilares</a>
-        <a class="btn agent-download" href="downloads/vision_agent_v1_1_streaming.zip" download>Baixar Vision Agent</a>
+        <a class="btn agent-download" href="downloads/VisionAgentSetup.exe" download>Baixar Vision Agent</a>
       </div>
     </div>
     <div class="startup-card devops-terminal">
@@ -122,19 +123,42 @@
     <h2>Gargalos mapeados antes do produto subir.</h2>
     <p class="section-lead">O VISION CORE ainda não precisa ser vendido como pronto. A força da página é mostrar que existe roadmap técnico honesto.</p>
     <div class="bottleneck-grid">
-      <div class="bn-card bn-high"><div class="bn-header"><span class="bn-icon">🔴</span><div><div class="bn-label">PRIORIDADE ALTA</div><h3>Multi-tenant ausente</h3></div></div><p>Hoje a base ainda funciona melhor como operador local/projeto único.</p><div class="bn-fix"><strong>Fix:</strong> workspaces, isolamento de banco, chaves por tenant e permissões por projeto.</div></div>
-      <div class="bn-card bn-high"><div class="bn-header"><span class="bn-icon">🔴</span><div><div class="bn-label">PRIORIDADE ALTA</div><h3>GitHub Action ainda não existe</h3></div></div><p>A validação ainda precisa virar pipeline CI reproduzível, não só execução local.</p><div class="bn-fix"><strong>Fix:</strong> action oficial com PASS GOLD, artifacts, diff, rollback manifest e PR comments.</div></div>
-      <div class="bn-card bn-medium"><div class="bn-header"><span class="bn-icon">🟡</span><div><div class="bn-label">PRIORIDADE MÉDIA</div><h3>Scanner sem AST</h3></div></div><p>O fileScanner usa sinais textuais. Funciona bem, mas ainda não entende árvore sintática.</p><div class="bn-fix"><strong>Fix:</strong> Babel/TypeScript AST para localizar função, rota, middleware e imports.</div></div>
-      <div class="bn-card bn-medium"><div class="bn-header"><span class="bn-icon">🟡</span><div><div class="bn-label">PRIORIDADE MÉDIA</div><h3>Contexto grande para LLM</h3></div></div><p>Snippets pequenos ajudam, mas erros complexos exigem contexto de função/bloco inteiro.</p><div class="bn-fix"><strong>Fix:</strong> compressão contextual, ranking por relevância e memória de incidentes.</div></div>
-      <div class="bn-card bn-low"><div class="bn-header"><span class="bn-icon">🟢</span><div><div class="bn-label">PRIORIDADE BAIXA</div><h3>Fallback offline</h3></div></div><p>Quando LLM falha, o sistema usa heurísticas. É útil, mas limitado.</p><div class="bn-fix"><strong>Fix:</strong> roteamento local/Ollama + cache de RCA por incidente.</div></div>
-      <div class="bn-card bn-low"><div class="bn-header"><span class="bn-icon">🟢</span><div><div class="bn-label">PRIORIDADE BAIXA</div><h3>Agent CLI-only</h3></div></div><p>O CLI já funciona, mas usuários finais vão preferir instalador e UI local.</p><div class="bn-fix"><strong>Fix:</strong> Vision Agent Desktop com tray, logs, permissões e atualização automática.</div></div>
+      <div class="bn-card" style="border-color:rgba(34,197,94,.3)"><div class="bn-header"><span class="bn-icon">✅</span><div><div class="bn-label" style="color:var(--green)">RESOLVIDO — V4.1</div><h3>Multi-tenant real</h3></div></div><p>Orgs → Workspaces → Projects com RBAC (owner/admin/developer/viewer). Auth PBKDF2+JWT. Isolamento real: usuário A nunca acessa dados do usuário B.</p><div class="bn-fix" style="color:var(--green)"><strong>Entregue:</strong> server-v41.js + /api/orgs + /api/workspaces + /api/projects + requireProjectAccess.</div></div>
+      <div class="bn-card" style="border-color:rgba(34,197,94,.3)"><div class="bn-header"><span class="bn-icon">✅</span><div><div class="bn-label" style="color:var(--green)">RESOLVIDO — V4.1</div><h3>GitHub Action CI/CD nativo</h3></div></div><p>Workflow .github/workflows/visioncore.yml entregue. Pipeline Vision Core na PR: Scanner → Hermes → PASS GOLD → PR comment + artifacts + rollback manifest. Merge bloqueado se FAIL.</p><div class="bn-fix" style="color:var(--green)"><strong>Entregue:</strong> .github/workflows/visioncore.yml com PASS GOLD gate real.</div></div>
+      <div class="bn-card bn-medium"><div class="bn-header"><span class="bn-icon">🟢</span><div><div class="bn-label">ENTREGUE — V4.3.1</div><h3>Scanner AST entregue</h3></div></div><p>Scanner estrutural com Babel/TypeScript AST entregue: localiza imports, exports, functions, routes e middlewares via endpoints reais.</p><div class="bn-fix"><strong>Entregue:</strong> /api/scanner/ast, /api/scanner/dependencies e /api/scanner/graph.</div></div>
+      <div class="bn-card bn-medium"><div class="bn-header"><span class="bn-icon">🟢</span><div><div class="bn-label">ENTREGUE — V4.3.1</div><h3>Hermes Context Graph entregue</h3></div></div><p>Hermes agora monta contexto por grafo de dependências, ranking de relevância e compressão antes de chamar LLM.</p><div class="bn-fix"><strong>Entregue:</strong> /api/hermes/context, /api/hermes/dependencies e /api/hermes/compression.</div></div>
+      <div class="bn-card bn-low"><div class="bn-header"><span class="bn-icon">🟢</span><div><div class="bn-label">ENTREGUE — V4.3.1</div><h3>Fallback offline</h3></div></div><p>Runtime providers entregue: status real de Ollama/local e provedores cloud por env/config, com fallback heurístico seguro quando necessário.</p><div class="bn-fix"><strong>Entregue:</strong> /api/runtime/providers e /api/runtime/provider-status.</div></div>
+      <div class="bn-card bn-low"><div class="bn-header"><span class="bn-icon">🟢</span><div><div class="bn-label">ENTREGUE — V4.3.1</div><h3>Vision Agent Desktop entregue</h3></div></div><p>Vision Agent Desktop funcional em Windows: mission console com tray, live logs, mission runner, report viewer, config e update checker. Orbit permanece no dashboard home, não no desktop.</p><div class="bn-fix"><strong>Entregue:</strong> desktop-agent Electron; build NSIS/portable configurado.</div></div>
     </div>
   </section>
 
   <section class="startup-section agent-cta-section" id="download-agent">
     <div class="agent-cta-card">
       <div><p class="eyebrow">VISION AGENT</p><h2>Baixe o executor local.</h2><p>O agente conecta projetos locais ao VISION CORE, registra paths, executa missões, acompanha timeline e prepara rollback com segurança.</p></div>
-      <div class="agent-download-box"><a class="btn agent-download big" href="downloads/vision_agent_v1_1_streaming.zip" download>⬇ Download Vision Agent v1.1</a><code>npm install<br>npm link<br>vision-agent login<br>vision-agent register ./meu-projeto</code></div>
+      <div class="agent-download-box"><a class="btn agent-download big" href="downloads/VisionAgentSetup.exe" download>⬇ Download Vision Agent v1.1</a><code>npm install<br>npm link<br>vision-agent login<br>vision-agent register ./meu-projeto</code></div>
+    </div>
+  </section>
+
+  <section class="startup-section" id="timeline-v41">
+    <p class="eyebrow" style="color:var(--green)">✅ V4.1 — ENTERPRISE CLOSEOUT</p>
+    <h2>Auth real + Multi-tenant + Stripe + GitHub CI</h2>
+    <div class="timeline-vc devops-timeline">
+      <div class="tl-item tl-current">
+        <span class="tl-dot tl-dot-pulse" style="color:#22c55e;background:#22c55e"></span>
+        <div class="tl-content">
+          <div class="tl-header">
+            <span class="tl-version">V4.2</span>
+            <span class="tl-badge live-badge">LIVE</span>
+          </div>
+          <h3 class="tl-title">Auth · Multi-tenant · Billing Stripe · GitHub CI · Billing UI · Desktop Agent</h3>
+          <p class="tl-desc">V4.1: Auth PBKDF2+JWT, multi-tenant RBAC real (Orgs→Workspaces→Projects), Stripe Checkout via HTTPS nativo, webhook HMAC, GitHub Action CI com PASS GOLD gate. V4.2: billing.html completo (plano atual, card info, cancel/reactivate, portal Stripe), Vision Agent Desktop Electron (tray, SSE live logs, report viewer, update checker).</p>
+          <div class="tl-tags">
+            <span>Auth real</span><span>Multi-tenant RBAC</span><span>Stripe real</span>
+            <span>GitHub CI</span><span>billing.html</span><span>Electron Desktop</span>
+          </div>
+          <div class="tl-current-bar"><span class="tl-live-dot"></span> versão atual — em produção</div>
+        </div>
+      </div>
     </div>
   </section>
 
