@@ -1,0 +1,14 @@
+{
+  "name": "visioncore-api-gateway",
+  "version": "3.1.0",
+  "private": true,
+  "description": "VISION CORE V3.1 API Gateway Worker",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.73.0"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VisionCore PASS GOLD Decision",
+  "description": "Contrato de decisão PASS GOLD. Todos os gates devem ser true para status=GOLD.",
+  "type": "object",
+  "required": ["status", "pass_gold", "promotion_allowed", "rollback_ready", "engine", "gates"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["GOLD", "FAIL"],
+      "description": "GOLD apenas quando todos os 7 gates são true."
+    },
+    "pass_gold": {
+      "type": "boolean",
+      "description": "true somente se status=GOLD"
+    },
+    "promotion_allowed": {
+      "type": "boolean",
+      "description": "true somente se pass_gold=true. Nunca true em FAIL."
+    },
+    "rollback_ready": {
+      "type": "boolean",
+      "description": "O sistema de rollback está operacional e pode desfazer patches."
+    },
+    "engine": {
+      "type": "string",
+      "const": "go-safe-core"
+    },
+    "version": {
+      "type": "string",
+      "const": "5.0.0-go-safe-core"
+    },
+    "gates": {
+      "type": "object",
+      "description": "Resultado individual de cada gate. Todos devem ser true para GOLD.",
+      "required": ["scanner_ok","fileops_ok","patcher_ok","validator_ok","rollback_ready","security_ok","legacy_safe"],
+      "properties": {
+        "scanner_ok":     { "type": "boolean", "description": "Scanner executou sem alterar arquivos" },
+        "fileops_ok":     { "type": "boolean", "description": "Operações de arquivo dentro do root, sem traversal" },
+        "patcher_ok":     { "type": "boolean", "description": "Patch validado (dry-run ou real com snapshot)" },
+        "validator_ok":   { "type": "boolean", "description": "Todos os checks de validação passaram" },
+        "rollback_ready": { "type": "boolean", "description": "Sistema de rollback operacional" },
+        "security_ok":    { "type": "boolean", "description": "Nenhum módulo escreveu fora do root" },
+        "legacy_safe":    { "type": "boolean", "description": "Node/Electron não foram alterados" }
+      },
+      "additionalProperties": false
+    },
+    "failed_gates": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Lista de gates que falharam. Vazio se status=GOLD."
+    }
+  },
+  "additionalProperties": false,
+  "if": { "properties": { "status": { "const": "FAIL" } } },
+  "then": {
+    "properties": {
+      "pass_gold": { "const": false },
+      "promotion_allowed": { "const": false }
+    }
+  }
+}

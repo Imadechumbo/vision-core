@@ -11,7 +11,7 @@
   }
   const API = resolveApiBase();
   const RUN_PATH = '/api/run-live';
-  const STREAM_PATH = '/api/run-live-stream';
+  const STREAM_PATH = '/run-live-stream';
   function el(id){ return document.getElementById(id); }
   async function safeFetchJson(path, opts = {}){
     let res = await fetch(API + path, opts);
@@ -95,6 +95,8 @@
     if(currentSource) { try{ currentSource.close(); }catch{} currentSource = null; }
     if(!window.EventSource){ addLog('SSE','EventSource indisponível; usando polling.', 'yellow'); return pollMission(missionId); }
     const url = `${API}${STREAM_PATH}?mission_id=${encodeURIComponent(missionId)}`;
+    // V32: SSE bloqueado — runtime único v32 controla SSE
+    if(window.__V32_OWNER__){addLog("SSE","runtime v32 ativo — v233 SSE desativado","yellow");return;}
     const es = new EventSource(url);
     currentSource = es;
     addLog('SSE', `conectando ${missionId}`, 'event');
@@ -193,7 +195,7 @@
     if(sub) sub.textContent = 'V2.3.6 SSE PIPELINE VISUAL REAL • BLACK/PURPLE • SSE • LIVE PIPELINE';
     const btn = el('executeBtn');
     if(btn){ btn.onclick = runLiveMission; btn.textContent = '▷ EXECUTAR LIVE'; }
-    if(!API){ addLog('CONFIG', 'API_BASE_URL obrigatório para modo real-time. Ex.: window.RUNTIME_CONFIG = { API_BASE_URL: "http://localhost:8787" }', 'red'); setLiveState('fail','API OFF'); } else { setLiveState('', 'LIVE'); }
+    if(!API){ addLog('CONFIG', 'API_BASE_URL obrigatório para modo real-time. Ex.: window.RUNTIME_CONFIG = { API_BASE_URL: "/api" }', 'red'); setLiveState('fail','API OFF'); } else { setLiveState('', 'LIVE'); }
   });
 
   // caso o script carregue após DOMContentLoaded

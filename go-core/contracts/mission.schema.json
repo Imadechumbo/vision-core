@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VisionCore Mission Input",
+  "description": "Contrato de entrada para missão do Go Safe Core V5.0",
+  "type": "object",
+  "required": ["root", "input"],
+  "properties": {
+    "root": {
+      "type": "string",
+      "description": "Caminho absoluto ou relativo do projeto alvo. Nunca pode conter ../",
+      "minLength": 1
+    },
+    "input": {
+      "type": "string",
+      "description": "Texto da missão em linguagem natural ou identificador de self-test",
+      "minLength": 1
+    },
+    "dry_run": {
+      "type": "boolean",
+      "description": "Se true, nenhum arquivo é alterado. V5.0 sempre dry_run=true.",
+      "default": true
+    },
+    "mission_id": {
+      "type": "string",
+      "description": "ID opcional da missão. Se omitido, gerado automaticamente.",
+      "pattern": "^mission_[a-f0-9]+$"
+    }
+  },
+  "additionalProperties": false
+}

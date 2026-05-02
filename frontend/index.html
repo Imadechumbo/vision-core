@@ -3,17 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VISION CORE VISION CORE V2.9.4 ULTRA</title>
-<script>
-// VISION CORE production API contract
-// VISION CORE V2.9.4 ULTRA runtime resolver
-// Priority: localStorage.VISION_CORE_API_BASE_URL > ?api= > runtime config > auto candidates
-window.RUNTIME_CONFIG = window.RUNTIME_CONFIG || {};
-window.RUNTIME_CONFIG.API_BASE_URL = window.RUNTIME_CONFIG.API_BASE_URL || "/";
-window.API_BASE_URL = window.RUNTIME_CONFIG.API_BASE_URL;
-window.__VISION_API__ = window.RUNTIME_CONFIG.API_BASE_URL;
-</script>
-<meta name="vision-api-base" content="/">
+<meta name="vision-api-base" content="https://visioncore-api-gateway.weiganlight.workers.dev">
+<title>VISION CORE V2.9.10 CLEAN FRONT</title>
+
 <link rel="stylesheet" href="assets/style.css">
 <link rel="stylesheet" href="assets/v23-ui-system.css">
 <link rel="stylesheet" href="assets/v231-colors-agents.css">
@@ -22,6 +14,64 @@ window.__VISION_API__ = window.RUNTIME_CONFIG.API_BASE_URL;
   <link rel="stylesheet" href="assets/v272-layout-force.css">
   <link rel="stylesheet" href="assets/v273-sddf-command-chat.css">
   <link rel="stylesheet" href="assets/v290-hardening.css">
+<script>
+// VISION CORE V2.9.10 CLEAN FRONT — Cloudflare Pages proxy mode
+// Nunca chamar Elastic Beanstalk direto pelo browser.
+// Toda chamada deve sair como /api/... e o Cloudflare Pages encaminha via _redirects.
+// VISION CORE V2.9.10 CLEAN FRONT + V3.1 API GATEWAY
+// Frontend Cloudflare Pages → Worker Gateway → Elastic Beanstalk Backend.
+// Não usar _redirects para /api/*: POST e SSE passam pelo Worker.
+window.RUNTIME_CONFIG = { API_BASE_URL: "https://visioncore-api-gateway.weiganlight.workers.dev" };
+window.API_BASE_URL = "https://visioncore-api-gateway.weiganlight.workers.dev";
+window.__VISION_API__ = "https://visioncore-api-gateway.weiganlight.workers.dev";
+window.API = "https://visioncore-api-gateway.weiganlight.workers.dev";
+window.__VISION_RUNTIME_VERSION__ = "2.9.10-clean-front-v31-gateway";
+</script>
+
+<script>
+/* V2.9.10 + V3.1 API GATEWAY HARDENING
+   Qualquer chamada /api/... ou fallback EB antigo é redirecionado para o Worker Gateway.
+   Resultado: POST, OPTIONS e SSE passam pelo Worker, sem 405 do Cloudflare Pages.
+*/
+(function(){
+  const VISION_GATEWAY = "https://visioncore-api-gateway.weiganlight.workers.dev";
+  const DEAD_EB_RE = /^https?:\/\/tngh-aws-final-v2-env\.eba-fi8g5gme\.us-east-1\.elasticbeanstalk\.com(\/api\/.*)$/i;
+  const nativeFetch = window.fetch.bind(window);
+
+  function normalizeVisionApiUrl(url){
+    const raw = String(url || "");
+    const eb = raw.match(DEAD_EB_RE);
+    if (eb) return VISION_GATEWAY + eb[1];
+
+    if (raw.startsWith("/api/")) return VISION_GATEWAY + raw;
+    if (raw === "/api") return VISION_GATEWAY + "/api";
+
+    return url;
+  }
+
+  window.fetch = function(input, init){
+    try {
+      if (typeof input === "string") {
+        input = normalizeVisionApiUrl(input);
+      } else if (input && input.url) {
+        const nextUrl = normalizeVisionApiUrl(input.url);
+        if (nextUrl !== input.url) input = new Request(nextUrl, input);
+      }
+    } catch (_) {}
+    return nativeFetch(input, init);
+  };
+
+  console.info("[VISION V2.9.10/V3.1] API Gateway ativo:", VISION_GATEWAY);
+})();
+</script>
+
+<link rel="stylesheet" href="assets/vision-v297-ui.css">
+<link rel="stylesheet" href="assets/vision-v33-orbit.css">
+<script src="assets/vision-runtime-v297.js?v=297"></script>
+<script src="assets/vision-v297-interactions.js?v=297" defer></script>
+<link rel="stylesheet" href="assets/vision-v298-command-chat.css">
+<link rel="stylesheet" href="assets/vision-v298-final-hardened.css">
+<link rel="stylesheet" href="assets/vision-v298-final-hard-fix2.css">
 </head>
 <body>
 <header class="top">
@@ -32,7 +82,7 @@ window.__VISION_API__ = window.RUNTIME_CONFIG.API_BASE_URL;
       </div>
       <div>
         <div class="brand">VISION CORE</div>
-        <div class="sub">VISION CORE V2.9.4 ULTRA • BLACK/PURPLE • SSE • LIVE PIPELINE</div>
+        <div class="sub">VISION CORE V2.9.10 • FULLSTACK • SAAS • HERMES • PASS GOLD</div>
       </div>
     </div>
     <nav class="v231-topnav" aria-label="Navegação principal">
@@ -46,7 +96,7 @@ window.__VISION_API__ = window.RUNTIME_CONFIG.API_BASE_URL;
     <div class="top-actions">
       <a class="btn ghost" href="landing.html">LANDING STARTUP</a>
       <a class="btn github" href="https://github.com/Imadechumbo/vision-core-master" target="_blank" rel="noopener">GITHUB</a>
-      <a class="btn agent-download" href="downloads/vision_agent_v1_1_streaming.zip" download>BAIXAR AGENT</a>
+      <a class="btn agent-download" href="downloads/VisionAgentSetup.exe" download>BAIXAR AGENT</a>
       <button class="btn ghost" id="openAuthBtn" type="button">SIGN IN</button>
       <a class="btn" href="#mission">ENVIAR MISSÃO</a>
     </div>
@@ -86,6 +136,11 @@ window.__VISION_API__ = window.RUNTIME_CONFIG.API_BASE_URL;
 
   <section>
     <div class="panel" id="mission">
+<div class="v297-chat-shell" id="v297UniversalChat">
+  <div class="v297-chat-head"><div><strong>CHAT UNIVERSAL VISION</strong><span>perguntas, imagens, arquivos e correção de projetos</span></div><b id="v297ChatStatus">READY</b></div>
+  <div class="v297-chat-log" id="v297ChatLog"><div class="v297-msg bot">Pronto. Converse sobre qualquer assunto ou execute uma missão SDDF.</div></div>
+  <div class="v297-chat-tools"><button class="btn mini" id="v297AddImageBtn" type="button">+ IMAGEM</button><button class="btn mini" id="v297AddFileBtn" type="button">+ ARQUIVO</button><button class="btn mini" id="v297RunSddfBtn" type="button">RODAR SDDF</button><input id="v297FileInput" type="file" multiple hidden></div>
+</div>
       <h2>MISSION CONTROL</h2>
       <p>Operador técnico multi-projeto, multi-stack, com aprendizado contínuo.</p>
       <div class="project-strip">
@@ -300,31 +355,31 @@ window.__VISION_API__ = window.RUNTIME_CONFIG.API_BASE_URL;
         <!-- Nós orbitais -->
         <div class="mc-node mc-node--top"    data-key="openclaw">
           <div class="mc-node-icon">⬡</div>
-          <div class="mc-node-label">OPENCLAW<br><small>ORQUESTRA</small></div>
+          <div class="mc-node-label">OPENCLAW<br><small id="v33-t-openclaw">AGUARDA</small></div>
         </div>
-        <div class="mc-node mc-node--tr"     data-key="metrics">
+        <div class="mc-node mc-node--tr"     data-key="scanner">
           <div class="mc-node-icon">◈</div>
-          <div class="mc-node-label">METRICS<br><small>OBSERVA</small></div>
+          <div class="mc-node-label">SCANNER<br><small id="v33-t-scanner">AGUARDA</small></div>
         </div>
-        <div class="mc-node mc-node--right"  data-key="memory">
-          <div class="mc-node-icon">▤</div>
-          <div class="mc-node-label">MEMORY<br><small>APRENDE</small></div>
-        </div>
-        <div class="mc-node mc-node--br"     data-key="benchmark">
-          <div class="mc-node-icon">⊕</div>
-          <div class="mc-node-label">BENCHMARK<br><small>VALIDA</small></div>
-        </div>
-        <div class="mc-node mc-node--bottom" data-key="opensquad">
-          <div class="mc-node-icon">⌘</div>
-          <div class="mc-node-label">OPENSQUAD<br><small>ESCALA</small></div>
-        </div>
-        <div class="mc-node mc-node--left"   data-key="aegis">
-          <div class="mc-node-icon">◉</div>
-          <div class="mc-node-label">AEGIS<br><small>PROTEGE</small></div>
-        </div>
-        <div class="mc-node mc-node--tl"     data-key="hermes">
+        <div class="mc-node mc-node--right"  data-key="hermes">
           <div class="mc-node-icon">⬖</div>
-          <div class="mc-node-label">HERMES<br><small>DIAGNOSTICA</small></div>
+          <div class="mc-node-label">HERMES<br><small id="v33-t-hermes">AGUARDA</small></div>
+        </div>
+        <div class="mc-node mc-node--br"     data-key="patchengine">
+          <div class="mc-node-icon">⊕</div>
+          <div class="mc-node-label">PATCH ENGINE<br><small id="v33-t-patchengine">AGUARDA</small></div>
+        </div>
+        <div class="mc-node mc-node--bottom" data-key="aegis">
+          <div class="mc-node-icon">◉</div>
+          <div class="mc-node-label">AEGIS<br><small id="v33-t-aegis">AGUARDA</small></div>
+        </div>
+        <div class="mc-node mc-node--left"   data-key="passgold">
+          <div class="mc-node-icon">★</div>
+          <div class="mc-node-label">PASS GOLD<br><small id="v33-t-passgold">AGUARDA</small></div>
+        </div>
+        <div class="mc-node mc-node--tl"     data-key="github">
+          <div class="mc-node-icon">⎇</div>
+          <div class="mc-node-label">PR GITHUB<br><small id="v33-t-github">AGUARDA</small></div>
         </div>
 
         <!-- Núcleo central -->
@@ -344,49 +399,44 @@ window.__VISION_API__ = window.RUNTIME_CONFIG.API_BASE_URL;
         <span class="mc-live-badge" id="mcLiveBadge">● LIVE</span>
       </div>
 
+      <!-- AGENT METRICS — preenchido via GET /api/metrics/agents (sem fake) -->
       <div class="mc-metrics-grid" id="mcMetricsGrid">
-        <!-- preenchido via JS -->
-        <div class="mc-metric-row">
+        <div class="mc-metric-row" data-agent="openclaw">
           <div class="mc-metric-name">OpenClaw</div>
-          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:88%;background:var(--purple2)"></div></div>
-          <div class="mc-metric-val cyan">$0.163</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-openclaw" style="width:0%;background:var(--purple2)"></div></div>
+          <div class="mc-metric-val cyan" id="val-openclaw">—</div>
         </div>
-        <div class="mc-metric-row">
+        <div class="mc-metric-row" data-agent="hermes">
           <div class="mc-metric-name">Hermes RCA</div>
-          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:72%;background:#8b5cf6"></div></div>
-          <div class="mc-metric-val cyan">$0.815</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-hermes" style="width:0%;background:#8b5cf6"></div></div>
+          <div class="mc-metric-val cyan" id="val-hermes">—</div>
         </div>
-        <div class="mc-metric-row">
+        <div class="mc-metric-row" data-agent="scanner">
           <div class="mc-metric-name">Scanner</div>
-          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:65%;background:#22c55e"></div></div>
-          <div class="mc-metric-val green">$0.377</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-scanner" style="width:0%;background:#22c55e"></div></div>
+          <div class="mc-metric-val green" id="val-scanner">—</div>
         </div>
-        <div class="mc-metric-row">
+        <div class="mc-metric-row" data-agent="aegis">
           <div class="mc-metric-name">Aegis</div>
-          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:91%;background:#22d3ee"></div></div>
-          <div class="mc-metric-val cyan">$0.264</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-aegis" style="width:0%;background:#22d3ee"></div></div>
+          <div class="mc-metric-val cyan" id="val-aegis">—</div>
         </div>
-        <div class="mc-metric-row">
+        <div class="mc-metric-row" data-agent="patchengine">
           <div class="mc-metric-name">PatchEngine</div>
-          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:58%;background:#f59e0b"></div></div>
-          <div class="mc-metric-val yellow">$0.668</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-patchengine" style="width:0%;background:#f59e0b"></div></div>
+          <div class="mc-metric-val yellow" id="val-patchengine">—</div>
         </div>
-        <div class="mc-metric-row">
+        <div class="mc-metric-row" data-agent="passgold">
           <div class="mc-metric-name">PASS GOLD</div>
-          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:82%;background:#facc15"></div></div>
-          <div class="mc-metric-val yellow">$0.471</div>
-        </div>
-        <div class="mc-metric-row">
-          <div class="mc-metric-name">Benchmark</div>
-          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" style="width:76%;background:#f472b6"></div></div>
-          <div class="mc-metric-val" style="color:#f472b6">$1.469</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-passgold" style="width:0%;background:#facc15"></div></div>
+          <div class="mc-metric-val yellow" id="val-passgold">—</div>
         </div>
       </div>
 
-      <!-- Custo total -->
+      <!-- Custo total — do backend real -->
       <div class="mc-cost-row">
         <span class="mc-cost-label">TOTAL PIPELINE</span>
-        <span class="mc-cost-val" id="mcTotalCost">$4.227</span>
+        <span class="mc-cost-val" id="mcTotalCost">—</span>
       </div>
 
       <!-- Tabs PIPELINE / AGENT -->
@@ -397,16 +447,16 @@ window.__VISION_API__ = window.RUNTIME_CONFIG.API_BASE_URL;
 
       <div id="mc-tab-pipeline" class="mc-tab-pane active">
         <div class="mc-pipeline-status" id="mcPipelineStatus">
-          <div class="mc-ps-row"><span class="mc-ps-label">OpenClaw</span><span class="mc-ps-badge ok">OK</span></div>
-          <div class="mc-ps-row"><span class="mc-ps-label">Scanner</span><span class="mc-ps-badge ok">OK</span></div>
-          <div class="mc-ps-row"><span class="mc-ps-label">Hermes</span><span class="mc-ps-badge ok">OK</span></div>
-          <div class="mc-ps-row"><span class="mc-ps-label">Aegis</span><span class="mc-ps-badge ok">PASS</span></div>
-          <div class="mc-ps-row"><span class="mc-ps-label">PASS GOLD</span><span class="mc-ps-badge gold">GOLD</span></div>
+          <div class="mc-ps-row"><span class="mc-ps-label">OpenClaw</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
+          <div class="mc-ps-row"><span class="mc-ps-label">Scanner</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
+          <div class="mc-ps-row"><span class="mc-ps-label">Hermes</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
+          <div class="mc-ps-row"><span class="mc-ps-label">Aegis</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
+          <div class="mc-ps-row"><span class="mc-ps-label">PASS GOLD</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
         </div>
       </div>
 
       <div id="mc-tab-agent" class="mc-tab-pane">
-        <a class="btn agent-download full" href="downloads/vision_agent_v1_1_streaming.zip" download>⬇ BAIXAR VISION AGENT v1.1</a>
+        <a class="btn agent-download full" href="downloads/VisionAgentSetup.exe" download>⬇ BAIXAR VISION AGENT v1.1</a>
         <div class="agent-cmd">npm install<br>npm link<br>vision-agent status</div>
       </div>
     </section>
@@ -414,10 +464,10 @@ window.__VISION_API__ = window.RUNTIME_CONFIG.API_BASE_URL;
     <br>
     <section class="panel">
       <h2>GATES (SDDF)</h2>
-      <div class="gate"><span>SECURITY</span><span class="green">PASS</span></div>
-      <div class="gate"><span>COMPATIBILITY</span><span class="green">PASS</span></div>
-      <div class="gate"><span>STABILITY</span><span class="green">PASS</span></div>
-      <div class="gate"><span>RUNTIME</span><span class="cyan">LIVE</span></div>
+      <div class="gate"><span>SECURITY</span><span class="green" id="gate-security">—</span></div>
+      <div class="gate"><span>COMPATIBILITY</span><span class="green" id="gate-compatibility">—</span></div>
+      <div class="gate"><span>STABILITY</span><span class="green" id="gate-stability">—</span></div>
+      <div class="gate"><span>RUNTIME</span><span class="cyan" id="gate-runtime">—</span></div>
       <div class="gate"><span>DIFF</span><span class="cyan">READY</span></div>
       <div class="gate"><span>VAULT</span><span class="green">ACTIVE</span></div>
       <div class="gate"><span>PROMOTION</span><span class="yellow">REQUIRES GOLD</span></div>
@@ -560,11 +610,10 @@ window.__VISION_API__ = window.RUNTIME_CONFIG.API_BASE_URL;
   <span>▂▄▆█</span>
 </div>
 
-<script src="assets/v294-runtime-ultra.js?v=294"></script>
 <script>
-const getVisionApi = () => (window.VisionCoreRuntime?.api || window.RUNTIME_CONFIG?.API_BASE_URL || window.API_BASE_URL || window.__VISION_API__ || document.querySelector('meta[name=\"vision-api-base\"]')?.content || 'https://api.technetgame.com.br').replace(/\/$/, '');
-let API = getVisionApi();
-window.addEventListener('vision-api-ready', (e)=>{ API = e.detail.api; console.info('VISION CORE API_BASE_URL:', API); });
+const getVisionApi = () => (window.API || window.API_BASE_URL || window.RUNTIME_CONFIG?.API_BASE_URL || "").replace(/\/$/, "");
+let API = "https://visioncore-api-gateway.weiganlight.workers.dev";
+window.addEventListener('vision-api-ready', (e)=>{ API = (e.detail && e.detail.api) || API; console.info('VISION CORE API_BASE_URL:', API); });
 console.info('VISION CORE API_BASE_URL:', API);
 const logsBox=document.getElementById('logsBox'), logsPanel=document.getElementById('logsPanel');
 function showLog(scope,msg,cls=''){if(!logsBox)return;if(logsPanel)logsPanel.classList.add('active');logsBox.classList.remove('empty');logsBox.innerHTML+=`<div class="${cls}">[${new Date().toLocaleTimeString()}] ${scope}: ${String(msg||'').replace(/[<>]/g,'') }</div>`;logsBox.scrollTop=logsBox.scrollHeight}
@@ -627,17 +676,17 @@ window.addEventListener('keydown',e=>{if(e.key==='Escape')closeAuth()});
 
 function bindPlans(){document.querySelectorAll('.plan').forEach(p=>p.onclick=()=>{document.querySelectorAll('.plan').forEach(x=>x.classList.remove('active'));p.classList.add('active');selectedPlan=p.dataset.plan;signupResult.innerHTML='Plano selecionado: <b>'+selectedPlan.toUpperCase()+'</b>';});}
 bindPlans();
-if(signupBtn)signupBtn.onclick=async()=>{const email=signupEmail.value.trim(); if(!email){signupResult.innerHTML='<span class="red">Digite um email para continuar.</span>';return;} showLog('SAAS','criando conta automática para '+email,'cyan'); const res=await fetch(API+'/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,plan:selectedPlan,provider:'email'})}); const data=await res.json(); if(!res.ok||!data.ok){signupResult.innerHTML='<span class="red">'+(data.error||'Falha no cadastro')+'</span>'; return;} signupResult.innerHTML='<span class="green">Conta criada: '+data.user.email+'</span><br>Plano: '+data.user.plan+'<br>Token demo: '+data.token; showLog('SAAS','conta criada no plano '+data.user.plan,'green'); closeAuth();};
-document.querySelectorAll('.oauth').forEach(btn=>btn.onclick=async()=>{const provider=btn.dataset.provider; const email=(signupEmail.value.trim()||('operator+'+provider+'@visioncore.local')); const res=await fetch(API+'/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,plan:selectedPlan,provider})}); const data=await res.json(); signupResult.innerHTML=data.ok?('<span class="green">Login '+provider+' conectado</span><br>'+data.user.email+' • '+data.user.plan):('<span class="red">'+data.error+'</span>'); if(data.ok){showLog('SAAS','login social '+provider+' criou usuário FREE automático','green'); closeAuth();}});
+if(signupBtn)signupBtn.onclick=async()=>{const email=signupEmail.value.trim(); if(!email){signupResult.innerHTML='<span class="red">Digite um email para continuar.</span>';return;} showLog('SAAS','criando conta automática para '+email,'cyan'); const res=await fetch('/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,plan:selectedPlan,provider:'email'})}); const data=await res.json(); if(!res.ok||!data.ok){signupResult.innerHTML='<span class="red">'+(data.error||'Falha no cadastro')+'</span>'; return;} signupResult.innerHTML='<span class="green">Conta criada: '+data.user.email+'</span><br>Plano: '+data.user.plan+'<br>Token demo: '+data.token; showLog('SAAS','conta criada no plano '+data.user.plan,'green'); closeAuth();};
+document.querySelectorAll('.oauth').forEach(btn=>btn.onclick=async()=>{const provider=btn.dataset.provider; const email=(signupEmail.value.trim()||('operator+'+provider+'@visioncore.local')); const res=await fetch('/api/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,plan:selectedPlan,provider})}); const data=await res.json(); signupResult.innerHTML=data.ok?('<span class="green">Login '+provider+' conectado</span><br>'+data.user.email+' • '+data.user.plan):('<span class="red">'+data.error+'</span>'); if(data.ok){showLog('SAAS','login social '+provider+' criou usuário FREE automático','green'); closeAuth();}});
 
 function maskKey(k){if(!k)return 'empty';return k.length<=8?'....':k.slice(0,4)+'......'+k.slice(-4)}
 document.querySelectorAll('.provider').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.provider').forEach(x=>x.classList.remove('active'));btn.classList.add('active'); if(window.aiProviderSelect) aiProviderSelect.value=btn.dataset.provider;});
 if(window.aiProviderSelect){aiProviderSelect.onchange=()=>{document.querySelectorAll('.provider').forEach(x=>x.classList.toggle('active',x.dataset.provider===aiProviderSelect.value));};}
-if(window.saveAiProviderBtn){saveAiProviderBtn.onclick=async()=>{const payload={provider:aiProviderSelect.value,api_key:aiApiKey.value.trim(),model:aiModel.value.trim(),priority:aiPriority.value}; if(!payload.api_key){aiProviderStatus.innerHTML='<span class="red">Cole uma API key para salvar.</span>';return;} try{const res=await fetch(API+'/api/ai/providers/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const data=await res.json(); aiProviderStatus.innerHTML=data.ok?('<span class="green">Provider salvo:</span> '+data.provider+' - '+data.model+' - key '+data.masked_key):('<span class="red">'+(data.error||'falha')+'</span>'); showLog('AI API','provider '+payload.provider+' salvo como '+payload.priority,'green');}catch(e){aiProviderStatus.innerHTML='<span class="yellow">Modo estatico: '+payload.provider+' configurado localmente - key '+maskKey(payload.api_key)+'</span>'; showLog('AI API','provider local salvo em UI demo','yellow');}}}
+if(window.saveAiProviderBtn){saveAiProviderBtn.onclick=async()=>{const payload={provider:aiProviderSelect.value,api_key:aiApiKey.value.trim(),model:aiModel.value.trim(),priority:aiPriority.value}; if(!payload.api_key){aiProviderStatus.innerHTML='<span class="red">Cole uma API key para salvar.</span>';return;} try{const res=await fetch('/api/ai/providers/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const data=await res.json(); aiProviderStatus.innerHTML=data.ok?('<span class="green">Provider salvo:</span> '+data.provider+' - '+data.model+' - key '+data.masked_key):('<span class="red">'+(data.error||'falha')+'</span>'); showLog('AI API','provider '+payload.provider+' salvo como '+payload.priority,'green');}catch(e){aiProviderStatus.innerHTML='<span class="yellow">Modo estatico: '+payload.provider+' configurado localmente - key '+maskKey(payload.api_key)+'</span>'; showLog('AI API','provider local salvo em UI demo','yellow');}}}
 if(window.testAiProviderBtn){testAiProviderBtn.onclick=()=>{const p=aiProviderSelect.value; aiProviderStatus.innerHTML='<span class="cyan">Teste mock OK:</span> '+p+' pronto para roteamento inteligente.'; showLog('AI API','teste mock OK para '+p,'cyan')}}
 githubStatusBtn.onclick=checkGithub;
 policyBtn.onclick=async()=>{const d=await api('/api/github/automerge-policy'); githubResult.innerHTML='Auto-merge: '+d.default+'<br>Required: '+d.required.join(', ')};
-githubPrBtn.onclick=async()=>{setRuntimeState('analyzing');showLog('GITHUB','criando PR com PASS GOLD...','cyan');const stamp=new Date().toISOString();const res=await fetch(API+'/api/github/create-pr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pass_gold:true,title:'VISION CORE V2.3.4 MARKET READY patch',message:'chore(vision-core): validate V2.3.4 static hardened',changes:[{path:'VISION_CORE_V9_5_1_PROOF.md',content:'# VISION CORE V2.3.4\n\nPASS GOLD confirmado em '+stamp+'\n\nFront VISION CORE V2.9.4 ULTRA.\n'}]})});const data=await res.json();if(!res.ok||!data.ok){githubResult.innerHTML=`<span class="red">${data.message||data.error||'Falha ao criar PR'}</span>`;showLog('GITHUB',data.message||'Falha ao criar PR','red');setRuntimeState('stable');return}githubResult.innerHTML=`PR criado: <a href="${data.pr_url}" target="_blank">${data.pr_url}</a><br>Vault: ${data.vault_manifest}`;showLog('GITHUB','PR criado com sucesso','green');setRuntimeState('stable')};
+githubPrBtn.onclick=async()=>{setRuntimeState('analyzing');showLog('GITHUB','criando PR com PASS GOLD...','cyan');const stamp=new Date().toISOString();const res=await fetch('/api/github/create-pr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pass_gold:true,title:'VISION CORE V2.3.4 MARKET READY patch',message:'chore(vision-core): validate V2.3.4 static hardened',changes:[{path:'VISION_CORE_V9_5_1_PROOF.md',content:'# VISION CORE V2.3.4\n\nPASS GOLD confirmado em '+stamp+'\n\nFront VISION CORE V2.9.4 ULTRA.\n'}]})});const data=await res.json();if(!res.ok||!data.ok){githubResult.innerHTML=`<span class="red">${data.message||data.error||'Falha ao criar PR'}</span>`;showLog('GITHUB',data.message||'Falha ao criar PR','red');setRuntimeState('stable');return}githubResult.innerHTML=`PR criado: <a href="${data.pr_url}" target="_blank">${data.pr_url}</a><br>Vault: ${data.vault_manifest}`;showLog('GITHUB','PR criado com sucesso','green');setRuntimeState('stable')};
 diffBtn.onclick=async()=>{const d=await api('/api/diff/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:'README.md',before:'VISION CORE V9.4',after:'VISION CORE V2.3.4 MARKET READY\nVISION CORE V2.9.4 ULTRA'})});diffViewer.textContent=d.patch;showLog('DIFF','preview gerado')};
 executeBtn.onclick=async()=>{
   const mission=(missionText.value.trim()||"diagnosticar runtime do projeto");
@@ -748,7 +797,7 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
   // Métricas ao vivo — atualizar barras com harness metrics se disponível
   async function updateMcMetrics() {
     try {
-      const r = await fetch(API + '/api/runtime/harness-stats');
+      const _hsBase = (window.__VISION_API__ || window.API_BASE_URL || ''); const r = await fetch(_hsBase + '/api/runtime/harness-stats');
       if (!r.ok) return;
       const d = await r.json();
       if (!d.ok) return;
@@ -800,11 +849,9 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
 </script>
 <script src="assets/v23-ui-system.js"></script>
 <script src="assets/v231-backend-agents.js"></script>
-<script src="assets/v233-realtime.js"></script>
-
 <script>
 (function(){
-  const API_BASE = (window.API || window.RUNTIME_CONFIG?.API_BASE_URL || '').replace(/\/$/, '');
+  const API_BASE = (window.API || window.API_BASE_URL || window.RUNTIME_CONFIG?.API_BASE_URL || '').replace(/\/$/, '');
   const missionText = document.getElementById('missionText');
   const copilotBtn = document.getElementById('v236CopilotBtn');
   const fileBtn = document.getElementById('v236FileBtn');
@@ -915,15 +962,39 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
   function small(el,t){const s=el&&el.querySelector('small'); if(s) s.textContent=t;}
   function reset(){current=-1;steps().forEach(e=>{e.classList.remove('running','done','fail');small(e,'aguardando')});lines().forEach(e=>e.classList.remove('running','done','fail'));}
   function paint(stage,status){const n=norm(stage); if(!n) return; const idx=STAGES.indexOf(n); if(idx<0)return; current=Math.max(current,idx); const done=['done','ok','gold','success'].includes(status); const fail=['fail','failed','error'].includes(status); steps().forEach((el,i)=>{el.classList.remove('running','done','fail'); if(i<idx){el.classList.add('done'); small(el,STAGES[i]==='PASS GOLD'?'GOLD':'ok');} else if(i===idx){ if(fail){el.classList.add('fail');small(el,'falhou')} else if(done){el.classList.add('done');small(el,n==='PASS GOLD'?'GOLD':'ok')} else {el.classList.add('running');small(el,'executando')} } else small(el,'aguardando');}); lines().forEach((li,i)=>{li.classList.remove('running','done','fail'); if(i<idx)li.classList.add('done'); else if(i===idx && !done)li.classList.add('running');});}
-  function animate(){clearInterval(timer);reset();let i=0;paint(STAGES[0],'running');timer=setInterval(()=>{if(i<STAGES.length)paint(STAGES[i],'done');i++;if(i<STAGES.length)paint(STAGES[i],'running');else clearInterval(timer);},900);}
+  function animate(){console.log('[V44] animate demo bloqueado — pipeline aguarda SSE real');}
   window.v236ResetPipeline=reset; window.v236SetPipelineStage=paint; window.v236AnimatePipelineDemo=animate;
   document.addEventListener('DOMContentLoaded',reset); if(document.readyState!=='loading')reset();
-  const ex=document.getElementById('executeBtn'); if(ex)ex.addEventListener('click',animate,true);
+  const ex=document.getElementById('executeBtn'); if(ex)ex.addEventListener('click',function(){ /* V4.4: sem demo local; v32/v34/v44 controlam via SSE real */ },true);
   const cp=document.getElementById('v236CopilotBtn'); if(cp)cp.addEventListener('click',()=>paint('Hermes','running'),true);
   const fb=document.getElementById('v236FileBtn'); if(fb)fb.addEventListener('click',()=>paint('Scanner','running'),true);
   const lb=document.getElementById('logsBox'); if(lb){new MutationObserver(()=>{const t=lb.textContent.toLowerCase(); if(t.includes('fail')||t.includes('erro')||t.includes('bloqueado')){paint(STAGES[Math.max(current,0)]||'Scanner','fail');return;} Object.keys(ALIASES).forEach(k=>{if(t.includes(k))paint(ALIASES[k],t.includes('running')||t.includes('executando')||t.includes('iniciando')?'running':'done')});}).observe(lb,{childList:true,subtree:true,characterData:true});}
 })();
 </script>
-<script src="assets/v273-sddf-command-chat.js"></script>
+<script src="assets/vision-v298-command-chat.js?v=298" defer></script>
+<script src="assets/vision-v298-final-hard-fix2.js?v=298-fix2" defer></script>
+<script src="assets/vision-v299-fullstack-runtime.js?v=299" defer></script>
+<script src="assets/vision-v2910-clean-runtime.js?v=2910-clean" defer></script>
+
+<script id="V31_FORCE_GATEWAY_FINAL">
+(function(){
+  const GATEWAY = "https://visioncore-api-gateway.weiganlight.workers.dev";
+  function apiUrl(p){ p=String(p||''); if(p.startsWith('/api')) return GATEWAY+p; if(p.startsWith('api/')) return GATEWAY+'/'+p; if(/^https?:/.test(p)) return p; return GATEWAY+'/api'+(p.startsWith('/')?p:'/'+p); }
+  function forceGateway(){
+    window.RUNTIME_CONFIG = { API_BASE_URL: GATEWAY }; window.API_BASE_URL = GATEWAY; window.__VISION_API__ = GATEWAY; window.API = GATEWAY; window.getVisionApi = () => GATEWAY;
+    if(window.VisionCoreRuntime){ window.VisionCoreRuntime.api=GATEWAY; window.VisionCoreRuntime.active=GATEWAY; window.VisionCoreRuntime.apiUrl=apiUrl; window.VisionCoreRuntime.withBase=apiUrl; }
+  }
+  forceGateway(); document.addEventListener('DOMContentLoaded', forceGateway); setTimeout(forceGateway,0); setTimeout(forceGateway,500); setTimeout(forceGateway,1500);
+})();
+</script>
+
+  <!-- V3.2: Runtime único SSE — carrega último para neutralizar runtimes anteriores -->
+  <script src="assets/vision-v32-orbit-runtime.js?v=32" defer></script>
+  <!-- V3.4 Enterprise Live -->
+  <script src="assets/vision-v34-enterprise.js?v=34" defer></script>
+  <!-- V3.5 Telemetria Real -->
+  <script src="assets/vision-v35-telemetry.js?v=35" defer></script>
+  <!-- V4.4 Runtime Consistency Pass -->
+  <script src="assets/vision-v44-runtime-consistency.js?v=44" defer></script>
 </body>
 </html>

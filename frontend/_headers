@@ -1,8 +1,3 @@
 /*
-  Cache-Control: no-store, no-cache, must-revalidate
-  Pragma: no-cache
   X-Content-Type-Options: nosniff
-
-/api/*
-  Cache-Control: no-store
-  Content-Security-Policy: default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; connect-src 'self' https://api.technetgame.com.br https://*.technetgame.com.br https://*.pages.dev https://*.elasticbeanstalk.com; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:
+  Referrer-Policy: strict-origin-when-cross-origin

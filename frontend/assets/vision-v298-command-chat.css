@@ -1,0 +1,281 @@
+
+/* VISION CORE V2.9.8 — Command Chat inspirado no TechNet AI
+   Incremental only: mantém DNA roxo/preto e não remove menus. */
+
+:root{
+  --v298-bg:#05070b;
+  --v298-panel:rgba(8,10,18,.92);
+  --v298-panel2:rgba(18,10,35,.88);
+  --v298-border:rgba(168,85,247,.34);
+  --v298-purple:#a855f7;
+  --v298-purple2:#7c3aed;
+  --v298-cyan:#22d3ee;
+  --v298-green:#00e0a4;
+  --v298-yellow:#facc15;
+  --v298-red:#ef4444;
+  --v298-text:#f8fafc;
+  --v298-muted:rgba(248,250,252,.66);
+}
+
+/* Esconde apenas o chat pequeno antigo, preservando estrutura e IDs originais. */
+#v297UniversalChat,
+.v236-copilot-mini-chat{
+  display:none !important;
+}
+
+/* O card da missão vira Command Center, sem redesenhar o grid externo. */
+#mission{
+  position:relative;
+  overflow:hidden;
+}
+
+/* Cria área TechNet-style dentro do Vision Core */
+.v298-command-chat{
+  margin:14px 0 0;
+  border:1px solid var(--v298-border);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(168,85,247,.22), transparent 35%),
+    linear-gradient(180deg, rgba(9,10,16,.96), rgba(4,5,10,.96));
+  border-radius:18px;
+  box-shadow:0 0 34px rgba(168,85,247,.14), inset 0 1px 0 rgba(255,255,255,.04);
+  min-height:520px;
+  display:flex;
+  flex-direction:column;
+}
+
+.v298-command-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:14px 16px;
+  border-bottom:1px solid rgba(168,85,247,.22);
+}
+
+.v298-command-title strong{
+  display:block;
+  font-size:15px;
+  letter-spacing:.16em;
+  color:var(--v298-text);
+}
+
+.v298-command-title span{
+  display:block;
+  margin-top:3px;
+  font-size:12px;
+  color:var(--v298-muted);
+}
+
+.v298-command-status{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  border:1px solid rgba(34,211,238,.28);
+  background:rgba(34,211,238,.07);
+  color:var(--v298-cyan);
+  border-radius:999px;
+  padding:7px 10px;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.12em;
+  white-space:nowrap;
+}
+
+.v298-command-status::before{
+  content:"";
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--v298-cyan);
+  box-shadow:0 0 12px var(--v298-cyan);
+}
+
+.v298-chat-stream{
+  flex:1;
+  min-height:280px;
+  max-height:480px;
+  overflow:auto;
+  padding:18px;
+  background:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size:32px 32px;
+}
+
+.v298-empty-hint{
+  margin:48px auto;
+  max-width:620px;
+  text-align:center;
+  color:var(--v298-muted);
+  line-height:1.6;
+  font-size:14px;
+}
+
+.v298-message{
+  max-width:86%;
+  margin:12px 0;
+  border-radius:16px;
+  padding:12px 14px;
+  line-height:1.55;
+  font-size:14px;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+
+.v298-message.user{
+  margin-left:auto;
+  background:linear-gradient(135deg, rgba(124,58,237,.9), rgba(168,85,247,.7));
+  border:1px solid rgba(216,180,254,.34);
+  color:#fff;
+  box-shadow:0 0 20px rgba(168,85,247,.18);
+}
+
+.v298-message.bot{
+  margin-right:auto;
+  background:rgba(15,23,42,.75);
+  border:1px solid rgba(34,211,238,.16);
+  color:var(--v298-text);
+}
+
+.v298-message.system{
+  max-width:100%;
+  background:rgba(250,204,21,.08);
+  border:1px solid rgba(250,204,21,.22);
+  color:#fde68a;
+  font-size:13px;
+}
+
+.v298-message.error{
+  max-width:100%;
+  background:rgba(239,68,68,.1);
+  border:1px solid rgba(239,68,68,.32);
+  color:#fecaca;
+}
+
+.v298-composer{
+  border-top:1px solid rgba(168,85,247,.22);
+  padding:14px;
+  background:linear-gradient(180deg, rgba(10,10,18,.96), rgba(5,5,10,.98));
+}
+
+.v298-input-wrap{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  align-items:stretch;
+}
+
+.v298-input{
+  width:100%;
+  min-height:86px;
+  max-height:180px;
+  resize:vertical;
+  border-radius:16px;
+  border:1px solid rgba(168,85,247,.24);
+  background:rgba(255,255,255,.08);
+  color:#fff;
+  padding:14px 16px;
+  font-size:14px;
+  outline:none;
+}
+
+.v298-input:focus{
+  border-color:rgba(168,85,247,.7);
+  box-shadow:0 0 0 3px rgba(168,85,247,.12);
+}
+
+.v298-send-stack{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.v298-send,
+.v298-run{
+  min-width:132px;
+  border:0;
+  border-radius:14px;
+  padding:12px 14px;
+  color:#fff;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.v298-send{
+  background:linear-gradient(135deg, var(--v298-purple), var(--v298-purple2));
+}
+
+.v298-run{
+  background:linear-gradient(135deg, var(--v298-cyan), var(--v298-green));
+  color:#031014;
+}
+
+.v298-tool-row{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:10px;
+  align-items:center;
+}
+
+.v298-tool-btn,
+.v298-select{
+  min-height:38px;
+  border-radius:12px;
+  border:1px solid rgba(168,85,247,.22);
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  padding:9px 11px;
+  font-size:12px;
+  font-weight:700;
+}
+
+.v298-tool-btn{
+  cursor:pointer;
+}
+
+.v298-select{
+  min-width:160px;
+}
+
+.v298-file-note{
+  margin-top:8px;
+  color:var(--v298-muted);
+  font-size:12px;
+}
+
+.v298-state-running .v298-command-status{
+  color:var(--v298-purple);
+  border-color:rgba(168,85,247,.45);
+}
+.v298-state-running .v298-command-status::before{background:var(--v298-purple);box-shadow:0 0 12px var(--v298-purple);}
+
+.v298-state-fail .v298-command-status{
+  color:var(--v298-red);
+  border-color:rgba(239,68,68,.45);
+}
+.v298-state-fail .v298-command-status::before{background:var(--v298-red);box-shadow:0 0 12px var(--v298-red);}
+
+.v298-state-gold .v298-command-status{
+  color:var(--v298-yellow);
+  border-color:rgba(250,204,21,.45);
+}
+.v298-state-gold .v298-command-status::before{background:var(--v298-yellow);box-shadow:0 0 12px var(--v298-yellow);}
+
+/* Integração visual com timeline e agent local existentes */
+body.v298-pipeline-running .mc-core{box-shadow:0 0 26px rgba(168,85,247,.78)!important;}
+body.v298-pipeline-fail .mc-core{box-shadow:0 0 28px rgba(239,68,68,.78)!important;}
+body.v298-pipeline-gold .mc-core{box-shadow:0 0 30px rgba(250,204,21,.82)!important;}
+
+body.v298-pipeline-fail .v236-compact-timeline{border-color:rgba(239,68,68,.62)!important;}
+body.v298-pipeline-gold .v236-compact-timeline{border-color:rgba(250,204,21,.62)!important;}
+body.v298-pipeline-running .v236-compact-timeline{border-color:rgba(168,85,247,.62)!important;}
+
+@media(max-width:900px){
+  .v298-command-chat{min-height:480px;}
+  .v298-command-head{align-items:flex-start;flex-direction:column;}
+  .v298-input-wrap{grid-template-columns:1fr;}
+  .v298-send-stack{flex-direction:row;}
+  .v298-send,.v298-run{flex:1;min-width:0;}
+  .v298-select{flex:1 1 160px;}
+}

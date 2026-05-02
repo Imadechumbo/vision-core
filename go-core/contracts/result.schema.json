@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VisionCore Mission Result",
+  "description": "Contrato de saída JSON puro do Go Safe Core V5.0",
+  "type": "object",
+  "required": ["ok", "version", "mission_id", "engine", "status", "pass_gold", "promotion_allowed", "rollback_ready", "summary", "steps"],
+  "properties": {
+    "ok": { "type": "boolean" },
+    "version": { "type": "string", "const": "5.0.0-go-safe-core" },
+    "mission_id": { "type": "string", "pattern": "^mission_[a-f0-9]+$" },
+    "engine": { "type": "string", "const": "go-safe-core" },
+    "status": { "type": "string", "enum": ["GOLD", "FAIL"] },
+    "pass_gold": { "type": "boolean" },
+    "promotion_allowed": { "type": "boolean" },
+    "rollback_ready": { "type": "boolean" },
+    "summary": { "type": "string" },
+    "steps": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "step_results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step", "ok"],
+        "properties": {
+          "step": { "type": "string" },
+          "ok": { "type": "boolean" },
+          "message": { "type": "string" },
+          "error": { "type": "string" }
+        }
+      }
+    },
+    "gates": { "$ref": "#/definitions/Gates" },
+    "failed_gates": { "type": "array", "items": { "type": "string" } },
+    "duration_ms": { "type": "integer", "minimum": 0 },
+    "error": { "type": "string" }
+  },
+  "definitions": {
+    "Gates": {
+      "type": "object",
+      "required": ["scanner_ok","fileops_ok","patcher_ok","validator_ok","rollback_ready","security_ok","legacy_safe"],
+      "properties": {
+        "scanner_ok":     { "type": "boolean" },
+        "fileops_ok":     { "type": "boolean" },
+        "patcher_ok":     { "type": "boolean" },
+        "validator_ok":   { "type": "boolean" },
+        "rollback_ready": { "type": "boolean" },
+        "security_ok":    { "type": "boolean" },
+        "legacy_safe":    { "type": "boolean" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

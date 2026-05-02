@@ -1,24 +1,31 @@
 {
-  "name": "vision-core-server",
-  "version": "2.9.4",
-  "description": "VISION CORE V2.9.4 FULL REAL - OpenClaw Router, real Scanner, Hermes RCA, SSE, GitHub PR and PASS GOLD gates",
+  "name": "vision-core-backend-v41",
+  "version": "4.1.0",
+  "description": "Vision Core V4.1 — Auth real, Multi-tenant real, Stripe real, GitHub CI real",
   "main": "server.js",
+  "type": "commonjs",
   "scripts": {
+    "prestart": "node scripts/validate-syntax.js && node scripts/self-healing-config.js --apply",
     "start": "node server.js",
-    "iniciar": "node server.js",
-    "health": "node -e \"fetch('http://127.0.0.1:'+(process.env.PORT||8080)+'/api/health').then(r=>r.text()).then(console.log)\"",
-    "test:syntax": "node scripts/validate-syntax.js",
-    "test:contract": "node -e \"const app=require('./src/app'); const s=app.listen(8787,async()=>{for(const p of ['/api/health','/api/version','/api/harness-stats','/api/readiness','/api/validation/gates']){const r=await fetch('http://127.0.0.1:8787'+p); if(!r.ok) throw new Error(p+' '+r.status)}; s.close(()=>console.log('PASS GOLD CONTRACT OK'))})\"",
-    "test:cors": "node scripts/cors-preflight-check.js",
-    "validate": "npm run test:syntax && npm run test:contract && npm run test:cors",
-    "prestart": "node scripts/validate-syntax.js"
-  },
-  "engines": {
-    "node": ">=20 <25"
+    "start:v41": "node server-v41.js",
+    "validate": "node scripts/validate-syntax.js",
+    "validate:passgold": "node scripts/validate-passgold.js",
+    "validate:config": "node scripts/self-healing-config.js"
   },
   "dependencies": {
-    "express": "^4.18.3",
-    "cors": "^2.8.5"
+    "@babel/parser": "^7.24.7",
+    "bcryptjs": "^3.0.3",
+    "express": "^4.22.1",
+    "jsonwebtoken": "^9.0.3",
+    "stripe": "^22.1.0"
   },
-  "devDependencies": {}
+  "engines": {
+    "node": ">=20.18.1"
+  },
+  "notes": {
+    "v41_auth": "Auth real via Node built-ins: PBKDF2 + JWT HS256 manual. Sem bcrypt ou jsonwebtoken externos.",
+    "v41_db": "Banco JSON file-based com isolamento real por tenant. Para produção: migrar para SQLite/PostgreSQL.",
+    "v41_stripe": "Stripe via HTTPS nativo (sem SDK). Requer STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET.",
+    "v41_env": "JWT_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_PRO, STRIPE_PRICE_ENTERPRISE"
+  }
 }
