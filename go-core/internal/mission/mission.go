@@ -54,6 +54,10 @@ type Output struct {
 	FailedGates      []string       `json:"failed_gates,omitempty"`
 	SnapshotID       string         `json:"snapshot_id,omitempty"`
 	RollbackApplied  bool           `json:"rollback_applied"`
+	TransactionMode  bool           `json:"transaction_mode"`
+	TransactionID    string         `json:"transaction_id,omitempty"`
+	PatchedFiles     int            `json:"patched_files"`
+	TotalFiles       int            `json:"total_files"`
 	DurationMs       int64          `json:"duration_ms"`
 	Error            string         `json:"error,omitempty"`
 }
@@ -126,38 +130,35 @@ func Run(input Input) Output {
 	_ = realSnap
 	out.StepResults = append(out.StepResults, s3)
 
-	// ── STEP 4: Patcher ───────────────────────────────────────────
-	// FIX 2: patcher roda com DryRun=true quando já criamos snapshot aqui
-	// Isso evita que patcher.Apply crie um segundo snapshot duplicado.
-	// O arquivo alvo já foi salvo em backup no step 3.
-	plan := buildPlan(missionID, targetFile, input)
-	// Se já fizemos snapshot no step 3 (não dry-run), o patcher não precisa
-	// criar outro. Mas o patcher.Apply só cria snapshot quando !plan.DryRun.
-	// Como o backup já existe, passamos o snapshotDir: o patcher vai tentar
-	// criar um segundo snapshot — para evitar, marcamos patcher como dry-run
-	// quando já temos o snapshot real do step 3.
-	if !input.DryRun && snapshotID != "" {
-		// Temos snapshot real: patcher não precisa criar outro
-		// mas precisa escrever as mudanças — usamos um wrapper que pula o snapshot interno
-		plan.DryRun = false // aplica mudanças
-		// O patcher.Apply vai tentar criar snapshot: isso é aceito (será o segundo)
-		// mas o snapshotID que exportamos é o do step 3 (o primeiro e correto)
-	}
-	patchRes := patcher.Apply(input.Root, plan, snapshotDir)
+	// ── STEP 4: Patcher — V5.4 Multi-File Transactional ─────────
+	// Usa BatchPlan para permitir múltiplos arquivos com rollback transacional.
+	// Snapshot já foi criado no step 3 (arquivo sentinela).
+	// O BatchPlan também cria snapshots internos de cada arquivo do batch.
+	batch := buildBatchPlan(missionID, targetFile, input)
+	batchRes := patcher.ApplyBatch(input.Root, batch, snapshotDir)
 	s4 := StepResult{Step: "patcher"}
-	if patchRes.OK {
+	if batchRes.OK {
 		s4.OK = true
 		gates.PatcherOK = true
 		if input.DryRun {
-			s4.Message = fmt.Sprintf("dry-run: %d ops validated", patchRes.Applied)
+			s4.Message = fmt.Sprintf("dry-run: %d/%d files validated",
+				batchRes.PatchedFiles, batchRes.TotalFiles)
 		} else {
-			s4.Message = fmt.Sprintf("patch executed: %d ops applied", patchRes.Applied)
+			s4.Message = fmt.Sprintf("patch executed: %d/%d files patched (tx: %s)",
+				batchRes.PatchedFiles, batchRes.TotalFiles, batchRes.TransactionID)
+		}
+		out.TransactionMode = true
+		out.TransactionID   = batchRes.TransactionID
+		out.PatchedFiles    = batchRes.PatchedFiles
+		out.TotalFiles      = batchRes.TotalFiles
+		if batchRes.SnapshotIDs != nil && len(batchRes.SnapshotIDs) > 0 {
+			out.SnapshotID = batchRes.SnapshotIDs[0] // primeiro snapshot do batch
 		}
 	} else {
-		s4.Error = patchRes.Error
-		if len(patchRes.Errors) > 0 {
-			s4.Error = patchRes.Errors[0]
-		}
+		s4.Error = batchRes.Error
+		out.TransactionMode   = true
+		out.TransactionID     = batchRes.TransactionID
+		out.RollbackApplied   = batchRes.RollbackApplied
 	}
 	out.StepResults = append(out.StepResults, s4)
 
@@ -254,16 +255,23 @@ func selectTargetFile(root, _ string) string {
 	return ".vision-sentinel"
 }
 
-// buildPlan constrói plano de patch para o arquivo sentinela.
-func buildPlan(missionID, targetFile string, input Input) patcher.Plan {
-	return patcher.Plan{
-		MissionID: missionID,
-		File:      targetFile,
-		DryRun:    input.DryRun,
-		Ops: []patcher.Op{
+// buildBatchPlan constrói um BatchPlan V5.4 para o arquivo sentinela.
+// Em V5.4 o pipeline usa BatchPlan mesmo para arquivo único,
+// garantindo transaction_mode=true em todas as execuções.
+func buildBatchPlan(missionID, targetFile string, input Input) patcher.BatchPlan {
+	return patcher.BatchPlan{
+		MissionID:   missionID,
+		DryRun:      input.DryRun,
+		Description: "V5.4 transactional mission: " + input.InputText,
+		Files: []patcher.FilePlan{
 			{
-				Type:    "append",
-				Content: fmt.Sprintf("\naudited:%s:%d\n", missionID, time.Now().UnixMilli()),
+				File: targetFile,
+				Ops: []patcher.Op{
+					{
+						Type:    "append",
+						Content: fmt.Sprintf("\naudited:%s:%d\n", missionID, time.Now().UnixMilli()),
+					},
+				},
 			},
 		},
 	}
