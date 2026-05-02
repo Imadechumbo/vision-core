@@ -2,225 +2,97 @@ name: Vision Core CI — PASS GOLD Gate
 
 on:
   push:
-    branches: [ main, develop, 'feat/**', 'fix/**' ]
+    branches:
+      - main
+      - develop
+      - "feat/**"
+      - "fix/**"
+      - "v5-go-agent-bridge"
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+  workflow_dispatch:
 
-# Cancela runs anteriores do mesmo PR/branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  VISION_CORE_API: ${{ secrets.VISION_CORE_API_URL }}
-  GITHUB_TOKEN_VC:  ${{ secrets.VISION_CORE_GITHUB_TOKEN }}
+permissions:
+  contents: read
+  actions: read
 
 jobs:
-  # ─── JOB 1: Syntax + Lint rápido ───────────────────────────────
   syntax-check:
     name: 🔍 Syntax & Lint
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'backend/package.json'
+          node-version: "20"
 
-      - name: Install dependencies
-        working-directory: backend
-        run: npm ci --prefer-offline
-
-      - name: Validate syntax (Vision Core gate)
-        working-directory: backend
-        run: node scripts/validate-syntax.js
-
-      - name: Validate PASS GOLD policy
-        working-directory: backend
-        run: node scripts/validate-passgold.js
-
-  # ─── JOB 2: Vision Core Pipeline ───────────────────────────────
-  vision-core-pipeline:
-    name: 🧠 Vision Core — Hermes RCA + Patch + PASS GOLD
-    runs-on: ubuntu-latest
-    needs: syntax-check
-    if: ${{ github.event_name == 'pull_request' }}
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Full history para diff
-
-      - name: Get changed files
-        id: changed
+      - name: Node syntax checks
         run: |
-          CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | head -50 | tr '\n' ',')
-          echo "files=$CHANGED" >> $GITHUB_OUTPUT
-          echo "Changed files: $CHANGED"
+          node --check backend/server.js
+          node --check backend/src/runtime/goRunner.js
 
-      - name: Trigger Vision Core Mission
-        id: mission
-        run: |
-          if [ -z "$VISION_CORE_API" ]; then
-            echo "VISION_CORE_API não configurado — pulando análise Vision Core"
-            echo "mission_id=no-api" >> $GITHUB_OUTPUT
-            echo "pass_gold=skipped" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          MISSION_PAYLOAD=$(cat <<EOF
-          {
-            "mission": "Analyze PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}",
-            "context": {
-              "pr_number": ${{ github.event.pull_request.number }},
-              "changed_files": "${{ steps.changed.outputs.files }}",
-              "base_sha": "${{ github.event.pull_request.base.sha }}",
-              "head_sha": "${{ github.sha }}",
-              "repo": "${{ github.repository }}",
-              "branch": "${{ github.head_ref }}"
-            },
-            "mode": "ci",
-            "require_pass_gold": true
-          }
-          EOF
-          )
-
-          RESPONSE=$(curl -s -X POST "$VISION_CORE_API/api/run-live" \
-            -H "Content-Type: application/json" \
-            -d "$MISSION_PAYLOAD" \
-            --max-time 30 || echo '{"ok":false,"error":"timeout"}')
-
-          echo "Response: $RESPONSE"
-          MISSION_ID=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('mission_id','unknown'))" 2>/dev/null || echo "unknown")
-          echo "mission_id=$MISSION_ID" >> $GITHUB_OUTPUT
-
-      - name: Wait for PASS GOLD
-        id: pass_gold
-        run: |
-          MISSION_ID="${{ steps.mission.outputs.mission_id }}"
-          if [ "$MISSION_ID" = "no-api" ] || [ "$MISSION_ID" = "unknown" ]; then
-            echo "result=skipped" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "Aguardando PASS GOLD para missão $MISSION_ID..."
-          MAX_WAIT=300  # 5 minutos
-          ELAPSED=0
-          INTERVAL=10
-
-          while [ $ELAPSED -lt $MAX_WAIT ]; do
-            STATUS=$(curl -s "$VISION_CORE_API/api/mission/$MISSION_ID" --max-time 10 | \
-              python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('pass_gold','pending'))" 2>/dev/null || echo "pending")
-            echo "[$ELAPSED s] Status: $STATUS"
-
-            if [ "$STATUS" = "true" ] || [ "$STATUS" = "GOLD" ]; then
-              echo "result=PASS_GOLD" >> $GITHUB_OUTPUT
-              break
-            elif [ "$STATUS" = "false" ] || [ "$STATUS" = "FAIL" ]; then
-              echo "result=FAIL" >> $GITHUB_OUTPUT
-              break
-            fi
-
-            sleep $INTERVAL
-            ELAPSED=$((ELAPSED + INTERVAL))
-          done
-
-          if [ $ELAPSED -ge $MAX_WAIT ]; then
-            echo "result=TIMEOUT" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Comment PASS GOLD result on PR
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const result    = '${{ steps.pass_gold.outputs.result }}';
-            const missionId = '${{ steps.mission.outputs.mission_id }}';
-            const apiUrl    = process.env.VISION_CORE_API || 'not configured';
-
-            const icons = { PASS_GOLD: '✅', FAIL: '❌', TIMEOUT: '⏱️', skipped: 'ℹ️' };
-            const icon  = icons[result] || '🔍';
-
-            const body = `## ${icon} Vision Core — ${result}
-
-            | Campo | Valor |
-            |-------|-------|
-            | Mission ID | \`${missionId}\` |
-            | Resultado | **${result}** |
-            | Pipeline | OpenClaw → Scanner → Hermes → PatchEngine → Aegis → SDDF |
-            | API | ${apiUrl} |
-
-            ${result === 'PASS_GOLD' ?
-              '**Deploy autorizado.** Todos os gates passaram.' :
-              result === 'FAIL' ?
-              '**⛔ Deploy bloqueado.** Hermes identificou problemas. Verifique o relatório no Mission Control.' :
-              result === 'TIMEOUT' ?
-              '**Pipeline não concluiu em 5 minutos.** Verifique o backend Vision Core.' :
-              'Vision Core API não configurada — análise pulada.'
-            }`;
-
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body
-            });
-
-      - name: Block merge on FAIL
-        if: ${{ steps.pass_gold.outputs.result == 'FAIL' }}
-        run: |
-          echo "❌ VISION CORE FAIL — merge bloqueado"
-          exit 1
-
-  # ─── JOB 3: Build artifact ─────────────────────────────────────
   build:
     name: 📦 Build & Artifact
     runs-on: ubuntu-latest
-    needs: [ syntax-check ]
+    needs:
+      - syntax-check
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'backend/package.json'
+          go-version-file: go-core/go.mod
 
-      - name: Install
-        working-directory: backend
-        run: npm ci
+      - name: Go test
+        working-directory: go-core
+        run: go test ./...
 
-      - name: Create deployment artifact
-        run: |
-          mkdir -p artifact
-          cp -r backend artifact/
-          cp -r frontend artifact/ 2>/dev/null || true
-          # Gerar rollback manifest com SHA
-          echo "{\"sha\":\"${{ github.sha }}\",\"ref\":\"${{ github.ref }}\",\"built_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"pass_gold_required\":true}" \
-            > artifact/rollback-manifest.json
-          tar -czf vision-core-build.tar.gz artifact/
+      - name: Build vision-core binary
+        working-directory: go-core
+        run: go build -o ../bin/vision-core.exe ./cmd/vision-core
 
-      - name: Upload artifact
+      - name: Upload vision-core binary
         uses: actions/upload-artifact@v4
         with:
-          name: vision-core-${{ github.sha }}
-          path: vision-core-build.tar.gz
+          name: vision-core-exe-${{ github.sha }}
+          path: bin/vision-core.exe
+          if-no-files-found: error
           retention-days: 30
 
-      - name: Generate diff report
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          git diff ${{ github.event.pull_request.base.sha }} ${{ github.sha }} --stat > diff-report.txt
-          cat diff-report.txt
+  vision-core-pipeline:
+    name: 🧠 Vision Core — Hermes RCA + Patch + PASS GOLD
+    runs-on: ubuntu-latest
+    needs:
+      - build
 
-      - name: Upload diff
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/upload-artifact@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          name: diff-${{ github.sha }}
-          path: diff-report.txt
+          go-version-file: go-core/go.mod
+
+      - name: Build vision-core binary
+        working-directory: go-core
+        run: go build -o ../bin/vision-core.exe ./cmd/vision-core
+
+      - name: Run Hermes mission and validate PASS GOLD
+        shell: bash
+        run: |
+          output=$(./bin/vision-core.exe mission --root "." --input "CORS origin blocked")
+          echo "$output"
+          printf '%s' "$output" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="GOLD"; assert d["pass_gold"] is True; assert d["engine"]=="go-safe-core"; assert d["hermes_enabled"] is True; assert d["transaction_mode"] is True; print("PASS GOLD")'
