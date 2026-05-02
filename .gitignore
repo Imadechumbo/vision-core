@@ -19,3 +19,9 @@ desktop-agent/node_modules/-e
 bin/
 **/.vision-snapshots/
 go-core/vendor/
+
+.vision-test/
+**/.vision-test/
+.rollback/
+**/.rollback/
+backend/memory/incidents/

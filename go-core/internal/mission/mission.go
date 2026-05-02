@@ -3,10 +3,10 @@
 // Pipeline: scanner → fileops → snapshot → patcher (no-snapshot) → validator → rollback → passgold
 //
 // Fixes V5.2.1:
-//   1. self-test usa .vision-test/ — nunca toca go.mod ou arquivos reais do projeto
-//   2. snapshot único: criado aqui no step 3, patcher roda com DryRun=true para não duplicar
-//   3. snapshotID retornado é snap.ID real de fileops.CreateSnapshot
-//   4. rollback.Restore recebe root para resolver path absoluto corretamente
+//  1. self-test usa .vision-test/ — nunca toca go.mod ou arquivos reais do projeto
+//  2. snapshot único: criado aqui no step 3, patcher roda com DryRun=true para não duplicar
+//  3. snapshotID retornado é snap.ID real de fileops.CreateSnapshot
+//  4. rollback.Restore recebe root para resolver path absoluto corretamente
 package mission
 
 import (
@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/visioncore/go-core/internal/fileops"
+	"github.com/visioncore/go-core/internal/hermes"
 	"github.com/visioncore/go-core/internal/passgold"
 	"github.com/visioncore/go-core/internal/patcher"
 	"github.com/visioncore/go-core/internal/rollback"
@@ -39,35 +40,41 @@ type StepResult struct {
 }
 
 type Output struct {
-	OK               bool           `json:"ok"`
-	Version          string         `json:"version"`
-	MissionID        string         `json:"mission_id"`
-	Engine           string         `json:"engine"`
-	Status           string         `json:"status"`
-	PassGold         bool           `json:"pass_gold"`
-	PromotionAllowed bool           `json:"promotion_allowed"`
-	RollbackReady    bool           `json:"rollback_ready"`
-	Summary          string         `json:"summary"`
-	Steps            []string       `json:"steps"`
-	StepResults      []StepResult   `json:"step_results"`
-	Gates            passgold.Gates `json:"gates"`
-	FailedGates      []string       `json:"failed_gates,omitempty"`
-	SnapshotID       string         `json:"snapshot_id,omitempty"`
-	RollbackApplied  bool           `json:"rollback_applied"`
-	TransactionMode  bool           `json:"transaction_mode"`
-	TransactionID    string         `json:"transaction_id,omitempty"`
-	PatchedFiles     int            `json:"patched_files"`
-	TotalFiles       int            `json:"total_files"`
-	DurationMs       int64          `json:"duration_ms"`
-	Error            string         `json:"error,omitempty"`
+	OK                bool           `json:"ok"`
+	Version           string         `json:"version"`
+	MissionID         string         `json:"mission_id"`
+	Engine            string         `json:"engine"`
+	Status            string         `json:"status"`
+	PassGold          bool           `json:"pass_gold"`
+	PromotionAllowed  bool           `json:"promotion_allowed"`
+	RollbackReady     bool           `json:"rollback_ready"`
+	Summary           string         `json:"summary"`
+	Steps             []string       `json:"steps"`
+	StepResults       []StepResult   `json:"step_results"`
+	Gates             passgold.Gates `json:"gates"`
+	FailedGates       []string       `json:"failed_gates,omitempty"`
+	SnapshotID        string         `json:"snapshot_id,omitempty"`
+	RollbackApplied   bool           `json:"rollback_applied"`
+	TransactionMode   bool           `json:"transaction_mode"`
+	TransactionID     string         `json:"transaction_id,omitempty"`
+	PatchedFiles      int            `json:"patched_files"`
+	TotalFiles        int            `json:"total_files"`
+	DurationMs        int64          `json:"duration_ms"`
+	Error             string         `json:"error,omitempty"`
+	HermesEnabled     bool           `json:"hermes_enabled"`
+	IssueType         string         `json:"issue_type,omitempty"`
+	ProbableRootCause string         `json:"probable_root_cause,omitempty"`
+	Confidence        float64        `json:"confidence"`
+	Severity          string         `json:"severity,omitempty"`
+	SuggestedStrategy string         `json:"suggested_strategy,omitempty"`
 }
 
-var v52Steps = []string{
-	"scanner", "fileops", "snapshot", "patcher",
+var v55Steps = []string{
+	"scanner", "hermes", "fileops", "snapshot", "patcher",
 	"validator", "rollback", "passgold",
 }
 
-// Run executa o pipeline V5.2 corrigido.
+// Run executa o pipeline V5.5 com Hermes integrado ao runtime real.
 func Run(input Input) Output {
 	start := time.Now()
 	missionID := "mission_" + shortID()
@@ -77,7 +84,7 @@ func Run(input Input) Output {
 		Version:   passgold.Version,
 		MissionID: missionID,
 		Engine:    passgold.Engine,
-		Steps:     v52Steps,
+		Steps:     v55Steps,
 	}
 	gates := passgold.Gates{}
 
@@ -92,7 +99,26 @@ func Run(input Input) Output {
 	}
 	out.StepResults = append(out.StepResults, s1)
 
-	// ── STEP 2: FileOps — path safety ─────────────────────────────
+	// ── STEP 2: Hermes — diagnóstico e RCA antes de qualquer patch ─
+	scannerEvidence := s1.Message
+	diagnosis := hermes.Analyze(input.InputText, scannerEvidence)
+	out.HermesEnabled = diagnosis.HermesEnabled
+	out.IssueType = diagnosis.IssueType
+	out.ProbableRootCause = diagnosis.ProbableRootCause
+	out.Confidence = diagnosis.Confidence
+	out.Severity = diagnosis.Severity
+	out.SuggestedStrategy = diagnosis.SuggestedStrategy
+	sHermes := StepResult{
+		Step:    "hermes",
+		OK:      diagnosis.HermesEnabled && diagnosis.Confidence > 0.70,
+		Message: fmt.Sprintf("RCA: %s | confidence %.2f | severity %s", diagnosis.IssueType, diagnosis.Confidence, diagnosis.Severity),
+	}
+	if !sHermes.OK {
+		sHermes.Error = "hermes confidence below PASS GOLD threshold"
+	}
+	out.StepResults = append(out.StepResults, sHermes)
+
+	// ── STEP 3: FileOps — path safety ─────────────────────────────
 	s2 := StepResult{Step: "fileops"}
 	if err := fileops.ValidateSafePath(input.Root, "."); err == nil {
 		s2.OK = true
@@ -148,17 +174,17 @@ func Run(input Input) Output {
 				batchRes.PatchedFiles, batchRes.TotalFiles, batchRes.TransactionID)
 		}
 		out.TransactionMode = true
-		out.TransactionID   = batchRes.TransactionID
-		out.PatchedFiles    = batchRes.PatchedFiles
-		out.TotalFiles      = batchRes.TotalFiles
+		out.TransactionID = batchRes.TransactionID
+		out.PatchedFiles = batchRes.PatchedFiles
+		out.TotalFiles = batchRes.TotalFiles
 		if batchRes.SnapshotIDs != nil && len(batchRes.SnapshotIDs) > 0 {
 			out.SnapshotID = batchRes.SnapshotIDs[0] // primeiro snapshot do batch
 		}
 	} else {
 		s4.Error = batchRes.Error
-		out.TransactionMode   = true
-		out.TransactionID     = batchRes.TransactionID
-		out.RollbackApplied   = batchRes.RollbackApplied
+		out.TransactionMode = true
+		out.TransactionID = batchRes.TransactionID
+		out.RollbackApplied = batchRes.RollbackApplied
 	}
 	out.StepResults = append(out.StepResults, s4)
 
@@ -231,7 +257,7 @@ func Run(input Input) Output {
 	out.FailedGates = pg.FailedGates
 	if pg.PassGold {
 		out.OK = true
-		out.Summary = "V5.2 REAL MISSION EXECUTION — PASS GOLD confirmed."
+		out.Summary = "V5.5 GO HERMES BRIDGE — PASS GOLD confirmed."
 	} else {
 		out.OK = false
 		out.Summary = fmt.Sprintf("Mission FAILED. Gates: %v", pg.FailedGates)

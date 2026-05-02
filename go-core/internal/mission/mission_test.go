@@ -15,8 +15,8 @@ func TestRun_SelfTest_PassGold(t *testing.T) {
 	if out.Status != "GOLD" {
 		t.Errorf("expected GOLD, got %s", out.Status)
 	}
-	if out.Version != "5.4.0-go-safe-core" {
-		t.Errorf("expected 5.4.0-go-safe-core, got %s", out.Version)
+	if out.Version != "5.5.0-go-safe-core" {
+		t.Errorf("expected 5.5.0-go-safe-core, got %s", out.Version)
 	}
 	if out.Engine != "go-safe-core" {
 		t.Errorf("expected go-safe-core, got %s", out.Engine)
@@ -46,7 +46,7 @@ func TestRun_SelfTest_DoesNotModifyGoMod(t *testing.T) {
 func TestRun_Steps_V52(t *testing.T) {
 	dir := t.TempDir()
 	out := Run(Input{Root: dir, InputText: "self-test"})
-	required := []string{"snapshot", "patcher", "rollback"}
+	required := []string{"hermes", "snapshot", "patcher", "rollback"}
 	for _, step := range required {
 		found := false
 		for _, s := range out.Steps {
@@ -56,7 +56,7 @@ func TestRun_Steps_V52(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("V5.2 must have step %q in steps list", step)
+			t.Errorf("V5.5 must have step %q in steps list", step)
 		}
 	}
 }
@@ -151,5 +151,22 @@ func TestRun_AllStepResultsPresent(t *testing.T) {
 		if !names[r] {
 			t.Errorf("missing step_result for %q", r)
 		}
+	}
+}
+
+func TestRun_HermesIntegrated(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked for https://example.com", DryRun: false})
+	if !out.HermesEnabled {
+		t.Fatal("expected hermes_enabled=true")
+	}
+	if out.IssueType != "cors_blocked" {
+		t.Fatalf("expected cors_blocked, got %s", out.IssueType)
+	}
+	if out.Confidence <= 0.70 {
+		t.Fatalf("expected confidence > 0.70, got %.2f", out.Confidence)
+	}
+	if out.SuggestedStrategy == "" || out.ProbableRootCause == "" {
+		t.Fatal("expected Hermes RCA fields to be populated")
 	}
 }

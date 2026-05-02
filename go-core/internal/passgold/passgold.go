@@ -5,30 +5,30 @@ package passgold
 
 // Gates é o conjunto de gates necessários.
 type Gates struct {
-	ScannerOK    bool `json:"scanner_ok"`
-	FileopsOK    bool `json:"fileops_ok"`
-	PatcherOK    bool `json:"patcher_ok"`
-	ValidatorOK  bool `json:"validator_ok"`
+	ScannerOK     bool `json:"scanner_ok"`
+	FileopsOK     bool `json:"fileops_ok"`
+	PatcherOK     bool `json:"patcher_ok"`
+	ValidatorOK   bool `json:"validator_ok"`
 	RollbackReady bool `json:"rollback_ready"`
-	SecurityOK   bool `json:"security_ok"`
-	LegacySafe   bool `json:"legacy_safe"`
+	SecurityOK    bool `json:"security_ok"`
+	LegacySafe    bool `json:"legacy_safe"`
 }
 
 // Result é o resultado final do PASS GOLD.
 type Result struct {
-	Status           string  `json:"status"`            // "GOLD" | "FAIL"
-	PassGold         bool    `json:"pass_gold"`
-	PromotionAllowed bool    `json:"promotion_allowed"`
-	RollbackReady    bool    `json:"rollback_ready"`
-	Engine           string  `json:"engine"`
-	Version          string  `json:"version"`
-	Gates            Gates   `json:"gates"`
+	Status           string   `json:"status"` // "GOLD" | "FAIL"
+	PassGold         bool     `json:"pass_gold"`
+	PromotionAllowed bool     `json:"promotion_allowed"`
+	RollbackReady    bool     `json:"rollback_ready"`
+	Engine           string   `json:"engine"`
+	Version          string   `json:"version"`
+	Gates            Gates    `json:"gates"`
 	FailedGates      []string `json:"failed_gates,omitempty"`
 }
 
 const (
 	Engine  = "go-safe-core"
-	Version = "5.4.0-go-safe-core"
+	Version = "5.5.0-go-safe-core"
 )
 
 // Evaluate computa o PASS GOLD dado os gates.
