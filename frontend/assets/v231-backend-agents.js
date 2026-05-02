@@ -103,8 +103,15 @@
 
       if (ar && ar.ok) {
         const ad = await ar.json();
-        const agents = [...(ad.core_agents || []), ...(ad.reserve_agents || [])];
-        renderAgents(agents, { source:'backend' });
+        // Sempre incluir reserves: da API se existir, senão do fallback local
+        const coreFromApi    = ad.core_agents    || ad.agents || [];
+        const reserveFromApi = ad.reserve_agents || [];
+        // Se a API não trouxe reserves, usar o fallback local
+        const reserveAgents  = reserveFromApi.length > 0
+          ? reserveFromApi
+          : fallbackAgents.filter(a => a.type === 'reserve');
+        const agents = [...coreFromApi, ...reserveAgents];
+        renderAgents(agents.length > 0 ? agents : fallbackAgents, { source:'backend' });
       } else {
         renderAgents(fallbackAgents, { source:'local' });
       }

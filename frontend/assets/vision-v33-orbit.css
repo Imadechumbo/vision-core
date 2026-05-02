@@ -27,8 +27,12 @@ main.shell.grid > aside:last-of-type {
   align-self: start !important;
   height: fit-content !important;
   max-height: calc(100vh - 32px) !important;
-  overflow: visible !important;
+  overflow-y: auto !important;   /* scroll interno — todo conteúdo visível */
+  overflow-x: visible !important;
   z-index: 20 !important;
+  /* scrollbar fina discreta */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168,85,247,.35) transparent;
 }
 
 /* 2. #agentDownload: remover sticky conflitante — é filho normal do aside */
@@ -52,8 +56,8 @@ main.shell.grid > aside:last-of-type {
 /* ── ORB WRAP — ocupa todo o espaço disponível do mc-panel ────── */
 /* mc-panel content ≈ 352px. Nodes ficam dentro do wrap. */
 .mc-orb-wrap {
-  width: 330px !important;
-  height: 330px !important;
+  width: 260px !important;
+  height: 260px !important;
   margin: 6px auto 10px !important;
   position: relative;
   overflow: visible !important;
@@ -73,7 +77,7 @@ main.shell.grid > aside:last-of-type {
 
 .mc-ring-1 {
   width: 170px !important;
-  height: 170px !important;
+  height: 134px !important;
   border-width: 1px;
   border-color: rgba(168, 85, 247, .22) !important;
   animation: v33RingA 22s linear infinite;
@@ -81,7 +85,7 @@ main.shell.grid > aside:last-of-type {
 
 .mc-ring-2 {
   width: 248px !important;
-  height: 248px !important;
+  height: 196px !important;
   border-width: 1px;
   border-color: rgba(168, 85, 247, .13) !important;
   animation: v33RingB 32s linear infinite reverse;
@@ -89,7 +93,7 @@ main.shell.grid > aside:last-of-type {
 
 .mc-ring-3 {
   width: 316px !important;
-  height: 316px !important;
+  height: 250px !important;
   border-width: 1px;
   border-color: rgba(168, 85, 247, .07) !important;
   animation: v33RingA 48s linear infinite;
@@ -107,7 +111,7 @@ main.shell.grid > aside:last-of-type {
 /* ── CORE READY ─────────────────────────────────────────────────── */
 .mc-core {
   width: 72px !important;
-  height: 72px !important;
+  height: 56px !important;
   border-radius: 50% !important;
   position: absolute !important;
   top: 50% !important;
@@ -372,3 +376,15 @@ main.shell.grid > aside:last-of-type {
 .v44-report-row span { color: #a78bfa; }
 .v44-report-row b { color: #e9d5ff; text-align: right; word-break: break-word; }
 .v44-report-row b.gold { color: #facc15; }
+
+/* ── Scrollbar fina no painel direito (Webkit) ───────────────── */
+main.shell.grid > aside:last-of-type::-webkit-scrollbar {
+  width: 4px;
+}
+main.shell.grid > aside:last-of-type::-webkit-scrollbar-track {
+  background: transparent;
+}
+main.shell.grid > aside:last-of-type::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, .30);
+  border-radius: 2px;
+}

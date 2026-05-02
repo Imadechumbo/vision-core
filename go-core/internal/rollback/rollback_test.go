@@ -28,15 +28,11 @@ func TestRestore_Valid(t *testing.T) {
 		t.Fatalf("snapshot failed: %s", res.Error)
 	}
 
-	// Modificar o arquivo
+	// Modificar
 	_ = os.WriteFile(targetPath, []byte("modified content"), 0644)
 
-	// Re-salvar metadata com path absoluto para que restore funcione
-	snap.OriginalPath = targetPath
-	metaData, _ := json.MarshalIndent(snap, "", "  ")
-	_ = os.WriteFile(filepath.Join(snapDir, snap.ID+".json"), metaData, 0644)
-
-	rRes := Restore(snapDir, snap.ID)
+	// Restore com root — path absoluto resolvido corretamente
+	rRes := Restore(snapDir, snap.ID, root)
 	if !rRes.OK {
 		t.Fatalf("restore failed: %s", rRes.Error)
 	}
@@ -47,9 +43,40 @@ func TestRestore_Valid(t *testing.T) {
 	}
 }
 
+func TestRestore_AbsolutePath(t *testing.T) {
+	// Verificar que Restore funciona com OriginalPath absoluto (não relativo)
+	root := t.TempDir()
+	snapDir := t.TempDir()
+
+	target := filepath.Join(root, "abs.js")
+	_ = os.WriteFile(target, []byte("absolute path test"), 0644)
+
+	snap, res := fileops.CreateSnapshot(root, "abs.js", "m002", snapDir)
+	if !res.OK {
+		t.Fatalf("snapshot failed: %s", res.Error)
+	}
+
+	// Salvar metadata com path absoluto
+	snap.OriginalPath = target
+	metaData, _ := json.MarshalIndent(snap, "", "  ")
+	_ = os.WriteFile(filepath.Join(snapDir, snap.ID+".json"), metaData, 0644)
+
+	_ = os.WriteFile(target, []byte("modified"), 0644)
+
+	// Restore sem root (path já absoluto)
+	rRes := Restore(snapDir, snap.ID, "")
+	if !rRes.OK {
+		t.Fatalf("restore with absolute path failed: %s", rRes.Error)
+	}
+	data, _ := os.ReadFile(target)
+	if string(data) != "absolute path test" {
+		t.Errorf("restore failed: got %q", string(data))
+	}
+}
+
 func TestRestore_MissingSnapshot(t *testing.T) {
 	dir := t.TempDir()
-	res := Restore(dir, "nonexistent-snapshot-id")
+	res := Restore(dir, "nonexistent-snapshot-id", "")
 	if res.OK {
 		t.Error("should fail for missing snapshot")
 	}

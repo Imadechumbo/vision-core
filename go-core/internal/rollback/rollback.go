@@ -23,10 +23,10 @@ type Result struct {
 }
 
 // Restore restaura um arquivo a partir do snapshot ID.
-func Restore(snapshotDir, snapshotID string) Result {
+// root é o diretório base do projeto — usado para resolver OriginalPath relativo.
+func Restore(snapshotDir, snapshotID, root string) Result {
 	res := Result{SnapshotID: snapshotID}
 
-	// Ler metadata do snapshot
 	metaPath := filepath.Join(snapshotDir, snapshotID+".json")
 	metaData, err := os.ReadFile(metaPath)
 	if err != nil {
@@ -49,20 +49,25 @@ func Restore(snapshotDir, snapshotID string) Result {
 		return res
 	}
 
-	// Verificar integridade do backup
+	// Verificar integridade
 	h := fileops.HashBytes(backupData)
 	res.HashMatch = h == snap.Hash
 	if !res.HashMatch {
-		res.Error = fmt.Sprintf("backup integrity check failed (expected %s, got %s)", snap.Hash, h)
+		res.Error = fmt.Sprintf("integrity check failed (expected %s, got %s)", snap.Hash, h)
 		return res
 	}
 
-	// Restaurar arquivo original
-	if err := os.MkdirAll(filepath.Dir(snap.OriginalPath), 0755); err != nil {
+	// Resolver path absoluto: OriginalPath pode ser relativo ao root
+	destPath := snap.OriginalPath
+	if root != "" && !filepath.IsAbs(destPath) {
+		destPath = filepath.Join(root, destPath)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 		res.Error = "cannot create dirs: " + err.Error()
 		return res
 	}
-	if err := os.WriteFile(snap.OriginalPath, backupData, 0644); err != nil {
+	if err := os.WriteFile(destPath, backupData, 0644); err != nil {
 		res.Error = "restore write failed: " + err.Error()
 		return res
 	}
@@ -77,7 +82,6 @@ func ListSnapshots(snapshotDir string) ([]fileops.Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	var snaps []fileops.Snapshot
 	for _, e := range entries {
 		if !strings.HasSuffix(e.Name(), ".json") {
@@ -100,7 +104,6 @@ func Ready(snapshotDir string) bool {
 	if err := os.MkdirAll(snapshotDir, 0755); err != nil {
 		return false
 	}
-	// Tentar criar e deletar um arquivo de teste
 	testFile := filepath.Join(snapshotDir, ".rollback-ready-test")
 	if err := os.WriteFile(testFile, []byte("ok"), 0644); err != nil {
 		return false
