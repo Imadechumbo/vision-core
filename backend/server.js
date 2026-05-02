@@ -4,6 +4,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { scanConfig, applyConfigFixes, enforceConfigGold } = require('./vision_core/config/selfHealingConfig');
+const { runGoMission, streamGoMission, checkGoHealth, resolveGoBinary } = require('./src/runtime/goRunner');
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
@@ -466,72 +467,86 @@ app.all('/api/hermes/rca', (req, res) => sendOk(res, {
   fix_plan: ['validate_api_contract', 'validate_sse', 'aegis_policy', 'pass_gold']
 }));
 
-/* RUN LIVE */
-app.all('/api/run-live', (req, res) => {
-  const body = normalizeBody(req);
-  const mission = body.mission || body.message || body.prompt || 'missão SDDF';
-  const missionId = makeId('mission');
+/* ── V5.3: RUN LIVE — Go Core real ───────────────────────────── */
 
-  saveMarkdown('incidents', missionId, {
-    mission,
-    context: mission,
-    root_cause: 'pipeline_runtime_validation',
-    fix: 'SDDF validation',
-    pass_gold: true,
-    request: body
-  });
-
-  return sendOk(res, {
-    endpoint: '/api/run-live',
-    mission_id: missionId,
-    mission,
-    status: 'queued',
-    pass_gold: true,
-    promotion_allowed: true,
-    pipeline: ['OpenClaw', 'Scanner', 'Hermes', 'PatchEngine', 'Aegis', 'SDDF', 'PASS GOLD'],
-    stream: '/api/run-live-stream'
-  });
+// GET /api/go-core/health — verifica binário + self-test
+app.get('/api/go-core/health', async (req, res) => {
+  try {
+    const health = await checkGoHealth();
+    const status = health.ok ? 200 : 503;
+    return res.status(status).json(Object.assign({ time: now() }, health));
+  } catch (err) {
+    return res.status(503).json({ ok: false, healthy: false, error: err.message, time: now() });
+  }
 });
 
-app.get('/api/run-live-stream', (req, res) => {
+// POST /api/run-live — executa Go Core, retorna JSON final
+app.all('/api/run-live', async (req, res) => {
+  const body     = normalizeBody(req);
+  const input    = body.mission || body.message || body.prompt || body.input || 'self-test';
+  const missionRoot = path.resolve(process.env.VISION_PROJECT_ROOT || ROOT || process.cwd(), '..');
+
+  let result;
+  try {
+    result = await runGoMission({ root: missionRoot, input });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false, pass_gold: false, promotion_allowed: false,
+      error_type: 'go_runtime_failure', message: err.message, time: now(),
+    });
+  }
+
+  // Salvar incidente apenas se PASS GOLD real
+  if (result.pass_gold) {
+    saveMarkdown('incidents', result.mission_id || makeId('mission'), {
+      mission: input,
+      mission_id: result.mission_id,
+      pass_gold: true,
+      engine: result.engine,
+      version: result.version,
+      snapshot_id: result.snapshot_id,
+      duration_ms: result.duration_ms,
+    });
+  }
+
+  return res.json(Object.assign({ time: now(), stream: '/api/run-live-stream' }, result));
+});
+
+// GET /api/run-live-stream — SSE real do Go Core
+// A UI abre esta conexão antes de chamar /api/run-live
+// Aqui executamos o Go Core e emitimos os eventos reais em sequência
+app.get('/api/run-live-stream', async (req, res) => {
+  const input    = req.query.mission || req.query.input || req.query.message || 'self-test';
+  const missionId = makeId('mission');
+  const missionRoot = path.resolve(process.env.VISION_PROJECT_ROOT || ROOT || process.cwd(), '..');
+
   res.writeHead(200, {
-    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Content-Type':  'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache, no-transform',
-    'Connection': 'keep-alive',
+    'Connection':    'keep-alive',
     'X-Accel-Buffering': 'no',
-    'Access-Control-Allow-Origin': req.headers.origin || '*'
+    'Access-Control-Allow-Origin': req.headers.origin || '*',
   });
 
-  const send = (event, data) => {
-    res.write(`event: ${event}\n`);
-    res.write(`data: ${JSON.stringify({ ...data, time: now() })}\n\n`);
-  };
+  // Client desconectou antes de terminar
+  let aborted = false;
+  req.on('close', () => { aborted = true; });
 
-  send('open', { ok: true, status: 'connected', mission: req.query.mission || 'mission' });
+  if (aborted) { try { res.end(); } catch (_) {} return; }
 
-  const steps = [
-    ['step', { stage: 'OpenClaw', status: 'running', message: 'orquestração iniciada' }],
-    ['step', { stage: 'Scanner', status: 'ok', message: 'projeto mapeado' }],
-    ['step', { stage: 'Hermes', status: 'ok', message: 'RCA concluído' }],
-    ['step', { stage: 'PatchEngine', status: 'ok', message: 'patch seguro preparado' }],
-    ['step', { stage: 'Aegis', status: 'ok', message: 'policy aprovada' }],
-    ['gate', { stage: 'SDDF', status: 'PASS', message: 'validação aprovada' }],
-    ['pass_gold', { stage: 'PASS GOLD', status: 'GOLD', message: 'promoção liberada' }],
-    ['done', { ok: true, pass_gold: true, promotion_allowed: true }]
-  ];
-
-  let i = 0;
-  const timer = setInterval(() => {
-    if (i >= steps.length) {
-      clearInterval(timer);
-      return;
+  try {
+    await streamGoMission({ root: missionRoot, input, res, missionId });
+  } catch (err) {
+    if (!aborted) {
+      try {
+        res.write('event: mission:fail\n');
+        res.write('data: ' + JSON.stringify({
+          ok: false, pass_gold: false, error: err.message, time: now(),
+        }) + '\n\n');
+        res.end();
+      } catch (_) {}
     }
-    const [event, data] = steps[i++];
-    send(event, data);
-    if (event === 'done') clearInterval(timer);
-  }, 800);
-
-  req.on('close', () => clearInterval(timer));
+  }
 });
 
 /* AGENTS */
