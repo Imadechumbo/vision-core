@@ -25,3 +25,16 @@ go-core/vendor/
 .rollback/
 **/.rollback/
 backend/memory/incidents/
+# VISION CORE runtime/build artifacts
+bin/
+*.exe
+.vision-test/
+**/.vision-test/
+.rollback/
+**/.rollback/
+.vision-snapshots/
+**/.vision-snapshots/
+backend/memory/incidents/
+go-core/vendor/
+node_modules/
+desktop-agent/dist/

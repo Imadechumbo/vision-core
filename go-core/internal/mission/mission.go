@@ -257,7 +257,7 @@ func Run(input Input) Output {
 	out.FailedGates = pg.FailedGates
 	if pg.PassGold {
 		out.OK = true
-		out.Summary = "V5.5 GO HERMES BRIDGE — PASS GOLD confirmed."
+		out.Summary = "V5.7 RELEASE CANDIDATE — PASS GOLD confirmed."
 	} else {
 		out.OK = false
 		out.Summary = fmt.Sprintf("Mission FAILED. Gates: %v", pg.FailedGates)

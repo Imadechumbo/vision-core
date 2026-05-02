@@ -1,0 +1,44 @@
+name: PASS GOLD V5.7
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  pass-gold:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go-core/go.mod
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Go test
+        working-directory: go-core
+        run: go test ./...
+
+      - name: Go build
+        working-directory: go-core
+        run: go build -o ../bin/vision-core.exe ./cmd/vision-core
+
+      - name: Node syntax checks
+        run: |
+          node --check backend/server.js
+          node --check backend/src/runtime/goRunner.js
+
+      - name: Run mission and validate PASS GOLD
+        shell: bash
+        run: |
+          output=$(./bin/vision-core.exe mission --root "." --input "CORS origin blocked")
+          echo "$output"
+          printf '%s' "$output" | python -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="GOLD"; assert d["pass_gold"] is True; assert d["engine"]=="go-safe-core"; assert d["hermes_enabled"] is True; assert d["transaction_mode"] is True; print("PASS GOLD")'
