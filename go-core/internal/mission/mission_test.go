@@ -15,8 +15,8 @@ func TestRun_SelfTest_PassGold(t *testing.T) {
 	if out.Status != "GOLD" {
 		t.Errorf("expected GOLD, got %s", out.Status)
 	}
-	if out.Version != "5.2.0-go-safe-core" {
-		t.Errorf("expected 5.2.0-go-safe-core, got %s", out.Version)
+	if out.Version != "5.4.0-go-safe-core" {
+		t.Errorf("expected 5.4.0-go-safe-core, got %s", out.Version)
 	}
 	if out.Engine != "go-safe-core" {
 		t.Errorf("expected go-safe-core, got %s", out.Engine)

@@ -28,7 +28,7 @@ type Result struct {
 
 const (
 	Engine  = "go-safe-core"
-	Version = "5.2.0-go-safe-core"
+	Version = "5.4.0-go-safe-core"
 )
 
 // Evaluate computa o PASS GOLD dado os gates.
