@@ -1,0 +1,39 @@
+name: v60-release-observability
+
+on:
+  workflow_dispatch:
+    inputs:
+      backend_url:
+        description: "Backend base URL"
+        required: true
+        type: string
+      frontend_url:
+        description: "Frontend URL"
+        required: true
+        type: string
+
+jobs:
+  post-deploy-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate backend health
+        run: |
+          set -euo pipefail
+          curl -fsS "${{ inputs.backend_url }}/api/health" > /dev/null
+          curl -fsS "${{ inputs.backend_url }}/api/go-core/health" > /dev/null
+
+      - name: Validate run-live observability fields
+        run: |
+          set -euo pipefail
+          response=$(curl -fsS -X POST "${{ inputs.backend_url }}/api/run-live" \
+            -H "Content-Type: application/json" \
+            -d "{\"input\":\"CORS origin blocked\"}")
+          echo "$response"
+          echo "$response" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('pass_gold') is True; assert d.get('engine')=='go-safe-core'; assert d.get('hermes_enabled') is True; assert d.get('transaction_mode') is True; print('POST DEPLOY V6.0 PASS')"
+
+      - name: Validate frontend availability
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o /dev/null -w "%{http_code}" "${{ inputs.frontend_url }}")
+          test "$code" = "200"
