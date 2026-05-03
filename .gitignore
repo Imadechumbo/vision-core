@@ -38,3 +38,18 @@ backend/memory/incidents/
 go-core/vendor/
 node_modules/
 desktop-agent/dist/
+
+# VISION CORE runtime/build artifacts
+bin/
+*.exe
+.vision-test/
+**/.vision-test/
+.vision-snapshots/
+**/.vision-snapshots/
+.rollback/
+**/.rollback/
+backend/memory/incidents/
+go-core/vendor/
+node_modules/
+desktop-agent/dist/
+desktop-agent/node_modules/
