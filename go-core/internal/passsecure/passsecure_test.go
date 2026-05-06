@@ -79,3 +79,44 @@ CMD ["/bin/bash"]
 		t.Error("expected ContainersOK=false")
 	}
 }
+
+func TestPassSecure_DoesNotFailOnlyForTestFixtureNoise(t *testing.T) {
+	root := t.TempDir()
+	fixture := "package api_test\nfunc TestLog(t *testing.T) { " + "console" + "." + "log" + "(\"" + "tok" + "en" + "\") }\n"
+	_ = os.WriteFile(filepath.Join(root, "api_test.go"), []byte(fixture), 0644)
+
+	res := Evaluate(root)
+	if !res.PassSecure {
+		t.Fatalf("expected PassSecure=true for test fixture report_only noise, failedGates=%v", res.FailedGates)
+	}
+	if res.BlockingTotal != 0 {
+		t.Fatalf("BlockingTotal=%d, want 0", res.BlockingTotal)
+	}
+	if res.FalsePositiveCount != 1 || res.NoiseCount != 1 || res.ReportOnlyTotal != 1 {
+		t.Fatalf("counts false_positive=%d noise=%d report_only=%d, want 1/1/1",
+			res.FalsePositiveCount, res.NoiseCount, res.ReportOnlyTotal)
+	}
+	if len(res.Summary_.Violations) != 1 {
+		t.Fatalf("violations=%d, want 1", len(res.Summary_.Violations))
+	}
+	v := res.Summary_.Violations[0]
+	if v.SourceContext != "test_fixture" || v.Disposition != "report_only" || !v.FalsePositive || v.NoiseReason == "" {
+		t.Fatalf("unexpected classification: %+v", v)
+	}
+}
+
+func TestPassSecure_FailsForProductionBlockerAndPassGoldDependency(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "config.go"), []byte(testfixtures.AWSKeyGoSource("key")), 0644)
+
+	res := Evaluate(root)
+	if res.PassSecure {
+		t.Fatal("expected PassSecure=false for production blocker")
+	}
+	if res.BlockingTotal == 0 {
+		t.Fatal("expected BlockingTotal > 0")
+	}
+	if res.DeployAllowed {
+		t.Fatal("expected DeployAllowed=false when PassSecure=false")
+	}
+}
