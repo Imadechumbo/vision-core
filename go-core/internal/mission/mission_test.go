@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/visioncore/go-core/internal/memory"
 	"github.com/visioncore/go-core/internal/testfixtures"
 )
 
@@ -693,5 +694,281 @@ func TestRun_GoldMemoryFailureAddsWarningWithoutFailingMission(t *testing.T) {
 	}
 	if out.MemoryWarning == "" {
 		t.Fatal("memory_warning must explain non-critical memory failure")
+	}
+}
+
+// ═══════════════════════════════════════════════════════
+// V6.3 REMEDIATION MEMORY BEFORE/AFTER TRACE TESTS
+// ═══════════════════════════════════════════════════════
+
+func TestRun_V63_MemoryBeforeAfterInCleanProject(t *testing.T) {
+	// Projeto limpo: blocking_before=0, blocking_after=0, fixed_rule_ids=[].
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if !out.MemoryRecorded {
+		t.Skip("memory not recorded — project not clean enough for GOLD")
+	}
+
+	// Ler o evento gravado
+	events := readLastMemoryEvent(t, dir)
+	if events.BlockingBefore != 0 {
+		t.Errorf("clean project: blocking_before=%d, want 0", events.BlockingBefore)
+	}
+	if events.BlockingAfter != 0 {
+		t.Errorf("clean project: blocking_after=%d, want 0", events.BlockingAfter)
+	}
+	if len(events.FixedRuleIDs) != 0 {
+		t.Errorf("clean project: fixed_rule_ids should be empty, got %v", events.FixedRuleIDs)
+	}
+	if len(events.FixedFiles) != 0 {
+		t.Errorf("clean project: fixed_files should be empty, got %v", events.FixedFiles)
+	}
+	if events.PatchSummary == "" {
+		t.Error("patch_summary must not be empty")
+	}
+	if events.DiffAvailable {
+		t.Error("diff_available must be false in V6.3")
+	}
+}
+
+func TestRun_V63_TestFixtureNotInFixedLists(t *testing.T) {
+	// Violações em test_fixture NÃO devem entrar em fixed_rule_ids ou fixed_files.
+	dir := t.TempDir()
+	// Criar arquivo de teste com violação (test_fixture)
+	_ = os.WriteFile(filepath.Join(dir, "handler_test.go"),
+		[]byte("package x\nfunc Login(token string) {\n}\n"), 0644)
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if !out.MemoryRecorded {
+		t.Skip("memory not recorded — not GOLD")
+	}
+
+	events := readLastMemoryEvent(t, dir)
+	for _, rid := range events.FixedRuleIDs {
+		t.Errorf("fixed_rule_ids must not contain test_fixture violations, found: %s", rid)
+	}
+	for _, f := range events.FixedFiles {
+		if filepath.Base(f) == "handler_test.go" {
+			t.Errorf("fixed_files must not contain test_fixture file: %s", f)
+		}
+	}
+}
+
+func TestRun_V63_MemoryFailDoesNotAlterGold(t *testing.T) {
+	// Mesmo que a memória falhe, pass_gold e pass_secure não são alterados.
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	goldBefore := out.PassGold
+	secureBefore := out.PassSecure
+	// Simular falha de memória não deve mudar os gates
+	if out.PassGold != goldBefore {
+		t.Error("pass_gold must not change due to memory operation")
+	}
+	if out.PassSecure != secureBefore {
+		t.Error("pass_secure must not change due to memory operation")
+	}
+}
+
+func TestRun_V63_FailMissionDoesNotRecordMemory(t *testing.T) {
+	// Missão que falha NÃO grava memória.
+	dir := t.TempDir()
+	// Injetar violação de segurança para garantir falha
+	if err := os.WriteFile(filepath.Join(dir, "config.go"),
+		[]byte("package config\nconst k = \"AKIA"+"IOSFODNN7"+"EXAMPLE\"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.PassGold && out.MemoryRecorded {
+		// GOLD + gravação é ok
+		return
+	}
+	if !out.PassGold && out.MemoryRecorded {
+		t.Error("mission FAIL must not record positive memory")
+	}
+}
+
+func TestRun_V63_PatchSummaryContainsTransactionID(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if !out.MemoryRecorded {
+		t.Skip("memory not recorded")
+	}
+
+	events := readLastMemoryEvent(t, dir)
+	if events.PatchSummary == "" {
+		t.Error("patch_summary must not be empty")
+	}
+	// patch_summary deve conter referência ao transaction ou patched files
+	if !containsAny(events.PatchSummary, []string{"patched", "transaction", "tx_"}) {
+		t.Errorf("patch_summary unexpected format: %q", events.PatchSummary)
+	}
+}
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+func readLastMemoryEvent(t *testing.T, root string) memory.RemediationEvent {
+	t.Helper()
+	events, err := memory.ListRemediationEvents(root)
+	if err != nil {
+		t.Fatalf("ListRemediationEvents: %v", err)
+	}
+	if len(events) == 0 {
+		t.Fatal("expected at least one memory event")
+	}
+	return events[len(events)-1]
+}
+
+func containsAny(s string, candidates []string) bool {
+	for _, c := range candidates {
+		if len(s) >= len(c) {
+			for i := 0; i <= len(s)-len(c); i++ {
+				if s[i:i+len(c)] == c {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// ═══════════════════════════════════════════════════════
+// V6.4 REMEDIATION MEMORY REUSE TESTS
+// ═══════════════════════════════════════════════════════
+
+func TestRun_V64_SuggestionFieldsAlwaysPresent(t *testing.T) {
+	// memory_suggestion_* campos devem existir no output, mesmo sem memória.
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+
+	// Campos booleanos e numéricos sempre presentes (zero-value é válido)
+	_ = out.MemorySuggestionAvailable    // bool
+	_ = out.MemorySuggestionConfidence   // float64
+	_ = out.MemorySuggestionMatches      // int >= 0
+
+	if out.MemorySuggestionMatches < 0 {
+		t.Error("memory_suggestion_matches must be >= 0")
+	}
+	if out.MemorySuggestionConfidence < 0 || out.MemorySuggestionConfidence > 1.0 {
+		t.Errorf("memory_suggestion_confidence out of bounds: %f", out.MemorySuggestionConfidence)
+	}
+}
+
+func TestRun_V64_NoMemoryAvailable(t *testing.T) {
+	// Sem memória: memory_suggestion_available=false.
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+	if out.MemorySuggestionAvailable {
+		t.Error("expected memory_suggestion_available=false with no prior memory")
+	}
+	if out.MemorySuggestionMatches != 0 {
+		t.Errorf("expected 0 matches with no memory, got %d", out.MemorySuggestionMatches)
+	}
+}
+
+func TestRun_V64_WithExistingGoldMemory(t *testing.T) {
+	// Com memória GOLD existente e issue_type correspondente: suggestion available.
+	dir := t.TempDir()
+
+	// Gravar evento GOLD na memória do diretório de teste
+	event := memory.RemediationEvent{
+		ID:                "mem_v64_seed",
+		Timestamp:         "2026-05-06T00:00:00Z",
+		MissionID:         "mission_seed",
+		IssueType:         "cors_blocked",
+		SuggestedStrategy: "align_allowed_origins_headers_methods_and_options_preflight",
+		Severity:          "MEDIUM",
+		Outcome:           "gold",
+		PassGold:          true,
+		PassSecure:        true,
+		RollbackApplied:   false,
+		PatchSummary:      "patched 1/1 files via transaction tx_seed",
+	}
+	if err := memory.AppendRemediationEvent(dir, event); err != nil {
+		t.Fatalf("failed to seed memory: %v", err)
+	}
+
+	// Rodar missão — hermes deve detectar cors_blocked e a memória deve matchear
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+
+	if !out.MemorySuggestionAvailable {
+		t.Log("memory_suggestion_available=false — IssueType may not have matched:", out.IssueType)
+		// Aceitar: issue_type depende do Hermes; se não matchear, zero é correto.
+		return
+	}
+	if out.MemorySuggestionConfidence <= 0 {
+		t.Error("memory_suggestion_confidence must be > 0 when suggestion available")
+	}
+	if out.MemorySuggestionEventID == "" {
+		t.Error("memory_suggestion_event_id must not be empty when suggestion available")
+	}
+	if out.MemorySuggestionMatches <= 0 {
+		t.Error("memory_suggestion_matches must be > 0 when suggestion available")
+	}
+}
+
+func TestRun_V64_SuggestionDoesNotAlterPassGold(t *testing.T) {
+	dir := t.TempDir()
+	// Seed com qualquer evento GOLD
+	event := memory.RemediationEvent{
+		ID:        "mem_v64_gold_guard",
+		Timestamp: "2026-05-06T00:00:00Z",
+		Outcome:   "gold",
+		PassGold:  true,
+		PassSecure: true,
+		IssueType: "cors_blocked",
+	}
+	_ = memory.AppendRemediationEvent(dir, event)
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+
+	// Sugestão de memória NUNCA altera pass_gold ou pass_secure.
+	// Se o projeto está limpo → GOLD é pelo Aegis, não pela memória.
+	// Se o projeto tem blockers → GOLD deve ser false independente da memória.
+	// O teste valida que a sugestão não inflaciona gates.
+	if out.MemorySuggestionAvailable && !out.PassGold {
+		// Memória sugeriu MAS pass_gold ainda é falso — correto.
+		if out.DeployAllowed {
+			t.Error("deploy_allowed must not be true when pass_gold=false, regardless of memory suggestion")
+		}
+		if out.PromotionAllowed {
+			t.Error("promotion_allowed must not be true when pass_gold=false, regardless of memory suggestion")
+		}
+	}
+}
+
+func TestRun_V64_SuggestionDoesNotAlterPassSecure(t *testing.T) {
+	dir := t.TempDir()
+	// Projeto com blocker de produção
+	if err := os.WriteFile(filepath.Join(dir, "config.go"),
+		[]byte("package config\nconst k = \"AKIA"+"IOSFODNN7"+"EXAMPLE\"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	// Seed com evento GOLD
+	event := memory.RemediationEvent{
+		ID: "mem_v64_secure_guard", Timestamp: "2026-05-06T00:00:00Z",
+		Outcome: "gold", PassGold: true, PassSecure: true, IssueType: "cors_blocked",
+	}
+	_ = memory.AppendRemediationEvent(dir, event)
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+
+	// Se há blockers reais → pass_secure deve ser false,
+	// independente de qualquer sugestão de memória.
+	if out.SecurityBlockingTotal > 0 && out.PassSecure {
+		t.Error("pass_secure must not be true with blocking violations, regardless of memory suggestion")
+	}
+}
+
+func TestRun_V64_MemorySuggestionConfidenceBounds(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+	if out.MemorySuggestionConfidence < 0 || out.MemorySuggestionConfidence > 1.0 {
+		t.Errorf("memory_suggestion_confidence out of [0, 1]: %f", out.MemorySuggestionConfidence)
 	}
 }

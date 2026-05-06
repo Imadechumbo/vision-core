@@ -39,8 +39,19 @@ type RemediationEvent struct {
 	SecurityScoreAfter  int      `json:"security_score_after"`
 	BlockingBefore      int      `json:"blocking_before"`
 	BlockingAfter       int      `json:"blocking_after"`
+	// V6.2 compat — flat lists of rule_ids and files (after state)
 	RuleIDs             []string `json:"rule_ids"`
 	Files               []string `json:"files"`
+	// V6.3 — before/after trace for remediation learning
+	RuleIDsBefore  []string `json:"rule_ids_before"`
+	RuleIDsAfter   []string `json:"rule_ids_after"`
+	FixedRuleIDs   []string `json:"fixed_rule_ids"`
+	FilesBefore    []string `json:"files_before"`
+	FilesAfter     []string `json:"files_after"`
+	FixedFiles     []string `json:"fixed_files"`
+	PatchSummary   string   `json:"patch_summary"`
+	ChangedFiles   []string `json:"changed_files"`
+	DiffAvailable  bool     `json:"diff_available"`
 	PatchedFiles        int      `json:"patched_files"`
 	TotalFiles          int      `json:"total_files"`
 	PassSecure          bool     `json:"pass_secure"`
@@ -178,4 +189,44 @@ func intField(v reflect.Value, name string) int64 {
 	default:
 		return -1
 	}
+}
+
+// ─── V6.3 helpers ────────────────────────────────────────────────────────────
+
+// DiffStringSlices returns elements in `before` that are NOT in `after`.
+// Used to compute fixed_rule_ids and fixed_files.
+// Both slices are treated as unordered sets. Result is deterministically
+// ordered by first appearance in `before`.
+func DiffStringSlices(before, after []string) []string {
+	afterSet := make(map[string]bool, len(after))
+	for _, s := range after {
+		afterSet[s] = true
+	}
+	var diff []string
+	seen := map[string]bool{}
+	for _, s := range before {
+		if s == "" || afterSet[s] || seen[s] {
+			continue
+		}
+		seen[s] = true
+		diff = append(diff, s)
+	}
+	if diff == nil {
+		return []string{}
+	}
+	return diff
+}
+
+// DeduplicateStrings returns a deduplicated copy of ss preserving order.
+func DeduplicateStrings(ss []string) []string {
+	out := []string{}
+	seen := map[string]bool{}
+	for _, s := range ss {
+		if s == "" || seen[s] {
+			continue
+		}
+		seen[s] = true
+		out = append(out, s)
+	}
+	return out
 }

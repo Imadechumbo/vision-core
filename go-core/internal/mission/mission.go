@@ -93,6 +93,26 @@ type Output struct {
 	MemoryRecorded bool   `json:"memory_recorded"`
 	MemoryEventID  string `json:"memory_event_id,omitempty"`
 	MemoryWarning  string `json:"memory_warning,omitempty"`
+	// V6.4 — passive remediation reuse suggestion (advisory-only, never alters security decisions)
+	MemorySuggestionAvailable    bool    `json:"memory_suggestion_available"`
+	MemorySuggestionConfidence   float64 `json:"memory_suggestion_confidence"`
+	MemorySuggestionEventID      string  `json:"memory_suggestion_event_id,omitempty"`
+	MemorySuggestionStrategy     string  `json:"memory_suggestion_strategy,omitempty"`
+	MemorySuggestionPatchSummary string  `json:"memory_suggestion_patch_summary,omitempty"`
+	MemorySuggestionMatches      int     `json:"memory_suggestion_matches"`
+	// V6.3 — before-state trace, populated by buildSecurityTrace before patcher.
+	// Not exposed in JSON output — used internally by recordPassiveMemory.
+	beforeTrace securityTrace `json:"-"`
+}
+
+// securityTrace holds production-only blocking violations captured before
+// and after the patcher runs. Used exclusively for memory learning.
+// NÃO influencia pass_secure, pass_gold, gates ou deployment.
+type securityTrace struct {
+	RuleIDs []string
+	Files   []string
+	Score   int
+	Blocking int
 }
 
 // securityViolation é a struct exposta no JSON da missão.
@@ -162,6 +182,31 @@ func Run(input Input) Output {
 	}
 	out.StepResults = append(out.StepResults, sHermes)
 
+	// ── V6.4: PASSIVE MEMORY SUGGESTION — advisory-only ───────────
+	// Consultar memória local por eventos GOLD similares ao diagnóstico atual.
+	// REGRA: memória pode SUGERIR, nunca DECIDE. Nada aqui altera pass_secure,
+	// pass_gold, deploy_allowed, severity ou qualquer gate de segurança.
+	{
+		mq := memory.RemediationQuery{
+			IssueType:         out.IssueType,
+			ProbableRootCause: out.ProbableRootCause,
+			SuggestedStrategy: out.SuggestedStrategy,
+			Severity:          out.Severity,
+		}
+		if matches, err := memory.FindSimilarRemediations(input.Root, mq); err == nil {
+			suggestion := memory.BuildSuggestion(matches)
+			out.MemorySuggestionAvailable = suggestion.Available
+			out.MemorySuggestionConfidence = suggestion.Confidence
+			out.MemorySuggestionMatches = len(suggestion.Matches)
+			if suggestion.Available {
+				out.MemorySuggestionEventID = suggestion.BestEventID
+				out.MemorySuggestionStrategy = suggestion.SuggestedStrategy
+				out.MemorySuggestionPatchSummary = suggestion.PatchSummary
+			}
+		}
+		// erro de leitura de memória é silencioso — não bloqueia pipeline
+	}
+
 	// ── STEP 3: FileOps — path safety ─────────────────────────────
 	s2 := StepResult{Step: "fileops"}
 	if err := fileops.ValidateSafePath(input.Root, "."); err == nil {
@@ -199,6 +244,14 @@ func Run(input Input) Output {
 	}
 	_ = realSnap
 	out.StepResults = append(out.StepResults, s3)
+
+	// ── V6.3: BEFORE-STATE CAPTURE — telemetria apenas, não bloqueia ─
+	// Rodar avaliação de segurança ANTES do patcher para capturar o estado
+	// real de before. Usado somente para memória de remediation.
+	// NÃO altera pass_secure, pass_gold, gates ou qualquer decisão de segurança.
+	beforeSecure := passsecure.Evaluate(input.Root)
+	beforeAnnotated := passsecure.AnnotateViolations(beforeSecure.Summary_.Violations)
+	out.beforeTrace = buildSecurityTrace(beforeAnnotated, beforeSecure.SecurityScore)
 
 	// ── STEP 4: Patcher — V5.4 Multi-File Transactional ─────────
 	// Usa BatchPlan para permitir múltiplos arquivos com rollback transacional.
@@ -431,6 +484,30 @@ func recordPassiveMemory(root string, out *Output) {
 		return
 	}
 
+	// After-state: production blocking violations from the PASS SECURE result.
+	afterRuleIDs := productionRuleIDs(out.SecurityBlockingViolations)
+	afterFiles := productionFiles(out.SecurityBlockingViolations)
+	afterScore := out.SecurityScore
+	afterBlocking := out.SecurityBlockingTotal
+
+	// Before-state: captured by buildSecurityTrace before the patcher ran.
+	before := out.beforeTrace
+	beforeRuleIDs := memory.DeduplicateStrings(before.RuleIDs)
+	beforeFiles := memory.DeduplicateStrings(before.Files)
+
+	// Fixed = items in before that are no longer in after.
+	fixedRuleIDs := memory.DiffStringSlices(beforeRuleIDs, afterRuleIDs)
+	fixedFiles := memory.DiffStringSlices(beforeFiles, afterFiles)
+
+	// Patch summary — deterministic, no fake diff.
+	patchSummary := fmt.Sprintf("patched %d/%d file(s) via transaction %s",
+		out.PatchedFiles, out.TotalFiles, out.TransactionID)
+
+	// changed_files: list of files touched by the patcher (from patched count).
+	// V6.3: use fixed_files + after files as best-effort list.
+	// diff_available=false until V6.5 introduces real diff capture.
+	changedFiles := memory.DeduplicateStrings(append(fixedFiles, afterFiles...))
+
 	eventID := "mem_" + shortID()
 	event := memory.RemediationEvent{
 		ID:                  eventID,
@@ -445,21 +522,32 @@ func recordPassiveMemory(root string, out *Output) {
 		SuggestedStrategy:   out.SuggestedStrategy,
 		Confidence:          out.Confidence,
 		Severity:            out.Severity,
-		SecurityScoreBefore: 0,
-		SecurityScoreAfter:  out.SecurityScore,
-		BlockingBefore:      out.SecurityBlockingTotal,
-		BlockingAfter:       out.SecurityBlockingTotal,
-		RuleIDs:             productionRuleIDs(out.SecurityBlockingViolations),
-		Files:               productionFiles(out.SecurityBlockingViolations),
-		PatchedFiles:        out.PatchedFiles,
-		TotalFiles:          out.TotalFiles,
-		PassSecure:          out.PassSecure,
-		PassGold:            out.PassGold,
-		DeployAllowed:       out.DeployAllowed,
-		PromotionAllowed:    out.PromotionAllowed,
-		RollbackReady:       out.RollbackReady,
-		RollbackApplied:     out.RollbackApplied,
-		Outcome:             "gold",
+		// V6.3 before/after trace
+		SecurityScoreBefore: before.Score,
+		SecurityScoreAfter:  afterScore,
+		BlockingBefore:      before.Blocking,
+		BlockingAfter:       afterBlocking,
+		RuleIDsBefore:       beforeRuleIDs,
+		RuleIDsAfter:        afterRuleIDs,
+		FixedRuleIDs:        fixedRuleIDs,
+		FilesBefore:         beforeFiles,
+		FilesAfter:          afterFiles,
+		FixedFiles:          fixedFiles,
+		PatchSummary:        patchSummary,
+		ChangedFiles:        changedFiles,
+		DiffAvailable:       false, // V6.5 will implement real diff capture
+		// V6.2 compat
+		RuleIDs:          afterRuleIDs,
+		Files:            afterFiles,
+		PatchedFiles:     out.PatchedFiles,
+		TotalFiles:       out.TotalFiles,
+		PassSecure:       out.PassSecure,
+		PassGold:         out.PassGold,
+		DeployAllowed:    out.DeployAllowed,
+		PromotionAllowed: out.PromotionAllowed,
+		RollbackReady:    out.RollbackReady,
+		RollbackApplied:  out.RollbackApplied,
+		Outcome:          "gold",
 	}
 
 	if err := memory.AppendRemediationEvent(root, event); err != nil {
@@ -470,6 +558,42 @@ func recordPassiveMemory(root string, out *Output) {
 	out.MemoryRecorded = true
 	out.MemoryEventID = eventID
 	out.StepResults = append(out.StepResults, StepResult{Step: "memory", OK: true, Message: "remediation event recorded: " + eventID})
+}
+
+// buildSecurityTrace extracts production-only blocking violations from an
+// annotated slice for memory learning. Score is taken from passsecure result.
+// NÃO deve ser usada para decisão de segurança.
+func buildSecurityTrace(violations []types.Violation, score int) securityTrace {
+	var ruleIDs, files []string
+	seenRule := map[string]bool{}
+	seenFile := map[string]bool{}
+	blocking := 0
+	for _, v := range violations {
+		if v.FalsePositive || v.Disposition != types.DispositionBlocking {
+			continue
+		}
+		// somente production
+		blocked := map[string]bool{"": true, "test_fixture": true, "generated": true, "vendor": true, "snapshot": true, "unknown": true}
+		if blocked[v.SourceContext] {
+			continue
+		}
+		blocking++
+		if v.RuleID != "" && !seenRule[v.RuleID] {
+			seenRule[v.RuleID] = true
+			ruleIDs = append(ruleIDs, v.RuleID)
+		}
+		if v.File != "" && !seenFile[v.File] {
+			seenFile[v.File] = true
+			files = append(files, v.File)
+		}
+	}
+	if ruleIDs == nil {
+		ruleIDs = []string{}
+	}
+	if files == nil {
+		files = []string{}
+	}
+	return securityTrace{RuleIDs: ruleIDs, Files: files, Score: score, Blocking: blocking}
 }
 
 func productionRuleIDs(violations []securityViolation) []string {
