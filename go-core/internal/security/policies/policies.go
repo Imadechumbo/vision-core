@@ -14,15 +14,15 @@ import (
 
 // PolicyResult agrega todos os guards com violations completas.
 type PolicyResult struct {
-	OK             bool              `json:"ok"`
-	Policy         string            `json:"policy"`
-	SecretsOK      bool              `json:"secrets_ok"`
-	DependenciesOK bool              `json:"dependencies_ok"`
-	ContainersOK   bool              `json:"containers_ok"`
-	APIOK          bool              `json:"api_ok"`
-	Violations     []types.Violation `json:"violations"`
-	Violations_count int             `json:"violations_count"`
-	Summary        string            `json:"summary"`
+	OK               bool              `json:"ok"`
+	Policy           string            `json:"policy"`
+	SecretsOK        bool              `json:"secrets_ok"`
+	DependenciesOK   bool              `json:"dependencies_ok"`
+	ContainersOK     bool              `json:"containers_ok"`
+	APIOK            bool              `json:"api_ok"`
+	Violations       []types.Violation `json:"violations"`
+	Violations_count int               `json:"violations_count"`
+	Summary          string            `json:"summary"`
 }
 
 // Evaluate executa todos os guards e retorna resultado unificado.
@@ -37,23 +37,38 @@ func Evaluate(root string) PolicyResult {
 	all = append(all, depsRes.Violations...)
 	all = append(all, containersRes.Violations...)
 	all = append(all, apiRes.Violations...)
+	all = types.AnnotateDisposition(all)
 
-	allOK := secretsRes.OK && depsRes.OK && containersRes.OK && apiRes.OK
+	secretsOK := types.BlockingCount(byGate(all, "secrets_ok")) == 0
+	dependenciesOK := types.BlockingCount(byGate(all, "dependencies_ok")) == 0
+	containersOK := types.BlockingCount(byGate(all, "containers_ok")) == 0
+	apiOK := types.BlockingCount(byGate(all, "api_ok")) == 0
+	allOK := types.BlockingCount(all) == 0
 
 	summary := fmt.Sprintf(
-		"secrets=%v deps=%v containers=%v api=%v violations=%d",
-		secretsRes.OK, depsRes.OK, containersRes.OK, apiRes.OK, len(all),
+		"secrets=%v deps=%v containers=%v api=%v violations=%d blocking=%d",
+		secretsOK, dependenciesOK, containersOK, apiOK, len(all), types.BlockingCount(all),
 	)
 
 	return PolicyResult{
-		OK:             allOK,
-		Policy:         "AEGIS-V6.1",
-		SecretsOK:      secretsRes.OK,
-		DependenciesOK: depsRes.OK,
-		ContainersOK:   containersRes.OK,
-		APIOK:          apiRes.OK,
-		Violations:     all,
+		OK:               allOK,
+		Policy:           "AEGIS-V6.1",
+		SecretsOK:        secretsOK,
+		DependenciesOK:   dependenciesOK,
+		ContainersOK:     containersOK,
+		APIOK:            apiOK,
+		Violations:       all,
 		Violations_count: len(all),
-		Summary:        summary,
+		Summary:          summary,
 	}
+}
+
+func byGate(violations []types.Violation, gate string) []types.Violation {
+	out := make([]types.Violation, 0, len(violations))
+	for _, v := range violations {
+		if v.Gate == gate {
+			out = append(out, v)
+		}
+	}
+	return out
 }

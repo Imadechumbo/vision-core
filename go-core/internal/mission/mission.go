@@ -73,14 +73,20 @@ type Output struct {
 	Severity          string         `json:"severity,omitempty"`
 	SuggestedStrategy string         `json:"suggested_strategy,omitempty"`
 
-	// V6.1.1 — Security Remediation Report
-	SecurityFailedGates   []string              `json:"security_failed_gates,omitempty"`
-	SecurityViolations    []securityViolation   `json:"security_violations,omitempty"`
-	SecurityTotalViolations int                 `json:"security_total_violations"`
-	SecurityCriticalCount int                   `json:"security_critical_count"`
-	SecurityHighCount     int                   `json:"security_high_count"`
-	SecurityMediumCount   int                   `json:"security_medium_count"`
-	SecurityLowCount      int                   `json:"security_low_count"`
+	// V6.1.1 — Security Remediation Report; V6.1.2 adds disposition/noise splits.
+	SecurityFailedGates          []string            `json:"security_failed_gates,omitempty"`
+	SecurityViolations           []securityViolation `json:"security_violations,omitempty"`
+	SecurityTotalViolations      int                 `json:"security_total_violations"`
+	SecurityCriticalCount        int                 `json:"security_critical_count"`
+	SecurityHighCount            int                 `json:"security_high_count"`
+	SecurityMediumCount          int                 `json:"security_medium_count"`
+	SecurityLowCount             int                 `json:"security_low_count"`
+	SecurityBlockingTotal        int                 `json:"security_blocking_total"`
+	SecurityBlockingViolations   []securityViolation `json:"security_blocking_violations,omitempty"`
+	SecurityReportOnlyViolations []securityViolation `json:"security_report_only_violations,omitempty"`
+	SecurityFalsePositiveCount   int                 `json:"security_false_positive_count"`
+	SecurityRequiresReviewCount  int                 `json:"security_requires_review_count"`
+	SecurityNoiseCount           int                 `json:"security_noise_count"`
 }
 
 // securityViolation é a struct exposta no JSON da missão.
@@ -96,6 +102,9 @@ type securityViolation struct {
 	Message       string `json:"message"`
 	Remediation   string `json:"remediation"`
 	SourceContext string `json:"source_context,omitempty"`
+	Disposition   string `json:"disposition"`
+	NoiseReason   string `json:"noise_reason,omitempty"`
+	FalsePositive bool   `json:"false_positive,omitempty"`
 }
 
 var v55Steps = []string{
@@ -295,7 +304,7 @@ func Run(input Input) Output {
 	out.SecurityFailedGates = psResult.FailedGates
 
 	// Mapear violations para o tipo de saída da missão.
-	// V6.1.1-HARDEN: anotar SourceContext antes de expor no JSON.
+	// V6.1.2: anotar SourceContext + Disposition sem reduzir o total bruto.
 	annotated := passsecure.AnnotateViolations(psResult.Summary_.Violations)
 	vs := types.Build(annotated)
 	out.SecurityTotalViolations = vs.TotalCount
@@ -303,21 +312,13 @@ func Run(input Input) Output {
 	out.SecurityHighCount = vs.HighCount
 	out.SecurityMediumCount = vs.MediumCount
 	out.SecurityLowCount = vs.LowCount
-	svv := make([]securityViolation, 0, len(vs.Violations))
-	for _, v := range vs.Violations {
-		svv = append(svv, securityViolation{
-			Gate:          v.Gate,
-			Category:      v.Category,
-			Severity:      v.Severity,
-			File:          v.File,
-			Line:          v.Line,
-			RuleID:        v.RuleID,
-			Message:       v.Message,
-			Remediation:   v.Remediation,
-			SourceContext: v.SourceContext,
-		})
-	}
-	out.SecurityViolations = svv
+	out.SecurityBlockingTotal = types.BlockingCount(annotated)
+	out.SecurityFalsePositiveCount = types.FalsePositiveCount(annotated)
+	out.SecurityRequiresReviewCount = types.RequiresReviewCount(annotated)
+	out.SecurityNoiseCount = types.NoiseCount(annotated)
+	out.SecurityViolations = mapSecurityViolations(vs.Violations)
+	out.SecurityBlockingViolations = mapSecurityViolations(filterViolationsByDisposition(vs.Violations, types.DispositionBlocking))
+	out.SecurityReportOnlyViolations = mapSecurityViolations(filterViolationsByDisposition(vs.Violations, types.DispositionReportOnly))
 	out.StepResults = append(out.StepResults, sPassSecure)
 
 	// ── PASS GOLD ──────────────────────────────────────────────────
@@ -383,4 +384,37 @@ func shortID() string {
 	b := make([]byte, 4)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+func mapSecurityViolations(violations []types.Violation) []securityViolation {
+	out := make([]securityViolation, 0, len(violations))
+	for _, v := range violations {
+		classified := types.ClassifyDisposition(v)
+		out = append(out, securityViolation{
+			Gate:          classified.Gate,
+			Category:      classified.Category,
+			Severity:      classified.Severity,
+			File:          classified.File,
+			Line:          classified.Line,
+			RuleID:        classified.RuleID,
+			Message:       classified.Message,
+			Remediation:   classified.Remediation,
+			SourceContext: classified.SourceContext,
+			Disposition:   classified.Disposition,
+			NoiseReason:   classified.NoiseReason,
+			FalsePositive: classified.FalsePositive,
+		})
+	}
+	return out
+}
+
+func filterViolationsByDisposition(violations []types.Violation, disposition string) []types.Violation {
+	out := make([]types.Violation, 0, len(violations))
+	for _, v := range violations {
+		classified := types.ClassifyDisposition(v)
+		if classified.Disposition == disposition {
+			out = append(out, classified)
+		}
+	}
+	return out
 }

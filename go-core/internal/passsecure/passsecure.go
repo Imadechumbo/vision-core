@@ -26,23 +26,30 @@ type SecureGates struct {
 
 // Result é o output completo do PASS SECURE com violations acionáveis.
 type Result struct {
-	PassSecure    bool                  `json:"pass_secure"`
-	DeployAllowed bool                  `json:"deploy_allowed"`
-	SecurityScore int                   `json:"security_score"`
-	Engine        string                `json:"engine"`
-	Version       string                `json:"version"`
-	Gates         SecureGates           `json:"gates"`
-	FailedGates   []string              `json:"failed_gates,omitempty"`
-	Status        string                `json:"status"` // "SECURE" | "FAIL"
-	PolicySummary string                `json:"policy_summary"`
-	Violations    int                   `json:"violations"` // retrocompat count
-	Summary_      types.ViolationSummary `json:"violation_summary"`
+	PassSecure          bool                   `json:"pass_secure"`
+	DeployAllowed       bool                   `json:"deploy_allowed"`
+	SecurityScore       int                    `json:"security_score"`
+	Engine              string                 `json:"engine"`
+	Version             string                 `json:"version"`
+	Gates               SecureGates            `json:"gates"`
+	FailedGates         []string               `json:"failed_gates,omitempty"`
+	Status              string                 `json:"status"` // "SECURE" | "FAIL"
+	PolicySummary       string                 `json:"policy_summary"`
+	Violations          int                    `json:"violations"` // retrocompat count
+	BlockingTotal       int                    `json:"security_blocking_total"`
+	ReportOnlyTotal     int                    `json:"security_report_only_total"`
+	FalsePositiveCount  int                    `json:"security_false_positive_count"`
+	RequiresReviewCount int                    `json:"security_requires_review_count"`
+	NoiseCount          int                    `json:"security_noise_count"`
+	Summary_            types.ViolationSummary `json:"violation_summary"`
 }
 
 // Evaluate executa o PASS SECURE para o root fornecido.
 func Evaluate(root string) Result {
 	policy := policies.Evaluate(root)
-	vs := types.Build(policy.Violations)
+	violations := types.AnnotateDisposition(policy.Violations)
+	vs := types.Build(violations)
+	blockingTotal := types.BlockingCount(violations)
 
 	gates := SecureGates{
 		SecretsOK:      policy.SecretsOK,
@@ -77,25 +84,30 @@ func Evaluate(root string) Result {
 		score = 0
 	}
 
-	// PASS SECURE falha se houver CRITICAL ou HIGH (blockers)
-	passSecure := len(failedGates) == 0 && !vs.HasBlockers()
+	// PASS SECURE falha somente se houver blocker real.
+	passSecure := len(failedGates) == 0 && blockingTotal == 0
 	status := "SECURE"
 	if !passSecure {
 		status = "FAIL"
 	}
 
 	return Result{
-		PassSecure:    passSecure,
-		DeployAllowed: passSecure,
-		SecurityScore: score,
-		Engine:        Engine,
-		Version:       Version,
-		Gates:         gates,
-		FailedGates:   failedGates,
-		Status:        status,
-		PolicySummary: policy.Summary,
-		Violations:    vs.TotalCount,
-		Summary_:      vs,
+		PassSecure:          passSecure,
+		DeployAllowed:       passSecure,
+		SecurityScore:       score,
+		Engine:              Engine,
+		Version:             Version,
+		Gates:               gates,
+		FailedGates:         failedGates,
+		Status:              status,
+		PolicySummary:       policy.Summary,
+		Violations:          vs.TotalCount,
+		BlockingTotal:       blockingTotal,
+		ReportOnlyTotal:     types.ReportOnlyCount(violations),
+		FalsePositiveCount:  types.FalsePositiveCount(violations),
+		RequiresReviewCount: types.RequiresReviewCount(violations),
+		NoiseCount:          types.NoiseCount(violations),
+		Summary_:            vs,
 	}
 }
 
@@ -108,8 +120,8 @@ func (r Result) Summary() string {
 		r.Summary_.CriticalCount, r.Summary_.HighCount)
 }
 
-// AnnotateViolations aplica ClassifySourceContext a cada violation.
+// AnnotateViolations aplica source_context e disposition a cada violation.
 // Exposto como helper público para uso em mission.go sem import cycle.
 func AnnotateViolations(violations []types.Violation) []types.Violation {
-	return types.Annotate(violations)
+	return types.AnnotateDisposition(violations)
 }

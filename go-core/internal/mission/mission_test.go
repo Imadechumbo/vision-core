@@ -254,6 +254,7 @@ func TestRun_HermesIntegrated(t *testing.T) {
 		t.Fatal("expected probable_root_cause to be populated")
 	}
 }
+
 // ═══════════════════════════════════════════════════════════════════════════
 // V6.1.1-HARDEN CONTRACT TESTS
 // Garantem que o JSON de output da missão sempre expõe o Security Remediation
@@ -271,9 +272,9 @@ func TestRun_SecurityReport_FieldsAlwaysPresent(t *testing.T) {
 	// Campos obrigatórios — devem existir mesmo quando não há violações
 
 	// pass_secure e pass_gold devem ser booleanos válidos (sempre presentes)
-	_ = out.PassSecure     // bool — sempre presente
-	_ = out.PassGold       // bool — sempre presente
-	_ = out.DeployAllowed  // bool — sempre presente
+	_ = out.PassSecure       // bool — sempre presente
+	_ = out.PassGold         // bool — sempre presente
+	_ = out.DeployAllowed    // bool — sempre presente
 	_ = out.PromotionAllowed // bool — sempre presente
 
 	// contadores numéricos — devem ser >= 0
@@ -532,5 +533,75 @@ func TestRun_PipelineContainsSecuritySteps(t *testing.T) {
 	}
 	if !found {
 		t.Error("step_results must contain 'passsecure' entry")
+	}
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// V6.1.2 PREFLIGHT FALSE POSITIVE / NOISE FILTER CONTRACT TESTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+func TestRun_SecurityDispositionFieldsAndCounts(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "config.go"), []byte(testfixtures.AWSKeyGoSource("awsKey")), 0644); err != nil {
+		t.Fatal(err)
+	}
+	fixture := "package api_test\nfunc TestLog(t *testing.T) { " + "console" + "." + "log" + "(\"" + "tok" + "en" + "\") }\n"
+	if err := os.WriteFile(filepath.Join(dir, "api_test.go"), []byte(fixture), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.SecurityTotalViolations != len(out.SecurityViolations) {
+		t.Fatalf("security_total_violations=%d, len(security_violations)=%d", out.SecurityTotalViolations, len(out.SecurityViolations))
+	}
+	if out.SecurityTotalViolations < 2 {
+		t.Fatalf("expected raw total to include production blocker and test fixture noise, got %d", out.SecurityTotalViolations)
+	}
+	if out.SecurityBlockingTotal != len(out.SecurityBlockingViolations) {
+		t.Fatalf("security_blocking_total=%d, len(security_blocking_violations)=%d", out.SecurityBlockingTotal, len(out.SecurityBlockingViolations))
+	}
+	if out.SecurityBlockingTotal == 0 {
+		t.Fatal("expected at least one production blocker")
+	}
+	if out.SecurityFalsePositiveCount == 0 || out.SecurityNoiseCount == 0 {
+		t.Fatalf("expected false_positive/noise counts > 0, got fp=%d noise=%d", out.SecurityFalsePositiveCount, out.SecurityNoiseCount)
+	}
+
+	foundFixture := false
+	for i, v := range out.SecurityViolations {
+		if v.Disposition == "" {
+			t.Fatalf("security_violations[%d] missing disposition: %+v", i, v)
+		}
+		if v.File == "api_test.go" {
+			foundFixture = true
+			if v.SourceContext != "test_fixture" || v.Disposition != "report_only" || !v.FalsePositive || v.NoiseReason == "" {
+				t.Fatalf("unexpected test fixture classification: %+v", v)
+			}
+		}
+	}
+	if !foundFixture {
+		t.Fatal("expected api_test.go test fixture violation in security_violations")
+	}
+}
+
+func TestRun_PassSecureFalseKeepsPassGoldDeployPromotionFalse(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "secrets.go"), []byte(testfixtures.AWSKeyGoSource("key")), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+	if out.PassSecure {
+		t.Fatal("expected pass_secure=false with production blocker")
+	}
+	if out.PassGold {
+		t.Fatal("expected pass_gold=false while pass_secure=false")
+	}
+	if out.DeployAllowed {
+		t.Fatal("expected deploy_allowed=false while pass_secure=false")
+	}
+	if out.PromotionAllowed {
+		t.Fatal("expected promotion_allowed=false while pass_secure=false")
 	}
 }
