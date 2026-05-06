@@ -19,6 +19,7 @@ import (
 
 	"github.com/visioncore/go-core/internal/fileops"
 	"github.com/visioncore/go-core/internal/hermes"
+	"github.com/visioncore/go-core/internal/memory"
 	"github.com/visioncore/go-core/internal/passgold"
 	"github.com/visioncore/go-core/internal/passsecure"
 	"github.com/visioncore/go-core/internal/patcher"
@@ -87,6 +88,11 @@ type Output struct {
 	SecurityFalsePositiveCount   int                 `json:"security_false_positive_count"`
 	SecurityRequiresReviewCount  int                 `json:"security_requires_review_count"`
 	SecurityNoiseCount           int                 `json:"security_noise_count"`
+
+	// V6.2 — passive remediation memory. These fields never influence security gates.
+	MemoryRecorded bool   `json:"memory_recorded"`
+	MemoryEventID  string `json:"memory_event_id,omitempty"`
+	MemoryWarning  string `json:"memory_warning,omitempty"`
 }
 
 // securityViolation é a struct exposta no JSON da missão.
@@ -109,7 +115,7 @@ type securityViolation struct {
 
 var v55Steps = []string{
 	"scanner", "hermes", "fileops", "snapshot", "patcher",
-	"validator", "rollback", "security", "passsecure", "passgold",
+	"validator", "rollback", "security", "passsecure", "passgold", "memory",
 }
 
 // Run executa o pipeline V5.5 com Hermes integrado ao runtime real.
@@ -339,6 +345,7 @@ func Run(input Input) Output {
 		out.OK = false
 		out.Summary = fmt.Sprintf("Mission FAILED. Gates: %v", pg.FailedGates)
 	}
+	recordPassiveMemory(input.Root, &out)
 	out.DurationMs = time.Since(start).Milliseconds()
 	return out
 }
@@ -417,4 +424,95 @@ func filterViolationsByDisposition(violations []types.Violation, disposition str
 		}
 	}
 	return out
+}
+
+func recordPassiveMemory(root string, out *Output) {
+	if out == nil || !memory.ShouldLearnFromMission(*out) {
+		return
+	}
+
+	eventID := "mem_" + shortID()
+	event := memory.RemediationEvent{
+		ID:                  eventID,
+		Timestamp:           time.Now().UTC().Format(time.RFC3339Nano),
+		MissionID:           out.MissionID,
+		TransactionID:       out.TransactionID,
+		SnapshotID:          out.SnapshotID,
+		Engine:              out.Engine,
+		Version:             out.Version,
+		IssueType:           out.IssueType,
+		ProbableRootCause:   out.ProbableRootCause,
+		SuggestedStrategy:   out.SuggestedStrategy,
+		Confidence:          out.Confidence,
+		Severity:            out.Severity,
+		SecurityScoreBefore: 0,
+		SecurityScoreAfter:  out.SecurityScore,
+		BlockingBefore:      out.SecurityBlockingTotal,
+		BlockingAfter:       out.SecurityBlockingTotal,
+		RuleIDs:             productionRuleIDs(out.SecurityBlockingViolations),
+		Files:               productionFiles(out.SecurityBlockingViolations),
+		PatchedFiles:        out.PatchedFiles,
+		TotalFiles:          out.TotalFiles,
+		PassSecure:          out.PassSecure,
+		PassGold:            out.PassGold,
+		DeployAllowed:       out.DeployAllowed,
+		PromotionAllowed:    out.PromotionAllowed,
+		RollbackReady:       out.RollbackReady,
+		RollbackApplied:     out.RollbackApplied,
+		Outcome:             "gold",
+	}
+
+	if err := memory.AppendRemediationEvent(root, event); err != nil {
+		out.MemoryWarning = "memory record skipped: " + err.Error()
+		out.StepResults = append(out.StepResults, StepResult{Step: "memory", OK: false, Error: out.MemoryWarning})
+		return
+	}
+	out.MemoryRecorded = true
+	out.MemoryEventID = eventID
+	out.StepResults = append(out.StepResults, StepResult{Step: "memory", OK: true, Message: "remediation event recorded: " + eventID})
+}
+
+func productionRuleIDs(violations []securityViolation) []string {
+	seen := map[string]bool{}
+	ids := []string{}
+	for _, v := range violations {
+		if !isProductionLearningViolation(v) || v.RuleID == "" {
+			continue
+		}
+		if !seen[v.RuleID] {
+			seen[v.RuleID] = true
+			ids = append(ids, v.RuleID)
+		}
+	}
+	return ids
+}
+
+func productionFiles(violations []securityViolation) []string {
+	seen := map[string]bool{}
+	files := []string{}
+	for _, v := range violations {
+		if !isProductionLearningViolation(v) || v.File == "" {
+			continue
+		}
+		if !seen[v.File] {
+			seen[v.File] = true
+			files = append(files, v.File)
+		}
+	}
+	return files
+}
+
+func isProductionLearningViolation(v securityViolation) bool {
+	if v.FalsePositive || v.Disposition != types.DispositionBlocking {
+		return false
+	}
+	blockedContexts := map[string]bool{
+		"":             true,
+		"unknown":      true,
+		"test_fixture": true,
+		"generated":    true,
+		"vendor":       true,
+		"snapshot":     true,
+	}
+	return !blockedContexts[v.SourceContext]
 }

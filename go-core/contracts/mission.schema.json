@@ -3,7 +3,10 @@
   "title": "VisionCore Mission Input",
   "description": "Contrato de entrada para missão do Go Safe Core V5.0",
   "type": "object",
-  "required": ["root", "input"],
+  "required": [
+    "root",
+    "input"
+  ],
   "properties": {
     "root": {
       "type": "string",
@@ -24,6 +27,18 @@
       "type": "string",
       "description": "ID opcional da missão. Se omitido, gerado automaticamente.",
       "pattern": "^mission_[a-f0-9]+$"
+    },
+    "memory_recorded": {
+      "type": "boolean",
+      "description": "V6.2 output field: true when a PASS GOLD + PASS SECURE mission wrote a passive remediation memory event."
+    },
+    "memory_event_id": {
+      "type": "string",
+      "description": "V6.2 output field: ID of the passive remediation memory event when recorded."
+    },
+    "memory_warning": {
+      "type": "string",
+      "description": "V6.2 output field: non-critical memory persistence warning; never changes PASS GOLD/PASS SECURE decisions."
     }
   },
   "additionalProperties": false

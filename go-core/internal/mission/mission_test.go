@@ -605,3 +605,93 @@ func TestRun_PassSecureFalseKeepsPassGoldDeployPromotionFalse(t *testing.T) {
 		t.Fatal("expected promotion_allowed=false while pass_secure=false")
 	}
 }
+
+func TestRun_GoldRecordsPassiveMemory(t *testing.T) {
+	dir := t.TempDir()
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+	if !out.PassGold || !out.PassSecure {
+		t.Fatalf("test setup expected PASS GOLD + PASS SECURE, got pass_gold=%v pass_secure=%v failed=%v", out.PassGold, out.PassSecure, out.FailedGates)
+	}
+	if !out.MemoryRecorded {
+		t.Fatalf("expected memory_recorded=true, warning=%q", out.MemoryWarning)
+	}
+	if out.MemoryEventID == "" {
+		t.Fatal("memory_event_id must be filled when memory is recorded")
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".vision-memory", "remediation_events.jsonl")); err != nil {
+		t.Fatalf("expected remediation memory JSONL file: %v", err)
+	}
+}
+
+func TestRun_FailDoesNotRecordPassiveMemory(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "secrets.go"), []byte(testfixtures.AWSKeyGoSource("key")), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+	if out.PassGold || out.PassSecure {
+		t.Fatalf("test setup expected FAIL, got pass_gold=%v pass_secure=%v", out.PassGold, out.PassSecure)
+	}
+	if out.MemoryRecorded {
+		t.Fatal("memory_recorded must remain false for FAIL missions")
+	}
+	if out.MemoryEventID != "" {
+		t.Fatalf("memory_event_id must be empty for FAIL missions, got %q", out.MemoryEventID)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".vision-memory", "remediation_events.jsonl")); !os.IsNotExist(err) {
+		t.Fatalf("FAIL mission must not write positive learning, stat err=%v", err)
+	}
+}
+
+func TestRun_MemoryDoesNotTransformFailIntoGold(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "secrets.go"), []byte(testfixtures.AWSKeyGoSource("key")), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+	if out.MemoryRecorded {
+		t.Fatal("memory must not record failed security missions")
+	}
+	if out.PassGold || out.OK || out.DeployAllowed || out.PromotionAllowed {
+		t.Fatalf("memory must not transform FAIL into GOLD: pass_gold=%v ok=%v deploy=%v promotion=%v", out.PassGold, out.OK, out.DeployAllowed, out.PromotionAllowed)
+	}
+}
+
+func TestRun_MemoryWarningDoesNotMaskSecurityFailure(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "secrets.go"), []byte(testfixtures.AWSKeyGoSource("key")), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".vision-memory"), []byte("not a dir"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+	if out.PassSecure || out.PassGold {
+		t.Fatalf("security failure must remain blocked, pass_secure=%v pass_gold=%v", out.PassSecure, out.PassGold)
+	}
+	if out.MemoryRecorded || out.MemoryWarning != "" {
+		t.Fatalf("failed security missions must not attempt positive memory writes, recorded=%v warning=%q", out.MemoryRecorded, out.MemoryWarning)
+	}
+}
+
+func TestRun_GoldMemoryFailureAddsWarningWithoutFailingMission(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".vision-memory"), []byte("not a dir"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+	if !out.PassGold || !out.PassSecure {
+		t.Fatalf("test setup expected GOLD+SECURE despite memory store failure, pass_gold=%v pass_secure=%v failed=%v", out.PassGold, out.PassSecure, out.FailedGates)
+	}
+	if out.MemoryRecorded {
+		t.Fatal("memory_recorded must be false when the memory append fails")
+	}
+	if out.MemoryWarning == "" {
+		t.Fatal("memory_warning must explain non-critical memory failure")
+	}
+}

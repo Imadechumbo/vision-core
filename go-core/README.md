@@ -97,3 +97,16 @@ Todos os 7 gates devem ser `true` para `status: "GOLD"`:
 - LLM/AI calls
 - Escrita em produção
 - Substituição do legado Node/Electron
+
+## V6.2 AEGIS AUTO REMEDIATION MEMORY
+
+A V6.2 adiciona memória local passiva para eventos de remediation bem-sucedidos. O runtime grava um registro em `.vision-memory/remediation_events.jsonl` somente depois que a missão já foi avaliada como **PASS GOLD + PASS SECURE**.
+
+Regras de aprendizado:
+
+- Só aprende quando `pass_gold=true`, `pass_secure=true`, `deploy_allowed=true`, `promotion_allowed=true` e `security_blocking_total=0`.
+- Não aprende com missão FAIL, `pass_gold=false` ou `pass_secure=false`.
+- Não aprende quando `rollback_applied=true`.
+- Não transforma falso positivo, `test_fixture`, `report_only`, `generated`, `vendor`, `snapshot` ou `unknown` em aprendizado positivo.
+- A memória é local, offline-first e zero-CGO via JSONL: `.vision-memory/remediation_events.jsonl`.
+- Na V6.2, memória é apenas registro/auditoria/aprendizado passivo; ela não altera decisões de segurança, deploy, promotion, PASS GOLD ou PASS SECURE.
