@@ -39,18 +39,17 @@ type RemediationEvent struct {
 	SecurityScoreAfter  int      `json:"security_score_after"`
 	BlockingBefore      int      `json:"blocking_before"`
 	BlockingAfter       int      `json:"blocking_after"`
-	// V6.2 compat — flat lists of rule_ids and files (after state)
 	RuleIDs             []string `json:"rule_ids"`
 	Files               []string `json:"files"`
 	// V6.3 — before/after trace for remediation learning
-	RuleIDsBefore  []string `json:"rule_ids_before"`
-	RuleIDsAfter   []string `json:"rule_ids_after"`
-	FixedRuleIDs   []string `json:"fixed_rule_ids"`
-	FilesBefore    []string `json:"files_before"`
-	FilesAfter     []string `json:"files_after"`
-	FixedFiles     []string `json:"fixed_files"`
-	PatchSummary   string   `json:"patch_summary"`
-	ChangedFiles   []string `json:"changed_files"`
+	RuleIDsBefore  []string `json:"rule_ids_before,omitempty"`
+	RuleIDsAfter   []string `json:"rule_ids_after,omitempty"`
+	FixedRuleIDs   []string `json:"fixed_rule_ids,omitempty"`
+	FilesBefore    []string `json:"files_before,omitempty"`
+	FilesAfter     []string `json:"files_after,omitempty"`
+	FixedFiles     []string `json:"fixed_files,omitempty"`
+	PatchSummary   string   `json:"patch_summary,omitempty"`
+	ChangedFiles   []string `json:"changed_files,omitempty"`
 	DiffAvailable  bool     `json:"diff_available"`
 	PatchedFiles        int      `json:"patched_files"`
 	TotalFiles          int      `json:"total_files"`
@@ -191,12 +190,40 @@ func intField(v reflect.Value, name string) int64 {
 	}
 }
 
-// ─── V6.3 helpers ────────────────────────────────────────────────────────────
+// ─── V6.3 Before/After Trace Fields ────────────────────────────────────────
+// Estes campos são adicionados ao RemediationEvent via go struct embedding
+// para manter backward compatibility via JSON omitempty.
+// Os campos V6.3 ficam separados aqui para evitar rewrite do struct.
 
-// DiffStringSlices returns elements in `before` that are NOT in `after`.
+// NOTE: os campos V6.3 são adicionados diretamente ao RemediationEvent.
+// Esta função de upgrade garante que eventos antigos lidos do JSONL tenham
+// valores default corretos para os novos campos.
+func upgradeEventV63(e *RemediationEvent) {
+	if e.RuleIDsBefore == nil {
+		e.RuleIDsBefore = []string{}
+	}
+	if e.RuleIDsAfter == nil {
+		e.RuleIDsAfter = []string{}
+	}
+	if e.FixedRuleIDs == nil {
+		e.FixedRuleIDs = []string{}
+	}
+	if e.FilesBefore == nil {
+		e.FilesBefore = []string{}
+	}
+	if e.FilesAfter == nil {
+		e.FilesAfter = []string{}
+	}
+	if e.FixedFiles == nil {
+		e.FixedFiles = []string{}
+	}
+	if e.ChangedFiles == nil {
+		e.ChangedFiles = []string{}
+	}
+}
+
+// DiffStringSlices returns elements in before that are NOT in after.
 // Used to compute fixed_rule_ids and fixed_files.
-// Both slices are treated as unordered sets. Result is deterministically
-// ordered by first appearance in `before`.
 func DiffStringSlices(before, after []string) []string {
 	afterSet := make(map[string]bool, len(after))
 	for _, s := range after {

@@ -1,18 +1,16 @@
 // internal/memory/reuse.go
 // VISION AEGIS CORE ENTERPRISE — V6.4 REMEDIATION MEMORY REUSE
 //
-// REGRA CENTRAL:
-//   Memória pode SUGERIR. Memória NÃO pode DECIDIR.
-//   Aegis / PASS SECURE / PASS GOLD continuam soberanos.
+// REGRA CENTRAL: Memória pode SUGERIR. Memória NÃO pode DECIDIR.
+// Aegis / PASS SECURE / PASS GOLD continuam soberanos.
 //
-// Esta camada é advisory-only. Nada aqui pode alterar:
-//   pass_secure, pass_gold, deploy_allowed, promotion_allowed,
-//   severity, disposition, security_blocking_total, security_score.
+// Memory suggestion is advisory only.
+// It must never change PASS SECURE, PASS GOLD, deploy or promotion decisions.
 package memory
 
 import "sort"
 
-// ─── Query types ─────────────────────────────────────────────────────────────
+// ─── Query / Match / Suggestion types ───────────────────────────────────────
 
 // RemediationQuery descreve o contexto atual da missão para busca de memória.
 type RemediationQuery struct {
@@ -48,27 +46,26 @@ type RemediationSuggestion struct {
 	Matches           []RemediationMatch `json:"matches,omitempty"`
 }
 
-// ─── Query engine ─────────────────────────────────────────────────────────────
+// ─── Public API ───────────────────────────────────────────────────────────────
 
-// FindSimilarRemediations lê a memória local e retorna eventos ranqueados por
-// similaridade com a query. Considera somente eventos com outcome="gold",
-// pass_gold=true, pass_secure=true e rollback_applied=false.
+// FindSimilarRemediations lê a memória local e retorna eventos ranqueados.
+// Considera somente eventos GOLD elegíveis. Erro de leitura retorna vazio.
 func FindSimilarRemediations(root string, query RemediationQuery) ([]RemediationMatch, error) {
 	events, err := ListRemediationEvents(root)
 	if err != nil {
-		return []RemediationMatch{}, nil // memória ausente = sem sugestão
+		return []RemediationMatch{}, nil
 	}
 	return RankRemediationMatches(events, query), nil
 }
 
-// RankRemediationMatches pontua e ordena eventos por similaridade com a query.
+// RankRemediationMatches pontua e ordena eventos por similaridade.
 //
 // Pontuação (soma limitada a 1.0):
-//   +0.35 issue_type igual
-//   +0.25 suggested_strategy igual
-//   +0.25 interseção proporcional de rule_ids
-//   +0.10 interseção proporcional de files
-//   +0.05 severity igual
+//   +0.35  issue_type igual
+//   +0.25  suggested_strategy igual
+//   +0.25  interseção proporcional de rule_ids
+//   +0.10  interseção proporcional de files
+//   +0.05  severity igual
 func RankRemediationMatches(events []RemediationEvent, query RemediationQuery) []RemediationMatch {
 	var matches []RemediationMatch
 	for _, e := range events {
@@ -79,10 +76,9 @@ func RankRemediationMatches(events []RemediationEvent, query RemediationQuery) [
 		if score <= 0 {
 			continue
 		}
-		match.Score = clamp(score, 0.0, 1.0)
+		match.Score = clampF(score, 0.0, 1.0)
 		matches = append(matches, match)
 	}
-	// ordenar por score decrescente, eventID crescente (determinístico)
 	sort.Slice(matches, func(i, j int) bool {
 		if matches[i].Score != matches[j].Score {
 			return matches[i].Score > matches[j].Score
@@ -92,8 +88,7 @@ func RankRemediationMatches(events []RemediationEvent, query RemediationQuery) [
 	return matches
 }
 
-// BuildSuggestion constrói uma RemediationSuggestion a partir dos matches.
-// Se não houver matches, retorna available=false.
+// BuildSuggestion constrói RemediationSuggestion a partir dos matches.
 // Advisory-only — não toma decisões de segurança.
 func BuildSuggestion(matches []RemediationMatch) RemediationSuggestion {
 	if len(matches) == 0 {
@@ -104,16 +99,14 @@ func BuildSuggestion(matches []RemediationMatch) RemediationSuggestion {
 		Available:         true,
 		Confidence:        best.Score,
 		BestEventID:       best.EventID,
-		SuggestedStrategy: best.PatchSummary, // patch_summary como estratégia sugerida
+		SuggestedStrategy: best.PatchSummary,
 		PatchSummary:      best.PatchSummary,
 		Matches:           matches,
 	}
 }
 
-// ─── Eligibility ─────────────────────────────────────────────────────────────
+// ─── Eligibility ──────────────────────────────────────────────────────────────
 
-// isEligibleForSuggestion valida que o evento é um aprendizado positivo válido.
-// Eventos corrompidos, failed, rolled_back ou test_fixture não são elegíveis.
 func isEligibleForSuggestion(e RemediationEvent) bool {
 	if !e.PassGold || !e.PassSecure {
 		return false
@@ -125,7 +118,7 @@ func isEligibleForSuggestion(e RemediationEvent) bool {
 		return false
 	}
 	if e.ID == "" {
-		return false // evento corrompido
+		return false
 	}
 	return true
 }
@@ -135,61 +128,50 @@ func isEligibleForSuggestion(e RemediationEvent) bool {
 func scoreEvent(e RemediationEvent, q RemediationQuery) (float64, RemediationMatch) {
 	var score float64
 	match := RemediationMatch{
-		EventID:   e.ID,
-		MissionID: e.MissionID,
-		Outcome:   e.Outcome,
+		EventID:      e.ID,
+		MissionID:    e.MissionID,
+		Outcome:      e.Outcome,
 		PatchSummary: e.PatchSummary,
 	}
-
-	// +0.35 issue_type
 	if q.IssueType != "" && e.IssueType == q.IssueType {
 		score += 0.35
 		match.MatchedIssueType = true
 	}
-
-	// +0.25 suggested_strategy
 	if q.SuggestedStrategy != "" && e.SuggestedStrategy == q.SuggestedStrategy {
 		score += 0.25
 		match.MatchedStrategy = true
 	}
-
-	// +0.25 rule_ids interseção proporcional
 	if len(q.RuleIDs) > 0 {
-		eventRules := toSet(e.RuleIDsBefore)
-		if len(eventRules) == 0 {
-			eventRules = toSet(e.RuleIDs) // V6.2 compat
+		eSet := toSet(e.RuleIDsBefore)
+		if len(eSet) == 0 {
+			eSet = toSet(e.RuleIDs)
 		}
-		intersect := intersection(q.RuleIDs, eventRules)
-		if len(intersect) > 0 {
-			ratio := float64(len(intersect)) / float64(max(len(q.RuleIDs), len(eventRules)))
+		inter := intersection(q.RuleIDs, eSet)
+		if len(inter) > 0 {
+			ratio := float64(len(inter)) / float64(maxInt(len(q.RuleIDs), len(eSet)))
 			score += 0.25 * ratio
-			match.MatchedRuleIDs = intersect
+			match.MatchedRuleIDs = inter
 		}
 	}
-
-	// +0.10 files interseção proporcional
 	if len(q.Files) > 0 {
-		eventFiles := toSet(e.FilesBefore)
-		if len(eventFiles) == 0 {
-			eventFiles = toSet(e.Files) // V6.2 compat
+		eSet := toSet(e.FilesBefore)
+		if len(eSet) == 0 {
+			eSet = toSet(e.Files)
 		}
-		intersect := intersection(q.Files, eventFiles)
-		if len(intersect) > 0 {
-			ratio := float64(len(intersect)) / float64(max(len(q.Files), len(eventFiles)))
+		inter := intersection(q.Files, eSet)
+		if len(inter) > 0 {
+			ratio := float64(len(inter)) / float64(maxInt(len(q.Files), len(eSet)))
 			score += 0.10 * ratio
-			match.MatchedFiles = intersect
+			match.MatchedFiles = inter
 		}
 	}
-
-	// +0.05 severity
 	if q.Severity != "" && e.Severity == q.Severity {
 		score += 0.05
 	}
-
 	return score, match
 }
 
-// ─── Set helpers ──────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 func toSet(ss []string) map[string]bool {
 	m := make(map[string]bool, len(ss))
@@ -213,7 +195,7 @@ func intersection(slice []string, set map[string]bool) []string {
 	return out
 }
 
-func clamp(v, lo, hi float64) float64 {
+func clampF(v, lo, hi float64) float64 {
 	if v < lo {
 		return lo
 	}
@@ -223,7 +205,7 @@ func clamp(v, lo, hi float64) float64 {
 	return v
 }
 
-func max(a, b int) int {
+func maxInt(a, b int) int {
 	if a > b {
 		return a
 	}
