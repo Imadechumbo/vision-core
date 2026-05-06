@@ -136,3 +136,35 @@ func TestAPIGuard_ViolationStructure(t *testing.T) {
 		t.Error("Remediation empty")
 	}
 }
+
+func TestAPIGuard_RateLimitDocumentationCommentIgnored(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "worker.js"), []byte(`
+// Fallback simples. Para produção pesada, use binding de Rate Limiting API ou Durable Object.
+const RATE_LIMIT_MAX = 120;
+`), 0644)
+	res := Scan(root)
+	if !res.OK {
+		t.Errorf("expected OK=true for rate limit documentation comment, violations: %v", res.Violations)
+	}
+}
+
+func TestAPIGuard_CommentedRateLimitMiddlewareDetected(t *testing.T) {
+	root := t.TempDir()
+	_ = os.WriteFile(filepath.Join(root, "server.js"), []byte(`
+// app.use(rateLimit({ windowMs: 60000, max: 120 }));
+`), 0644)
+	res := Scan(root)
+	if res.OK {
+		t.Fatal("expected commented rate limit middleware to be flagged")
+	}
+	found := false
+	for _, v := range res.Violations {
+		if v.RuleID == "AEGIS_API_008" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected AEGIS_API_008, got: %v", res.Violations)
+	}
+}

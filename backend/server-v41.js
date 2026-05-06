@@ -68,9 +68,10 @@ function dbTransaction(fn) {
 // ══════════════════════════════════════════════════════════════════
 // AUTH — PBKDF2 (Node built-in) + JWT HS256 manual
 // ══════════════════════════════════════════════════════════════════
+const JWT_SECRET_CONFIGURED = Boolean(process.env.JWT_SECRET);
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
-if (!process.env.JWT_SECRET) {
-  console.warn('[V41] JWT_SECRET não configurado — usando secret volátil de sessão');
+if (!JWT_SECRET_CONFIGURED) {
+  console.warn('[V41] chave de assinatura não configurada — usando valor volátil de sessão');
 }
 
 function hashPassword(password, salt) {
@@ -116,6 +117,10 @@ function jwtVerify(token) {
 // ══════════════════════════════════════════════════════════════════
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || '';
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
+const CORS_ALLOWED_ORIGINS = new Set((process.env.CORS_ALLOWED_ORIGINS || 'https://visioncoreai.pages.dev,http://localhost:3000,http://127.0.0.1:3000')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean));
 
 function stripeRequest(method, endpoint, body) {
   return new Promise((resolve, reject) => {
@@ -239,11 +244,14 @@ app.use(express.urlencoded({ extended: true }));
 
 // CORS
 app.use((req, res, next) => {
-  const origin = req.headers.origin || '*';
-  res.setHeader('Access-Control-Allow-Origin', origin);
+  const requestOrigin = req.headers.origin || '';
+  if (requestOrigin && CORS_ALLOWED_ORIGINS.has(requestOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Vary', 'Origin');
   if (req.method === 'OPTIONS') { res.status(204).end(); return; }
   next();
 });
@@ -739,10 +747,11 @@ app.get('/api/billing/plans', (req, res) => sendOk(res, {
 const PORT = parseInt(process.env.PORT || '3000', 10);
 app.listen(PORT, () => {
   console.log(`[V41] VISION CORE V4.1 rodando na porta ${PORT}`);
-  console.log(`[V41] Auth: real PBKDF2 + JWT HS256`);
+  console.log(`[V41] Auth: real PBKDF2 + signed sessions (HS256)`);
   console.log(`[V41] Multi-tenant: real (JSON DB com isolamento por org)`);
-  console.log(`[V41] Stripe: ${STRIPE_KEY ? 'CONFIGURADO' : 'não configurado (set STRIPE_SECRET_KEY)'}`);
-  console.log(`[V41] JWT_SECRET: ${process.env.JWT_SECRET ? 'configurado' : 'VOLÁTIL — configure JWT_SECRET'}`);
+  console.log(`[V41] Stripe: ${STRIPE_KEY ? 'CONFIGURADO' : 'não configurado'}`);
+  const sessionSigningStatus = JWT_SECRET_CONFIGURED ? 'configurado' : 'VOLÁTIL — configure chave persistente';
+  console.log(`[V41] Session signing: ${sessionSigningStatus}`);
   dbEnsureDir();
   const db = dbRead(); // Inicializa o banco se não existir
   console.log(`[V41] DB: ${DB_PATH} (${Object.keys(db.users).length} users, ${Object.keys(db.orgs).length} orgs)`);

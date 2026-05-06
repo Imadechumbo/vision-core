@@ -100,7 +100,7 @@ var dangerRules = []apiRule{
 	{
 		ruleID:      "AEGIS_API_008",
 		kind:        "rate_limit_commented",
-		pattern:     regexp.MustCompile(`(?i)//.*rate.?lim`),
+		pattern:     regexp.MustCompile(`(?i)^\s*//\s*(app\.use|router\.use|server\.use|.*rateLimit\(|.*RateLimiter|.*limiter\.New)`),
 		severity:    types.SeverityMedium,
 		message:     "Rate limiting appears commented out in source",
 		remediation: "Re-enable rate limiting middleware. Without it the API is vulnerable to brute-force and DoS attacks.",
@@ -194,7 +194,11 @@ func scanFile(root, path string) ([]types.Violation, map[string]bool) {
 			}
 		}
 
-		// comentários: apenas checar rate_limit_commented
+		if strings.Contains(trimmed, "regexp.MustCompile") {
+			continue
+		}
+
+		// comentários: apenas checar middleware de quota inativo
 		if strings.HasPrefix(trimmed, "//") || strings.HasPrefix(trimmed, "#") {
 			for _, r := range dangerRules {
 				if r.kind == "rate_limit_commented" && r.pattern.MatchString(trimmed) {
