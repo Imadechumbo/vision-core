@@ -62,7 +62,7 @@ func TestEvaluate_AllFail(t *testing.T) {
 	if res.PassGold {
 		t.Error("should fail with no gates")
 	}
-	if len(res.FailedGates) != 7 {
-		t.Errorf("expected 7 failed gates, got %d", len(res.FailedGates))
+	if len(res.FailedGates) != 8 {
+		t.Errorf("expected 8 failed gates, got %d", len(res.FailedGates))
 	}
 }

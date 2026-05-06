@@ -20,9 +20,11 @@ import (
 	"github.com/visioncore/go-core/internal/fileops"
 	"github.com/visioncore/go-core/internal/hermes"
 	"github.com/visioncore/go-core/internal/passgold"
+	"github.com/visioncore/go-core/internal/passsecure"
 	"github.com/visioncore/go-core/internal/patcher"
 	"github.com/visioncore/go-core/internal/rollback"
 	"github.com/visioncore/go-core/internal/scanner"
+	"github.com/visioncore/go-core/internal/security/types"
 	"github.com/visioncore/go-core/internal/validator"
 )
 
@@ -46,6 +48,9 @@ type Output struct {
 	Engine            string         `json:"engine"`
 	Status            string         `json:"status"`
 	PassGold          bool           `json:"pass_gold"`
+	PassSecure        bool           `json:"pass_secure"`
+	SecurityScore     int            `json:"security_score"`
+	DeployAllowed     bool           `json:"deploy_allowed"`
 	PromotionAllowed  bool           `json:"promotion_allowed"`
 	RollbackReady     bool           `json:"rollback_ready"`
 	Summary           string         `json:"summary"`
@@ -67,11 +72,35 @@ type Output struct {
 	Confidence        float64        `json:"confidence"`
 	Severity          string         `json:"severity,omitempty"`
 	SuggestedStrategy string         `json:"suggested_strategy,omitempty"`
+
+	// V6.1.1 — Security Remediation Report
+	SecurityFailedGates   []string              `json:"security_failed_gates,omitempty"`
+	SecurityViolations    []securityViolation   `json:"security_violations,omitempty"`
+	SecurityTotalViolations int                 `json:"security_total_violations"`
+	SecurityCriticalCount int                   `json:"security_critical_count"`
+	SecurityHighCount     int                   `json:"security_high_count"`
+	SecurityMediumCount   int                   `json:"security_medium_count"`
+	SecurityLowCount      int                   `json:"security_low_count"`
+}
+
+// securityViolation é a struct exposta no JSON da missão.
+// Espelha types.Violation mas com json tags explícitas para clareza no output.
+// V6.1.1-HARDEN: adiciona source_context para classificação de origem.
+type securityViolation struct {
+	Gate          string `json:"gate"`
+	Category      string `json:"category"`
+	Severity      string `json:"severity"`
+	File          string `json:"file"`
+	Line          int    `json:"line"`
+	RuleID        string `json:"rule_id"`
+	Message       string `json:"message"`
+	Remediation   string `json:"remediation"`
+	SourceContext string `json:"source_context,omitempty"`
 }
 
 var v55Steps = []string{
 	"scanner", "hermes", "fileops", "snapshot", "patcher",
-	"validator", "rollback", "passgold",
+	"validator", "rollback", "security", "passsecure", "passgold",
 }
 
 // Run executa o pipeline V5.5 com Hermes integrado ao runtime real.
@@ -247,6 +276,50 @@ func Run(input Input) Output {
 	gates.SecurityOK = gates.ScannerOK && gates.FileopsOK && gates.PatcherOK
 	gates.LegacySafe = true
 
+	// ── STEP 7: PASS SECURE — Aegis Security Runtime ──────────────
+	psResult := passsecure.Evaluate(input.Root)
+	sPassSecure := StepResult{
+		Step: "passsecure",
+		OK:   psResult.PassSecure,
+	}
+	if psResult.PassSecure {
+		sPassSecure.Message = psResult.Summary()
+		gates.PassSecureOK = true
+	} else {
+		sPassSecure.Error = psResult.Summary()
+		gates.PassSecureOK = false
+	}
+	out.PassSecure = psResult.PassSecure
+	out.SecurityScore = psResult.SecurityScore
+	out.DeployAllowed = psResult.DeployAllowed
+	out.SecurityFailedGates = psResult.FailedGates
+
+	// Mapear violations para o tipo de saída da missão.
+	// V6.1.1-HARDEN: anotar SourceContext antes de expor no JSON.
+	annotated := passsecure.AnnotateViolations(psResult.Summary_.Violations)
+	vs := types.Build(annotated)
+	out.SecurityTotalViolations = vs.TotalCount
+	out.SecurityCriticalCount = vs.CriticalCount
+	out.SecurityHighCount = vs.HighCount
+	out.SecurityMediumCount = vs.MediumCount
+	out.SecurityLowCount = vs.LowCount
+	svv := make([]securityViolation, 0, len(vs.Violations))
+	for _, v := range vs.Violations {
+		svv = append(svv, securityViolation{
+			Gate:          v.Gate,
+			Category:      v.Category,
+			Severity:      v.Severity,
+			File:          v.File,
+			Line:          v.Line,
+			RuleID:        v.RuleID,
+			Message:       v.Message,
+			Remediation:   v.Remediation,
+			SourceContext: v.SourceContext,
+		})
+	}
+	out.SecurityViolations = svv
+	out.StepResults = append(out.StepResults, sPassSecure)
+
 	// ── PASS GOLD ──────────────────────────────────────────────────
 	pg := passgold.Evaluate(gates)
 	out.Gates = gates
@@ -255,9 +328,12 @@ func Run(input Input) Output {
 	out.RollbackReady = pg.RollbackReady
 	out.Status = pg.Status
 	out.FailedGates = pg.FailedGates
-	if pg.PassGold {
+	if pg.PassGold && psResult.PassSecure {
 		out.OK = true
-		out.Summary = "V5.7 RELEASE CANDIDATE — PASS GOLD confirmed."
+		out.Summary = "V6.1 AEGIS RELEASE CANDIDATE — PASS GOLD + PASS SECURE confirmed."
+	} else if pg.PassGold && !psResult.PassSecure {
+		out.OK = false
+		out.Summary = fmt.Sprintf("Mission BLOCKED. PASS GOLD=true but PASS SECURE=false. Security violations: %d", psResult.Violations)
 	} else {
 		out.OK = false
 		out.Summary = fmt.Sprintf("Mission FAILED. Gates: %v", pg.FailedGates)

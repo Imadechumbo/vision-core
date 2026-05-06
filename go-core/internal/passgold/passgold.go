@@ -12,6 +12,8 @@ type Gates struct {
 	RollbackReady bool `json:"rollback_ready"`
 	SecurityOK    bool `json:"security_ok"`
 	LegacySafe    bool `json:"legacy_safe"`
+	// V6.1 — AEGIS gate: requer PASS SECURE para promoção
+	PassSecureOK  bool `json:"pass_secure_ok"`
 }
 
 // Result é o resultado final do PASS GOLD.
@@ -49,12 +51,14 @@ func Evaluate(g Gates) Result {
 		"rollback_ready": g.RollbackReady,
 		"security_ok":    g.SecurityOK,
 		"legacy_safe":    g.LegacySafe,
+		"pass_secure_ok": g.PassSecureOK,
 	}
 
 	// Ordem determinística
 	order := []string{
 		"scanner_ok", "fileops_ok", "patcher_ok",
 		"validator_ok", "rollback_ready", "security_ok", "legacy_safe",
+		"pass_secure_ok",
 	}
 
 	for _, name := range order {
@@ -87,5 +91,6 @@ func AllGatesOK() Gates {
 		RollbackReady: true,
 		SecurityOK:    true,
 		LegacySafe:    true,
+		PassSecureOK:  true,
 	}
 }
