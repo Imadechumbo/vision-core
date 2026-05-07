@@ -144,7 +144,7 @@ func TestRunControlledPRFlowBlocksMainOrMasterCurrentBranch(t *testing.T) {
 	}
 }
 
-func TestGitHubPackageDoesNotImplementPush(t *testing.T) {
+func TestGitHubPackagePushContractAvoidsForbiddenOptions(t *testing.T) {
 	matches, err := filepath.Glob(filepath.Join(".", "*.go"))
 	if err != nil {
 		t.Fatal(err)
@@ -155,8 +155,11 @@ func TestGitHubPackageDoesNotImplementPush(t *testing.T) {
 			t.Fatal(err)
 		}
 		text := string(b)
-		if strings.Contains(text, "gitOutput(root, \"push\"") || strings.Contains(text, "\"push\",") {
-			t.Fatalf("github package must not call git push in V7.1: %s", f)
+		for _, forbidden := range []string{"set-upstream", "force", "mirror", "all", "tags"} {
+			option := "--" + forbidden
+			if strings.Contains(text, option) {
+				t.Fatalf("github package must not use forbidden push option %s in %s", option, f)
+			}
 		}
 	}
 }
