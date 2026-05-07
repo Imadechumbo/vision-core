@@ -19,12 +19,13 @@ import (
 	"time"
 
 	"github.com/visioncore/go-core/internal/fileops"
+	githubpr "github.com/visioncore/go-core/internal/github"
 	"github.com/visioncore/go-core/internal/hermes"
 	"github.com/visioncore/go-core/internal/memory"
 	"github.com/visioncore/go-core/internal/passgold"
-	"github.com/visioncore/go-core/internal/planning"
 	"github.com/visioncore/go-core/internal/passsecure"
 	"github.com/visioncore/go-core/internal/patcher"
+	"github.com/visioncore/go-core/internal/planning"
 	"github.com/visioncore/go-core/internal/rollback"
 	"github.com/visioncore/go-core/internal/scanner"
 	"github.com/visioncore/go-core/internal/security/types"
@@ -103,15 +104,15 @@ type Output struct {
 	MemorySuggestionPatchSummary string  `json:"memory_suggestion_patch_summary,omitempty"`
 	MemorySuggestionMatches      int     `json:"memory_suggestion_matches"`
 	// V6.5 — memory-guided patch planning (advisory/supervised)
-	PatchPlanID              string   `json:"patch_plan_id,omitempty"`
-	PatchPlanStrategy        string   `json:"patch_plan_strategy,omitempty"`
-	PatchPlanMemoryGuided    bool     `json:"patch_plan_memory_guided"`
-	PatchPlanMemoryEventID   string   `json:"patch_plan_memory_event_id,omitempty"`
-	PatchPlanMemoryConfidence float64 `json:"patch_plan_memory_confidence"`
-	PatchPlanRiskLevel       string   `json:"patch_plan_risk_level,omitempty"`
-	PatchPlanApplyMode       string   `json:"patch_plan_apply_mode,omitempty"`
-	PatchPlanTargetFiles     []string                  `json:"patch_plan_target_files,omitempty"`
-	PatchPlanOperations      []planning.PlannedOperation `json:"patch_plan_operations,omitempty"`
+	PatchPlanID               string                      `json:"patch_plan_id,omitempty"`
+	PatchPlanStrategy         string                      `json:"patch_plan_strategy,omitempty"`
+	PatchPlanMemoryGuided     bool                        `json:"patch_plan_memory_guided"`
+	PatchPlanMemoryEventID    string                      `json:"patch_plan_memory_event_id,omitempty"`
+	PatchPlanMemoryConfidence float64                     `json:"patch_plan_memory_confidence"`
+	PatchPlanRiskLevel        string                      `json:"patch_plan_risk_level,omitempty"`
+	PatchPlanApplyMode        string                      `json:"patch_plan_apply_mode,omitempty"`
+	PatchPlanTargetFiles      []string                    `json:"patch_plan_target_files,omitempty"`
+	PatchPlanOperations       []planning.PlannedOperation `json:"patch_plan_operations,omitempty"`
 	// V6.6 — supervised multi-file patch execution result
 	PatchExecutionID           string   `json:"patch_execution_id,omitempty"`
 	PatchExecutionMode         string   `json:"patch_execution_mode,omitempty"`
@@ -122,18 +123,28 @@ type Output struct {
 	PatchExecutionTotalFiles   int      `json:"patch_execution_total_files"`
 	PatchExecutionPatchedFiles int      `json:"patch_execution_patched_files"`
 	// V6.7 — real remediation operation stats
-	RealRemediationEnabled      bool     `json:"real_remediation_enabled"`
-	RealRemediationApplied      bool     `json:"real_remediation_applied"`
-	RealRemediationOpsTotal     int      `json:"real_remediation_operations_total"`
-	RealRemediationOpsApplied   int      `json:"real_remediation_operations_applied"`
-	RealRemediationOpsSkipped   int      `json:"real_remediation_operations_skipped"`
-	RealRemediationOpsFailed    int      `json:"real_remediation_operations_failed"`
-	RealRemediationOpTypes      []string `json:"real_remediation_operation_types,omitempty"`
+	RealRemediationEnabled    bool     `json:"real_remediation_enabled"`
+	RealRemediationApplied    bool     `json:"real_remediation_applied"`
+	RealRemediationOpsTotal   int      `json:"real_remediation_operations_total"`
+	RealRemediationOpsApplied int      `json:"real_remediation_operations_applied"`
+	RealRemediationOpsSkipped int      `json:"real_remediation_operations_skipped"`
+	RealRemediationOpsFailed  int      `json:"real_remediation_operations_failed"`
+	RealRemediationOpTypes    []string `json:"real_remediation_operation_types,omitempty"`
 	// V6.8 — rule mapping stats
-	RuleMappingEnabled       bool     `json:"rule_mapping_enabled"`
-	RuleMappingOpsGenerated  int      `json:"rule_mapping_operations_generated"`
-	RuleMappingOpsRejected   int      `json:"rule_mapping_operations_rejected"`
+	RuleMappingEnabled         bool     `json:"rule_mapping_enabled"`
+	RuleMappingOpsGenerated    int      `json:"rule_mapping_operations_generated"`
+	RuleMappingOpsRejected     int      `json:"rule_mapping_operations_rejected"`
 	RuleMappingRejectedReasons []string `json:"rule_mapping_rejected_reasons,omitempty"`
+	// V7.0 — PASS GOLD gated GitHub PR planning (dry-run only by default)
+	GitHubPRPlanID        string `json:"github_pr_plan_id,omitempty"`
+	GitHubPRBranch        string `json:"github_pr_branch,omitempty"`
+	GitHubPRCanOpen       bool   `json:"github_pr_can_open"`
+	GitHubPRBlockReason   string `json:"github_pr_block_reason,omitempty"`
+	GitHubPRTitle         string `json:"github_pr_title,omitempty"`
+	GitHubPRStatusContext string `json:"github_pr_status_context"`
+	GitHubPRStatusState   string `json:"github_pr_status_state"`
+	GitHubPRDryRun        bool   `json:"github_pr_dry_run"`
+	GitHubPROpened        bool   `json:"github_pr_opened"`
 	// V6.3 internal — before-state telemetry, not serialised
 	beforeTrace securityTrace `json:"-"`
 }
@@ -536,6 +547,7 @@ func Run(input Input) Output {
 		out.Summary = fmt.Sprintf("Mission FAILED. Gates: %v", pg.FailedGates)
 	}
 	recordPassiveMemory(input.Root, &out)
+	planGitHubPR(input, &out, changedFiles)
 	out.DurationMs = time.Since(start).Milliseconds()
 	return out
 }
@@ -783,4 +795,45 @@ func isProductionLearningViolation(v securityViolation) bool {
 		"snapshot":     true,
 	}
 	return !blockedContexts[v.SourceContext]
+}
+
+func planGitHubPR(input Input, out *Output, changedFiles []string) {
+	if out == nil {
+		return
+	}
+	plannedFiles := memory.DeduplicateStrings(append([]string{}, changedFiles...))
+	if len(plannedFiles) == 0 {
+		plannedFiles = memory.DeduplicateStrings(append(plannedFiles, out.PatchExecutionAppliedFiles...))
+	}
+	if len(plannedFiles) == 0 && out.PatchedFiles > 0 {
+		plannedFiles = memory.DeduplicateStrings(append(plannedFiles, out.PatchPlanTargetFiles...))
+	}
+	gateSnapshot := githubpr.GateSnapshot{
+		PassGold:              out.PassGold,
+		PassSecure:            out.PassSecure,
+		DeployAllowed:         out.DeployAllowed,
+		PromotionAllowed:      out.PromotionAllowed,
+		SecurityBlockingTotal: out.SecurityBlockingTotal,
+		RollbackReady:         out.RollbackReady,
+		ValidatorOK:           out.Gates.ValidatorOK,
+		PatcherOK:             out.Gates.PatcherOK,
+	}
+	status := githubpr.BuildPassGoldStatus(gateSnapshot)
+	plan := githubpr.BuildPRPlan(githubpr.PRPlanInput{
+		MissionID:         out.MissionID,
+		ChangedFiles:      plannedFiles,
+		IssueType:         out.IssueType,
+		SuggestedStrategy: out.SuggestedStrategy,
+		PatchSummary:      fmt.Sprintf("patched %d/%d file(s) via transaction %s", out.PatchedFiles, out.TotalFiles, out.TransactionID),
+		GateSnapshot:      gateSnapshot,
+	})
+	out.GitHubPRPlanID = plan.ID
+	out.GitHubPRBranch = plan.WorkBranch
+	out.GitHubPRCanOpen = plan.CanOpenPR
+	out.GitHubPRBlockReason = plan.BlockReason
+	out.GitHubPRTitle = plan.Title
+	out.GitHubPRStatusContext = status.Context
+	out.GitHubPRStatusState = status.State
+	out.GitHubPRDryRun = true
+	out.GitHubPROpened = false
 }

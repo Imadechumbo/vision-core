@@ -135,3 +135,14 @@ Critérios validados por cenário positivo:
 - remove o padrão inseguro original do arquivo final.
 
 Os testes negativos garantem que `test_fixture`, `report_only` e `false_positive` continuam não mapeáveis, que targets inseguros não são patchados, que a ausência de target seguro usa sentinel/noop controlado e que operação obrigatória com falha bloqueia PASS GOLD. O harness nunca grava fixtures vulneráveis fora do tempdir e não altera contrato JSON público da missão.
+
+## V7.0 GITHUB PR AUTOMATION WITH PASS GOLD CHECKS
+
+VISION AEGIS CORE V7.0 adds a safe GitHub/PR planning layer for remediation work while preserving the Go First Architecture security gates.
+
+- The mission pipeline builds a deterministic `PRPlan` after PASS GOLD/PASS SECURE evaluation and passive memory recording.
+- A PR is permitted only when PASS GOLD is true, PASS SECURE is true, `deploy_allowed=true`, `promotion_allowed=true`, `security_blocking_total=0`, rollback is ready, validator and patcher gates are OK, and changed files are present.
+- The default mission behavior is dry-run PR planning: it emits `github_pr_*` metadata but does not push, open a PR, publish a real status, merge, or touch GitHub.
+- Any real external GitHub write requires the explicit environment flag `VISION_GITHUB_WRITE=1`; real GitHub clients read tokens only from `GITHUB_TOKEN` and never include tokens in logs, errors, PR bodies, or status descriptions.
+- The generated status check context is `vision/pass-gold`; its state is `success` only for PASS GOLD + PASS SECURE with zero blocking security findings, and `failure` otherwise.
+- V7.0 never performs auto-merge, never pushes in tests, never opens real PRs in tests, and excludes `.vision-memory/`, `.vision-snapshots/`, `bin/`, `node_modules/`, and `vendor/` from controlled git add operations.

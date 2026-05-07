@@ -842,12 +842,12 @@ func TestRun_V66_Governance_MemoryGuidedDoesNotSkipValidator(t *testing.T) {
 	dir := t.TempDir()
 	// Seed memory with gold event
 	event := memory.RemediationEvent{
-		ID:        "mem_gov_test",
-		Timestamp: "2026-05-06T00:00:00Z",
-		Outcome:   "gold",
-		PassGold:  true,
-		PassSecure: true,
-		IssueType: "cors_blocked",
+		ID:                "mem_gov_test",
+		Timestamp:         "2026-05-06T00:00:00Z",
+		Outcome:           "gold",
+		PassGold:          true,
+		PassSecure:        true,
+		IssueType:         "cors_blocked",
 		SuggestedStrategy: "align_cors",
 	}
 	_ = memory.AppendRemediationEvent(dir, event)
@@ -873,12 +873,12 @@ func TestRun_V66_Governance_MemoryGuidedDoesNotBypassPassSecure(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dir, "server.go"),
 		[]byte("package main\nconst k = \"AKIA"+"IOSFODNN7"+"EXAMPLE\"\n"), 0644)
 	event := memory.RemediationEvent{
-		ID:        "mem_gov_test2",
-		Timestamp: "2026-05-06T00:00:00Z",
-		Outcome:   "gold",
-		PassGold:  true,
+		ID:         "mem_gov_test2",
+		Timestamp:  "2026-05-06T00:00:00Z",
+		Outcome:    "gold",
+		PassGold:   true,
 		PassSecure: true,
-		IssueType: "cors_blocked",
+		IssueType:  "cors_blocked",
 	}
 	_ = memory.AppendRemediationEvent(dir, event)
 
@@ -1037,12 +1037,12 @@ func TestRun_V67_MemoryGuidedPlanDoesNotForceOperationsWithoutBeforeAfter(t *tes
 	dir := t.TempDir()
 	// Seed memory with GOLD event
 	event := memory.RemediationEvent{
-		ID:        "mem_v67_test",
-		Timestamp: "2026-05-06T00:00:00Z",
-		Outcome:   "gold",
-		PassGold:  true,
-		PassSecure: true,
-		IssueType: "cors_blocked",
+		ID:                "mem_v67_test",
+		Timestamp:         "2026-05-06T00:00:00Z",
+		Outcome:           "gold",
+		PassGold:          true,
+		PassSecure:        true,
+		IssueType:         "cors_blocked",
 		SuggestedStrategy: "align_cors",
 	}
 	_ = memory.AppendRemediationEvent(dir, event)
@@ -1067,5 +1067,80 @@ func TestRun_V67_RollbackReadyAfterRealRemediation(t *testing.T) {
 
 	if !out.RollbackReady {
 		t.Error("rollback_ready must be true after real remediation execution")
+	}
+}
+
+func TestRun_GitHubPRFields_GoldDryRun(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+	if !out.PassGold || !out.PassSecure {
+		t.Fatalf("expected PASS GOLD + PASS SECURE, got gold=%v secure=%v", out.PassGold, out.PassSecure)
+	}
+	if out.GitHubPRPlanID == "" || out.GitHubPRBranch == "" || out.GitHubPRTitle == "" {
+		t.Fatalf("expected github PR metadata, got plan=%q branch=%q title=%q", out.GitHubPRPlanID, out.GitHubPRBranch, out.GitHubPRTitle)
+	}
+	if !out.GitHubPRCanOpen {
+		t.Fatalf("expected github_pr_can_open=true, reason=%q", out.GitHubPRBlockReason)
+	}
+	if out.GitHubPRStatusContext != "vision/pass-gold" {
+		t.Fatalf("unexpected status context: %s", out.GitHubPRStatusContext)
+	}
+	if out.GitHubPRStatusState != "success" {
+		t.Fatalf("expected success status in GOLD, got %s", out.GitHubPRStatusState)
+	}
+	if !out.GitHubPRDryRun || out.GitHubPROpened {
+		t.Fatalf("PR planning must be dry-run/no real PR, dry=%v opened=%v", out.GitHubPRDryRun, out.GitHubPROpened)
+	}
+}
+
+func TestRun_GitHubPRPlanning_DoesNotAlterPassGatesOrMemory(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+	if !out.PassGold || !out.PassSecure {
+		t.Fatalf("PR planning must not alter PASS gates: gold=%v secure=%v", out.PassGold, out.PassSecure)
+	}
+	if !out.MemoryRecorded || out.MemoryEventID == "" {
+		t.Fatalf("PR planning must not prevent memory recording: recorded=%v id=%q warning=%q", out.MemoryRecorded, out.MemoryEventID, out.MemoryWarning)
+	}
+	if out.GitHubPROpened {
+		t.Fatal("mission must not open a real PR")
+	}
+}
+
+func TestRun_GitHubPRPlanning_DryRunDoesNotPushOrOpenPR(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: true})
+	if out.GitHubPRStatusContext != "vision/pass-gold" {
+		t.Fatalf("unexpected status context: %s", out.GitHubPRStatusContext)
+	}
+	if !out.GitHubPRDryRun || out.GitHubPROpened {
+		t.Fatalf("dry-run planning must not push/open PR: dry=%v opened=%v", out.GitHubPRDryRun, out.GitHubPROpened)
+	}
+}
+
+func TestPlanGitHubPRBlocksWhenMissionGateFails(t *testing.T) {
+	out := Output{
+		MissionID:                  "mission_blocked",
+		IssueType:                  "cors_blocked",
+		PassGold:                   false,
+		PassSecure:                 true,
+		DeployAllowed:              true,
+		PromotionAllowed:           false,
+		SecurityBlockingTotal:      0,
+		RollbackReady:              true,
+		PatchExecutionOK:           true,
+		PatchExecutionAppliedFiles: []string{".vision-test/mission.sentinel"},
+	}
+	out.Gates.ValidatorOK = true
+	out.Gates.PatcherOK = true
+	planGitHubPR(Input{}, &out, []string{".vision-test/mission.sentinel"})
+	if out.GitHubPRCanOpen {
+		t.Fatal("expected PR plan to block when PASS GOLD fails")
+	}
+	if out.GitHubPRStatusState == "success" {
+		t.Fatal("status success must not be generated when PASS GOLD fails")
+	}
+	if out.GitHubPRBlockReason == "" {
+		t.Fatal("blocked PR plan must include an objective reason")
 	}
 }
