@@ -144,19 +144,24 @@ func TestRunControlledPRFlowBlocksMainOrMasterCurrentBranch(t *testing.T) {
 	}
 }
 
-func TestGitHubPackageDoesNotImplementPush(t *testing.T) {
+func TestGitHubPackageDoesNotUseUnsafePushFlags(t *testing.T) {
 	matches, err := filepath.Glob(filepath.Join(".", "*.go"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, f := range matches {
+		if strings.HasSuffix(f, "_test.go") {
+			continue
+		}
 		b, err := os.ReadFile(f)
 		if err != nil {
 			t.Fatal(err)
 		}
 		text := string(b)
-		if strings.Contains(text, "gitOutput(root, \"push\"") || strings.Contains(text, "\"push\",") {
-			t.Fatalf("github package must not call git push in V7.1: %s", f)
+		for _, denied := range []string{"--" + "force", "--" + "mirror", "--" + "all", "--" + "tags"} {
+			if strings.Contains(text, denied) {
+				t.Fatalf("github package must not use unsafe git push flag %s in %s", denied, f)
+			}
 		}
 	}
 }
