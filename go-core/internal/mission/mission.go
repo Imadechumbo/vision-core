@@ -109,7 +109,8 @@ type Output struct {
 	PatchPlanMemoryConfidence float64 `json:"patch_plan_memory_confidence"`
 	PatchPlanRiskLevel       string   `json:"patch_plan_risk_level,omitempty"`
 	PatchPlanApplyMode       string   `json:"patch_plan_apply_mode,omitempty"`
-	PatchPlanTargetFiles     []string `json:"patch_plan_target_files,omitempty"`
+	PatchPlanTargetFiles     []string                  `json:"patch_plan_target_files,omitempty"`
+	PatchPlanOperations      []planning.PlannedOperation `json:"patch_plan_operations,omitempty"`
 	// V6.6 — supervised multi-file patch execution result
 	PatchExecutionID           string   `json:"patch_execution_id,omitempty"`
 	PatchExecutionMode         string   `json:"patch_execution_mode,omitempty"`
@@ -119,6 +120,14 @@ type Output struct {
 	PatchExecutionFailedFiles  []string `json:"patch_execution_failed_files,omitempty"`
 	PatchExecutionTotalFiles   int      `json:"patch_execution_total_files"`
 	PatchExecutionPatchedFiles int      `json:"patch_execution_patched_files"`
+	// V6.7 — real remediation operation stats
+	RealRemediationEnabled      bool     `json:"real_remediation_enabled"`
+	RealRemediationApplied      bool     `json:"real_remediation_applied"`
+	RealRemediationOpsTotal     int      `json:"real_remediation_operations_total"`
+	RealRemediationOpsApplied   int      `json:"real_remediation_operations_applied"`
+	RealRemediationOpsSkipped   int      `json:"real_remediation_operations_skipped"`
+	RealRemediationOpsFailed    int      `json:"real_remediation_operations_failed"`
+	RealRemediationOpTypes      []string `json:"real_remediation_operation_types,omitempty"`
 	// V6.3 internal — before-state telemetry, not serialised
 	beforeTrace securityTrace `json:"-"`
 }
@@ -253,6 +262,7 @@ func Run(input Input) Output {
 		out.PatchPlanRiskLevel = plan.RiskLevel
 		out.PatchPlanApplyMode = plan.ApplyMode
 		out.PatchPlanTargetFiles = plan.TargetFiles
+		out.PatchPlanOperations = plan.Operations
 	}
 
 	// ── STEP 3: FileOps — path safety ─────────────────────────────
@@ -310,6 +320,19 @@ func Run(input Input) Output {
 	// V6.6: usa ExecuteSupervisedMultiFile sobre o PatchPlan da V6.5.
 	// Snapshot criado internamente via ApplyBatch transacional.
 	// ApplyMode="supervised" é obrigatório. "automatic" nunca é aceito.
+	// V6.7: map PlannedOperation → patcher.PatchOperation to avoid import cycle
+	var patchOps []patcher.PatchOperation
+	for _, pop := range out.PatchPlanOperations {
+		patchOps = append(patchOps, patcher.PatchOperation{
+			File:          pop.File,
+			Description:   pop.Description,
+			OperationType: pop.OperationType,
+			Before:        pop.Before,
+			After:         pop.After,
+			Anchor:        pop.Anchor,
+			Status:        "pending",
+		})
+	}
 	execInput := patcher.ExecutionPlanInput{
 		MissionID:     missionID,
 		TransactionID: "", // gerado internamente pelo ApplyBatch
@@ -317,6 +340,7 @@ func Run(input Input) Output {
 		TargetFiles:   out.PatchPlanTargetFiles,
 		Root:          input.Root,
 		DryRun:        input.DryRun,
+		Operations:    patchOps,
 	}
 	execRes := patcher.ExecuteSupervisedMultiFile(input.Root, execInput, snapshotDir)
 	s4 := StepResult{Step: "patcher"}
@@ -328,6 +352,14 @@ func Run(input Input) Output {
 	out.PatchExecutionFailedFiles = execRes.FailedFiles
 	out.PatchExecutionTotalFiles = execRes.TotalFiles
 	out.PatchExecutionPatchedFiles = execRes.PatchedFiles
+	// V6.7 — real remediation stats from execution result
+	out.RealRemediationEnabled = execRes.RealRemediationEnabled
+	out.RealRemediationApplied = execRes.RealRemediationApplied
+	out.RealRemediationOpsTotal = execRes.OperationsTotal
+	out.RealRemediationOpsApplied = execRes.OperationsApplied
+	out.RealRemediationOpsSkipped = execRes.OperationsSkipped
+	out.RealRemediationOpsFailed = execRes.OperationsFailed
+	out.RealRemediationOpTypes = execRes.OperationTypes
 	if execRes.OK {
 		s4.OK = true
 		gates.PatcherOK = true

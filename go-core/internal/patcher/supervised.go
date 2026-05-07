@@ -26,6 +26,7 @@ type PatchOperation struct {
 	OperationType string `json:"operation_type"` // append | replace | noop | redaction | policy_fix
 	Before        string `json:"before,omitempty"`
 	After         string `json:"after,omitempty"`
+	Anchor        string `json:"anchor,omitempty"`
 	Status        string `json:"status"` // pending | applied | skipped | failed
 	Error         string `json:"error,omitempty"`
 }
@@ -57,6 +58,14 @@ type ExecutionResult struct {
 	TotalFiles    int              `json:"total_files"`
 	DurationMs    int64            `json:"duration_ms"`
 	Error         string           `json:"error,omitempty"`
+	// V6.7 — real remediation stats
+	RealRemediationEnabled    bool     `json:"real_remediation_enabled"`
+	RealRemediationApplied    bool     `json:"real_remediation_applied"`
+	OperationsTotal           int      `json:"real_remediation_operations_total"`
+	OperationsApplied         int      `json:"real_remediation_operations_applied"`
+	OperationsSkipped         int      `json:"real_remediation_operations_skipped"`
+	OperationsFailed          int      `json:"real_remediation_operations_failed"`
+	OperationTypes            []string `json:"real_remediation_operation_types,omitempty"`
 }
 
 // ─── ExecutionPlanInput ───────────────────────────────────────────────────────
@@ -71,6 +80,7 @@ type ExecutionPlanInput struct {
 	TargetFiles  []string // já validados pelo planning.IsSafeTarget
 	Root         string
 	DryRun       bool
+	Operations   []PatchOperation // V6.7: real remediation operations
 }
 
 // ─── ExecuteSupervisedMultiFile ───────────────────────────────────────────────
@@ -152,7 +162,50 @@ func ExecuteSupervisedMultiFile(root string, planInput ExecutionPlanInput, snaps
 
 	result.TotalFiles = len(validTargets)
 
-	// ── Build BatchPlan from valid targets ────────────────────────
+	// ── V6.7: Apply real operations if provided ─────────────────
+	// Real remediation operations are allowlisted, supervised, and reversible.
+	// If Operations are present, use ApplyOperations instead of BatchPlan sentinel.
+	if len(planInput.Operations) > 0 {
+		result.RealRemediationEnabled = true
+		ops, applied, skipped, failed := ApplyOperations(root, planInput.Operations)
+		result.Operations = append(result.Operations, ops...)
+		result.OperationsTotal = len(ops)
+		result.OperationsApplied = applied
+		result.OperationsSkipped = skipped
+		result.OperationsFailed = failed
+		result.RealRemediationApplied = applied > 0
+
+		// Collect unique operation types
+		typeSet := map[string]bool{}
+		for _, op := range ops {
+			if op.Status == "applied" && !typeSet[op.OperationType] {
+				typeSet[op.OperationType] = true
+				result.OperationTypes = append(result.OperationTypes, op.OperationType)
+			}
+		}
+
+		// Collect applied/skipped/failed files from operations
+		for _, op := range ops {
+			switch op.Status {
+			case "applied":
+				result.AppliedFiles = appendUnique(result.AppliedFiles, op.File)
+				result.PatchedFiles++
+			case "skipped":
+				result.SkippedFiles = appendUnique(result.SkippedFiles, op.File)
+			case "failed":
+				result.FailedFiles = appendUnique(result.FailedFiles, op.File)
+			}
+		}
+		result.TotalFiles = len(validTargets)
+		result.OK = failed == 0
+		if failed > 0 {
+			result.Error = fmt.Sprintf("real remediation: %d operation(s) failed", failed)
+		}
+		result.DurationMs = time.Since(start).Milliseconds()
+		return result
+	}
+
+	// ── Build BatchPlan from valid targets (sentinel fallback) ────
 	txID := planInput.TransactionID
 	if txID == "" {
 		txID = newTxID()
@@ -330,4 +383,14 @@ func isSupervisedSafeTarget(path string) bool {
 		}
 	}
 	return true
+}
+
+// appendUnique appends s to slice only if not already present.
+func appendUnique(slice []string, s string) []string {
+	for _, existing := range slice {
+		if existing == s {
+			return slice
+		}
+	}
+	return append(slice, s)
 }

@@ -29,6 +29,17 @@ const SafeSentinel = safeSentinel
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+// PlannedOperation descreve uma operação de remediation planejada.
+// Evita import cycle com o pacote patcher — mapeado em mission.go.
+type PlannedOperation struct {
+	File          string `json:"file"`
+	Description   string `json:"description"`
+	OperationType string `json:"operation_type"` // noop | redaction | exact_replace | policy_fix | append_guarded
+	Before        string `json:"before,omitempty"`
+	After         string `json:"after,omitempty"`
+	Anchor        string `json:"anchor,omitempty"`
+}
+
 // PatchPlan descreve o plano de patch supervisionado gerado pelo planning engine.
 // Este plano é advisory: o patcher ainda executa, valida e pode fazer rollback
 // independente do conteúdo do plano.
@@ -47,8 +58,9 @@ type PatchPlan struct {
 	RiskLevel          string   `json:"risk_level"` // low | medium | high
 	RequiresValidation bool     `json:"requires_validation"`
 	RequiresRollback   bool     `json:"requires_rollback"`
-	ApplyMode          string   `json:"apply_mode"` // supervised (never automatic in V6.5)
-	Notes              []string `json:"notes,omitempty"`
+	ApplyMode          string             `json:"apply_mode"` // supervised (never automatic in V6.5)
+	Operations         []PlannedOperation `json:"operations,omitempty"`
+	Notes              []string           `json:"notes,omitempty"`
 }
 
 // PlanInput é o contexto passado pelo mission.Run para construir o plano.
@@ -62,6 +74,8 @@ type PlanInput struct {
 	BlockingFiles     []string
 	Root              string // project root, used for path validation
 	MemorySuggestion  memory.RemediationSuggestion
+	// V6.7 — explicit operations to attach to plan (must have before/after for replace types)
+	Operations        []PlannedOperation
 }
 
 // ─── BuildPatchPlan ───────────────────────────────────────────────────────────
@@ -137,9 +151,10 @@ func BuildPatchPlan(input PlanInput) PatchPlan {
 		MemoryConfidence:   memoryConfidence,
 		MemoryPatchSummary: memoryPatchSummary,
 		RiskLevel:          riskLevel,
-		RequiresValidation: true,  // invariante: nunca false
-		RequiresRollback:   true,  // invariante: nunca false
-		ApplyMode:          "supervised", // nunca "automatic" em V6.5
+		RequiresValidation: true,
+		RequiresRollback:   true,
+		ApplyMode:          "supervised",
+		Operations:         input.Operations,
 		Notes:              notes,
 	}
 }
