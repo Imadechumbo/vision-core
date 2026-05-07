@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/visioncore/go-core/internal/fileops"
@@ -128,17 +129,23 @@ type Output struct {
 	RealRemediationOpsSkipped   int      `json:"real_remediation_operations_skipped"`
 	RealRemediationOpsFailed    int      `json:"real_remediation_operations_failed"`
 	RealRemediationOpTypes      []string `json:"real_remediation_operation_types,omitempty"`
+	// V6.8 — rule mapping stats
+	RuleMappingEnabled       bool     `json:"rule_mapping_enabled"`
+	RuleMappingOpsGenerated  int      `json:"rule_mapping_operations_generated"`
+	RuleMappingOpsRejected   int      `json:"rule_mapping_operations_rejected"`
+	RuleMappingRejectedReasons []string `json:"rule_mapping_rejected_reasons,omitempty"`
 	// V6.3 internal — before-state telemetry, not serialised
 	beforeTrace securityTrace `json:"-"`
 }
 
 // securityTrace holds production blocking violations captured BEFORE the patcher.
-// Used only for memory learning. NEVER influences security gates.
+// Used only for memory learning and V6.8 rule mapping. NEVER influences security gates.
 type securityTrace struct {
-	RuleIDs  []string
-	Files    []string
-	Score    int
-	Blocking int
+	RuleIDs      []string
+	Files        []string
+	Score        int
+	Blocking     int
+	RuleMappings []planning.RuleMappingInput // V6.8: ready for rule→op mapping
 }
 
 // securityViolation é a struct exposta no JSON da missão.
@@ -232,6 +239,12 @@ func Run(input Input) Output {
 		// memória indisponível é silenciosa — não bloqueia pipeline
 	}
 
+	// ── V6.8: RULE MAPPING — violation → planned operation ─────
+	// Convert production/blocking violations into PlannedOperations.
+	// Only rules in the V6.8 allowlist with deterministic before/after are mapped.
+	// No secrets are emitted in mapping results. Fallback to sentinel if no ops.
+	out.RuleMappingEnabled = true // capability always active in V6.8+
+
 	// ── V6.5: MEMORY-GUIDED PATCH PLANNING — advisory/supervised ─
 	// Memory-guided patch planning is advisory and supervised.
 	// It cannot bypass validation, rollback, PASS SECURE or PASS GOLD.
@@ -254,6 +267,22 @@ func Run(input Input) Output {
 			},
 		}
 		plan := planning.BuildPatchPlan(planInput)
+
+		// V6.8: attach real operations from security violations
+		if len(out.beforeTrace.RuleMappings) > 0 {
+			prevOpCount := len(plan.Operations)
+			plan = planning.AttachOperationsFromViolations(input.Root, plan, out.beforeTrace.RuleMappings)
+			generated := len(plan.Operations) - prevOpCount
+			out.RuleMappingOpsGenerated = generated
+			out.RuleMappingOpsRejected = len(out.beforeTrace.RuleMappings) - generated
+			// Collect rejection reasons (no secrets) from plan notes added by AttachOperationsFromViolations
+			for _, note := range plan.Notes {
+				if strings.Contains(note, "rule_mapping:") && strings.Contains(note, "—") {
+					out.RuleMappingRejectedReasons = append(out.RuleMappingRejectedReasons, note)
+				}
+			}
+		}
+
 		out.PatchPlanID = plan.ID
 		out.PatchPlanStrategy = plan.Strategy
 		out.PatchPlanMemoryGuided = plan.MemoryGuided
@@ -654,14 +683,18 @@ func recordPassiveMemory(root string, out *Output) {
 	out.StepResults = append(out.StepResults, StepResult{Step: "memory", OK: true, Message: "remediation event recorded: " + eventID})
 }
 
-// buildSecurityTrace extracts production-only blocking violations for memory.
-// NEVER used for security decisions.
+// buildSecurityTrace extracts production-only blocking violations for memory
+// learning and V6.8 rule mapping. NEVER used for security decisions.
 func buildSecurityTrace(violations []types.Violation, score int) securityTrace {
 	var ruleIDs, files []string
+	var ruleMappings []planning.RuleMappingInput
 	seenRule := map[string]bool{}
 	seenFile := map[string]bool{}
 	blocking := 0
-	blocked := map[string]bool{"": true, "test_fixture": true, "generated": true, "vendor": true, "snapshot": true, "unknown": true}
+	blocked := map[string]bool{
+		"": true, "test_fixture": true, "generated": true,
+		"vendor": true, "snapshot": true, "unknown": true,
+	}
 	for _, v := range violations {
 		if v.FalsePositive || v.Disposition != types.DispositionBlocking || blocked[v.SourceContext] {
 			continue
@@ -675,6 +708,19 @@ func buildSecurityTrace(violations []types.Violation, score int) securityTrace {
 			seenFile[v.File] = true
 			files = append(files, v.File)
 		}
+		// V6.8: build RuleMappingInput for every qualifying violation
+		ruleMappings = append(ruleMappings, planning.RuleMappingInput{
+			RuleID:        v.RuleID,
+			Category:      v.Category,
+			Severity:      v.Severity,
+			File:          v.File,
+			Line:          v.Line,
+			Message:       v.Message,
+			Remediation:   v.Remediation,
+			SourceContext: v.SourceContext,
+			Disposition:   v.Disposition,
+			FalsePositive: v.FalsePositive,
+		})
 	}
 	if ruleIDs == nil {
 		ruleIDs = []string{}
@@ -682,7 +728,16 @@ func buildSecurityTrace(violations []types.Violation, score int) securityTrace {
 	if files == nil {
 		files = []string{}
 	}
-	return securityTrace{RuleIDs: ruleIDs, Files: files, Score: score, Blocking: blocking}
+	if ruleMappings == nil {
+		ruleMappings = []planning.RuleMappingInput{}
+	}
+	return securityTrace{
+		RuleIDs:      ruleIDs,
+		Files:        files,
+		Score:        score,
+		Blocking:     blocking,
+		RuleMappings: ruleMappings,
+	}
 }
 
 func productionRuleIDs(violations []securityViolation) []string {
