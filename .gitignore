@@ -53,5 +53,3 @@ go-core/vendor/
 node_modules/
 desktop-agent/dist/
 desktop-agent/node_modules/
-
-.vision-memory/

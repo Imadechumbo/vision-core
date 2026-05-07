@@ -175,13 +175,22 @@ func resolveTargetFiles(candidates []string, root string) ([]string, []string) {
 // Rejects: empty, dot, absolute paths, path traversal, test fixtures,
 // and any path containing a blocked directory segment.
 func isSafeTarget(path string) bool {
-	cleaned := filepath.Clean(filepath.ToSlash(strings.TrimSpace(path)))
+	raw := strings.TrimSpace(path)
+	if raw == "" {
+		return false
+	}
+
+	if filepath.IsAbs(raw) {
+		return false
+	}
+
+	cleaned := filepath.ToSlash(filepath.Clean(raw))
 
 	if cleaned == "." || cleaned == "" {
 		return false
 	}
 
-	if filepath.IsAbs(path) || strings.HasPrefix(cleaned, "/") {
+	if strings.HasPrefix(cleaned, "/") {
 		return false
 	}
 
