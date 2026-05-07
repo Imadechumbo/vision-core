@@ -40,17 +40,21 @@ type StatusRequest struct {
 }
 
 type MockPRClient struct {
-	OpenCalls   int
-	StatusCalls int
+	OpenCalls          int
+	StatusCalls        int
+	OpenPRCalled       bool // V7.3: explicit boolean tracking
+	PublishStatusCalled bool // V7.3: explicit boolean tracking
 }
 
 func (m *MockPRClient) OpenPR(_ context.Context, req OpenPRRequest) (OpenPRResponse, error) {
 	m.OpenCalls++
+	m.OpenPRCalled = true
 	return OpenPRResponse{Number: 1, URL: fmt.Sprintf("https://github.com/%s/%s/pull/1", req.Owner, req.Repo)}, nil
 }
 
 func (m *MockPRClient) PublishStatus(_ context.Context, _ StatusRequest) error {
 	m.StatusCalls++
+	m.PublishStatusCalled = true
 	return nil
 }
 
@@ -72,7 +76,7 @@ func (c HTTPGitHubClient) OpenPR(ctx context.Context, req OpenPRRequest) (OpenPR
 		HTMLURL string `json:"html_url"`
 	}
 	if err := c.do(ctx, "POST", fmt.Sprintf("/repos/%s/%s/pulls", req.Owner, req.Repo), payload, &resp); err != nil {
-		return OpenPRResponse{}, err
+		return OpenPRResponse{}, errors.New(RedactSecrets(err.Error()))
 	}
 	return OpenPRResponse{Number: resp.Number, URL: resp.HTMLURL}, nil
 }
@@ -85,7 +89,10 @@ func (c HTTPGitHubClient) PublishStatus(ctx context.Context, req StatusRequest) 
 		return errors.New("github token unavailable")
 	}
 	payload := map[string]string{"state": req.State, "context": req.Context, "description": req.Description, "target_url": req.TargetURL}
-	return c.do(ctx, "POST", fmt.Sprintf("/repos/%s/%s/statuses/%s", req.Owner, req.Repo, req.SHA), payload, nil)
+	if err := c.do(ctx, "POST", fmt.Sprintf("/repos/%s/%s/statuses/%s", req.Owner, req.Repo, req.SHA), payload, nil); err != nil {
+		return errors.New(RedactSecrets(err.Error()))
+	}
+	return nil
 }
 
 func (c HTTPGitHubClient) do(ctx context.Context, method, path string, payload any, out any) error {
@@ -152,7 +159,7 @@ func OpenPRDryRunAware(ctx context.Context, input OpenFlowInput) PRResult {
 	pr, err := input.Client.OpenPR(ctx, input.Request)
 	if err != nil {
 		res.OK = false
-		res.Error = err.Error()
+		res.Error = RedactSecrets(err.Error())
 		return res
 	}
 	res.PROpened = true
@@ -160,7 +167,7 @@ func OpenPRDryRunAware(ctx context.Context, input OpenFlowInput) PRResult {
 	res.PRURL = pr.URL
 	if err := input.Client.PublishStatus(ctx, input.Status); err != nil {
 		res.OK = false
-		res.Error = err.Error()
+		res.Error = RedactSecrets(err.Error())
 		return res
 	}
 	res.StatusPublished = true
