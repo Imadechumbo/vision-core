@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var deniedPathPrefixes = []string{".vision-memory", ".vision-snapshots", "bin", "node_modules", "vendor"}
+var deniedPathPrefixes = []string{".vision-memory", ".vision-snapshots", "bin", "node_modules", "vendor", "dist", "build", ".next"}
 
 func CurrentBranch(root string) (string, error) {
 	return gitOutput(root, "rev-parse", "--abbrev-ref", "HEAD")
