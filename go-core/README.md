@@ -110,3 +110,28 @@ Regras de aprendizado:
 - Não transforma falso positivo, `test_fixture`, `report_only`, `generated`, `vendor`, `snapshot` ou `unknown` em aprendizado positivo.
 - A memória é local, offline-first e zero-CGO via JSONL: `.vision-memory/remediation_events.jsonl`.
 - Na V6.2, memória é apenas registro/auditoria/aprendizado passivo; ela não altera decisões de segurança, deploy, promotion, PASS GOLD ou PASS SECURE.
+
+## V6.9 REAL REMEDIATION TEST HARNESS
+
+A V6.9 adiciona o pacote `internal/remediationharness` para provar o ciclo real de remediation sem inserir vulnerabilidades permanentes no repositório. Cada cenário do harness cria um projeto temporário em `t.TempDir()`, escreve fixtures production controladas apenas nesse diretório isolado e executa os componentes reais do runtime: Aegis/PASS SECURE antes, rule mapping, patcher supervisionado, validator, PASS SECURE depois, PASS GOLD, rollback readiness e memória before/after.
+
+O harness cobre os cenários reais mínimos:
+
+- `AEGIS_API_004` — CORS wildcard em `backend/server.js`, remediado para `process.env.ALLOWED_ORIGINS` com fallback seguro.
+- `AEGIS_API_007` — logging sensível de token em `backend/logger.js`, remediado para `"[REDACTED]"`.
+- `AEGIS_API_008` — rate limiting comentado em `backend/server.js`, remediado por policy fix ou guard supervisionado.
+- `AEGIS_API_005`/`AEGIS_API_006` — bypass/debug auth flag em `backend/auth.js`, remediado para flag desabilitada.
+- `AEGIS_SECRET_010` — API key/token hardcoded em `backend/config.js`, remediado para variável de ambiente ou redaction segura.
+
+Critérios validados por cenário positivo:
+
+- começa com blocker production real (`source_context=production`, `disposition=blocking`, `false_positive=false`);
+- gera pelo menos uma operação via rule mapping;
+- aplica remediation real supervisionada;
+- valida os arquivos alterados;
+- reavalia para `security_blocking_total=0`;
+- termina com `pass_secure=true` e `pass_gold=true`;
+- registra memória before/after no tempdir do harness;
+- remove o padrão inseguro original do arquivo final.
+
+Os testes negativos garantem que `test_fixture`, `report_only` e `false_positive` continuam não mapeáveis, que targets inseguros não são patchados, que a ausência de target seguro usa sentinel/noop controlado e que operação obrigatória com falha bloqueia PASS GOLD. O harness nunca grava fixtures vulneráveis fora do tempdir e não altera contrato JSON público da missão.

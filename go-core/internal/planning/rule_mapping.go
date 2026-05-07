@@ -42,6 +42,7 @@ var mappableRules = map[string]bool{
 	"AEGIS_API_004":    true, // CORS wildcard → policy_fix
 	"AEGIS_API_008":    true, // rate limiting commented out → append_guarded
 	"AEGIS_API_006":    true, // auth disabled in debug mode → exact_replace / policy_fix
+	"AEGIS_API_005":    true, // auth bypass flag → exact_replace
 	"AEGIS_SECRET_010": true, // hardcoded API key/token → redaction / env ref
 }
 
@@ -114,7 +115,7 @@ func MapViolationToOperation(root string, v RuleMappingInput) RuleMappingResult 
 		return mapAPI004CORSFix(v, line, absFile)
 	case "AEGIS_API_008":
 		return mapAPI008RateLimit(v, line)
-	case "AEGIS_API_006":
+	case "AEGIS_API_006", "AEGIS_API_005":
 		return mapAPI006AuthBypass(v, line)
 	case "AEGIS_SECRET_010":
 		return mapSecret010Redaction(v, line)
@@ -246,25 +247,31 @@ func init() {
 	}{
 		// origin: "*"
 		{js("origin: ", dq(wc)),
-			js("origin: process.env.ALLOWED_ORIGINS || ", dq("https://example.com"))},
+			js("origin: process.env.ALLOWED_ORIGINS ?? ", dq("https://example.com"))},
 		// origin: '*'
 		{js("origin: ", sq(wc)),
-			js("origin: process.env.ALLOWED_ORIGINS || ", sq("https://example.com"))},
+			js("origin: process.env.ALLOWED_ORIGINS ?? ", sq("https://example.com"))},
 		// "Access-Control-Allow-Origin": "*"
 		{js(dq("Access-Control-Allow-Origin"), ": ", dq(wc)),
-			js(dq("Access-Control-Allow-Origin"), ": process.env.ALLOWED_ORIGINS || ", dq("https://example.com"))},
+			js(dq("Access-Control-Allow-Origin"), ": process.env.ALLOWED_ORIGINS ?? ", dq("https://example.com"))},
 		// 'Access-Control-Allow-Origin': '*'
 		{js(sq("Access-Control-Allow-Origin"), ": ", sq(wc)),
-			js(sq("Access-Control-Allow-Origin"), ": process.env.ALLOWED_ORIGINS || ", sq("https://example.com"))},
+			js(sq("Access-Control-Allow-Origin"), ": process.env.ALLOWED_ORIGINS ?? ", sq("https://example.com"))},
 		// Access-Control-Allow-Origin: "*"
 		{js("Access-Control-Allow-Origin: ", dq(wc)),
 			js(`Access-Control-Allow-Origin: "${ALLOWED_ORIGINS:-https://example.com}"`)},
 		// allowedOrigins = ["*"]
 		{js("allowedOrigins = [", dq(wc), "]"),
-			js("allowedOrigins = [process.env.ALLOWED_ORIGINS || ", dq("https://example.com"), "]")},
+			js("allowedOrigins = [process.env.ALLOWED_ORIGINS ?? ", dq("https://example.com"), "]")},
 		// allowedOrigins = ['*']
 		{js("allowedOrigins = [", sq(wc), "]"),
-			js("allowedOrigins = [process.env.ALLOWED_ORIGINS || ", sq("https://example.com"), "]")},
+			js("allowedOrigins = [process.env.ALLOWED_ORIGINS ?? ", sq("https://example.com"), "]")},
+		// JS header setter with double quotes
+		{js("setHeader(", dq("Access-Control-Allow-Origin"), ", ", dq(wc), ")"),
+			js("setHeader(", dq("Access-Control-Allow-Origin"), ", process.env.ALLOWED_ORIGINS ?? ", dq("https://example.com"), ")")},
+		// JS header setter with single quotes
+		{js("setHeader(", sq("Access-Control-Allow-Origin"), ", ", sq(wc), ")"),
+			js("setHeader(", sq("Access-Control-Allow-Origin"), ", process.env.ALLOWED_ORIGINS ?? ", sq("https://example.com"), ")")},
 	}
 }
 

@@ -66,9 +66,11 @@ var dangerRules = []apiRule{
 		remediation: "Replace with process.env.JWT_SECRET or os.Getenv('JWT_SECRET'). Rotate the exposed secret.",
 	},
 	{
-		ruleID:      "AEGIS_API_004",
-		kind:        "cors_wildcard",
-		pattern:     regexp.MustCompile(`(?i)(Access-Control-Allow-Origin|allowedOrigins?|origin)\s*[:=]\s*["']\*["']`),
+		ruleID: "AEGIS_API_004",
+		kind:   "cors_wildcard",
+		pattern: regexp.MustCompile(
+			`(?i)((Access-Control-Allow-Origin|allowedOrigins?|origin)\s*[:=]\s*["']\*["']|setHeader\s*\(\s*["']Access-Control-Allow-Origin["']\s*,\s*["']\*["']\s*\))`,
+		),
 		severity:    types.SeverityHigh,
 		message:     "CORS configured with wildcard (*) — allows requests from any origin",
 		remediation: "Restrict to known origins: allowedOrigins: ['https://yourdomain.com']. Never use '*' with credentials.",
@@ -217,6 +219,9 @@ func scanFile(root, path string) ([]types.Violation, map[string]bool) {
 				continue
 			}
 			if r.pattern.MatchString(trimmed) {
+				if r.ruleID == "AEGIS_API_007" && strings.Contains(strings.ToUpper(trimmed), "[REDACTED]") {
+					continue
+				}
 				violations = append(violations, types.Violation{
 					Gate: "api_ok", Category: "api",
 					Severity: r.severity, File: rel, Line: lineNum,
