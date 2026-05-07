@@ -162,8 +162,8 @@ func TestBuildPatchPlan_InsecureTargetsDiscarded(t *testing.T) {
 		"internal/foo_test.go",
 	}
 	plan := BuildPatchPlan(PlanInput{
-		MissionID:       "m1",
-		BlockingFiles:   badTargets,
+		MissionID:        "m1",
+		BlockingFiles:    badTargets,
 		MemorySuggestion: noSuggestion(),
 	})
 	for _, f := range plan.TargetFiles {
@@ -275,5 +275,98 @@ func TestBuildPatchPlan_CandidateRuleIDsDeduplicated(t *testing.T) {
 	})
 	if len(plan.CandidateRuleIDs) != 2 {
 		t.Errorf("expected 2 unique rule IDs, got %v", plan.CandidateRuleIDs)
+	}
+}
+
+// ─── isSafeTarget unit tests (hotfix coverage) ───────────────────────────────
+
+func TestIsSafeTarget_EmptyString(t *testing.T) {
+	if isSafeTarget("") {
+		t.Error("empty string must not be safe")
+	}
+}
+
+func TestIsSafeTarget_DotOnly(t *testing.T) {
+	if isSafeTarget(".") {
+		t.Error("'.' must not be safe")
+	}
+}
+
+func TestIsSafeTarget_AbsolutePath(t *testing.T) {
+	cases := []string{
+		"/etc/passwd",
+		"/absolute/path/file.go",
+		"/home/user/project/server.js",
+	}
+	for _, c := range cases {
+		if isSafeTarget(c) {
+			t.Errorf("absolute path %q must not be safe", c)
+		}
+	}
+}
+
+func TestIsSafeTarget_PathTraversal(t *testing.T) {
+	cases := []string{
+		"../etc/passwd",
+		"../../root/.ssh/id_rsa",
+		"safe/../../../unsafe",
+	}
+	for _, c := range cases {
+		if isSafeTarget(c) {
+			t.Errorf("traversal path %q must not be safe", c)
+		}
+	}
+}
+
+func TestIsSafeTarget_TestFixture(t *testing.T) {
+	cases := []string{
+		"internal/foo_test.go",
+		"mission_test.go",
+		"security/api/api_test.go",
+	}
+	for _, c := range cases {
+		if isSafeTarget(c) {
+			t.Errorf("test fixture %q must not be safe", c)
+		}
+	}
+}
+
+func TestIsSafeTarget_BlockedDirectorySegment(t *testing.T) {
+	cases := []string{
+		".git/config",
+		".vision-memory/events.jsonl",
+		".vision-snapshots/snap/file.go",
+		"node_modules/lib/index.js",
+		"vendor/some/lib.go",
+		"dist/bundle.js",
+		"build/output.js",
+		".next/server/page.js",
+	}
+	for _, c := range cases {
+		if isSafeTarget(c) {
+			t.Errorf("blocked path %q must not be safe", c)
+		}
+	}
+}
+
+func TestIsSafeTarget_ValidProductionFiles(t *testing.T) {
+	cases := []string{
+		"backend/server.js",
+		"worker/src/index.js",
+		"cmd/vision-core/main.go",
+		"internal/mission/mission.go",
+		"frontend/app.ts",
+	}
+	for _, c := range cases {
+		if !isSafeTarget(c) {
+			t.Errorf("valid production file %q should be safe", c)
+		}
+	}
+}
+
+func TestIsSafeTarget_WhitespaceHandled(t *testing.T) {
+	// Whitespace around path should be trimmed and checked
+	if isSafeTarget("  /etc/passwd  ") {
+		t.Error("absolute path with whitespace must not be safe")
 	}
 }

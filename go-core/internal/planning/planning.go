@@ -157,8 +157,8 @@ func resolveTargetFiles(candidates []string, root string) ([]string, []string) {
 		if f == "" {
 			continue
 		}
-		if err := validateTargetPath(f, root); err != nil {
-			notes = append(notes, fmt.Sprintf("target discarded (%s): %s", f, err.Error()))
+		if !isSafeTarget(f) {
+			notes = append(notes, fmt.Sprintf("target discarded (%s): failed safety validation", f))
 			continue
 		}
 		valid = append(valid, f)
@@ -171,41 +171,46 @@ func resolveTargetFiles(candidates []string, root string) ([]string, []string) {
 	return valid, notes
 }
 
-// validateTargetPath aplica todas as regras de segurança de path para V6.5.
-func validateTargetPath(target, root string) error {
-	// Não pode ser absoluto fora do root
-	if filepath.IsAbs(target) {
-		return fmt.Errorf("absolute path not allowed")
-	}
-	// Não pode conter ..
-	if strings.Contains(target, "..") {
-		return fmt.Errorf("path traversal detected")
-	}
-	norm := filepath.ToSlash(target)
+// isSafeTarget validates that a target path is safe to use as a patch target.
+// Rejects: empty, dot, absolute paths, path traversal, test fixtures,
+// and any path containing a blocked directory segment.
+func isSafeTarget(path string) bool {
+	cleaned := filepath.Clean(filepath.ToSlash(strings.TrimSpace(path)))
 
-	// Diretórios proibidos
-	blockedDirs := []string{
-		".git", ".vision-memory", ".vision-snapshots",
-		"node_modules", "vendor", "dist", "build", ".next",
+	if cleaned == "." || cleaned == "" {
+		return false
 	}
-	for _, bd := range blockedDirs {
-		if strings.HasPrefix(norm, bd+"/") || norm == bd {
-			return fmt.Errorf("path inside restricted directory: %s", bd)
+
+	if filepath.IsAbs(path) || strings.HasPrefix(cleaned, "/") {
+		return false
+	}
+
+	if strings.Contains(cleaned, "..") {
+		return false
+	}
+
+	if strings.HasSuffix(cleaned, "_test.go") {
+		return false
+	}
+
+	blockedParts := map[string]bool{
+		".git":              true,
+		".vision-memory":    true,
+		".vision-snapshots": true,
+		"node_modules":      true,
+		"vendor":            true,
+		"dist":              true,
+		"build":             true,
+		".next":             true,
+	}
+
+	for _, part := range strings.Split(cleaned, "/") {
+		if blockedParts[part] {
+			return false
 		}
-		for _, seg := range strings.Split(norm, "/") {
-			if seg == bd {
-				return fmt.Errorf("path segment is restricted: %s", bd)
-			}
-		}
 	}
 
-	// Arquivos de teste Go não são targets válidos de produção
-	base := filepath.Base(norm)
-	if strings.HasSuffix(base, "_test.go") {
-		return fmt.Errorf("test fixture files cannot be patch targets")
-	}
-
-	return nil
+	return true
 }
 
 // ─── Risk / severity ─────────────────────────────────────────────────────────
