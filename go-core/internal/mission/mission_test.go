@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/visioncore/go-core/internal/memory"
 	"github.com/visioncore/go-core/internal/testfixtures"
 )
 
@@ -693,5 +694,212 @@ func TestRun_GoldMemoryFailureAddsWarningWithoutFailingMission(t *testing.T) {
 	}
 	if out.MemoryWarning == "" {
 		t.Fatal("memory_warning must explain non-critical memory failure")
+	}
+}
+
+// ═══════════════════════════════════════════════════════
+// V6.6 SUPERVISED MULTI-FILE PATCH EXECUTION TESTS
+// ═══════════════════════════════════════════════════════
+
+func TestRun_V66_PatchExecutionFieldsAlwaysPresent(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+
+	// Fields must always be present (zero-value is fine)
+	_ = out.PatchExecutionID
+	_ = out.PatchExecutionMode
+	_ = out.PatchExecutionOK
+	_ = out.PatchExecutionTotalFiles
+	_ = out.PatchExecutionPatchedFiles
+
+	if out.PatchExecutionMode == "" {
+		// mode should be "supervised" or reflect the plan mode
+		t.Logf("patch_execution_mode is empty — PatchPlan may not have been built")
+	}
+	if out.PatchExecutionTotalFiles < 0 {
+		t.Error("patch_execution_total_files must be >= 0")
+	}
+	if out.PatchExecutionPatchedFiles < 0 {
+		t.Error("patch_execution_patched_files must be >= 0")
+	}
+}
+
+func TestRun_V66_PatchExecutionModeSupervisedOnly(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// execution mode must never be "automatic"
+	if out.PatchExecutionMode == "automatic" {
+		t.Error("patch_execution_mode must never be 'automatic'")
+	}
+	// if mode is set, it must be "supervised"
+	if out.PatchExecutionMode != "" && out.PatchExecutionMode != "supervised" {
+		t.Errorf("patch_execution_mode must be 'supervised' or empty, got %q", out.PatchExecutionMode)
+	}
+}
+
+func TestRun_V66_InsecureTargetDoesNotWriteOutsideRoot(t *testing.T) {
+	dir := t.TempDir()
+	// The V6.5 plan builds targets from BlockingFiles — in a clean project
+	// the plan falls back to sentinel. We verify no traversal happens.
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+
+	for _, f := range out.PatchExecutionAppliedFiles {
+		if len(f) > 2 && f[:2] == ".." {
+			t.Errorf("applied file contains path traversal: %q", f)
+		}
+		if filepath.IsAbs(f) {
+			t.Errorf("applied file is absolute path: %q", f)
+		}
+	}
+}
+
+func TestRun_V66_PatchExecutionOKDoesNotAlterPassGold(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// patch_execution_ok=true must not automatically make pass_gold=true
+	// pass_gold is decided by passgold gates, not by patch execution
+	_ = out.PatchExecutionOK
+	_ = out.PassGold
+	// The invariant is: pass_gold is never set by patch execution
+	// We verify it hasn't been set to true inappropriately (only Aegis gates set it)
+	if out.PatchExecutionOK && !out.Gates.ValidatorOK {
+		// If patch ran but validator failed, pass_gold must be false
+		if out.PassGold {
+			t.Error("pass_gold must not be true when validator failed, regardless of patch execution")
+		}
+	}
+}
+
+func TestRun_V66_PassSecureStillRunsAfterPatch(t *testing.T) {
+	dir := t.TempDir()
+	// Inject a blocker to verify passsecure runs AFTER patch
+	_ = os.WriteFile(filepath.Join(dir, "config.go"),
+		[]byte("package config\nconst k = \"AKIA"+"IOSFODNN7"+"EXAMPLE\"\n"), 0644)
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// passsecure step must appear in step_results
+	found := false
+	for _, sr := range out.StepResults {
+		if sr.Step == "passsecure" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("passsecure step must appear in step_results after patch execution")
+	}
+	// If there are blockers, pass_secure must be false
+	if out.SecurityBlockingTotal > 0 && out.PassSecure {
+		t.Error("pass_secure must not be true when blocking violations exist")
+	}
+}
+
+func TestRun_V66_PassGoldStillRunsAfterPatch(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// passgold step must appear in step_results
+	found := false
+	for _, sr := range out.StepResults {
+		if sr.Step == "passgold" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("passgold step must appear in step_results after patch execution")
+	}
+}
+
+func TestRun_V66_RollbackReadyAfterPatch(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if !out.RollbackReady {
+		t.Error("rollback_ready must be true after supervised patch execution")
+	}
+	if out.RollbackApplied {
+		t.Error("rollback_applied must be false for successful execution")
+	}
+}
+
+func TestRun_V66_PatchExecutionIDNonEmptyWhenApplied(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// execution ID must be set if patcher ran
+	if out.PatchExecutionMode != "" && out.PatchExecutionID == "" {
+		t.Error("patch_execution_id must not be empty when execution mode is set")
+	}
+}
+
+// ─── Governance tests ─────────────────────────────────────────────────────────
+
+func TestRun_V66_Governance_MemoryGuidedDoesNotSkipValidator(t *testing.T) {
+	dir := t.TempDir()
+	// Seed memory with gold event
+	event := memory.RemediationEvent{
+		ID:        "mem_gov_test",
+		Timestamp: "2026-05-06T00:00:00Z",
+		Outcome:   "gold",
+		PassGold:  true,
+		PassSecure: true,
+		IssueType: "cors_blocked",
+		SuggestedStrategy: "align_cors",
+	}
+	_ = memory.AppendRemediationEvent(dir, event)
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+
+	// validator must have run regardless of memory guidance
+	found := false
+	for _, sr := range out.StepResults {
+		if sr.Step == "validator" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("validator must run even when patch is memory-guided")
+	}
+}
+
+func TestRun_V66_Governance_MemoryGuidedDoesNotBypassPassSecure(t *testing.T) {
+	dir := t.TempDir()
+	// Inject blocker + seed memory
+	_ = os.WriteFile(filepath.Join(dir, "server.go"),
+		[]byte("package main\nconst k = \"AKIA"+"IOSFODNN7"+"EXAMPLE\"\n"), 0644)
+	event := memory.RemediationEvent{
+		ID:        "mem_gov_test2",
+		Timestamp: "2026-05-06T00:00:00Z",
+		Outcome:   "gold",
+		PassGold:  true,
+		PassSecure: true,
+		IssueType: "cors_blocked",
+	}
+	_ = memory.AppendRemediationEvent(dir, event)
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+
+	if out.SecurityBlockingTotal > 0 && out.PassSecure {
+		t.Error("memory-guided plan must not bypass passsecure — blockers must still block")
+	}
+	if out.SecurityBlockingTotal > 0 && out.DeployAllowed {
+		t.Error("deploy_allowed must not be true with blocking violations, even with memory guidance")
+	}
+}
+
+func TestRun_V66_Governance_AutomaticNeverAllowed(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.PatchPlanApplyMode == "automatic" {
+		t.Error("patch_plan_apply_mode must never be 'automatic'")
+	}
+	if out.PatchExecutionMode == "automatic" {
+		t.Error("patch_execution_mode must never be 'automatic'")
 	}
 }

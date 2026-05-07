@@ -222,6 +222,13 @@ func isSafeTarget(path string) bool {
 	return true
 }
 
+// IsSafeTarget is the exported version of isSafeTarget.
+// Used by patcher and other packages that need path safety validation
+// without importing fileops directly.
+func IsSafeTarget(path string) bool {
+	return isSafeTarget(path)
+}
+
 // ─── Risk / severity ─────────────────────────────────────────────────────────
 
 func severityToRisk(severity string) string {

@@ -110,6 +110,15 @@ type Output struct {
 	PatchPlanRiskLevel       string   `json:"patch_plan_risk_level,omitempty"`
 	PatchPlanApplyMode       string   `json:"patch_plan_apply_mode,omitempty"`
 	PatchPlanTargetFiles     []string `json:"patch_plan_target_files,omitempty"`
+	// V6.6 — supervised multi-file patch execution result
+	PatchExecutionID           string   `json:"patch_execution_id,omitempty"`
+	PatchExecutionMode         string   `json:"patch_execution_mode,omitempty"`
+	PatchExecutionOK           bool     `json:"patch_execution_ok"`
+	PatchExecutionAppliedFiles []string `json:"patch_execution_applied_files,omitempty"`
+	PatchExecutionSkippedFiles []string `json:"patch_execution_skipped_files,omitempty"`
+	PatchExecutionFailedFiles  []string `json:"patch_execution_failed_files,omitempty"`
+	PatchExecutionTotalFiles   int      `json:"patch_execution_total_files"`
+	PatchExecutionPatchedFiles int      `json:"patch_execution_patched_files"`
 	// V6.3 internal — before-state telemetry, not serialised
 	beforeTrace securityTrace `json:"-"`
 }
@@ -297,35 +306,51 @@ func Run(input Input) Output {
 		out.beforeTrace = buildSecurityTrace(beforeAnnotated, beforePS.SecurityScore)
 	}
 
-	// ── STEP 4: Patcher — V5.4 Multi-File Transactional ─────────
-	// Usa BatchPlan para permitir múltiplos arquivos com rollback transacional.
-	// Snapshot já foi criado no step 3 (arquivo sentinela).
-	// O BatchPlan também cria snapshots internos de cada arquivo do batch.
-	batch := buildBatchPlan(missionID, targetFile, input)
-	batchRes := patcher.ApplyBatch(input.Root, batch, snapshotDir)
+	// ── STEP 4: Patcher — V6.6 Supervised Multi-File Execution ──
+	// V6.6: usa ExecuteSupervisedMultiFile sobre o PatchPlan da V6.5.
+	// Snapshot criado internamente via ApplyBatch transacional.
+	// ApplyMode="supervised" é obrigatório. "automatic" nunca é aceito.
+	execInput := patcher.ExecutionPlanInput{
+		MissionID:     missionID,
+		TransactionID: "", // gerado internamente pelo ApplyBatch
+		ApplyMode:     out.PatchPlanApplyMode,
+		TargetFiles:   out.PatchPlanTargetFiles,
+		Root:          input.Root,
+		DryRun:        input.DryRun,
+	}
+	execRes := patcher.ExecuteSupervisedMultiFile(input.Root, execInput, snapshotDir)
 	s4 := StepResult{Step: "patcher"}
-	if batchRes.OK {
+	out.PatchExecutionID = execRes.ExecutionID
+	out.PatchExecutionMode = out.PatchPlanApplyMode
+	out.PatchExecutionOK = execRes.OK
+	out.PatchExecutionAppliedFiles = execRes.AppliedFiles
+	out.PatchExecutionSkippedFiles = execRes.SkippedFiles
+	out.PatchExecutionFailedFiles = execRes.FailedFiles
+	out.PatchExecutionTotalFiles = execRes.TotalFiles
+	out.PatchExecutionPatchedFiles = execRes.PatchedFiles
+	if execRes.OK {
 		s4.OK = true
 		gates.PatcherOK = true
 		if input.DryRun {
-			s4.Message = fmt.Sprintf("dry-run: %d/%d files validated",
-				batchRes.PatchedFiles, batchRes.TotalFiles)
+			s4.Message = fmt.Sprintf("dry-run: %d/%d files validated (exec: %s)",
+				execRes.PatchedFiles, execRes.TotalFiles, execRes.ExecutionID)
 		} else {
-			s4.Message = fmt.Sprintf("patch executed: %d/%d files patched (tx: %s)",
-				batchRes.PatchedFiles, batchRes.TotalFiles, batchRes.TransactionID)
+			s4.Message = fmt.Sprintf("supervised exec: %d/%d files applied (exec: %s tx: %s)",
+				execRes.PatchedFiles, execRes.TotalFiles, execRes.ExecutionID, execRes.TransactionID)
 		}
 		out.TransactionMode = true
-		out.TransactionID = batchRes.TransactionID
-		out.PatchedFiles = batchRes.PatchedFiles
-		out.TotalFiles = batchRes.TotalFiles
-		if batchRes.SnapshotIDs != nil && len(batchRes.SnapshotIDs) > 0 {
-			out.SnapshotID = batchRes.SnapshotIDs[0] // primeiro snapshot do batch
-		}
+		out.TransactionID = execRes.TransactionID
+		out.PatchedFiles = execRes.PatchedFiles
+		out.TotalFiles = execRes.TotalFiles
 	} else {
-		s4.Error = batchRes.Error
+		if execRes.Error != "" {
+			s4.Error = execRes.Error
+		} else {
+			s4.Error = fmt.Sprintf("supervised execution failed: %d file(s) failed",
+				len(execRes.FailedFiles))
+		}
 		out.TransactionMode = true
-		out.TransactionID = batchRes.TransactionID
-		out.RollbackApplied = batchRes.RollbackApplied
+		out.TransactionID = execRes.TransactionID
 	}
 	out.StepResults = append(out.StepResults, s4)
 
@@ -432,6 +457,13 @@ func Run(input Input) Output {
 	out.RollbackReady = pg.RollbackReady
 	out.Status = pg.Status
 	out.FailedGates = pg.FailedGates
+	sPassGold := StepResult{Step: "passgold", OK: pg.PassGold}
+	if pg.PassGold {
+		sPassGold.Message = fmt.Sprintf("PASS GOLD — status=%s", pg.Status)
+	} else {
+		sPassGold.Error = fmt.Sprintf("PASS GOLD FAIL — gates: %v", pg.FailedGates)
+	}
+	out.StepResults = append(out.StepResults, sPassGold)
 	if pg.PassGold && psResult.PassSecure {
 		out.OK = true
 		out.Summary = "V6.1 AEGIS RELEASE CANDIDATE — PASS GOLD + PASS SECURE confirmed."
