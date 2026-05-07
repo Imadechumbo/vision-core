@@ -24,6 +24,8 @@ type PRPlan struct {
 	PassSecureRequired bool     `json:"pass_secure_required"`
 	CanOpenPR          bool     `json:"can_open_pr"`
 	BlockReason        string   `json:"block_reason,omitempty"`
+	StatusContext      string   `json:"status_context"`
+	StatusState        string   `json:"status_state"`
 }
 
 type PRResult struct {
@@ -78,6 +80,8 @@ func BuildPRPlan(input PRPlanInput) PRPlan {
 		ChangedFiles:       changedFiles,
 		PassGoldRequired:   true,
 		PassSecureRequired: true,
+		StatusContext:      DefaultStatusContext,
+		StatusState:        BuildPassGoldStatus(input.GateSnapshot).State,
 	}
 	plan.Body = buildPRBody(input, plan, issueType)
 	plan.BlockReason = firstBlockReason(input.GateSnapshot, changedFiles)
@@ -147,7 +151,7 @@ func firstBlockReason(g GateSnapshot, changedFiles []string) string {
 }
 
 func IsSafeBranchName(branch string) bool {
-	return branch != "" && branch == sanitizeBranch(branch) && !strings.HasPrefix(branch, "/") && !strings.HasSuffix(branch, "/") && !strings.Contains(branch, "//") && !strings.Contains(branch, "..")
+	return branch != "" && branch != "main" && branch != "master" && branch == sanitizeBranch(branch) && !strings.HasPrefix(branch, "/") && !strings.HasSuffix(branch, "/") && !strings.Contains(branch, "//") && !strings.Contains(branch, "..")
 }
 
 func sanitizeBranch(branch string) string {
