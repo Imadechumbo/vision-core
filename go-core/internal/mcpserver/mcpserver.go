@@ -30,6 +30,11 @@ const (
 	ToolGetReport             = "vision.get_report"
 	ToolGithubFlowReportsList = "vision.github_flow_reports_list"
 	ToolPassGoldStatus        = "vision.pass_gold_status"
+	// V8.1 tools
+	ToolGraphProviders       = "vision.graph_providers"
+	ToolGraphProviderStatus  = "vision.graph_provider_status"
+	ToolGraphImpactQuery     = "vision.graph_impact_query"
+	ToolGraphDryRunContext   = "vision.graph_dry_run_context"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -54,6 +59,11 @@ var allowedTools = map[string]bool{
 	ToolGetReport:             true,
 	ToolGithubFlowReportsList: true,
 	ToolPassGoldStatus:        true,
+	// V8.1
+	ToolGraphProviders:      true,
+	ToolGraphProviderStatus: true,
+	ToolGraphImpactQuery:    true,
+	ToolGraphDryRunContext:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -108,6 +118,15 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleGithubFlowReportsList(req)
 	case ToolPassGoldStatus:
 		return handlePassGoldStatus(req)
+	// V8.1
+	case ToolGraphProviders:
+		return handleGraphProviders(req)
+	case ToolGraphProviderStatus:
+		return handleGraphProviderStatus(req)
+	case ToolGraphImpactQuery:
+		return handleGraphImpactQuery(req)
+	case ToolGraphDryRunContext:
+		return handleGraphDryRunContext(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -326,3 +345,187 @@ func IsBlocked(tool string) bool { return blockedTools[tool] }
 
 // IsAllowed reports whether a tool name is allowed (read-only).
 func IsAllowed(tool string) bool { return allowedTools[tool] }
+
+// ── V8.1 Handlers ─────────────────────────────────────────────────────────────
+
+// handleGraphProviders returns the list of all registered graph providers.
+// Read-only, no side-effects.
+func handleGraphProviders(req ToolRequest) ToolResponse {
+	infos := graphmemory.ListProviders()
+	return ToolResponse{
+		Tool: req.Tool,
+		OK:   true,
+		Payload: map[string]interface{}{
+			"version":   graphmemory.V81Version,
+			"providers": infos,
+		},
+	}
+}
+
+type graphProviderStatusArgs struct {
+	Provider string `json:"provider"`
+}
+
+// handleGraphProviderStatus reports availability of a named provider.
+// Read-only, no side-effects.
+func handleGraphProviderStatus(req ToolRequest) ToolResponse {
+	var a graphProviderStatusArgs
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+		}
+	}
+	if a.Provider == "" {
+		a.Provider = "local"
+	}
+
+	p, err := graphmemory.GetProvider(a.Provider)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+
+	payload := map[string]interface{}{
+		"provider":  p.Name(),
+		"available": p.Available(),
+		"read_only": true,
+		"version":   graphmemory.V81Version,
+	}
+	if !p.Available() {
+		payload["reason"] = graphmemory.GraphifyUnavailableReason
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: payload}
+}
+
+type graphImpactQueryArgs struct {
+	Query    string `json:"query"`
+	Limit    int    `json:"limit"`
+	Provider string `json:"provider,omitempty"`
+}
+
+// handleGraphImpactQuery queries the existing index for related nodes.
+// Does NOT build the index automatically.
+// Read-only, no side-effects.
+func handleGraphImpactQuery(req ToolRequest) ToolResponse {
+	if len(req.Args) == 0 {
+		return errResp(req.Tool, errors.New("args required (query, limit)"))
+	}
+	var a graphImpactQueryArgs
+	if err := json.Unmarshal(req.Args, &a); err != nil {
+		return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+	}
+	if a.Limit <= 0 {
+		a.Limit = 10
+	}
+	if a.Provider == "" {
+		a.Provider = "local"
+	}
+
+	// Validate provider exists (but use the index regardless — query is read-only)
+	if _, err := graphmemory.GetProvider(a.Provider); err != nil {
+		return errResp(req.Tool, err)
+	}
+
+	root := rootFrom(req)
+	result, err := graphmemory.Query(root, a.Query, a.Limit)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+
+	return ToolResponse{
+		Tool: req.Tool,
+		OK:   true,
+		Payload: map[string]interface{}{
+			"version":  graphmemory.V81Version,
+			"provider": a.Provider,
+			"query":    result.Query,
+			"limit":    result.Limit,
+			"total":    result.Total,
+			"results":  result.Results,
+			"read_only": true,
+		},
+	}
+}
+
+type graphDryRunContextArgs struct {
+	Query     string `json:"query"`
+	IssueType string `json:"issue_type,omitempty"`
+	Limit     int    `json:"limit,omitempty"`
+}
+
+// handleGraphDryRunContext assembles a read-only planning context for a future mission.
+// Does NOT call mission.Run, does NOT call patcher, does NOT write files,
+// does NOT call GitHub.
+func handleGraphDryRunContext(req ToolRequest) ToolResponse {
+	if len(req.Args) == 0 {
+		return errResp(req.Tool, errors.New("args required (query)"))
+	}
+	var a graphDryRunContextArgs
+	if err := json.Unmarshal(req.Args, &a); err != nil {
+		return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+	}
+	if a.Query == "" {
+		return errResp(req.Tool, errors.New("query is required"))
+	}
+	if a.Limit <= 0 {
+		a.Limit = 10
+	}
+	if a.IssueType == "" {
+		a.IssueType = "unknown"
+	}
+
+	root := rootFrom(req)
+
+	// Attempt to load index for candidate files; graceful if absent
+	var candidateFiles []string
+	var relatedCommands []string
+	var riskHints []string
+
+	result, err := graphmemory.Query(root, a.Query, a.Limit)
+	if err == nil {
+		for _, n := range result.Results {
+			if n.Path != "" {
+				candidateFiles = append(candidateFiles, n.Path)
+			}
+			if string(n.Kind) == "cli_cmd" {
+				relatedCommands = append(relatedCommands, n.Label)
+			}
+		}
+	} else {
+		riskHints = append(riskHints, "graph index not built — run graph-index for richer context")
+	}
+
+	// Static risk hints based on issue_type
+	switch strings.ToLower(a.IssueType) {
+	case "cors_blocked", "cors":
+		riskHints = append(riskHints, "CORS issues often affect multiple endpoints — verify allow-list coverage")
+		riskHints = append(riskHints, "Check OPTIONS preflight handling before applying patch")
+	case "github_flow_safety_drill":
+		riskHints = append(riskHints, "Safety drill — no real GitHub write will occur")
+	default:
+		riskHints = append(riskHints, "Run mission for authoritative diagnosis and patch plan")
+	}
+
+	// Related reports — list any existing reports (read-only)
+	relatedReports := []string{}
+	if idx, rerr := report.ListEntries(root, report.DefaultReportDir, 3); rerr == nil {
+		for _, e := range idx.Entries {
+			relatedReports = append(relatedReports, e.FlowID)
+		}
+	}
+
+	return ToolResponse{
+		Tool: req.Tool,
+		OK:   true,
+		Payload: map[string]interface{}{
+			"version":          graphmemory.V81Version,
+			"query":            a.Query,
+			"issue_type":       a.IssueType,
+			"candidate_files":  candidateFiles,
+			"related_commands": relatedCommands,
+			"related_reports":  relatedReports,
+			"risk_hints":       riskHints,
+			"dry_run":          true,
+			"read_only":        true,
+		},
+	}
+}

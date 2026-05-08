@@ -21,7 +21,7 @@ import (
 	"github.com/visioncore/go-core/internal/report"
 )
 
-const githubFlowVersion = "V7.8"
+const githubFlowVersion = "V7.9"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -40,6 +40,8 @@ func main() {
 		runGitHubFlowReports(os.Args[2:])
 	case "github-flow-drill":
 		runGitHubFlowDrill(os.Args[2:])
+	case "graph-providers":
+		runGraphProviders(os.Args[2:])
 	case "graph-index":
 		runGraphIndex(os.Args[2:])
 	case "graph-summary":
@@ -62,7 +64,7 @@ func main() {
 			"usage": "vision-core mission --root <path> --input <text>",
 			"commands": []string{
 				"mission", "github-flow", "github-flow-reports", "github-flow-drill",
-				"graph-index", "graph-summary", "graph-query", "mcp-readonly",
+				"graph-providers", "graph-index", "graph-summary", "graph-query", "mcp-readonly",
 				"version", "help",
 			},
 		})
@@ -716,29 +718,63 @@ func printGitHubFlowUsageJSON() {
 	})
 }
 
+// ─── graph-providers ──────────────────────────────────────────────────────────
+
+func runGraphProviders(args []string) {
+	fs := flag.NewFlagSet("graph-providers", flag.ContinueOnError)
+	fs.String("root", ".", "Project root path") // accepted but unused
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	infos := graphmemory.ListProviders()
+	printJSON(map[string]interface{}{
+		"ok":        true,
+		"version":   graphmemory.V81Version,
+		"providers": infos,
+	})
+}
+
 // ─── graph-index ──────────────────────────────────────────────────────────────
 
 func runGraphIndex(args []string) {
 	fs := flag.NewFlagSet("graph-index", flag.ContinueOnError)
-	root := fs.String("root", ".", "Project root path")
+	root     := fs.String("root", ".", "Project root path")
+	provider := fs.String("provider", "local", "Graph provider: local|graphify (default: local)")
 	fs.SetOutput(os.Stderr)
 	if err := fs.Parse(args); err != nil {
 		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
 		os.Exit(1)
 	}
 	rootPath := resolveRoot(*root)
-	path, err := graphmemory.Index(rootPath)
+
+	p, err := graphmemory.GetProvider(*provider)
 	if err != nil {
 		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
 		os.Exit(1)
 	}
-	idx, lerr := graphmemory.Load(rootPath)
-	if lerr != nil {
-		printJSON(map[string]interface{}{"ok": false, "error": lerr.Error()})
+	if !p.Available() {
+		printJSON(map[string]interface{}{
+			"ok":    false,
+			"error": graphmemory.GraphifyUnavailableReason,
+		})
+		os.Exit(1)
+	}
+
+	idx, err := p.Build(rootPath)
+	if err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	path, err := graphmemory.WriteIndex(rootPath, idx)
+	if err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
 		os.Exit(1)
 	}
 	printJSON(map[string]interface{}{
 		"ok":          true,
+		"provider":    p.Name(),
 		"index_path":  path,
 		"total_nodes": len(idx.Nodes),
 		"total_edges": len(idx.Edges),
@@ -751,9 +787,15 @@ func runGraphIndex(args []string) {
 
 func runGraphSummary(args []string) {
 	fs := flag.NewFlagSet("graph-summary", flag.ContinueOnError)
-	root := fs.String("root", ".", "Project root path")
+	root     := fs.String("root", ".", "Project root path")
+	provider := fs.String("provider", "local", "Graph provider: local|graphify (default: local)")
 	fs.SetOutput(os.Stderr)
 	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	// Validate provider (availability check; summary always reads existing index)
+	if _, err := graphmemory.GetProvider(*provider); err != nil {
 		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
 		os.Exit(1)
 	}
@@ -767,18 +809,24 @@ func runGraphSummary(args []string) {
 		})
 		os.Exit(1)
 	}
-	printJSON(map[string]interface{}{"ok": true, "summary": sum})
+	printJSON(map[string]interface{}{"ok": true, "provider": *provider, "summary": sum})
 }
 
 // ─── graph-query ──────────────────────────────────────────────────────────────
 
 func runGraphQuery(args []string) {
 	fs := flag.NewFlagSet("graph-query", flag.ContinueOnError)
-	root := fs.String("root", ".", "Project root path")
-	query := fs.String("query", "", "Search query (case-insensitive substring)")
-	limit := fs.Int("limit", 10, "Maximum results to return")
+	root     := fs.String("root", ".", "Project root path")
+	query    := fs.String("query", "", "Search query (case-insensitive substring)")
+	limit    := fs.Int("limit", 10, "Maximum results to return")
+	provider := fs.String("provider", "local", "Graph provider: local|graphify (default: local)")
 	fs.SetOutput(os.Stderr)
 	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	// Validate provider
+	if _, err := graphmemory.GetProvider(*provider); err != nil {
 		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
 		os.Exit(1)
 	}
@@ -792,7 +840,7 @@ func runGraphQuery(args []string) {
 		})
 		os.Exit(1)
 	}
-	printJSON(map[string]interface{}{"ok": true, "result": result})
+	printJSON(map[string]interface{}{"ok": true, "provider": *provider, "result": result})
 }
 
 // ─── mcp-readonly ─────────────────────────────────────────────────────────────

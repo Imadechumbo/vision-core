@@ -336,3 +336,236 @@ func TestGraphSummaryNoTokenLeak(t *testing.T) {
 		t.Error("token leaked in graph_summary response")
 	}
 }
+
+// ── V8.1 Tests ────────────────────────────────────────────────────────────────
+
+// ─── TestExecuteGraphProviders ────────────────────────────────────────────────
+
+func TestExecuteGraphProviders(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolGraphProviders})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	if !strings.Contains(s, "local") {
+		t.Error("providers must include 'local'")
+	}
+	if !strings.Contains(s, "graphify") {
+		t.Error("providers must include 'graphify'")
+	}
+}
+
+// ─── TestExecuteGraphProviderStatusLocal ──────────────────────────────────────
+
+func TestExecuteGraphProviderStatusLocal(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolGraphProviderStatus,
+		Args: mkArgs(map[string]string{"provider": "local"}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	if !strings.Contains(s, `"available":true`) {
+		t.Errorf("local provider must be available: %s", s)
+	}
+	if !strings.Contains(s, `"read_only":true`) {
+		t.Errorf("must be read_only: %s", s)
+	}
+}
+
+// ─── TestExecuteGraphProviderStatusGraphifyUnavailable ────────────────────────
+
+func TestExecuteGraphProviderStatusGraphifyUnavailable(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolGraphProviderStatus,
+		Args: mkArgs(map[string]string{"provider": "graphify"}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	// If graphify is unavailable, must include reason
+	if strings.Contains(s, `"available":false`) {
+		if !strings.Contains(s, "graphify provider not available") {
+			t.Errorf("must have canonical reason when unavailable: %s", s)
+		}
+	}
+}
+
+// ─── TestExecuteGraphImpactQuery ──────────────────────────────────────────────
+
+func TestExecuteGraphImpactQuery(t *testing.T) {
+	root := buildIndex(t)
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolGraphImpactQuery,
+		Root: root,
+		Args: mkArgs(map[string]interface{}{"query": "github", "limit": 10}),
+	})
+	if !resp.OK {
+		t.Errorf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	if !strings.Contains(s, `"read_only":true`) {
+		t.Errorf("must be read_only: %s", s)
+	}
+}
+
+func TestExecuteGraphImpactQueryNoIndex(t *testing.T) {
+	root := t.TempDir()
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolGraphImpactQuery,
+		Root: root,
+		Args: mkArgs(map[string]interface{}{"query": "x", "limit": 5}),
+	})
+	if resp.OK {
+		t.Error("impact_query without index must return ok=false")
+	}
+	if !strings.Contains(resp.Error, "graph index not found") {
+		t.Errorf("expected 'graph index not found': %q", resp.Error)
+	}
+}
+
+func TestExecuteGraphImpactQueryNoArgs(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolGraphImpactQuery})
+	if resp.OK {
+		t.Error("expected ok=false with no args")
+	}
+}
+
+// ─── TestExecuteGraphDryRunContext ────────────────────────────────────────────
+
+func TestExecuteGraphDryRunContext(t *testing.T) {
+	root := buildIndex(t)
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolGraphDryRunContext,
+		Root: root,
+		Args: mkArgs(map[string]interface{}{
+			"query":      "CORS origin blocked",
+			"issue_type": "cors_blocked",
+			"limit":      10,
+		}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	if !strings.Contains(s, `"dry_run":true`) {
+		t.Errorf("must have dry_run:true: %s", s)
+	}
+	if !strings.Contains(s, `"read_only":true`) {
+		t.Errorf("must have read_only:true: %s", s)
+	}
+	if !strings.Contains(s, "candidate_files") {
+		t.Errorf("must have candidate_files: %s", s)
+	}
+	if !strings.Contains(s, "risk_hints") {
+		t.Errorf("must have risk_hints: %s", s)
+	}
+}
+
+// ─── TestGraphDryRunContextDoesNotWriteFiles ──────────────────────────────────
+
+func TestGraphDryRunContextDoesNotWriteFiles(t *testing.T) {
+	root := buildIndex(t)
+
+	// Capture files before
+	before := listFiles(t, root)
+
+	mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolGraphDryRunContext,
+		Root: root,
+		Args: mkArgs(map[string]interface{}{"query": "test", "limit": 5}),
+	})
+
+	// Capture files after — no new files must have been created
+	after := listFiles(t, root)
+
+	for f := range after {
+		if _, existed := before[f]; !existed {
+			t.Errorf("dry_run_context created unexpected file: %s", f)
+		}
+	}
+}
+
+func listFiles(t *testing.T, root string) map[string]bool {
+	t.Helper()
+	files := map[string]bool{}
+	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		files[path] = true
+		return nil
+	})
+	return files
+}
+
+// ─── TestMutableToolsAreStillBlockedReadOnly ──────────────────────────────────
+
+func TestMutableToolsAreStillBlockedReadOnly(t *testing.T) {
+	for _, tool := range []string{
+		"vision.apply_patch", "vision.write_file", "vision.commit",
+		"vision.push", "vision.open_pr", "vision.publish_status",
+		"vision.run_mission_real", "vision.rollback", "vision.deploy",
+	} {
+		t.Run(tool, func(t *testing.T) {
+			resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+			if resp.OK {
+				t.Errorf("%q must return ok=false", tool)
+			}
+			if resp.Error != "tool is not allowed in read-only MCP control plane" {
+				t.Errorf("wrong error for %q: %q", tool, resp.Error)
+			}
+		})
+	}
+}
+
+// ─── TestPassGoldStatusStillUnknown ───────────────────────────────────────────
+
+func TestPassGoldStatusStillUnknown(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPassGoldStatus})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	if !strings.Contains(s, `"status":"unknown"`) {
+		t.Errorf("pass_gold_status must return status:unknown: %s", s)
+	}
+	if !strings.Contains(s, `"read_only":true`) {
+		t.Errorf("must be read_only:true: %s", s)
+	}
+	if !strings.Contains(s, `"deploy_performed":false`) {
+		t.Errorf("must have deploy_performed:false: %s", s)
+	}
+}
+
+// ─── TestGetReportStillIndexOnly ──────────────────────────────────────────────
+
+func TestGetReportStillIndexOnly(t *testing.T) {
+	root := t.TempDir()
+	flowID := seedReport(t, root)
+
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolGetReport,
+		Root: root,
+		Args: mkArgs(map[string]interface{}{"flow_id": flowID}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	if strings.Contains(s, "SHOULD_NOT_BE_READ") {
+		t.Error("get_report must not expose JSONPath contents")
+	}
+	if strings.Contains(s, "json_path") {
+		t.Error("get_report payload must not include json_path field")
+	}
+}
