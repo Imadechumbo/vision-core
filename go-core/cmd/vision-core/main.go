@@ -11,13 +11,15 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	githubflow "github.com/visioncore/go-core/internal/github"
 	"github.com/visioncore/go-core/internal/mission"
 	"github.com/visioncore/go-core/internal/passgold"
+	"github.com/visioncore/go-core/internal/report"
 )
 
-const githubFlowVersion = "V7.6"
+const githubFlowVersion = "V7.7"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -124,6 +126,8 @@ func runGitHubFlow(args []string) {
 	publishRemoteFlag := fs.Bool("publish-remote", false, "Publish remote branch step")
 	openPRFlag := fs.Bool("open-pr", false, "Open pull request step")
 	publishStatusFlag := fs.Bool("publish-status", false, "Publish PASS GOLD status step")
+	reportDirFlag := fs.String("report-dir", report.DefaultReportDir, "Directory for execution report artifacts")
+	reportFormatFlag := fs.String("report-format", "both", "Report format: json|markdown|both|none")
 
 	if err := fs.Parse(args); err != nil {
 		printGitHubFlowError("invalid arguments: " + err.Error())
@@ -140,6 +144,19 @@ func runGitHubFlow(args []string) {
 	mode := "dry-run"
 	if !dryRun {
 		mode = "real"
+	}
+
+	// V7.7: validate report format and dir
+	reportFormat := report.ReportFormat(*reportFormatFlag)
+	if !reportFormat.IsValid() {
+		printGitHubFlowError(fmt.Sprintf("invalid --report-format %q; must be json|markdown|both|none", *reportFormatFlag))
+		os.Exit(1)
+	}
+	if reportFormat != report.FormatNone {
+		if err := report.ValidateReportDir(*reportDirFlag); err != nil {
+			printGitHubFlowError("invalid --report-dir: " + err.Error())
+			os.Exit(1)
+		}
 	}
 
 	if err := validateGitHubFlowCLI(gitHubFlowCLIInput{
@@ -161,6 +178,11 @@ func runGitHubFlow(args []string) {
 		printGitHubFlowResult(false, mode, dryRun, nil, err.Error())
 		os.Exit(1)
 	}
+
+	// V7.7: build flow ID early (used in report regardless of path)
+	ts := time.Now().UTC()
+	wb := "vision/remediation/" + *missionIDFlag
+	flowID := report.NewFlowID(*missionIDFlag, wb, changedFiles, ts)
 
 	plan := githubflow.BuildPRPlan(githubflow.PRPlanInput{
 		MissionID:        *missionIDFlag,
@@ -192,28 +214,108 @@ func runGitHubFlow(args []string) {
 		client = githubflow.HTTPGitHubClient{}
 	}
 
-	if dryRun && !*allowLocalGitFlag {
-		flow := dryRunGitHubFlow(plan, *publishRemoteFlag, *openPRFlag, *publishStatusFlag)
-		printGitHubFlowResult(true, mode, dryRun, flow, "")
-		return
+	// V7.7: prepare base report
+	gates := map[string]bool{
+		"pass_gold_required":                    true,
+		"pass_secure_required":                  true,
+		"dry_run_default_safe":                  !*applyRealFlag,
+		"explicit_apply_real":                   *applyRealFlag,
+		"write_gate_required":                   true,
+		"token_required_for_real_pr_or_status":  *openPRFlag || *publishStatusFlag,
+		"remote_origin_only":                    *remoteFlag == "origin",
+		"no_main_or_master":                     true,
+		"changed_files_required":                len(changedFiles) > 0,
+		"report_path_safe":                      reportFormat == report.FormatNone || report.ValidateReportDir(*reportDirFlag) == nil,
+	}
+	execReport := &report.GitHubFlowExecutionReport{
+		FlowID:        flowID,
+		Version:       githubFlowVersion,
+		CreatedAtUTC:  ts.Format(time.RFC3339),
+		Mode:          mode,
+		DryRun:        dryRun,
+		ApplyReal:     *applyRealFlag,
+		Root:          rootPath,
+		Owner:         *ownerFlag,
+		Repo:          *repoFlag,
+		Remote:        *remoteFlag,
+		MissionID:     *missionIDFlag,
+		IssueType:     *issueTypeFlag,
+		BaseBranch:    plan.BaseBranch,
+		WorkBranch:    plan.WorkBranch,
+		ChangedFiles:  changedFiles,
+		PublishRemote: *publishRemoteFlag,
+		OpenPR:        *openPRFlag,
+		PublishStatus: *publishStatusFlag,
+		Gates:         gates,
+		Plan:          plan,
 	}
 
-	flow := githubflow.RunEndToEndGitHubFlow(context.Background(), githubflow.EndToEndGitHubFlowInput{
-		Root:             rootPath,
-		Plan:             plan,
-		Client:           client,
-		Owner:            *ownerFlag,
-		Repo:             *repoFlag,
-		Remote:           *remoteFlag,
-		DryRun:           dryRun,
-		AllowLocalGit:    *allowLocalGitFlag,
-		PublishRemote:    *publishRemoteFlag,
-		OpenPR:           *openPRFlag,
-		PublishStatus:    *publishStatusFlag,
-		RequireWriteGate: true,
+	// Execute flow
+	var flowResult interface{}
+	var flowOK bool
+	var flowErrStr string
+
+	if dryRun && !*allowLocalGitFlag {
+		flowResult = dryRunGitHubFlow(plan, *publishRemoteFlag, *openPRFlag, *publishStatusFlag)
+		flowOK = true
+	} else {
+		result := githubflow.RunEndToEndGitHubFlow(context.Background(), githubflow.EndToEndGitHubFlowInput{
+			Root:             rootPath,
+			Plan:             plan,
+			Client:           client,
+			Owner:            *ownerFlag,
+			Repo:             *repoFlag,
+			Remote:           *remoteFlag,
+			DryRun:           dryRun,
+			AllowLocalGit:    *allowLocalGitFlag,
+			PublishRemote:    *publishRemoteFlag,
+			OpenPR:           *openPRFlag,
+			PublishStatus:    *publishStatusFlag,
+			RequireWriteGate: true,
+		})
+		flowResult = result
+		flowOK = result.OK
+		if !result.OK {
+			flowErrStr = result.BlockReason
+			if result.Error != "" {
+				flowErrStr = result.Error
+			}
+		}
+	}
+
+	// V7.7: populate and write report
+	execReport.OK = flowOK
+	execReport.Blocked = !flowOK
+	execReport.BlockReason = flowErrStr
+	execReport.Result = flowResult
+
+	if reportFormat != report.FormatNone {
+		if err := report.Write(rootPath, *reportDirFlag, reportFormat, execReport); err != nil {
+			// Report write failure is non-fatal — log to stderr only
+			fmt.Fprintf(os.Stderr, "warning: report write failed: %v\n", err)
+		}
+	}
+
+	// Build and print output with report metadata
+	reportMeta := map[string]interface{}{
+		"flow_id": execReport.FlowID,
+		"format":  string(reportFormat),
+	}
+	if execReport.JSONPath != "" {
+		reportMeta["json_path"] = execReport.JSONPath
+	}
+	if execReport.MarkdownPath != "" {
+		reportMeta["markdown_path"] = execReport.MarkdownPath
+	}
+
+	printJSON(map[string]interface{}{
+		"ok":          flowOK,
+		"version":     githubFlowVersion,
+		"mode":        mode,
+		"github_flow": flowResult,
+		"report":      reportMeta,
 	})
-	printGitHubFlowResult(flow.OK, mode, dryRun, flow, "")
-	if !flow.OK {
+	if !flowOK {
 		os.Exit(2)
 	}
 }
@@ -398,7 +500,7 @@ func printGitHubFlowUsageJSON() {
 	printJSON(map[string]interface{}{
 		"ok":      true,
 		"version": githubFlowVersion,
-		"usage":   "vision-core github-flow --root <path> --owner <owner> --repo <repo> --remote origin --mission-id <id> --issue-type <type> --changed-file <path> --title <title> --body <body> [--dry-run=true|false] [--apply-real] [--allow-local-git] [--publish-remote] [--open-pr] [--publish-status]",
+		"usage":   "vision-core github-flow --root <path> --owner <owner> --repo <repo> --remote origin --mission-id <id> --issue-type <type> --changed-file <path> --title <title> --body <body> [--dry-run=true|false] [--apply-real] [--allow-local-git] [--publish-remote] [--open-pr] [--publish-status] [--report-dir <path>] [--report-format json|markdown|both|none]",
 		"flags": []string{
 			"--root",
 			"--owner",
