@@ -40,16 +40,16 @@ func makeDrillRepo(t *testing.T) string {
 	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("# drill\n"), 0644); err != nil {
 		t.Fatalf("WriteFile README: %v", err)
 	}
-	if err := os.MkdirAll(filepath.Join(root, ".vision-test"), 0755); err != nil {
-		t.Fatalf("MkdirAll .vision-test: %v", err)
+	if err := os.MkdirAll(filepath.Join(root, "vision-test"), 0755); err != nil {
+		t.Fatalf("MkdirAll vision-test: %v", err)
 	}
 	if err := os.WriteFile(
-		filepath.Join(root, ".vision-test", "github-flow-safety-drill.txt"),
+		filepath.Join(root, "vision-test", "github-flow-safety-drill.txt"),
 		[]byte("# placeholder\n"), 0644,
 	); err != nil {
 		t.Fatalf("WriteFile sentinel: %v", err)
 	}
-	mustGit("add", "--", "README.md", ".vision-test/github-flow-safety-drill.txt")
+	mustGit("add", "--", "README.md", "vision-test/github-flow-safety-drill.txt")
 	mustGit("commit", "-m", "initial")
 	gitOutput(root, "branch", "-m", "v6-go-enterprise-runtime") //nolint
 
@@ -238,10 +238,10 @@ func TestSafetyDrill_SentinelFileCreated(t *testing.T) {
 	}
 
 	// Sentinel must be at vision-test/github-flow-safety-drill.txt
-	sentinelPath := filepath.Join(root, ".vision-test", "github-flow-safety-drill.txt")
+	sentinelPath := filepath.Join(root, "vision-test", "github-flow-safety-drill.txt")
 	data, err := os.ReadFile(sentinelPath)
 	if err != nil {
-		t.Fatalf("sentinel file must exist at .vision-test/: %v", err)
+		t.Fatalf("sentinel file must exist at vision-test/: %v", err)
 	}
 	if !strings.Contains(string(data), "sentinel_test_drill") {
 		t.Error("sentinel file must contain mission_id")
@@ -296,9 +296,9 @@ func TestSafetyDrill_BlocksDirtyWorkingTree(t *testing.T) {
 	}
 
 	// Sentinel must NOT have been created (block before any file creation)
-	if _, err := os.Stat(filepath.Join(root, ".vision-test", "github-flow-safety-drill.txt")); err == nil {
+	if _, err := os.Stat(filepath.Join(root, "vision-test", "github-flow-safety-drill.txt")); err == nil {
 		// The sentinel file already existed (pre-committed placeholder) — check content unchanged
-		data, _ := os.ReadFile(filepath.Join(root, ".vision-test", "github-flow-safety-drill.txt"))
+		data, _ := os.ReadFile(filepath.Join(root, "vision-test", "github-flow-safety-drill.txt"))
 		if strings.Contains(string(data), "VISION safety drill") {
 			t.Error("sentinel must not be overwritten when working tree is dirty")
 		}

@@ -14,12 +14,14 @@ import (
 	"time"
 
 	githubflow "github.com/visioncore/go-core/internal/github"
+	"github.com/visioncore/go-core/internal/graphmemory"
+	"github.com/visioncore/go-core/internal/mcpserver"
 	"github.com/visioncore/go-core/internal/mission"
 	"github.com/visioncore/go-core/internal/passgold"
 	"github.com/visioncore/go-core/internal/report"
 )
 
-const githubFlowVersion = "V7.9"
+const githubFlowVersion = "V7.8"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -38,6 +40,14 @@ func main() {
 		runGitHubFlowReports(os.Args[2:])
 	case "github-flow-drill":
 		runGitHubFlowDrill(os.Args[2:])
+	case "graph-index":
+		runGraphIndex(os.Args[2:])
+	case "graph-summary":
+		runGraphSummary(os.Args[2:])
+	case "graph-query":
+		runGraphQuery(os.Args[2:])
+	case "mcp-readonly":
+		runMCPReadonly(os.Args[2:])
 	case "version", "--version", "-v":
 		printJSON(map[string]string{
 			"version": passgold.Version,
@@ -50,6 +60,11 @@ func main() {
 			"ok":    false,
 			"error": "unknown command: " + cmd,
 			"usage": "vision-core mission --root <path> --input <text>",
+			"commands": []string{
+				"mission", "github-flow", "github-flow-reports", "github-flow-drill",
+				"graph-index", "graph-summary", "graph-query", "mcp-readonly",
+				"version", "help",
+			},
 		})
 		os.Exit(1)
 	}
@@ -652,13 +667,20 @@ func printJSON(v interface{}) {
 
 func printUsageJSON() {
 	printJSON(map[string]interface{}{
-		"engine":   passgold.Engine,
-		"version":  passgold.Version,
-		"usage":    "vision-core <command> [flags]",
-		"commands": []string{"mission", "github-flow", "github-flow-reports", "github-flow-drill", "version", "help"},
+		"engine":  passgold.Engine,
+		"version": passgold.Version,
+		"usage":   "vision-core <command> [flags]",
+		"commands": []string{
+			"mission", "github-flow", "github-flow-reports", "github-flow-drill",
+			"graph-index", "graph-summary", "graph-query", "mcp-readonly",
+			"version", "help",
+		},
 		"examples": []string{
 			`vision-core mission --root "." --input "self-test"`,
-			`vision-core github-flow --root "." --owner OWNER --repo REPO --mission-id MISSION --issue-type ISSUE --changed-file path/to/file --title "TITLE" --body "BODY" --publish-remote --open-pr --publish-status`,
+			`vision-core graph-index --root "."`,
+			`vision-core graph-summary --root "."`,
+			`vision-core graph-query --root "." --query "github-flow" --limit 10`,
+			`vision-core mcp-readonly --root "." --tool vision.graph_summary`,
 		},
 	})
 }
@@ -692,4 +714,113 @@ func printGitHubFlowUsageJSON() {
 			"work_branch": "vision/remediation/<mission-id>",
 		},
 	})
+}
+
+// ─── graph-index ──────────────────────────────────────────────────────────────
+
+func runGraphIndex(args []string) {
+	fs := flag.NewFlagSet("graph-index", flag.ContinueOnError)
+	root := fs.String("root", ".", "Project root path")
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	rootPath := resolveRoot(*root)
+	path, err := graphmemory.Index(rootPath)
+	if err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	idx, lerr := graphmemory.Load(rootPath)
+	if lerr != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": lerr.Error()})
+		os.Exit(1)
+	}
+	printJSON(map[string]interface{}{
+		"ok":          true,
+		"index_path":  path,
+		"total_nodes": len(idx.Nodes),
+		"total_edges": len(idx.Edges),
+		"version":     idx.Version,
+		"build_time":  idx.BuildTime,
+	})
+}
+
+// ─── graph-summary ────────────────────────────────────────────────────────────
+
+func runGraphSummary(args []string) {
+	fs := flag.NewFlagSet("graph-summary", flag.ContinueOnError)
+	root := fs.String("root", ".", "Project root path")
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	rootPath := resolveRoot(*root)
+	sum, err := graphmemory.Summary(rootPath)
+	if err != nil {
+		printJSON(map[string]interface{}{
+			"ok":    false,
+			"error": err.Error(),
+			"hint":  "run 'vision-core graph-index --root <path>' first",
+		})
+		os.Exit(1)
+	}
+	printJSON(map[string]interface{}{"ok": true, "summary": sum})
+}
+
+// ─── graph-query ──────────────────────────────────────────────────────────────
+
+func runGraphQuery(args []string) {
+	fs := flag.NewFlagSet("graph-query", flag.ContinueOnError)
+	root := fs.String("root", ".", "Project root path")
+	query := fs.String("query", "", "Search query (case-insensitive substring)")
+	limit := fs.Int("limit", 10, "Maximum results to return")
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	rootPath := resolveRoot(*root)
+	result, err := graphmemory.Query(rootPath, *query, *limit)
+	if err != nil {
+		printJSON(map[string]interface{}{
+			"ok":    false,
+			"error": err.Error(),
+			"hint":  "run 'vision-core graph-index --root <path>' first",
+		})
+		os.Exit(1)
+	}
+	printJSON(map[string]interface{}{"ok": true, "result": result})
+}
+
+// ─── mcp-readonly ─────────────────────────────────────────────────────────────
+
+func runMCPReadonly(args []string) {
+	fs := flag.NewFlagSet("mcp-readonly", flag.ContinueOnError)
+	root := fs.String("root", ".", "Project root path")
+	tool := fs.String("tool", "", "MCP tool name (required)")
+	argsJSON := fs.String("args", "", "Tool arguments as JSON string")
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	if *tool == "" {
+		printJSON(map[string]interface{}{"ok": false, "error": "--tool is required"})
+		os.Exit(1)
+	}
+	req := mcpserver.ToolRequest{
+		Tool: *tool,
+		Root: resolveRoot(*root),
+	}
+	if *argsJSON != "" {
+		req.Args = json.RawMessage(*argsJSON)
+	}
+	resp := mcpserver.Dispatch(req)
+	printJSON(resp)
+	if !resp.OK {
+		os.Exit(1)
+	}
 }

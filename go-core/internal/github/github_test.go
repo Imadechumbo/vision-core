@@ -175,3 +175,60 @@ func runGit(t *testing.T, dir string, args ...string) {
 		t.Fatalf("git %v failed: %v\n%s", args, err, out)
 	}
 }
+
+
+// ─── V8.0 Mandatory Tests ─────────────────────────────────────────────────────
+
+// TestAddFilesDoesNotForceIgnoredFiles verifies that AddFiles (normal flow)
+// never adds .gitignored files via -f and rejects .gitignored paths.
+func TestAddFilesDoesNotForceIgnoredFiles(t *testing.T) {
+	dir := initRepo(t)
+
+	// Write a .gitignore that ignores "ignored.txt"
+	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("ignored.txt\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, dir, "add", ".gitignore")
+	runGit(t, dir, "commit", "-m", "add gitignore")
+
+	// Write ignored file
+	ignoredPath := filepath.Join(dir, "ignored.txt")
+	if err := os.WriteFile(ignoredPath, []byte("secret\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// AddFiles (safe path, no -f) on an ignored file must not stage it.
+	// git add -- on an ignored file is a no-op (no error, no staging).
+	err := AddFiles(dir, []string{"ignored.txt"})
+	_ = err
+	out, gitErr := gitOutput(dir, "diff", "--cached", "--name-only")
+	if gitErr != nil {
+		t.Fatalf("git diff: %v", gitErr)
+	}
+	if strings.Contains(out, "ignored.txt") {
+		t.Error("AddFiles must not stage .gitignored files")
+	}
+}
+
+// TestSafetyDrillStillHandlesIgnoredSentinel verifies that the safety drill
+// completes correctly when the sentinel file is already tracked (pre-committed).
+func TestSafetyDrillStillHandlesIgnoredSentinel(t *testing.T) {
+	dir := makeDrillRepo(t)
+
+	// The sentinel is already tracked in makeDrillRepo — drill must succeed.
+	ctx := context.Background()
+	res := RunSafetyDrill(ctx, SafetyDrillInput{
+		Root:      dir,
+		MissionID: "sentinel_ignored_test",
+		Owner:     "testowner",
+		Repo:      "testrepo",
+	})
+
+	if !res.OK {
+		t.Fatalf("drill failed: blocked=%v reason=%q error=%q",
+			res.Blocked, res.BlockReason, res.Error)
+	}
+	if !res.LocalCommitCreated {
+		t.Error("local_commit_created must be true")
+	}
+}

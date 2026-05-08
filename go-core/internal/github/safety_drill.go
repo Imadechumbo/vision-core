@@ -72,7 +72,7 @@ type SafetyDrillResult struct {
 // line[3:] extracts "vision-test/..." correctly for EnsureWorkingTreeOnlyHas.
 // (With ".vision-test/" the leading dot is consumed by line[3:] when status
 // shows "M " staged format, breaking the path match.)
-const drillSentinelRelPath = ".vision-test/github-flow-safety-drill.txt"
+const drillSentinelRelPath = "vision-test/github-flow-safety-drill.txt"
 
 // ─── RunSafetyDrill ───────────────────────────────────────────────────────────
 
