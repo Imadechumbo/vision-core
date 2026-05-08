@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/visioncore/go-core/internal/dryrun"
 	"github.com/visioncore/go-core/internal/graphmemory"
 	"github.com/visioncore/go-core/internal/report"
 )
@@ -35,6 +36,12 @@ const (
 	ToolGraphProviderStatus  = "vision.graph_provider_status"
 	ToolGraphImpactQuery     = "vision.graph_impact_query"
 	ToolGraphDryRunContext   = "vision.graph_dry_run_context"
+	// V8.2 dry-run control tools
+	ToolDryRunApplyPatch    = "vision.dry_run_apply_patch"
+	ToolDryRunWriteFile     = "vision.dry_run_write_file"
+	ToolDryRunGitHubFlow    = "vision.dry_run_github_flow"
+	ToolDryRunMission       = "vision.dry_run_mission"
+	ToolDryRunRiskAssessment = "vision.dry_run_risk_assessment"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -64,6 +71,12 @@ var allowedTools = map[string]bool{
 	ToolGraphProviderStatus: true,
 	ToolGraphImpactQuery:    true,
 	ToolGraphDryRunContext:  true,
+	// V8.2 dry-run control tools
+	ToolDryRunApplyPatch:    true,
+	ToolDryRunWriteFile:     true,
+	ToolDryRunGitHubFlow:    true,
+	ToolDryRunMission:       true,
+	ToolDryRunRiskAssessment: true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -127,6 +140,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleGraphImpactQuery(req)
 	case ToolGraphDryRunContext:
 		return handleGraphDryRunContext(req)
+	// V8.2 dry-run control tools
+	case ToolDryRunApplyPatch:
+		return handleDryRunApplyPatch(req)
+	case ToolDryRunWriteFile:
+		return handleDryRunWriteFile(req)
+	case ToolDryRunGitHubFlow:
+		return handleDryRunGitHubFlow(req)
+	case ToolDryRunMission:
+		return handleDryRunMission(req)
+	case ToolDryRunRiskAssessment:
+		return handleDryRunRiskAssessment(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -528,4 +552,71 @@ func handleGraphDryRunContext(req ToolRequest) ToolResponse {
 			"read_only":        true,
 		},
 	}
+}
+
+// ── V8.2 Handlers ─────────────────────────────────────────────────────────────
+
+func handleDryRunApplyPatch(req ToolRequest) ToolResponse {
+	if len(req.Args) == 0 {
+		return errResp(req.Tool, errors.New("args required (file, find, replace, mode)"))
+	}
+	var a dryrun.ApplyPatchInput
+	if err := json.Unmarshal(req.Args, &a); err != nil {
+		return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+	}
+	a.Root = rootFrom(req)
+	result := dryrun.DryRunApplyPatch(a)
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: result}
+}
+
+func handleDryRunWriteFile(req ToolRequest) ToolResponse {
+	if len(req.Args) == 0 {
+		return errResp(req.Tool, errors.New("args required (file, content, operation)"))
+	}
+	var a dryrun.WriteFileInput
+	if err := json.Unmarshal(req.Args, &a); err != nil {
+		return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+	}
+	a.Root = rootFrom(req)
+	result := dryrun.DryRunWriteFile(a)
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: result}
+}
+
+func handleDryRunGitHubFlow(req ToolRequest) ToolResponse {
+	if len(req.Args) == 0 {
+		return errResp(req.Tool, errors.New("args required (mission_id or work_branch, changed_files)"))
+	}
+	var a dryrun.GitHubFlowInput
+	if err := json.Unmarshal(req.Args, &a); err != nil {
+		return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+	}
+	result := dryrun.DryRunGitHubFlow(a)
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: result}
+}
+
+func handleDryRunMission(req ToolRequest) ToolResponse {
+	if len(req.Args) == 0 {
+		return errResp(req.Tool, errors.New("args required (input)"))
+	}
+	var a dryrun.MissionInput
+	if err := json.Unmarshal(req.Args, &a); err != nil {
+		return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	result := dryrun.DryRunMission(a)
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: result}
+}
+
+func handleDryRunRiskAssessment(req ToolRequest) ToolResponse {
+	if len(req.Args) == 0 {
+		return errResp(req.Tool, errors.New("args required (files, operation)"))
+	}
+	var a dryrun.RiskAssessmentInput
+	if err := json.Unmarshal(req.Args, &a); err != nil {
+		return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+	}
+	result := dryrun.DryRunRiskAssessment(a)
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: result}
 }

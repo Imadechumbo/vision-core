@@ -569,3 +569,258 @@ func TestGetReportStillIndexOnly(t *testing.T) {
 		t.Error("get_report payload must not include json_path field")
 	}
 }
+
+// ── V8.2 Tests ────────────────────────────────────────────────────────────────
+
+// ─── All V8.2 tools registered ────────────────────────────────────────────────
+
+func TestV82AllNewToolsRegistered(t *testing.T) {
+	v82Tools := []string{
+		mcpserver.ToolDryRunApplyPatch,
+		mcpserver.ToolDryRunWriteFile,
+		mcpserver.ToolDryRunGitHubFlow,
+		mcpserver.ToolDryRunMission,
+		mcpserver.ToolDryRunRiskAssessment,
+	}
+	for _, tool := range v82Tools {
+		if !mcpserver.IsAllowed(tool) {
+			t.Errorf("V8.2 tool %q must be in allowed set", tool)
+		}
+		if mcpserver.IsBlocked(tool) {
+			t.Errorf("V8.2 tool %q must not be in blocked set", tool)
+		}
+	}
+}
+
+// ─── vision.dry_run_apply_patch ───────────────────────────────────────────────
+
+func TestExecuteDryRunApplyPatch_DryRunReadOnly(t *testing.T) {
+	root := buildIndex(t)
+	// Write a test file
+	os.WriteFile(filepath.Join(root, "README.md"), []byte("VISION SAFE CONTENT"), 0o644)
+
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolDryRunApplyPatch,
+		Root: root,
+		Args: mkArgs(map[string]interface{}{
+			"file": "README.md", "find": "VISION", "replace": "VISION", "mode": "exact_match",
+		}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	if !strings.Contains(s, `"dry_run":true`) {
+		t.Errorf("must have dry_run:true: %s", s)
+	}
+	if !strings.Contains(s, `"read_only":true`) {
+		t.Errorf("must have read_only:true: %s", s)
+	}
+}
+
+func TestExecuteDryRunApplyPatch_DoesNotModifyFile(t *testing.T) {
+	root := t.TempDir()
+	content := "ORIGINAL CONTENT"
+	path := filepath.Join(root, "test.txt")
+	os.WriteFile(path, []byte(content), 0o644)
+
+	mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolDryRunApplyPatch,
+		Root: root,
+		Args: mkArgs(map[string]interface{}{
+			"file": "test.txt", "find": "ORIGINAL", "replace": "CHANGED", "mode": "exact_match",
+		}),
+	})
+
+	after, _ := os.ReadFile(path)
+	if string(after) != content {
+		t.Error("dry_run_apply_patch must not modify file")
+	}
+}
+
+func TestExecuteDryRunApplyPatch_NoArgs(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolDryRunApplyPatch})
+	if resp.OK {
+		t.Error("expected ok=false with no args")
+	}
+}
+
+// ─── vision.dry_run_write_file ────────────────────────────────────────────────
+
+func TestExecuteDryRunWriteFile_DryRunReadOnly(t *testing.T) {
+	root := t.TempDir()
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolDryRunWriteFile,
+		Root: root,
+		Args: mkArgs(map[string]interface{}{
+			"file": "tmp-v82-dryrun-test.txt", "content": "test", "operation": "create",
+		}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	if !strings.Contains(s, `"dry_run":true`) {
+		t.Errorf("must have dry_run:true: %s", s)
+	}
+	if !strings.Contains(s, `"read_only":true`) {
+		t.Errorf("must have read_only:true: %s", s)
+	}
+}
+
+func TestExecuteDryRunWriteFile_DoesNotCreateFile(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "tmp-v82-dryrun-test.txt")
+
+	mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolDryRunWriteFile,
+		Root: root,
+		Args: mkArgs(map[string]interface{}{
+			"file": "tmp-v82-dryrun-test.txt", "content": "test", "operation": "create",
+		}),
+	})
+
+	if _, err := os.Stat(target); err == nil {
+		t.Error("dry_run_write_file must not create the file")
+	}
+}
+
+func TestExecuteDryRunWriteFile_NoArgs(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolDryRunWriteFile})
+	if resp.OK {
+		t.Error("expected ok=false with no args")
+	}
+}
+
+// ─── vision.dry_run_github_flow ───────────────────────────────────────────────
+
+func TestExecuteDryRunGitHubFlow_DryRunReadOnly(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolDryRunGitHubFlow,
+		Args: mkArgs(map[string]interface{}{
+			"mission_id":    "mission_v82_test",
+			"issue_type":    "cors_blocked",
+			"base_branch":   "v6-go-enterprise-runtime",
+			"work_branch":   "vision/remediation/mission_v82_test",
+			"title":         "VISION remediation dry run",
+			"changed_files": []string{"go-core/internal/mcpserver/mcpserver.go"},
+		}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	if !strings.Contains(s, `"dry_run":true`) {
+		t.Errorf("must have dry_run:true: %s", s)
+	}
+	if !strings.Contains(s, `"read_only":true`) {
+		t.Errorf("must have read_only:true: %s", s)
+	}
+	if !strings.Contains(s, `"would_push":true`) {
+		t.Errorf("must have would_push:true for valid input: %s", s)
+	}
+	if !strings.Contains(s, `"would_open_pr":true`) {
+		t.Errorf("must have would_open_pr:true for valid input: %s", s)
+	}
+	if !strings.Contains(s, `"would_publish_status":true`) {
+		t.Errorf("must have would_publish_status:true for valid input: %s", s)
+	}
+}
+
+func TestExecuteDryRunGitHubFlow_NoArgs(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolDryRunGitHubFlow})
+	if resp.OK {
+		t.Error("expected ok=false with no args")
+	}
+}
+
+// ─── vision.dry_run_mission ───────────────────────────────────────────────────
+
+func TestExecuteDryRunMission_DryRunReadOnly(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolDryRunMission,
+		Args: mkArgs(map[string]interface{}{"input": "CORS origin blocked", "mode": "remediation_plan"}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	if !strings.Contains(s, `"dry_run":true`) {
+		t.Errorf("must have dry_run:true: %s", s)
+	}
+	if !strings.Contains(s, `"read_only":true`) {
+		t.Errorf("must have read_only:true: %s", s)
+	}
+	if !strings.Contains(s, `"would_patch":false`) {
+		t.Errorf("would_patch must be false: %s", s)
+	}
+	if !strings.Contains(s, `"would_create_report":false`) {
+		t.Errorf("would_create_report must be false: %s", s)
+	}
+}
+
+func TestExecuteDryRunMission_NoArgs(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolDryRunMission})
+	if resp.OK {
+		t.Error("expected ok=false with no args")
+	}
+}
+
+// ─── vision.dry_run_risk_assessment ───────────────────────────────────────────
+
+func TestExecuteDryRunRiskAssessment_DangerousPathBlocked(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolDryRunRiskAssessment,
+		Args: mkArgs(map[string]interface{}{
+			"files":     []string{".env", "go-core/internal/mcpserver/mcpserver.go"},
+			"operation": "patch",
+		}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	if !strings.Contains(s, `"dry_run":true`) {
+		t.Errorf("must have dry_run:true: %s", s)
+	}
+	if !strings.Contains(s, `"blocked":true`) {
+		t.Errorf(".env must cause blocked:true: %s", s)
+	}
+}
+
+func TestExecuteDryRunRiskAssessment_NoArgs(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolDryRunRiskAssessment})
+	if resp.OK {
+		t.Error("expected ok=false with no args")
+	}
+}
+
+// ─── Regression: V8.0/V8.1 tools still work ──────────────────────────────────
+
+func TestV81ToolsStillWorkInV82(t *testing.T) {
+	root := buildIndex(t)
+	for _, tc := range []struct {
+		tool string
+		args interface{}
+	}{
+		{mcpserver.ToolGraphSummary, nil},
+		{mcpserver.ToolGraphProviders, nil},
+		{mcpserver.ToolPassGoldStatus, nil},
+		{mcpserver.ToolGraphQuery, map[string]interface{}{"query": "github", "limit": 5}},
+		{mcpserver.ToolGraphProviderStatus, map[string]interface{}{"provider": "local"}},
+	} {
+		req := mcpserver.ToolRequest{Tool: tc.tool, Root: root}
+		if tc.args != nil {
+			req.Args = mkArgs(tc.args)
+		}
+		resp := mcpserver.Dispatch(req)
+		if !resp.OK {
+			t.Errorf("V8.1 tool %q still must work: %s", tc.tool, resp.Error)
+		}
+	}
+}
