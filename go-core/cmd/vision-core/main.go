@@ -19,7 +19,7 @@ import (
 	"github.com/visioncore/go-core/internal/report"
 )
 
-const githubFlowVersion = "V7.8"
+const githubFlowVersion = "V7.9"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -36,6 +36,8 @@ func main() {
 		runGitHubFlow(os.Args[2:])
 	case "github-flow-reports":
 		runGitHubFlowReports(os.Args[2:])
+	case "github-flow-drill":
+		runGitHubFlowDrill(os.Args[2:])
 	case "version", "--version", "-v":
 		printJSON(map[string]string{
 			"version": passgold.Version,
@@ -583,6 +585,63 @@ func runGitHubFlowReports(args []string) {
 	})
 }
 
+// ─── github-flow-drill subcommand ─────────────────────────────────────────────
+
+func runGitHubFlowDrill(args []string) {
+	if hasHelpArg(args) {
+		printJSON(map[string]interface{}{
+			"command": "github-flow-drill",
+			"version": githubFlowVersion,
+			"usage":   "vision-core github-flow-drill --root <path> [--owner <owner>] [--repo <repo>] [--mission-id <id>] [--issue-type <type>] [--report-dir <dir>]",
+			"description": "Local safety drill — proves real git flow end-to-end with bare local remote and MockPRClient. Zero network, zero GitHub real.",
+			"flags": map[string]string{
+				"--root":       "Project root path (must be an existing git repo)",
+				"--owner":      "Owner name used in mock PR (default: Imadechumbo)",
+				"--repo":       "Repo name used in mock PR (default: vision-core)",
+				"--mission-id": "Drill mission ID (default: drill_<timestamp>)",
+				"--issue-type": "Issue type label (default: github_flow_safety_drill)",
+				"--report-dir": "Report artifacts directory (default: .vision-reports/github-flow)",
+			},
+		})
+		return
+	}
+
+	fs := flag.NewFlagSet("github-flow-drill", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+
+	rootFlag := fs.String("root", ".", "Project root path")
+	ownerFlag := fs.String("owner", "Imadechumbo", "Mock PR owner")
+	repoFlag := fs.String("repo", "vision-core", "Mock PR repo")
+	missionIDFlag := fs.String("mission-id", "", "Drill mission ID (auto-generated if empty)")
+	issueTypeFlag := fs.String("issue-type", "github_flow_safety_drill", "Issue type label")
+	reportDirFlag := fs.String("report-dir", report.DefaultReportDir, "Report artifacts directory")
+
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": "invalid arguments: " + err.Error()})
+		os.Exit(1)
+	}
+
+	rootPath := resolveRoot(*rootFlag)
+
+	result := githubflow.RunSafetyDrill(context.Background(), githubflow.SafetyDrillInput{
+		Root:      rootPath,
+		Owner:     *ownerFlag,
+		Repo:      *repoFlag,
+		MissionID: *missionIDFlag,
+		IssueType: *issueTypeFlag,
+		ReportDir: *reportDirFlag,
+	})
+
+	printJSON(map[string]interface{}{
+		"ok":      result.OK,
+		"version": githubFlowVersion,
+		"drill":   result,
+	})
+	if !result.OK {
+		os.Exit(2)
+	}
+}
+
 func printJSON(v interface{}) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
@@ -596,7 +655,7 @@ func printUsageJSON() {
 		"engine":   passgold.Engine,
 		"version":  passgold.Version,
 		"usage":    "vision-core <command> [flags]",
-		"commands": []string{"mission", "github-flow", "github-flow-reports", "version", "help"},
+		"commands": []string{"mission", "github-flow", "github-flow-reports", "github-flow-drill", "version", "help"},
 		"examples": []string{
 			`vision-core mission --root "." --input "self-test"`,
 			`vision-core github-flow --root "." --owner OWNER --repo REPO --mission-id MISSION --issue-type ISSUE --changed-file path/to/file --title "TITLE" --body "BODY" --publish-remote --open-pr --publish-status`,

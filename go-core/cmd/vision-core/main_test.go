@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -108,8 +109,8 @@ func TestRunGitHubFlowDefaultDryRunBuildsV76PlanInternally(t *testing.T) {
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("invalid JSON output: %v\n%s", err, data)
 	}
-	// V7.8 contract: version="V7.8", ok=true, mode=dry-run, github_flow present
-	if got["ok"] != true || got["version"] != "V7.8" || got["mode"] != "dry-run" || got["github_flow"] == nil {
+	// V7.9 contract: version="V7.9", ok=true, mode=dry-run, github_flow present
+	if got["ok"] != true || got["version"] != "V7.9" || got["mode"] != "dry-run" || got["github_flow"] == nil {
 		t.Fatalf("unexpected github-flow output: %#v", got)
 	}
 
@@ -124,7 +125,7 @@ func TestRunGitHubFlowDefaultDryRunBuildsV76PlanInternally(t *testing.T) {
 	// V7.8: report field must be present with flow_id and index_path
 	rpt, _ := got["report"].(map[string]interface{})
 	if rpt == nil {
-		t.Fatal("report field must be present in V7.8 output")
+		t.Fatal("report field must be present in V7.9 output")
 	}
 	if rpt["flow_id"] == "" || rpt["flow_id"] == nil {
 		t.Error("report.flow_id must not be empty")
@@ -686,5 +687,117 @@ func TestV78_GitHubFlowReports_HelpShowsFlags(t *testing.T) {
 		if !strings.Contains(out, flag) {
 			t.Errorf("--help must mention %s", flag)
 		}
+	}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// V7.9 SAFETY DRILL TESTS
+// ═══════════════════════════════════════════════════════════════════
+
+func TestV79_GitHubFlowDrill_DryRun_OK(t *testing.T) {
+	root := t.TempDir()
+	// Create minimal git repo
+	gitIn(t, root, "init", "-q")
+	gitIn(t, root, "config", "user.email", "t@t.com")
+	gitIn(t, root, "config", "user.name", "T")
+	gitIn(t, root, "config", "commit.gpgsign", "false")
+	os.WriteFile(filepath.Join(root, "README.md"), []byte("# t\n"), 0644)
+	gitIn(t, root, "add", "--", "README.md")
+	gitIn(t, root, "commit", "-m", "init")
+	gitIn(t, root, "branch", "-m", "v6-go-enterprise-runtime")
+	// Working tree must be clean — drill blocks if dirty
+
+	tmpOut, err := os.CreateTemp("", "drill-test-*.json")
+	if err != nil {
+		t.Fatalf("CreateTemp: %v", err)
+	}
+	defer os.Remove(tmpOut.Name())
+
+	old := os.Stdout
+	os.Stdout = tmpOut
+	runGitHubFlowDrill([]string{
+		"--root", root,
+		"--owner", "testorg",
+		"--repo", "testrepo",
+		"--mission-id", "cli_drill_test",
+		"--issue-type", "github_flow_safety_drill",
+		"--report-dir", ".vision-reports/github-flow",
+	})
+	os.Stdout = old
+	tmpOut.Close()
+
+	data, _ := os.ReadFile(tmpOut.Name())
+	var result map[string]interface{}
+	if err := json.Unmarshal(data, &result); err != nil {
+		t.Fatalf("output not valid JSON: %v\n%s", err, data)
+	}
+	if result["ok"] != true {
+		t.Errorf("expected ok=true, got: %s", data)
+	}
+	if result["version"] != "V7.9" {
+		t.Errorf("expected version=V7.9, got %v", result["version"])
+	}
+	drill, _ := result["drill"].(map[string]interface{})
+	if drill == nil {
+		t.Fatal("drill field must be present")
+	}
+	if drill["github_real_used"] == true {
+		t.Error("github_real_used must be false in safety drill")
+	}
+	if drill["network_used"] == true {
+		t.Error("network_used must be false in safety drill")
+	}
+}
+
+func TestV79_Help_ShowsGitHubFlowDrill(t *testing.T) {
+	out := captureStdout(t, func() {
+		runGitHubFlowDrill([]string{"--help"})
+	})
+	if !strings.Contains(out, "github-flow-drill") {
+		t.Error("--help must mention github-flow-drill")
+	}
+	for _, flag := range []string{"--root", "--owner", "--repo", "--mission-id", "--issue-type", "--report-dir"} {
+		if !strings.Contains(out, flag) {
+			t.Errorf("--help must mention %s", flag)
+		}
+	}
+}
+
+func TestV79_Mission_DoesNotRunDrill(t *testing.T) {
+	dir := t.TempDir()
+	tmpOut, _ := os.CreateTemp("", "mission-v79-*.json")
+	defer os.Remove(tmpOut.Name())
+	old := os.Stdout
+	os.Stdout = tmpOut
+	runMission([]string{"--root", dir, "--input", "self-test"})
+	os.Stdout = old
+	tmpOut.Close()
+
+	// No drill sentinel should be created by mission
+	if _, err := os.Stat(filepath.Join(dir, "github-flow-safety-drill.txt")); err == nil {
+		t.Error("mission must not create drill sentinel file")
+	}
+}
+
+func TestV79_CommandsListIncludesDrill(t *testing.T) {
+	out := captureStdout(t, func() {
+		// main help shows command list
+		main_ := func() {
+			printUsageJSON()
+		}
+		main_()
+	})
+	if !strings.Contains(out, "github-flow-drill") {
+		t.Error("usage JSON must list github-flow-drill command")
+	}
+}
+
+// gitIn runs a git command in dir using exec.Command.
+func gitIn(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Logf("git %v: %v (output: %q)", args, err, out)
 	}
 }
