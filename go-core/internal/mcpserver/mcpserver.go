@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/visioncore/go-core/internal/codeburn"
 	"github.com/visioncore/go-core/internal/dryrun"
 	"github.com/visioncore/go-core/internal/graphmemory"
 	"github.com/visioncore/go-core/internal/report"
@@ -32,16 +33,22 @@ const (
 	ToolGithubFlowReportsList = "vision.github_flow_reports_list"
 	ToolPassGoldStatus        = "vision.pass_gold_status"
 	// V8.1 tools
-	ToolGraphProviders       = "vision.graph_providers"
-	ToolGraphProviderStatus  = "vision.graph_provider_status"
-	ToolGraphImpactQuery     = "vision.graph_impact_query"
-	ToolGraphDryRunContext   = "vision.graph_dry_run_context"
+	ToolGraphProviders      = "vision.graph_providers"
+	ToolGraphProviderStatus = "vision.graph_provider_status"
+	ToolGraphImpactQuery    = "vision.graph_impact_query"
+	ToolGraphDryRunContext  = "vision.graph_dry_run_context"
 	// V8.2 dry-run control tools
-	ToolDryRunApplyPatch    = "vision.dry_run_apply_patch"
-	ToolDryRunWriteFile     = "vision.dry_run_write_file"
-	ToolDryRunGitHubFlow    = "vision.dry_run_github_flow"
-	ToolDryRunMission       = "vision.dry_run_mission"
+	ToolDryRunApplyPatch     = "vision.dry_run_apply_patch"
+	ToolDryRunWriteFile      = "vision.dry_run_write_file"
+	ToolDryRunGitHubFlow     = "vision.dry_run_github_flow"
+	ToolDryRunMission        = "vision.dry_run_mission"
 	ToolDryRunRiskAssessment = "vision.dry_run_risk_assessment"
+	// V8.3 CodeBurn cost guard tools
+	ToolCodeBurnEstimate    = "vision.codeburn_estimate"
+	ToolCodeBurnPolicyCheck = "vision.codeburn_policy_check"
+	ToolCodeBurnBudgetPlan  = "vision.codeburn_budget_plan"
+	ToolCodeBurnGuardStatus = "vision.codeburn_guard_status"
+	ToolCodeBurnExplain     = "vision.codeburn_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -72,11 +79,17 @@ var allowedTools = map[string]bool{
 	ToolGraphImpactQuery:    true,
 	ToolGraphDryRunContext:  true,
 	// V8.2 dry-run control tools
-	ToolDryRunApplyPatch:    true,
-	ToolDryRunWriteFile:     true,
-	ToolDryRunGitHubFlow:    true,
-	ToolDryRunMission:       true,
+	ToolDryRunApplyPatch:     true,
+	ToolDryRunWriteFile:      true,
+	ToolDryRunGitHubFlow:     true,
+	ToolDryRunMission:        true,
 	ToolDryRunRiskAssessment: true,
+	// V8.3 CodeBurn cost guard tools
+	ToolCodeBurnEstimate:    true,
+	ToolCodeBurnPolicyCheck: true,
+	ToolCodeBurnBudgetPlan:  true,
+	ToolCodeBurnGuardStatus: true,
+	ToolCodeBurnExplain:     true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -151,6 +164,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleDryRunMission(req)
 	case ToolDryRunRiskAssessment:
 		return handleDryRunRiskAssessment(req)
+	// V8.3 CodeBurn cost guard tools
+	case ToolCodeBurnEstimate:
+		return handleCodeBurnEstimate(req)
+	case ToolCodeBurnPolicyCheck:
+		return handleCodeBurnPolicyCheck(req)
+	case ToolCodeBurnBudgetPlan:
+		return handleCodeBurnBudgetPlan(req)
+	case ToolCodeBurnGuardStatus:
+		return handleCodeBurnGuardStatus(req)
+	case ToolCodeBurnExplain:
+		return handleCodeBurnExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -339,11 +363,11 @@ func handlePassGoldStatus(req ToolRequest) ToolResponse {
 		Tool: req.Tool,
 		OK:   true,
 		Payload: map[string]interface{}{
-			"status":            "unknown",
-			"reason":            note,
-			"read_only":         true,
-			"deploy_performed":  false,
-			"status_published":  false,
+			"status":           "unknown",
+			"reason":           note,
+			"read_only":        true,
+			"deploy_performed": false,
+			"status_published": false,
 		},
 	}
 }
@@ -459,12 +483,12 @@ func handleGraphImpactQuery(req ToolRequest) ToolResponse {
 		Tool: req.Tool,
 		OK:   true,
 		Payload: map[string]interface{}{
-			"version":  graphmemory.V81Version,
-			"provider": a.Provider,
-			"query":    result.Query,
-			"limit":    result.Limit,
-			"total":    result.Total,
-			"results":  result.Results,
+			"version":   graphmemory.V81Version,
+			"provider":  a.Provider,
+			"query":     result.Query,
+			"limit":     result.Limit,
+			"total":     result.Total,
+			"results":   result.Results,
 			"read_only": true,
 		},
 	}
@@ -618,5 +642,59 @@ func handleDryRunRiskAssessment(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
 	}
 	result := dryrun.DryRunRiskAssessment(a)
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: result}
+}
+
+// ── V8.3 CodeBurn Handlers ───────────────────────────────────────────────────
+
+func handleCodeBurnEstimate(req ToolRequest) ToolResponse {
+	if len(req.Args) == 0 {
+		return errResp(req.Tool, errors.New("args required (operation, provider, model, limits)"))
+	}
+	var a codeburn.EstimateInput
+	if err := json.Unmarshal(req.Args, &a); err != nil {
+		return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+	}
+	result := codeburn.Estimate(a)
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: result}
+}
+
+func handleCodeBurnPolicyCheck(req ToolRequest) ToolResponse {
+	if len(req.Args) == 0 {
+		return errResp(req.Tool, errors.New("args required (operation, provider, model, limits)"))
+	}
+	var a codeburn.EstimateInput
+	if err := json.Unmarshal(req.Args, &a); err != nil {
+		return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+	}
+	result := codeburn.PolicyCheck(a)
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: result}
+}
+
+func handleCodeBurnBudgetPlan(req ToolRequest) ToolResponse {
+	if len(req.Args) == 0 {
+		return errResp(req.Tool, errors.New("args required (mission_input, budget_usd)"))
+	}
+	var a codeburn.BudgetPlanInput
+	if err := json.Unmarshal(req.Args, &a); err != nil {
+		return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+	}
+	result := codeburn.BudgetPlan(a)
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: result}
+}
+
+func handleCodeBurnGuardStatus(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: codeburn.GuardStatus()}
+}
+
+func handleCodeBurnExplain(req ToolRequest) ToolResponse {
+	if len(req.Args) == 0 {
+		return errResp(req.Tool, errors.New("args required (estimate)"))
+	}
+	var a codeburn.ExplainInput
+	if err := json.Unmarshal(req.Args, &a); err != nil {
+		return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+	}
+	result := codeburn.Explain(a)
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: result}
 }

@@ -824,3 +824,131 @@ func TestV81ToolsStillWorkInV82(t *testing.T) {
 		}
 	}
 }
+
+// ── V8.3 CodeBurn Tests ──────────────────────────────────────────────────────
+
+func TestV83CodeBurnToolsRegistered(t *testing.T) {
+	tools := []string{
+		mcpserver.ToolCodeBurnEstimate,
+		mcpserver.ToolCodeBurnPolicyCheck,
+		mcpserver.ToolCodeBurnBudgetPlan,
+		mcpserver.ToolCodeBurnGuardStatus,
+		mcpserver.ToolCodeBurnExplain,
+	}
+	for _, tool := range tools {
+		if !mcpserver.IsAllowed(tool) {
+			t.Errorf("V8.3 CodeBurn tool %q must be allowed", tool)
+		}
+		if mcpserver.IsBlocked(tool) {
+			t.Errorf("V8.3 CodeBurn tool %q must not be blocked", tool)
+		}
+	}
+}
+
+func TestExecuteCodeBurnGuardStatus_DryRunReadOnlyV83(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolCodeBurnGuardStatus})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"dry_run":true`, `"read_only":true`, `"version":"V8.3"`, `"deploy_allowed":false`, `"mutations_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecuteCodeBurnEstimate_LocalOfflineCostZero(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolCodeBurnEstimate,
+		Args: mkArgs(map[string]interface{}{
+			"operation": "patch", "mission_input": "CORS origin blocked",
+			"files": []string{"go-core/internal/mcpserver/mcpserver.go"}, "commands": []string{"go test ./..."},
+			"provider": "local", "model": "offline", "estimated_tokens_in": 1000, "estimated_tokens_out": 500,
+			"estimated_runtime_seconds": 30, "max_files": 20, "max_commands": 10, "max_tokens": 100000,
+			"max_runtime_seconds": 600, "max_estimated_cost_usd": 1.00,
+		}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"dry_run":true`, `"read_only":true`, `"version":"V8.3"`, `"estimated_cost_usd":0`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecuteCodeBurnPolicyCheck_BlocksEnvTraversalAndLimits(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolCodeBurnPolicyCheck,
+		Args: mkArgs(map[string]interface{}{
+			"operation": "patch", "files": []string{".env", "../secret.txt", "go-core/internal/mcpserver/mcpserver.go"},
+			"commands": []string{"go test ./...", "go build ./cmd/vision-core"}, "provider": "local", "model": "offline",
+			"estimated_tokens_in": 1000, "estimated_tokens_out": 1000, "estimated_runtime_seconds": 30,
+			"max_files": 1, "max_commands": 1, "max_tokens": 100, "max_runtime_seconds": 1, "max_estimated_cost_usd": 0.01,
+		}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"dry_run":true`, `"read_only":true`, `"version":"V8.3"`, `"blocked":true`, `"risk_level":"critical"`, "sensitive env file", "path traversal", "file count", "command count", "estimated tokens", "estimated runtime"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecuteCodeBurnPolicyCheck_UnknownProviderBlocks(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolCodeBurnPolicyCheck,
+		Args: mkArgs(map[string]interface{}{"provider": "unknown-paid", "model": "paid", "require_known_provider": true}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	if !strings.Contains(s, `"blocked":true`) || !strings.Contains(s, "unknown provider") {
+		t.Fatalf("unknown provider must block: %s", s)
+	}
+}
+
+func TestExecuteCodeBurnBudgetPlan_RecommendsCheapSafePath(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolCodeBurnBudgetPlan,
+		Args: mkArgs(map[string]interface{}{"mission_input": "Corrigir CORS origin blocked", "budget_usd": 0.25, "preferred_provider": "local", "max_steps": 5}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"dry_run":true`, `"read_only":true`, `"version":"V8.3"`, `"recommended_provider":"local"`, `"recommended_model":"offline"`, `"estimated_cost_usd":0`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecuteCodeBurnExplain_ReturnsSummaryAndSafePath(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolCodeBurnExplain,
+		Args: mkArgs(map[string]interface{}{"estimate": map[string]interface{}{"blocked": true, "blocked_reasons": []string{"cost exceeds limit"}, "risk_level": "high"}}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"dry_run":true`, `"read_only":true`, `"version":"V8.3"`, "CodeBurn blocked", "cost exceeds limit", "safe_path"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
