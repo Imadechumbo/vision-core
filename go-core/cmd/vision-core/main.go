@@ -19,7 +19,7 @@ import (
 	"github.com/visioncore/go-core/internal/report"
 )
 
-const githubFlowVersion = "V7.7"
+const githubFlowVersion = "V7.8"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -34,6 +34,8 @@ func main() {
 		runMission(os.Args[2:])
 	case "github-flow":
 		runGitHubFlow(os.Args[2:])
+	case "github-flow-reports":
+		runGitHubFlowReports(os.Args[2:])
 	case "version", "--version", "-v":
 		printJSON(map[string]string{
 			"version": passgold.Version,
@@ -294,6 +296,11 @@ func runGitHubFlow(args []string) {
 			// Report write failure is non-fatal — log to stderr only
 			fmt.Fprintf(os.Stderr, "warning: report write failed: %v\n", err)
 		}
+		// V7.8: append/update index entry
+		entry := report.EntryFromReport(execReport)
+		if err := report.AppendOrUpdateEntry(rootPath, *reportDirFlag, entry); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: index update failed: %v\n", err)
+		}
 	}
 
 	// Build and print output with report metadata
@@ -306,6 +313,10 @@ func runGitHubFlow(args []string) {
 	}
 	if execReport.MarkdownPath != "" {
 		reportMeta["markdown_path"] = execReport.MarkdownPath
+	}
+	// V7.8: always add index_path when format != none
+	if reportFormat != report.FormatNone {
+		reportMeta["index_path"] = report.IndexPath(rootPath, *reportDirFlag)
 	}
 
 	printJSON(map[string]interface{}{
@@ -475,6 +486,103 @@ func printGitHubFlowResult(ok bool, mode string, dryRun bool, flow interface{}, 
 	printJSON(out)
 }
 
+// ─── github-flow-reports subcommand ──────────────────────────────────────────
+
+func runGitHubFlowReports(args []string) {
+	if hasHelpArg(args) {
+		printJSON(map[string]interface{}{
+			"command": "github-flow-reports",
+			"version": githubFlowVersion,
+			"usage":   "vision-core github-flow-reports --root <path> [--report-dir <dir>] [--list] [--flow-id <id>] [--limit <n>] [--clean] [--keep-last <n>] [--dry-run=true|false] [--json]",
+			"flags": map[string]string{
+				"--root":        "Project root path (default: .)",
+				"--report-dir":  "Report directory (default: .vision-reports/github-flow)",
+				"--list":        "List all executions (default mode)",
+				"--flow-id":     "Get a single execution by flow_id",
+				"--limit":       "Max entries to return for list (default: 20)",
+				"--clean":       "Clean old report artifacts",
+				"--keep-last":   "Number of reports to keep during clean (default: 20)",
+				"--dry-run":     "Dry-run mode for clean (default: true)",
+				"--json":        "Output JSON (always true; reserved for future formatting)",
+			},
+		})
+		return
+	}
+
+	fs := flag.NewFlagSet("github-flow-reports", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+
+	rootFlag := fs.String("root", ".", "Project root path")
+	reportDirFlag := fs.String("report-dir", report.DefaultReportDir, "Report directory")
+	listFlag := fs.Bool("list", false, "List executions")
+	flowIDFlag := fs.String("flow-id", "", "Get execution by flow_id")
+	limitFlag := fs.Int("limit", 20, "Max entries for list")
+	cleanFlag := fs.Bool("clean", false, "Clean old artifacts")
+	keepLastFlag := fs.Int("keep-last", 20, "Reports to keep during clean")
+	dryRunFlag := fs.Bool("dry-run", true, "Dry-run mode for clean")
+	_ = fs.Bool("json", true, "Output JSON (always enabled)")
+
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": "invalid arguments: " + err.Error()})
+		os.Exit(1)
+	}
+
+	rootPath := resolveRoot(*rootFlag)
+	_ = *listFlag // default mode — always list unless another flag is set
+
+	if err := report.ValidateReportDir(*reportDirFlag); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": "invalid --report-dir: " + err.Error()})
+		os.Exit(1)
+	}
+
+	// Get by flow_id
+	if *flowIDFlag != "" {
+		if err := report.ValidateFlowID(*flowIDFlag); err != nil {
+			printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+			os.Exit(1)
+		}
+		entry, err := report.GetEntry(rootPath, *reportDirFlag, *flowIDFlag)
+		if err != nil {
+			printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+			os.Exit(1)
+		}
+		printJSON(map[string]interface{}{"ok": true, "version": githubFlowVersion, "entry": entry})
+		return
+	}
+
+	// Clean
+	if *cleanFlag {
+		result, err := report.Clean(rootPath, *reportDirFlag, *keepLastFlag, *dryRunFlag)
+		if err != nil {
+			printJSON(map[string]interface{}{"ok": false, "version": githubFlowVersion, "error": err.Error()})
+			os.Exit(1)
+		}
+		printJSON(map[string]interface{}{
+			"ok":           true,
+			"version":      githubFlowVersion,
+			"report_dir":   *reportDirFlag,
+			"index_path":   report.IndexPath(rootPath, *reportDirFlag),
+			"clean_result": result,
+		})
+		return
+	}
+
+	// List (default)
+	idx, err := report.ListEntries(rootPath, *reportDirFlag, *limitFlag)
+	if err != nil {
+		printJSON(map[string]interface{}{"ok": false, "version": githubFlowVersion, "error": err.Error()})
+		os.Exit(1)
+	}
+	printJSON(map[string]interface{}{
+		"ok":          true,
+		"version":     githubFlowVersion,
+		"report_dir":  *reportDirFlag,
+		"index_path":  report.IndexPath(rootPath, *reportDirFlag),
+		"count":       len(idx.Entries),
+		"entries":     idx.Entries,
+	})
+}
+
 func printJSON(v interface{}) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
@@ -488,7 +596,7 @@ func printUsageJSON() {
 		"engine":   passgold.Engine,
 		"version":  passgold.Version,
 		"usage":    "vision-core <command> [flags]",
-		"commands": []string{"mission", "github-flow", "version", "help"},
+		"commands": []string{"mission", "github-flow", "github-flow-reports", "version", "help"},
 		"examples": []string{
 			`vision-core mission --root "." --input "self-test"`,
 			`vision-core github-flow --root "." --owner OWNER --repo REPO --mission-id MISSION --issue-type ISSUE --changed-file path/to/file --title "TITLE" --body "BODY" --publish-remote --open-pr --publish-status`,

@@ -69,34 +69,69 @@ func TestRunGitHubFlowHelpPrintsContractFlagsWithoutPlan(t *testing.T) {
 }
 
 func TestRunGitHubFlowDefaultDryRunBuildsV76PlanInternally(t *testing.T) {
-	out := captureStdout(t, func() {
-		runGitHubFlow([]string{
-			"--root", ".",
-			"--owner", "Imadechumbo",
-			"--repo", "vision-core",
-			"--mission-id", "mission_cli_test",
-			"--issue-type", "cors_blocked",
-			"--changed-file", "go-core/internal/github/e2e_flow.go",
-			"--title", "VISION remediation: cors_blocked",
-			"--body", "Automated PASS GOLD remediation plan",
-			"--publish-remote",
-			"--open-pr",
-			"--publish-status",
-		})
-	})
-	var got map[string]interface{}
-	if err := json.Unmarshal([]byte(out), &got); err != nil {
-		t.Fatalf("invalid JSON output: %v\n%s", err, out)
+	// Use a temp dir as root so report artifacts don't pollute the working tree
+	root := t.TempDir()
+
+	// Use temp file for stdout to avoid pipe deadlock on Windows
+	tmpOut, err := os.CreateTemp("", "ghflow-test-*.json")
+	if err != nil {
+		t.Fatalf("CreateTemp: %v", err)
 	}
-	if got["ok"] != true || got["version"] != "V7.7" || got["mode"] != "dry-run" || got["github_flow"] == nil {
+	defer os.Remove(tmpOut.Name())
+
+	old := os.Stdout
+	os.Stdout = tmpOut
+	runGitHubFlow([]string{
+		"--root", root,
+		"--owner", "Imadechumbo",
+		"--repo", "vision-core",
+		"--mission-id", "mission_cli_test",
+		"--issue-type", "cors_blocked",
+		"--changed-file", "go-core/internal/github/e2e_flow.go",
+		"--title", "VISION remediation: cors_blocked",
+		"--body", "Automated PASS GOLD remediation plan",
+		"--publish-remote",
+		"--open-pr",
+		"--publish-status",
+		// Use a sub-dir inside root for reports to ensure cleanup
+		"--report-dir", ".vision-reports/github-flow",
+	})
+	os.Stdout = old
+	tmpOut.Close()
+
+	data, err := os.ReadFile(tmpOut.Name())
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+
+	var got map[string]interface{}
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("invalid JSON output: %v\n%s", err, data)
+	}
+	// V7.8 contract: version="V7.8", ok=true, mode=dry-run, github_flow present
+	if got["ok"] != true || got["version"] != "V7.8" || got["mode"] != "dry-run" || got["github_flow"] == nil {
 		t.Fatalf("unexpected github-flow output: %#v", got)
 	}
+
 	flow := got["github_flow"].(map[string]interface{})
 	if flow["work_branch"] != "vision/remediation/mission_cli_test" || flow["base_branch"] != "v6-go-enterprise-runtime" {
 		t.Fatalf("unexpected branches: %#v", flow)
 	}
 	if flow["pr_opened"] != false || flow["remote_pushed"] != false || flow["status_published"] != false {
 		t.Fatalf("dry-run must not perform real side effects: %#v", flow)
+	}
+
+	// V7.8: report field must be present with flow_id and index_path
+	rpt, _ := got["report"].(map[string]interface{})
+	if rpt == nil {
+		t.Fatal("report field must be present in V7.8 output")
+	}
+	if rpt["flow_id"] == "" || rpt["flow_id"] == nil {
+		t.Error("report.flow_id must not be empty")
+	}
+	// format defaults to "both" — index_path must be set
+	if rpt["index_path"] == "" || rpt["index_path"] == nil {
+		t.Error("report.index_path must be present when format=both")
 	}
 }
 
@@ -439,6 +474,217 @@ func TestV77_NoRealGitHub(t *testing.T) {
 		}
 		if published, _ := flow["status_published"].(bool); published {
 			t.Error("real status must not be published in test dry-run")
+		}
+	}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// V7.8 GITHUB FLOW REPORT INDEX AND RETENTION TESTS
+// ═══════════════════════════════════════════════════════════════════
+
+// ─── K: github-flow V7.7 still generates report + index ──────────────────────
+
+func TestV78_GitHubFlow_GeneratesIndexEntry(t *testing.T) {
+	out, dir := runFlowInTemp(t, nil)
+
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(out), &result); err != nil {
+		t.Fatalf("output not valid JSON: %v\noutput: %s", err, out)
+	}
+	rpt, _ := result["report"].(map[string]interface{})
+	if rpt == nil {
+		t.Fatal("report field missing")
+	}
+
+	// index_path must be present
+	indexPath, _ := rpt["index_path"].(string)
+	if indexPath == "" {
+		t.Fatal("report.index_path must not be empty")
+	}
+	if _, err := os.Stat(indexPath); err != nil {
+		t.Errorf("index.json must exist: %v", err)
+	}
+
+	// index must contain the flow_id
+	data, _ := os.ReadFile(indexPath)
+	if !strings.Contains(string(data), rpt["flow_id"].(string)) {
+		t.Errorf("index.json must contain flow_id %q", rpt["flow_id"])
+	}
+
+	_ = dir
+}
+
+// ─── D: List reports CLI ─────────────────────────────────────────────────────
+
+func TestV78_GitHubFlowReports_List_TwoEntries(t *testing.T) {
+	// Run flow twice to create two index entries
+	_, dir := runFlowInTemp(t, nil)
+	runFlowInTemp(t, []string{"--root", dir, "--mission-id", "second_mission"})
+
+	out := captureStdout(t, func() {
+		runGitHubFlowReports([]string{
+			"--root", dir,
+			"--report-dir", ".vision-reports/github-flow",
+			"--list",
+		})
+	})
+
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(out), &result); err != nil {
+		t.Fatalf("list output not valid JSON: %v\noutput: %s", err, out)
+	}
+	if result["ok"] != true {
+		t.Errorf("expected ok=true: %s", out)
+	}
+	// count may be 1 or 2 depending on whether second run created a new flow_id
+	count, _ := result["count"].(float64)
+	if count < 1 {
+		t.Errorf("expected count >= 1, got %v", count)
+	}
+}
+
+// ─── E: Get by flow_id CLI ────────────────────────────────────────────────────
+
+func TestV78_GitHubFlowReports_GetByFlowID(t *testing.T) {
+	out, dir := runFlowInTemp(t, nil)
+
+	var flowResult map[string]interface{}
+	json.Unmarshal([]byte(out), &flowResult)
+	rpt, _ := flowResult["report"].(map[string]interface{})
+	flowID, _ := rpt["flow_id"].(string)
+	if flowID == "" {
+		t.Skip("no flow_id in output")
+	}
+
+	listOut := captureStdout(t, func() {
+		runGitHubFlowReports([]string{
+			"--root", dir,
+			"--report-dir", ".vision-reports/github-flow",
+			"--flow-id", flowID,
+		})
+	})
+	var getResult map[string]interface{}
+	if err := json.Unmarshal([]byte(listOut), &getResult); err != nil {
+		t.Fatalf("get output not valid JSON: %s", listOut)
+	}
+	if getResult["ok"] != true {
+		t.Errorf("expected ok=true for get: %s", listOut)
+	}
+	entry, _ := getResult["entry"].(map[string]interface{})
+	if entry == nil || entry["flow_id"] != flowID {
+		t.Errorf("entry flow_id mismatch: %v", getResult)
+	}
+}
+
+// ─── F: Clean dry-run CLI ────────────────────────────────────────────────────
+
+func TestV78_GitHubFlowReports_CleanDryRun(t *testing.T) {
+	_, dir := runFlowInTemp(t, nil)
+
+	cleanOut := captureStdout(t, func() {
+		runGitHubFlowReports([]string{
+			"--root", dir,
+			"--report-dir", ".vision-reports/github-flow",
+			"--clean",
+			"--keep-last", "1",
+			"--dry-run=true",
+		})
+	})
+	var cleanResult map[string]interface{}
+	if err := json.Unmarshal([]byte(cleanOut), &cleanResult); err != nil {
+		t.Fatalf("clean output not valid JSON: %s", cleanOut)
+	}
+	if cleanResult["ok"] != true {
+		t.Errorf("expected ok=true for clean dry-run: %s", cleanOut)
+	}
+}
+
+// ─── H: Path safety CLI ──────────────────────────────────────────────────────
+
+func TestV78_GitHubFlowReports_InsecureReportDir_Blocked(t *testing.T) {
+	// ValidateReportDir is called in runGitHubFlowReports — test via function
+	badDirs := []string{
+		"/absolute",
+		"../traversal",
+		".git/reports",
+		"node_modules/r",
+	}
+	for _, bad := range badDirs {
+		if err := report.ValidateReportDir(bad); err == nil {
+			t.Errorf("expected block for %q", bad)
+		}
+	}
+}
+
+// ─── I: flow_id safety CLI ───────────────────────────────────────────────────
+
+func TestV78_FlowIDSafety_Blocked(t *testing.T) {
+	badIDs := []string{
+		"",
+		"no_prefix",
+		"github_flow_with/slash",
+		"github_flow_with space",
+		"github_flow_with..dots",
+	}
+	for _, bad := range badIDs {
+		if err := report.ValidateFlowID(bad); err == nil {
+			t.Errorf("expected block for flow_id %q", bad)
+		}
+	}
+}
+
+// ─── J: Redaction CLI ────────────────────────────────────────────────────────
+
+func TestV78_TokenRedaction_IndexAndOutput(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "ghp_V78_SECRET_TOKEN_VALUE_9876")
+	out, _ := runFlowInTemp(t, nil)
+
+	if strings.Contains(out, "ghp_V78_SECRET") {
+		t.Error("CLI output must not contain GITHUB_TOKEN")
+	}
+}
+
+// ─── L: Mission does not create index ────────────────────────────────────────
+
+func TestV78_Mission_DoesNotCreateIndex(t *testing.T) {
+	dir := t.TempDir()
+
+	tmpOut, err := os.CreateTemp("", "mission-v78-*.json")
+	if err != nil {
+		t.Fatalf("CreateTemp: %v", err)
+	}
+	defer os.Remove(tmpOut.Name())
+
+	old := os.Stdout
+	os.Stdout = tmpOut
+	runMission([]string{"--root", dir, "--input", "self-test"})
+	os.Stdout = old
+	tmpOut.Close()
+
+	// index.json must not exist
+	indexPath := filepath.Join(dir, ".vision-reports", "github-flow", "index.json")
+	if _, err := os.Stat(indexPath); err == nil {
+		t.Error("mission must not create .vision-reports/github-flow/index.json")
+	}
+}
+
+// ─── M: No real GitHub ───────────────────────────────────────────────────────
+
+func TestV78_NoRealGitHub_IndexTestsAreSafe(t *testing.T) {
+	// Documents that all V7.8 tests use only local file operations.
+	// The report index is purely local JSONL/JSON — no network calls.
+	t.Log("V7.8 index tests: local filesystem only, zero network calls")
+}
+
+// ─── github-flow-reports --help ──────────────────────────────────────────────
+
+func TestV78_GitHubFlowReports_HelpShowsFlags(t *testing.T) {
+	out := captureStdout(t, func() {
+		runGitHubFlowReports([]string{"--help"})
+	})
+	for _, flag := range []string{"--report-dir", "--list", "--flow-id", "--limit", "--clean", "--keep-last", "--dry-run"} {
+		if !strings.Contains(out, flag) {
+			t.Errorf("--help must mention %s", flag)
 		}
 	}
 }

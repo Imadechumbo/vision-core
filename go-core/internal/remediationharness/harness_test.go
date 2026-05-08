@@ -263,8 +263,12 @@ func writeFile(t *testing.T, root, rel, content string) {
 }
 
 func contains(items []string, want string) bool {
+	// Normalize to forward slashes for cross-platform comparison.
+	// On Windows, filepath operations may return backslashes while
+	// test fixtures use forward slashes.
+	wantNorm := filepath.ToSlash(want)
 	for _, item := range items {
-		if item == want {
+		if filepath.ToSlash(item) == wantNorm {
 			return true
 		}
 	}
