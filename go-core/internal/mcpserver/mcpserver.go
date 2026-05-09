@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/visioncore/go-core/internal/authorizationmanifest"
 	"github.com/visioncore/go-core/internal/codeburn"
 	"github.com/visioncore/go-core/internal/contractregistry"
 	"github.com/visioncore/go-core/internal/dashboard"
@@ -119,6 +120,12 @@ const (
 	ToolExecutorRehearsalBoundary = "vision.executor_rehearsal_boundary"
 	ToolExecutorRehearsalAudit    = "vision.executor_rehearsal_audit"
 	ToolExecutorRehearsalExplain  = "vision.executor_rehearsal_explain"
+	// V9.4 External Executor Authorization Manifest tools
+	ToolExecutorAuthorizationManifest = "vision.executor_authorization_manifest"
+	ToolExecutorAuthorizationValidate = "vision.executor_authorization_validate"
+	ToolExecutorAuthorizationBoundary = "vision.executor_authorization_boundary"
+	ToolExecutorAuthorizationAudit    = "vision.executor_authorization_audit"
+	ToolExecutorAuthorizationExplain  = "vision.executor_authorization_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -220,6 +227,12 @@ var allowedTools = map[string]bool{
 	ToolExecutorRehearsalBoundary: true,
 	ToolExecutorRehearsalAudit:    true,
 	ToolExecutorRehearsalExplain:  true,
+	// V9.4 External Executor Authorization Manifest tools
+	ToolExecutorAuthorizationManifest: true,
+	ToolExecutorAuthorizationValidate: true,
+	ToolExecutorAuthorizationBoundary: true,
+	ToolExecutorAuthorizationAudit:    true,
+	ToolExecutorAuthorizationExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -415,6 +428,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleExecutorRehearsalAudit(req)
 	case ToolExecutorRehearsalExplain:
 		return handleExecutorRehearsalExplain(req)
+	// V9.4 External Executor Authorization Manifest tools
+	case ToolExecutorAuthorizationManifest:
+		return handleExecutorAuthorizationManifest(req)
+	case ToolExecutorAuthorizationValidate:
+		return handleExecutorAuthorizationValidate(req)
+	case ToolExecutorAuthorizationBoundary:
+		return handleExecutorAuthorizationBoundary(req)
+	case ToolExecutorAuthorizationAudit:
+		return handleExecutorAuthorizationAudit(req)
+	case ToolExecutorAuthorizationExplain:
+		return handleExecutorAuthorizationExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -1467,4 +1491,55 @@ func handleExecutorRehearsalExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: rehearsalrecorder.ExplainRehearsal(a)}
+}
+
+// ── V9.4 External Executor Authorization Manifest Handlers ──────────────────
+
+func parseAuthorizationInput(req ToolRequest) (authorizationmanifest.AuthorizationInput, error) {
+	var a authorizationmanifest.AuthorizationInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleExecutorAuthorizationManifest(req ToolRequest) ToolResponse {
+	a, err := parseAuthorizationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: authorizationmanifest.BuildAuthorizationManifest(a)}
+}
+
+func handleExecutorAuthorizationValidate(req ToolRequest) ToolResponse {
+	a, err := parseAuthorizationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: authorizationmanifest.ValidateAuthorization(a)}
+}
+
+func handleExecutorAuthorizationBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: authorizationmanifest.BuildAuthorizationBoundary()}
+}
+
+func handleExecutorAuthorizationAudit(req ToolRequest) ToolResponse {
+	a, err := parseAuthorizationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: authorizationmanifest.AuditAuthorization(a)}
+}
+
+func handleExecutorAuthorizationExplain(req ToolRequest) ToolResponse {
+	a, err := parseAuthorizationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: authorizationmanifest.ExplainAuthorization(a)}
 }
