@@ -27,6 +27,7 @@ import (
 	"github.com/visioncore/go-core/internal/graphmemory"
 	"github.com/visioncore/go-core/internal/handoffpackage"
 	"github.com/visioncore/go-core/internal/impeccable"
+	"github.com/visioncore/go-core/internal/invocationboundary"
 	"github.com/visioncore/go-core/internal/policymatrix"
 	"github.com/visioncore/go-core/internal/promotioncontract"
 	"github.com/visioncore/go-core/internal/readiness"
@@ -140,6 +141,12 @@ const (
 	ToolExecutorHandoffBoundary = "vision.executor_handoff_boundary"
 	ToolExecutorHandoffAudit    = "vision.executor_handoff_audit"
 	ToolExecutorHandoffExplain  = "vision.executor_handoff_explain"
+	// V9.7 External Executor Invocation Boundary tools
+	ToolExecutorInvocationBoundary         = "vision.executor_invocation_boundary"
+	ToolExecutorInvocationValidate         = "vision.executor_invocation_validate"
+	ToolExecutorInvocationHardDenyBoundary = "vision.executor_invocation_hard_deny_boundary"
+	ToolExecutorInvocationAudit            = "vision.executor_invocation_audit"
+	ToolExecutorInvocationExplain          = "vision.executor_invocation_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -259,6 +266,12 @@ var allowedTools = map[string]bool{
 	ToolExecutorHandoffBoundary: true,
 	ToolExecutorHandoffAudit:    true,
 	ToolExecutorHandoffExplain:  true,
+	// V9.7 External Executor Invocation Boundary tools
+	ToolExecutorInvocationBoundary:         true,
+	ToolExecutorInvocationValidate:         true,
+	ToolExecutorInvocationHardDenyBoundary: true,
+	ToolExecutorInvocationAudit:            true,
+	ToolExecutorInvocationExplain:          true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -487,6 +500,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleExecutorHandoffAudit(req)
 	case ToolExecutorHandoffExplain:
 		return handleExecutorHandoffExplain(req)
+	// V9.7 External Executor Invocation Boundary tools
+	case ToolExecutorInvocationBoundary:
+		return handleExecutorInvocationBoundary(req)
+	case ToolExecutorInvocationValidate:
+		return handleExecutorInvocationValidate(req)
+	case ToolExecutorInvocationHardDenyBoundary:
+		return handleExecutorInvocationHardDenyBoundary(req)
+	case ToolExecutorInvocationAudit:
+		return handleExecutorInvocationAudit(req)
+	case ToolExecutorInvocationExplain:
+		return handleExecutorInvocationExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -1692,4 +1716,58 @@ func handleExecutorHandoffExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: handoffpackage.ExplainHandoff(a)}
+}
+
+// ── V9.7 External Executor Invocation Boundary Handlers ────────────────────
+
+func parseInvocationInput(req ToolRequest) (invocationboundary.InvocationInput, error) {
+	var a invocationboundary.InvocationInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleExecutorInvocationBoundary(req ToolRequest) ToolResponse {
+	if len(req.Args) == 0 || strings.TrimSpace(string(req.Args)) == "{}" {
+		return ToolResponse{Tool: req.Tool, OK: true, Payload: invocationboundary.BuildInvocationHardDenyBoundary()}
+	}
+	a, err := parseInvocationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: invocationboundary.BuildInvocationBoundary(a)}
+}
+
+func handleExecutorInvocationValidate(req ToolRequest) ToolResponse {
+	a, err := parseInvocationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: invocationboundary.ValidateInvocationBoundary(a)}
+}
+
+func handleExecutorInvocationHardDenyBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: invocationboundary.BuildInvocationHardDenyBoundary()}
+}
+
+func handleExecutorInvocationAudit(req ToolRequest) ToolResponse {
+	a, err := parseInvocationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: invocationboundary.AuditInvocationBoundary(a)}
+}
+
+func handleExecutorInvocationExplain(req ToolRequest) ToolResponse {
+	a, err := parseInvocationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: invocationboundary.ExplainInvocationBoundary(a)}
 }
