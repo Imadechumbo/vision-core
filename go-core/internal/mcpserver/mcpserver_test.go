@@ -2048,3 +2048,143 @@ func TestV91RegressionToolsV80ThroughV90StillWork(t *testing.T) {
 		}
 	}
 }
+
+func completeSafetyArgs() map[string]interface{} {
+	return map[string]interface{}{
+		"mission_input":            "CORS origin blocked",
+		"operation":                "external_executor_safety_check",
+		"executor":                 "external_promotion_executor",
+		"target":                   "stable",
+		"environment":              "local",
+		"promotion_contract_valid": true,
+		"gates": []map[string]interface{}{
+			{"gate": "PASS_GOLD", "real_evidence": true, "dry_run": false, "synthesized": false, "recognized_by_authority": true},
+			{"gate": "PASS_SECURE", "real_evidence": true, "dry_run": false, "synthesized": false, "recognized_by_authority": true},
+		},
+		"rollback_policy":   map[string]interface{}{"present": true, "strategy": "snapshot_restore", "snapshot_required": true, "restore_command_declared": true, "validation_after_rollback": true, "max_attempts": 1, "manual_intervention_required": true},
+		"idempotency":       map[string]interface{}{"present": true, "key": "promo-001", "scope": "project-branch-target", "replay_protection": true, "duplicate_action_behavior": "block"},
+		"lock":              map[string]interface{}{"present": true, "lock_id": "vision-core-stable", "lease_seconds": 900, "owner": "external_promotion_executor", "prevents_concurrent_execution": true},
+		"timeout":           map[string]interface{}{"present": true, "max_seconds": 900, "graceful_abort": true, "hard_abort": true},
+		"kill_switch":       map[string]interface{}{"present": true, "enabled": true, "trigger": "manual_or_policy", "manual_override": true},
+		"audit_trail":       map[string]interface{}{"present": true, "audit_id": "audit-001", "records_inputs": true, "records_outputs": true, "records_gate_artifacts": true, "records_decisions": true, "immutable_target_declared": true},
+		"dry_run_rehearsal": map[string]interface{}{"present": true, "rehearsal_id": "dryrun-001", "completed": true, "matched_target": true, "matched_environment": true, "no_mutation_confirmed": true},
+		"observability":     map[string]interface{}{"present": true, "health_checks": true, "metrics": true, "logs": true, "post_execution_watch_seconds": 600, "alerting_declared": true},
+		"fallback":          map[string]interface{}{"present": true, "fallback_target": "previous-stable", "fallback_strategy": "manual_hold_then_restore", "manual_hold_required": true},
+	}
+}
+
+func TestV92SafetyToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolExecutorSafetyEnvelope, mcpserver.ToolExecutorSafetyValidate, mcpserver.ToolExecutorSafetyBoundary, mcpserver.ToolExecutorSafetyAudit, mcpserver.ToolExecutorSafetyExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Args: mkArgs(map[string]interface{}{})})
+		if !resp.OK {
+			t.Fatalf("V9.2 tool %s should be registered: %+v", tool, resp)
+		}
+	}
+}
+
+func TestExecuteExecutorSafetyEnvelopeReturnsV92ReadOnlyDryRun(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorSafetyEnvelope, Args: mkArgs(completeSafetyArgs())})
+	if !resp.OK {
+		t.Fatalf("executor safety envelope failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	if p["version"] != "V9.2" || p["dry_run"] != true || p["read_only"] != true || p["would_allow_external_executor"] != true || p["promotion_allowed"] != false || p["deploy_allowed"] != false {
+		t.Fatalf("unexpected safety envelope payload: %+v", p)
+	}
+}
+
+func TestExecuteExecutorSafetyValidateBlocksMCPAndPromotionAllowed(t *testing.T) {
+	args := map[string]interface{}{"executor": "mcp", "target": "stable", "environment": "local", "promotion_contract_valid": false, "promotion_allowed": true, "attempt_external_call": true, "gates": []map[string]interface{}{{"gate": "PASS_GOLD", "real_evidence": false, "dry_run": true, "synthesized": true}}}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorSafetyValidate, Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("executor safety validate failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	if p["version"] != "V9.2" || p["valid"] != false || p["blocked"] != true || p["mcp_execution_allowed"] != false {
+		t.Fatalf("expected blocked validation: %+v", p)
+	}
+	claims, _ := p["unsafe_claims"].([]interface{})
+	if len(claims) == 0 {
+		t.Fatalf("expected unsafe claims: %+v", p)
+	}
+}
+
+func TestExecuteExecutorSafetyBoundaryListsForbiddenInsideMCP(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorSafetyBoundary})
+	if !resp.OK {
+		t.Fatalf("executor safety boundary failed: %s", resp.Error)
+	}
+	b, _ := json.Marshal(resp.Payload)
+	s := string(b)
+	for _, want := range []string{`"version":"V9.2"`, `"dry_run":true`, `"read_only":true`, "forbidden_inside_mcp", "promote", "deploy", "publish_status", "write_memory", "call_external_executor", "acquire_real_lock", "perform_rollback"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("safety boundary missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestExecuteExecutorSafetyAuditDetectsExternalCallAttempt(t *testing.T) {
+	args := map[string]interface{}{"executor": "mcp", "operation": "promote", "promotion_allowed": true, "deploy_allowed": true, "attempt_external_call": true, "attempt_real_rollback": true, "gates": []map[string]interface{}{{"gate": "PASS_GOLD", "dry_run": true, "real_evidence": false, "synthesized": true}}}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorSafetyAudit, Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("executor safety audit failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	if p["version"] != "V9.2" || p["executor_call_attempt_found"] != true || p["unsafe_claims_found"] != true || p["missing_controls_found"] != true {
+		t.Fatalf("expected audit findings: %+v", p)
+	}
+}
+
+func TestExecuteExecutorSafetyExplainWhyMCPCannotExecute(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorSafetyExplain, Args: mkArgs(map[string]interface{}{"operation": "promote", "executor": "external_promotion_executor"})})
+	if !resp.OK {
+		t.Fatalf("executor safety explain failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	why, _ := p["why_mcp_cannot_execute"].([]interface{})
+	gates, _ := p["required_gates"].([]interface{})
+	if p["version"] != "V9.2" || p["dry_run"] != true || p["read_only"] != true || len(why) == 0 || len(gates) != 2 {
+		t.Fatalf("expected explain details: %+v", p)
+	}
+}
+
+func TestV92MutatingToolsStillBlockedWithCanonicalError(t *testing.T) {
+	for _, tool := range []string{"vision.apply_patch", "vision.write_file", "vision.commit", "vision.push", "vision.open_pr", "vision.publish_status", "vision.run_mission_real", "vision.rollback", "vision.deploy"} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+		if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+			t.Fatalf("tool %s must remain blocked with canonical error, got %+v", tool, resp)
+		}
+	}
+}
+
+func TestV92RegressionToolsV80ThroughV91StillWork(t *testing.T) {
+	root := buildIndex(t)
+	tests := []struct {
+		version string
+		tool    string
+		args    interface{}
+	}{
+		{"V9.1", mcpserver.ToolPromotionContractBoundary, nil},
+		{"V9.0", mcpserver.ToolGateAuthorityPolicy, nil},
+		{"V8.9", mcpserver.ToolReadinessExplain, nil},
+		{"V8.8", mcpserver.ToolEvidenceExplain, nil},
+		{"V8.7", mcpserver.ToolContractAudit, nil},
+		{"V8.6", mcpserver.ToolPolicyConflicts, nil},
+		{"V8.5", mcpserver.ToolDashboardToolInventory, nil},
+		{"V8.4", mcpserver.ToolImpeccableGuardStatus, nil},
+		{"V8.3", mcpserver.ToolCodeBurnGuardStatus, nil},
+		{"V8.2", mcpserver.ToolDryRunRiskAssessment, map[string]interface{}{"files": []string{"frontend/index.html"}, "operation": "mission"}},
+		{"V8.1", mcpserver.ToolGraphProviders, nil},
+		{"V8.0", mcpserver.ToolProjectSummary, nil},
+	}
+	for _, tc := range tests {
+		req := mcpserver.ToolRequest{Tool: tc.tool, Root: root}
+		if tc.args != nil {
+			req.Args = mkArgs(tc.args)
+		}
+		resp := mcpserver.Dispatch(req)
+		if !resp.OK {
+			t.Fatalf("%s regression tool %s failed: %s", tc.version, tc.tool, resp.Error)
+		}
+	}
+}

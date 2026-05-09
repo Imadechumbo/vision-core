@@ -28,6 +28,7 @@ import (
 	"github.com/visioncore/go-core/internal/promotioncontract"
 	"github.com/visioncore/go-core/internal/readiness"
 	"github.com/visioncore/go-core/internal/report"
+	"github.com/visioncore/go-core/internal/safetyenvelope"
 )
 
 // ── Tool names ────────────────────────────────────────────────────────────────
@@ -105,6 +106,12 @@ const (
 	ToolPromotionContractBoundary = "vision.promotion_contract_boundary"
 	ToolPromotionContractAudit    = "vision.promotion_contract_audit"
 	ToolPromotionContractExplain  = "vision.promotion_contract_explain"
+	// V9.2 External Executor Safety Envelope tools
+	ToolExecutorSafetyEnvelope = "vision.executor_safety_envelope"
+	ToolExecutorSafetyValidate = "vision.executor_safety_validate"
+	ToolExecutorSafetyBoundary = "vision.executor_safety_boundary"
+	ToolExecutorSafetyAudit    = "vision.executor_safety_audit"
+	ToolExecutorSafetyExplain  = "vision.executor_safety_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -194,6 +201,12 @@ var allowedTools = map[string]bool{
 	ToolPromotionContractBoundary: true,
 	ToolPromotionContractAudit:    true,
 	ToolPromotionContractExplain:  true,
+	// V9.2 External Executor Safety Envelope tools
+	ToolExecutorSafetyEnvelope: true,
+	ToolExecutorSafetyValidate: true,
+	ToolExecutorSafetyBoundary: true,
+	ToolExecutorSafetyAudit:    true,
+	ToolExecutorSafetyExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -367,6 +380,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handlePromotionContractAudit(req)
 	case ToolPromotionContractExplain:
 		return handlePromotionContractExplain(req)
+	// V9.2 External Executor Safety Envelope tools
+	case ToolExecutorSafetyEnvelope:
+		return handleExecutorSafetyEnvelope(req)
+	case ToolExecutorSafetyValidate:
+		return handleExecutorSafetyValidate(req)
+	case ToolExecutorSafetyBoundary:
+		return handleExecutorSafetyBoundary(req)
+	case ToolExecutorSafetyAudit:
+		return handleExecutorSafetyAudit(req)
+	case ToolExecutorSafetyExplain:
+		return handleExecutorSafetyExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -1317,4 +1341,55 @@ func handlePromotionContractExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotioncontract.ExplainContract(a)}
+}
+
+// ── V9.2 External Executor Safety Envelope Handlers ───────────────────────
+
+func parseSafetyEnvelopeInput(req ToolRequest) (safetyenvelope.SafetyEnvelopeInput, error) {
+	var a safetyenvelope.SafetyEnvelopeInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleExecutorSafetyEnvelope(req ToolRequest) ToolResponse {
+	a, err := parseSafetyEnvelopeInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: safetyenvelope.BuildSafetyEnvelope(a)}
+}
+
+func handleExecutorSafetyValidate(req ToolRequest) ToolResponse {
+	a, err := parseSafetyEnvelopeInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: safetyenvelope.ValidateSafetyEnvelope(a)}
+}
+
+func handleExecutorSafetyBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: safetyenvelope.BuildSafetyBoundary()}
+}
+
+func handleExecutorSafetyAudit(req ToolRequest) ToolResponse {
+	a, err := parseSafetyEnvelopeInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: safetyenvelope.AuditSafetyEnvelope(a)}
+}
+
+func handleExecutorSafetyExplain(req ToolRequest) ToolResponse {
+	a, err := parseSafetyEnvelopeInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: safetyenvelope.ExplainSafetyEnvelope(a)}
 }
