@@ -33,6 +33,7 @@ import (
 	"github.com/visioncore/go-core/internal/readiness"
 	"github.com/visioncore/go-core/internal/rehearsalrecorder"
 	"github.com/visioncore/go-core/internal/report"
+	"github.com/visioncore/go-core/internal/resultintake"
 	"github.com/visioncore/go-core/internal/safetyenvelope"
 )
 
@@ -147,6 +148,12 @@ const (
 	ToolExecutorInvocationHardDenyBoundary = "vision.executor_invocation_hard_deny_boundary"
 	ToolExecutorInvocationAudit            = "vision.executor_invocation_audit"
 	ToolExecutorInvocationExplain          = "vision.executor_invocation_explain"
+	// V9.8 External Executor Result Intake Boundary tools
+	ToolExecutorResultIntake   = "vision.executor_result_intake"
+	ToolExecutorResultValidate = "vision.executor_result_validate"
+	ToolExecutorResultBoundary = "vision.executor_result_boundary"
+	ToolExecutorResultAudit    = "vision.executor_result_audit"
+	ToolExecutorResultExplain  = "vision.executor_result_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -272,6 +279,12 @@ var allowedTools = map[string]bool{
 	ToolExecutorInvocationHardDenyBoundary: true,
 	ToolExecutorInvocationAudit:            true,
 	ToolExecutorInvocationExplain:          true,
+	// V9.8 External Executor Result Intake Boundary tools
+	ToolExecutorResultIntake:   true,
+	ToolExecutorResultValidate: true,
+	ToolExecutorResultBoundary: true,
+	ToolExecutorResultAudit:    true,
+	ToolExecutorResultExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -511,6 +524,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleExecutorInvocationAudit(req)
 	case ToolExecutorInvocationExplain:
 		return handleExecutorInvocationExplain(req)
+	// V9.8 External Executor Result Intake Boundary tools
+	case ToolExecutorResultIntake:
+		return handleExecutorResultIntake(req)
+	case ToolExecutorResultValidate:
+		return handleExecutorResultValidate(req)
+	case ToolExecutorResultBoundary:
+		return handleExecutorResultBoundary(req)
+	case ToolExecutorResultAudit:
+		return handleExecutorResultAudit(req)
+	case ToolExecutorResultExplain:
+		return handleExecutorResultExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -1770,4 +1794,55 @@ func handleExecutorInvocationExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: invocationboundary.ExplainInvocationBoundary(a)}
+}
+
+// ── V9.8 External Executor Result Intake Boundary Handlers ─────────────────
+
+func parseResultIntakeInput(req ToolRequest) (resultintake.ResultIntakeInput, error) {
+	var a resultintake.ResultIntakeInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleExecutorResultIntake(req ToolRequest) ToolResponse {
+	a, err := parseResultIntakeInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: resultintake.BuildResultIntake(a)}
+}
+
+func handleExecutorResultValidate(req ToolRequest) ToolResponse {
+	a, err := parseResultIntakeInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: resultintake.ValidateResultIntake(a)}
+}
+
+func handleExecutorResultBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: resultintake.BuildResultIntakeBoundary()}
+}
+
+func handleExecutorResultAudit(req ToolRequest) ToolResponse {
+	a, err := parseResultIntakeInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: resultintake.AuditResultIntake(a)}
+}
+
+func handleExecutorResultExplain(req ToolRequest) ToolResponse {
+	a, err := parseResultIntakeInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: resultintake.ExplainResultIntake(a)}
 }
