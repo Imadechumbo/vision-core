@@ -3106,3 +3106,124 @@ func TestV100RegressionToolsV80ThroughV99StillRegistered(t *testing.T) {
 		}
 	}
 }
+
+func validPromotionFirewallArgs() map[string]interface{} {
+	return map[string]interface{}{
+		"decision_id":                  "decision-001",
+		"executor":                     "external_promotion_executor",
+		"executor_mode":                "external_only",
+		"promotion_decision_candidate": true,
+		"real_gates": []map[string]interface{}{
+			{"gate": "PASS_GOLD", "status": "pass", "real_evidence": true, "source": "validator", "artifact_id": "pg", "recognized_by_authority": true},
+			{"gate": "PASS_SECURE", "status": "pass", "real_evidence": true, "source": "runner", "artifact_id": "ps", "recognized_by_authority": true},
+		},
+		"human_approval":             map[string]interface{}{"present": true, "approved": true, "approver": "operator", "approval_reference": "approval-001"},
+		"independent_revalidation":   map[string]interface{}{"present": true, "completed": true, "validator": "reviewer", "revalidation_reference": "reval-001"},
+		"rollback_requirements":      map[string]interface{}{"present": true, "rollback_plan_present": true},
+		"observability_requirements": map[string]interface{}{"present": true, "health_checks_present": true, "metrics_present": true, "alerting_present": true},
+		"policy":                     map[string]interface{}{"present": true, "reject_execution_claims": true, "require_external_only": true, "require_read_only_dry_run": true},
+		"controls":                   map[string]interface{}{"present": true, "read_only": true, "dry_run": true, "no_executor_call": true, "no_network_call": true, "no_command_execution": true, "no_file_write": true, "no_real_lock": true},
+	}
+}
+
+func TestV101PromotionFirewallToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolPromotionExecutionFirewall, mcpserver.ToolPromotionFirewallValidate, mcpserver.ToolPromotionFirewallBoundary, mcpserver.ToolPromotionFirewallAudit, mcpserver.ToolPromotionFirewallExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir(), Args: mkArgs(validPromotionFirewallArgs())})
+		if strings.Contains(resp.Error, "unknown tool") {
+			t.Fatalf("V10.1 tool %s not registered", tool)
+		}
+	}
+}
+
+func TestPromotionExecutionFirewallReturnsV101ReadOnlyDryRunAndDeniesExecution(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPromotionExecutionFirewall, Root: t.TempDir(), Args: mkArgs(validPromotionFirewallArgs())})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V10.1"`, `"dry_run":true`, `"read_only":true`, `"firewall_status":"execution_eligibility_ready_dry_run"`, `"execution_eligibility_ready_dry_run":true`, `"mcp_execution_allowed":false`, `"executor_call_allowed":false`, `"network_call_allowed":false`, `"command_execution_allowed":false`, `"file_write_allowed":false`, `"promotion_allowed":false`, `"deploy_allowed":false`, `"status_publish_allowed":false`, `"memory_write_allowed":false`, `"stable_promotion_allowed":false`, `"learning_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestPromotionFirewallValidateBlocksRequiredFailuresAndClaims(t *testing.T) {
+	args := validPromotionFirewallArgs()
+	args["executor"] = "mcp"
+	args["executor_mode"] = "inside_mcp"
+	args["promotion_decision_candidate"] = false
+	args["promotion_allowed"] = true
+	args["deploy_allowed"] = true
+	args["status_publish_allowed"] = true
+	args["memory_write_allowed"] = true
+	args["execution_allowed"] = true
+	args["executor_call_allowed"] = true
+	args["network_call_allowed"] = true
+	args["command_execution_allowed"] = true
+	args["file_write_allowed"] = true
+	args["real_gates"] = []map[string]interface{}{{"gate": "PASS_GOLD", "status": "pass", "real_evidence": true, "dry_run": true, "synthesized": true, "recognized_by_authority": false}}
+	args["human_approval"] = map[string]interface{}{"present": true, "approved": true, "approval_is_placeholder": true}
+	args["independent_revalidation"] = map[string]interface{}{"present": true, "completed": true, "revalidation_is_placeholder": true}
+	args["rollback_requirements"] = nil
+	args["observability_requirements"] = nil
+	args["policy"] = nil
+	args["controls"] = nil
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPromotionFirewallValidate, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V10.1"`, `"valid":false`, `"blocked":true`, "executor_must_not_be_mcp", "executor_mode_must_be_external_only", "promotion_decision_candidate", "PASS_SECURE_REAL", "PASS_GOLD_dry_run_gate_claim", "PASS_GOLD_synthesized_gate_claim", "PASS_GOLD_not_recognized_by_authority", "human_approval_placeholder", "independent_revalidation_placeholder", "rollback_requirements", "observability_requirements", "policy", "controls", "promotion_allowed", "deploy_allowed", "status_publish_allowed", "memory_write_allowed", "execution_allowed", "executor_call_allowed", "network_call_allowed", "command_execution_allowed", "file_write_allowed"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestPromotionFirewallBoundaryAndExplain(t *testing.T) {
+	for _, tc := range []struct {
+		tool  string
+		wants []string
+	}{
+		{mcpserver.ToolPromotionFirewallBoundary, []string{`"version":"V10.1"`, `"forbidden_inside_mcp":`, "call_executor", "acquire_lock", "execute_rollback", `"always_denied":`, "mcp_execution_allowed", "learning_allowed"}},
+		{mcpserver.ToolPromotionFirewallExplain, []string{`"version":"V10.1"`, `"why_eligibility_is_not_execution":`, "execution_eligibility_ready_dry_run", "PASS_GOLD", "PASS_SECURE"}},
+	} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tc.tool, Root: t.TempDir(), Args: mkArgs(validPromotionFirewallArgs())})
+		if !resp.OK {
+			t.Fatalf("expected ok=true for %s: %s", tc.tool, resp.Error)
+		}
+		s := string(mustJSON(t, resp.Payload))
+		for _, want := range tc.wants {
+			if !strings.Contains(s, want) {
+				t.Fatalf("missing %s in payload: %s", want, s)
+			}
+		}
+	}
+}
+
+func TestPromotionFirewallAuditDetectsUnsafeExecutionAttempts(t *testing.T) {
+	args := validPromotionFirewallArgs()
+	args["executor_call_allowed"] = true
+	args["file_write_allowed"] = true
+	args["promotion_allowed"] = true
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPromotionFirewallAudit, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"unsafe_claims_found":true`, `"executor_call_attempt_found":true`, `"file_write_attempt_found":true`, `"promotion_attempt_found":true`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestV101MutatingToolsStillBlockedExactMessage(t *testing.T) {
+	for _, tool := range []string{"vision.apply_patch", "vision.write_file", "vision.commit", "vision.push", "vision.open_pr", "vision.publish_status", "vision.run_mission_real", "vision.rollback", "vision.deploy"} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+		if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+			t.Fatalf("mutating tool %s must remain blocked with exact message, got ok=%v error=%q", tool, resp.OK, resp.Error)
+		}
+	}
+}

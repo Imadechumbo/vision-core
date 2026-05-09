@@ -31,6 +31,7 @@ import (
 	"github.com/visioncore/go-core/internal/invocationboundary"
 	"github.com/visioncore/go-core/internal/policymatrix"
 	"github.com/visioncore/go-core/internal/promotioncontract"
+	"github.com/visioncore/go-core/internal/promotionfirewall"
 	"github.com/visioncore/go-core/internal/readiness"
 	"github.com/visioncore/go-core/internal/rehearsalrecorder"
 	"github.com/visioncore/go-core/internal/report"
@@ -168,6 +169,12 @@ const (
 	ToolSovereignDecisionBoundary  = "vision.sovereign_decision_boundary"
 	ToolSovereignDecisionAudit     = "vision.sovereign_decision_audit"
 	ToolSovereignDecisionExplain   = "vision.sovereign_decision_explain"
+	// V10.1 Promotion Execution Eligibility Firewall tools
+	ToolPromotionExecutionFirewall = "vision.promotion_execution_firewall"
+	ToolPromotionFirewallValidate  = "vision.promotion_firewall_validate"
+	ToolPromotionFirewallBoundary  = "vision.promotion_firewall_boundary"
+	ToolPromotionFirewallAudit     = "vision.promotion_firewall_audit"
+	ToolPromotionFirewallExplain   = "vision.promotion_firewall_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -311,6 +318,12 @@ var allowedTools = map[string]bool{
 	ToolSovereignDecisionBoundary:  true,
 	ToolSovereignDecisionAudit:     true,
 	ToolSovereignDecisionExplain:   true,
+	// V10.1 Promotion Execution Eligibility Firewall tools
+	ToolPromotionExecutionFirewall: true,
+	ToolPromotionFirewallValidate:  true,
+	ToolPromotionFirewallBoundary:  true,
+	ToolPromotionFirewallAudit:     true,
+	ToolPromotionFirewallExplain:   true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -583,6 +596,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleSovereignDecisionAudit(req)
 	case ToolSovereignDecisionExplain:
 		return handleSovereignDecisionExplain(req)
+	// V10.1 Promotion Execution Eligibility Firewall tools
+	case ToolPromotionExecutionFirewall:
+		return handlePromotionExecutionFirewall(req)
+	case ToolPromotionFirewallValidate:
+		return handlePromotionFirewallValidate(req)
+	case ToolPromotionFirewallBoundary:
+		return handlePromotionFirewallBoundary(req)
+	case ToolPromotionFirewallAudit:
+		return handlePromotionFirewallAudit(req)
+	case ToolPromotionFirewallExplain:
+		return handlePromotionFirewallExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -1995,4 +2019,55 @@ func handleSovereignDecisionExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: sovereigndecision.ExplainSovereignDecision(a)}
+}
+
+// ── V10.1 Promotion Execution Eligibility Firewall Handlers ────────────────
+
+func parsePromotionFirewallInput(req ToolRequest) (promotionfirewall.PromotionFirewallInput, error) {
+	var a promotionfirewall.PromotionFirewallInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handlePromotionExecutionFirewall(req ToolRequest) ToolResponse {
+	a, err := parsePromotionFirewallInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotionfirewall.BuildPromotionFirewall(a)}
+}
+
+func handlePromotionFirewallValidate(req ToolRequest) ToolResponse {
+	a, err := parsePromotionFirewallInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotionfirewall.ValidatePromotionFirewall(a)}
+}
+
+func handlePromotionFirewallBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotionfirewall.BuildPromotionFirewallBoundary()}
+}
+
+func handlePromotionFirewallAudit(req ToolRequest) ToolResponse {
+	a, err := parsePromotionFirewallInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotionfirewall.AuditPromotionFirewall(a)}
+}
+
+func handlePromotionFirewallExplain(req ToolRequest) ToolResponse {
+	a, err := parsePromotionFirewallInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotionfirewall.ExplainPromotionFirewall(a)}
 }
