@@ -25,6 +25,7 @@ import (
 	"github.com/visioncore/go-core/internal/executorpreflight"
 	"github.com/visioncore/go-core/internal/gateauthority"
 	"github.com/visioncore/go-core/internal/graphmemory"
+	"github.com/visioncore/go-core/internal/handoffpackage"
 	"github.com/visioncore/go-core/internal/impeccable"
 	"github.com/visioncore/go-core/internal/policymatrix"
 	"github.com/visioncore/go-core/internal/promotioncontract"
@@ -133,6 +134,12 @@ const (
 	ToolExecutorPreflightBoundary = "vision.executor_preflight_boundary"
 	ToolExecutorPreflightAudit    = "vision.executor_preflight_audit"
 	ToolExecutorPreflightExplain  = "vision.executor_preflight_explain"
+	// V9.6 External Executor Handoff Package tools
+	ToolExecutorHandoffPackage  = "vision.executor_handoff_package"
+	ToolExecutorHandoffValidate = "vision.executor_handoff_validate"
+	ToolExecutorHandoffBoundary = "vision.executor_handoff_boundary"
+	ToolExecutorHandoffAudit    = "vision.executor_handoff_audit"
+	ToolExecutorHandoffExplain  = "vision.executor_handoff_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -246,6 +253,12 @@ var allowedTools = map[string]bool{
 	ToolExecutorPreflightBoundary: true,
 	ToolExecutorPreflightAudit:    true,
 	ToolExecutorPreflightExplain:  true,
+	// V9.6 External Executor Handoff Package tools
+	ToolExecutorHandoffPackage:  true,
+	ToolExecutorHandoffValidate: true,
+	ToolExecutorHandoffBoundary: true,
+	ToolExecutorHandoffAudit:    true,
+	ToolExecutorHandoffExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -463,6 +476,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleExecutorPreflightAudit(req)
 	case ToolExecutorPreflightExplain:
 		return handleExecutorPreflightExplain(req)
+	// V9.6 External Executor Handoff Package tools
+	case ToolExecutorHandoffPackage:
+		return handleExecutorHandoffPackage(req)
+	case ToolExecutorHandoffValidate:
+		return handleExecutorHandoffValidate(req)
+	case ToolExecutorHandoffBoundary:
+		return handleExecutorHandoffBoundary(req)
+	case ToolExecutorHandoffAudit:
+		return handleExecutorHandoffAudit(req)
+	case ToolExecutorHandoffExplain:
+		return handleExecutorHandoffExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -1617,4 +1641,55 @@ func handleExecutorPreflightExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: executorpreflight.ExplainPreflight(a)}
+}
+
+// ── V9.6 External Executor Handoff Package Handlers ────────────────────────
+
+func parseHandoffInput(req ToolRequest) (handoffpackage.HandoffInput, error) {
+	var a handoffpackage.HandoffInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleExecutorHandoffPackage(req ToolRequest) ToolResponse {
+	a, err := parseHandoffInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: handoffpackage.BuildHandoffPackage(a)}
+}
+
+func handleExecutorHandoffValidate(req ToolRequest) ToolResponse {
+	a, err := parseHandoffInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: handoffpackage.ValidateHandoff(a)}
+}
+
+func handleExecutorHandoffBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: handoffpackage.BuildHandoffBoundary()}
+}
+
+func handleExecutorHandoffAudit(req ToolRequest) ToolResponse {
+	a, err := parseHandoffInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: handoffpackage.AuditHandoff(a)}
+}
+
+func handleExecutorHandoffExplain(req ToolRequest) ToolResponse {
+	a, err := parseHandoffInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: handoffpackage.ExplainHandoff(a)}
 }

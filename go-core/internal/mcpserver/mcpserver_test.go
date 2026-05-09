@@ -2560,3 +2560,125 @@ func TestV95RegressionToolsV80ThroughV94StillRegistered(t *testing.T) {
 		}
 	}
 }
+
+func fullHandoffArgs() map[string]interface{} {
+	return map[string]interface{}{
+		"mission_input": "CORS origin blocked", "operation": "external_executor_handoff_package", "handoff_id": "handoff-001", "executor": "external_promotion_executor", "project": "vision-core", "branch": "v6-go-enterprise-runtime", "commit_sha": "b916ea9", "target": "stable", "environment": "local",
+		"authority_summary":              map[string]interface{}{"present": true, "version": "V9.0", "status": "all_real_gates_recognized", "ready": true, "valid": true, "summary": "PASS_GOLD_REAL and PASS_SECURE_REAL recognized."},
+		"promotion_contract_summary":     map[string]interface{}{"present": true, "version": "V9.1", "status": "externally_eligible_dry_run", "ready": true, "valid": true, "summary": "Promotion contract externally eligible in dry-run."},
+		"safety_envelope_summary":        map[string]interface{}{"present": true, "version": "V9.2", "status": "safety_ready_dry_run", "ready": true, "valid": true, "summary": "Safety envelope controls present."},
+		"rehearsal_summary":              map[string]interface{}{"present": true, "version": "V9.3", "status": "rehearsal_ready_dry_run", "ready": true, "valid": true, "summary": "Dry-run rehearsal completed with no-mutation proof."},
+		"authorization_manifest_summary": map[string]interface{}{"present": true, "version": "V9.4", "status": "authorization_ready_dry_run", "ready": true, "valid": true, "summary": "Authorization manifest is valid in dry-run."},
+		"final_preflight_result":         map[string]interface{}{"present": true, "version": "V9.5", "status": "preflight_ready_dry_run", "ready": true, "valid": true, "summary": "Final preflight is ready in dry-run.", "external_execution_preflight_ready": true},
+		"gates": []map[string]interface{}{
+			{"gate": "PASS_GOLD", "status": "pass", "real_evidence": true, "dry_run": false, "synthesized": false, "recognized_by_authority": true, "source": "sddf_passgold_validator", "artifact_id": "pg-123"},
+			{"gate": "PASS_SECURE", "status": "pass", "real_evidence": true, "dry_run": false, "synthesized": false, "recognized_by_authority": true, "source": "passsecure_runner", "artifact_id": "ps-123"},
+		},
+		"artifacts": []map[string]interface{}{
+			{"id": "pg-123", "type": "pass_gold_report", "required": true, "present": true, "trusted": true}, {"id": "ps-123", "type": "pass_secure_report", "required": true, "present": true, "trusted": true}, {"id": "contract-001", "type": "promotion_contract", "required": true, "present": true, "trusted": true}, {"id": "safety-001", "type": "safety_envelope", "required": true, "present": true, "trusted": true}, {"id": "rehearsal-001", "type": "rehearsal_record", "required": true, "present": true, "trusted": true}, {"id": "authz-001", "type": "authorization_manifest", "required": true, "present": true, "trusted": true}, {"id": "preflight-001", "type": "final_preflight", "required": true, "present": true, "trusted": true},
+		},
+		"rollback_requirements":      map[string]interface{}{"present": true, "mandatory": true, "strategy": "snapshot_restore", "snapshot_required": true, "validation_required": true, "manual_intervention_required": true},
+		"kill_switch_requirements":   map[string]interface{}{"present": true, "mandatory": true, "enabled": true, "trigger": "manual_or_policy", "manual_override": true},
+		"observability_requirements": map[string]interface{}{"present": true, "health_checks": true, "metrics": true, "logs": true, "watch_window_seconds": 600, "alerting_declared": true},
+		"boundary":                   map[string]interface{}{"present": true, "no_write_file": true, "no_network_call": true, "no_command_execution": true, "mcp_scope": []string{"read", "validate", "audit", "explain", "simulate handoff package"}, "forbidden_inside_mcp": []string{"write_handoff_file", "execute", "call_external_executor", "promote", "deploy", "publish_status", "mutate", "write_memory"}},
+		"checklist":                  map[string]interface{}{"present": true, "authority_checked": true, "promotion_contract_checked": true, "safety_envelope_checked": true, "rehearsal_checked": true, "authorization_manifest_checked": true, "final_preflight_checked": true, "pass_gold_real_checked": true, "pass_secure_real_checked": true, "rollback_checked": true, "kill_switch_checked": true, "observability_checked": true, "mcp_boundary_checked": true, "no_mutation_checked": true},
+	}
+}
+
+func TestV96HandoffToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolExecutorHandoffPackage, mcpserver.ToolExecutorHandoffValidate, mcpserver.ToolExecutorHandoffBoundary, mcpserver.ToolExecutorHandoffAudit, mcpserver.ToolExecutorHandoffExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir()})
+		if !resp.OK || strings.Contains(resp.Error, "unknown tool") {
+			t.Fatalf("V9.6 tool %s not registered: ok=%v err=%q", tool, resp.OK, resp.Error)
+		}
+	}
+}
+
+func TestExecutorHandoffPackageReturnsV96ReadOnlyDryRun(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorHandoffPackage, Root: t.TempDir(), Args: mkArgs(fullHandoffArgs())})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V9.6"`, `"dry_run":true`, `"read_only":true`, `"package_status":"handoff_ready_dry_run"`, `"external_executor_handoff_ready":true`, `"promotion_allowed":false`, `"deploy_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorHandoffValidateBlocksMCPExecutorCallAndFileWrite(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorHandoffValidate, Root: t.TempDir(), Args: mkArgs(map[string]interface{}{"handoff_id": "handoff-unsafe", "executor": "mcp", "target": "stable", "environment": "local", "promotion_allowed": true, "executor_call_allowed_inside_mcp": true, "file_write_allowed": true, "write_handoff_file": true, "external_executor_handoff_ready": true})})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V9.6"`, `"valid":false`, `"blocked":true`, "executor cannot be mcp or mcp_readonly", "executor_call_allowed_inside_mcp cannot be true", "write_handoff_file cannot be true"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorHandoffBoundaryListsForbiddenInsideMCP(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorHandoffBoundary})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V9.6"`, `"forbidden_inside_mcp":`, "write_handoff_file", "call_external_executor", "authorize_execution_inside_mcp", "perform_rollback"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorHandoffAuditDetectsAttempts(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorHandoffAudit, Root: t.TempDir(), Args: mkArgs(map[string]interface{}{"handoff_id": "handoff-unsafe", "executor": "mcp", "operation": "promote", "promotion_allowed": true, "deploy_allowed": true, "executor_call_allowed_inside_mcp": true, "file_write_allowed": true, "write_handoff_file": true, "attempt_external_call": true, "attempt_real_rollback": true, "file_write": true, "command_execution": true, "network_call": true, "pass_gold": true, "external_executor_handoff_ready": true, "gates": []map[string]interface{}{{"gate": "PASS_GOLD", "dry_run": true, "real_evidence": false, "synthesized": true}}})})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"execution_attempt_found":true`, `"mutation_attempt_found":true`, `"file_write_attempt_found":true`, `"mcp_executor_call_attempt_found":true`, `"dry_run_gate_claim_found":true`, `"synthesized_gate_claim_found":true`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorHandoffExplainIncludesNotPassGoldExecutionOrFile(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorHandoffExplain, Root: t.TempDir(), Args: mkArgs(map[string]interface{}{"operation": "promote", "executor": "external_promotion_executor"})})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V9.6"`, `"why_handoff_is_not_pass_gold":`, `"why_handoff_is_not_execution":`, `"why_handoff_is_not_a_file":`, "PASS_GOLD", "PASS_SECURE"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestV96MutatingToolsStillBlockedExactMessage(t *testing.T) {
+	for _, tool := range []string{"vision.apply_patch", "vision.write_file", "vision.commit", "vision.push", "vision.open_pr", "vision.publish_status", "vision.run_mission_real", "vision.rollback", "vision.deploy"} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+		if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+			t.Fatalf("mutating tool %s must remain blocked with exact message, got ok=%v error=%q", tool, resp.OK, resp.Error)
+		}
+	}
+}
+
+func TestV96RegressionToolsV80ThroughV95StillRegistered(t *testing.T) {
+	tools := []string{mcpserver.ToolProjectSummary, mcpserver.ToolGraphProviders, mcpserver.ToolDryRunRiskAssessment, mcpserver.ToolCodeBurnExplain, mcpserver.ToolImpeccableExplain, mcpserver.ToolDashboardToolInventory, mcpserver.ToolPolicyExplain, mcpserver.ToolContractExplain, mcpserver.ToolEvidenceExplain, mcpserver.ToolReadinessExplain, mcpserver.ToolGateAuthorityExplain, mcpserver.ToolPromotionContractBoundary, mcpserver.ToolExecutorSafetyBoundary, mcpserver.ToolExecutorRehearsalBoundary, mcpserver.ToolExecutorAuthorizationBoundary, mcpserver.ToolExecutorPreflightBoundary}
+	for _, tool := range tools {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir()})
+		if strings.Contains(resp.Error, "unknown tool") {
+			t.Fatalf("regression tool %s became unregistered", tool)
+		}
+	}
+}
