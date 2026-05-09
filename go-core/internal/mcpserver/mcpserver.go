@@ -32,6 +32,7 @@ import (
 	"github.com/visioncore/go-core/internal/policymatrix"
 	"github.com/visioncore/go-core/internal/promotioncontract"
 	"github.com/visioncore/go-core/internal/promotionfirewall"
+	"github.com/visioncore/go-core/internal/promotionsimulation"
 	"github.com/visioncore/go-core/internal/readiness"
 	"github.com/visioncore/go-core/internal/rehearsalrecorder"
 	"github.com/visioncore/go-core/internal/report"
@@ -175,6 +176,12 @@ const (
 	ToolPromotionFirewallBoundary  = "vision.promotion_firewall_boundary"
 	ToolPromotionFirewallAudit     = "vision.promotion_firewall_audit"
 	ToolPromotionFirewallExplain   = "vision.promotion_firewall_explain"
+	// V10.2 Promotion Execution Simulation Recorder tools
+	ToolPromotionExecutionSimulation = "vision.promotion_execution_simulation"
+	ToolPromotionSimulationValidate  = "vision.promotion_simulation_validate"
+	ToolPromotionSimulationBoundary  = "vision.promotion_simulation_boundary"
+	ToolPromotionSimulationAudit     = "vision.promotion_simulation_audit"
+	ToolPromotionSimulationExplain   = "vision.promotion_simulation_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -324,6 +331,12 @@ var allowedTools = map[string]bool{
 	ToolPromotionFirewallBoundary:  true,
 	ToolPromotionFirewallAudit:     true,
 	ToolPromotionFirewallExplain:   true,
+	// V10.2 Promotion Execution Simulation Recorder tools
+	ToolPromotionExecutionSimulation: true,
+	ToolPromotionSimulationValidate:  true,
+	ToolPromotionSimulationBoundary:  true,
+	ToolPromotionSimulationAudit:     true,
+	ToolPromotionSimulationExplain:   true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -607,6 +620,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handlePromotionFirewallAudit(req)
 	case ToolPromotionFirewallExplain:
 		return handlePromotionFirewallExplain(req)
+	// V10.2 Promotion Execution Simulation Recorder tools
+	case ToolPromotionExecutionSimulation:
+		return handlePromotionExecutionSimulation(req)
+	case ToolPromotionSimulationValidate:
+		return handlePromotionSimulationValidate(req)
+	case ToolPromotionSimulationBoundary:
+		return handlePromotionSimulationBoundary(req)
+	case ToolPromotionSimulationAudit:
+		return handlePromotionSimulationAudit(req)
+	case ToolPromotionSimulationExplain:
+		return handlePromotionSimulationExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -2070,4 +2094,55 @@ func handlePromotionFirewallExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotionfirewall.ExplainPromotionFirewall(a)}
+}
+
+// ── V10.2 Promotion Execution Simulation Recorder Handlers ────────────────
+
+func parsePromotionSimulationInput(req ToolRequest) (promotionsimulation.PromotionSimulationInput, error) {
+	var a promotionsimulation.PromotionSimulationInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handlePromotionExecutionSimulation(req ToolRequest) ToolResponse {
+	a, err := parsePromotionSimulationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotionsimulation.BuildPromotionSimulation(a)}
+}
+
+func handlePromotionSimulationValidate(req ToolRequest) ToolResponse {
+	a, err := parsePromotionSimulationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotionsimulation.ValidatePromotionSimulation(a)}
+}
+
+func handlePromotionSimulationBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotionsimulation.BuildPromotionSimulationBoundary()}
+}
+
+func handlePromotionSimulationAudit(req ToolRequest) ToolResponse {
+	a, err := parsePromotionSimulationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotionsimulation.AuditPromotionSimulation(a)}
+}
+
+func handlePromotionSimulationExplain(req ToolRequest) ToolResponse {
+	a, err := parsePromotionSimulationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotionsimulation.ExplainPromotionSimulation(a)}
 }
