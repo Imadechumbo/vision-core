@@ -1769,3 +1769,136 @@ func TestV89RegressionToolsV80ThroughV88StillWork(t *testing.T) {
 		}
 	}
 }
+
+// ── V9.0 PASS GOLD Authority Layer Tests ────────────────────────────────────
+
+func v90RealGoldEvidence() map[string]interface{} {
+	return map[string]interface{}{"gate": "PASS_GOLD", "status": "pass", "source": "sddf_passgold_validator", "artifact_id": "pg-123", "artifact_type": "pass_gold_report", "dry_run": false, "real_evidence": true, "synthesized": false}
+}
+
+func TestV90GateAuthorityToolsRegistered(t *testing.T) {
+	tools := []string{
+		mcpserver.ToolGateAuthoritySnapshot,
+		mcpserver.ToolGateAuthorityDecide,
+		mcpserver.ToolGateAuthorityAudit,
+		mcpserver.ToolGateAuthorityPolicy,
+		mcpserver.ToolGateAuthorityExplain,
+	}
+	for _, tool := range tools {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir()})
+		if !resp.OK {
+			t.Fatalf("tool %s must be registered: %s", tool, resp.Error)
+		}
+	}
+}
+
+func TestExecuteGateAuthoritySnapshotV90ReadOnlyDryRun(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolGateAuthoritySnapshot, Args: mkArgs(map[string]interface{}{"mission_input": "CORS origin blocked", "operation": "promotion_check", "evidences": []map[string]interface{}{v90RealGoldEvidence()}})})
+	if !resp.OK {
+		t.Fatalf("gate authority snapshot failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	if p["version"] != "V9.0" || p["dry_run"] != true || p["read_only"] != true || p["promotion_allowed"] != false || p["deploy_allowed"] != false {
+		t.Fatalf("unexpected snapshot payload: %+v", p)
+	}
+}
+
+func TestExecuteGateAuthorityDecideRecognizesValidPassGoldReal(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolGateAuthorityDecide, Args: mkArgs(map[string]interface{}{"gate": "PASS_GOLD", "evidence": v90RealGoldEvidence()})})
+	if !resp.OK {
+		t.Fatalf("gate authority decide failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	if p["status"] != "recognized_real_gate" || p["recognized"] != true || p["valid"] != true || p["blocked"] != false {
+		t.Fatalf("expected recognized real gate: %+v", p)
+	}
+}
+
+func TestExecuteGateAuthorityDecideRejectsDashboardDryRunSynthesized(t *testing.T) {
+	ev := map[string]interface{}{"gate": "PASS_GOLD", "status": "pass", "source": "dashboard", "artifact_id": "fake", "artifact_type": "dashboard_snapshot", "dry_run": true, "real_evidence": false, "synthesized": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolGateAuthorityDecide, Args: mkArgs(map[string]interface{}{"gate": "PASS_GOLD", "evidence": ev})})
+	if !resp.OK {
+		t.Fatalf("gate authority decide failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	if p["status"] != "rejected_synthesized_gate" || p["recognized"] != false || p["valid"] != false || p["blocked"] != true {
+		t.Fatalf("expected dashboard dry-run synthesized rejection: %+v", p)
+	}
+}
+
+func TestExecuteGateAuthorityAuditDetectsSynthesizedUnauthorizedDryRunGate(t *testing.T) {
+	ev := map[string]interface{}{"gate": "PASS_GOLD", "status": "pass", "source": "readiness", "dry_run": true, "real_evidence": false, "synthesized": true, "promotion_allowed": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolGateAuthorityAudit, Args: mkArgs(map[string]interface{}{"evidences": []map[string]interface{}{ev}})})
+	if !resp.OK {
+		t.Fatalf("gate authority audit failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	if p["synthesized_gate_attempt_found"] != true || p["unauthorized_gate_found"] != true || p["dry_run_gate_claim_found"] != true || p["unsafe_claims_found"] != true {
+		t.Fatalf("expected synthesized/unauthorized/dry-run detection: %+v", p)
+	}
+}
+
+func TestExecuteGateAuthorityPolicyListsSources(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolGateAuthorityPolicy})
+	if !resp.OK {
+		t.Fatalf("gate authority policy failed: %s", resp.Error)
+	}
+	b, _ := json.Marshal(resp.Payload)
+	s := string(b)
+	for _, want := range []string{`"version":"V9.0"`, "sddf_passgold_validator", "passsecure_runner", "dashboard", "readiness", `"required_gates":["PASS_GOLD","PASS_SECURE"]`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("policy missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestExecuteGateAuthorityExplainReturnsWhyNotPromoted(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolGateAuthorityExplain, Args: mkArgs(map[string]interface{}{"gate": "PASS_GOLD", "source": "dashboard"})})
+	if !resp.OK {
+		t.Fatalf("gate authority explain failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	why, _ := p["why_not_promoted"].([]interface{})
+	if p["version"] != "V9.0" || p["dry_run"] != true || p["read_only"] != true || len(why) == 0 {
+		t.Fatalf("expected V9.0 why_not_promoted: %+v", p)
+	}
+}
+
+func TestV90MutatingToolsStillBlockedWithCanonicalError(t *testing.T) {
+	for _, tool := range []string{"vision.apply_patch", "vision.write_file", "vision.commit", "vision.push", "vision.open_pr", "vision.publish_status", "vision.run_mission_real", "vision.rollback", "vision.deploy"} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+		if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+			t.Fatalf("tool %s must remain blocked with canonical error, got %+v", tool, resp)
+		}
+	}
+}
+
+func TestV90RegressionToolsV80ThroughV89StillWork(t *testing.T) {
+	root := buildIndex(t)
+	tests := []struct {
+		version string
+		tool    string
+		args    interface{}
+	}{
+		{"V8.9", mcpserver.ToolReadinessExplain, nil},
+		{"V8.8", mcpserver.ToolEvidenceExplain, nil},
+		{"V8.7", mcpserver.ToolContractAudit, nil},
+		{"V8.6", mcpserver.ToolPolicyConflicts, nil},
+		{"V8.5", mcpserver.ToolDashboardToolInventory, nil},
+		{"V8.4", mcpserver.ToolImpeccableGuardStatus, nil},
+		{"V8.3", mcpserver.ToolCodeBurnGuardStatus, nil},
+		{"V8.2", mcpserver.ToolDryRunRiskAssessment, map[string]interface{}{"files": []string{"frontend/index.html"}, "operation": "mission"}},
+		{"V8.1", mcpserver.ToolGraphProviders, nil},
+		{"V8.0", mcpserver.ToolProjectSummary, nil},
+	}
+	for _, tc := range tests {
+		var args json.RawMessage
+		if tc.args != nil {
+			args = mkArgs(tc.args)
+		}
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tc.tool, Root: root, Args: args})
+		if !resp.OK {
+			t.Fatalf("%s regression tool %s failed: %s", tc.version, tc.tool, resp.Error)
+		}
+	}
+}

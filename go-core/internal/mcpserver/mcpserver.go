@@ -21,6 +21,7 @@ import (
 	"github.com/visioncore/go-core/internal/dashboard"
 	"github.com/visioncore/go-core/internal/dryrun"
 	"github.com/visioncore/go-core/internal/evidenceledger"
+	"github.com/visioncore/go-core/internal/gateauthority"
 	"github.com/visioncore/go-core/internal/graphmemory"
 	"github.com/visioncore/go-core/internal/impeccable"
 	"github.com/visioncore/go-core/internal/policymatrix"
@@ -91,6 +92,12 @@ const (
 	ToolReadinessModules  = "vision.readiness_modules"
 	ToolReadinessAudit    = "vision.readiness_audit"
 	ToolReadinessExplain  = "vision.readiness_explain"
+	// V9.0 PASS GOLD Authority Layer tools
+	ToolGateAuthoritySnapshot = "vision.gate_authority_snapshot"
+	ToolGateAuthorityDecide   = "vision.gate_authority_decide"
+	ToolGateAuthorityAudit    = "vision.gate_authority_audit"
+	ToolGateAuthorityPolicy   = "vision.gate_authority_policy"
+	ToolGateAuthorityExplain  = "vision.gate_authority_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -168,6 +175,12 @@ var allowedTools = map[string]bool{
 	ToolReadinessModules:  true,
 	ToolReadinessAudit:    true,
 	ToolReadinessExplain:  true,
+	// V9.0 PASS GOLD Authority Layer tools
+	ToolGateAuthoritySnapshot: true,
+	ToolGateAuthorityDecide:   true,
+	ToolGateAuthorityAudit:    true,
+	ToolGateAuthorityPolicy:   true,
+	ToolGateAuthorityExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -319,6 +332,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleReadinessAudit(req)
 	case ToolReadinessExplain:
 		return handleReadinessExplain(req)
+	// V9.0 PASS GOLD Authority Layer tools
+	case ToolGateAuthoritySnapshot:
+		return handleGateAuthoritySnapshot(req)
+	case ToolGateAuthorityDecide:
+		return handleGateAuthorityDecide(req)
+	case ToolGateAuthorityAudit:
+		return handleGateAuthorityAudit(req)
+	case ToolGateAuthorityPolicy:
+		return handleGateAuthorityPolicy(req)
+	case ToolGateAuthorityExplain:
+		return handleGateAuthorityExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -1167,4 +1191,55 @@ func handleReadinessExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: readiness.ExplainReadiness(a)}
+}
+
+// ── V9.0 PASS GOLD Authority Layer Handlers ────────────────────────────────
+
+func parseGateAuthorityInput(req ToolRequest) (gateauthority.GateAuthorityInput, error) {
+	var a gateauthority.GateAuthorityInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleGateAuthoritySnapshot(req ToolRequest) ToolResponse {
+	a, err := parseGateAuthorityInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: gateauthority.BuildAuthoritySnapshot(a)}
+}
+
+func handleGateAuthorityDecide(req ToolRequest) ToolResponse {
+	a, err := parseGateAuthorityInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: gateauthority.DecideGate(a)}
+}
+
+func handleGateAuthorityAudit(req ToolRequest) ToolResponse {
+	a, err := parseGateAuthorityInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: gateauthority.AuditGateAuthority(a)}
+}
+
+func handleGateAuthorityPolicy(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: gateauthority.BuildAuthorityPolicy()}
+}
+
+func handleGateAuthorityExplain(req ToolRequest) ToolResponse {
+	a, err := parseGateAuthorityInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: gateauthority.ExplainGateAuthority(a)}
 }
