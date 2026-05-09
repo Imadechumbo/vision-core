@@ -21,6 +21,7 @@ import (
 	"github.com/visioncore/go-core/internal/dryrun"
 	"github.com/visioncore/go-core/internal/graphmemory"
 	"github.com/visioncore/go-core/internal/impeccable"
+	"github.com/visioncore/go-core/internal/policymatrix"
 	"github.com/visioncore/go-core/internal/report"
 )
 
@@ -63,6 +64,12 @@ const (
 	ToolDashboardIntelligenceSummary = "vision.dashboard_intelligence_summary"
 	ToolDashboardToolInventory       = "vision.dashboard_tool_inventory"
 	ToolDashboardMissionControl      = "vision.dashboard_mission_control"
+	// V8.6 Agent Policy Matrix tools
+	ToolPolicyMatrix       = "vision.policy_matrix"
+	ToolPolicyDecide       = "vision.policy_decide"
+	ToolPolicyValidatePlan = "vision.policy_validate_plan"
+	ToolPolicyConflicts    = "vision.policy_conflicts"
+	ToolPolicyExplain      = "vision.policy_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -116,6 +123,12 @@ var allowedTools = map[string]bool{
 	ToolDashboardIntelligenceSummary: true,
 	ToolDashboardToolInventory:       true,
 	ToolDashboardMissionControl:      true,
+	// V8.6 Agent Policy Matrix tools
+	ToolPolicyMatrix:       true,
+	ToolPolicyDecide:       true,
+	ToolPolicyValidatePlan: true,
+	ToolPolicyConflicts:    true,
+	ToolPolicyExplain:      true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -223,6 +236,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleDashboardToolInventory(req)
 	case ToolDashboardMissionControl:
 		return handleDashboardMissionControl(req)
+	// V8.6 Agent Policy Matrix tools
+	case ToolPolicyMatrix:
+		return handlePolicyMatrix(req)
+	case ToolPolicyDecide:
+		return handlePolicyDecide(req)
+	case ToolPolicyValidatePlan:
+		return handlePolicyValidatePlan(req)
+	case ToolPolicyConflicts:
+		return handlePolicyConflicts(req)
+	case ToolPolicyExplain:
+		return handlePolicyExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -850,4 +874,50 @@ func handleDashboardMissionControl(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: dashboard.BuildMissionControl(a)}
+}
+
+// ── V8.6 Agent Policy Matrix Handlers ───────────────────────────────────────
+
+func handlePolicyMatrix(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: policymatrix.BuildMatrix()}
+}
+
+func handlePolicyDecide(req ToolRequest) ToolResponse {
+	var a policymatrix.PolicyInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: policymatrix.Decide(a)}
+}
+
+func handlePolicyValidatePlan(req ToolRequest) ToolResponse {
+	var a policymatrix.PlanValidationInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+		}
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: policymatrix.ValidatePlan(a)}
+}
+
+func handlePolicyConflicts(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: policymatrix.DetectConflicts()}
+}
+
+func handlePolicyExplain(req ToolRequest) ToolResponse {
+	var a policymatrix.PolicyInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: policymatrix.ExplainDecision(a)}
 }

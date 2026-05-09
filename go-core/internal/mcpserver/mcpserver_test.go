@@ -1235,3 +1235,141 @@ func TestV85RegressionToolsV84V83V82V81V80StillWork(t *testing.T) {
 		}
 	}
 }
+
+// ── V8.6 Agent Policy Matrix Tests ──────────────────────────────────────────
+
+func TestV86PolicyMatrixToolsRegistered(t *testing.T) {
+	for _, tool := range []string{
+		mcpserver.ToolPolicyMatrix,
+		mcpserver.ToolPolicyDecide,
+		mcpserver.ToolPolicyValidatePlan,
+		mcpserver.ToolPolicyConflicts,
+		mcpserver.ToolPolicyExplain,
+	} {
+		if !mcpserver.IsAllowed(tool) {
+			t.Fatalf("V8.6 policy matrix tool %q must be allowed", tool)
+		}
+		if mcpserver.IsBlocked(tool) {
+			t.Fatalf("V8.6 policy matrix tool %q must not be blocked", tool)
+		}
+	}
+}
+
+func TestExecutePolicyMatrixV86DryRunReadOnly(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPolicyMatrix, Root: t.TempDir()})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V8.6"`, `"dry_run":true`, `"read_only":true`, `"matrix_status":"safe_read_only"`, `"PASS_GOLD"`, `"PASS_SECURE"`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("policy_matrix missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestExecutePolicyDecideBlocksPatchEngineApplyPatch(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolPolicyDecide,
+		Root: t.TempDir(),
+		Args: mkArgs(map[string]interface{}{"agent": "PatchEngine", "action": "apply_patch", "tool": "vision.apply_patch", "operation": "patch", "requested_mode": "dry_run"}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V8.6"`, `"dry_run":true`, `"read_only":true`, `"agent":"PatchEngine"`, `"allowed":false`, `"blocked":true`, `"required_gates":["PASS_GOLD","PASS_SECURE"]`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("policy_decide missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestExecutePolicyValidatePlanBlocksApplyPatch(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolPolicyValidatePlan,
+		Root: t.TempDir(),
+		Args: mkArgs(map[string]interface{}{"steps": []map[string]interface{}{{"agent": "Scanner", "action": "scan", "tool": "vision.graph_query", "operation": "read"}, {"agent": "PatchEngine", "action": "apply_patch", "tool": "vision.apply_patch", "operation": "patch"}}}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V8.6"`, `"valid":false`, `"blocked":true`, `"findings":`, `vision.apply_patch`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("policy_validate_plan missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestExecutePolicyConflictsClean(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPolicyConflicts, Root: t.TempDir()})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V8.6"`, `"dry_run":true`, `"read_only":true`, `"conflicts_found":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("policy_conflicts missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestExecutePolicyExplainHasSummaryAndNextSteps(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolPolicyExplain,
+		Root: t.TempDir(),
+		Args: mkArgs(map[string]interface{}{"agent": "Dashboard", "action": "deploy", "tool": "vision.deploy", "operation": "deploy", "requested_mode": "dry_run"}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V8.6"`, `"summary":`, `"why_blocked":`, `"safest_next_steps":`, `"required_gates":["PASS_GOLD","PASS_SECURE"]`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("policy_explain missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestV86MutatingToolsStillBlockedExactMessage(t *testing.T) {
+	for _, tool := range []string{"vision.apply_patch", "vision.write_file", "vision.commit", "vision.push", "vision.open_pr", "vision.publish_status", "vision.run_mission_real", "vision.rollback", "vision.deploy"} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+		if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+			t.Fatalf("mutating tool %s must remain blocked with exact message, got ok=%v error=%q", tool, resp.OK, resp.Error)
+		}
+	}
+}
+
+func TestV86RegressionToolsV85V84V83V82V81V80StillWork(t *testing.T) {
+	root := buildIndex(t)
+	cases := []struct {
+		tool string
+		args interface{}
+	}{
+		{mcpserver.ToolProjectSummary, nil},
+		{mcpserver.ToolGraphProviders, nil},
+		{mcpserver.ToolGraphSummary, nil},
+		{mcpserver.ToolGraphQuery, map[string]interface{}{"query": "github", "limit": 5}},
+		{mcpserver.ToolGraphDryRunContext, map[string]interface{}{"query": "github", "limit": 5}},
+		{mcpserver.ToolDryRunRiskAssessment, map[string]interface{}{"operation": "patch", "files": []string{"README.md"}}},
+		{mcpserver.ToolCodeBurnGuardStatus, nil},
+		{mcpserver.ToolImpeccableGuardStatus, nil},
+		{mcpserver.ToolDashboardToolInventory, nil},
+	}
+	for _, tc := range cases {
+		req := mcpserver.ToolRequest{Tool: tc.tool, Root: root}
+		if tc.args != nil {
+			req.Args = mkArgs(tc.args)
+		}
+		resp := mcpserver.Dispatch(req)
+		if !resp.OK {
+			t.Fatalf("regression tool %s must still work: %s", tc.tool, resp.Error)
+		}
+	}
+}
