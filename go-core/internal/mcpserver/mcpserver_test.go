@@ -1902,3 +1902,149 @@ func TestV90RegressionToolsV80ThroughV89StillWork(t *testing.T) {
 		}
 	}
 }
+
+// ── V9.1 External Promotion Executor Contract Tests ────────────────────────
+
+func v91CompletePromotionArgs() map[string]interface{} {
+	return map[string]interface{}{
+		"mission_input": "CORS origin blocked",
+		"operation":     "promotion_contract_check",
+		"request": map[string]interface{}{
+			"request_id": "promo-001", "mission_id": "mission-001", "project": "vision-core", "branch": "v6-go-enterprise-runtime", "commit_sha": "69d210e",
+			"target": "stable", "environment": "local", "executor": "external_promotion_executor", "operation": "promote", "dry_run": false, "read_only": false,
+		},
+		"gates": []map[string]interface{}{
+			{"gate": "PASS_GOLD", "status": "pass", "source": "sddf_passgold_validator", "artifact_id": "pg-123", "artifact_type": "pass_gold_report", "real_evidence": true, "dry_run": false, "synthesized": false, "recognized_by_authority": true},
+			{"gate": "PASS_SECURE", "status": "pass", "source": "passsecure_runner", "artifact_id": "ps-123", "artifact_type": "pass_secure_report", "real_evidence": true, "dry_run": false, "synthesized": false, "recognized_by_authority": true},
+		},
+		"artifacts": []map[string]interface{}{
+			{"id": "pg-123", "type": "pass_gold_report", "required": true, "present": true, "trusted": true},
+			{"id": "ps-123", "type": "pass_secure_report", "required": true, "present": true, "trusted": true},
+			{"id": "auth-001", "type": "authority_snapshot", "required": true, "present": true, "trusted": true},
+			{"id": "promo-001", "type": "promotion_request", "required": true, "present": true, "trusted": true},
+		},
+	}
+}
+
+func TestV91PromotionContractToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolPromotionContractSnapshot, mcpserver.ToolPromotionContractValidate, mcpserver.ToolPromotionContractBoundary, mcpserver.ToolPromotionContractAudit, mcpserver.ToolPromotionContractExplain} {
+		if !mcpserver.IsAllowed(tool) || mcpserver.IsBlocked(tool) {
+			t.Fatalf("V9.1 tool %s registration invalid", tool)
+		}
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir()})
+		if !resp.OK {
+			t.Fatalf("V9.1 tool %s must dispatch: %s", tool, resp.Error)
+		}
+	}
+}
+
+func TestExecutePromotionContractSnapshotV91ReadOnlyDryRun(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPromotionContractSnapshot, Args: mkArgs(v91CompletePromotionArgs())})
+	if !resp.OK {
+		t.Fatalf("promotion contract snapshot failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	if p["version"] != "V9.1" || p["dry_run"] != true || p["read_only"] != true || p["contract_status"] != "externally_eligible_dry_run" || p["would_allow_external_executor"] != true || p["promotion_allowed"] != false || p["deploy_allowed"] != false {
+		t.Fatalf("unexpected V9.1 snapshot payload: %+v", p)
+	}
+}
+
+func TestExecutePromotionContractValidateBlocksMCPAndPromotionAllowed(t *testing.T) {
+	args := map[string]interface{}{
+		"request": map[string]interface{}{"request_id": "promo-001", "mission_id": "mission-001", "project": "vision-core", "branch": "v6-go-enterprise-runtime", "commit_sha": "69d210e", "target": "stable", "environment": "local", "executor": "mcp", "operation": "promote", "promotion_allowed": true},
+		"gates":   []map[string]interface{}{{"gate": "PASS_GOLD", "status": "pass", "source": "dashboard", "artifact_id": "fake", "artifact_type": "dashboard_snapshot", "real_evidence": false, "dry_run": true, "synthesized": true, "recognized_by_authority": false}},
+	}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPromotionContractValidate, Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("promotion contract validate failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	if p["version"] != "V9.1" || p["blocked"] != true || p["valid"] != false || p["contract_status"] != "blocked" || p["would_allow_external_executor"] != false {
+		t.Fatalf("expected blocked validation: %+v", p)
+	}
+	b, _ := json.Marshal(resp.Payload)
+	s := string(b)
+	for _, want := range []string{"executor=mcp", "promotion_allowed=true", "PASS_GOLD_REAL", "PASS_SECURE_REAL"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("validation missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestExecutePromotionContractBoundaryListsForbiddenInsideMCP(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPromotionContractBoundary})
+	if !resp.OK {
+		t.Fatalf("promotion contract boundary failed: %s", resp.Error)
+	}
+	b, _ := json.Marshal(resp.Payload)
+	s := string(b)
+	for _, want := range []string{`"version":"V9.1"`, `"dry_run":true`, `"read_only":true`, "forbidden_inside_mcp", "promote", "deploy", "publish_status", "write_memory"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("boundary missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestExecutePromotionContractAuditDetectsExternalCallAttempt(t *testing.T) {
+	args := map[string]interface{}{"request": map[string]interface{}{"executor": "mcp", "operation": "promote", "promotion_allowed": true, "deploy_allowed": true}, "gates": []map[string]interface{}{{"gate": "PASS_GOLD", "source": "readiness", "dry_run": true, "real_evidence": false, "synthesized": true}}, "attempt_external_call": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPromotionContractAudit, Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("promotion contract audit failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	if p["version"] != "V9.1" || p["executor_call_attempt_found"] != true || p["unsafe_claims_found"] != true {
+		t.Fatalf("expected external call attempt audit: %+v", p)
+	}
+}
+
+func TestExecutePromotionContractExplainWhyMCPCannotExecute(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPromotionContractExplain, Args: mkArgs(map[string]interface{}{"operation": "promote", "executor": "external_promotion_executor"})})
+	if !resp.OK {
+		t.Fatalf("promotion contract explain failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	why, _ := p["why_mcp_cannot_execute"].([]interface{})
+	if p["version"] != "V9.1" || p["dry_run"] != true || p["read_only"] != true || len(why) == 0 {
+		t.Fatalf("expected why_mcp_cannot_execute: %+v", p)
+	}
+}
+
+func TestV91MutatingToolsStillBlockedWithCanonicalError(t *testing.T) {
+	for _, tool := range []string{"vision.apply_patch", "vision.write_file", "vision.commit", "vision.push", "vision.open_pr", "vision.publish_status", "vision.run_mission_real", "vision.rollback", "vision.deploy"} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+		if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+			t.Fatalf("tool %s must remain blocked with canonical error, got %+v", tool, resp)
+		}
+	}
+}
+
+func TestV91RegressionToolsV80ThroughV90StillWork(t *testing.T) {
+	root := buildIndex(t)
+	tests := []struct {
+		version string
+		tool    string
+		args    interface{}
+	}{
+		{"V9.0", mcpserver.ToolGateAuthorityPolicy, nil},
+		{"V8.9", mcpserver.ToolReadinessExplain, nil},
+		{"V8.8", mcpserver.ToolEvidenceExplain, nil},
+		{"V8.7", mcpserver.ToolContractAudit, nil},
+		{"V8.6", mcpserver.ToolPolicyConflicts, nil},
+		{"V8.5", mcpserver.ToolDashboardToolInventory, nil},
+		{"V8.4", mcpserver.ToolImpeccableGuardStatus, nil},
+		{"V8.3", mcpserver.ToolCodeBurnGuardStatus, nil},
+		{"V8.2", mcpserver.ToolDryRunRiskAssessment, map[string]interface{}{"files": []string{"frontend/index.html"}, "operation": "mission"}},
+		{"V8.1", mcpserver.ToolGraphProviders, nil},
+		{"V8.0", mcpserver.ToolProjectSummary, nil},
+	}
+	for _, tc := range tests {
+		req := mcpserver.ToolRequest{Tool: tc.tool, Root: root}
+		if tc.args != nil {
+			req.Args = mkArgs(tc.args)
+		}
+		resp := mcpserver.Dispatch(req)
+		if !resp.OK {
+			t.Fatalf("%s regression tool %s failed: %s", tc.version, tc.tool, resp.Error)
+		}
+	}
+}

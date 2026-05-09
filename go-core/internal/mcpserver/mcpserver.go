@@ -25,6 +25,7 @@ import (
 	"github.com/visioncore/go-core/internal/graphmemory"
 	"github.com/visioncore/go-core/internal/impeccable"
 	"github.com/visioncore/go-core/internal/policymatrix"
+	"github.com/visioncore/go-core/internal/promotioncontract"
 	"github.com/visioncore/go-core/internal/readiness"
 	"github.com/visioncore/go-core/internal/report"
 )
@@ -98,6 +99,12 @@ const (
 	ToolGateAuthorityAudit    = "vision.gate_authority_audit"
 	ToolGateAuthorityPolicy   = "vision.gate_authority_policy"
 	ToolGateAuthorityExplain  = "vision.gate_authority_explain"
+	// V9.1 External Promotion Executor Contract tools
+	ToolPromotionContractSnapshot = "vision.promotion_contract_snapshot"
+	ToolPromotionContractValidate = "vision.promotion_contract_validate"
+	ToolPromotionContractBoundary = "vision.promotion_contract_boundary"
+	ToolPromotionContractAudit    = "vision.promotion_contract_audit"
+	ToolPromotionContractExplain  = "vision.promotion_contract_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -181,6 +188,12 @@ var allowedTools = map[string]bool{
 	ToolGateAuthorityAudit:    true,
 	ToolGateAuthorityPolicy:   true,
 	ToolGateAuthorityExplain:  true,
+	// V9.1 External Promotion Executor Contract tools
+	ToolPromotionContractSnapshot: true,
+	ToolPromotionContractValidate: true,
+	ToolPromotionContractBoundary: true,
+	ToolPromotionContractAudit:    true,
+	ToolPromotionContractExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -343,6 +356,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleGateAuthorityPolicy(req)
 	case ToolGateAuthorityExplain:
 		return handleGateAuthorityExplain(req)
+	// V9.1 External Promotion Executor Contract tools
+	case ToolPromotionContractSnapshot:
+		return handlePromotionContractSnapshot(req)
+	case ToolPromotionContractValidate:
+		return handlePromotionContractValidate(req)
+	case ToolPromotionContractBoundary:
+		return handlePromotionContractBoundary(req)
+	case ToolPromotionContractAudit:
+		return handlePromotionContractAudit(req)
+	case ToolPromotionContractExplain:
+		return handlePromotionContractExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -1242,4 +1266,55 @@ func handleGateAuthorityExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: gateauthority.ExplainGateAuthority(a)}
+}
+
+// ── V9.1 External Promotion Executor Contract Handlers ─────────────────────
+
+func parsePromotionContractInput(req ToolRequest) (promotioncontract.PromotionContractInput, error) {
+	var a promotioncontract.PromotionContractInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handlePromotionContractSnapshot(req ToolRequest) ToolResponse {
+	a, err := parsePromotionContractInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotioncontract.BuildContractSnapshot(a)}
+}
+
+func handlePromotionContractValidate(req ToolRequest) ToolResponse {
+	a, err := parsePromotionContractInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotioncontract.ValidateContract(a)}
+}
+
+func handlePromotionContractBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotioncontract.BuildBoundary()}
+}
+
+func handlePromotionContractAudit(req ToolRequest) ToolResponse {
+	a, err := parsePromotionContractInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotioncontract.AuditContract(a)}
+}
+
+func handlePromotionContractExplain(req ToolRequest) ToolResponse {
+	a, err := parsePromotionContractInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotioncontract.ExplainContract(a)}
 }
