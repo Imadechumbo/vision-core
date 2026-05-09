@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/visioncore/go-core/internal/codeburn"
+	"github.com/visioncore/go-core/internal/contractregistry"
 	"github.com/visioncore/go-core/internal/dashboard"
 	"github.com/visioncore/go-core/internal/dryrun"
 	"github.com/visioncore/go-core/internal/graphmemory"
@@ -70,6 +71,12 @@ const (
 	ToolPolicyValidatePlan = "vision.policy_validate_plan"
 	ToolPolicyConflicts    = "vision.policy_conflicts"
 	ToolPolicyExplain      = "vision.policy_explain"
+	// V8.7 Runtime Contract Registry tools
+	ToolContractRegistry        = "vision.contract_registry"
+	ToolContractGet             = "vision.contract_get"
+	ToolContractValidatePayload = "vision.contract_validate_payload"
+	ToolContractAudit           = "vision.contract_audit"
+	ToolContractExplain         = "vision.contract_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -129,6 +136,12 @@ var allowedTools = map[string]bool{
 	ToolPolicyValidatePlan: true,
 	ToolPolicyConflicts:    true,
 	ToolPolicyExplain:      true,
+	// V8.7 Runtime Contract Registry tools
+	ToolContractRegistry:        true,
+	ToolContractGet:             true,
+	ToolContractValidatePayload: true,
+	ToolContractAudit:           true,
+	ToolContractExplain:         true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -247,6 +260,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handlePolicyConflicts(req)
 	case ToolPolicyExplain:
 		return handlePolicyExplain(req)
+	// V8.7 Runtime Contract Registry tools
+	case ToolContractRegistry:
+		return handleContractRegistry(req)
+	case ToolContractGet:
+		return handleContractGet(req)
+	case ToolContractValidatePayload:
+		return handleContractValidatePayload(req)
+	case ToolContractAudit:
+		return handleContractAudit(req)
+	case ToolContractExplain:
+		return handleContractExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -920,4 +944,55 @@ func handlePolicyExplain(req ToolRequest) ToolResponse {
 		a.Root = rootFrom(req)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: policymatrix.ExplainDecision(a)}
+}
+
+// ── V8.7 Runtime Contract Registry Handlers ─────────────────────────────────
+
+func handleContractRegistry(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: contractregistry.BuildRegistry()}
+}
+
+func handleContractGet(req ToolRequest) ToolResponse {
+	var a contractregistry.ContractInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+		}
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: map[string]interface{}{
+		"version":   contractregistry.Version,
+		"dry_run":   true,
+		"read_only": true,
+		"contract":  contractregistry.GetContract(a.Tool),
+	}}
+}
+
+func handleContractValidatePayload(req ToolRequest) ToolResponse {
+	var a contractregistry.ContractInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: contractregistry.ValidateContract(a)}
+}
+
+func handleContractAudit(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: contractregistry.AuditRegistry()}
+}
+
+func handleContractExplain(req ToolRequest) ToolResponse {
+	var a contractregistry.ContractInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: contractregistry.ExplainContract(a)}
 }
