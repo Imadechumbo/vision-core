@@ -20,6 +20,7 @@ import (
 	"github.com/visioncore/go-core/internal/contractregistry"
 	"github.com/visioncore/go-core/internal/dashboard"
 	"github.com/visioncore/go-core/internal/dryrun"
+	"github.com/visioncore/go-core/internal/evidenceledger"
 	"github.com/visioncore/go-core/internal/graphmemory"
 	"github.com/visioncore/go-core/internal/impeccable"
 	"github.com/visioncore/go-core/internal/policymatrix"
@@ -77,6 +78,12 @@ const (
 	ToolContractValidatePayload = "vision.contract_validate_payload"
 	ToolContractAudit           = "vision.contract_audit"
 	ToolContractExplain         = "vision.contract_explain"
+	// V8.8 Evidence Ledger tools
+	ToolEvidenceLedger   = "vision.evidence_ledger"
+	ToolEvidenceValidate = "vision.evidence_validate"
+	ToolEvidenceSummary  = "vision.evidence_summary"
+	ToolEvidenceAudit    = "vision.evidence_audit"
+	ToolEvidenceExplain  = "vision.evidence_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -142,6 +149,12 @@ var allowedTools = map[string]bool{
 	ToolContractValidatePayload: true,
 	ToolContractAudit:           true,
 	ToolContractExplain:         true,
+	// V8.8 Evidence Ledger tools
+	ToolEvidenceLedger:   true,
+	ToolEvidenceValidate: true,
+	ToolEvidenceSummary:  true,
+	ToolEvidenceAudit:    true,
+	ToolEvidenceExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -271,6 +284,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleContractAudit(req)
 	case ToolContractExplain:
 		return handleContractExplain(req)
+	// V8.8 Evidence Ledger tools
+	case ToolEvidenceLedger:
+		return handleEvidenceLedger(req)
+	case ToolEvidenceValidate:
+		return handleEvidenceValidate(req)
+	case ToolEvidenceSummary:
+		return handleEvidenceSummary(req)
+	case ToolEvidenceAudit:
+		return handleEvidenceAudit(req)
+	case ToolEvidenceExplain:
+		return handleEvidenceExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -995,4 +1019,59 @@ func handleContractExplain(req ToolRequest) ToolResponse {
 		a.Root = rootFrom(req)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: contractregistry.ExplainContract(a)}
+}
+
+// ── V8.8 Evidence Ledger Handlers ───────────────────────────────────────────
+
+func parseEvidenceInput(req ToolRequest) (evidenceledger.EvidenceInput, error) {
+	var a evidenceledger.EvidenceInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleEvidenceLedger(req ToolRequest) ToolResponse {
+	a, err := parseEvidenceInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: evidenceledger.BuildLedger(a)}
+}
+
+func handleEvidenceValidate(req ToolRequest) ToolResponse {
+	a, err := parseEvidenceInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: evidenceledger.ValidateEvidence(a)}
+}
+
+func handleEvidenceSummary(req ToolRequest) ToolResponse {
+	a, err := parseEvidenceInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: evidenceledger.SummarizeEvidence(a)}
+}
+
+func handleEvidenceAudit(req ToolRequest) ToolResponse {
+	a, err := parseEvidenceInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: evidenceledger.AuditLedger(a)}
+}
+
+func handleEvidenceExplain(req ToolRequest) ToolResponse {
+	a, err := parseEvidenceInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: evidenceledger.ExplainEvidence(a)}
 }
