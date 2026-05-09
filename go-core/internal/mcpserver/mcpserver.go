@@ -22,6 +22,7 @@ import (
 	"github.com/visioncore/go-core/internal/dashboard"
 	"github.com/visioncore/go-core/internal/dryrun"
 	"github.com/visioncore/go-core/internal/evidenceledger"
+	"github.com/visioncore/go-core/internal/executorpreflight"
 	"github.com/visioncore/go-core/internal/gateauthority"
 	"github.com/visioncore/go-core/internal/graphmemory"
 	"github.com/visioncore/go-core/internal/impeccable"
@@ -126,6 +127,12 @@ const (
 	ToolExecutorAuthorizationBoundary = "vision.executor_authorization_boundary"
 	ToolExecutorAuthorizationAudit    = "vision.executor_authorization_audit"
 	ToolExecutorAuthorizationExplain  = "vision.executor_authorization_explain"
+	// V9.5 External Executor Final Preflight tools
+	ToolExecutorFinalPreflight    = "vision.executor_final_preflight"
+	ToolExecutorPreflightValidate = "vision.executor_preflight_validate"
+	ToolExecutorPreflightBoundary = "vision.executor_preflight_boundary"
+	ToolExecutorPreflightAudit    = "vision.executor_preflight_audit"
+	ToolExecutorPreflightExplain  = "vision.executor_preflight_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -233,6 +240,12 @@ var allowedTools = map[string]bool{
 	ToolExecutorAuthorizationBoundary: true,
 	ToolExecutorAuthorizationAudit:    true,
 	ToolExecutorAuthorizationExplain:  true,
+	// V9.5 External Executor Final Preflight tools
+	ToolExecutorFinalPreflight:    true,
+	ToolExecutorPreflightValidate: true,
+	ToolExecutorPreflightBoundary: true,
+	ToolExecutorPreflightAudit:    true,
+	ToolExecutorPreflightExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -439,6 +452,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleExecutorAuthorizationAudit(req)
 	case ToolExecutorAuthorizationExplain:
 		return handleExecutorAuthorizationExplain(req)
+	// V9.5 External Executor Final Preflight tools
+	case ToolExecutorFinalPreflight:
+		return handleExecutorFinalPreflight(req)
+	case ToolExecutorPreflightValidate:
+		return handleExecutorPreflightValidate(req)
+	case ToolExecutorPreflightBoundary:
+		return handleExecutorPreflightBoundary(req)
+	case ToolExecutorPreflightAudit:
+		return handleExecutorPreflightAudit(req)
+	case ToolExecutorPreflightExplain:
+		return handleExecutorPreflightExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -1542,4 +1566,55 @@ func handleExecutorAuthorizationExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: authorizationmanifest.ExplainAuthorization(a)}
+}
+
+// ── V9.5 External Executor Final Preflight Handlers ─────────────────────────
+
+func parsePreflightInput(req ToolRequest) (executorpreflight.PreflightInput, error) {
+	var a executorpreflight.PreflightInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleExecutorFinalPreflight(req ToolRequest) ToolResponse {
+	a, err := parsePreflightInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executorpreflight.BuildFinalPreflight(a)}
+}
+
+func handleExecutorPreflightValidate(req ToolRequest) ToolResponse {
+	a, err := parsePreflightInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executorpreflight.ValidatePreflight(a)}
+}
+
+func handleExecutorPreflightBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executorpreflight.BuildPreflightBoundary()}
+}
+
+func handleExecutorPreflightAudit(req ToolRequest) ToolResponse {
+	a, err := parsePreflightInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executorpreflight.AuditPreflight(a)}
+}
+
+func handleExecutorPreflightExplain(req ToolRequest) ToolResponse {
+	a, err := parsePreflightInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executorpreflight.ExplainPreflight(a)}
 }

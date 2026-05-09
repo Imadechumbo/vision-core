@@ -2435,3 +2435,128 @@ func TestV94RegressionsV80ThroughV93ToolsStillAllowed(t *testing.T) {
 		}
 	}
 }
+
+func fullPreflightArgs() map[string]interface{} {
+	return map[string]interface{}{
+		"mission_input": "CORS origin blocked", "operation": "external_executor_final_preflight", "preflight_id": "preflight-001", "executor": "external_promotion_executor", "project": "vision-core", "branch": "v6-go-enterprise-runtime", "commit_sha": "2b58abc", "target": "stable", "environment": "local",
+		"authority":              map[string]interface{}{"present": true, "version": "V9.0", "pass_gold_real": true, "pass_secure_real": true, "all_real_gates_recognized": true, "authority_status": "all_real_gates_recognized"},
+		"promotion_contract":     map[string]interface{}{"present": true, "version": "V9.1", "contract_status": "externally_eligible_dry_run", "externally_eligible_dry_run": true, "would_allow_external_executor": true},
+		"safety_envelope":        map[string]interface{}{"present": true, "version": "V9.2", "envelope_status": "safety_ready_dry_run", "safety_ready_dry_run": true, "would_allow_external_executor": true, "required_controls_present": true},
+		"rehearsal":              map[string]interface{}{"present": true, "version": "V9.3", "rehearsal_status": "rehearsal_ready_dry_run", "rehearsal_ready_dry_run": true, "no_mutation_proof": true, "would_allow_external_executor": true},
+		"authorization_manifest": map[string]interface{}{"present": true, "version": "V9.4", "manifest_status": "authorization_ready_dry_run", "authorization_ready_dry_run": true, "would_authorize_external_executor": true, "validity_within_window": true, "explicit_authorization": true},
+		"gates": []map[string]interface{}{
+			{"gate": "PASS_GOLD", "status": "pass", "real_evidence": true, "dry_run": false, "synthesized": false, "recognized_by_authority": true, "source": "sddf_passgold_validator", "artifact_id": "pg-123"},
+			{"gate": "PASS_SECURE", "status": "pass", "real_evidence": true, "dry_run": false, "synthesized": false, "recognized_by_authority": true, "source": "passsecure_runner", "artifact_id": "ps-123"},
+		},
+		"artifacts": []map[string]interface{}{
+			{"id": "pg-123", "type": "pass_gold_report", "required": true, "present": true, "trusted": true},
+			{"id": "ps-123", "type": "pass_secure_report", "required": true, "present": true, "trusted": true},
+			{"id": "contract-001", "type": "promotion_contract", "required": true, "present": true, "trusted": true},
+			{"id": "safety-001", "type": "safety_envelope", "required": true, "present": true, "trusted": true},
+			{"id": "rehearsal-001", "type": "rehearsal_record", "required": true, "present": true, "trusted": true},
+			{"id": "authz-001", "type": "authorization_manifest", "required": true, "present": true, "trusted": true},
+		},
+	}
+}
+
+func TestV95ToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolExecutorFinalPreflight, mcpserver.ToolExecutorPreflightValidate, mcpserver.ToolExecutorPreflightBoundary, mcpserver.ToolExecutorPreflightAudit, mcpserver.ToolExecutorPreflightExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir()})
+		if !resp.OK || strings.Contains(resp.Error, "unknown tool") {
+			t.Fatalf("V9.5 tool %s not registered: ok=%v err=%q", tool, resp.OK, resp.Error)
+		}
+	}
+}
+
+func TestExecutorFinalPreflightReturnsV95ReadOnlyDryRun(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorFinalPreflight, Root: t.TempDir(), Args: mkArgs(fullPreflightArgs())})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V9.5"`, `"dry_run":true`, `"read_only":true`, `"preflight_status":"preflight_ready_dry_run"`, `"external_execution_preflight_ready":true`, `"promotion_allowed":false`, `"deploy_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorPreflightValidateBlocksMCPAndExecutorCall(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorPreflightValidate, Root: t.TempDir(), Args: mkArgs(map[string]interface{}{"preflight_id": "preflight-unsafe", "executor": "mcp", "target": "stable", "environment": "local", "executor_call_allowed_inside_mcp": true})})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V9.5"`, `"valid":false`, `"blocked":true`, "executor cannot be mcp or mcp_readonly", "executor_call_allowed_inside_mcp cannot be true"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorPreflightBoundaryListsForbiddenInsideMCP(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorPreflightBoundary})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V9.5"`, `"forbidden_inside_mcp":`, "call_external_executor", "authorize_execution_inside_mcp", "write_preflight_file"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorPreflightAuditDetectsAttempts(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorPreflightAudit, Root: t.TempDir(), Args: mkArgs(map[string]interface{}{"preflight_id": "preflight-unsafe", "executor": "mcp", "operation": "promote", "promotion_allowed": true, "deploy_allowed": true, "executor_call_allowed_inside_mcp": true, "attempt_external_call": true, "attempt_real_rollback": true, "file_write": true, "command_execution": true, "network_call": true, "pass_gold": true, "external_execution_preflight_ready": true, "gates": []map[string]interface{}{{"gate": "PASS_GOLD", "dry_run": true, "real_evidence": false, "synthesized": true}}})})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"execution_attempt_found":true`, `"mutation_attempt_found":true`, `"mcp_executor_call_attempt_found":true`, `"dry_run_gate_claim_found":true`, `"synthesized_gate_claim_found":true`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorPreflightExplainIncludesNotPassGoldAndNotExecution(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorPreflightExplain, Root: t.TempDir(), Args: mkArgs(map[string]interface{}{"operation": "promote", "executor": "external_promotion_executor"})})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V9.5"`, `"why_preflight_is_not_pass_gold":`, `"why_preflight_is_not_execution":`, "PASS_GOLD", "PASS_SECURE"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestV95MutatingToolsStillBlockedExactMessage(t *testing.T) {
+	for _, tool := range []string{"vision.apply_patch", "vision.write_file", "vision.commit", "vision.push", "vision.open_pr", "vision.publish_status", "vision.run_mission_real", "vision.rollback", "vision.deploy"} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+		if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+			t.Fatalf("mutating tool %s must remain blocked with exact message, got ok=%v error=%q", tool, resp.OK, resp.Error)
+		}
+	}
+}
+
+func TestV95RegressionToolsV80ThroughV94StillRegistered(t *testing.T) {
+	tools := []string{
+		mcpserver.ToolProjectSummary, mcpserver.ToolGraphProviders, mcpserver.ToolDryRunRiskAssessment, mcpserver.ToolCodeBurnExplain, mcpserver.ToolImpeccableExplain,
+		mcpserver.ToolDashboardToolInventory, mcpserver.ToolPolicyExplain, mcpserver.ToolContractExplain, mcpserver.ToolEvidenceExplain, mcpserver.ToolReadinessExplain,
+		mcpserver.ToolGateAuthorityExplain, mcpserver.ToolPromotionContractBoundary, mcpserver.ToolExecutorSafetyBoundary, mcpserver.ToolExecutorRehearsalBoundary, mcpserver.ToolExecutorAuthorizationBoundary,
+	}
+	for _, tool := range tools {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir()})
+		if strings.Contains(resp.Error, "unknown tool") {
+			t.Fatalf("regression tool %s became unregistered", tool)
+		}
+	}
+}
