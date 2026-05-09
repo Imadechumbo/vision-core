@@ -24,6 +24,7 @@ import (
 	"github.com/visioncore/go-core/internal/graphmemory"
 	"github.com/visioncore/go-core/internal/impeccable"
 	"github.com/visioncore/go-core/internal/policymatrix"
+	"github.com/visioncore/go-core/internal/readiness"
 	"github.com/visioncore/go-core/internal/report"
 )
 
@@ -84,6 +85,12 @@ const (
 	ToolEvidenceSummary  = "vision.evidence_summary"
 	ToolEvidenceAudit    = "vision.evidence_audit"
 	ToolEvidenceExplain  = "vision.evidence_explain"
+	// V8.9 Promotion Readiness Gate tools
+	ToolReadinessVerdict  = "vision.readiness_verdict"
+	ToolReadinessValidate = "vision.readiness_validate"
+	ToolReadinessModules  = "vision.readiness_modules"
+	ToolReadinessAudit    = "vision.readiness_audit"
+	ToolReadinessExplain  = "vision.readiness_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -155,6 +162,12 @@ var allowedTools = map[string]bool{
 	ToolEvidenceSummary:  true,
 	ToolEvidenceAudit:    true,
 	ToolEvidenceExplain:  true,
+	// V8.9 Promotion Readiness Gate tools
+	ToolReadinessVerdict:  true,
+	ToolReadinessValidate: true,
+	ToolReadinessModules:  true,
+	ToolReadinessAudit:    true,
+	ToolReadinessExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -295,6 +308,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleEvidenceAudit(req)
 	case ToolEvidenceExplain:
 		return handleEvidenceExplain(req)
+	// V8.9 Promotion Readiness Gate tools
+	case ToolReadinessVerdict:
+		return handleReadinessVerdict(req)
+	case ToolReadinessValidate:
+		return handleReadinessValidate(req)
+	case ToolReadinessModules:
+		return handleReadinessModules(req)
+	case ToolReadinessAudit:
+		return handleReadinessAudit(req)
+	case ToolReadinessExplain:
+		return handleReadinessExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -1074,4 +1098,73 @@ func handleEvidenceExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: evidenceledger.ExplainEvidence(a)}
+}
+
+// ── V8.9 Promotion Readiness Gate Handlers ──────────────────────────────────
+
+type readinessModulesPayload struct {
+	Version       string                      `json:"version"`
+	DryRun        bool                        `json:"dry_run"`
+	ReadOnly      bool                        `json:"read_only"`
+	Modules       []readiness.ModuleReadiness `json:"modules"`
+	RequiredGates []string                    `json:"required_gates"`
+}
+
+func parseReadinessInput(req ToolRequest) (readiness.ReadinessInput, error) {
+	var a readiness.ReadinessInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleReadinessVerdict(req ToolRequest) ToolResponse {
+	a, err := parseReadinessInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: readiness.BuildReadiness(a)}
+}
+
+func handleReadinessValidate(req ToolRequest) ToolResponse {
+	a, err := parseReadinessInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: readiness.ValidateReadiness(a)}
+}
+
+func handleReadinessModules(req ToolRequest) ToolResponse {
+	a, err := parseReadinessInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: readinessModulesPayload{
+		Version:       readiness.Version,
+		DryRun:        true,
+		ReadOnly:      true,
+		Modules:       readiness.BuildModuleReadiness(a),
+		RequiredGates: []string{"PASS_GOLD", "PASS_SECURE"},
+	}}
+}
+
+func handleReadinessAudit(req ToolRequest) ToolResponse {
+	a, err := parseReadinessInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: readiness.AuditReadiness(a)}
+}
+
+func handleReadinessExplain(req ToolRequest) ToolResponse {
+	a, err := parseReadinessInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: readiness.ExplainReadiness(a)}
 }

@@ -1637,3 +1637,135 @@ func TestV88RegressionToolsV87ThroughV80StillWork(t *testing.T) {
 		}
 	}
 }
+
+// ── V8.9 Promotion Readiness Gate Tests ─────────────────────────────────────
+
+func payloadMap(t *testing.T, payload interface{}) map[string]interface{} {
+	t.Helper()
+	b, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	var out map[string]interface{}
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	return out
+}
+
+func TestV89ReadinessToolsRegistered(t *testing.T) {
+	tools := []string{
+		mcpserver.ToolReadinessVerdict,
+		mcpserver.ToolReadinessValidate,
+		mcpserver.ToolReadinessModules,
+		mcpserver.ToolReadinessAudit,
+		mcpserver.ToolReadinessExplain,
+	}
+	for _, tool := range tools {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir()})
+		if !resp.OK {
+			t.Fatalf("tool %s must be registered: %s", tool, resp.Error)
+		}
+	}
+}
+
+func TestExecuteReadinessVerdictV89ReadOnlyDryRun(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolReadinessVerdict, Root: t.TempDir(), Args: mkArgs(map[string]interface{}{"mission_input": "CORS origin blocked", "operation": "mission"})})
+	if !resp.OK {
+		t.Fatalf("readiness verdict failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	if p["version"] != "V8.9" || p["dry_run"] != true || p["read_only"] != true || p["ready"] != false {
+		t.Fatalf("unexpected readiness verdict payload: %+v", p)
+	}
+}
+
+func TestExecuteReadinessValidateBlocksDryRunPromotionClaims(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolReadinessValidate, Args: mkArgs(map[string]interface{}{"evidences": []map[string]interface{}{{"source": "dashboard", "tool": "vision.dashboard_snapshot", "status": "pass", "dry_run": true, "pass_gold": true, "promotion_allowed": true}}, "strict": true})})
+	if !resp.OK {
+		t.Fatalf("readiness validate failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	if p["valid"] != false || p["blocked"] != true {
+		t.Fatalf("validation must block dry-run pass/promote claims: %+v", p)
+	}
+	claims, _ := p["unsafe_claims"].([]interface{})
+	if len(claims) == 0 {
+		t.Fatalf("expected unsafe claims: %+v", p)
+	}
+}
+
+func TestExecuteReadinessModulesListsEvidenceLedgerAndPassGates(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolReadinessModules, Args: mkArgs(map[string]interface{}{"operation": "mission", "files": []string{"frontend/index.html"}, "evidences": []map[string]interface{}{{"source": "contract_registry", "tool": "vision.contract_audit", "status": "pass", "dry_run": true}}})})
+	if !resp.OK {
+		t.Fatalf("readiness modules failed: %s", resp.Error)
+	}
+	b, _ := json.Marshal(resp.Payload)
+	payload := string(b)
+	for _, want := range []string{"EvidenceLedger", "PASS_GOLD", "PASS_SECURE"} {
+		if !strings.Contains(payload, want) {
+			t.Fatalf("expected %s in modules payload: %s", want, payload)
+		}
+	}
+}
+
+func TestExecuteReadinessAuditDetectsPromotionAttempt(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolReadinessAudit, Args: mkArgs(map[string]interface{}{"evidences": []map[string]interface{}{{"source": "dashboard", "tool": "vision.dashboard_snapshot", "status": "pass", "dry_run": true, "promotion_allowed": true}}})})
+	if !resp.OK {
+		t.Fatalf("readiness audit failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	if p["promotion_attempt_found"] != true {
+		t.Fatalf("expected promotion_attempt_found: %+v", p)
+	}
+}
+
+func TestExecuteReadinessExplainReturnsWhyNotPromoted(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolReadinessExplain, Args: mkArgs(map[string]interface{}{"mission_input": "CORS origin blocked", "operation": "mission"})})
+	if !resp.OK {
+		t.Fatalf("readiness explain failed: %s", resp.Error)
+	}
+	p := payloadMap(t, resp.Payload)
+	why, _ := p["why_not_promoted"].([]interface{})
+	if len(why) == 0 {
+		t.Fatalf("expected why_not_promoted: %+v", p)
+	}
+}
+
+func TestV89MutatingToolsStillBlockedWithCanonicalError(t *testing.T) {
+	for _, tool := range []string{"vision.apply_patch", "vision.write_file", "vision.commit", "vision.push", "vision.open_pr", "vision.publish_status", "vision.run_mission_real", "vision.rollback", "vision.deploy"} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+		if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+			t.Fatalf("tool %s must remain blocked with canonical error, got %+v", tool, resp)
+		}
+	}
+}
+
+func TestV89RegressionToolsV80ThroughV88StillWork(t *testing.T) {
+	root := buildIndex(t)
+	tests := []struct {
+		version string
+		tool    string
+		args    interface{}
+	}{
+		{"V8.8", mcpserver.ToolEvidenceExplain, nil},
+		{"V8.7", mcpserver.ToolContractAudit, nil},
+		{"V8.6", mcpserver.ToolPolicyConflicts, nil},
+		{"V8.5", mcpserver.ToolDashboardToolInventory, nil},
+		{"V8.4", mcpserver.ToolImpeccableGuardStatus, nil},
+		{"V8.3", mcpserver.ToolCodeBurnGuardStatus, nil},
+		{"V8.2", mcpserver.ToolDryRunRiskAssessment, map[string]interface{}{"files": []string{"frontend/index.html"}, "operation": "mission"}},
+		{"V8.1", mcpserver.ToolGraphProviders, nil},
+		{"V8.0", mcpserver.ToolProjectSummary, nil},
+	}
+	for _, tc := range tests {
+		var args json.RawMessage
+		if tc.args != nil {
+			args = mkArgs(tc.args)
+		}
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tc.tool, Root: root, Args: args})
+		if !resp.OK {
+			t.Fatalf("%s regression tool %s failed: %s", tc.version, tc.tool, resp.Error)
+		}
+	}
+}
