@@ -27,6 +27,7 @@ import (
 	"github.com/visioncore/go-core/internal/policymatrix"
 	"github.com/visioncore/go-core/internal/promotioncontract"
 	"github.com/visioncore/go-core/internal/readiness"
+	"github.com/visioncore/go-core/internal/rehearsalrecorder"
 	"github.com/visioncore/go-core/internal/report"
 	"github.com/visioncore/go-core/internal/safetyenvelope"
 )
@@ -112,6 +113,12 @@ const (
 	ToolExecutorSafetyBoundary = "vision.executor_safety_boundary"
 	ToolExecutorSafetyAudit    = "vision.executor_safety_audit"
 	ToolExecutorSafetyExplain  = "vision.executor_safety_explain"
+	// V9.3 Executor Dry-Run Rehearsal Recorder tools
+	ToolExecutorRehearsalRecord   = "vision.executor_rehearsal_record"
+	ToolExecutorRehearsalValidate = "vision.executor_rehearsal_validate"
+	ToolExecutorRehearsalBoundary = "vision.executor_rehearsal_boundary"
+	ToolExecutorRehearsalAudit    = "vision.executor_rehearsal_audit"
+	ToolExecutorRehearsalExplain  = "vision.executor_rehearsal_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -207,6 +214,12 @@ var allowedTools = map[string]bool{
 	ToolExecutorSafetyBoundary: true,
 	ToolExecutorSafetyAudit:    true,
 	ToolExecutorSafetyExplain:  true,
+	// V9.3 Executor Dry-Run Rehearsal Recorder tools
+	ToolExecutorRehearsalRecord:   true,
+	ToolExecutorRehearsalValidate: true,
+	ToolExecutorRehearsalBoundary: true,
+	ToolExecutorRehearsalAudit:    true,
+	ToolExecutorRehearsalExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -391,6 +404,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleExecutorSafetyAudit(req)
 	case ToolExecutorSafetyExplain:
 		return handleExecutorSafetyExplain(req)
+	// V9.3 Executor Dry-Run Rehearsal Recorder tools
+	case ToolExecutorRehearsalRecord:
+		return handleExecutorRehearsalRecord(req)
+	case ToolExecutorRehearsalValidate:
+		return handleExecutorRehearsalValidate(req)
+	case ToolExecutorRehearsalBoundary:
+		return handleExecutorRehearsalBoundary(req)
+	case ToolExecutorRehearsalAudit:
+		return handleExecutorRehearsalAudit(req)
+	case ToolExecutorRehearsalExplain:
+		return handleExecutorRehearsalExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -1392,4 +1416,55 @@ func handleExecutorSafetyExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: safetyenvelope.ExplainSafetyEnvelope(a)}
+}
+
+// ── V9.3 Executor Dry-Run Rehearsal Recorder Handlers ─────────────────────
+
+func parseRehearsalInput(req ToolRequest) (rehearsalrecorder.RehearsalInput, error) {
+	var a rehearsalrecorder.RehearsalInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleExecutorRehearsalRecord(req ToolRequest) ToolResponse {
+	a, err := parseRehearsalInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: rehearsalrecorder.BuildRehearsalRecord(a)}
+}
+
+func handleExecutorRehearsalValidate(req ToolRequest) ToolResponse {
+	a, err := parseRehearsalInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: rehearsalrecorder.ValidateRehearsal(a)}
+}
+
+func handleExecutorRehearsalBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: rehearsalrecorder.BuildRehearsalBoundary()}
+}
+
+func handleExecutorRehearsalAudit(req ToolRequest) ToolResponse {
+	a, err := parseRehearsalInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: rehearsalrecorder.AuditRehearsal(a)}
+}
+
+func handleExecutorRehearsalExplain(req ToolRequest) ToolResponse {
+	a, err := parseRehearsalInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: rehearsalrecorder.ExplainRehearsal(a)}
 }

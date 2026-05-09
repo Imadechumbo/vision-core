@@ -2188,3 +2188,138 @@ func TestV92RegressionToolsV80ThroughV91StillWork(t *testing.T) {
 		}
 	}
 }
+
+// ── V9.3 Executor Dry-Run Rehearsal Recorder Tests ───────────────────────────
+
+func completeRehearsalArgs() map[string]interface{} {
+	return map[string]interface{}{
+		"mission_input": "CORS origin blocked", "operation": "external_executor_rehearsal", "rehearsal_id": "rehearsal-001",
+		"executor": "external_promotion_executor", "target": "stable", "environment": "local",
+		"safety_envelope_valid": true, "promotion_contract_valid": true,
+		"expected_actions":        []map[string]interface{}{{"id": "act-001", "name": "verify_authority_artifacts", "category": "validation", "would_execute_outside_mcp": true, "inside_mcp_allowed": false, "requires_gate": "PASS_GOLD", "order": 1}},
+		"forbidden_actions":       []string{"promote_inside_mcp", "deploy_inside_mcp", "publish_status_inside_mcp", "write_memory_inside_mcp", "call_external_executor_inside_mcp"},
+		"replay_plan":             map[string]interface{}{"present": true, "steps": []string{"validate_gates", "verify_safety_envelope", "simulate_promotion_order", "confirm_no_mutation"}, "deterministic": true, "target_matched": true, "environment_matched": true},
+		"no_mutation_proof":       map[string]interface{}{"present": true, "no_files_written": true, "no_commands_executed": true, "no_network_called": true, "no_status_published": true, "no_deploy_performed": true, "no_lock_acquired": true, "no_rollback_performed": true},
+		"audit_summary":           map[string]interface{}{"present": true, "audit_id": "audit-rehearsal-001", "records_inputs": true, "records_expected_actions": true, "records_forbidden_actions": true, "records_safety_controls": true, "records_no_mutation": true},
+		"evidence_summary":        map[string]interface{}{"present": true, "includes_pass_gold_real_reference": true, "includes_pass_secure_real_reference": true, "includes_safety_envelope_reference": true, "includes_promotion_contract_reference": true, "uses_dry_run_as_real_gate": false},
+		"rollback_rehearsal":      map[string]interface{}{"present": true, "strategy": "snapshot_restore", "simulated_only": true, "restore_path_declared": true, "validation_after_simulated_restore": true, "no_real_rollback_performed": true},
+		"observability_rehearsal": map[string]interface{}{"present": true, "health_checks_planned": true, "metrics_planned": true, "logs_planned": true, "alerting_planned": true, "watch_window_seconds": 600},
+		"checklist":               map[string]interface{}{"present": true, "pass_gold_real_checked": true, "pass_secure_real_checked": true, "promotion_contract_checked": true, "safety_envelope_checked": true, "idempotency_checked": true, "lock_lease_checked": true, "timeout_checked": true, "kill_switch_checked": true, "audit_trail_checked": true, "rollback_checked": true, "observability_checked": true, "fallback_checked": true, "no_mutation_checked": true},
+	}
+}
+
+func TestV93AllRehearsalToolsRegistered(t *testing.T) {
+	for _, tool := range []string{
+		mcpserver.ToolExecutorRehearsalRecord,
+		mcpserver.ToolExecutorRehearsalValidate,
+		mcpserver.ToolExecutorRehearsalBoundary,
+		mcpserver.ToolExecutorRehearsalAudit,
+		mcpserver.ToolExecutorRehearsalExplain,
+	} {
+		if !mcpserver.IsAllowed(tool) {
+			t.Errorf("V9.3 tool %q must be allowed", tool)
+		}
+	}
+}
+
+func TestExecutorRehearsalRecordReturnsV93DryRunReadOnly(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorRehearsalRecord, Args: mkArgs(completeRehearsalArgs())})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V9.3"`, `"dry_run":true`, `"read_only":true`, `"rehearsal_status":"rehearsal_ready_dry_run"`, `"would_allow_external_executor":true`, `"promotion_allowed":false`, `"deploy_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("payload missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorRehearsalValidateBlocksMCPAndPromotionAllowed(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorRehearsalValidate, Args: mkArgs(map[string]interface{}{
+		"rehearsal_id": "rehearsal-unsafe", "executor": "mcp", "target": "stable", "environment": "local",
+		"safety_envelope_valid": false, "promotion_contract_valid": false, "promotion_allowed": true,
+		"attempt_external_call": true, "file_write": true, "command_execution": true,
+		"no_mutation_proof": map[string]interface{}{"present": true, "no_files_written": true, "no_commands_executed": true, "no_network_called": true},
+	})})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V9.3"`, `"dry_run":true`, `"read_only":true`, `"valid":false`, `"blocked":true`, "executor_must_not_be_mcp", "promotion_allowed_inside_mcp"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("payload missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorRehearsalBoundaryListsForbiddenInsideMCP(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorRehearsalBoundary})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{"forbidden_inside_mcp", "promote", "deploy", "call_external_executor", "write_rehearsal_file"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("boundary missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorRehearsalAuditDetectsExecutionAndMutation(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorRehearsalAudit, Args: mkArgs(map[string]interface{}{
+		"executor": "mcp", "operation": "promote", "promotion_allowed": true, "deploy_allowed": true,
+		"attempt_external_call": true, "attempt_real_rollback": true, "file_write": true, "command_execution": true,
+		"network_call": true, "pass_gold": true,
+		"no_mutation_proof": map[string]interface{}{"present": true, "no_files_written": true, "no_commands_executed": true, "no_network_called": true},
+	})})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"execution_attempt_found":true`, `"mutation_attempt_found":true`, `"unsafe_claims_found":true`, "rehearsal_claims_pass_gold"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("audit missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorRehearsalExplainWhyNotPassGold(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorRehearsalExplain, Args: mkArgs(map[string]interface{}{"operation": "promote", "executor": "external_promotion_executor"})})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{"why_rehearsal_is_not_pass_gold", "PASS_GOLD", "PASS_SECURE"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("explain missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestV93RegressionsPriorToolsStillAllowed(t *testing.T) {
+	for _, tool := range []string{
+		mcpserver.ToolExecutorSafetyBoundary,
+		mcpserver.ToolPromotionContractBoundary,
+		mcpserver.ToolGateAuthorityPolicy,
+		mcpserver.ToolReadinessModules,
+		mcpserver.ToolEvidenceExplain,
+		mcpserver.ToolContractExplain,
+		mcpserver.ToolPolicyExplain,
+		mcpserver.ToolDashboardToolInventory,
+		mcpserver.ToolImpeccableExplain,
+		mcpserver.ToolCodeBurnExplain,
+		mcpserver.ToolDryRunRiskAssessment,
+		mcpserver.ToolGraphProviders,
+		mcpserver.ToolPassGoldStatus,
+	} {
+		if !mcpserver.IsAllowed(tool) {
+			t.Fatalf("prior tool no longer allowed: %s", tool)
+		}
+	}
+}
