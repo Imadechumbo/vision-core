@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/visioncore/go-core/internal/authorityreview"
 	"github.com/visioncore/go-core/internal/authorizationmanifest"
 	"github.com/visioncore/go-core/internal/codeburn"
 	"github.com/visioncore/go-core/internal/contractregistry"
@@ -154,6 +155,12 @@ const (
 	ToolExecutorResultBoundary = "vision.executor_result_boundary"
 	ToolExecutorResultAudit    = "vision.executor_result_audit"
 	ToolExecutorResultExplain  = "vision.executor_result_explain"
+	// V9.9 External Result Authority Review Gate tools
+	ToolExecutorAuthorityReview         = "vision.executor_authority_review"
+	ToolExecutorAuthorityReviewValidate = "vision.executor_authority_review_validate"
+	ToolExecutorAuthorityReviewBoundary = "vision.executor_authority_review_boundary"
+	ToolExecutorAuthorityReviewAudit    = "vision.executor_authority_review_audit"
+	ToolExecutorAuthorityReviewExplain  = "vision.executor_authority_review_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -285,6 +292,12 @@ var allowedTools = map[string]bool{
 	ToolExecutorResultBoundary: true,
 	ToolExecutorResultAudit:    true,
 	ToolExecutorResultExplain:  true,
+	// V9.9 External Result Authority Review Gate tools
+	ToolExecutorAuthorityReview:         true,
+	ToolExecutorAuthorityReviewValidate: true,
+	ToolExecutorAuthorityReviewBoundary: true,
+	ToolExecutorAuthorityReviewAudit:    true,
+	ToolExecutorAuthorityReviewExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -535,6 +548,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleExecutorResultAudit(req)
 	case ToolExecutorResultExplain:
 		return handleExecutorResultExplain(req)
+	// V9.9 External Result Authority Review Gate tools
+	case ToolExecutorAuthorityReview:
+		return handleExecutorAuthorityReview(req)
+	case ToolExecutorAuthorityReviewValidate:
+		return handleExecutorAuthorityReviewValidate(req)
+	case ToolExecutorAuthorityReviewBoundary:
+		return handleExecutorAuthorityReviewBoundary(req)
+	case ToolExecutorAuthorityReviewAudit:
+		return handleExecutorAuthorityReviewAudit(req)
+	case ToolExecutorAuthorityReviewExplain:
+		return handleExecutorAuthorityReviewExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -1845,4 +1869,55 @@ func handleExecutorResultExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: resultintake.ExplainResultIntake(a)}
+}
+
+// ── V9.9 External Result Authority Review Gate Handlers ─────────────────────
+
+func parseAuthorityReviewInput(req ToolRequest) (authorityreview.AuthorityReviewInput, error) {
+	var a authorityreview.AuthorityReviewInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleExecutorAuthorityReview(req ToolRequest) ToolResponse {
+	a, err := parseAuthorityReviewInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: authorityreview.BuildAuthorityReview(a)}
+}
+
+func handleExecutorAuthorityReviewValidate(req ToolRequest) ToolResponse {
+	a, err := parseAuthorityReviewInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: authorityreview.ValidateAuthorityReview(a)}
+}
+
+func handleExecutorAuthorityReviewBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: authorityreview.BuildAuthorityReviewBoundary()}
+}
+
+func handleExecutorAuthorityReviewAudit(req ToolRequest) ToolResponse {
+	a, err := parseAuthorityReviewInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: authorityreview.AuditAuthorityReview(a)}
+}
+
+func handleExecutorAuthorityReviewExplain(req ToolRequest) ToolResponse {
+	a, err := parseAuthorityReviewInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: authorityreview.ExplainAuthorityReview(a)}
 }

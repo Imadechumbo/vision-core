@@ -2885,3 +2885,112 @@ func TestV98RegressionToolsV80ThroughV97StillRegistered(t *testing.T) {
 		}
 	}
 }
+
+func validAuthorityReviewArgs() map[string]interface{} {
+	return map[string]interface{}{
+		"review_id": "review-001", "intake_id": "intake-001", "invocation_id": "invoke-001", "executor": "external_promotion_executor", "executor_mode": "external_only", "project": "vision-core", "branch": "v6-go-enterprise-runtime", "commit_sha": "bd56cf1", "target": "stable", "environment": "local",
+		"result_intake":    map[string]interface{}{"present": true, "version": "V9.8", "intake_id": "intake-001", "intake_status": "result_intake_ready_dry_run", "result_intake_valid": true, "result_requires_human_review": true, "result_requires_revalidation": true, "result_eligible_for_authority_review": true, "result_rejected": false, "valid": true},
+		"evidence_bundle":  map[string]interface{}{"present": true, "evidence_id": "evidence-result-001", "contains_executor_logs": true, "contains_diff_summary": true, "contains_validation_summary": true, "contains_security_summary": true, "contains_real_pass_gold": false, "contains_real_pass_secure": false, "dry_run_evidence_only": false, "trusted": false, "sufficient_for_review": true},
+		"audit_trail":      map[string]interface{}{"present": true, "audit_id": "audit-001", "records_invocation_id": true, "records_executor": true, "records_inputs": true, "records_outputs": true, "records_started_finished": true, "records_decisions": true, "immutable_target_declared": true, "sufficient_for_review": true},
+		"safety_decision":  map[string]interface{}{"present": true, "decision": "requires_authority_review", "requires_human_review": true, "requires_revalidation": true, "eligible_for_authority_review": true, "rejected": false},
+		"rollback_outcome": map[string]interface{}{"present": true}, "observability_outcome": map[string]interface{}{"present": true}, "mutation_summary": map[string]interface{}{"present": true}, "command_summary": map[string]interface{}{"present": true}, "network_summary": map[string]interface{}{"present": true}, "file_write_summary": map[string]interface{}{"present": true}, "status_publication_summary": map[string]interface{}{"present": true},
+		"authority_requirements": map[string]interface{}{"present": true, "requires_pass_gold_real": true, "requires_pass_secure_real": true, "requires_evidence_bundle": true, "requires_audit_trail": true, "requires_safety_decision": true, "requires_no_auto_promotion": true, "requires_no_memory_write": true, "requires_no_trust_bypass": true},
+		"review_policy":          map[string]interface{}{"present": true, "require_human_review": true, "require_revalidation": true, "require_real_pass_gold_gate": true, "require_real_pass_secure_gate": true, "reject_auto_gold_claims": true, "reject_auto_promotion_claims": true, "reject_memory_write_claims": true, "reject_trust_without_review": true},
+		"claims":                 map[string]interface{}{"pass_gold": false, "pass_secure": false, "authority_granted": false, "promotion_allowed": false, "deploy_allowed": false, "status_publish_allowed": false, "mutation_allowed": false, "memory_write_allowed": false, "stable_promoted": false, "result_trusted_without_review": false, "review_bypassed": false, "human_review_skipped": false, "revalidation_skipped": false},
+	}
+}
+
+func TestV99AuthorityReviewToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolExecutorAuthorityReview, mcpserver.ToolExecutorAuthorityReviewValidate, mcpserver.ToolExecutorAuthorityReviewBoundary, mcpserver.ToolExecutorAuthorityReviewAudit, mcpserver.ToolExecutorAuthorityReviewExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir()})
+		if !resp.OK || strings.Contains(resp.Error, "unknown tool") {
+			t.Fatalf("V9.9 tool %s not registered: ok=%v err=%q", tool, resp.OK, resp.Error)
+		}
+	}
+}
+
+func TestExecutorAuthorityReviewReturnsV99ReadOnlyDryRun(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorAuthorityReview, Root: t.TempDir(), Args: mkArgs(validAuthorityReviewArgs())})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V9.9"`, `"dry_run":true`, `"read_only":true`, `"review_status":"authority_review_ready_dry_run"`, `"authority_review_valid":true`, `"pass_gold_allowed":false`, `"authority_grant_allowed":false`, `"promotion_allowed":false`, `"trust_without_review_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorAuthorityReviewValidateBlocksUnsafeClaims(t *testing.T) {
+	args := map[string]interface{}{"review_id": "review-unsafe", "intake_id": "intake-unsafe", "invocation_id": "invoke-unsafe", "executor": "mcp", "executor_mode": "inside_mcp", "pass_gold": true, "authority_granted": true, "human_review_skipped": true, "safety_decision": map[string]interface{}{"present": true, "requires_human_review": false, "requires_revalidation": false, "rejected": false}}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorAuthorityReviewValidate, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V9.9"`, `"valid":false`, `"blocked":true`, "executor_must_not_be_mcp", "pass_gold", "authority_granted", "human_review_skipped", `"pass_gold_allowed":false`, `"authority_grant_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorAuthorityReviewBoundaryListsForbiddenInsideMCP(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorAuthorityReviewBoundary, Args: mkArgs(map[string]interface{}{})})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V9.9"`, `"forbidden_inside_mcp":`, "mark_PASS_GOLD", "mark_PASS_SECURE", "grant_authority", "deploy", "publish_status", "write_memory", "learn_stable", "trust_result_automatically", "bypass_human_review", "bypass_revalidation"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorAuthorityReviewAuditDetectsUnsafeAttempts(t *testing.T) {
+	args := map[string]interface{}{"review_id": "review-unsafe", "executor": "mcp", "pass_gold": true, "pass_secure": true, "authority_granted": true, "promotion_allowed": true, "deploy_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "stable_promoted": true, "result_trusted_without_review": true, "review_bypassed": true, "human_review_skipped": true, "revalidation_skipped": true, "evidence_bundle": map[string]interface{}{"dry_run_evidence_only": true, "trusted": true}}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorAuthorityReviewAudit, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"auto_gold_attempt_found":true`, `"authority_grant_attempt_found":true`, `"auto_promotion_attempt_found":true`, `"trust_bypass_attempt_found":true`, `"review_bypass_attempt_found":true`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecutorAuthorityReviewExplainIncludesAuthorityAndHumanReviewReasons(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExecutorAuthorityReviewExplain, Root: t.TempDir(), Args: mkArgs(map[string]interface{}{"operation": "review_external_result", "executor": "external_promotion_executor"})})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V9.9"`, `"why_review_is_not_authority":`, `"why_human_review_is_required":`, "PASS_GOLD", "PASS_SECURE"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestV99MutatingToolsStillBlockedExactMessage(t *testing.T) {
+	for _, tool := range []string{"vision.apply_patch", "vision.write_file", "vision.commit", "vision.push", "vision.open_pr", "vision.publish_status", "vision.run_mission_real", "vision.rollback", "vision.deploy"} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+		if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+			t.Fatalf("mutating tool %s must remain blocked with exact message, got ok=%v error=%q", tool, resp.OK, resp.Error)
+		}
+	}
+}
+
+func TestV99RegressionToolsV80ThroughV98StillRegistered(t *testing.T) {
+	tools := []string{mcpserver.ToolProjectSummary, mcpserver.ToolGraphProviders, mcpserver.ToolDryRunRiskAssessment, mcpserver.ToolCodeBurnExplain, mcpserver.ToolImpeccableExplain, mcpserver.ToolDashboardToolInventory, mcpserver.ToolPolicyExplain, mcpserver.ToolContractExplain, mcpserver.ToolEvidenceExplain, mcpserver.ToolReadinessExplain, mcpserver.ToolGateAuthorityExplain, mcpserver.ToolPromotionContractBoundary, mcpserver.ToolExecutorSafetyBoundary, mcpserver.ToolExecutorRehearsalBoundary, mcpserver.ToolExecutorAuthorizationBoundary, mcpserver.ToolExecutorPreflightBoundary, mcpserver.ToolExecutorHandoffBoundary, mcpserver.ToolExecutorInvocationBoundary, mcpserver.ToolExecutorResultBoundary}
+	for _, tool := range tools {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir()})
+		if strings.Contains(resp.Error, "unknown tool") {
+			t.Fatalf("regression tool %s became unregistered", tool)
+		}
+	}
+}
