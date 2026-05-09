@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/visioncore/go-core/internal/codeburn"
+	"github.com/visioncore/go-core/internal/dashboard"
 	"github.com/visioncore/go-core/internal/dryrun"
 	"github.com/visioncore/go-core/internal/graphmemory"
 	"github.com/visioncore/go-core/internal/impeccable"
@@ -56,6 +57,12 @@ const (
 	ToolImpeccableVisualGatePlan = "vision.impeccable_visual_gate_plan"
 	ToolImpeccableGuardStatus    = "vision.impeccable_guard_status"
 	ToolImpeccableExplain        = "vision.impeccable_explain"
+	// V8.5 Unified Intelligence Dashboard tools
+	ToolDashboardSnapshot            = "vision.dashboard_snapshot"
+	ToolDashboardReadiness           = "vision.dashboard_readiness"
+	ToolDashboardIntelligenceSummary = "vision.dashboard_intelligence_summary"
+	ToolDashboardToolInventory       = "vision.dashboard_tool_inventory"
+	ToolDashboardMissionControl      = "vision.dashboard_mission_control"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -103,6 +110,12 @@ var allowedTools = map[string]bool{
 	ToolImpeccableVisualGatePlan: true,
 	ToolImpeccableGuardStatus:    true,
 	ToolImpeccableExplain:        true,
+	// V8.5 Unified Intelligence Dashboard tools
+	ToolDashboardSnapshot:            true,
+	ToolDashboardReadiness:           true,
+	ToolDashboardIntelligenceSummary: true,
+	ToolDashboardToolInventory:       true,
+	ToolDashboardMissionControl:      true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -199,6 +212,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleImpeccableGuardStatus(req)
 	case ToolImpeccableExplain:
 		return handleImpeccableExplain(req)
+	// V8.5 Unified Intelligence Dashboard tools
+	case ToolDashboardSnapshot:
+		return handleDashboardSnapshot(req)
+	case ToolDashboardReadiness:
+		return handleDashboardReadiness(req)
+	case ToolDashboardIntelligenceSummary:
+		return handleDashboardIntelligenceSummary(req)
+	case ToolDashboardToolInventory:
+		return handleDashboardToolInventory(req)
+	case ToolDashboardMissionControl:
+		return handleDashboardMissionControl(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -775,4 +799,55 @@ func handleImpeccableExplain(req ToolRequest) ToolResponse {
 		}
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: impeccable.ExplainUIRisk(a)}
+}
+
+// ── V8.5 Unified Intelligence Dashboard Handlers ─────────────────────────────
+
+func parseDashboardInput(req ToolRequest) (dashboard.DashboardInput, error) {
+	var a dashboard.DashboardInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleDashboardSnapshot(req ToolRequest) ToolResponse {
+	a, err := parseDashboardInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: dashboard.BuildSnapshot(a)}
+}
+
+func handleDashboardReadiness(req ToolRequest) ToolResponse {
+	a, err := parseDashboardInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: dashboard.BuildReadiness(a)}
+}
+
+func handleDashboardIntelligenceSummary(req ToolRequest) ToolResponse {
+	a, err := parseDashboardInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: dashboard.SummarizeIntelligence(a)}
+}
+
+func handleDashboardToolInventory(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: dashboard.BuildToolInventory()}
+}
+
+func handleDashboardMissionControl(req ToolRequest) ToolResponse {
+	a, err := parseDashboardInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: dashboard.BuildMissionControl(a)}
 }

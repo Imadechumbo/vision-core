@@ -1088,3 +1088,150 @@ func TestV83V82V81V80ToolsStillAllowedInV84(t *testing.T) {
 		}
 	}
 }
+
+// ── V8.5 Unified Intelligence Dashboard Tests ────────────────────────────────
+
+func TestV85DashboardToolsRegistered(t *testing.T) {
+	for _, tool := range []string{
+		mcpserver.ToolDashboardSnapshot,
+		mcpserver.ToolDashboardReadiness,
+		mcpserver.ToolDashboardIntelligenceSummary,
+		mcpserver.ToolDashboardToolInventory,
+		mcpserver.ToolDashboardMissionControl,
+	} {
+		if !mcpserver.IsAllowed(tool) {
+			t.Errorf("V8.5 dashboard tool %q must be allowed", tool)
+		}
+		if mcpserver.IsBlocked(tool) {
+			t.Errorf("V8.5 dashboard tool %q must not be blocked", tool)
+		}
+	}
+}
+
+func TestExecuteDashboardSnapshotV85DryRunReadOnly(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolDashboardSnapshot,
+		Root: t.TempDir(),
+		Args: mkArgs(map[string]interface{}{
+			"mission_input": "CORS origin blocked",
+			"operation":     "mission",
+			"files":         []string{"frontend/index.html", "go-core/internal/mcpserver/mcpserver.go"},
+			"route":         "/",
+			"viewport":      "mobile",
+			"provider":      "local",
+			"model":         "offline",
+		}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V8.5"`, `"dry_run":true`, `"read_only":true`, `"promotion_allowed":false`, `"deploy_allowed":false`, `"status_publish_allowed":false`, `"mutation_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecuteDashboardReadinessBlocksDeployMutation(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolDashboardReadiness,
+		Root: t.TempDir(),
+		Args: mkArgs(map[string]interface{}{"operation": "patch", "files": []string{"frontend/index.html"}, "provider": "local", "model": "offline"}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V8.5"`, `"dry_run":true`, `"read_only":true`, `"pass_gold_required":true`, `"pass_secure_required":true`, `"deploy_allowed":false`, `"mutation_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecuteDashboardIntelligenceSummaryHasExecutiveSummary(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolDashboardIntelligenceSummary,
+		Root: t.TempDir(),
+		Args: mkArgs(map[string]interface{}{"mission_input": "CORS origin blocked", "operation": "mission", "files": []string{"frontend/index.html"}, "route": "/", "viewport": "mobile"}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	if !strings.Contains(s, `"executive_summary":`) || !strings.Contains(s, `"top_risks":`) || !strings.Contains(s, `"blocked_actions":`) {
+		t.Fatalf("summary missing required fields: %s", s)
+	}
+}
+
+func TestExecuteDashboardToolInventoryListsBlockedMutatingTools(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolDashboardToolInventory})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"version":"V8.5"`, `"dashboard_tools":`, `"blocked_mutating_tools":`, "vision.apply_patch", "vision.deploy"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecuteDashboardMissionControlListsExpectedModules(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolDashboardMissionControl,
+		Root: t.TempDir(),
+		Args: mkArgs(map[string]interface{}{"mission_input": "CORS origin blocked", "operation": "mission", "files": []string{"frontend/index.html"}, "route": "/", "viewport": "mobile"}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{"GraphMemory", "MCPReadOnly", "DryRun", "CodeBurn", "Impeccable", "PASS_GOLD", "PASS_SECURE"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("mission control missing %s: %s", want, s)
+		}
+	}
+}
+
+func TestV85MutatingToolsStillBlockedExactMessage(t *testing.T) {
+	for _, tool := range []string{"vision.apply_patch", "vision.write_file", "vision.commit", "vision.push", "vision.open_pr", "vision.publish_status", "vision.run_mission_real", "vision.rollback", "vision.deploy"} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+		if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+			t.Fatalf("mutating tool %s must remain blocked with exact message, got ok=%v error=%q", tool, resp.OK, resp.Error)
+		}
+	}
+}
+
+func TestV85RegressionToolsV84V83V82V81V80StillWork(t *testing.T) {
+	root := buildIndex(t)
+	cases := []struct {
+		tool string
+		args interface{}
+	}{
+		{mcpserver.ToolProjectSummary, nil},
+		{mcpserver.ToolGraphProviders, nil},
+		{mcpserver.ToolGraphSummary, nil},
+		{mcpserver.ToolGraphQuery, map[string]interface{}{"query": "github", "limit": 5}},
+		{mcpserver.ToolGraphDryRunContext, map[string]interface{}{"query": "github", "limit": 5}},
+		{mcpserver.ToolDryRunRiskAssessment, map[string]interface{}{"operation": "patch", "files": []string{"README.md"}}},
+		{mcpserver.ToolCodeBurnGuardStatus, nil},
+		{mcpserver.ToolImpeccableGuardStatus, nil},
+	}
+	for _, tc := range cases {
+		req := mcpserver.ToolRequest{Tool: tc.tool, Root: root}
+		if tc.args != nil {
+			req.Args = mkArgs(tc.args)
+		}
+		resp := mcpserver.Dispatch(req)
+		if !resp.OK {
+			t.Fatalf("regression tool %s must still work: %s", tc.tool, resp.Error)
+		}
+	}
+}
