@@ -952,3 +952,139 @@ func TestExecuteCodeBurnExplain_ReturnsSummaryAndSafePath(t *testing.T) {
 		}
 	}
 }
+
+// ── V8.4 Impeccable UI Guard Tests ──────────────────────────────────────────
+
+func TestV84ImpeccableToolsRegistered(t *testing.T) {
+	tools := []string{
+		mcpserver.ToolImpeccableUIRisk,
+		mcpserver.ToolImpeccableFileClassify,
+		mcpserver.ToolImpeccableVisualGatePlan,
+		mcpserver.ToolImpeccableGuardStatus,
+		mcpserver.ToolImpeccableExplain,
+	}
+	for _, tool := range tools {
+		if !mcpserver.IsAllowed(tool) {
+			t.Errorf("V8.4 Impeccable tool %q must be allowed", tool)
+		}
+		if mcpserver.IsBlocked(tool) {
+			t.Errorf("V8.4 Impeccable tool %q must not be blocked", tool)
+		}
+	}
+}
+
+func TestExecuteImpeccableUIRisk_DryRunReadOnlyV84(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolImpeccableUIRisk,
+		Args: mkArgs(map[string]interface{}{
+			"operation": "frontend_change", "files": []string{"frontend/index.html", "frontend/styles.css"},
+			"route": "/", "viewport": "mobile", "framework": "static", "description": "Ajuste visual do dashboard",
+		}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"dry_run":true`, `"read_only":true`, `"version":"V8.4"`, `"VISUAL_DIFF_REQUIRED"`, `"PASS_GOLD"`, `"PASS_SECURE"`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecuteImpeccableFileClassify_GroupsFrontendBackendDangerous(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolImpeccableFileClassify,
+		Args: mkArgs(map[string]interface{}{"files": []string{"frontend/index.html", "go-core/internal/github/github.go", ".env"}}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"dry_run":true`, `"read_only":true`, `"version":"V8.4"`, `"ui_files":["frontend/index.html"]`, `"backend_files":["go-core/internal/github/github.go"]`, `"dangerous_files":[".env"]`, `"blocked":true`, `"risk_level":"critical"`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecuteImpeccableVisualGatePlan_CommandsNotExecuted(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolImpeccableVisualGatePlan,
+		Args: mkArgs(map[string]interface{}{"route": "/", "viewport": "mobile", "files": []string{"frontend/index.html"}, "description": "Alteração visual"}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"dry_run":true`, `"read_only":true`, `"version":"V8.4"`, `"commands_executed":false`, `"visual_diff"`, `"mobile_viewport"`, `"accessibility_contrast"`, `"route_load"`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecuteImpeccableGuardStatus_DeniesBrowserScreenshotsMutations(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolImpeccableGuardStatus})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"enabled":true`, `"browser_execution_allowed":false`, `"screenshots_allowed":false`, `"mutations_allowed":false`, `"deploy_allowed":false`, `"external_calls_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExecuteImpeccableExplain_ReturnsSummaryAndSafePath(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{
+		Tool: mcpserver.ToolImpeccableExplain,
+		Args: mkArgs(map[string]interface{}{"estimate": map[string]interface{}{"blocked": true, "blocked_reasons": []string{"dangerous UI path"}, "risk_level": "high"}}),
+	})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	payload, _ := json.Marshal(resp.Payload)
+	s := string(payload)
+	for _, want := range []string{`"dry_run":true`, `"read_only":true`, `"version":"V8.4"`, `"summary"`, `"cheapest_safe_path"`, "dangerous UI path"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestV83V82V81V80ToolsStillAllowedInV84(t *testing.T) {
+	tools := []string{
+		mcpserver.ToolProjectSummary,
+		mcpserver.ToolGraphQuery,
+		mcpserver.ToolGraphSummary,
+		mcpserver.ToolListReports,
+		mcpserver.ToolGetReport,
+		mcpserver.ToolGithubFlowReportsList,
+		mcpserver.ToolPassGoldStatus,
+		mcpserver.ToolGraphProviders,
+		mcpserver.ToolGraphProviderStatus,
+		mcpserver.ToolGraphImpactQuery,
+		mcpserver.ToolGraphDryRunContext,
+		mcpserver.ToolDryRunApplyPatch,
+		mcpserver.ToolDryRunWriteFile,
+		mcpserver.ToolDryRunGitHubFlow,
+		mcpserver.ToolDryRunMission,
+		mcpserver.ToolDryRunRiskAssessment,
+		mcpserver.ToolCodeBurnEstimate,
+		mcpserver.ToolCodeBurnPolicyCheck,
+		mcpserver.ToolCodeBurnBudgetPlan,
+		mcpserver.ToolCodeBurnGuardStatus,
+		mcpserver.ToolCodeBurnExplain,
+	}
+	for _, tool := range tools {
+		if !mcpserver.IsAllowed(tool) {
+			t.Errorf("existing tool %q must remain allowed", tool)
+		}
+	}
+}

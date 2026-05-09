@@ -19,6 +19,7 @@ import (
 	"github.com/visioncore/go-core/internal/codeburn"
 	"github.com/visioncore/go-core/internal/dryrun"
 	"github.com/visioncore/go-core/internal/graphmemory"
+	"github.com/visioncore/go-core/internal/impeccable"
 	"github.com/visioncore/go-core/internal/report"
 )
 
@@ -49,6 +50,12 @@ const (
 	ToolCodeBurnBudgetPlan  = "vision.codeburn_budget_plan"
 	ToolCodeBurnGuardStatus = "vision.codeburn_guard_status"
 	ToolCodeBurnExplain     = "vision.codeburn_explain"
+	// V8.4 Impeccable UI Guard tools
+	ToolImpeccableUIRisk         = "vision.impeccable_ui_risk"
+	ToolImpeccableFileClassify   = "vision.impeccable_file_classify"
+	ToolImpeccableVisualGatePlan = "vision.impeccable_visual_gate_plan"
+	ToolImpeccableGuardStatus    = "vision.impeccable_guard_status"
+	ToolImpeccableExplain        = "vision.impeccable_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -90,6 +97,12 @@ var allowedTools = map[string]bool{
 	ToolCodeBurnBudgetPlan:  true,
 	ToolCodeBurnGuardStatus: true,
 	ToolCodeBurnExplain:     true,
+	// V8.4 Impeccable UI Guard tools
+	ToolImpeccableUIRisk:         true,
+	ToolImpeccableFileClassify:   true,
+	ToolImpeccableVisualGatePlan: true,
+	ToolImpeccableGuardStatus:    true,
+	ToolImpeccableExplain:        true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -175,6 +188,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleCodeBurnGuardStatus(req)
 	case ToolCodeBurnExplain:
 		return handleCodeBurnExplain(req)
+	// V8.4 Impeccable UI Guard tools
+	case ToolImpeccableUIRisk:
+		return handleImpeccableUIRisk(req)
+	case ToolImpeccableFileClassify:
+		return handleImpeccableFileClassify(req)
+	case ToolImpeccableVisualGatePlan:
+		return handleImpeccableVisualGatePlan(req)
+	case ToolImpeccableGuardStatus:
+		return handleImpeccableGuardStatus(req)
+	case ToolImpeccableExplain:
+		return handleImpeccableExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -697,4 +721,58 @@ func handleCodeBurnExplain(req ToolRequest) ToolResponse {
 	}
 	result := codeburn.Explain(a)
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: result}
+}
+
+// ── V8.4 Impeccable UI Guard Handlers ───────────────────────────────────────
+
+func handleImpeccableUIRisk(req ToolRequest) ToolResponse {
+	var a impeccable.UIInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: impeccable.AnalyzeUIRisk(a)}
+}
+
+func handleImpeccableFileClassify(req ToolRequest) ToolResponse {
+	var a struct {
+		Files []string `json:"files"`
+	}
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+		}
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: impeccable.ClassifyUIFileSet(a.Files)}
+}
+
+func handleImpeccableVisualGatePlan(req ToolRequest) ToolResponse {
+	var a impeccable.UIInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: impeccable.BuildVisualGatePlan(a)}
+}
+
+func handleImpeccableGuardStatus(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: impeccable.GuardStatus()}
+}
+
+func handleImpeccableExplain(req ToolRequest) ToolResponse {
+	var a impeccable.ExplainInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return errResp(req.Tool, fmt.Errorf("invalid args: %w", err))
+		}
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: impeccable.ExplainUIRisk(a)}
 }
