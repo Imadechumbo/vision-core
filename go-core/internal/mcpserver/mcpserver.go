@@ -36,6 +36,7 @@ import (
 	"github.com/visioncore/go-core/internal/report"
 	"github.com/visioncore/go-core/internal/resultintake"
 	"github.com/visioncore/go-core/internal/safetyenvelope"
+	"github.com/visioncore/go-core/internal/sovereigndecision"
 )
 
 // ── Tool names ────────────────────────────────────────────────────────────────
@@ -161,6 +162,12 @@ const (
 	ToolExecutorAuthorityReviewBoundary = "vision.executor_authority_review_boundary"
 	ToolExecutorAuthorityReviewAudit    = "vision.executor_authority_review_audit"
 	ToolExecutorAuthorityReviewExplain  = "vision.executor_authority_review_explain"
+	// V10.0 Sovereign Promotion Decision Kernel tools
+	ToolSovereignPromotionDecision = "vision.sovereign_promotion_decision"
+	ToolSovereignDecisionValidate  = "vision.sovereign_decision_validate"
+	ToolSovereignDecisionBoundary  = "vision.sovereign_decision_boundary"
+	ToolSovereignDecisionAudit     = "vision.sovereign_decision_audit"
+	ToolSovereignDecisionExplain   = "vision.sovereign_decision_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -298,6 +305,12 @@ var allowedTools = map[string]bool{
 	ToolExecutorAuthorityReviewBoundary: true,
 	ToolExecutorAuthorityReviewAudit:    true,
 	ToolExecutorAuthorityReviewExplain:  true,
+	// V10.0 Sovereign Promotion Decision Kernel tools
+	ToolSovereignPromotionDecision: true,
+	ToolSovereignDecisionValidate:  true,
+	ToolSovereignDecisionBoundary:  true,
+	ToolSovereignDecisionAudit:     true,
+	ToolSovereignDecisionExplain:   true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -559,6 +572,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleExecutorAuthorityReviewAudit(req)
 	case ToolExecutorAuthorityReviewExplain:
 		return handleExecutorAuthorityReviewExplain(req)
+	// V10.0 Sovereign Promotion Decision Kernel tools
+	case ToolSovereignPromotionDecision:
+		return handleSovereignPromotionDecision(req)
+	case ToolSovereignDecisionValidate:
+		return handleSovereignDecisionValidate(req)
+	case ToolSovereignDecisionBoundary:
+		return handleSovereignDecisionBoundary(req)
+	case ToolSovereignDecisionAudit:
+		return handleSovereignDecisionAudit(req)
+	case ToolSovereignDecisionExplain:
+		return handleSovereignDecisionExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -1920,4 +1944,55 @@ func handleExecutorAuthorityReviewExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: authorityreview.ExplainAuthorityReview(a)}
+}
+
+// ── V10.0 Sovereign Promotion Decision Kernel Handlers ─────────────────────
+
+func parseSovereignDecisionInput(req ToolRequest) (sovereigndecision.SovereignDecisionInput, error) {
+	var a sovereigndecision.SovereignDecisionInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleSovereignPromotionDecision(req ToolRequest) ToolResponse {
+	a, err := parseSovereignDecisionInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sovereigndecision.BuildSovereignDecision(a)}
+}
+
+func handleSovereignDecisionValidate(req ToolRequest) ToolResponse {
+	a, err := parseSovereignDecisionInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sovereigndecision.ValidateSovereignDecision(a)}
+}
+
+func handleSovereignDecisionBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sovereigndecision.BuildSovereignDecisionBoundary()}
+}
+
+func handleSovereignDecisionAudit(req ToolRequest) ToolResponse {
+	a, err := parseSovereignDecisionInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sovereigndecision.AuditSovereignDecision(a)}
+}
+
+func handleSovereignDecisionExplain(req ToolRequest) ToolResponse {
+	a, err := parseSovereignDecisionInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sovereigndecision.ExplainSovereignDecision(a)}
 }

@@ -2994,3 +2994,115 @@ func TestV99RegressionToolsV80ThroughV98StillRegistered(t *testing.T) {
 		}
 	}
 }
+
+func validSovereignDecisionArgs() map[string]interface{} {
+	return map[string]interface{}{
+		"decision_id": "decision-001", "review_id": "review-001", "intake_id": "intake-001", "invocation_id": "invoke-001", "executor": "external_promotion_executor", "executor_mode": "external_only", "project": "vision-core", "branch": "v6-go-enterprise-runtime", "commit_sha": "e2c3203", "target": "stable", "environment": "local",
+		"authority_review":           map[string]interface{}{"present": true, "version": "V9.9", "review_id": "review-001", "review_status": "authority_review_ready_dry_run", "authority_review_valid": true, "authority_review_ready_dry_run": true, "requires_human_review": true, "requires_revalidation": true, "eligible_for_future_authority_decision": true, "rejected": false, "valid": true},
+		"result_intake":              map[string]interface{}{"present": true, "version": "V9.8", "intake_id": "intake-001", "result_intake_valid": true, "result_requires_human_review": true, "result_requires_revalidation": true, "result_eligible_for_authority_review": true, "result_rejected": false, "valid": true},
+		"evidence_bundle":            map[string]interface{}{"present": true, "evidence_id": "evidence-001", "contains_executor_logs": true, "contains_diff_summary": true, "contains_validation_summary": true, "contains_security_summary": true, "contains_real_pass_gold": true, "contains_real_pass_secure": true, "sufficient_for_decision": true, "dry_run_evidence_only": false},
+		"audit_trail":                map[string]interface{}{"present": true, "audit_id": "audit-001", "records_invocation_id": true, "records_executor": true, "records_inputs": true, "records_outputs": true, "records_started_finished": true, "records_decisions": true, "immutable_target_declared": true, "sufficient_for_decision": true},
+		"real_gates":                 []map[string]interface{}{{"gate": "PASS_GOLD", "status": "pass", "real_evidence": true, "source": "validator", "artifact_id": "pg", "recognized_by_authority": true, "dry_run": false, "synthesized": false}, {"gate": "PASS_SECURE", "status": "pass", "real_evidence": true, "source": "runner", "artifact_id": "ps", "recognized_by_authority": true, "dry_run": false, "synthesized": false}},
+		"promotion_requirements":     map[string]interface{}{"present": true, "requires_pass_gold_real": true, "requires_pass_secure_real": true, "requires_authority_review_valid": true, "requires_result_intake_valid": true, "requires_evidence_bundle": true, "requires_audit_trail": true, "requires_human_approval": true, "requires_revalidation": true, "requires_rollback_plan": true, "requires_observability": true, "requires_no_unsafe_claims": true},
+		"risk_assessment":            map[string]interface{}{"present": true, "risk_level": "medium", "critical_risks": 0, "high_risks": 0, "medium_risks": 1, "low_risks": 2, "acceptable_for_candidate": true},
+		"rollback_requirements":      map[string]interface{}{"present": true, "rollback_required": true, "rollback_plan_present": true, "snapshot_required": true, "validation_required": true, "manual_intervention_required": true},
+		"observability_requirements": map[string]interface{}{"present": true, "health_checks_required": true, "metrics_required": true, "logs_required": true, "alerting_required": true, "watch_window_seconds": 900},
+		"human_approval":             map[string]interface{}{"present": true, "required": true, "approved": true, "approver": "operator", "approval_reference": "approval-001", "approval_is_placeholder": false},
+		"policy":                     map[string]interface{}{"present": true, "reject_auto_gold_claims": true, "reject_auto_authority_claims": true, "reject_auto_promotion_claims": true, "reject_memory_write_claims": true, "reject_stable_promotion_claims": true, "reject_trust_without_review": true, "require_real_pass_gold_gate": true, "require_real_pass_secure_gate": true, "require_human_approval": true, "require_revalidation": true},
+	}
+}
+
+func TestV100SovereignDecisionToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolSovereignPromotionDecision, mcpserver.ToolSovereignDecisionValidate, mcpserver.ToolSovereignDecisionBoundary, mcpserver.ToolSovereignDecisionAudit, mcpserver.ToolSovereignDecisionExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir(), Args: mkArgs(validSovereignDecisionArgs())})
+		if strings.Contains(resp.Error, "unknown tool") {
+			t.Fatalf("V10.0 tool %s not registered", tool)
+		}
+	}
+}
+
+func TestSovereignPromotionDecisionReturnsV100ReadOnlyDryRun(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSovereignPromotionDecision, Root: t.TempDir(), Args: mkArgs(validSovereignDecisionArgs())})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V10.0"`, `"dry_run":true`, `"read_only":true`, `"decision_status":"promotion_candidate_ready_dry_run"`, `"promotion_decision_candidate":true`, `"promotion_allowed":false`, `"pass_gold_allowed":false`, `"authority_grant_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestSovereignDecisionValidateBlocksMCPAndUnsafeClaims(t *testing.T) {
+	args := map[string]interface{}{"decision_id": "decision-unsafe", "review_id": "review-unsafe", "intake_id": "intake-unsafe", "invocation_id": "invoke-unsafe", "executor": "mcp", "executor_mode": "inside_mcp", "pass_gold": true, "authority_granted": true, "promotion_allowed": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSovereignDecisionValidate, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V10.0"`, `"valid":false`, `"blocked":true`, "executor_must_not_be_mcp", "pass_gold", "authority_granted", "promotion_allowed", `"pass_gold_allowed":false`, `"authority_grant_allowed":false`, `"promotion_allowed":false`, `"trust_without_review_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestSovereignDecisionBoundaryListsForbiddenInsideMCP(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSovereignDecisionBoundary, Args: mkArgs(map[string]interface{}{})})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V10.0"`, `"forbidden_inside_mcp":`, "mark_PASS_GOLD", "mark_PASS_SECURE", "grant_authority", "deploy", "publish_status", "write_memory", "learn_stable", "trust_result_automatically", "bypass_human_review", "bypass_revalidation"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestSovereignDecisionAuditDetectsUnsafeAttempts(t *testing.T) {
+	args := map[string]interface{}{"decision_id": "decision-unsafe", "executor": "mcp", "pass_gold": true, "pass_secure": true, "authority_granted": true, "promotion_allowed": true, "deploy_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "stable_promoted": true, "learned_as_stable": true, "result_trusted_without_review": true, "human_approval_bypassed": true, "revalidation_bypassed": true, "real_gates": []map[string]interface{}{{"gate": "PASS_GOLD", "dry_run": true, "synthesized": true, "real_evidence": false}}}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSovereignDecisionAudit, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"auto_gold_attempt_found":true`, `"authority_grant_attempt_found":true`, `"auto_promotion_attempt_found":true`, `"deploy_attempt_found":true`, `"status_publish_attempt_found":true`, `"stable_learning_attempt_found":true`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestSovereignDecisionExplainIncludesAuthorityAndAdvisoryReasons(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSovereignDecisionExplain, Root: t.TempDir(), Args: mkArgs(map[string]interface{}{"operation": "sovereign_promotion_candidate_decision", "executor": "external_promotion_executor"})})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V10.0"`, `"why_decision_is_not_authority":`, `"why_candidate_is_only_advisory":`, "PASS_GOLD", "PASS_SECURE"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestV100MutatingToolsStillBlockedExactMessage(t *testing.T) {
+	for _, tool := range []string{"vision.apply_patch", "vision.write_file", "vision.commit", "vision.push", "vision.open_pr", "vision.publish_status", "vision.run_mission_real", "vision.rollback", "vision.deploy"} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+		if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+			t.Fatalf("mutating tool %s must remain blocked with exact message, got ok=%v error=%q", tool, resp.OK, resp.Error)
+		}
+	}
+}
+
+func TestV100RegressionToolsV80ThroughV99StillRegistered(t *testing.T) {
+	tools := []string{mcpserver.ToolProjectSummary, mcpserver.ToolGraphProviders, mcpserver.ToolDryRunRiskAssessment, mcpserver.ToolCodeBurnExplain, mcpserver.ToolImpeccableExplain, mcpserver.ToolDashboardToolInventory, mcpserver.ToolPolicyExplain, mcpserver.ToolContractExplain, mcpserver.ToolEvidenceExplain, mcpserver.ToolReadinessExplain, mcpserver.ToolGateAuthorityExplain, mcpserver.ToolPromotionContractBoundary, mcpserver.ToolExecutorSafetyBoundary, mcpserver.ToolExecutorRehearsalBoundary, mcpserver.ToolExecutorAuthorizationBoundary, mcpserver.ToolExecutorPreflightBoundary, mcpserver.ToolExecutorHandoffBoundary, mcpserver.ToolExecutorInvocationBoundary, mcpserver.ToolExecutorResultBoundary, mcpserver.ToolExecutorAuthorityReviewBoundary}
+	for _, tool := range tools {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir()})
+		if strings.Contains(resp.Error, "unknown tool") {
+			t.Fatalf("regression tool %s became unregistered", tool)
+		}
+	}
+}
