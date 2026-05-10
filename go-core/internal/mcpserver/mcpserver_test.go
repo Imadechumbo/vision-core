@@ -5065,3 +5065,95 @@ func TestV116SandboxReadinessAuditDetectsUnsafeAttempts(t *testing.T) {
 		t.Fatalf("mutating tool must remain blocked with exact message, got ok=%v error=%q", resp.OK, resp.Error)
 	}
 }
+
+func validIsolatedRuntimeArgs() map[string]interface{} {
+	return map[string]interface{}{
+		"isolated_runtime_id": "iso-1", "readiness_gate_id": "ready-1", "audit_report_id": "audit-1", "replay_gate_id": "replay-1", "persistence_gate_id": "persist-1", "sandbox_trace_id": "trace-1", "sandbox_adapter_id": "adapter-1", "runtime_id": "runtime-1", "runtime_session_id": "session-1", "evidence_binding_id": "evidence-1", "verification_id": "verify-1", "response_contract_id": "response-1", "request_envelope_id": "request-1", "adapter_interface_id": "adapter-interface-1", "final_authorization_id": "auth-1", "simulation_id": "simulation-1", "firewall_id": "firewall-1", "decision_id": "decision-1", "invocation_id": "invocation-1",
+		"executor": "isolated_runtime_executor", "executor_mode": "isolated_controlled", "adapter_name": "isolated-local", "adapter_version": "V12.0", "adapter_type": "isolated_local", "project": "vision-core", "branch": "v6-go-enterprise-runtime", "commit_sha": "a6c248c", "target": "noop", "environment": "local_isolated",
+		"sandbox_readiness_ready_dry_run": true, "sandbox_to_controlled_execution_candidate": true, "v12_transition_candidate": true, "readiness_score_dry_run": 100,
+		"audit_report_valid": true, "replay_gate_valid": true, "persistence_gate_valid": true, "sandbox_trace_valid": true, "sandbox_adapter_valid": true, "controlled_runtime_valid": true, "evidence_binding_valid": true, "verification_valid": true, "response_contract_valid": true, "request_envelope_valid": true, "adapter_interface_valid": true, "final_authorization_valid": true, "simulation_valid": true, "firewall_valid": true, "sovereign_candidate_valid": true,
+		"pass_gold_real": true, "pass_secure_real": true, "human_approval_real": true, "independent_revalidation_real": true,
+		"command": map[string]interface{}{"raw": "echo V12 isolated runtime"}, "workspace": map[string]interface{}{"path": ".vision-tmp/isolated-runtime"},
+	}
+}
+
+func TestV120IsolatedControlledRuntimeToolsRegisteredReadOnly(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolIsolatedControlledRuntimePlan, mcpserver.ToolIsolatedControlledRuntimeValidate, mcpserver.ToolIsolatedControlledRuntimeBoundary, mcpserver.ToolIsolatedControlledRuntimeAudit, mcpserver.ToolIsolatedControlledRuntimeExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir(), Args: mkArgs(validIsolatedRuntimeArgs())})
+		if !resp.OK {
+			t.Fatalf("%s expected ok=true: %s", tool, resp.Error)
+		}
+		s := string(mustJSON(t, resp.Payload))
+		for _, want := range []string{`"version":"V12.0"`, `"isolated":true`, `"runtime_mode":"isolated_controlled_execution_runtime"`, `"next_phase":"V12.1_isolated_command_execution_receipt"`} {
+			if !strings.Contains(s, want) {
+				t.Fatalf("%s missing %s in %s", tool, want, s)
+			}
+		}
+	}
+}
+
+func TestV120BoundaryReadOnlyAndMCPDoesNotExecute(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolIsolatedControlledRuntimeBoundary, Root: t.TempDir()})
+	if !resp.OK {
+		t.Fatalf("boundary expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V12.0"`, `"dry_run":false`, `"read_only":true`, `"runtime_mode":"isolated_controlled_execution_runtime"`, `"next_phase":"V12.1_isolated_command_execution_receipt"`, `"mcp_execution_allowed":false`, `"mcp_mutation_allowed":false`, "execute_isolated_runtime", "deploy", "promote", "publish_status", "mark_PASS_GOLD", "grant_authority"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("boundary missing %s in %s", want, s)
+		}
+	}
+	if strings.Contains(s, "isolated_execution_performed") {
+		t.Fatalf("MCP boundary must not execute runtime: %s", s)
+	}
+}
+
+func TestV120PlanValidateAuditExplainAndLegacyToolsStillWork(t *testing.T) {
+	for _, tc := range []struct {
+		tool  string
+		wants []string
+	}{
+		{mcpserver.ToolIsolatedControlledRuntimePlan, []string{`"dry_run":false`, `"read_only":true`, `"isolated_runtime_plan_ready":true`, `"command_allowlisted":true`, `"deploy_allowed":false`, `"promotion_allowed":false`, `"status_publish_allowed":false`, `"authority_granted":false`}},
+		{mcpserver.ToolIsolatedControlledRuntimeValidate, []string{`"isolated_runtime_validated":true`, `"isolated_real_execution_allowed":true`}},
+		{mcpserver.ToolIsolatedControlledRuntimeExplain, []string{"why_v12_is_first_isolated_execution_phase", "why_mcp_cannot_execute", "why_v12_1_receipt_is_next", "PASS_GOLD", "PASS_SECURE", "always_denied"}},
+	} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tc.tool, Root: t.TempDir(), Args: mkArgs(validIsolatedRuntimeArgs())})
+		if !resp.OK {
+			t.Fatalf("%s expected ok=true: %s", tc.tool, resp.Error)
+		}
+		s := string(mustJSON(t, resp.Payload))
+		for _, want := range tc.wants {
+			if !strings.Contains(s, want) {
+				t.Fatalf("%s missing %s in %s", tc.tool, want, s)
+			}
+		}
+	}
+	args := validIsolatedRuntimeArgs()
+	args["claims"] = map[string]interface{}{"deploy_allowed": true, "authority_granted": true, "pass_gold": true, "network_call_allowed": true, "isolation_bypassed": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolIsolatedControlledRuntimeAudit, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("audit expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"deploy_attempt_found":true`, `"authority_grant_attempt_found":true`, `"auto_gold_attempt_found":true`, `"network_attempt_found":true`, `"isolation_bypass_attempt_found":true`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("audit missing %s in %s", want, s)
+		}
+	}
+	for _, legacy := range []struct {
+		tool string
+		want string
+	}{{mcpserver.ToolSandboxToControlledReadinessBoundary, `"version":"V11.6"`}, {mcpserver.ToolSandboxTraceAuditReportBoundary, `"version":"V11.5"`}, {mcpserver.ToolSandboxTraceReplayBoundary, `"version":"V11.4"`}, {mcpserver.ToolSandboxTracePersistenceBoundary, `"version":"V11.3"`}} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: legacy.tool, Root: t.TempDir()})
+		if !resp.OK {
+			t.Fatalf("legacy %s expected ok=true: %s", legacy.tool, resp.Error)
+		}
+		if !strings.Contains(string(mustJSON(t, resp.Payload)), legacy.want) {
+			t.Fatalf("legacy %s missing %s", legacy.tool, legacy.want)
+		}
+	}
+	resp = mcpserver.Dispatch(mcpserver.ToolRequest{Tool: "vision.apply_patch"})
+	if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+		t.Fatalf("mutating tool must remain blocked with exact message, got ok=%v error=%q", resp.OK, resp.Error)
+	}
+}
