@@ -1,3 +1,16 @@
+(function(){
+  if (window.__VISION_SAFE_DOMTOKEN_PATCH__) return;
+  window.__VISION_SAFE_DOMTOKEN_PATCH__ = true;
+
+  var nativeRemove = DOMTokenList.prototype.remove;
+  DOMTokenList.prototype.remove = function(){
+    var tokens = Array.prototype.slice.call(arguments)
+      .filter(function(t){ return typeof t === "string" && t.trim().length > 0; });
+
+    if (!tokens.length) return;
+    return nativeRemove.apply(this, tokens);
+  };
+})();
 /**
  * VISION CORE V3.4 — TELEMETRIA VIVA REAL
  * ══════════════════════════════════════════════════════════════════
@@ -490,3 +503,4 @@
     boot();
   }
 })();
+

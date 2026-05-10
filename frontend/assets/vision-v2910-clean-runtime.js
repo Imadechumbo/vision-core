@@ -475,6 +475,10 @@
       text.includes('executar live');
 
     if (isSend || isRun) {
+      if (isRun && window.__V32_OWNER__) {
+        console.log('[v2910] run-live ignorado: V32 é o owner da execução');
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       if (e.stopImmediatePropagation) e.stopImmediatePropagation();
@@ -546,3 +550,4 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();
+
