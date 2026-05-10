@@ -46,6 +46,7 @@ import (
 	"github.com/visioncore/go-core/internal/resultintake"
 	"github.com/visioncore/go-core/internal/safetyenvelope"
 	"github.com/visioncore/go-core/internal/sandboxadapter"
+	"github.com/visioncore/go-core/internal/sandboxauditreport"
 	"github.com/visioncore/go-core/internal/sandboxtrace"
 	"github.com/visioncore/go-core/internal/sandboxtracepersistence"
 	"github.com/visioncore/go-core/internal/sandboxtracereplay"
@@ -259,6 +260,12 @@ const (
 	ToolSandboxTraceReplayBoundary = "vision.sandbox_trace_replay_boundary"
 	ToolSandboxTraceReplayAudit    = "vision.sandbox_trace_replay_audit"
 	ToolSandboxTraceReplayExplain  = "vision.sandbox_trace_replay_explain"
+	// V11.5 Sandbox Trace Audit Report tools
+	ToolSandboxTraceAuditReport         = "vision.sandbox_trace_audit_report"
+	ToolSandboxTraceAuditReportValidate = "vision.sandbox_trace_audit_report_validate"
+	ToolSandboxTraceAuditReportBoundary = "vision.sandbox_trace_audit_report_boundary"
+	ToolSandboxTraceAuditReportAudit    = "vision.sandbox_trace_audit_report_audit"
+	ToolSandboxTraceAuditReportExplain  = "vision.sandbox_trace_audit_report_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -480,6 +487,12 @@ var allowedTools = map[string]bool{
 	ToolSandboxTraceReplayBoundary: true,
 	ToolSandboxTraceReplayAudit:    true,
 	ToolSandboxTraceReplayExplain:  true,
+	// V11.5 Sandbox Trace Audit Report tools
+	ToolSandboxTraceAuditReport:         true,
+	ToolSandboxTraceAuditReportValidate: true,
+	ToolSandboxTraceAuditReportBoundary: true,
+	ToolSandboxTraceAuditReportAudit:    true,
+	ToolSandboxTraceAuditReportExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -895,6 +908,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleSandboxTraceReplayAudit(req)
 	case ToolSandboxTraceReplayExplain:
 		return handleSandboxTraceReplayExplain(req)
+	// V11.5 Sandbox Trace Audit Report tools
+	case ToolSandboxTraceAuditReport:
+		return handleSandboxTraceAuditReport(req)
+	case ToolSandboxTraceAuditReportValidate:
+		return handleSandboxTraceAuditReportValidate(req)
+	case ToolSandboxTraceAuditReportBoundary:
+		return handleSandboxTraceAuditReportBoundary(req)
+	case ToolSandboxTraceAuditReportAudit:
+		return handleSandboxTraceAuditReportAudit(req)
+	case ToolSandboxTraceAuditReportExplain:
+		return handleSandboxTraceAuditReportExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -2970,4 +2994,55 @@ func handleSandboxTraceReplayExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtracereplay.ExplainSandboxTraceReplayGate(a)}
+}
+
+// ── V11.5 Sandbox Trace Audit Report Handlers ─────────────────
+
+func parseSandboxTraceAuditReportInput(req ToolRequest) (sandboxauditreport.SandboxTraceAuditReportInput, error) {
+	var a sandboxauditreport.SandboxTraceAuditReportInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleSandboxTraceAuditReport(req ToolRequest) ToolResponse {
+	a, err := parseSandboxTraceAuditReportInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxauditreport.BuildSandboxTraceAuditReport(a)}
+}
+
+func handleSandboxTraceAuditReportValidate(req ToolRequest) ToolResponse {
+	a, err := parseSandboxTraceAuditReportInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxauditreport.ValidateSandboxTraceAuditReport(a)}
+}
+
+func handleSandboxTraceAuditReportBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxauditreport.BuildSandboxTraceAuditReportBoundary()}
+}
+
+func handleSandboxTraceAuditReportAudit(req ToolRequest) ToolResponse {
+	a, err := parseSandboxTraceAuditReportInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxauditreport.AuditSandboxTraceAuditReport(a)}
+}
+
+func handleSandboxTraceAuditReportExplain(req ToolRequest) ToolResponse {
+	a, err := parseSandboxTraceAuditReportInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxauditreport.ExplainSandboxTraceAuditReport(a)}
 }
