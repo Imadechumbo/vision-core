@@ -178,7 +178,16 @@
   }
   function attachSSE(){
     var es = window.__VISION_SSE__;
-    if (!es || es.__v44_attached__) return;
+    var missionText = window.__VISION_ACTIVE_MISSION_TEXT__;
+    var missionId = window.__VISION_LAST_RUN_LIVE_MISSION_ID__;
+    if (!es) return;
+    if (!es.__V32_REAL_SSE__) {
+      if (typeof window.__V32_startSSE__ === 'function' && missionText && window.__VISION_RUN_LIVE_ACCEPTED__) {
+        window.__V32_startSSE__(missionText, missionId);
+      }
+      return;
+    }
+    if (es.__v44_attached__) return;
     es.__v44_attached__ = true;
     ['open','mission','mission_started','accepted','step','stage','progress','gate','pass_gold','mission_completed','success','done','completed','fail','error'].forEach(function(evt){
       try { es.addEventListener(evt, function(e){ processEvent(evt, e); }); } catch(_) {}

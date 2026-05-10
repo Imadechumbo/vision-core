@@ -64,6 +64,10 @@
   /* ── MISSION STATE ────────────────────────────────────────────── */
   var mission = { id: null, start: null, steps: [], active: false };
   window.__VISION_RUN_LIVE_IN_FLIGHT__ = window.__VISION_RUN_LIVE_IN_FLIGHT__ || false;
+  window.__VISION_ACTIVE_MISSION_TEXT__ = window.__VISION_ACTIVE_MISSION_TEXT__ || null;
+  window.__VISION_SSE_OWNER__ = window.__VISION_SSE_OWNER__ || null;
+  window.__VISION_RUN_LIVE_ACCEPTED__ = window.__VISION_RUN_LIVE_ACCEPTED__ || false;
+
 
   /* ── NEUTRALIZE SSE IN OLD RUNTIMES ──────────────────────────── */
   function neutralizeOldSSE() {
@@ -94,12 +98,9 @@
     window.EventSource.CLOSED = 2;
     window.EventSource.prototype = NativeES.prototype;
 
-    // Also stomp startSSE on window so old runtimes calling window.startSSE()
-    // are silenced — they will call our version instead
-    window.startSSE = function (m, missionId) {
-      console.log('[V32] startSSE delegado ao runtime único');
-      startSSE(m, missionId);
-    };
+    // Expose only the explicit owner bridge. Do not route through
+    // window.startSSE because older runtimes can replace it recursively.
+    window.__V32_startSSE__ = startSSE;
   }
 
   /* ── CORE STATE ───────────────────────────────────────────────── */
@@ -298,6 +299,7 @@
     window.__VISION_SSE_LOCK__ = false;
     window.__VISION_SSE_RETRY_INDEX__ = 0;
     window.__VISION_SSE_MISSION_ID__ = null;
+    window.__VISION_SSE_OWNER__ = null;
   }
 
   /* ── START SSE (real, sem fallback, sem fake) ─────────────────── */
@@ -309,6 +311,9 @@
     }
     closeSSE();
     window.__VISION_SSE_MISSION_ID__ = streamKey;
+    window.__VISION_ACTIVE_MISSION_TEXT__ = missionText || 'mission';
+    window.__VISION_SSE_OWNER__ = 'V32';
+    window.__VISION_RUN_LIVE_ACCEPTED__ = true;
     resetNodes();
     setCoreState('running');
     mission.start = Date.now();
@@ -326,15 +331,28 @@
       if (window.__VISION_SSE_LOCK__) return;
       window.__VISION_SSE_LOCK__ = true;
 
-      // Use the native EventSource through our V32 flag
+      // Always use the preserved native EventSource directly. Observers may
+      // decorate window.EventSource, but only V32 opens the real stream.
+      var NativeES = window.__VISION_NATIVE_EVENT_SOURCE__ || window.__nativeEventSource || window.EventSource;
+      if (!NativeES) {
+        window.__VISION_SSE_LOCK__ = false;
+        setCoreState('fail');
+        console.error('[V32] EventSource nativo indisponível para SSE real');
+        return;
+      }
       window.__V32_CALLING__ = true;
       var es;
       try {
-        es = new EventSource(url);
+        es = new NativeES(url);
       } finally {
         window.__V32_CALLING__ = false;
       }
+      es.__V32_REAL_SSE__ = true;
+      es.__VISION_SSE_OWNER__ = 'V32';
+      es.__VISION_SSE_MISSION_ID__ = streamKey;
+      es.__VISION_SSE_URL__ = url;
       window.__VISION_SSE__ = es;
+      window.__VISION_SSE_OWNER__ = 'V32';
       console.log('[V32] SSE abrindo:', url);
 
       es.onopen = function () {
@@ -405,6 +423,7 @@
         } catch (e) {}
         closeSSE();
         mission.active = false;
+        window.__VISION_RUN_LIVE_ACCEPTED__ = false;
         console.log('[V32] SSE done — missão concluída');
       });
 
@@ -418,12 +437,14 @@
           try { es.close(); } catch (_) {}
           window.__VISION_SSE__ = null;
           window.__VISION_SSE_LOCK__ = false;
+          window.__VISION_SSE_OWNER__ = null;
 
           var delay = SSE_BACKOFF[Math.min(retryIdx, SSE_BACKOFF.length - 1)];
           retryIdx++;
           window.__VISION_SSE_RETRY_INDEX__ = retryIdx;
 
           if (retryIdx > SSE_BACKOFF.length) {
+            window.__VISION_RUN_LIVE_ACCEPTED__ = false;
             setCoreState('fail');
             console.warn('[V32] SSE esgotou tentativas');
             return;
@@ -618,7 +639,9 @@
       .then(function (d) {
         mission.id = d.mission_id || d.missionId || d.id || null;
         window.__VISION_LAST_RUN_LIVE_MISSION_ID__ = mission.id;
-        startSSE(missionText, mission.id);
+        window.__VISION_ACTIVE_MISSION_TEXT__ = missionText;
+        window.__VISION_RUN_LIVE_ACCEPTED__ = true;
+        window.__V32_startSSE__(missionText, mission.id);
       })
       .catch(function (err) {
         console.error('[V32] /api/run-live erro controlado:', err);
@@ -649,6 +672,7 @@
 
   /* ── BOOT ─────────────────────────────────────────────────────── */
   function boot() {
+    window.__V32_startSSE__ = startSSE;
     neutralizeOldSSE();
     injectCSS();
     initSticky();

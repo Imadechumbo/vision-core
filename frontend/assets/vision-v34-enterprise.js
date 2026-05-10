@@ -218,18 +218,25 @@
     if (type === 'ping') return; // heartbeat silencioso
   }
 
-  // Instalar listener nos EventSource que forem criados
+  // Instalar listener observador no singleton real criado pelo V32.
   function interceptEventSources() {
-    var NativeES = window.__nativeEventSource || window.EventSource;
-    if (!NativeES) return;
-
-    // Observar o singleton global do v32
+    // V34 observa o SSE; não substitui EventSource nem cria mocks.
     setInterval(function() {
       var es = window.__VISION_SSE__;
-      if (es && !es.__v34_intercepted__) {
+      var missionText = window.__VISION_ACTIVE_MISSION_TEXT__;
+      var missionId = window.__VISION_LAST_RUN_LIVE_MISSION_ID__;
+
+      if (es && !es.__V32_REAL_SSE__) {
+        if (typeof window.__V32_startSSE__ === 'function' && missionText && window.__VISION_RUN_LIVE_ACCEPTED__) {
+          window.__V32_startSSE__(missionText, missionId);
+        }
+        return;
+      }
+
+      if (es && es.__V32_REAL_SSE__ && !es.__v34_intercepted__) {
         es.__v34_intercepted__ = true;
 
-        // Interceptar eventos SSE do singleton existente
+        // Observar eventos SSE do singleton existente, sem bloquear o stream.
         ['step', 'gate', 'pass_gold', 'done', 'open', 'ping'].forEach(function(evt) {
           es.addEventListener(evt, function(e) {
             processSSEEvent(evt, e.data);
@@ -240,7 +247,7 @@
         _orbitStart = Date.now();
         orbitResetAll();
         orbitSetCore('running');
-        console.log('[V34] orbit interceptando SSE singleton');
+        console.log('[V34] orbit observando SSE singleton real');
       }
     }, 200);
   }
