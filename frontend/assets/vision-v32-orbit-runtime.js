@@ -23,7 +23,7 @@
   window.__VISION_SSE_RETRY_INDEX__ = window.__VISION_SSE_RETRY_INDEX__ || 0;
   window.__V32_OWNER__              = true; // flag: só este runtime controla SSE
 
-  var SSE_BACKOFF = [1000, 2000, 5000, 10000];
+  var SSE_BACKOFF = [1000, 2000, 5000];
 
   /* ── PIPELINE MAP: SSE stage → mc-node data-key ──────────────── */
   var STAGE_TO_NODE = {
@@ -63,14 +63,16 @@
 
   /* ── MISSION STATE ────────────────────────────────────────────── */
   var mission = { id: null, start: null, steps: [], active: false };
+  window.__VISION_RUN_LIVE_IN_FLIGHT__ = window.__VISION_RUN_LIVE_IN_FLIGHT__ || false;
 
   /* ── NEUTRALIZE SSE IN OLD RUNTIMES ──────────────────────────── */
   function neutralizeOldSSE() {
     // Override window.EventSource so any runtime that calls new EventSource()
     // without going through our singleton gets intercepted.
     // We store the native and only allow our calls.
-    var NativeES = window.EventSource;
-    window.__nativeEventSource = NativeES;
+    var NativeES = window.__VISION_NATIVE_EVENT_SOURCE__ || window.__nativeEventSource || window.EventSource;
+    window.__VISION_NATIVE_EVENT_SOURCE__ = NativeES;
+    if (!window.__nativeEventSource) window.__nativeEventSource = NativeES;
 
     window.EventSource = function (url, cfg) {
       // Only allow if called by V32 owner (we set __V32_CALLING__ flag)
@@ -94,9 +96,9 @@
 
     // Also stomp startSSE on window so old runtimes calling window.startSSE()
     // are silenced — they will call our version instead
-    window.startSSE = function (m) {
+    window.startSSE = function (m, missionId) {
       console.log('[V32] startSSE delegado ao runtime único');
-      startSSE(m);
+      startSSE(m, missionId);
     };
   }
 
@@ -295,18 +297,25 @@
     }
     window.__VISION_SSE_LOCK__ = false;
     window.__VISION_SSE_RETRY_INDEX__ = 0;
+    window.__VISION_SSE_MISSION_ID__ = null;
   }
 
   /* ── START SSE (real, sem fallback, sem fake) ─────────────────── */
-  function startSSE(missionText) {
+  function startSSE(missionText, missionId) {
+    var streamKey = missionId || missionText || 'mission';
+    if (window.__VISION_SSE_MISSION_ID__ === streamKey && window.__VISION_SSE__ && window.__VISION_SSE__.readyState !== 2) {
+      console.log('[V32] SSE já ativo para:', streamKey);
+      return;
+    }
     closeSSE();
+    window.__VISION_SSE_MISSION_ID__ = streamKey;
     resetNodes();
     setCoreState('running');
     mission.start = Date.now();
     mission.active = true;
     mission.steps = [];
 
-    var url = apiUrl('/api/run-live-stream?mission=') + encodeURIComponent(missionText || 'mission');
+    var url = apiUrl('/api/run-live-stream?mission=') + encodeURIComponent(missionText || 'mission') + (missionId ? '&mission_id=' + encodeURIComponent(missionId) : '');
     var retryIdx = 0;
 
     function elapsed() {
@@ -567,24 +576,56 @@
   }
 
   /* ── RUN MISSION (POST /api/run-live) ─────────────────────────── */
-  function runMission(missionText) {
-    if (!missionText) return;
+  function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+
+  function callRunLiveEndpoint(missionText) {
+    var maxAttempts = 3;
+    var attempt = 0;
+
+    function once() {
+      attempt += 1;
+      return fetch(apiUrl('/api/run-live'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mission: missionText, mode: 'dry-run', project_id: 'vision-core' }),
+      }).then(function (r) {
+        return r.json().then(function (d) {
+          if (!r.ok) throw new Error(d.error || d.message || ('HTTP ' + r.status));
+          return d;
+        });
+      }).catch(function (err) {
+        if (attempt >= maxAttempts) throw err;
+        var backoff = attempt * 1000;
+        console.warn('[V32] /api/run-live retry ' + (attempt + 1) + '/' + maxAttempts + ' em ' + backoff + 'ms:', err.message);
+        return sleep(backoff).then(once);
+      });
+    }
+
+    return once();
+  }
+
+  function executeMissionPipeline(missionText) {
+    if (!missionText) return Promise.resolve();
+    if (window.__VISION_RUN_LIVE_IN_FLIGHT__) {
+      console.log('[V32] run-live duplicado ignorado');
+      return Promise.resolve();
+    }
+
+    window.__VISION_RUN_LIVE_IN_FLIGHT__ = true;
     mission.id = null;
 
-    fetch(apiUrl('/api/run-live'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mission: missionText, mode: 'dry-run', project_id: 'vision-core' }),
-    })
-      .then(function (r) { return r.json(); })
+    return callRunLiveEndpoint(missionText)
       .then(function (d) {
-        if (d.mission_id) mission.id = d.mission_id;
-        startSSE(missionText);
+        mission.id = d.mission_id || d.missionId || d.id || null;
+        window.__VISION_LAST_RUN_LIVE_MISSION_ID__ = mission.id;
+        startSSE(missionText, mission.id);
       })
       .catch(function (err) {
-        console.error('[V32] /api/run-live erro:', err);
-        // Start SSE anyway — Worker has the SSE stub
-        startSSE(missionText);
+        console.error('[V32] /api/run-live erro controlado:', err);
+        setCoreState('fail');
+      })
+      .finally(function () {
+        window.__VISION_RUN_LIVE_IN_FLIGHT__ = false;
       });
   }
 
@@ -602,7 +643,7 @@
       if (!text) return;
       // Delay slightly so other runtimes that fire first can update UI text,
       // but we control the SSE.
-      setTimeout(function () { runMission(text); }, 200);
+      setTimeout(function () { executeMissionPipeline(text); }, 200);
     }, true);
   }
 

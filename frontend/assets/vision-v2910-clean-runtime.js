@@ -231,24 +231,55 @@
     }
   }
 
-  async function runMission(){
-    const mission = getPrompt() || 'executar missão SDDF';
-    addMsg('user', 'MISSÃO: ' + mission);
+  function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
+
+  async function callRunLiveEndpoint(payload){
+    const maxAttempts = 3;
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await postJson('/run-live', payload);
+      } catch (e) {
+        lastError = e;
+        if (attempt >= maxAttempts) break;
+        const backoff = attempt * 1000;
+        addMsg('system', 'Run-live tentando novamente em ' + backoff + 'ms (' + (attempt + 1) + '/' + maxAttempts + ').');
+        await sleep(backoff);
+      }
+    }
+
+    throw lastError || new Error('run-live indisponível');
+  }
+
+  async function clientRunLive(){
+    if (window.__VISION_RUN_LIVE_IN_FLIGHT__) {
+      addMsg('system', 'Run-live já está em execução; clique duplicado ignorado.');
+      return;
+    }
+
+    window.__VISION_RUN_LIVE_IN_FLIGHT__ = true;
+    const missionText = getPrompt() || 'executar missão SDDF';
+    addMsg('user', 'MISSÃO: ' + missionText);
     setState('running');
 
     try {
-      const data = await postJson('/run-live', {
-        mission,
+      const data = await callRunLiveEndpoint({
+        mission: missionText,
         mode: getMode(),
         model: getModel(),
         source: VERSION
       });
 
-      addMsg('system', 'Missão aceita: ' + (data.mission_id || data.status || 'ok'));
-      startSSE(mission);
+      const missionId = data.mission_id || data.missionId || data.id || data.status || 'ok';
+      window.__VISION_LAST_RUN_LIVE_MISSION_ID__ = missionId;
+      addMsg('system', 'Missão aceita: ' + missionId);
+      startSSE(missionText, missionId);
     } catch(e) {
-      addMsg('error', 'Run-live falhou: ' + e.message);
+      addMsg('error', 'Run-live falhou de forma controlada: ' + e.message);
       setState('fail');
+    } finally {
+      window.__VISION_RUN_LIVE_IN_FLIGHT__ = false;
     }
   }
 
@@ -259,7 +290,7 @@
   window.__VISION_SSE_LOCK__ = window.__VISION_SSE_LOCK__ || false;
   window.__VISION_SSE_RETRY_T__ = window.__VISION_SSE_RETRY_T__ || null;
 
-  var SSE_BACKOFF = [1000, 2000, 5000, 10000];
+  var SSE_BACKOFF = [1000, 2000, 5000];
 
   function closeSSE(){
     if (window.__VISION_SSE_RETRY_T__) {
@@ -272,19 +303,26 @@
     }
     window.__VISION_SSE_LOCK__ = false;
     window.__VISION_SSE_RETRY_INDEX__ = 0; // reset para próxima missão
+    window.__VISION_SSE_MISSION_ID__ = null;
   }
 
-  function startSSE(mission){
+  function startSSE(mission, missionId){
     // V32 GUARD: runtime único v32 controla SSE — v2910 delegado
     if(window.__V32_OWNER__){
       console.log('[v2910] startSSE delegado ao V32');
-      if(typeof window.startSSE === 'function') window.startSSE(mission);
+      if(typeof window.startSSE === 'function') window.startSSE(mission, missionId);
       return;
     }
+    var streamKey = missionId || mission || 'mission';
+    if (window.__VISION_SSE_MISSION_ID__ === streamKey && window.__VISION_SSE__ && window.__VISION_SSE__.readyState !== 2) {
+      log('SSE já ativo para mission_id/missão:', streamKey);
+      return;
+    }
+
     // Garante stream anterior fechado antes de qualquer coisa.
     closeSSE();
-
-    var url = apiUrl('/run-live-stream') + '?mission=' + encodeURIComponent(mission || 'mission');
+    window.__VISION_SSE_MISSION_ID__ = streamKey;
+    var url = apiUrl('/run-live-stream') + '?mission=' + encodeURIComponent(mission || 'mission') + (missionId ? '&mission_id=' + encodeURIComponent(missionId) : '');
     // retryIndex global por sessão — não reseta ao reconectar
     if (!window.__VISION_SSE_RETRY_INDEX__) window.__VISION_SSE_RETRY_INDEX__ = 0;
     // resetar apenas quando nova missão é iniciada (closeSSE foi chamado antes)
@@ -379,7 +417,9 @@
 
   function patchNetwork(){
     if (!window.__nativeFetch) window.__nativeFetch = window.fetch.bind(window);
-    if (!window.__nativeEventSource) window.__nativeEventSource = window.EventSource;
+    var NativeES = window.__VISION_NATIVE_EVENT_SOURCE__ || window.__nativeEventSource || window.EventSource;
+    window.__VISION_NATIVE_EVENT_SOURCE__ = NativeES;
+    if (!window.__nativeEventSource) window.__nativeEventSource = NativeES;
 
     if (!window.__VISION_V2910_FETCH__) {
       window.__VISION_V2910_FETCH__ = true;
@@ -397,16 +437,16 @@
     if (!window.__VISION_V2910_SSE__) {
       window.__VISION_V2910_SSE__ = true;
       window.EventSource = function(url, cfg){
-        return new window.__nativeEventSource(apiUrl(url), cfg);
+        return new NativeES(apiUrl(url), cfg);
       };
-      window.EventSource.prototype = window.__nativeEventSource.prototype;
+      window.EventSource.prototype = NativeES.prototype;
     }
 
     window.VisionCoreRuntime = window.VisionCoreRuntime || {};
     window.VisionCoreRuntime.apiUrl = apiUrl;
     window.VisionCoreRuntime.withBase = apiUrl;
     window.VisionCoreRuntime.rewriteUrl = cleanUrl;
-    window.VisionApi = { apiUrl, ebUrl, postJson, getJson, sendCopilot, runMission };
+    window.VisionApi = { apiUrl, ebUrl, postJson, getJson, sendCopilot, clientRunLive, callRunLiveEndpoint };
 
     window.__VISION_API__ = 'https://visioncore-api-gateway.weiganlight.workers.dev';
     window.API = 'https://visioncore-api-gateway.weiganlight.workers.dev';
@@ -438,7 +478,7 @@
       e.preventDefault();
       e.stopPropagation();
       if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-      if (isRun) runMission();
+      if (isRun) clientRunLive();
       else sendCopilot();
     }
   }
