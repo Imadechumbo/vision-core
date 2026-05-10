@@ -24,6 +24,7 @@ import (
 	"github.com/visioncore/go-core/internal/dryrun"
 	"github.com/visioncore/go-core/internal/evidenceledger"
 	"github.com/visioncore/go-core/internal/executionadapter"
+	"github.com/visioncore/go-core/internal/executionrequest"
 	"github.com/visioncore/go-core/internal/executorpreflight"
 	"github.com/visioncore/go-core/internal/finalauthorization"
 	"github.com/visioncore/go-core/internal/gateauthority"
@@ -196,6 +197,12 @@ const (
 	ToolExternalExecutionAdapterBoundary  = "vision.external_execution_adapter_boundary"
 	ToolExternalExecutionAdapterAudit     = "vision.external_execution_adapter_audit"
 	ToolExternalExecutionAdapterExplain   = "vision.external_execution_adapter_explain"
+	// V10.5 External Execution Request Envelope tools
+	ToolExternalExecutionRequestEnvelope = "vision.external_execution_request_envelope"
+	ToolExternalExecutionRequestValidate = "vision.external_execution_request_validate"
+	ToolExternalExecutionRequestBoundary = "vision.external_execution_request_boundary"
+	ToolExternalExecutionRequestAudit    = "vision.external_execution_request_audit"
+	ToolExternalExecutionRequestExplain  = "vision.external_execution_request_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -363,6 +370,12 @@ var allowedTools = map[string]bool{
 	ToolExternalExecutionAdapterBoundary:  true,
 	ToolExternalExecutionAdapterAudit:     true,
 	ToolExternalExecutionAdapterExplain:   true,
+	// V10.5 External Execution Request Envelope tools
+	ToolExternalExecutionRequestEnvelope: true,
+	ToolExternalExecutionRequestValidate: true,
+	ToolExternalExecutionRequestBoundary: true,
+	ToolExternalExecutionRequestAudit:    true,
+	ToolExternalExecutionRequestExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -679,6 +692,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleExternalExecutionAdapterAudit(req)
 	case ToolExternalExecutionAdapterExplain:
 		return handleExternalExecutionAdapterExplain(req)
+	// V10.5 External Execution Request Envelope tools
+	case ToolExternalExecutionRequestEnvelope:
+		return handleExternalExecutionRequestEnvelope(req)
+	case ToolExternalExecutionRequestValidate:
+		return handleExternalExecutionRequestValidate(req)
+	case ToolExternalExecutionRequestBoundary:
+		return handleExternalExecutionRequestBoundary(req)
+	case ToolExternalExecutionRequestAudit:
+		return handleExternalExecutionRequestAudit(req)
+	case ToolExternalExecutionRequestExplain:
+		return handleExternalExecutionRequestExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -2295,4 +2319,55 @@ func handleExternalExecutionAdapterExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: executionadapter.ExplainExecutionAdapterInterface(a)}
+}
+
+// ── V10.5 External Execution Request Envelope Handlers ───────────────
+
+func parseExecutionRequestInput(req ToolRequest) (executionrequest.ExecutionRequestInput, error) {
+	var a executionrequest.ExecutionRequestInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleExternalExecutionRequestEnvelope(req ToolRequest) ToolResponse {
+	a, err := parseExecutionRequestInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executionrequest.BuildExecutionRequestEnvelope(a)}
+}
+
+func handleExternalExecutionRequestValidate(req ToolRequest) ToolResponse {
+	a, err := parseExecutionRequestInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executionrequest.ValidateExecutionRequestEnvelope(a)}
+}
+
+func handleExternalExecutionRequestBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executionrequest.BuildExecutionRequestBoundary()}
+}
+
+func handleExternalExecutionRequestAudit(req ToolRequest) ToolResponse {
+	a, err := parseExecutionRequestInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executionrequest.AuditExecutionRequestEnvelope(a)}
+}
+
+func handleExternalExecutionRequestExplain(req ToolRequest) ToolResponse {
+	a, err := parseExecutionRequestInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executionrequest.ExplainExecutionRequestEnvelope(a)}
 }
