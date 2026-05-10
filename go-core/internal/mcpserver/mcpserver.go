@@ -27,6 +27,7 @@ import (
 	"github.com/visioncore/go-core/internal/executionadapter"
 	"github.com/visioncore/go-core/internal/executionrequest"
 	"github.com/visioncore/go-core/internal/executionresponse"
+	"github.com/visioncore/go-core/internal/executionruntime"
 	"github.com/visioncore/go-core/internal/executionverification"
 	"github.com/visioncore/go-core/internal/executorpreflight"
 	"github.com/visioncore/go-core/internal/finalauthorization"
@@ -224,6 +225,12 @@ const (
 	ToolExternalExecutionEvidenceBindingBoundary = "vision.external_execution_evidence_binding_boundary"
 	ToolExternalExecutionEvidenceBindingAudit    = "vision.external_execution_evidence_binding_audit"
 	ToolExternalExecutionEvidenceBindingExplain  = "vision.external_execution_evidence_binding_explain"
+	// V11.0 Controlled External Execution Runtime tools
+	ToolControlledExecutionRuntime         = "vision.controlled_execution_runtime"
+	ToolControlledExecutionRuntimeValidate = "vision.controlled_execution_runtime_validate"
+	ToolControlledExecutionRuntimeBoundary = "vision.controlled_execution_runtime_boundary"
+	ToolControlledExecutionRuntimeAudit    = "vision.controlled_execution_runtime_audit"
+	ToolControlledExecutionRuntimeExplain  = "vision.controlled_execution_runtime_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -415,6 +422,12 @@ var allowedTools = map[string]bool{
 	ToolExternalExecutionEvidenceBindingBoundary: true,
 	ToolExternalExecutionEvidenceBindingAudit:    true,
 	ToolExternalExecutionEvidenceBindingExplain:  true,
+	// V11.0 Controlled External Execution Runtime tools
+	ToolControlledExecutionRuntime:         true,
+	ToolControlledExecutionRuntimeValidate: true,
+	ToolControlledExecutionRuntimeBoundary: true,
+	ToolControlledExecutionRuntimeAudit:    true,
+	ToolControlledExecutionRuntimeExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -775,6 +788,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleExternalExecutionEvidenceBindingAudit(req)
 	case ToolExternalExecutionEvidenceBindingExplain:
 		return handleExternalExecutionEvidenceBindingExplain(req)
+	// V11.0 Controlled External Execution Runtime tools
+	case ToolControlledExecutionRuntime:
+		return handleControlledExecutionRuntime(req)
+	case ToolControlledExecutionRuntimeValidate:
+		return handleControlledExecutionRuntimeValidate(req)
+	case ToolControlledExecutionRuntimeBoundary:
+		return handleControlledExecutionRuntimeBoundary(req)
+	case ToolControlledExecutionRuntimeAudit:
+		return handleControlledExecutionRuntimeAudit(req)
+	case ToolControlledExecutionRuntimeExplain:
+		return handleControlledExecutionRuntimeExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -2595,4 +2619,55 @@ func handleExternalExecutionEvidenceBindingExplain(req ToolRequest) ToolResponse
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: evidencebinding.ExplainExecutionEvidenceBinding(a)}
+}
+
+// ── V11.0 Controlled External Execution Runtime Handlers ────────────────
+
+func parseControlledExecutionRuntimeInput(req ToolRequest) (executionruntime.ControlledExecutionRuntimeInput, error) {
+	var a executionruntime.ControlledExecutionRuntimeInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleControlledExecutionRuntime(req ToolRequest) ToolResponse {
+	a, err := parseControlledExecutionRuntimeInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executionruntime.BuildControlledExecutionRuntime(a)}
+}
+
+func handleControlledExecutionRuntimeValidate(req ToolRequest) ToolResponse {
+	a, err := parseControlledExecutionRuntimeInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executionruntime.ValidateControlledExecutionRuntime(a)}
+}
+
+func handleControlledExecutionRuntimeBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executionruntime.BuildExecutionRuntimeBoundary()}
+}
+
+func handleControlledExecutionRuntimeAudit(req ToolRequest) ToolResponse {
+	a, err := parseControlledExecutionRuntimeInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executionruntime.AuditControlledExecutionRuntime(a)}
+}
+
+func handleControlledExecutionRuntimeExplain(req ToolRequest) ToolResponse {
+	a, err := parseControlledExecutionRuntimeInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: executionruntime.ExplainControlledExecutionRuntime(a)}
 }

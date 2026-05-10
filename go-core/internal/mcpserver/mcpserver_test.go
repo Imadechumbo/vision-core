@@ -4161,3 +4161,124 @@ func TestExternalExecutionEvidenceBindingBoundaryAuditExplainAndBlockedMutatingT
 		t.Fatalf("mutating tool must remain blocked with exact message, got ok=%v error=%q", resp.OK, resp.Error)
 	}
 }
+
+func validControlledExecutionRuntimeArgs() map[string]interface{} {
+	args := map[string]interface{}{}
+	for k, v := range validExecutionEvidenceBindingArgs() {
+		args[k] = v
+	}
+	present := func() map[string]interface{} { return map[string]interface{}{"present": true, "valid": true} }
+	args["runtime_id"] = "runtime-1"
+	args["runtime_session_id"] = "session-1"
+	args["runtime_mode"] = "controlled_dry_run_rehearsal"
+	args["evidence_binding"] = validExecutionEvidenceBindingArgs()
+	args["runtime_plan"] = present()
+	args["runtime_policy"] = present()
+	args["runtime_scope"] = present()
+	args["runtime_constraints"] = present()
+	args["runtime_safety_envelope"] = present()
+	args["runtime_audit_envelope"] = present()
+	args["runtime_observability_plan"] = present()
+	args["runtime_rollback_plan"] = present()
+	args["runtime_kill_switch"] = present()
+	args["runtime_timeout"] = present()
+	args["runtime_lock_plan"] = present()
+	args["runtime_stop_criteria"] = present()
+	args["runtime_preflight_checks"] = present()
+	args["runtime_postflight_checks"] = present()
+	args["runtime_idempotency_key"] = "runtime-idem-1"
+	args["safety_controls"] = map[string]interface{}{"present": true, "valid": true, "no_mcp_execution": true, "no_adapter_call_inside_mcp": true, "no_network_inside_mcp": true, "no_command_inside_mcp": true, "no_file_write_inside_mcp": true, "no_deploy_inside_mcp": true, "no_status_publish_inside_mcp": true, "no_promotion_inside_mcp": true, "no_memory_stable_write_inside_mcp": true, "no_trust_escalation_inside_mcp": true}
+	return args
+}
+
+func TestV110ControlledExecutionRuntimeToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolControlledExecutionRuntime, mcpserver.ToolControlledExecutionRuntimeValidate, mcpserver.ToolControlledExecutionRuntimeBoundary, mcpserver.ToolControlledExecutionRuntimeAudit, mcpserver.ToolControlledExecutionRuntimeExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir(), Args: mkArgs(validControlledExecutionRuntimeArgs())})
+		if !resp.OK {
+			t.Fatalf("V11.0 tool %s not registered: %s", tool, resp.Error)
+		}
+	}
+}
+
+func TestControlledExecutionRuntimeReturnsV110ReadOnlyDryRunAndDeniesRealPermissions(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolControlledExecutionRuntime, Root: t.TempDir(), Args: mkArgs(validControlledExecutionRuntimeArgs())})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V11.0"`, `"dry_run":true`, `"read_only":true`, `"controlled_runtime":true`, `"runtime_status":"runtime_ready_dry_run"`, `"runtime_ready_dry_run":true`, `"runtime_execution_candidate":true`, `"controlled_runtime_ready":true`, `"mcp_execution_allowed":false`, `"real_execution_allowed":false`, `"adapter_call_allowed":false`, `"executor_call_allowed":false`, `"network_call_allowed":false`, `"command_execution_allowed":false`, `"file_write_allowed":false`, `"deploy_allowed":false`, `"promotion_allowed":false`, `"status_publish_allowed":false`, `"mutation_allowed":false`, `"memory_write_allowed":false`, `"stable_promotion_allowed":false`, `"learning_allowed":false`, `"real_lock_allowed":false`, `"rollback_allowed":false`, `"evidence_trust_allowed":false`, `"result_trust_allowed":false`, `"ledger_write_allowed":false`, `"pass_gold_allowed":false`, `"pass_secure_allowed":false`, `"authority_grant_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestControlledExecutionRuntimeValidateBlocksFailuresAndClaims(t *testing.T) {
+	args := validControlledExecutionRuntimeArgs()
+	args["executor"] = "mcp"
+	args["executor_mode"] = "mcp_readonly"
+	args["runtime_mode"] = "real_execution"
+	delete(args, "evidence_binding")
+	delete(args, "runtime_plan")
+	delete(args, "runtime_policy")
+	delete(args, "runtime_scope")
+	delete(args, "runtime_safety_envelope")
+	delete(args, "runtime_audit_envelope")
+	delete(args, "runtime_observability_plan")
+	delete(args, "runtime_rollback_plan")
+	delete(args, "runtime_idempotency_key")
+	delete(args, "runtime_kill_switch")
+	delete(args, "runtime_timeout")
+	delete(args, "runtime_lock_plan")
+	delete(args, "runtime_stop_criteria")
+	delete(args, "runtime_preflight_checks")
+	delete(args, "runtime_postflight_checks")
+	args["claims"] = map[string]interface{}{"real_execution_allowed": true, "mcp_execution_allowed": true, "adapter_call_allowed": true, "executor_call_allowed": true, "network_call_allowed": true, "command_execution_allowed": true, "file_write_allowed": true, "deploy_allowed": true, "promotion_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "stable_promoted": true, "learned_as_stable": true, "real_lock_acquired": true, "rollback_performed": true, "evidence_trusted": true, "result_trusted": true, "ledger_written": true, "pass_gold": true, "pass_secure": true, "authority_granted": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolControlledExecutionRuntimeValidate, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V11.0"`, `"valid":false`, `"blocked":true`, "executor_must_not_be_mcp", "executor_mode_must_be_external_only", "runtime_mode_blocked", "evidence_binding_missing", "runtime_plan_missing", "runtime_policy_missing", "runtime_scope_missing", "safety_envelope_missing", "audit_envelope_missing", "observability_plan_missing", "rollback_plan_missing", "idempotency_missing", "kill_switch_missing", "timeout_missing", "lock_plan_missing", "stop_criteria_missing", "preflight_checks_missing", "postflight_checks_missing", "unsafe_runtime_execution_attempt", "unsafe_adapter_call_attempt", "unsafe_network_attempt", "unsafe_command_attempt", "unsafe_file_write_attempt", "unsafe_deploy_attempt", "unsafe_promotion_attempt", "unsafe_status_publish_attempt", "unsafe_memory_write_attempt", "unsafe_trust_escalation_attempt", "real_execution_allowed", "adapter_call_allowed", "evidence_trusted", "result_trusted", "ledger_written"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestControlledExecutionRuntimeBoundaryAuditExplainAndBlockedMutatingTools(t *testing.T) {
+	for _, tc := range []struct {
+		tool  string
+		wants []string
+	}{
+		{mcpserver.ToolControlledExecutionRuntimeBoundary, []string{`"version":"V11.0"`, `"dry_run":true`, `"read_only":true`, `"controlled_runtime":true`, `"real_execution_allowed":false`, "simulate controlled execution runtime", "execute_runtime", "call_adapter", "call_executor", "network_call", "command_execution", "file_write", "deploy", "promote", "publish_status", "write_memory", "learn_stable", "trust_evidence", "trust_result", "write_ledger", "acquire_real_lock", "perform_rollback", "mark_PASS_GOLD", "grant_authority", "real_execution_allowed"}},
+		{mcpserver.ToolControlledExecutionRuntimeExplain, []string{`"version":"V11.0"`, `"controlled_runtime":true`, `"real_execution_allowed":false`, "why_controlled_runtime_is_not_real_execution_yet", "why_mcp_cannot_execute_runtime", "why_external_adapter_call_is_blocked", "why_evidence_binding_is_required", "why_result_verification_is_required", "why_final_authorization_is_required", "why_real_gates_are_required", "why_human_approval_and_revalidation_are_required", "why_runtime_policy_safety_rollback_observability_are_required", "why_real_execution_requires_future_explicit_release", "PASS_GOLD", "PASS_SECURE", "always_denied"}},
+	} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tc.tool, Root: t.TempDir(), Args: mkArgs(validControlledExecutionRuntimeArgs())})
+		if !resp.OK {
+			t.Fatalf("%s expected ok=true: %s", tc.tool, resp.Error)
+		}
+		s := string(mustJSON(t, resp.Payload))
+		for _, want := range tc.wants {
+			if !strings.Contains(s, want) {
+				t.Fatalf("%s missing %s in %s", tc.tool, want, s)
+			}
+		}
+	}
+	args := validControlledExecutionRuntimeArgs()
+	args["claims"] = map[string]interface{}{"real_execution_allowed": true, "adapter_call_allowed": true, "executor_call_allowed": true, "network_call_allowed": true, "command_execution_allowed": true, "file_write_allowed": true, "deploy_allowed": true, "promotion_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "learned_as_stable": true, "evidence_trusted": true, "result_trusted": true, "ledger_written": true, "real_lock_acquired": true, "rollback_performed": true, "pass_gold": true, "authority_granted": true, "human_approval_bypassed": true, "revalidation_bypassed": true, "evidence_binding_bypassed": true, "verification_bypassed": true, "runtime_policy_bypassed": true, "kill_switch_bypassed": true, "rollback_bypassed": true, "observability_bypassed": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolControlledExecutionRuntimeAudit, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("audit expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"runtime_execution_attempt_found":true`, `"adapter_call_attempt_found":true`, `"executor_call_attempt_found":true`, `"network_attempt_found":true`, `"command_attempt_found":true`, `"file_write_attempt_found":true`, `"deploy_attempt_found":true`, `"promotion_attempt_found":true`, `"status_publish_attempt_found":true`, `"memory_write_attempt_found":true`, `"stable_learning_attempt_found":true`, `"evidence_trust_attempt_found":true`, `"result_trust_attempt_found":true`, `"ledger_write_attempt_found":true`, `"real_lock_attempt_found":true`, `"rollback_attempt_found":true`, `"auto_gold_attempt_found":true`, `"authority_grant_attempt_found":true`, `"human_approval_bypass_attempt_found":true`, `"revalidation_bypass_attempt_found":true`, `"evidence_binding_bypass_attempt_found":true`, `"verification_bypass_attempt_found":true`, `"runtime_policy_bypass_attempt_found":true`, `"kill_switch_bypass_attempt_found":true`, `"rollback_bypass_attempt_found":true`, `"observability_bypass_attempt_found":true`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("audit missing %s in %s", want, s)
+		}
+	}
+	resp = mcpserver.Dispatch(mcpserver.ToolRequest{Tool: "vision.apply_patch"})
+	if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+		t.Fatalf("mutating tool must remain blocked with exact message, got ok=%v error=%q", resp.OK, resp.Error)
+	}
+}
