@@ -4713,3 +4713,136 @@ func TestSandboxTracePersistenceBoundaryAuditExplainAndBlockedMutatingTools(t *t
 		t.Fatalf("mutating tool must remain blocked with exact message, got ok=%v error=%q", resp.OK, resp.Error)
 	}
 }
+
+func validSandboxTraceReplayArgs() map[string]interface{} {
+	args := validSandboxTracePersistenceArgs()
+	present := func() map[string]interface{} { return map[string]interface{}{"present": true, "valid": true} }
+	args["replay_gate_id"] = "replay-gate-1"
+	args["sandbox_trace_persistence_gate"] = present()
+	args["sandbox_trace_persistence_ready_dry_run"] = true
+	args["persistence_candidate"] = true
+	args["isolated_storage_candidate"] = true
+	args["trace_replay_reference_ready_dry_run"] = true
+	args["audit_index_candidate"] = true
+	args["sandbox_trace"] = present()
+	args["sandbox_adapter"] = present()
+	args["controlled_runtime"] = present()
+	args["human_approval"] = map[string]interface{}{"present": true, "approved": true, "valid": true}
+	args["independent_revalidation"] = map[string]interface{}{"present": true, "completed": true, "pass_gold_revalidated": true, "pass_secure_revalidated": true, "valid": true}
+	args["replay_policy"] = present()
+	args["replay_scope"] = present()
+	args["replay_reference"] = present()
+	args["replay_reference_value"] = "replay-ref-1"
+	args["replay_events"] = []string{"start", "deny", "block", "finish"}
+	args["replay_event_order_policy"] = present()
+	args["replay_event_order_result"] = present()
+	args["replay_timestamp_model"] = present()
+	args["replay_correlation_id"] = "corr-1"
+	args["replay_idempotency_key"] = "replay-idem-1"
+	args["replay_trace_hash"] = "sha256:abc123"
+	args["replay_hash_verification"] = present()
+	args["replay_audit_index_descriptor"] = present()
+	args["replay_audit_trail"] = present()
+	args["replay_denied_permissions"] = []string{"network_call"}
+	args["replay_blocked_actions"] = []string{"file_write"}
+	args["replay_safety_decisions"] = present()
+	args["replay_check_results"] = present()
+	args["replay_integrity_checks"] = present()
+	args["replay_completeness_checks"] = present()
+	args["replay_redaction_policy"] = present()
+	args["replay_privacy_policy"] = present()
+	args["replay_retention_policy"] = present()
+	args["replay_tamper_evidence_model"] = present()
+	return args
+}
+
+func TestV114SandboxTraceReplayToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolSandboxTraceReplayGate, mcpserver.ToolSandboxTraceReplayValidate, mcpserver.ToolSandboxTraceReplayBoundary, mcpserver.ToolSandboxTraceReplayAudit, mcpserver.ToolSandboxTraceReplayExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir(), Args: mkArgs(validSandboxTraceReplayArgs())})
+		if !resp.OK {
+			t.Fatalf("V11.4 tool %s not registered: %s", tool, resp.Error)
+		}
+		if resp.Error != "" {
+			t.Fatalf("V11.4 tool %s must be read-only allowed", tool)
+		}
+	}
+}
+
+func TestSandboxTraceReplayGateReturnsV114ReadOnlyDryRunAndDeniesRealPermissions(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSandboxTraceReplayGate, Root: t.TempDir(), Args: mkArgs(validSandboxTraceReplayArgs())})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V11.4"`, `"dry_run":true`, `"read_only":true`, `"sandbox":true`, `"trace_mode":"sandbox_noop_trace"`, `"replay_mode":"sandbox_trace_replay_gate"`, `"replay_status":"sandbox_trace_replay_ready_dry_run"`, `"sandbox_trace_replay_ready_dry_run":true`, `"replay_candidate":true`, `"replay_reference_valid_dry_run":true`, `"event_order_valid_dry_run":true`, `"denied_permissions_replayed":true`, `"blocked_actions_replayed":true`, `"trace_hash_verified_dry_run":true`, `"audit_index_replayable_dry_run":true`, `"replay_complete_dry_run":true`, `"mcp_execution_allowed":false`, `"real_execution_allowed":false`, `"real_adapter_call_allowed":false`, `"adapter_call_allowed":false`, `"executor_call_allowed":false`, `"network_call_allowed":false`, `"command_execution_allowed":false`, `"file_write_allowed":false`, `"trace_persistence_allowed":false`, `"replay_persistence_allowed":false`, `"trace_persisted":false`, `"replay_persisted":false`, `"database_write_allowed":false`, `"ledger_write_allowed":false`, `"deploy_allowed":false`, `"promotion_allowed":false`, `"status_publish_allowed":false`, `"mutation_allowed":false`, `"memory_write_allowed":false`, `"stable_promotion_allowed":false`, `"learning_allowed":false`, `"real_lock_allowed":false`, `"rollback_allowed":false`, `"evidence_trust_allowed":false`, `"result_trust_allowed":false`, `"trace_trust_allowed":false`, `"replay_trust_allowed":false`, `"pass_gold_allowed":false`, `"pass_secure_allowed":false`, `"authority_grant_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestSandboxTraceReplayValidateBlocksFailuresAndClaims(t *testing.T) {
+	args := validSandboxTraceReplayArgs()
+	args["executor"] = "mcp_readonly"
+	args["executor_mode"] = "inside_mcp"
+	args["adapter_type"] = "real"
+	args["environment"] = "prod"
+	args["sandbox_trace_persistence_ready_dry_run"] = false
+	args["persistence_candidate"] = false
+	delete(args, "replay_reference")
+	delete(args, "replay_events")
+	args["replay_event_order_result"] = map[string]interface{}{"present": true, "valid": false}
+	delete(args, "replay_trace_hash")
+	delete(args, "replay_hash_verification")
+	delete(args, "replay_audit_index_descriptor")
+	delete(args, "replay_denied_permissions")
+	delete(args, "replay_blocked_actions")
+	args["claims"] = map[string]interface{}{"real_execution_allowed": true, "real_adapter_call_allowed": true, "network_call_allowed": true, "command_execution_allowed": true, "file_write_allowed": true, "database_write_allowed": true, "trace_persisted": true, "replay_persisted": true, "ledger_written": true, "deploy_allowed": true, "promotion_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "evidence_trusted": true, "result_trusted": true, "trace_trusted": true, "replay_trusted": true, "pass_gold": true, "authority_granted": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSandboxTraceReplayValidate, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("validate expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{"executor_must_not_be_mcp", "executor_mode_must_be_external_only", "adapter_type_must_be_sandbox_noop", "environment_must_be_sandbox_or_local_sandbox", "sandbox_trace_persistence_blocked", "replay_reference_missing", "replay_event_list_missing", "replay_event_order_invalid", "replay_trace_hash_missing", "replay_hash_verification_failed", "replay_audit_index_missing", "replay_denied_permissions_missing", "replay_blocked_actions_missing", "unsafe_real_execution_attempt", "unsafe_real_adapter_call_attempt", "unsafe_network_attempt", "unsafe_command_attempt", "unsafe_file_write_attempt", "unsafe_database_write_attempt", "unsafe_trace_persistence_attempt", "unsafe_replay_persistence_attempt", "unsafe_ledger_write_attempt", "unsafe_deploy_attempt", "unsafe_promotion_attempt", "unsafe_status_publish_attempt", "unsafe_memory_write_attempt", "unsafe_trust_escalation_attempt", "replay_persisted", "replay_trusted"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestSandboxTraceReplayBoundaryAuditExplainAndBlockedMutatingTools(t *testing.T) {
+	for _, tc := range []struct {
+		tool  string
+		wants []string
+	}{
+		{mcpserver.ToolSandboxTraceReplayBoundary, []string{`"version":"V11.4"`, `"dry_run":true`, `"read_only":true`, `"sandbox":true`, `"trace_mode":"sandbox_noop_trace"`, `"replay_mode":"sandbox_trace_replay_gate"`, `"real_execution_allowed":false`, "simulate sandbox trace replay gate", "reconstruct sandbox session in response payload", "replay denied permissions in response payload", "replay blocked actions in response payload", "verify event order in dry-run", "verify trace hash in dry-run", "verify replay reference in dry-run", "verify audit index in dry-run", "return replay decision in response payload", "execute_runtime", "call_real_adapter", "call_executor", "network_call", "command_execution", "file_write", "database_write", "persist_trace", "persist_replay", "write_ledger", "deploy", "promote", "publish_status", "write_memory", "learn_stable", "trust_trace", "trust_replay", "trust_evidence", "trust_result", "acquire_real_lock", "perform_rollback", "mark_PASS_GOLD", "mark_PASS_SECURE", "grant_authority", "replay_persistence_allowed"}},
+		{mcpserver.ToolSandboxTraceReplayExplain, []string{`"version":"V11.4"`, `"sandbox":true`, `"trace_mode":"sandbox_noop_trace"`, `"replay_mode":"sandbox_trace_replay_gate"`, `"real_execution_allowed":false`, "why_replay_gate_is_not_execution", "why_replay_gate_is_not_persistence", "why_file_write_is_blocked_inside_mcp", "why_database_write_is_blocked_inside_mcp", "why_ledger_write_is_blocked_inside_mcp", "why_sandbox_trace_persistence_gate_is_required", "why_sandbox_trace_is_required", "why_sandbox_adapter_is_required", "why_controlled_runtime_is_required", "why_evidence_binding_is_required", "why_result_verification_is_required", "why_final_authorization_is_required", "why_real_gates_are_required", "why_human_approval_and_revalidation_are_required", "why_event_order_hash_replay_reference_and_audit_index_are_required", "why_replay_can_only_be_persisted_by_future_explicit_release", "PASS_GOLD", "PASS_SECURE", "always_denied"}},
+	} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tc.tool, Root: t.TempDir(), Args: mkArgs(validSandboxTraceReplayArgs())})
+		if !resp.OK {
+			t.Fatalf("%s expected ok=true: %s", tc.tool, resp.Error)
+		}
+		s := string(mustJSON(t, resp.Payload))
+		for _, want := range tc.wants {
+			if !strings.Contains(s, want) {
+				t.Fatalf("%s missing %s in %s", tc.tool, want, s)
+			}
+		}
+	}
+	args := validSandboxTraceReplayArgs()
+	args["claims"] = map[string]interface{}{"real_execution_allowed": true, "real_adapter_call_allowed": true, "adapter_call_allowed": true, "executor_call_allowed": true, "network_call_allowed": true, "command_execution_allowed": true, "file_write_allowed": true, "database_write_allowed": true, "trace_persisted": true, "replay_persisted": true, "ledger_written": true, "deploy_allowed": true, "promotion_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "learned_as_stable": true, "trace_trusted": true, "replay_trusted": true, "evidence_trusted": true, "result_trusted": true, "real_lock_acquired": true, "rollback_performed": true, "pass_gold": true, "authority_granted": true, "human_approval_bypassed": true, "revalidation_bypassed": true, "runtime_bypassed": true, "sandbox_adapter_bypassed": true, "sandbox_trace_bypassed": true, "persistence_gate_bypassed": true, "evidence_binding_bypassed": true, "verification_bypassed": true, "replay_policy_bypassed": true, "replay_hash_bypassed": true, "replay_event_order_bypassed": true, "replay_audit_index_bypassed": true, "replay_redaction_bypassed": true, "sandbox_escaped": true, "kill_switch_bypassed": true, "rollback_bypassed": true, "observability_bypassed": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSandboxTraceReplayAudit, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("audit expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"real_execution_attempt_found":true`, `"real_adapter_call_attempt_found":true`, `"adapter_call_attempt_found":true`, `"executor_call_attempt_found":true`, `"network_attempt_found":true`, `"command_attempt_found":true`, `"file_write_attempt_found":true`, `"database_write_attempt_found":true`, `"trace_persistence_attempt_found":true`, `"replay_persistence_attempt_found":true`, `"ledger_write_attempt_found":true`, `"deploy_attempt_found":true`, `"promotion_attempt_found":true`, `"status_publish_attempt_found":true`, `"memory_write_attempt_found":true`, `"stable_learning_attempt_found":true`, `"trace_trust_attempt_found":true`, `"replay_trust_attempt_found":true`, `"evidence_trust_attempt_found":true`, `"result_trust_attempt_found":true`, `"real_lock_attempt_found":true`, `"rollback_attempt_found":true`, `"auto_gold_attempt_found":true`, `"authority_grant_attempt_found":true`, `"human_approval_bypass_attempt_found":true`, `"revalidation_bypass_attempt_found":true`, `"runtime_bypass_attempt_found":true`, `"sandbox_adapter_bypass_attempt_found":true`, `"sandbox_trace_bypass_attempt_found":true`, `"persistence_gate_bypass_attempt_found":true`, `"evidence_binding_bypass_attempt_found":true`, `"verification_bypass_attempt_found":true`, `"replay_policy_bypass_attempt_found":true`, `"replay_hash_bypass_attempt_found":true`, `"replay_event_order_bypass_attempt_found":true`, `"replay_audit_index_bypass_attempt_found":true`, `"replay_redaction_bypass_attempt_found":true`, `"sandbox_escape_attempt_found":true`, `"kill_switch_bypass_attempt_found":true`, `"rollback_bypass_attempt_found":true`, `"observability_bypass_attempt_found":true`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("audit missing %s in %s", want, s)
+		}
+	}
+	resp = mcpserver.Dispatch(mcpserver.ToolRequest{Tool: "vision.apply_patch"})
+	if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+		t.Fatalf("mutating tool must remain blocked with exact message, got ok=%v error=%q", resp.OK, resp.Error)
+	}
+}

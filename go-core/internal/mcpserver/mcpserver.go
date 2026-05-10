@@ -48,6 +48,7 @@ import (
 	"github.com/visioncore/go-core/internal/sandboxadapter"
 	"github.com/visioncore/go-core/internal/sandboxtrace"
 	"github.com/visioncore/go-core/internal/sandboxtracepersistence"
+	"github.com/visioncore/go-core/internal/sandboxtracereplay"
 	"github.com/visioncore/go-core/internal/sovereigndecision"
 )
 
@@ -252,6 +253,12 @@ const (
 	ToolSandboxTracePersistenceBoundary = "vision.sandbox_trace_persistence_boundary"
 	ToolSandboxTracePersistenceAudit    = "vision.sandbox_trace_persistence_audit"
 	ToolSandboxTracePersistenceExplain  = "vision.sandbox_trace_persistence_explain"
+	// V11.4 Sandbox Trace Replay Gate tools
+	ToolSandboxTraceReplayGate     = "vision.sandbox_trace_replay_gate"
+	ToolSandboxTraceReplayValidate = "vision.sandbox_trace_replay_validate"
+	ToolSandboxTraceReplayBoundary = "vision.sandbox_trace_replay_boundary"
+	ToolSandboxTraceReplayAudit    = "vision.sandbox_trace_replay_audit"
+	ToolSandboxTraceReplayExplain  = "vision.sandbox_trace_replay_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -467,6 +474,12 @@ var allowedTools = map[string]bool{
 	ToolSandboxTracePersistenceBoundary: true,
 	ToolSandboxTracePersistenceAudit:    true,
 	ToolSandboxTracePersistenceExplain:  true,
+	// V11.4 Sandbox Trace Replay Gate tools
+	ToolSandboxTraceReplayGate:     true,
+	ToolSandboxTraceReplayValidate: true,
+	ToolSandboxTraceReplayBoundary: true,
+	ToolSandboxTraceReplayAudit:    true,
+	ToolSandboxTraceReplayExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -871,6 +884,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleSandboxTracePersistenceAudit(req)
 	case ToolSandboxTracePersistenceExplain:
 		return handleSandboxTracePersistenceExplain(req)
+	// V11.4 Sandbox Trace Replay Gate tools
+	case ToolSandboxTraceReplayGate:
+		return handleSandboxTraceReplayGate(req)
+	case ToolSandboxTraceReplayValidate:
+		return handleSandboxTraceReplayValidate(req)
+	case ToolSandboxTraceReplayBoundary:
+		return handleSandboxTraceReplayBoundary(req)
+	case ToolSandboxTraceReplayAudit:
+		return handleSandboxTraceReplayAudit(req)
+	case ToolSandboxTraceReplayExplain:
+		return handleSandboxTraceReplayExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -2895,4 +2919,55 @@ func handleSandboxTracePersistenceExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtracepersistence.ExplainSandboxTracePersistenceGate(a)}
+}
+
+// ── V11.4 Sandbox Trace Replay Gate Handlers ─────────────────
+
+func parseSandboxTraceReplayInput(req ToolRequest) (sandboxtracereplay.SandboxTraceReplayInput, error) {
+	var a sandboxtracereplay.SandboxTraceReplayInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleSandboxTraceReplayGate(req ToolRequest) ToolResponse {
+	a, err := parseSandboxTraceReplayInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtracereplay.BuildSandboxTraceReplayGate(a)}
+}
+
+func handleSandboxTraceReplayValidate(req ToolRequest) ToolResponse {
+	a, err := parseSandboxTraceReplayInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtracereplay.ValidateSandboxTraceReplayGate(a)}
+}
+
+func handleSandboxTraceReplayBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtracereplay.BuildSandboxTraceReplayBoundary()}
+}
+
+func handleSandboxTraceReplayAudit(req ToolRequest) ToolResponse {
+	a, err := parseSandboxTraceReplayInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtracereplay.AuditSandboxTraceReplayGate(a)}
+}
+
+func handleSandboxTraceReplayExplain(req ToolRequest) ToolResponse {
+	a, err := parseSandboxTraceReplayInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtracereplay.ExplainSandboxTraceReplayGate(a)}
 }
