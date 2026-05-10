@@ -5065,3 +5065,51 @@ func TestV116SandboxReadinessAuditDetectsUnsafeAttempts(t *testing.T) {
 		t.Fatalf("mutating tool must remain blocked with exact message, got ok=%v error=%q", resp.OK, resp.Error)
 	}
 }
+
+func TestV120IsolatedControlledRuntimeFullMCPContract(t *testing.T) {
+	tools := []string{
+		mcpserver.ToolIsolatedControlledRuntimePlan,
+		mcpserver.ToolIsolatedControlledRuntimeValidate,
+		mcpserver.ToolIsolatedControlledRuntimeBoundary,
+		mcpserver.ToolIsolatedControlledRuntimeAudit,
+		mcpserver.ToolIsolatedControlledRuntimeExplain,
+	}
+	for _, tool := range tools {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir(), Args: mkArgs(map[string]interface{}{"command": []interface{}{"go", "version"}})})
+		if !resp.OK {
+			t.Fatalf("%s expected ok=true: %s", tool, resp.Error)
+		}
+		s := string(mustJSON(t, resp.Payload))
+		for _, want := range []string{`"version":"V12.0"`, `"read_only":true`, `"mcp_execution_allowed":false`, `"deploy_allowed":false`, `"promotion_allowed":false`, `"status_publish_allowed":false`, `"network_call_allowed":false`, `"repo_mutation_allowed":false`, `"trust_allowed":false`, `"pass_gold_allowed":false`, `"pass_secure_allowed":false`, `"authority_grant_allowed":false`} {
+			if !strings.Contains(s, want) {
+				t.Fatalf("%s missing %s in %s", tool, want, s)
+			}
+		}
+	}
+}
+
+func TestV120IsolatedControlledRuntimeWindowsSafeCommandPolicy(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolIsolatedControlledRuntimeValidate, Root: t.TempDir(), Args: mkArgs(map[string]interface{}{"command": []interface{}{"go", "version"}})})
+	if !resp.OK {
+		t.Fatalf("go version validation expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"valid":true`, `"cross_platform_allowlisted":true`, `"command_execution_allowed":false`, `"real_execution_allowed":false`, `"mcp_execution_allowed":false`, `"would_execute":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("go version policy missing %s in %s", want, s)
+		}
+	}
+
+	for _, command := range [][]interface{}{{"echo", "ok"}, {"cmd.exe", "/c", "go", "version"}, {"powershell", "go version"}, {"bash", "-lc", "go version"}} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolIsolatedControlledRuntimeValidate, Root: t.TempDir(), Args: mkArgs(map[string]interface{}{"command": command})})
+		if !resp.OK {
+			t.Fatalf("blocked command validation expected ok=true: %s", resp.Error)
+		}
+		s := string(mustJSON(t, resp.Payload))
+		for _, want := range []string{`"valid":false`, `"blocked":true`, `"command_execution_allowed":false`, `"mcp_execution_allowed":false`} {
+			if !strings.Contains(s, want) {
+				t.Fatalf("blocked command policy missing %s in %s", want, s)
+			}
+		}
+	}
+}

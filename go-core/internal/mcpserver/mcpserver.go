@@ -36,6 +36,7 @@ import (
 	"github.com/visioncore/go-core/internal/handoffpackage"
 	"github.com/visioncore/go-core/internal/impeccable"
 	"github.com/visioncore/go-core/internal/invocationboundary"
+	"github.com/visioncore/go-core/internal/isolatedruntime"
 	"github.com/visioncore/go-core/internal/policymatrix"
 	"github.com/visioncore/go-core/internal/promotioncontract"
 	"github.com/visioncore/go-core/internal/promotionfirewall"
@@ -273,6 +274,12 @@ const (
 	ToolSandboxToControlledReadinessBoundary = "vision.sandbox_to_controlled_readiness_boundary"
 	ToolSandboxToControlledReadinessAudit    = "vision.sandbox_to_controlled_readiness_audit"
 	ToolSandboxToControlledReadinessExplain  = "vision.sandbox_to_controlled_readiness_explain"
+	// V12.0 Isolated Controlled Runtime tools
+	ToolIsolatedControlledRuntimePlan     = "vision.isolated_controlled_runtime_plan"
+	ToolIsolatedControlledRuntimeValidate = "vision.isolated_controlled_runtime_validate"
+	ToolIsolatedControlledRuntimeBoundary = "vision.isolated_controlled_runtime_boundary"
+	ToolIsolatedControlledRuntimeAudit    = "vision.isolated_controlled_runtime_audit"
+	ToolIsolatedControlledRuntimeExplain  = "vision.isolated_controlled_runtime_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -506,6 +513,12 @@ var allowedTools = map[string]bool{
 	ToolSandboxToControlledReadinessBoundary: true,
 	ToolSandboxToControlledReadinessAudit:    true,
 	ToolSandboxToControlledReadinessExplain:  true,
+	// V12.0 Isolated Controlled Runtime tools
+	ToolIsolatedControlledRuntimePlan:     true,
+	ToolIsolatedControlledRuntimeValidate: true,
+	ToolIsolatedControlledRuntimeBoundary: true,
+	ToolIsolatedControlledRuntimeAudit:    true,
+	ToolIsolatedControlledRuntimeExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -943,6 +956,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleSandboxToControlledReadinessAudit(req)
 	case ToolSandboxToControlledReadinessExplain:
 		return handleSandboxToControlledReadinessExplain(req)
+	// V12.0 Isolated Controlled Runtime tools
+	case ToolIsolatedControlledRuntimePlan:
+		return handleIsolatedControlledRuntimePlan(req)
+	case ToolIsolatedControlledRuntimeValidate:
+		return handleIsolatedControlledRuntimeValidate(req)
+	case ToolIsolatedControlledRuntimeBoundary:
+		return handleIsolatedControlledRuntimeBoundary(req)
+	case ToolIsolatedControlledRuntimeAudit:
+		return handleIsolatedControlledRuntimeAudit(req)
+	case ToolIsolatedControlledRuntimeExplain:
+		return handleIsolatedControlledRuntimeExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -3120,4 +3144,51 @@ func handleSandboxToControlledReadinessExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxreadiness.ExplainSandboxReadinessGate(a)}
+}
+
+// ── V12.0 Isolated Controlled Runtime Handlers ──────────────────────────────
+
+func parseIsolatedControlledRuntimeRequest(req ToolRequest) (isolatedruntime.Request, error) {
+	var a isolatedruntime.Request
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleIsolatedControlledRuntimePlan(req ToolRequest) ToolResponse {
+	a, err := parseIsolatedControlledRuntimeRequest(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: isolatedruntime.BuildPlan(a)}
+}
+
+func handleIsolatedControlledRuntimeValidate(req ToolRequest) ToolResponse {
+	a, err := parseIsolatedControlledRuntimeRequest(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: isolatedruntime.Validate(a)}
+}
+
+func handleIsolatedControlledRuntimeBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: isolatedruntime.BuildBoundary()}
+}
+
+func handleIsolatedControlledRuntimeAudit(req ToolRequest) ToolResponse {
+	a, err := parseIsolatedControlledRuntimeRequest(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: isolatedruntime.AuditRuntime(a)}
+}
+
+func handleIsolatedControlledRuntimeExplain(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: isolatedruntime.ExplainRuntime()}
 }
