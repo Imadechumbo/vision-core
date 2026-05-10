@@ -3379,3 +3379,141 @@ func TestV102MutatingToolsStillBlockedExactMessage(t *testing.T) {
 		}
 	}
 }
+
+func validFinalAuthorizationArgs() map[string]interface{} {
+	present := func() map[string]interface{} { return map[string]interface{}{"present": true, "valid": true} }
+	return map[string]interface{}{
+		"final_authorization_id": "fa-1",
+		"simulation_id":          "sim-1",
+		"firewall_id":            "fw-1",
+		"decision_id":            "dec-1",
+		"review_id":              "rev-1",
+		"intake_id":              "intake-1",
+		"invocation_id":          "inv-1",
+		"executor":               "external_promotion_executor",
+		"executor_mode":          "external_only",
+		"project":                "vision-core",
+		"branch":                 "v6-go-enterprise-runtime",
+		"commit_sha":             "088f7aa",
+		"target":                 "stable",
+		"environment":            "production",
+		"promotion_simulation":   map[string]interface{}{"version": "V10.2", "dry_run": true, "read_only": true, "valid": true, "simulation_record_ready_dry_run": true, "execution_simulation_candidate": true},
+		"promotion_firewall":     map[string]interface{}{"version": "V10.1", "dry_run": true, "read_only": true, "valid": true, "firewall_valid": true, "execution_eligibility_ready_dry_run": true},
+		"sovereign_decision":     map[string]interface{}{"version": "V10.0", "dry_run": true, "read_only": true, "valid": true, "sovereign_decision_valid": true, "promotion_decision_candidate": true},
+		"real_gates": []map[string]interface{}{
+			{"gate": "PASS_GOLD", "status": "pass", "real_evidence": true, "source": "validator", "artifact_id": "pg", "recognized_by_authority": true},
+			{"gate": "PASS_SECURE", "status": "pass", "real_evidence": true, "source": "runner", "artifact_id": "ps", "recognized_by_authority": true},
+		},
+		"human_approval":           map[string]interface{}{"present": true, "approved": true, "approver": "release-manager", "approval_reference": "approval-1", "valid": true},
+		"independent_revalidation": map[string]interface{}{"present": true, "completed": true, "validator": "independent-validator", "revalidation_reference": "reval-1", "pass_gold_revalidated": true, "pass_secure_revalidated": true, "valid": true},
+		"rollback_plan":            present(),
+		"observability_plan":       present(),
+		"idempotency":              present(),
+		"kill_switch":              present(),
+		"timeout":                  present(),
+		"final_execution_policy":   present(),
+		"safety_controls":          map[string]interface{}{"present": true, "valid": true, "no_mcp_execution": true, "no_executor_call_inside_mcp": true, "no_network_inside_mcp": true, "no_command_inside_mcp": true, "no_file_write_inside_mcp": true, "no_deploy_inside_mcp": true, "no_status_publish_inside_mcp": true, "no_memory_stable_write_inside_mcp": true},
+	}
+}
+
+func TestV103PromotionFinalAuthorizationToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolPromotionFinalAuthorization, mcpserver.ToolPromotionFinalAuthorizationValidate, mcpserver.ToolPromotionFinalAuthorizationBoundary, mcpserver.ToolPromotionFinalAuthorizationAudit, mcpserver.ToolPromotionFinalAuthorizationExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir(), Args: mkArgs(validFinalAuthorizationArgs())})
+		if strings.Contains(resp.Error, "unknown tool") {
+			t.Fatalf("V10.3 tool %s not registered", tool)
+		}
+	}
+}
+
+func TestPromotionFinalAuthorizationReturnsV103ReadOnlyDryRunAndDeniesExecution(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPromotionFinalAuthorization, Root: t.TempDir(), Args: mkArgs(validFinalAuthorizationArgs())})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V10.3"`, `"dry_run":true`, `"read_only":true`, `"final_authorization_status":"final_authorization_ready_dry_run"`, `"final_authorization_ready_dry_run":true`, `"mcp_execution_allowed":false`, `"executor_call_allowed":false`, `"network_call_allowed":false`, `"command_execution_allowed":false`, `"file_write_allowed":false`, `"promotion_allowed":false`, `"deploy_allowed":false`, `"status_publish_allowed":false`, `"mutation_allowed":false`, `"memory_write_allowed":false`, `"stable_promotion_allowed":false`, `"learning_allowed":false`, `"real_lock_allowed":false`, `"rollback_allowed":false`, `"final_authorization_persistence_allowed":false`, `"pass_gold_allowed":false`, `"pass_secure_allowed":false`, `"authority_grant_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestPromotionFinalAuthorizationValidateBlocksFailuresAndClaims(t *testing.T) {
+	args := validFinalAuthorizationArgs()
+	args["executor"] = "mcp_readonly"
+	args["executor_mode"] = "inside_mcp"
+	args["promotion_simulation"] = map[string]interface{}{"version": "V10.2", "valid": false, "simulation_record_ready_dry_run": false, "execution_simulation_candidate": false}
+	args["promotion_firewall"] = map[string]interface{}{"valid": false, "firewall_valid": false, "execution_eligibility_ready_dry_run": false}
+	args["sovereign_decision"] = map[string]interface{}{"valid": false, "sovereign_decision_valid": false, "promotion_decision_candidate": false}
+	args["real_gates"] = []map[string]interface{}{{"gate": "PASS_GOLD", "status": "pass", "real_evidence": true, "dry_run": true, "synthesized": true, "recognized_by_authority": false}}
+	args["human_approval"] = map[string]interface{}{"present": true, "approved": false, "placeholder": true, "valid": false}
+	args["independent_revalidation"] = map[string]interface{}{"present": true, "completed": false, "placeholder": true, "pass_gold_revalidated": false, "pass_secure_revalidated": false, "valid": false}
+	args["rollback_plan"] = nil
+	args["observability_plan"] = nil
+	args["idempotency"] = nil
+	args["kill_switch"] = nil
+	args["timeout"] = nil
+	args["final_execution_policy"] = nil
+	args["safety_controls"] = map[string]interface{}{"present": true, "valid": false}
+	args["execution_allowed"] = true
+	args["executor_call_allowed"] = true
+	args["network_call_allowed"] = true
+	args["command_execution_allowed"] = true
+	args["file_write_allowed"] = true
+	args["promotion_allowed"] = true
+	args["deploy_allowed"] = true
+	args["status_publish_allowed"] = true
+	args["memory_write_allowed"] = true
+	args["final_authorization_persistence_allowed"] = true
+	args["authority_grant_allowed"] = true
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPromotionFinalAuthorizationValidate, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V10.3"`, `"valid":false`, `"blocked":true`, "executor_must_not_be_mcp", "executor_mode_must_be_external_only", "simulation_blocked", "simulation_record_ready_dry_run", "execution_simulation_candidate", "firewall_blocked", "execution_eligibility_ready_dry_run", "sovereign_candidate_missing", "promotion_decision_candidate", "PASS_SECURE_REAL", "PASS_GOLD_dry_run_gate_claim", "PASS_GOLD_synthesized_gate_claim", "PASS_GOLD_not_recognized_by_authority", "human_approval_placeholder", "human_approval_approved_false", "independent_revalidation_placeholder", "independent_revalidation_completed_false", "pass_gold_revalidated_false", "pass_secure_revalidated_false", "rollback_plan", "observability_plan", "idempotency", "kill_switch", "timeout", "final_execution_policy", "safety_controls_invalid", "execution_allowed", "executor_call_allowed", "network_call_allowed", "command_execution_allowed", "file_write_allowed", "promotion_allowed", "deploy_allowed", "status_publish_allowed", "memory_write_allowed", "final_authorization_persistence_allowed", "authority_grant_allowed"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestPromotionFinalAuthorizationBoundaryAuditExplainAndBlockedMutatingTools(t *testing.T) {
+	for _, tc := range []struct {
+		tool  string
+		wants []string
+	}{
+		{mcpserver.ToolPromotionFinalAuthorizationBoundary, []string{`"version":"V10.3"`, `"dry_run":true`, `"read_only":true`, "simulate final authorization", "call_executor", "persist_final_authorization", "mark_PASS_GOLD", "grant_authority", "final_authorization_persistence_allowed"}},
+		{mcpserver.ToolPromotionFinalAuthorizationExplain, []string{`"version":"V10.3"`, "why_final_authorization_is_not_execution", "why_mcp_cannot_execute", "why_real_gates_are_required", "PASS_GOLD", "PASS_SECURE", "always_denied"}},
+	} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tc.tool, Root: t.TempDir(), Args: mkArgs(validFinalAuthorizationArgs())})
+		if !resp.OK {
+			t.Fatalf("%s expected ok=true: %s", tc.tool, resp.Error)
+		}
+		s := string(mustJSON(t, resp.Payload))
+		for _, want := range tc.wants {
+			if !strings.Contains(s, want) {
+				t.Fatalf("%s missing %s in %s", tc.tool, want, s)
+			}
+		}
+	}
+
+	args := validFinalAuthorizationArgs()
+	args["claims"] = map[string]interface{}{"execution_allowed": true, "executor_call_allowed": true, "network_call_allowed": true, "command_execution_allowed": true, "file_write_allowed": true, "promotion_allowed": true, "deploy_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "learned_as_stable": true, "real_lock_acquired": true, "rollback_performed": true, "final_authorization_persisted": true, "pass_gold": true, "authority_granted": true, "dry_run_gate_claim": true, "synthesized_gate_claim": true, "human_approval_bypassed": true, "revalidation_bypassed": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolPromotionFinalAuthorizationAudit, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("audit expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"execution_attempt_found":true`, `"executor_call_attempt_found":true`, `"network_attempt_found":true`, `"command_attempt_found":true`, `"file_write_attempt_found":true`, `"promotion_attempt_found":true`, `"deploy_attempt_found":true`, `"status_publish_attempt_found":true`, `"memory_write_attempt_found":true`, `"stable_learning_attempt_found":true`, `"real_lock_attempt_found":true`, `"rollback_attempt_found":true`, `"final_authorization_persistence_attempt_found":true`, `"auto_gold_attempt_found":true`, `"authority_grant_attempt_found":true`, `"dry_run_gate_claim_found":true`, `"synthesized_gate_claim_found":true`, `"human_approval_bypass_attempt_found":true`, `"revalidation_bypass_attempt_found":true`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("audit missing %s in %s", want, s)
+		}
+	}
+	for _, tool := range []string{"vision.apply_patch", "vision.write_file", "vision.commit", "vision.push", "vision.open_pr", "vision.publish_status", "vision.run_mission_real", "vision.rollback", "vision.deploy"} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+		if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+			t.Fatalf("mutating tool %s must remain blocked with exact message, got ok=%v error=%q", tool, resp.OK, resp.Error)
+		}
+	}
+}

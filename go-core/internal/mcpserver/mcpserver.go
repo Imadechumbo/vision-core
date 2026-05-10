@@ -24,6 +24,7 @@ import (
 	"github.com/visioncore/go-core/internal/dryrun"
 	"github.com/visioncore/go-core/internal/evidenceledger"
 	"github.com/visioncore/go-core/internal/executorpreflight"
+	"github.com/visioncore/go-core/internal/finalauthorization"
 	"github.com/visioncore/go-core/internal/gateauthority"
 	"github.com/visioncore/go-core/internal/graphmemory"
 	"github.com/visioncore/go-core/internal/handoffpackage"
@@ -182,6 +183,12 @@ const (
 	ToolPromotionSimulationBoundary  = "vision.promotion_simulation_boundary"
 	ToolPromotionSimulationAudit     = "vision.promotion_simulation_audit"
 	ToolPromotionSimulationExplain   = "vision.promotion_simulation_explain"
+	// V10.3 Promotion Execution Final Authorization Gate tools
+	ToolPromotionFinalAuthorization         = "vision.promotion_final_authorization"
+	ToolPromotionFinalAuthorizationValidate = "vision.promotion_final_authorization_validate"
+	ToolPromotionFinalAuthorizationBoundary = "vision.promotion_final_authorization_boundary"
+	ToolPromotionFinalAuthorizationAudit    = "vision.promotion_final_authorization_audit"
+	ToolPromotionFinalAuthorizationExplain  = "vision.promotion_final_authorization_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -337,6 +344,12 @@ var allowedTools = map[string]bool{
 	ToolPromotionSimulationBoundary:  true,
 	ToolPromotionSimulationAudit:     true,
 	ToolPromotionSimulationExplain:   true,
+	// V10.3 Promotion Execution Final Authorization Gate tools
+	ToolPromotionFinalAuthorization:         true,
+	ToolPromotionFinalAuthorizationValidate: true,
+	ToolPromotionFinalAuthorizationBoundary: true,
+	ToolPromotionFinalAuthorizationAudit:    true,
+	ToolPromotionFinalAuthorizationExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -631,6 +644,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handlePromotionSimulationAudit(req)
 	case ToolPromotionSimulationExplain:
 		return handlePromotionSimulationExplain(req)
+	// V10.3 Promotion Execution Final Authorization Gate tools
+	case ToolPromotionFinalAuthorization:
+		return handlePromotionFinalAuthorization(req)
+	case ToolPromotionFinalAuthorizationValidate:
+		return handlePromotionFinalAuthorizationValidate(req)
+	case ToolPromotionFinalAuthorizationBoundary:
+		return handlePromotionFinalAuthorizationBoundary(req)
+	case ToolPromotionFinalAuthorizationAudit:
+		return handlePromotionFinalAuthorizationAudit(req)
+	case ToolPromotionFinalAuthorizationExplain:
+		return handlePromotionFinalAuthorizationExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -2145,4 +2169,55 @@ func handlePromotionSimulationExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: promotionsimulation.ExplainPromotionSimulation(a)}
+}
+
+// ── V10.3 Promotion Execution Final Authorization Gate Handlers ───────────
+
+func parseFinalAuthorizationInput(req ToolRequest) (finalauthorization.FinalAuthorizationInput, error) {
+	var a finalauthorization.FinalAuthorizationInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handlePromotionFinalAuthorization(req ToolRequest) ToolResponse {
+	a, err := parseFinalAuthorizationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: finalauthorization.BuildFinalAuthorization(a)}
+}
+
+func handlePromotionFinalAuthorizationValidate(req ToolRequest) ToolResponse {
+	a, err := parseFinalAuthorizationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: finalauthorization.ValidateFinalAuthorization(a)}
+}
+
+func handlePromotionFinalAuthorizationBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: finalauthorization.BuildFinalAuthorizationBoundary()}
+}
+
+func handlePromotionFinalAuthorizationAudit(req ToolRequest) ToolResponse {
+	a, err := parseFinalAuthorizationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: finalauthorization.AuditFinalAuthorization(a)}
+}
+
+func handlePromotionFinalAuthorizationExplain(req ToolRequest) ToolResponse {
+	a, err := parseFinalAuthorizationInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: finalauthorization.ExplainFinalAuthorization(a)}
 }
