@@ -22,6 +22,7 @@ import (
 	"github.com/visioncore/go-core/internal/contractregistry"
 	"github.com/visioncore/go-core/internal/dashboard"
 	"github.com/visioncore/go-core/internal/dryrun"
+	"github.com/visioncore/go-core/internal/evidencebinding"
 	"github.com/visioncore/go-core/internal/evidenceledger"
 	"github.com/visioncore/go-core/internal/executionadapter"
 	"github.com/visioncore/go-core/internal/executionrequest"
@@ -217,6 +218,12 @@ const (
 	ToolExternalExecutionResultBoundary     = "vision.external_execution_result_boundary"
 	ToolExternalExecutionResultAudit        = "vision.external_execution_result_audit"
 	ToolExternalExecutionResultExplain      = "vision.external_execution_result_explain"
+	// V10.8 External Execution Evidence Binding Gate tools
+	ToolExternalExecutionEvidenceBinding         = "vision.external_execution_evidence_binding"
+	ToolExternalExecutionEvidenceBindingValidate = "vision.external_execution_evidence_binding_validate"
+	ToolExternalExecutionEvidenceBindingBoundary = "vision.external_execution_evidence_binding_boundary"
+	ToolExternalExecutionEvidenceBindingAudit    = "vision.external_execution_evidence_binding_audit"
+	ToolExternalExecutionEvidenceBindingExplain  = "vision.external_execution_evidence_binding_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -402,6 +409,12 @@ var allowedTools = map[string]bool{
 	ToolExternalExecutionResultBoundary:     true,
 	ToolExternalExecutionResultAudit:        true,
 	ToolExternalExecutionResultExplain:      true,
+	// V10.8 External Execution Evidence Binding Gate tools
+	ToolExternalExecutionEvidenceBinding:         true,
+	ToolExternalExecutionEvidenceBindingValidate: true,
+	ToolExternalExecutionEvidenceBindingBoundary: true,
+	ToolExternalExecutionEvidenceBindingAudit:    true,
+	ToolExternalExecutionEvidenceBindingExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -751,6 +764,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleExternalExecutionResultAudit(req)
 	case ToolExternalExecutionResultExplain:
 		return handleExternalExecutionResultExplain(req)
+	// V10.8 External Execution Evidence Binding Gate tools
+	case ToolExternalExecutionEvidenceBinding:
+		return handleExternalExecutionEvidenceBinding(req)
+	case ToolExternalExecutionEvidenceBindingValidate:
+		return handleExternalExecutionEvidenceBindingValidate(req)
+	case ToolExternalExecutionEvidenceBindingBoundary:
+		return handleExternalExecutionEvidenceBindingBoundary(req)
+	case ToolExternalExecutionEvidenceBindingAudit:
+		return handleExternalExecutionEvidenceBindingAudit(req)
+	case ToolExternalExecutionEvidenceBindingExplain:
+		return handleExternalExecutionEvidenceBindingExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -2520,4 +2544,55 @@ func handleExternalExecutionResultExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: executionverification.ExplainExecutionResultVerification(a)}
+}
+
+// ── V10.8 External Execution Evidence Binding Gate Handlers ────────────────
+
+func parseExecutionEvidenceBindingInput(req ToolRequest) (evidencebinding.ExecutionEvidenceBindingInput, error) {
+	var a evidencebinding.ExecutionEvidenceBindingInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleExternalExecutionEvidenceBinding(req ToolRequest) ToolResponse {
+	a, err := parseExecutionEvidenceBindingInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: evidencebinding.BuildExecutionEvidenceBinding(a)}
+}
+
+func handleExternalExecutionEvidenceBindingValidate(req ToolRequest) ToolResponse {
+	a, err := parseExecutionEvidenceBindingInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: evidencebinding.ValidateExecutionEvidenceBinding(a)}
+}
+
+func handleExternalExecutionEvidenceBindingBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: evidencebinding.BuildEvidenceBindingBoundary()}
+}
+
+func handleExternalExecutionEvidenceBindingAudit(req ToolRequest) ToolResponse {
+	a, err := parseExecutionEvidenceBindingInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: evidencebinding.AuditExecutionEvidenceBinding(a)}
+}
+
+func handleExternalExecutionEvidenceBindingExplain(req ToolRequest) ToolResponse {
+	a, err := parseExecutionEvidenceBindingInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: evidencebinding.ExplainExecutionEvidenceBinding(a)}
 }
