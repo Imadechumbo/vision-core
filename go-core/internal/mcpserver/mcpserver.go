@@ -47,6 +47,7 @@ import (
 	"github.com/visioncore/go-core/internal/safetyenvelope"
 	"github.com/visioncore/go-core/internal/sandboxadapter"
 	"github.com/visioncore/go-core/internal/sandboxtrace"
+	"github.com/visioncore/go-core/internal/sandboxtracepersistence"
 	"github.com/visioncore/go-core/internal/sovereigndecision"
 )
 
@@ -245,6 +246,12 @@ const (
 	ToolSandboxExecutionTraceBoundary = "vision.sandbox_execution_trace_boundary"
 	ToolSandboxExecutionTraceAudit    = "vision.sandbox_execution_trace_audit"
 	ToolSandboxExecutionTraceExplain  = "vision.sandbox_execution_trace_explain"
+	// V11.3 Sandbox Trace Persistence Gate tools
+	ToolSandboxTracePersistenceGate     = "vision.sandbox_trace_persistence_gate"
+	ToolSandboxTracePersistenceValidate = "vision.sandbox_trace_persistence_validate"
+	ToolSandboxTracePersistenceBoundary = "vision.sandbox_trace_persistence_boundary"
+	ToolSandboxTracePersistenceAudit    = "vision.sandbox_trace_persistence_audit"
+	ToolSandboxTracePersistenceExplain  = "vision.sandbox_trace_persistence_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -454,6 +461,12 @@ var allowedTools = map[string]bool{
 	ToolSandboxExecutionTraceBoundary: true,
 	ToolSandboxExecutionTraceAudit:    true,
 	ToolSandboxExecutionTraceExplain:  true,
+	// V11.3 Sandbox Trace Persistence Gate tools
+	ToolSandboxTracePersistenceGate:     true,
+	ToolSandboxTracePersistenceValidate: true,
+	ToolSandboxTracePersistenceBoundary: true,
+	ToolSandboxTracePersistenceAudit:    true,
+	ToolSandboxTracePersistenceExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -847,6 +860,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleSandboxExecutionTraceAudit(req)
 	case ToolSandboxExecutionTraceExplain:
 		return handleSandboxExecutionTraceExplain(req)
+	// V11.3 Sandbox Trace Persistence Gate tools
+	case ToolSandboxTracePersistenceGate:
+		return handleSandboxTracePersistenceGate(req)
+	case ToolSandboxTracePersistenceValidate:
+		return handleSandboxTracePersistenceValidate(req)
+	case ToolSandboxTracePersistenceBoundary:
+		return handleSandboxTracePersistenceBoundary(req)
+	case ToolSandboxTracePersistenceAudit:
+		return handleSandboxTracePersistenceAudit(req)
+	case ToolSandboxTracePersistenceExplain:
+		return handleSandboxTracePersistenceExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -2820,4 +2844,55 @@ func handleSandboxExecutionTraceExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtrace.ExplainSandboxExecutionTrace(a)}
+}
+
+// ── V11.3 Sandbox Trace Persistence Gate Handlers ────────────────
+
+func parseSandboxTracePersistenceInput(req ToolRequest) (sandboxtracepersistence.SandboxTracePersistenceInput, error) {
+	var a sandboxtracepersistence.SandboxTracePersistenceInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleSandboxTracePersistenceGate(req ToolRequest) ToolResponse {
+	a, err := parseSandboxTracePersistenceInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtracepersistence.BuildSandboxTracePersistenceGate(a)}
+}
+
+func handleSandboxTracePersistenceValidate(req ToolRequest) ToolResponse {
+	a, err := parseSandboxTracePersistenceInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtracepersistence.ValidateSandboxTracePersistenceGate(a)}
+}
+
+func handleSandboxTracePersistenceBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtracepersistence.BuildSandboxTracePersistenceBoundary()}
+}
+
+func handleSandboxTracePersistenceAudit(req ToolRequest) ToolResponse {
+	a, err := parseSandboxTracePersistenceInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtracepersistence.AuditSandboxTracePersistenceGate(a)}
+}
+
+func handleSandboxTracePersistenceExplain(req ToolRequest) ToolResponse {
+	a, err := parseSandboxTracePersistenceInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtracepersistence.ExplainSandboxTracePersistenceGate(a)}
 }

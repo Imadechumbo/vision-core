@@ -4560,3 +4560,156 @@ func TestSandboxExecutionTraceBoundaryAuditExplainAndBlockedMutatingTools(t *tes
 		t.Fatalf("mutating tool must remain blocked with exact message, got ok=%v error=%q", resp.OK, resp.Error)
 	}
 }
+
+func validSandboxTracePersistenceArgs() map[string]interface{} {
+	args := map[string]interface{}{}
+	for k, v := range validSandboxTraceArgs() {
+		args[k] = v
+	}
+	present := func() map[string]interface{} { return map[string]interface{}{"present": true, "valid": true} }
+	args["persistence_gate_id"] = "persistence-gate-1"
+	args["sandbox_trace"] = validSandboxTraceArgs()
+	args["sandbox_trace_ready_dry_run"] = true
+	args["trace_complete_dry_run"] = true
+	args["denied_permissions_recorded"] = true
+	args["blocked_actions_recorded"] = true
+	args["evidence_binding"] = present()
+	args["result_verification"] = present()
+	args["response_contract"] = present()
+	args["request_envelope"] = present()
+	args["adapter_interface"] = present()
+	args["final_authorization"] = present()
+	args["simulation"] = present()
+	args["firewall"] = present()
+	args["sovereign_candidate"] = present()
+	args["pass_gold_real"] = present()
+	args["pass_secure_real"] = present()
+	args["recognized_by_authority"] = true
+	args["human_approval"] = map[string]interface{}{"present": true, "approved": true, "approver": "human-reviewer"}
+	args["independent_revalidation"] = map[string]interface{}{"present": true, "completed": true, "pass_gold_revalidated": true, "pass_secure_revalidated": true}
+	args["persistence_policy"] = present()
+	args["persistence_scope"] = present()
+	args["isolated_storage_descriptor"] = present()
+	args["allowed_storage_root_descriptor"] = present()
+	args["path_safety_policy"] = present()
+	args["filename_policy"] = present()
+	args["trace_serialization_policy"] = present()
+	args["trace_schema_version"] = "sandbox-trace/v1"
+	args["trace_hash"] = "sha256:abc123"
+	args["trace_integrity_checks"] = present()
+	args["trace_redaction_policy"] = present()
+	args["trace_privacy_policy"] = present()
+	args["trace_retention_policy"] = present()
+	args["trace_replay_reference"] = present()
+	args["trace_audit_index_descriptor"] = present()
+	args["trace_tamper_evidence_model"] = present()
+	args["trace_deduplication_key"] = "dedupe-1"
+	args["trace_correlation_id"] = "corr-1"
+	args["trace_idempotency_key"] = "persist-idem-1"
+	return args
+}
+
+func TestV113SandboxTracePersistenceToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolSandboxTracePersistenceGate, mcpserver.ToolSandboxTracePersistenceValidate, mcpserver.ToolSandboxTracePersistenceBoundary, mcpserver.ToolSandboxTracePersistenceAudit, mcpserver.ToolSandboxTracePersistenceExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir(), Args: mkArgs(validSandboxTracePersistenceArgs())})
+		if !resp.OK {
+			t.Fatalf("V11.3 tool %s not registered: %s", tool, resp.Error)
+		}
+		if resp.Error != "" {
+			t.Fatalf("V11.3 tool %s must be read-only allowed", tool)
+		}
+	}
+}
+
+func TestSandboxTracePersistenceGateReturnsV113ReadOnlyDryRunAndDeniesRealPermissions(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSandboxTracePersistenceGate, Root: t.TempDir(), Args: mkArgs(validSandboxTracePersistenceArgs())})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V11.3"`, `"dry_run":true`, `"read_only":true`, `"sandbox":true`, `"trace_mode":"sandbox_noop_trace"`, `"persistence_mode":"controlled_sandbox_trace_persistence_gate"`, `"persistence_status":"sandbox_trace_persistence_ready_dry_run"`, `"sandbox_trace_persistence_ready_dry_run":true`, `"persistence_candidate":true`, `"isolated_storage_candidate":true`, `"trace_integrity_ready_dry_run":true`, `"trace_redaction_ready_dry_run":true`, `"trace_retention_ready_dry_run":true`, `"trace_replay_reference_ready_dry_run":true`, `"audit_index_candidate":true`, `"mcp_execution_allowed":false`, `"real_execution_allowed":false`, `"real_adapter_call_allowed":false`, `"adapter_call_allowed":false`, `"executor_call_allowed":false`, `"network_call_allowed":false`, `"command_execution_allowed":false`, `"file_write_allowed":false`, `"trace_persistence_allowed":false`, `"trace_persisted":false`, `"database_write_allowed":false`, `"ledger_write_allowed":false`, `"deploy_allowed":false`, `"promotion_allowed":false`, `"status_publish_allowed":false`, `"mutation_allowed":false`, `"memory_write_allowed":false`, `"stable_promotion_allowed":false`, `"learning_allowed":false`, `"real_lock_allowed":false`, `"rollback_allowed":false`, `"evidence_trust_allowed":false`, `"result_trust_allowed":false`, `"trace_trust_allowed":false`, `"pass_gold_allowed":false`, `"pass_secure_allowed":false`, `"authority_grant_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestSandboxTracePersistenceValidateBlocksFailuresAndClaims(t *testing.T) {
+	args := validSandboxTracePersistenceArgs()
+	args["executor"] = "mcp_readonly"
+	args["executor_mode"] = "inside_mcp"
+	args["adapter_type"] = "real"
+	args["environment"] = "prod"
+	delete(args, "sandbox_trace")
+	args["sandbox_trace_ready_dry_run"] = false
+	args["trace_complete_dry_run"] = false
+	args["denied_permissions_recorded"] = false
+	args["blocked_actions_recorded"] = false
+	delete(args, "persistence_policy")
+	delete(args, "persistence_scope")
+	delete(args, "isolated_storage_descriptor")
+	delete(args, "allowed_storage_root_descriptor")
+	delete(args, "path_safety_policy")
+	delete(args, "filename_policy")
+	delete(args, "trace_serialization_policy")
+	delete(args, "trace_schema_version")
+	delete(args, "trace_hash")
+	delete(args, "trace_integrity_checks")
+	delete(args, "trace_redaction_policy")
+	delete(args, "trace_privacy_policy")
+	delete(args, "trace_retention_policy")
+	delete(args, "trace_replay_reference")
+	delete(args, "trace_audit_index_descriptor")
+	delete(args, "trace_tamper_evidence_model")
+	delete(args, "trace_deduplication_key")
+	delete(args, "trace_correlation_id")
+	delete(args, "trace_idempotency_key")
+	args["claims"] = map[string]interface{}{"real_execution_allowed": true, "real_adapter_call_allowed": true, "adapter_call_allowed": true, "executor_call_allowed": true, "network_call_allowed": true, "command_execution_allowed": true, "file_write_allowed": true, "database_write_allowed": true, "trace_persisted": true, "ledger_written": true, "deploy_allowed": true, "promotion_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "learned_as_stable": true, "evidence_trusted": true, "result_trusted": true, "trace_trusted": true, "pass_gold": true, "authority_granted": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSandboxTracePersistenceValidate, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("validate expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V11.3"`, `"valid":false`, `"blocked":true`, "executor_must_not_be_mcp", "executor_mode_must_be_external_only", "adapter_type_must_be_sandbox_noop", "environment_must_be_sandbox_or_local_sandbox", "sandbox_trace_missing", "sandbox_trace_blocked", "persistence_policy_missing", "persistence_scope_missing", "isolated_storage_missing", "allowed_storage_root_missing", "path_safety_policy_missing", "filename_policy_missing", "serialization_policy_missing", "trace_schema_version_missing", "trace_hash_missing", "integrity_check_failed", "redaction_policy_missing", "privacy_policy_missing", "retention_policy_missing", "replay_reference_missing", "audit_index_missing", "tamper_evidence_missing", "deduplication_key_missing", "correlation_id_missing", "idempotency_missing", "unsafe_real_execution_attempt", "unsafe_real_adapter_call_attempt", "unsafe_network_attempt", "unsafe_command_attempt", "unsafe_file_write_attempt", "unsafe_database_write_attempt", "unsafe_trace_persistence_attempt", "unsafe_ledger_write_attempt", "unsafe_deploy_attempt", "unsafe_promotion_attempt", "unsafe_status_publish_attempt", "unsafe_memory_write_attempt", "unsafe_trust_escalation_attempt", "trace_persisted", "ledger_written"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestSandboxTracePersistenceBoundaryAuditExplainAndBlockedMutatingTools(t *testing.T) {
+	for _, tc := range []struct {
+		tool  string
+		wants []string
+	}{
+		{mcpserver.ToolSandboxTracePersistenceBoundary, []string{`"version":"V11.3"`, `"dry_run":true`, `"read_only":true`, `"sandbox":true`, `"trace_mode":"sandbox_noop_trace"`, `"persistence_mode":"controlled_sandbox_trace_persistence_gate"`, `"real_execution_allowed":false`, "simulate sandbox trace persistence gate", "build persistence eligibility payload", "build isolated storage candidate descriptor", "build replay reference candidate", "build audit index candidate", "return trace persistence decision in response payload", "execute_runtime", "call_real_adapter", "call_executor", "network_call", "command_execution", "file_write", "database_write", "persist_trace", "write_ledger", "deploy", "promote", "publish_status", "write_memory", "learn_stable", "trust_trace", "trust_evidence", "trust_result", "acquire_real_lock", "perform_rollback", "mark_PASS_GOLD", "mark_PASS_SECURE", "grant_authority", "trace_persistence_allowed"}},
+		{mcpserver.ToolSandboxTracePersistenceExplain, []string{`"version":"V11.3"`, `"sandbox":true`, `"trace_mode":"sandbox_noop_trace"`, `"persistence_mode":"controlled_sandbox_trace_persistence_gate"`, `"real_execution_allowed":false`, "why_persistence_gate_is_not_persistence", "why_file_write_is_blocked_inside_mcp", "why_database_write_is_blocked_inside_mcp", "why_ledger_write_is_blocked_inside_mcp", "why_sandbox_trace_is_required", "why_sandbox_adapter_is_required", "why_controlled_runtime_is_required", "why_evidence_binding_is_required", "why_result_verification_is_required", "why_final_authorization_is_required", "why_real_gates_are_required", "why_human_approval_and_revalidation_are_required", "why_isolated_storage_path_safety_redaction_retention_are_required", "why_trace_can_only_be_persisted_by_future_explicit_release", "PASS_GOLD", "PASS_SECURE", "always_denied"}},
+	} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tc.tool, Root: t.TempDir(), Args: mkArgs(validSandboxTracePersistenceArgs())})
+		if !resp.OK {
+			t.Fatalf("%s expected ok=true: %s", tc.tool, resp.Error)
+		}
+		s := string(mustJSON(t, resp.Payload))
+		for _, want := range tc.wants {
+			if !strings.Contains(s, want) {
+				t.Fatalf("%s missing %s in %s", tc.tool, want, s)
+			}
+		}
+	}
+	args := validSandboxTracePersistenceArgs()
+	args["claims"] = map[string]interface{}{"real_execution_allowed": true, "real_adapter_call_allowed": true, "adapter_call_allowed": true, "executor_call_allowed": true, "network_call_allowed": true, "command_execution_allowed": true, "file_write_allowed": true, "database_write_allowed": true, "trace_persisted": true, "ledger_written": true, "deploy_allowed": true, "promotion_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "learned_as_stable": true, "trace_trusted": true, "evidence_trusted": true, "result_trusted": true, "real_lock_acquired": true, "rollback_performed": true, "pass_gold": true, "authority_granted": true, "human_approval_bypassed": true, "revalidation_bypassed": true, "runtime_bypassed": true, "sandbox_adapter_bypassed": true, "sandbox_trace_bypassed": true, "evidence_binding_bypassed": true, "verification_bypassed": true, "persistence_policy_bypassed": true, "path_safety_bypassed": true, "redaction_bypassed": true, "retention_bypassed": true, "audit_index_bypassed": true, "sandbox_escaped": true, "kill_switch_bypassed": true, "rollback_bypassed": true, "observability_bypassed": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSandboxTracePersistenceAudit, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("audit expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"real_execution_attempt_found":true`, `"real_adapter_call_attempt_found":true`, `"adapter_call_attempt_found":true`, `"executor_call_attempt_found":true`, `"network_attempt_found":true`, `"command_attempt_found":true`, `"file_write_attempt_found":true`, `"database_write_attempt_found":true`, `"trace_persistence_attempt_found":true`, `"ledger_write_attempt_found":true`, `"deploy_attempt_found":true`, `"promotion_attempt_found":true`, `"status_publish_attempt_found":true`, `"memory_write_attempt_found":true`, `"stable_learning_attempt_found":true`, `"trace_trust_attempt_found":true`, `"evidence_trust_attempt_found":true`, `"result_trust_attempt_found":true`, `"real_lock_attempt_found":true`, `"rollback_attempt_found":true`, `"auto_gold_attempt_found":true`, `"authority_grant_attempt_found":true`, `"human_approval_bypass_attempt_found":true`, `"revalidation_bypass_attempt_found":true`, `"runtime_bypass_attempt_found":true`, `"sandbox_adapter_bypass_attempt_found":true`, `"sandbox_trace_bypass_attempt_found":true`, `"evidence_binding_bypass_attempt_found":true`, `"verification_bypass_attempt_found":true`, `"persistence_policy_bypass_attempt_found":true`, `"path_safety_bypass_attempt_found":true`, `"redaction_bypass_attempt_found":true`, `"retention_bypass_attempt_found":true`, `"audit_index_bypass_attempt_found":true`, `"sandbox_escape_attempt_found":true`, `"kill_switch_bypass_attempt_found":true`, `"rollback_bypass_attempt_found":true`, `"observability_bypass_attempt_found":true`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("audit missing %s in %s", want, s)
+		}
+	}
+	resp = mcpserver.Dispatch(mcpserver.ToolRequest{Tool: "vision.apply_patch"})
+	if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+		t.Fatalf("mutating tool must remain blocked with exact message, got ok=%v error=%q", resp.OK, resp.Error)
+	}
+}
