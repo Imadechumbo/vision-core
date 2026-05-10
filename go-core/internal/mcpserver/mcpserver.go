@@ -47,6 +47,7 @@ import (
 	"github.com/visioncore/go-core/internal/safetyenvelope"
 	"github.com/visioncore/go-core/internal/sandboxadapter"
 	"github.com/visioncore/go-core/internal/sandboxauditreport"
+	"github.com/visioncore/go-core/internal/sandboxreadiness"
 	"github.com/visioncore/go-core/internal/sandboxtrace"
 	"github.com/visioncore/go-core/internal/sandboxtracepersistence"
 	"github.com/visioncore/go-core/internal/sandboxtracereplay"
@@ -266,6 +267,12 @@ const (
 	ToolSandboxTraceAuditReportBoundary = "vision.sandbox_trace_audit_report_boundary"
 	ToolSandboxTraceAuditReportAudit    = "vision.sandbox_trace_audit_report_audit"
 	ToolSandboxTraceAuditReportExplain  = "vision.sandbox_trace_audit_report_explain"
+	// V11.6 Sandbox-to-Controlled Execution Readiness Gate tools
+	ToolSandboxToControlledReadinessGate     = "vision.sandbox_to_controlled_readiness_gate"
+	ToolSandboxToControlledReadinessValidate = "vision.sandbox_to_controlled_readiness_validate"
+	ToolSandboxToControlledReadinessBoundary = "vision.sandbox_to_controlled_readiness_boundary"
+	ToolSandboxToControlledReadinessAudit    = "vision.sandbox_to_controlled_readiness_audit"
+	ToolSandboxToControlledReadinessExplain  = "vision.sandbox_to_controlled_readiness_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -493,6 +500,12 @@ var allowedTools = map[string]bool{
 	ToolSandboxTraceAuditReportBoundary: true,
 	ToolSandboxTraceAuditReportAudit:    true,
 	ToolSandboxTraceAuditReportExplain:  true,
+	// V11.6 Sandbox-to-Controlled Execution Readiness Gate tools
+	ToolSandboxToControlledReadinessGate:     true,
+	ToolSandboxToControlledReadinessValidate: true,
+	ToolSandboxToControlledReadinessBoundary: true,
+	ToolSandboxToControlledReadinessAudit:    true,
+	ToolSandboxToControlledReadinessExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -919,6 +932,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleSandboxTraceAuditReportAudit(req)
 	case ToolSandboxTraceAuditReportExplain:
 		return handleSandboxTraceAuditReportExplain(req)
+	// V11.6 Sandbox-to-Controlled Execution Readiness Gate tools
+	case ToolSandboxToControlledReadinessGate:
+		return handleSandboxToControlledReadinessGate(req)
+	case ToolSandboxToControlledReadinessValidate:
+		return handleSandboxToControlledReadinessValidate(req)
+	case ToolSandboxToControlledReadinessBoundary:
+		return handleSandboxToControlledReadinessBoundary(req)
+	case ToolSandboxToControlledReadinessAudit:
+		return handleSandboxToControlledReadinessAudit(req)
+	case ToolSandboxToControlledReadinessExplain:
+		return handleSandboxToControlledReadinessExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -3045,4 +3069,55 @@ func handleSandboxTraceAuditReportExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxauditreport.ExplainSandboxTraceAuditReport(a)}
+}
+
+// ── V11.6 Sandbox-to-Controlled Execution Readiness Gate Handlers ──────────
+
+func parseSandboxToControlledReadinessInput(req ToolRequest) (sandboxreadiness.SandboxToControlledReadinessInput, error) {
+	var a sandboxreadiness.SandboxToControlledReadinessInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleSandboxToControlledReadinessGate(req ToolRequest) ToolResponse {
+	a, err := parseSandboxToControlledReadinessInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxreadiness.BuildSandboxToControlledReadinessGate(a)}
+}
+
+func handleSandboxToControlledReadinessValidate(req ToolRequest) ToolResponse {
+	a, err := parseSandboxToControlledReadinessInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxreadiness.ValidateSandboxToControlledReadinessGate(a)}
+}
+
+func handleSandboxToControlledReadinessBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxreadiness.BuildSandboxReadinessBoundary()}
+}
+
+func handleSandboxToControlledReadinessAudit(req ToolRequest) ToolResponse {
+	a, err := parseSandboxToControlledReadinessInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxreadiness.AuditSandboxReadinessGate(a)}
+}
+
+func handleSandboxToControlledReadinessExplain(req ToolRequest) ToolResponse {
+	a, err := parseSandboxToControlledReadinessInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxreadiness.ExplainSandboxReadinessGate(a)}
 }
