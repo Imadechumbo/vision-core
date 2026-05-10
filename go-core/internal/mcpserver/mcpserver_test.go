@@ -4411,3 +4411,152 @@ func TestControlledRuntimeSandboxAdapterBoundaryAuditExplainAndBlockedMutatingTo
 		t.Fatalf("mutating tool must remain blocked with exact message, got ok=%v error=%q", resp.OK, resp.Error)
 	}
 }
+
+func validSandboxTraceArgs() map[string]interface{} {
+	args := map[string]interface{}{}
+	for k, v := range validSandboxAdapterArgs() {
+		args[k] = v
+	}
+	present := func() map[string]interface{} { return map[string]interface{}{"present": true, "valid": true} }
+	args["sandbox_trace_id"] = "sandbox-trace-1"
+	args["sandbox_adapter"] = validSandboxAdapterArgs()
+	args["sandbox_adapter_ready_dry_run"] = true
+	args["simulated_adapter_response_ready"] = true
+	args["runtime_ready_dry_run"] = true
+	args["controlled_runtime_ready"] = true
+	args["trace_policy"] = present()
+	args["trace_scope"] = present()
+	args["trace_input_snapshot"] = present()
+	args["trace_output_snapshot"] = present()
+	args["trace_event_list"] = present()
+	args["trace_timestamp_model"] = present()
+	args["trace_correlation_id"] = "corr-1"
+	args["trace_idempotency_key"] = "trace-idem-1"
+	args["trace_denied_permissions"] = present()
+	args["trace_blocked_actions"] = present()
+	args["trace_safety_decisions"] = present()
+	args["trace_check_results"] = present()
+	args["trace_audit_envelope"] = present()
+	args["trace_observability_envelope"] = present()
+	args["trace_integrity_checks"] = present()
+	args["trace_completeness_checks"] = present()
+	args["trace_retention_policy"] = present()
+	args["trace_privacy_policy"] = present()
+	args["trace_redaction_policy"] = present()
+	args["trace_tamper_evidence_model"] = present()
+	args["input_received"] = map[string]interface{}{"operation": "sandbox_execution_trace"}
+	args["runtime_session"] = map[string]interface{}{"runtime_session_id": "runtime-session-1"}
+	args["simulated_adapter_response"] = map[string]interface{}{"noop": true}
+	args["logical_timestamps"] = []string{"t0", "t1"}
+	args["checks_executed"] = []string{"trace_policy", "trace_integrity"}
+	args["denied_permissions"] = []string{"real_execution_allowed", "trace_persistence_allowed"}
+	args["blocked_actions"] = []string{"execute", "persist_trace"}
+	args["audit_trail"] = []string{"trace built in response payload only"}
+	args["safety_decisions"] = []string{"deny real execution"}
+	args["sandbox_policy_result"] = "sandbox_noop_only"
+	args["noop_result"] = "simulated"
+	args["trace_completeness"] = "complete_dry_run"
+	return args
+}
+
+func TestV112SandboxExecutionTraceToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolSandboxExecutionTrace, mcpserver.ToolSandboxExecutionTraceValidate, mcpserver.ToolSandboxExecutionTraceBoundary, mcpserver.ToolSandboxExecutionTraceAudit, mcpserver.ToolSandboxExecutionTraceExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir(), Args: mkArgs(validSandboxTraceArgs())})
+		if !resp.OK {
+			t.Fatalf("V11.2 tool %s not registered: %s", tool, resp.Error)
+		}
+		if !mcpserver.IsAllowed(tool) || mcpserver.IsBlocked(tool) {
+			t.Fatalf("V11.2 tool %s must be read-only allowed", tool)
+		}
+	}
+}
+
+func TestSandboxExecutionTraceReturnsV112ReadOnlySandboxTraceAndDeniesRealPermissions(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSandboxExecutionTrace, Root: t.TempDir(), Args: mkArgs(validSandboxTraceArgs())})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V11.2"`, `"dry_run":true`, `"read_only":true`, `"sandbox":true`, `"trace_mode":"sandbox_noop_trace"`, `"trace_status":"sandbox_trace_ready_dry_run"`, `"sandbox_trace_ready_dry_run":true`, `"sandbox_trace_candidate":true`, `"sandbox_adapter_traceable":true`, `"simulated_response_traceable":true`, `"denied_permissions_recorded":true`, `"blocked_actions_recorded":true`, `"audit_trail_ready_dry_run":true`, `"trace_complete_dry_run":true`, `"mcp_execution_allowed":false`, `"real_execution_allowed":false`, `"real_adapter_call_allowed":false`, `"adapter_call_allowed":false`, `"executor_call_allowed":false`, `"network_call_allowed":false`, `"command_execution_allowed":false`, `"file_write_allowed":false`, `"trace_persistence_allowed":false`, `"deploy_allowed":false`, `"promotion_allowed":false`, `"status_publish_allowed":false`, `"mutation_allowed":false`, `"memory_write_allowed":false`, `"stable_promotion_allowed":false`, `"learning_allowed":false`, `"real_lock_allowed":false`, `"rollback_allowed":false`, `"evidence_trust_allowed":false`, `"result_trust_allowed":false`, `"ledger_write_allowed":false`, `"pass_gold_allowed":false`, `"pass_secure_allowed":false`, `"authority_grant_allowed":false`, "simulated_adapter_response", "blocked_actions"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestSandboxExecutionTraceValidateBlocksFailuresAndClaims(t *testing.T) {
+	args := validSandboxTraceArgs()
+	args["executor"] = "mcp_readonly"
+	args["executor_mode"] = "inside_mcp"
+	args["adapter_type"] = "real"
+	args["environment"] = "prod"
+	delete(args, "sandbox_adapter")
+	delete(args, "trace_policy")
+	delete(args, "trace_scope")
+	delete(args, "trace_input_snapshot")
+	delete(args, "trace_output_snapshot")
+	delete(args, "trace_event_list")
+	delete(args, "trace_timestamp_model")
+	delete(args, "trace_correlation_id")
+	delete(args, "trace_idempotency_key")
+	delete(args, "trace_denied_permissions")
+	delete(args, "trace_blocked_actions")
+	delete(args, "trace_safety_decisions")
+	delete(args, "trace_check_results")
+	delete(args, "trace_audit_envelope")
+	delete(args, "trace_observability_envelope")
+	delete(args, "trace_integrity_checks")
+	delete(args, "trace_completeness_checks")
+	delete(args, "trace_retention_policy")
+	delete(args, "trace_privacy_policy")
+	delete(args, "trace_redaction_policy")
+	delete(args, "trace_tamper_evidence_model")
+	args["claims"] = map[string]interface{}{"real_execution_allowed": true, "mcp_execution_allowed": true, "real_adapter_call_allowed": true, "adapter_call_allowed": true, "executor_call_allowed": true, "network_call_allowed": true, "command_execution_allowed": true, "file_write_allowed": true, "trace_persistence_allowed": true, "trace_persisted": true, "ledger_written": true, "deploy_allowed": true, "promotion_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "stable_promoted": true, "learned_as_stable": true, "real_lock_acquired": true, "rollback_performed": true, "evidence_trusted": true, "result_trusted": true, "pass_gold": true, "pass_secure": true, "authority_granted": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSandboxExecutionTraceValidate, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V11.2"`, `"valid":false`, `"blocked":true`, "executor_must_not_be_mcp", "executor_mode_must_be_external_only", "adapter_type_must_be_sandbox_noop", "environment_must_be_sandbox_or_local_sandbox", "sandbox_adapter_missing", "trace_policy_missing", "trace_scope_missing", "trace_input_snapshot_missing", "trace_output_snapshot_missing", "trace_event_list_missing", "trace_timestamp_model_missing", "trace_correlation_id_missing", "trace_idempotency_missing", "denied_permissions_missing", "blocked_actions_missing", "safety_decisions_missing", "check_results_missing", "audit_envelope_missing", "observability_envelope_missing", "integrity_check_failed", "completeness_check_failed", "retention_policy_missing", "privacy_policy_missing", "redaction_policy_missing", "tamper_evidence_missing", "unsafe_real_execution_attempt", "unsafe_real_adapter_call_attempt", "unsafe_network_attempt", "unsafe_command_attempt", "unsafe_file_write_attempt", "unsafe_trace_persistence_attempt", "unsafe_ledger_write_attempt", "unsafe_deploy_attempt", "unsafe_promotion_attempt", "unsafe_status_publish_attempt", "unsafe_memory_write_attempt", "unsafe_trust_escalation_attempt", "trace_persisted", "ledger_written"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestSandboxExecutionTraceBoundaryAuditExplainAndBlockedMutatingTools(t *testing.T) {
+	for _, tc := range []struct {
+		tool  string
+		wants []string
+	}{
+		{mcpserver.ToolSandboxExecutionTraceBoundary, []string{`"version":"V11.2"`, `"dry_run":true`, `"read_only":true`, `"sandbox":true`, `"trace_mode":"sandbox_noop_trace"`, `"real_execution_allowed":false`, "build sandbox execution trace", "simulate sandbox trace", "record denied permissions in response payload", "record blocked actions in response payload", "build noop trace response", "execute_runtime", "call_real_adapter", "call_executor", "network_call", "command_execution", "file_write", "persist_trace", "write_ledger", "deploy", "promote", "publish_status", "write_memory", "learn_stable", "trust_evidence", "trust_result", "acquire_real_lock", "perform_rollback", "mark_PASS_GOLD", "mark_PASS_SECURE", "grant_authority", "trace_persistence_allowed"}},
+		{mcpserver.ToolSandboxExecutionTraceExplain, []string{`"version":"V11.2"`, `"sandbox":true`, `"trace_mode":"sandbox_noop_trace"`, `"real_execution_allowed":false`, "why_sandbox_trace_is_not_real_execution", "why_trace_is_not_persistence", "why_trace_persistence_is_blocked", "why_ledger_write_is_blocked", "why_sandbox_adapter_is_required", "why_controlled_runtime_is_required", "why_evidence_binding_is_required", "why_result_verification_is_required", "why_final_authorization_is_required", "why_real_gates_are_required", "why_human_approval_and_revalidation_are_required", "why_denied_permissions_and_blocked_actions_are_recorded", "why_trace_policy_integrity_redaction_and_completeness_are_required", "why_real_execution_requires_future_explicit_release", "PASS_GOLD", "PASS_SECURE", "always_denied"}},
+	} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tc.tool, Root: t.TempDir(), Args: mkArgs(validSandboxTraceArgs())})
+		if !resp.OK {
+			t.Fatalf("%s expected ok=true: %s", tc.tool, resp.Error)
+		}
+		s := string(mustJSON(t, resp.Payload))
+		for _, want := range tc.wants {
+			if !strings.Contains(s, want) {
+				t.Fatalf("%s missing %s in %s", tc.tool, want, s)
+			}
+		}
+	}
+	args := validSandboxTraceArgs()
+	args["claims"] = map[string]interface{}{"real_execution_allowed": true, "real_adapter_call_allowed": true, "adapter_call_allowed": true, "executor_call_allowed": true, "network_call_allowed": true, "command_execution_allowed": true, "file_write_allowed": true, "trace_persisted": true, "ledger_written": true, "deploy_allowed": true, "promotion_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "learned_as_stable": true, "evidence_trusted": true, "result_trusted": true, "real_lock_acquired": true, "rollback_performed": true, "pass_gold": true, "authority_granted": true, "human_approval_bypassed": true, "revalidation_bypassed": true, "runtime_bypassed": true, "sandbox_adapter_bypassed": true, "evidence_binding_bypassed": true, "verification_bypassed": true, "trace_policy_bypassed": true, "trace_integrity_bypassed": true, "trace_completeness_bypassed": true, "trace_redaction_bypassed": true, "sandbox_escaped": true, "kill_switch_bypassed": true, "rollback_bypassed": true, "observability_bypassed": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolSandboxExecutionTraceAudit, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("audit expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"real_execution_attempt_found":true`, `"real_adapter_call_attempt_found":true`, `"adapter_call_attempt_found":true`, `"executor_call_attempt_found":true`, `"network_attempt_found":true`, `"command_attempt_found":true`, `"file_write_attempt_found":true`, `"trace_persistence_attempt_found":true`, `"ledger_write_attempt_found":true`, `"deploy_attempt_found":true`, `"promotion_attempt_found":true`, `"status_publish_attempt_found":true`, `"memory_write_attempt_found":true`, `"stable_learning_attempt_found":true`, `"evidence_trust_attempt_found":true`, `"result_trust_attempt_found":true`, `"real_lock_attempt_found":true`, `"rollback_attempt_found":true`, `"auto_gold_attempt_found":true`, `"authority_grant_attempt_found":true`, `"human_approval_bypass_attempt_found":true`, `"revalidation_bypass_attempt_found":true`, `"runtime_bypass_attempt_found":true`, `"sandbox_adapter_bypass_attempt_found":true`, `"evidence_binding_bypass_attempt_found":true`, `"verification_bypass_attempt_found":true`, `"trace_policy_bypass_attempt_found":true`, `"trace_integrity_bypass_attempt_found":true`, `"trace_completeness_bypass_attempt_found":true`, `"trace_redaction_bypass_attempt_found":true`, `"sandbox_escape_attempt_found":true`, `"kill_switch_bypass_attempt_found":true`, `"rollback_bypass_attempt_found":true`, `"observability_bypass_attempt_found":true`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("audit missing %s in %s", want, s)
+		}
+	}
+	resp = mcpserver.Dispatch(mcpserver.ToolRequest{Tool: "vision.apply_patch"})
+	if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+		t.Fatalf("mutating tool must remain blocked with exact message, got ok=%v error=%q", resp.OK, resp.Error)
+	}
+}

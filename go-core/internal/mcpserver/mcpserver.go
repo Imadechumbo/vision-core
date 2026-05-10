@@ -46,6 +46,7 @@ import (
 	"github.com/visioncore/go-core/internal/resultintake"
 	"github.com/visioncore/go-core/internal/safetyenvelope"
 	"github.com/visioncore/go-core/internal/sandboxadapter"
+	"github.com/visioncore/go-core/internal/sandboxtrace"
 	"github.com/visioncore/go-core/internal/sovereigndecision"
 )
 
@@ -238,6 +239,12 @@ const (
 	ToolControlledRuntimeSandboxAdapterBoundary = "vision.controlled_runtime_sandbox_adapter_boundary"
 	ToolControlledRuntimeSandboxAdapterAudit    = "vision.controlled_runtime_sandbox_adapter_audit"
 	ToolControlledRuntimeSandboxAdapterExplain  = "vision.controlled_runtime_sandbox_adapter_explain"
+	// V11.2 Sandbox Execution Trace Recorder tools
+	ToolSandboxExecutionTrace         = "vision.sandbox_execution_trace"
+	ToolSandboxExecutionTraceValidate = "vision.sandbox_execution_trace_validate"
+	ToolSandboxExecutionTraceBoundary = "vision.sandbox_execution_trace_boundary"
+	ToolSandboxExecutionTraceAudit    = "vision.sandbox_execution_trace_audit"
+	ToolSandboxExecutionTraceExplain  = "vision.sandbox_execution_trace_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -441,6 +448,12 @@ var allowedTools = map[string]bool{
 	ToolControlledRuntimeSandboxAdapterBoundary: true,
 	ToolControlledRuntimeSandboxAdapterAudit:    true,
 	ToolControlledRuntimeSandboxAdapterExplain:  true,
+	// V11.2 Sandbox Execution Trace Recorder tools
+	ToolSandboxExecutionTrace:         true,
+	ToolSandboxExecutionTraceValidate: true,
+	ToolSandboxExecutionTraceBoundary: true,
+	ToolSandboxExecutionTraceAudit:    true,
+	ToolSandboxExecutionTraceExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -823,6 +836,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleControlledRuntimeSandboxAdapterAudit(req)
 	case ToolControlledRuntimeSandboxAdapterExplain:
 		return handleControlledRuntimeSandboxAdapterExplain(req)
+	// V11.2 Sandbox Execution Trace Recorder tools
+	case ToolSandboxExecutionTrace:
+		return handleSandboxExecutionTrace(req)
+	case ToolSandboxExecutionTraceValidate:
+		return handleSandboxExecutionTraceValidate(req)
+	case ToolSandboxExecutionTraceBoundary:
+		return handleSandboxExecutionTraceBoundary(req)
+	case ToolSandboxExecutionTraceAudit:
+		return handleSandboxExecutionTraceAudit(req)
+	case ToolSandboxExecutionTraceExplain:
+		return handleSandboxExecutionTraceExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -2745,4 +2769,55 @@ func handleControlledRuntimeSandboxAdapterExplain(req ToolRequest) ToolResponse 
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxadapter.ExplainSandboxAdapter(a)}
+}
+
+// ── V11.2 Sandbox Execution Trace Recorder Handlers ────────────────
+
+func parseSandboxExecutionTraceInput(req ToolRequest) (sandboxtrace.SandboxExecutionTraceInput, error) {
+	var a sandboxtrace.SandboxExecutionTraceInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleSandboxExecutionTrace(req ToolRequest) ToolResponse {
+	a, err := parseSandboxExecutionTraceInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtrace.BuildSandboxExecutionTrace(a)}
+}
+
+func handleSandboxExecutionTraceValidate(req ToolRequest) ToolResponse {
+	a, err := parseSandboxExecutionTraceInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtrace.ValidateSandboxExecutionTrace(a)}
+}
+
+func handleSandboxExecutionTraceBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtrace.BuildSandboxTraceBoundary()}
+}
+
+func handleSandboxExecutionTraceAudit(req ToolRequest) ToolResponse {
+	a, err := parseSandboxExecutionTraceInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtrace.AuditSandboxExecutionTrace(a)}
+}
+
+func handleSandboxExecutionTraceExplain(req ToolRequest) ToolResponse {
+	a, err := parseSandboxExecutionTraceInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxtrace.ExplainSandboxExecutionTrace(a)}
 }
