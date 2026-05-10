@@ -45,6 +45,7 @@ import (
 	"github.com/visioncore/go-core/internal/report"
 	"github.com/visioncore/go-core/internal/resultintake"
 	"github.com/visioncore/go-core/internal/safetyenvelope"
+	"github.com/visioncore/go-core/internal/sandboxadapter"
 	"github.com/visioncore/go-core/internal/sovereigndecision"
 )
 
@@ -231,6 +232,12 @@ const (
 	ToolControlledExecutionRuntimeBoundary = "vision.controlled_execution_runtime_boundary"
 	ToolControlledExecutionRuntimeAudit    = "vision.controlled_execution_runtime_audit"
 	ToolControlledExecutionRuntimeExplain  = "vision.controlled_execution_runtime_explain"
+	// V11.1 Controlled Runtime Sandbox Adapter tools
+	ToolControlledRuntimeSandboxAdapter         = "vision.controlled_runtime_sandbox_adapter"
+	ToolControlledRuntimeSandboxAdapterValidate = "vision.controlled_runtime_sandbox_adapter_validate"
+	ToolControlledRuntimeSandboxAdapterBoundary = "vision.controlled_runtime_sandbox_adapter_boundary"
+	ToolControlledRuntimeSandboxAdapterAudit    = "vision.controlled_runtime_sandbox_adapter_audit"
+	ToolControlledRuntimeSandboxAdapterExplain  = "vision.controlled_runtime_sandbox_adapter_explain"
 )
 
 // blockedTools are mutating tools that must always be rejected.
@@ -428,6 +435,12 @@ var allowedTools = map[string]bool{
 	ToolControlledExecutionRuntimeBoundary: true,
 	ToolControlledExecutionRuntimeAudit:    true,
 	ToolControlledExecutionRuntimeExplain:  true,
+	// V11.1 Controlled Runtime Sandbox Adapter tools
+	ToolControlledRuntimeSandboxAdapter:         true,
+	ToolControlledRuntimeSandboxAdapterValidate: true,
+	ToolControlledRuntimeSandboxAdapterBoundary: true,
+	ToolControlledRuntimeSandboxAdapterAudit:    true,
+	ToolControlledRuntimeSandboxAdapterExplain:  true,
 }
 
 const blockedToolError = "tool is not allowed in read-only MCP control plane"
@@ -799,6 +812,17 @@ func Dispatch(req ToolRequest) ToolResponse {
 		return handleControlledExecutionRuntimeAudit(req)
 	case ToolControlledExecutionRuntimeExplain:
 		return handleControlledExecutionRuntimeExplain(req)
+	// V11.1 Controlled Runtime Sandbox Adapter tools
+	case ToolControlledRuntimeSandboxAdapter:
+		return handleControlledRuntimeSandboxAdapter(req)
+	case ToolControlledRuntimeSandboxAdapterValidate:
+		return handleControlledRuntimeSandboxAdapterValidate(req)
+	case ToolControlledRuntimeSandboxAdapterBoundary:
+		return handleControlledRuntimeSandboxAdapterBoundary(req)
+	case ToolControlledRuntimeSandboxAdapterAudit:
+		return handleControlledRuntimeSandboxAdapterAudit(req)
+	case ToolControlledRuntimeSandboxAdapterExplain:
+		return handleControlledRuntimeSandboxAdapterExplain(req)
 	}
 	return ToolResponse{Tool: tool, OK: false, Error: "handler not implemented"}
 }
@@ -2670,4 +2694,55 @@ func handleControlledExecutionRuntimeExplain(req ToolRequest) ToolResponse {
 		return errResp(req.Tool, err)
 	}
 	return ToolResponse{Tool: req.Tool, OK: true, Payload: executionruntime.ExplainControlledExecutionRuntime(a)}
+}
+
+// ── V11.1 Controlled Runtime Sandbox Adapter Handlers ────────────────
+
+func parseControlledRuntimeSandboxAdapterInput(req ToolRequest) (sandboxadapter.SandboxAdapterInput, error) {
+	var a sandboxadapter.SandboxAdapterInput
+	if len(req.Args) > 0 {
+		if err := json.Unmarshal(req.Args, &a); err != nil {
+			return a, fmt.Errorf("invalid args: %w", err)
+		}
+	}
+	if a.Root == "" {
+		a.Root = rootFrom(req)
+	}
+	return a, nil
+}
+
+func handleControlledRuntimeSandboxAdapter(req ToolRequest) ToolResponse {
+	a, err := parseControlledRuntimeSandboxAdapterInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxadapter.BuildSandboxAdapter(a)}
+}
+
+func handleControlledRuntimeSandboxAdapterValidate(req ToolRequest) ToolResponse {
+	a, err := parseControlledRuntimeSandboxAdapterInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxadapter.ValidateSandboxAdapter(a)}
+}
+
+func handleControlledRuntimeSandboxAdapterBoundary(req ToolRequest) ToolResponse {
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxadapter.BuildSandboxAdapterBoundary()}
+}
+
+func handleControlledRuntimeSandboxAdapterAudit(req ToolRequest) ToolResponse {
+	a, err := parseControlledRuntimeSandboxAdapterInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxadapter.AuditSandboxAdapter(a)}
+}
+
+func handleControlledRuntimeSandboxAdapterExplain(req ToolRequest) ToolResponse {
+	a, err := parseControlledRuntimeSandboxAdapterInput(req)
+	if err != nil {
+		return errResp(req.Tool, err)
+	}
+	return ToolResponse{Tool: req.Tool, OK: true, Payload: sandboxadapter.ExplainSandboxAdapter(a)}
 }

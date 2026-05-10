@@ -4282,3 +4282,132 @@ func TestControlledExecutionRuntimeBoundaryAuditExplainAndBlockedMutatingTools(t
 		t.Fatalf("mutating tool must remain blocked with exact message, got ok=%v error=%q", resp.OK, resp.Error)
 	}
 }
+
+func validSandboxAdapterArgs() map[string]interface{} {
+	args := map[string]interface{}{}
+	for k, v := range validControlledExecutionRuntimeArgs() {
+		args[k] = v
+	}
+	present := func() map[string]interface{} { return map[string]interface{}{"present": true, "valid": true} }
+	args["sandbox_adapter_id"] = "sandbox-adapter-1"
+	args["adapter_type"] = "sandbox_noop"
+	args["environment"] = "sandbox"
+	args["controlled_runtime"] = validControlledExecutionRuntimeArgs()
+	args["runtime_ready_dry_run"] = true
+	args["controlled_runtime_ready"] = true
+	args["evidence_binding"] = validExecutionEvidenceBindingArgs()
+	args["sandbox_policy"] = present()
+	args["sandbox_scope"] = present()
+	args["sandbox_constraints"] = present()
+	args["sandbox_input_contract"] = present()
+	args["sandbox_output_contract"] = present()
+	args["sandbox_noop_response"] = present()
+	args["sandbox_audit_envelope"] = present()
+	args["sandbox_observability_plan"] = present()
+	args["sandbox_rollback_policy"] = present()
+	args["sandbox_timeout"] = present()
+	args["sandbox_idempotency_key"] = "sandbox-idem-1"
+	args["sandbox_kill_switch"] = present()
+	args["sandbox_stop_criteria"] = present()
+	args["sandbox_safety_controls"] = map[string]interface{}{"present": true, "valid": true, "no_real_execution": true, "no_real_adapter_call": true, "no_network_call": true, "no_command_execution": true, "no_file_write": true, "no_deploy": true, "no_promotion": true, "no_status_publish": true, "no_memory_stable_write": true, "no_trust_escalation": true}
+	return args
+}
+
+func TestV111ControlledRuntimeSandboxAdapterToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolControlledRuntimeSandboxAdapter, mcpserver.ToolControlledRuntimeSandboxAdapterValidate, mcpserver.ToolControlledRuntimeSandboxAdapterBoundary, mcpserver.ToolControlledRuntimeSandboxAdapterAudit, mcpserver.ToolControlledRuntimeSandboxAdapterExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir(), Args: mkArgs(validSandboxAdapterArgs())})
+		if !resp.OK {
+			t.Fatalf("V11.1 tool %s not registered: %s", tool, resp.Error)
+		}
+		if !mcpserver.IsAllowed(tool) || mcpserver.IsBlocked(tool) {
+			t.Fatalf("V11.1 tool %s must be read-only allowed", tool)
+		}
+	}
+}
+
+func TestControlledRuntimeSandboxAdapterReturnsV111ReadOnlySandboxNoopAndDeniesRealPermissions(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolControlledRuntimeSandboxAdapter, Root: t.TempDir(), Args: mkArgs(validSandboxAdapterArgs())})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V11.1"`, `"dry_run":true`, `"read_only":true`, `"sandbox":true`, `"adapter_type":"sandbox_noop"`, `"adapter_status":"sandbox_adapter_ready_dry_run"`, `"sandbox_adapter_ready_dry_run":true`, `"sandbox_noop_candidate":true`, `"controlled_runtime_candidate":true`, `"simulated_adapter_response_ready":true`, `"mcp_execution_allowed":false`, `"real_execution_allowed":false`, `"real_adapter_call_allowed":false`, `"adapter_call_allowed":false`, `"executor_call_allowed":false`, `"network_call_allowed":false`, `"command_execution_allowed":false`, `"file_write_allowed":false`, `"deploy_allowed":false`, `"promotion_allowed":false`, `"status_publish_allowed":false`, `"mutation_allowed":false`, `"memory_write_allowed":false`, `"stable_promotion_allowed":false`, `"learning_allowed":false`, `"real_lock_allowed":false`, `"rollback_allowed":false`, `"evidence_trust_allowed":false`, `"result_trust_allowed":false`, `"ledger_write_allowed":false`, `"pass_gold_allowed":false`, `"pass_secure_allowed":false`, `"authority_grant_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestControlledRuntimeSandboxAdapterValidateBlocksFailuresAndClaims(t *testing.T) {
+	args := validSandboxAdapterArgs()
+	args["executor"] = "mcp"
+	args["executor_mode"] = "mcp_readonly"
+	args["adapter_type"] = "real_adapter"
+	args["environment"] = "production"
+	delete(args, "controlled_runtime")
+	args["runtime_ready_dry_run"] = false
+	args["controlled_runtime_ready"] = false
+	delete(args, "evidence_binding")
+	delete(args, "sandbox_policy")
+	delete(args, "sandbox_scope")
+	delete(args, "sandbox_constraints")
+	delete(args, "sandbox_input_contract")
+	delete(args, "sandbox_output_contract")
+	delete(args, "sandbox_noop_response")
+	delete(args, "sandbox_audit_envelope")
+	delete(args, "sandbox_observability_plan")
+	delete(args, "sandbox_rollback_policy")
+	delete(args, "sandbox_timeout")
+	delete(args, "sandbox_idempotency_key")
+	delete(args, "sandbox_kill_switch")
+	delete(args, "sandbox_stop_criteria")
+	delete(args, "sandbox_safety_controls")
+	args["claims"] = map[string]interface{}{"real_execution_allowed": true, "mcp_execution_allowed": true, "real_adapter_call_allowed": true, "adapter_call_allowed": true, "executor_call_allowed": true, "network_call_allowed": true, "command_execution_allowed": true, "file_write_allowed": true, "deploy_allowed": true, "promotion_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "stable_promoted": true, "learned_as_stable": true, "real_lock_acquired": true, "rollback_performed": true, "evidence_trusted": true, "result_trusted": true, "ledger_written": true, "pass_gold": true, "pass_secure": true, "authority_granted": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolControlledRuntimeSandboxAdapterValidate, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V11.1"`, `"valid":false`, `"blocked":true`, "executor_must_not_be_mcp", "executor_mode_must_be_external_only", "adapter_type_must_be_sandbox_noop", "environment_must_be_sandbox_or_local_sandbox", "controlled_runtime_missing", "controlled_runtime_blocked", "evidence_binding_missing", "sandbox_policy_missing", "sandbox_scope_missing", "sandbox_constraints_missing", "sandbox_input_contract_missing", "sandbox_output_contract_missing", "sandbox_noop_response_missing", "sandbox_audit_envelope_missing", "sandbox_observability_missing", "sandbox_rollback_policy_missing", "sandbox_timeout_missing", "sandbox_idempotency_missing", "sandbox_kill_switch_missing", "sandbox_stop_criteria_missing", "sandbox_safety_controls_missing", "unsafe_real_execution_attempt", "unsafe_real_adapter_call_attempt", "unsafe_network_attempt", "unsafe_command_attempt", "unsafe_file_write_attempt", "unsafe_deploy_attempt", "unsafe_promotion_attempt", "unsafe_status_publish_attempt", "unsafe_memory_write_attempt", "unsafe_trust_escalation_attempt", "real_execution_allowed", "real_adapter_call_allowed", "adapter_call_allowed", "evidence_trusted", "result_trusted", "ledger_written"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestControlledRuntimeSandboxAdapterBoundaryAuditExplainAndBlockedMutatingTools(t *testing.T) {
+	for _, tc := range []struct {
+		tool  string
+		wants []string
+	}{
+		{mcpserver.ToolControlledRuntimeSandboxAdapterBoundary, []string{`"version":"V11.1"`, `"dry_run":true`, `"read_only":true`, `"sandbox":true`, `"adapter_type":"sandbox_noop"`, `"real_execution_allowed":false`, "simulate sandbox adapter", "build noop adapter response", "execute_runtime", "call_real_adapter", "call_executor", "network_call", "command_execution", "file_write", "deploy", "promote", "publish_status", "write_memory", "learn_stable", "trust_evidence", "trust_result", "write_ledger", "acquire_real_lock", "perform_rollback", "mark_PASS_GOLD", "mark_PASS_SECURE", "grant_authority", "real_adapter_call_allowed"}},
+		{mcpserver.ToolControlledRuntimeSandboxAdapterExplain, []string{`"version":"V11.1"`, `"sandbox":true`, `"adapter_type":"sandbox_noop"`, `"real_execution_allowed":false`, "why_sandbox_adapter_is_not_real_execution", "why_real_adapter_call_is_blocked", "why_sandbox_noop_is_allowed_only_as_dry_run", "why_controlled_runtime_is_required", "why_evidence_binding_is_required", "why_result_verification_is_required", "why_final_authorization_is_required", "why_real_gates_are_required", "why_human_approval_and_revalidation_are_required", "why_sandbox_policy_safety_rollback_observability_are_required", "why_real_execution_requires_future_explicit_release", "PASS_GOLD", "PASS_SECURE", "always_denied"}},
+	} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tc.tool, Root: t.TempDir(), Args: mkArgs(validSandboxAdapterArgs())})
+		if !resp.OK {
+			t.Fatalf("%s expected ok=true: %s", tc.tool, resp.Error)
+		}
+		s := string(mustJSON(t, resp.Payload))
+		for _, want := range tc.wants {
+			if !strings.Contains(s, want) {
+				t.Fatalf("%s missing %s in %s", tc.tool, want, s)
+			}
+		}
+	}
+	args := validSandboxAdapterArgs()
+	args["claims"] = map[string]interface{}{"real_execution_allowed": true, "real_adapter_call_allowed": true, "adapter_call_allowed": true, "executor_call_allowed": true, "network_call_allowed": true, "command_execution_allowed": true, "file_write_allowed": true, "deploy_allowed": true, "promotion_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "learned_as_stable": true, "evidence_trusted": true, "result_trusted": true, "ledger_written": true, "real_lock_acquired": true, "rollback_performed": true, "pass_gold": true, "authority_granted": true, "human_approval_bypassed": true, "revalidation_bypassed": true, "runtime_bypassed": true, "evidence_binding_bypassed": true, "verification_bypassed": true, "sandbox_policy_bypassed": true, "sandbox_escaped": true, "kill_switch_bypassed": true, "rollback_bypassed": true, "observability_bypassed": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolControlledRuntimeSandboxAdapterAudit, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("audit expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"real_execution_attempt_found":true`, `"real_adapter_call_attempt_found":true`, `"adapter_call_attempt_found":true`, `"executor_call_attempt_found":true`, `"network_attempt_found":true`, `"command_attempt_found":true`, `"file_write_attempt_found":true`, `"deploy_attempt_found":true`, `"promotion_attempt_found":true`, `"status_publish_attempt_found":true`, `"memory_write_attempt_found":true`, `"stable_learning_attempt_found":true`, `"evidence_trust_attempt_found":true`, `"result_trust_attempt_found":true`, `"ledger_write_attempt_found":true`, `"real_lock_attempt_found":true`, `"rollback_attempt_found":true`, `"auto_gold_attempt_found":true`, `"authority_grant_attempt_found":true`, `"human_approval_bypass_attempt_found":true`, `"revalidation_bypass_attempt_found":true`, `"runtime_bypass_attempt_found":true`, `"evidence_binding_bypass_attempt_found":true`, `"verification_bypass_attempt_found":true`, `"sandbox_policy_bypass_attempt_found":true`, `"sandbox_escape_attempt_found":true`, `"kill_switch_bypass_attempt_found":true`, `"rollback_bypass_attempt_found":true`, `"observability_bypass_attempt_found":true`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("audit missing %s in %s", want, s)
+		}
+	}
+	resp = mcpserver.Dispatch(mcpserver.ToolRequest{Tool: "vision.apply_patch"})
+	if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+		t.Fatalf("mutating tool must remain blocked with exact message, got ok=%v error=%q", resp.OK, resp.Error)
+	}
+}
