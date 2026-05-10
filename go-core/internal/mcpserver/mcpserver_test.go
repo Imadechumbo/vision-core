@@ -3517,3 +3517,148 @@ func TestPromotionFinalAuthorizationBoundaryAuditExplainAndBlockedMutatingTools(
 		}
 	}
 }
+
+func validExecutionAdapterArgs() map[string]interface{} {
+	present := func() map[string]interface{} { return map[string]interface{}{"present": true, "valid": true} }
+	return map[string]interface{}{
+		"adapter_interface_id":     "adapter-iface-1",
+		"final_authorization_id":   "fa-1",
+		"simulation_id":            "sim-1",
+		"firewall_id":              "fw-1",
+		"decision_id":              "dec-1",
+		"invocation_id":            "inv-1",
+		"executor":                 "external_promotion_executor",
+		"executor_mode":            "external_only",
+		"adapter_name":             "external-execution-adapter",
+		"adapter_version":          "1.0.0",
+		"adapter_type":             "promotion_executor_adapter",
+		"project":                  "vision-core",
+		"branch":                   "v6-go-enterprise-runtime",
+		"commit_sha":               "59a6624",
+		"target":                   "stable",
+		"environment":              "production",
+		"final_authorization":      map[string]interface{}{"version": "V10.3", "dry_run": true, "read_only": true, "valid": true, "final_authorization_ready_dry_run": true},
+		"promotion_simulation":     map[string]interface{}{"version": "V10.2", "dry_run": true, "read_only": true, "valid": true, "simulation_record_ready_dry_run": true, "execution_simulation_candidate": true},
+		"promotion_firewall":       map[string]interface{}{"version": "V10.1", "dry_run": true, "read_only": true, "valid": true, "firewall_valid": true, "execution_eligibility_ready_dry_run": true},
+		"sovereign_decision":       map[string]interface{}{"version": "V10.0", "dry_run": true, "read_only": true, "valid": true, "sovereign_decision_valid": true, "promotion_decision_candidate": true},
+		"real_gates":               []map[string]interface{}{{"gate": "PASS_GOLD", "status": "pass", "real_evidence": true, "recognized_by_authority": true}, {"gate": "PASS_SECURE", "status": "pass", "real_evidence": true, "recognized_by_authority": true}},
+		"human_approval":           map[string]interface{}{"present": true, "approved": true, "approver": "release-manager", "approval_reference": "approval-1", "valid": true},
+		"independent_revalidation": map[string]interface{}{"present": true, "completed": true, "validator": "independent-validator", "revalidation_reference": "reval-1", "pass_gold_revalidated": true, "pass_secure_revalidated": true, "valid": true},
+		"adapter_contract_schema":  present(),
+		"input_contract":           present(),
+		"output_contract":          present(),
+		"error_contract":           present(),
+		"timeout_contract":         present(),
+		"idempotency_contract":     present(),
+		"kill_switch_contract":     present(),
+		"rollback_contract":        present(),
+		"observability_contract":   present(),
+		"audit_contract":           present(),
+		"security_contract":        present(),
+		"policy_contract":          present(),
+		"safety_controls":          map[string]interface{}{"present": true, "valid": true, "no_mcp_execution": true, "no_adapter_call_inside_mcp": true, "no_network_inside_mcp": true, "no_command_inside_mcp": true, "no_file_write_inside_mcp": true, "no_deploy_inside_mcp": true, "no_status_publish_inside_mcp": true, "no_memory_stable_write_inside_mcp": true},
+	}
+}
+
+func TestV104ExternalExecutionAdapterToolsRegistered(t *testing.T) {
+	for _, tool := range []string{mcpserver.ToolExternalExecutionAdapterInterface, mcpserver.ToolExternalExecutionAdapterValidate, mcpserver.ToolExternalExecutionAdapterBoundary, mcpserver.ToolExternalExecutionAdapterAudit, mcpserver.ToolExternalExecutionAdapterExplain} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool, Root: t.TempDir(), Args: mkArgs(validExecutionAdapterArgs())})
+		if strings.Contains(resp.Error, "unknown tool") {
+			t.Fatalf("V10.4 tool %s not registered", tool)
+		}
+	}
+}
+
+func TestExternalExecutionAdapterReturnsV104ReadOnlyDryRunAndDeniesExecution(t *testing.T) {
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExternalExecutionAdapterInterface, Root: t.TempDir(), Args: mkArgs(validExecutionAdapterArgs())})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V10.4"`, `"dry_run":true`, `"read_only":true`, `"adapter_interface_status":"adapter_interface_ready_dry_run"`, `"adapter_interface_ready_dry_run":true`, `"mcp_execution_allowed":false`, `"adapter_call_allowed":false`, `"executor_call_allowed":false`, `"network_call_allowed":false`, `"command_execution_allowed":false`, `"file_write_allowed":false`, `"promotion_allowed":false`, `"deploy_allowed":false`, `"status_publish_allowed":false`, `"mutation_allowed":false`, `"memory_write_allowed":false`, `"stable_promotion_allowed":false`, `"learning_allowed":false`, `"real_lock_allowed":false`, `"rollback_allowed":false`, `"adapter_persistence_allowed":false`, `"pass_gold_allowed":false`, `"pass_secure_allowed":false`, `"authority_grant_allowed":false`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExternalExecutionAdapterValidateBlocksFailuresAndClaims(t *testing.T) {
+	args := validExecutionAdapterArgs()
+	args["executor"] = "mcp_readonly"
+	args["executor_mode"] = "inside_mcp"
+	args["adapter_name"] = ""
+	args["adapter_version"] = ""
+	args["adapter_type"] = ""
+	args["final_authorization"] = map[string]interface{}{"version": "V10.3", "valid": false, "final_authorization_ready_dry_run": false}
+	args["promotion_simulation"] = map[string]interface{}{"version": "V10.2", "valid": false, "simulation_record_ready_dry_run": false, "execution_simulation_candidate": false}
+	args["promotion_firewall"] = map[string]interface{}{"valid": false, "firewall_valid": false, "execution_eligibility_ready_dry_run": false}
+	args["sovereign_decision"] = map[string]interface{}{"valid": false, "sovereign_decision_valid": false, "promotion_decision_candidate": false}
+	args["real_gates"] = []map[string]interface{}{{"gate": "PASS_GOLD", "status": "pass", "real_evidence": true, "dry_run": true, "synthesized": true, "recognized_by_authority": false}}
+	args["human_approval"] = map[string]interface{}{"present": true, "approved": false, "placeholder": true, "valid": false}
+	args["independent_revalidation"] = map[string]interface{}{"present": true, "completed": false, "placeholder": true, "pass_gold_revalidated": false, "pass_secure_revalidated": false, "valid": false}
+	args["input_contract"] = nil
+	args["output_contract"] = map[string]interface{}{"present": true, "valid": false}
+	args["policy_contract"] = nil
+	args["safety_controls"] = map[string]interface{}{"present": true, "valid": false}
+	args["adapter_call_allowed"] = true
+	args["executor_call_allowed"] = true
+	args["network_call_allowed"] = true
+	args["command_execution_allowed"] = true
+	args["file_write_allowed"] = true
+	args["promotion_allowed"] = true
+	args["deploy_allowed"] = true
+	args["status_publish_allowed"] = true
+	args["memory_write_allowed"] = true
+	args["adapter_persistence_allowed"] = true
+	args["authority_grant_allowed"] = true
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExternalExecutionAdapterValidate, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"version":"V10.4"`, `"valid":false`, `"blocked":true`, "executor_must_not_be_mcp", "executor_mode_must_be_external_only", "adapter_name", "adapter_version", "adapter_type", "final_authorization_blocked", "final_authorization_ready_dry_run", "simulation_blocked", "simulation_record_ready_dry_run", "execution_simulation_candidate", "firewall_blocked", "sovereign_candidate_missing", "promotion_decision_candidate", "PASS_SECURE_REAL", "PASS_GOLD_dry_run_gate_claim", "PASS_GOLD_synthesized_gate_claim", "PASS_GOLD_not_recognized_by_authority", "human_approval_placeholder", "human_approval_approved_false", "independent_revalidation_placeholder", "independent_revalidation_completed_false", "pass_gold_revalidated_false", "pass_secure_revalidated_false", "input_contract", "output_contract_invalid", "policy_contract", "safety_controls_invalid", "adapter_call_allowed", "executor_call_allowed", "network_call_allowed", "command_execution_allowed", "file_write_allowed", "promotion_allowed", "deploy_allowed", "status_publish_allowed", "memory_write_allowed", "adapter_persistence_allowed", "authority_grant_allowed"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %s in payload: %s", want, s)
+		}
+	}
+}
+
+func TestExternalExecutionAdapterBoundaryAuditExplainAndBlockedMutatingTools(t *testing.T) {
+	for _, tc := range []struct {
+		tool  string
+		wants []string
+	}{
+		{mcpserver.ToolExternalExecutionAdapterBoundary, []string{`"version":"V10.4"`, `"dry_run":true`, `"read_only":true`, "simulate external execution adapter interface", "call_adapter", "call_executor", "persist_adapter_contract", "mark_PASS_GOLD", "grant_authority", "adapter_persistence_allowed"}},
+		{mcpserver.ToolExternalExecutionAdapterExplain, []string{`"version":"V10.4"`, "why_adapter_interface_is_not_execution", "why_adapter_call_is_blocked_inside_mcp", "why_final_authorization_is_required", "why_real_gates_are_required", "why_contracts_are_required", "PASS_GOLD", "PASS_SECURE", "always_denied"}},
+	} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tc.tool, Root: t.TempDir(), Args: mkArgs(validExecutionAdapterArgs())})
+		if !resp.OK {
+			t.Fatalf("%s expected ok=true: %s", tc.tool, resp.Error)
+		}
+		s := string(mustJSON(t, resp.Payload))
+		for _, want := range tc.wants {
+			if !strings.Contains(s, want) {
+				t.Fatalf("%s missing %s in %s", tc.tool, want, s)
+			}
+		}
+	}
+
+	args := validExecutionAdapterArgs()
+	args["claims"] = map[string]interface{}{"adapter_call_allowed": true, "execution_allowed": true, "executor_call_allowed": true, "network_call_allowed": true, "command_execution_allowed": true, "file_write_allowed": true, "promotion_allowed": true, "deploy_allowed": true, "status_publish_allowed": true, "memory_write_allowed": true, "learned_as_stable": true, "real_lock_acquired": true, "rollback_performed": true, "adapter_contract_persisted": true, "pass_gold": true, "authority_granted": true, "dry_run_gate_claim": true, "synthesized_gate_claim": true, "human_approval_bypassed": true, "revalidation_bypassed": true, "contract_bypassed": true}
+	resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: mcpserver.ToolExternalExecutionAdapterAudit, Root: t.TempDir(), Args: mkArgs(args)})
+	if !resp.OK {
+		t.Fatalf("audit expected ok=true: %s", resp.Error)
+	}
+	s := string(mustJSON(t, resp.Payload))
+	for _, want := range []string{`"adapter_call_attempt_found":true`, `"execution_attempt_found":true`, `"executor_call_attempt_found":true`, `"network_attempt_found":true`, `"command_attempt_found":true`, `"file_write_attempt_found":true`, `"promotion_attempt_found":true`, `"deploy_attempt_found":true`, `"status_publish_attempt_found":true`, `"memory_write_attempt_found":true`, `"stable_learning_attempt_found":true`, `"real_lock_attempt_found":true`, `"rollback_attempt_found":true`, `"adapter_persistence_attempt_found":true`, `"auto_gold_attempt_found":true`, `"authority_grant_attempt_found":true`, `"dry_run_gate_claim_found":true`, `"synthesized_gate_claim_found":true`, `"human_approval_bypass_attempt_found":true`, `"revalidation_bypass_attempt_found":true`, `"contract_bypass_attempt_found":true`} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("audit missing %s in %s", want, s)
+		}
+	}
+	for _, tool := range []string{"vision.apply_patch", "vision.write_file", "vision.commit", "vision.push", "vision.open_pr", "vision.publish_status", "vision.run_mission_real", "vision.rollback", "vision.deploy"} {
+		resp := mcpserver.Dispatch(mcpserver.ToolRequest{Tool: tool})
+		if resp.OK || resp.Error != "tool is not allowed in read-only MCP control plane" {
+			t.Fatalf("mutating tool %s must remain blocked with exact message, got ok=%v error=%q", tool, resp.OK, resp.Error)
+		}
+	}
+}
