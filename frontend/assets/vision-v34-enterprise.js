@@ -412,6 +412,24 @@
                           ? ha.pass_gold_rate + '%'
                           : '—';
 
+      m = normalizeMissionReportEvidence({
+        mission_id: m.mission_id || missionId,
+        project: m.project,
+        classification: m.classification,
+        root_cause: m.root_cause,
+        files_changed: m.files_changed,
+        pass_gold_status: passGoldVal,
+        promotion_allowed: m.promotion_allowed,
+        hermes_consensus: he.consensus,
+        sddf_evidence: sddfVal,
+        logs_available: lo ? 'SIM' : '—'
+      });
+
+      passGoldVal = m.pass_gold_status;
+      promoVal = m.promotion_allowed === true ? 'SIM' : 'NÃO';
+      sddfVal = m.sddf_evidence;
+      var hermesVal = m.hermes_consensus;
+
       var rows = [
         ['Mission ID',        v(m.mission_id || missionId)],
         ['Projeto',           v(m.project)],
@@ -423,10 +441,10 @@
         ['Snapshot ID',       snapshotVal],
         ['Promotion Allowed', promoVal],
         ['GitHub Status',     gh.connected != null ? (gh.connected ? 'Connected' : 'Not connected') : '—'],
-        ['Hermes Vote',       v(he.consensus)],
+        ['Hermes Vote',       v(hermesVal)],
         ['Aegis Status',      aegisVal],
         ['SDDF Tests',        sddfVal],
-        ['Logs Available',    lo ? 'YES' : '—'],
+        ['Logs Available',    m.logs_available === 'SIM' ? 'YES' : '—'],
       ];
 
       var html =
@@ -533,4 +551,6 @@
     boot();
   }
 })();
+
+
 

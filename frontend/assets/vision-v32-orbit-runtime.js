@@ -517,7 +517,58 @@
   }
 
   /* ── RENDER REPORT CARD ───────────────────────────────────────── */
+  function normalizeMissionReportEvidence(raw) {
+    raw = raw || {};
+
+    function blank(v) {
+      return v == null ||
+        v === '' ||
+        v === '—' ||
+        v === '-' ||
+        String(v).trim().toLowerCase() === 'mission' ||
+        String(v).trim().toLowerCase() === 'executar missão';
+    }
+
+    var filesChanged =
+      raw.files_changed != null ? raw.files_changed :
+      raw.changed_files != null ? raw.changed_files :
+      raw.files_changed_count != null ? raw.files_changed_count :
+      null;
+
+    var filesChangedNumber = Number(filesChanged);
+    var noFilesChanged =
+      filesChanged == null ||
+      filesChanged === '—' ||
+      filesChanged === '-' ||
+      (!isNaN(filesChangedNumber) && filesChangedNumber <= 0);
+
+    var incomplete =
+      blank(raw.mission_id) ||
+      blank(raw.project) ||
+      blank(raw.root_cause) ||
+      noFilesChanged;
+
+    if (incomplete) {
+      raw.mission_status = 'INCOMPLETE';
+      raw.pass_gold_status = 'FAIL';
+      raw.pass_gold_final = false;
+      raw.pass_gold = false;
+      raw.promotion_allowed = false;
+      raw.memory_learning_allowed = false;
+      raw.hermes_consensus = 'BLOCKED — evidence missing';
+      raw.hermes_vote = 'BLOCKED — evidence missing';
+      raw.sddf_evidence = 'INCOMPLETE';
+      raw.sddf_tests = 'INCOMPLETE';
+      raw.logs_available = '—';
+      raw.aegis_status = 'BLOCKED';
+      raw._evidence_incomplete = true;
+    }
+
+    return raw;
+  }
+
   function renderReport(data, totalTime) {
+    data = normalizeMissionReportEvidence(data);
     function val(v) {
       if (v == null || v === '' || v === undefined) return '—';
       if (typeof v === 'boolean') return v ? 'SIM' : 'NÃO';
@@ -531,9 +582,9 @@
       { label: 'Root Cause',         v: val(data.root_cause) },
       { label: 'Arquivos alterados', v: val(data.files_changed) },
       { label: 'Tempo total',        v: totalTime || '—' },
-      { label: 'PASS GOLD',          v: val(data.pass_gold_status || data.pass_gold_final), gold: !!(data.pass_gold_status || data.pass_gold_final) },
+      { label: 'PASS GOLD',          v: val(data.pass_gold_status), gold: data.pass_gold_status === 'GOLD' },
       { label: 'Snapshot ID',        v: val(data.snapshot_id) },
-      { label: 'Promotion Allowed',  v: data.promotion_allowed != null ? (data.promotion_allowed ? 'SIM' : 'NÃO') : '—' },
+      { label: 'Promotion Allowed',  v: data.promotion_allowed === true ? 'SIM' : 'NÃO' },
       { label: 'GitHub Status',      v: data.github_connected != null ? (data.github_connected ? 'Connected' : 'Not connected') : '—' },
       { label: 'Automerge Policy',   v: val(data.automerge_policy) },
       { label: 'Hermes Vote',        v: val(data.hermes_consensus) },
@@ -797,4 +848,6 @@
     boot();
   }
 })();
+
+
 

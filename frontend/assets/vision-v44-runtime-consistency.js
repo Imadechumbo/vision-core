@@ -225,6 +225,56 @@
     console.log('[V44] Orbit Home ligada ao SSE singleton real');
   }
   setInterval(attachSSE, 250);
+  function normalizeMissionReportEvidence(raw) {
+    raw = raw || {};
+
+    function blank(v) {
+      return v == null ||
+        v === '' ||
+        v === '—' ||
+        v === '-' ||
+        String(v).trim().toLowerCase() === 'mission' ||
+        String(v).trim().toLowerCase() === 'executar missão';
+    }
+
+    var filesChanged =
+      raw.files_changed != null ? raw.files_changed :
+      raw.changed_files != null ? raw.changed_files :
+      raw.files_changed_count != null ? raw.files_changed_count :
+      null;
+
+    var filesChangedNumber = Number(filesChanged);
+    var noFilesChanged =
+      filesChanged == null ||
+      filesChanged === '—' ||
+      filesChanged === '-' ||
+      (!isNaN(filesChangedNumber) && filesChangedNumber <= 0);
+
+    var incomplete =
+      blank(raw.mission_id) ||
+      blank(raw.project) ||
+      blank(raw.root_cause) ||
+      noFilesChanged;
+
+    if (incomplete) {
+      raw.mission_status = 'INCOMPLETE';
+      raw.pass_gold_status = 'FAIL';
+      raw.pass_gold_final = false;
+      raw.pass_gold = false;
+      raw.promotion_allowed = false;
+      raw.memory_learning_allowed = false;
+      raw.hermes_consensus = 'BLOCKED — evidence missing';
+      raw.hermes_vote = 'BLOCKED — evidence missing';
+      raw.sddf_evidence = 'INCOMPLETE';
+      raw.sddf_tests = 'INCOMPLETE';
+      raw.logs_available = '—';
+      raw.aegis_status = 'BLOCKED';
+      raw._evidence_incomplete = true;
+    }
+
+    return raw;
+  }
+
 
   function chatTarget(){
     return document.getElementById('v298ChatStream') || document.getElementById('v297ChatLog') || document.getElementById('v236CopilotMiniChat') || document.querySelector('.v236-copilot-mini-chat');
@@ -233,11 +283,111 @@
     var t = chatTarget();
     return !!(t && /MISSION REPORT/i.test(t.textContent || ''));
   }
+  function normalizeMissionReportEvidence(raw) {
+    raw = raw || {};
+
+    function blank(v) {
+      return v == null ||
+        v === '' ||
+        v === '—' ||
+        v === '-' ||
+        String(v).trim().toLowerCase() === 'mission' ||
+        String(v).trim().toLowerCase() === 'executar missão';
+    }
+
+    var filesChanged =
+      raw.files_changed != null ? raw.files_changed :
+      raw.changed_files != null ? raw.changed_files :
+      raw.files_changed_count != null ? raw.files_changed_count :
+      null;
+
+    var filesChangedNumber = Number(filesChanged);
+    var noFilesChanged =
+      filesChanged == null ||
+      filesChanged === '—' ||
+      filesChanged === '-' ||
+      (!isNaN(filesChangedNumber) && filesChangedNumber <= 0);
+
+    var incomplete =
+      blank(raw.mission_id) ||
+      blank(raw.project) ||
+      blank(raw.root_cause) ||
+      noFilesChanged;
+
+    if (incomplete) {
+      raw.mission_status = 'INCOMPLETE';
+      raw.pass_gold_status = 'FAIL';
+      raw.pass_gold_final = false;
+      raw.pass_gold = false;
+      raw.promotion_allowed = false;
+      raw.memory_learning_allowed = false;
+      raw.hermes_consensus = 'BLOCKED — evidence missing';
+      raw.hermes_vote = 'BLOCKED — evidence missing';
+      raw.sddf_evidence = 'INCOMPLETE';
+      raw.sddf_tests = 'INCOMPLETE';
+      raw.logs_available = '—';
+      raw.aegis_status = 'BLOCKED';
+      raw._evidence_incomplete = true;
+    }
+
+    return raw;
+  }
+
   function triggerReport(missionId){
     if (reportLock) return;
     reportLock = true;
     setTimeout(function(){ buildReport(missionId || activeMissionId || null); }, 350);
   }
+  function normalizeMissionReportEvidence(raw) {
+    raw = raw || {};
+
+    function blank(v) {
+      return v == null ||
+        v === '' ||
+        v === '—' ||
+        v === '-' ||
+        String(v).trim().toLowerCase() === 'mission' ||
+        String(v).trim().toLowerCase() === 'executar missão';
+    }
+
+    var filesChanged =
+      raw.files_changed != null ? raw.files_changed :
+      raw.changed_files != null ? raw.changed_files :
+      raw.files_changed_count != null ? raw.files_changed_count :
+      null;
+
+    var filesChangedNumber = Number(filesChanged);
+    var noFilesChanged =
+      filesChanged == null ||
+      filesChanged === '—' ||
+      filesChanged === '-' ||
+      (!isNaN(filesChangedNumber) && filesChangedNumber <= 0);
+
+    var incomplete =
+      blank(raw.mission_id) ||
+      blank(raw.project) ||
+      blank(raw.root_cause) ||
+      noFilesChanged;
+
+    if (incomplete) {
+      raw.mission_status = 'INCOMPLETE';
+      raw.pass_gold_status = 'FAIL';
+      raw.pass_gold_final = false;
+      raw.pass_gold = false;
+      raw.promotion_allowed = false;
+      raw.memory_learning_allowed = false;
+      raw.hermes_consensus = 'BLOCKED — evidence missing';
+      raw.hermes_vote = 'BLOCKED — evidence missing';
+      raw.sddf_evidence = 'INCOMPLETE';
+      raw.sddf_tests = 'INCOMPLETE';
+      raw.logs_available = '—';
+      raw.aegis_status = 'BLOCKED';
+      raw._evidence_incomplete = true;
+    }
+
+    return raw;
+  }
+
   function buildReport(missionId){
     Promise.all([
       missionId ? safeJson('/api/mission/' + encodeURIComponent(missionId)) : Promise.resolve(null),
@@ -250,6 +400,20 @@
       var m = r[0] || {}, score = r[1] || {}, gh = r[2] || {}, hermes = r[3] || {}, workers = r[4] || {}, logs = r[5];
       if (hasReport()) return;
       var passGold = score.pass_gold != null ? score.pass_gold : (m.pass_gold != null ? m.pass_gold : null);
+      m = normalizeMissionReportEvidence({
+        mission_id: m.mission_id || missionId,
+        project: m.project,
+        classification: m.classification,
+        root_cause: m.root_cause,
+        files_changed: m.files_changed || m.changed_files,
+        pass_gold_status: passGold === true ? 'GOLD' : (passGold === false ? 'FAIL' : null),
+        promotion_allowed: m.promotion_allowed || score.promotion_allowed,
+        hermes_consensus: hermes.consensus || hermes.vote,
+        logs_available: logs ? 'SIM' : '—'
+      });
+
+      passGold = m.pass_gold_status === 'GOLD';
+
       var rows = [
         ['Mission ID', val(m.mission_id || missionId)],
         ['Project', val(m.project || m.project_id)],
@@ -257,13 +421,13 @@
         ['Root Cause', val(m.root_cause)],
         ['Files Changed', val(m.files_changed || m.changed_files)],
         ['Duration', val(m.duration || (missionStartedAt ? elapsed() : null))],
-        ['PASS GOLD', passGold == null ? '—' : (passGold ? 'TRUE' : 'FALSE'), passGold === true],
-        ['Promotion Allowed', val(m.promotion_allowed || score.promotion_allowed)],
+        ['PASS GOLD', m.pass_gold_status, m.pass_gold_status === 'GOLD'],
+        ['Promotion Allowed', m.promotion_allowed === true ? 'SIM' : 'NÃO'],
         ['Snapshot ID', val(m.snapshot_id || score.snapshot_id)],
         ['GitHub Status', gh.connected == null ? '—' : (gh.connected ? 'CONNECTED' : 'NOT CONNECTED')],
-        ['Hermes Vote', val(hermes.consensus || hermes.vote)],
+        ['Hermes Vote', val(m.hermes_consensus)],
         ['Worker Status', val(workers.status || workers.queue || workers.state)],
-        ['Logs Available', logs ? 'YES' : '—']
+        ['Logs Available', m.logs_available === 'SIM' ? 'YES' : '—']
       ];
       var card = document.createElement('div');
       card.className = 'v44-mission-report';
@@ -317,3 +481,5 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
+
+
