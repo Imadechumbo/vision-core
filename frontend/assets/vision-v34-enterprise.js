@@ -40,6 +40,26 @@
   var API = (window.__VISION_API__ || window.API_BASE_URL || '').replace(/\/$/, '');
   function apiUrl(p) { return API + p; }
 
+  var _v34DelegatedStreamKeys = {};
+
+  function getSSEStreamKey(missionText, missionId) {
+    if (typeof window.__VISION_getSSEStreamKey__ === 'function') {
+      return window.__VISION_getSSEStreamKey__(missionText, missionId);
+    }
+    return missionId || missionText || 'mission';
+  }
+
+  function isRealOpenSSE(es) {
+    if (typeof window.__VISION_isRealOpenSSE__ === 'function') {
+      return window.__VISION_isRealOpenSSE__(es);
+    }
+    return !!(es &&
+      typeof es.addEventListener === 'function' &&
+      typeof es.close === 'function' &&
+      es.__V32_REAL_SSE__ === true &&
+      es.readyState !== 2);
+  }
+
   /* ── 1. STICKY FIX — top:24px conforme especificação ── */
   function fixSticky() {
     // V3.5 FIX: sticky CSS puro já aplicado via vision-v33-orbit.css
@@ -239,14 +259,24 @@
       var missionText = window.__VISION_ACTIVE_MISSION_TEXT__;
       var missionId = window.__VISION_LAST_RUN_LIVE_MISSION_ID__;
 
-      if (es && !es.__V32_REAL_SSE__) {
-        if (typeof window.__V32_startSSE__ === 'function' && missionText && window.__VISION_RUN_LIVE_ACCEPTED__) {
+      var streamKey = getSSEStreamKey(missionText, missionId);
+      var realOpen = isRealOpenSSE(es);
+      var esKey = es && (es.__VISION_SSE_STREAM_KEY__ || es.__VISION_SSE_MISSION_ID__);
+
+      if (!realOpen) {
+        if (typeof window.__V32_startSSE__ === 'function' &&
+            missionText &&
+            (missionId || window.__VISION_RUN_LIVE_ACCEPTED__) &&
+            !_v34DelegatedStreamKeys[streamKey]) {
+          _v34DelegatedStreamKeys[streamKey] = true;
           window.__V32_startSSE__(missionText, missionId);
         }
         return;
       }
 
-      if (es && es.__V32_REAL_SSE__ && !es.__v34_intercepted__) {
+      if (esKey === streamKey) _v34DelegatedStreamKeys[streamKey] = true;
+
+      if (realOpen && !es.__v34_intercepted__) {
         es.__v34_intercepted__ = true;
 
         // Observar eventos SSE do singleton existente, sem bloquear o stream.

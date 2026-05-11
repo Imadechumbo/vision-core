@@ -67,6 +67,22 @@
   window.__VISION_ACTIVE_MISSION_TEXT__ = window.__VISION_ACTIVE_MISSION_TEXT__ || null;
   window.__VISION_SSE_OWNER__ = window.__VISION_SSE_OWNER__ || null;
   window.__VISION_RUN_LIVE_ACCEPTED__ = window.__VISION_RUN_LIVE_ACCEPTED__ || false;
+  window.__VISION_LAST_RUN_LIVE_MISSION_ID__ = window.__VISION_LAST_RUN_LIVE_MISSION_ID__ || null;
+
+  function getSSEStreamKey(missionText, missionId) {
+    return missionId || missionText || 'mission';
+  }
+
+  function isRealOpenSSE(es) {
+    return !!(es &&
+      typeof es.addEventListener === 'function' &&
+      typeof es.close === 'function' &&
+      es.__V32_REAL_SSE__ === true &&
+      es.readyState !== 2);
+  }
+
+  window.__VISION_getSSEStreamKey__ = getSSEStreamKey;
+  window.__VISION_isRealOpenSSE__ = isRealOpenSSE;
 
 
   /* ── NEUTRALIZE SSE IN OLD RUNTIMES ──────────────────────────── */
@@ -287,7 +303,7 @@
   }
 
   /* ── CLOSE SSE ────────────────────────────────────────────────── */
-  function closeSSE() {
+  function closeStaleSSE(reason) {
     if (window.__VISION_SSE_RETRY_T__) {
       clearTimeout(window.__VISION_SSE_RETRY_T__);
       window.__VISION_SSE_RETRY_T__ = null;
@@ -300,17 +316,40 @@
     window.__VISION_SSE_RETRY_INDEX__ = 0;
     window.__VISION_SSE_MISSION_ID__ = null;
     window.__VISION_SSE_OWNER__ = null;
+    console.log('[V32] SSE singleton reset:', reason || 'sem motivo informado');
+  }
+
+  function finishSSE(reason) {
+    closeStaleSSE(reason);
+    window.__VISION_ACTIVE_MISSION_TEXT__ = null;
+    window.__VISION_RUN_LIVE_ACCEPTED__ = false;
+    mission.active = false;
+  }
+
+  function closeSSE() {
+    closeStaleSSE('closeSSE');
   }
 
   /* ── START SSE (real, sem fallback, sem fake) ─────────────────── */
   function startSSE(missionText, missionId) {
-    var streamKey = missionId || missionText || 'mission';
-    if (window.__VISION_SSE_MISSION_ID__ === streamKey && window.__VISION_SSE__ && window.__VISION_SSE__.readyState !== 2) {
-      console.log('[V32] SSE já ativo para:', streamKey);
-      return;
+    var streamKey = getSSEStreamKey(missionText, missionId);
+    var current = window.__VISION_SSE__;
+    var currentKey = current && (current.__VISION_SSE_STREAM_KEY__ || current.__VISION_SSE_MISSION_ID__);
+
+    if (isRealOpenSSE(current)) {
+      if (window.__VISION_SSE_MISSION_ID__ === streamKey && currentKey === streamKey) {
+        console.log('[V32] SSE já ativo (singleton protegido) para:', streamKey);
+        return;
+      }
+      closeStaleSSE('streamKey mudou de ' + (currentKey || window.__VISION_SSE_MISSION_ID__ || 'desconhecido') + ' para ' + streamKey);
+    } else if (current) {
+      closeStaleSSE('SSE dummy/stub/fechado antes de abrir ' + streamKey);
+    } else if (window.__VISION_SSE_LOCK__) {
+      closeStaleSSE('lock preso sem SSE real antes de abrir ' + streamKey);
     }
-    closeSSE();
+
     window.__VISION_SSE_MISSION_ID__ = streamKey;
+    window.__VISION_LAST_RUN_LIVE_MISSION_ID__ = missionId || null;
     window.__VISION_ACTIVE_MISSION_TEXT__ = missionText || 'mission';
     window.__VISION_SSE_OWNER__ = 'V32';
     window.__VISION_RUN_LIVE_ACCEPTED__ = true;
@@ -328,7 +367,10 @@
     }
 
     function open() {
-      if (window.__VISION_SSE_LOCK__) return;
+      if (window.__VISION_SSE_LOCK__) {
+        if (isRealOpenSSE(window.__VISION_SSE__) && window.__VISION_SSE_MISSION_ID__ === streamKey) return;
+        closeStaleSSE('lock preso sem SSE real durante open ' + streamKey);
+      }
       window.__VISION_SSE_LOCK__ = true;
 
       // Always use the preserved native EventSource directly. Observers may
@@ -350,6 +392,9 @@
       es.__V32_REAL_SSE__ = true;
       es.__VISION_SSE_OWNER__ = 'V32';
       es.__VISION_SSE_MISSION_ID__ = streamKey;
+      es.__VISION_SSE_STREAM_KEY__ = streamKey;
+      es.__VISION_MISSION_ID__ = missionId || null;
+      es.__VISION_MISSION_TEXT__ = missionText || 'mission';
       es.__VISION_SSE_URL__ = url;
       window.__VISION_SSE__ = es;
       window.__VISION_SSE_OWNER__ = 'V32';
@@ -411,6 +456,7 @@
             fetchReport(d.mission_id);
           }
         } catch (e) {}
+        finishSSE('pass_gold recebido para ' + streamKey);
       });
 
       es.addEventListener('done', function (ev) {
@@ -421,10 +467,29 @@
           if (mission.id) fetchReport(mission.id);
           else renderReport(d, elapsed() + 's');
         } catch (e) {}
-        closeSSE();
-        mission.active = false;
-        window.__VISION_RUN_LIVE_ACCEPTED__ = false;
+        finishSSE('done recebido para ' + streamKey);
         console.log('[V32] SSE done — missão concluída');
+      });
+
+      function handleFinalError(ev, type) {
+        try {
+          var d = JSON.parse((ev && ev.data) || '{}');
+          if (!mission.id && d.mission_id) mission.id = d.mission_id;
+          setCoreState('fail');
+          if (d.stage) {
+            var k = resolveKey(d.stage);
+            if (k) setNodeState(k, 'fail', d.message, elapsed());
+          }
+          renderReport(d, elapsed() + 's');
+        } catch (e) {
+          setCoreState('fail');
+        }
+        finishSSE(type + ' final recebido para ' + streamKey);
+      }
+
+      es.addEventListener('fail', function (ev) { handleFinalError(ev, 'fail'); });
+      es.addEventListener('error', function (ev) {
+        if (ev && ev.data) handleFinalError(ev, 'error');
       });
 
       es.addEventListener('ping', function () {
@@ -444,8 +509,8 @@
           window.__VISION_SSE_RETRY_INDEX__ = retryIdx;
 
           if (retryIdx > SSE_BACKOFF.length) {
-            window.__VISION_RUN_LIVE_ACCEPTED__ = false;
             setCoreState('fail');
+            finishSSE('retry esgotado para ' + streamKey);
             console.warn('[V32] SSE esgotou tentativas');
             return;
           }
@@ -637,11 +702,12 @@
 
     return callRunLiveEndpoint(missionText)
       .then(function (d) {
-        mission.id = d.mission_id || d.missionId || d.id || null;
-        window.__VISION_LAST_RUN_LIVE_MISSION_ID__ = mission.id;
+        var missionId = d.mission_id || d.missionId || d.id || null;
+        mission.id = missionId;
+        window.__VISION_LAST_RUN_LIVE_MISSION_ID__ = missionId;
         window.__VISION_ACTIVE_MISSION_TEXT__ = missionText;
         window.__VISION_RUN_LIVE_ACCEPTED__ = true;
-        window.__V32_startSSE__(missionText, mission.id);
+        window.__V32_startSSE__(missionText, missionId);
       })
       .catch(function (err) {
         console.error('[V32] /api/run-live erro controlado:', err);

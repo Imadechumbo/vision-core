@@ -23,6 +23,27 @@
     var url = apiUrl(path);
     return fetch(url).then(function(r){ return r.ok ? r.json() : null; }).catch(function(e){ console.warn('[V44]', path, e.message); return null; });
   }
+
+  var delegatedStreamKeys = {};
+
+  function getSSEStreamKey(missionText, missionId) {
+    if (typeof window.__VISION_getSSEStreamKey__ === 'function') {
+      return window.__VISION_getSSEStreamKey__(missionText, missionId);
+    }
+    return missionId || missionText || 'mission';
+  }
+
+  function isRealOpenSSE(es) {
+    if (typeof window.__VISION_isRealOpenSSE__ === 'function') {
+      return window.__VISION_isRealOpenSSE__(es);
+    }
+    return !!(es &&
+      typeof es.addEventListener === 'function' &&
+      typeof es.close === 'function' &&
+      es.__V32_REAL_SSE__ === true &&
+      es.readyState !== 2);
+  }
+
   function val(x){
     if (x == null || x === '') return '—';
     if (Array.isArray(x)) return x.length ? x.join(', ') : '—';
@@ -180,13 +201,22 @@
     var es = window.__VISION_SSE__;
     var missionText = window.__VISION_ACTIVE_MISSION_TEXT__;
     var missionId = window.__VISION_LAST_RUN_LIVE_MISSION_ID__;
-    if (!es) return;
-    if (!es.__V32_REAL_SSE__) {
-      if (typeof window.__V32_startSSE__ === 'function' && missionText && window.__VISION_RUN_LIVE_ACCEPTED__) {
+    var streamKey = getSSEStreamKey(missionText, missionId);
+    var realOpen = isRealOpenSSE(es);
+    var esKey = es && (es.__VISION_SSE_STREAM_KEY__ || es.__VISION_SSE_MISSION_ID__);
+
+    if (!realOpen) {
+      if (typeof window.__V32_startSSE__ === 'function' &&
+          missionText &&
+          (missionId || window.__VISION_RUN_LIVE_ACCEPTED__) &&
+          !delegatedStreamKeys[streamKey]) {
+        delegatedStreamKeys[streamKey] = true;
         window.__V32_startSSE__(missionText, missionId);
       }
       return;
     }
+
+    if (esKey === streamKey) delegatedStreamKeys[streamKey] = true;
     if (es.__v44_attached__) return;
     es.__v44_attached__ = true;
     ['open','mission','mission_started','accepted','step','stage','progress','gate','pass_gold','mission_completed','success','done','completed','fail','error'].forEach(function(evt){
