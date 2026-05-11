@@ -168,3 +168,19 @@
 .v33-report-lbl { color: #a78bfa; }
 .v33-report-val { color: #e9d5ff; }
 .v33-report-gold { color: #facc15; font-weight: 700; }
+
+/* ── ESTADO INCOMPLETE / BLOCKED no orbit (V8.2.1) ─────────────── */
+.mc-node.v33-incomplete .mc-node-icon {
+  border-color: rgba(250,204,21,.5) !important;
+  color: #fbbf24 !important;
+  box-shadow: 0 0 12px rgba(250,204,21,.3) !important;
+}
+
+/* Core INCOMPLETE: amarelo/laranja, não verde */
+#mcCore.fail #mcCoreStatus {
+  color: #fbbf24 !important;
+}
+#mcCore.fail #mcCoreSub {
+  color: rgba(251,191,36,.7) !important;
+  font-size: 9px !important;
+}
