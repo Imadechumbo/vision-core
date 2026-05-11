@@ -323,6 +323,7 @@
     closeStaleSSE(reason);
     window.__VISION_ACTIVE_MISSION_TEXT__ = null;
     window.__VISION_RUN_LIVE_ACCEPTED__ = false;
+    window.__VISION_FORCE_RESET_DONE_KEY__ = null;
     mission.active = false;
   }
 
@@ -355,6 +356,13 @@
   /* ── START SSE (real, sem fallback, sem fake) ─────────────────── */
   function startSSE(missionText, missionId) {
     var streamKey = getSSEStreamKey(missionText, missionId);
+
+    if (window.__VISION_RUN_LIVE_ACCEPTED__ === true &&
+        window.__VISION_FORCE_RESET_DONE_KEY__ !== streamKey) {
+      window.__VISION_FORCE_NEW_SSE__ = false;
+      forceResetSSEForNewMission(missionText, missionId);
+      window.__VISION_FORCE_RESET_DONE_KEY__ = streamKey;
+    }
     var current = window.__VISION_SSE__;
     var currentKey = current && (current.__VISION_SSE_STREAM_KEY__ || current.__VISION_SSE_MISSION_ID__);
 
@@ -869,4 +877,5 @@
     boot();
   }
 })();
+
 
