@@ -103,6 +103,24 @@
     stream.scrollTop = stream.scrollHeight;
   }
 
+  /* ── BRIDGE GLOBALS: V32 escreve no chat V298 ── */
+  window.__VISION_APPEND_CHAT__ = function(type, text) {
+    addMessage(type || 'bot', text || '');
+    if (type === 'running' || type === 'system') setGlobalPipelineState('running');
+    if (type === 'gold')   setGlobalPipelineState('gold');
+    if (type === 'fail')   setGlobalPipelineState('fail');
+  };
+
+  window.__VISION_GET_CHAT_TEXT__ = function() {
+    var p = document.getElementById('v298Prompt');
+    return p ? p.value.trim() : '';
+  };
+
+  window.__VISION_CLEAR_CHAT_TEXT__ = function() {
+    var p = document.getElementById('v298Prompt');
+    if (p) p.value = '';
+  };
+
   async function postJson(path, body){
     const res = await fetch(apiUrl(path), {
       method:'POST',
@@ -163,12 +181,22 @@
 
   async function runMission(){
     if (window.__V32_OWNER__) {
-      // V32 é execution_owner — delegar ao executeBtn original
-      const execBtn = document.getElementById('executeBtn');
+      // V32 é execution_owner — copiar texto, mostrar no chat, depois disparar
       const prompt = $('v298Prompt');
       const missionText = document.getElementById('missionText');
-      if (prompt && missionText) missionText.value = prompt.value;
-      if (execBtn) execBtn.click();
+      const text = prompt ? prompt.value.trim() : '';
+      if (!text) return;
+      // Mostrar no chat antes de executar
+      addMessage('user', 'MISSÃO: ' + text);
+      // Sincronizar com missionText que o V32 lê
+      if (missionText) missionText.value = text;
+      // Limpar input
+      if (prompt) prompt.value = '';
+      // Disparar V32 com pequeno delay para o DOM atualizar
+      setTimeout(function() {
+        const execBtn = document.getElementById('executeBtn');
+        if (execBtn) execBtn.click();
+      }, 50);
       return;
     }
     const input = $('v298Prompt');

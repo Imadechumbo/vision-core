@@ -297,6 +297,23 @@
     window.__VISION_SSE_RETRY_INDEX__ = 0;
   }
 
+
+  /* ── BRIDGE: escrever no chat V298 (se disponível) ── */
+  function appendToChat(type, text) {
+    if (typeof window.__VISION_APPEND_CHAT__ === 'function') {
+      window.__VISION_APPEND_CHAT__(type, text);
+    } else {
+      // fallback: logsBox
+      var lb = document.getElementById('logsBox');
+      if (lb) {
+        lb.classList.remove('empty');
+        lb.innerHTML += '<div>[' + new Date().toLocaleTimeString() + '] ' +
+          String(text || '').replace(/[<>]/g, '') + '</div>';
+        lb.scrollTop = lb.scrollHeight;
+      }
+    }
+  }
+
   /* ── START SSE (real, sem fallback, sem fake) ─────────────────── */
   function startSSE(missionText) {
     closeSSE();
@@ -346,6 +363,10 @@
           // Update core label to current stage
           var cStat = document.getElementById('mcCoreStatus');
           if (cStat) cStat.textContent = (d.stage || 'RUN').slice(0, 8).toUpperCase();
+          // Escrever no chat V298
+          var stageLabel = d.stage || 'step';
+          var stageMsg = d.message || d.status || 'ok';
+          appendToChat('system', '▸ ' + stageLabel + ': ' + stageMsg);
         } catch (e) { console.warn('[V32] step error', e); }
       });
 
@@ -375,6 +396,7 @@
           setPipelineRow('PASS GOLD', 'GOLD');
           setCoreState('gold');
           console.log('[V32] PASS GOLD recebido');
+          appendToChat('gold', '★ PASS GOLD — pipeline validado');
 
           // Fetch mission report
           if (mission.id) {
@@ -396,6 +418,7 @@
         } catch (e) {}
         closeSSE();
         mission.active = false;
+        appendToChat('system', '✓ Missão concluída em ' + elapsed() + 's');
         console.log('[V32] SSE done — missão concluída');
       });
 
@@ -545,31 +568,43 @@
           : '') +
       '</div>';
 
-    // Inserir no v298ChatStream (chat principal de missão) — fallback para outros
-    var container = (
-      document.getElementById('v298ChatStream') ||
-      document.getElementById('v297ChatLog') ||
-      document.getElementById('v236CopilotMiniChat') ||
-      document.querySelector('.v236-copilot-mini-chat') ||
-      document.getElementById('logsBox')
-    );
-
-    if (container) {
-      var div = document.createElement('div');
-      div.innerHTML = reportHtml;
-      var card = div.firstChild;
-      container.appendChild(card);
-      setTimeout(function() {
-        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 100);
+    // Inserir via bridge V298 se disponível, senão fallback direto
+    if (typeof window.__VISION_APPEND_CHAT__ === 'function') {
+      // Inserir como elemento HTML no stream do V298
+      var stream = document.getElementById('v298ChatStream');
+      if (stream) {
+        var div = document.createElement('div');
+        div.innerHTML = reportHtml;
+        var card = div.firstChild;
+        var emptyHint = stream.querySelector('.v298-empty-hint');
+        if (emptyHint) emptyHint.remove();
+        stream.appendChild(card);
+        setTimeout(function() { card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
+      }
+    } else {
+      var container = (
+        document.getElementById('v298ChatStream') ||
+        document.getElementById('v297ChatLog') ||
+        document.getElementById('v236CopilotMiniChat') ||
+        document.querySelector('.v236-copilot-mini-chat') ||
+        document.getElementById('logsBox')
+      );
+      if (container) {
+        var div2 = document.createElement('div');
+        div2.innerHTML = reportHtml;
+        var card2 = div2.firstChild;
+        container.appendChild(card2);
+        setTimeout(function() { card2.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 100);
+      }
     }
-    console.log('[V33] MISSION REPORT inserido no chat — PASS GOLD');
+    console.log('[V32] MISSION REPORT inserido no chat V298');
   }
 
   /* ── RUN MISSION (POST /api/run-live) ─────────────────────────── */
   function runMission(missionText) {
     if (!missionText) return;
     mission.id = null;
+    appendToChat('system', '⚡ Iniciando missão SDDF...');
 
     fetch(apiUrl('/api/run-live'), {
       method: 'POST',
@@ -595,13 +630,19 @@
 
     // Capture phase (true) so we intercept before stopImmediatePropagation of other runtimes
     btn.addEventListener('click', function () {
-      var ta = document.getElementById('missionText') ||
-               document.querySelector('textarea.mission') ||
-               document.querySelector('[name="mission"]');
-      var text = ta ? ta.value.trim() : '';
+      // Priorizar o campo do VISION AI COMMAND (V298)
+      var text = '';
+      if (typeof window.__VISION_GET_CHAT_TEXT__ === 'function') {
+        text = window.__VISION_GET_CHAT_TEXT__();
+      }
+      if (!text) {
+        var ta = document.getElementById('v298Prompt') ||
+                 document.getElementById('missionText') ||
+                 document.querySelector('textarea.mission') ||
+                 document.querySelector('[name="mission"]');
+        text = ta ? ta.value.trim() : '';
+      }
       if (!text) return;
-      // Delay slightly so other runtimes that fire first can update UI text,
-      // but we control the SSE.
       setTimeout(function () { runMission(text); }, 200);
     }, true);
   }
