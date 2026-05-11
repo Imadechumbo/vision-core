@@ -615,13 +615,45 @@
     window.__V32_EXECUTE_HOOK__ = true;
 
     function getMissionText() {
-      var el = document.getElementById('missionText') ||
-               document.getElementById('v298Prompt') ||
-               document.querySelector('textarea[name="mission"]') ||
-               document.querySelector('textarea.mission') ||
-               document.querySelector('textarea') ||
-               document.querySelector('[contenteditable="true"]');
-      return el ? String(el.value || el.textContent || '').trim() : '';
+      var candidates = [];
+
+      if (document.activeElement) candidates.push(document.activeElement);
+
+      [
+        'missionText',
+        'v298Prompt',
+        'v297Prompt',
+        'v236Prompt',
+        'v273Prompt',
+        'prompt',
+        'commandInput',
+        'missionInput'
+      ].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) candidates.push(el);
+      });
+
+      Array.prototype.forEach.call(document.querySelectorAll(
+        'textarea, input[type="text"], input:not([type]), [contenteditable="true"], .mission textarea, .prompt textarea'
+      ), function(el) {
+        candidates.push(el);
+      });
+
+      for (var i = 0; i < candidates.length; i++) {
+        var el = candidates[i];
+        if (!el) continue;
+
+        var style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+        if (style && (style.display === 'none' || style.visibility === 'hidden')) continue;
+
+        var value = String(el.value || el.textContent || '').trim();
+        if (value && value.length > 2) {
+          window.__VISION_LAST_MISSION_TEXT__ = value;
+          return value;
+        }
+      }
+
+      return String(window.__VISION_LAST_MISSION_TEXT__ || '').trim();
     }
 
     function isExecuteTarget(target) {
@@ -765,3 +797,4 @@
     boot();
   }
 })();
+
