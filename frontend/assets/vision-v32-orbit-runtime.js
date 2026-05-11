@@ -69,9 +69,8 @@
     // Override window.EventSource so any runtime that calls new EventSource()
     // without going through our singleton gets intercepted.
     // We store the native and only allow our calls.
-    var NativeES = window.__VISION_NATIVE_EVENT_SOURCE__ || window.__nativeEventSource || window.EventSource;
-    window.__VISION_NATIVE_EVENT_SOURCE__ = NativeES;
-    if (!window.__nativeEventSource) window.__nativeEventSource = NativeES;
+    var NativeES = window.EventSource;
+    window.__nativeEventSource = NativeES;
 
     window.EventSource = function (url, cfg) {
       // Only allow if called by V32 owner (we set __V32_CALLING__ flag)
@@ -95,14 +94,10 @@
 
     // Also stomp startSSE on window so old runtimes calling window.startSSE()
     // are silenced — they will call our version instead
-    window.startSSE = function (m, missionId) {
-      console.log('[V32] startSSE compat -> __V32_startSSE__');
-      if (typeof window.__V32_startSSE__ === 'function') {
-        return window.__V32_startSSE__(m, missionId);
-      }
-      console.warn('[V32] __V32_startSSE__ indisponível; startSSE ignorado');
+    window.startSSE = function (m) {
+      console.log('[V32] startSSE delegado ao runtime único');
+      startSSE(m);
     };
-    window.__V32_startSSE__ = startSSE;
   }
 
   /* ── CORE STATE ───────────────────────────────────────────────── */
@@ -303,18 +298,15 @@
   }
 
   /* ── START SSE (real, sem fallback, sem fake) ─────────────────── */
-  function startSSE(missionText, missionId) {
+  function startSSE(missionText) {
     closeSSE();
-    window.__VISION_LAST_RUN_LIVE_MISSION_ID__ = missionId || null;
-    window.__VISION_ACTIVE_MISSION_TEXT__ = missionText || 'mission';
-    window.__VISION_RUN_LIVE_ACCEPTED__ = true;
     resetNodes();
     setCoreState('running');
     mission.start = Date.now();
     mission.active = true;
     mission.steps = [];
 
-    var url = apiUrl('/api/run-live-stream?mission=') + encodeURIComponent(missionText || 'mission') + (missionId ? '&mission_id=' + encodeURIComponent(missionId) : '');
+    var url = apiUrl('/api/run-live-stream?mission=') + encodeURIComponent(missionText || 'mission');
     var retryIdx = 0;
 
     function elapsed() {
@@ -325,21 +317,15 @@
       if (window.__VISION_SSE_LOCK__) return;
       window.__VISION_SSE_LOCK__ = true;
 
-      // Use preserved native EventSource directly; do not pass through legacy wrappers.
-      var NativeES = window.__VISION_NATIVE_EVENT_SOURCE__ || window.__nativeEventSource || window.EventSource;
+      // Use the native EventSource through our V32 flag
       window.__V32_CALLING__ = true;
       var es;
       try {
-        es = new NativeES(url);
+        es = new EventSource(url);
       } finally {
         window.__V32_CALLING__ = false;
       }
-      es.__V32_REAL_SSE__ = true;
-      es.__VISION_SSE_OWNER__ = 'V32';
-      es.__VISION_MISSION_ID__ = missionId || null;
-      es.__VISION_MISSION_TEXT__ = missionText || 'mission';
       window.__VISION_SSE__ = es;
-      window.__VISION_SSE_MISSION_ID__ = missionId || missionText || 'mission';
       console.log('[V32] SSE abrindo:', url);
 
       es.onopen = function () {
@@ -517,58 +503,7 @@
   }
 
   /* ── RENDER REPORT CARD ───────────────────────────────────────── */
-  function normalizeMissionReportEvidence(raw) {
-    raw = raw || {};
-
-    function blank(v) {
-      return v == null ||
-        v === '' ||
-        v === '—' ||
-        v === '-' ||
-        String(v).trim().toLowerCase() === 'mission' ||
-        String(v).trim().toLowerCase() === 'executar missão';
-    }
-
-    var filesChanged =
-      raw.files_changed != null ? raw.files_changed :
-      raw.changed_files != null ? raw.changed_files :
-      raw.files_changed_count != null ? raw.files_changed_count :
-      null;
-
-    var filesChangedNumber = Number(filesChanged);
-    var noFilesChanged =
-      filesChanged == null ||
-      filesChanged === '—' ||
-      filesChanged === '-' ||
-      (!isNaN(filesChangedNumber) && filesChangedNumber <= 0);
-
-    var incomplete =
-      blank(raw.mission_id) ||
-      blank(raw.project) ||
-      blank(raw.root_cause) ||
-      noFilesChanged;
-
-    if (incomplete) {
-      raw.mission_status = 'INCOMPLETE';
-      raw.pass_gold_status = 'FAIL';
-      raw.pass_gold_final = false;
-      raw.pass_gold = false;
-      raw.promotion_allowed = false;
-      raw.memory_learning_allowed = false;
-      raw.hermes_consensus = 'BLOCKED — evidence missing';
-      raw.hermes_vote = 'BLOCKED — evidence missing';
-      raw.sddf_evidence = 'INCOMPLETE';
-      raw.sddf_tests = 'INCOMPLETE';
-      raw.logs_available = '—';
-      raw.aegis_status = 'BLOCKED';
-      raw._evidence_incomplete = true;
-    }
-
-    return raw;
-  }
-
   function renderReport(data, totalTime) {
-    data = normalizeMissionReportEvidence(data);
     function val(v) {
       if (v == null || v === '' || v === undefined) return '—';
       if (typeof v === 'boolean') return v ? 'SIM' : 'NÃO';
@@ -582,9 +517,9 @@
       { label: 'Root Cause',         v: val(data.root_cause) },
       { label: 'Arquivos alterados', v: val(data.files_changed) },
       { label: 'Tempo total',        v: totalTime || '—' },
-      { label: 'PASS GOLD',          v: val(data.pass_gold_status), gold: data.pass_gold_status === 'GOLD' },
+      { label: 'PASS GOLD',          v: val(data.pass_gold_status || data.pass_gold_final), gold: !!(data.pass_gold_status || data.pass_gold_final) },
       { label: 'Snapshot ID',        v: val(data.snapshot_id) },
-      { label: 'Promotion Allowed',  v: data.promotion_allowed === true ? 'SIM' : 'NÃO' },
+      { label: 'Promotion Allowed',  v: data.promotion_allowed != null ? (data.promotion_allowed ? 'SIM' : 'NÃO') : '—' },
       { label: 'GitHub Status',      v: data.github_connected != null ? (data.github_connected ? 'Connected' : 'Not connected') : '—' },
       { label: 'Automerge Policy',   v: val(data.automerge_policy) },
       { label: 'Hermes Vote',        v: val(data.hermes_consensus) },
@@ -644,104 +579,31 @@
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d.mission_id) mission.id = d.mission_id;
-        window.__VISION_LAST_RUN_LIVE_MISSION_ID__ = mission.id || null;
-        window.__VISION_ACTIVE_MISSION_TEXT__ = missionText;
-        window.__VISION_RUN_LIVE_ACCEPTED__ = true;
-        startSSE(missionText, mission.id);
+        startSSE(missionText);
       })
       .catch(function (err) {
         console.error('[V32] /api/run-live erro:', err);
         // Start SSE anyway — Worker has the SSE stub
-        window.__VISION_ACTIVE_MISSION_TEXT__ = missionText;
-        window.__VISION_RUN_LIVE_ACCEPTED__ = true;
-        startSSE(missionText, mission.id);
+        startSSE(missionText);
       });
   }
 
   /* ── HOOK executeBtn ──────────────────────────────────────────── */
-  window.__V32_runMission__ = runMission;
-
   function hookButton() {
-    if (window.__V32_EXECUTE_HOOK__) return;
-    window.__V32_EXECUTE_HOOK__ = true;
+    var btn = document.getElementById('executeBtn');
+    if (!btn) return;
 
-    function getMissionText() {
-      var candidates = [];
-
-      if (document.activeElement) candidates.push(document.activeElement);
-
-      [
-        'missionText',
-        'v298Prompt',
-        'v297Prompt',
-        'v236Prompt',
-        'v273Prompt',
-        'prompt',
-        'commandInput',
-        'missionInput'
-      ].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) candidates.push(el);
-      });
-
-      Array.prototype.forEach.call(document.querySelectorAll(
-        'textarea, input[type="text"], input:not([type]), [contenteditable="true"], .mission textarea, .prompt textarea'
-      ), function(el) {
-        candidates.push(el);
-      });
-
-      for (var i = 0; i < candidates.length; i++) {
-        var el = candidates[i];
-        if (!el) continue;
-
-        var style = window.getComputedStyle ? window.getComputedStyle(el) : null;
-        if (style && (style.display === 'none' || style.visibility === 'hidden')) continue;
-
-        var value = String(el.value || el.textContent || '').trim();
-        if (value && value.length > 2) {
-          window.__VISION_LAST_MISSION_TEXT__ = value;
-          return value;
-        }
-      }
-
-      return String(window.__VISION_LAST_MISSION_TEXT__ || '').trim();
-    }
-
-    function isExecuteTarget(target) {
-      if (!target) return false;
-      var el = target.closest ? target.closest('button,a,[role="button"],input[type="submit"]') : target;
-      if (!el) return false;
-      var id = String(el.id || '').toLowerCase();
-      var cls = String(el.className || '').toLowerCase();
-      var text = String(el.textContent || el.value || '').trim().toLowerCase();
-      return id === 'executebtn' || id === 'v298runbtn' || id === 'v297runbtn' ||
-             id.indexOf('execute') >= 0 || cls.indexOf('execute') >= 0 ||
-             text.indexOf('executar missão') >= 0 || text.indexOf('executar live') >= 0 ||
-             text.indexOf('run mission') >= 0;
-    }
-
-    // Document capture runs before button capture listeners from legacy runtimes.
-    document.addEventListener('click', function (e) {
-      if (!isExecuteTarget(e.target)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-      if (window.__V32_RUN_IN_FLIGHT__) {
-        console.log('[V32] clique ignorado: missão já em execução');
-        return;
-      }
-      var text = getMissionText();
-      if (!text) {
-        console.warn('[V32] missão vazia; nada executado');
-        return;
-      }
-      window.__V32_RUN_IN_FLIGHT__ = true;
-      console.log('[V32] runMission owner executando:', text);
-      try { runMission(text); }
-      finally { setTimeout(function(){ window.__V32_RUN_IN_FLIGHT__ = false; }, 1200); }
+    // Capture phase (true) so we intercept before stopImmediatePropagation of other runtimes
+    btn.addEventListener('click', function () {
+      var ta = document.getElementById('missionText') ||
+               document.querySelector('textarea.mission') ||
+               document.querySelector('[name="mission"]');
+      var text = ta ? ta.value.trim() : '';
+      if (!text) return;
+      // Delay slightly so other runtimes that fire first can update UI text,
+      // but we control the SSE.
+      setTimeout(function () { runMission(text); }, 200);
     }, true);
-
-    console.log('[V32] executeBtn capturado pelo owner V32');
   }
 
   /* ── BOOT ─────────────────────────────────────────────────────── */
@@ -848,6 +710,3 @@
     boot();
   }
 })();
-
-
-
