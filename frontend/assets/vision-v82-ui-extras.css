@@ -184,3 +184,199 @@
   color: rgba(251,191,36,.7) !important;
   font-size: 9px !important;
 }
+
+/* ─────────────────────────────────────────────
+   V8.2.2 — Agent Local proportional orbit fix
+   Visual only. Zero runtime.
+───────────────────────────────────────────── */
+
+.agent-local,
+#agentLocal,
+.vision-agent-local,
+.mc-agent,
+.v33-agent-card {
+  overflow: hidden !important;
+}
+
+.mc-orb-wrap,
+.v33-orbit-wrap,
+.agent-orbit-wrap {
+  position: relative !important;
+  width: min(92%, 300px) !important;
+  height: 300px !important;
+  margin: 18px auto 28px auto !important;
+  overflow: visible !important;
+}
+
+.mc-orb,
+.v33-orbit,
+.agent-orbit {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 auto !important;
+  transform: none !important;
+}
+
+.mc-ring-1,
+.mc-ring-2,
+.mc-ring-3,
+.v33-ring-1,
+.v33-ring-2,
+.v33-ring-3 {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  border-radius: 999px !important;
+  pointer-events: none !important;
+}
+
+.mc-ring-1,
+.v33-ring-1 {
+  width: 138px !important;
+  height: 138px !important;
+}
+
+.mc-ring-2,
+.v33-ring-2 {
+  width: 214px !important;
+  height: 214px !important;
+}
+
+.mc-ring-3,
+.v33-ring-3 {
+  width: 284px !important;
+  height: 284px !important;
+}
+
+.mc-core,
+.v33-core,
+#mcCore {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 88px !important;
+  height: 88px !important;
+  border-radius: 999px !important;
+  z-index: 8 !important;
+  display: grid !important;
+  place-items: center !important;
+  text-align: center !important;
+}
+
+.mc-core #mcCoreState,
+.mc-core .mc-core-state,
+.v33-core-state {
+  font-size: 13px !important;
+  line-height: 1.05 !important;
+  letter-spacing: .08em !important;
+}
+
+.mc-core #mcCoreSub,
+.mc-core .mc-core-sub,
+.v33-core-sub {
+  font-size: 9px !important;
+  line-height: 1.05 !important;
+  letter-spacing: .08em !important;
+}
+
+/* Nodes distributed on a proportional 6-node orbit */
+.mc-node,
+.v33-node {
+  position: absolute !important;
+  width: 72px !important;
+  min-height: 54px !important;
+  margin: 0 !important;
+  transform: translate(-50%, -50%) !important;
+  text-align: center !important;
+  z-index: 10 !important;
+}
+
+.mc-node .mc-dot,
+.v33-node .mc-dot,
+.mc-node .v33-dot,
+.v33-node .v33-dot {
+  width: 34px !important;
+  height: 34px !important;
+  margin: 0 auto 5px auto !important;
+}
+
+.mc-node strong,
+.v33-node strong {
+  display: block !important;
+  font-size: 10px !important;
+  line-height: 1.05 !important;
+  white-space: nowrap !important;
+}
+
+.mc-node small,
+.v33-node small {
+  display: block !important;
+  font-size: 8px !important;
+  line-height: 1.05 !important;
+  opacity: .78 !important;
+}
+
+/* Canonical positions */
+.mc-node[data-key="openclaw"],
+.v33-node[data-key="openclaw"] {
+  left: 50% !important;
+  top: 9% !important;
+}
+
+.mc-node[data-key="scanner"],
+.v33-node[data-key="scanner"] {
+  left: 84% !important;
+  top: 28% !important;
+}
+
+.mc-node[data-key="hermes"],
+.v33-node[data-key="hermes"] {
+  left: 84% !important;
+  top: 67% !important;
+}
+
+.mc-node[data-key="patchengine"],
+.v33-node[data-key="patchengine"] {
+  left: 50% !important;
+  top: 90% !important;
+}
+
+.mc-node[data-key="aegis"],
+.v33-node[data-key="aegis"] {
+  left: 16% !important;
+  top: 67% !important;
+}
+
+.mc-node[data-key="passgold"],
+.v33-node[data-key="passgold"] {
+  left: 16% !important;
+  top: 28% !important;
+}
+
+.mc-node[data-key="github"],
+.v33-node[data-key="github"] {
+  left: 50% !important;
+  top: 104% !important;
+  opacity: .72 !important;
+}
+
+/* BLOCKED state: visible but not oversized */
+.mc-core.fail,
+.mc-core.incomplete,
+.v33-core.fail,
+.v33-core.incomplete {
+  box-shadow:
+    0 0 26px rgba(255, 90, 90, .42),
+    inset 0 0 24px rgba(255, 80, 80, .18) !important;
+}
+
+.mc-node.v33-incomplete .mc-dot,
+.v33-node.v33-incomplete .v33-dot,
+.mc-node.v33-fail .mc-dot,
+.v33-node.v33-fail .v33-dot {
+  box-shadow: 0 0 18px rgba(255, 206, 64, .5) !important;
+}
