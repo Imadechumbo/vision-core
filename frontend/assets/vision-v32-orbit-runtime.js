@@ -329,6 +329,28 @@
   function closeSSE() {
     closeStaleSSE('closeSSE');
   }
+  function forceResetSSEForNewMission(missionText, missionId) {
+    var newKey = getSSEStreamKey(missionText, missionId);
+
+    if (window.__VISION_SSE__) {
+      try { window.__VISION_SSE__.close(); } catch (_) {}
+    }
+
+    if (window.__VISION_SSE_RETRY_T__) {
+      try { clearTimeout(window.__VISION_SSE_RETRY_T__); } catch (_) {}
+    }
+
+    window.__VISION_SSE__ = null;
+    window.__VISION_SSE_LOCK__ = false;
+    window.__VISION_SSE_RETRY_T__ = null;
+    window.__VISION_SSE_RETRY_INDEX__ = 0;
+    window.__VISION_SSE_MISSION_ID__ = null;
+    window.__VISION_ACTIVE_SSE_STREAM_KEY__ = null;
+    window.__VISION_SSE_OWNER__ = null;
+
+    console.log('[V32] SSE resetado para nova missão:', newKey);
+  }
+
 
   /* ── START SSE (real, sem fallback, sem fake) ─────────────────── */
   function startSSE(missionText, missionId) {
@@ -338,10 +360,16 @@
 
     if (isRealOpenSSE(current)) {
       if (window.__VISION_SSE_MISSION_ID__ === streamKey && currentKey === streamKey) {
-        console.log('[V32] SSE já ativo (singleton protegido) para:', streamKey);
-        return;
+        if (window.__VISION_FORCE_NEW_SSE__ === true) {
+          closeStaleSSE('reset forçado para missão aceita: ' + streamKey);
+          window.__VISION_FORCE_NEW_SSE__ = false;
+        } else {
+          console.log('[V32] SSE já ativo (singleton protegido) para:', streamKey);
+          return;
+        }
+      } else {
+        closeStaleSSE('streamKey mudou de ' + (currentKey || window.__VISION_SSE_MISSION_ID__ || 'desconhecido') + ' para ' + streamKey);
       }
-      closeStaleSSE('streamKey mudou de ' + (currentKey || window.__VISION_SSE_MISSION_ID__ || 'desconhecido') + ' para ' + streamKey);
     } else if (current) {
       closeStaleSSE('SSE dummy/stub/fechado antes de abrir ' + streamKey);
     } else if (window.__VISION_SSE_LOCK__) {
@@ -841,3 +869,4 @@
     boot();
   }
 })();
+
