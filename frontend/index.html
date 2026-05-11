@@ -67,11 +67,12 @@ window.__VISION_RUNTIME_VERSION__ = "2.9.10-clean-front-v31-gateway";
 
 <link rel="stylesheet" href="assets/vision-v297-ui.css">
 <link rel="stylesheet" href="assets/vision-v33-orbit.css">
-<script src="assets/vision-runtime-v297.js?v=297"></script>
-<script src="assets/vision-v297-interactions.js?v=297" defer></script>
+<link rel="stylesheet" href="assets/vision-v82-ui-extras.css">
+
+
 <link rel="stylesheet" href="assets/vision-v298-command-chat.css">
-<link rel="stylesheet" href="assets/vision-v298-final-hardened.css">
-<link rel="stylesheet" href="assets/vision-v298-final-hard-fix2.css">
+
+
 </head>
 <body>
 <header class="top">
@@ -847,8 +848,6 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
 
 })(); // fim initMissionControlOrb
 </script>
-<script src="assets/v23-ui-system.js"></script>
-<script src="assets/v231-backend-agents.js"></script>
 <script>
 (function(){
   const API_BASE = (window.API || window.API_BASE_URL || window.RUNTIME_CONFIG?.API_BASE_URL || '').replace(/\/$/, '');
@@ -971,30 +970,31 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
   const lb=document.getElementById('logsBox'); if(lb){new MutationObserver(()=>{const t=lb.textContent.toLowerCase(); if(t.includes('fail')||t.includes('erro')||t.includes('bloqueado')){paint(STAGES[Math.max(current,0)]||'Scanner','fail');return;} Object.keys(ALIASES).forEach(k=>{if(t.includes(k))paint(ALIASES[k],t.includes('running')||t.includes('executando')||t.includes('iniciando')?'running':'done')});}).observe(lb,{childList:true,subtree:true,characterData:true});}
 })();
 </script>
-<script src="assets/vision-v298-command-chat.js?v=298" defer></script>
-<script src="assets/vision-v298-final-hard-fix2.js?v=298-fix2" defer></script>
-<script src="assets/vision-v299-fullstack-runtime.js?v=299" defer></script>
-<script src="assets/vision-v2910-clean-runtime.js?v=2910-clean" defer></script>
 
-<script id="V31_FORCE_GATEWAY_FINAL">
-(function(){
-  const GATEWAY = "https://visioncore-api-gateway.weiganlight.workers.dev";
-  function apiUrl(p){ p=String(p||''); if(p.startsWith('/api')) return GATEWAY+p; if(p.startsWith('api/')) return GATEWAY+'/'+p; if(/^https?:/.test(p)) return p; return GATEWAY+'/api'+(p.startsWith('/')?p:'/'+p); }
-  function forceGateway(){
-    window.RUNTIME_CONFIG = { API_BASE_URL: GATEWAY }; window.API_BASE_URL = GATEWAY; window.__VISION_API__ = GATEWAY; window.API = GATEWAY; window.getVisionApi = () => GATEWAY;
-    if(window.VisionCoreRuntime){ window.VisionCoreRuntime.api=GATEWAY; window.VisionCoreRuntime.active=GATEWAY; window.VisionCoreRuntime.apiUrl=apiUrl; window.VisionCoreRuntime.withBase=apiUrl; }
-  }
-  forceGateway(); document.addEventListener('DOMContentLoaded', forceGateway); setTimeout(forceGateway,0); setTimeout(forceGateway,500); setTimeout(forceGateway,1500);
-})();
-</script>
+
+
+
+
+
 
   <!-- V3.2: Runtime único SSE — carrega último para neutralizar runtimes anteriores -->
-  <script src="assets/vision-v32-orbit-runtime.js?v=32" defer></script>
+  
   <!-- V3.4 Enterprise Live -->
-  <script src="assets/vision-v34-enterprise.js?v=34" defer></script>
+  
   <!-- V3.5 Telemetria Real -->
-  <script src="assets/vision-v35-telemetry.js?v=35" defer></script>
+  
   <!-- V4.4 Runtime Consistency Pass -->
-  <script src="assets/vision-v44-runtime-consistency.js?v=44" defer></script>
+  
+
+  <!-- V8.2 SCRIPTS — runtime único + UI command -->
+  <!-- Utilitários visuais -->
+  <script src="assets/v23-ui-system.js"></script>
+  <script src="assets/v231-backend-agents.js"></script>
+
+  <!-- 1. Runtime Owner (único executor: run-live, SSE, report) -->
+  <script src="assets/vision-runtime-owner.js?v=82" defer></script>
+
+  <!-- 2. UI Command Chat (chat visual, modos LLM, bridge) -->
+  <script src="assets/vision-ui-command.js?v=82" defer></script>
 </body>
 </html>

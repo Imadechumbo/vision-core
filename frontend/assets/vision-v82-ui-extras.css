@@ -1,0 +1,170 @@
+/*
+ * VISION CORE V8.2 — UI EXTRAS
+ * Badges de modo + botões de seleção de modo
+ * Não altera layout geral, identidade visual ou orbit.
+ */
+
+/* ── BADGES ─────────────────────────────────────────────────── */
+.vui-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  padding: 2px 7px;
+  border-radius: 20px;
+  margin-right: 7px;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+}
+
+.vui-badge-VOCÊ,
+.vui-badge-voce {
+  background: rgba(124,58,237,.25);
+  color: #c084fc;
+  border: 1px solid rgba(168,85,247,.35);
+}
+
+.vui-badge-COPILOT {
+  background: rgba(34,211,238,.12);
+  color: #67e8f9;
+  border: 1px solid rgba(34,211,238,.3);
+}
+
+.vui-badge-CAVEMAN {
+  background: rgba(251,146,60,.12);
+  color: #fdba74;
+  border: 1px solid rgba(251,146,60,.3);
+}
+
+.vui-badge-SDDF {
+  background: rgba(34,197,94,.12);
+  color: #86efac;
+  border: 1px solid rgba(34,197,94,.3);
+}
+
+.vui-badge-SYSTEM {
+  background: rgba(250,204,21,.1);
+  color: #fde68a;
+  border: 1px solid rgba(250,204,21,.25);
+}
+
+/* ── MENSAGENS COM BADGE ─────────────────────────────────────── */
+.v298-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.v298-message span:last-child {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+/* Mensagem do usuário */
+.v298-message.user {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.v298-message.user .vui-badge { margin-right: 0; margin-left: 7px; }
+
+/* Caveman: fundo laranja suave */
+.v298-message.bot .vui-badge-CAVEMAN + span,
+.v298-message.caveman {
+  background: rgba(251,146,60,.06) !important;
+  border-color: rgba(251,146,60,.2) !important;
+}
+
+/* Gold: destaque */
+.v298-message.gold {
+  background: rgba(250,204,21,.08) !important;
+  border: 1px solid rgba(250,204,21,.3) !important;
+  color: #fde68a !important;
+}
+
+/* ── BOTÕES DE MODO ──────────────────────────────────────────── */
+.vui-mode-label {
+  font-size: 11px;
+  color: rgba(255,255,255,.4);
+  letter-spacing: .08em;
+  align-self: center;
+  white-space: nowrap;
+  margin-right: 2px;
+}
+
+.vui-mode-btn {
+  background: rgba(10,10,18,.8);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  color: rgba(255,255,255,.5);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s ease;
+  white-space: nowrap;
+}
+
+.vui-mode-btn:hover {
+  border-color: rgba(168,85,247,.35);
+  color: #fff;
+  background: rgba(124,58,237,.1);
+}
+
+.vui-mode-btn.active {
+  background: rgba(124,58,237,.2);
+  border-color: rgba(168,85,247,.55);
+  color: var(--purple2, #a855f7);
+}
+
+/* Caveman ativo: laranja */
+.vui-mode-btn[data-mode="caveman"].active {
+  background: rgba(251,146,60,.15);
+  border-color: rgba(251,146,60,.45);
+  color: #fdba74;
+}
+
+/* ── AJUSTE TOOL ROW para caber os botões de modo ────────────── */
+.v298-tool-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  align-items: center !important;
+  margin-top: 8px !important;
+}
+
+/* ── REPORT CARD ─────────────────────────────────────────────── */
+.v33-report {
+  background: linear-gradient(155deg, rgba(12,8,24,.99), rgba(7,5,16,.99));
+  border: 1px solid rgba(250,204,21,.38);
+  border-radius: 12px;
+  padding: 12px;
+  margin: 6px 0;
+  box-shadow: 0 0 22px rgba(250,204,21,.08);
+}
+
+.v33-report-title {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: #facc15;
+  text-align: center;
+  line-height: 1.7;
+  margin-bottom: 8px;
+}
+
+.v33-report-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(168,85,247,.08);
+  font-size: 10px;
+}
+
+.v33-report-lbl { color: #a78bfa; }
+.v33-report-val { color: #e9d5ff; }
+.v33-report-gold { color: #facc15; font-weight: 700; }
