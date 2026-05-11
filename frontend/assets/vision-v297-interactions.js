@@ -1,7 +1,114 @@
-(function(){'use strict';function $(id){return document.getElementById(id)}function appendChat(text,type){const log=$('v297ChatLog')||$('v236CopilotMiniChat');if(!log)return;const div=document.createElement('div');div.className=(log.id==='v297ChatLog')?('v297-msg '+(type||'bot')):('v236-copilot-msg '+(type||'bot'));div.textContent=text;log.appendChild(div);log.scrollTop=log.scrollHeight}function setBodyState(state){document.body.classList.remove('v297-pipeline-fail','v297-pipeline-gold','v297-pipeline-ok','v297-pipeline-running');if(state)document.body.classList.add('v297-pipeline-'+state);const badge=$('mcLiveBadge');if(badge){badge.classList.remove('fail','gold','ok');if(state==='fail'){badge.textContent='● FAIL';badge.classList.add('fail')}else if(state==='gold'){badge.textContent='● PASS GOLD';badge.classList.add('gold')}else{badge.textContent='● LIVE';badge.classList.add('ok')}}}function setTimeline(stage,status){const aliases={'Patch':'PatchEngine','Patch Engine':'PatchEngine','PASS_GOLD':'PASS GOLD','pass_gold':'PASS GOLD'};const normalized=aliases[stage]||stage;document.querySelectorAll('.v236-tl-step').forEach(el=>{if(el.dataset.stage===normalized){el.classList.remove('running','done','fail');if(status==='running')el.classList.add('running');else if(status==='fail'||status==='error')el.classList.add('fail');else el.classList.add(normalized==='PASS GOLD'?'gold':'done');const sm=el.querySelector('small');if(sm)sm.textContent=status==='fail'?'erro':(normalized==='PASS GOLD'?'GOLD':'ok')}});if(status==='fail')setBodyState('fail');else if(normalized==='PASS GOLD')setBodyState('gold');else setBodyState('ok')}window.v297SetTimeline=setTimeline;async function postJson(path,payload){const res=await fetch(window.VisionCoreRuntime.apiUrl(path),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload||{})});const text=await res.text();try{return JSON.parse(text||'{}')}catch{return{ok:false,raw:text,status:res.status}}}function startSSE(mission){if(window.__V32_OWNER__){console.log('[v297] startSSE ignorado: V32 é o owner da execução');return;}// DELEGADO ao singleton v2910 — evita múltiplos EventSource
-if(window.VisionApi&&window.VisionApi.runMission){// runMission já chama startSSE singleton internamente
-return;}
-// Fallback seguro: usa singleton global se disponível
-if(window.__VISION_SSE_LOCK__){appendChat('SSE já ativo (singleton).','bot');return;}
-// Usa window.EventSource que é proxy do v2910 (aponta para Worker)
-const es=new EventSource((window.__VISION_API__||'')+'/api/run-live-stream?mission='+encodeURIComponent(mission||'mission'));window.__VISION_SSE__=es;window.__VISION_SSE_LOCK__=true;es.addEventListener('open',()=>{appendChat('SSE conectado.','bot');setTimeline('Scanner','running');setTimeout(()=>{window.__VISION_SSE_LOCK__=false;},500)});es.addEventListener('step',ev=>{const data=JSON.parse(ev.data||'{}');setTimeline(data.stage,'done');appendChat((data.stage||'step')+': '+(data.message||'ok'),'bot')});es.addEventListener('done',ev=>{setTimeline('PASS GOLD','gold');appendChat('PASS GOLD confirmado.','bot');es.close();window.__VISION_SSE__=null;window.__VISION_SSE_LOCK__=false;});es.addEventListener('ping',()=>{});es.onerror=()=>{if(es.readyState===2){appendChat('SSE conexão perdida.','bot');setBodyState('fail');try{es.close()}catch{};window.__VISION_SSE__=null;window.__VISION_SSE_LOCK__=false;}else{console.log('[SSE v297] erro não-fatal readyState='+es.readyState+' — ignorado');}}}document.addEventListener('DOMContentLoaded',()=>{const execute=$('executeBtn'),missionText=$('missionText'),runSddf=$('v297RunSddfBtn'),addFile=$('v297AddFileBtn')||$('v236FileBtn'),addImage=$('v297AddImageBtn'),fileInput=$('v297FileInput')||$('v236FileInput'),copilotBtn=$('v236CopilotBtn');function runMission(){if(window.__V32_OWNER__){console.log('[v297] runMission ignorado: V32 é o owner da execução');return;}const mission=(missionText&&missionText.value.trim())||'missão SDDF';appendChat('MISSÃO: '+mission,'user');setTimeline('Scanner','running');postJson('/run-live',{mission,mode:'dry-run',project_id:'vision-core'}).then(data=>{if(!data.ok){appendChat('Falha no run-live: '+(data.error||data.message||data.status||'erro'),'bot');setBodyState('fail');return}appendChat('Backend aceitou missão: '+(data.mission_id||data.status||'ok'),'bot');startSSE(mission)}).catch(e=>{appendChat('Erro de conexão: '+e.message,'bot');setBodyState('fail')})}if(execute)execute.addEventListener('click',runMission,true);if(runSddf)runSddf.addEventListener('click',runMission);if(addFile&&fileInput)addFile.addEventListener('click',()=>fileInput.click());if(addImage&&fileInput)addImage.addEventListener('click',()=>fileInput.click());if(fileInput)fileInput.addEventListener('change',()=>appendChat(Array.from(fileInput.files||[]).length+' arquivo(s)/imagem(ns) adicionados ao contexto.','bot'));if(copilotBtn&&missionText)copilotBtn.addEventListener('click',async()=>{const message=missionText.value.trim()||'Explique o Vision Core';appendChat(message,'user');try{const data=await postJson('/copilot',{message,mode:'general'});appendChat(data.answer||'Posso conversar sobre qualquer assunto e corrigir projetos via missão SDDF.','bot')}catch(e){appendChat('Posso conversar sobre qualquer assunto e corrigir projetos via missão SDDF.','bot')}},true);appendChat('V2.9.7 carregado: timeline compacta, chat universal e agent local discreto.','bot')})})();
+/**
+ * VISION CORE V2.9.7 — LEGACY UI OBSERVER
+ * ─────────────────────────────────────────────────────────────────
+ * RUNTIME ROLE  : observer / legacy-ui
+ * OWNER         : false
+ * DOMAINS       : timeline-visual (read bridge only)
+ * DEPENDS ON    : window.__V32_OWNER__ = true
+ *
+ * REGRAS (SDDF SPEC V8.1.0):
+ * - Quando __V32_OWNER__ = true: NENHUMA ação de execução
+ * - Nunca chamar /run-live
+ * - Nunca criar EventSource
+ * - Nunca registrar listener em executeBtn
+ * - Nunca renderizar Mission Report
+ * - Nunca emitir PASS GOLD
+ * - Pode prover window.v297SetTimeline como ponte visual para V32
+ * ─────────────────────────────────────────────────────────────────
+ */
+(function () {
+  'use strict';
+
+  /* ── GUARD: só registra uma vez ── */
+  if (window.__V297_OBSERVER__) return;
+  window.__V297_OBSERVER__ = true;
+
+  /* ── HELPER: acessa elemento por id ── */
+  function $(id) { return document.getElementById(id); }
+
+  /* ── HELPER: adiciona mensagem no chat legado (se existir) ── */
+  function appendChat(text, type) {
+    var log = $('v297ChatLog');
+    if (!log) return;
+    var div = document.createElement('div');
+    div.className = 'v297-msg ' + (type || 'bot');
+    div.textContent = text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  /* ── HELPER: atualiza badge de estado ── */
+  function setBodyState(state) {
+    document.body.classList.remove(
+      'v297-pipeline-fail',
+      'v297-pipeline-gold',
+      'v297-pipeline-ok',
+      'v297-pipeline-running'
+    );
+    if (state) document.body.classList.add('v297-pipeline-' + state);
+
+    var badge = $('mcLiveBadge');
+    if (!badge) return;
+    badge.classList.remove('fail', 'gold', 'ok');
+    if (state === 'fail') {
+      badge.textContent = '● FAIL';
+      badge.classList.add('fail');
+    } else if (state === 'gold') {
+      badge.textContent = '● PASS GOLD';
+      badge.classList.add('gold');
+    } else {
+      badge.textContent = '● LIVE';
+      badge.classList.add('ok');
+    }
+  }
+
+  /* ── TIMELINE BRIDGE: expõe v297SetTimeline para V32 usar ── */
+  function setTimeline(stage, status) {
+    var aliases = {
+      'Patch': 'PatchEngine',
+      'Patch Engine': 'PatchEngine',
+      'PASS_GOLD': 'PASS GOLD',
+      'pass_gold': 'PASS GOLD'
+    };
+    var normalized = aliases[stage] || stage;
+
+    document.querySelectorAll('.v236-tl-step').forEach(function (el) {
+      if (el.dataset.stage !== normalized) return;
+      el.classList.remove('running', 'done', 'fail');
+      if (status === 'running') {
+        el.classList.add('running');
+      } else if (status === 'fail' || status === 'error') {
+        el.classList.add('fail');
+      } else {
+        el.classList.add(normalized === 'PASS GOLD' ? 'gold' : 'done');
+      }
+      var sm = el.querySelector('small');
+      if (sm) {
+        sm.textContent = status === 'fail'
+          ? 'erro'
+          : (normalized === 'PASS GOLD' ? 'GOLD' : 'ok');
+      }
+    });
+
+    if (status === 'fail') setBodyState('fail');
+    else if (normalized === 'PASS GOLD') setBodyState('gold');
+    else setBodyState('ok');
+  }
+
+  /* Expõe como bridge global para V32 */
+  window.v297SetTimeline = setTimeline;
+
+  /* ── INIT: sem qualquer ação de execução ── */
+  document.addEventListener('DOMContentLoaded', function () {
+    /* V32 é o owner — este runtime não registra executeBtn nem startSSE */
+    if (window.__V32_OWNER__) {
+      console.log('[V297] observer read-only ativo — V32 é execution owner');
+      return;
+    }
+
+    /* Fallback: V32 não carregou (situação de emergência) */
+    console.warn('[V297] __V32_OWNER__ não detectado — modo standby');
+    appendChat('V2.9.7 carregado em modo standby (aguardando V32).', 'bot');
+  });
+
+})();
