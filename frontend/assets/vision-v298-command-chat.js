@@ -162,6 +162,10 @@
   }
 
   async function runMission(){
+    if (window.__V32_OWNER__) {
+      console.log('[v298] runMission ignorado: V32 é o owner da execução');
+      return;
+    }
     const input = $('v298Prompt');
     const text = (input?.value || '').trim() || 'executar missão SDDF';
     addMessage('user', 'MISSÃO: ' + text);
@@ -191,6 +195,10 @@
   }
 
   function startSSE(mission){
+    if (window.__V32_OWNER__) {
+      console.log('[v298] startSSE ignorado: V32 é o owner da execução');
+      return;
+    }
     // SINGLETON GUARD — respeita window.__VISION_SSE__ do v2910
     if (window.__VISION_SSE_LOCK__) {
       addMessage('system', 'SSE já ativo (singleton protegido).');
@@ -364,3 +372,4 @@
 
   document.addEventListener('DOMContentLoaded', buildCommandChat);
 })();
+
