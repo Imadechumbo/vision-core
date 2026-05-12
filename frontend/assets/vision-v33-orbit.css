@@ -28,7 +28,7 @@ main.shell.grid > aside:last-of-type {
   height: fit-content !important;
   max-height: calc(100vh - 32px) !important;
   overflow-y: auto !important;   /* scroll interno — todo conteúdo visível */
-  overflow-x: hidden !important; /* corrige gap/overflow horizontal */
+  overflow-x: visible !important;
   z-index: 20 !important;
   /* scrollbar fina discreta */
   scrollbar-width: thin;
@@ -92,7 +92,7 @@ main.shell.grid > aside:last-of-type {
 }
 
 .mc-ring-3 {
-  width: 256px !important;
+  width: 316px !important;
   height: 250px !important;
   border-width: 1px;
   border-color: rgba(168, 85, 247, .07) !important;

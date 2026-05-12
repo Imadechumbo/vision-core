@@ -67,12 +67,9 @@ window.__VISION_RUNTIME_VERSION__ = "2.9.10-clean-front-v31-gateway";
 
 <link rel="stylesheet" href="assets/vision-v297-ui.css">
 <link rel="stylesheet" href="assets/vision-v33-orbit.css">
-<link rel="stylesheet" href="assets/vision-v82-ui-extras.css">
-
-
 <link rel="stylesheet" href="assets/vision-v298-command-chat.css">
-
-
+<link rel="stylesheet" href="assets/vision-v298-final-hardened.css">
+<link rel="stylesheet" href="assets/vision-v298-final-hard-fix2.css">
 </head>
 <body>
 <header class="top">
@@ -619,8 +616,7 @@ console.info('VISION CORE API_BASE_URL:', API);
 const logsBox=document.getElementById('logsBox'), logsPanel=document.getElementById('logsPanel');
 function showLog(scope,msg,cls=''){if(!logsBox)return;if(logsPanel)logsPanel.classList.add('active');logsBox.classList.remove('empty');logsBox.innerHTML+=`<div class="${cls}">[${new Date().toLocaleTimeString()}] ${scope}: ${String(msg||'').replace(/[<>]/g,'') }</div>`;logsBox.scrollTop=logsBox.scrollHeight}
 function setRuntimeState(s){if(window.runtimeMonitor)runtimeMonitor.className=s;if(window.runtimeText)runtimeText.textContent=String(s||'stable').toUpperCase()}
-const RUN_PATH = '/api/run-live'; // DESATIVADO — vision-runtime-owner.js controla execução
-// executeBtn controlado pelo vision-runtime-owner.js (defer) — não registrar aqui
+const RUN_PATH='/api/run-live';
 const STREAM_PATH='/api/run-live-stream';
 async function api(path, opts={}){
   let res = await fetch(getVisionApi() + path, opts);
@@ -690,16 +686,24 @@ githubStatusBtn.onclick=checkGithub;
 policyBtn.onclick=async()=>{const d=await api('/api/github/automerge-policy'); githubResult.innerHTML='Auto-merge: '+d.default+'<br>Required: '+d.required.join(', ')};
 githubPrBtn.onclick=async()=>{setRuntimeState('analyzing');showLog('GITHUB','criando PR com PASS GOLD...','cyan');const stamp=new Date().toISOString();const res=await fetch('/api/github/create-pr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pass_gold:true,title:'VISION CORE V2.3.4 MARKET READY patch',message:'chore(vision-core): validate V2.3.4 static hardened',changes:[{path:'VISION_CORE_V9_5_1_PROOF.md',content:'# VISION CORE V2.3.4\n\nPASS GOLD confirmado em '+stamp+'\n\nFront VISION CORE V2.9.4 ULTRA.\n'}]})});const data=await res.json();if(!res.ok||!data.ok){githubResult.innerHTML=`<span class="red">${data.message||data.error||'Falha ao criar PR'}</span>`;showLog('GITHUB',data.message||'Falha ao criar PR','red');setRuntimeState('stable');return}githubResult.innerHTML=`PR criado: <a href="${data.pr_url}" target="_blank">${data.pr_url}</a><br>Vault: ${data.vault_manifest}`;showLog('GITHUB','PR criado com sucesso','green');setRuntimeState('stable')};
 diffBtn.onclick=async()=>{const d=await api('/api/diff/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:'README.md',before:'VISION CORE V9.4',after:'VISION CORE V2.3.4 MARKET READY\nVISION CORE V2.9.4 ULTRA'})});diffViewer.textContent=d.patch;showLog('DIFF','preview gerado')};
-executeBtn.onclick = function() {
-    // Delegado ao vision-runtime-owner.js (runtime único)
-    // NÃO chamar run-live aqui — apenas sincronizar o textarea
-    var text = document.getElementById('v298Prompt')?.value?.trim()
-            || document.getElementById('missionText')?.value?.trim()
-            || '';
-    if (text && document.getElementById('missionText')) {
-      document.getElementById('missionText').value = text;
-    }
-  };
+executeBtn.onclick=async()=>{
+  const mission=(missionText.value.trim()||"diagnosticar runtime do projeto");
+  const project=(projectSelector&&projectSelector.value)||"technetgame";
+  const mode=(window.runMode&&runMode.value)||"dry-run";
+  showLog("MISSION","iniciando "+mode+" em "+project,"cyan");
+  setRuntimeState("analyzing");
+  try{
+    const data=await api(RUN_PATH,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({project_id:project,mission,error:mission,dry_run:mode==="dry-run",mode})});
+    if(!data.ok){showLog("MISSION",data.error||data.message||("HTTP "+(data.status||"falha")),"red");setRuntimeState("stable");return;}
+    const mid=data.id||data.mission_id||(data.result&&data.result.id);
+    showLog("MISSION","missão concluída: "+(mid||"sem id"),"green");
+    const steps=data.timeline||((data.result&&data.result.timeline)||[]);
+    steps.forEach(x=>showLog(x.status||"STEP",(x.step||"")+" "+(x.detail||""),x.status==="fail"?"red":x.status==="running"?"yellow":"green"));
+    if(mid) await loadMissionPoll(mid);
+    await loadTimeline(); await loadScore();
+  }catch(e){showLog("MISSION","erro de conexão: "+e.message,"red");}
+  setRuntimeState("stable");
+};
 async function loadMissionPoll(mid){try{const d=await api("/api/mission/"+mid);const steps=d.steps||d.mission?.timeline||d.timeline||[];steps.forEach(x=>showLog("LIVE",(x.step||x.stage||"STEP")+" • "+(x.detail||x.message||""),(x.status==="fail"||x.stage==="FAIL")?"red":(x.status==="running"?"yellow":"green")));}catch{}}
 enqueueBtn.onclick=enqueueMission;workerRefreshBtn.onclick=loadWorkers;
 downloadLogsBtn.onclick=()=>{window.location.href=API+'/api/logs/download'};
@@ -965,29 +969,22 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
 </script>
 
 
-
-
-
-
-
-  <!-- V3.2: Runtime único SSE — carrega último para neutralizar runtimes anteriores -->
-  
-  <!-- V3.4 Enterprise Live -->
-  
-  <!-- V3.5 Telemetria Real -->
-  
-  <!-- V4.4 Runtime Consistency Pass -->
-  
+<script id="V31_FORCE_GATEWAY_FINAL">
+(function(){
+  const GATEWAY = "https://visioncore-api-gateway.weiganlight.workers.dev";
+  function apiUrl(p){ p=String(p||''); if(p.startsWith('/api')) return GATEWAY+p; if(p.startsWith('api/')) return GATEWAY+'/'+p; if(/^https?:/.test(p)) return p; return GATEWAY+'/api'+(p.startsWith('/')?p:'/'+p); }
+  function forceGateway(){
+    window.RUNTIME_CONFIG = { API_BASE_URL: GATEWAY }; window.API_BASE_URL = GATEWAY; window.__VISION_API__ = GATEWAY; window.API = GATEWAY; window.getVisionApi = () => GATEWAY;
+    if(window.VisionCoreRuntime){ window.VisionCoreRuntime.api=GATEWAY; window.VisionCoreRuntime.active=GATEWAY; window.VisionCoreRuntime.apiUrl=apiUrl; window.VisionCoreRuntime.withBase=apiUrl; }
+  }
+  forceGateway(); document.addEventListener('DOMContentLoaded', forceGateway); setTimeout(forceGateway,0); setTimeout(forceGateway,500); setTimeout(forceGateway,1500);
+})();
+</script>
 
   <!-- V8.2 SCRIPTS — runtime único + UI command -->
-  <!-- Utilitários visuais -->
   <script src="assets/v23-ui-system.js"></script>
   <script src="assets/v231-backend-agents.js"></script>
-
-  <!-- 1. Runtime Owner (único executor: run-live, SSE, report) -->
   <script src="assets/vision-runtime-owner.js?v=82" defer></script>
-
-  <!-- 2. UI Command Chat (chat visual, modos LLM, bridge) -->
   <script src="assets/vision-ui-command.js?v=82" defer></script>
 </body>
 </html>
