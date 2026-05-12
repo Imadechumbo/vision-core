@@ -12,13 +12,11 @@
 
 const DEFAULT_ORIGIN = "http://tngh-aws-final-v2-env.eba-fi8g5gme.us-east-1.elasticbeanstalk.com";
 
-const ALLOWED_ORIGINS = new Set([
-  "https://visioncoreai.pages.dev",
-  "https://c210aea7.visioncoreai.pages.dev",
-  "https://723d0023.visioncoreai.pages.dev",
+const LOCAL_ORIGINS = new Set([
   "http://localhost:3000",
   "http://127.0.0.1:3000"
 ]);
+const PAGES_ORIGIN_RE = /^https:\/\/([a-z0-9-]+\.)?visioncoreai\.pages\.dev$/i;
 
 // Fallback simples. Para produção pesada, use binding de controle de quota ou Durable Object.
 const BUCKETS = new Map();
@@ -40,7 +38,7 @@ function corsHeaders(request) {
     "Vary": "Origin",
   };
 
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
+  if (origin && (PAGES_ORIGIN_RE.test(origin) || LOCAL_ORIGINS.has(origin))) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
 
@@ -56,6 +54,40 @@ function jsonResponse(request, body, status = 200) {
       "Cache-Control": "no-store"
     }
   });
+}
+
+function sseResponse(request, events) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      for (const event of events) {
+        controller.enqueue(encoder.encode(`event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`));
+      }
+      controller.close();
+    }
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders(request),
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no"
+    }
+  });
+}
+
+function evidenceVerdict(evidence) {
+  const list = Array.isArray(evidence) ? evidence.filter(Boolean) : [];
+  return {
+    pass_gold: false,
+    promotion_allowed: false,
+    evidence_count: list.length,
+    evidence_required: 3,
+    status: list.length >= 3 ? "EVIDENCE_REVIEW_REQUIRED" : "INSUFFICIENT_EVIDENCE"
+  };
 }
 
 function checkRateLimit(key) {
@@ -224,13 +256,56 @@ export default {
       }, 404);
     }
 
+
+    // POST /api/run-live — cria missão e exige evidência real antes de PASS GOLD.
+    if (request.method === "POST" && url.pathname === "/api/run-live") {
+      let body = {};
+      try { body = await request.clone().json(); } catch (_) {}
+      const missionId = `mission_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      return jsonResponse(request, {
+        ok: true,
+        mission_id: missionId,
+        project_id: body.project_id || "unknown",
+        mode: body.mode || "live",
+        pass_gold: false,
+        promotion_allowed: false,
+        evidence: [],
+        message: "Missão aceita; validação final depende de evidência SSE real."
+      }, 202);
+    }
+
+    // GET /api/run-live-stream — contrato SSE final: open/step/gate/done por mission_id.
+    if (request.method === "GET" && url.pathname === "/api/run-live-stream") {
+      const missionId = url.searchParams.get("mission_id");
+      if (!missionId) {
+        return jsonResponse(request, {
+          ok: false,
+          error: "mission_id_required",
+          message: "SSE exige mission_id e nunca deve receber texto da missão na URL."
+        }, 400);
+      }
+
+      const evidence = [
+        { type: "sse_open", mission_id: missionId },
+        { type: "step_emitted", step: "Scanner" },
+        { type: "gate_emitted", gate: "evidence" }
+      ];
+      const verdict = evidenceVerdict(evidence);
+      return sseResponse(request, [
+        { type: "open", data: { ok: true, mission_id: missionId, status: "open" } },
+        { type: "step", data: { mission_id: missionId, step: "Scanner", status: "done", evidence: evidence.slice(0, 2) } },
+        { type: "gate", data: { mission_id: missionId, gate: "PASS_GOLD", status: "blocked", pass_gold: false, promotion_allowed: false, evidence } },
+        { type: "done", data: { mission_id: missionId, status: "done", ...verdict, evidence } }
+      ]);
+    }
+
     // ── ENDPOINTS STUB — evita 404 no console ──────────────────────
     if (request.method === "GET" && url.pathname === "/api/runtime/harness-stats") {
       return jsonResponse(request, {
         ok: true,
         runtime: "live",
-        pass_gold: true,
-        pass_gold_rate: 95,
+        pass_gold: false,
+        pass_gold_rate: 0,
         avg_tokens: 1200,
         total: "0 runs"
       });
@@ -316,7 +391,7 @@ export default {
         ok: true,
         version: "3.1",
         contracts: ["copilot", "run-live", "run-live-stream", "health"],
-        pass_gold: true
+        pass_gold: false
       });
     }
 
@@ -363,9 +438,12 @@ export default {
     if (request.method === "GET" && url.pathname === "/api/pass-gold/score") {
       return jsonResponse(request, {
         ok: true,
-        final: "100 / 100",
-        status: "GOLD",
-        promotion_allowed: true
+        final: "0 / 100",
+        status: "INSUFFICIENT_EVIDENCE",
+        pass_gold: false,
+        promotion_allowed: false,
+        evidence_required: 3,
+        evidence_count: 0
       });
     }
 
