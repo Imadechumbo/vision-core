@@ -1,139 +1,175 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="vision-api-base" content="https://visioncore-api-gateway.weiganlight.workers.dev">
-  <title>VISION CORE V13.2 — Gold Clean Front</title>
-  <link rel="stylesheet" href="assets/vision-gold.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="vision-api-base" content="https://visioncore-api-gateway.weiganlight.workers.dev">
+<title>VISION CORE V2.9.10 · GOLD CLEAN FRONT</title>
+<link rel="stylesheet" href="assets/vision-gold.css">
+<script src="assets/vision-api.js" defer></script>
+<script src="assets/vision-agent-local.js" defer></script>
+<script src="assets/vision-ui-command.js" defer></script>
+<script src="assets/vision-runtime-owner.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="#top" aria-label="Vision Core home">
-      <span class="brand-mark"></span>
-      <span>
-        <strong>VISION CORE</strong>
-        <small>V13.2 GOLD CLEAN FRONT</small>
-      </span>
-    </a>
-    <nav class="top-menu" aria-label="Menu principal">
-      <a href="https://github.com/Imadechumbo/vision-core-master" target="_blank" rel="noopener">GitHub</a>
-      <a href="downloads/VisionAgentSetup.exe" download>Baixar Agent</a>
-      <button id="openAuthBtn" type="button">Sign In</button>
-    </nav>
-  </header>
-
-  <main id="top" class="cockpit-shell">
-    <section class="hero-strip" aria-label="Estado do runtime">
-      <div>
-        <span class="eyebrow">Owner único</span>
-        <h1>Cockpit limpo para missões com evidência real.</h1>
-      </div>
-      <div class="status-cards">
-        <article>
-          <span>Runtime</span>
-          <strong id="runtimeText">READY</strong>
-        </article>
-        <article>
-          <span>Score / PASS GOLD</span>
-          <strong id="scoreBox">Aguardando evidência</strong>
-        </article>
-      </div>
-    </section>
-
-    <section class="main-grid" aria-label="Cockpit Vision Core">
-      <article class="panel chat-panel" aria-labelledby="chatTitle">
-        <div class="panel-head">
-          <div>
-            <span class="eyebrow">Vision Chat</span>
-            <h2 id="chatTitle">LLM Mission Console</h2>
-          </div>
-          <div class="mode-pills" aria-label="Modos do chat">
-            <button type="button" class="mode-pill active" data-chat-mode="conversation">Conversa</button>
-            <button type="button" class="mode-pill" data-chat-mode="mission">Missão</button>
-            <button type="button" class="mode-pill" data-chat-mode="caveman">Caveman</button>
-          </div>
-        </div>
-
-        <div id="chatStream" class="chat-stream" aria-live="polite"></div>
-        <div id="attachmentList" class="attachment-list" aria-live="polite"></div>
-
-        <label class="sr-only" for="missionText">Texto da missão</label>
-        <textarea id="missionText" rows="5" placeholder="Descreva a missão, peça explicações ou prepare uma execução segura..."></textarea>
-
-        <div class="composer-actions">
-          <select id="runMode" aria-label="Modo de execução">
-            <option value="dry-run">dry-run</option>
-            <option value="live">live</option>
-            <option value="safe-patch">safe-patch</option>
-            <option value="pr-mode">pr-mode</option>
-          </select>
-          <input id="fileInput" type="file" multiple hidden>
-          <button id="attachBtn" type="button" class="ghost">Anexar</button>
-          <button id="sendChatBtn" type="button" class="ghost">Enviar chat</button>
-          <button id="executeBtn" type="button" class="primary">Executar missão</button>
-        </div>
-      </article>
-
-      <aside class="panel agent-panel" aria-labelledby="agentTitle">
-        <div class="panel-head">
-          <div>
-            <span class="eyebrow">Vision Agent Local</span>
-            <h2 id="agentTitle">Orbit interativo</h2>
-          </div>
-          <button id="workerRefreshBtn" type="button" class="ghost compact">Workers</button>
-        </div>
-        <div id="agentOrbit" class="agent-orbit" aria-live="polite"></div>
-        <div class="agent-sidecards">
-          <section>
-            <h3>Métricas</h3>
-            <div id="agentMetrics" class="mini-box">Sem missão ativa.</div>
-          </section>
-          <section>
-            <h3>Contratos / gates</h3>
-            <div id="agentContracts" class="mini-box">Sem gates recebidos.</div>
-          </section>
-          <section>
-            <h3>Workers</h3>
-            <div id="workersBox" class="mini-box">Não consultado.</div>
-          </section>
-        </div>
-      </aside>
-    </section>
-
-    <section class="panel command-bar" aria-label="Ações seguras">
-      <button id="githubStatusBtn" type="button">GitHub status</button>
-      <button id="policyBtn" type="button">Política</button>
-      <button id="githubPrBtn" type="button">PR GitHub</button>
-      <button id="diffBtn" type="button">Preview diff</button>
-      <button id="downloadLogsBtn" type="button">Download logs</button>
-    </section>
-
-    <section class="bottom-grid">
-      <article class="panel log-panel">
-        <div class="panel-head"><h2>Logs / eventos reais</h2></div>
-        <pre id="logsBox" aria-live="polite">READY — aguardando missão.</pre>
-      </article>
-      <article class="panel report-panel">
-        <div class="panel-head"><h2>Mission report</h2></div>
-        <div id="missionReport">Nenhuma missão executada.</div>
-      </article>
-    </section>
-  </main>
-
-  <dialog id="authModal" class="auth-modal">
-    <div class="panel-head">
-      <h2>Vision Auth</h2>
-      <button id="closeAuthBtn" type="button" class="ghost compact">Fechar</button>
+<header class="vision-topbar">
+  <div class="vision-brand" aria-label="VISION CORE">
+    <div class="vision-eye-logo" aria-hidden="true">
+      <div class="vision-eye-core"></div>
+      <div class="vision-eye-pulse"></div>
     </div>
-    <p>Autenticação visual local. Fluxos autorizados continuam no servidor.</p>
-    <input type="email" placeholder="operator@visioncore.local" aria-label="E-mail">
-    <button type="button" class="primary">Continuar</button>
-  </dialog>
+    <div>
+      <div class="vision-brand-title">VISION CORE</div>
+      <div class="vision-brand-subtitle">VISION CORE V2.9.10 · FULLSTACK · SAAS · HERMES · PASS GOLD</div>
+    </div>
+  </div>
+  <nav class="vision-nav" aria-label="Navegação principal">
+    <a href="#mission" class="active">Mission</a>
+    <a href="#vault">Vault</a>
+    <a href="#githubPanel">GitHub</a>
+    <a href="#tools">Tools</a>
+    <a href="#metricsBoard">Métricas</a>
+    <a href="#agentsBoard">Agentes</a>
+  </nav>
+  <div class="vision-actions">
+    <a class="btn btn-ghost" href="landing.html">Landing Startup</a>
+    <a class="btn btn-ghost" href="https://github.com/Imadechumbo/vision-core-master" target="_blank" rel="noopener">GitHub</a>
+    <a class="btn btn-ghost" href="downloads/VisionAgentSetup.exe" download>Baixar Agent</a>
+    <button class="btn btn-ghost" id="openAuthBtn" type="button">Sign In</button>
+    <a class="btn btn-gold" href="#mission">Enviar Missão</a>
+  </div>
+</header>
 
-  <script src="assets/vision-api.js" defer></script>
-  <script src="assets/vision-agent-local.js" defer></script>
-  <script src="assets/vision-ui-command.js" defer></script>
-  <script src="assets/vision-runtime-owner.js" defer></script>
+<main class="vision-shell">
+  <section class="command-panel" id="mission" aria-labelledby="commandTitle">
+    <div class="panel-head compact">
+      <div>
+        <p class="eyebrow">SaaS Command Center</p>
+        <h1 id="commandTitle">VISION AI COMMAND</h1>
+        <p class="panel-subtitle">Chat universal + correção de projetos com PASS GOLD</p>
+      </div>
+      <div class="ready-pill" id="runtimeText">READY</div>
+    </div>
+
+    <div class="chat-stream" id="chatStream" aria-live="polite">
+      <article class="chat-message assistant">
+        <span class="speaker">VISION</span>
+        <p>Pronto para receber uma missão. O runtime limpo preserva a decisão de PASS GOLD no backend e só promove com evidência real.</p>
+      </article>
+      <article class="chat-message system">
+        <span class="speaker">SYSTEM</span>
+        <p>Status READY · selecione o modo, anexe arquivos se necessário e execute a missão.</p>
+      </article>
+    </div>
+
+    <div class="command-input-row">
+      <textarea id="missionText" rows="4" placeholder="Descreva a missão, projeto, root cause esperado ou correção desejada..."></textarea>
+      <div class="command-controls">
+        <select id="runMode" aria-label="Modo de execução">
+          <option value="safe">SAFE</option>
+          <option value="fullstack">FULLSTACK</option>
+          <option value="hermes">HERMES</option>
+          <option value="audit">AUDIT</option>
+        </select>
+        <button class="btn btn-purple" id="sendChatBtn" type="button">ENVIAR</button>
+        <button class="btn btn-execute" id="executeBtn" type="button">EXECUTAR MISSÃO</button>
+      </div>
+    </div>
+    <div class="attach-row">
+      <button class="btn btn-soft" id="attachBtn" type="button">+ Adicionar arquivos</button>
+      <input id="fileInput" type="file" multiple hidden>
+      <span class="micro-copy">Runtime owner único: live run e SSE controlados fora da UI estática.</span>
+    </div>
+  </section>
+
+  <aside class="agent-panel" id="agentsBoard" aria-labelledby="agentTitle">
+    <div class="panel-head small">
+      <div>
+        <p class="eyebrow">Local Runtime</p>
+        <h2 id="agentTitle">VISION AGENT LOCAL</h2>
+      </div>
+      <span class="stage-chip" id="agentStageChip">READY</span>
+    </div>
+
+    <div class="agent-orbit" id="agentOrbit" data-stage="ready" role="group" aria-label="Agentes locais">
+      <button class="agent-node node-openclaw" type="button" data-agent="OpenClaw" data-status="AGUARDA">OpenClaw <small>AGUARDA</small></button>
+      <button class="agent-node node-scanner" type="button" data-agent="Scanner" data-status="LIVE">Scanner <small>LIVE</small></button>
+      <button class="agent-node node-hermes" type="button" data-agent="Hermes" data-status="AGUARDA">Hermes <small>AGUARDA</small></button>
+      <button class="agent-node node-patch" type="button" data-agent="PatchEngine" data-status="AGUARDA">PatchEngine <small>AGUARDA</small></button>
+      <button class="agent-node node-aegis" type="button" data-agent="Aegis" data-status="BLOCKED">Aegis <small>BLOCKED</small></button>
+      <button class="agent-node node-gold locked" type="button" data-agent="PASS GOLD" data-status="PASS">PASS GOLD <small>PASS</small></button>
+      <button class="agent-node node-pr" type="button" data-agent="PR GitHub" data-status="AGUARDA">PR GitHub <small>AGUARDA</small></button>
+      <div class="orbit-ring"></div>
+      <div class="orbit-core"><strong>READY</strong><span>awaiting mission</span></div>
+    </div>
+
+    <div class="agent-detail" id="agentDetail">Clique em um agente para ver contratos e estado local.</div>
+    <div class="metric-grid" id="agentMetrics">
+      <div><span>Stage</span><strong>READY</strong></div>
+      <div><span>Workers</span><strong id="workersBox">0</strong></div>
+      <div><span>Score</span><strong id="scoreBox">--</strong></div>
+    </div>
+    <div class="contracts-box" id="agentContracts">
+      <strong>Contracts</strong>
+      <p>PASS GOLD bloqueado até evidence_receipt válido + pass_gold:true + promotion_allowed:true enviados pelo backend.</p>
+    </div>
+  </aside>
+
+  <section class="mission-report-panel" aria-labelledby="missionReportTitle">
+    <div class="panel-head small">
+      <div>
+        <p class="eyebrow gold">Final Evidence</p>
+        <h2 id="missionReportTitle">Mission Report</h2>
+      </div>
+      <span class="report-chip">PASS GOLD Evidence Gate</span>
+    </div>
+    <div id="missionReport" class="mission-report" aria-live="polite">
+      <p class="blocked">INCOMPLETE / BLOCKED — evidence missing</p>
+      <dl>
+        <div><dt>pass_gold</dt><dd>false</dd></div>
+        <div><dt>promotion_allowed</dt><dd>false</dd></div>
+        <div><dt>Evidence Receipt</dt><dd>missing</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="ops-grid" aria-label="Operações">
+    <div class="mini-panel" id="githubPanel">
+      <h3>GitHub / PR Real</h3>
+      <button class="btn btn-soft" id="githubStatusBtn" type="button">Status GitHub</button>
+      <button class="btn btn-soft" id="githubPrBtn" type="button">PR GitHub</button>
+      <button class="btn btn-soft" id="diffBtn" type="button">Diff</button>
+    </div>
+    <div class="mini-panel" id="metricsBoard">
+      <h3>Métricas</h3>
+      <button class="btn btn-soft" id="policyBtn" type="button">Policy</button>
+      <button class="btn btn-soft" id="downloadLogsBtn" type="button">Download Logs</button>
+    </div>
+    <div class="mini-panel" id="vault">
+      <h3>Vault</h3>
+      <p>Rollback, logs e recibos permanecem auditáveis.</p>
+    </div>
+    <div class="mini-panel" id="tools">
+      <h3>Tools</h3>
+      <p>Scanner, Hermes, PatchEngine e Aegis conectados ao runtime owner.</p>
+    </div>
+  </section>
+
+  <section class="logs-panel" aria-label="Logs">
+    <div class="panel-head small">
+      <h2>Execution Monitor</h2>
+      <span class="ready-pill muted">LOGS</span>
+    </div>
+    <pre id="logsBox">[ready] Vision Core aguardando missão.</pre>
+  </section>
+</main>
+
+<div class="auth-modal" id="authModal" hidden>
+  <div class="auth-card" role="dialog" aria-modal="true" aria-label="Sign In">
+    <button class="auth-close" id="closeAuthBtn" type="button">×</button>
+    <h2>VISION CORE Sign In</h2>
+    <p>Autenticação SaaS preservada para integração externa.</p>
+  </div>
+</div>
 </body>
 </html>

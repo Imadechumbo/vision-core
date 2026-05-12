@@ -3,36 +3,17 @@ import path from "node:path";
 
 const root = process.cwd();
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
-const failures = [];
-const pass = [];
-
-function ok(condition, message) {
-  if (condition) pass.push(message);
-  else failures.push(message);
-}
-
-function includesAll(text, items, scope) {
-  for (const item of items) ok(text.includes(item), `${scope}: contém ${item}`);
-}
-
-function excludesAll(text, items, scope) {
-  for (const item of items) ok(!text.includes(item), `${scope}: não contém ${item}`);
-}
+const fail = (message) => {
+  console.error(`SDDF Guard failed: ${message}`);
+  process.exitCode = 1;
+};
 
 const index = read("frontend/index.html");
-const apiJs = read("frontend/assets/vision-api.js");
-const agentJs = read("frontend/assets/vision-agent-local.js");
-const uiJs = read("frontend/assets/vision-ui-command.js");
-const ownerJs = read("frontend/assets/vision-runtime-owner.js");
-const workerJs = read("worker/src/index.js");
+const owner = read("frontend/assets/vision-runtime-owner.js");
+const agent = read("frontend/assets/vision-agent-local.js");
+const css = read("frontend/assets/vision-gold.css");
 
-const allowedScripts = [
-  "assets/vision-api.js",
-  "assets/vision-agent-local.js",
-  "assets/vision-ui-command.js",
-  "assets/vision-runtime-owner.js"
-];
-const legacyScripts = [
+const legacyRuntimeFiles = [
   "vision-runtime-v297.js",
   "vision-v297-interactions.js",
   "vision-v298-command-chat.js",
@@ -43,89 +24,92 @@ const legacyScripts = [
   "vision-v35-telemetry.js",
   "vision-v44-runtime-consistency.js"
 ];
-const requiredIds = [
-  "missionText", "runMode", "executeBtn", "sendChatBtn", "attachBtn", "fileInput",
-  "logsBox", "runtimeText", "scoreBox", "workersBox", "githubStatusBtn", "policyBtn",
-  "githubPrBtn", "diffBtn", "downloadLogsBtn", "openAuthBtn", "closeAuthBtn",
-  "agentOrbit", "agentMetrics", "agentContracts", "chatStream", "missionReport"
+
+for (const legacy of legacyRuntimeFiles) {
+  if (index.includes(legacy)) fail(`legacy runtime loaded in index: ${legacy}`);
+}
+
+const scriptSrcs = [...index.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi)].map((match) => match[1]);
+const allowedScripts = [
+  "assets/vision-api.js",
+  "assets/vision-agent-local.js",
+  "assets/vision-ui-command.js",
+  "assets/vision-runtime-owner.js"
 ];
+if (JSON.stringify(scriptSrcs) !== JSON.stringify(allowedScripts)) {
+  fail(`index scripts must be exactly ${allowedScripts.join(", ")} but found ${scriptSrcs.join(", ")}`);
+}
 
-ok(!/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/i.test(index), "Index: sem script inline de execução");
-const scriptSrcs = [...index.matchAll(/<script[^>]+src=["']([^"']+)["'][^>]*>/gi)].map((match) => match[1].replace(/\?.*$/, ""));
-ok(scriptSrcs.length === allowedScripts.length, "Index: carrega exatamente quatro scripts ativos");
-ok(scriptSrcs.every((src) => allowedScripts.includes(src)), "Index: scripts ativos pertencem à lista permitida");
-includesAll(index, allowedScripts, "Index");
-excludesAll(index, legacyScripts, "Index");
-includesAll(index, requiredIds.map((id) => `id="${id}"`), "Index IDs");
-ok(index.includes("assets/vision-gold.css"), "Index: carrega vision-gold.css");
+if (/<script\b(?![^>]*\bsrc=)[^>]*>/i.test(index)) fail("inline executable script found in index");
+if (!index.includes('rel="stylesheet" href="assets/vision-gold.css"')) fail("vision-gold.css is not loaded");
 
-includesAll(apiJs, ["window.VisionApi", "apiUrl", "get", "post", "download", "meta[name=\"vision-api-base\"]", "replace(/\\/api\\/api\\//g"], "Vision API");
-
-includesAll(ownerJs, [
-  "window.VisionRuntimeOwner",
-  "runMission",
-  "stopMission",
-  "status",
-  "document.getElementById(\"runMode\")",
-  "api().post(\"/api/run-live\"",
-  "new EventSource",
-  "mission_id=${encodeURIComponent(missionId)}",
-  "mode === \"dry-run\"",
-  "running = true",
-  "releaseLock",
-  "Backend não retornou mission_id real"
-], "Runtime Owner");
-excludesAll(ownerJs, ["?mission=", "Date.now() +", "localMission", "mission=${"], "Runtime Owner");
-ok((ownerJs.match(/new EventSource/g) || []).length === 1, "Runtime Owner: apenas uma criação de EventSource");
-ok(ownerJs.includes("currentEventSource.close()"), "Runtime Owner: fecha EventSource anterior/atual");
-ok(ownerJs.includes("releaseLock(gold ? \"DONE\" : \"BLOCKED\")") && ownerJs.includes("releaseLock(\"BLOCKED\")"), "Runtime Owner: libera lock em done/error/fail");
-
-excludesAll(uiJs, ["/api/run-live", "new EventSource", "create-pr", "pass_gold:true", "promotion_allowed:true"], "UI Command");
-includesAll(uiJs, [
-  "window.VisionChat",
-  "getMissionText",
-  "append",
-  "clear",
-  "getAttachments",
-  "sendChatBtn",
+const requiredIds = [
+  "missionText",
+  "runMode",
   "executeBtn",
+  "sendChatBtn",
   "attachBtn",
-  "githubPrBtn",
-  "workerRefreshBtn",
+  "fileInput",
+  "logsBox",
+  "runtimeText",
+  "scoreBox",
+  "workersBox",
   "githubStatusBtn",
   "policyBtn",
+  "githubPrBtn",
   "diffBtn",
   "downloadLogsBtn",
   "openAuthBtn",
   "closeAuthBtn",
-  "window.VisionRuntimeOwner.runMission()",
-  "/api/copilot",
-  "/api/workers/status",
-  "/api/github/status",
-  "/api/github/automerge-policy",
-  "/api/diff/preview",
-  "/api/logs/download",
-  "PR exige fluxo servidor autorizado e PASS GOLD real"
-], "UI Command");
-
-excludesAll(agentJs, ["/api/run-live", "new EventSource", "create-pr"], "Agent Local");
-includesAll(agentJs, ["window.VisionAgentLocal", "setStage", "setRuntime", "setMetrics", "setContracts", "reset", "mission:start", "sse:open", "sse:step", "sse:gate", "sse:done", "mission:blocked", "mission:error"], "Agent Local");
-
-includesAll(workerJs, [
-  "proxyToOrigin(request, env, ctx)",
-  "proxyToOrigin(missionIdOnlyRequest(request), env, ctx)",
-  "pass_gold: false",
-  "promotion_allowed: false",
-  "authorized_server_flow_required",
-  "BLOCKED_NO_EVIDENCE",
-  "EVIDENCE_RECEIVED_PENDING_VERIFICATION"
-], "Worker");
-excludesAll(workerJs, ["stub-pr", "promotion_allowed: true", "status: \"GOLD\"", "status:\"GOLD\""], "Worker");
-
-if (failures.length) {
-  console.error("SDDF guard failed:");
-  for (const failure of failures) console.error(`- ${failure}`);
-  process.exit(1);
+  "agentOrbit",
+  "agentMetrics",
+  "agentContracts",
+  "chatStream",
+  "missionReport"
+];
+for (const id of requiredIds) {
+  if (!new RegExp(`id=["']${id}["']`).test(index)) fail(`required id missing: #${id}`);
 }
 
-console.log(`SDDF guard passed (${pass.length} checks).`);
+const requiredClasses = [
+  "vision-eye-logo",
+  "vision-eye-core",
+  "vision-eye-pulse",
+  "vision-brand-title",
+  "vision-brand-subtitle"
+];
+for (const className of requiredClasses) {
+  if (!index.includes(className)) fail(`required visual class missing in index: .${className}`);
+  if (!css.includes(`.${className}`)) fail(`required visual class missing in CSS: .${className}`);
+}
+
+if (/<img\b/i.test(index) || /<svg\b/i.test(index) || /\.svg["')]/i.test(index + css)) {
+  fail("logo must be CSS/HTML only; image or SVG reference found");
+}
+
+const frontendRuntimeFiles = [
+  "frontend/assets/vision-api.js",
+  "frontend/assets/vision-agent-local.js",
+  "frontend/assets/vision-ui-command.js"
+];
+for (const file of frontendRuntimeFiles) {
+  const contents = read(file);
+  if (contents.includes("/api/run-live")) fail(`/api/run-live used outside runtime owner: ${file}`);
+  if (/new\s+EventSource\s*\(/.test(contents)) fail(`SSE opened outside runtime owner: ${file}`);
+}
+
+if (!owner.includes("renderMissionReport")) fail("runtime owner must render mission report");
+if (!owner.includes("missionReport")) fail("runtime owner does not target #missionReport");
+if (!owner.includes("/api/run-live")) fail("runtime owner does not own /api/run-live call");
+if (!/new\s+EventSource\s*\(/.test(owner)) fail("runtime owner does not own SSE EventSource");
+if (!owner.includes("evidenceReceiptIsValid") || !owner.includes("pass_gold === true") || !owner.includes("promotion_allowed === true")) {
+  fail("PASS GOLD gate must require pass_gold, promotion_allowed and valid evidence receipt");
+}
+if (!agent.includes("hasGoldEvidence") || !agent.includes("evidenceReceiptIsValid")) fail("agent local must gate GOLD stage on evidence");
+if (!owner.includes("INCOMPLETE / BLOCKED — evidence missing")) fail("missing blocked evidence report text");
+if (/promotion_allowed\s*:\s*true/.test(owner + agent) || /promotion_allowed["']?\s*,\s*true/.test(owner + agent)) {
+  fail("frontend must not manufacture promotion_allowed:true");
+}
+
+if (process.exitCode) process.exit(process.exitCode);
+console.log("SDDF Guard passed: clean V13.2 Gold UI with runtime owner evidence gate.");

@@ -1,165 +1,320 @@
 (function () {
   "use strict";
 
-  let running = false;
-  let currentEventSource = null;
-  let currentMissionId = null;
+  const runtime = {
+    running: false,
+    currentMissionId: null,
+    lastPayload: null,
+    eventSource: null
+  };
 
-  function $(id) { return document.getElementById(id); }
-  function api() { return window.VisionApi; }
-  function chat() { return window.VisionChat; }
-  function agent() { return window.VisionAgentLocal; }
+  function byId(id) { return document.getElementById(id); }
 
-  function log(message, payload) {
-    const text = payload ? `${message} ${JSON.stringify(payload)}` : message;
-    const logs = $("logsBox");
-    if (logs) {
-      logs.textContent += `\n[${new Date().toISOString()}] ${text}`;
-      logs.scrollTop = logs.scrollHeight;
-    }
-    if (chat() && typeof chat().append === "function") chat().append("system", text);
+  function log(line) {
+    const box = byId("logsBox");
+    if (!box) return;
+    const stamp = new Date().toISOString();
+    box.textContent += `\n[${stamp}] ${line}`;
+    box.scrollTop = box.scrollHeight;
   }
 
-  function publish(stage, status, payload) {
-    if (agent() && typeof agent().setStage === "function") agent().setStage(stage, status, payload || {});
+  function setRuntimeStatus(status) {
+    const text = String(status || "READY").toUpperCase();
+    const node = byId("runtimeText");
+    if (node) node.textContent = text;
   }
 
-  function setRuntime(status) {
-    if (agent() && typeof agent().setRuntime === "function") agent().setRuntime(status);
-    const runtimeText = $("runtimeText");
-    if (runtimeText) runtimeText.textContent = status;
+  function evidenceReceiptIsValid(value) {
+    if (typeof value === "string") return value.trim().length >= 8;
+    if (value && typeof value === "object") return Object.keys(value).length > 0;
+    return false;
   }
 
-  function hasRealGold(payload) {
-    return Boolean(payload && payload.pass_gold === true && payload.promotion_allowed === true && payload.evidence_receipt);
+  function hasGoldEvidence(payload) {
+    return Boolean(
+      payload &&
+      payload.pass_gold === true &&
+      payload.promotion_allowed === true &&
+      evidenceReceiptIsValid(payload.evidence_receipt)
+    );
   }
 
-  function parseEvent(event) {
-    try { return JSON.parse(event.data || "{}"); } catch (_) { return { raw: event.data || "" }; }
+  function valueOrFallback(value, fallback) {
+    if (value === undefined || value === null || value === "") return fallback;
+    if (Array.isArray(value)) return value.length ? value.join(", ") : fallback;
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
   }
 
-  function releaseLock(finalStatus) {
-    running = false;
-    if (currentEventSource) {
-      currentEventSource.close();
-      currentEventSource = null;
-    }
-    if (finalStatus) setRuntime(finalStatus);
+  function normalizeMissionPayload(payload) {
+    const finalState = payload && (payload.final_state || payload.state || payload.status || payload.stage);
+    const receipt = payload && (payload.evidence_receipt || payload.evidenceReceipt || payload.receipt);
+    const goldAllowed = hasGoldEvidence({
+      ...(payload || {}),
+      evidence_receipt: receipt
+    });
+
+    return {
+      mission_id: valueOrFallback(
+        payload && (payload.mission_id || payload.missionId || payload.id),
+        runtime.currentMissionId || "—"
+      ),
+      project: valueOrFallback(payload && (payload.project || payload.repo || payload.repository), "not provided"),
+      mode: valueOrFallback(payload && (payload.mode || payload.run_mode), byId("runMode") ? byId("runMode").value : "safe"),
+      final_state: valueOrFallback(finalState, goldAllowed ? "completed" : "blocked"),
+      pass_gold: goldAllowed ? "true" : "false",
+      promotion_allowed: goldAllowed ? "true" : "false",
+      evidence_receipt: valueOrFallback(receipt, "missing"),
+      root_cause: valueOrFallback(payload && (payload.root_cause || payload.rootCause), "not provided"),
+      changed_files: valueOrFallback(payload && (payload.changed_files || payload.changedFiles || payload.files), "not provided"),
+      logs_available: valueOrFallback(payload && (payload.logs_available || payload.logsAvailable || payload.logs_url || payload.logsUrl), "logsBox"),
+      blocked_reason: goldAllowed ? "none" : valueOrFallback(
+        payload && (payload.blocked_reason || payload.blockedReason || payload.reason || payload.error),
+        "INCOMPLETE / BLOCKED — evidence missing"
+      ),
+      goldAllowed
+    };
   }
 
-  function renderReport(payload) {
-    const report = $("missionReport");
+  function renderMissionReport(payload) {
+    const report = byId("missionReport");
     if (!report) return;
-    const gold = hasRealGold(payload);
-    report.innerHTML = `<strong>Status:</strong> ${gold ? "GOLD" : "BLOCKED"}<br><strong>Mission ID:</strong> ${currentMissionId || "—"}<br><strong>Evidence receipt:</strong> ${payload && payload.evidence_receipt ? payload.evidence_receipt : "ausente"}<pre>${JSON.stringify(payload || {}, null, 2)}</pre>`;
-    const score = $("scoreBox");
-    if (score) score.textContent = gold ? "GOLD — backend evidence receipt válido" : "BLOCKED — sem evidência real";
+
+    const normalized = normalizeMissionPayload(payload || {});
+    report.replaceChildren();
+
+    const status = document.createElement("p");
+    status.className = normalized.goldAllowed ? "gold-ok" : "blocked";
+    status.textContent = normalized.goldAllowed
+      ? "PASS GOLD VERIFIED — evidence receipt accepted"
+      : "INCOMPLETE / BLOCKED — evidence missing";
+
+    const dl = document.createElement("dl");
+    const rows = [
+      ["Mission ID", normalized.mission_id],
+      ["Projeto", normalized.project],
+      ["Modo", normalized.mode],
+      ["Estado final observado", normalized.final_state],
+      ["PASS GOLD", normalized.pass_gold],
+      ["Promotion Allowed", normalized.promotion_allowed],
+      ["Evidence Receipt", normalized.evidence_receipt],
+      ["Root Cause", normalized.root_cause],
+      ["Arquivos alterados", normalized.changed_files],
+      ["Logs disponíveis", normalized.logs_available],
+      ["Motivo do bloqueio", normalized.blocked_reason]
+    ];
+
+    rows.forEach(([label, value]) => {
+      const item = document.createElement("div");
+      const dt = document.createElement("dt");
+      const dd = document.createElement("dd");
+      dt.textContent = label;
+      dd.textContent = value;
+      item.append(dt, dd);
+      dl.appendChild(item);
+    });
+
+    report.append(status, dl);
+
+    if (window.VisionAgentLocal) {
+      window.VisionAgentLocal.updateOrbit(normalized.goldAllowed ? "gold" : "blocked", {
+        ...(payload || {}),
+        evidence_receipt: normalized.evidence_receipt,
+        pass_gold: normalized.goldAllowed,
+        promotion_allowed: normalized.goldAllowed
+      });
+    }
   }
 
-  function eventUrl(missionId) {
-    return api().apiUrl(`/api/run-live-stream?mission_id=${encodeURIComponent(missionId)}`);
+  function closeMissionStream() {
+    if (runtime.eventSource) {
+      runtime.eventSource.close();
+      runtime.eventSource = null;
+    }
   }
 
-  function openStream(missionId) {
+  function openMissionStream(missionId) {
     if (!missionId) throw new Error("mission_id obrigatório para SSE");
-    if (currentEventSource) currentEventSource.close();
+    if (!window.VisionAPI || typeof EventSource === "undefined") return;
 
-    currentEventSource = new EventSource(eventUrl(missionId));
-    currentEventSource.addEventListener("open", () => {
-      publish("sse:open", "running", { mission_id: missionId });
-      log("SSE aberto", { mission_id: missionId });
+    closeMissionStream();
+
+    const streamUrl = window.VisionAPI.apiUrl(`/api/run-live-stream?mission_id=${encodeURIComponent(missionId)}`);
+    runtime.eventSource = new EventSource(streamUrl);
+
+    runtime.eventSource.addEventListener("open", () => {
+      log(`SSE aberto para mission_id real: ${missionId}`);
+      if (window.VisionAgentLocal) {
+        window.VisionAgentLocal.updateOrbit("running", { mission_id: missionId });
+      }
     });
-    currentEventSource.addEventListener("step", (event) => {
-      const payload = parseEvent(event);
-      publish("sse:step", "running", payload);
-      log("SSE step", payload);
+
+    runtime.eventSource.addEventListener("message", (event) => {
+      log(`stream: ${event.data}`);
+      try {
+        const payload = JSON.parse(event.data);
+        runtime.lastPayload = payload;
+
+        if (payload.stage && window.VisionAgentLocal) {
+          window.VisionAgentLocal.updateOrbit(payload.stage, payload);
+        }
+
+        if (payload.final || payload.done || payload.status === "completed" || payload.status === "blocked") {
+          renderMissionReport({ ...payload, mission_id: payload.mission_id || missionId });
+          setRuntimeStatus(hasGoldEvidence(payload) ? "GOLD" : "BLOCKED");
+        }
+      } catch (_) {
+        if (window.VisionUICommand) window.VisionUICommand.appendMessage("system", event.data);
+      }
     });
-    currentEventSource.addEventListener("gate", (event) => {
-      const payload = parseEvent(event);
-      publish("sse:gate", payload.pass ? "pass" : "blocked", payload);
-      log("SSE gate", payload);
+
+    ["open", "step", "gate", "done"].forEach((eventName) => {
+      runtime.eventSource.addEventListener(eventName, (event) => {
+        let payload = {};
+        try { payload = JSON.parse(event.data || "{}"); }
+        catch (_) { payload = { message: event.data || "" }; }
+
+        runtime.lastPayload = payload;
+
+        if (window.VisionAgentLocal) {
+          window.VisionAgentLocal.updateOrbit(eventName === "done" ? "done" : eventName, {
+            ...payload,
+            mission_id: payload.mission_id || missionId
+          });
+        }
+
+        log(`${eventName}: ${JSON.stringify(payload)}`);
+
+        if (eventName === "done") {
+          renderMissionReport({ ...payload, mission_id: payload.mission_id || missionId });
+          setRuntimeStatus(hasGoldEvidence(payload) ? "GOLD" : "BLOCKED");
+          closeMissionStream();
+        }
+      });
     });
-    currentEventSource.addEventListener("done", (event) => {
-      const payload = parseEvent(event);
-      const gold = hasRealGold(payload);
-      publish("sse:done", gold ? "pass" : "blocked", payload);
-      renderReport(payload);
-      log("SSE done", payload);
-      releaseLock(gold ? "DONE" : "BLOCKED");
+
+    runtime.eventSource.addEventListener("error", () => {
+      log("stream unavailable or closed");
+      closeMissionStream();
+      if (runtime.running) {
+        setRuntimeStatus("BLOCKED");
+      }
     });
-    currentEventSource.addEventListener("fail", (event) => {
-      const payload = parseEvent(event);
-      publish("mission:error", "fail", payload);
-      renderReport(payload);
-      log("SSE fail", payload);
-      releaseLock("BLOCKED");
-    });
-    currentEventSource.onerror = () => {
-      const payload = { ok: false, status: "STREAM_ERROR", pass_gold: false, promotion_allowed: false };
-      publish("mission:error", "fail", payload);
-      renderReport(payload);
-      log("SSE error", payload);
-      releaseLock("BLOCKED");
-    };
   }
 
-  async function runMission() {
-    if (running) {
-      log("Execução bloqueada: já existe missão em andamento.");
-      return;
-    }
+  async function executeMission() {
+    if (runtime.running) return;
 
-    const mission = (chat() && chat().getMissionText ? chat().getMissionText() : ($("missionText")?.value || "")).trim();
+    const missionText = byId("missionText");
+    const runMode = byId("runMode");
+    const mission = missionText ? missionText.value.trim() : "";
+    const mode = runMode ? runMode.value : "safe";
+
     if (!mission) {
-      log("Execução bloqueada: missão vazia.");
+      if (window.VisionUICommand) {
+        window.VisionUICommand.appendMessage("system", "Descreva uma missão antes de executar.");
+      }
       return;
     }
 
-    const runModeSelect = document.getElementById("runMode");
-    const mode = runModeSelect ? runModeSelect.value : "dry-run";
-    const payload = {
-      mission,
-      project_id: "vision-core",
-      mode,
-      dry_run: mode === "dry-run",
-      source: "vision-core-v13.2-gold-clean-front"
-    };
+    runtime.running = true;
+    runtime.currentMissionId = null;
+    runtime.lastPayload = null;
 
-    running = true;
-    currentMissionId = null;
-    setRuntime("RUNNING");
-    publish("mission:start", "running", { mode, dry_run: payload.dry_run });
-    log("Missão enviada ao Runtime Owner", { mode, dry_run: payload.dry_run });
+    setRuntimeStatus("RUNNING");
+
+    if (window.VisionAgentLocal) {
+      window.VisionAgentLocal.updateOrbit("running", { mission_id: "pending", mode });
+    }
+
+    if (window.VisionUICommand) {
+      window.VisionUICommand.appendMessage(
+        "system",
+        `Executando missão em modo ${mode.toUpperCase()}. Aguardando mission_id real do backend.`
+      );
+    }
+
+    log("mission submitted; waiting for backend mission_id");
 
     try {
-      const response = await api().post("/api/run-live", payload);
-      const missionId = response && (response.mission_id || response.id);
-      if (!missionId || typeof missionId !== "string") {
+      const payload = await window.VisionAPI.requestJson("/api/run-live", {
+        method: "POST",
+        body: JSON.stringify({
+          mission,
+          mode,
+          dry_run: mode === "dry-run",
+          source: "vision-core-v13.2-gold-clean-front"
+        })
+      });
+
+      runtime.lastPayload = payload;
+
+      const missionId = payload && (payload.mission_id || payload.missionId || payload.id);
+      if (!missionId) {
         throw new Error("Backend não retornou mission_id real.");
       }
-      currentMissionId = missionId;
-      log("mission_id confirmado", { mission_id: missionId });
-      openStream(missionId);
+
+      runtime.currentMissionId = missionId;
+
+      log(`mission_id confirmado pelo backend: ${missionId}`);
+
+      if (window.VisionUICommand) {
+        window.VisionUICommand.appendMessage("system", `mission_id real confirmado: ${missionId}`);
+      }
+
+      if (window.VisionAgentLocal) {
+        window.VisionAgentLocal.updateOrbit("running", { ...payload, mission_id: missionId, mode });
+      }
+
+      renderMissionReport({ ...payload, mission_id: missionId, mode });
+      openMissionStream(missionId);
+      setRuntimeStatus(hasGoldEvidence(payload) ? "GOLD" : "RUNNING");
     } catch (error) {
-      const blocked = { ok: false, status: "BLOCKED", reason: error.message, pass_gold: false, promotion_allowed: false };
-      publish("mission:blocked", "blocked", blocked);
-      renderReport(blocked);
-      log("Missão bloqueada", blocked);
-      releaseLock("BLOCKED");
+      const payload = error && error.data ? error.data : { error: error && error.message ? error.message : "unknown_error" };
+
+      renderMissionReport({
+        ...payload,
+        mission_id: runtime.currentMissionId || "—",
+        mode,
+        blocked_reason: valueOrFallback(payload.error, "INCOMPLETE / BLOCKED — evidence missing")
+      });
+
+      setRuntimeStatus("BLOCKED");
+
+      if (window.VisionAgentLocal) {
+        window.VisionAgentLocal.updateOrbit("blocked", {
+          ...payload,
+          mission_id: runtime.currentMissionId || "—",
+          mode
+        });
+      }
+
+      log(`mission blocked: ${valueOrFallback(payload.error, error && error.message ? error.message : "unknown_error")}`);
+    } finally {
+      runtime.running = false;
     }
   }
 
-  function stopMission() {
-    const stopped = { ok: false, status: "STOPPED", pass_gold: false, promotion_allowed: false };
-    publish("mission:error", "blocked", stopped);
-    renderReport(stopped);
-    log("Missão interrompida pelo operador.");
-    releaseLock("BLOCKED");
+  function bindRuntimeOwner() {
+    const executeBtn = byId("executeBtn");
+    if (executeBtn) executeBtn.addEventListener("click", executeMission);
+    renderMissionReport({});
   }
 
-  function status() {
-    return { running, mission_id: currentMissionId, sse_open: Boolean(currentEventSource) };
-  }
+  window.VisionRuntimeOwner = Object.freeze({
+    executeMission,
+    runMission: executeMission,
+    renderMissionReport,
+    hasGoldEvidence,
+    closeMissionStream,
+    status: function () {
+      return {
+        running: runtime.running,
+        mission_id: runtime.currentMissionId,
+        sse_open: Boolean(runtime.eventSource)
+      };
+    }
+  });
 
-  window.VisionRuntimeOwner = { runMission, stopMission, status };
+  document.addEventListener("DOMContentLoaded", bindRuntimeOwner);
 })();
