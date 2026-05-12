@@ -1,618 +1,139 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="vision-api-base" content="https://visioncore-api-gateway.weiganlight.workers.dev">
-<title>VISION CORE V2.9.10 CLEAN FRONT</title>
-
-<link rel="stylesheet" href="assets/style.css">
-<link rel="stylesheet" href="assets/v23-ui-system.css">
-<link rel="stylesheet" href="assets/v231-colors-agents.css">
-<link rel="stylesheet" href="assets/v233-realtime.css">
-<link rel="stylesheet" href="assets/v233-topbar-final-fix.css">
-  <link rel="stylesheet" href="assets/v272-layout-force.css">
-  <link rel="stylesheet" href="assets/v273-sddf-command-chat.css">
-  <link rel="stylesheet" href="assets/v290-hardening.css">
-<script>
-// VISION CORE V2.9.10 CLEAN FRONT — Cloudflare Pages proxy mode
-// Nunca chamar Elastic Beanstalk direto pelo browser.
-// Toda chamada deve sair como /api/... e o Cloudflare Pages encaminha via _redirects.
-// VISION CORE V2.9.10 CLEAN FRONT + V3.1 API GATEWAY
-// Frontend Cloudflare Pages → Worker Gateway → Elastic Beanstalk Backend.
-// Não usar _redirects para /api/*: POST e SSE passam pelo Worker.
-window.RUNTIME_CONFIG = { API_BASE_URL: "https://visioncore-api-gateway.weiganlight.workers.dev" };
-window.API_BASE_URL = "https://visioncore-api-gateway.weiganlight.workers.dev";
-window.__VISION_API__ = "https://visioncore-api-gateway.weiganlight.workers.dev";
-window.API = "https://visioncore-api-gateway.weiganlight.workers.dev";
-window.__VISION_RUNTIME_VERSION__ = "2.9.10-clean-front-v31-gateway";
-</script>
-
-<script>
-/* V2.9.10 + V3.1 API GATEWAY HARDENING
-   Qualquer chamada /api/... ou fallback EB antigo é redirecionado para o Worker Gateway.
-   Resultado: POST, OPTIONS e SSE passam pelo Worker, sem 405 do Cloudflare Pages.
-*/
-(function(){
-  const VISION_GATEWAY = "https://visioncore-api-gateway.weiganlight.workers.dev";
-  const DEAD_EB_RE = /^https?:\/\/tngh-aws-final-v2-env\.eba-fi8g5gme\.us-east-1\.elasticbeanstalk\.com(\/api\/.*)$/i;
-  const nativeFetch = window.fetch.bind(window);
-
-  function normalizeVisionApiUrl(url){
-    const raw = String(url || "");
-    const eb = raw.match(DEAD_EB_RE);
-    if (eb) return VISION_GATEWAY + eb[1];
-
-    if (raw.startsWith("/api/")) return VISION_GATEWAY + raw;
-    if (raw === "/api") return VISION_GATEWAY + "/api";
-
-    return url;
-  }
-
-  window.fetch = function(input, init){
-    try {
-      if (typeof input === "string") {
-        input = normalizeVisionApiUrl(input);
-      } else if (input && input.url) {
-        const nextUrl = normalizeVisionApiUrl(input.url);
-        if (nextUrl !== input.url) input = new Request(nextUrl, input);
-      }
-    } catch (_) {}
-    return nativeFetch(input, init);
-  };
-
-  console.info("[VISION V2.9.10/V3.1] API Gateway ativo:", VISION_GATEWAY);
-})();
-</script>
-
-<link rel="stylesheet" href="assets/vision-v297-ui.css">
-<link rel="stylesheet" href="assets/vision-v33-orbit.css">
-<link rel="stylesheet" href="assets/vision-v298-command-chat.css">
-<link rel="stylesheet" href="assets/vision-v298-final-hardened.css">
-<link rel="stylesheet" href="assets/vision-v298-final-hard-fix2.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="vision-api-base" content="https://visioncore-api-gateway.weiganlight.workers.dev">
+  <title>VISION CORE V13.2 — Gold Clean Front</title>
+  <link rel="stylesheet" href="assets/vision-gold.css">
 </head>
 <body>
-<header class="top">
-  <div class="shell topin">
-    <div class="brand-block v23-brand-block">
-      <div class="v23-top-eye" title="VISION CORE ativo">
-        <div class="v23-eye"><div class="v23-pupil"></div></div>
-      </div>
-      <div>
-        <div class="brand">VISION CORE</div>
-        <div class="sub">VISION CORE V2.9.10 • FULLSTACK • SAAS • HERMES • PASS GOLD</div>
-      </div>
-    </div>
-    <nav class="v231-topnav" aria-label="Navegação principal">
-      <a class="active" href="#mission">▣ Mission</a>
-      <a href="#vault">▤ Vault</a>
-      <a href="#githubPanel">⌬ GitHub</a>
-      <a href="#marketplace">☷ Tools</a>
-      <a href="#metricsBoard">▥ Métricas</a>
-      <a href="#agentsBoard">⚙ Agentes</a>
-    </nav>
-    <div class="top-actions">
-      <a class="btn ghost" href="landing.html">LANDING STARTUP</a>
-      <a class="btn github" href="https://github.com/Imadechumbo/vision-core-master" target="_blank" rel="noopener">GITHUB</a>
-      <a class="btn agent-download" href="downloads/VisionAgentSetup.exe" download>BAIXAR AGENT</a>
-      <button class="btn ghost" id="openAuthBtn" type="button">SIGN IN</button>
-      <a class="btn" href="#mission">ENVIAR MISSÃO</a>
-    </div>
-  </div>
-</header>
-
-<main class="shell grid">
-  <aside>
-    <section class="panel logo premium-logo">
-      <div class="eye-wrap" title="VISION CORE ativo">
-        <div class="ai-eye"><div class="pupil"></div></div>
-      </div>
-      <h1>VISION CORE</h1>
-      <p class="cyan">SEE. DECIDE. EXECUTE.</p>
-      <a class="marketing-link" href="about.html">um sistema que corrige sistemas</a>
-    </section>
-<nav class="panel menu premium-menu">
-      <a class="active" href="#mission">◎ MISSION CONTROL</a>
-      <a href="#timeline">⌁ MISSION TIMELINE</a>
-      <a href="#runtime">⌁ EXECUTION MONITOR</a>
-      <a href="#hermes">☷ DIAGNOSTICS / HERMES</a>
-      <a href="#score">☑ VALIDATION / SDDF</a>
-      <a href="#diff">☷ DIFF PREVIEW</a>
-      <a href="#vault">⌂ VAULT / ROLLBACK</a>
-      <a href="#memory">▤ MEMORY / OBSIDIAN</a>
-      <a href="#opensquad" class="menu-reserved">⌘ OPENCLAW / OPENSQUAD <span class="menu-badge">SCALE</span></a>
-      <a href="#osint">◇ OSINT DOCKER</a>
-      <a href="#githubPanel">⌬ GITHUB / PR REAL</a>
-      <a href="#saasAuth">◉ SAAS / PLANOS</a>
-      <a href="#v10">◇ V10 ENTERPRISE</a>
-      <a href="#aiApiVault">AI API VAULT</a>
-      <a href="#marketplace">▣ TOOLS MARKETPLACE</a>
-      <a href="#metricsBoard">▥ MÉTRICAS</a>
-      <a href="#agentsBoard">⚙ AGENTES EXTRAS</a>
-    </nav>
-  </aside>
-
-  <section>
-    <div class="panel" id="mission">
-<div class="v297-chat-shell" id="v297UniversalChat">
-  <div class="v297-chat-head"><div><strong>CHAT UNIVERSAL VISION</strong><span>perguntas, imagens, arquivos e correção de projetos</span></div><b id="v297ChatStatus">READY</b></div>
-  <div class="v297-chat-log" id="v297ChatLog"><div class="v297-msg bot">Pronto. Converse sobre qualquer assunto ou execute uma missão SDDF.</div></div>
-  <div class="v297-chat-tools"><button class="btn mini" id="v297AddImageBtn" type="button">+ IMAGEM</button><button class="btn mini" id="v297AddFileBtn" type="button">+ ARQUIVO</button><button class="btn mini" id="v297RunSddfBtn" type="button">RODAR SDDF</button><input id="v297FileInput" type="file" multiple hidden></div>
-</div>
-      <h2>MISSION CONTROL</h2>
-      <p>Operador técnico multi-projeto, multi-stack, com aprendizado contínuo.</p>
-      <div class="project-strip">
-        <label>Projeto ativo</label>
-        <select class="select" id="projectSelector"><option>Carregando projetos...</option></select>
-        <button class="btn mini" id="enqueueBtn" type="button">ENFILEIRAR WORKER</button>
-      </div>
-
-      <div class="pipeline-headline" aria-label="Frase de impacto VISION CORE">
-        <span>IAs criam.</span>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Vision Core home">
+      <span class="brand-mark"></span>
+      <span>
         <strong>VISION CORE</strong>
-        <span>corrige</span>
+        <small>V13.2 GOLD CLEAN FRONT</small>
+      </span>
+    </a>
+    <nav class="top-menu" aria-label="Menu principal">
+      <a href="https://github.com/Imadechumbo/vision-core-master" target="_blank" rel="noopener">GitHub</a>
+      <a href="downloads/VisionAgentSetup.exe" download>Baixar Agent</a>
+      <button id="openAuthBtn" type="button">Sign In</button>
+    </nav>
+  </header>
+
+  <main id="top" class="cockpit-shell">
+    <section class="hero-strip" aria-label="Estado do runtime">
+      <div>
+        <span class="eyebrow">Owner único</span>
+        <h1>Cockpit limpo para missões com evidência real.</h1>
       </div>
-
-      <div class="v236-compact-timeline" id="v236CompactTimeline" aria-label="Timeline compacta do pipeline">
-        <div class="v236-tl-step" data-stage="Scanner"><b>✓</b><span>Scanner</span><small>aguardando</small></div>
-        <i></i>
-        <div class="v236-tl-step" data-stage="Hermes"><b>✓</b><span>Hermes</span><small>aguardando</small></div>
-        <i></i>
-        <div class="v236-tl-step" data-stage="PatchEngine"><b>✓</b><span>Patch Engine</span><small>aguardando</small></div>
-        <i></i>
-        <div class="v236-tl-step" data-stage="Aegis"><b>✓</b><span>Aegis</span><small>aguardando</small></div>
-        <i></i>
-        <div class="v236-tl-step gold" data-stage="PASS GOLD"><b>★</b><span>PASS GOLD</span><small>aguardando</small></div>
-        <i class="pending"></i>
-        <div class="v236-tl-step pending" data-stage="PR GitHub"><b></b><span>PR GitHub</span><small>aguardando</small></div>
-      </div>
-
-      <div class="vc-process-screen v236-copilot-screen" id="processScreen" aria-live="polite">
-        <div class="vc-process-orb" id="processOrb">◉</div>
-        <div class="vc-process-copy">
-          <strong id="processTitle">Copiloto VISION aguardando missão</strong>
-          <span id="processMessage">Converse no mesmo campo abaixo. Posso explicar o erro para usuário leigo ou executar o pipeline em tempo real.</span>
-          <div class="v236-copilot-mini-chat" id="v236CopilotMiniChat">
-            <div class="v236-copilot-msg bot">Pergunte sobre a plataforma, cole um erro ou peça para eu explicar o que o PASS GOLD está validando.</div>
-          </div>
-        </div>
-        <div class="vc-process-stage" id="processStage">READY</div>
-      </div>
-      <textarea class="mission" id="missionText" placeholder="Descreva a missão, cole erro, log, endpoint, stack ou contexto..."></textarea>
-      <br><br>
-      <div class="row v236-action-row">
-        <button class="btn mini v236-file-btn" id="v236FileBtn" type="button">＋ ADICIONAR ARQUIVOS</button>
-        <button class="btn mini v236-copilot-btn" id="v236CopilotBtn" type="button">💬 COPILOTO</button>
-        <input id="v236FileInput" type="file" multiple hidden>
-        <select class="select">
-          <option>MODELO: AUTO melhor disponível</option>
-          <option>Gemini 2.0 Flash</option>
-          <option>Llama 3.3 70B Groq</option>
-          <option>OpenRouter Auto</option>
-          <option>DeepSeek Reasoner</option>
-          <option>Ollama Local</option>
-        </select>
-        <select class="select compact-select" id="runMode"><option value="dry-run">DRY RUN</option><option value="safe-patch">SAFE PATCH</option><option value="pr">PR MODE</option></select><button class="btn" id="executeBtn">▷ EXECUTAR LIVE</button>
-      </div>
-    </div>
-
-    <br>
-    <!-- V2.7.2: HERO MOVIDO PARA BAIXO DO BLOCO MISSION CONTROL -->
-    <div class="panel hero-copy hero-under-mission moved-below-mission-control" id="missionHeroBelowControl">
-      <p class="eyebrow">DEPLOY SEGURO • PASS GOLD • GITHUB PR REAL • DIFF • CI • VAULT • AUTO-ROLLBACK</p>
-      <h2>Sistema operacional para desenvolvimento com IA.</h2>
-      <p>IAs criam software rápido. O VISION CORE fecha o loop: diagnostica, executa, valida, protege e mostra tudo em logs vivos.</p>
-      <div class="mini-pipeline"><span>Missão</span><b>→</b><span>Diagnóstico</span><b>→</b><span>Diff</span><b>→</b><span>PASS GOLD</span><b>→</b><span>PR</span><b>→</b><span>Stable Vault</span></div>
-    </div>
-
-    <br>
-    <div class="panel saas-panel" id="saasAuth">
-      <p class="eyebrow">SAAS ONBOARDING • SOCIAL LOGIN / OAUTH SIGNUP POPUP • PLANS</p>
-      <h2>Cadastro SaaS automático, simples e popular.</h2>
-      <p><strong>Autonomous Software Repair System.</strong> Isso não é chat, copiloto ou automação simples. É um sistema que detecta → entende → corrige → valida → protege → aprende.</p>
-      <p>O cadastro agora abre em popup preto pelo botão <strong>Sign in</strong> no header. Google, GitHub e SSO criam usuário automaticamente com plano FREE por padrão, preparado para OAuth real depois.</p>
-      <div class="plans" id="plansBox">
-        <div class="plan active" data-plan="free"><strong>FREE</strong><span>5 missões/mês</span><small>sem auto-merge</small></div>
-        <div class="plan" data-plan="pro"><strong>PRO</strong><span>missões ilimitadas</span><small>GitHub auto PR + rollback</small></div>
-        <div class="plan" data-plan="enterprise"><strong>ENTERPRISE</strong><span>multi-projeto + workers</span><small>dashboard completo</small></div>
-      </div>
-      <div class="operator-auth-card inline-auth-card">
-        <p class="side-auth-kicker">OPERADOR</p>
-        <button class="btn ghost side-signin" id="openAuthBtn2" type="button">SIGN IN</button>
-        <small>Social Login / OAuth Signup Popup</small>
-      </div>
-      <div id="signupResult" class="signup-result inline-result">Plano selecionado: <b>FREE</b></div>
-    </div>
-
-    <br>
-    <br>
-    <div class="panel" id="timeline">
-      <h2>MISSION TIMELINE</h2>
-      <p>Fluxo visual: missão recebida → Hermes → snapshot → diff → validação → GitHub PR.</p>
-      <div id="timelineBox" class="timelineBox"></div>
-    </div>
-
-    <br>
-    <div class="panel" id="diff">
-      <h2>DIFF PREVIEW</h2>
-      <p>Mostra o patch antes de criar branch, commit ou Pull Request.</p>
-      <button class="btn mini" id="diffBtn">GERAR DIFF DEMO</button>
-      <pre id="diffViewer" class="diffViewer">Aguardando diff...</pre>
-    </div>
-
-    <br>
-    <div class="panel" id="score">
-      <h2>PASS GOLD SCORE</h2>
-      <p>Promoção só é liberada acima do corte GOLD.</p>
-      <div id="scoreBox" class="scoreGrid"></div>
-    </div>
-
-    <br>
-    <div class="panel github-panel" id="githubPanel">
-      <h2>GitHub Integration Real</h2>
-      <p>Cria branch, aplica commit e abre Pull Request real via GitHub REST API. Bloqueado sem PASS GOLD.</p>
-      <div class="github-status" id="githubStatus">Verificando GitHub...</div>
-      <div class="github-actions">
-        <button class="btn github" id="githubStatusBtn">Verificar GitHub</button>
-        <button class="btn" id="githubPrBtn">Criar PR PASS GOLD</button>
-        <button class="btn ghost" id="policyBtn">Auto-merge Policy</button>
-      </div>
-      <div class="github-result" id="githubResult"></div>
-    </div>
-
-    <br>
-    <div class="panel" id="v10">
-      <h2>V10 ENTERPRISE FOUNDATION</h2>
-      <div class="cards">
-        <div class="card"><strong>Multi-projeto</strong><span>gestão por stack e estado GOLD</span></div>
-        <div class="card"><strong>Métricas reais</strong><span>runtime, delivery e GitHub</span></div>
-        <div class="card"><strong>Hermes votando</strong><span>consenso antes do PR</span></div>
-        <div class="card"><strong>Auto-merge condicionado</strong><span>só com checks + GOLD</span></div>
-        <div class="card"><strong>Workers distribuídos</strong><span>filas por execução/rollback</span></div>
-        <div class="card"><strong>Billing SaaS</strong><span>planos prontos para Stripe</span></div>
-      </div>
-    </div>
-
-    <br>
-    <br>
-    <div class="panel ai-api-panel" id="aiApiVault">
-      <p class="eyebrow">AI API VAULT - PROVEDORES PAGOS - ROTEAMENTO INTELIGENTE</p>
-      <h2>Menu para adicionar APIs de IAs pagas</h2>
-      <p>Conecte provedores comerciais e defina prioridade/fallback. As chaves ficam preparadas para uso via variaveis de ambiente ou vault local em desenvolvimento.</p>
-      <div class="provider-grid">
-        <button class="provider active" data-provider="openai"><strong>OpenAI</strong><span>GPT / Vision / Assistants</span></button>
-        <button class="provider" data-provider="anthropic"><strong>Anthropic</strong><span>Claude</span></button>
-        <button class="provider" data-provider="gemini"><strong>Google Gemini</strong><span>Flash / Pro / Vision</span></button>
-        <button class="provider" data-provider="openrouter"><strong>OpenRouter</strong><span>multi-model fallback</span></button>
-        <button class="provider" data-provider="groq"><strong>Groq</strong><span>alta velocidade</span></button>
-        <button class="provider" data-provider="deepseek"><strong>DeepSeek</strong><span>reasoner/code</span></button>
-      </div>
-      <div class="api-form">
-        <label>Provider</label><select class="select" id="aiProviderSelect"><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="gemini">Google Gemini</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="deepseek">DeepSeek</option></select>
-        <label>API Key</label><input class="api-input" id="aiApiKey" type="password" placeholder="cole sua chave aqui...">
-        <label>Modelo padrao</label><input class="api-input" id="aiModel" type="text" placeholder="ex: gpt-4.1, claude-3.7-sonnet, gemini-2.0-flash">
-        <label>Prioridade</label><select class="select" id="aiPriority"><option>primary</option><option>fallback</option><option>disabled</option></select>
-      </div>
-      <div class="github-actions"><button class="btn github" id="saveAiProviderBtn" type="button">SALVAR PROVIDER</button><button class="btn ghost" id="testAiProviderBtn" type="button">TESTAR MOCK</button><a class="btn ghost" href="landing.html">VER LANDING STARTUP</a></div>
-      <div class="ai-provider-status" id="aiProviderStatus">Nenhuma API salva nesta sessao.</div>
-    </div>
-
-    <br>
-    <div class="panel" id="marketplace">
-      <h2>TOOLS MARKETPLACE</h2>
-      <p>Conectores preparados para GitHub, Cloudflare, Railway, Docker, Langfuse e billing.</p>
-      <div id="toolsBox" class="toolGrid"></div>
-    </div>
-
-    <br>
-    <div class="panel logs-panel" id="logsPanel" aria-live="polite">
-      <div class="log-head">
-        <h2>LIVE EXECUTION STREAM</h2>
-        <button class="btn mini" id="downloadLogsBtn">BAIXAR LOGS</button>
-      </div>
-      <div class="logs empty" id="logsBox"><span class="muted">Aguardando eventos SSE / polling do missionRunner v1.1...</span></div>
-    </div>
-    <br>
-    <div class="panel metrics-board" id="metricsBoard">
-      <div class="section-headline">
-        <div>
-          <p class="eyebrow">AGENT METRICS • CUSTO POR AGENTE • PIPELINE</p>
-          <h2>MÉTRICAS DOS AGENTES</h2>
-          <p>Ligado ao backend em <code>/api/metrics/agents</code>. Quando o backend estiver offline, a tela mantém fallback local marcado como UI local.</p>
-        </div>
-        <span class="live-pill">● LIVE</span>
-      </div>
-      <div class="metrics-bars-large" id="agentMetricsLarge"></div>
-    </div>
-
-    <br>
-    <div class="panel agents-board" id="agentsBoard">
-      <div class="section-headline">
-        <div>
-          <p class="eyebrow">OPENSQUAD RESERVE • AGENTES QUE TRABALHAM FORA DO MENU PRINCIPAL</p>
-          <h2>AGENTES EXTRAS EM EXECUÇÃO</h2>
-          <p>Catálogo lido do backend em <code>/api/agents/catalog</code>, usando os nomes e funções reais do projeto.</p>
-        </div>
-        <a class="btn ghost mini" href="#opensquad">Ver OpenSquad</a>
-      </div>
-      <div class="agents-grid-real" id="agentsCatalogGrid"></div>
-    </div>
-  </section>
-
-  <aside>
-    <!-- ── Mission Control Orb + VISION AGENT LOCAL ────────────────── -->
-    <section class="panel mc-panel" id="agentDownload">
-      <p class="eyebrow">VISION AGENT LOCAL</p>
-
-      <!-- Orb interativo -->
-      <div class="mc-orb-wrap">
-        <div class="mc-ring mc-ring-3"></div>
-        <div class="mc-ring mc-ring-2"></div>
-        <div class="mc-ring mc-ring-1"></div>
-
-        <!-- Nós orbitais -->
-        <div class="mc-node mc-node--top"    data-key="openclaw">
-          <div class="mc-node-icon">⬡</div>
-          <div class="mc-node-label">OPENCLAW<br><small id="v33-t-openclaw">AGUARDA</small></div>
-        </div>
-        <div class="mc-node mc-node--tr"     data-key="scanner">
-          <div class="mc-node-icon">◈</div>
-          <div class="mc-node-label">SCANNER<br><small id="v33-t-scanner">AGUARDA</small></div>
-        </div>
-        <div class="mc-node mc-node--right"  data-key="hermes">
-          <div class="mc-node-icon">⬖</div>
-          <div class="mc-node-label">HERMES<br><small id="v33-t-hermes">AGUARDA</small></div>
-        </div>
-        <div class="mc-node mc-node--br"     data-key="patchengine">
-          <div class="mc-node-icon">⊕</div>
-          <div class="mc-node-label">PATCH ENGINE<br><small id="v33-t-patchengine">AGUARDA</small></div>
-        </div>
-        <div class="mc-node mc-node--bottom" data-key="aegis">
-          <div class="mc-node-icon">◉</div>
-          <div class="mc-node-label">AEGIS<br><small id="v33-t-aegis">AGUARDA</small></div>
-        </div>
-        <div class="mc-node mc-node--left"   data-key="passgold">
-          <div class="mc-node-icon">★</div>
-          <div class="mc-node-label">PASS GOLD<br><small id="v33-t-passgold">AGUARDA</small></div>
-        </div>
-        <div class="mc-node mc-node--tl"     data-key="github">
-          <div class="mc-node-icon">⎇</div>
-          <div class="mc-node-label">PR GITHUB<br><small id="v33-t-github">AGUARDA</small></div>
-        </div>
-
-        <!-- Núcleo central -->
-        <div class="mc-core" id="mcCore">
-          <div class="mc-core-hex"></div>
-          <div class="mc-core-status" id="mcCoreStatus">READY</div>
-          <div class="mc-core-sub" id="mcCoreSub">VISION CORE</div>
-        </div>
-
-        <!-- Tooltip ao hover nos nós -->
-        <div class="mc-tooltip" id="mcTooltip"></div>
-      </div>
-
-      <!-- Métricas estilo LionClaw abaixo do orb -->
-      <div class="mc-metrics-header">
-        <span class="eyebrow">AGENT METRICS</span>
-        <span class="mc-live-badge" id="mcLiveBadge">● LIVE</span>
-      </div>
-
-      <!-- AGENT METRICS — preenchido via GET /api/metrics/agents (sem fake) -->
-      <div class="mc-metrics-grid" id="mcMetricsGrid">
-        <div class="mc-metric-row" data-agent="openclaw">
-          <div class="mc-metric-name">OpenClaw</div>
-          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-openclaw" style="width:0%;background:var(--purple2)"></div></div>
-          <div class="mc-metric-val cyan" id="val-openclaw">—</div>
-        </div>
-        <div class="mc-metric-row" data-agent="hermes">
-          <div class="mc-metric-name">Hermes RCA</div>
-          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-hermes" style="width:0%;background:#8b5cf6"></div></div>
-          <div class="mc-metric-val cyan" id="val-hermes">—</div>
-        </div>
-        <div class="mc-metric-row" data-agent="scanner">
-          <div class="mc-metric-name">Scanner</div>
-          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-scanner" style="width:0%;background:#22c55e"></div></div>
-          <div class="mc-metric-val green" id="val-scanner">—</div>
-        </div>
-        <div class="mc-metric-row" data-agent="aegis">
-          <div class="mc-metric-name">Aegis</div>
-          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-aegis" style="width:0%;background:#22d3ee"></div></div>
-          <div class="mc-metric-val cyan" id="val-aegis">—</div>
-        </div>
-        <div class="mc-metric-row" data-agent="patchengine">
-          <div class="mc-metric-name">PatchEngine</div>
-          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-patchengine" style="width:0%;background:#f59e0b"></div></div>
-          <div class="mc-metric-val yellow" id="val-patchengine">—</div>
-        </div>
-        <div class="mc-metric-row" data-agent="passgold">
-          <div class="mc-metric-name">PASS GOLD</div>
-          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-passgold" style="width:0%;background:#facc15"></div></div>
-          <div class="mc-metric-val yellow" id="val-passgold">—</div>
-        </div>
-      </div>
-
-      <!-- Custo total — do backend real -->
-      <div class="mc-cost-row">
-        <span class="mc-cost-label">TOTAL PIPELINE</span>
-        <span class="mc-cost-val" id="mcTotalCost">—</span>
-      </div>
-
-      <!-- Tabs PIPELINE / AGENT -->
-      <div class="mc-tabs">
-        <button class="mc-tab active" data-tab="pipeline">PIPELINE</button>
-        <button class="mc-tab" data-tab="agent">AGENT LOCAL</button>
-      </div>
-
-      <div id="mc-tab-pipeline" class="mc-tab-pane active">
-        <div class="mc-pipeline-status" id="mcPipelineStatus">
-          <div class="mc-ps-row"><span class="mc-ps-label">OpenClaw</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
-          <div class="mc-ps-row"><span class="mc-ps-label">Scanner</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
-          <div class="mc-ps-row"><span class="mc-ps-label">Hermes</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
-          <div class="mc-ps-row"><span class="mc-ps-label">Aegis</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
-          <div class="mc-ps-row"><span class="mc-ps-label">PASS GOLD</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
-        </div>
-      </div>
-
-      <div id="mc-tab-agent" class="mc-tab-pane">
-        <a class="btn agent-download full" href="downloads/VisionAgentSetup.exe" download>⬇ BAIXAR VISION AGENT v1.1</a>
-        <div class="agent-cmd">npm install<br>npm link<br>vision-agent status</div>
+      <div class="status-cards">
+        <article>
+          <span>Runtime</span>
+          <strong id="runtimeText">READY</strong>
+        </article>
+        <article>
+          <span>Score / PASS GOLD</span>
+          <strong id="scoreBox">Aguardando evidência</strong>
+        </article>
       </div>
     </section>
 
-    <br>
-    <section class="panel">
-      <h2>GATES (SDDF)</h2>
-      <div class="gate"><span>SECURITY</span><span class="green" id="gate-security">—</span></div>
-      <div class="gate"><span>COMPATIBILITY</span><span class="green" id="gate-compatibility">—</span></div>
-      <div class="gate"><span>STABILITY</span><span class="green" id="gate-stability">—</span></div>
-      <div class="gate"><span>RUNTIME</span><span class="cyan" id="gate-runtime">—</span></div>
-      <div class="gate"><span>DIFF</span><span class="cyan">READY</span></div>
-      <div class="gate"><span>VAULT</span><span class="green">ACTIVE</span></div>
-      <div class="gate"><span>PROMOTION</span><span class="yellow">REQUIRES GOLD</span></div>
-      <div class="gate"><span>GITHUB PR</span><span class="cyan">REAL API</span></div>
-    </section>
-
-    <br>
-    <section class="panel" id="hermes">
-      <h2>HERMES CONSENSUS</h2>
-      <div id="votesBox"></div>
-    </section>
-
-    <br>
-    <section class="panel" id="vault">
-      <h2>STABLE VAULT</h2>
-      <div class="gate"><span>Snapshots</span><span class="green">ACTIVE</span></div>
-      <div class="gate"><span>Patches</span><span class="cyan">TRACKED</span></div>
-      <div class="gate"><span>Rollback</span><span class="yellow">READY</span></div>
-    </section>
-
-    <br>
-    <section class="panel" id="memory">
-      <h2>MEMORY / OBSIDIAN</h2>
-      <div class="gate"><span>Vault</span><span class="cyan">LINKED</span></div>
-      <div class="gate"><span>Incidents</span><span class="green">PERSIST</span></div>
-    </section>
-
-    <br>
-    <section class="panel opensquad-panel" id="opensquad">
-      <div class="opensquad-header">
-        <div>
-          <p class="eyebrow" style="color:var(--purple2);margin:0 0 6px">ARQUITETURA ESCALÁVEL — RESERVADO</p>
-          <h2 style="margin:0">OPENCLAW / OPENSQUAD</h2>
-        </div>
-        <div class="opensquad-badge">SCALE TIER</div>
-      </div>
-
-      <p style="color:var(--muted);font-size:13px;line-height:1.65;margin:14px 0">
-        Infraestrutura de agentes paralelos para problemas que exigem trabalho simultâneo em múltiplas camadas — banco de dados, backend e frontend ao mesmo tempo. Reservado para casos de escala onde um único agente não é suficiente.
-      </p>
-
-      <div class="opensquad-agents">
-        <div class="agent-slot active">
-          <div class="agent-dot" style="background:var(--green)"></div>
+    <section class="main-grid" aria-label="Cockpit Vision Core">
+      <article class="panel chat-panel" aria-labelledby="chatTitle">
+        <div class="panel-head">
           <div>
-            <strong>HERMES</strong>
-            <span>RCA · Orquestrador principal</span>
+            <span class="eyebrow">Vision Chat</span>
+            <h2 id="chatTitle">LLM Mission Console</h2>
           </div>
-          <span class="agent-status green">ATIVO</span>
-        </div>
-        <div class="agent-slot reserved">
-          <div class="agent-dot" style="background:var(--purple2)"></div>
-          <div>
-            <strong>OPENCLAW</strong>
-            <span>Router · Distribuição de missões</span>
+          <div class="mode-pills" aria-label="Modos do chat">
+            <button type="button" class="mode-pill active" data-chat-mode="conversation">Conversa</button>
+            <button type="button" class="mode-pill" data-chat-mode="mission">Missão</button>
+            <button type="button" class="mode-pill" data-chat-mode="caveman">Caveman</button>
           </div>
-          <span class="agent-status" style="color:var(--purple2)">RESERVADO</span>
         </div>
-        <div class="agent-slot reserved">
-          <div class="agent-dot" style="background:#555"></div>
-          <div>
-            <strong>SQUAD α</strong>
-            <span>Agente especialista · Database layer</span>
-          </div>
-          <span class="agent-status muted">ESCALA</span>
-        </div>
-        <div class="agent-slot reserved">
-          <div class="agent-dot" style="background:#555"></div>
-          <div>
-            <strong>SQUAD β</strong>
-            <span>Agente especialista · API layer</span>
-          </div>
-          <span class="agent-status muted">ESCALA</span>
-        </div>
-        <div class="agent-slot reserved">
-          <div class="agent-dot" style="background:#555"></div>
-          <div>
-            <strong>SQUAD γ</strong>
-            <span>Agente especialista · Frontend layer</span>
-          </div>
-          <span class="agent-status muted">ESCALA</span>
-        </div>
-      </div>
 
-      <div class="opensquad-flow">
-        <span>Erro complexo</span><b>→</b>
-        <span>OPENCLAW</span><b>→</b>
-        <span>N squads paralelos</span><b>→</b>
-        <span>Consolidação</span><b>→</b>
-        <span class="green">PASS GOLD</span>
-      </div>
+        <div id="chatStream" class="chat-stream" aria-live="polite"></div>
+        <div id="attachmentList" class="attachment-list" aria-live="polite"></div>
 
-      <div class="gate" style="margin-top:14px;border-color:rgba(139,92,246,.25);background:rgba(139,92,246,.04);border-radius:10px;padding:10px 12px">
-        <span style="font-size:12px;color:var(--muted)">Ativação automática quando missão exige &gt; 1 agente</span>
-        <span style="font-size:11px;color:var(--purple2);font-weight:600">MULTI-TENANT TIER</span>
-      </div>
+        <label class="sr-only" for="missionText">Texto da missão</label>
+        <textarea id="missionText" rows="5" placeholder="Descreva a missão, peça explicações ou prepare uma execução segura..."></textarea>
+
+        <div class="composer-actions">
+          <select id="runMode" aria-label="Modo de execução">
+            <option value="dry-run">dry-run</option>
+            <option value="live">live</option>
+            <option value="safe-patch">safe-patch</option>
+            <option value="pr-mode">pr-mode</option>
+          </select>
+          <input id="fileInput" type="file" multiple hidden>
+          <button id="attachBtn" type="button" class="ghost">Anexar</button>
+          <button id="sendChatBtn" type="button" class="ghost">Enviar chat</button>
+          <button id="executeBtn" type="button" class="primary">Executar missão</button>
+        </div>
+      </article>
+
+      <aside class="panel agent-panel" aria-labelledby="agentTitle">
+        <div class="panel-head">
+          <div>
+            <span class="eyebrow">Vision Agent Local</span>
+            <h2 id="agentTitle">Orbit interativo</h2>
+          </div>
+          <button id="workerRefreshBtn" type="button" class="ghost compact">Workers</button>
+        </div>
+        <div id="agentOrbit" class="agent-orbit" aria-live="polite"></div>
+        <div class="agent-sidecards">
+          <section>
+            <h3>Métricas</h3>
+            <div id="agentMetrics" class="mini-box">Sem missão ativa.</div>
+          </section>
+          <section>
+            <h3>Contratos / gates</h3>
+            <div id="agentContracts" class="mini-box">Sem gates recebidos.</div>
+          </section>
+          <section>
+            <h3>Workers</h3>
+            <div id="workersBox" class="mini-box">Não consultado.</div>
+          </section>
+        </div>
+      </aside>
     </section>
 
-    <br>
-    <section class="panel" id="osint">
-      <h2>OSINT TOOLS</h2>
-      <div class="gate"><span>SpiderFoot</span><span class="green">DOCKER</span></div>
-      <div class="gate"><span>Recon-ng</span><span class="yellow">SANDBOX</span></div>
-      <div class="gate"><span>Maryam</span><span class="yellow">SANDBOX</span></div>
+    <section class="panel command-bar" aria-label="Ações seguras">
+      <button id="githubStatusBtn" type="button">GitHub status</button>
+      <button id="policyBtn" type="button">Política</button>
+      <button id="githubPrBtn" type="button">PR GitHub</button>
+      <button id="diffBtn" type="button">Preview diff</button>
+      <button id="downloadLogsBtn" type="button">Download logs</button>
     </section>
 
-    <br>
-    <section class="panel">
-      <h2>WORKERS</h2>
-      <div id="workersBox"></div><br><button class="btn mini" id="workerRefreshBtn" type="button">ATUALIZAR FILA</button><div id="queueBox" class="queueBox"></div>
+    <section class="bottom-grid">
+      <article class="panel log-panel">
+        <div class="panel-head"><h2>Logs / eventos reais</h2></div>
+        <pre id="logsBox" aria-live="polite">READY — aguardando missão.</pre>
+      </article>
+      <article class="panel report-panel">
+        <div class="panel-head"><h2>Mission report</h2></div>
+        <div id="missionReport">Nenhuma missão executada.</div>
+      </article>
     </section>
-  </aside>
-</main>
+  </main>
 
+  <dialog id="authModal" class="auth-modal">
+    <div class="panel-head">
+      <h2>Vision Auth</h2>
+      <button id="closeAuthBtn" type="button" class="ghost compact">Fechar</button>
+    </div>
+    <p>Autenticação visual local. Fluxos autorizados continuam no servidor.</p>
+    <input type="email" placeholder="operator@visioncore.local" aria-label="E-mail">
+    <button type="button" class="primary">Continuar</button>
+  </dialog>
 
-<div class="auth-backdrop" id="authBackdrop" aria-hidden="true">
-  <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-    <button class="auth-close" id="closeAuthBtn" type="button" aria-label="Fechar">×</button>
-    <h2 id="authTitle">Sign in</h2>
-    <p>Use seu email ou entre automaticamente com um provedor popular.</p>
-
-    <label for="signupEmail">Username or email address*</label>
-    <input class="signup-input" id="signupEmail" type="email" autocomplete="email" placeholder="operator@visioncore.local">
-
-    <button class="auth-primary" id="signupBtn" type="button">Continue</button>
-
-    <div class="or"><span></span><b>OR</b><span></span></div>
-
-    <button class="oauth" type="button" data-provider="google"><b class="google-mark">G</b><span>Continue with Google</span></button>
-    <button class="oauth" type="button" data-provider="github"><b>●</b><span>Continue with GitHub</span></button>
-    <button class="oauth" type="button" data-provider="sso"><b>⌁</b><span>Continue with SSO</span></button>
-
-    <small>Mock SaaS: cria usuário automaticamente com plano FREE. Preparado para OAuth real depois.</small>
-  </div>
-</div>
-
-<div id="runtimeMonitor" class="stable" title="Runtime protegido por GOLD state • Auto-rollback ativo">
-  <span id="runtimeDot"></span>
-  <span id="runtimeText">LIVE</span>
-  <span>▂▄▆█</span>
-</div>
-
-
-<script src="assets/v23-ui-system.js"></script>
-<script src="assets/v231-backend-agents.js"></script>
-<script src="assets/vision-ui-command.js?v=131" defer></script>
-<script src="assets/vision-runtime-owner.js?v=131" defer></script>
-
+  <script src="assets/vision-api.js" defer></script>
+  <script src="assets/vision-agent-local.js" defer></script>
+  <script src="assets/vision-ui-command.js" defer></script>
+  <script src="assets/vision-runtime-owner.js" defer></script>
 </body>
 </html>

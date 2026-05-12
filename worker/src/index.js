@@ -14,10 +14,11 @@ const DEFAULT_ORIGIN = "http://tngh-aws-final-v2-env.eba-fi8g5gme.us-east-1.elas
 
 const ALLOWED_ORIGINS = new Set([
   "https://visioncoreai.pages.dev",
+  "https://c210aea7.visioncoreai.pages.dev",
+  "https://723d0023.visioncoreai.pages.dev",
   "http://localhost:3000",
   "http://127.0.0.1:3000"
 ]);
-const PAGES_ORIGIN_RE = /^https:\/\/[a-z0-9-]+\.visioncoreai\.pages\.dev$/i;
 
 // Fallback simples. Para produção pesada, use binding de controle de quota ou Durable Object.
 const BUCKETS = new Map();
@@ -39,27 +40,11 @@ function corsHeaders(request) {
     "Vary": "Origin",
   };
 
-  if (origin && (ALLOWED_ORIGINS.has(origin) || PAGES_ORIGIN_RE.test(origin))) {
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
 
   return headers;
-}
-
-function sseEvent(event, data) {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-}
-
-function evidenceReceiptFrom(request) {
-  return request.headers.get("X-Vision-Evidence-Receipt") || request.headers.get("X-Evidence-Receipt") || "";
-}
-
-function hasRealEvidenceReceipt(request) {
-  return /^evr_[a-z0-9]{24,}$/i.test(evidenceReceiptFrom(request));
-}
-
-function missionId() {
-  return `mission_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function jsonResponse(request, body, status = 200) {
@@ -212,6 +197,53 @@ async function proxyToOrigin(request, env, ctx) {
   });
 }
 
+function blockedRunLiveResponse(request, reason = "origin_unavailable") {
+  return jsonResponse(request, {
+    ok: false,
+    status: "INSUFFICIENT_EVIDENCE",
+    error: reason,
+    pass_gold: false,
+    promotion_allowed: false
+  }, 503);
+}
+
+function missionIdOnlyRequest(request) {
+  const incomingUrl = new URL(request.url);
+  const cleanUrl = new URL(request.url);
+  cleanUrl.search = "";
+  cleanUrl.searchParams.set("mission_id", incomingUrl.searchParams.get("mission_id") || "");
+  return new Request(cleanUrl.toString(), {
+    method: "GET",
+    headers: request.headers,
+    redirect: "manual"
+  });
+}
+
+function fallbackBlockedSse(request, missionId, reason = "origin_unavailable") {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      const send = (event, data) => {
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      };
+      send("open", { ok: false, mission_id: missionId, status: "INSUFFICIENT_EVIDENCE", pass_gold: false, promotion_allowed: false });
+      send("gate", { ok: false, gate: "evidence", status: "BLOCKED_NO_EVIDENCE", error: reason, pass_gold: false, promotion_allowed: false });
+      send("done", { ok: false, mission_id: missionId, status: "BLOCKED_NO_EVIDENCE", pass_gold: false, promotion_allowed: false });
+      controller.close();
+    }
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders(request),
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no"
+    }
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -240,49 +272,34 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/api/run-live") {
-      let body = {};
-      try { body = await request.clone().json(); } catch (_) {}
-      const id = missionId();
-      return jsonResponse(request, {
-        ok: true,
-        accepted: true,
-        mission_id: id,
-        state: "queued",
-        message: "Missão aceita pelo V13.1 runtime owner.",
-        pass_gold: false,
-        promotion_allowed: false,
-        evidence_required: true,
-        received: { mission: body.mission || body.prompt || "" }
-      });
+      if (env && env.ORIGIN_BASE) {
+        try {
+          return await proxyToOrigin(request, env, ctx);
+        } catch (err) {
+          return blockedRunLiveResponse(request, String(err && err.message ? err.message : err));
+        }
+      }
+      return blockedRunLiveResponse(request, "origin_base_not_configured");
     }
 
     if (request.method === "GET" && url.pathname === "/api/run-live-stream") {
-      const id = url.searchParams.get("mission_id") || "mission_unknown";
-      const encoder = new TextEncoder();
-      const stream = new ReadableStream({
-        start(controller) {
-          const events = [
-            ["open", { ok: true, mission_id: id, state: "running" }],
-            ["step", { mission_id: id, stage: "Scanner", status: "running", message: "Realidade coletada para validação SDDF." }],
-            ["step", { mission_id: id, stage: "Hermes", status: "running", message: "Diagnóstico registrado sem decisão GOLD." }],
-            ["step", { mission_id: id, stage: "PatchEngine", status: "running", message: "Correção preparada sob owner único." }],
-            ["gate", { mission_id: id, stage: "Aegis", allowed: false, status: "blocked", message: "Sem evidence receipt real; promoção bloqueada." }],
-            ["done", { mission_id: id, state: "done", pass_gold: false, promotion_allowed: false, message: "Estado final observado sem evidência GOLD real." }]
-          ];
-          for (const [event, data] of events) controller.enqueue(encoder.encode(sseEvent(event, data)));
-          controller.close();
+      const missionId = url.searchParams.get("mission_id");
+      if (!missionId) {
+        return jsonResponse(request, {
+          ok: false,
+          error: "mission_id_required",
+          pass_gold: false,
+          promotion_allowed: false
+        }, 400);
+      }
+      if (env && env.ORIGIN_BASE) {
+        try {
+          return await proxyToOrigin(missionIdOnlyRequest(request), env, ctx);
+        } catch (err) {
+          return fallbackBlockedSse(request, missionId, String(err && err.message ? err.message : err));
         }
-      });
-      return new Response(stream, {
-        status: 200,
-        headers: {
-          ...corsHeaders(request),
-          "Content-Type": "text/event-stream; charset=utf-8",
-          "Cache-Control": "no-cache, no-transform",
-          "Connection": "keep-alive",
-          "X-Accel-Buffering": "no"
-        }
-      });
+      }
+      return fallbackBlockedSse(request, missionId, "origin_base_not_configured");
     }
 
     // ── ENDPOINTS STUB — evita 404 no console ──────────────────────
@@ -377,9 +394,7 @@ export default {
         ok: true,
         version: "3.1",
         contracts: ["copilot", "run-live", "run-live-stream", "health"],
-        pass_gold: false,
-        promotion_allowed: false,
-        evidence_required: true
+        pass_gold: false
       });
     }
 
@@ -425,11 +440,11 @@ export default {
     // /api/pass-gold/score
     if (request.method === "GET" && url.pathname === "/api/pass-gold/score") {
       return jsonResponse(request, {
-        ok: true,
+        ok: false,
         final: "0 / 100",
-        status: "BLOCKED_NO_EVIDENCE",
-        promotion_allowed: hasRealEvidenceReceipt(request),
-        evidence_receipt_required: true
+        status: url.searchParams.get("evidence_receipt") ? "EVIDENCE_RECEIVED_PENDING_VERIFICATION" : "BLOCKED_NO_EVIDENCE",
+        pass_gold: false,
+        promotion_allowed: false
       });
     }
 
@@ -446,8 +461,8 @@ export default {
     }
 
     // /api/diff/preview
-    if (request.method === "GET" && url.pathname === "/api/diff/preview") {
-      return jsonResponse(request, { ok: true, diff: "", files_changed: 0 });
+    if (["GET", "POST"].includes(request.method) && url.pathname === "/api/diff/preview") {
+      return jsonResponse(request, { ok: true, diff: "", files_changed: 0, pass_gold: false, promotion_allowed: false });
     }
 
     // /api/github/status
@@ -457,7 +472,7 @@ export default {
 
     // /api/github/automerge-policy
     if (request.method === "GET" && url.pathname === "/api/github/automerge-policy") {
-      return jsonResponse(request, { ok: true, policy: "pass_gold_required" });
+      return jsonResponse(request, { ok: true, policy: "pass_gold_required", pass_gold: false, promotion_allowed: false });
     }
 
     // /api/tools/marketplace
@@ -498,10 +513,11 @@ export default {
     // POST /api/github/create-pr
     if (request.method === "POST" && url.pathname === "/api/github/create-pr") {
       return jsonResponse(request, {
-        ok: true,
-        pr_url: "https://github.com/visioncore/stub-pr",
-        vault_manifest: "vault://pass-gold-" + Date.now()
-      });
+        ok: false,
+        error: "authorized_server_flow_required",
+        pass_gold: false,
+        promotion_allowed: false
+      }, 403);
     }
 
     // ── FIM ENDPOINTS STUB FASE 2 ───────────────────────────────────
