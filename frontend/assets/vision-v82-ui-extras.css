@@ -394,3 +394,40 @@
 .agent-orbit {
   top: 10px !important;
 }
+
+/* V8.2.4 — mirror left orbit nodes with right side */
+.mc-node[data-key="scanner"],
+.v33-node[data-key="scanner"] {
+  left: 82% !important;
+  top: 30% !important;
+}
+
+.mc-node[data-key="hermes"],
+.v33-node[data-key="hermes"] {
+  left: 82% !important;
+  top: 66% !important;
+}
+
+.mc-node[data-key="passgold"],
+.v33-node[data-key="passgold"] {
+  left: 18% !important;
+  top: 30% !important;
+}
+
+.mc-node[data-key="aegis"],
+.v33-node[data-key="aegis"] {
+  left: 18% !important;
+  top: 66% !important;
+}
+
+.mc-node[data-key="patchengine"],
+.v33-node[data-key="patchengine"] {
+  left: 50% !important;
+  top: 88% !important;
+}
+
+.mc-node[data-key="github"],
+.v33-node[data-key="github"] {
+  left: 50% !important;
+  top: 103% !important;
+}
