@@ -194,7 +194,6 @@ main.shell.grid > aside:last-of-type {
 .mc-node--right  { top: 50%;  right: 3px; transform: translateY(-50%); }
 .mc-node--br     { bottom: 11%; right: 9%; }
 .mc-node--bottom { bottom: 3px; left: 50%; transform: translateX(-50%); }
-.mc-node--bl     { bottom: 11%; left: 9%; }
 .mc-node--left   { top: 50%;  left: 3px; transform: translateY(-50%); }
 .mc-node--tl     { top: 11%;  left: 9%; }
 

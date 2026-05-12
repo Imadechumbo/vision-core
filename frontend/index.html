@@ -367,7 +367,7 @@ window.__VISION_RUNTIME_VERSION__ = "2.9.10-clean-front-v31-gateway";
           <div class="mc-node-icon">⊕</div>
           <div class="mc-node-label">PATCH ENGINE<br><small id="v33-t-patchengine">AGUARDA</small></div>
         </div>
-        <div class="mc-node mc-node--bl" data-key="aegis">
+        <div class="mc-node mc-node--bottom" data-key="aegis">
           <div class="mc-node-icon">◉</div>
           <div class="mc-node-label">AEGIS<br><small id="v33-t-aegis">AGUARDA</small></div>
         </div>
@@ -686,7 +686,7 @@ githubStatusBtn.onclick=checkGithub;
 policyBtn.onclick=async()=>{const d=await api('/api/github/automerge-policy'); githubResult.innerHTML='Auto-merge: '+d.default+'<br>Required: '+d.required.join(', ')};
 githubPrBtn.onclick=async()=>{setRuntimeState('analyzing');showLog('GITHUB','criando PR com PASS GOLD...','cyan');const stamp=new Date().toISOString();const res=await fetch('/api/github/create-pr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pass_gold:true,title:'VISION CORE V2.3.4 MARKET READY patch',message:'chore(vision-core): validate V2.3.4 static hardened',changes:[{path:'VISION_CORE_V9_5_1_PROOF.md',content:'# VISION CORE V2.3.4\n\nPASS GOLD confirmado em '+stamp+'\n\nFront VISION CORE V2.9.4 ULTRA.\n'}]})});const data=await res.json();if(!res.ok||!data.ok){githubResult.innerHTML=`<span class="red">${data.message||data.error||'Falha ao criar PR'}</span>`;showLog('GITHUB',data.message||'Falha ao criar PR','red');setRuntimeState('stable');return}githubResult.innerHTML=`PR criado: <a href="${data.pr_url}" target="_blank">${data.pr_url}</a><br>Vault: ${data.vault_manifest}`;showLog('GITHUB','PR criado com sucesso','green');setRuntimeState('stable')};
 diffBtn.onclick=async()=>{const d=await api('/api/diff/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:'README.md',before:'VISION CORE V9.4',after:'VISION CORE V2.3.4 MARKET READY\nVISION CORE V2.9.4 ULTRA'})});diffViewer.textContent=d.patch;showLog('DIFF','preview gerado')};
-/* V8.2 SDDF: executeBtn legacy inline handler removed. Runtime owner controls mission execution. */
+/* V8.3 SDDF: executeBtn legacy inline handler removed. Runtime owner controls mission execution. */
 async function loadMissionPoll(mid){try{const d=await api("/api/mission/"+mid);const steps=d.steps||d.mission?.timeline||d.timeline||[];steps.forEach(x=>showLog("LIVE",(x.step||x.stage||"STEP")+" • "+(x.detail||x.message||""),(x.status==="fail"||x.stage==="FAIL")?"red":(x.status==="running"?"yellow":"green")));}catch{}}
 enqueueBtn.onclick=enqueueMission;workerRefreshBtn.onclick=loadWorkers;
 downloadLogsBtn.onclick=()=>{window.location.href=API+'/api/logs/download'};
@@ -950,8 +950,6 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
   const lb=document.getElementById('logsBox'); if(lb){new MutationObserver(()=>{const t=lb.textContent.toLowerCase(); if(t.includes('fail')||t.includes('erro')||t.includes('bloqueado')){paint(STAGES[Math.max(current,0)]||'Scanner','fail');return;} Object.keys(ALIASES).forEach(k=>{if(t.includes(k))paint(ALIASES[k],t.includes('running')||t.includes('executando')||t.includes('iniciando')?'running':'done')});}).observe(lb,{childList:true,subtree:true,characterData:true});}
 })();
 </script>
-
-
 <script id="V31_FORCE_GATEWAY_FINAL">
 (function(){
   const GATEWAY = "https://visioncore-api-gateway.weiganlight.workers.dev";
@@ -963,12 +961,10 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
   forceGateway(); document.addEventListener('DOMContentLoaded', forceGateway); setTimeout(forceGateway,0); setTimeout(forceGateway,500); setTimeout(forceGateway,1500);
 })();
 </script>
-
-  <!-- V8.2 SCRIPTS — runtime único + UI command -->
   <script src="assets/v23-ui-system.js"></script>
   <script src="assets/v231-backend-agents.js"></script>
-  <script src="assets/vision-runtime-owner.js?v=82" defer></script>
-  <script src="assets/vision-ui-command.js?v=82" defer></script>
+  <script src="assets/vision-runtime-owner.js?v=83" defer></script>
+  <script src="assets/vision-ui-command.js?v=83" defer></script>
+
 </body>
 </html>
-
