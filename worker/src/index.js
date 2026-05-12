@@ -14,8 +14,10 @@ const DEFAULT_ORIGIN = "http://tngh-aws-final-v2-env.eba-fi8g5gme.us-east-1.elas
 
 const ALLOWED_ORIGINS = new Set([
   "https://visioncoreai.pages.dev",
+  "https://visioncore.technetgame.com.br",
   "https://c210aea7.visioncoreai.pages.dev",
   "https://723d0023.visioncoreai.pages.dev",
+  "https://cc369d83.visioncoreai.pages.dev",
   "http://localhost:3000",
   "http://127.0.0.1:3000"
 ]);
