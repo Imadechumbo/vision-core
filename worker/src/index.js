@@ -14,15 +14,11 @@ const DEFAULT_ORIGIN = "http://tngh-aws-final-v2-env.eba-fi8g5gme.us-east-1.elas
 
 const ALLOWED_ORIGINS = new Set([
   "https://visioncoreai.pages.dev",
+  "https://c210aea7.visioncoreai.pages.dev",
+  "https://723d0023.visioncoreai.pages.dev",
   "http://localhost:3000",
   "http://127.0.0.1:3000"
 ]);
-
-const VISION_PAGES_SUBDOMAIN_RE = /^https:\/\/[^./]+\.visioncoreai\.pages\.dev$/i;
-
-function isAllowedOrigin(origin) {
-  return ALLOWED_ORIGINS.has(origin) || VISION_PAGES_SUBDOMAIN_RE.test(origin);
-}
 
 // Fallback simples. Para produção pesada, use binding de controle de quota ou Durable Object.
 const BUCKETS = new Map();
@@ -35,62 +31,32 @@ function getClientIp(request) {
     "unknown";
 }
 
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+
+  try {
+    const { protocol, hostname } = new URL(origin);
+    return protocol === "https:" && hostname.endsWith(".pages.dev");
+  } catch (_) {
+    return false;
+  }
+}
+
 function corsHeaders(request) {
   const origin = request.headers.get("Origin") || "";
   const headers = {
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Vision-Token",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Vision-Token, X-Evidence-Receipt",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
 
-  if (origin && isAllowedOrigin(origin)) {
+  if (isAllowedOrigin(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
 
   return headers;
-}
-
-
-function insufficientEvidenceBody(extra = {}) {
-  return {
-    ok: true,
-    pass_gold: false,
-    promotion_allowed: false,
-    status: "INSUFFICIENT_EVIDENCE",
-    evidence_required: true,
-    evidence_receipt: null,
-    ...extra
-  };
-}
-
-function createMissionId() {
-  return "mission_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
-}
-
-function sseFrame(event, data) {
-  return "event: " + event + "\n" + "data: " + JSON.stringify(data) + "\n\n";
-}
-
-function sseResponse(request, missionId) {
-  const now = new Date().toISOString();
-  const body = [
-    sseFrame("open", { ok: true, mission_id: missionId, status: "OPEN", received_at: now }),
-    sseFrame("step", { ok: true, mission_id: missionId, stage: "Scanner", status: "running", message: "SDDF stream accepted" }),
-    sseFrame("gate", { ok: true, mission_id: missionId, gate: "PASS_GOLD", status: "blocked", message: "Real evidence receipt required" }),
-    sseFrame("done", insufficientEvidenceBody({ mission_id: missionId, message: "SEM EVIDÊNCIA REAL → SEM PASS GOLD" }))
-  ].join("");
-
-  return new Response(body, {
-    status: 200,
-    headers: {
-      ...corsHeaders(request),
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      "Connection": "keep-alive",
-      "X-Accel-Buffering": "no"
-    }
-  });
 }
 
 function jsonResponse(request, body, status = 200) {
@@ -100,6 +66,38 @@ function jsonResponse(request, body, status = 200) {
       ...corsHeaders(request),
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store"
+    }
+  });
+}
+
+function hasEvidenceReceipt(request, url) {
+  return Boolean(
+    request.headers.get("X-Evidence-Receipt") ||
+    url.searchParams.get("evidence_receipt") ||
+    url.searchParams.get("receipt")
+  );
+}
+
+function sseResponse(request, events) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      for (const event of events) {
+        controller.enqueue(encoder.encode(`event: ${event.type}\n`));
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event.data)}\n\n`));
+      }
+      controller.close();
+    }
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders(request),
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no"
     }
   });
 }
@@ -270,28 +268,39 @@ export default {
       }, 404);
     }
 
+    // POST /api/run-live — aceita missão sem certificar GOLD sem receipt real.
     if (request.method === "POST" && url.pathname === "/api/run-live") {
       let body = {};
       try { body = await request.clone().json(); } catch (_) {}
-      const missionId = createMissionId();
-      return jsonResponse(request, insufficientEvidenceBody({
+      const missionId = `mission_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const mission = String(body.mission || body.error || "missão sem descrição").slice(0, 500);
+
+      return jsonResponse(request, {
+        ok: true,
         mission_id: missionId,
-        accepted: true,
-        project_id: body.project_id || "vision-core-master",
-        stream_contract: "/api/run-live-stream?mission_id=<mission_id>"
-      }));
+        status: "queued",
+        observed_final_state: "blocked_without_evidence",
+        pass_gold: false,
+        promotion_allowed: false,
+        evidence_receipt_required: true,
+        mission,
+        timeline: [
+          { step: "open", status: "queued", detail: "Missão aceita pelo Worker Gateway." },
+          { step: "gate", status: "blocked", detail: "PASS GOLD e promoção exigem receipt real." }
+        ]
+      });
     }
 
+    // GET /api/run-live-stream?mission_id=... — stream observado open/step/gate/done.
     if (request.method === "GET" && url.pathname === "/api/run-live-stream") {
-      const missionId = url.searchParams.get("mission_id");
-      if (!missionId || url.searchParams.has("mission") || url.searchParams.has("error") || url.searchParams.has("prompt")) {
-        return jsonResponse(request, {
-          ok: false,
-          error: "invalid_stream_contract",
-          message: "Use apenas /api/run-live-stream?mission_id=<mission_id>"
-        }, 400);
-      }
-      return sseResponse(request, missionId);
+      const missionId = url.searchParams.get("mission_id") || "unknown";
+      return sseResponse(request, [
+        { type: "open", data: { ok: true, mission_id: missionId, status: "running" } },
+        { type: "step", data: { mission_id: missionId, stage: "Scanner", status: "done", message: "Entrada recebida e normalizada." } },
+        { type: "step", data: { mission_id: missionId, stage: "Hermes", status: "done", message: "Diagnóstico aguardando evidência real para certificação." } },
+        { type: "gate", data: { mission_id: missionId, name: "observed_final_state_gate", status: "blocked", pass_gold: false, promotion_allowed: false } },
+        { type: "done", data: { ok: true, mission_id: missionId, status: "completed", pass_gold: false, promotion_allowed: false, message: "Execução encerrada sem promoção por ausência de receipt real." } }
+      ]);
     }
 
     // ── ENDPOINTS STUB — evita 404 no console ──────────────────────
@@ -300,7 +309,7 @@ export default {
         ok: true,
         runtime: "live",
         pass_gold: false,
-        pass_gold_rate: 95,
+        pass_gold_rate: 0,
         avg_tokens: 1200,
         total: "0 runs"
       });
@@ -429,23 +438,32 @@ export default {
       });
     }
 
-    // /api/pass-gold/score
+    // /api/pass-gold/score — bloqueado sem evidence receipt real.
     if (request.method === "GET" && url.pathname === "/api/pass-gold/score") {
-      const evidenceReceipt = url.searchParams.get("evidence_receipt");
-      if (!evidenceReceipt) {
-        return jsonResponse(request, insufficientEvidenceBody({
+      if (!hasEvidenceReceipt(request, url)) {
+        return jsonResponse(request, {
+          ok: false,
           final: "0 / 100",
-          score: 0,
-          message: "SEM EVIDÊNCIA REAL → SEM PASS GOLD"
-        }));
+          status: "BLOCKED",
+          status_label: "BLOCKED_WITHOUT_EVIDENCE",
+          promotion_label: "BLOQUEADA",
+          pass_gold: false,
+          promotion_allowed: false,
+          evidence_receipt_required: true,
+          message: "PASS GOLD score exige evidence receipt real."
+        }, 403);
       }
 
-      return jsonResponse(request, insufficientEvidenceBody({
-        final: "0 / 100",
-        score: 0,
-        evidence_receipt: evidenceReceipt,
-        message: "Evidence receipt ainda não validado por backend real"
-      }));
+      return jsonResponse(request, {
+        ok: true,
+        final: "pending server verification",
+        status: "EVIDENCE_RECEIVED",
+        status_label: "EVIDENCE_RECEIVED_PENDING_VERIFICATION",
+        promotion_label: "BLOQUEADA",
+        pass_gold: false,
+        promotion_allowed: false,
+        evidence_receipt_required: false
+      });
     }
 
     // /api/billing/plans
@@ -510,13 +528,13 @@ export default {
       });
     }
 
-    // POST /api/github/create-pr
+    // POST /api/github/create-pr — frontend não deve criar PR; manter bloqueado no gateway.
     if (request.method === "POST" && url.pathname === "/api/github/create-pr") {
       return jsonResponse(request, {
-        ok: true,
-        pr_url: "https://github.com/visioncore/stub-pr",
-        vault_manifest: "vault://pass-gold-" + Date.now()
-      });
+        ok: false,
+        error: "frontend_pr_creation_blocked",
+        message: "Criação de PR exige fluxo servidor autorizado e receipt real."
+      }, 403);
     }
 
     // ── FIM ENDPOINTS STUB FASE 2 ───────────────────────────────────

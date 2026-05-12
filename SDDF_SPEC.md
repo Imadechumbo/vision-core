@@ -1,69 +1,88 @@
-# VISION CORE V8.4 — SDDF CLEAN SPEC BASELINE
+# SDDF SPEC — VISION CORE
 
-Esta SPEC é vinculante para impedir regressões de runtime duplicado, scripts legados, CORS instável, PASS GOLD falso e SSE sem contrato final.
+Este documento preserva a SPEC histórica como base normativa e adiciona V13.1 apenas como complemento. Nenhuma seção V13.1 pode substituir, reduzir ou invalidar os gates, estados e proibições definidos abaixo.
 
-## 1. Frontend — runtime único
+## Gates obrigatórios preservados
 
-`frontend/index.html` é o shell visual e não pode voltar a controlar a execução diretamente. Ele deve carregar somente estes scripts de runtime/comando:
+### runtime_ownership_gate
+- O runtime ativo deve ter um único owner carregado na UI.
+- Runtimes legados não podem ser carregados em paralelo ao owner oficial.
+- Qualquer novo runtime deve declarar ownership, versão, escopo e plano de rollback antes de ser ativado.
 
-1. `assets/v23-ui-system.js`
-2. `assets/v231-backend-agents.js`
-3. `assets/vision-runtime-owner.js`
-4. `assets/vision-ui-command.js`
+### report_truth_gate
+- Relatórios devem representar apenas eventos observados ou evidências recebidas.
+- A UI não pode inventar aprovação, PR criado, promoção liberada ou PASS GOLD.
+- Estados demonstrativos devem ser rotulados como bloqueados, simulados ou indisponíveis.
 
-`frontend/index.html` não pode conter os marcadores legados abaixo:
+### post_deploy_completion_gate
+- Deploy só é considerado completo após validação programática e observação do estado final.
+- Falhas pós-deploy devem manter a missão em estado bloqueado ou failed, nunca promoted.
+- A conclusão deve registrar checks executados, resultado e evidências mínimas.
 
-- `executeBtn.onclick`
-- `new EventSource`
-- `RUN_PATH`
-- `STREAM_PATH`
-- `vision-runtime-v297`
-- `vision-v297-interactions`
-- `vision-v298-command-chat.js`
-- `vision-v299`
-- `vision-v2910`
-- `vision-v32`
-- `vision-v34`
-- `vision-v35`
-- `vision-v44`
+### observed_final_state_gate
+- O estado final oficial de uma missão depende de evidência observável do runtime/backend.
+- A ausência de receipt real mantém `pass_gold:false` e `promotion_allowed:false`.
+- SSE, logs e score devem convergir para o mesmo estado final observado.
 
-## 2. Frontend — owner de execução
+## Estados oficiais de missão
 
-`frontend/assets/vision-runtime-owner.js` é o único owner do botão `executeBtn` e deve:
+Os estados oficiais são:
 
-- controlar `executeBtn` via listener único;
-- chamar `POST /api/run-live`;
-- abrir SSE em `/api/run-live-stream` usando apenas `mission_id` na query string;
-- nunca colocar texto da missão na URL do SSE;
-- liberar lock em eventos `done`, `fail` e `error`;
-- acumular evidência recebida do SSE em `window.__VISION_SSE_EVIDENCE__`.
+1. `queued` — missão aceita para processamento.
+2. `running` — runtime executando ou aguardando etapa ativa.
+3. `blocked` — gate, política ou evidência ausente impede avanço.
+4. `failed` — execução falhou de forma observada.
+5. `completed` — execução terminou sem promoção automática.
+6. `gold_candidate` — evidência suficiente para avaliação do servidor.
+7. `gold` — aprovado apenas por backend com receipt real.
 
-## 3. Worker — gateway e contrato SSE
+A UI pode exibir estados visuais equivalentes, mas não pode converter estados locais em `gold`.
 
-`worker/src/index.js` deve:
+## Regra de novos runtimes
 
-- aplicar CORS dinâmico para `https://*.visioncoreai.pages.dev` e `https://visioncoreai.pages.dev`;
-- responder `OPTIONS` com HTTP `204`;
-- preservar as rotas existentes;
-- implementar `POST /api/run-live` sem conceder PASS GOLD no stub;
-- implementar SSE em `/api/run-live-stream` com eventos `open`, `step`, `gate` e `done`;
-- retornar `pass_gold:false` quando a evidência for insuficiente;
-- nunca retornar `promotion_allowed:true` em stub.
+Novos runtimes só podem ser adicionados se:
 
-## 4. PASS GOLD
+- não duplicarem owner de execução;
+- não abrirem stream concorrente sem coordenação explícita;
+- não reintroduzirem endpoints legados ativos;
+- passarem pelo SDDF Guard;
+- documentarem rollback e compatibilidade com os gates preservados.
 
-`/api/pass-gold/score` não pode retornar `GOLD` quando não houver evidência real. Sem evidência suficiente, o retorno obrigatório é bloqueante:
+## Regression test obrigatório — TechNetGame Marvel Tokon
 
-- `status: "INSUFFICIENT_EVIDENCE"` ou equivalente não-GOLD;
-- `pass_gold: false`;
-- `promotion_allowed: false`.
+Toda alteração em runtime, guard, score ou worker deve preservar um teste/regra de regressão para o caso TechNetGame Marvel Tokon:
 
-## 5. Guard obrigatório
+- nenhuma missão pode ser promovida sem evidence receipt real;
+- relatório final deve refletir a execução observada;
+- runtimes legados não podem sequestrar ownership;
+- falha em CORS, OPTIONS, POST live ou SSE deve bloquear conclusão.
 
-O comando abaixo é obrigatório antes de mudanças que toquem runtime, frontend shell ou gateway:
+## Proibições absolutas
 
-```bash
-node tools/sddf-guard.mjs
-```
+É proibido:
 
-O guard deve falhar se qualquer regra desta SPEC for violada.
+- carregar runtimes legados em `frontend/index.html`;
+- duplicar `vision-runtime-owner.js` ou `vision-ui-command.js`;
+- abrir SSE a partir do arquivo de comando de UI;
+- chamar execução live a partir de scripts inline do `index.html`;
+- usar `executeBtn.onclick` como owner paralelo;
+- criar PR pelo frontend;
+- decidir PASS GOLD no frontend;
+- liberar promoção sem evidence receipt real;
+- retornar `pass_gold:true` ou `promotion_allowed:true` sem evidência real.
+
+## Complemento V13.1 — Clean Core sem merge
+
+V13.1 mantém o visual Gold e restringe o carregamento ativo da UI a:
+
+- `assets/v23-ui-system.js`
+- `assets/v231-backend-agents.js`
+- `assets/vision-ui-command.js?v=131`
+- `assets/vision-runtime-owner.js?v=131`
+
+O complemento V13.1 define a separação de responsabilidades:
+
+- `vision-ui-command.js` preserva UX, chat, copiloto e anexos sem SSE, execução live, criação de PR ou decisão de promoção.
+- `vision-runtime-owner.js` é o owner único de submissão/observação live no frontend.
+- `worker/src/index.js` deve manter CORS dinâmico para Pages, `OPTIONS 204`, `POST /api/run-live`, `GET /api/run-live-stream?mission_id=...`, eventos SSE `open`, `step`, `gate`, `done` e bloqueio de score sem receipt real.
+- `tools/sddf-guard.mjs` é o gate programático mínimo para impedir regressões destrutivas no diff.

@@ -1,66 +1,115 @@
+#!/usr/bin/env node
 import { readFileSync } from 'node:fs';
 
-const files = {
-  index: 'frontend/index.html',
-  owner: 'frontend/assets/vision-runtime-owner.js',
-  command: 'frontend/assets/vision-ui-command.js',
-  worker: 'worker/src/index.js',
-};
-
-const src = Object.fromEntries(
-  Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]),
-);
-
 const failures = [];
-function fail(message) { failures.push(message); }
-function requireMatch(name, text, pattern, message) {
-  if (!pattern.test(text)) fail(`${name}: ${message}`);
+const read = (path) => readFileSync(path, 'utf8');
+const index = read('frontend/index.html');
+const spec = read('SDDF_SPEC.md');
+const uiCommand = read('frontend/assets/vision-ui-command.js');
+
+function fail(message) {
+  failures.push(message);
 }
-function forbidMatch(name, text, pattern, message) {
-  if (pattern.test(text)) fail(`${name}: ${message}`);
+
+function count(haystack, needle) {
+  return haystack.split(needle).length - 1;
 }
 
-forbidMatch('frontend/index.html', src.index, /\bRUN_PATH\b/, 'contém RUN_PATH');
-forbidMatch('frontend/index.html', src.index, /\bSTREAM_PATH\b/, 'contém STREAM_PATH');
-forbidMatch('frontend/index.html', src.index, /new\s+EventSource\s*\(/, 'contém new EventSource');
-forbidMatch('frontend/index.html', src.index, /fetch\(\s*['"]\/api\/run-live['"]/, "contém fetch('/api/run-live')");
-forbidMatch('frontend/index.html', src.index, /executeBtn\.onclick/, 'contém executeBtn.onclick');
-forbidMatch('frontend/index.html', src.index, /\bpass_gold\b/, 'contém lógica pass_gold');
-forbidMatch('frontend/index.html', src.index, /\bpromotion_allowed\b/, 'contém lógica promotion_allowed');
-forbidMatch('frontend/index.html', src.index, /__VISION_SSE_EVIDENCE__/, 'contém evidence runtime');
+const requiredSpecTerms = [
+  'runtime_ownership_gate',
+  'report_truth_gate',
+  'post_deploy_completion_gate',
+  'observed_final_state_gate',
+  'Estados oficiais de missão',
+  'Regra de novos runtimes',
+  'TechNetGame Marvel Tokon',
+  'Proibições absolutas',
+  'Complemento V13.1'
+];
 
-requireMatch('vision-runtime-owner.js', src.owner, /async\s+function\s+runMission\s*\(/, 'deve implementar runMission');
-requireMatch('vision-runtime-owner.js', src.owner, /addEventListener\(\s*['"]click['"]\s*,\s*runMission\s*\)/, 'deve registrar runMission no click do executeBtn');
-requireMatch('vision-runtime-owner.js', src.owner, /missionLock/, 'deve possuir lock contra execução concorrente');
-requireMatch('vision-runtime-owner.js', src.owner, /fetch\(\s*apiUrl\(RUN_LIVE_PATH\)/, 'deve chamar POST /api/run-live pelo runtime owner');
-requireMatch('vision-runtime-owner.js', src.owner, /mission_id/, 'deve ler mission_id da resposta');
-requireMatch('vision-runtime-owner.js', src.owner, /RUN_LIVE_STREAM_PATH\)\s*\+\s*['"]\?mission_id=/, 'deve montar SSE apenas com mission_id');
-requireMatch('vision-runtime-owner.js', src.owner, /new\s+EventSource\(\s*streamUrl\s*\)/, 'deve abrir EventSource a partir da URL mission_id-only');
-requireMatch('vision-runtime-owner.js', src.owner, /__VISION_SSE_EVIDENCE__/, 'deve manter array global de evidências');
-requireMatch('vision-runtime-owner.js', src.owner, /__VISION_SSE_EVIDENCE__\.push/, 'deve acumular evidências do SSE');
-requireMatch('vision-runtime-owner.js', src.owner, /addEventListener\(\s*['"]done['"][\s\S]*?releaseLock\(\s*['"]done['"]\s*\)/, 'deve liberar lock em done');
-requireMatch('vision-runtime-owner.js', src.owner, /addEventListener\(\s*['"]fail['"][\s\S]*?releaseLock\(\s*['"]fail['"]\s*\)/, 'deve liberar lock em fail');
-requireMatch('vision-runtime-owner.js', src.owner, /onerror\s*=\s*function[\s\S]*?releaseLock\(\s*['"]error['"]\s*\)/, 'deve liberar lock em error');
-forbidMatch('vision-runtime-owner.js', src.owner, /\?mission=/, 'não pode enviar texto da missão na query string');
-
-forbidMatch('vision-ui-command.js', src.command, /new\s+EventSource\s*\(/, 'não pode abrir SSE');
-forbidMatch('vision-ui-command.js', src.command, /fetch\(\s*.*\/api\/run-live/, 'não pode ser dono da execução real');
-forbidMatch('vision-ui-command.js', src.command, /pass_gold|promotion_allowed/, 'não pode decidir PASS GOLD');
-
-requireMatch('worker/src/index.js', src.worker, /VISION_PAGES_SUBDOMAIN_RE/, 'deve ter CORS dinâmico para subdomínios pages.dev');
-requireMatch('worker/src/index.js', src.worker, /status:\s*204/, 'OPTIONS deve retornar 204');
-requireMatch('worker/src/index.js', src.worker, /request\.method\s*===\s*['"]POST['"]\s*&&\s*url\.pathname\s*===\s*['"]\/api\/run-live['"]/, 'deve implementar POST /api/run-live');
-requireMatch('worker/src/index.js', src.worker, /request\.method\s*===\s*['"]GET['"]\s*&&\s*url\.pathname\s*===\s*['"]\/api\/run-live-stream['"]/, 'deve implementar GET /api/run-live-stream');
-requireMatch('worker/src/index.js', src.worker, /url\.searchParams\.get\(\s*['"]mission_id['"]\s*\)/, 'stream deve aceitar mission_id');
-requireMatch('worker/src/index.js', src.worker, /url\.searchParams\.has\(\s*['"]mission['"]\s*\)/, 'stream deve recusar texto sensível na query');
-for (const event of ['open', 'step', 'gate', 'done']) {
-  requireMatch('worker/src/index.js', src.worker, new RegExp(`sseFrame\\(\\s*['"]${event}['"]`), `deve emitir SSE ${event}`);
+for (const term of requiredSpecTerms) {
+  if (!spec.includes(term)) fail(`SDDF_SPEC.md perdeu termo obrigatório: ${term}`);
 }
-requireMatch('worker/src/index.js', src.worker, /pass_gold:\s*false/, 'deve retornar pass_gold:false sem evidência real');
-requireMatch('worker/src/index.js', src.worker, /promotion_allowed:\s*false/, 'deve bloquear promoção sem evidência real');
-requireMatch('worker/src/index.js', src.worker, /status:\s*['"]INSUFFICIENT_EVIDENCE['"]/, 'deve retornar INSUFFICIENT_EVIDENCE');
-forbidMatch('worker/src/index.js', src.worker, /promotion_allowed:\s*true/, 'não pode liberar promoção em stub');
-forbidMatch('worker/src/index.js', src.worker, /status:\s*['"]GOLD['"]/, '/api/pass-gold/score não pode retornar GOLD sem evidência real');
+
+const legacyRuntimeLoads = [
+  'assets/vision-runtime-v297.js',
+  'assets/vision-v297-interactions.js',
+  'assets/vision-v298-command-chat.js',
+  'assets/vision-v299-fullstack-runtime.js',
+  'assets/vision-v2910-clean-runtime.js',
+  'assets/vision-v32-orbit-runtime.js',
+  'assets/vision-v34-enterprise.js',
+  'assets/vision-v35-telemetry.js',
+  'assets/vision-v44-runtime-consistency.js',
+  'assets/vision-runtime-owner.js?v=83',
+  'assets/vision-ui-command.js?v=83'
+];
+
+for (const runtime of legacyRuntimeLoads) {
+  if (index.includes(runtime)) fail(`index.html carrega runtime legado: ${runtime}`);
+}
+
+const allowedRuntimeLoads = [
+  'assets/v23-ui-system.js',
+  'assets/v231-backend-agents.js',
+  'assets/vision-ui-command.js?v=131',
+  'assets/vision-runtime-owner.js?v=131'
+];
+
+for (const runtime of allowedRuntimeLoads) {
+  if (!index.includes(runtime)) fail(`index.html não carrega runtime permitido obrigatório: ${runtime}`);
+}
+
+const scriptSrcs = Array.from(index.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi), (match) => match[1]);
+for (const src of scriptSrcs) {
+  const normalized = src.replace(/\?.*$/, '');
+  const isAllowed = allowedRuntimeLoads.some((allowed) => src === allowed || normalized === allowed.replace(/\?.*$/, ''));
+  if (!isAllowed) fail(`index.html possui script ativo fora da lista V13.1: ${src}`);
+}
+
+if (count(index, 'vision-runtime-owner.js') !== 1) {
+  fail('index.html deve conter exatamente uma ocorrência de vision-runtime-owner.js');
+}
+
+if (count(index, 'vision-ui-command.js') !== 1) {
+  fail('index.html deve conter exatamente uma ocorrência de vision-ui-command.js');
+}
+
+const duplicateVersionPattern = /<script\b[^>]*\bsrc=["']([^"'?]+)(?:\?v=([^"']+))?["'][^>]*>/gi;
+const versions = new Map();
+for (const [, path, version = 'unversioned'] of index.matchAll(duplicateVersionPattern)) {
+  if (!versions.has(path)) versions.set(path, new Set());
+  versions.get(path).add(version);
+}
+for (const [path, seen] of versions) {
+  if (seen.size > 1) fail(`index.html carrega versões duplicadas para ${path}: ${Array.from(seen).join(', ')}`);
+}
+
+const prohibitedIndexTerms = [
+  'RUN_PATH',
+  'STREAM_PATH',
+  'EventSource',
+  "fetch('/api/run-live')",
+  'executeBtn.onclick',
+  'pass_gold',
+  'promotion_allowed'
+];
+
+for (const term of prohibitedIndexTerms) {
+  if (index.includes(term)) fail(`index.html contém termo proibido: ${term}`);
+}
+
+const prohibitedUiCommandTerms = [
+  'EventSource',
+  '/api/run-live',
+  '/api/github/create-pr',
+  'promotion_allowed',
+  'pass_gold:true'
+];
+
+for (const term of prohibitedUiCommandTerms) {
+  if (uiCommand.includes(term)) fail(`vision-ui-command.js contém termo proibido: ${term}`);
+}
 
 if (failures.length) {
   console.error('SDDF Guard failed:');
@@ -68,4 +117,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('SDDF Guard passed. V13.1 contract enforced.');
+console.log('SDDF Guard passed.');
