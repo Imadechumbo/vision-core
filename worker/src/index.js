@@ -31,16 +31,28 @@ function getClientIp(request) {
     "unknown";
 }
 
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+
+  try {
+    const { protocol, hostname } = new URL(origin);
+    return protocol === "https:" && hostname.endsWith(".pages.dev");
+  } catch (_) {
+    return false;
+  }
+}
+
 function corsHeaders(request) {
   const origin = request.headers.get("Origin") || "";
   const headers = {
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Vision-Token",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Vision-Token, X-Evidence-Receipt",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
 
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
+  if (isAllowedOrigin(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
 
@@ -54,6 +66,38 @@ function jsonResponse(request, body, status = 200) {
       ...corsHeaders(request),
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store"
+    }
+  });
+}
+
+function hasEvidenceReceipt(request, url) {
+  return Boolean(
+    request.headers.get("X-Evidence-Receipt") ||
+    url.searchParams.get("evidence_receipt") ||
+    url.searchParams.get("receipt")
+  );
+}
+
+function sseResponse(request, events) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      for (const event of events) {
+        controller.enqueue(encoder.encode(`event: ${event.type}\n`));
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event.data)}\n\n`));
+      }
+      controller.close();
+    }
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders(request),
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no"
     }
   });
 }
@@ -224,13 +268,48 @@ export default {
       }, 404);
     }
 
+    // POST /api/run-live — aceita missão sem certificar GOLD sem receipt real.
+    if (request.method === "POST" && url.pathname === "/api/run-live") {
+      let body = {};
+      try { body = await request.clone().json(); } catch (_) {}
+      const missionId = `mission_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const mission = String(body.mission || body.error || "missão sem descrição").slice(0, 500);
+
+      return jsonResponse(request, {
+        ok: true,
+        mission_id: missionId,
+        status: "queued",
+        observed_final_state: "blocked_without_evidence",
+        pass_gold: false,
+        promotion_allowed: false,
+        evidence_receipt_required: true,
+        mission,
+        timeline: [
+          { step: "open", status: "queued", detail: "Missão aceita pelo Worker Gateway." },
+          { step: "gate", status: "blocked", detail: "PASS GOLD e promoção exigem receipt real." }
+        ]
+      });
+    }
+
+    // GET /api/run-live-stream?mission_id=... — stream observado open/step/gate/done.
+    if (request.method === "GET" && url.pathname === "/api/run-live-stream") {
+      const missionId = url.searchParams.get("mission_id") || "unknown";
+      return sseResponse(request, [
+        { type: "open", data: { ok: true, mission_id: missionId, status: "running" } },
+        { type: "step", data: { mission_id: missionId, stage: "Scanner", status: "done", message: "Entrada recebida e normalizada." } },
+        { type: "step", data: { mission_id: missionId, stage: "Hermes", status: "done", message: "Diagnóstico aguardando evidência real para certificação." } },
+        { type: "gate", data: { mission_id: missionId, name: "observed_final_state_gate", status: "blocked", pass_gold: false, promotion_allowed: false } },
+        { type: "done", data: { ok: true, mission_id: missionId, status: "completed", pass_gold: false, promotion_allowed: false, message: "Execução encerrada sem promoção por ausência de receipt real." } }
+      ]);
+    }
+
     // ── ENDPOINTS STUB — evita 404 no console ──────────────────────
     if (request.method === "GET" && url.pathname === "/api/runtime/harness-stats") {
       return jsonResponse(request, {
         ok: true,
         runtime: "live",
-        pass_gold: true,
-        pass_gold_rate: 95,
+        pass_gold: false,
+        pass_gold_rate: 0,
         avg_tokens: 1200,
         total: "0 runs"
       });
@@ -316,7 +395,7 @@ export default {
         ok: true,
         version: "3.1",
         contracts: ["copilot", "run-live", "run-live-stream", "health"],
-        pass_gold: true
+        pass_gold: false
       });
     }
 
@@ -359,13 +438,31 @@ export default {
       });
     }
 
-    // /api/pass-gold/score
+    // /api/pass-gold/score — bloqueado sem evidence receipt real.
     if (request.method === "GET" && url.pathname === "/api/pass-gold/score") {
+      if (!hasEvidenceReceipt(request, url)) {
+        return jsonResponse(request, {
+          ok: false,
+          final: "0 / 100",
+          status: "BLOCKED",
+          status_label: "BLOCKED_WITHOUT_EVIDENCE",
+          promotion_label: "BLOQUEADA",
+          pass_gold: false,
+          promotion_allowed: false,
+          evidence_receipt_required: true,
+          message: "PASS GOLD score exige evidence receipt real."
+        }, 403);
+      }
+
       return jsonResponse(request, {
         ok: true,
-        final: "100 / 100",
-        status: "GOLD",
-        promotion_allowed: true
+        final: "pending server verification",
+        status: "EVIDENCE_RECEIVED",
+        status_label: "EVIDENCE_RECEIVED_PENDING_VERIFICATION",
+        promotion_label: "BLOQUEADA",
+        pass_gold: false,
+        promotion_allowed: false,
+        evidence_receipt_required: false
       });
     }
 
@@ -431,13 +528,13 @@ export default {
       });
     }
 
-    // POST /api/github/create-pr
+    // POST /api/github/create-pr — frontend não deve criar PR; manter bloqueado no gateway.
     if (request.method === "POST" && url.pathname === "/api/github/create-pr") {
       return jsonResponse(request, {
-        ok: true,
-        pr_url: "https://github.com/visioncore/stub-pr",
-        vault_manifest: "vault://pass-gold-" + Date.now()
-      });
+        ok: false,
+        error: "frontend_pr_creation_blocked",
+        message: "Criação de PR exige fluxo servidor autorizado e receipt real."
+      }, 403);
     }
 
     // ── FIM ENDPOINTS STUB FASE 2 ───────────────────────────────────
