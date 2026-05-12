@@ -36,6 +36,7 @@
 
   /* ── ESTADO ── */
   var STATE = { active: false, missionId: null, start: null, steps: [], finalizing: false };
+  window.__VISION_RUN_LIVE_IN_FLIGHT__ = window.__VISION_RUN_LIVE_IN_FLIGHT__ || false;
   window.__VISION_MISSION_STATE__ = STATE;
 
   /* Dedup de relatório por missão */
@@ -278,6 +279,7 @@
 
       STATE.active     = false;
       STATE.finalizing = false;
+      window.__VISION_RUN_LIVE_IN_FLIGHT__ = false;
     }
 
     if (mid) {
@@ -309,7 +311,10 @@
 
   /* ── SSE ── */
   function startSSE(missionText) {
-    if (window.__VISION_SSE_LOCK__ || STATE.active) return;
+    if (window.__VISION_SSE_LOCK__ || window.__VISION_SSE__) {
+      console.log('[VRO] SSE ignorado — conexão já ativa');
+      return;
+    }
     closeSSE();
     STATE.active     = true;
     STATE.start      = Date.now();
@@ -388,7 +393,8 @@
   /* ── RUN MISSION ── */
   function runMission(missionText) {
     if (!missionText || !missionText.trim()) return;
-    if (STATE.active) { chat('system', 'Miss\u00e3o já em execução. Aguarde.'); return; }
+    if (STATE.active || window.__VISION_RUN_LIVE_IN_FLIGHT__) { chat('system', 'Miss\u00e3o já em execução. Aguarde.'); return; }
+    window.__VISION_RUN_LIVE_IN_FLIGHT__ = true;
 
     STATE.missionId  = null;
     STATE.finalizing = false;
@@ -406,12 +412,19 @@
     .then(function(d) {
       if (d.mission_id) STATE.missionId = d.mission_id;
       chat('system', 'Miss\u00e3o aceita: ' + (d.mission_id || 'sem id'));
-      startSSE(missionText);
+      try {
+        startSSE(missionText);
+      } catch (sseErr) {
+        window.__VISION_RUN_LIVE_IN_FLIGHT__ = false;
+        STATE.active = false;
+        throw sseErr;
+      }
     })
     .catch(function(err) {
       chat('error', 'run-live falhou: ' + err.message);
       setCoreState('fail');
       STATE.active = false;
+      window.__VISION_RUN_LIVE_IN_FLIGHT__ = false;
     });
   }
 
@@ -424,7 +437,13 @@
     var btn = document.getElementById('executeBtn');
     if (!btn || btn.__vro_hooked__) return;
     btn.__vro_hooked__ = true;
-    btn.addEventListener('click', function() {
+    /* Runtime Owner é o único executor. Bloqueia o onclick legado do index.html. */
+    try { btn.onclick = null; } catch (_) {}
+    btn.addEventListener('click', function(ev) {
+      if (ev) {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+      }
       var text = '';
       if (typeof window.__VISION_GET_CHAT_TEXT__ === 'function') text = window.__VISION_GET_CHAT_TEXT__();
       if (!text) {
@@ -434,7 +453,7 @@
         text = ta ? ta.value.trim() : '';
       }
       if (!text) return;
-      setTimeout(function() { runMission(text); }, 50);
+      runMission(text);
     }, true);
   }
 
