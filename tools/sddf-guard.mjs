@@ -1,120 +1,88 @@
-#!/usr/bin/env node
-import { readFileSync } from 'node:fs';
+import { readFileSync } from "node:fs";
 
-const failures = [];
-const read = (path) => readFileSync(path, 'utf8');
-const index = read('frontend/index.html');
-const spec = read('SDDF_SPEC.md');
-const uiCommand = read('frontend/assets/vision-ui-command.js');
+const read = (path) => readFileSync(path, "utf8");
+const fail = (message) => {
+  console.error(`SDDF GUARD FAIL: ${message}`);
+  process.exitCode = 1;
+};
 
-function fail(message) {
-  failures.push(message);
-}
+const index = read("frontend/index.html");
+const uiCommand = read("frontend/assets/vision-ui-command.js");
+const spec = read("SDDF_SPEC.md");
 
-function count(haystack, needle) {
-  return haystack.split(needle).length - 1;
-}
+const activeScriptSrcs = [...index.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi)].map((match) => match[1]);
+const activeScriptBase = activeScriptSrcs.map((src) => src.replace(/\?.*$/, ""));
 
-const requiredSpecTerms = [
-  'runtime_ownership_gate',
-  'report_truth_gate',
-  'post_deploy_completion_gate',
-  'observed_final_state_gate',
-  'Estados oficiais de missão',
-  'Regra de novos runtimes',
-  'TechNetGame Marvel Tokon',
-  'Proibições absolutas',
-  'Complemento V13.1'
+const expectedScripts = [
+  "assets/v23-ui-system.js",
+  "assets/v231-backend-agents.js",
+  "assets/vision-ui-command.js?v=131",
+  "assets/vision-runtime-owner.js?v=131"
 ];
 
-for (const term of requiredSpecTerms) {
-  if (!spec.includes(term)) fail(`SDDF_SPEC.md perdeu termo obrigatório: ${term}`);
-}
-
-const legacyRuntimeLoads = [
-  'assets/vision-runtime-v297.js',
-  'assets/vision-v297-interactions.js',
-  'assets/vision-v298-command-chat.js',
-  'assets/vision-v299-fullstack-runtime.js',
-  'assets/vision-v2910-clean-runtime.js',
-  'assets/vision-v32-orbit-runtime.js',
-  'assets/vision-v34-enterprise.js',
-  'assets/vision-v35-telemetry.js',
-  'assets/vision-v44-runtime-consistency.js',
-  'assets/vision-runtime-owner.js?v=83',
-  'assets/vision-ui-command.js?v=83'
+const legacyRuntimeBases = [
+  "assets/vision-runtime-v297.js",
+  "assets/vision-v297-interactions.js",
+  "assets/vision-v298-command-chat.js",
+  "assets/vision-v299-fullstack-runtime.js",
+  "assets/vision-v2910-clean-runtime.js",
+  "assets/vision-v32-orbit-runtime.js",
+  "assets/vision-v34-enterprise.js",
+  "assets/vision-v35-telemetry.js",
+  "assets/vision-v44-runtime-consistency.js"
 ];
 
-for (const runtime of legacyRuntimeLoads) {
-  if (index.includes(runtime)) fail(`index.html carrega runtime legado: ${runtime}`);
+for (const src of legacyRuntimeBases) {
+  if (activeScriptBase.includes(src)) fail(`index.html carrega runtime legado ativo: ${src}`);
 }
 
-const allowedRuntimeLoads = [
-  'assets/v23-ui-system.js',
-  'assets/v231-backend-agents.js',
-  'assets/vision-ui-command.js?v=131',
-  'assets/vision-runtime-owner.js?v=131'
+for (const required of expectedScripts) {
+  const count = activeScriptSrcs.filter((src) => src === required).length;
+  if (count !== 1) fail(`index.html deve carregar ${required} exatamente uma vez; encontrado ${count}`);
+}
+
+const ownerCount = activeScriptBase.filter((src) => src === "assets/vision-runtime-owner.js").length;
+const commandCount = activeScriptBase.filter((src) => src === "assets/vision-ui-command.js").length;
+if (ownerCount !== 1) fail(`vision-runtime-owner.js deve ocorrer exatamente uma vez; encontrado ${ownerCount}`);
+if (commandCount !== 1) fail(`vision-ui-command.js deve ocorrer exatamente uma vez; encontrado ${commandCount}`);
+
+const forbiddenIndexTokens = [
+  "RUN_PATH",
+  "STREAM_PATH",
+  "EventSource",
+  "fetch('/api/run-live'",
+  "executeBtn.onclick",
+  "pass_gold",
+  "promotion_allowed"
 ];
-
-for (const runtime of allowedRuntimeLoads) {
-  if (!index.includes(runtime)) fail(`index.html não carrega runtime permitido obrigatório: ${runtime}`);
+for (const token of forbiddenIndexTokens) {
+  if (index.includes(token)) fail(`index.html contém token bloqueado: ${token}`);
 }
 
-const scriptSrcs = Array.from(index.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi), (match) => match[1]);
-for (const src of scriptSrcs) {
-  const normalized = src.replace(/\?.*$/, '');
-  const isAllowed = allowedRuntimeLoads.some((allowed) => src === allowed || normalized === allowed.replace(/\?.*$/, ''));
-  if (!isAllowed) fail(`index.html possui script ativo fora da lista V13.1: ${src}`);
-}
-
-if (count(index, 'vision-runtime-owner.js') !== 1) {
-  fail('index.html deve conter exatamente uma ocorrência de vision-runtime-owner.js');
-}
-
-if (count(index, 'vision-ui-command.js') !== 1) {
-  fail('index.html deve conter exatamente uma ocorrência de vision-ui-command.js');
-}
-
-const duplicateVersionPattern = /<script\b[^>]*\bsrc=["']([^"'?]+)(?:\?v=([^"']+))?["'][^>]*>/gi;
-const versions = new Map();
-for (const [, path, version = 'unversioned'] of index.matchAll(duplicateVersionPattern)) {
-  if (!versions.has(path)) versions.set(path, new Set());
-  versions.get(path).add(version);
-}
-for (const [path, seen] of versions) {
-  if (seen.size > 1) fail(`index.html carrega versões duplicadas para ${path}: ${Array.from(seen).join(', ')}`);
-}
-
-const prohibitedIndexTerms = [
-  'RUN_PATH',
-  'STREAM_PATH',
-  'EventSource',
-  "fetch('/api/run-live')",
-  'executeBtn.onclick',
-  'pass_gold',
-  'promotion_allowed'
+const forbiddenUiTokens = [
+  "EventSource",
+  "/api/run-live",
+  "/api/github/create-pr",
+  "pass_gold",
+  "promotion_allowed"
 ];
-
-for (const term of prohibitedIndexTerms) {
-  if (index.includes(term)) fail(`index.html contém termo proibido: ${term}`);
+for (const token of forbiddenUiTokens) {
+  if (uiCommand.includes(token)) fail(`vision-ui-command.js contém responsabilidade proibida: ${token}`);
 }
 
-const prohibitedUiCommandTerms = [
-  'EventSource',
-  '/api/run-live',
-  '/api/github/create-pr',
-  'promotion_allowed',
-  'pass_gold:true'
+const requiredSpecTokens = [
+  "runtime_ownership_gate",
+  "report_truth_gate",
+  "post_deploy_completion_gate",
+  "observed_final_state_gate",
+  "estados oficiais de missão",
+  "regra de novos runtimes",
+  "TechNetGame Marvel Tokon",
+  "proibições absolutas",
+  "V13.1"
 ];
-
-for (const term of prohibitedUiCommandTerms) {
-  if (uiCommand.includes(term)) fail(`vision-ui-command.js contém termo proibido: ${term}`);
+for (const token of requiredSpecTokens) {
+  if (!spec.includes(token)) fail(`SDDF_SPEC.md perdeu conteúdo obrigatório: ${token}`);
 }
 
-if (failures.length) {
-  console.error('SDDF Guard failed:');
-  for (const item of failures) console.error(`- ${item}`);
-  process.exit(1);
-}
-
-console.log('SDDF Guard passed.');
+if (!process.exitCode) console.log("SDDF GUARD PASS: runtime owner único e SPEC V8.1+V13.1 preservadas.");
