@@ -33,16 +33,26 @@ function getClientIp(request) {
     "unknown";
 }
 
+function allowedCorsOrigin(origin) {
+  return (
+    /^https:\/\/[a-z0-9-]+\.visioncoreai\.pages\.dev$/.test(origin) ||
+    origin === "https://visioncoreai.pages.dev" ||
+    /^http:\/\/localhost:\d+$/.test(origin) ||
+    /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)
+  );
+}
+
 function corsHeaders(request) {
   const origin = request.headers.get("Origin") || "";
+
   const headers = {
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Vision-Token",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Vision-Token, X-Vision-Key",
     "Access-Control-Max-Age": "86400",
-    "Vary": "Origin",
+    "Vary": "Origin"
   };
 
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
+  if (allowedCorsOrigin(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
 
@@ -473,3 +483,4 @@ export default {
     }
   }
 };
+
