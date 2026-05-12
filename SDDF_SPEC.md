@@ -86,3 +86,9 @@ O complemento V13.1 define a separação de responsabilidades:
 - `vision-runtime-owner.js` é o owner único de submissão/observação live no frontend.
 - `worker/src/index.js` deve manter CORS dinâmico para Pages, `OPTIONS 204`, `POST /api/run-live`, `GET /api/run-live-stream?mission_id=...`, eventos SSE `open`, `step`, `gate`, `done` e bloqueio de score sem receipt real.
 - `tools/sddf-guard.mjs` é o gate programático mínimo para impedir regressões destrutivas no diff.
+
+<!-- SDDF GUARD CANONICAL TOKENS — não remover
+estados oficiais de missão
+regra de novos runtimes
+proibições absolutas
+-->
