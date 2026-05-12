@@ -197,6 +197,53 @@ async function proxyToOrigin(request, env, ctx) {
   });
 }
 
+function blockedRunLiveResponse(request, reason = "origin_unavailable") {
+  return jsonResponse(request, {
+    ok: false,
+    status: "INSUFFICIENT_EVIDENCE",
+    error: reason,
+    pass_gold: false,
+    promotion_allowed: false
+  }, 503);
+}
+
+function missionIdOnlyRequest(request) {
+  const incomingUrl = new URL(request.url);
+  const cleanUrl = new URL(request.url);
+  cleanUrl.search = "";
+  cleanUrl.searchParams.set("mission_id", incomingUrl.searchParams.get("mission_id") || "");
+  return new Request(cleanUrl.toString(), {
+    method: "GET",
+    headers: request.headers,
+    redirect: "manual"
+  });
+}
+
+function fallbackBlockedSse(request, missionId, reason = "origin_unavailable") {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      const send = (event, data) => {
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      };
+      send("open", { ok: false, mission_id: missionId, status: "INSUFFICIENT_EVIDENCE", pass_gold: false, promotion_allowed: false });
+      send("gate", { ok: false, gate: "evidence", status: "BLOCKED_NO_EVIDENCE", error: reason, pass_gold: false, promotion_allowed: false });
+      send("done", { ok: false, mission_id: missionId, status: "BLOCKED_NO_EVIDENCE", pass_gold: false, promotion_allowed: false });
+      controller.close();
+    }
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders(request),
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no"
+    }
+  });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -224,13 +271,44 @@ export default {
       }, 404);
     }
 
+    if (request.method === "POST" && url.pathname === "/api/run-live") {
+      if (env && env.ORIGIN_BASE) {
+        try {
+          return await proxyToOrigin(request, env, ctx);
+        } catch (err) {
+          return blockedRunLiveResponse(request, String(err && err.message ? err.message : err));
+        }
+      }
+      return blockedRunLiveResponse(request, "origin_base_not_configured");
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/run-live-stream") {
+      const missionId = url.searchParams.get("mission_id");
+      if (!missionId) {
+        return jsonResponse(request, {
+          ok: false,
+          error: "mission_id_required",
+          pass_gold: false,
+          promotion_allowed: false
+        }, 400);
+      }
+      if (env && env.ORIGIN_BASE) {
+        try {
+          return await proxyToOrigin(missionIdOnlyRequest(request), env, ctx);
+        } catch (err) {
+          return fallbackBlockedSse(request, missionId, String(err && err.message ? err.message : err));
+        }
+      }
+      return fallbackBlockedSse(request, missionId, "origin_base_not_configured");
+    }
+
     // ── ENDPOINTS STUB — evita 404 no console ──────────────────────
     if (request.method === "GET" && url.pathname === "/api/runtime/harness-stats") {
       return jsonResponse(request, {
         ok: true,
         runtime: "live",
-        pass_gold: true,
-        pass_gold_rate: 95,
+        pass_gold: false,
+        pass_gold_rate: 0,
         avg_tokens: 1200,
         total: "0 runs"
       });
@@ -316,7 +394,7 @@ export default {
         ok: true,
         version: "3.1",
         contracts: ["copilot", "run-live", "run-live-stream", "health"],
-        pass_gold: true
+        pass_gold: false
       });
     }
 
@@ -362,10 +440,11 @@ export default {
     // /api/pass-gold/score
     if (request.method === "GET" && url.pathname === "/api/pass-gold/score") {
       return jsonResponse(request, {
-        ok: true,
-        final: "100 / 100",
-        status: "GOLD",
-        promotion_allowed: true
+        ok: false,
+        final: "0 / 100",
+        status: url.searchParams.get("evidence_receipt") ? "EVIDENCE_RECEIVED_PENDING_VERIFICATION" : "BLOCKED_NO_EVIDENCE",
+        pass_gold: false,
+        promotion_allowed: false
       });
     }
 
@@ -382,8 +461,8 @@ export default {
     }
 
     // /api/diff/preview
-    if (request.method === "GET" && url.pathname === "/api/diff/preview") {
-      return jsonResponse(request, { ok: true, diff: "", files_changed: 0 });
+    if (["GET", "POST"].includes(request.method) && url.pathname === "/api/diff/preview") {
+      return jsonResponse(request, { ok: true, diff: "", files_changed: 0, pass_gold: false, promotion_allowed: false });
     }
 
     // /api/github/status
@@ -393,7 +472,7 @@ export default {
 
     // /api/github/automerge-policy
     if (request.method === "GET" && url.pathname === "/api/github/automerge-policy") {
-      return jsonResponse(request, { ok: true, policy: "pass_gold_required" });
+      return jsonResponse(request, { ok: true, policy: "pass_gold_required", pass_gold: false, promotion_allowed: false });
     }
 
     // /api/tools/marketplace
@@ -434,10 +513,11 @@ export default {
     // POST /api/github/create-pr
     if (request.method === "POST" && url.pathname === "/api/github/create-pr") {
       return jsonResponse(request, {
-        ok: true,
-        pr_url: "https://github.com/visioncore/stub-pr",
-        vault_manifest: "vault://pass-gold-" + Date.now()
-      });
+        ok: false,
+        error: "authorized_server_flow_required",
+        pass_gold: false,
+        promotion_allowed: false
+      }, 403);
     }
 
     // ── FIM ENDPOINTS STUB FASE 2 ───────────────────────────────────
