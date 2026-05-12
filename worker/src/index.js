@@ -14,11 +14,15 @@ const DEFAULT_ORIGIN = "http://tngh-aws-final-v2-env.eba-fi8g5gme.us-east-1.elas
 
 const ALLOWED_ORIGINS = new Set([
   "https://visioncoreai.pages.dev",
-  "https://c210aea7.visioncoreai.pages.dev",
-  "https://723d0023.visioncoreai.pages.dev",
   "http://localhost:3000",
   "http://127.0.0.1:3000"
 ]);
+
+const VISION_PAGES_SUBDOMAIN_RE = /^https:\/\/[^./]+\.visioncoreai\.pages\.dev$/i;
+
+function isAllowedOrigin(origin) {
+  return ALLOWED_ORIGINS.has(origin) || VISION_PAGES_SUBDOMAIN_RE.test(origin);
+}
 
 // Fallback simples. Para produção pesada, use binding de controle de quota ou Durable Object.
 const BUCKETS = new Map();
@@ -40,11 +44,53 @@ function corsHeaders(request) {
     "Vary": "Origin",
   };
 
-  if (origin && ALLOWED_ORIGINS.has(origin)) {
+  if (origin && isAllowedOrigin(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
 
   return headers;
+}
+
+
+function insufficientEvidenceBody(extra = {}) {
+  return {
+    ok: true,
+    pass_gold: false,
+    promotion_allowed: false,
+    status: "INSUFFICIENT_EVIDENCE",
+    evidence_required: true,
+    evidence_receipt: null,
+    ...extra
+  };
+}
+
+function createMissionId() {
+  return "mission_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+}
+
+function sseFrame(event, data) {
+  return "event: " + event + "\n" + "data: " + JSON.stringify(data) + "\n\n";
+}
+
+function sseResponse(request, missionId) {
+  const now = new Date().toISOString();
+  const body = [
+    sseFrame("open", { ok: true, mission_id: missionId, status: "OPEN", received_at: now }),
+    sseFrame("step", { ok: true, mission_id: missionId, stage: "Scanner", status: "running", message: "SDDF stream accepted" }),
+    sseFrame("gate", { ok: true, mission_id: missionId, gate: "PASS_GOLD", status: "blocked", message: "Real evidence receipt required" }),
+    sseFrame("done", insufficientEvidenceBody({ mission_id: missionId, message: "SEM EVIDÊNCIA REAL → SEM PASS GOLD" }))
+  ].join("");
+
+  return new Response(body, {
+    status: 200,
+    headers: {
+      ...corsHeaders(request),
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no"
+    }
+  });
 }
 
 function jsonResponse(request, body, status = 200) {
@@ -224,12 +270,36 @@ export default {
       }, 404);
     }
 
+    if (request.method === "POST" && url.pathname === "/api/run-live") {
+      let body = {};
+      try { body = await request.clone().json(); } catch (_) {}
+      const missionId = createMissionId();
+      return jsonResponse(request, insufficientEvidenceBody({
+        mission_id: missionId,
+        accepted: true,
+        project_id: body.project_id || "vision-core-master",
+        stream_contract: "/api/run-live-stream?mission_id=<mission_id>"
+      }));
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/run-live-stream") {
+      const missionId = url.searchParams.get("mission_id");
+      if (!missionId || url.searchParams.has("mission") || url.searchParams.has("error") || url.searchParams.has("prompt")) {
+        return jsonResponse(request, {
+          ok: false,
+          error: "invalid_stream_contract",
+          message: "Use apenas /api/run-live-stream?mission_id=<mission_id>"
+        }, 400);
+      }
+      return sseResponse(request, missionId);
+    }
+
     // ── ENDPOINTS STUB — evita 404 no console ──────────────────────
     if (request.method === "GET" && url.pathname === "/api/runtime/harness-stats") {
       return jsonResponse(request, {
         ok: true,
         runtime: "live",
-        pass_gold: true,
+        pass_gold: false,
         pass_gold_rate: 95,
         avg_tokens: 1200,
         total: "0 runs"
@@ -316,7 +386,7 @@ export default {
         ok: true,
         version: "3.1",
         contracts: ["copilot", "run-live", "run-live-stream", "health"],
-        pass_gold: true
+        pass_gold: false
       });
     }
 
@@ -361,12 +431,21 @@ export default {
 
     // /api/pass-gold/score
     if (request.method === "GET" && url.pathname === "/api/pass-gold/score") {
-      return jsonResponse(request, {
-        ok: true,
-        final: "100 / 100",
-        status: "GOLD",
-        promotion_allowed: true
-      });
+      const evidenceReceipt = url.searchParams.get("evidence_receipt");
+      if (!evidenceReceipt) {
+        return jsonResponse(request, insufficientEvidenceBody({
+          final: "0 / 100",
+          score: 0,
+          message: "SEM EVIDÊNCIA REAL → SEM PASS GOLD"
+        }));
+      }
+
+      return jsonResponse(request, insufficientEvidenceBody({
+        final: "0 / 100",
+        score: 0,
+        evidence_receipt: evidenceReceipt,
+        message: "Evidence receipt ainda não validado por backend real"
+      }));
     }
 
     // /api/billing/plans

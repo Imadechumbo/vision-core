@@ -618,8 +618,6 @@ console.info('VISION CORE API_BASE_URL:', API);
 const logsBox=document.getElementById('logsBox'), logsPanel=document.getElementById('logsPanel');
 function showLog(scope,msg,cls=''){if(!logsBox)return;if(logsPanel)logsPanel.classList.add('active');logsBox.classList.remove('empty');logsBox.innerHTML+=`<div class="${cls}">[${new Date().toLocaleTimeString()}] ${scope}: ${String(msg||'').replace(/[<>]/g,'') }</div>`;logsBox.scrollTop=logsBox.scrollHeight}
 function setRuntimeState(s){if(window.runtimeMonitor)runtimeMonitor.className=s;if(window.runtimeText)runtimeText.textContent=String(s||'stable').toUpperCase()}
-const RUN_PATH='/api/run-live';
-const STREAM_PATH='/api/run-live-stream';
 async function api(path, opts={}){
   let res = await fetch(getVisionApi() + path, opts);
   if(res.status === 405 && String(opts.method || 'GET').toUpperCase() === 'POST'){
@@ -641,7 +639,7 @@ async function loadTimeline(){
   const items = d.timeline || d.mission?.timeline || [];
   if(window.timelineBox) timelineBox.innerHTML=items.map(x=>`<div class="timelineStep ${x.status||x.stage||'ready'}"><strong>${x.step||x.stage||'step'}</strong><span>${x.status||x.stage||'ready'}</span><small>${x.detail||x.message||''}</small></div>`).join('');
 }
-async function loadScore(){const d=await api('/api/pass-gold/score'); scoreBox.innerHTML=`<div class="scoreBig ${d.status==='GOLD'?'green':'red'}">${d.final} / GOLD</div><div>Status: <b>${d.status}</b></div><div>Promoção: <b>${d.promotion_allowed?'LIBERADA':'BLOQUEADA'}</b></div>`}
+async function loadScore(){if(scoreBox)scoreBox.innerHTML='<div class="scoreBig yellow">Aguardando evidência real</div><div>Status: <b>BLOQUEADO</b></div><div>Promoção: <b>BLOQUEADA</b></div>'}
 async function loadMetrics(){const d=await api('/api/metrics/summary'); const r=d.runtime; metricsBox.innerHTML=['cpu','memory','disk','network'].map(k=>`<div class="health"><span>${k.toUpperCase()}</span><div class="bar"><span style="width:${r[k]}%"></span></div><span>${r[k]}%</span></div>`).join('')}
 async function loadVotes(){const d=await api('/api/hermes/vote'); votesBox.innerHTML=d.votes.map(v=>`<div class="gate"><span>${v.agent}</span><span class="green">${v.vote} ${v.confidence}%</span></div>`).join('')+`<p class="cyan">${d.consensus}</p>`}
 async function loadWorkers(){
@@ -652,16 +650,10 @@ async function loadWorkers(){
 }
 async function loadProjects(){const d=await api('/api/projects'); if(window.projectSelector){projectSelector.innerHTML=d.projects.map(p=>`<option value="${p.id}">${p.id} • ${p.stack} • ${p.status}</option>`).join('')}}
 async function enqueueMission(){
-  const mission=(missionText.value.trim()||'demo mission worker queue');
-  const project=(projectSelector&&projectSelector.value)||'vision-core-master';
-  setRuntimeState('realtime');
-  showLog('LIVE','executando via /api/run-live','cyan');
-  const data=await api(RUN_PATH,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({project_id:project,mission,error:mission,mode:'live',dry_run:false})});
-  if(!data.ok){showLog('LIVE','falha: '+(data.error||data.message||data.status||'erro desconhecido'),'red'); setRuntimeState('fail'); return;}
-  showLog('LIVE','mission_id: '+(data.mission_id||data.missionId),'green');
-  if(data.timeline && window.timelineBox){timelineBox.innerHTML=data.timeline.map(x=>`<div class="timelineStep ${x.status||x.stage||'ok'}"><strong>${x.step||x.stage}</strong><span>${x.status||x.stage}</span><small>${x.detail||x.message||''}</small></div>`).join('')}
-  setRuntimeState(data.pass_gold?'gold':'stable');
-  await loadWorkers();
+  if (window.VisionRuntimeOwner && typeof window.VisionRuntimeOwner.runMission === 'function') {
+    return window.VisionRuntimeOwner.runMission();
+  }
+  showLog('LIVE','runtime owner ainda não carregado','yellow');
 }
 async function loadTools(){const d=await api('/api/tools/marketplace'); toolsBox.innerHTML=d.tools.map(t=>`<div class="tool"><strong>${t.name}</strong><span>${t.status}</span></div>`).join('')}
 async function loadPlans(){const d=await api('/api/billing/plans'); if(!d.plans)return; plansBox.innerHTML=d.plans.map((p,i)=>`<div class="plan ${i===0?'active':''}" data-plan="${p.id}"><strong>${p.name}</strong><span>${p.missions}</span><small>${p.features.join(' • ')}</small></div>`).join(''); bindPlans();}
@@ -686,26 +678,9 @@ if(window.saveAiProviderBtn){saveAiProviderBtn.onclick=async()=>{const payload={
 if(window.testAiProviderBtn){testAiProviderBtn.onclick=()=>{const p=aiProviderSelect.value; aiProviderStatus.innerHTML='<span class="cyan">Teste mock OK:</span> '+p+' pronto para roteamento inteligente.'; showLog('AI API','teste mock OK para '+p,'cyan')}}
 githubStatusBtn.onclick=checkGithub;
 policyBtn.onclick=async()=>{const d=await api('/api/github/automerge-policy'); githubResult.innerHTML='Auto-merge: '+d.default+'<br>Required: '+d.required.join(', ')};
-githubPrBtn.onclick=async()=>{setRuntimeState('analyzing');showLog('GITHUB','criando PR com PASS GOLD...','cyan');const stamp=new Date().toISOString();const res=await fetch('/api/github/create-pr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pass_gold:true,title:'VISION CORE V2.3.4 MARKET READY patch',message:'chore(vision-core): validate V2.3.4 static hardened',changes:[{path:'VISION_CORE_V9_5_1_PROOF.md',content:'# VISION CORE V2.3.4\n\nPASS GOLD confirmado em '+stamp+'\n\nFront VISION CORE V2.9.4 ULTRA.\n'}]})});const data=await res.json();if(!res.ok||!data.ok){githubResult.innerHTML=`<span class="red">${data.message||data.error||'Falha ao criar PR'}</span>`;showLog('GITHUB',data.message||'Falha ao criar PR','red');setRuntimeState('stable');return}githubResult.innerHTML=`PR criado: <a href="${data.pr_url}" target="_blank">${data.pr_url}</a><br>Vault: ${data.vault_manifest}`;showLog('GITHUB','PR criado com sucesso','green');setRuntimeState('stable')};
+githubPrBtn.onclick=()=>{githubResult.innerHTML='<span class="yellow">PR bloqueado até evidência real server-side.</span>';showLog('GITHUB','promoção bloqueada sem evidência real','yellow');setRuntimeState('stable')};
 diffBtn.onclick=async()=>{const d=await api('/api/diff/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:'README.md',before:'VISION CORE V9.4',after:'VISION CORE V2.3.4 MARKET READY\nVISION CORE V2.9.4 ULTRA'})});diffViewer.textContent=d.patch;showLog('DIFF','preview gerado')};
-executeBtn.onclick=async()=>{
-  const mission=(missionText.value.trim()||"diagnosticar runtime do projeto");
-  const project=(projectSelector&&projectSelector.value)||"technetgame";
-  const mode=(window.runMode&&runMode.value)||"dry-run";
-  showLog("MISSION","iniciando "+mode+" em "+project,"cyan");
-  setRuntimeState("analyzing");
-  try{
-    const data=await api(RUN_PATH,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({project_id:project,mission,error:mission,dry_run:mode==="dry-run",mode})});
-    if(!data.ok){showLog("MISSION",data.error||data.message||("HTTP "+(data.status||"falha")),"red");setRuntimeState("stable");return;}
-    const mid=data.id||data.mission_id||(data.result&&data.result.id);
-    showLog("MISSION","missão concluída: "+(mid||"sem id"),"green");
-    const steps=data.timeline||((data.result&&data.result.timeline)||[]);
-    steps.forEach(x=>showLog(x.status||"STEP",(x.step||"")+" "+(x.detail||""),x.status==="fail"?"red":x.status==="running"?"yellow":"green"));
-    if(mid) await loadMissionPoll(mid);
-    await loadTimeline(); await loadScore();
-  }catch(e){showLog("MISSION","erro de conexão: "+e.message,"red");}
-  setRuntimeState("stable");
-};
+// Execução real pertence exclusivamente ao frontend/assets/vision-runtime-owner.js.
 async function loadMissionPoll(mid){try{const d=await api("/api/mission/"+mid);const steps=d.steps||d.mission?.timeline||d.timeline||[];steps.forEach(x=>showLog("LIVE",(x.step||x.stage||"STEP")+" • "+(x.detail||x.message||""),(x.status==="fail"||x.stage==="FAIL")?"red":(x.status==="running"?"yellow":"green")));}catch{}}
 enqueueBtn.onclick=enqueueMission;workerRefreshBtn.onclick=loadWorkers;
 downloadLogsBtn.onclick=()=>{window.location.href=API+'/api/logs/download'};
@@ -806,7 +781,7 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
       // Atualizar com dados reais se disponível
       if (d.avg_tokens) {
         const bar = grid.querySelector('.mc-metric-bar');
-        if (bar) bar.style.width = Math.min(100, d.pass_gold_rate || 82) + '%';
+        if (bar) bar.style.width = Math.min(100, 82) + '%';
       }
       if (d.total) cost.textContent = d.total + ' runs';
     } catch { /* backend offline — manter demo */ }
@@ -825,7 +800,7 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
   if (logsBox) {
     const logObs = new MutationObserver(() => {
       const text = logsBox.textContent.toLowerCase();
-      if (text.includes('pass gold') || text.includes('pass_gold')) {
+      if (text.includes('pass gold')) {
         updateOrb('success');
         pulseNode('benchmark');
         setTimeout(() => updateOrb(''), 3000);
@@ -925,7 +900,7 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
   if(logBox){
     const obs=new MutationObserver(()=>{
       const text=logBox.textContent.toLowerCase();
-      [['scanner','Scanner'],['hermes','Hermes'],['patch','PatchEngine'],['aegis','Aegis'],['pass gold','PASS GOLD'],['pass_gold','PASS GOLD']].forEach(([needle,stage])=>{
+      [['scanner','Scanner'],['hermes','Hermes'],['patch','PatchEngine'],['aegis','Aegis'],['pass gold','PASS GOLD'],['pass gold','PASS GOLD']].forEach(([needle,stage])=>{
         if(text.includes(needle)) setTimeline(stage, stage==='PASS GOLD'?'gold':'done');
       });
     });
@@ -954,7 +929,7 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
 /* V2.3.7 timeline acionavel */
 (function(){
   const STAGES=['Scanner','Hermes','PatchEngine','Aegis','PASS GOLD','PR GitHub'];
-  const ALIASES={scanner:'Scanner',scan:'Scanner',openclaw:'Scanner',hermes:'Hermes',rca:'Hermes',diagnosis:'Hermes',diagnostico:'Hermes',patch:'PatchEngine',patchengine:'PatchEngine','patch engine':'PatchEngine',aegis:'Aegis',security:'Aegis',seguranca:'Aegis',gold:'PASS GOLD','pass gold':'PASS GOLD',pass_gold:'PASS GOLD',passgold:'PASS GOLD',pr:'PR GitHub',github:'PR GitHub','pull request':'PR GitHub',pullrequest:'PR GitHub'};
+  const ALIASES={scanner:'Scanner',scan:'Scanner',openclaw:'Scanner',hermes:'Hermes',rca:'Hermes',diagnosis:'Hermes',diagnostico:'Hermes',patch:'PatchEngine',patchengine:'PatchEngine','patch engine':'PatchEngine',aegis:'Aegis',security:'Aegis',seguranca:'Aegis',gold:'PASS GOLD','pass gold':'PASS GOLD','pass gold':'PASS GOLD',passgold:'PASS GOLD',pr:'PR GitHub',github:'PR GitHub','pull request':'PR GitHub',pullrequest:'PR GitHub'};
   let current=-1,timer=null;
   function norm(x){ if(!x) return null; const r=String(x).trim(); if(STAGES.includes(r)) return r; const k=r.toLowerCase().replace(/[_-]/g,' ').replace(/\s+/g,' ').trim(); return ALIASES[k]||ALIASES[k.replace(/\s/g,'')]||null; }
   function steps(){return Array.from(document.querySelectorAll('.v236-tl-step'));}
@@ -971,10 +946,7 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
   const lb=document.getElementById('logsBox'); if(lb){new MutationObserver(()=>{const t=lb.textContent.toLowerCase(); if(t.includes('fail')||t.includes('erro')||t.includes('bloqueado')){paint(STAGES[Math.max(current,0)]||'Scanner','fail');return;} Object.keys(ALIASES).forEach(k=>{if(t.includes(k))paint(ALIASES[k],t.includes('running')||t.includes('executando')||t.includes('iniciando')?'running':'done')});}).observe(lb,{childList:true,subtree:true,characterData:true});}
 })();
 </script>
-<script src="assets/vision-v298-command-chat.js?v=298" defer></script>
-<script src="assets/vision-v298-final-hard-fix2.js?v=298-fix2" defer></script>
 <script src="assets/vision-v299-fullstack-runtime.js?v=299" defer></script>
-<script src="assets/vision-v2910-clean-runtime.js?v=2910-clean" defer></script>
 
 <script id="V31_FORCE_GATEWAY_FINAL">
 (function(){
@@ -989,12 +961,12 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
 </script>
 
   <!-- V3.2: Runtime único SSE — carrega último para neutralizar runtimes anteriores -->
-  <script src="assets/vision-v32-orbit-runtime.js?v=32" defer></script>
   <!-- V3.4 Enterprise Live -->
-  <script src="assets/vision-v34-enterprise.js?v=34" defer></script>
   <!-- V3.5 Telemetria Real -->
   <script src="assets/vision-v35-telemetry.js?v=35" defer></script>
+  <!-- V13.1 SDDF: command UX + runtime owner único -->
+  <script src="assets/vision-ui-command.js?v=131" defer></script>
+<script src="assets/vision-runtime-owner.js?v=131" defer></script>
   <!-- V4.4 Runtime Consistency Pass -->
-  <script src="assets/vision-v44-runtime-consistency.js?v=44" defer></script>
 </body>
 </html>
