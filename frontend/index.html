@@ -67,6 +67,8 @@ window.__VISION_RUNTIME_VERSION__ = "2.9.10-clean-front-v31-gateway";
 
 <link rel="stylesheet" href="assets/vision-v297-ui.css">
 <link rel="stylesheet" href="assets/vision-v33-orbit.css">
+<script src="assets/vision-runtime-v297.js?v=297"></script>
+<script src="assets/vision-v297-interactions.js?v=297" defer></script>
 <link rel="stylesheet" href="assets/vision-v298-command-chat.css">
 <link rel="stylesheet" href="assets/vision-v298-final-hardened.css">
 <link rel="stylesheet" href="assets/vision-v298-final-hard-fix2.css">
@@ -686,7 +688,24 @@ githubStatusBtn.onclick=checkGithub;
 policyBtn.onclick=async()=>{const d=await api('/api/github/automerge-policy'); githubResult.innerHTML='Auto-merge: '+d.default+'<br>Required: '+d.required.join(', ')};
 githubPrBtn.onclick=async()=>{setRuntimeState('analyzing');showLog('GITHUB','criando PR com PASS GOLD...','cyan');const stamp=new Date().toISOString();const res=await fetch('/api/github/create-pr',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pass_gold:true,title:'VISION CORE V2.3.4 MARKET READY patch',message:'chore(vision-core): validate V2.3.4 static hardened',changes:[{path:'VISION_CORE_V9_5_1_PROOF.md',content:'# VISION CORE V2.3.4\n\nPASS GOLD confirmado em '+stamp+'\n\nFront VISION CORE V2.9.4 ULTRA.\n'}]})});const data=await res.json();if(!res.ok||!data.ok){githubResult.innerHTML=`<span class="red">${data.message||data.error||'Falha ao criar PR'}</span>`;showLog('GITHUB',data.message||'Falha ao criar PR','red');setRuntimeState('stable');return}githubResult.innerHTML=`PR criado: <a href="${data.pr_url}" target="_blank">${data.pr_url}</a><br>Vault: ${data.vault_manifest}`;showLog('GITHUB','PR criado com sucesso','green');setRuntimeState('stable')};
 diffBtn.onclick=async()=>{const d=await api('/api/diff/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:'README.md',before:'VISION CORE V9.4',after:'VISION CORE V2.3.4 MARKET READY\nVISION CORE V2.9.4 ULTRA'})});diffViewer.textContent=d.patch;showLog('DIFF','preview gerado')};
-/* V8.3 SDDF: executeBtn legacy inline handler removed. Runtime owner controls mission execution. */
+executeBtn.onclick=async()=>{
+  const mission=(missionText.value.trim()||"diagnosticar runtime do projeto");
+  const project=(projectSelector&&projectSelector.value)||"technetgame";
+  const mode=(window.runMode&&runMode.value)||"dry-run";
+  showLog("MISSION","iniciando "+mode+" em "+project,"cyan");
+  setRuntimeState("analyzing");
+  try{
+    const data=await api(RUN_PATH,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({project_id:project,mission,error:mission,dry_run:mode==="dry-run",mode})});
+    if(!data.ok){showLog("MISSION",data.error||data.message||("HTTP "+(data.status||"falha")),"red");setRuntimeState("stable");return;}
+    const mid=data.id||data.mission_id||(data.result&&data.result.id);
+    showLog("MISSION","missão concluída: "+(mid||"sem id"),"green");
+    const steps=data.timeline||((data.result&&data.result.timeline)||[]);
+    steps.forEach(x=>showLog(x.status||"STEP",(x.step||"")+" "+(x.detail||""),x.status==="fail"?"red":x.status==="running"?"yellow":"green"));
+    if(mid) await loadMissionPoll(mid);
+    await loadTimeline(); await loadScore();
+  }catch(e){showLog("MISSION","erro de conexão: "+e.message,"red");}
+  setRuntimeState("stable");
+};
 async function loadMissionPoll(mid){try{const d=await api("/api/mission/"+mid);const steps=d.steps||d.mission?.timeline||d.timeline||[];steps.forEach(x=>showLog("LIVE",(x.step||x.stage||"STEP")+" • "+(x.detail||x.message||""),(x.status==="fail"||x.stage==="FAIL")?"red":(x.status==="running"?"yellow":"green")));}catch{}}
 enqueueBtn.onclick=enqueueMission;workerRefreshBtn.onclick=loadWorkers;
 downloadLogsBtn.onclick=()=>{window.location.href=API+'/api/logs/download'};
@@ -828,6 +847,8 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
 
 })(); // fim initMissionControlOrb
 </script>
+<script src="assets/v23-ui-system.js"></script>
+<script src="assets/v231-backend-agents.js"></script>
 <script>
 (function(){
   const API_BASE = (window.API || window.API_BASE_URL || window.RUNTIME_CONFIG?.API_BASE_URL || '').replace(/\/$/, '');
@@ -950,6 +971,11 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
   const lb=document.getElementById('logsBox'); if(lb){new MutationObserver(()=>{const t=lb.textContent.toLowerCase(); if(t.includes('fail')||t.includes('erro')||t.includes('bloqueado')){paint(STAGES[Math.max(current,0)]||'Scanner','fail');return;} Object.keys(ALIASES).forEach(k=>{if(t.includes(k))paint(ALIASES[k],t.includes('running')||t.includes('executando')||t.includes('iniciando')?'running':'done')});}).observe(lb,{childList:true,subtree:true,characterData:true});}
 })();
 </script>
+<script src="assets/vision-v298-command-chat.js?v=298" defer></script>
+<script src="assets/vision-v298-final-hard-fix2.js?v=298-fix2" defer></script>
+<script src="assets/vision-v299-fullstack-runtime.js?v=299" defer></script>
+<script src="assets/vision-v2910-clean-runtime.js?v=2910-clean" defer></script>
+
 <script id="V31_FORCE_GATEWAY_FINAL">
 (function(){
   const GATEWAY = "https://visioncore-api-gateway.weiganlight.workers.dev";
@@ -961,10 +987,14 @@ checkGithub().catch(()=>showLog('GITHUB','backend offline ou CORS','yellow'));
   forceGateway(); document.addEventListener('DOMContentLoaded', forceGateway); setTimeout(forceGateway,0); setTimeout(forceGateway,500); setTimeout(forceGateway,1500);
 })();
 </script>
-  <script src="assets/v23-ui-system.js"></script>
-  <script src="assets/v231-backend-agents.js"></script>
-  <script src="assets/vision-runtime-owner.js?v=83" defer></script>
-  <script src="assets/vision-ui-command.js?v=83" defer></script>
 
+  <!-- V3.2: Runtime único SSE — carrega último para neutralizar runtimes anteriores -->
+  <script src="assets/vision-v32-orbit-runtime.js?v=32" defer></script>
+  <!-- V3.4 Enterprise Live -->
+  <script src="assets/vision-v34-enterprise.js?v=34" defer></script>
+  <!-- V3.5 Telemetria Real -->
+  <script src="assets/vision-v35-telemetry.js?v=35" defer></script>
+  <!-- V4.4 Runtime Consistency Pass -->
+  <script src="assets/vision-v44-runtime-consistency.js?v=44" defer></script>
 </body>
 </html>
