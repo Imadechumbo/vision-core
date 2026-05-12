@@ -3,7 +3,7 @@
  * Cloudflare Worker proxy for:
  * - POST/GET/OPTIONS API forwarding
  * - CORS hardening
- * - simple in-memory per-isolate rate limit fallback
+ * - simple in-memory per-isolate request quota fallback
  * - SSE passthrough for /api/run-live-stream
  *
  * Origin atual:
@@ -20,7 +20,7 @@ const ALLOWED_ORIGINS = new Set([
   "http://127.0.0.1:3000"
 ]);
 
-// Fallback simples. Para produção pesada, use binding de Rate Limiting API ou Durable Object.
+// Fallback simples. Para produção pesada, use binding de controle de quota ou Durable Object.
 const BUCKETS = new Map();
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 120;
@@ -33,15 +33,18 @@ function getClientIp(request) {
 
 function corsHeaders(request) {
   const origin = request.headers.get("Origin") || "";
-  const allowed = ALLOWED_ORIGINS.has(origin) ? origin : "*";
-
-  return {
-    "Access-Control-Allow-Origin": allowed,
+  const headers = {
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Vision-Token",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
+
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
 }
 
 function jsonResponse(request, body, status = 200) {

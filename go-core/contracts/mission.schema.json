@@ -1,9 +1,12 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "VisionCore Mission Input",
-  "description": "Contrato de entrada para missão do Go Safe Core V5.0",
+  "description": "Contrato de entrada para miss\u00e3o do Go Safe Core V5.0",
   "type": "object",
-  "required": ["root", "input"],
+  "required": [
+    "root",
+    "input"
+  ],
   "properties": {
     "root": {
       "type": "string",
@@ -12,18 +15,67 @@
     },
     "input": {
       "type": "string",
-      "description": "Texto da missão em linguagem natural ou identificador de self-test",
+      "description": "Texto da miss\u00e3o em linguagem natural ou identificador de self-test",
       "minLength": 1
     },
     "dry_run": {
       "type": "boolean",
-      "description": "Se true, nenhum arquivo é alterado. V5.0 sempre dry_run=true.",
+      "description": "Se true, nenhum arquivo \u00e9 alterado. V5.0 sempre dry_run=true.",
       "default": true
     },
     "mission_id": {
       "type": "string",
-      "description": "ID opcional da missão. Se omitido, gerado automaticamente.",
+      "description": "ID opcional da miss\u00e3o. Se omitido, gerado automaticamente.",
       "pattern": "^mission_[a-f0-9]+$"
+    },
+    "memory_recorded": {
+      "type": "boolean",
+      "description": "V6.2 output field: true when a PASS GOLD + PASS SECURE mission wrote a passive remediation memory event."
+    },
+    "memory_event_id": {
+      "type": "string",
+      "description": "V6.2 output field: ID of the passive remediation memory event when recorded."
+    },
+    "memory_warning": {
+      "type": "string",
+      "description": "V6.2 output field: non-critical memory persistence warning; never changes PASS GOLD/PASS SECURE decisions."
+    },
+    "github_pr_plan_id": {
+      "type": "string",
+      "description": "V7.0 output field: deterministic PASS GOLD gated PR plan identifier."
+    },
+    "github_pr_branch": {
+      "type": "string",
+      "description": "V7.0 output field: sanitized remediation work branch planned for PR."
+    },
+    "github_pr_can_open": {
+      "type": "boolean",
+      "description": "V7.0 output field: true only when PASS GOLD, PASS SECURE and all PR gates pass with changed files."
+    },
+    "github_pr_block_reason": {
+      "type": "string",
+      "description": "V7.0 output field: objective reason PR opening is blocked."
+    },
+    "github_pr_title": {
+      "type": "string",
+      "description": "V7.0 output field: generated PR title."
+    },
+    "github_pr_status_context": {
+      "type": "string",
+      "description": "V7.0 output field: GitHub status context, always vision/pass-gold for PASS GOLD checks."
+    },
+    "github_pr_status_state": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failure",
+        "pending"
+      ],
+      "description": "V7.0 output field: generated status state; success only with PASS GOLD + PASS SECURE and zero blocking findings."
+    },
+    "github_pr_dry_run": {
+      "type": "boolean",
+      "description": "V7.0 output field: true when no external GitHub write occurs."
     }
   },
   "additionalProperties": false

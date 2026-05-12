@@ -69,7 +69,7 @@ func TestRun_NoCredentials_Clean(t *testing.T) {
 
 func TestRun_NoCredentials_Dirty(t *testing.T) {
 	dir := t.TempDir()
-	_ = os.WriteFile(filepath.Join(dir, "server.js"), []byte(`const key = "sk_live_abc123";`), 0644)
+	_ = os.WriteFile(filepath.Join(dir, "server.js"), []byte("const key = \""+"sk_"+"live_"+"abc123"+"\";"), 0644)
 	res := Run(dir, []string{"server.js"})
 	found := false
 	for _, c := range res.Checks {

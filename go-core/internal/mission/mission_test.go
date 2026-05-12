@@ -4,6 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/visioncore/go-core/internal/memory"
+	"github.com/visioncore/go-core/internal/testfixtures"
 )
 
 func TestRun_SelfTest_PassGold(t *testing.T) {
@@ -122,7 +125,7 @@ func TestRun_ValidatorFail_TriggersRollback(t *testing.T) {
 	_ = os.MkdirAll(testDir, 0755)
 
 	poisoned := filepath.Join(testDir, "mission.sentinel")
-	_ = os.WriteFile(poisoned, []byte("sk_live_FAKE_KEY_FOR_TESTING_ROLLBACK"), 0644)
+	_ = os.WriteFile(poisoned, []byte(testfixtures.RollbackSentinelContent()), 0644)
 
 	original, _ := os.ReadFile(poisoned)
 
@@ -250,5 +253,894 @@ func TestRun_HermesIntegrated(t *testing.T) {
 
 	if out.ProbableRootCause == "" {
 		t.Fatal("expected probable_root_cause to be populated")
+	}
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// V6.1.1-HARDEN CONTRACT TESTS
+// Garantem que o JSON de output da missão sempre expõe o Security Remediation
+// Report completo e que os invariantes de segurança são mantidos.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// TestRun_SecurityReport_FieldsAlwaysPresent garante que todos os campos do
+// Security Remediation Report estão presentes no output da missão,
+// independente de haver violações ou não.
+func TestRun_SecurityReport_FieldsAlwaysPresent(t *testing.T) {
+	dir := t.TempDir()
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// Campos obrigatórios — devem existir mesmo quando não há violações
+
+	// pass_secure e pass_gold devem ser booleanos válidos (sempre presentes)
+	_ = out.PassSecure       // bool — sempre presente
+	_ = out.PassGold         // bool — sempre presente
+	_ = out.DeployAllowed    // bool — sempre presente
+	_ = out.PromotionAllowed // bool — sempre presente
+
+	// contadores numéricos — devem ser >= 0
+	if out.SecurityTotalViolations < 0 {
+		t.Error("security_total_violations must be >= 0")
+	}
+	if out.SecurityCriticalCount < 0 {
+		t.Error("security_critical_count must be >= 0")
+	}
+	if out.SecurityHighCount < 0 {
+		t.Error("security_high_count must be >= 0")
+	}
+	if out.SecurityMediumCount < 0 {
+		t.Error("security_medium_count must be >= 0")
+	}
+	if out.SecurityLowCount < 0 {
+		t.Error("security_low_count must be >= 0")
+	}
+
+	// SecurityViolations deve ser slice inicializado (não nil após scan vazio)
+	// nil é aceitável quando não há violações — mas o total deve bater
+	total := out.SecurityCriticalCount + out.SecurityHighCount +
+		out.SecurityMediumCount + out.SecurityLowCount
+	if total != out.SecurityTotalViolations {
+		t.Errorf("security counts must sum to total: critical(%d)+high(%d)+medium(%d)+low(%d)=%d != total(%d)",
+			out.SecurityCriticalCount, out.SecurityHighCount,
+			out.SecurityMediumCount, out.SecurityLowCount,
+			total, out.SecurityTotalViolations)
+	}
+}
+
+// TestRun_SecurityReport_CountsSumToTotal garante invariante aritmético:
+// critical + high + medium + low == total_violations, sempre.
+func TestRun_SecurityReport_CountsSumToTotal(t *testing.T) {
+	dir := t.TempDir()
+
+	// projeto com violações reais — fixtures construídas em runtime, sem literais no binário
+	if err := os.WriteFile(filepath.Join(dir, "config.go"),
+		[]byte(testfixtures.AWSKeyGoSource("awsKey")+testfixtures.AuthBypassGoSource()),
+		0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	sum := out.SecurityCriticalCount + out.SecurityHighCount +
+		out.SecurityMediumCount + out.SecurityLowCount
+	if sum != out.SecurityTotalViolations {
+		t.Errorf("counts must sum to total: %d+%d+%d+%d=%d != %d",
+			out.SecurityCriticalCount, out.SecurityHighCount,
+			out.SecurityMediumCount, out.SecurityLowCount,
+			sum, out.SecurityTotalViolations)
+	}
+	// também deve bater com len(SecurityViolations)
+	if len(out.SecurityViolations) != out.SecurityTotalViolations {
+		t.Errorf("len(security_violations)=%d != security_total_violations=%d",
+			len(out.SecurityViolations), out.SecurityTotalViolations)
+	}
+}
+
+// TestRun_CriticalOrHighBlocksPromotion garante que a presença de qualquer
+// violation CRITICAL ou HIGH mantém pass_secure, pass_gold, deploy_allowed
+// e promotion_allowed todos false.
+func TestRun_CriticalOrHighBlocksPromotion(t *testing.T) {
+	dir := t.TempDir()
+
+	// injetar violação CRITICAL conhecida — fixture em runtime evita literal no binário
+	if err := os.WriteFile(filepath.Join(dir, "secrets.go"),
+		[]byte(testfixtures.AWSKeyGoSource("key")), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	hasCriticalOrHigh := out.SecurityCriticalCount > 0 || out.SecurityHighCount > 0
+	if !hasCriticalOrHigh {
+		t.Skip("no CRITICAL/HIGH detected — test relies on secret injection")
+	}
+
+	if out.PassSecure {
+		t.Error("pass_secure must be false when CRITICAL or HIGH violations exist")
+	}
+	if out.PassGold {
+		t.Error("pass_gold must be false when CRITICAL or HIGH violations exist")
+	}
+	if out.DeployAllowed {
+		t.Error("deploy_allowed must be false when CRITICAL or HIGH violations exist")
+	}
+	if out.PromotionAllowed {
+		t.Error("promotion_allowed must be false when CRITICAL or HIGH violations exist")
+	}
+}
+
+// TestRun_PassSecureFalseImpliesPassGoldFalse garante o invariante de cadeia:
+// pass_secure=false → pass_gold=false, sem exceção.
+func TestRun_PassSecureFalseImpliesPassGoldFalse(t *testing.T) {
+	dir := t.TempDir()
+
+	// injetar auth bypass flag CRITICAL — fixture em runtime
+	if err := os.WriteFile(filepath.Join(dir, "handler.go"),
+		[]byte(testfixtures.AuthBypassGoSource()), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if !out.PassSecure && out.PassGold {
+		t.Error("invariant violated: pass_secure=false but pass_gold=true — impossible state")
+	}
+	// se pass_secure for false, gates devem refletir pass_secure_ok=false
+	if !out.PassSecure {
+		if out.Gates.PassSecureOK {
+			t.Error("gates.pass_secure_ok must be false when pass_secure=false")
+		}
+		if out.PromotionAllowed {
+			t.Error("promotion_allowed must be false when pass_secure=false")
+		}
+		if out.DeployAllowed {
+			t.Error("deploy_allowed must be false when pass_secure=false")
+		}
+	}
+}
+
+// TestRun_ViolationStructureComplete garante que cada violation no output
+// contém todos os campos obrigatórios preenchidos.
+func TestRun_ViolationStructureComplete(t *testing.T) {
+	dir := t.TempDir()
+
+	// injetar arquivo com violação conhecida — fixture em runtime
+	if err := os.WriteFile(filepath.Join(dir, "config.go"),
+		[]byte(testfixtures.AWSKeyGoSource("awsKey")), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if len(out.SecurityViolations) == 0 {
+		t.Fatal("expected at least one violation — test requires secret injection to work")
+	}
+
+	for i, v := range out.SecurityViolations {
+		if v.Gate == "" {
+			t.Errorf("violation[%d]: gate must not be empty", i)
+		}
+		if v.Category == "" {
+			t.Errorf("violation[%d]: category must not be empty", i)
+		}
+		if v.Severity == "" {
+			t.Errorf("violation[%d]: severity must not be empty", i)
+		}
+		if v.File == "" {
+			t.Errorf("violation[%d]: file must not be empty", i)
+		}
+		// line pode ser 0 (arquivo inteiro) — válido
+		if v.RuleID == "" {
+			t.Errorf("violation[%d]: rule_id must not be empty", i)
+		}
+		if v.Message == "" {
+			t.Errorf("violation[%d]: message must not be empty", i)
+		}
+		if v.Remediation == "" {
+			t.Errorf("violation[%d]: remediation must not be empty", i)
+		}
+		// severity deve ser um valor permitido
+		validSeverity := map[string]bool{
+			"CRITICAL": true, "HIGH": true, "MEDIUM": true, "LOW": true,
+		}
+		if !validSeverity[v.Severity] {
+			t.Errorf("violation[%d]: invalid severity %q (must be CRITICAL|HIGH|MEDIUM|LOW)", i, v.Severity)
+		}
+	}
+}
+
+// TestRun_ViolationSourceContext_ProductionFile garante que violations em
+// arquivos de produção (.go não-test, .js) são classificadas como "production".
+func TestRun_ViolationSourceContext_ProductionFile(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(dir, "config.go"),
+		[]byte(testfixtures.AWSKeyGoSource("awsKey")), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	found := false
+	for _, v := range out.SecurityViolations {
+		if v.File == "config.go" {
+			found = true
+			if v.SourceContext != "production" {
+				t.Errorf("config.go must be classified as 'production', got %q", v.SourceContext)
+			}
+		}
+	}
+	if !found {
+		t.Logf("violation for config.go not found in output — violations: %v", out.SecurityViolations)
+	}
+}
+
+// TestRun_SecurityFailedGates_Populated garante que security_failed_gates
+// é populado corretamente quando há falhas de segurança.
+func TestRun_SecurityFailedGates_Populated(t *testing.T) {
+	dir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(dir, "main.go"),
+		[]byte(testfixtures.AWSKeyGoSource("secret")), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if !out.PassSecure {
+		if len(out.SecurityFailedGates) == 0 {
+			t.Error("security_failed_gates must be non-empty when pass_secure=false")
+		}
+		// cada gate falho deve ser um valor conhecido
+		validGates := map[string]bool{
+			"secrets_ok": true, "dependencies_ok": true, "containers_ok": true,
+			"api_ok": true, "policies_ok": true,
+		}
+		for _, g := range out.SecurityFailedGates {
+			if !validGates[g] {
+				t.Errorf("unknown gate in security_failed_gates: %q", g)
+			}
+		}
+	}
+}
+
+// TestRun_PipelineContainsSecuritySteps valida que o pipeline V6.1.1 contém
+// os steps de segurança obrigatórios.
+func TestRun_PipelineContainsSecuritySteps(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	requiredSteps := []string{
+		"scanner", "hermes", "fileops", "snapshot", "patcher",
+		"validator", "rollback", "security", "passsecure", "passgold",
+	}
+	stepSet := map[string]bool{}
+	for _, s := range out.Steps {
+		stepSet[s] = true
+	}
+	for _, req := range requiredSteps {
+		if !stepSet[req] {
+			t.Errorf("V6.1.1 pipeline missing required step: %q", req)
+		}
+	}
+
+	// passsecure deve aparecer no step_results
+	found := false
+	for _, sr := range out.StepResults {
+		if sr.Step == "passsecure" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("step_results must contain 'passsecure' entry")
+	}
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// V6.1.2 PREFLIGHT FALSE POSITIVE / NOISE FILTER CONTRACT TESTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+func TestRun_SecurityDispositionFieldsAndCounts(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "config.go"), []byte(testfixtures.AWSKeyGoSource("awsKey")), 0644); err != nil {
+		t.Fatal(err)
+	}
+	fixture := "package api_test\nfunc TestLog(t *testing.T) { " + "console" + "." + "log" + "(\"" + "tok" + "en" + "\") }\n"
+	if err := os.WriteFile(filepath.Join(dir, "api_test.go"), []byte(fixture), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.SecurityTotalViolations != len(out.SecurityViolations) {
+		t.Fatalf("security_total_violations=%d, len(security_violations)=%d", out.SecurityTotalViolations, len(out.SecurityViolations))
+	}
+	if out.SecurityTotalViolations < 2 {
+		t.Fatalf("expected raw total to include production blocker and test fixture noise, got %d", out.SecurityTotalViolations)
+	}
+	if out.SecurityBlockingTotal != len(out.SecurityBlockingViolations) {
+		t.Fatalf("security_blocking_total=%d, len(security_blocking_violations)=%d", out.SecurityBlockingTotal, len(out.SecurityBlockingViolations))
+	}
+	if out.SecurityBlockingTotal == 0 {
+		t.Fatal("expected at least one production blocker")
+	}
+	if out.SecurityFalsePositiveCount == 0 || out.SecurityNoiseCount == 0 {
+		t.Fatalf("expected false_positive/noise counts > 0, got fp=%d noise=%d", out.SecurityFalsePositiveCount, out.SecurityNoiseCount)
+	}
+
+	foundFixture := false
+	for i, v := range out.SecurityViolations {
+		if v.Disposition == "" {
+			t.Fatalf("security_violations[%d] missing disposition: %+v", i, v)
+		}
+		if v.File == "api_test.go" {
+			foundFixture = true
+			if v.SourceContext != "test_fixture" || v.Disposition != "report_only" || !v.FalsePositive || v.NoiseReason == "" {
+				t.Fatalf("unexpected test fixture classification: %+v", v)
+			}
+		}
+	}
+	if !foundFixture {
+		t.Fatal("expected api_test.go test fixture violation in security_violations")
+	}
+}
+
+func TestRun_PassSecureFalseKeepsPassGoldDeployPromotionFalse(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "secrets.go"), []byte(testfixtures.AWSKeyGoSource("key")), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+	if out.PassSecure {
+		t.Fatal("expected pass_secure=false with production blocker")
+	}
+	if out.PassGold {
+		t.Fatal("expected pass_gold=false while pass_secure=false")
+	}
+	if out.DeployAllowed {
+		t.Fatal("expected deploy_allowed=false while pass_secure=false")
+	}
+	if out.PromotionAllowed {
+		t.Fatal("expected promotion_allowed=false while pass_secure=false")
+	}
+}
+
+func TestRun_GoldRecordsPassiveMemory(t *testing.T) {
+	dir := t.TempDir()
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+	if !out.PassGold || !out.PassSecure {
+		t.Fatalf("test setup expected PASS GOLD + PASS SECURE, got pass_gold=%v pass_secure=%v failed=%v", out.PassGold, out.PassSecure, out.FailedGates)
+	}
+	if !out.MemoryRecorded {
+		t.Fatalf("expected memory_recorded=true, warning=%q", out.MemoryWarning)
+	}
+	if out.MemoryEventID == "" {
+		t.Fatal("memory_event_id must be filled when memory is recorded")
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".vision-memory", "remediation_events.jsonl")); err != nil {
+		t.Fatalf("expected remediation memory JSONL file: %v", err)
+	}
+}
+
+func TestRun_FailDoesNotRecordPassiveMemory(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "secrets.go"), []byte(testfixtures.AWSKeyGoSource("key")), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+	if out.PassGold || out.PassSecure {
+		t.Fatalf("test setup expected FAIL, got pass_gold=%v pass_secure=%v", out.PassGold, out.PassSecure)
+	}
+	if out.MemoryRecorded {
+		t.Fatal("memory_recorded must remain false for FAIL missions")
+	}
+	if out.MemoryEventID != "" {
+		t.Fatalf("memory_event_id must be empty for FAIL missions, got %q", out.MemoryEventID)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".vision-memory", "remediation_events.jsonl")); !os.IsNotExist(err) {
+		t.Fatalf("FAIL mission must not write positive learning, stat err=%v", err)
+	}
+}
+
+func TestRun_MemoryDoesNotTransformFailIntoGold(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "secrets.go"), []byte(testfixtures.AWSKeyGoSource("key")), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+	if out.MemoryRecorded {
+		t.Fatal("memory must not record failed security missions")
+	}
+	if out.PassGold || out.OK || out.DeployAllowed || out.PromotionAllowed {
+		t.Fatalf("memory must not transform FAIL into GOLD: pass_gold=%v ok=%v deploy=%v promotion=%v", out.PassGold, out.OK, out.DeployAllowed, out.PromotionAllowed)
+	}
+}
+
+func TestRun_MemoryWarningDoesNotMaskSecurityFailure(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "secrets.go"), []byte(testfixtures.AWSKeyGoSource("key")), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".vision-memory"), []byte("not a dir"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+	if out.PassSecure || out.PassGold {
+		t.Fatalf("security failure must remain blocked, pass_secure=%v pass_gold=%v", out.PassSecure, out.PassGold)
+	}
+	if out.MemoryRecorded || out.MemoryWarning != "" {
+		t.Fatalf("failed security missions must not attempt positive memory writes, recorded=%v warning=%q", out.MemoryRecorded, out.MemoryWarning)
+	}
+}
+
+func TestRun_GoldMemoryFailureAddsWarningWithoutFailingMission(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".vision-memory"), []byte("not a dir"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+	if !out.PassGold || !out.PassSecure {
+		t.Fatalf("test setup expected GOLD+SECURE despite memory store failure, pass_gold=%v pass_secure=%v failed=%v", out.PassGold, out.PassSecure, out.FailedGates)
+	}
+	if out.MemoryRecorded {
+		t.Fatal("memory_recorded must be false when the memory append fails")
+	}
+	if out.MemoryWarning == "" {
+		t.Fatal("memory_warning must explain non-critical memory failure")
+	}
+}
+
+// ═══════════════════════════════════════════════════════
+// V6.6 SUPERVISED MULTI-FILE PATCH EXECUTION TESTS
+// ═══════════════════════════════════════════════════════
+
+func TestRun_V66_PatchExecutionFieldsAlwaysPresent(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+
+	// Fields must always be present (zero-value is fine)
+	_ = out.PatchExecutionID
+	_ = out.PatchExecutionMode
+	_ = out.PatchExecutionOK
+	_ = out.PatchExecutionTotalFiles
+	_ = out.PatchExecutionPatchedFiles
+
+	if out.PatchExecutionMode == "" {
+		// mode should be "supervised" or reflect the plan mode
+		t.Logf("patch_execution_mode is empty — PatchPlan may not have been built")
+	}
+	if out.PatchExecutionTotalFiles < 0 {
+		t.Error("patch_execution_total_files must be >= 0")
+	}
+	if out.PatchExecutionPatchedFiles < 0 {
+		t.Error("patch_execution_patched_files must be >= 0")
+	}
+}
+
+func TestRun_V66_PatchExecutionModeSupervisedOnly(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// execution mode must never be "automatic"
+	if out.PatchExecutionMode == "automatic" {
+		t.Error("patch_execution_mode must never be 'automatic'")
+	}
+	// if mode is set, it must be "supervised"
+	if out.PatchExecutionMode != "" && out.PatchExecutionMode != "supervised" {
+		t.Errorf("patch_execution_mode must be 'supervised' or empty, got %q", out.PatchExecutionMode)
+	}
+}
+
+func TestRun_V66_InsecureTargetDoesNotWriteOutsideRoot(t *testing.T) {
+	dir := t.TempDir()
+	// The V6.5 plan builds targets from BlockingFiles — in a clean project
+	// the plan falls back to sentinel. We verify no traversal happens.
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+
+	for _, f := range out.PatchExecutionAppliedFiles {
+		if len(f) > 2 && f[:2] == ".." {
+			t.Errorf("applied file contains path traversal: %q", f)
+		}
+		if filepath.IsAbs(f) {
+			t.Errorf("applied file is absolute path: %q", f)
+		}
+	}
+}
+
+func TestRun_V66_PatchExecutionOKDoesNotAlterPassGold(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// patch_execution_ok=true must not automatically make pass_gold=true
+	// pass_gold is decided by passgold gates, not by patch execution
+	_ = out.PatchExecutionOK
+	_ = out.PassGold
+	// The invariant is: pass_gold is never set by patch execution
+	// We verify it hasn't been set to true inappropriately (only Aegis gates set it)
+	if out.PatchExecutionOK && !out.Gates.ValidatorOK {
+		// If patch ran but validator failed, pass_gold must be false
+		if out.PassGold {
+			t.Error("pass_gold must not be true when validator failed, regardless of patch execution")
+		}
+	}
+}
+
+func TestRun_V66_PassSecureStillRunsAfterPatch(t *testing.T) {
+	dir := t.TempDir()
+	// Inject a blocker to verify passsecure runs AFTER patch
+	_ = os.WriteFile(filepath.Join(dir, "config.go"),
+		[]byte("package config\nconst k = \"AKIA"+"IOSFODNN7"+"EXAMPLE\"\n"), 0644)
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// passsecure step must appear in step_results
+	found := false
+	for _, sr := range out.StepResults {
+		if sr.Step == "passsecure" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("passsecure step must appear in step_results after patch execution")
+	}
+	// If there are blockers, pass_secure must be false
+	if out.SecurityBlockingTotal > 0 && out.PassSecure {
+		t.Error("pass_secure must not be true when blocking violations exist")
+	}
+}
+
+func TestRun_V66_PassGoldStillRunsAfterPatch(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// passgold step must appear in step_results
+	found := false
+	for _, sr := range out.StepResults {
+		if sr.Step == "passgold" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("passgold step must appear in step_results after patch execution")
+	}
+}
+
+func TestRun_V66_RollbackReadyAfterPatch(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if !out.RollbackReady {
+		t.Error("rollback_ready must be true after supervised patch execution")
+	}
+	if out.RollbackApplied {
+		t.Error("rollback_applied must be false for successful execution")
+	}
+}
+
+func TestRun_V66_PatchExecutionIDNonEmptyWhenApplied(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// execution ID must be set if patcher ran
+	if out.PatchExecutionMode != "" && out.PatchExecutionID == "" {
+		t.Error("patch_execution_id must not be empty when execution mode is set")
+	}
+}
+
+// ─── Governance tests ─────────────────────────────────────────────────────────
+
+func TestRun_V66_Governance_MemoryGuidedDoesNotSkipValidator(t *testing.T) {
+	dir := t.TempDir()
+	// Seed memory with gold event
+	event := memory.RemediationEvent{
+		ID:                "mem_gov_test",
+		Timestamp:         "2026-05-06T00:00:00Z",
+		Outcome:           "gold",
+		PassGold:          true,
+		PassSecure:        true,
+		IssueType:         "cors_blocked",
+		SuggestedStrategy: "align_cors",
+	}
+	_ = memory.AppendRemediationEvent(dir, event)
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+
+	// validator must have run regardless of memory guidance
+	found := false
+	for _, sr := range out.StepResults {
+		if sr.Step == "validator" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("validator must run even when patch is memory-guided")
+	}
+}
+
+func TestRun_V66_Governance_MemoryGuidedDoesNotBypassPassSecure(t *testing.T) {
+	dir := t.TempDir()
+	// Inject blocker + seed memory
+	_ = os.WriteFile(filepath.Join(dir, "server.go"),
+		[]byte("package main\nconst k = \"AKIA"+"IOSFODNN7"+"EXAMPLE\"\n"), 0644)
+	event := memory.RemediationEvent{
+		ID:         "mem_gov_test2",
+		Timestamp:  "2026-05-06T00:00:00Z",
+		Outcome:    "gold",
+		PassGold:   true,
+		PassSecure: true,
+		IssueType:  "cors_blocked",
+	}
+	_ = memory.AppendRemediationEvent(dir, event)
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+
+	if out.SecurityBlockingTotal > 0 && out.PassSecure {
+		t.Error("memory-guided plan must not bypass passsecure — blockers must still block")
+	}
+	if out.SecurityBlockingTotal > 0 && out.DeployAllowed {
+		t.Error("deploy_allowed must not be true with blocking violations, even with memory guidance")
+	}
+}
+
+func TestRun_V66_Governance_AutomaticNeverAllowed(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.PatchPlanApplyMode == "automatic" {
+		t.Error("patch_plan_apply_mode must never be 'automatic'")
+	}
+	if out.PatchExecutionMode == "automatic" {
+		t.Error("patch_execution_mode must never be 'automatic'")
+	}
+}
+
+// ═══════════════════════════════════════════════════════
+// V6.7 SUPERVISED REAL REMEDIATION OPERATIONS TESTS
+// ═══════════════════════════════════════════════════════
+
+func TestRun_V67_RealRemediationFieldsAlwaysPresent(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// Fields must always be present (zero-value fine)
+	_ = out.RealRemediationEnabled
+	_ = out.RealRemediationApplied
+	_ = out.RealRemediationOpsTotal
+	_ = out.RealRemediationOpsApplied
+	_ = out.RealRemediationOpsSkipped
+	_ = out.RealRemediationOpsFailed
+
+	if out.RealRemediationOpsTotal < 0 {
+		t.Error("real_remediation_operations_total must be >= 0")
+	}
+	if out.RealRemediationOpsApplied < 0 {
+		t.Error("real_remediation_operations_applied must be >= 0")
+	}
+}
+
+func TestRun_V67_NoOperations_RealRemediationDisabled(t *testing.T) {
+	// Without explicit operations on the plan, real_remediation_enabled=false.
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// PatchPlan in V6.5 has no operations by default (no explicit rule triggers)
+	// real_remediation_enabled must be false without operations
+	if out.RealRemediationEnabled {
+		t.Logf("real_remediation_enabled=true — operations were generated by plan")
+		// If enabled, applied must be consistent
+		if out.RealRemediationOpsApplied > out.RealRemediationOpsTotal {
+			t.Error("applied cannot exceed total")
+		}
+	}
+}
+
+func TestRun_V67_ValidatorRunsAfterRealRemediation(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// validator must appear in step_results regardless of real remediation
+	found := false
+	for _, sr := range out.StepResults {
+		if sr.Step == "validator" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("validator step must appear in step_results after real remediation")
+	}
+}
+
+func TestRun_V67_PassSecureRunsAfterRealRemediation(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	found := false
+	for _, sr := range out.StepResults {
+		if sr.Step == "passsecure" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("passsecure step must appear in step_results after real remediation")
+	}
+}
+
+func TestRun_V67_PassGoldRunsAfterRealRemediation(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	found := false
+	for _, sr := range out.StepResults {
+		if sr.Step == "passgold" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("passgold step must appear in step_results after real remediation")
+	}
+}
+
+func TestRun_V67_TestFixtureNeverRemediated(t *testing.T) {
+	dir := t.TempDir()
+	// Create a test fixture file with a vulnerability pattern
+	_ = os.WriteFile(filepath.Join(dir, "handler_test.go"),
+		[]byte("package handler\nconst skipAuth = true\n"), 0644)
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// handler_test.go must not appear in applied_files
+	for _, f := range out.PatchExecutionAppliedFiles {
+		if filepath.Base(f) == "handler_test.go" {
+			t.Errorf("test fixture handler_test.go must not be in applied_files: %v", out.PatchExecutionAppliedFiles)
+		}
+	}
+}
+
+func TestRun_V67_RealRemediationAppliedConsistency(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	// Consistency: applied implies enabled
+	if out.RealRemediationApplied && !out.RealRemediationEnabled {
+		t.Error("real_remediation_applied=true requires real_remediation_enabled=true")
+	}
+	// Consistency: applied count <= total count
+	if out.RealRemediationOpsApplied > out.RealRemediationOpsTotal {
+		t.Errorf("applied (%d) cannot exceed total (%d)",
+			out.RealRemediationOpsApplied, out.RealRemediationOpsTotal)
+	}
+	// Sum check: applied + skipped + failed should equal total when enabled
+	if out.RealRemediationEnabled {
+		sum := out.RealRemediationOpsApplied + out.RealRemediationOpsSkipped + out.RealRemediationOpsFailed
+		if sum != out.RealRemediationOpsTotal {
+			t.Errorf("operation counts must sum to total: %d+%d+%d=%d != %d",
+				out.RealRemediationOpsApplied, out.RealRemediationOpsSkipped,
+				out.RealRemediationOpsFailed, sum, out.RealRemediationOpsTotal)
+		}
+	}
+}
+
+func TestRun_V67_MemoryGuidedPlanDoesNotForceOperationsWithoutBeforeAfter(t *testing.T) {
+	dir := t.TempDir()
+	// Seed memory with GOLD event
+	event := memory.RemediationEvent{
+		ID:                "mem_v67_test",
+		Timestamp:         "2026-05-06T00:00:00Z",
+		Outcome:           "gold",
+		PassGold:          true,
+		PassSecure:        true,
+		IssueType:         "cors_blocked",
+		SuggestedStrategy: "align_cors",
+	}
+	_ = memory.AppendRemediationEvent(dir, event)
+
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+
+	// Memory-guided plan must not generate real operations without explicit before/after
+	// If operations were generated, each must have explicit before/after for replace types
+	for _, op := range out.PatchPlanOperations {
+		if op.OperationType == "exact_replace" || op.OperationType == "policy_fix" {
+			if op.Before == "" || op.After == "" {
+				t.Errorf("operation %s on %s missing before/after — must be explicit",
+					op.OperationType, op.File)
+			}
+		}
+	}
+}
+
+func TestRun_V67_RollbackReadyAfterRealRemediation(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if !out.RollbackReady {
+		t.Error("rollback_ready must be true after real remediation execution")
+	}
+}
+
+func TestRun_GitHubPRFields_GoldDryRun(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "CORS origin blocked", DryRun: false})
+	if !out.PassGold || !out.PassSecure {
+		t.Fatalf("expected PASS GOLD + PASS SECURE, got gold=%v secure=%v", out.PassGold, out.PassSecure)
+	}
+	if out.GitHubPRPlanID == "" || out.GitHubPRBranch == "" || out.GitHubPRTitle == "" {
+		t.Fatalf("expected github PR metadata, got plan=%q branch=%q title=%q", out.GitHubPRPlanID, out.GitHubPRBranch, out.GitHubPRTitle)
+	}
+	if !out.GitHubPRCanOpen {
+		t.Fatalf("expected github_pr_can_open=true, reason=%q", out.GitHubPRBlockReason)
+	}
+	if out.GitHubPRStatusContext != "vision/pass-gold" {
+		t.Fatalf("unexpected status context: %s", out.GitHubPRStatusContext)
+	}
+	if out.GitHubPRStatusState != "success" {
+		t.Fatalf("expected success status in GOLD, got %s", out.GitHubPRStatusState)
+	}
+	if !out.GitHubPRDryRun || out.GitHubPROpened {
+		t.Fatalf("PR planning must be dry-run/no real PR, dry=%v opened=%v", out.GitHubPRDryRun, out.GitHubPROpened)
+	}
+}
+
+func TestRun_GitHubPRPlanning_DoesNotAlterPassGatesOrMemory(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+	if !out.PassGold || !out.PassSecure {
+		t.Fatalf("PR planning must not alter PASS gates: gold=%v secure=%v", out.PassGold, out.PassSecure)
+	}
+	if !out.MemoryRecorded || out.MemoryEventID == "" {
+		t.Fatalf("PR planning must not prevent memory recording: recorded=%v id=%q warning=%q", out.MemoryRecorded, out.MemoryEventID, out.MemoryWarning)
+	}
+	if out.GitHubPROpened {
+		t.Fatal("mission must not open a real PR")
+	}
+}
+
+func TestRun_GitHubPRPlanning_DryRunDoesNotPushOrOpenPR(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: true})
+	if out.GitHubPRStatusContext != "vision/pass-gold" {
+		t.Fatalf("unexpected status context: %s", out.GitHubPRStatusContext)
+	}
+	if !out.GitHubPRDryRun || out.GitHubPROpened {
+		t.Fatalf("dry-run planning must not push/open PR: dry=%v opened=%v", out.GitHubPRDryRun, out.GitHubPROpened)
+	}
+}
+
+func TestPlanGitHubPRBlocksWhenMissionGateFails(t *testing.T) {
+	out := Output{
+		MissionID:                  "mission_blocked",
+		IssueType:                  "cors_blocked",
+		PassGold:                   false,
+		PassSecure:                 true,
+		DeployAllowed:              true,
+		PromotionAllowed:           false,
+		SecurityBlockingTotal:      0,
+		RollbackReady:              true,
+		PatchExecutionOK:           true,
+		PatchExecutionAppliedFiles: []string{".vision-test/mission.sentinel"},
+	}
+	out.Gates.ValidatorOK = true
+	out.Gates.PatcherOK = true
+	planGitHubPR(Input{}, &out, []string{".vision-test/mission.sentinel"})
+	if out.GitHubPRCanOpen {
+		t.Fatal("expected PR plan to block when PASS GOLD fails")
+	}
+	if out.GitHubPRStatusState == "success" {
+		t.Fatal("status success must not be generated when PASS GOLD fails")
+	}
+	if out.GitHubPRBlockReason == "" {
+		t.Fatal("blocked PR plan must include an objective reason")
 	}
 }

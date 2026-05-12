@@ -5,14 +5,23 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
+	githubflow "github.com/visioncore/go-core/internal/github"
+	"github.com/visioncore/go-core/internal/graphmemory"
+	"github.com/visioncore/go-core/internal/mcpserver"
 	"github.com/visioncore/go-core/internal/mission"
 	"github.com/visioncore/go-core/internal/passgold"
+	"github.com/visioncore/go-core/internal/report"
 )
+
+const githubFlowVersion = "V7.9"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -25,6 +34,22 @@ func main() {
 	switch cmd {
 	case "mission":
 		runMission(os.Args[2:])
+	case "github-flow":
+		runGitHubFlow(os.Args[2:])
+	case "github-flow-reports":
+		runGitHubFlowReports(os.Args[2:])
+	case "github-flow-drill":
+		runGitHubFlowDrill(os.Args[2:])
+	case "graph-providers":
+		runGraphProviders(os.Args[2:])
+	case "graph-index":
+		runGraphIndex(os.Args[2:])
+	case "graph-summary":
+		runGraphSummary(os.Args[2:])
+	case "graph-query":
+		runGraphQuery(os.Args[2:])
+	case "mcp-readonly":
+		runMCPReadonly(os.Args[2:])
 	case "version", "--version", "-v":
 		printJSON(map[string]string{
 			"version": passgold.Version,
@@ -37,6 +62,11 @@ func main() {
 			"ok":    false,
 			"error": "unknown command: " + cmd,
 			"usage": "vision-core mission --root <path> --input <text>",
+			"commands": []string{
+				"mission", "github-flow", "github-flow-reports", "github-flow-drill",
+				"graph-providers", "graph-index", "graph-summary", "graph-query", "mcp-readonly",
+				"version", "help",
+			},
 		})
 		os.Exit(1)
 	}
@@ -44,7 +74,7 @@ func main() {
 
 func runMission(args []string) {
 	fs := flag.NewFlagSet("mission", flag.ContinueOnError)
-	root  := fs.String("root", ".", "Project root path")
+	root := fs.String("root", ".", "Project root path")
 	input := fs.String("input", "", "Mission input text (required)")
 	dryRun := fs.Bool("dry-run", false, "Dry run mode (no file changes)")
 
@@ -92,6 +122,543 @@ func runMission(args []string) {
 	}
 }
 
+func runGitHubFlow(args []string) {
+	if hasHelpArg(args) {
+		printGitHubFlowUsageJSON()
+		return
+	}
+
+	fs := flag.NewFlagSet("github-flow", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+
+	rootFlag := fs.String("root", ".", "Project root path")
+	ownerFlag := fs.String("owner", "", "GitHub repository owner")
+	repoFlag := fs.String("repo", "", "GitHub repository name")
+	remoteFlag := fs.String("remote", "origin", "Git remote name (public flows only allow origin)")
+	missionIDFlag := fs.String("mission-id", "", "Mission identifier")
+	issueTypeFlag := fs.String("issue-type", "", "Issue type")
+	changedFileFlag := stringSliceFlag{}
+	fs.Var(&changedFileFlag, "changed-file", "Changed file path; repeat for multiple files")
+	titleFlag := fs.String("title", "", "Pull request title override")
+	bodyFlag := fs.String("body", "", "Pull request body override")
+	dryRunFlag := fs.Bool("dry-run", true, "Dry run mode; defaults to true")
+	applyRealFlag := fs.Bool("apply-real", false, "Enable real execution when combined with --dry-run=false and write gates")
+	allowLocalGitFlag := fs.Bool("allow-local-git", false, "Allow local branch and commit creation")
+	publishRemoteFlag := fs.Bool("publish-remote", false, "Publish remote branch step")
+	openPRFlag := fs.Bool("open-pr", false, "Open pull request step")
+	publishStatusFlag := fs.Bool("publish-status", false, "Publish PASS GOLD status step")
+	reportDirFlag := fs.String("report-dir", report.DefaultReportDir, "Directory for execution report artifacts")
+	reportFormatFlag := fs.String("report-format", "both", "Report format: json|markdown|both|none")
+
+	if err := fs.Parse(args); err != nil {
+		printGitHubFlowError("invalid arguments: " + err.Error())
+		os.Exit(1)
+	}
+
+	rootPath := resolveRoot(*rootFlag)
+	changedFiles := splitChangedFiles(changedFileFlag.String())
+	dryRun := *dryRunFlag
+	if !*applyRealFlag {
+		dryRun = true
+	}
+
+	mode := "dry-run"
+	if !dryRun {
+		mode = "real"
+	}
+
+	// V7.7: validate report format and dir
+	reportFormat := report.ReportFormat(*reportFormatFlag)
+	if !reportFormat.IsValid() {
+		printGitHubFlowError(fmt.Sprintf("invalid --report-format %q; must be json|markdown|both|none", *reportFormatFlag))
+		os.Exit(1)
+	}
+	if reportFormat != report.FormatNone {
+		if err := report.ValidateReportDir(*reportDirFlag); err != nil {
+			printGitHubFlowError("invalid --report-dir: " + err.Error())
+			os.Exit(1)
+		}
+	}
+
+	if err := validateGitHubFlowCLI(gitHubFlowCLIInput{
+		Root:          rootPath,
+		Owner:         *ownerFlag,
+		Repo:          *repoFlag,
+		Remote:        *remoteFlag,
+		MissionID:     *missionIDFlag,
+		IssueType:     *issueTypeFlag,
+		ChangedFiles:  changedFiles,
+		Title:         *titleFlag,
+		Body:          *bodyFlag,
+		DryRun:        dryRun,
+		ApplyReal:     *applyRealFlag,
+		PublishRemote: *publishRemoteFlag,
+		OpenPR:        *openPRFlag,
+		PublishStatus: *publishStatusFlag,
+	}); err != nil {
+		printGitHubFlowResult(false, mode, dryRun, nil, err.Error())
+		os.Exit(1)
+	}
+
+	// V7.7: build flow ID early (used in report regardless of path)
+	ts := time.Now().UTC()
+	wb := "vision/remediation/" + *missionIDFlag
+	flowID := report.NewFlowID(*missionIDFlag, wb, changedFiles, ts)
+
+	plan := githubflow.BuildPRPlan(githubflow.PRPlanInput{
+		MissionID:        *missionIDFlag,
+		BaseBranch:       githubflow.DefaultBaseBranch,
+		WorkBranchPrefix: "vision/remediation",
+		ChangedFiles:     changedFiles,
+		IssueType:        *issueTypeFlag,
+		PatchSummary:     "Safe GitHub flow CLI plan",
+		GateSnapshot: githubflow.GateSnapshot{
+			PassGold:              true,
+			PassSecure:            true,
+			DeployAllowed:         true,
+			PromotionAllowed:      true,
+			SecurityBlockingTotal: 0,
+			RollbackReady:         true,
+			ValidatorOK:           true,
+			PatcherOK:             true,
+		},
+	})
+	if strings.TrimSpace(*titleFlag) != "" {
+		plan.Title = strings.TrimSpace(*titleFlag)
+	}
+	if strings.TrimSpace(*bodyFlag) != "" {
+		plan.Body = strings.TrimSpace(*bodyFlag)
+	}
+
+	client := githubflow.PRClient(nil)
+	if !dryRun && (*openPRFlag || *publishStatusFlag) {
+		client = githubflow.HTTPGitHubClient{}
+	}
+
+	// V7.7: prepare base report
+	gates := map[string]bool{
+		"pass_gold_required":                    true,
+		"pass_secure_required":                  true,
+		"dry_run_default_safe":                  !*applyRealFlag,
+		"explicit_apply_real":                   *applyRealFlag,
+		"write_gate_required":                   true,
+		"token_required_for_real_pr_or_status":  *openPRFlag || *publishStatusFlag,
+		"remote_origin_only":                    *remoteFlag == "origin",
+		"no_main_or_master":                     true,
+		"changed_files_required":                len(changedFiles) > 0,
+		"report_path_safe":                      reportFormat == report.FormatNone || report.ValidateReportDir(*reportDirFlag) == nil,
+	}
+	execReport := &report.GitHubFlowExecutionReport{
+		FlowID:        flowID,
+		Version:       githubFlowVersion,
+		CreatedAtUTC:  ts.Format(time.RFC3339),
+		Mode:          mode,
+		DryRun:        dryRun,
+		ApplyReal:     *applyRealFlag,
+		Root:          rootPath,
+		Owner:         *ownerFlag,
+		Repo:          *repoFlag,
+		Remote:        *remoteFlag,
+		MissionID:     *missionIDFlag,
+		IssueType:     *issueTypeFlag,
+		BaseBranch:    plan.BaseBranch,
+		WorkBranch:    plan.WorkBranch,
+		ChangedFiles:  changedFiles,
+		PublishRemote: *publishRemoteFlag,
+		OpenPR:        *openPRFlag,
+		PublishStatus: *publishStatusFlag,
+		Gates:         gates,
+		Plan:          plan,
+	}
+
+	// Execute flow
+	var flowResult interface{}
+	var flowOK bool
+	var flowErrStr string
+
+	if dryRun && !*allowLocalGitFlag {
+		flowResult = dryRunGitHubFlow(plan, *publishRemoteFlag, *openPRFlag, *publishStatusFlag)
+		flowOK = true
+	} else {
+		result := githubflow.RunEndToEndGitHubFlow(context.Background(), githubflow.EndToEndGitHubFlowInput{
+			Root:             rootPath,
+			Plan:             plan,
+			Client:           client,
+			Owner:            *ownerFlag,
+			Repo:             *repoFlag,
+			Remote:           *remoteFlag,
+			DryRun:           dryRun,
+			AllowLocalGit:    *allowLocalGitFlag,
+			PublishRemote:    *publishRemoteFlag,
+			OpenPR:           *openPRFlag,
+			PublishStatus:    *publishStatusFlag,
+			RequireWriteGate: true,
+		})
+		flowResult = result
+		flowOK = result.OK
+		if !result.OK {
+			flowErrStr = result.BlockReason
+			if result.Error != "" {
+				flowErrStr = result.Error
+			}
+		}
+	}
+
+	// V7.7: populate and write report
+	execReport.OK = flowOK
+	execReport.Blocked = !flowOK
+	execReport.BlockReason = flowErrStr
+	execReport.Result = flowResult
+
+	if reportFormat != report.FormatNone {
+		if err := report.Write(rootPath, *reportDirFlag, reportFormat, execReport); err != nil {
+			// Report write failure is non-fatal — log to stderr only
+			fmt.Fprintf(os.Stderr, "warning: report write failed: %v\n", err)
+		}
+		// V7.8: append/update index entry
+		entry := report.EntryFromReport(execReport)
+		if err := report.AppendOrUpdateEntry(rootPath, *reportDirFlag, entry); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: index update failed: %v\n", err)
+		}
+	}
+
+	// Build and print output with report metadata
+	reportMeta := map[string]interface{}{
+		"flow_id": execReport.FlowID,
+		"format":  string(reportFormat),
+	}
+	if execReport.JSONPath != "" {
+		reportMeta["json_path"] = execReport.JSONPath
+	}
+	if execReport.MarkdownPath != "" {
+		reportMeta["markdown_path"] = execReport.MarkdownPath
+	}
+	// V7.8: always add index_path when format != none
+	if reportFormat != report.FormatNone {
+		reportMeta["index_path"] = report.IndexPath(rootPath, *reportDirFlag)
+	}
+
+	printJSON(map[string]interface{}{
+		"ok":          flowOK,
+		"version":     githubFlowVersion,
+		"mode":        mode,
+		"github_flow": flowResult,
+		"report":      reportMeta,
+	})
+	if !flowOK {
+		os.Exit(2)
+	}
+}
+
+type stringSliceFlag []string
+
+func (f *stringSliceFlag) String() string {
+	if f == nil {
+		return ""
+	}
+	return strings.Join(*f, ",")
+}
+
+func (f *stringSliceFlag) Set(value string) error {
+	*f = append(*f, value)
+	return nil
+}
+
+func dryRunGitHubFlow(plan githubflow.PRPlan, publishRemote, openPR, publishStatus bool) map[string]interface{} {
+	return map[string]interface{}{
+		"ok":                   true,
+		"dry_run":              true,
+		"plan_id":              plan.ID,
+		"base_branch":          plan.BaseBranch,
+		"work_branch":          plan.WorkBranch,
+		"local_flow_ok":        true,
+		"branch_created":       false,
+		"commit_created":       false,
+		"remote_publish_ok":    publishRemote,
+		"would_push":           publishRemote,
+		"remote_pushed":        false,
+		"pr_open_ok":           openPR,
+		"would_open_pr":        openPR,
+		"pr_opened":            false,
+		"status_ok":            publishStatus,
+		"would_publish_status": publishStatus,
+		"status_published":     false,
+		"blocked":              false,
+		"plan":                 plan,
+	}
+}
+
+type gitHubFlowCLIInput struct {
+	Root          string
+	Owner         string
+	Repo          string
+	Remote        string
+	MissionID     string
+	IssueType     string
+	ChangedFiles  []string
+	Title         string
+	Body          string
+	DryRun        bool
+	ApplyReal     bool
+	PublishRemote bool
+	OpenPR        bool
+	PublishStatus bool
+}
+
+func validateGitHubFlowCLI(input gitHubFlowCLIInput) error {
+	missing := []string{}
+	for name, value := range map[string]string{
+		"--root":       input.Root,
+		"--owner":      input.Owner,
+		"--repo":       input.Repo,
+		"--remote":     input.Remote,
+		"--mission-id": input.MissionID,
+		"--issue-type": input.IssueType,
+		"--title":      input.Title,
+		"--body":       input.Body,
+	} {
+		if strings.TrimSpace(value) == "" {
+			missing = append(missing, name)
+		}
+	}
+	if len(input.ChangedFiles) == 0 {
+		missing = append(missing, "--changed-file")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("missing required flags: %s", strings.Join(missing, ", "))
+	}
+	if input.Remote != "origin" {
+		return fmt.Errorf("remote %q is not allowed; public github-flow only allows origin", input.Remote)
+	}
+	if input.PublishStatus && (!input.PublishRemote || !input.OpenPR) {
+		return fmt.Errorf("--publish-status requires --publish-remote and --open-pr")
+	}
+	if !input.DryRun {
+		if !input.ApplyReal {
+			return fmt.Errorf("--apply-real is required for --dry-run=false")
+		}
+		if os.Getenv("VISION_GITHUB_WRITE") != "1" {
+			return fmt.Errorf("--apply-real --dry-run=false requires VISION_GITHUB_WRITE=1")
+		}
+		if (input.OpenPR || input.PublishStatus) && os.Getenv("GITHUB_TOKEN") == "" {
+			return fmt.Errorf("real --open-pr/--publish-status requires GITHUB_TOKEN")
+		}
+	}
+	return nil
+}
+
+func splitChangedFiles(value string) []string {
+	parts := strings.Split(value, ",")
+	files := make([]string, 0, len(parts))
+	seen := map[string]bool{}
+	for _, part := range parts {
+		file := strings.TrimSpace(part)
+		if file == "" || seen[file] {
+			continue
+		}
+		files = append(files, file)
+		seen[file] = true
+	}
+	return files
+}
+
+func resolveRoot(value string) string {
+	if value == "" || value == "." {
+		cwd, err := os.Getwd()
+		if err == nil {
+			return cwd
+		}
+		return "."
+	}
+	return value
+}
+
+func hasHelpArg(args []string) bool {
+	for _, arg := range args {
+		if arg == "--help" || arg == "-h" || arg == "help" {
+			return true
+		}
+	}
+	return false
+}
+
+func printGitHubFlowError(err string) {
+	printJSON(map[string]interface{}{
+		"ok":      false,
+		"version": githubFlowVersion,
+		"mode":    "error",
+		"error":   err,
+	})
+}
+
+func printGitHubFlowResult(ok bool, mode string, dryRun bool, flow interface{}, err string) {
+	out := map[string]interface{}{
+		"ok":          ok,
+		"version":     githubFlowVersion,
+		"mode":        mode,
+		"github_flow": flow,
+		"dry_run":     dryRun,
+	}
+	if err != "" {
+		out["error"] = err
+	}
+	printJSON(out)
+}
+
+// ─── github-flow-reports subcommand ──────────────────────────────────────────
+
+func runGitHubFlowReports(args []string) {
+	if hasHelpArg(args) {
+		printJSON(map[string]interface{}{
+			"command": "github-flow-reports",
+			"version": githubFlowVersion,
+			"usage":   "vision-core github-flow-reports --root <path> [--report-dir <dir>] [--list] [--flow-id <id>] [--limit <n>] [--clean] [--keep-last <n>] [--dry-run=true|false] [--json]",
+			"flags": map[string]string{
+				"--root":        "Project root path (default: .)",
+				"--report-dir":  "Report directory (default: .vision-reports/github-flow)",
+				"--list":        "List all executions (default mode)",
+				"--flow-id":     "Get a single execution by flow_id",
+				"--limit":       "Max entries to return for list (default: 20)",
+				"--clean":       "Clean old report artifacts",
+				"--keep-last":   "Number of reports to keep during clean (default: 20)",
+				"--dry-run":     "Dry-run mode for clean (default: true)",
+				"--json":        "Output JSON (always true; reserved for future formatting)",
+			},
+		})
+		return
+	}
+
+	fs := flag.NewFlagSet("github-flow-reports", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+
+	rootFlag := fs.String("root", ".", "Project root path")
+	reportDirFlag := fs.String("report-dir", report.DefaultReportDir, "Report directory")
+	listFlag := fs.Bool("list", false, "List executions")
+	flowIDFlag := fs.String("flow-id", "", "Get execution by flow_id")
+	limitFlag := fs.Int("limit", 20, "Max entries for list")
+	cleanFlag := fs.Bool("clean", false, "Clean old artifacts")
+	keepLastFlag := fs.Int("keep-last", 20, "Reports to keep during clean")
+	dryRunFlag := fs.Bool("dry-run", true, "Dry-run mode for clean")
+	_ = fs.Bool("json", true, "Output JSON (always enabled)")
+
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": "invalid arguments: " + err.Error()})
+		os.Exit(1)
+	}
+
+	rootPath := resolveRoot(*rootFlag)
+	_ = *listFlag // default mode — always list unless another flag is set
+
+	if err := report.ValidateReportDir(*reportDirFlag); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": "invalid --report-dir: " + err.Error()})
+		os.Exit(1)
+	}
+
+	// Get by flow_id
+	if *flowIDFlag != "" {
+		if err := report.ValidateFlowID(*flowIDFlag); err != nil {
+			printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+			os.Exit(1)
+		}
+		entry, err := report.GetEntry(rootPath, *reportDirFlag, *flowIDFlag)
+		if err != nil {
+			printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+			os.Exit(1)
+		}
+		printJSON(map[string]interface{}{"ok": true, "version": githubFlowVersion, "entry": entry})
+		return
+	}
+
+	// Clean
+	if *cleanFlag {
+		result, err := report.Clean(rootPath, *reportDirFlag, *keepLastFlag, *dryRunFlag)
+		if err != nil {
+			printJSON(map[string]interface{}{"ok": false, "version": githubFlowVersion, "error": err.Error()})
+			os.Exit(1)
+		}
+		printJSON(map[string]interface{}{
+			"ok":           true,
+			"version":      githubFlowVersion,
+			"report_dir":   *reportDirFlag,
+			"index_path":   report.IndexPath(rootPath, *reportDirFlag),
+			"clean_result": result,
+		})
+		return
+	}
+
+	// List (default)
+	idx, err := report.ListEntries(rootPath, *reportDirFlag, *limitFlag)
+	if err != nil {
+		printJSON(map[string]interface{}{"ok": false, "version": githubFlowVersion, "error": err.Error()})
+		os.Exit(1)
+	}
+	printJSON(map[string]interface{}{
+		"ok":          true,
+		"version":     githubFlowVersion,
+		"report_dir":  *reportDirFlag,
+		"index_path":  report.IndexPath(rootPath, *reportDirFlag),
+		"count":       len(idx.Entries),
+		"entries":     idx.Entries,
+	})
+}
+
+// ─── github-flow-drill subcommand ─────────────────────────────────────────────
+
+func runGitHubFlowDrill(args []string) {
+	if hasHelpArg(args) {
+		printJSON(map[string]interface{}{
+			"command": "github-flow-drill",
+			"version": githubFlowVersion,
+			"usage":   "vision-core github-flow-drill --root <path> [--owner <owner>] [--repo <repo>] [--mission-id <id>] [--issue-type <type>] [--report-dir <dir>]",
+			"description": "Local safety drill — proves real git flow end-to-end with bare local remote and MockPRClient. Zero network, zero GitHub real.",
+			"flags": map[string]string{
+				"--root":       "Project root path (must be an existing git repo)",
+				"--owner":      "Owner name used in mock PR (default: Imadechumbo)",
+				"--repo":       "Repo name used in mock PR (default: vision-core)",
+				"--mission-id": "Drill mission ID (default: drill_<timestamp>)",
+				"--issue-type": "Issue type label (default: github_flow_safety_drill)",
+				"--report-dir": "Report artifacts directory (default: .vision-reports/github-flow)",
+			},
+		})
+		return
+	}
+
+	fs := flag.NewFlagSet("github-flow-drill", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+
+	rootFlag := fs.String("root", ".", "Project root path")
+	ownerFlag := fs.String("owner", "Imadechumbo", "Mock PR owner")
+	repoFlag := fs.String("repo", "vision-core", "Mock PR repo")
+	missionIDFlag := fs.String("mission-id", "", "Drill mission ID (auto-generated if empty)")
+	issueTypeFlag := fs.String("issue-type", "github_flow_safety_drill", "Issue type label")
+	reportDirFlag := fs.String("report-dir", report.DefaultReportDir, "Report artifacts directory")
+
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": "invalid arguments: " + err.Error()})
+		os.Exit(1)
+	}
+
+	rootPath := resolveRoot(*rootFlag)
+
+	result := githubflow.RunSafetyDrill(context.Background(), githubflow.SafetyDrillInput{
+		Root:      rootPath,
+		Owner:     *ownerFlag,
+		Repo:      *repoFlag,
+		MissionID: *missionIDFlag,
+		IssueType: *issueTypeFlag,
+		ReportDir: *reportDirFlag,
+	})
+
+	printJSON(map[string]interface{}{
+		"ok":      result.OK,
+		"version": githubFlowVersion,
+		"drill":   result,
+	})
+	if !result.OK {
+		os.Exit(2)
+	}
+}
+
 func printJSON(v interface{}) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
@@ -104,8 +671,204 @@ func printUsageJSON() {
 	printJSON(map[string]interface{}{
 		"engine":  passgold.Engine,
 		"version": passgold.Version,
-		"usage":   "vision-core mission --root <path> --input <text>",
-		"commands": []string{"mission", "version", "help"},
-		"example": `vision-core mission --root "." --input "self-test"`,
+		"usage":   "vision-core <command> [flags]",
+		"commands": []string{
+			"mission", "github-flow", "github-flow-reports", "github-flow-drill",
+			"graph-index", "graph-summary", "graph-query", "mcp-readonly",
+			"version", "help",
+		},
+		"examples": []string{
+			`vision-core mission --root "." --input "self-test"`,
+			`vision-core graph-index --root "."`,
+			`vision-core graph-summary --root "."`,
+			`vision-core graph-query --root "." --query "github-flow" --limit 10`,
+			`vision-core mcp-readonly --root "." --tool vision.graph_summary`,
+		},
 	})
+}
+
+func printGitHubFlowUsageJSON() {
+	printJSON(map[string]interface{}{
+		"ok":      true,
+		"version": githubFlowVersion,
+		"usage":   "vision-core github-flow --root <path> --owner <owner> --repo <repo> --remote origin --mission-id <id> --issue-type <type> --changed-file <path> --title <title> --body <body> [--dry-run=true|false] [--apply-real] [--allow-local-git] [--publish-remote] [--open-pr] [--publish-status] [--report-dir <path>] [--report-format json|markdown|both|none]",
+		"flags": []string{
+			"--root",
+			"--owner",
+			"--repo",
+			"--remote",
+			"--mission-id",
+			"--issue-type",
+			"--changed-file",
+			"--title",
+			"--body",
+			"--dry-run=true|false",
+			"--apply-real",
+			"--allow-local-git",
+			"--publish-remote",
+			"--open-pr",
+			"--publish-status",
+		},
+		"defaults": map[string]interface{}{
+			"base_branch": githubflow.DefaultBaseBranch,
+			"dry_run":     true,
+			"remote":      "origin",
+			"work_branch": "vision/remediation/<mission-id>",
+		},
+	})
+}
+
+// ─── graph-providers ──────────────────────────────────────────────────────────
+
+func runGraphProviders(args []string) {
+	fs := flag.NewFlagSet("graph-providers", flag.ContinueOnError)
+	fs.String("root", ".", "Project root path") // accepted but unused
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	infos := graphmemory.ListProviders()
+	printJSON(map[string]interface{}{
+		"ok":        true,
+		"version":   graphmemory.V81Version,
+		"providers": infos,
+	})
+}
+
+// ─── graph-index ──────────────────────────────────────────────────────────────
+
+func runGraphIndex(args []string) {
+	fs := flag.NewFlagSet("graph-index", flag.ContinueOnError)
+	root     := fs.String("root", ".", "Project root path")
+	provider := fs.String("provider", "local", "Graph provider: local|graphify (default: local)")
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	rootPath := resolveRoot(*root)
+
+	p, err := graphmemory.GetProvider(*provider)
+	if err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	if !p.Available() {
+		printJSON(map[string]interface{}{
+			"ok":    false,
+			"error": graphmemory.GraphifyUnavailableReason,
+		})
+		os.Exit(1)
+	}
+
+	idx, err := p.Build(rootPath)
+	if err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	path, err := graphmemory.WriteIndex(rootPath, idx)
+	if err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	printJSON(map[string]interface{}{
+		"ok":          true,
+		"provider":    p.Name(),
+		"index_path":  path,
+		"total_nodes": len(idx.Nodes),
+		"total_edges": len(idx.Edges),
+		"version":     idx.Version,
+		"build_time":  idx.BuildTime,
+	})
+}
+
+// ─── graph-summary ────────────────────────────────────────────────────────────
+
+func runGraphSummary(args []string) {
+	fs := flag.NewFlagSet("graph-summary", flag.ContinueOnError)
+	root     := fs.String("root", ".", "Project root path")
+	provider := fs.String("provider", "local", "Graph provider: local|graphify (default: local)")
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	// Validate provider (availability check; summary always reads existing index)
+	if _, err := graphmemory.GetProvider(*provider); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	rootPath := resolveRoot(*root)
+	sum, err := graphmemory.Summary(rootPath)
+	if err != nil {
+		printJSON(map[string]interface{}{
+			"ok":    false,
+			"error": err.Error(),
+			"hint":  "run 'vision-core graph-index --root <path>' first",
+		})
+		os.Exit(1)
+	}
+	printJSON(map[string]interface{}{"ok": true, "provider": *provider, "summary": sum})
+}
+
+// ─── graph-query ──────────────────────────────────────────────────────────────
+
+func runGraphQuery(args []string) {
+	fs := flag.NewFlagSet("graph-query", flag.ContinueOnError)
+	root     := fs.String("root", ".", "Project root path")
+	query    := fs.String("query", "", "Search query (case-insensitive substring)")
+	limit    := fs.Int("limit", 10, "Maximum results to return")
+	provider := fs.String("provider", "local", "Graph provider: local|graphify (default: local)")
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	// Validate provider
+	if _, err := graphmemory.GetProvider(*provider); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	rootPath := resolveRoot(*root)
+	result, err := graphmemory.Query(rootPath, *query, *limit)
+	if err != nil {
+		printJSON(map[string]interface{}{
+			"ok":    false,
+			"error": err.Error(),
+			"hint":  "run 'vision-core graph-index --root <path>' first",
+		})
+		os.Exit(1)
+	}
+	printJSON(map[string]interface{}{"ok": true, "provider": *provider, "result": result})
+}
+
+// ─── mcp-readonly ─────────────────────────────────────────────────────────────
+
+func runMCPReadonly(args []string) {
+	fs := flag.NewFlagSet("mcp-readonly", flag.ContinueOnError)
+	root := fs.String("root", ".", "Project root path")
+	tool := fs.String("tool", "", "MCP tool name (required)")
+	argsJSON := fs.String("args", "", "Tool arguments as JSON string")
+	fs.SetOutput(os.Stderr)
+	if err := fs.Parse(args); err != nil {
+		printJSON(map[string]interface{}{"ok": false, "error": err.Error()})
+		os.Exit(1)
+	}
+	if *tool == "" {
+		printJSON(map[string]interface{}{"ok": false, "error": "--tool is required"})
+		os.Exit(1)
+	}
+	req := mcpserver.ToolRequest{
+		Tool: *tool,
+		Root: resolveRoot(*root),
+	}
+	if *argsJSON != "" {
+		req.Args = json.RawMessage(*argsJSON)
+	}
+	resp := mcpserver.Dispatch(req)
+	printJSON(resp)
+	if !resp.OK {
+		os.Exit(1)
+	}
 }
