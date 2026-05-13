@@ -127,6 +127,9 @@
   window.VisionReport = {
     render: render,
     renderChat: renderChat,
+    normalize: normalized,
+    renderMissionReport: render,
+    renderMissionReportChat: renderChat,
     hasValidEvidence: validEvidence,
     hasGoldEvidence: function (payload) {
       var data = payload && typeof payload === 'object' ? payload : {};
