@@ -59,6 +59,14 @@
     closeSource();
     if (reason) { log(reason); }
   }
+  function streamState() {
+    return {
+      running: running,
+      connected: !!source,
+      mission_id: activeMissionId || '',
+      source: source ? 'eventsource' : 'idle'
+    };
+  }
   function realMissionId(payload) {
     var id = payload && (payload.mission_id || payload.missionId || payload.id);
     return typeof id === 'string' && id.trim().length > 0 ? id.trim() : '';
@@ -157,7 +165,11 @@
   window.VisionRuntimeOwner = {
     executeMission: executeMission,
     realMissionId: realMissionId,
-    release: release
+    release: release,
+    handleEvent: handleEvent,
+    normalizePayload: normalizePayload,
+    report: report,
+    streamState: streamState
   };
 
   document.addEventListener('DOMContentLoaded', bind);
