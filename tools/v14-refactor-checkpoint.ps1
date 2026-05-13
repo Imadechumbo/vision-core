@@ -8,7 +8,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 function Step($msg) {
-  Write-Host "`n=== $msg ===" -ForegroundColor Cyan
+  Write-Host ""
+  Write-Host "=== $msg ===" -ForegroundColor Cyan
 }
 
 function Ok($msg) {
@@ -21,17 +22,17 @@ function Fail($msg) {
 }
 
 function Run($cmd, $args) {
-  Write-Host "> $cmd $($args -join ' ')" -ForegroundColor DarkGray
+  Write-Host ("> " + $cmd + " " + ($args -join " ")) -ForegroundColor DarkGray
   & $cmd @args
   if ($LASTEXITCODE -ne 0) {
-    Fail "$cmd failed with exit code $LASTEXITCODE"
+    Fail ($cmd + " failed with exit code " + $LASTEXITCODE)
   }
 }
 
 function Get-GitOutput($args) {
   $out = & git @args
   if ($LASTEXITCODE -ne 0) {
-    Fail "git $($args -join ' ') failed"
+    Fail ("git " + ($args -join " ") + " failed")
   }
   return ($out -join "`n")
 }
@@ -62,14 +63,6 @@ function Test-FileExists($path) {
 function Test-ForbiddenLiteral($path, $pattern, $label) {
   if (-not (Test-Path $path)) { return }
   $match = Select-String -Path $path -Pattern $pattern -SimpleMatch -ErrorAction SilentlyContinue
-  if ($match) {
-    Fail "$label found in $path"
-  }
-}
-
-function Test-ForbiddenRegex($path, $pattern, $label) {
-  if (-not (Test-Path $path)) { return }
-  $match = Select-String -Path $path -Pattern $pattern -ErrorAction SilentlyContinue
   if ($match) {
     Fail "$label found in $path"
   }
@@ -109,7 +102,7 @@ function Test-PiHarnessContract() {
     "var OCTAGON",
     "var ORDER",
     "var STAGE_MAP",
-    "L0-L9 · AUTO"
+    "L0-L9"
   )
   foreach ($item in $required) {
     if ($agent.IndexOf($item) -lt 0) { Fail "PI/orbit contract marker missing: $item" }
@@ -178,8 +171,8 @@ function Sync-GitHub() {
   Run git @("fetch", "origin", $Branch)
   $local = Get-GitOutput @("rev-parse", "HEAD")
   $remote = Get-GitOutput @("rev-parse", "origin/$Branch")
-  Write-Host "local HEAD:  $local"
-  Write-Host "origin/$Branch: $remote"
+  Write-Host ("local HEAD:  " + $local)
+  Write-Host ("origin/" + $Branch + ": " + $remote)
 
   if ($Push) {
     Assert-CleanOrCommitReady
@@ -189,9 +182,9 @@ function Sync-GitHub() {
     $local = Get-GitOutput @("rev-parse", "HEAD")
     $remote = Get-GitOutput @("rev-parse", "origin/$Branch")
     if ($local.Trim() -ne $remote.Trim()) {
-      Fail "GitHub confirmation failed: local HEAD differs from origin/$Branch"
+      Fail ("GitHub confirmation failed: local HEAD differs from origin/" + $Branch)
     }
-    Ok "GitHub confirmed: origin/$Branch equals local HEAD $local"
+    Ok ("GitHub confirmed: origin/" + $Branch + " equals local HEAD " + $local)
   }
 }
 
@@ -209,4 +202,4 @@ Sync-GitHub
 
 Step "Checkpoint complete"
 Ok "V14 refactor checkpoint passed"
-Write-Host "Next safe phase: Fase 4 — Chat clean ownership" -ForegroundColor Yellow
+Write-Host "Next safe phase: Fase 4 - Chat clean ownership" -ForegroundColor Yellow
