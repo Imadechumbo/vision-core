@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 const args = new Set(process.argv.slice(2));
 const fullJsCheck = args.has('--full-js-check') || args.has('--FullJsCheck');
 const noPush = args.has('--no-push') || args.has('--NoPush');
+const skipPull = args.has('--skip-pull') || args.has('--SkipPull');
 const branchArg = process.argv.find((x) => x.startsWith('--branch='));
 const branch = branchArg ? branchArg.split('=').slice(1).join('=') : 'main';
 const commitArg = process.argv.find((x) => x.startsWith('--commit-message='));
@@ -216,12 +217,17 @@ try {
   add(`BRANCH: ${branch}`);
   add(`FULL_JS_CHECK: ${fullJsCheck ? 'true' : 'false'}`);
   add(`PUSH: ${noPush ? 'false' : 'true'}`);
+  add(`SKIP_PULL: ${skipPull ? 'true' : 'false'}`);
   add('PI_HARNESS: adaptive local runner enabled');
 
   layer('L0', 'Intake: load refactor objective and options');
   registerManualWorkCapabilities();
   layer('L1', 'Inspect: sync repository and inspect pending ownership patches');
-  run('git', ['pull', '--rebase', 'origin', branch], { silentOutput: true });
+  if (skipPull) {
+    add('GIT: pull skipped because parent runner already synchronized branch before controlled patch');
+  } else {
+    run('git', ['pull', '--rebase', 'origin', branch], { silentOutput: true });
+  }
 
   layer('L2', 'Diagnose: determine whether legacy runtime still owns forbidden behavior');
   applyPendingPatches();
@@ -230,6 +236,7 @@ try {
 
   layer('L6', 'Validation: syntax, checkpoint, front guard, and git integrity');
   run('node', ['--check', 'frontend/assets/v233-realtime.js'], { silentOutput: true });
+  run('node', ['--check', 'frontend/assets/vision-runtime-owner.js'], { silentOutput: true });
   run('node', ['--check', 'frontend/assets/vision-v34-enterprise.js'], { silentOutput: true });
   run('node', ['--check', 'frontend/assets/vision-v44-runtime-consistency.js'], { silentOutput: true });
 
