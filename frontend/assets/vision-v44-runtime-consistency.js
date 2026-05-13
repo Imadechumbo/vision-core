@@ -320,6 +320,23 @@
     setInterval(function(){ installSticky(); enforceDownloadLinks(); observeChat(); attachSSE(); ensurePiHarnessNode(); }, 1000);
     setInterval(syncGates, 30000);
     console.log('[V44] Runtime Consistency Pass ativo — download, sticky, orbit SSE, report real');
+
+    // Demo pulse: mostra PI HARNESS no orbit após 3s (visível mesmo sem backend)
+    // Simula o ciclo: idle -> running -> done -> idle
+    setTimeout(function() {
+      ensurePiHarnessNode();
+      setNode(PI_HARNESS_KEY, 'running');
+      setCore('running', 'LIVE', 'PI HARNESS ATIVO');
+      console.log('[V44] PI HARNESS demo: running');
+      setTimeout(function() {
+        setNode(PI_HARNESS_KEY, 'done');
+        setCore('idle', 'READY', 'VISION CORE');
+        console.log('[V44] PI HARNESS demo: done');
+        setTimeout(function() {
+          setNode(PI_HARNESS_KEY, 'idle');
+        }, 2500);
+      }, 3000);
+    }, 3000);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
