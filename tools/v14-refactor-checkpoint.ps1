@@ -21,24 +21,29 @@ function Fail($msg) {
   exit 1
 }
 
-function Run($cmd, $args) {
-  Write-Host ("> " + $cmd + " " + ($args -join " ")) -ForegroundColor DarkGray
-  & $cmd @args
+function Run {
+  param(
+    [Parameter(Mandatory=$true)][string]$Cmd,
+    [Parameter(ValueFromRemainingArguments=$true)][string[]]$CmdArgs
+  )
+  Write-Host ("> " + $Cmd + " " + ($CmdArgs -join " ")) -ForegroundColor DarkGray
+  & $Cmd @CmdArgs
   if ($LASTEXITCODE -ne 0) {
-    Fail ($cmd + " failed with exit code " + $LASTEXITCODE)
+    Fail ($Cmd + " failed with exit code " + $LASTEXITCODE)
   }
 }
 
-function Get-GitOutput($args) {
-  $out = & git @args
+function Get-GitOutput {
+  param([Parameter(ValueFromRemainingArguments=$true)][string[]]$GitArgs)
+  $out = & git @GitArgs
   if ($LASTEXITCODE -ne 0) {
-    Fail ("git " + ($args -join " ") + " failed")
+    Fail ("git " + ($GitArgs -join " ") + " failed")
   }
   return ($out -join "`n")
 }
 
 function Assert-CleanOrCommitReady() {
-  $status = Get-GitOutput @("status", "--porcelain")
+  $status = Get-GitOutput status --porcelain
   if ([string]::IsNullOrWhiteSpace($status)) {
     Ok "working tree clean"
     return
@@ -50,8 +55,8 @@ function Assert-CleanOrCommitReady() {
   }
 
   Step "Committing local changes"
-  Run git @("add", "frontend", "docs", "tools", ".github")
-  Run git @("commit", "-m", $CommitMessage)
+  Run git add frontend docs tools .github
+  Run git commit -m $CommitMessage
 }
 
 function Test-FileExists($path) {
@@ -142,13 +147,13 @@ function Test-Syntax() {
     "tools/sddf-front-guard.mjs"
   )
   foreach ($f in $critical) {
-    if (Test-Path $f) { Run node @("--check", $f) }
+    if (Test-Path $f) { Run node --check $f }
   }
 
   if ($FullJsCheck) {
     Step "Running full frontend/assets JS syntax check"
     Get-ChildItem "frontend/assets" -Filter "*.js" | ForEach-Object {
-      Run node @("--check", $_.FullName)
+      Run node --check $_.FullName
     }
   }
   Ok "syntax checks passed"
@@ -156,31 +161,31 @@ function Test-Syntax() {
 
 function Test-Guard() {
   Step "Running SDDF front guard"
-  Run node @("tools/sddf-front-guard.mjs")
+  Run node tools/sddf-front-guard.mjs
   Ok "SDDF front guard passed"
 }
 
 function Test-GitIntegrity() {
   Step "Running git integrity checks"
-  Run git @("diff", "--check")
+  Run git diff --check
   Ok "git diff --check passed"
 }
 
 function Sync-GitHub() {
   Step "Syncing with GitHub"
-  Run git @("fetch", "origin", $Branch)
-  $local = Get-GitOutput @("rev-parse", "HEAD")
-  $remote = Get-GitOutput @("rev-parse", "origin/$Branch")
+  Run git fetch origin $Branch
+  $local = Get-GitOutput rev-parse HEAD
+  $remote = Get-GitOutput rev-parse "origin/$Branch"
   Write-Host ("local HEAD:  " + $local)
   Write-Host ("origin/" + $Branch + ": " + $remote)
 
   if ($Push) {
     Assert-CleanOrCommitReady
     Step "Pushing to GitHub"
-    Run git @("push", "origin", $Branch)
-    Run git @("fetch", "origin", $Branch)
-    $local = Get-GitOutput @("rev-parse", "HEAD")
-    $remote = Get-GitOutput @("rev-parse", "origin/$Branch")
+    Run git push origin $Branch
+    Run git fetch origin $Branch
+    $local = Get-GitOutput rev-parse HEAD
+    $remote = Get-GitOutput rev-parse "origin/$Branch"
     if ($local.Trim() -ne $remote.Trim()) {
       Fail ("GitHub confirmation failed: local HEAD differs from origin/" + $Branch)
     }
@@ -189,8 +194,8 @@ function Sync-GitHub() {
 }
 
 Step "VISION CORE V14 + PI HARNESS checkpoint"
-Run git @("branch", "--show-current")
-Run git @("status", "--short")
+Run git branch --show-current
+Run git status --short
 
 Test-CleanOwners
 Test-PiHarnessContract
