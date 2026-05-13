@@ -100,11 +100,17 @@
     Object.keys(OCTAGON).forEach(function(key) {
       var el = document.querySelector('.mc-node[data-key="' + key + '"]');
       if (!el) return;
+      // Remove positional classes to kill CSS ghost positions
+      ['mc-node--top','mc-node--tr','mc-node--right','mc-node--br',
+       'mc-node--bottom','mc-node--left','mc-node--tl'].forEach(function(cls) {
+        el.classList.remove(cls);
+      });
       var pos = OCTAGON[key];
-      el.style.setProperty('top',       pos.top,  'important');
-      el.style.setProperty('left',      pos.left, 'important');
-      el.style.setProperty('right',     'auto',   'important');
-      el.style.setProperty('bottom',    'auto',   'important');
+      el.style.setProperty('position',  'absolute',             'important');
+      el.style.setProperty('top',       pos.top,                'important');
+      el.style.setProperty('left',      pos.left,               'important');
+      el.style.setProperty('right',     'auto',                 'important');
+      el.style.setProperty('bottom',    'auto',                 'important');
       el.style.setProperty('transform', 'translate(-50%,-50%)', 'important');
     });
   }
