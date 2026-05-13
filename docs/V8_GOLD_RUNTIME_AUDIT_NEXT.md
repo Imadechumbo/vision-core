@@ -1,4 +1,4 @@
-# V8 Gold Runtime Audit — Active Map
+# V8 Gold Runtime Audit — Complete Map
 
 Current frontend state: `V8_PURE_VISUAL_SNAPSHOT MODE`.
 
@@ -23,9 +23,9 @@ The V8 pure snapshot currently depends on legacy assets for visual parity. Remov
 
 ## Audit Status
 
-Second audit pass completed for the remaining high-risk V298–V44 runtime chain.
+Runtime audit map completed for all listed V8/V14 legacy runtime scripts.
 
-Only `v23-ui-system.js` remains pending in this document. Do not remove any legacy script until this last pending item is mapped and the visual initializers are ported.
+Do not remove any legacy script until visual initializers are ported to the clean V14 files and the V8 Gold visual is compared after each removal.
 
 ## Runtime Responsibility Table
 
@@ -33,7 +33,7 @@ Only `v23-ui-system.js` remains pending in this document. Do not remove any lega
 |---|---|---|---|---|---|
 | `vision-runtime-v297.js` | Global `window.RUNTIME_CONFIG`, `window.API_BASE_URL`, `window.__VISION_API__`, `window.API`, `window.VisionCoreRuntime`, `window.fetch`, `window.EventSource` | none directly; bootstraps API globals used by visual/runtime scripts | rewrites API URLs, patches global fetch, patches EventSource, exposes `getVisionApi()` | CRITICAL: global fetch/EventSource override; must not survive clean mode | `vision-api.js` for API base and URL normalization only. Do not port global fetch/EventSource monkeypatch. |
 | `vision-v297-interactions.js` | `v297ChatLog`, `v236CopilotMiniChat`, `mcLiveBadge`, `.v236-tl-step`, `executeBtn`, `missionText`, `v297RunSddfBtn`, `v297AddFileBtn`, `v236FileBtn`, `v297AddImageBtn`, `v297FileInput`, `v236FileInput`, `v236CopilotBtn` | chat append, body pipeline state classes, compact timeline state, file/image button UX, PASS GOLD visual state | posts to `/run-live`, starts EventSource fallback, binds execution button, updates timeline, calls `/copilot` | CRITICAL: duplicate execution owner, unsafe SSE, mission query string stream, PASS GOLD visual state | split into `vision-chat.js` for chat/file UX, `vision-agent-local.js` for visual state, `vision-runtime-owner.js` for real execution after contract alignment |
-| `v23-ui-system.js` | PENDING | PENDING | PENDING | PENDING | PENDING |
+| `v23-ui-system.js` | `mcLiveBadge`, `document.documentElement.dataset.contracts`, global `window.__VISION_CONTRACTS__` | small status badge: `CONTRACTS` vs `LOCAL UI`; marks document as `data-contracts=real/offline` | fetches `/api/runtime/contracts` and writes contracts object globally | MEDIUM: useful contract status probe, but global state and direct fetch should not own runtime | `vision-api.js` for `/api/runtime/contracts`; `vision-agent-local.js` for contract badge/status display |
 | `v231-backend-agents.js` | `agentMetricsLarge`, `agentsCatalogGrid`, `metricsBoard .live-pill`, `mcMetricsGrid`, CSS classes `metric-big-row`, `agent-real-card`, `agent-status-chip` | renders large Agent Metrics board and OpenSquad reserve cards; paints small metrics data colors | fetches `/api/metrics/agents` and `/api/agents/catalog`; falls back to local metrics and agents when backend unavailable | HIGH: useful visual renderer, but fallback can look real unless clearly marked local | `vision-agent-local.js` for visual metrics rendering; optional `vision-api.js` endpoints; preserve explicit LOCAL/UI markers |
 | `v233-realtime.js` | `processScreen`, `processTitle`, `processMessage`, `processStage`, `runtimeMonitor`, `runtimeText`, `.v23-top-eye`, `.eye-wrap`, `mcCore`, `mcCoreStatus`, `logsPanel`, `logsBox`, `timelineBox`, `projectSelector`, `missionText`, `runMode`, `executeBtn` | live process screen, runtime badges, eye/core state, log stream, mission timeline | defines `RUN_PATH`, `STREAM_PATH`, opens EventSource, binds `executeBtn.onclick`, polling fallback, calls `/api/run-live`, `/api/mission/:id` | CRITICAL: duplicate runtime owner and forbidden markers; high regression source | `vision-runtime-owner.js` for execution lifecycle; `vision-report.js`/`vision-agent-local.js` for visual updates; do not port `executeBtn.onclick` or static paths |
 | `v273-sddf-command-chat.js` | `missionText`, `executeBtn`, `v236CopilotBtn`, `processScreen`, `processTitle`, `processMessage`, `processStage`, `v236FileInput`, dynamic `v273CommandPanel`, `v273-sddf-bar`, `v273-chip-row` | command chat panel, SDDF gate chips, prompt chips, process header updates | sends `/api/copilot`, opens EventSource with mission query params, fallback POST to `/api/run-live`, binds execute button with capture | CRITICAL: duplicate chat/runtime owner; unsafe direct SSE; useful SDDF UI/gate visual | `vision-chat.js` for chat/chips/files; `vision-runtime-owner.js` for execution; `vision-report.js` for gates/evidence |
@@ -114,13 +114,19 @@ But both also bind runtime. Port UI only to `vision-chat.js`; leave execution to
 
 This means Pi Harness must not be inserted into the orbit until one clean orbit owner exists.
 
+### 6. Contract status is a separate lightweight concern
+
+`v23-ui-system.js` only probes `/api/runtime/contracts` and marks `mcLiveBadge`/`documentElement.dataset.contracts`.
+
+This should become a small read-only status function in `vision-agent-local.js`, using `vision-api.js` for the request.
+
 ## Clean Ownership Target
 
 | Clean file | Owns |
 |---|---|
-| `vision-api.js` | API base, URL normalization, GET/POST helpers, stream URL builder. No global fetch/EventSource monkeypatch. |
+| `vision-api.js` | API base, URL normalization, GET/POST helpers, stream URL builder, contract/status read helpers. No global fetch/EventSource monkeypatch. |
 | `vision-chat.js` | Chat UI, prompt chips, file selection, explain-only copilot, provider selectors. No run-live and no EventSource. |
-| `vision-agent-local.js` | Orbit rendering, node state, Agent Metrics, status pills, Pi slot later. No network mutation. |
+| `vision-agent-local.js` | Orbit rendering, node state, Agent Metrics, contract status badge, status pills, Pi slot later. No network mutation. |
 | `vision-runtime-owner.js` | Single mission execution lifecycle, POST `/api/run-live`, one SSE connection, mission id requirement, blocked states. |
 | `vision-report.js` | Evidence Receipt rendering, Mission Report, PASS GOLD display only with real evidence. |
 
@@ -138,9 +144,9 @@ Pi Harness can be added safely only after:
 
 ## Migration Plan
 
-### Step A — Complete Audit
+### Step A — Audit Complete
 
-Remaining: map `v23-ui-system.js`.
+All listed legacy runtime scripts are now mapped.
 
 ### Step B — Port Visual Initializers
 
@@ -153,6 +159,7 @@ Priority ports:
 3. Orbit/core status from `vision-v32-orbit-runtime.js` / `vision-v34-enterprise.js` / `vision-v44-runtime-consistency.js` to `vision-agent-local.js`.
 4. Mission Report from `vision-v32-orbit-runtime.js` / `vision-v34-enterprise.js` / `vision-v44-runtime-consistency.js` to `vision-report.js`.
 5. API URL logic from `vision-runtime-v297.js` / `vision-v2910-clean-runtime.js` to `vision-api.js`, without monkeypatch.
+6. Contract status probe from `v23-ui-system.js` to `vision-agent-local.js` plus `vision-api.js`.
 
 ### Step C — Remove Legacy Scripts Incrementally
 
@@ -170,7 +177,8 @@ Suggested removal order after full audit and visual ports:
 10. `vision-v35-telemetry.js`
 11. `vision-v34-enterprise.js`
 12. `vision-v44-runtime-consistency.js`
-13. `vision-v32-orbit-runtime.js` last
+13. `v23-ui-system.js`
+14. `vision-v32-orbit-runtime.js` last
 
 ### Step D — Restore V14 Clean Mode
 
