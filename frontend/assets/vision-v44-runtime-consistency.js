@@ -37,10 +37,12 @@
     patch:'patchengine', patchengine:'patchengine', patch_engine:'patchengine',
     aegis:'aegis', security:'aegis', policy:'aegis', sddf:'aegis', validation:'aegis',
     passgold:'passgold', pass_gold:'passgold', gold:'passgold', 'pass gold':'passgold',
-    github:'github', pr:'github', pullrequest:'github', pull_request:'github'
+    github:'github', pr:'github', pullrequest:'github', pull_request:'github',
+    pi_harness:'pi_harness', piharness:'pi_harness', 'pi harness':'pi_harness',
+    adaptive:'pi_harness', harness:'pi_harness', difficulty:'pi_harness', layer:'pi_harness'
   };
-  var ORDER = ['openclaw','scanner','hermes','patchengine','aegis','passgold','github'];
-  var LABEL = {openclaw:'OpenClaw', scanner:'Scanner', hermes:'Hermes', patchengine:'PatchEngine', aegis:'Aegis', passgold:'PASS GOLD', github:'PR GitHub'};
+  var ORDER = ['openclaw','scanner','hermes','patchengine','pi_harness','aegis','passgold','github'];
+  var LABEL = {openclaw:'OpenClaw', scanner:'Scanner', hermes:'Hermes', patchengine:'PatchEngine', pi_harness:'PI HARNESS', aegis:'Aegis', passgold:'PASS GOLD', github:'PR GitHub'};
   var missionStartedAt = null;
   var activeMissionId = null;
   var reportLock = false;
@@ -266,13 +268,56 @@
     });
   }
 
+
+  var PI_HARNESS_KEY = 'pi_harness';
+
+  function ensurePiHarnessNode() {
+    var orbWrap = document.querySelector('.mc-orb-wrap') || document.getElementById('vcOrbitWrap');
+    if (!orbWrap) return;
+    if (orbWrap.querySelector('[data-key="' + PI_HARNESS_KEY + '"]')) return;
+    var n = document.createElement('div');
+    n.className = 'mc-node v33-idle';
+    n.setAttribute('data-key', PI_HARNESS_KEY);
+    n.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) translateY(-56px) scale(.80);display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;z-index:6;opacity:0;transition:opacity .4s ease,transform .4s ease';
+    n.innerHTML = '<div class="mc-node-icon" style="font-size:14px;font-weight:700">π</div>' +
+      '<div class="mc-node-label">PI HARNESS<br><small id="v33-t-pi_harness" style="color:rgba(168,85,247,.7)">ADAPTIVE</small></div>';
+    n.addEventListener('click', function() {
+      var d = document.getElementById('agentDetail');
+      if (d) d.textContent = 'PI HARNESS · Orquestrador adaptativo L0-L9: ajusta dificuldade, orcamento de ferramentas e escalonamento. · status: ' + (n.classList.contains('v33-running') ? 'RUNNING' : n.classList.contains('v33-done') ? 'DONE' : 'ADAPTIVE');
+    });
+    orbWrap.appendChild(n);
+  }
+
+  var _origSetNode = null;
+  function patchSetNodeForPiHarness() {
+    if (_origSetNode) return;
+    _origSetNode = setNode;
+    setNode = function(key, status) {
+      _origSetNode(key, status);
+      if (key !== PI_HARNESS_KEY) return;
+      var n = document.querySelector('[data-key="' + PI_HARNESS_KEY + '"]');
+      if (!n) return;
+      var active = (status === 'running' || status === 'done');
+      n.style.opacity = active ? '1' : '0';
+      n.style.transform = active
+        ? 'translate(-50%,-50%) translateY(-56px) scale(.88)'
+        : 'translate(-50%,-50%) translateY(-56px) scale(.80)';
+      if (status === 'running') {
+        var sub = document.getElementById('mcCoreSub');
+        if (sub) sub.textContent = 'PI HARNESS ATIVO';
+      }
+    };
+  }
+
   function boot(){
     enforceDownloadLinks();
     installSticky();
     zeroFake();
     observeChat();
     syncGates();
-    setInterval(function(){ installSticky(); enforceDownloadLinks(); observeChat(); attachSSE(); }, 1000);
+    ensurePiHarnessNode();
+    patchSetNodeForPiHarness();
+    setInterval(function(){ installSticky(); enforceDownloadLinks(); observeChat(); attachSSE(); ensurePiHarnessNode(); }, 1000);
     setInterval(syncGates, 30000);
     console.log('[V44] Runtime Consistency Pass ativo — download, sticky, orbit SSE, report real');
   }
