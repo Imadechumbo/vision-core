@@ -23,9 +23,9 @@ The V8 pure snapshot currently depends on legacy assets for visual parity. Remov
 
 ## Audit Status
 
-Initial audit pass completed for the highest-risk scripts that directly patch fetch/SSE, bind execution buttons, or render agent boards.
+Second audit pass completed for the remaining high-risk V298–V44 runtime chain.
 
-Remaining legacy scripts are still marked `PENDING`. Do not remove them yet.
+Only `v23-ui-system.js` remains pending in this document. Do not remove any legacy script until this last pending item is mapped and the visual initializers are ported.
 
 ## Runtime Responsibility Table
 
@@ -37,24 +37,27 @@ Remaining legacy scripts are still marked `PENDING`. Do not remove them yet.
 | `v231-backend-agents.js` | `agentMetricsLarge`, `agentsCatalogGrid`, `metricsBoard .live-pill`, `mcMetricsGrid`, CSS classes `metric-big-row`, `agent-real-card`, `agent-status-chip` | renders large Agent Metrics board and OpenSquad reserve cards; paints small metrics data colors | fetches `/api/metrics/agents` and `/api/agents/catalog`; falls back to local metrics and agents when backend unavailable | HIGH: useful visual renderer, but fallback can look real unless clearly marked local | `vision-agent-local.js` for visual metrics rendering; optional `vision-api.js` endpoints; preserve explicit LOCAL/UI markers |
 | `v233-realtime.js` | `processScreen`, `processTitle`, `processMessage`, `processStage`, `runtimeMonitor`, `runtimeText`, `.v23-top-eye`, `.eye-wrap`, `mcCore`, `mcCoreStatus`, `logsPanel`, `logsBox`, `timelineBox`, `projectSelector`, `missionText`, `runMode`, `executeBtn` | live process screen, runtime badges, eye/core state, log stream, mission timeline | defines `RUN_PATH`, `STREAM_PATH`, opens EventSource, binds `executeBtn.onclick`, polling fallback, calls `/api/run-live`, `/api/mission/:id` | CRITICAL: duplicate runtime owner and forbidden markers; high regression source | `vision-runtime-owner.js` for execution lifecycle; `vision-report.js`/`vision-agent-local.js` for visual updates; do not port `executeBtn.onclick` or static paths |
 | `v273-sddf-command-chat.js` | `missionText`, `executeBtn`, `v236CopilotBtn`, `processScreen`, `processTitle`, `processMessage`, `processStage`, `v236FileInput`, dynamic `v273CommandPanel`, `v273-sddf-bar`, `v273-chip-row` | command chat panel, SDDF gate chips, prompt chips, process header updates | sends `/api/copilot`, opens EventSource with mission query params, fallback POST to `/api/run-live`, binds execute button with capture | CRITICAL: duplicate chat/runtime owner; unsafe direct SSE; useful SDDF UI/gate visual | `vision-chat.js` for chat/chips/files; `vision-runtime-owner.js` for execution; `vision-report.js` for gates/evidence |
-| `vision-v298-command-chat.js` | PENDING | PENDING | PENDING | PENDING | PENDING |
-| `vision-v298-final-hard-fix2.js` | PENDING | PENDING | PENDING | PENDING | PENDING |
-| `vision-v299-fullstack-runtime.js` | PENDING | PENDING | PENDING | PENDING | PENDING |
-| `vision-v2910-clean-runtime.js` | PENDING | PENDING | PENDING | PENDING | PENDING |
-| `vision-v32-orbit-runtime.js` | PENDING | PENDING | PENDING | PENDING | PENDING |
-| `vision-v34-enterprise.js` | PENDING | PENDING | PENDING | PENDING | PENDING |
-| `vision-v35-telemetry.js` | PENDING | PENDING | PENDING | PENDING | PENDING |
-| `vision-v44-runtime-consistency.js` | PENDING | PENDING | PENDING | PENDING | PENDING |
+| `vision-v298-command-chat.js` | `v298CommandChat`, `v298CommandStatus`, `v298ChatStream`, `v298Prompt`, `v298SendBtn`, `v298RunBtn`, `v298Mode`, `v298Model`, `v298Streaming`, `v298AddFilesBtn`, `v298ReadPrintBtn`, `v298ClearBtn`, `v298FileInput`, `mission`, `missionText`, `.v236-compact-timeline`, `.vc-process-screen`, `.v236-action-row`, `mcCore`, `.v236-tl-step` | builds replacement Vision AI Command chat, hides old controls, renders prompt/file controls, updates compact timeline and core state | posts to `/api/copilot`, `/api/hermes/analyze`, `/api/run-live`; creates SSE singleton placeholder/dummy; binds send/run/clear/file buttons | CRITICAL: creates its own chat/runtime owner and hides DOM controls. Useful visual shell but unsafe as execution owner | `vision-chat.js` for command chat UI and files; `vision-runtime-owner.js` for run button; `vision-agent-local.js` for timeline/core visual updates |
+| `vision-v298-final-hard-fix2.js` | `v298Mode`, `v298Model`, `v298Streaming`, `.v298-dd`, `.v236-compact-timeline`, `v298CommandChat` | replaces native selects with custom dropdown UI, hides duplicate timelines | patches global fetch and EventSource; exposes `v298GetCommandMode`, `v298GetCommandModel`, `v298GetStreaming` | HIGH: visual dropdown useful, but network patch must not survive clean mode | `vision-chat.js` for dropdown/UI helpers only; `vision-api.js` must own URL normalization without monkeypatch |
+| `vision-v299-fullstack-runtime.js` | `v299QuotaBadge`, `.v298-tool-row`, `v299ConfigModal`, `v299ProviderSelect`, `v299ApiKey`, `v299ModelDefault`, `v299SaveProvider`, `v299ProviderMsg`, `v299PlanInfo`, `v299ObsidianBtn`, `v298Mode`, `v298Model`, `v298ChatStream` | extends command chat with quota badge, provider config modal, Obsidian button, agent download, extra modes, injected modal CSS | calls `/api/usage/quota`, `/api/ai/providers`, `/api/ai/providers/save`, `/api/billing/plans`, `/api/billing/checkout`, `/api/memory/obsidian/status`; exposes `window.v299Upgrade` | HIGH: SaaS/provider UI useful, but mixes billing/provider actions into legacy runtime and injects CSS | `vision-chat.js` for UI controls; `vision-api.js` for endpoints; future billing/provider module if kept. Do not expose secrets client-side. |
+| `vision-v2910-clean-runtime.js` | `v298Prompt`, `missionText`, `v298Mode`, `.v298-dd`, `v298Model`, `v298ChatStream`, `v297ChatLog`, `v236CopilotMiniChat`, `v298CommandStatus`, buttons/forms, `window.__nativeFetch`, `window.__nativeEventSource`, `window.VisionApi`, `window.VisionCoreRuntime` | final legacy command/chat intercept, state badges, duplicate timeline cleanup | owns API URL cleanup, POST/GET JSON, EB fallback, global fetch patch, EventSource patch, SSE singleton, form/button interception, `/run-live`, `/run-live-stream`, `/health` | CRITICAL: closest to clean intent but still global monkeypatch + EB fallback + duplicate Runtime Owner | split into `vision-api.js` for pure URL helpers, `vision-runtime-owner.js` for execution/SSE, `vision-chat.js` for intercept-free UI |
+| `vision-v32-orbit-runtime.js` | `mcCore`, `mcCoreStatus`, `mcCoreSub`, `.mc-node[data-key]`, `v33-t-*`, `.mc-ps-badge`, `executeBtn`, `missionText`, `.mc-orb-wrap`, chat/report targets | owns orbit state, mc-node animation, core status, pipeline row status, sticky CSS support, mission report card | declares `window.__V32_OWNER__`, neutralizes old EventSource, owns SSE singleton, posts `/api/run-live`, fetches report endpoints | CRITICAL: orbit ownership and SSE ownership are mixed; must be last to remove after porting orbit visual behavior | `vision-agent-local.js` for orbit/core/node rendering; `vision-runtime-owner.js` for SSE; `vision-report.js` for report card |
+| `vision-v34-enterprise.js` | `.mc-node[data-key]`, `v33-t-*`, `mcCore`, `mcCoreStatus`, `mcCoreSub`, `agentDownload`, `v34StatusBlock`, `v34s-*`, `v298ChatStream`, `v297ChatLog`, `logsBox` | orbit telemetry, system status block, sticky fix, PASS GOLD report observer, fake animation blocker | polls `/api/runtime/harness-stats`, `/api/workers/status`; observes SSE singleton; fetches mission/pass-gold/github/hermes/workers/logs report data | HIGH: valuable telemetry/reporting, but duplicates v32/v44 report/orbit logic | `vision-agent-local.js` for orbit/status, `vision-report.js` for report observer, `vision-api.js` for endpoint reads |
+| `vision-v35-telemetry.js` | `bar-*`, `val-*`, `mcTotalCost`, `v298ChatStream`, `v297ChatLog` | updates right-panel metric bars and total cost, fallback PASS GOLD bar from harness stats | polls `/api/metrics/agents`, `/api/runtime/harness-stats`; observes PASS GOLD text if v34 absent | MEDIUM-HIGH: useful telemetry but duplicates metrics ownership | `vision-agent-local.js` for metric rendering; `vision-api.js` for polling helpers |
+| `vision-v44-runtime-consistency.js` | `.mc-node[data-key]`, `v33-t-*`, `mcCore`, `mcCoreStatus`, `mcCoreSub`, right aside, `agentDownload`, download links, `executeBtn`, chat/report targets, gate ids | final consistency layer for sticky, download link, orbit SSE state, Mission Report, gates | attaches to `window.__VISION_SSE__`, observes chat, polls pass-gold/runtime endpoints, builds real report, blocks fake animation | HIGH: useful final consistency ideas but duplicates v32/v34/v35 and can mask ownership boundaries | `vision-agent-local.js` for sticky/orbit/gates, `vision-report.js` for report, keep download link static in HTML/CSS |
 
-## Findings From Initial Pass
+## Findings From Audit
 
 ### 1. Runtime ownership is fragmented
 
-At least three legacy scripts bind or influence mission execution:
+At least six legacy scripts bind or influence mission execution:
 
 - `vision-v297-interactions.js`
 - `v233-realtime.js`
 - `v273-sddf-command-chat.js`
+- `vision-v298-command-chat.js`
+- `vision-v2910-clean-runtime.js`
+- `vision-v32-orbit-runtime.js`
 
 Clean migration must restore one owner only:
 
@@ -69,6 +72,8 @@ Legacy scripts set API globals and rewrite requests through multiple mechanisms:
 - direct `window.__VISION_API__`
 - `window.fetch` monkeypatch
 - `window.EventSource` monkeypatch
+- EB fallback logic
+- per-script `apiUrl()` helpers
 
 Clean migration must restore one API client only:
 
@@ -76,55 +81,48 @@ Clean migration must restore one API client only:
 
 ### 3. Agent metrics are useful but need clean ownership
 
-`v231-backend-agents.js` is visually valuable because it renders:
+`v231-backend-agents.js`, `vision-v35-telemetry.js`, `vision-v34-enterprise.js`, and `vision-v44-runtime-consistency.js` all affect metric/status rendering.
 
-- large metrics board
-- OpenSquad reserve cards
-- backend/local source badge
+Clean owner:
 
-This should be ported as visual-only rendering into `vision-agent-local.js`, with clear `LOCAL UI` markers when using fallback data.
+- `frontend/assets/vision-agent-local.js`
 
 ### 4. SDDF chat/gates are useful but mixed with runtime
 
-`v273-sddf-command-chat.js` contains useful command UX:
+`v273-sddf-command-chat.js` and `vision-v298-command-chat.js` contain useful command UX:
 
 - chips
 - SDDF gates
 - process header updates
 - file list
 - explanation mode
+- Vision AI Command composer
 
-But it also opens SSE and binds runtime. Port only UI behavior to `vision-chat.js` and leave execution to `vision-runtime-owner.js`.
+But both also bind runtime. Port UI only to `vision-chat.js`; leave execution to `vision-runtime-owner.js`.
 
-## Legacy Audit Questions
+### 5. Orbit ownership is the most sensitive area
 
-For each remaining pending script, answer:
+`vision-v32-orbit-runtime.js`, `vision-v34-enterprise.js`, and `vision-v44-runtime-consistency.js` all manipulate:
 
-1. Which DOM IDs does it read?
-2. Which DOM IDs does it write?
-3. Which classes does it add or remove?
-4. Which buttons does it bind?
-5. Does it initialize orbit?
-6. Does it initialize agent metrics?
-7. Does it initialize chat?
-8. Does it initialize Mission Control?
-9. Does it open SSE/EventSource?
-10. Does it override `window.fetch`?
-11. Does it use `RUN_PATH` or `STREAM_PATH`?
-12. Does it generate mission IDs?
-13. Does it hardcode PASS GOLD true?
-14. Does it hardcode promotion allowed true?
-15. Does it call or simulate create-pr?
+- `.mc-node[data-key]`
+- `mcCore`
+- `mcCoreStatus`
+- `mcCoreSub`
+- `v33-t-*`
+- SSE-driven state
+- PASS GOLD report triggers
 
-## Clean Destinations
+This means Pi Harness must not be inserted into the orbit until one clean orbit owner exists.
 
-Map responsibilities into clean files:
+## Clean Ownership Target
 
-- `frontend/assets/vision-api.js`
-- `frontend/assets/vision-chat.js`
-- `frontend/assets/vision-agent-local.js`
-- `frontend/assets/vision-runtime-owner.js`
-- `frontend/assets/vision-report.js`
+| Clean file | Owns |
+|---|---|
+| `vision-api.js` | API base, URL normalization, GET/POST helpers, stream URL builder. No global fetch/EventSource monkeypatch. |
+| `vision-chat.js` | Chat UI, prompt chips, file selection, explain-only copilot, provider selectors. No run-live and no EventSource. |
+| `vision-agent-local.js` | Orbit rendering, node state, Agent Metrics, status pills, Pi slot later. No network mutation. |
+| `vision-runtime-owner.js` | Single mission execution lifecycle, POST `/api/run-live`, one SSE connection, mission id requirement, blocked states. |
+| `vision-report.js` | Evidence Receipt rendering, Mission Report, PASS GOLD display only with real evidence. |
 
 ## Pi Harness Dependency
 
@@ -136,30 +134,50 @@ Pi Harness can be added safely only after:
 - agent node rendering is known
 - metrics ownership is known
 - PASS GOLD visual state ownership is known
+- `vision-agent-local.js` is the only orbit owner
 
 ## Migration Plan
 
 ### Step A — Complete Audit
-Document every legacy runtime responsibility.
+
+Remaining: map `v23-ui-system.js`.
 
 ### Step B — Port Visual Initializers
+
 Move visual-only initialization into clean V14 scripts without enabling unsafe runtime behavior.
 
+Priority ports:
+
+1. Vision AI Command shell and chips from `vision-v298-command-chat.js` / `v273-sddf-command-chat.js` to `vision-chat.js`.
+2. Metrics boards from `v231-backend-agents.js` / `vision-v35-telemetry.js` to `vision-agent-local.js`.
+3. Orbit/core status from `vision-v32-orbit-runtime.js` / `vision-v34-enterprise.js` / `vision-v44-runtime-consistency.js` to `vision-agent-local.js`.
+4. Mission Report from `vision-v32-orbit-runtime.js` / `vision-v34-enterprise.js` / `vision-v44-runtime-consistency.js` to `vision-report.js`.
+5. API URL logic from `vision-runtime-v297.js` / `vision-v2910-clean-runtime.js` to `vision-api.js`, without monkeypatch.
+
 ### Step C — Remove Legacy Scripts Incrementally
-Remove one legacy script at a time and compare visual output.
 
-Suggested removal order after full audit:
+Suggested removal order after full audit and visual ports:
 
-1. duplicate command/chat runtime after porting chat visuals
-2. duplicate realtime runtime after Runtime Owner handles execution
-3. fetch/EventSource monkeypatch after VisionApi handles endpoint normalization
-4. metrics renderer after porting metrics to Agent Local
-5. orbit runtime last, after Pi slot/agent rendering ownership is stable
+1. `v273-sddf-command-chat.js`
+2. `vision-v298-command-chat.js`
+3. `v233-realtime.js`
+4. `vision-v298-final-hard-fix2.js`
+5. `vision-v299-fullstack-runtime.js`
+6. `vision-v2910-clean-runtime.js`
+7. `vision-runtime-v297.js`
+8. `vision-v297-interactions.js`
+9. `v231-backend-agents.js`
+10. `vision-v35-telemetry.js`
+11. `vision-v34-enterprise.js`
+12. `vision-v44-runtime-consistency.js`
+13. `vision-v32-orbit-runtime.js` last
 
 ### Step D — Restore V14 Clean Mode
+
 Once the V8 Gold visual works with clean scripts only, switch guard back to `V14_CLEAN_RUNTIME MODE`.
 
 ### Step E — Only Then Implement Pi Slot
+
 Add Pi Harness to the Vision Agent Local wheel after the wheel ownership is stable.
 
 ## Stop Conditions
