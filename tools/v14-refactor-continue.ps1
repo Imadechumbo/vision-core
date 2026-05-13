@@ -6,93 +6,59 @@ param(
   [string]$Checkpoint = "tools/v14-refactor-checkpoint.ps1"
 )
 
-$ErrorActionPreference = "Stop"
-$script:Log = New-Object System.Collections.Generic.List[string]
-$script:Changed = $false
-$script:Applied = New-Object System.Collections.Generic.List[string]
-$script:Skipped = New-Object System.Collections.Generic.List[string]
+$ErrorActionPreference = "Continue"
+$Log = New-Object System.Collections.Generic.List[string]
+$Applied = New-Object System.Collections.Generic.List[string]
+$Skipped = New-Object System.Collections.Generic.List[string]
 
-function Add-Log([string]$msg) { [void]$script:Log.Add($msg) }
-function Add-Applied([string]$msg) { [void]$script:Applied.Add($msg); Add-Log("APPLIED: " + $msg) }
-function Add-Skipped([string]$msg) { [void]$script:Skipped.Add($msg); Add-Log("SKIPPED: " + $msg) }
+function AddLog([string]$msg) { [void]$Log.Add($msg) }
+function AddApplied([string]$msg) { [void]$Applied.Add($msg); AddLog("APPLIED: " + $msg) }
+function AddSkipped([string]$msg) { [void]$Skipped.Add($msg); AddLog("SKIPPED: " + $msg) }
 
-function Finish([bool]$ok, [string]$msg) {
+function Summary([bool]$ok, [string]$msg) {
   Write-Host ""
   Write-Host "=== V14 TOTAL REFACTOR RUNNER SUMMARY ===" -ForegroundColor Cyan
   Write-Host ("RESULT: " + $(if ($ok) { "PASS" } else { "FAIL" }))
   Write-Host ("MESSAGE: " + $msg)
-  Write-Host ("APPLIED_COUNT: " + $script:Applied.Count)
-  foreach ($line in $script:Applied) { Write-Host ("  + " + $line) }
-  Write-Host ("SKIPPED_COUNT: " + $script:Skipped.Count)
-  foreach ($line in $script:Skipped) { Write-Host ("  - " + $line) }
+  Write-Host ("APPLIED_COUNT: " + $Applied.Count)
+  foreach ($x in $Applied) { Write-Host ("  + " + $x) }
+  Write-Host ("SKIPPED_COUNT: " + $Skipped.Count)
+  foreach ($x in $Skipped) { Write-Host ("  - " + $x) }
   Write-Host "--- EXECUTION LOG ---"
-  foreach ($line in $script:Log) { Write-Host $line }
-  if ($ok) { Write-Host ("OK: " + $msg) -ForegroundColor Green }
-  else { Write-Host ("FAIL: " + $msg) -ForegroundColor Red }
+  foreach ($x in $Log) { Write-Host $x }
+  if ($ok) { Write-Host ("OK: " + $msg) -ForegroundColor Green } else { Write-Host ("FAIL: " + $msg) -ForegroundColor Red }
   Write-Host "=== END SUMMARY ===" -ForegroundColor Cyan
   if (-not $ok) { exit 1 }
 }
 
-function Run-External {
-  param(
-    [Parameter(Mandatory=$true)][string]$Exe,
-    [Parameter(Mandatory=$true)][string]$Label,
-    [Parameter(ValueFromRemainingArguments=$true)][string[]]$ExeArgs
-  )
-  Add-Log("> " + $Label + " " + ($ExeArgs -join " "))
-  $output = & $Exe @ExeArgs 2>&1
-  $code = $LASTEXITCODE
-  if ($output) {
-    foreach ($line in $output) {
-      $text = [string]$line
-      if ($text.Length -gt 500) { $text = $text.Substring(0, 500) + " ...[truncated]" }
-      Add-Log("  " + $text)
-    }
-  }
-  if ($code -ne 0) { Finish $false ($Label + " failed with exit code " + $code) }
-  return $output
+function RunGit([string[]]$Args) {
+  AddLog("> git " + ($Args -join " "))
+  & git.exe @Args *> $null
+  if ($LASTEXITCODE -ne 0) { Summary $false ("git failed: " + ($Args -join " ")) }
 }
 
-function Git { param([Parameter(ValueFromRemainingArguments=$true)][string[]]$GitArgs) return Run-External -Exe "git.exe" -Label "git" @GitArgs }
-function Node { param([Parameter(ValueFromRemainingArguments=$true)][string[]]$NodeArgs) return Run-External -Exe "node.exe" -Label "node" @NodeArgs }
-function RunPowerShell { param([Parameter(ValueFromRemainingArguments=$true)][string[]]$PSArgs) return Run-External -Exe "powershell.exe" -Label "powershell" @PSArgs }
-
-function Get-FileRaw([string]$Path) {
-  if (-not (Test-Path $Path)) { return $null }
-  return Get-Content $Path -Raw
+function RunNode([string[]]$Args) {
+  AddLog("> node " + ($Args -join " "))
+  & node.exe @Args *> $null
+  if ($LASTEXITCODE -ne 0) { Summary $false ("node failed: " + ($Args -join " ")) }
 }
 
-function Write-FileRaw([string]$Path, [string]$Content) {
+function RunPS([string[]]$Args) {
+  AddLog("> powershell " + ($Args -join " "))
+  & powershell.exe @Args *> $null
+  if ($LASTEXITCODE -ne 0) { Summary $false ("powershell failed: " + ($Args -join " ")) }
+}
+
+function EnsureAdapter([string]$Path, [string]$Marker, [string]$Description, [string]$Content) {
+  if (-not (Test-Path $Path)) { AddSkipped("missing file: " + $Path); return }
+  $current = Get-Content $Path -Raw
+  if ($current.Contains($Marker)) { AddSkipped($Description + " already delegated"); return }
   Set-Content -Path $Path -Value $Content -Encoding UTF8
-  $script:Changed = $true
+  AddApplied($Description)
 }
 
-function Ensure-Adapter {
-  param(
-    [Parameter(Mandatory=$true)][string]$Path,
-    [Parameter(Mandatory=$true)][string]$Marker,
-    [Parameter(Mandatory=$true)][string]$Description,
-    [Parameter(Mandatory=$true)][string]$Content
-  )
-  $current = Get-FileRaw $Path
-  if ($null -eq $current) { Add-Skipped("missing file: " + $Path); return }
-  if ($current.Contains($Marker)) { Add-Skipped($Description + " already delegated"); return }
-  Write-FileRaw $Path $Content
-  Add-Applied($Description)
-}
-
-function Assert-NoForbiddenRuntimeMarkers {
-  param([string]$Path)
-  if (-not (Test-Path $Path)) { return }
-  $s = Get-Content $Path -Raw
-  $forbidden = @("RUN_PATH", "STREAM_PATH", "new EventSource", "window.fetch =", "window.EventSource =", "pass_gold:true", "promotion_allowed:true")
-  foreach ($f in $forbidden) {
-    if ($s.Contains($f)) { Finish $false ("forbidden marker " + $f + " remains in " + $Path) }
-  }
-}
-
-function Apply-PendingPatches {
-  $v233Content = @'
+function ApplyPendingPatches() {
+  $v233 = @'
 /* VISION CORE V2.3.3 - LEGACY REALTIME ADAPTER
  * V14 CLEAN: runtime execution and stream ownership belong to vision-runtime-owner.js.
  * This adapter keeps load compatibility only.
@@ -120,56 +86,57 @@ function Apply-PendingPatches {
   else boot();
 })();
 '@
-  Ensure-Adapter -Path "frontend/assets/v233-realtime.js" -Marker "__V233_REALTIME_ADAPTER__" -Description "v233 realtime -> VisionRuntimeOwner adapter" -Content $v233Content
+  EnsureAdapter "frontend/assets/v233-realtime.js" "__V233_REALTIME_ADAPTER__" "v233 realtime -> VisionRuntimeOwner adapter" $v233
 }
 
-function Run-Validation {
-  Node --check frontend/assets/v233-realtime.js | Out-Null
-  if (-not (Test-Path $Checkpoint)) { Finish $false ("checkpoint runner not found: " + $Checkpoint) }
-  $checkpointArgs = @("-ExecutionPolicy", "Bypass", "-File", $Checkpoint, "-Quiet")
-  if ($FullJsCheck) { $checkpointArgs += "-FullJsCheck" }
-  RunPowerShell @checkpointArgs | Out-Null
-  Git diff --check | Out-Null
-}
-
-function Commit-And-Push {
-  $status = Git status --porcelain
-  if ($status -and $status.Count -gt 0) {
-    Add-Log("GIT: committing changed files")
-    Git add frontend docs tools .github | Out-Null
-    Git commit -m $CommitMessage | Out-Null
-    $script:Changed = $true
-  } else {
-    Add-Log("GIT: working tree clean, no commit needed")
-  }
-
-  if ($Push) {
-    Add-Log("GIT: pushing and verifying remote HEAD")
-    Git push origin $Branch | Out-Null
-    Git fetch origin $Branch | Out-Null
-    $local = (Git rev-parse HEAD | Select-Object -Last 1).Trim()
-    $remote = (Git rev-parse "origin/$Branch" | Select-Object -Last 1).Trim()
-    Add-Log("LOCAL_HEAD: " + $local)
-    Add-Log("REMOTE_HEAD: " + $remote)
-    if ($local -ne $remote) { Finish $false "remote HEAD does not match local HEAD" }
+function AssertNoForbidden([string]$Path) {
+  if (-not (Test-Path $Path)) { return }
+  $s = Get-Content $Path -Raw
+  foreach ($f in @("RUN_PATH", "STREAM_PATH", "new EventSource", "window.fetch =", "window.EventSource =", "pass_gold:true", "promotion_allowed:true")) {
+    if ($s.Contains($f)) { Summary $false ("forbidden marker remains in " + $Path + ": " + $f) }
   }
 }
 
 try {
-  Add-Log("MODE: resumable refactor runner")
-  Add-Log("REPORTING: final summary only")
-  Add-Log("BRANCH: " + $Branch)
-  Add-Log("CHECKPOINT: " + $Checkpoint)
+  AddLog("MODE: stable resumable runner")
+  AddLog("BRANCH: " + $Branch)
+  AddLog("CHECKPOINT: " + $Checkpoint)
 
-  Git pull --rebase origin $Branch | Out-Null
-  Apply-PendingPatches
+  RunGit @("pull", "--rebase", "origin", $Branch)
+  ApplyPendingPatches
+  AssertNoForbidden "frontend/assets/v233-realtime.js"
 
-  Assert-NoForbiddenRuntimeMarkers "frontend/assets/v233-realtime.js"
-  Run-Validation
-  Commit-And-Push
+  RunNode @("--check", "frontend/assets/v233-realtime.js")
 
-  Finish $true "resumable refactor block completed"
+  if (-not (Test-Path $Checkpoint)) { Summary $false ("checkpoint runner not found: " + $Checkpoint) }
+  $checkpointArgs = @("-ExecutionPolicy", "Bypass", "-File", $Checkpoint, "-Quiet")
+  if ($FullJsCheck) { $checkpointArgs += "-FullJsCheck" }
+  RunPS $checkpointArgs
+
+  RunGit @("diff", "--check")
+
+  $status = & git.exe status --porcelain
+  if ($LASTEXITCODE -ne 0) { Summary $false "git status failed" }
+  if ($status) {
+    AddLog("GIT: committing changed files")
+    RunGit @("add", "frontend", "docs", "tools", ".github")
+    RunGit @("commit", "-m", $CommitMessage)
+  } else {
+    AddLog("GIT: working tree clean, no commit needed")
+  }
+
+  if ($Push) {
+    RunGit @("push", "origin", $Branch)
+    RunGit @("fetch", "origin", $Branch)
+    $local = (& git.exe rev-parse HEAD).Trim()
+    $remote = (& git.exe rev-parse "origin/$Branch").Trim()
+    AddLog("LOCAL_HEAD: " + $local)
+    AddLog("REMOTE_HEAD: " + $remote)
+    if ($local -ne $remote) { Summary $false "remote HEAD does not match local HEAD" }
+  }
+
+  Summary $true "resumable refactor block completed"
 } catch {
-  Add-Log("EXCEPTION: " + $_.Exception.Message)
-  Finish $false "resumable refactor block failed"
+  AddLog("EXCEPTION: " + $_.Exception.Message)
+  Summary $false "resumable refactor block failed"
 }
