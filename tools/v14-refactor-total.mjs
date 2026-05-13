@@ -61,8 +61,10 @@ try {
   log('REPORTING: final summary only');
   run('git', ['pull', '--rebase', 'origin', branch], { suppressOutput: true });
   note('git pull/rebase completed');
-  const bridgeOutput = run('node', ['tools/v14-runtime-bridge-patch.mjs'], { suppressOutput: true });
-  note(bridgeOutput || 'runtime bridge patcher completed with no output');
+  const runtimeBridgeOutput = run('node', ['tools/v14-runtime-bridge-patch.mjs'], { suppressOutput: true });
+  note(runtimeBridgeOutput || 'runtime bridge patcher completed with no output');
+  const reportBridgeOutput = run('node', ['tools/v14-report-bridge-patch.mjs'], { suppressOutput: true });
+  note(reportBridgeOutput || 'report bridge patcher completed with no output');
   const next = ['tools/v14-refactor-continue.mjs'];
   if (full) next.push('--full-js-check');
   next.push(`--branch=${branch}`);
