@@ -106,7 +106,7 @@
   function localAnswer(text) {
     var answers = {
       'debug-cors': 'Diagnóstico provável: CORS/preflight. O SDDF valida Origin, OPTIONS, método, headers permitidos e endpoint real antes de culpar o frontend.',
-      'debug-contract': 'Diagnóstico provável: contrato front/back. 405 indica rota ou método divergente. Verifique POST/GET, aliases /api/run-live e compatibilidade SSE.',
+      'debug-contract': 'Diagnóstico provável: contrato front/back. 405 indica rota ou método divergente. Verifique método HTTP, aliases de execução e compatibilidade SSE.',
       pr: 'Fluxo PR: só pode preparar Pull Request depois de Scanner + Hermes + PatchEngine + Aegis + Evidence Receipt + PASS GOLD. Sem GOLD, PR fica bloqueado.',
       deploy: 'Fluxo deploy: validar health, version, CORS, backend, Cloudflare, runtime e rollback. Promoção só com PASS GOLD real.',
       debug: 'Modo debug: OpenClaw classifica, Scanner lê a realidade, Hermes diagnostica RCA, PatchEngine planeja, Aegis bloqueia risco, SDDF decide GOLD.',
@@ -158,7 +158,7 @@
       event.preventDefault();
       if (event.stopPropagation) { event.stopPropagation(); }
     }
-    appendMessage('system', 'EXECUÇÃO BLOQUEADA NO CHAT: run-live pertence ao VisionRuntimeOwner e exige mission_id + Evidence Receipt. Use o botão de missão quando o Runtime Owner estiver ativo.');
+    appendMessage('system', 'EXECUÇÃO BLOQUEADA NO CHAT: a execução pertence ao VisionRuntimeOwner e exige mission_id + Evidence Receipt. Use o botão de missão quando o Runtime Owner estiver ativo.');
     if (window.VisionRuntimeOwner && typeof window.VisionRuntimeOwner.executeMission === 'function') {
       window.VisionRuntimeOwner.executeMission();
     }
