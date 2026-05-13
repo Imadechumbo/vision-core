@@ -65,6 +65,8 @@ try {
   note(runtimeBridgeOutput || 'runtime bridge patcher completed with no output');
   const reportBridgeOutput = run('node', ['tools/v14-report-bridge-patch.mjs'], { suppressOutput: true });
   note(reportBridgeOutput || 'report bridge patcher completed with no output');
+  const statusBridgeOutput = run('node', ['tools/v14-status-bridge-patch.mjs'], { suppressOutput: true });
+  note(statusBridgeOutput || 'status bridge patcher completed with no output');
   const next = ['tools/v14-refactor-continue.mjs'];
   if (full) next.push('--full-js-check');
   next.push(`--branch=${branch}`);
