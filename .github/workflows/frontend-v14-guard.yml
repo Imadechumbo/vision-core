@@ -1,0 +1,35 @@
+name: Frontend V14 Guard
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "tools/sddf-front-guard.mjs"
+      - ".github/workflows/frontend-v14-guard.yml"
+
+jobs:
+  frontend-v14-guard:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Syntax check
+        run: |
+          node --check frontend/assets/vision-api.js
+          node --check frontend/assets/vision-chat.js
+          node --check frontend/assets/vision-agent-local.js
+          node --check frontend/assets/vision-runtime-owner.js
+          node --check frontend/assets/vision-report.js
+          node --check tools/sddf-front-guard.mjs
+
+      - name: SDDF front guard
+        run: node tools/sddf-front-guard.mjs
+
+      - name: Anti legacy scan
+        run: |
+          ! grep -RInE "RUN_PATH|STREAM_PATH|window\.fetch\s*=|executeBtn\.onclick|vision-v297|vision-v298|vision-v299|vision-v2910|vision-v32|vision-v34|vision-v35|vision-v44|pass_gold\s*:\s*true|promotion_allowed\s*:\s*true|create-pr|signupBtn|oauth|authBackdrop|mission-\$\{Date\.now\}" frontend/index.html frontend/assets tools/sddf-front-guard.mjs
