@@ -312,6 +312,17 @@
     window.VisionApi.contracts().then(renderContracts);
   }
 
+  function statusSnapshot() {
+    return {
+      state: lastPayload.state || lastPayload.status || 'WAITING',
+      gold: hasGold(lastPayload),
+      evidence: hasEvidence(lastPayload),
+      mission_id: lastPayload.mission_id || lastPayload.missionId || lastPayload.id || '',
+      difficulty: lastPayload.difficulty || lastPayload.pi_difficulty || '',
+      layer: lastPayload.layer || lastPayload.current_layer || lastPayload.max_layer || ''
+    };
+  }
+
   function update(payload) {
     lastPayload = payload && typeof payload === 'object' ? payload : {};
     renderOrbit();
