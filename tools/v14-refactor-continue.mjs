@@ -15,6 +15,8 @@ const applied = [];
 const skipped = [];
 const layers = [];
 const audit = [];
+const nextActions = [];
+const capability = [];
 const harness = {
   difficulty: 'D3',
   difficultyLabel: 'High - legacy frontend/runtime refactor',
@@ -30,6 +32,8 @@ function add(line) { report.push(String(line)); }
 function addApplied(line) { applied.push(String(line)); add(`APPLIED: ${line}`); }
 function addSkipped(line) { skipped.push(String(line)); add(`SKIPPED: ${line}`); }
 function addAudit(line) { audit.push(String(line)); add(`AUDIT: ${line}`); }
+function addNext(line) { nextActions.push(String(line)); add(`NEXT: ${line}`); }
+function addCapability(line) { capability.push(String(line)); add(`CAPABILITY: ${line}`); }
 function layer(id, label) { harness.currentLayer = id; layers.push(`${id} - ${label}`); add(`LAYER: ${id} - ${label}`); }
 
 function finish(ok, message) {
@@ -45,8 +49,12 @@ function finish(ok, message) {
   console.log(`DEPLOY_ALLOWED: ${harness.deployAllowed ? 'true' : 'false'}`);
   console.log(`LAYERS_COUNT: ${layers.length}`);
   for (const item of layers) console.log(`  * ${item}`);
+  console.log(`CAPABILITY_COUNT: ${capability.length}`);
+  for (const item of capability) console.log(`  # ${item}`);
   console.log(`AUDIT_COUNT: ${audit.length}`);
   for (const item of audit) console.log(`  ! ${item}`);
+  console.log(`NEXT_ACTIONS_COUNT: ${nextActions.length}`);
+  for (const item of nextActions) console.log(`  > ${item}`);
   console.log(`APPLIED_COUNT: ${applied.length}`);
   for (const item of applied) console.log(`  + ${item}`);
   console.log(`SKIPPED_COUNT: ${skipped.length}`);
@@ -128,6 +136,17 @@ function assertNoForbidden(path) {
   }
 }
 
+function registerManualWorkCapabilities() {
+  addCapability('Can pull/rebase the active branch without manual copy/paste');
+  addCapability('Can classify mission difficulty D0-D5 and active layer L0-L9');
+  addCapability('Can audit legacy ownership before patching');
+  addCapability('Can apply safe adapter patches when a clean owner already exists');
+  addCapability('Can run syntax checks, front guard, checkpoint, and git diff integrity');
+  addCapability('Can commit only when staged changes exist');
+  addCapability('Can push and verify local HEAD equals origin/main');
+  addCapability('Cannot deploy, promote, or mark PASS GOLD without backend evidence_receipt');
+}
+
 function auditLegacyRuntimeOwnership() {
   layer('L4', 'Dry Run: audit critical v34/v44 runtime ownership before patching');
   harness.difficulty = 'D4';
@@ -149,6 +168,10 @@ function auditLegacyRuntimeOwnership() {
   }
 
   addAudit('D4 decision: no destructive v34/v44 patch yet; clean owners must absorb SSE/report/status first');
+  addNext('Absorb SSE bridge into vision-runtime-owner.js before disabling v34/v44 SSE behavior');
+  addNext('Absorb mission report rendering into vision-report.js before disabling v34/v44 report behavior');
+  addNext('Absorb status polling into vision-agent-local.js or a dedicated clean status owner before disabling v34 system status');
+  addNext('Only after clean owners cover those contracts, convert v34/v44 into adapters');
 }
 
 function applyPendingPatches() {
@@ -196,6 +219,7 @@ try {
   add('PI_HARNESS: adaptive local runner enabled');
 
   layer('L0', 'Intake: load refactor objective and options');
+  registerManualWorkCapabilities();
   layer('L1', 'Inspect: sync repository and inspect pending ownership patches');
   run('git', ['pull', '--rebase', 'origin', branch], { silentOutput: true });
 
