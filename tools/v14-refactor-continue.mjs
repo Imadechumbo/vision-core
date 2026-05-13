@@ -50,6 +50,20 @@ function run(cmd, cmdArgs, options = {}) {
   return result.stdout || '';
 }
 
+function runSoft(cmd, cmdArgs, options = {}) {
+  add(`> ${cmd} ${cmdArgs.join(' ')}`);
+  const result = spawnSync(cmd, cmdArgs, { encoding: 'utf8', shell: false, ...options });
+  const combined = `${result.stdout || ''}${result.stderr || ''}`.trim();
+  if (combined && !options.silentOutput) {
+    for (const raw of combined.split(/\r?\n/)) {
+      if (!raw.trim()) continue;
+      const line = raw.length > 500 ? `${raw.slice(0, 500)} ...[truncated]` : raw;
+      add(`  ${line}`);
+    }
+  }
+  return { code: result.status, stdout: result.stdout || '', stderr: result.stderr || '' };
+}
+
 function read(path) {
   return fs.existsSync(path) ? fs.readFileSync(path, 'utf8') : null;
 }
@@ -112,6 +126,11 @@ function applyPendingPatches() {
   ensureAdapter('frontend/assets/v233-realtime.js', '__V233_REALTIME_ADAPTER__', 'v233 realtime -> VisionRuntimeOwner adapter', v233);
 }
 
+function stagedChangesExist() {
+  const staged = run('git', ['diff', '--cached', '--name-only'], { silentOutput: true }).trim();
+  return staged.length > 0;
+}
+
 try {
   add('MODE: node resumable refactor runner');
   add(`BRANCH: ${branch}`);
@@ -134,7 +153,16 @@ try {
   if (status) {
     add('GIT: committing changed files');
     run('git', ['add', 'frontend', 'docs', 'tools', '.github'], { silentOutput: true });
-    run('git', ['commit', '-m', commitMessage], { silentOutput: true });
+    if (stagedChangesExist()) {
+      const commit = runSoft('git', ['commit', '-m', commitMessage], { silentOutput: true });
+      if (commit.code !== 0) {
+        const afterCommitStatus = run('git', ['status', '--porcelain'], { silentOutput: true }).trim();
+        if (afterCommitStatus) finish(false, `git commit failed with exit code ${commit.code}`);
+        add('GIT: commit skipped because there were no staged changes after normalization');
+      }
+    } else {
+      add('GIT: no staged changes after git add; commit skipped');
+    }
   } else {
     add('GIT: working tree clean, no commit needed');
   }
