@@ -14,6 +14,7 @@ const report = [];
 const applied = [];
 const skipped = [];
 const layers = [];
+const audit = [];
 const harness = {
   difficulty: 'D3',
   difficultyLabel: 'High - legacy frontend/runtime refactor',
@@ -28,6 +29,7 @@ const harness = {
 function add(line) { report.push(String(line)); }
 function addApplied(line) { applied.push(String(line)); add(`APPLIED: ${line}`); }
 function addSkipped(line) { skipped.push(String(line)); add(`SKIPPED: ${line}`); }
+function addAudit(line) { audit.push(String(line)); add(`AUDIT: ${line}`); }
 function layer(id, label) { harness.currentLayer = id; layers.push(`${id} - ${label}`); add(`LAYER: ${id} - ${label}`); }
 
 function finish(ok, message) {
@@ -43,6 +45,8 @@ function finish(ok, message) {
   console.log(`DEPLOY_ALLOWED: ${harness.deployAllowed ? 'true' : 'false'}`);
   console.log(`LAYERS_COUNT: ${layers.length}`);
   for (const item of layers) console.log(`  * ${item}`);
+  console.log(`AUDIT_COUNT: ${audit.length}`);
+  for (const item of audit) console.log(`  ! ${item}`);
   console.log(`APPLIED_COUNT: ${applied.length}`);
   for (const item of applied) console.log(`  + ${item}`);
   console.log(`SKIPPED_COUNT: ${skipped.length}`);
@@ -93,6 +97,14 @@ function write(path, content) {
   fs.writeFileSync(path, content, 'utf8');
 }
 
+function countMarkers(content, markers) {
+  const found = [];
+  for (const marker of markers) {
+    if (content.includes(marker)) found.push(marker);
+  }
+  return found;
+}
+
 function ensureAdapter(path, marker, description, content) {
   const current = read(path);
   if (current === null) {
@@ -114,6 +126,29 @@ function assertNoForbidden(path) {
   for (const marker of forbidden) {
     if (content.includes(marker)) finish(false, `forbidden marker remains in ${path}: ${marker}`);
   }
+}
+
+function auditLegacyRuntimeOwnership() {
+  layer('L4', 'Dry Run: audit critical v34/v44 runtime ownership before patching');
+  harness.difficulty = 'D4';
+  harness.difficultyLabel = 'Critical - legacy SSE/report/orbit ownership audit';
+
+  const targets = [
+    ['frontend/assets/vision-v34-enterprise.js', ['EventSource', '__VISION_SSE__', 'MutationObserver', 'doReport', 'fetch(', 'orbitActivate', 'PASS GOLD', 'v236AnimatePipelineDemo']],
+    ['frontend/assets/vision-v44-runtime-consistency.js', ['EventSource', '__VISION_SSE__', 'buildReport', 'syncGates', 'download', 'setNode', 'PI HARNESS demo', 'setTimeout(function()']],
+  ];
+
+  for (const [path, markers] of targets) {
+    const content = read(path);
+    if (content === null) {
+      addAudit(`${path}: missing`);
+      continue;
+    }
+    const found = countMarkers(content, markers);
+    addAudit(`${path}: markers=${found.length} [${found.join(', ') || 'none'}]`);
+  }
+
+  addAudit('D4 decision: no destructive v34/v44 patch yet; clean owners must absorb SSE/report/status first');
 }
 
 function applyPendingPatches() {
@@ -166,10 +201,13 @@ try {
 
   layer('L2', 'Diagnose: determine whether legacy runtime still owns forbidden behavior');
   applyPendingPatches();
+  auditLegacyRuntimeOwnership();
   assertNoForbidden('frontend/assets/v233-realtime.js');
 
   layer('L6', 'Validation: syntax, checkpoint, front guard, and git integrity');
   run('node', ['--check', 'frontend/assets/v233-realtime.js'], { silentOutput: true });
+  run('node', ['--check', 'frontend/assets/vision-v34-enterprise.js'], { silentOutput: true });
+  run('node', ['--check', 'frontend/assets/vision-v44-runtime-consistency.js'], { silentOutput: true });
 
   const checkpointArgs = ['-ExecutionPolicy', 'Bypass', '-File', 'tools/v14-refactor-checkpoint.ps1', '-Quiet'];
   if (fullJsCheck) checkpointArgs.push('-FullJsCheck');
