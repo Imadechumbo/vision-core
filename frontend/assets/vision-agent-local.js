@@ -24,54 +24,42 @@
     if (payload && (payload.state || payload.status)) { return String(payload.state || payload.status).toUpperCase(); }
     return 'WAITING';
   }
+  function position(index, total) {
+    var angle = (Math.PI * 2 * index / total) - Math.PI / 2;
+    var radius = 38;
+    return {
+      left: 50 + Math.cos(angle) * radius,
+      top: 50 + Math.sin(angle) * radius
+    };
+  }
   function showDetail(agent) {
-    var detail = byId('agentDetail') || byId('mcTooltip');
+    var detail = byId('agentDetail');
     if (!detail) { return; }
     var evidence = hasEvidence(lastPayload) ? lastPayload.evidence_receipt : 'missing';
     detail.textContent = agent.name + ' · contrato: ' + agent.contract + ' · status: ' + statusFor(agent, lastPayload) + ' · evidence: ' + evidence;
   }
-  function updateLegacyOrbit(payload) {
-    var map = {
-      openclaw: 'OpenClaw',
-      scanner: 'Scanner',
-      hermes: 'Hermes',
-      patchengine: 'PatchEngine',
-      aegis: 'Aegis',
-      passgold: 'PASS GOLD',
-      github: 'PR GitHub'
-    };
-    Object.keys(map).forEach(function (key) {
-      var node = document.querySelector('[data-key="' + key + '"]');
-      if (!node) { return; }
-      var agent = agents.find(function (item) { return item.name === map[key]; }) || agents[0];
-      var small = node.querySelector('small');
-      if (small) { small.textContent = statusFor(agent, payload); }
-      node.addEventListener('click', function () { showDetail(agent); }, { once: false });
-    });
-    var status = byId('mcCoreStatus') || byId('agentStatus');
-    if (status) { status.textContent = hasGold(payload) ? 'GOLD' : (payload.state || payload.status || 'READY'); }
-  }
   function render() {
     var orbit = byId('agentOrbit');
-    if (!orbit) {
-      updateLegacyOrbit(lastPayload);
-      return;
-    }
+    if (!orbit) { return; }
     orbit.replaceChildren();
     agents.forEach(function (agent, index) {
-      var angle = (Math.PI * 2 * index / agents.length) - Math.PI / 2;
-      var radius = 38;
       var node = document.createElement('button');
+      var point = position(index, agents.length);
       node.type = 'button';
       node.className = 'agent-node' + (agent.gold ? ' is-gold' : '');
-      node.style.left = 'calc(' + (50 + Math.cos(angle) * radius) + '% - 56px)';
-      node.style.top = 'calc(' + (50 + Math.sin(angle) * radius) + '% - 38px)';
+      node.style.left = 'calc(' + point.left + '% - 56px)';
+      node.style.top = 'calc(' + point.top + '% - 38px)';
       node.innerHTML = '<strong></strong><small></small>';
       node.querySelector('strong').textContent = agent.name;
       node.querySelector('small').textContent = statusFor(agent, lastPayload);
       node.addEventListener('click', function () { showDetail(agent); });
       orbit.appendChild(node);
     });
+    var status = byId('agentStatus');
+    if (status) {
+      status.textContent = hasGold(lastPayload) ? 'GOLD VERIFIED' : (lastPayload.state || lastPayload.status || 'WAITING');
+      status.className = 'status-pill ' + (hasGold(lastPayload) ? 'gold' : 'muted');
+    }
   }
   function update(payload) {
     lastPayload = payload && typeof payload === 'object' ? payload : {};

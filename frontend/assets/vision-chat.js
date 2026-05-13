@@ -5,7 +5,7 @@
 
   function byId(id) { return document.getElementById(id); }
   function appendMessage(role, text) {
-    var root = byId('chatMessages') || byId('v297ChatLog');
+    var root = byId('chatMessages');
     if (!root) { return; }
     var article = document.createElement('article');
     article.className = 'message ' + (role || 'system');
@@ -18,16 +18,24 @@
     root.scrollTop = root.scrollHeight;
   }
   function setStatus(text, kind) {
-    var status = byId('chatStatus') || byId('v297ChatStatus');
+    var status = byId('chatStatus');
     if (!status) { return; }
     status.textContent = text;
     status.className = 'status-pill ' + (kind || '');
   }
+  function showModal() {
+    var modal = byId('authModal');
+    if (modal) { modal.classList.remove('is-hidden'); }
+  }
+  function hideModal() {
+    var modal = byId('authModal');
+    if (modal) { modal.classList.add('is-hidden'); }
+  }
   function updateAttachments(files) {
     attachments = Array.prototype.slice.call(files || []);
-    var list = byId('attachmentList') || byId('v236FileList');
+    var list = byId('attachmentList');
     if (!list) { return; }
-    list.textContent = attachments.length ? attachments.map(function (file) { return file.name; }).join(' · ') : 'Nenhum arquivo anexado.';
+    list.textContent = attachments.length ? attachments.map(function (file) { return file.name; }).join(' · ') : '';
   }
   async function sendToCopilot(text) {
     if (!window.VisionApi) {
@@ -39,8 +47,8 @@
     });
   }
   async function onSubmit(event) {
-    if (event) { event.preventDefault(); }
-    var input = byId('missionInput') || byId('missionText');
+    event.preventDefault();
+    var input = byId('missionInput');
     var text = input ? input.value.trim() : '';
     if (!text) {
       appendMessage('system', 'BLOCKED: descreva a missão antes de enviar.');
@@ -58,15 +66,42 @@
       setStatus('BLOCKED', 'blocked');
     }
   }
+  function bindModal() {
+    var modal = byId('authModal');
+    var signIn = byId('signInBtn');
+    var close = byId('closeAuthBtn');
+    var local = byId('continueLocalBtn');
+    var external = byId('connectGitHubBtn');
+    if (signIn) { signIn.addEventListener('click', showModal); }
+    if (close) { close.addEventListener('click', hideModal); }
+    if (local) {
+      local.addEventListener('click', function () {
+        hideModal();
+        appendMessage('system', 'Modo local ativo. GitHub e integrações externas exigem autorização separada.');
+      });
+    }
+    if (external) {
+      external.addEventListener('click', function () {
+        appendMessage('system', 'Integração GitHub exige fluxo autorizado pelo servidor.');
+      });
+    }
+    if (modal) {
+      modal.addEventListener('click', function (event) {
+        if (event.target === modal) { hideModal(); }
+      });
+    }
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') { hideModal(); }
+    });
+  }
   function bind() {
     var form = byId('chatForm');
-    var sendBtn = byId('sendBtn') || byId('v297SendBtn');
-    var files = byId('fileInput') || byId('v236FileInput') || byId('v297FileInput');
+    var files = byId('fileInput');
     if (form) { form.addEventListener('submit', onSubmit); }
-    if (sendBtn) { sendBtn.addEventListener('click', onSubmit); }
     if (files) { files.addEventListener('change', function () { updateAttachments(files.files); }); }
+    bindModal();
   }
 
-  window.VisionChat = { appendMessage: appendMessage, send: onSubmit };
+  window.VisionChat = { appendMessage: appendMessage };
   document.addEventListener('DOMContentLoaded', bind);
 }());
