@@ -8,30 +8,57 @@ if (!fs.existsSync(path)) {
 }
 
 let s = fs.readFileSync(path, 'utf8');
-if (s.includes('streamState: streamState') && s.includes('handleEvent: handleEvent') && s.includes('normalizePayload: normalizePayload')) {
+
+const hasBridge = s.includes('streamState: streamState') &&
+  s.includes('handleEvent: handleEvent') &&
+  s.includes('normalizePayload: normalizePayload') &&
+  s.includes('report: report');
+
+if (hasBridge) {
   console.log('SKIP: runtime bridge already absorbed');
   process.exit(0);
 }
 
-const marker = `  function realMissionId(payload) {\n`;
-if (!s.includes(marker)) {
-  console.error('BLOCKED: realMissionId marker not found');
-  process.exit(1);
-}
-
-const streamState = `  function streamState() {\n    return {\n      running: running,\n      connected: !!source,\n      mission_id: activeMissionId || '',\n      source: source ? 'eventsource' : 'idle'\n    };\n  }\n`;
+const streamState = `  function streamState() {
+    return {
+      running: running,
+      connected: !!source,
+      mission_id: activeMissionId || '',
+      source: source ? 'eventsource' : 'idle'
+    };
+  }
+`;
 
 if (!s.includes('function streamState()')) {
-  s = s.replace(marker, streamState + marker);
+  const realMissionMatch = /\n\s*function\s+realMissionId\s*\(payload\)\s*\{/.exec(s);
+  if (!realMissionMatch) {
+    console.error('BLOCKED: realMissionId marker not found');
+    process.exit(1);
+  }
+  s = s.slice(0, realMissionMatch.index + 1) + streamState + s.slice(realMissionMatch.index + 1);
 }
 
-const oldExport = `  window.VisionRuntimeOwner = {\n    executeMission: executeMission,\n    realMissionId: realMissionId,\n    release: release\n  };`;
-const newExport = `  window.VisionRuntimeOwner = {\n    executeMission: executeMission,\n    realMissionId: realMissionId,\n    release: release,\n    handleEvent: handleEvent,\n    normalizePayload: normalizePayload,\n    report: report,\n    streamState: streamState\n  };`;
-
-if (!s.includes(oldExport)) {
+const exportRegex = /window\.VisionRuntimeOwner\s*=\s*\{[\s\S]*?\n\s*\};/;
+const exportMatch = exportRegex.exec(s);
+if (!exportMatch) {
   console.error('BLOCKED: VisionRuntimeOwner export marker not found');
   process.exit(1);
 }
+
+const oldExport = exportMatch[0];
+const requiredExports = [
+  'executeMission: executeMission',
+  'realMissionId: realMissionId',
+  'release: release',
+  'handleEvent: handleEvent',
+  'normalizePayload: normalizePayload',
+  'report: report',
+  'streamState: streamState'
+];
+
+const newExport = `window.VisionRuntimeOwner = {
+    ${requiredExports.join(',\n    ')}
+  };`;
 
 s = s.replace(oldExport, newExport);
 fs.writeFileSync(path, s, 'utf8');
