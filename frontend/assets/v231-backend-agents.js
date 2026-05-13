@@ -9,6 +9,7 @@
     { name:'Scanner',      mode:'conversa', width:65, cost:'$0.377', color:'green'  },
     { name:'Aegis',        mode:'conversa', width:91, cost:'$0.264', color:'cyan'   },
     { name:'PatchEngine',  mode:'loop',     width:58, cost:'$0.668', color:'orange' },
+    { name:'PI HARNESS',   mode:'adaptive', width:0,  cost:'L0-L9',  color:'purple2' },
     { name:'PASS GOLD',    mode:'loop',     width:82, cost:'$0.471', color:'yellow' },
     { name:'Benchmark',    mode:'auto',     width:76, cost:'$1.469', color:'pink'   },
   ];

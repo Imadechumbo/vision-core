@@ -278,7 +278,7 @@
     var n = document.createElement('div');
     n.className = 'mc-node v33-idle';
     n.setAttribute('data-key', PI_HARNESS_KEY);
-    n.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) translateY(-56px) scale(.80);display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;z-index:6;opacity:0;transition:opacity .4s ease,transform .4s ease';
+    n.style.cssText = 'position:absolute;top:20%;left:14%;transform:translate(-50%,-50%) scale(.82);display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;z-index:6;opacity:0;transition:opacity .4s ease,transform .4s ease';
     n.innerHTML = '<div class="mc-node-icon" style="font-size:14px;font-weight:700">π</div>' +
       '<div class="mc-node-label">PI HARNESS<br><small id="v33-t-pi_harness" style="color:rgba(168,85,247,.7)">ADAPTIVE</small></div>';
     n.addEventListener('click', function() {
@@ -300,8 +300,8 @@
       var active = (status === 'running' || status === 'done');
       n.style.opacity = active ? '1' : '0';
       n.style.transform = active
-        ? 'translate(-50%,-50%) translateY(-56px) scale(.88)'
-        : 'translate(-50%,-50%) translateY(-56px) scale(.80)';
+        ? 'translate(-50%,-50%) scale(.92)'
+        : 'translate(-50%,-50%) scale(.82)';
       if (status === 'running') {
         var sub = document.getElementById('mcCoreSub');
         if (sub) sub.textContent = 'PI HARNESS ATIVO';
