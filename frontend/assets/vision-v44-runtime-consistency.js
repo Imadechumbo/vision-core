@@ -30,19 +30,6 @@
     return String(x);
   }
 
-  var STAGE_MAP = {
-    openclaw:'openclaw', input:'openclaw', mission:'openclaw', accepted:'openclaw',
-    scanner:'scanner', scan:'scanner', file:'scanner', target:'scanner',
-    hermes:'hermes', rca:'hermes', diagnosis:'hermes', diagnostico:'hermes',
-    patch:'patchengine', patchengine:'patchengine', patch_engine:'patchengine',
-    aegis:'aegis', security:'aegis', policy:'aegis', sddf:'aegis', validation:'aegis',
-    passgold:'passgold', pass_gold:'passgold', gold:'passgold', 'pass gold':'passgold',
-    github:'github', pr:'github', pullrequest:'github', pull_request:'github',
-    pi_harness:'pi_harness', piharness:'pi_harness', 'pi harness':'pi_harness',
-    adaptive:'pi_harness', harness:'pi_harness', difficulty:'pi_harness', layer:'pi_harness'
-  };
-  var ORDER = ['openclaw','scanner','hermes','patchengine','pi_harness','aegis','passgold','github'];
-  var LABEL = {openclaw:'OpenClaw', scanner:'Scanner', hermes:'Hermes', patchengine:'PatchEngine', pi_harness:'PI HARNESS', aegis:'Aegis', passgold:'PASS GOLD', github:'PR GitHub'};
   var missionStartedAt = null;
   var activeMissionId = null;
   var reportLock = false;
@@ -52,13 +39,12 @@
     var raw = String(stage).trim().toLowerCase();
     var compact = raw.replace(/[\s\-]+/g, '_');
     var flat = raw.replace(/[\s_\-]+/g, '');
-    return STAGE_MAP[raw] || STAGE_MAP[compact] || STAGE_MAP[flat] || null;
+    var SM = window.VisionAgentLocal ? window.VisionAgentLocal.STAGE_MAP : {};
+    return SM[raw] || SM[compact] || SM[flat] || null;
   }
   function elapsed(){
     return missionStartedAt ? ((Date.now() - missionStartedAt) / 1000).toFixed(1) + 's' : '—';
   }
-  function node(key){ return document.querySelector('.mc-node[data-key="' + key + '"]'); }
-  function nodeSmall(key){ return document.getElementById('v33-t-' + key); }
   function setCore(state, text, sub){
     var core = document.getElementById('mcCore');
     if (core) {
@@ -72,66 +58,26 @@
     if (t) t.textContent = text || (state === 'gold' ? '★ GOLD' : state === 'running' ? 'LIVE' : state === 'fail' ? 'FAIL' : 'READY');
     if (s) s.textContent = sub || (state === 'gold' ? 'PASS GOLD' : state === 'running' ? 'EXECUTANDO' : state === 'fail' ? 'ERRO' : 'VISION CORE');
   }
-  function setNode(key, status){
-    var n = node(key); if (!n) return;
-    n.classList.remove('v33-idle','v33-running','v33-done','v33-fail');
-    var cls = status === 'fail' ? 'v33-fail' : status === 'done' ? 'v33-done' : status === 'running' ? 'v33-running' : 'v33-idle';
-    n.classList.add(cls);
-    var small = nodeSmall(key);
-    if (small) small.textContent = status === 'idle' ? 'AGUARDA' : (elapsed() + ' · ' + (status === 'done' ? 'PASS' : status.toUpperCase()));
-    if (window.v236SetPipelineStage) {
-      var mappedStatus = status === 'done' ? 'done' : status === 'fail' ? 'fail' : 'running';
-      try { window.v236SetPipelineStage(LABEL[key] || key, mappedStatus); } catch(_) {}
-    }
-  }
-  // Octagon positions (mathematically perfect, 8 nodes)
-  var OCTAGON = {
-    openclaw:    { top:'5%',    left:'50%'   },
-    scanner:     { top:'18.2%', left:'81.8%' },
-    hermes:      { top:'50%',   left:'95%'   },
-    patchengine: { top:'81.8%', left:'81.8%' },
-    aegis:       { top:'95%',   left:'50%'   },
-    passgold:    { top:'81.8%', left:'18.2%' },
-    github:      { top:'50%',   left:'5%'    },
-    pi_harness:  { top:'18.2%', left:'18.2%' }
-  };
 
-  function applyOctagonPositions() {
-    Object.keys(OCTAGON).forEach(function(key) {
-      var el = document.querySelector('.mc-node[data-key="' + key + '"]');
-      if (!el) return;
-      // Remove positional classes to kill CSS ghost positions
-      ['mc-node--top','mc-node--tr','mc-node--right','mc-node--br',
-       'mc-node--bottom','mc-node--left','mc-node--tl'].forEach(function(cls) {
-        el.classList.remove(cls);
-      });
-      var pos = OCTAGON[key];
-      el.style.setProperty('position',  'absolute',             'important');
-      el.style.setProperty('top',       pos.top,                'important');
-      el.style.setProperty('left',      pos.left,               'important');
-      el.style.setProperty('right',     'auto',                 'important');
-      el.style.setProperty('bottom',    'auto',                 'important');
-      el.style.setProperty('transform', 'translate(-50%,-50%)', 'important');
-    });
-  }
-
-  function resetOrbit(){
-    ORDER.forEach(function(k){ setNode(k, 'idle'); });
-    setCore('idle', 'READY', 'VISION CORE');
-    applyOctagonPositions();
-  }
   function markStage(stage, status){
     var key = normalizeStage(stage); if (!key) return;
+    var VAL = window.VisionAgentLocal;
+    if (!VAL) return;
+    var ORDER = VAL.ORDER;
     if (!missionStartedAt) missionStartedAt = Date.now();
     setCore('running');
     var idx = ORDER.indexOf(key);
     if (idx >= 0 && (status === 'done' || status === 'pass' || status === 'ok' || status === 'success' || status === 'gold')) {
-      ORDER.slice(0, idx).forEach(function(k){ if (k !== 'github') setNode(k, 'done'); });
+      ORDER.slice(0, idx).forEach(function(k){ if (k !== 'github') VAL.setNode(k, 'done', elapsed()); });
     }
     var finalStatus = /fail|error|blocked/i.test(String(status || '')) ? 'fail' : /done|pass|ok|success|gold/i.test(String(status || '')) ? 'done' : 'running';
-    setNode(key, finalStatus);
+    VAL.setNode(key, finalStatus, elapsed());
+    if (window.v236SetPipelineStage) {
+      var mappedStatus = finalStatus === 'done' ? 'done' : finalStatus === 'fail' ? 'fail' : 'running';
+      try { window.v236SetPipelineStage((VAL.LABEL[key] || key), mappedStatus); } catch(_) {}
+    }
     if (key === 'passgold' && finalStatus === 'done') {
-      ORDER.slice(0, ORDER.indexOf('passgold') + 1).forEach(function(k){ setNode(k, 'done'); });
+      ORDER.slice(0, ORDER.indexOf('passgold') + 1).forEach(function(k){ VAL.setNode(k, 'done', elapsed()); });
       setCore('gold');
       triggerReport(activeMissionId);
     }
@@ -194,7 +140,9 @@
     var missionId = extractMissionId(d);
     if (missionId) activeMissionId = missionId;
     if (type === 'open' || type === 'mission' || type === 'mission_started' || type === 'accepted') {
-      missionStartedAt = Date.now(); reportLock = false; resetOrbit(); setCore('running'); markStage('openclaw','running'); return;
+      missionStartedAt = Date.now(); reportLock = false;
+      if (window.VisionAgentLocal) window.VisionAgentLocal.resetOrbit();
+      setCore('running'); markStage('openclaw','running'); return;
     }
     if (type === 'step' || type === 'gate' || type === 'stage' || type === 'progress') {
       markStage(d.stage || d.agent || d.name || d.step || d.module, d.status || type); return;
@@ -300,73 +248,41 @@
     });
   }
 
-
-  var PI_HARNESS_KEY = 'pi_harness';
-
-  function ensurePiHarnessNode() {
-    var orbWrap = document.querySelector('.mc-orb-wrap') || document.getElementById('vcOrbitWrap');
-    if (!orbWrap) return;
-    if (orbWrap.querySelector('[data-key="' + PI_HARNESS_KEY + '"]')) return;
-    var n = document.createElement('div');
-    n.className = 'mc-node v33-idle';
-    n.setAttribute('data-key', PI_HARNESS_KEY);
-    n.style.cssText = 'position:absolute;top:18.2%;left:18.2%;transform:translate(-50%,-50%) scale(.82);display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;z-index:6;opacity:0;transition:opacity .4s ease,transform .4s ease';
-    n.innerHTML = '<div class="mc-node-icon" style="font-size:14px;font-weight:700">π</div>' +
-      '<div class="mc-node-label">PI HARNESS<br><small id="v33-t-pi_harness" style="color:rgba(168,85,247,.7)">ADAPTIVE</small></div>';
-    n.addEventListener('click', function() {
-      var d = document.getElementById('agentDetail');
-      if (d) d.textContent = 'PI HARNESS · Orquestrador adaptativo L0-L9: ajusta dificuldade, orcamento de ferramentas e escalonamento. · status: ' + (n.classList.contains('v33-running') ? 'RUNNING' : n.classList.contains('v33-done') ? 'DONE' : 'ADAPTIVE');
-    });
-    orbWrap.appendChild(n);
-  }
-
-  var _origSetNode = null;
-  function patchSetNodeForPiHarness() {
-    if (_origSetNode) return;
-    _origSetNode = setNode;
-    setNode = function(key, status) {
-      _origSetNode(key, status);
-      if (key !== PI_HARNESS_KEY) return;
-      var n = document.querySelector('[data-key="' + PI_HARNESS_KEY + '"]');
-      if (!n) return;
-      var active = (status === 'running' || status === 'done');
-      n.style.opacity = active ? '1' : '0';
-      n.style.transform = active
-        ? 'translate(-50%,-50%) scale(.92)'
-        : 'translate(-50%,-50%) scale(.82)';
-      if (status === 'running') {
-        var sub = document.getElementById('mcCoreSub');
-        if (sub) sub.textContent = 'PI HARNESS ATIVO';
-      }
-    };
-  }
-
   function boot(){
     enforceDownloadLinks();
     installSticky();
     zeroFake();
     observeChat();
     syncGates();
-    ensurePiHarnessNode();
-    patchSetNodeForPiHarness();
-    applyOctagonPositions();
-    setInterval(function(){ installSticky(); enforceDownloadLinks(); observeChat(); attachSSE(); ensurePiHarnessNode(); applyOctagonPositions(); }, 2000);
+    if (window.VisionAgentLocal) {
+      window.VisionAgentLocal.ensurePiHarnessNode();
+      window.VisionAgentLocal.applyOctagonPositions();
+    }
+    setInterval(function(){
+      installSticky();
+      enforceDownloadLinks();
+      observeChat();
+      attachSSE();
+      if (window.VisionAgentLocal) {
+        window.VisionAgentLocal.ensurePiHarnessNode();
+        window.VisionAgentLocal.applyOctagonPositions();
+      }
+    }, 2000);
     setInterval(syncGates, 30000);
     console.log('[V44] Runtime Consistency Pass ativo — download, sticky, orbit SSE, report real');
 
     // Demo pulse: mostra PI HARNESS no orbit após 3s (visível mesmo sem backend)
-    // Simula o ciclo: idle -> running -> done -> idle
     setTimeout(function() {
-      ensurePiHarnessNode();
-      setNode(PI_HARNESS_KEY, 'running');
+      if (window.VisionAgentLocal) window.VisionAgentLocal.ensurePiHarnessNode();
+      if (window.VisionAgentLocal) window.VisionAgentLocal.setNode('pi_harness', 'running');
       setCore('running', 'LIVE', 'PI HARNESS ATIVO');
       console.log('[V44] PI HARNESS demo: running');
       setTimeout(function() {
-        setNode(PI_HARNESS_KEY, 'done');
+        if (window.VisionAgentLocal) window.VisionAgentLocal.setNode('pi_harness', 'done');
         setCore('idle', 'READY', 'VISION CORE');
         console.log('[V44] PI HARNESS demo: done');
         setTimeout(function() {
-          setNode(PI_HARNESS_KEY, 'idle');
+          if (window.VisionAgentLocal) window.VisionAgentLocal.setNode('pi_harness', 'idle');
         }, 2500);
       }, 3000);
     }, 3000);
