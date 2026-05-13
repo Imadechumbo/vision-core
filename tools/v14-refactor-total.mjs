@@ -7,6 +7,8 @@ const branchArg = args.find((x) => x.startsWith('--branch='));
 const branch = branchArg ? branchArg.split('=').slice(1).join('=') : 'main';
 const report = [];
 const evidence = [];
+let legacyCleanConfirmed = false;
+let v14CleanOwnership = false;
 
 function log(line) { report.push(String(line)); }
 function note(line) { evidence.push(String(line)); }
@@ -23,6 +25,8 @@ function finish(ok, message) {
   console.log('PASS_GOLD_CANDIDATE: false');
   console.log('PROMOTION_ALLOWED: false');
   console.log('DEPLOY_ALLOWED: false');
+  console.log(`LEGACY_CLEAN_CONFIRMED: ${legacyCleanConfirmed ? 'true' : 'false'}`);
+  console.log(`V14_CLEAN_OWNERSHIP: ${v14CleanOwnership ? 'true' : 'false'}`);
   console.log(`EVIDENCE_COUNT: ${evidence.length}`);
   for (const line of evidence) console.log(`  * ${line}`);
   console.log('--- COMPACT EXECUTION LOG ---');
@@ -50,9 +54,13 @@ function run(cmd, cmdArgs, options = {}) {
 }
 function parseNestedEvidence(output) {
   const lines = output.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
-  for (const key of ['RESULT:', 'MESSAGE:', 'PI_HARNESS_DIFFICULTY:', 'GITHUB_CONFIRMED:', 'PASS_GOLD_CANDIDATE:', 'PROMOTION_ALLOWED:', 'DEPLOY_ALLOWED:', 'LOCAL_HEAD:', 'REMOTE_HEAD:']) {
+  for (const key of ['RESULT:', 'MESSAGE:', 'PI_HARNESS_DIFFICULTY:', 'GITHUB_CONFIRMED:', 'PASS_GOLD_CANDIDATE:', 'PROMOTION_ALLOWED:', 'DEPLOY_ALLOWED:', 'LOCAL_HEAD:', 'REMOTE_HEAD:', 'LEGACY_CLEAN_CONFIRMED:', 'V14_CLEAN_OWNERSHIP:']) {
     const hit = [...lines].reverse().find((line) => line.startsWith(key));
-    if (hit) note(hit);
+    if (hit) {
+      note(hit);
+      if (key === 'LEGACY_CLEAN_CONFIRMED:' && hit.includes('true')) legacyCleanConfirmed = true;
+      if (key === 'V14_CLEAN_OWNERSHIP:' && hit.includes('true')) v14CleanOwnership = true;
+    }
   }
 }
 

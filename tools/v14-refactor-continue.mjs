@@ -27,6 +27,8 @@ const harness = {
   promotionAllowed: false,
   deployAllowed: false,
   githubConfirmed: false,
+  legacyCleanConfirmed: false,
+  v14CleanOwnership: false,
 };
 
 function add(line) { report.push(String(line)); }
@@ -48,6 +50,8 @@ function finish(ok, message) {
   console.log(`PASS_GOLD_CANDIDATE: ${harness.passGoldCandidate ? 'true' : 'false'}`);
   console.log(`PROMOTION_ALLOWED: ${harness.promotionAllowed ? 'true' : 'false'}`);
   console.log(`DEPLOY_ALLOWED: ${harness.deployAllowed ? 'true' : 'false'}`);
+  console.log(`LEGACY_CLEAN_CONFIRMED: ${harness.legacyCleanConfirmed ? 'true' : 'false'}`);
+  console.log(`V14_CLEAN_OWNERSHIP: ${harness.v14CleanOwnership ? 'true' : 'false'}`);
   console.log(`LAYERS_COUNT: ${layers.length}`);
   for (const item of layers) console.log(`  * ${item}`);
   console.log(`CAPABILITY_COUNT: ${capability.length}`);
@@ -158,6 +162,7 @@ function auditLegacyRuntimeOwnership() {
     ['frontend/assets/vision-v44-runtime-consistency.js', ['EventSource', '__VISION_SSE__', 'buildReport', 'syncGates', 'download', 'setNode', 'PI HARNESS demo', 'setTimeout(function()']],
   ];
 
+  let totalLegacyMarkers = 0;
   for (const [path, markers] of targets) {
     const content = read(path);
     if (content === null) {
@@ -165,14 +170,21 @@ function auditLegacyRuntimeOwnership() {
       continue;
     }
     const found = countMarkers(content, markers);
+    totalLegacyMarkers += found.length;
     addAudit(`${path}: markers=${found.length} [${found.join(', ') || 'none'}]`);
   }
 
-  addAudit('D4 decision: no destructive v34/v44 patch yet; clean owners must absorb SSE/report/status first');
-  addNext('Absorb SSE bridge into vision-runtime-owner.js before disabling v34/v44 SSE behavior');
-  addNext('Absorb mission report rendering into vision-report.js before disabling v34/v44 report behavior');
-  addNext('Absorb status polling into vision-agent-local.js or a dedicated clean status owner before disabling v34 system status');
-  addNext('Only after clean owners cover those contracts, convert v34/v44 into adapters');
+  if (totalLegacyMarkers === 0) {
+    addAudit('legacy ownership clean: v34/v44 markers = 0');
+    harness.legacyCleanConfirmed = true;
+    harness.v14CleanOwnership = true;
+  } else {
+    addAudit('D4 decision: no destructive v34/v44 patch yet; clean owners must absorb SSE/report/status first');
+    addNext('Absorb SSE bridge into vision-runtime-owner.js before disabling v34/v44 SSE behavior');
+    addNext('Absorb mission report rendering into vision-report.js before disabling v34/v44 report behavior');
+    addNext('Absorb status polling into vision-agent-local.js or a dedicated clean status owner before disabling v34 system status');
+    addNext('Only after clean owners cover those contracts, convert v34/v44 into adapters');
+  }
 }
 
 function applyPendingPatches() {
