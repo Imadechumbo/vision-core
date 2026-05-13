@@ -43,6 +43,7 @@
     { key: 'scanner',     name: 'Scanner',     width: 0, value: '—' },
     { key: 'aegis',       name: 'Aegis',       width: 0, value: '—' },
     { key: 'patchengine', name: 'PatchEngine', width: 0, value: '—' },
+    { key: 'pi_harness',  name: 'PI HARNESS',  width: 0, value: 'L0-L9 · AUTO' },
     { key: 'passgold',    name: 'PASS GOLD',   width: 0, value: '—' }
   ];
 
