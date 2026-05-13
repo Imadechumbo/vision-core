@@ -13,15 +13,34 @@ const commitMessage = commitArg ? commitArg.split('=').slice(1).join('=') : 'ref
 const report = [];
 const applied = [];
 const skipped = [];
+const layers = [];
+const harness = {
+  difficulty: 'D3',
+  difficultyLabel: 'High - legacy frontend/runtime refactor',
+  mode: 'ORCHESTRATING',
+  currentLayer: 'L0',
+  passGoldCandidate: false,
+  promotionAllowed: false,
+  deployAllowed: false,
+};
 
 function add(line) { report.push(String(line)); }
 function addApplied(line) { applied.push(String(line)); add(`APPLIED: ${line}`); }
 function addSkipped(line) { skipped.push(String(line)); add(`SKIPPED: ${line}`); }
+function layer(id, label) { harness.currentLayer = id; layers.push(`${id} - ${label}`); add(`LAYER: ${id} - ${label}`); }
 
 function finish(ok, message) {
   console.log('\n=== V14 TOTAL REFACTOR RUNNER SUMMARY ===');
   console.log(`RESULT: ${ok ? 'PASS' : 'FAIL'}`);
   console.log(`MESSAGE: ${message}`);
+  console.log(`PI_HARNESS_DIFFICULTY: ${harness.difficulty} - ${harness.difficultyLabel}`);
+  console.log(`PI_HARNESS_MODE: ${ok ? 'READY' : 'BLOCKED'}`);
+  console.log(`CURRENT_LAYER: ${harness.currentLayer}`);
+  console.log(`PASS_GOLD_CANDIDATE: ${harness.passGoldCandidate ? 'true' : 'false'}`);
+  console.log(`PROMOTION_ALLOWED: ${harness.promotionAllowed ? 'true' : 'false'}`);
+  console.log(`DEPLOY_ALLOWED: ${harness.deployAllowed ? 'true' : 'false'}`);
+  console.log(`LAYERS_COUNT: ${layers.length}`);
+  for (const item of layers) console.log(`  * ${item}`);
   console.log(`APPLIED_COUNT: ${applied.length}`);
   for (const item of applied) console.log(`  + ${item}`);
   console.log(`SKIPPED_COUNT: ${skipped.length}`);
@@ -96,6 +115,7 @@ function assertNoForbidden(path) {
 }
 
 function applyPendingPatches() {
+  layer('L3', 'Plan and apply controlled legacy adapter patch set');
   const v233 = `/* VISION CORE V2.3.3 - LEGACY REALTIME ADAPTER
  * V14 CLEAN: runtime execution and stream ownership belong to vision-runtime-owner.js.
  * This adapter keeps load compatibility only.
@@ -136,11 +156,17 @@ try {
   add(`BRANCH: ${branch}`);
   add(`FULL_JS_CHECK: ${fullJsCheck ? 'true' : 'false'}`);
   add(`PUSH: ${noPush ? 'false' : 'true'}`);
+  add('PI_HARNESS: adaptive local runner enabled');
 
+  layer('L0', 'Intake: load refactor objective and options');
+  layer('L1', 'Inspect: sync repository and inspect pending ownership patches');
   run('git', ['pull', '--rebase', 'origin', branch], { silentOutput: true });
+
+  layer('L2', 'Diagnose: determine whether legacy runtime still owns forbidden behavior');
   applyPendingPatches();
   assertNoForbidden('frontend/assets/v233-realtime.js');
 
+  layer('L6', 'Validation: syntax, checkpoint, front guard, and git integrity');
   run('node', ['--check', 'frontend/assets/v233-realtime.js'], { silentOutput: true });
 
   const checkpointArgs = ['-ExecutionPolicy', 'Bypass', '-File', 'tools/v14-refactor-checkpoint.ps1', '-Quiet'];
@@ -149,6 +175,7 @@ try {
 
   run('git', ['diff', '--check'], { silentOutput: true });
 
+  layer('L7', 'Evidence Receipt: commit/push verification and remote HEAD match');
   const status = run('git', ['status', '--porcelain'], { silentOutput: true }).trim();
   if (status) {
     add('GIT: committing changed files');
@@ -177,6 +204,9 @@ try {
     if (local !== remote) finish(false, 'remote HEAD does not match local HEAD');
   }
 
+  harness.passGoldCandidate = false;
+  harness.promotionAllowed = false;
+  harness.deployAllowed = false;
   finish(true, 'resumable refactor block completed');
 } catch (error) {
   add(`EXCEPTION: ${error && error.message ? error.message : String(error)}`);
