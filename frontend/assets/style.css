@@ -228,13 +228,13 @@ body{font-size:13px}.topin{min-height:58px}.brand{font-size:21px}.sub{font-size:
 .mc-node:hover .mc-node-icon{transform:scale(1.18);border-color:var(--cyan);box-shadow:0 0 22px rgba(34,211,238,.45);color:var(--cyan)}
 
 /* Posições dos nós (12h → sentido horário) */
-.mc-node--top   {top:0;left:50%;transform:translateX(-50%)}
-.mc-node--tr    {top:14%;right:4%}
-.mc-node--right {top:50%;right:-2px;transform:translateY(-50%)}
-.mc-node--br    {bottom:14%;right:4%}
-.mc-node--bottom{bottom:0;left:50%;transform:translateX(-50%)}
-.mc-node--left  {top:50%;left:-2px;transform:translateY(-50%)}
-.mc-node--tl    {top:14%;left:4%}
+.mc-node--top   {top:5%;left:50%;transform:translate(-50%,-50%)}
+.mc-node--tr    {top:18.2%;left:81.8%;transform:translate(-50%,-50%)}
+.mc-node--right {top:50%;left:95%;transform:translate(-50%,-50%)}
+.mc-node--br    {top:81.8%;left:81.8%;transform:translate(-50%,-50%)}
+.mc-node--bottom{top:95%;left:50%;transform:translate(-50%,-50%)}
+.mc-node--left  {top:81.8%;left:18.2%;transform:translate(-50%,-50%)}
+.mc-node--tl    {top:50%;left:5%;transform:translate(-50%,-50%)}
 
 /* Tooltip */
 .mc-tooltip{position:absolute;background:rgba(6,6,12,.96);border:1px solid rgba(168,85,247,.4);border-radius:10px;padding:8px 11px;font-size:11px;color:#e4e4f0;pointer-events:none;opacity:0;transition:.15s;z-index:20;white-space:nowrap;backdrop-filter:blur(8px);box-shadow:0 8px 28px rgba(0,0,0,.6)}
