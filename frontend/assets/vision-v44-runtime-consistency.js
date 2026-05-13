@@ -84,9 +84,35 @@
       try { window.v236SetPipelineStage(LABEL[key] || key, mappedStatus); } catch(_) {}
     }
   }
+  // Octagon positions (mathematically perfect, 8 nodes)
+  var OCTAGON = {
+    openclaw:    { top:'5%',    left:'50%'   },
+    scanner:     { top:'18.2%', left:'81.8%' },
+    hermes:      { top:'50%',   left:'95%'   },
+    patchengine: { top:'81.8%', left:'81.8%' },
+    aegis:       { top:'95%',   left:'50%'   },
+    passgold:    { top:'81.8%', left:'18.2%' },
+    github:      { top:'50%',   left:'5%'    },
+    pi_harness:  { top:'18.2%', left:'18.2%' }
+  };
+
+  function applyOctagonPositions() {
+    Object.keys(OCTAGON).forEach(function(key) {
+      var el = document.querySelector('.mc-node[data-key="' + key + '"]');
+      if (!el) return;
+      var pos = OCTAGON[key];
+      el.style.setProperty('top',       pos.top,  'important');
+      el.style.setProperty('left',      pos.left, 'important');
+      el.style.setProperty('right',     'auto',   'important');
+      el.style.setProperty('bottom',    'auto',   'important');
+      el.style.setProperty('transform', 'translate(-50%,-50%)', 'important');
+    });
+  }
+
   function resetOrbit(){
     ORDER.forEach(function(k){ setNode(k, 'idle'); });
     setCore('idle', 'READY', 'VISION CORE');
+    applyOctagonPositions();
   }
   function markStage(stage, status){
     var key = normalizeStage(stage); if (!key) return;
@@ -317,7 +343,8 @@
     syncGates();
     ensurePiHarnessNode();
     patchSetNodeForPiHarness();
-    setInterval(function(){ installSticky(); enforceDownloadLinks(); observeChat(); attachSSE(); ensurePiHarnessNode(); }, 1000);
+    applyOctagonPositions();
+    setInterval(function(){ installSticky(); enforceDownloadLinks(); observeChat(); attachSSE(); ensurePiHarnessNode(); applyOctagonPositions(); }, 2000);
     setInterval(syncGates, 30000);
     console.log('[V44] Runtime Consistency Pass ativo — download, sticky, orbit SSE, report real');
 
