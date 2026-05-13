@@ -1,0 +1,156 @@
+#!/usr/bin/env node
+import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
+
+const args = new Set(process.argv.slice(2));
+const fullJsCheck = args.has('--full-js-check') || args.has('--FullJsCheck');
+const noPush = args.has('--no-push') || args.has('--NoPush');
+const branchArg = process.argv.find((x) => x.startsWith('--branch='));
+const branch = branchArg ? branchArg.split('=').slice(1).join('=') : 'main';
+const commitArg = process.argv.find((x) => x.startsWith('--commit-message='));
+const commitMessage = commitArg ? commitArg.split('=').slice(1).join('=') : 'refactor(frontend): continue v14 clean runtime ownership';
+
+const report = [];
+const applied = [];
+const skipped = [];
+
+function add(line) { report.push(String(line)); }
+function addApplied(line) { applied.push(String(line)); add(`APPLIED: ${line}`); }
+function addSkipped(line) { skipped.push(String(line)); add(`SKIPPED: ${line}`); }
+
+function finish(ok, message) {
+  console.log('\n=== V14 TOTAL REFACTOR RUNNER SUMMARY ===');
+  console.log(`RESULT: ${ok ? 'PASS' : 'FAIL'}`);
+  console.log(`MESSAGE: ${message}`);
+  console.log(`APPLIED_COUNT: ${applied.length}`);
+  for (const item of applied) console.log(`  + ${item}`);
+  console.log(`SKIPPED_COUNT: ${skipped.length}`);
+  for (const item of skipped) console.log(`  - ${item}`);
+  console.log('--- EXECUTION LOG ---');
+  for (const line of report) console.log(line);
+  console.log(ok ? `OK: ${message}` : `FAIL: ${message}`);
+  console.log('=== END SUMMARY ===');
+  process.exit(ok ? 0 : 1);
+}
+
+function run(cmd, cmdArgs, options = {}) {
+  add(`> ${cmd} ${cmdArgs.join(' ')}`);
+  const result = spawnSync(cmd, cmdArgs, { encoding: 'utf8', shell: false, ...options });
+  const combined = `${result.stdout || ''}${result.stderr || ''}`.trim();
+  if (combined && !options.silentOutput) {
+    for (const raw of combined.split(/\r?\n/)) {
+      if (!raw.trim()) continue;
+      const line = raw.length > 500 ? `${raw.slice(0, 500)} ...[truncated]` : raw;
+      add(`  ${line}`);
+    }
+  }
+  if (result.status !== 0) {
+    finish(false, `${cmd} failed with exit code ${result.status}: ${cmdArgs.join(' ')}`);
+  }
+  return result.stdout || '';
+}
+
+function read(path) {
+  return fs.existsSync(path) ? fs.readFileSync(path, 'utf8') : null;
+}
+
+function write(path, content) {
+  fs.writeFileSync(path, content, 'utf8');
+}
+
+function ensureAdapter(path, marker, description, content) {
+  const current = read(path);
+  if (current === null) {
+    addSkipped(`missing file: ${path}`);
+    return;
+  }
+  if (current.includes(marker)) {
+    addSkipped(`${description} already delegated`);
+    return;
+  }
+  write(path, content);
+  addApplied(description);
+}
+
+function assertNoForbidden(path) {
+  const content = read(path);
+  if (content === null) return;
+  const forbidden = ['RUN_PATH', 'STREAM_PATH', 'new EventSource', 'window.fetch =', 'window.EventSource =', 'pass_gold:true', 'promotion_allowed:true'];
+  for (const marker of forbidden) {
+    if (content.includes(marker)) finish(false, `forbidden marker remains in ${path}: ${marker}`);
+  }
+}
+
+function applyPendingPatches() {
+  const v233 = `/* VISION CORE V2.3.3 - LEGACY REALTIME ADAPTER
+ * V14 CLEAN: runtime execution and stream ownership belong to vision-runtime-owner.js.
+ * This adapter keeps load compatibility only.
+ */
+(function(){
+  'use strict';
+  if (window.__V233_REALTIME_ADAPTER__) return;
+  window.__V233_REALTIME_ADAPTER__ = true;
+
+  function delegate() {
+    if (window.VisionRuntimeOwner && typeof window.VisionRuntimeOwner.executeMission === 'function') {
+      console.log('[V233] delegated to VisionRuntimeOwner clean owner');
+      return true;
+    }
+    return false;
+  }
+
+  function boot() {
+    if (delegate()) return;
+    setTimeout(delegate, 300);
+    setTimeout(delegate, 1200);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+`;
+  ensureAdapter('frontend/assets/v233-realtime.js', '__V233_REALTIME_ADAPTER__', 'v233 realtime -> VisionRuntimeOwner adapter', v233);
+}
+
+try {
+  add('MODE: node resumable refactor runner');
+  add(`BRANCH: ${branch}`);
+  add(`FULL_JS_CHECK: ${fullJsCheck ? 'true' : 'false'}`);
+  add(`PUSH: ${noPush ? 'false' : 'true'}`);
+
+  run('git', ['pull', '--rebase', 'origin', branch], { silentOutput: true });
+  applyPendingPatches();
+  assertNoForbidden('frontend/assets/v233-realtime.js');
+
+  run('node', ['--check', 'frontend/assets/v233-realtime.js'], { silentOutput: true });
+
+  const checkpointArgs = ['-ExecutionPolicy', 'Bypass', '-File', 'tools/v14-refactor-checkpoint.ps1', '-Quiet'];
+  if (fullJsCheck) checkpointArgs.push('-FullJsCheck');
+  run('powershell', checkpointArgs, { silentOutput: true });
+
+  run('git', ['diff', '--check'], { silentOutput: true });
+
+  const status = run('git', ['status', '--porcelain'], { silentOutput: true }).trim();
+  if (status) {
+    add('GIT: committing changed files');
+    run('git', ['add', 'frontend', 'docs', 'tools', '.github'], { silentOutput: true });
+    run('git', ['commit', '-m', commitMessage], { silentOutput: true });
+  } else {
+    add('GIT: working tree clean, no commit needed');
+  }
+
+  if (!noPush) {
+    run('git', ['push', 'origin', branch], { silentOutput: true });
+    run('git', ['fetch', 'origin', branch], { silentOutput: true });
+    const local = run('git', ['rev-parse', 'HEAD'], { silentOutput: true }).trim();
+    const remote = run('git', ['rev-parse', `origin/${branch}`], { silentOutput: true }).trim();
+    add(`LOCAL_HEAD: ${local}`);
+    add(`REMOTE_HEAD: ${remote}`);
+    if (local !== remote) finish(false, 'remote HEAD does not match local HEAD');
+  }
+
+  finish(true, 'resumable refactor block completed');
+} catch (error) {
+  add(`EXCEPTION: ${error && error.message ? error.message : String(error)}`);
+  finish(false, 'resumable refactor block failed');
+}
