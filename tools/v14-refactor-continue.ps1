@@ -10,6 +10,7 @@ $script:Log = @()
 $script:Changed = $false
 
 function Add-Log($msg) { $script:Log += $msg }
+
 function Finish($ok, $msg) {
   Write-Host ""
   Write-Host "=== V14 TOTAL REFACTOR RUNNER SUMMARY ===" -ForegroundColor Cyan
@@ -19,25 +20,41 @@ function Finish($ok, $msg) {
   Write-Host "=== END SUMMARY ===" -ForegroundColor Cyan
   if (-not $ok) { exit 1 }
 }
-function Run($cmd, [string[]]$cmdArgs) {
-  $joined = $cmdArgs -join " "
-  Add-Log("> " + $cmd + " " + $joined)
-  $out = & $cmd @cmdArgs 2>&1
+
+function Run {
+  param(
+    [Parameter(Mandatory=$true)][string]$Cmd,
+    [Parameter(ValueFromRemainingArguments=$true)][string[]]$CmdArgs
+  )
+  Add-Log("> " + $Cmd + " " + ($CmdArgs -join " "))
+  $out = & $Cmd @CmdArgs 2>&1
   $code = $LASTEXITCODE
   if ($out) { foreach ($line in $out) { Add-Log("  " + $line) } }
-  if ($code -ne 0) { Finish $false ($cmd + " failed with exit code " + $code) }
+  if ($code -ne 0) { Finish $false ($Cmd + " failed with exit code " + $code) }
   return $out
 }
-function Git($args) { return Run "git" $args }
-function Node($args) { return Run "node" $args }
-function PS($args) { return Run "powershell" $args }
+
+function Git {
+  param([Parameter(ValueFromRemainingArguments=$true)][string[]]$GitArgs)
+  return Run git @GitArgs
+}
+
+function Node {
+  param([Parameter(ValueFromRemainingArguments=$true)][string[]]$NodeArgs)
+  return Run node @NodeArgs
+}
+
+function RunPowerShell {
+  param([Parameter(ValueFromRemainingArguments=$true)][string[]]$PSArgs)
+  return Run powershell @PSArgs
+}
 
 try {
   Add-Log("MODE: resumable refactor runner")
   Add-Log("REPORTING: final summary only")
   Add-Log("BRANCH: " + $Branch)
 
-  Git @("pull", "--rebase", "origin", $Branch) | Out-Null
+  Git pull --rebase origin $Branch | Out-Null
 
   $v233 = "frontend/assets/v233-realtime.js"
   if (Test-Path $v233) {
@@ -82,18 +99,18 @@ try {
     Add-Log("SKIP: v233 realtime file not found")
   }
 
-  Node @("--check", "frontend/assets/v233-realtime.js") | Out-Null
+  Node --check frontend/assets/v233-realtime.js | Out-Null
 
   $checkpointArgs = @("-ExecutionPolicy", "Bypass", "-File", "tools/v14-refactor-checkpoint.ps1", "-Quiet")
   if ($FullJsCheck) { $checkpointArgs += "-FullJsCheck" }
-  PS $checkpointArgs | Out-Null
+  RunPowerShell @checkpointArgs | Out-Null
 
-  Git @("diff", "--check") | Out-Null
-  $status = Git @("status", "--porcelain")
+  Git diff --check | Out-Null
+  $status = Git status --porcelain
   if ($status -and $status.Count -gt 0) {
     Add-Log("GIT: committing changed files")
-    Git @("add", "frontend", "docs", "tools", ".github") | Out-Null
-    Git @("commit", "-m", $CommitMessage) | Out-Null
+    Git add frontend docs tools .github | Out-Null
+    Git commit -m $CommitMessage | Out-Null
     $script:Changed = $true
   } else {
     Add-Log("GIT: working tree clean, no commit needed")
@@ -101,10 +118,10 @@ try {
 
   if ($Push) {
     Add-Log("GIT: pushing and verifying remote HEAD")
-    Git @("push", "origin", $Branch) | Out-Null
-    Git @("fetch", "origin", $Branch) | Out-Null
-    $local = (Git @("rev-parse", "HEAD") | Select-Object -Last 1).Trim()
-    $remote = (Git @("rev-parse", "origin/$Branch") | Select-Object -Last 1).Trim()
+    Git push origin $Branch | Out-Null
+    Git fetch origin $Branch | Out-Null
+    $local = (Git rev-parse HEAD | Select-Object -Last 1).Trim()
+    $remote = (Git rev-parse "origin/$Branch" | Select-Object -Last 1).Trim()
     Add-Log("LOCAL_HEAD: " + $local)
     Add-Log("REMOTE_HEAD: " + $remote)
     if ($local -ne $remote) { Finish $false "remote HEAD does not match local HEAD" }
