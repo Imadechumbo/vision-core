@@ -33,13 +33,14 @@ function Finish([bool]$ok, [string]$msg) {
   if (-not $ok) { exit 1 }
 }
 
-function Run {
+function Run-External {
   param(
-    [Parameter(Mandatory=$true)][string]$Cmd,
-    [Parameter(ValueFromRemainingArguments=$true)][string[]]$CmdArgs
+    [Parameter(Mandatory=$true)][string]$Exe,
+    [Parameter(Mandatory=$true)][string]$Label,
+    [Parameter(ValueFromRemainingArguments=$true)][string[]]$ExeArgs
   )
-  Add-Log("> " + $Cmd + " " + ($CmdArgs -join " "))
-  $output = & $Cmd @CmdArgs 2>&1
+  Add-Log("> " + $Label + " " + ($ExeArgs -join " "))
+  $output = & $Exe @ExeArgs 2>&1
   $code = $LASTEXITCODE
   if ($output) {
     foreach ($line in $output) {
@@ -48,13 +49,13 @@ function Run {
       Add-Log("  " + $text)
     }
   }
-  if ($code -ne 0) { Finish $false ($Cmd + " failed with exit code " + $code) }
+  if ($code -ne 0) { Finish $false ($Label + " failed with exit code " + $code) }
   return $output
 }
 
-function Git { param([Parameter(ValueFromRemainingArguments=$true)][string[]]$GitArgs) return Run git @GitArgs }
-function Node { param([Parameter(ValueFromRemainingArguments=$true)][string[]]$NodeArgs) return Run node @NodeArgs }
-function RunPowerShell { param([Parameter(ValueFromRemainingArguments=$true)][string[]]$PSArgs) return Run powershell @PSArgs }
+function Git { param([Parameter(ValueFromRemainingArguments=$true)][string[]]$GitArgs) return Run-External -Exe "git.exe" -Label "git" @GitArgs }
+function Node { param([Parameter(ValueFromRemainingArguments=$true)][string[]]$NodeArgs) return Run-External -Exe "node.exe" -Label "node" @NodeArgs }
+function RunPowerShell { param([Parameter(ValueFromRemainingArguments=$true)][string[]]$PSArgs) return Run-External -Exe "powershell.exe" -Label "powershell" @PSArgs }
 
 function Get-FileRaw([string]$Path) {
   if (-not (Test-Path $Path)) { return $null }
