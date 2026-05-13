@@ -22,6 +22,7 @@ const harness = {
   passGoldCandidate: false,
   promotionAllowed: false,
   deployAllowed: false,
+  githubConfirmed: false,
 };
 
 function add(line) { report.push(String(line)); }
@@ -36,6 +37,7 @@ function finish(ok, message) {
   console.log(`PI_HARNESS_DIFFICULTY: ${harness.difficulty} - ${harness.difficultyLabel}`);
   console.log(`PI_HARNESS_MODE: ${ok ? 'READY' : 'BLOCKED'}`);
   console.log(`CURRENT_LAYER: ${harness.currentLayer}`);
+  console.log(`GITHUB_CONFIRMED: ${harness.githubConfirmed ? 'true' : 'false'}`);
   console.log(`PASS_GOLD_CANDIDATE: ${harness.passGoldCandidate ? 'true' : 'false'}`);
   console.log(`PROMOTION_ALLOWED: ${harness.promotionAllowed ? 'true' : 'false'}`);
   console.log(`DEPLOY_ALLOWED: ${harness.deployAllowed ? 'true' : 'false'}`);
@@ -178,7 +180,7 @@ try {
   layer('L7', 'Evidence Receipt: commit/push verification and remote HEAD match');
   const status = run('git', ['status', '--porcelain'], { silentOutput: true }).trim();
   if (status) {
-    add('GIT: committing changed files');
+    add('GIT: local changes detected; checking staged diff');
     run('git', ['add', 'frontend', 'docs', 'tools', '.github'], { silentOutput: true });
     if (stagedChangesExist()) {
       const commit = runSoft('git', ['commit', '-m', commitMessage], { silentOutput: true });
@@ -202,6 +204,9 @@ try {
     add(`LOCAL_HEAD: ${local}`);
     add(`REMOTE_HEAD: ${remote}`);
     if (local !== remote) finish(false, 'remote HEAD does not match local HEAD');
+    harness.githubConfirmed = true;
+  } else {
+    add('GITHUB: push disabled; remote confirmation skipped');
   }
 
   harness.passGoldCandidate = false;
