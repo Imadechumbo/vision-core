@@ -56,6 +56,7 @@ try {
   const next = ['tools/v14-refactor-continue.mjs'];
   if (full) next.push('--full-js-check');
   next.push(`--branch=${branch}`);
+  next.push('--skip-pull');
   run('node', next);
   finish(true, 'total pi harness refactor pass completed');
 } catch (error) {
