@@ -1,0 +1,390 @@
+/* ── FIX CRÍTICO: mc-panel não pode cortar os nodes orbitais ──── */
+.mc-panel {
+  overflow: visible !important;
+  /* O sticky wrapper (#v33StickyWrap) continua com overflow normal */
+}
+
+/* Garantir que o aside e paineis vizinhos não criem clipping context */
+
+
+/* ═══════════════════════════════════════════════════════════════
+   VISION CORE V3.3 ENTERPRISE — ORBIT CSS
+   Arquivo: vision-v33-orbit.css
+   Patch cirúrgico: só afeta .mc-panel e .mc-node/.mc-core
+   NÃO altera grid, chat, sidebar, layout geral
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── STICKY REAL — coluna direita completa acompanha scroll ─────
+ * MÉTODO CORRETO: sticky no aside (coluna grid), não no #agentDownload
+ * aside é filho direto de main.shell.grid → scroll container = viewport
+ * overflow-x:clip (não hidden) nos ancestors → sem criar scroll container
+ */
+
+/* 1. O aside direito (coluna VISION AGENT LOCAL) sticky como coluna inteira */
+main.shell.grid > aside:last-of-type {
+  position: sticky !important;
+  top: 24px !important;
+  align-self: start !important;
+  height: fit-content !important;
+  max-height: calc(100vh - 32px) !important;
+  overflow-y: auto !important;   /* scroll interno — todo conteúdo visível */
+  overflow-x: visible !important;
+  z-index: 20 !important;
+  /* scrollbar fina discreta */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168,85,247,.35) transparent;
+}
+
+/* 2. #agentDownload: remover sticky conflitante — é filho normal do aside */
+#agentDownload {
+  position: relative !important;
+  top: auto !important;
+  align-self: auto !important;
+  overflow: visible !important;
+}
+
+/* 3. Neutralizar wrappers JS de patches anteriores */
+#v32StickyWrap,
+#v33StickyWrap,
+#v34StickyWrap {
+  position: static !important;
+  top: auto !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* ── ORB WRAP — ocupa todo o espaço disponível do mc-panel ────── */
+/* mc-panel content ≈ 352px. Nodes ficam dentro do wrap. */
+.mc-orb-wrap {
+  width: 260px !important;
+  height: 260px !important;
+  margin: 6px auto 10px !important;
+  position: relative;
+  overflow: visible !important;
+}
+
+/* ── RINGS animados ─────────────────────────────────────────────── */
+.mc-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border-style: dashed;
+  border-color: rgba(168, 85, 247, .15);
+  pointer-events: none;
+}
+
+.mc-ring-1 {
+  width: 170px !important;
+  height: 134px !important;
+  border-width: 1px;
+  border-color: rgba(168, 85, 247, .22) !important;
+  animation: v33RingA 22s linear infinite;
+}
+
+.mc-ring-2 {
+  width: 248px !important;
+  height: 196px !important;
+  border-width: 1px;
+  border-color: rgba(168, 85, 247, .13) !important;
+  animation: v33RingB 32s linear infinite reverse;
+}
+
+.mc-ring-3 {
+  width: 316px !important;
+  height: 250px !important;
+  border-width: 1px;
+  border-color: rgba(168, 85, 247, .07) !important;
+  animation: v33RingA 48s linear infinite;
+}
+
+@keyframes v33RingA {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+@keyframes v33RingB {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(-360deg); }
+}
+
+/* ── CORE READY ─────────────────────────────────────────────────── */
+.mc-core {
+  width: 72px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: radial-gradient(circle at 38% 32%, #9333ea, #4c1d95 68%, #130a2a) !important;
+  box-shadow: 0 0 20px rgba(147, 51, 234, .55), inset 0 0 12px rgba(255,255,255,.05) !important;
+  z-index: 10;
+  transition: background .5s, box-shadow .5s;
+  cursor: default;
+}
+
+.mc-core-hex {
+  display: none !important; /* substituído pelo radial-gradient no próprio core */
+}
+
+.mc-core-status {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: .06em !important;
+  color: #e9d5ff !important;
+  line-height: 1.1 !important;
+}
+
+.mc-core-sub {
+  font-size: 7px !important;
+  color: #a78bfa !important;
+  letter-spacing: .1em !important;
+  margin-top: 2px !important;
+}
+
+/* Core states */
+.mc-core.running {
+  background: radial-gradient(circle at 38% 32%, #0ea5e9, #1e40af 68%, #0c1a3d) !important;
+  box-shadow: 0 0 32px rgba(14,165,233,.8), inset 0 0 14px rgba(255,255,255,.07) !important;
+  animation: v33CorePulse 1.1s ease-in-out infinite !important;
+}
+
+.mc-core.success {
+  background: radial-gradient(circle at 38% 32%, #fde047, #b45309 68%, #1c0f00) !important;
+  box-shadow: 0 0 40px rgba(250,204,21,.9), inset 0 0 16px rgba(255,255,255,.08) !important;
+  animation: none !important;
+}
+
+.mc-core.fail {
+  background: radial-gradient(circle at 38% 32%, #ef4444, #7f1d1d 68%, #1c0000) !important;
+  box-shadow: 0 0 30px rgba(239,68,68,.85) !important;
+  animation: none !important;
+}
+
+@keyframes v33CorePulse {
+  0%,100% { transform: translate(-50%,-50%) scale(1); }
+  50%      { transform: translate(-50%,-50%) scale(1.06); }
+}
+
+/* ── NODES — posições para 280px wrap ────────────────────────────── */
+/* Ring de nodes = 104px de raio do centro = 280/2=140px center */
+/* Posicionamento relativo ao wrapper 280px                       */
+
+.mc-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  z-index: 5;
+  transition: opacity .3s, transform .2s;
+}
+
+/* Reposicionar para 280px wrap — 7 nodes em círculo              */
+/* Raio visual = 104px do centro do wrap (140px)                  */
+/* node-icon é 28px → offset -14px para centrar                  */
+
+.mc-node--top    { top: 3px;   left: 50%; transform: translateX(-50%); }
+.mc-node--tr     { top: 11%;  right: 9%; }
+.mc-node--right  { top: 50%;  right: 3px; transform: translateY(-50%); }
+.mc-node--br     { bottom: 11%; right: 9%; }
+.mc-node--bottom { bottom: 3px; left: 50%; transform: translateX(-50%); }
+.mc-node--left   { top: 50%;  left: 3px; transform: translateY(-50%); }
+.mc-node--tl     { top: 11%;  left: 9%; }
+
+.mc-node-icon {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  background: rgba(8,6,18,.95) !important;
+  border: 1.5px solid rgba(168,85,247,.4) !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: 13px !important;
+  color: var(--purple2) !important;
+  transition: border-color .3s, color .3s, box-shadow .3s !important;
+}
+
+.mc-node-label {
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  letter-spacing: .06em !important;
+  color: rgba(255,255,255,.75) !important;
+  text-align: center !important;
+  margin-top: 3px !important;
+  line-height: 1.25 !important;
+  white-space: nowrap;
+}
+
+.mc-node-label small {
+  color: rgba(255,255,255,.4) !important;
+  font-weight: 400 !important;
+  display: block !important;
+  font-size: 7px !important;
+}
+
+/* ── NODE PIPELINE STATES ───────────────────────────────────────── */
+
+/* idle dim */
+.mc-node.v33-idle { opacity: .45; }
+
+/* running — pulse + color */
+.mc-node.v33-running .mc-node-icon {
+  border-color: currentColor !important;
+  animation: v33NodePulse 1s ease-in-out infinite !important;
+}
+.mc-node.v33-running { opacity: 1 !important; }
+
+/* done — green check glow */
+.mc-node.v33-done .mc-node-icon {
+  border-color: rgba(34,197,94,.7) !important;
+  box-shadow: 0 0 12px rgba(34,197,94,.5) !important;
+  color: #22c55e !important;
+}
+.mc-node.v33-done { opacity: .9 !important; }
+
+/* fail */
+.mc-node.v33-fail .mc-node-icon {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 12px rgba(239,68,68,.6) !important;
+  color: #ef4444 !important;
+}
+
+@keyframes v33NodePulse {
+  0%,100% { opacity: 1; box-shadow: none; }
+  50%      { opacity: .6; box-shadow: 0 0 14px currentColor; }
+}
+
+/* ── NODE COLORS per data-key ───────────────────────────────────── */
+[data-key="openclaw"].v33-running .mc-node-icon { color: #a855f7 !important; border-color: #a855f7 !important; }
+[data-key="scanner"].v33-running  .mc-node-icon { color: #22c55e !important; border-color: #22c55e !important; }
+[data-key="hermes"].v33-running   .mc-node-icon { color: #f59e0b !important; border-color: #f59e0b !important; }
+[data-key="patchengine"].v33-running .mc-node-icon { color: #22d3ee !important; border-color: #22d3ee !important; }
+[data-key="aegis"].v33-running    .mc-node-icon { color: #22c55e !important; border-color: #22c55e !important; }
+[data-key="passgold"].v33-running .mc-node-icon { color: #facc15 !important; border-color: #facc15 !important; }
+[data-key="github"].v33-running   .mc-node-icon { color: #94a3b8 !important; border-color: #94a3b8 !important; }
+
+[data-key="passgold"].v33-done .mc-node-icon { color: #facc15 !important; border-color: #facc15 !important; box-shadow: 0 0 18px rgba(250,204,21,.8) !important; }
+
+/* ── ORBIT ARC — SVG connector (injetado via JS) ────────────────── */
+#v33-orbit-arc {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ── LIVE REPORT CARD ───────────────────────────────────────────── */
+.v33-report {
+  background: linear-gradient(155deg, rgba(12,8,24,.98), rgba(7,5,16,.98));
+  border: 1px solid rgba(250,204,21,.4);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 8px;
+  box-shadow: 0 0 24px rgba(250,204,21,.1);
+}
+
+.v33-report-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: #facc15;
+  margin-bottom: 9px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.v33-report-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(168,85,247,.08);
+  font-size: 10px;
+}
+.v33-report-row:last-child { border-bottom: none; }
+
+.v33-report-lbl { color: #a78bfa; flex-shrink: 0; margin-right: 8px; }
+.v33-report-val { color: #e9d5ff; text-align: right; word-break: break-all; }
+.v33-report-gold { color: #facc15 !important; font-weight: 700 !important; }
+
+.v33-report-btn {
+  display: block;
+  margin-top: 9px;
+  padding: 6px 10px;
+  background: rgba(250,204,21,.1);
+  border: 1px solid rgba(250,204,21,.35);
+  border-radius: 8px;
+  color: #facc15;
+  font-size: 10px;
+  text-align: center;
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: .07em;
+  transition: background .2s;
+}
+.v33-report-btn:hover { background: rgba(250,204,21,.2); }
+
+/* ═══════════════════════════════════════════════════════════════
+   VISION CORE V4.4 — RUNTIME CONSISTENCY PASS CSS
+   Sticky real + Mission Report card + clipping guards
+   ═══════════════════════════════════════════════════════════════ */
+html, body { overflow-x: clip !important; }
+main.shell.grid { align-items: start !important; overflow: visible !important; transform: none !important; contain: none !important; }
+main.shell.grid > aside:last-of-type {
+  position: sticky !important;
+  top: 24px !important;
+  align-self: start !important;
+  height: fit-content !important;
+  max-height: calc(100vh - 32px) !important;
+  overflow: visible !important;
+  z-index: 20 !important;
+}
+#agentDownload { position: relative !important; top: auto !important; overflow: visible !important; }
+.v44-mission-report {
+  background: linear-gradient(155deg, rgba(12,8,24,.98), rgba(7,5,16,.98));
+  border: 1px solid rgba(250,204,21,.42);
+  border-radius: 12px;
+  padding: 12px;
+  margin: 8px 0;
+  box-shadow: 0 0 24px rgba(250,204,21,.1);
+}
+.v44-report-title {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  color: #facc15;
+  margin-bottom: 8px;
+  text-align: center;
+  line-height: 1.6;
+}
+.v44-report-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(168,85,247,.08);
+  font-size: 10px;
+}
+.v44-report-row span { color: #a78bfa; }
+.v44-report-row b { color: #e9d5ff; text-align: right; word-break: break-word; }
+.v44-report-row b.gold { color: #facc15; }
+
+/* ── Scrollbar fina no painel direito (Webkit) ───────────────── */
+main.shell.grid > aside:last-of-type::-webkit-scrollbar {
+  width: 4px;
+}
+main.shell.grid > aside:last-of-type::-webkit-scrollbar-track {
+  background: transparent;
+}
+main.shell.grid > aside:last-of-type::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, .30);
+  border-radius: 2px;
+}
