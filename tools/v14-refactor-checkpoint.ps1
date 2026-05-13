@@ -1,24 +1,43 @@
 param(
   [switch]$Push,
   [switch]$FullJsCheck,
+  [switch]$Quiet,
   [string]$CommitMessage = "",
   [string]$Branch = "main"
 )
 
 $ErrorActionPreference = "Stop"
+$script:Report = @()
+
+function Add-Report($msg) {
+  $script:Report += $msg
+}
 
 function Step($msg) {
-  Write-Host ""
-  Write-Host "=== $msg ===" -ForegroundColor Cyan
+  if (-not $Quiet) {
+    Write-Host ""
+    Write-Host "=== $msg ===" -ForegroundColor Cyan
+  }
+  Add-Report("STEP: " + $msg)
 }
 
 function Ok($msg) {
-  Write-Host "OK: $msg" -ForegroundColor Green
+  if (-not $Quiet) { Write-Host "OK: $msg" -ForegroundColor Green }
+  Add-Report("OK: " + $msg)
 }
 
 function Fail($msg) {
   Write-Host "FAIL: $msg" -ForegroundColor Red
+  Add-Report("FAIL: " + $msg)
+  Write-FinalSummary
   exit 1
+}
+
+function Write-FinalSummary() {
+  Write-Host ""
+  Write-Host "=== V14 REFACTOR CHECKPOINT SUMMARY ===" -ForegroundColor Cyan
+  foreach ($line in $script:Report) { Write-Host $line }
+  Write-Host "=== END SUMMARY ===" -ForegroundColor Cyan
 }
 
 function Run {
@@ -26,7 +45,7 @@ function Run {
     [Parameter(Mandatory=$true)][string]$Cmd,
     [Parameter(ValueFromRemainingArguments=$true)][string[]]$CmdArgs
   )
-  Write-Host ("> " + $Cmd + " " + ($CmdArgs -join " ")) -ForegroundColor DarkGray
+  if (-not $Quiet) { Write-Host ("> " + $Cmd + " " + ($CmdArgs -join " ")) -ForegroundColor DarkGray }
   & $Cmd @CmdArgs
   if ($LASTEXITCODE -ne 0) {
     Fail ($Cmd + " failed with exit code " + $LASTEXITCODE)
@@ -50,7 +69,7 @@ function Assert-CleanOrCommitReady() {
   }
 
   if ([string]::IsNullOrWhiteSpace($CommitMessage)) {
-    Write-Host $status -ForegroundColor Yellow
+    if (-not $Quiet) { Write-Host $status -ForegroundColor Yellow }
     Fail "working tree has changes and no -CommitMessage was provided"
   }
 
@@ -176,8 +195,12 @@ function Sync-GitHub() {
   Run git fetch origin $Branch
   $local = Get-GitOutput rev-parse HEAD
   $remote = Get-GitOutput rev-parse "origin/$Branch"
-  Write-Host ("local HEAD:  " + $local)
-  Write-Host ("origin/" + $Branch + ": " + $remote)
+  Add-Report("local HEAD: " + $local)
+  Add-Report("origin/" + $Branch + ": " + $remote)
+  if (-not $Quiet) {
+    Write-Host ("local HEAD:  " + $local)
+    Write-Host ("origin/" + $Branch + ": " + $remote)
+  }
 
   if ($Push) {
     Assert-CleanOrCommitReady
@@ -207,4 +230,5 @@ Sync-GitHub
 
 Step "Checkpoint complete"
 Ok "V14 refactor checkpoint passed"
-Write-Host "Next safe phase: Fase 4 - Chat clean ownership" -ForegroundColor Yellow
+Add-Report("Next safe phase: Fase 4 - Chat clean ownership")
+Write-FinalSummary
