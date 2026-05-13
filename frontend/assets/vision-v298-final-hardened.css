@@ -1,0 +1,173 @@
+
+/* VISION CORE V2.9.8 FINAL HARDENED
+   Patch final incremental: dropdown dark, timeline única, spacing, replay/logs. */
+
+/* 1. Remove timeline antiga/duplicada, mantendo a primeira timeline compacta do topo */
+#mission .v236-compact-timeline ~ .v236-compact-timeline,
+#mission .v236-compact-timeline.v298-duplicated,
+#mission .v236-compact-timeline[data-v298-hidden="true"]{
+  display:none!important;
+}
+
+/* 2. Command Center spacing refinado */
+#mission{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.v298-command-chat{
+  margin-top:8px!important;
+  margin-bottom:10px!important;
+  min-height:560px!important;
+}
+
+.v298-chat-stream{
+  min-height:330px!important;
+  max-height:520px!important;
+}
+
+.v298-composer{
+  padding:12px!important;
+}
+
+.v298-input-wrap{
+  gap:8px!important;
+}
+
+.v298-tool-row{
+  margin-top:8px!important;
+  gap:8px!important;
+}
+
+/* 3. Esconde selects nativos substituídos por dropdowns custom */
+.v298-select.v298-native-hidden{
+  display:none!important;
+}
+
+/* 4. Dropdown custom dark */
+.v298-dropdown{
+  position:relative;
+  min-width:170px;
+}
+
+.v298-dropdown-btn{
+  width:100%;
+  min-height:38px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(168,85,247,.28);
+  color:#fff;
+  padding:9px 34px 9px 12px;
+  border-radius:12px;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:800;
+  text-align:left;
+  white-space:nowrap;
+  position:relative;
+}
+
+.v298-dropdown-btn::after{
+  content:"⌄";
+  position:absolute;
+  right:12px;
+  top:50%;
+  transform:translateY(-50%);
+  opacity:.78;
+}
+
+.v298-dropdown.open .v298-dropdown-btn{
+  border-color:rgba(168,85,247,.72);
+  box-shadow:0 0 0 3px rgba(168,85,247,.12);
+}
+
+.v298-dropdown-menu{
+  position:absolute;
+  left:0;
+  bottom:calc(100% + 8px);
+  background:#090912;
+  border:1px solid rgba(168,85,247,.42);
+  border-radius:12px;
+  min-width:100%;
+  width:max-content;
+  max-width:260px;
+  display:none;
+  z-index:99999;
+  overflow:hidden;
+  box-shadow:0 18px 40px rgba(0,0,0,.55),0 0 26px rgba(168,85,247,.16);
+}
+
+.v298-dropdown.open .v298-dropdown-menu{
+  display:block;
+}
+
+.v298-dropdown-menu div{
+  padding:10px 12px;
+  cursor:pointer;
+  color:#ddd;
+  font-size:12px;
+  font-weight:700;
+  white-space:nowrap;
+}
+
+.v298-dropdown-menu div:hover,
+.v298-dropdown-menu div.active{
+  background:rgba(168,85,247,.24);
+  color:#fff;
+}
+
+/* 5. Botões utilitários finais */
+.v298-tool-btn.v298-hard-action{
+  border-color:rgba(34,211,238,.32);
+  color:#c7f9ff;
+}
+
+.v298-tool-btn.v298-danger-soft{
+  border-color:rgba(239,68,68,.25);
+  color:#fecaca;
+}
+
+/* 6. Timeline visual mais limpa */
+.v236-compact-timeline{
+  margin-bottom:10px!important;
+}
+
+.v236-tl-step small{
+  opacity:.62!important;
+  font-size:10px!important;
+}
+
+.v236-tl-step span{
+  white-space:nowrap!important;
+}
+
+/* 7. Estados globais */
+body.v298-final-running .v298-command-chat{
+  border-color:rgba(168,85,247,.62)!important;
+}
+
+body.v298-final-fail .v298-command-chat{
+  border-color:rgba(239,68,68,.72)!important;
+}
+
+body.v298-final-gold .v298-command-chat{
+  border-color:rgba(250,204,21,.72)!important;
+}
+
+/* 8. Mobile hardening */
+@media(max-width:900px){
+  .v298-command-chat{
+    min-height:500px!important;
+  }
+  .v298-chat-stream{
+    min-height:260px!important;
+  }
+  .v298-dropdown{
+    flex:1 1 100%;
+  }
+  .v298-dropdown-menu{
+    bottom:auto;
+    top:calc(100% + 8px);
+    width:100%;
+  }
+}
