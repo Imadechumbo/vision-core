@@ -80,8 +80,25 @@
     }).join('');
   }
 
+  function ensurePiHarnessMetricRow(){
+    const grid = document.getElementById('mcMetricsGrid');
+    if (!grid) return;
+    if (grid.querySelector('[data-agent="pi_harness"]')) return;
+    // Find PASS GOLD row to insert before it
+    const pgRow = grid.querySelector('[data-agent="passgold"]');
+    const row = document.createElement('div');
+    row.className = 'mc-metric-row';
+    row.setAttribute('data-agent', 'pi_harness');
+    row.innerHTML =
+      '<div class="mc-metric-name">PI HARNESS</div>' +
+      '<div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-pi_harness" style="width:0%;background:linear-gradient(90deg,#7c3aed,#c084fc)"></div></div>' +
+      '<div class="mc-metric-val cyan" id="val-pi_harness">L0-L9</div>';
+    pgRow ? grid.insertBefore(row, pgRow) : grid.appendChild(row);
+  }
+
   function paintSmallMetrics(){
-    const colors = ['purple','purple','green','cyan','orange','yellow','pink'];
+    ensurePiHarnessMetricRow();
+    const colors = ['purple','purple','green','cyan','orange','purple2','yellow','pink'];
     document.querySelectorAll('#mcMetricsGrid .mc-metric-bar').forEach((el,i)=>{
       el.dataset.color = colors[i] || 'purple';
     });
