@@ -505,10 +505,11 @@ app.all('/api/run-live', async (req, res) => {
     const { createHash } = require('crypto');
     const fallbackReceipt = ['evr', 'catch', 'none', 'blocked', 'promotion-blocked',
       String(err.message.length), Date.now()].join('_').replace(/[^a-zA-Z0-9._-]+/g, '-');
-    return res.status(500).json({
+    return res.status(200).json({
       ok: false, pass_gold: false, promotion_allowed: false,
       error_type: 'go_runtime_failure', message: err.message, time: now(),
       evidence_receipt: fallbackReceipt,
+      steps: [],
     });
   }
 
