@@ -75,6 +75,7 @@ if (!fs.existsSync(path)) {
 
 runProbe('V14.1_HARNESS_PATCH', 'tools/v14-pi-harness-backend-validation-patch.mjs', 8);
 runProbe('V14.1_NORMALIZER', 'tools/v14-backend-receipt-normalizer.mjs', 8);
+runProbe('V14.2_STRICT_PASSGOLD', 'tools/v142-strict-passgold-gate-patch.mjs', 8);
 runProbe('V14.1_TOTAL_FINAL', 'tools/pi-harness-v141-total-final.mjs', 16);
 
 if (!changed) process.exit(0);
