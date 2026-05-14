@@ -66,6 +66,26 @@ if (!fs.existsSync(path)) {
   }
 }
 
+const harnessPath = 'tools/pi-harness.mjs';
+if (fs.existsSync(harnessPath)) {
+  let h = fs.readFileSync(harnessPath, 'utf8');
+  let harnessChanged = false;
+  if (!h.includes("'backend/src/runtime/goRunner.js'")) {
+    h = h.replace("'tools/',", "'backend/src/runtime/goRunner.js',\n      'tools/',");
+    harnessChanged = true;
+  }
+  if (!h.includes("'tools/pi-harness-v141-audit.mjs'")) {
+    h = h.replace("'tools/pi-harness.mjs',", "'tools/pi-harness.mjs',\n    'tools/pi-harness-v141-audit.mjs',\n    'tools/v14-backend-receipt-normalizer.mjs',");
+    harnessChanged = true;
+  }
+  if (harnessChanged) {
+    fs.writeFileSync(harnessPath, h, 'utf8');
+    console.log('PATCHED: pi harness can stage and validate backend evidence files');
+  } else {
+    console.log('SKIP: pi harness backend evidence staging already enabled');
+  }
+}
+
 const normalizerPath = 'tools/v14-backend-receipt-normalizer.mjs';
 if (fs.existsSync(normalizerPath)) {
   const normalizer = spawnSync(process.execPath, [normalizerPath], { encoding: 'utf8', shell: false });
