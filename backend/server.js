@@ -58,6 +58,17 @@ function sendOk(res, payload = {}) {
   return res.status(200).json({ ok: true, ...payload, time: now() });
 }
 
+function normalizeEvidenceReceipt(result) {
+  if (!result || typeof result !== 'object') return null;
+  return typeof result.evidence_receipt === 'string' && result.evidence_receipt.length >= 8
+    ? result.evidence_receipt
+    : null;
+}
+
+function passGoldCandidateFromResult(result) {
+  return Boolean(result && result.pass_gold === true && result.promotion_allowed === true && normalizeEvidenceReceipt(result));
+}
+
 function saveMarkdown(folder, title, data) {
   const safeTitle = String(title || 'note').replace(/[^\w.-]+/g, '_').slice(0, 90);
   const file = path.join(MEMORY_ROOT, folder, `${Date.now()}-${safeTitle}.md`);
@@ -248,14 +259,15 @@ app.get('/api/health', (req, res) => sendOk(res, {
   service: 'vision-core-backend',
   version: '2.9.10-self-healing-config',
   status: 'ok',
-  pass_gold_ready: true
+  pass_gold_ready: false
 }));
 
 app.get('/api/readiness', (req, res) => sendOk(res, {
   ready: true,
-  status: 'GOLD',
-  pass_gold: true,
-  promotion_allowed: true,
+  status: 'READY',
+  pass_gold: false,
+  promotion_allowed: false,
+  pass_gold_reason: 'evidence receipt required from Go Core',
   endpoints: [
     'POST /api/copilot',
     'POST /api/hermes/analyze',
@@ -553,7 +565,7 @@ app.get('/api/run-live-stream', async (req, res) => {
 app.all('/api/openclaw/orchestrate', (req, res) => sendOk(res, { agent: 'OpenClaw', decision: 'route_to_pipeline', body_received: normalizeBody(req) }));
 app.all('/api/scanner/scan', (req, res) => sendOk(res, { agent: 'Scanner', stack: 'auto', files_detected: [] }));
 app.all('/api/aegis/validate', (req, res) => sendOk(res, { agent: 'Aegis', verdict: 'PASS', policy: 'no_promotion_without_pass_gold' }));
-app.all('/api/sddf/check', (req, res) => sendOk(res, { agent: 'SDDF', status: 'GOLD', pass_gold: true, promotion_allowed: true }));
+app.all('/api/sddf/check', (req, res) => sendOk(res, { agent: 'SDDF', status: 'GOLD', pass_gold: false, promotion_allowed: false, pass_gold_reason: 'evidence receipt required from Go Core' }));
 app.all('/api/operator/execute', (req, res) => sendOk(res, { agent: 'Operator', mode: normalizeBody(req).mode || 'dry-run', executed: true }));
 app.all('/api/archivist/learn', (req, res) => {
   const body = normalizeBody(req);
@@ -799,7 +811,7 @@ app.get('/api/metrics/agents', (req, res) => sendOk(res, { agents: [
 ]}));
 app.get('/api/metrics/summary', (req, res) => sendOk(res, { runtime: { cpu: 12, memory: 28, disk: 33, network: 8 } }));
 app.get('/api/dora-metrics', (req, res) => sendOk(res, { deployment_frequency: 'mock', lead_time: 'mock', mttr: 'mock', change_failure_rate: 'mock' }));
-app.get('/api/pass-gold/score', (req, res) => sendOk(res, { final: 100, status: 'GOLD', pass_gold: true, promotion_allowed: true }));
+app.get('/api/pass-gold/score', (req, res) => sendOk(res, { final: 100, status: 'GOLD', pass_gold: false, promotion_allowed: false, pass_gold_reason: 'evidence receipt required from Go Core' }));
 app.get('/api/logs/download', (req, res) => res.type('text/plain').send(`VISION CORE V2.9.10 SELF-HEALING CONFIG LOG\nPASS GOLD READY\n${now()}\n`));
 
 /* BAD PATH ALIAS */

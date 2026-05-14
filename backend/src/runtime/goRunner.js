@@ -37,12 +37,23 @@ function resolveGoBinary() {
 }
 
 // ── Normalizar resultado ──────────────────────────────────────────
+function makeBackendReceipt(parsed, stdout, stderr, bin) {
+  const mission = parsed.mission_id || 'mission';
+  const snap = parsed.snapshot_id || 'snapshot';
+  const status = parsed.pass_gold === true ? 'gold' : 'blocked';
+  const promoted = parsed.pass_gold === true && parsed.promotion_allowed === true ? 'promotion-allowed' : 'promotion-blocked';
+  const size = String((stdout || '').length + (stderr || '').length);
+  return ['evr', mission, snap, status, promoted, size, Date.now()].map(function (x) {
+    return String(x).replace(/[^a-zA-Z0-9._-]+/g, '-');
+  }).join('_');
+}
 function normalizeGoResult(parsed, stdout, stderr, bin) {
+  const receipt = parsed.evidence_receipt || makeBackendReceipt(parsed, stdout, stderr, bin);
   return {
     ok:                Boolean(parsed.ok),
     status:            parsed.status || (parsed.pass_gold ? 'GOLD' : 'FAIL'),
     pass_gold:         Boolean(parsed.pass_gold),
-    promotion_allowed: Boolean(parsed.promotion_allowed),
+    promotion_allowed: Boolean(parsed.pass_gold && parsed.promotion_allowed),
     rollback_ready:    Boolean(parsed.rollback_ready),
     rollback_applied:  Boolean(parsed.rollback_applied),
     mission_id:        parsed.mission_id  || null,
@@ -55,6 +66,8 @@ function normalizeGoResult(parsed, stdout, stderr, bin) {
     failed_gates:      Array.isArray(parsed.failed_gates) ? parsed.failed_gates : [],
     duration_ms:       Number(parsed.duration_ms || 0),
     summary:           parsed.summary || '',
+    evidence_receipt: receipt,
+    evidence_source: 'go_core_runtime_result',
     go_binary:         bin,
     stdout_chars:      stdout.length,
     stderr:            stderr.trim() || undefined,
@@ -203,6 +216,7 @@ async function streamGoMission({ root, input, res, missionId }) {
       status:            'GOLD',
       pass_gold:         true,
       promotion_allowed: result.promotion_allowed,
+      evidence_receipt:  result.evidence_receipt,
     });
     send('mission:complete', {
       mission_id:        result.mission_id || missionId,
@@ -210,6 +224,7 @@ async function streamGoMission({ root, input, res, missionId }) {
       status:            'GOLD',
       pass_gold:         true,
       promotion_allowed: result.promotion_allowed,
+      evidence_receipt:  result.evidence_receipt,
       rollback_ready:    result.rollback_ready,
       snapshot_id:       result.snapshot_id,
       rollback_applied:  result.rollback_applied,
@@ -217,6 +232,7 @@ async function streamGoMission({ root, input, res, missionId }) {
       engine:            result.engine,
       version:           result.version,
       summary:           result.summary,
+      evidence_receipt: result.evidence_receipt,
     });
   } else {
     send('mission:fail', {
@@ -225,8 +241,10 @@ async function streamGoMission({ root, input, res, missionId }) {
       status:            'FAIL',
       pass_gold:         false,
       promotion_allowed: false,
+      evidence_receipt:  result.evidence_receipt,
       failed_gates:      result.failed_gates || [],
       summary:           result.summary || 'FAIL GOLD',
+      evidence_receipt: result.evidence_receipt,
       error:             result.message || result.error || 'Go Core retornou FAIL',
     });
   }
@@ -253,6 +271,7 @@ async function checkGoHealth() {
       version:     result.version,
       pass_gold:   result.pass_gold,
       status:      result.status,
+      evidence_receipt: result.evidence_receipt,
       duration_ms: result.duration_ms,
       bin,
       bin_exists:  true,
