@@ -20,7 +20,7 @@
     "stripe": "^22.1.0"
   },
   "engines": {
-    "node": ">=20.18.1"
+    "node": ">=24.0.0"
   },
   "notes": {
     "v41_auth": "Auth real via Node built-ins: PBKDF2 + JWT HS256 manual. Sem bcrypt ou jsonwebtoken externos.",

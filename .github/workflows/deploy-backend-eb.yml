@@ -1,0 +1,58 @@
+name: Deploy Backend — AWS Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-backend-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to AWS Elastic Beanstalk
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Syntax check before deploy
+        run: node --check backend/server.js
+
+      - name: Generate deployment package
+        run: |
+          cd backend
+          zip -r ../deploy.zip . \
+            --exclude "*.test.*" \
+            --exclude "node_modules/*" \
+            --exclude ".env*" \
+            --exclude "*.log"
+
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: ${{ secrets.EB_APPLICATION_NAME }}
+          environment_name: ${{ secrets.EB_ENVIRONMENT_NAME }}
+          region: ${{ secrets.AWS_REGION }}
+          version_label: "v${{ github.run_number }}-${{ github.sha }}"
+          deployment_package: deploy.zip
+          wait_for_deployment: true
+          wait_for_environment_recovery: 120
+
+      - name: Post-deploy health check
+        run: |
+          sleep 20
+          curl -fsS "${{ secrets.EB_BACKEND_URL }}/api/health" > /dev/null
+          echo "Backend health OK"
