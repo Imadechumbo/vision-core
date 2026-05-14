@@ -66,6 +66,19 @@ if (!fs.existsSync(path)) {
   }
 }
 
+const normalizerPath = 'tools/v14-backend-receipt-normalizer.mjs';
+if (fs.existsSync(normalizerPath)) {
+  const normalizer = spawnSync(process.execPath, [normalizerPath], { encoding: 'utf8', shell: false });
+  const output = `${normalizer.stdout || ''}${normalizer.stderr || ''}`.trim();
+  if (output) {
+    const lines = output.split(/\r?\n/).filter(Boolean).slice(0, 8);
+    for (const line of lines) console.log('V14.1_NORMALIZER: ' + line);
+  }
+  if (normalizer.status !== 0) {
+    console.log('V14.1_NORMALIZER: BLOCKED; backend receipt normalization not applied');
+  }
+}
+
 const auditPath = 'tools/pi-harness-v141-audit.mjs';
 if (fs.existsSync(auditPath)) {
   const audit = spawnSync(process.execPath, [auditPath], { encoding: 'utf8', shell: false });
