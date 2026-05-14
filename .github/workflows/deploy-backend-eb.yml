@@ -50,7 +50,7 @@ jobs:
       - name: Upload bundle to S3
         run: |
           VERSION_LABEL="v${{ github.run_number }}-${{ github.sha }}"
-          S3_KEY="${EB_APP}/${VERSION_LABEL}.zip"
+          S3_KEY="${VERSION_LABEL}.zip"
           aws s3 cp deploy.zip "s3://${S3_BUCKET}/${S3_KEY}"
           echo "VERSION_LABEL=${VERSION_LABEL}" >> $GITHUB_ENV
           echo "S3_KEY=${S3_KEY}" >> $GITHUB_ENV
@@ -60,7 +60,8 @@ jobs:
           aws elasticbeanstalk create-application-version \
             --application-name "${EB_APP}" \
             --version-label "${{ env.VERSION_LABEL }}" \
-            --source-bundle S3Bucket="${S3_BUCKET}",S3Key="${{ env.S3_KEY }}"
+            --source-bundle S3Bucket="${S3_BUCKET}",S3Key="${{ env.S3_KEY }}" \
+            --auto-create-application
 
       - name: Deploy version to environment
         run: |
