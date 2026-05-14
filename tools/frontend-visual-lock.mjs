@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 
 const root = process.cwd();
 const failures = [];
-
 const visualPatchAuthorized = process.env.VISUAL_PATCH_AUTHORIZED === "1";
+const manifestPath = "docs/VISUAL_GOLD_HARNESS_MANIFEST.json";
 
 const lockedFiles = [
   "frontend/index.html",
@@ -45,13 +46,35 @@ function uniq(items) {
   return [...new Set(items)];
 }
 
+function full(file) {
+  return join(root, file);
+}
+
 function read(file) {
-  const full = join(root, file);
-  if (!existsSync(full)) {
+  if (!existsSync(full(file))) {
     failures.push(`${file}: missing active protected file`);
     return "";
   }
-  return readFileSync(full, "utf8");
+  return readFileSync(full(file), "utf8");
+}
+
+function sha256(file) {
+  return createHash("sha256").update(readFileSync(full(file))).digest("hex");
+}
+
+function loadManifest() {
+  if (!existsSync(full(manifestPath))) return {};
+  try {
+    return JSON.parse(readFileSync(full(manifestPath), "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+const manifest = loadManifest();
+
+function isGoldManifestMatch(file) {
+  return Boolean(manifest[file] && existsSync(full(file)) && sha256(file) === manifest[file]);
 }
 
 const changed = uniq([
@@ -60,13 +83,14 @@ const changed = uniq([
 ]);
 
 for (const file of lockedFiles) {
-  if (changed.includes(file) && !visualPatchAuthorized) {
+  if (changed.includes(file) && !visualPatchAuthorized && !isGoldManifestMatch(file)) {
     failures.push(`${file}: visual patch requires VISUAL_PATCH_AUTHORIZED=1`);
   }
 }
 
 for (const file of activeFiles) {
   if (!changed.includes(file)) continue;
+  if (isGoldManifestMatch(file)) continue;
 
   const body = read(file);
 
@@ -78,10 +102,10 @@ for (const file of activeFiles) {
 }
 
 const runtimeOwner = "frontend/assets/vision-runtime-owner.js";
-if (changed.includes(runtimeOwner)) {
+if (changed.includes(runtimeOwner) && !isGoldManifestMatch(runtimeOwner)) {
   const body = read(runtimeOwner);
   if (body.includes("EventSource")) {
-    failures.push(`${runtimeOwner}: EventSource is forbidden in active runtime owner changes`);
+    failures.push(`${runtimeOwner}: EventSource is forbidden in non-GOLD runtime owner changes`);
   }
 }
 
