@@ -97,6 +97,18 @@
     "error": {
       "type": "string"
     },
+    "backend_stub": {
+      "type": "boolean"
+    },
+    "backendStub": {
+      "type": "boolean"
+    },
+    "backendHasMissionId": {
+      "type": "boolean"
+    },
+    "backendHasEvidenceReceipt": {
+      "type": "boolean"
+    },
     "evidence_receipt": {
       "type": "object",
       "description": "Evidence receipt after mission completion",
