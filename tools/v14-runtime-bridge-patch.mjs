@@ -106,5 +106,6 @@ runProbe('V14.1_ENDPOINT_CONTRACT', 'tools/pi-harness-v141-endpoint-contract-aud
 runProbe('V14.1_GOLD_GATE', 'tools/pi-harness-v141-gold-gate-audit.mjs', 10);
 runProbe('V14.1_FINAL_BACKEND_AUDIT', 'tools/pi-harness-v141-final-audit.mjs', 10);
 runProbe('V14.1_RELEASE_READINESS', 'tools/pi-harness-v141-release-readiness-audit.mjs', 10);
+runProbe('V14.1_EVIDENCE_SUMMARY', 'tools/pi-harness-v141-evidence-summary.mjs', 10);
 
 if (!changed) process.exit(0);
