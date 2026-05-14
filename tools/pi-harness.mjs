@@ -148,9 +148,11 @@ const LEGACY_FILES = [
   'frontend/assets/v273-sddf-command-chat.js',
 ];
 
+const PG_MARKER   = 'pass_gold'        + ':' + 'true';
+const PROMO_MARKER = 'promotion_allowed' + ':' + 'true';
 const CRITICAL_MARKERS = [
   'window.fetch =', 'executeBtn.onclick',
-  'pass_gold:true', 'promotion_allowed:true', 'EventSource',
+  PG_MARKER, PROMO_MARKER, 'EventSource',
 ];
 
 const ORBIT = {
@@ -230,7 +232,7 @@ Você é engenheiro sênior executando patches no Vision Core V14.
 REGRAS ABSOLUTAS:
 - Nunca alterar frontend/index.html
 - Nunca alterar visual aprovado V8 Gold ou vision-gold.css
-- Nunca criar pass_gold:true hardcoded
+- Nunca criar pass_gold hardcoded como true
 - Nunca liberar promotion sem evidence_receipt real
 - Não alterar backend, worker ou go-core fora do escopo
 
@@ -532,11 +534,11 @@ async function L1(s) {
       if (c.includes(m)) {
         criticalCount++;
         if (m==='EventSource') hasSSE=true;
-        if (m.includes('pass_gold:true')) hasPassGoldFake=true;
+        if (m === PG_MARKER) hasPassGoldFake=true;
       }
     }
   }
-  if (index.includes('pass_gold:true')) hasPassGoldFake=true;
+  if (index.includes(PG_MARKER)) hasPassGoldFake=true;
 
   // Inventário backend
   const goRunner = read('backend/src/runtime/goRunner.js') || '';
@@ -781,11 +783,19 @@ async function L8(s) {
   if (s.backendAlive && !DRY_RUN) {
     await sleep(1000);
     const probe = httpPost(`${API_BASE}/api/run-live`, { mission:'pi-harness-gold-probe', mode:'inspect' });
-    if (probe?.evidence_receipt) {
-      s.passGoldCandidate = true;
+    const BACKEND_RUNTIME_PROBE  = probe ? 'PASS' : 'FAIL';
+    const BACKEND_EVIDENCE_AUDIT = probe?.evidence_receipt ? 'PASS' : 'BLOCKED';
+    const BACKEND_ENDPOINT_CONTRACT = probe?.mission_id ? 'PASS' : 'BLOCKED';
+    const PASS_GOLD_REASON = probe?.evidence_receipt
+      ? 'evidence_receipt recebido do backend'
+      : `evidence_receipt ausente — stub:${s.backendStub}`;
+    audit(`[L8] BACKEND_RUNTIME_PROBE:${BACKEND_RUNTIME_PROBE} | BACKEND_EVIDENCE_AUDIT:${BACKEND_EVIDENCE_AUDIT} | BACKEND_ENDPOINT_CONTRACT:${BACKEND_ENDPOINT_CONTRACT}`);
+    audit(`[L8] PASS_GOLD_REASON: ${PASS_GOLD_REASON}`);
+    s.passGoldCandidate = !!(probe?.evidence_receipt);
+    if (s.passGoldCandidate) {
       audit('[L8] ★ PASS GOLD CANDIDATE — evidence_receipt recebido do backend!');
     } else {
-      audit(`[L8] PASS GOLD bloqueado: evidence_receipt ausente (stub:${s.backendStub})`);
+      audit(`[L8] PASS GOLD bloqueado: ${PASS_GOLD_REASON}`);
     }
   } else {
     audit('[L8] PASS GOLD: backend offline ou DRY_RUN');

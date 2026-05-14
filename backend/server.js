@@ -569,7 +569,7 @@ app.get('/api/run-live-stream', async (req, res) => {
 app.all('/api/openclaw/orchestrate', (req, res) => sendOk(res, { agent: 'OpenClaw', decision: 'route_to_pipeline', body_received: normalizeBody(req) }));
 app.all('/api/scanner/scan', (req, res) => sendOk(res, { agent: 'Scanner', stack: 'auto', files_detected: [] }));
 app.all('/api/aegis/validate', (req, res) => sendOk(res, { agent: 'Aegis', verdict: 'PASS', policy: 'no_promotion_without_pass_gold' }));
-app.all('/api/sddf/check', (req, res) => sendOk(res, { agent: 'SDDF', status: 'GOLD', pass_gold: false, promotion_allowed: false, pass_gold_reason: 'evidence receipt required from Go Core' }));
+app.all('/api/sddf/check', (req, res) => sendOk(res, { agent: 'SDDF', status: 'SDDF_ACTIVE', pass_gold: false, promotion_allowed: false, pass_gold_reason: 'evidence receipt required from Go Core' }));
 app.all('/api/operator/execute', (req, res) => sendOk(res, { agent: 'Operator', mode: normalizeBody(req).mode || 'dry-run', executed: true }));
 app.all('/api/archivist/learn', (req, res) => {
   const body = normalizeBody(req);
@@ -811,11 +811,11 @@ app.get('/api/metrics/agents', (req, res) => sendOk(res, { agents: [
   { name: 'Hermes RCA', status: 'ok', cost: 0.815 },
   { name: 'Scanner', status: 'ok', cost: 0.377 },
   { name: 'Aegis', status: 'PASS', cost: 0.264 },
-  { name: 'PASS GOLD', status: 'GOLD', cost: 0.471 }
+  { name: 'PASS GOLD', status: 'PENDING_EVIDENCE', cost: 0.471 }
 ]}));
 app.get('/api/metrics/summary', (req, res) => sendOk(res, { runtime: { cpu: 12, memory: 28, disk: 33, network: 8 } }));
 app.get('/api/dora-metrics', (req, res) => sendOk(res, { deployment_frequency: 'mock', lead_time: 'mock', mttr: 'mock', change_failure_rate: 'mock' }));
-app.get('/api/pass-gold/score', (req, res) => sendOk(res, { final: 100, status: 'GOLD', pass_gold: false, promotion_allowed: false, pass_gold_reason: 'evidence receipt required from Go Core' }));
+app.get('/api/pass-gold/score', (req, res) => sendOk(res, { final: 100, status: 'PENDING_EVIDENCE', pass_gold: false, promotion_allowed: false, pass_gold_reason: 'evidence receipt required from Go Core' }));
 app.get('/api/logs/download', (req, res) => res.type('text/plain').send(`VISION CORE V2.9.10 SELF-HEALING CONFIG LOG\nPASS GOLD READY\n${now()}\n`));
 
 /* BAD PATH ALIAS */

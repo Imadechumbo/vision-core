@@ -3,6 +3,7 @@
 
   var running = false;
   var source = null;
+  var activeMissionId = null;
 
   function byId(id) { return document.getElementById(id); }
   function log(line) {
@@ -25,6 +26,18 @@
       source = null;
     }
     if (reason) { log(reason); }
+  }
+  function streamState() {
+    return {
+      running: running,
+      connected: !!source,
+      mission_id: activeMissionId || '',
+      source: source ? 'eventsource' : 'idle'
+    };
+  }
+  function normalizePayload(payload) {
+    if (!payload || typeof payload !== 'object') { return {}; }
+    return payload;
   }
   function realMissionId(payload) {
     var id = payload && payload.mission_id;
@@ -61,6 +74,7 @@
       log('POST /api/run-live');
       var start = await window.VisionApi.post('/api/run-live', { mission: text });
       var id = realMissionId(start);
+      activeMissionId = id || null;
       if (!id) {
         report(Object.assign({}, start || {}, { state: 'BLOCKED', block_reason: 'Backend did not return mission_id' }));
         release('BLOCKED: backend did not return mission_id');
@@ -85,6 +99,14 @@
     if (button) { button.addEventListener('click', function () { window.VisionRuntimeOwner.executeMission(); }); }
   }
 
-  window.VisionRuntimeOwner = { executeMission: executeMission };
+  window.VisionRuntimeOwner = {
+    executeMission: executeMission,
+    realMissionId: realMissionId,
+    release: release,
+    handleEvent: handleEvent,
+    normalizePayload: normalizePayload,
+    report: report,
+    streamState: streamState
+  };
   document.addEventListener('DOMContentLoaded', bind);
 }());
