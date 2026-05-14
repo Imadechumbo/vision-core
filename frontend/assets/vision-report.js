@@ -3,32 +3,50 @@
 
   function byId(id) { return document.getElementById(id); }
   function validEvidence(value) { return typeof value === 'string' && value.trim().length >= 8; }
+<<<<<<< Updated upstream
   function safeText(value) { return value === undefined || value === null || value === '' ? '—' : String(value); }
   function boolText(value) { return value === true ? 'true' : 'false'; }
   function list(value) {
     if (Array.isArray(value)) { return value.length ? value.map(safeText).join('\n') : '—'; }
     return safeText(value);
   }
+=======
+  function list(value) {
+    if (Array.isArray(value)) { return value.length ? value.join('\n') : '—'; }
+    return value || '—';
+  }
+  function boolText(value) { return value === true ? 'true' : 'false'; }
+  function safeText(value) { return value === undefined || value === null || value === '' ? '—' : String(value); }
+>>>>>>> Stashed changes
 
   function normalized(payload) {
     var data = payload && typeof payload === 'object' ? payload : {};
     var hasEvidence = validEvidence(data.evidence_receipt);
     var passed = data.pass_gold === true && data.promotion_allowed === true && hasEvidence;
     return {
+<<<<<<< Updated upstream
       mission_id: data.mission_id || data.missionId || data.id || '—',
       project: data.project || data.project_id || data.repository || '—',
       mode: data.mode || data.execution_mode || 'local/runtime-owner',
       difficulty: data.difficulty || data.pi_difficulty || '—',
       layer: data.layer || data.current_layer || data.max_layer || '—',
+=======
+      mission_id: data.mission_id || data.id || '—',
+      project: data.project || data.repository || '—',
+      mode: data.mode || 'local/runtime-owner',
+>>>>>>> Stashed changes
       state: hasEvidence ? (data.state || data.status || 'INCOMPLETE') : 'INCOMPLETE / BLOCKED — evidence missing',
       passGold: passed,
       promotionAllowed: passed,
       evidence: hasEvidence ? data.evidence_receipt : 'evidence missing',
       rootCause: data.root_cause || data.rootCause || (hasEvidence ? '—' : 'Real evidence receipt was not provided by backend.'),
       files: data.files_changed || data.changed_files || data.files || [],
+<<<<<<< Updated upstream
       commands: data.commands || data.commands_run || [],
       validations: data.validations || data.validation_results || data.tests || [],
       snapshot: data.snapshot_id || data.snapshot || '—',
+=======
+>>>>>>> Stashed changes
       logs: data.logs || data.events || [],
       blockReason: hasEvidence ? (data.block_reason || data.blocked_reason || '—') : 'BLOCKED — evidence missing'
     };
@@ -45,6 +63,7 @@
     return node;
   }
 
+<<<<<<< Updated upstream
   function chatTarget() {
     return byId('v298ChatStream') || byId('v297ChatLog') || byId('v236CopilotMiniChat') || document.querySelector('.v236-copilot-mini-chat');
   }
@@ -90,10 +109,13 @@
     return card;
   }
 
+=======
+>>>>>>> Stashed changes
   function render(payload) {
     var data = normalized(payload);
     var root = byId('missionReport');
     var state = byId('reportState');
+<<<<<<< Updated upstream
     if (root) {
       root.replaceChildren(
         item('Mission ID', safeText(data.mission_id)),
@@ -114,10 +136,27 @@
         item('Motivo de bloqueio', safeText(data.blockReason), true)
       );
     }
+=======
+    if (!root) { return data; }
+    root.replaceChildren(
+      item('Mission ID', safeText(data.mission_id)),
+      item('Projeto', safeText(data.project)),
+      item('Modo', safeText(data.mode)),
+      item('Estado', safeText(data.state)),
+      item('PASS GOLD', boolText(data.passGold)),
+      item('Promotion Allowed', boolText(data.promotionAllowed)),
+      item('Evidence Receipt', safeText(data.evidence), true),
+      item('Root Cause', safeText(data.rootCause), true),
+      item('Arquivos alterados', list(data.files), true),
+      item('Logs', list(data.logs), true),
+      item('Motivo de bloqueio', safeText(data.blockReason), true)
+    );
+>>>>>>> Stashed changes
     if (state) {
       state.textContent = data.passGold ? 'GOLD' : 'BLOCKED';
       state.className = 'status-pill ' + (data.passGold ? 'gold' : 'blocked');
     }
+<<<<<<< Updated upstream
     if (payload && typeof payload === 'object' && (payload.evidence_receipt || payload.mission_id || payload.status || payload.state)) {
       renderChat(payload);
     }
@@ -137,5 +176,11 @@
     }
   };
 
+=======
+    return data;
+  }
+
+  window.VisionReport = { render: render, hasValidEvidence: validEvidence };
+>>>>>>> Stashed changes
   document.addEventListener('DOMContentLoaded', function () { render({}); });
 }());

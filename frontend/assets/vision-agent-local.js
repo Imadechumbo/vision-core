@@ -1,6 +1,7 @@
 (function () {
   'use strict';
 
+<<<<<<< Updated upstream
   var OCTAGON = {
     openclaw:    { top: '5%',    left: '50%'   },
     scanner:     { top: '18.2%', left: '81.8%' },
@@ -62,11 +63,32 @@
     return !!(payload && payload.pass_gold === true && payload.promotion_allowed === true && hasEvidence(payload));
   }
 
+=======
+  var agents = [
+    { name: 'OpenClaw', contract: 'Coordena a missão e valida handoff entre agentes.' },
+    { name: 'Scanner', contract: 'Inspeciona sinais, riscos e evidências técnicas.' },
+    { name: 'Hermes', contract: 'Comunica eventos, status e síntese operacional.' },
+    { name: 'PatchEngine', contract: 'Prepara alterações somente quando há contrato válido.' },
+    { name: 'Aegis', contract: 'Aplica política de bloqueio e segurança.' },
+    { name: 'PASS GOLD', contract: 'Só acende com autorização de promoção e recibo de evidência válido.', gold: true },
+    { name: 'PR GitHub', contract: 'Depende de integração autorizada pelo servidor.' }
+  ];
+  var lastPayload = {};
+
+  function byId(id) { return document.getElementById(id); }
+  function hasEvidence(payload) {
+    return !!(window.VisionReport && window.VisionReport.hasValidEvidence(payload && payload.evidence_receipt));
+  }
+  function hasGold(payload) {
+    return !!(payload && payload.pass_gold === true && payload.promotion_allowed === true && hasEvidence(payload));
+  }
+>>>>>>> Stashed changes
   function statusFor(agent, payload) {
     if (agent.gold) { return hasGold(payload) ? 'GOLD VERIFIED' : 'BLOCKED'; }
     if (payload && (payload.state || payload.status)) { return String(payload.state || payload.status).toUpperCase(); }
     return 'WAITING';
   }
+<<<<<<< Updated upstream
 
   function setText(id, value) {
     var node = byId(id);
@@ -82,6 +104,8 @@
       .replace(/[^a-z0-9]/g, '');
   }
 
+=======
+>>>>>>> Stashed changes
   function position(index, total) {
     var angle = (Math.PI * 2 * index / total) - Math.PI / 2;
     var radius = 38;
@@ -90,13 +114,19 @@
       top: 50 + Math.sin(angle) * radius
     };
   }
+<<<<<<< Updated upstream
 
   function showDetail(agent) {
     var detail = byId('agentDetail') || byId('mcTooltip');
+=======
+  function showDetail(agent) {
+    var detail = byId('agentDetail');
+>>>>>>> Stashed changes
     if (!detail) { return; }
     var evidence = hasEvidence(lastPayload) ? lastPayload.evidence_receipt : 'missing';
     detail.textContent = agent.name + ' · contrato: ' + agent.contract + ' · status: ' + statusFor(agent, lastPayload) + ' · evidence: ' + evidence;
   }
+<<<<<<< Updated upstream
 
   function setNode(key, status, elapsedStr) {
     var n = query('.mc-node[data-key="' + key + '"]');
@@ -185,6 +215,11 @@
       updateLegacyOrbit(lastPayload);
       return;
     }
+=======
+  function render() {
+    var orbit = byId('agentOrbit');
+    if (!orbit) { return; }
+>>>>>>> Stashed changes
     orbit.replaceChildren();
     agents.forEach(function (agent, index) {
       var node = document.createElement('button');
@@ -199,15 +234,19 @@
       node.addEventListener('click', function () { showDetail(agent); });
       orbit.appendChild(node);
     });
+<<<<<<< Updated upstream
   }
 
   function renderStatus() {
+=======
+>>>>>>> Stashed changes
     var status = byId('agentStatus');
     if (status) {
       status.textContent = hasGold(lastPayload) ? 'GOLD VERIFIED' : (lastPayload.state || lastPayload.status || 'WAITING');
       status.className = 'status-pill ' + (hasGold(lastPayload) ? 'gold' : 'muted');
     }
   }
+<<<<<<< Updated upstream
 
   function metricValue(metric) {
     if (metric.cost != null) { return String(metric.cost); }
@@ -357,4 +396,14 @@
 
   document.addEventListener('DOMContentLoaded', boot);
   if (document.readyState !== 'loading') { boot(); }
+=======
+  function update(payload) {
+    lastPayload = payload && typeof payload === 'object' ? payload : {};
+    render();
+    return { gold: hasGold(lastPayload), evidence: hasEvidence(lastPayload) };
+  }
+
+  window.VisionAgentLocal = { update: update, render: render };
+  document.addEventListener('DOMContentLoaded', render);
+>>>>>>> Stashed changes
 }());

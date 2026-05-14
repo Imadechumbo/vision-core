@@ -3,6 +3,7 @@
 
   var running = false;
   var source = null;
+<<<<<<< Updated upstream
   var activeMissionId = '';
 
   function byId(id) { return document.getElementById(id); }
@@ -44,10 +45,24 @@
     var coreStatus = byId('mcCoreStatus');
     if (coreStatus) { coreStatus.textContent = text; }
   }
+=======
+
+  function byId(id) { return document.getElementById(id); }
+  function log(line) {
+    var logs = byId('runtimeLogs');
+    var text = '[' + new Date().toISOString() + '] ' + line;
+    if (logs) { logs.textContent = (logs.textContent ? logs.textContent + '\n' : '') + text; }
+  }
+  function missionText() {
+    var input = byId('missionInput');
+    return input ? input.value.trim() : '';
+  }
+>>>>>>> Stashed changes
   function report(payload) {
     if (window.VisionReport) { window.VisionReport.render(payload); }
     if (window.VisionAgentLocal) { window.VisionAgentLocal.update(payload); }
   }
+<<<<<<< Updated upstream
   function closeSource() {
     if (source) {
       try { source.close(); } catch (_) {}
@@ -102,12 +117,44 @@
     }
     return true;
   }
+=======
+  function release(reason) {
+    running = false;
+    if (source) {
+      source.close();
+      source = null;
+    }
+    if (reason) { log(reason); }
+  }
+  function realMissionId(payload) {
+    var id = payload && payload.mission_id;
+    return typeof id === 'string' && id.trim().length > 0 ? id.trim() : '';
+  }
+  function handleEvent(raw) {
+    var payload;
+    try { payload = JSON.parse(raw); } catch (error) { payload = { logs: [raw], state: 'STREAM' }; }
+    report(payload);
+    if (payload.log || payload.message) { log(payload.log || payload.message); }
+    var state = String(payload.state || payload.status || '').toLowerCase();
+    if (state === 'done' || state === 'error' || state === 'fail' || state === 'failed') {
+      release('runtime released: ' + state);
+    }
+  }
+>>>>>>> Stashed changes
   async function executeMission() {
     if (running) {
       log('BLOCKED: mission already running');
       return;
     }
+<<<<<<< Updated upstream
     if (!requireApi()) { return; }
+=======
+    if (!window.VisionApi) {
+      report({ state: 'BLOCKED', block_reason: 'VisionApi unavailable' });
+      log('BLOCKED: VisionApi unavailable');
+      return;
+    }
+>>>>>>> Stashed changes
     var text = missionText();
     if (!text) {
       report({ state: 'BLOCKED', block_reason: 'Mission text is required' });
@@ -115,6 +162,7 @@
       return;
     }
     running = true;
+<<<<<<< Updated upstream
     closeSource();
     activeMissionId = '';
     setStatus('RUNNING', 'running');
@@ -127,12 +175,18 @@
         mode: runMode(),
         source: 'vision-runtime-owner'
       });
+=======
+    try {
+      log('POST /api/run-live');
+      var start = await window.VisionApi.post('/api/run-live', { mission: text });
+>>>>>>> Stashed changes
       var id = realMissionId(start);
       if (!id) {
         report(Object.assign({}, start || {}, { state: 'BLOCKED', block_reason: 'Backend did not return mission_id' }));
         release('BLOCKED: backend did not return mission_id');
         return;
       }
+<<<<<<< Updated upstream
       activeMissionId = id;
       report(Object.assign({}, start, { mission_id: id, state: start.state || 'RUNNING' }));
       log('STREAM ' + window.VisionApi.streamUrl(id));
@@ -141,6 +195,13 @@
       ['open', 'step', 'gate', 'progress', 'pass_gold', 'done', 'completed', 'fail', 'error'].forEach(function (name) {
         source.addEventListener(name, function (event) { handleEvent(event.data || '{}', name); });
       });
+=======
+      report(Object.assign({}, start, { state: start.state || 'RUNNING' }));
+      source = new EventSource(window.VisionApi.streamUrl(id));
+      source.onmessage = function (event) { handleEvent(event.data); };
+      source.addEventListener('done', function (event) { handleEvent(event.data || '{"state":"done"}'); });
+      source.addEventListener('fail', function (event) { handleEvent(event.data || '{"state":"fail"}'); });
+>>>>>>> Stashed changes
       source.onerror = function () {
         report({ mission_id: id, state: 'BLOCKED', block_reason: 'stream error' });
         release('runtime released: stream error');
@@ -151,6 +212,7 @@
     }
   }
   function bind() {
+<<<<<<< Updated upstream
     ['executeMissionBtn', 'executeBtn'].forEach(function (id) {
       var button = byId(id);
       if (!button || button.__visionRuntimeOwnerBound) { return; }
@@ -174,4 +236,12 @@
 
   document.addEventListener('DOMContentLoaded', bind);
   if (document.readyState !== 'loading') { bind(); }
+=======
+    var button = byId('executeMissionBtn');
+    if (button) { button.addEventListener('click', function () { window.VisionRuntimeOwner.executeMission(); }); }
+  }
+
+  window.VisionRuntimeOwner = { executeMission: executeMission };
+  document.addEventListener('DOMContentLoaded', bind);
+>>>>>>> Stashed changes
 }());
