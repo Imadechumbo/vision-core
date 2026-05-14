@@ -31,15 +31,19 @@ const forbiddenPatterns = [
   "promotion_allowed:true"
 ];
 
-function changedFiles(args) {
+function runGit(args) {
   try {
-    return execFileSync("git", args, { cwd: root, encoding: "utf8" })
-      .split(/\r?\n/)
-      .map((x) => x.trim())
-      .filter(Boolean);
+    return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
   } catch {
-    return [];
+    return "";
   }
+}
+
+function lines(text) {
+  return String(text || "")
+    .split(/\r?\n/)
+    .map((x) => x.trim())
+    .filter(Boolean);
 }
 
 function uniq(items) {
@@ -67,8 +71,37 @@ function loadManifest() {
   try {
     return JSON.parse(readFileSync(full(manifestPath), "utf8"));
   } catch {
+    failures.push(`${manifestPath}: invalid JSON`);
     return {};
   }
+}
+
+function baseRef() {
+  const candidates = [
+    process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : "",
+    process.env.GITHUB_BASE_SHA || "",
+    "origin/main"
+  ].filter(Boolean);
+
+  for (const ref of candidates) {
+    if (runGit(["rev-parse", "--verify", ref])) return ref;
+  }
+  return "";
+}
+
+function changedFiles() {
+  const local = [
+    ...lines(runGit(["diff", "--name-only"])),
+    ...lines(runGit(["diff", "--cached", "--name-only"]))
+  ];
+
+  const base = baseRef();
+  if (!base) return uniq(local);
+
+  const mergeBase = runGit(["merge-base", "HEAD", base]) || base;
+  const againstBase = lines(runGit(["diff", "--name-only", `${mergeBase}...HEAD`]));
+
+  return uniq([...local, ...againstBase]);
 }
 
 const manifest = loadManifest();
@@ -77,14 +110,11 @@ function isGoldManifestMatch(file) {
   return Boolean(manifest[file] && existsSync(full(file)) && sha256(file) === manifest[file]);
 }
 
-const changed = uniq([
-  ...changedFiles(["diff", "--name-only"]),
-  ...changedFiles(["diff", "--cached", "--name-only"])
-]);
+const changed = changedFiles();
 
 for (const file of lockedFiles) {
   if (changed.includes(file) && !visualPatchAuthorized && !isGoldManifestMatch(file)) {
-    failures.push(`${file}: visual patch requires VISUAL_PATCH_AUTHORIZED=1`);
+    failures.push(`${file}: visual patch requires VISUAL_PATCH_AUTHORIZED=1 unless it matches GOLD manifest`);
   }
 }
 
@@ -112,6 +142,8 @@ if (changed.includes(runtimeOwner) && !isGoldManifestMatch(runtimeOwner)) {
 if (failures.length) {
   console.error("FRONTEND VISUAL LOCK FAIL");
   for (const failure of failures) console.error("- " + failure);
+  console.error("Changed files inspected:");
+  for (const file of changed) console.error("  " + file);
   process.exit(2);
 }
 
