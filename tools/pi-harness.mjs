@@ -593,6 +593,42 @@ async function L6_Validation() {
     audit('backend server syntax: ' + (backendServerCheck.ok ? 'PASS' : 'BLOCKED'));
   }
 
+  if (existsSync(join(ROOT, 'tools/pi-harness-v141-backend-probe.mjs'))) {
+    const probe = shFull('node tools/pi-harness-v141-backend-probe.mjs');
+    evidence(`BACKEND_RUNTIME_PROBE: ${probe.ok ? 'PASS' : 'BLOCKED'}`);
+    audit('backend runtime probe: ' + (probe.ok ? 'PASS' : 'BLOCKED'));
+  }
+
+  if (existsSync(join(ROOT, 'tools/pi-harness-v141-endpoint-contract-audit.mjs'))) {
+    const probe = shFull('node tools/pi-harness-v141-endpoint-contract-audit.mjs');
+    evidence(`BACKEND_ENDPOINT_CONTRACT: ${probe.ok ? 'PASS' : 'BLOCKED'}`);
+    audit('backend endpoint contract: ' + (probe.ok ? 'PASS' : 'BLOCKED'));
+  }
+
+  if (existsSync(join(ROOT, 'tools/pi-harness-v141-gold-gate-audit.mjs'))) {
+    const probe = shFull('node tools/pi-harness-v141-gold-gate-audit.mjs');
+    evidence(`BACKEND_GOLD_GATE_AUDIT: ${probe.ok ? 'PASS' : 'BLOCKED'}`);
+    audit('backend gold gate audit: ' + (probe.ok ? 'PASS' : 'BLOCKED'));
+  }
+
+  if (existsSync(join(ROOT, 'tools/pi-harness-v141-final-audit.mjs'))) {
+    const probe = shFull('node tools/pi-harness-v141-final-audit.mjs');
+    evidence(`BACKEND_FINAL_AUDIT: ${probe.ok ? 'PASS' : 'BLOCKED'}`);
+    audit('backend final audit: ' + (probe.ok ? 'PASS' : 'BLOCKED'));
+  }
+
+  if (existsSync(join(ROOT, 'tools/pi-harness-v141-release-readiness-audit.mjs'))) {
+    const probe = shFull('node tools/pi-harness-v141-release-readiness-audit.mjs');
+    evidence(`RELEASE_READINESS: ${probe.ok ? 'PASS' : 'BLOCKED'}`);
+    audit('release readiness audit: ' + (probe.ok ? 'PASS' : 'BLOCKED'));
+  }
+
+  if (existsSync(join(ROOT, 'tools/pi-harness-v141-evidence-summary.mjs'))) {
+    const probe = shFull('node tools/pi-harness-v141-evidence-summary.mjs');
+    evidence(`V141_EVIDENCE_SUMMARY: ${probe.ok ? 'PASS' : 'BLOCKED'}`);
+    audit('v141 evidence summary: ' + (probe.ok ? 'PASS' : 'BLOCKED'));
+  }
+
   if (existsSync(join(ROOT, 'tools/pi-harness-v141-audit.mjs'))) {
     const backendAudit = shFull('node tools/pi-harness-v141-audit.mjs');
     evidence(`BACKEND_EVIDENCE_AUDIT: ${backendAudit.ok ? 'PASS' : 'BLOCKED'}`);
@@ -647,6 +683,7 @@ async function L7_EvidenceReceipt() {
       'frontend/assets/vision-v35-telemetry.js',
       'frontend/assets/v231-backend-agents.js',
       'backend/src/runtime/goRunner.js',
+      'backend/server.js',
       'tools/',
       'docs/',
       '.github/',
