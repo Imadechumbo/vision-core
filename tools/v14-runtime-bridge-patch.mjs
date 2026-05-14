@@ -5,6 +5,17 @@ import { spawnSync } from 'node:child_process';
 const path = 'frontend/assets/vision-runtime-owner.js';
 let changed = false;
 
+function runProbe(label, file, limit = 8) {
+  if (!fs.existsSync(file)) return;
+  const run = spawnSync(process.execPath, [file], { encoding: 'utf8', shell: false });
+  const output = `${run.stdout || ''}${run.stderr || ''}`.trim();
+  if (output) {
+    const lines = output.split(/\r?\n/).filter(Boolean).slice(0, limit);
+    for (const line of lines) console.log(label + ': ' + line);
+  }
+  if (run.status !== 0) console.log(label + ': BLOCKED');
+}
+
 if (!fs.existsSync(path)) {
   console.log('SKIP: runtime owner file not found');
 } else {
@@ -66,15 +77,7 @@ if (!fs.existsSync(path)) {
   }
 }
 
-const harnessValidationPatcher = 'tools/v14-pi-harness-backend-validation-patch.mjs';
-if (fs.existsSync(harnessValidationPatcher)) {
-  const validationPatch = spawnSync(process.execPath, [harnessValidationPatcher], { encoding: 'utf8', shell: false });
-  const output = `${validationPatch.stdout || ''}${validationPatch.stderr || ''}`.trim();
-  if (output) {
-    const lines = output.split(/\r?\n/).filter(Boolean).slice(0, 8);
-    for (const line of lines) console.log('V14.1_HARNESS_PATCH: ' + line);
-  }
-}
+runProbe('V14.1_HARNESS_PATCH', 'tools/v14-pi-harness-backend-validation-patch.mjs');
 
 const harnessPath = 'tools/pi-harness.mjs';
 if (fs.existsSync(harnessPath)) {
@@ -96,30 +99,8 @@ if (fs.existsSync(harnessPath)) {
   }
 }
 
-const normalizerPath = 'tools/v14-backend-receipt-normalizer.mjs';
-if (fs.existsSync(normalizerPath)) {
-  const normalizer = spawnSync(process.execPath, [normalizerPath], { encoding: 'utf8', shell: false });
-  const output = `${normalizer.stdout || ''}${normalizer.stderr || ''}`.trim();
-  if (output) {
-    const lines = output.split(/\r?\n/).filter(Boolean).slice(0, 8);
-    for (const line of lines) console.log('V14.1_NORMALIZER: ' + line);
-  }
-  if (normalizer.status !== 0) {
-    console.log('V14.1_NORMALIZER: BLOCKED; backend receipt normalization not applied');
-  }
-}
-
-const auditPath = 'tools/pi-harness-v141-audit.mjs';
-if (fs.existsSync(auditPath)) {
-  const audit = spawnSync(process.execPath, [auditPath], { encoding: 'utf8', shell: false });
-  const output = `${audit.stdout || ''}${audit.stderr || ''}`.trim();
-  if (output) {
-    const lines = output.split(/\r?\n/).filter(Boolean).slice(0, 8);
-    for (const line of lines) console.log('V14.1_AUDIT: ' + line);
-  }
-  if (audit.status !== 0) {
-    console.log('V14.1_AUDIT: BLOCKED until backend evidence receipt is absorbed locally by PI Harness');
-  }
-}
+runProbe('V14.1_NORMALIZER', 'tools/v14-backend-receipt-normalizer.mjs');
+runProbe('V14.1_AUDIT', 'tools/pi-harness-v141-audit.mjs');
+runProbe('V14.1_RUNTIME_PROBE', 'tools/pi-harness-v141-backend-probe.mjs', 10);
 
 if (!changed) process.exit(0);
