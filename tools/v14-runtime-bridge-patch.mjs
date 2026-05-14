@@ -103,5 +103,6 @@ runProbe('V14.1_NORMALIZER', 'tools/v14-backend-receipt-normalizer.mjs');
 runProbe('V14.1_AUDIT', 'tools/pi-harness-v141-audit.mjs');
 runProbe('V14.1_RUNTIME_PROBE', 'tools/pi-harness-v141-backend-probe.mjs', 10);
 runProbe('V14.1_ENDPOINT_CONTRACT', 'tools/pi-harness-v141-endpoint-contract-audit.mjs', 10);
+runProbe('V14.1_GOLD_GATE', 'tools/pi-harness-v141-gold-gate-audit.mjs', 10);
 
 if (!changed) process.exit(0);
