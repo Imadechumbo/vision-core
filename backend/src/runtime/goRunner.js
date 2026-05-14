@@ -101,6 +101,7 @@ async function runGoMission({ root, input, dryRun } = {}) {
       return finish({
         ok: false, status: 'FAIL', pass_gold: false, promotion_allowed: false,
         error_type: 'go_runtime_failure', message: err.message, go_binary: bin,
+        evidence_receipt: makeBackendReceipt({}, '', err.message, bin),
       });
     }
 
@@ -110,6 +111,7 @@ async function runGoMission({ root, input, dryRun } = {}) {
         ok: false, status: 'FAIL', pass_gold: false, promotion_allowed: false,
         error_type: 'go_runtime_failure', message: 'go core timeout',
         go_binary: bin, stdout, stderr,
+        evidence_receipt: makeBackendReceipt({}, stdout, 'timeout', bin),
       });
     }, Number(process.env.VISION_GO_CORE_TIMEOUT_MS || 30000));
 
@@ -122,6 +124,7 @@ async function runGoMission({ root, input, dryRun } = {}) {
         ok: false, status: 'FAIL', pass_gold: false, promotion_allowed: false,
         error_type: 'go_runtime_failure', message: err.message,
         go_binary: bin, stdout, stderr,
+        evidence_receipt: makeBackendReceipt({}, stdout, err.message, bin),
       });
     });
 
@@ -140,6 +143,7 @@ async function runGoMission({ root, input, dryRun } = {}) {
           error_type: 'go_runtime_failure',
           message: (code !== 0 ? 'go core exit ' + code + ': ' : '') + err.message,
           exit_code: code, go_binary: bin, stdout, stderr,
+          evidence_receipt: makeBackendReceipt({}, stdout, stderr, bin),
         });
       }
     });

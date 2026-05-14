@@ -1,6 +1,17 @@
 (function () {
   'use strict';
 
+  var ORBIT = {
+    openclaw:    { top: '5%',    left: '50%'   },
+    scanner:     { top: '18.2%', left: '81.8%' },
+    hermes:      { top: '50%',   left: '95%'   },
+    patchengine: { top: '81.8%', left: '81.8%' },
+    aegis:       { top: '95%',   left: '50%'   },
+    passgold:    { top: '81.8%', left: '18.2%' },
+    github:      { top: '50%',   left: '5%'    },
+    pi_harness:  { top: '18.2%', left: '18.2%' },
+  };
+
   var agents = [
     { name: 'OpenClaw', contract: 'Coordena a missão e valida handoff entre agentes.' },
     { name: 'Scanner', contract: 'Inspeciona sinais, riscos e evidências técnicas.' },
