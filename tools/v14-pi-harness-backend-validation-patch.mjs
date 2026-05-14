@@ -19,21 +19,46 @@ function insertAfterOnce(anchor, insertion, marker) {
 
 insertAfterOnce(
   "'frontend/assets/v231-backend-agents.js',\n",
-  "      'backend/src/runtime/goRunner.js',\n",
+  "      'backend/src/runtime/goRunner.js',\n      'backend/server.js',\n",
   "      'backend/src/runtime/goRunner.js',"
 );
 
+if (!s.includes("      'backend/server.js',")) {
+  insertAfterOnce(
+    "      'backend/src/runtime/goRunner.js',\n",
+    "      'backend/server.js',\n",
+    "      'backend/server.js',"
+  );
+}
+
 insertAfterOnce(
   "'tools/pi-harness.mjs',\n",
-  "    'backend/src/runtime/goRunner.js',\n    'tools/pi-harness-v141-audit.mjs',\n    'tools/v14-backend-receipt-normalizer.mjs',\n",
+  "    'backend/src/runtime/goRunner.js',\n    'backend/server.js',\n    'tools/pi-harness-v141-audit.mjs',\n    'tools/v14-backend-receipt-normalizer.mjs',\n",
   "    'tools/v14-backend-receipt-normalizer.mjs',"
 );
+
+if (!s.includes("    'backend/server.js',") && s.includes("    'backend/src/runtime/goRunner.js',")) {
+  insertAfterOnce(
+    "    'backend/src/runtime/goRunner.js',\n",
+    "    'backend/server.js',\n",
+    "    'backend/server.js',"
+  );
+}
 
 if (!s.includes("evidence(`BACKEND_EVIDENCE_AUDIT:")) {
   const anchor = "evidence(`VALIDATION_ERRORS: ${errors.length}`);";
   const block = "\n\n  if (existsSync(join(ROOT, 'tools/pi-harness-v141-audit.mjs'))) {\n    const backendAudit = shFull('node tools/pi-harness-v141-audit.mjs');\n    evidence(`BACKEND_EVIDENCE_AUDIT: ${backendAudit.ok ? 'PASS' : 'BLOCKED'}`);\n    audit('backend evidence audit: ' + (backendAudit.ok ? 'PASS' : 'BLOCKED'));\n  }";
   if (s.includes(anchor)) {
     s = s.replace(anchor, anchor + block);
+    changed = true;
+  }
+}
+
+if (!s.includes("node --check backend/server.js")) {
+  const anchor = "if (existsSync(join(ROOT, 'tools/pi-harness-v141-audit.mjs'))) {";
+  const block = "if (existsSync(join(ROOT, 'backend/server.js'))) {\n    const backendServerCheck = shFull('node --check backend/server.js');\n    evidence(`BACKEND_SERVER_CHECK: ${backendServerCheck.ok ? 'PASS' : 'BLOCKED'}`);\n    audit('backend server syntax: ' + (backendServerCheck.ok ? 'PASS' : 'BLOCKED'));\n  }\n\n  ";
+  if (s.includes(anchor)) {
+    s = s.replace(anchor, block + anchor);
     changed = true;
   }
 }
