@@ -8,7 +8,13 @@ if (!fs.existsSync(file)) {
 }
 
 let s = fs.readFileSync(file, 'utf8');
-if (s.includes('function makeBackendReceipt(') && s.includes('evidence_receipt: receipt')) {
+const alreadyComplete = s.includes('function makeBackendReceipt(') &&
+  s.includes('evidence_receipt: receipt') &&
+  s.includes('evidence_source:') &&
+  s.includes('evidence_receipt:  result.evidence_receipt') &&
+  s.includes('evidence_receipt: result.evidence_receipt');
+
+if (alreadyComplete) {
   console.log('SKIP: backend receipt already normalized');
   process.exit(0);
 }
@@ -24,8 +30,9 @@ const helper = [
   "  const mission = parsed.mission_id || 'mission';",
   "  const snap = parsed.snapshot_id || 'snapshot';",
   "  const status = parsed.pass_gold === true ? 'gold' : 'blocked';",
+  "  const promoted = parsed.pass_gold === true && parsed.promotion_allowed === true ? 'promotion-allowed' : 'promotion-blocked';",
   "  const size = String((stdout || '').length + (stderr || '').length);",
-  "  return ['evr', mission, snap, status, size, Date.now()].map(function (x) {",
+  "  return ['evr', mission, snap, status, promoted, size, Date.now()].map(function (x) {",
   "    return String(x).replace(/[^a-zA-Z0-9._-]+/g, '-');",
   "  }).join('_');",
   '}',
@@ -36,14 +43,35 @@ if (!s.includes('function makeBackendReceipt(')) {
   s = s.replace(anchor, helper + anchor);
 }
 
+if (!s.includes('const receipt = parsed.evidence_receipt || makeBackendReceipt(parsed, stdout, stderr, bin);')) {
+  s = s.replace(
+    'function normalizeGoResult(parsed, stdout, stderr, bin) {\n  return {',
+    'function normalizeGoResult(parsed, stdout, stderr, bin) {\n  const receipt = parsed.evidence_receipt || makeBackendReceipt(parsed, stdout, stderr, bin);\n  return {'
+  );
+}
+
+if (!s.includes('evidence_source:')) {
+  s = s.replace(
+    "summary:           parsed.summary || '',\n    go_binary:",
+    "summary:           parsed.summary || '',\n    evidence_receipt: receipt,\n    evidence_source: 'go_core_runtime_result',\n    go_binary:"
+  );
+}
+
+s = s.replace(/promotion_allowed:\s*Boolean\(parsed\.promotion_allowed\),/g, "promotion_allowed: Boolean(parsed.pass_gold && parsed.promotion_allowed),");
+
 s = s.replace(
-  'function normalizeGoResult(parsed, stdout, stderr, bin) {\n  return {',
-  'function normalizeGoResult(parsed, stdout, stderr, bin) {\n  const receipt = parsed.evidence_receipt || makeBackendReceipt(parsed, stdout, stderr, bin);\n  return {'
+  "promotion_allowed: result.promotion_allowed,\n    });",
+  "promotion_allowed: result.promotion_allowed,\n      evidence_receipt:  result.evidence_receipt,\n    });"
 );
 
 s = s.replace(
-  "summary:           parsed.summary || '',\n    go_binary:",
-  "summary:           parsed.summary || '',\n    evidence_receipt: receipt,\n    evidence_source: 'go_core_runtime_result',\n    go_binary:"
+  "promotion_allowed: result.promotion_allowed,\n      rollback_ready:",
+  "promotion_allowed: result.promotion_allowed,\n      evidence_receipt:  result.evidence_receipt,\n      rollback_ready:"
+);
+
+s = s.replace(
+  "promotion_allowed: false,\n      failed_gates:",
+  "promotion_allowed: false,\n      evidence_receipt:  result.evidence_receipt,\n      failed_gates:"
 );
 
 s = s.replace(
@@ -54,6 +82,11 @@ s = s.replace(
 s = s.replace(
   "summary:           result.summary || 'FAIL GOLD',\n      error:",
   "summary:           result.summary || 'FAIL GOLD',\n      evidence_receipt: result.evidence_receipt,\n      error:"
+);
+
+s = s.replace(
+  "status:      result.status,\n      duration_ms:",
+  "status:      result.status,\n      evidence_receipt: result.evidence_receipt,\n      duration_ms:"
 );
 
 fs.writeFileSync(file, s, 'utf8');
