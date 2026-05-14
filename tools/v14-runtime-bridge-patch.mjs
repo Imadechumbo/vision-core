@@ -109,5 +109,6 @@ runProbe('V14.1_RELEASE_READINESS', 'tools/pi-harness-v141-release-readiness-aud
 runProbe('V14.1_EVIDENCE_SUMMARY', 'tools/pi-harness-v141-evidence-summary.mjs', 10);
 runProbe('V14.1_NO_FAKE_GOLD', 'tools/pi-harness-v141-no-fake-gold-audit.mjs', 10);
 runProbe('V14.1_RUNTIME_CONTRACT_SUMMARY', 'tools/pi-harness-v141-runtime-contract-summary.mjs', 10);
+runProbe('V14.1_TOTAL_FINAL', 'tools/pi-harness-v141-total-final.mjs', 10);
 
 if (!changed) process.exit(0);
