@@ -587,6 +587,18 @@ async function L6_Validation() {
   state.validationErrors = errors;
   evidence(`VALIDATION_ERRORS: ${errors.length}`);
 
+  if (existsSync(join(ROOT, 'backend/server.js'))) {
+    const backendServerCheck = shFull('node --check backend/server.js');
+    evidence(`BACKEND_SERVER_CHECK: ${backendServerCheck.ok ? 'PASS' : 'BLOCKED'}`);
+    audit('backend server syntax: ' + (backendServerCheck.ok ? 'PASS' : 'BLOCKED'));
+  }
+
+  if (existsSync(join(ROOT, 'tools/pi-harness-v141-audit.mjs'))) {
+    const backendAudit = shFull('node tools/pi-harness-v141-audit.mjs');
+    evidence(`BACKEND_EVIDENCE_AUDIT: ${backendAudit.ok ? 'PASS' : 'BLOCKED'}`);
+    audit('backend evidence audit: ' + (backendAudit.ok ? 'PASS' : 'BLOCKED'));
+  }
+
   if (errors.length > 0) {
     for (const e of errors) audit(`VALIDATION_ERROR: ${e}`);
     // Erros de syntax são críticos
@@ -634,6 +646,7 @@ async function L7_EvidenceReceipt() {
       'frontend/assets/vision-v34-enterprise.js',
       'frontend/assets/vision-v35-telemetry.js',
       'frontend/assets/v231-backend-agents.js',
+      'backend/src/runtime/goRunner.js',
       'tools/',
       'docs/',
       '.github/',
