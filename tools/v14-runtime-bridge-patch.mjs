@@ -66,6 +66,16 @@ if (!fs.existsSync(path)) {
   }
 }
 
+const harnessValidationPatcher = 'tools/v14-pi-harness-backend-validation-patch.mjs';
+if (fs.existsSync(harnessValidationPatcher)) {
+  const validationPatch = spawnSync(process.execPath, [harnessValidationPatcher], { encoding: 'utf8', shell: false });
+  const output = `${validationPatch.stdout || ''}${validationPatch.stderr || ''}`.trim();
+  if (output) {
+    const lines = output.split(/\r?\n/).filter(Boolean).slice(0, 8);
+    for (const line of lines) console.log('V14.1_HARNESS_PATCH: ' + line);
+  }
+}
+
 const harnessPath = 'tools/pi-harness.mjs';
 if (fs.existsSync(harnessPath)) {
   let h = fs.readFileSync(harnessPath, 'utf8');
