@@ -33,7 +33,7 @@ if (!s.includes("      'backend/server.js',")) {
 
 insertAfterOnce(
   "'tools/pi-harness.mjs',\n",
-  "    'backend/src/runtime/goRunner.js',\n    'backend/server.js',\n    'tools/pi-harness-v141-audit.mjs',\n    'tools/v14-backend-receipt-normalizer.mjs',\n",
+  "    'backend/src/runtime/goRunner.js',\n    'backend/server.js',\n    'tools/pi-harness-v141-audit.mjs',\n    'tools/pi-harness-v141-backend-probe.mjs',\n    'tools/v14-backend-receipt-normalizer.mjs',\n",
   "    'tools/v14-backend-receipt-normalizer.mjs',"
 );
 
@@ -45,11 +45,28 @@ if (!s.includes("    'backend/server.js',") && s.includes("    'backend/src/runt
   );
 }
 
+if (!s.includes("    'tools/pi-harness-v141-backend-probe.mjs',") && s.includes("    'tools/pi-harness-v141-audit.mjs',")) {
+  insertAfterOnce(
+    "    'tools/pi-harness-v141-audit.mjs',\n",
+    "    'tools/pi-harness-v141-backend-probe.mjs',\n",
+    "    'tools/pi-harness-v141-backend-probe.mjs',"
+  );
+}
+
 if (!s.includes("evidence(`BACKEND_EVIDENCE_AUDIT:")) {
   const anchor = "evidence(`VALIDATION_ERRORS: ${errors.length}`);";
   const block = "\n\n  if (existsSync(join(ROOT, 'tools/pi-harness-v141-audit.mjs'))) {\n    const backendAudit = shFull('node tools/pi-harness-v141-audit.mjs');\n    evidence(`BACKEND_EVIDENCE_AUDIT: ${backendAudit.ok ? 'PASS' : 'BLOCKED'}`);\n    audit('backend evidence audit: ' + (backendAudit.ok ? 'PASS' : 'BLOCKED'));\n  }";
   if (s.includes(anchor)) {
     s = s.replace(anchor, anchor + block);
+    changed = true;
+  }
+}
+
+if (!s.includes("evidence(`BACKEND_RUNTIME_PROBE:")) {
+  const anchor = "if (existsSync(join(ROOT, 'tools/pi-harness-v141-audit.mjs'))) {";
+  const block = "if (existsSync(join(ROOT, 'tools/pi-harness-v141-backend-probe.mjs'))) {\n    const backendProbe = shFull('node tools/pi-harness-v141-backend-probe.mjs');\n    evidence(`BACKEND_RUNTIME_PROBE: ${backendProbe.ok ? 'PASS' : 'BLOCKED'}`);\n    audit('backend runtime probe: ' + (backendProbe.ok ? 'PASS' : 'BLOCKED'));\n  }\n\n  ";
+  if (s.includes(anchor)) {
+    s = s.replace(anchor, block + anchor);
     changed = true;
   }
 }
