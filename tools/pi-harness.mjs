@@ -204,6 +204,44 @@ function freshState() {
   };
 }
 
+
+function strictPassGoldCandidate(s) {
+  return Boolean(
+    s &&
+    s.backendAlive === true &&
+    s.backendStub === false &&
+    s.backendHasMissionId === true &&
+    s.backendHasEvidenceReceipt === true &&
+    s.evidenceReceiptInSchema === true &&
+    s.evidenceReceiptInNormalizer === true &&
+    s.goCoreCompiled === true &&
+    s.guardOk === true &&
+    s.legacyCleanConfirmed === true &&
+    s.v14CleanOwnership === true &&
+    s.githubConfirmed === true
+  );
+}
+
+function strictPromotionAllowed(s) {
+  return Boolean(strictPassGoldCandidate(s) && s.deployAllowed === false);
+}
+
+function strictPassGoldReason(s) {
+  const missing = [];
+  if (!s.backendAlive) missing.push('backend_alive');
+  if (s.backendStub) missing.push('backend_not_stub');
+  if (!s.backendHasMissionId) missing.push('mission_id');
+  if (!s.backendHasEvidenceReceipt) missing.push('evidence_receipt');
+  if (!s.evidenceReceiptInSchema) missing.push('evidence_schema');
+  if (!s.evidenceReceiptInNormalizer) missing.push('evidence_normalizer');
+  if (!s.goCoreCompiled) missing.push('go_core_compiled');
+  if (!s.guardOk) missing.push('front_guard');
+  if (!s.legacyCleanConfirmed) missing.push('legacy_clean');
+  if (!s.v14CleanOwnership) missing.push('v14_clean_ownership');
+  if (!s.githubConfirmed) missing.push('github_confirmed');
+  return missing.length ? missing.join(',') : 'strict_pass_gold_ready';
+}
+
 function classify(ind) {
   let s = 0;
   if (ind.legacyActive > 5)      s += 3;
@@ -778,7 +816,7 @@ async function L7(s) {
 
 async function L8(s) {
   s.layersExecuted.push('L8');
-  s.passGoldCandidate = false;
+  s.passGoldCandidate = strictPassGoldCandidate(s);
 
   if (s.backendAlive && !DRY_RUN) {
     await sleep(1000);
@@ -791,7 +829,7 @@ async function L8(s) {
       : `evidence_receipt ausente — stub:${s.backendStub}`;
     audit(`[L8] BACKEND_RUNTIME_PROBE:${BACKEND_RUNTIME_PROBE} | BACKEND_EVIDENCE_AUDIT:${BACKEND_EVIDENCE_AUDIT} | BACKEND_ENDPOINT_CONTRACT:${BACKEND_ENDPOINT_CONTRACT}`);
     audit(`[L8] PASS_GOLD_REASON: ${PASS_GOLD_REASON}`);
-    s.passGoldCandidate = !!(probe?.evidence_receipt);
+    s.passGoldCandidate = strictPassGoldCandidate(s);
     if (s.passGoldCandidate) {
       audit('[L8] ★ PASS GOLD CANDIDATE — evidence_receipt recebido do backend!');
     } else {
@@ -802,12 +840,13 @@ async function L8(s) {
   }
 
   addEvidence(`PASS_GOLD_CANDIDATE:${s.passGoldCandidate} | EVIDENCE_IN_BACKEND:${s.backendHasEvidenceReceipt}`);
+  addEvidence(`STRICT_PASS_GOLD_REASON:${strictPassGoldReason(s)}`);
   return true;
 }
 
 async function L9(s) {
   s.layersExecuted.push('L9');
-  s.promotionAllowed = s.passGoldCandidate;
+  s.promotionAllowed = strictPromotionAllowed(s);
   s.deployAllowed    = false; // deploy sempre manual
   audit(`[L9] promotion:${s.promotionAllowed} | deploy: sempre manual`);
   addEvidence(`PROMOTION_ALLOWED:${s.promotionAllowed} | DEPLOY_ALLOWED:false`);
