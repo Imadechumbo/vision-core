@@ -1,0 +1,12 @@
+/frontend/index.html @Imadechumbo
+/frontend/assets/vision-gold.css @Imadechumbo
+/frontend/assets/vision-agent-local.js @Imadechumbo
+/frontend/assets/vision-api.js @Imadechumbo
+/frontend/assets/vision-chat.js @Imadechumbo
+/frontend/assets/vision-runtime-owner.js @Imadechumbo
+/frontend/assets/vision-report.js @Imadechumbo
+
+/tools/pi-harness.mjs @Imadechumbo
+/backend/server.js @Imadechumbo
+/backend/src/runtime/goRunner.js @Imadechumbo
+/go-core/contracts/result.schema.json @Imadechumbo

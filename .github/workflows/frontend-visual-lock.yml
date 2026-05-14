@@ -1,0 +1,58 @@
+name: Frontend Visual Lock
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - "docs/VISUAL_GOLD_HARNESS_MANIFEST.json"
+      - "docs/VISUAL_BASELINE_LOCK.md"
+      - "tools/visual-gold-harness-lock.mjs"
+      - "tools/frontend-visual-lock.mjs"
+      - "tools/sddf-front-guard.mjs"
+      - ".github/CODEOWNERS"
+      - ".github/workflows/frontend-visual-lock.yml"
+
+  push:
+    branches:
+      - main
+    paths:
+      - "frontend/**"
+      - "docs/VISUAL_GOLD_HARNESS_MANIFEST.json"
+      - "docs/VISUAL_BASELINE_LOCK.md"
+      - "tools/visual-gold-harness-lock.mjs"
+      - "tools/frontend-visual-lock.mjs"
+      - "tools/sddf-front-guard.mjs"
+      - ".github/CODEOWNERS"
+      - ".github/workflows/frontend-visual-lock.yml"
+
+  workflow_dispatch:
+
+jobs:
+  frontend-visual-lock:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Syntax check visual locks
+        run: |
+          node --check tools/visual-gold-harness-lock.mjs
+          node --check tools/frontend-visual-lock.mjs
+
+      - name: Visual gold harness lock
+        run: node tools/visual-gold-harness-lock.mjs
+
+      - name: Frontend visual lock
+        run: node tools/frontend-visual-lock.mjs
+
+      - name: SDDF front guard
+        run: node tools/sddf-front-guard.mjs
+
