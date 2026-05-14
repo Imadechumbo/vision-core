@@ -1,11 +1,11 @@
 'use strict';
 
+const { runGoMission, streamGoMission, checkGoHealth, resolveGoBinary, normalizeGoResult } = require('./src/runtime/goRunner');
+
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { scanConfig, applyConfigFixes, enforceConfigGold } = require('./vision_core/config/selfHealingConfig');
-const { runGoMission, streamGoMission, checkGoHealth, resolveGoBinary } = require('./src/runtime/goRunner');
-
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
 const ROOT = process.cwd();
@@ -60,13 +60,25 @@ function sendOk(res, payload = {}) {
 
 function normalizeEvidenceReceipt(result) {
   if (!result || typeof result !== 'object') return null;
-  return typeof result.evidence_receipt === 'string' && result.evidence_receipt.length >= 8
-    ? result.evidence_receipt
-    : null;
+  if (result.backend_stub === true || result.backendStub === true) return null;
+  const receipt = result.evidence_receipt || result.evidenceReceipt;
+  if (!receipt) return null;
+  if (typeof receipt === 'string') return receipt.trim().length >= 8 ? receipt.trim() : null;
+  if (typeof receipt !== 'object') return null;
+  if (receipt.backend_stub === true || receipt.backendStub === true) return null;
+  if (receipt.source === 'backend-derived' || receipt.evidence_source === 'backend-derived') return null;
+  const id = typeof receipt.id === 'string' ? receipt.id.trim() : '';
+  const gatesHash = typeof receipt.gates_hash === 'string' ? receipt.gates_hash.trim() : '';
+  return id || gatesHash ? receipt : null;
 }
 
 function passGoldCandidateFromResult(result) {
-  return Boolean(result && result.pass_gold === true && result.promotion_allowed === true && normalizeEvidenceReceipt(result));
+  if (!result || typeof result !== 'object') return false;
+  if (result.pass_gold !== true || result.promotion_allowed !== true) return false;
+  if (result.backend_stub === true || result.backendStub === true) return false;
+  const missionId = typeof result.mission_id === 'string' ? result.mission_id.trim() : '';
+  if (!missionId) return false;
+  return Boolean(normalizeEvidenceReceipt(result));
 }
 
 function saveMarkdown(folder, title, data) {
@@ -494,40 +506,36 @@ app.get('/api/go-core/health', async (req, res) => {
 
 // POST /api/run-live — executa Go Core, retorna JSON final
 app.all('/api/run-live', async (req, res) => {
-  const body     = normalizeBody(req);
-  const input    = body.mission || body.message || body.prompt || body.input || 'self-test';
+  const body = normalizeBody(req);
+  const input = body.mission || body.message || body.prompt || body.input || 'self-test';
   const missionRoot = path.resolve(process.env.VISION_PROJECT_ROOT || ROOT || process.cwd(), '..');
 
-  let result;
+  let rawResult;
   try {
-    result = await runGoMission({ root: missionRoot, input });
+    rawResult = await runGoMission({ root: missionRoot, input });
   } catch (err) {
-    const { createHash } = require('crypto');
-    const fallbackReceipt = ['evr', 'catch', 'none', 'blocked', 'promotion-blocked',
-      String(err.message.length), Date.now()].join('_').replace(/[^a-zA-Z0-9._-]+/g, '-');
-    return res.status(200).json({
-      ok: false, pass_gold: false, promotion_allowed: false,
-      error_type: 'go_runtime_failure', message: err.message, time: now(),
-      evidence_receipt: fallbackReceipt,
-      steps: [],
-    });
+    rawResult = { ok: false, pass_gold: false, promotion_allowed: false, error_type: 'go_runtime_failure', message: err.message, steps: [] };
   }
 
-  // Salvar incidente apenas se PASS GOLD real
-  if (result.pass_gold) {
-    saveMarkdown('incidents', result.mission_id || makeId('mission'), {
+  const result = normalizeGoResult(rawResult);
+
+  if (passGoldCandidateFromResult(result)) {
+    saveMarkdown('incidents', result.mission_id, {
       mission: input,
       mission_id: result.mission_id,
-      pass_gold: true,
+      pass_gold: result.pass_gold,
+      promotion_allowed: result.promotion_allowed,
+      evidence_receipt: result.evidence_receipt,
       engine: result.engine,
       version: result.version,
       snapshot_id: result.snapshot_id,
-      duration_ms: result.duration_ms,
+      duration_ms: result.duration_ms
     });
   }
 
-  return res.json(Object.assign({ time: now(), stream: '/api/run-live-stream' }, result));
+  return res.status(200).json(Object.assign({ time: now(), stream: '/api/run-live-stream' }, result));
 });
+
 
 // GET /api/run-live-stream — SSE real do Go Core
 // A UI abre esta conexão antes de chamar /api/run-live
@@ -617,13 +625,7 @@ app.all('/api/memory/feedback', (req, res) => {
 app.get('/api/memory/incidents', (req, res) => sendOk(res, { incidents: fs.readdirSync(path.join(MEMORY_ROOT, 'incidents')).slice(-50) }));
 app.get('/api/memory/patterns', (req, res) => sendOk(res, { patterns: fs.readdirSync(path.join(MEMORY_ROOT, 'patterns')).slice(-50) }));
 
-app.get('/api/obsidian/status', (req, res) => sendOk(res, {
-  connected: Boolean(process.env.OBSIDIAN_VAULT_PATH || process.env.OBSIDIAN_API_URL),
-  mode: process.env.OBSIDIAN_SYNC_MODE || 'local',
-  vault_path_configured: Boolean(process.env.OBSIDIAN_VAULT_PATH),
-  api_url_configured: Boolean(process.env.OBSIDIAN_API_URL)
-}));
-app.all('/api/obsidian/connect', (req, res) => sendOk(res, { connected: true, mode: normalizeBody(req).mode || 'local' }));
+app.all('/api/obsidian/connect',(req, res) => sendOk(res, { connected: true, mode: normalizeBody(req).mode || 'local' }));
 app.all('/api/obsidian/test', (req, res) => sendOk(res, { status: 'reachable_or_mock' }));
 app.all('/api/obsidian/write', (req, res) => {
   const body = normalizeBody(req);
@@ -774,11 +776,8 @@ app.get('/api/billing/plans', (req, res) => sendOk(res, { plans, billing_mode: p
 app.all('/api/billing/checkout', (req, res) => sendOk(res, { mode: process.env.BILLING_MODE || 'mock', checkout_url: '/mock-checkout/success', plan: normalizeBody(req).plan || 'pro' }));
 app.all('/api/billing/webhook', (req, res) => sendOk(res, { received: true }));
 app.get('/api/billing/status', (req, res) => sendOk(res, { plan: process.env.FORCE_PRO_FOR_ALL_TEST_USERS === 'true' ? 'pro' : 'free', active: true }));
-app.all('/api/billing/cancel', (req, res) => sendOk(res, { cancelled: true }));
-app.get('/api/usage/quota', (req, res) => sendOk(res, { plan: process.env.FORCE_PRO_FOR_ALL_TEST_USERS === 'true' ? 'pro' : 'free', used: 0, quota: process.env.FORCE_PRO_FOR_ALL_TEST_USERS === 'true' ? 'unlimited' : 5 }));
 
 app.all('/api/auth/signup', (req, res) => sendOk(res, { user: { email: normalizeBody(req).email || 'operator@visioncore.local', plan: 'free' }, token: 'mock-token' }));
-app.all('/api/auth/login', (req, res) => sendOk(res, { user: { email: normalizeBody(req).email || 'operator@visioncore.local', plan: 'free' }, token: 'mock-token' }));
 app.get('/api/me', (req, res) => sendOk(res, { user: { email: 'operator@visioncore.local', plan: 'free' } }));
 
 /* AGENT DOWNLOAD */

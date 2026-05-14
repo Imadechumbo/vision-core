@@ -1,288 +1,146 @@
 'use strict';
 
-/**
- * Vision Core V5.3 — Node ⇄ Go Live Orchestration
- * goRunner.js: executa vision-core via child_process.spawn
- *
- * Exports:
- *   runGoMission({ root, input, dryRun })  → Promise<GoResult>
- *   streamGoMission({ root, input, res, missionId }) → emite SSE real
- *   resolveGoBinary()                      → caminho do binário
- *   checkGoHealth()                        → Promise<HealthResult>
- */
-
-const fs   = require('fs');
+const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-// ── Resolver binário ──────────────────────────────────────────────
+const DEFAULT_TIMEOUT_MS = Number(process.env.VISION_GO_CORE_TIMEOUT_MS || 30000);
+
+function repoRoot() { return path.resolve(__dirname, '../../..'); }
+function goCoreDir() { return path.join(repoRoot(), 'go-core'); }
+function exe(name) { return process.platform === 'win32' ? name + '.exe' : name; }
+
 function resolveGoBinary() {
-  const root = process.cwd();
-  const ext  = process.platform === 'win32' ? '.exe' : '';
-  const bin  = 'vision-core' + ext;
-
+  if (process.env.VISION_GO_CORE_BIN) return { command: process.env.VISION_GO_CORE_BIN, args: [], cwd: repoRoot(), mode: 'binary' };
   const candidates = [
-    process.env.VISION_GO_CORE_BIN,
-    path.join(root, '..', 'bin', bin),
-    path.join(root, 'bin', bin),
-    path.join(root, '..', 'go-core', bin),
-    path.join(root, '..', 'go-core', 'vision-core'),
-    bin,
-  ].filter(Boolean);
-
-  for (const c of candidates) {
-    try { if (fs.existsSync(c)) return c; } catch (_) {}
+    path.join(repoRoot(), 'bin', exe('vision-core')),
+    path.join(goCoreDir(), 'bin', exe('vision-core')),
+    path.join(goCoreDir(), exe('vision-core'))
+  ];
+  for (const candidate of candidates) {
+    try { if (fs.existsSync(candidate)) return { command: candidate, args: [], cwd: repoRoot(), mode: 'binary' }; } catch (_) {}
   }
-  return candidates[0] || bin;
+  return { command: 'go', args: ['run', './cmd/vision-core'], cwd: goCoreDir(), mode: 'go-run' };
 }
 
-// ── Normalizar resultado ──────────────────────────────────────────
-function makeBackendReceipt(parsed, stdout, stderr, bin) {
-  const mission = parsed.mission_id || 'mission';
-  const snap = parsed.snapshot_id || 'snapshot';
-  const status = parsed.pass_gold === true ? 'gold' : 'blocked';
-  const promoted = parsed.pass_gold === true && parsed.promotion_allowed === true ? 'promotion-allowed' : 'promotion-blocked';
-  const size = String((stdout || '').length + (stderr || '').length);
-  return ['evr', mission, snap, status, promoted, size, Date.now()].map(function (x) {
-    return String(x).replace(/[^a-zA-Z0-9._-]+/g, '-');
-  }).join('_');
+function cleanString(v) { return typeof v === 'string' && v.trim().length > 0 ? v.trim() : ''; }
+
+function realEvidenceReceipt(v) {
+  if (!v) return null;
+  if (typeof v === 'string') return v.trim().length >= 8 ? v.trim() : null;
+  if (typeof v !== 'object') return null;
+  if (v.backend_stub === true || v.backendStub === true) return null;
+  if (v.source === 'backend-derived' || v.evidence_source === 'backend-derived') return null;
+  if (cleanString(v.id) || cleanString(v.gates_hash)) return v;
+  return null;
 }
-function normalizeGoResult(parsed, stdout, stderr, bin) {
-  const receipt = parsed.evidence_receipt || makeBackendReceipt(parsed, stdout, stderr, bin);
+
+function backendDerivedReceipt(result) {
+  const basis = ['backend-derived', Date.now(), result && (result.error || result.message || result.status || 'diagnostic')].join(':');
+  return { id: basis.replace(/[^a-zA-Z0-9._-]+/g, '-').slice(0, 160), source: 'backend-derived', backend_stub: true, promotion_allowed: false };
+}
+
+function normalizeGoResult(result = {}) {
+  const raw = result && typeof result === 'object' ? result : { ok: false, error: 'invalid_go_result' };
+  const missionId = cleanString(raw.mission_id || raw.missionId);
+  const receipt = realEvidenceReceipt(raw.evidence_receipt || raw.evidenceReceipt);
+  const backendStub = raw.backend_stub === true || raw.backendStub === true || !missionId || !receipt;
+  const passGold = backendStub === false && raw.pass_gold === true;
+  const promotionAllowed = passGold === true && raw.promotion_allowed === true && backendStub === false;
   return {
-    ok:                Boolean(parsed.ok),
-    status:            parsed.status || (parsed.pass_gold ? 'GOLD' : 'FAIL'),
-    pass_gold:         Boolean(parsed.pass_gold),
-    promotion_allowed: Boolean(parsed.pass_gold && parsed.promotion_allowed),
-    rollback_ready:    Boolean(parsed.rollback_ready),
-    rollback_applied:  Boolean(parsed.rollback_applied),
-    mission_id:        parsed.mission_id  || null,
-    snapshot_id:       parsed.snapshot_id || null,
-    engine:            parsed.engine      || 'go-safe-core',
-    version:           parsed.version     || null,
-    steps:             Array.isArray(parsed.steps)        ? parsed.steps        : [],
-    step_results:      Array.isArray(parsed.step_results) ? parsed.step_results : [],
-    gates:             parsed.gates        || {},
-    failed_gates:      Array.isArray(parsed.failed_gates) ? parsed.failed_gates : [],
-    duration_ms:       Number(parsed.duration_ms || 0),
-    summary:           parsed.summary || '',
-    evidence_receipt: receipt,
-    evidence_source: 'go_core_runtime_result',
-    go_binary:         bin,
-    stdout_chars:      stdout.length,
-    stderr:            stderr.trim() || undefined,
+    ...raw,
+    ok: raw.ok === true && backendStub === false,
+    status: raw.status || (passGold ? 'GOLD' : 'FAIL'),
+    mission_id: missionId || null,
+    missionId: missionId || null,
+    evidence_receipt: receipt || backendDerivedReceipt(raw),
+    evidenceReceipt: receipt || null,
+    backend_stub: backendStub,
+    backendStub,
+    backendHasMissionId: Boolean(missionId),
+    backendHasEvidenceReceipt: Boolean(receipt),
+    pass_gold: passGold,
+    promotion_allowed: promotionAllowed,
+    deploy_allowed: promotionAllowed && raw.deploy_allowed === true
   };
 }
 
-// ── runGoMission ──────────────────────────────────────────────────
-async function runGoMission({ root, input, dryRun } = {}) {
-  const missionRoot  = path.resolve(root || process.cwd());
+function parseJsonOutput(stdout) {
+  const text = String(stdout || '').trim();
+  if (!text) return { ok: false, error: 'empty_go_stdout' };
+  try { return JSON.parse(text); } catch (e) {
+    const first = text.indexOf('{');
+    const last = text.lastIndexOf('}');
+    if (first >= 0 && last > first) {
+      try { return JSON.parse(text.slice(first, last + 1)); } catch (_) {}
+    }
+    return { ok: false, error: 'invalid_go_json', parse_error: e.message, stdout: text.slice(0, 4000) };
+  }
+}
+
+function runGoMission({ root, input, dryRun, timeoutMs } = {}) {
+  const targetRoot = path.resolve(root || repoRoot());
   const missionInput = String(input || 'self-test');
-  const bin          = resolveGoBinary();
-  const startedAt    = Date.now();
+  const resolved = resolveGoBinary();
+  const args = resolved.args.concat(['mission', '--root', targetRoot, '--input', missionInput]);
+  if (dryRun) args.push('--dry-run');
 
   return new Promise((resolve) => {
-    let stdout = '', stderr = '';
+    let stdout = '';
+    let stderr = '';
     let settled = false;
-
-    const finish = (payload) => {
-      if (settled) return;
-      settled = true;
-      resolve({ duration_ms: Date.now() - startedAt, ...payload });
-    };
-
-    const args = ['mission', '--root', missionRoot, '--input', missionInput];
-    if (dryRun) args.push('--dry-run');
+    function finish(payload) { if (settled) return; settled = true; resolve(normalizeGoResult(payload)); }
 
     let child;
     try {
-      child = spawn(bin, args, { cwd: missionRoot, windowsHide: true, shell: false });
-    } catch (err) {
-      return finish({
-        ok: false, status: 'FAIL', pass_gold: false, promotion_allowed: false,
-        error_type: 'go_runtime_failure', message: err.message, go_binary: bin,
-        evidence_receipt: makeBackendReceipt({}, '', err.message, bin),
-      });
+      child = spawn(resolved.command, args, { cwd: resolved.cwd, env: process.env, shell: false, windowsHide: true });
+    } catch (e) {
+      finish({ ok: false, error: e.message, error_type: 'go_spawn_failure' });
+      return;
     }
 
-    const timeout = setTimeout(() => {
+    const timer = setTimeout(() => {
       try { child.kill('SIGKILL'); } catch (_) {}
-      finish({
-        ok: false, status: 'FAIL', pass_gold: false, promotion_allowed: false,
-        error_type: 'go_runtime_failure', message: 'go core timeout',
-        go_binary: bin, stdout, stderr,
-        evidence_receipt: makeBackendReceipt({}, stdout, 'timeout', bin),
-      });
-    }, Number(process.env.VISION_GO_CORE_TIMEOUT_MS || 30000));
+      finish({ ok: false, error: 'go_mission_timeout', error_type: 'go_timeout', stderr });
+    }, Number(timeoutMs || DEFAULT_TIMEOUT_MS));
 
     child.stdout.on('data', (c) => { stdout += c.toString('utf8'); });
     child.stderr.on('data', (c) => { stderr += c.toString('utf8'); });
-
-    child.on('error', (err) => {
-      clearTimeout(timeout);
-      finish({
-        ok: false, status: 'FAIL', pass_gold: false, promotion_allowed: false,
-        error_type: 'go_runtime_failure', message: err.message,
-        go_binary: bin, stdout, stderr,
-        evidence_receipt: makeBackendReceipt({}, stdout, err.message, bin),
-      });
-    });
-
+    child.on('error', (e) => { clearTimeout(timer); finish({ ok: false, error: e.message, error_type: 'go_process_error', stderr }); });
     child.on('close', (code) => {
-      clearTimeout(timeout);
-      // Go retorna exit 0 (GOLD) ou 2 (FAIL GOLD) — ambos têm JSON válido
-      try {
-        const first = stdout.indexOf('{');
-        const last  = stdout.lastIndexOf('}');
-        if (first < 0 || last < first) throw new Error('no JSON in stdout');
-        const parsed = JSON.parse(stdout.slice(first, last + 1));
-        return finish(normalizeGoResult(parsed, stdout, stderr, bin));
-      } catch (err) {
-        return finish({
-          ok: false, status: 'FAIL', pass_gold: false, promotion_allowed: false,
-          error_type: 'go_runtime_failure',
-          message: (code !== 0 ? 'go core exit ' + code + ': ' : '') + err.message,
-          exit_code: code, go_binary: bin, stdout, stderr,
-          evidence_receipt: makeBackendReceipt({}, stdout, stderr, bin),
-        });
-      }
+      clearTimeout(timer);
+      const parsed = parseJsonOutput(stdout);
+      parsed.exit_code = code;
+      if (stderr.trim()) parsed.stderr = stderr.trim();
+      if (code !== 0 && parsed.ok !== true) parsed.ok = false;
+      finish(parsed);
     });
   });
 }
 
-// ── streamGoMission — Go Core + SSE real ─────────────────────────
-// Executa vision-core, aguarda JSON, emite eventos SSE em ordem.
-// PASS GOLD vem exclusivamente do Go Core — nunca simulado.
-async function streamGoMission({ root, input, res, missionId }) {
-  const ts = () => new Date().toISOString();
-
-  const send = (event, data) => {
-    try {
-      res.write('event: ' + event + '\n');
-      res.write('data: ' + JSON.stringify(Object.assign({}, data, { time: ts() })) + '\n\n');
-    } catch (_) {}
-  };
-
-  send('open',            { ok: true, status: 'connected' });
-  send('mission:start',   {
-    mission_id: missionId, step: 'mission:start', ok: true,
-    message: 'Go Safe Core iniciando pipeline V5.2...', status: 'running', pass_gold: false,
-  });
-
-  // Executar Go Core
-  let result;
-  try {
-    result = await runGoMission({ root, input });
-  } catch (err) {
-    send('mission:fail', {
-      mission_id: missionId, ok: false, pass_gold: false,
-      promotion_allowed: false, error: err.message,
-    });
-    try { res.end(); } catch (_) {}
-    return { ok: false, pass_gold: false };
+async function streamGoMission({ root, input, res, missionId } = {}) {
+  function send(event, data) {
+    res.write('event: ' + event + '\n');
+    res.write('data: ' + JSON.stringify({ time: new Date().toISOString(), ...data }) + '\n\n');
   }
-
-  // Map step name → SSE event name (compatível com a UI)
-  const STEP_EVENT = {
-    scanner:   'scanner:ok',
-    fileops:   'fileops:ok',
-    snapshot:  'snapshot:ok',
-    patcher:   'patcher:ok',
-    validator: 'validator:ok',
-    rollback:  'rollback:ok',
-    passgold:  'passgold:ok',
-  };
-
-  // Emitir cada step do Go Core como evento SSE
-  const stepResults = result.step_results || [];
-  for (const sr of stepResults) {
-    const eventName = sr.ok
-      ? (STEP_EVENT[sr.step] || ('step:' + sr.step))
-      : 'step:fail';
-
-    send(eventName, {
-      mission_id: result.mission_id || missionId,
-      step:       sr.step,
-      ok:         sr.ok,
-      message:    sr.message || sr.error || '',
-      status:     sr.ok ? 'ok' : 'fail',
-      pass_gold:  false,  // só true no evento final
-    });
+  send('open', { ok: true, status: 'connected', mission_id: missionId || null });
+  send('mission:start', { ok: true, status: 'running', mission_id: missionId || null, pass_gold: false, promotion_allowed: false });
+  const result = await runGoMission({ root, input });
+  const finalMissionId = result.backend_stub === false ? result.mission_id : null;
+  const finalReceipt = result.backend_stub === false ? result.evidence_receipt : null;
+  for (const step of Array.isArray(result.step_results) ? result.step_results : []) {
+    send(step.ok ? 'step:ok' : 'step:fail', { mission_id: finalMissionId, step: step.step, ok: step.ok === true, message: step.message || step.error || '', pass_gold: false, promotion_allowed: false });
   }
-
-  // Resultado final — PASS GOLD vem do Go Core
-  if (result.pass_gold) {
-    send('passgold:ok', {
-      mission_id:        result.mission_id || missionId,
-      step:              'passgold',
-      ok:                true,
-      message:           'PASS GOLD confirmado — promoção autorizada pelo Go Core',
-      status:            'GOLD',
-      pass_gold:         true,
-      promotion_allowed: result.promotion_allowed,
-      evidence_receipt:  result.evidence_receipt,
-    });
-    send('mission:complete', {
-      mission_id:        result.mission_id || missionId,
-      ok:                true,
-      status:            'GOLD',
-      pass_gold:         true,
-      promotion_allowed: result.promotion_allowed,
-      evidence_receipt:  result.evidence_receipt,
-      rollback_ready:    result.rollback_ready,
-      snapshot_id:       result.snapshot_id,
-      rollback_applied:  result.rollback_applied,
-      duration_ms:       result.duration_ms,
-      engine:            result.engine,
-      version:           result.version,
-      summary:           result.summary,
-      evidence_receipt: result.evidence_receipt,
-    });
-  } else {
-    send('mission:fail', {
-      mission_id:        result.mission_id || missionId,
-      ok:                false,
-      status:            'FAIL',
-      pass_gold:         false,
-      promotion_allowed: false,
-      evidence_receipt:  result.evidence_receipt,
-      failed_gates:      result.failed_gates || [],
-      summary:           result.summary || 'FAIL GOLD',
-      evidence_receipt: result.evidence_receipt,
-      error:             result.message || result.error || 'Go Core retornou FAIL',
-    });
-  }
-
+  send(result.pass_gold ? 'passgold:ok' : 'mission:blocked', { ...result, mission_id: finalMissionId, evidence_receipt: finalReceipt, done: true });
+  send('done', { ok: result.ok === true, mission_id: finalMissionId, evidence_receipt: finalReceipt, pass_gold: result.pass_gold === true, promotion_allowed: result.promotion_allowed === true, backend_stub: result.backend_stub === true });
   try { res.end(); } catch (_) {}
   return result;
 }
 
-// ── checkGoHealth ─────────────────────────────────────────────────
 async function checkGoHealth() {
-  const bin       = resolveGoBinary();
-  const binExists = (() => { try { return fs.existsSync(bin); } catch (_) { return false; } })();
-
-  if (!binExists) {
-    return { ok: false, healthy: false, reason: 'binary_not_found', bin };
-  }
-
-  try {
-    const result = await runGoMission({ root: process.cwd(), input: 'self-test' });
-    return {
-      ok:          result.ok && result.pass_gold,
-      healthy:     result.ok && result.pass_gold,
-      engine:      result.engine,
-      version:     result.version,
-      pass_gold:   result.pass_gold,
-      status:      result.status,
-      evidence_receipt: result.evidence_receipt,
-      duration_ms: result.duration_ms,
-      bin,
-      bin_exists:  true,
-    };
-  } catch (err) {
-    return { ok: false, healthy: false, reason: err.message, bin, bin_exists: true };
-  }
+  const result = await runGoMission({ input: 'self-test' });
+  const healthy = result.pass_gold === true && result.backend_stub === false;
+  return { ok: healthy, healthy, backend_stub: result.backend_stub === true, pass_gold: result.pass_gold === true, promotion_allowed: result.promotion_allowed === true, mission_id: healthy ? result.mission_id : null, evidence_receipt: healthy ? result.evidence_receipt : null, binary: resolveGoBinary() };
 }
 
-module.exports = { runGoMission, streamGoMission, resolveGoBinary, checkGoHealth };
+module.exports = { runGoMission, streamGoMission, resolveGoBinary, checkGoHealth, normalizeGoResult };
