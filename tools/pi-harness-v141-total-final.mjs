@@ -6,7 +6,8 @@ const gates = [
   ['RUNTIME_CONTRACT_SUMMARY', 'tools/pi-harness-v141-runtime-contract-summary.mjs'],
   ['EVIDENCE_SUMMARY', 'tools/pi-harness-v141-evidence-summary.mjs'],
   ['NO_FAKE_GOLD', 'tools/pi-harness-v141-no-fake-gold-audit.mjs'],
-  ['RELEASE_READINESS', 'tools/pi-harness-v141-release-readiness-audit.mjs']
+  ['RELEASE_READINESS', 'tools/pi-harness-v141-release-readiness-audit.mjs'],
+  ['GITHUB_CONFIRMATION', 'tools/pi-harness-v141-github-confirmation-audit.mjs']
 ];
 
 let blocked = false;
@@ -29,6 +30,7 @@ console.log('=== PI HARNESS V14.1 TOTAL FINAL AUDIT ===');
 console.log(`RESULT: ${blocked ? 'BLOCKED' : 'PASS'}`);
 for (const line of lines) console.log(line);
 console.log('V14_1_TOTAL_FINAL_READY: ' + (!blocked));
+console.log('GITHUB_CONFIRMED: ' + (!blocked));
 console.log('PASS_GOLD_CANDIDATE: false');
 console.log('PROMOTION_ALLOWED: false');
 console.log('DEPLOY_ALLOWED: false');
