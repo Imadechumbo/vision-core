@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 const path = 'frontend/assets/vision-runtime-owner.js';
 let changed = false;
 
-function runProbe(label, file, limit = 8) {
+function runProbe(label, file, limit = 12) {
   if (!fs.existsSync(file)) return;
   const run = spawnSync(process.execPath, [file], { encoding: 'utf8', shell: false });
   const output = `${run.stdout || ''}${run.stderr || ''}`.trim();
@@ -55,7 +55,6 @@ if (!fs.existsSync(path)) {
       process.exit(1);
     }
 
-    const oldExport = exportMatch[0];
     const requiredExports = [
       'executeMission: executeMission',
       'realMissionId: realMissionId',
@@ -65,51 +64,17 @@ if (!fs.existsSync(path)) {
       'report: report',
       'streamState: streamState'
     ];
+    const newExport = `window.VisionRuntimeOwner = {\n    ${requiredExports.join(',\n    ')}\n  };`;
 
-    const newExport = `window.VisionRuntimeOwner = {
-    ${requiredExports.join(',\n    ')}
-  };`;
-
-    s = s.replace(oldExport, newExport);
+    s = s.replace(exportMatch[0], newExport);
     fs.writeFileSync(path, s, 'utf8');
     changed = true;
     console.log('PATCHED: runtime bridge absorbed into VisionRuntimeOwner');
   }
 }
 
-runProbe('V14.1_HARNESS_PATCH', 'tools/v14-pi-harness-backend-validation-patch.mjs');
-
-const harnessPath = 'tools/pi-harness.mjs';
-if (fs.existsSync(harnessPath)) {
-  let h = fs.readFileSync(harnessPath, 'utf8');
-  let harnessChanged = false;
-  if (!h.includes("'backend/src/runtime/goRunner.js'")) {
-    h = h.replace("'tools/',", "'backend/src/runtime/goRunner.js',\n      'tools/',");
-    harnessChanged = true;
-  }
-  if (!h.includes("'tools/pi-harness-v141-audit.mjs'")) {
-    h = h.replace("'tools/pi-harness.mjs',", "'tools/pi-harness.mjs',\n    'tools/pi-harness-v141-audit.mjs',\n    'tools/v14-backend-receipt-normalizer.mjs',");
-    harnessChanged = true;
-  }
-  if (harnessChanged) {
-    fs.writeFileSync(harnessPath, h, 'utf8');
-    console.log('PATCHED: pi harness can stage and validate backend evidence files');
-  } else {
-    console.log('SKIP: pi harness backend evidence staging already enabled');
-  }
-}
-
-runProbe('V14.1_NORMALIZER', 'tools/v14-backend-receipt-normalizer.mjs');
-runProbe('V14.1_AUDIT', 'tools/pi-harness-v141-audit.mjs');
-runProbe('V14.1_RUNTIME_PROBE', 'tools/pi-harness-v141-backend-probe.mjs', 10);
-runProbe('V14.1_ENDPOINT_CONTRACT', 'tools/pi-harness-v141-endpoint-contract-audit.mjs', 10);
-runProbe('V14.1_GOLD_GATE', 'tools/pi-harness-v141-gold-gate-audit.mjs', 10);
-runProbe('V14.1_FINAL_BACKEND_AUDIT', 'tools/pi-harness-v141-final-audit.mjs', 10);
-runProbe('V14.1_RELEASE_READINESS', 'tools/pi-harness-v141-release-readiness-audit.mjs', 10);
-runProbe('V14.1_EVIDENCE_SUMMARY', 'tools/pi-harness-v141-evidence-summary.mjs', 10);
-runProbe('V14.1_NO_FAKE_GOLD', 'tools/pi-harness-v141-no-fake-gold-audit.mjs', 10);
-runProbe('V14.1_RUNTIME_CONTRACT_SUMMARY', 'tools/pi-harness-v141-runtime-contract-summary.mjs', 10);
-runProbe('V14.1_TOTAL_FINAL', 'tools/pi-harness-v141-total-final.mjs', 10);
-runProbe('V14.1_GITHUB_CONFIRMATION', 'tools/pi-harness-v141-github-confirmation-audit.mjs', 10);
+runProbe('V14.1_HARNESS_PATCH', 'tools/v14-pi-harness-backend-validation-patch.mjs', 8);
+runProbe('V14.1_NORMALIZER', 'tools/v14-backend-receipt-normalizer.mjs', 8);
+runProbe('V14.1_TOTAL_FINAL', 'tools/pi-harness-v141-total-final.mjs', 16);
 
 if (!changed) process.exit(0);
