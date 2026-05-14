@@ -63,7 +63,9 @@ function read(file) {
 }
 
 function sha256(file) {
-  return createHash("sha256").update(readFileSync(full(file))).digest("hex");
+  return createHash("sha256")
+    .update(readFileSync(full(file), "utf8").replace(/\r\n/g, "\n"), "utf8")
+    .digest("hex");
 }
 
 function loadManifest() {
@@ -149,3 +151,4 @@ if (failures.length) {
 
 console.log("FRONTEND VISUAL LOCK PASS");
 process.exit(0);
+

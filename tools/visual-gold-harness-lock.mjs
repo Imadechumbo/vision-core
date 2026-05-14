@@ -5,14 +5,18 @@ import { createHash } from "node:crypto";
 const authorized = process.env.VISUAL_PATCH_AUTHORIZED === "1";
 const manifestPath = "docs/VISUAL_GOLD_HARNESS_MANIFEST.json";
 
-function sha256(file) {
-  return createHash("sha256").update(readFileSync(file)).digest("hex");
-}
-
 function fail(message) {
   console.error("VISUAL GOLD HARNESS LOCK FAIL");
   console.error("- " + message);
   process.exit(2);
+}
+
+function normalizedBytes(file) {
+  return readFileSync(file, "utf8").replace(/\r\n/g, "\n");
+}
+
+function sha256(file) {
+  return createHash("sha256").update(normalizedBytes(file), "utf8").digest("hex");
 }
 
 if (!existsSync(manifestPath)) {

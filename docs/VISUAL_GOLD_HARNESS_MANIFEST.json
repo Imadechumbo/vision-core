@@ -1,8 +1,8 @@
 {
   "frontend/index.html": "24980d0f0ab9a64e293fbbaa98ceee610d0bf00ed819f67693c3b0ba7abeb846",
-  "frontend/assets/vision-agent-local.js": "3302da4bf1b65355023d40a3f11fd4d83a681e8ed7b3379aeafcdd6a9e367499",
-  "frontend/assets/vision-api.js": "3f9636757c212d2cc80b93c725d9911be6a9db2eb0ba170ee19794c5a4b22899",
-  "frontend/assets/vision-chat.js": "ccc344a5692906b7a9f57da9c70055513fe43208a1d5e343235a06f278c5dcac",
-  "frontend/assets/vision-runtime-owner.js": "c3b6e5fe4c453274fa17f7a42bf772fafff8a9c82c1ab328ca1711161ad0847b",
-  "frontend/assets/vision-report.js": "c1f9c22095741b821397e734f4f1db77796228a1134c8652f818ff348665d988"
+  "frontend/assets/vision-agent-local.js": "f1ddfd3bb12254ab1212f4a11e9ca61df8a01d3540cd4f921a0d986bdc48e789",
+  "frontend/assets/vision-api.js": "db8a0d60815770a1266c7987d4c17a861f104da0b81b7435a518ccc1e3b30944",
+  "frontend/assets/vision-chat.js": "84236cd3ad71b023c29463f84eb3e001185a941a523eeb32e5f7ab81d1178710",
+  "frontend/assets/vision-runtime-owner.js": "1361348a48b13ce08f4f3a1110b383439b2a96981068979b95a47128adcbe348",
+  "frontend/assets/vision-report.js": "d6f7c61945e46591ff22376ebdf24e45e0a17af7e9d6c1c52b22509cf6973e04"
 }
