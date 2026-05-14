@@ -24,71 +24,53 @@ insertAfterOnce(
 );
 
 if (!s.includes("      'backend/server.js',")) {
-  insertAfterOnce(
-    "      'backend/src/runtime/goRunner.js',\n",
-    "      'backend/server.js',\n",
-    "      'backend/server.js',"
-  );
+  insertAfterOnce("      'backend/src/runtime/goRunner.js',\n", "      'backend/server.js',\n", "      'backend/server.js',");
 }
 
 insertAfterOnce(
   "'tools/pi-harness.mjs',\n",
-  "    'backend/src/runtime/goRunner.js',\n    'backend/server.js',\n    'tools/pi-harness-v141-audit.mjs',\n    'tools/pi-harness-v141-backend-probe.mjs',\n    'tools/pi-harness-v141-endpoint-contract-audit.mjs',\n    'tools/pi-harness-v141-gold-gate-audit.mjs',\n    'tools/v14-backend-receipt-normalizer.mjs',\n    'tools/v14-backend-endpoint-normalizer.mjs',\n",
+  "    'backend/src/runtime/goRunner.js',\n    'backend/server.js',\n    'tools/pi-harness-v141-audit.mjs',\n    'tools/pi-harness-v141-backend-probe.mjs',\n    'tools/pi-harness-v141-endpoint-contract-audit.mjs',\n    'tools/pi-harness-v141-gold-gate-audit.mjs',\n    'tools/pi-harness-v141-final-audit.mjs',\n    'tools/pi-harness-v141-release-readiness-audit.mjs',\n    'tools/pi-harness-v141-evidence-summary.mjs',\n    'tools/v14-backend-receipt-normalizer.mjs',\n    'tools/v14-backend-endpoint-normalizer.mjs',\n",
   "    'tools/v14-backend-receipt-normalizer.mjs',"
 );
 
-if (!s.includes("    'backend/server.js',") && s.includes("    'backend/src/runtime/goRunner.js',")) {
-  insertAfterOnce("    'backend/src/runtime/goRunner.js',\n", "    'backend/server.js',\n", "    'backend/server.js',");
+const toolOrder = [
+  ['tools/pi-harness-v141-backend-probe.mjs', 'tools/pi-harness-v141-audit.mjs'],
+  ['tools/pi-harness-v141-endpoint-contract-audit.mjs', 'tools/pi-harness-v141-backend-probe.mjs'],
+  ['tools/pi-harness-v141-gold-gate-audit.mjs', 'tools/pi-harness-v141-endpoint-contract-audit.mjs'],
+  ['tools/pi-harness-v141-final-audit.mjs', 'tools/pi-harness-v141-gold-gate-audit.mjs'],
+  ['tools/pi-harness-v141-release-readiness-audit.mjs', 'tools/pi-harness-v141-final-audit.mjs'],
+  ['tools/pi-harness-v141-evidence-summary.mjs', 'tools/pi-harness-v141-release-readiness-audit.mjs'],
+  ['tools/v14-backend-endpoint-normalizer.mjs', 'tools/v14-backend-receipt-normalizer.mjs']
+];
+
+for (const [tool, after] of toolOrder) {
+  const line = `    '${tool}',\n`;
+  const anchor = `    '${after}',\n`;
+  if (!s.includes(line) && s.includes(anchor)) insertAfterOnce(anchor, line, line);
 }
 
-if (!s.includes("    'tools/pi-harness-v141-backend-probe.mjs',") && s.includes("    'tools/pi-harness-v141-audit.mjs',")) {
-  insertAfterOnce("    'tools/pi-harness-v141-audit.mjs',\n", "    'tools/pi-harness-v141-backend-probe.mjs',\n", "    'tools/pi-harness-v141-backend-probe.mjs',");
+function addEvidence(marker, script, label, auditLabel) {
+  if (s.includes(`evidence(\`${marker}:`)) return;
+  const anchor = "if (existsSync(join(ROOT, 'tools/pi-harness-v141-audit.mjs'))) {";
+  const block = `if (existsSync(join(ROOT, '${script}'))) {\n    const probe = shFull('node ${script}');\n    evidence(\`${marker}: \${probe.ok ? 'PASS' : 'BLOCKED'}\`);\n    audit('${auditLabel}: ' + (probe.ok ? 'PASS' : 'BLOCKED'));\n  }\n\n  `;
+  if (s.includes(anchor)) {
+    s = s.replace(anchor, block + anchor);
+    changed = true;
+  }
 }
 
-if (!s.includes("    'tools/pi-harness-v141-endpoint-contract-audit.mjs',") && s.includes("    'tools/pi-harness-v141-backend-probe.mjs',")) {
-  insertAfterOnce("    'tools/pi-harness-v141-backend-probe.mjs',\n", "    'tools/pi-harness-v141-endpoint-contract-audit.mjs',\n", "    'tools/pi-harness-v141-endpoint-contract-audit.mjs',");
-}
-
-if (!s.includes("    'tools/pi-harness-v141-gold-gate-audit.mjs',") && s.includes("    'tools/pi-harness-v141-endpoint-contract-audit.mjs',")) {
-  insertAfterOnce("    'tools/pi-harness-v141-endpoint-contract-audit.mjs',\n", "    'tools/pi-harness-v141-gold-gate-audit.mjs',\n", "    'tools/pi-harness-v141-gold-gate-audit.mjs',");
-}
-
-if (!s.includes("    'tools/v14-backend-endpoint-normalizer.mjs',") && s.includes("    'tools/v14-backend-receipt-normalizer.mjs',")) {
-  insertAfterOnce("    'tools/v14-backend-receipt-normalizer.mjs',\n", "    'tools/v14-backend-endpoint-normalizer.mjs',\n", "    'tools/v14-backend-endpoint-normalizer.mjs',");
-}
+addEvidence('BACKEND_RUNTIME_PROBE', 'tools/pi-harness-v141-backend-probe.mjs', 'backend runtime probe', 'backend runtime probe');
+addEvidence('BACKEND_ENDPOINT_CONTRACT', 'tools/pi-harness-v141-endpoint-contract-audit.mjs', 'backend endpoint contract', 'backend endpoint contract');
+addEvidence('BACKEND_GOLD_GATE_AUDIT', 'tools/pi-harness-v141-gold-gate-audit.mjs', 'backend gold gate audit', 'backend gold gate audit');
+addEvidence('BACKEND_FINAL_AUDIT', 'tools/pi-harness-v141-final-audit.mjs', 'backend final audit', 'backend final audit');
+addEvidence('RELEASE_READINESS', 'tools/pi-harness-v141-release-readiness-audit.mjs', 'release readiness audit', 'release readiness audit');
+addEvidence('V141_EVIDENCE_SUMMARY', 'tools/pi-harness-v141-evidence-summary.mjs', 'v141 evidence summary', 'v141 evidence summary');
 
 if (!s.includes("evidence(`BACKEND_EVIDENCE_AUDIT:")) {
   const anchor = "evidence(`VALIDATION_ERRORS: ${errors.length}`);";
   const block = "\n\n  if (existsSync(join(ROOT, 'tools/pi-harness-v141-audit.mjs'))) {\n    const backendAudit = shFull('node tools/pi-harness-v141-audit.mjs');\n    evidence(`BACKEND_EVIDENCE_AUDIT: ${backendAudit.ok ? 'PASS' : 'BLOCKED'}`);\n    audit('backend evidence audit: ' + (backendAudit.ok ? 'PASS' : 'BLOCKED'));\n  }";
   if (s.includes(anchor)) {
     s = s.replace(anchor, anchor + block);
-    changed = true;
-  }
-}
-
-if (!s.includes("evidence(`BACKEND_RUNTIME_PROBE:")) {
-  const anchor = "if (existsSync(join(ROOT, 'tools/pi-harness-v141-audit.mjs'))) {";
-  const block = "if (existsSync(join(ROOT, 'tools/pi-harness-v141-backend-probe.mjs'))) {\n    const backendProbe = shFull('node tools/pi-harness-v141-backend-probe.mjs');\n    evidence(`BACKEND_RUNTIME_PROBE: ${backendProbe.ok ? 'PASS' : 'BLOCKED'}`);\n    audit('backend runtime probe: ' + (backendProbe.ok ? 'PASS' : 'BLOCKED'));\n  }\n\n  ";
-  if (s.includes(anchor)) {
-    s = s.replace(anchor, block + anchor);
-    changed = true;
-  }
-}
-
-if (!s.includes("evidence(`BACKEND_ENDPOINT_CONTRACT:")) {
-  const anchor = "if (existsSync(join(ROOT, 'tools/pi-harness-v141-audit.mjs'))) {";
-  const block = "if (existsSync(join(ROOT, 'tools/pi-harness-v141-endpoint-contract-audit.mjs'))) {\n    const endpointAudit = shFull('node tools/pi-harness-v141-endpoint-contract-audit.mjs');\n    evidence(`BACKEND_ENDPOINT_CONTRACT: ${endpointAudit.ok ? 'PASS' : 'BLOCKED'}`);\n    audit('backend endpoint contract: ' + (endpointAudit.ok ? 'PASS' : 'BLOCKED'));\n  }\n\n  ";
-  if (s.includes(anchor)) {
-    s = s.replace(anchor, block + anchor);
-    changed = true;
-  }
-}
-
-if (!s.includes("evidence(`BACKEND_GOLD_GATE_AUDIT:")) {
-  const anchor = "if (existsSync(join(ROOT, 'tools/pi-harness-v141-audit.mjs'))) {";
-  const block = "if (existsSync(join(ROOT, 'tools/pi-harness-v141-gold-gate-audit.mjs'))) {\n    const goldGateAudit = shFull('node tools/pi-harness-v141-gold-gate-audit.mjs');\n    evidence(`BACKEND_GOLD_GATE_AUDIT: ${goldGateAudit.ok ? 'PASS' : 'BLOCKED'}`);\n    audit('backend gold gate audit: ' + (goldGateAudit.ok ? 'PASS' : 'BLOCKED'));\n  }\n\n  ";
-  if (s.includes(anchor)) {
-    s = s.replace(anchor, block + anchor);
     changed = true;
   }
 }
