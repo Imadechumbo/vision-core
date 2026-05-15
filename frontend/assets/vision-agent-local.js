@@ -2,13 +2,16 @@
   'use strict';
 
   var agents = [
-    { key: 'openclaw', name: 'OpenClaw', contract: 'Coordena a missão e valida handoff entre agentes.' },
-    { key: 'scanner', name: 'Scanner', contract: 'Inspeciona sinais, riscos e evidências técnicas.' },
-    { key: 'hermes', name: 'Hermes', contract: 'Comunica eventos, status e síntese operacional.' },
-    { key: 'patchengine', name: 'PatchEngine', contract: 'Prepara alterações somente quando há contrato válido.' },
-    { key: 'aegis', name: 'Aegis', contract: 'Aplica política de bloqueio e segurança.' },
-    { key: 'passgold', name: 'PASS GOLD', contract: 'Só acende com autorização de promoção e recibo de evidência válido.', gold: true },
-    { key: 'github', name: 'PR GitHub', contract: 'Depende de integração autorizada pelo servidor.' }
+    { key: 'piharness',   name: 'PI Harness',   contract: 'Roteia e valida a missão. Nunca promove sem evidence real.' },
+    { key: 'hermes',      name: 'Hermes',        contract: 'Supervisiona eventos e realiza análise de causa raiz.' },
+    { key: 'openclaw',    name: 'OpenClaw',      contract: 'Coordena a missão e valida handoff entre agentes.' },
+    { key: 'scanner',     name: 'Scanner',       contract: 'Inspeciona sinais, riscos e evidências técnicas.' },
+    { key: 'patchengine', name: 'PatchEngine',   contract: 'Prepara alterações somente quando há contrato válido.' },
+    { key: 'aegis',       name: 'Aegis',         contract: 'Aplica política de bloqueio e segurança.' },
+    { key: 'gocore',      name: 'Go Core',       contract: 'Evidence real só vem do Go Core. Runtime Truth.' },
+    { key: 'passgold',    name: 'PASS GOLD',     contract: 'Só acende com autorização e evidence válido.', gold: true },
+    { key: 'archivist',   name: 'Archivist',     contract: 'Guarda memória e contexto de missão.' },
+    { key: 'github',      name: 'GitHub Agent',  contract: 'Depende de integração autorizada pelo servidor.' }
   ];
 
   var fallbackMetrics = [
@@ -47,12 +50,20 @@
   }
 
   function normalizedKey(value) {
-    return String(value || '')
-      .toLowerCase()
-      .replace(/hermes rca/g, 'hermes')
-      .replace(/pass gold/g, 'passgold')
-      .replace(/patch engine/g, 'patchengine')
-      .replace(/[^a-z0-9]/g, '');
+    var s = String(value || '').toLowerCase();
+    s = s.replace(/hermes\s*rca/g, 'hermes');
+    s = s.replace(/pass\s*gold/g, 'passgold');
+    s = s.replace(/patch\s*engine/g, 'patchengine');
+    s = s.replace(/pi\s*harness/g, 'piharness');
+    s = s.replace(/go\s*core/g, 'gocore');
+    s = s.replace(/github\s*agent/g, 'github');
+    s = s.replace(/[^a-z0-9]/g, '');
+    if (s === 'runtime') { return 'gocore'; }
+    if (s === 'harness') { return 'piharness'; }
+    if (s === 'memory') { return 'archivist'; }
+    if (s === 'pr') { return 'github'; }
+    if (s === 'patch') { return 'patchengine'; }
+    return s;
   }
 
   function position(index, total) {
@@ -86,8 +97,8 @@
       }
     });
 
-    setText('mcCoreStatus', hasGold(payload) ? '★ GOLD' : (payload.state || payload.status || 'READY'));
-    setText('mcCoreSub', hasGold(payload) ? 'PASS GOLD' : 'VISION CORE');
+    setText('mcCoreStatus', hasGold(payload) ? '★ GOLD' : (payload.state || payload.status || 'AGUARDA'));
+    setText('mcCoreSub', hasGold(payload) ? 'PASS GOLD' : 'MISSION INPUT');
   }
 
   function renderOrbit() {

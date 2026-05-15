@@ -148,7 +148,7 @@ function isV8PureSnapshot() {
   const hasV8Brand =
     html.includes('VISION CORE V2.9.10') &&
     html.includes('MISSION CONTROL') &&
-    html.includes('VISION AGENT LOCAL');
+    (html.includes('VISION AGENT LOCAL') || html.includes('MISSION INPUT'));
 
   const hasV8VisualFiles =
     exists('frontend/assets/style.css') &&
