@@ -1,6 +1,7 @@
 {
-  "frontend/index.html": "24980d0f0ab9a64e293fbbaa98ceee610d0bf00ed819f67693c3b0ba7abeb846",
-  "frontend/assets/vision-agent-local.js": "f1ddfd3bb12254ab1212f4a11e9ca61df8a01d3540cd4f921a0d986bdc48e789",
+  "frontend/index.html": "d713051d83cb457bb9e29b8986df959b27807b1da72642db50185e969c7b028b",
+  "frontend/assets/vision-agent-local.js": "f83f4100c1f431722cc72709fda6b914d61910806ccfc6b93a3126b9df3e8ad0",
+  "frontend/assets/vision-gold.css": "26e4b86c9cc60cddb4ea07b3e57e48a7ec0440eb38615e393508c112d966071f",
   "frontend/assets/vision-api.js": "db8a0d60815770a1266c7987d4c17a861f104da0b81b7435a518ccc1e3b30944",
   "frontend/assets/vision-chat.js": "84236cd3ad71b023c29463f84eb3e001185a941a523eeb32e5f7ab81d1178710",
   "frontend/assets/vision-runtime-owner.js": "1361348a48b13ce08f4f3a1110b383439b2a96981068979b95a47128adcbe348",

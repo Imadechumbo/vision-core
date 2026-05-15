@@ -72,6 +72,7 @@ window.__VISION_RUNTIME_VERSION__ = "2.9.10-clean-front-v31-gateway";
 <link rel="stylesheet" href="assets/vision-v298-command-chat.css">
 <link rel="stylesheet" href="assets/vision-v298-final-hardened.css">
 <link rel="stylesheet" href="assets/vision-v298-final-hard-fix2.css">
+<link rel="stylesheet" href="assets/vision-gold.css">
 </head>
 <body>
 <header class="top">
@@ -342,55 +343,203 @@ window.__VISION_RUNTIME_VERSION__ = "2.9.10-clean-front-v31-gateway";
   </section>
 
   <aside>
-    <!-- ── Mission Control Orb + VISION AGENT LOCAL ────────────────── -->
+    <!-- ── MISSION INPUT — Decágono Multiagente ─────────────────────── -->
     <section class="panel mc-panel" id="agentDownload">
-      <p class="eyebrow">VISION AGENT LOCAL</p>
+      <p class="eyebrow">MISSION INPUT</p>
+      <p style="font-size:9px;letter-spacing:2px;color:#7c6fa0;margin:0 0 8px;text-align:center;">Arquitetura multiagente sugerida</p>
 
-      <!-- Orb interativo -->
-      <div class="mc-orb-wrap">
-        <div class="mc-ring mc-ring-3"></div>
-        <div class="mc-ring mc-ring-2"></div>
-        <div class="mc-ring mc-ring-1"></div>
-
-        <!-- Nós orbitais -->
-        <div class="mc-node mc-node--top"    data-key="openclaw">
-          <div class="mc-node-icon">⬡</div>
-          <div class="mc-node-label">OPENCLAW<br><small id="v33-t-openclaw">AGUARDA</small></div>
-        </div>
-        <div class="mc-node mc-node--tr"     data-key="scanner">
-          <div class="mc-node-icon">◈</div>
-          <div class="mc-node-label">SCANNER<br><small id="v33-t-scanner">AGUARDA</small></div>
-        </div>
-        <div class="mc-node mc-node--right"  data-key="hermes">
-          <div class="mc-node-icon">⬖</div>
-          <div class="mc-node-label">HERMES<br><small id="v33-t-hermes">AGUARDA</small></div>
-        </div>
-        <div class="mc-node mc-node--br"     data-key="patchengine">
-          <div class="mc-node-icon">⊕</div>
-          <div class="mc-node-label">PATCH ENGINE<br><small id="v33-t-patchengine">AGUARDA</small></div>
-        </div>
-        <div class="mc-node mc-node--bottom" data-key="aegis">
-          <div class="mc-node-icon">◉</div>
-          <div class="mc-node-label">AEGIS<br><small id="v33-t-aegis">AGUARDA</small></div>
-        </div>
-        <div class="mc-node mc-node--left"   data-key="passgold">
-          <div class="mc-node-icon">★</div>
-          <div class="mc-node-label">PASS GOLD<br><small id="v33-t-passgold">AGUARDA</small></div>
-        </div>
-        <div class="mc-node mc-node--tl"     data-key="github">
-          <div class="mc-node-icon">⎇</div>
-          <div class="mc-node-label">PR GITHUB<br><small id="v33-t-github">AGUARDA</small></div>
-        </div>
+      <!-- ── Decágono Multiagente ── -->
+      <div class="mi-decagon-wrap">
+        <svg class="mi-svg" viewBox="0 0 460 480" aria-hidden="true">
+          <circle cx="230" cy="240" r="210" fill="none" stroke="rgba(192,132,252,0.10)" stroke-width="0.5" stroke-dasharray="4 7"/>
+          <polygon points="230,24 352,65 427,173 427,307 352,415 230,456 108,415 33,307 33,173 108,65" fill="none" stroke="rgba(192,132,252,0.16)" stroke-width="0.5" stroke-dasharray="5 6"/>
+          <line x1="230" y1="240" x2="230" y2="24"  stroke="rgba(192,132,252,0.16)" stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="352" y2="65"  stroke="rgba(52,211,153,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="427" y2="173" stroke="rgba(96,165,250,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="427" y2="307" stroke="rgba(96,165,250,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="352" y2="415" stroke="rgba(192,132,252,0.16)" stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="230" y2="456" stroke="rgba(251,191,36,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="108" y2="415" stroke="rgba(251,191,36,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="33"  y2="307" stroke="rgba(248,113,113,0.16)" stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="33"  y2="173" stroke="rgba(34,211,238,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="108" y2="65"  stroke="rgba(34,211,238,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+        </svg>
 
         <!-- Núcleo central -->
-        <div class="mc-core" id="mcCore">
-          <div class="mc-core-hex"></div>
-          <div class="mc-core-status" id="mcCoreStatus">READY</div>
-          <div class="mc-core-sub" id="mcCoreSub">VISION CORE</div>
+        <div class="mi-center" id="mcCore">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="11" r="5" stroke="#c084fc" stroke-width="1.5"/>
+            <path d="M6 28c0-5.523 4.477-10 10-10s10 4.477 10 10" stroke="#c084fc" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <div class="mi-center-label" id="mcCoreStatus">AGUARDA</div>
+          <div class="mi-center-sub" id="mcCoreSub">MISSION INPUT</div>
         </div>
 
-        <!-- Tooltip ao hover nos nós -->
-        <div class="mc-tooltip" id="mcTooltip"></div>
+        <div class="mi-tooltip" id="mcTooltip"></div>
+
+        <!-- N1: PI Harness — top:5%, left:50% -->
+        <div class="mi-node" style="top:5%;left:50%;" data-key="piharness">
+          <div class="mi-icon mi-icon--p">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <rect x="4" y="6" width="18" height="14" rx="3" stroke="#c084fc" stroke-width="1.4"/>
+              <line x1="9" y1="6" x2="9" y2="20" stroke="#c084fc" stroke-width="1" opacity="0.6"/>
+              <line x1="13" y1="6" x2="13" y2="20" stroke="#c084fc" stroke-width="1" opacity="0.6"/>
+              <line x1="17" y1="6" x2="17" y2="20" stroke="#c084fc" stroke-width="1" opacity="0.6"/>
+              <line x1="4" y1="11" x2="22" y2="11" stroke="#c084fc" stroke-width="1" opacity="0.6"/>
+              <line x1="4" y1="15" x2="22" y2="15" stroke="#c084fc" stroke-width="1" opacity="0.6"/>
+              <line x1="9" y1="3" x2="9" y2="6"  stroke="#c084fc" stroke-width="1.2"/>
+              <line x1="13" y1="2" x2="13" y2="6" stroke="#c084fc" stroke-width="1.2"/>
+              <line x1="17" y1="3" x2="17" y2="6" stroke="#c084fc" stroke-width="1.2"/>
+              <line x1="9" y1="20" x2="9" y2="23"  stroke="#c084fc" stroke-width="1.2"/>
+              <line x1="13" y1="20" x2="13" y2="24" stroke="#c084fc" stroke-width="1.2"/>
+              <line x1="17" y1="20" x2="17" y2="23" stroke="#c084fc" stroke-width="1.2"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#c084fc;">PI HARNESS</div>
+          <div class="mi-role">Mission Runner</div>
+          <small id="v33-t-piharness" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N2: Hermes — top:13.6%, left:76.5% -->
+        <div class="mi-node" style="top:13.6%;left:76.5%;" data-key="hermes">
+          <div class="mi-icon mi-icon--t">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <circle cx="13" cy="13" r="4" stroke="#34d399" stroke-width="1.4"/>
+              <path d="M13 9 C10 6 5 5 3 8 C5 9 8 9 10 11" stroke="#34d399" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+              <path d="M13 9 C16 6 21 5 23 8 C21 9 18 9 16 11" stroke="#34d399" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+              <line x1="13" y1="17" x2="13" y2="22" stroke="#34d399" stroke-width="1.3" stroke-linecap="round"/>
+              <line x1="11" y1="21" x2="13" y2="22" stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="15" y1="21" x2="13" y2="22" stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#34d399;">HERMES</div>
+          <div class="mi-role">Supervisor / RCA</div>
+          <small id="v33-t-hermes" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N3: OpenClaw — top:36.1%, left:92.8% -->
+        <div class="mi-node" style="top:36.1%;left:92.8%;" data-key="openclaw">
+          <div class="mi-icon mi-icon--b">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <line x1="13" y1="22" x2="13" y2="8"  stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="8"  y1="4"  x2="8"  y2="11" stroke="#60a5fa" stroke-width="1.4" stroke-linecap="round"/>
+              <line x1="18" y1="4"  x2="18" y2="11" stroke="#60a5fa" stroke-width="1.4" stroke-linecap="round"/>
+              <path d="M8 11 Q8 14 13 14 Q18 14 18 11" stroke="#60a5fa" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+              <line x1="13" y1="4" x2="13" y2="8" stroke="#60a5fa" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#60a5fa;">OPENCLAW</div>
+          <div class="mi-role">Orchestrator</div>
+          <small id="v33-t-openclaw" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N4: Scanner — top:63.9%, left:92.8% -->
+        <div class="mi-node" style="top:63.9%;left:92.8%;" data-key="scanner">
+          <div class="mi-icon mi-icon--b">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <circle cx="11" cy="11" r="6" stroke="#60a5fa" stroke-width="1.5"/>
+              <line x1="15.5" y1="15.5" x2="22" y2="22" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="8" y1="11" x2="14" y2="11" stroke="#60a5fa" stroke-width="1" opacity="0.6"/>
+              <line x1="11" y1="8" x2="11" y2="14" stroke="#60a5fa" stroke-width="1" opacity="0.6"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#60a5fa;">SCANNER</div>
+          <div class="mi-role">Context Builder</div>
+          <small id="v33-t-scanner" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N5: PatchEngine — top:86.4%, left:76.5% -->
+        <div class="mi-node" style="top:86.4%;left:76.5%;" data-key="patchengine">
+          <div class="mi-icon mi-icon--p">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <circle cx="13" cy="13" r="4" stroke="#c084fc" stroke-width="1.4"/>
+              <path d="M13 3 L14.5 6.5 L18 5 L17 8.5 L20.5 10 L18 13 L20.5 16 L17 17.5 L18 21 L14.5 19.5 L13 23 L11.5 19.5 L8 21 L9 17.5 L5.5 16 L8 13 L5.5 10 L9 8.5 L8 5 L11.5 6.5 Z" stroke="#c084fc" stroke-width="1.3" fill="none" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#c084fc;">PATCH ENGINE</div>
+          <div class="mi-role">Exec. controlada</div>
+          <small id="v33-t-patchengine" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N6: Aegis — top:95%, left:50% -->
+        <div class="mi-node" style="top:95%;left:50%;" data-key="aegis">
+          <div class="mi-icon mi-icon--y">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <path d="M13 3 L22 7 L22 14 C22 19 13 23 13 23 C13 23 4 19 4 14 L4 7 Z" stroke="#fbbf24" stroke-width="1.4" fill="none" stroke-linejoin="round"/>
+              <path d="M9 13 L12 16 L17 10" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#fbbf24;">AEGIS</div>
+          <div class="mi-role">Security Gate</div>
+          <small id="v33-t-aegis" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N7: Go Core — top:86.4%, left:23.5% -->
+        <div class="mi-node" style="top:86.4%;left:23.5%;" data-key="gocore">
+          <div class="mi-icon mi-icon--y">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <ellipse cx="13" cy="7" rx="7" ry="3" stroke="#fbbf24" stroke-width="1.4"/>
+              <line x1="6" y1="7" x2="6" y2="19"  stroke="#fbbf24" stroke-width="1.4"/>
+              <line x1="20" y1="7" x2="20" y2="19" stroke="#fbbf24" stroke-width="1.4"/>
+              <ellipse cx="13" cy="19" rx="7" ry="3" stroke="#fbbf24" stroke-width="1.4"/>
+              <ellipse cx="13" cy="13" rx="7" ry="3" stroke="#fbbf24" stroke-width="1" opacity="0.5"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#fbbf24;">GO CORE</div>
+          <div class="mi-role">Runtime Truth</div>
+          <small id="v33-t-gocore" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N8: PASS GOLD — top:63.9%, left:7.2% -->
+        <div class="mi-node" style="top:63.9%;left:7.2%;" data-key="passgold">
+          <div class="mi-icon mi-icon--r">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <polygon points="13,3 15.5,9.5 22.5,10 17.5,15 19.5,22 13,18 6.5,22 8.5,15 3.5,10 10.5,9.5" stroke="#f87171" stroke-width="1.4" fill="none" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#f87171;">PASS GOLD</div>
+          <div class="mi-role">Final Authority</div>
+          <small id="v33-t-passgold" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N9: Archivist — top:36.1%, left:7.2% -->
+        <div class="mi-node" style="top:36.1%;left:7.2%;" data-key="archivist">
+          <div class="mi-icon mi-icon--c">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <rect x="5" y="4" width="16" height="18" rx="2" stroke="#22d3ee" stroke-width="1.4"/>
+              <line x1="9" y1="9"  x2="17" y2="9"  stroke="#22d3ee" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="9" y1="13" x2="17" y2="13" stroke="#22d3ee" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="9" y1="17" x2="14" y2="17" stroke="#22d3ee" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#22d3ee;">ARCHIVIST</div>
+          <div class="mi-role">Memory Guard</div>
+          <small id="v33-t-archivist" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N10: GitHub Agent — top:13.6%, left:23.5% -->
+        <div class="mi-node" style="top:13.6%;left:23.5%;" data-key="github">
+          <div class="mi-icon mi-icon--c">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <circle cx="9"  cy="6"  r="2.5" stroke="#22d3ee" stroke-width="1.4"/>
+              <circle cx="9"  cy="20" r="2.5" stroke="#22d3ee" stroke-width="1.4"/>
+              <circle cx="19" cy="10" r="2.5" stroke="#22d3ee" stroke-width="1.4"/>
+              <line x1="9" y1="8.5" x2="9" y2="17.5" stroke="#22d3ee" stroke-width="1.3" stroke-linecap="round"/>
+              <path d="M9 8.5 Q9 10 19 10" stroke="#22d3ee" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#22d3ee;">GITHUB AGENT</div>
+          <div class="mi-role">PR / CI / Release</div>
+          <small id="v33-t-github" class="mi-status">AGUARDA</small>
+        </div>
+      </div>
+
+      <!-- Legenda compacta -->
+      <div class="mi-legend">
+        <span class="mi-leg-item"><span class="mi-dot mi-dot--p">●</span> Decisão: Hermes, OpenClaw</span>
+        <span class="mi-leg-item"><span class="mi-dot mi-dot--t">●</span> Execução: PI Harness, Scanner, PatchEngine</span>
+        <span class="mi-leg-item"><span class="mi-dot mi-dot--b">●</span> Validação: Aegis, Go Core, PASS GOLD</span>
+        <span class="mi-leg-item"><span class="mi-dot mi-dot--c">●</span> Memória: Archivist · Governança: GitHub Agent</span>
       </div>
 
       <!-- Métricas estilo LionClaw abaixo do orb -->
