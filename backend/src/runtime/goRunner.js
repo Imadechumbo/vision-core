@@ -164,6 +164,9 @@ function normalizeGoResult(parsed = {}, stdout = '', stderr = '', bin = '', opti
   const backendHasEvidenceReceipt = hasEvidenceReceipt(receipt);
   const backendDerivedEvidence = isBackendDerivedEvidence(receipt);
 
+  // V14.4: evidence_receipt.source must be "go-core" for strict gold
+  const evidenceHasGoSource = isPlainObject(receipt) && receipt.source === 'go-core';
+
   const gates = isPlainObject(parsed.gates) ? parsed.gates : {};
   const gateValues = Object.values(gates);
   const mandatoryGatesPassed = gateValues.length > 0 && gateValues.every((value) => value === true);
@@ -175,6 +178,7 @@ function normalizeGoResult(parsed = {}, stdout = '', stderr = '', bin = '', opti
   if (!backendHasMissionId) failures.push('missing_real_mission_id');
   if (!backendHasEvidenceReceipt) failures.push('missing_real_evidence_receipt');
   if (backendDerivedEvidence) failures.push('backend_derived_evidence_receipt');
+  if (backendHasEvidenceReceipt && !evidenceHasGoSource) failures.push('evidence_source_not_go_core');
 
   if (parsed.pass_gold === true && !mandatoryGatesPassed) {
     failures.push('mandatory_gates_not_confirmed');
@@ -189,6 +193,7 @@ function normalizeGoResult(parsed = {}, stdout = '', stderr = '', bin = '', opti
     && !backendStubFromGo
     && backendHasMissionId
     && backendHasEvidenceReceipt
+    && evidenceHasGoSource
     && !backendDerivedEvidence
     && mandatoryGatesPassed
     && failedGates.length === 0;
@@ -224,7 +229,7 @@ function normalizeGoResult(parsed = {}, stdout = '', stderr = '', bin = '', opti
 
     mission_id: backendHasMissionId ? missionId : null,
     evidence_receipt: backendHasEvidenceReceipt ? receipt : null,
-    evidence_source: backendHasEvidenceReceipt ? 'go_core_runtime_result' : null,
+    evidence_source: backendHasEvidenceReceipt ? (evidenceHasGoSource ? 'go-core' : 'go_core_runtime_result') : null,
 
     snapshot_id: parsed.snapshot_id || null,
     engine: parsed.engine || 'go-safe-core',

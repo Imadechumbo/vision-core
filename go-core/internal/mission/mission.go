@@ -11,7 +11,9 @@ package mission
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -31,6 +33,20 @@ import (
 	"github.com/visioncore/go-core/internal/security/types"
 	"github.com/visioncore/go-core/internal/validator"
 )
+
+// EvidenceReceipt is the traceable proof of a real Go Core mission execution.
+// Only Go Core generates this — backend must never fabricate or substitute it.
+type EvidenceReceipt struct {
+	ID          string   `json:"id"`
+	MissionID   string   `json:"mission_id"`
+	SnapshotID  *string  `json:"snapshot_id"`
+	GatesHash   string   `json:"gates_hash"`
+	IssuedAt    string   `json:"issued_at"`
+	Result      string   `json:"result"` // "PASS" | "FAIL"
+	PassGold    bool     `json:"pass_gold"`
+	FailedGates []string `json:"failed_gates"`
+	Source      string   `json:"source"` // always "go-core"
+}
 
 type Input struct {
 	Root      string `json:"root"`
@@ -145,6 +161,11 @@ type Output struct {
 	GitHubPRStatusState   string `json:"github_pr_status_state"`
 	GitHubPRDryRun        bool   `json:"github_pr_dry_run"`
 	GitHubPROpened        bool   `json:"github_pr_opened"`
+	// V14.4 — Real Go Core evidence receipt. Backend must not fabricate this.
+	EvidenceReceipt *EvidenceReceipt `json:"evidence_receipt,omitempty"`
+	BackendStub     bool             `json:"backend_stub"`
+	EvidenceSource  string           `json:"evidence_source,omitempty"`
+
 	// V6.3 internal — before-state telemetry, not serialised
 	beforeTrace securityTrace `json:"-"`
 }
@@ -546,6 +567,14 @@ func Run(input Input) Output {
 		out.OK = false
 		out.Summary = fmt.Sprintf("Mission FAILED. Gates: %v", pg.FailedGates)
 	}
+
+	// V14.4 — Generate real evidence receipt from Go Core.
+	// This is the only place where evidence_receipt is created.
+	// Backend must never fabricate, substitute, or complement this.
+	out.EvidenceReceipt = buildEvidenceReceipt(missionID, snapshotID, gates, pg)
+	out.BackendStub = false
+	out.EvidenceSource = "go-core"
+
 	recordPassiveMemory(input.Root, &out)
 	planGitHubPR(input, &out, changedFiles)
 	out.DurationMs = time.Since(start).Milliseconds()
@@ -593,6 +622,41 @@ func shortID() string {
 	b := make([]byte, 4)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// buildEvidenceReceipt generates the real evidence receipt from Go Core.
+// The backend must never call this — it is internal to Go Core only.
+func buildEvidenceReceipt(missionID, snapshotID string, gates passgold.Gates, pg passgold.Result) *EvidenceReceipt {
+	gatesJSON, _ := json.Marshal(gates)
+	hash := sha256.Sum256(gatesJSON)
+	gatesHash := hex.EncodeToString(hash[:])[:16]
+
+	result := "FAIL"
+	if pg.PassGold {
+		result = "PASS"
+	}
+
+	var snapID *string
+	if snapshotID != "" {
+		snapID = &snapshotID
+	}
+
+	failedGates := pg.FailedGates
+	if failedGates == nil {
+		failedGates = []string{}
+	}
+
+	return &EvidenceReceipt{
+		ID:          "go_evr_" + shortID(),
+		MissionID:   missionID,
+		SnapshotID:  snapID,
+		GatesHash:   gatesHash,
+		IssuedAt:    time.Now().UTC().Format(time.RFC3339),
+		Result:      result,
+		PassGold:    pg.PassGold,
+		FailedGates: failedGates,
+		Source:      "go-core",
+	}
 }
 
 func mapSecurityViolations(violations []types.Violation) []securityViolation {
