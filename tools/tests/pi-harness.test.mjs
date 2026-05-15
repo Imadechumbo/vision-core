@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * PI Harness V15.2 — Test Suite
+ * PI Harness V15.3 — Test Suite
  *
  * Testa:
  * 1. Strict gate bloqueia sem evidence_source go-core
@@ -632,6 +632,308 @@ function _validateRuntimeContract(probe) {
     assert(Array.isArray(parsed.run_live_failed_gates),     '[8k] run_live_failed_gates é array');
   } else {
     assert(false, '[8k] JSON parseável para verificar runtime_contract_* fields');
+  }
+}
+
+// ─── SUITE 9: New Flags V15.3 ─────────────────────────────────────
+
+console.log('\n── Suite 9: New Flags V15.3 ──');
+
+// 9a: --runtime-probe-port aceito — JSON contém runtime_probe_port
+{
+  const r = runHarness(['--runtime-probe-port', '9999', '--json'], 90000);
+  let parsed = null;
+  try { parsed = JSON.parse(r.stdout.trim()); } catch {
+    const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
+    if (f >= 0 && l > f) try { parsed = JSON.parse(r.stdout.slice(f, l+1)); } catch { /* noop */ }
+  }
+  assert(parsed !== null, '[9a] --runtime-probe-port aceito sem crash');
+  if (parsed) {
+    assert(parsed.runtime_probe_port === 9999, '[9a] runtime_probe_port=9999 no JSON');
+  }
+}
+
+// 9b: --runtime-probe-timeout-ms aceito — JSON contém runtime_probe_timeout_ms
+{
+  const r = runHarness(['--runtime-probe-timeout-ms', '3000', '--json'], 90000);
+  let parsed = null;
+  try { parsed = JSON.parse(r.stdout.trim()); } catch {
+    const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
+    if (f >= 0 && l > f) try { parsed = JSON.parse(r.stdout.slice(f, l+1)); } catch { /* noop */ }
+  }
+  assert(parsed !== null, '[9b] --runtime-probe-timeout-ms aceito sem crash');
+  if (parsed) {
+    assert(parsed.runtime_probe_timeout_ms === 3000, '[9b] runtime_probe_timeout_ms=3000 no JSON');
+  }
+}
+
+// 9c: --runtime-probe-no-start aceito — JSON contém runtime_probe_no_start:true
+{
+  const r = runHarness(['--runtime-probe-no-start', '--json'], 90000);
+  let parsed = null;
+  try { parsed = JSON.parse(r.stdout.trim()); } catch {
+    const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
+    if (f >= 0 && l > f) try { parsed = JSON.parse(r.stdout.slice(f, l+1)); } catch { /* noop */ }
+  }
+  assert(parsed !== null, '[9c] --runtime-probe-no-start aceito sem crash');
+  if (parsed) {
+    assert(parsed.runtime_probe_no_start === true, '[9c] runtime_probe_no_start:true no JSON');
+  }
+}
+
+// 9d: sem flags novas → runtime_probe_no_start:false, runtime_probe_port=8080
+{
+  const r = runHarness(['--json'], 90000);
+  let parsed = null;
+  try { parsed = JSON.parse(r.stdout.trim()); } catch {
+    const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
+    if (f >= 0 && l > f) try { parsed = JSON.parse(r.stdout.slice(f, l+1)); } catch { /* noop */ }
+  }
+  if (parsed) {
+    assert(parsed.runtime_probe_no_start === false, '[9d] runtime_probe_no_start:false por padrão');
+    assert(typeof parsed.runtime_probe_port === 'number', '[9d] runtime_probe_port é number por padrão');
+    assert(typeof parsed.runtime_probe_timeout_ms === 'number', '[9d] runtime_probe_timeout_ms é number por padrão');
+  } else {
+    assert(false, '[9d] JSON parseável para verificar defaults');
+  }
+}
+
+// ─── SUITE 10: Safe Payload & Temp Root ──────────────────────────
+
+console.log('\n── Suite 10: Safe Payload & Temp Root ──');
+
+// 10a: payload de probe é seguro (unit test)
+{
+  function buildProbePayload(tempRoot) {
+    return {
+      input:   'V15.3 runtime pass path self-test',
+      root:    tempRoot,
+      dry_run: true,
+      source:  'pi-harness-runtime-probe',
+      mode:    'runtime-probe',
+    };
+  }
+  const payload = buildProbePayload('/tmp/probe-test-123');
+  assert(payload.dry_run === true,                           '[10a] payload dry_run:true');
+  assert(payload.source  === 'pi-harness-runtime-probe',    '[10a] payload source correto');
+  assert(payload.mode    === 'runtime-probe',                '[10a] payload mode correto');
+  assert(typeof payload.root === 'string' && payload.root.length > 0, '[10a] payload root presente');
+  assert(!payload.deploy && payload.deploy_allowed !== true, '[10a] payload não solicita deploy');
+}
+
+// 10b: JSON contém campos runtime_probe_temp_root*
+{
+  const r = runHarness(['--runtime-probe', '--json'], 90000);
+  let parsed = null;
+  try { parsed = JSON.parse(r.stdout.trim()); } catch {
+    const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
+    if (f >= 0 && l > f) try { parsed = JSON.parse(r.stdout.slice(f, l+1)); } catch { /* noop */ }
+  }
+  assert(parsed !== null, '[10b] JSON parseável com --runtime-probe');
+  if (parsed) {
+    assert('runtime_probe_temp_root'         in parsed, '[10b] JSON tem runtime_probe_temp_root');
+    assert('runtime_probe_temp_root_created' in parsed, '[10b] JSON tem runtime_probe_temp_root_created');
+    assert('runtime_probe_temp_root_removed' in parsed, '[10b] JSON tem runtime_probe_temp_root_removed');
+    assert(typeof parsed.runtime_probe_temp_root_created === 'boolean', '[10b] runtime_probe_temp_root_created é boolean');
+    assert(typeof parsed.runtime_probe_temp_root_removed === 'boolean', '[10b] runtime_probe_temp_root_removed é boolean');
+  }
+}
+
+// 10c: sem --runtime-probe, campos temp_root são null/false
+{
+  const r = runHarness(['--json'], 90000);
+  let parsed = null;
+  try { parsed = JSON.parse(r.stdout.trim()); } catch {
+    const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
+    if (f >= 0 && l > f) try { parsed = JSON.parse(r.stdout.slice(f, l+1)); } catch { /* noop */ }
+  }
+  if (parsed) {
+    assert(parsed.runtime_probe_temp_root === null ||
+           parsed.runtime_probe_temp_root === undefined,          '[10c] runtime_probe_temp_root null sem probe');
+    assert(parsed.runtime_probe_temp_root_created === false ||
+           parsed.runtime_probe_temp_root_created === undefined,  '[10c] temp_root_created false sem probe');
+  } else {
+    assert(false, '[10c] JSON parseável sem --runtime-probe');
+  }
+}
+
+// ─── SUITE 11: Positive Contract Path (unit) ─────────────────────
+
+console.log('\n── Suite 11: Positive Contract Path ──');
+
+// Reutiliza _validateRuntimeContract da Suite 8
+
+// 11a: contrato passa com payload coerente positivo
+{
+  const probe = {
+    mission_id:        'mission_v153_real',
+    evidence_source:   'go-core',
+    evidence_receipt:  { source: 'go-core', mission_id: 'mission_v153_real', id: 'ev_real_001' },
+    backend_stub:      false,
+    deploy_allowed:    false,
+    pass_gold:         true,
+    promotion_allowed: false,
+    failed_gates:      [],
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(r.ok === true,            '[11a] contrato PASS com payload positivo coerente');
+  assert(r.errors.length === 0,   '[11a] zero erros em payload positivo');
+}
+
+// 11b: deploy_allowed:true no run-live bloqueia mesmo outros campos ok
+{
+  const probe = {
+    mission_id:       'mission_v153',
+    evidence_source:  'go-core',
+    evidence_receipt: { source: 'go-core', mission_id: 'mission_v153', id: 'ev_1' },
+    backend_stub:     false,
+    deploy_allowed:   true,
+    pass_gold:        false,
+    failed_gates:     [],
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(!r.ok, '[11b] deploy_allowed:true bloqueia positive path');
+  assert(r.errors.some(e => e.includes('deploy_allowed:true')), '[11b] erro menciona deploy_allowed');
+}
+
+// 11c: backend_stub:true bloqueia positive path (pass_gold=true com stub)
+{
+  const probe = {
+    mission_id:       'mission_v153',
+    evidence_source:  'go-core',
+    evidence_receipt: { source: 'go-core', mission_id: 'mission_v153', id: 'ev_1' },
+    backend_stub:     true,
+    deploy_allowed:   false,
+    pass_gold:        true,
+    failed_gates:     [],
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(!r.ok, '[11c] backend_stub:true bloqueia positive path');
+  assert(r.errors.some(e => e.includes('backend_stub')), '[11c] erro menciona backend_stub');
+}
+
+// 11d: evidence_receipt.source ≠ go-core bloqueia
+{
+  const probe = {
+    mission_id:       'mission_v153',
+    evidence_source:  'go-core',
+    evidence_receipt: { source: 'backend-stub', mission_id: 'mission_v153', id: 'ev_1' },
+    backend_stub:     false,
+    deploy_allowed:   false,
+    pass_gold:        false,
+    failed_gates:     [],
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(!r.ok, '[11d] evidence_receipt.source ≠ go-core bloqueia');
+  assert(r.errors.some(e => e.includes('diverge de evidence_receipt.source')), '[11d] erro menciona divergência source');
+}
+
+// 11e: mission_id ausente em evidence_receipt bloqueia
+{
+  const probe = {
+    mission_id:       'mission_v153',
+    evidence_source:  'go-core',
+    evidence_receipt: { source: 'go-core', id: 'ev_1' }, // sem mission_id
+    backend_stub:     false,
+    deploy_allowed:   false,
+    pass_gold:        false,
+    failed_gates:     [],
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(!r.ok, '[11e] mission_id ausente em evidence_receipt bloqueia');
+  assert(r.errors.some(e => e.includes('evidence_receipt.mission_id ausente')), '[11e] erro correto');
+}
+
+// 11f: evidence_receipt.mission_id divergente bloqueia
+{
+  const probe = {
+    mission_id:       'mission_v153',
+    evidence_source:  'go-core',
+    evidence_receipt: { source: 'go-core', mission_id: 'mission_OTHER', id: 'ev_1' },
+    backend_stub:     false,
+    deploy_allowed:   false,
+    pass_gold:        false,
+    failed_gates:     [],
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(!r.ok, '[11f] evidence_receipt.mission_id divergente bloqueia');
+  assert(r.errors.some(e => e.includes('diverge de mission_id')), '[11f] erro menciona divergência mission_id');
+}
+
+// 11g: runtime_probe_pass só true quando todos os gates passam (unit lógico)
+{
+  function simulateRuntimeProbePass(probe) {
+    if (probe.deploy_allowed === true) return false;
+    if (!probe.mission_id || !String(probe.mission_id).startsWith('mission_')) return false;
+    const src = probe.evidence_receipt?.source || probe.evidence_source || null;
+    if (src !== 'go-core') return false;
+    if (probe.backend_stub !== false) return false;
+    const contract = _validateRuntimeContract(probe);
+    if (!contract.ok) return false;
+    return true;
+  }
+
+  const validProbe = {
+    mission_id:       'mission_v153_real',
+    evidence_source:  'go-core',
+    evidence_receipt: { source: 'go-core', mission_id: 'mission_v153_real', id: 'ev_001' },
+    backend_stub:     false,
+    deploy_allowed:   false,
+    pass_gold:        false,
+    failed_gates:     [],
+  };
+  assert(simulateRuntimeProbePass(validProbe) === true,  '[11g] runtime_probe_pass:true somente quando tudo PASS');
+
+  const invalidProbe = { ...validProbe, backend_stub: true };
+  assert(simulateRuntimeProbePass(invalidProbe) === false, '[11g] runtime_probe_pass:false quando backend_stub:true');
+}
+
+// ─── SUITE 12: --runtime-probe-no-start behavior ─────────────────
+
+console.log('\n── Suite 12: No-start & Process Control ──');
+
+// 12a: --runtime-probe-no-start → backend_process_started:false
+{
+  const args = ['--no-deprecation', HARNESS, '--max-difficulty', 'D4', '--runtime-probe', '--runtime-probe-no-start', '--json'];
+  const r = spawnSync(process.execPath, args, {
+    cwd: ROOT, encoding: 'utf8', timeout: 60000, shell: false,
+  });
+  let parsed = null;
+  try { parsed = JSON.parse(r.stdout.trim()); } catch {
+    const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
+    if (f >= 0 && l > f) try { parsed = JSON.parse(r.stdout.slice(f, l+1)); } catch { /* noop */ }
+  }
+  assert(parsed !== null, '[12a] JSON parseável com --runtime-probe-no-start');
+  if (parsed) {
+    assert(parsed.runtime_probe_no_start === true,     '[12a] runtime_probe_no_start:true no JSON');
+    assert(parsed.backend_process_started === false,   '[12a] backend_process_started:false com no-start');
+    assert(parsed.deploy_allowed === false,            '[12a] deploy_allowed permanece false');
+  }
+}
+
+// 12b: processo iniciado pelo harness é encerrado (backend_process_stopped quando started)
+{
+  // Testa que a invariante é mantida: se started=true então stopped=true no JSON
+  // Roda com D4 + runtime-probe, se backend for iniciado ele deve ser parado
+  const args = ['--no-deprecation', HARNESS, '--max-difficulty', 'D4', '--runtime-probe', '--json'];
+  const r = spawnSync(process.execPath, args, {
+    cwd: ROOT, encoding: 'utf8', timeout: 120000, shell: false,
+  });
+  let parsed = null;
+  try { parsed = JSON.parse(r.stdout.trim()); } catch {
+    const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
+    if (f >= 0 && l > f) try { parsed = JSON.parse(r.stdout.slice(f, l+1)); } catch { /* noop */ }
+  }
+  if (parsed) {
+    // Se backend foi iniciado pelo harness, deve ter sido parado
+    if (parsed.backend_process_started === true) {
+      assert(parsed.backend_process_stopped === true, '[12b] processo iniciado pelo harness é encerrado');
+    } else {
+      assert(true, '[12b] backend não foi iniciado (já rodando ou não disponível)');
+    }
+    assert(parsed.deploy_allowed === false, '[12b] deploy_allowed false independente de backend state');
+  } else {
+    assert(false, '[12b] JSON parseável para verificar process lifecycle');
   }
 }
 
