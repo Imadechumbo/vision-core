@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Hermes Mission Supervisor — V15.5
+ * Hermes Mission Supervisor — V15.7
  * Multi-Agent Control Plane for Vision Core
  *
  * REGRA ABSOLUTA: SEM PASS GOLD REAL → não promove, não libera, não stable.
@@ -8,7 +8,14 @@
  * Memória antiga nunca vence scan/evidence atual.
  */
 
-const HERMES_VERSION = 'V15.6';
+import {
+  evaluateDecisionMatrix,
+  evaluateReleaseReadiness,
+  renderDecisionMatrixSummary,
+  renderReleaseReadinessGate,
+} from './decision-matrix.mjs';
+
+const HERMES_VERSION = 'V15.7';
 
 // ═══════════════════════════════════════════════════════════════════
 // AGENT REGISTRY — 11 agents obrigatórios
@@ -783,8 +790,9 @@ function resolveAgentConflict(conflict) {
 function renderHermesSupervisionReport(context) {
   if (!context) return null;
 
-  const evidEval = evaluateHermesEvidence(context);
-  const graph    = renderEvidenceGraph(context);
+  const evidEval     = evaluateHermesEvidence(context);
+  const graph        = renderEvidenceGraph(context);
+  const decisionSummary = renderDecisionMatrixGraph(context);
 
   return {
     SUPERVISOR_ENABLED:            context.enabled,
@@ -805,6 +813,17 @@ function renderHermesSupervisionReport(context) {
     EVIDENCE_VALIDATION_ERRORS:    evidEval.validation_errors,
     EVIDENCE_VALIDATION_WARNINGS:  evidEval.validation_warnings,
     EVIDENCE_GRAPH:                graph,
+    DECISION_MATRIX:               context.decision_matrix       || null,
+    DECISION_MATRIX_SUMMARY:       decisionSummary,
+    RELEASE_READINESS_GATE:        context.release_readiness_gate || null,
+    DECISION_STATE:                context.decision_matrix?.decision_state || null,
+    DECISION_BLOCKING_REASONS:     context.decision_matrix?.blocking_reasons || [],
+    DECISION_SAFE_NEXT_ACTIONS:    context.decision_matrix?.safe_next_actions || [],
+    RELEASE_CANDIDATE:             context.decision_matrix?.release_candidate || false,
+    DEPLOY_ALLOWED:                false,
+    PROMOTION_ALLOWED:             false,
+    STABLE_ALLOWED:                false,
+    RELEASE_ALLOWED:               false,
   };
 }
 
@@ -930,6 +949,75 @@ function renderEvidenceGraph(context) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// V15.7 — DECISION MATRIX INTEGRATION
+// ═══════════════════════════════════════════════════════════════════
+
+function attachDecisionMatrix(context, matrix) {
+  if (!context) return;
+  context.decision_matrix          = matrix || null;
+  context.decision_matrix_attached = true;
+  context.decision_matrix_at       = Date.now();
+}
+
+function evaluateHermesDecision(context) {
+  if (!context) {
+    return {
+      decision_state:         'BLOCKED_RUNTIME',
+      release_readiness_gate: null,
+      decision_matrix_summary: null,
+      deploy_allowed:         false,
+      promotion_allowed:      false,
+      stable_allowed:         false,
+      release_allowed:        false,
+      release_candidate:      false,
+    };
+  }
+
+  const runtimeEvidence = context.runtime_evidence || null;
+  const matrix          = evaluateDecisionMatrix(runtimeEvidence, context);
+  const readiness       = evaluateReleaseReadiness(matrix, runtimeEvidence, context);
+
+  attachDecisionMatrix(context, matrix);
+  context.release_readiness_gate = readiness;
+
+  return {
+    decision_state:          matrix.decision_state,
+    release_readiness_gate:  readiness,
+    decision_matrix_summary: renderDecisionMatrixSummary(matrix),
+    deploy_allowed:          false,
+    promotion_allowed:       false,
+    stable_allowed:          false,
+    release_allowed:         false,
+    release_candidate:       false,
+  };
+}
+
+function renderDecisionMatrixGraph(context) {
+  if (!context) return null;
+  const matrix   = context.decision_matrix;
+  const readiness = context.release_readiness_gate;
+  if (!matrix) return null;
+
+  return {
+    schema_version:          'v15.7',
+    mission_id:              context.mission_id || null,
+    decision_state:          matrix.decision_state,
+    decision_matrix_summary: renderDecisionMatrixSummary(matrix),
+    release_readiness_gate:  readiness ? renderReleaseReadinessGate(readiness) : null,
+    blocking_count:          (matrix.blocking_reasons || []).length,
+    critical_count:          (matrix.blocking_reasons || []).filter(r => r.severity === 'critical').length,
+    gates_pass:              Object.entries(matrix.gates || {}).filter(([,g]) => g.pass).map(([k]) => k),
+    gates_blocked:           Object.entries(matrix.gates || {}).filter(([,g]) => !g.pass).map(([k]) => k),
+    deploy_allowed:          false,
+    promotion_allowed:       false,
+    stable_allowed:          false,
+    release_allowed:         false,
+    release_candidate:       false,
+    note:                    'classification only — no deploy performed — explicit authorization required',
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // REGISTRY VALIDATOR (usado em testes)
 // ═══════════════════════════════════════════════════════════════════
 
@@ -1015,4 +1103,7 @@ export {
   attachRuntimeEvidence,
   evaluateHermesEvidence,
   renderEvidenceGraph,
+  attachDecisionMatrix,
+  evaluateHermesDecision,
+  renderDecisionMatrixGraph,
 };

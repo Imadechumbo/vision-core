@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║   PI HARNESS V15.6 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
+ * ║   PI HARNESS V15.7 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
  * ║   D0-Preflight → D1-Cleanup → D2-Contract → D3-GoCore               ║
  * ║   → D4-Backend → D5-Repair → D6-AutoFix → D7-Decision → D8-Report  ║
  * ╠══════════════════════════════════════════════════════════════════════╣
@@ -33,6 +33,7 @@ import {
   recordHermesEvent,
   renderHermesSupervisionReport,
   attachRuntimeEvidence,
+  evaluateHermesDecision,
 } from './hermes/mission-supervisor.mjs';
 import {
   createRuntimeEvidence,
@@ -40,6 +41,13 @@ import {
   validateRuntimeEvidence,
   renderRuntimeEvidenceSummary,
 } from './hermes/runtime-evidence.mjs';
+import {
+  createDecisionMatrix,
+  evaluateDecisionMatrix,
+  evaluateReleaseReadiness,
+  renderDecisionMatrixSummary,
+  renderReleaseReadinessGate,
+} from './hermes/decision-matrix.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -80,6 +88,8 @@ let _probeTempRootCreated = false;
 let _hermesCtx = null;
 // Runtime Evidence snapshot (V15.6)
 let _runtimeEvidence = null;
+// Decision Matrix snapshot (V15.7)
+let _decisionMatrix = null;
 
 // ═══════════════════════════════════════════════════════════════════
 // FAKE EVIDENCE SCAN PATTERNS
@@ -1490,6 +1500,22 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       hermes_runtime_evidence_summary:    _runtimeEvidence
         ? renderRuntimeEvidenceSummary(_runtimeEvidence)
         : null,
+      // V15.7: Decision Matrix fields
+      hermes_decision_matrix_enabled:     true,
+      hermes_decision_matrix_schema_version: _decisionMatrix?.schema_version || 'v15.7',
+      hermes_decision_state:              _decisionMatrix?.decision_state || 'BLOCKED_RUNTIME',
+      hermes_release_readiness:           hermesCtx?.release_readiness_gate?.level || 'blocked',
+      hermes_release_candidate:           false,
+      hermes_decision_score:              hermesCtx?.release_readiness_gate?.score ?? 0,
+      hermes_decision_blocking_reasons:   (_decisionMatrix?.blocking_reasons || []).map(r => r.id),
+      hermes_required_evidence:           (_decisionMatrix?.required_evidence || []).map(r => r.id),
+      hermes_safe_next_actions:           (_decisionMatrix?.safe_next_actions || []).map(a => a.id),
+      hermes_release_gate:                hermesCtx?.release_readiness_gate
+        ? renderReleaseReadinessGate(hermesCtx.release_readiness_gate)
+        : null,
+      hermes_deploy_allowed:              false,
+      hermes_promotion_allowed:           false,
+      hermes_stable_allowed:              false,
     };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
@@ -1501,7 +1527,7 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
 
   log('');
   log(`╔${sep}╗`);
-  const title = 'PI HARNESS V15.6 — VISION CORE AUTONOMOUS MISSION RUNNER';
+  const title = 'PI HARNESS V15.7 — VISION CORE AUTONOMOUS MISSION RUNNER';
   log(`║  ${title}${' '.repeat(Math.max(0, W - title.length - 2))}║`);
   const sub   = 'RELATÓRIO FINAL';
   log(`║  ${sub}${' '.repeat(Math.max(0, W - sub.length - 2))}║`);
@@ -1627,7 +1653,7 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
   if (_runtimeEvidence) {
     const evValidation = validateRuntimeEvidence(_runtimeEvidence);
     const evSummary    = renderRuntimeEvidenceSummary(_runtimeEvidence);
-    log(div('RUNTIME EVIDENCE WIRING (V15.6)'));
+    log(div('RUNTIME EVIDENCE WIRING (V15.6/V15.7)'));
     log(`EVIDENCE_SCHEMA_VERSION:   ${_runtimeEvidence.schema_version}`);
     log(`EVIDENCE_TRUST_SCORE:      ${evValidation.trust_score}`);
     log(`EVIDENCE_RECOMMENDATION:   ${evValidation.final_recommendation}`);
@@ -1646,8 +1672,37 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
     }
   }
 
+  if (_decisionMatrix) {
+    const dm       = _decisionMatrix;
+    const readiness = hermesCtx?.release_readiness_gate || null;
+    log(div('RUNTIME EVIDENCE DECISION MATRIX (V15.7)'));
+    log(`DECISION_STATE:            ${dm.decision_state}`);
+    log(`DECISION_SCHEMA_VERSION:   ${dm.schema_version}`);
+    log(`RELEASE_READINESS:         ${readiness?.level || 'blocked'}`);
+    log(`DECISION_SCORE:            ${readiness?.score ?? 0}/100`);
+    log(`RELEASE_CANDIDATE:         false`);
+    log(`DEPLOY_ALLOWED:            false`);
+    log(`PROMOTION_ALLOWED:         false`);
+    log(`STABLE_ALLOWED:            false`);
+    const gatesPass    = Object.entries(dm.gates || {}).filter(([,g]) => g.pass).map(([k]) => k);
+    const gatesBlocked = Object.entries(dm.gates || {}).filter(([,g]) => !g.pass).map(([k]) => k);
+    log(`GATES_PASS:                ${gatesPass.join(', ') || 'none'}`);
+    log(`GATES_BLOCKED:             ${gatesBlocked.join(', ') || 'none'}`);
+    if ((dm.blocking_reasons || []).length > 0) {
+      log('  BLOCKING REASONS:');
+      for (const r of dm.blocking_reasons) {
+        log(`    [${r.severity?.toUpperCase() || 'UNKNOWN'}] ${r.id}: ${r.message || ''}`);
+      }
+    }
+    if (readiness?.missing?.length > 0) {
+      log('  MISSING EVIDENCE:');
+      for (const m of readiness.missing) log(`    ✗ ${m}`);
+    }
+    log(`  NOTE: classification only — no deploy performed — explicit authorization required`);
+  }
+
   if (hermesCtx) {
-    log(div('HERMES SUPERVISION (V15.6)'));
+    log(div('HERMES SUPERVISION (V15.7)'));
     log(`SUPERVISOR_ENABLED:        ${hermesCtx.enabled}`);
     log(`MISSION_ID:                ${hermesCtx.mission_id}`);
     log(`AGENTS_REGISTERED:         ${hermesCtx.agents.length}`);
@@ -1680,8 +1735,8 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
   log('');
   log(`╔${sep}╗`);
   const footer = result === 'PASS'
-    ? `✓ PI HARNESS V15.6 PASS — ${s.recommendation}`
-    : `✗ PI HARNESS V15.6 ${result} — ${s.recommendation}`;
+    ? `✓ PI HARNESS V15.7 PASS — ${s.recommendation}`
+    : `✗ PI HARNESS V15.7 ${result} — ${s.recommendation}`;
   log(`║  ${footer}${' '.repeat(Math.max(0, W - footer.length - 2))}║`);
   log(`╚${sep}╝`);
   log('');
@@ -1710,11 +1765,11 @@ async function main() {
 
   // V15.5: Hermes Mission Supervisor
   _hermesCtx = createHermesMissionContext();
-  recordHermesEvent(_hermesCtx, { type: 'mission_start', version: 'V15.6', max_difficulty: rawMaxDiff });
+  recordHermesEvent(_hermesCtx, { type: 'mission_start', version: 'V15.7', max_difficulty: rawMaxDiff });
 
   if (!JSON_MODE && !CI_MODE) {
     log('');
-    log('PI HARNESS V15.6 — iniciando...');
+    log('PI HARNESS V15.7 — iniciando...');
     log(`  max-difficulty: ${rawMaxDiff} | dry-run: ${DRY_RUN} | no-autofix: ${NO_AUTOFIX} | ci: ${CI_MODE} | runtime-probe: ${RUNTIME_PROBE} | no-start: ${RUNTIME_PROBE_NO_START}`);
     log(`  hermes: ${_hermesCtx.mission_id}`);
     log('');
@@ -1763,6 +1818,10 @@ async function main() {
   // V15.6: Collect and attach runtime evidence
   _runtimeEvidence = collectRuntimeEvidence(s, s.goRuntimeMissionId || null);
   attachRuntimeEvidence(_hermesCtx, _runtimeEvidence);
+
+  // V15.7: Evaluate decision matrix and release readiness
+  const hermesDecision = evaluateHermesDecision(_hermesCtx);
+  _decisionMatrix = _hermesCtx.decision_matrix;
 
   // V15.5: Hermes final validation & decision
   const missionEvidence = {
@@ -1852,7 +1911,7 @@ async function main() {
 
 main().catch(err => {
   if (!JSON_MODE) {
-    process.stderr.write(`PI HARNESS V15.6 FATAL: ${err.message}\n`);
+    process.stderr.write(`PI HARNESS V15.7 FATAL: ${err.message}\n`);
   } else {
     process.stdout.write(JSON.stringify({
       result: 'FAILED',
@@ -1872,6 +1931,19 @@ main().catch(err => {
       hermes_evidence_validation_warnings: [],
       hermes_evidence_graph: null,
       hermes_runtime_evidence_summary: null,
+      hermes_decision_matrix_enabled: true,
+      hermes_decision_matrix_schema_version: 'v15.7',
+      hermes_decision_state: 'BLOCKED_RUNTIME',
+      hermes_release_readiness: 'blocked',
+      hermes_release_candidate: false,
+      hermes_decision_score: 0,
+      hermes_decision_blocking_reasons: ['runtime_not_ready'],
+      hermes_required_evidence: [],
+      hermes_safe_next_actions: [],
+      hermes_release_gate: null,
+      hermes_deploy_allowed: false,
+      hermes_promotion_allowed: false,
+      hermes_stable_allowed: false,
     }) + '\n');
   }
   process.exit(1);
