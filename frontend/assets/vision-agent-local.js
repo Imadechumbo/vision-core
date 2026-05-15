@@ -98,7 +98,7 @@
     });
 
     setText('mcCoreStatus', hasGold(payload) ? '★ GOLD' : (payload.state || payload.status || 'AGUARDA'));
-    setText('mcCoreSub', hasGold(payload) ? 'PASS GOLD' : 'MISSION INPUT');
+    setText('mcCoreSub', hasGold(payload) ? 'PASS GOLD' : 'USER / MISSION INPUT');
   }
 
   function renderOrbit() {
