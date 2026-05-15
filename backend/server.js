@@ -60,9 +60,20 @@ function sendOk(res, payload = {}) {
 
 function normalizeEvidenceReceipt(result) {
   if (!result || typeof result !== 'object') return null;
-  return typeof result.evidence_receipt === 'string' && result.evidence_receipt.length >= 8
-    ? result.evidence_receipt
-    : null;
+  const evr = result.evidence_receipt;
+  if (!evr) return null;
+  // Accept Go Core object receipt (requires id, issued_at, source=go-core)
+  if (evr !== null && typeof evr === 'object' && !Array.isArray(evr)) {
+    if (typeof evr.id === 'string' && evr.id.length >= 8 && evr.issued_at && evr.source === 'go-core') {
+      return evr;
+    }
+    return null;
+  }
+  // Legacy: string receipt (not backend-derived)
+  if (typeof evr === 'string' && evr.length >= 8 && !/^(evr[_-]|backend[_-])/i.test(evr)) {
+    return evr;
+  }
+  return null;
 }
 
 function passGoldCandidateFromResult(result) {

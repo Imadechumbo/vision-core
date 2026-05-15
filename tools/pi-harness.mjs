@@ -198,6 +198,7 @@ function freshState() {
     backendHasEvidenceReceipt:false, backendStub:true,
     goCoreCompiled:false, goCorePath:null,
     evidenceReceiptInSchema:false, evidenceReceiptInNormalizer:false,
+    evidenceSource:null,
     serverVersionDeployed:null,
     // Gates
     passGoldCandidate:false, promotionAllowed:false, deployAllowed:false,
@@ -212,6 +213,7 @@ function strictPassGoldCandidate(s) {
     s.backendStub === false &&
     s.backendHasMissionId === true &&
     s.backendHasEvidenceReceipt === true &&
+    s.evidenceSource === 'go-core' &&
     s.evidenceReceiptInSchema === true &&
     s.evidenceReceiptInNormalizer === true &&
     s.goCoreCompiled === true &&
@@ -232,6 +234,7 @@ function strictPassGoldReason(s) {
   if (s.backendStub) missing.push('backend_not_stub');
   if (!s.backendHasMissionId) missing.push('mission_id');
   if (!s.backendHasEvidenceReceipt) missing.push('evidence_receipt');
+  if (!s.evidenceSource || s.evidenceSource !== 'go-core') missing.push('evidence_source_go_core');
   if (!s.evidenceReceiptInSchema) missing.push('evidence_schema');
   if (!s.evidenceReceiptInNormalizer) missing.push('evidence_normalizer');
   if (!s.goCoreCompiled) missing.push('go_core_compiled');
@@ -824,14 +827,23 @@ async function L8(s) {
     const BACKEND_RUNTIME_PROBE  = probe ? 'PASS' : 'FAIL';
     const BACKEND_EVIDENCE_AUDIT = probe?.evidence_receipt ? 'PASS' : 'BLOCKED';
     const BACKEND_ENDPOINT_CONTRACT = probe?.mission_id ? 'PASS' : 'BLOCKED';
-    const PASS_GOLD_REASON = probe?.evidence_receipt
-      ? 'evidence_receipt recebido do backend'
-      : `evidence_receipt ausente — stub:${s.backendStub}`;
-    audit(`[L8] BACKEND_RUNTIME_PROBE:${BACKEND_RUNTIME_PROBE} | BACKEND_EVIDENCE_AUDIT:${BACKEND_EVIDENCE_AUDIT} | BACKEND_ENDPOINT_CONTRACT:${BACKEND_ENDPOINT_CONTRACT}`);
+
+    // V14.4: extract evidence source — must be "go-core" for PASS GOLD
+    const evidenceReceiptSource = probe?.evidence_receipt?.source || probe?.evidence_source || null;
+    s.evidenceSource = evidenceReceiptSource === 'go-core' ? 'go-core' : null;
+    const EVIDENCE_SOURCE_AUDIT = s.evidenceSource === 'go-core' ? 'PASS' : 'BLOCKED';
+
+    const PASS_GOLD_REASON = probe?.evidence_receipt && s.evidenceSource === 'go-core'
+      ? 'evidence_receipt real com source=go-core recebido'
+      : probe?.evidence_receipt
+        ? `evidence_receipt presente mas source=${evidenceReceiptSource} ≠ go-core`
+        : `evidence_receipt ausente — stub:${s.backendStub}`;
+
+    audit(`[L8] BACKEND_RUNTIME_PROBE:${BACKEND_RUNTIME_PROBE} | BACKEND_EVIDENCE_AUDIT:${BACKEND_EVIDENCE_AUDIT} | BACKEND_ENDPOINT_CONTRACT:${BACKEND_ENDPOINT_CONTRACT} | EVIDENCE_SOURCE:${EVIDENCE_SOURCE_AUDIT}`);
     audit(`[L8] PASS_GOLD_REASON: ${PASS_GOLD_REASON}`);
     s.passGoldCandidate = strictPassGoldCandidate(s);
     if (s.passGoldCandidate) {
-      audit('[L8] ★ PASS GOLD CANDIDATE — evidence_receipt recebido do backend!');
+      audit('[L8] ★ PASS GOLD CANDIDATE — evidence_receipt real go-core confirmado!');
     } else {
       audit(`[L8] PASS GOLD bloqueado: ${PASS_GOLD_REASON}`);
     }
@@ -1040,6 +1052,7 @@ async function main() {
   console.log(`EVIDENCE_IN_SCHEMA:        ${s.evidenceReceiptInSchema}`);
   console.log(`EVIDENCE_IN_NORMALIZER:    ${s.evidenceReceiptInNormalizer}`);
   console.log(`EVIDENCE_IN_BACKEND:       ${s.backendHasEvidenceReceipt}`);
+  console.log(`EVIDENCE_SOURCE:           ${s.evidenceSource||'null'} ${s.evidenceSource==='go-core'?'✓':'← BLOQUEIO: deve ser go-core'}`);
 
   // ── PASS GOLD ──
   console.log(div('PASS GOLD'));
@@ -1055,6 +1068,8 @@ async function main() {
     if (!s.evidenceReceiptInSchema)   console.log('  → evidence_receipt ausente em result.schema.json');
     if (!s.goCoreCompiled)            console.log('  → Go binary não compilado');
     if (!s.backendHasEvidenceReceipt) console.log('  → Backend não retorna evidence_receipt no payload');
+    if (s.backendHasEvidenceReceipt && s.evidenceSource !== 'go-core')
+      console.log(`  → evidence_receipt.source="${s.evidenceSource}" ≠ "go-core" — evidence não é do Go Core`);
   }
 
   // ── EVIDENCE ──

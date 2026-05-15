@@ -1118,6 +1118,212 @@ func TestRun_GitHubPRPlanning_DryRunDoesNotPushOrOpenPR(t *testing.T) {
 	}
 }
 
+// ═══════════════════════════════════════════════════════
+// V14.4 REAL GO CORE EVIDENCE RECEIPT TESTS
+// Garantem que Go Core é a única fonte de evidence_receipt real.
+// Backend nunca pode fabricar, substituir ou complementar estes campos.
+// ═══════════════════════════════════════════════════════
+
+func TestRun_V144_EvidenceReceipt_AlwaysPresent(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.EvidenceReceipt == nil {
+		t.Fatal("evidence_receipt must not be nil — Go Core must always generate it")
+	}
+}
+
+func TestRun_V144_EvidenceReceipt_SourceIsGoCore(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.EvidenceReceipt == nil {
+		t.Fatal("evidence_receipt nil — cannot check source")
+	}
+	if out.EvidenceReceipt.Source != "go-core" {
+		t.Errorf("evidence_receipt.source must be go-core, got %q", out.EvidenceReceipt.Source)
+	}
+}
+
+func TestRun_V144_EvidenceReceipt_ReferencesMissionID(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.EvidenceReceipt == nil {
+		t.Fatal("evidence_receipt nil")
+	}
+	if out.EvidenceReceipt.MissionID != out.MissionID {
+		t.Errorf("evidence_receipt.mission_id=%q must match mission output mission_id=%q",
+			out.EvidenceReceipt.MissionID, out.MissionID)
+	}
+}
+
+func TestRun_V144_EvidenceReceipt_ContainsGatesHash(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.EvidenceReceipt == nil {
+		t.Fatal("evidence_receipt nil")
+	}
+	if out.EvidenceReceipt.GatesHash == "" {
+		t.Error("evidence_receipt.gates_hash must not be empty — proves real gate evaluation")
+	}
+	if len(out.EvidenceReceipt.GatesHash) < 8 {
+		t.Errorf("evidence_receipt.gates_hash too short: %q", out.EvidenceReceipt.GatesHash)
+	}
+}
+
+func TestRun_V144_EvidenceReceipt_ContainsTimestamp(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.EvidenceReceipt == nil {
+		t.Fatal("evidence_receipt nil")
+	}
+	if out.EvidenceReceipt.IssuedAt == "" {
+		t.Error("evidence_receipt.issued_at must not be empty")
+	}
+}
+
+func TestRun_V144_EvidenceReceipt_ResultMatchesPassGold(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.EvidenceReceipt == nil {
+		t.Fatal("evidence_receipt nil")
+	}
+	expectedResult := "FAIL"
+	if out.PassGold {
+		expectedResult = "PASS"
+	}
+	if out.EvidenceReceipt.Result != expectedResult {
+		t.Errorf("evidence_receipt.result=%q must match pass_gold=%v (expected %q)",
+			out.EvidenceReceipt.Result, out.PassGold, expectedResult)
+	}
+	if out.EvidenceReceipt.PassGold != out.PassGold {
+		t.Errorf("evidence_receipt.pass_gold=%v must match top-level pass_gold=%v",
+			out.EvidenceReceipt.PassGold, out.PassGold)
+	}
+}
+
+func TestRun_V144_EvidenceReceipt_FailedGateKeepsPassGoldFalse(t *testing.T) {
+	dir := t.TempDir()
+	// Inject CRITICAL violation to force pass_gold=false
+	if err := os.WriteFile(filepath.Join(dir, "secrets.go"),
+		[]byte("package main\nconst k = \"AKIAIOSFODNN7EXAMPLE\"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.EvidenceReceipt == nil {
+		t.Fatal("evidence_receipt must be present even on FAIL")
+	}
+	if out.PassGold {
+		t.Skip("gate did not fail — cannot test failed-gate invariant")
+	}
+	if out.EvidenceReceipt.PassGold {
+		t.Error("evidence_receipt.pass_gold must be false when pass_gold=false")
+	}
+	if out.EvidenceReceipt.Result != "FAIL" {
+		t.Errorf("evidence_receipt.result must be FAIL when gates failed, got %q", out.EvidenceReceipt.Result)
+	}
+	if len(out.EvidenceReceipt.FailedGates) == 0 {
+		t.Error("evidence_receipt.failed_gates must be non-empty when pass_gold=false")
+	}
+}
+
+func TestRun_V144_EvidenceReceipt_FailedGatesMatchOutput(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "secrets.go"),
+		[]byte("package main\nconst k = \"AKIAIOSFODNN7EXAMPLE\"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.EvidenceReceipt == nil || out.PassGold {
+		t.Skip("no failure or no receipt")
+	}
+	// evidence_receipt.failed_gates must contain the same gates as the output
+	receiptSet := map[string]bool{}
+	for _, g := range out.EvidenceReceipt.FailedGates {
+		receiptSet[g] = true
+	}
+	for _, g := range out.FailedGates {
+		if !receiptSet[g] {
+			t.Errorf("failed_gate %q in output but missing from evidence_receipt.failed_gates", g)
+		}
+	}
+}
+
+func TestRun_V144_BackendStub_AlwaysFalse(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.BackendStub {
+		t.Error("backend_stub must always be false when Go Core executes real mission")
+	}
+}
+
+func TestRun_V144_EvidenceSource_AlwaysGoCore(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.EvidenceSource != "go-core" {
+		t.Errorf("evidence_source must be go-core, got %q", out.EvidenceSource)
+	}
+}
+
+func TestRun_V144_NoPromotionWithoutRealEvidence(t *testing.T) {
+	// Verifies invariant: promotion_allowed requires real evidence_receipt
+	// Since Go Core always generates it, we verify the conjunction
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.PromotionAllowed && out.EvidenceReceipt == nil {
+		t.Fatal("promotion_allowed=true impossible without evidence_receipt — invariant violated")
+	}
+	if out.PromotionAllowed && out.EvidenceReceipt != nil && out.EvidenceReceipt.Source != "go-core" {
+		t.Fatal("promotion_allowed=true with non-go-core evidence source — invariant violated")
+	}
+}
+
+func TestRun_V144_EvidenceReceipt_IDNotBackendDerived(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: false})
+
+	if out.EvidenceReceipt == nil {
+		t.Fatal("evidence_receipt nil")
+	}
+	id := out.EvidenceReceipt.ID
+	// ID must not start with backend-derived prefixes
+	forbiddenPrefixes := []string{"evr-", "evr_", "backend-", "backend_", "node-backend", "backend-derived"}
+	for _, prefix := range forbiddenPrefixes {
+		if len(id) >= len(prefix) && id[:len(prefix)] == prefix {
+			t.Errorf("evidence_receipt.id=%q has forbidden backend-derived prefix %q", id, prefix)
+		}
+	}
+	if id == "" {
+		t.Error("evidence_receipt.id must not be empty")
+	}
+}
+
+func TestRun_V144_EvidenceReceipt_DryRun_StillPresent(t *testing.T) {
+	dir := t.TempDir()
+	out := Run(Input{Root: dir, InputText: "self-test", DryRun: true})
+
+	if out.EvidenceReceipt == nil {
+		t.Fatal("evidence_receipt must be present even in dry-run mode")
+	}
+	if out.EvidenceReceipt.Source != "go-core" {
+		t.Errorf("evidence_receipt.source must be go-core in dry-run, got %q", out.EvidenceReceipt.Source)
+	}
+	if out.BackendStub {
+		t.Error("backend_stub must be false even in dry-run mode")
+	}
+}
+
 func TestPlanGitHubPRBlocksWhenMissionGateFails(t *testing.T) {
 	out := Output{
 		MissionID:                  "mission_blocked",
