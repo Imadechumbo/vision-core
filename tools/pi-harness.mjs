@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║   PI HARNESS V15.1 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
+ * ║   PI HARNESS V15.2 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
  * ║   D0-Preflight → D1-Cleanup → D2-Contract → D3-GoCore               ║
  * ║   → D4-Backend → D5-Repair → D6-AutoFix → D7-Decision → D8-Report  ║
  * ╠══════════════════════════════════════════════════════════════════════╣
@@ -71,6 +71,114 @@ const FORBIDDEN_HARDCODED = [
   'VISUAL_PATCH_AUTHORIZED',
   "deploy_allowed" + ":" + "true",
 ];
+
+// ═══════════════════════════════════════════════════════════════════
+// RUNTIME CONTRACT HELPERS (V15.2)
+// ═══════════════════════════════════════════════════════════════════
+
+function normalizeFailedGates(value) {
+  if (Array.isArray(value)) return { normalized: value, warning: null };
+  if (value === null || value === undefined) return { normalized: [], warning: null };
+  if (typeof value === 'string') return { normalized: [value], warning: `failed_gates era string, normalizado para array` };
+  return { normalized: [], warning: `failed_gates tipo inválido: ${typeof value}, normalizado para []` };
+}
+
+function classifyRuntimeContractFailure(error) {
+  if (error.includes('deploy_allowed')) return 'BLOCKED_DEPLOY_GUARD';
+  return 'BLOCKED_EVIDENCE';
+}
+
+function validateRuntimeContract(probe) {
+  const errors   = [];
+  const warnings = [];
+
+  const missionId       = probe.mission_id || null;
+  const evidenceReceipt = (probe.evidence_receipt && typeof probe.evidence_receipt === 'object')
+    ? probe.evidence_receipt : null;
+  const evidenceSourceTopLevel  = probe.evidence_source || null;
+  const evidenceReceiptSource   = evidenceReceipt?.source || null;
+  const evidenceReceiptMissionId = evidenceReceipt?.mission_id || null;
+
+  // 1. Coerência mission_id / evidence_receipt
+  if (evidenceReceipt) {
+    if (!evidenceReceiptMissionId) {
+      errors.push('evidence_receipt.mission_id ausente');
+    } else if (evidenceReceiptMissionId !== missionId) {
+      errors.push(`evidence_receipt.mission_id="${evidenceReceiptMissionId}" diverge de mission_id="${missionId}"`);
+    }
+  }
+
+  // 2. Coerência evidence source
+  if (evidenceReceipt) {
+    if (!evidenceSourceTopLevel) {
+      errors.push('evidence_source top-level ausente com evidence_receipt presente');
+    } else if (evidenceSourceTopLevel !== 'go-core') {
+      errors.push(`evidence_source top-level="${evidenceSourceTopLevel}" deve ser "go-core"`);
+    }
+    if (evidenceSourceTopLevel && evidenceReceiptSource && evidenceSourceTopLevel !== evidenceReceiptSource) {
+      errors.push(`evidence_source="${evidenceSourceTopLevel}" diverge de evidence_receipt.source="${evidenceReceiptSource}"`);
+    }
+  }
+
+  // 3. Coerência PASS GOLD
+  const passGold = probe.pass_gold === true;
+  const { normalized: normalizedFailedGates, warning: fgWarning } = normalizeFailedGates(probe.failed_gates);
+  if (fgWarning) warnings.push(fgWarning);
+
+  if (passGold) {
+    if (!evidenceReceipt) {
+      errors.push('pass_gold:true sem evidence_receipt válido');
+    }
+    if (normalizedFailedGates.length > 0) {
+      errors.push(`pass_gold:true com failed_gates não vazio: [${normalizedFailedGates.join(', ')}]`);
+    }
+    if (probe.backend_stub !== false) {
+      errors.push('pass_gold:true com backend_stub não false');
+    }
+    if (evidenceReceiptSource !== 'go-core') {
+      errors.push(`pass_gold:true com evidence_receipt.source="${evidenceReceiptSource}" ≠ "go-core"`);
+    }
+    if (probe.deploy_allowed === true) {
+      errors.push('pass_gold:true com deploy_allowed:true — incoerente');
+    }
+  }
+
+  // 4. Coerência promotion_allowed
+  const promotionAllowed = probe.promotion_allowed === true;
+  if (promotionAllowed) {
+    if (!passGold) {
+      errors.push('promotion_allowed:true sem pass_gold:true');
+    }
+    if (probe.backend_stub === true) {
+      errors.push('promotion_allowed:true com backend_stub:true');
+    }
+    if (evidenceSourceTopLevel !== 'go-core') {
+      errors.push(`promotion_allowed:true sem evidence_source go-core`);
+    }
+  }
+
+  // 5. deploy_allowed
+  if (probe.deploy_allowed === true) {
+    errors.push('deploy_allowed:true — bloqueio crítico imediato');
+  }
+
+  return {
+    ok: errors.length === 0,
+    errors,
+    warnings,
+    normalized: {
+      mission_id:                  missionId,
+      evidence_source:             evidenceSourceTopLevel,
+      evidence_receipt_source:     evidenceReceiptSource,
+      evidence_receipt_mission_id: evidenceReceiptMissionId,
+      backend_stub:                probe.backend_stub,
+      pass_gold:                   passGold,
+      promotion_allowed:           promotionAllowed,
+      deploy_allowed:              probe.deploy_allowed === true,
+      failed_gates:                normalizedFailedGates,
+    },
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // RELATÓRIO ACUMULADO
@@ -228,6 +336,14 @@ function createMissionState() {
     runLiveBackendStub:    null,
     runLiveDeployAllowed:  null,
     runtimeProbePass:      false,
+    // Runtime Contract (V15.2)
+    runtimeContractPass:      false,
+    runtimeContractErrors:    [],
+    runtimeContractWarnings:  [],
+    runtimeContractChecked:   false,
+    runLivePassGold:          null,
+    runLivePromotionAllowed:  null,
+    runLiveFailedGates:       [],
   };
 }
 
@@ -826,6 +942,32 @@ async function runRuntimeProbe(s) {
     return false;
   }
 
+  // V15.2: Runtime Contract Hardening
+  const contract = validateRuntimeContract(probe);
+  s.runtimeContractPass     = contract.ok;
+  s.runtimeContractErrors   = contract.errors;
+  s.runtimeContractWarnings = contract.warnings;
+  s.runtimeContractChecked  = true;
+  s.runLivePassGold         = probe.pass_gold === true;
+  s.runLivePromotionAllowed = probe.promotion_allowed === true;
+  s.runLiveFailedGates      = contract.normalized.failed_gates;
+
+  if (contract.warnings.length > 0) {
+    for (const w of contract.warnings) audit(`[D4] [runtime-probe] V15.2 WARN: ${w}`);
+  }
+
+  if (!contract.ok) {
+    audit(`[D4] [runtime-probe] V15.2 contract FAIL: ${contract.errors.length} erro(s)`);
+    for (const e of contract.errors) audit(`  !! ${e}`);
+    s.runtimeProbePass = false;
+    s.blockReason      = `runtime-contract: ${contract.errors[0]}`;
+    s.recommendation   = classifyRuntimeContractFailure(contract.errors[0]);
+    s.layersFailed.push('D4');
+    return false;
+  }
+
+  audit('[D4] [runtime-probe] V15.2 contract: PASS ✓');
+
   s.runtimeProbePass = true;
   audit('[D4] [runtime-probe] todas validações PASS ✓');
   return true;
@@ -1203,6 +1345,14 @@ function renderFinalMissionReport(s, result, elapsed) {
       run_live_backend_stub:    s.runLiveBackendStub    !== undefined ? s.runLiveBackendStub : null,
       run_live_deploy_allowed:  s.runLiveDeployAllowed  !== undefined ? s.runLiveDeployAllowed : null,
       runtime_probe_pass:       s.runtimeProbePass      || false,
+      // Runtime Contract (V15.2)
+      runtime_contract_checked:  s.runtimeContractChecked  || false,
+      runtime_contract_pass:     s.runtimeContractPass     || false,
+      runtime_contract_errors:   s.runtimeContractErrors   || [],
+      runtime_contract_warnings: s.runtimeContractWarnings || [],
+      run_live_pass_gold:        s.runLivePassGold         !== undefined ? s.runLivePassGold        : null,
+      run_live_promotion_allowed:s.runLivePromotionAllowed !== undefined ? s.runLivePromotionAllowed : null,
+      run_live_failed_gates:     s.runLiveFailedGates      || [],
     };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
@@ -1214,7 +1364,7 @@ function renderFinalMissionReport(s, result, elapsed) {
 
   log('');
   log(`╔${sep}╗`);
-  const title = 'PI HARNESS V15.1 — VISION CORE AUTONOMOUS MISSION RUNNER';
+  const title = 'PI HARNESS V15.2 — VISION CORE AUTONOMOUS MISSION RUNNER';
   log(`║  ${title}${' '.repeat(Math.max(0, W - title.length - 2))}║`);
   const sub   = 'RELATÓRIO FINAL';
   log(`║  ${sub}${' '.repeat(Math.max(0, W - sub.length - 2))}║`);
@@ -1271,7 +1421,7 @@ function renderFinalMissionReport(s, result, elapsed) {
   log(`EVIDENCE_SOURCE:           ${s.evidenceSource || 'null'}${s.evidenceSource === 'go-core' ? ' ✓' : s.evidenceSource ? ' ← deve ser go-core' : ''}`);
 
   if (s.runtimeProbeEnabled) {
-    log(div('RUNTIME PROBE (V15.1)'));
+    log(div('RUNTIME PROBE (V15.1/V15.2)'));
     log(`RUNTIME_PROBE_ENABLED:     ${s.runtimeProbeEnabled}`);
     log(`BACKEND_PROCESS_STARTED:   ${s.backendProcessStarted}`);
     log(`BACKEND_PROCESS_STOPPED:   ${s.backendProcessStopped}`);
@@ -1282,6 +1432,19 @@ function renderFinalMissionReport(s, result, elapsed) {
     log(`RUN_LIVE_BACKEND_STUB:     ${s.runLiveBackendStub}`);
     log(`RUN_LIVE_DEPLOY_ALLOWED:   ${s.runLiveDeployAllowed}`);
     log(`RUNTIME_PROBE_PASS:        ${s.runtimeProbePass}`);
+    log(`RUN_LIVE_PASS_GOLD:        ${s.runLivePassGold}`);
+    log(`RUN_LIVE_PROMOTION_ALLOWED:${s.runLivePromotionAllowed}`);
+    log(`RUN_LIVE_FAILED_GATES:     ${(s.runLiveFailedGates || []).join(', ') || 'none'}`);
+    log(`RUNTIME_CONTRACT_CHECKED:  ${s.runtimeContractChecked}`);
+    log(`RUNTIME_CONTRACT_PASS:     ${s.runtimeContractPass}`);
+    if ((s.runtimeContractErrors || []).length > 0) {
+      log(`RUNTIME_CONTRACT_ERRORS:`);
+      for (const e of s.runtimeContractErrors) log(`  ✗ ${e}`);
+    }
+    if ((s.runtimeContractWarnings || []).length > 0) {
+      log(`RUNTIME_CONTRACT_WARNINGS:`);
+      for (const w of s.runtimeContractWarnings) log(`  ! ${w}`);
+    }
   }
 
   if (s.repairPlan.length > 0) {
@@ -1332,8 +1495,8 @@ function renderFinalMissionReport(s, result, elapsed) {
   log('');
   log(`╔${sep}╗`);
   const footer = result === 'PASS'
-    ? `✓ PI HARNESS V15.1 PASS — ${s.recommendation}`
-    : `✗ PI HARNESS V15.1 ${result} — ${s.recommendation}`;
+    ? `✓ PI HARNESS V15.2 PASS — ${s.recommendation}`
+    : `✗ PI HARNESS V15.2 ${result} — ${s.recommendation}`;
   log(`║  ${footer}${' '.repeat(Math.max(0, W - footer.length - 2))}║`);
   log(`╚${sep}╝`);
   log('');
@@ -1362,7 +1525,7 @@ async function main() {
 
   if (!JSON_MODE && !CI_MODE) {
     log('');
-    log('PI HARNESS V15.1 — iniciando...');
+    log('PI HARNESS V15.2 — iniciando...');
     log(`  max-difficulty: ${rawMaxDiff} | dry-run: ${DRY_RUN} | no-autofix: ${NO_AUTOFIX} | ci: ${CI_MODE} | runtime-probe: ${RUNTIME_PROBE}`);
     log('');
   }
@@ -1408,7 +1571,7 @@ async function main() {
 
 main().catch(err => {
   if (!JSON_MODE) {
-    process.stderr.write(`PI HARNESS V15.0 FATAL: ${err.message}\n`);
+    process.stderr.write(`PI HARNESS V15.2 FATAL: ${err.message}\n`);
   } else {
     process.stdout.write(JSON.stringify({ result: 'FAILED', error: err.message }) + '\n');
   }

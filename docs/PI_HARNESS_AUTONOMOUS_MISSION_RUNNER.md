@@ -1,4 +1,4 @@
-# PI Harness V15.1 — Autonomous Mission Runner
+# PI Harness V15.2 — Autonomous Mission Runner
 
 Vision Core autonomous executor. Runs progressive validation from preflight to final PASS GOLD decision.
 
@@ -133,7 +133,14 @@ node tools/pi-harness.mjs --runtime-probe --json
   "run_live_evidence_source": null,
   "run_live_backend_stub": null,
   "run_live_deploy_allowed": null,
-  "runtime_probe_pass": false
+  "runtime_probe_pass": false,
+  "runtime_contract_checked": false,
+  "runtime_contract_pass": false,
+  "runtime_contract_errors": [],
+  "runtime_contract_warnings": [],
+  "run_live_pass_gold": null,
+  "run_live_promotion_allowed": null,
+  "run_live_failed_gates": []
 }
 ```
 
@@ -154,7 +161,63 @@ node tools/pi-harness.mjs --runtime-probe --json
 node tools/tests/pi-harness.test.mjs
 ```
 
-Cobre: strict gate, fake evidence scan, forbidden diff, JSON parseável, dry-run imutabilidade, syntax check, runtime probe flag/fields, validação deploy_allowed/evidence_source, backend offline → BLOCKED_RUNTIME.
+Cobre: strict gate, fake evidence scan, forbidden diff, JSON parseável, dry-run imutabilidade, syntax check, runtime probe flag/fields, validação deploy_allowed/evidence_source, backend offline → BLOCKED_RUNTIME, runtime contract coherence V15.2 (mission_id, evidence_source, pass_gold, promotion_allowed, failed_gates, deploy_allowed, normalização).
+
+## V15.2 — Runtime Contract Hardening
+
+### Por que não basta o backend responder?
+
+Em V15.1, o harness valida que `/api/run-live` responde com os campos básicos corretos. Mas um backend parcialmente funcional pode responder com campos coerentes individualmente mas **incoerentes entre si** — por exemplo, `pass_gold: true` com `failed_gates` não vazio, ou `evidence_receipt.mission_id` diferente do `mission_id` top-level. V15.2 adiciona validação de coerência entre todos os campos da resposta.
+
+### Campos obrigatórios e regras de coerência
+
+| Regra | Condição | Bloqueio |
+|-------|----------|---------|
+| `evidence_receipt.mission_id` | Deve existir quando `evidence_receipt` presente | `BLOCKED_EVIDENCE` |
+| `evidence_receipt.mission_id` | Deve ser igual ao `mission_id` top-level | `BLOCKED_EVIDENCE` |
+| `evidence_source` top-level | Deve existir quando `evidence_receipt` presente | `BLOCKED_EVIDENCE` |
+| `evidence_source` | Deve ser `"go-core"` | `BLOCKED_EVIDENCE` |
+| `evidence_source` vs `evidence_receipt.source` | Devem ser iguais | `BLOCKED_EVIDENCE` |
+| `pass_gold: true` | Requer `evidence_receipt` válido | `BLOCKED_EVIDENCE` |
+| `pass_gold: true` | Requer `failed_gates` vazio | `BLOCKED_EVIDENCE` |
+| `pass_gold: true` | Requer `backend_stub: false` | `BLOCKED_EVIDENCE` |
+| `pass_gold: true` | Requer `evidence_receipt.source === "go-core"` | `BLOCKED_EVIDENCE` |
+| `promotion_allowed: true` | Requer `pass_gold: true` | `BLOCKED_EVIDENCE` |
+| `promotion_allowed: true` | Requer `backend_stub: false` | `BLOCKED_EVIDENCE` |
+| `promotion_allowed: true` | Requer `evidence_source === "go-core"` | `BLOCKED_EVIDENCE` |
+| `deploy_allowed: true` | Sempre bloqueio crítico | `BLOCKED_DEPLOY_GUARD` |
+
+### Normalização de `failed_gates`
+
+`failed_gates` deve ser array. Se vier como string, é normalizado para `[string]` com warning. Se vier como `null`/`undefined`, normalizado para `[]` sem warning. Se vier como outro tipo, normalizado para `[]` com warning. Se `pass_gold: true` e `failed_gates` normalizado não vazio, bloqueia.
+
+### Exemplos de bloqueio V15.2
+
+```json
+// BLOQUEIO: mission_id divergente
+{ "mission_id": "mission_abc", "evidence_receipt": { "mission_id": "mission_XYZ", "source": "go-core" } }
+// → evidence_receipt.mission_id="mission_XYZ" diverge de mission_id="mission_abc"
+
+// BLOQUEIO: pass_gold com failed_gates não vazio
+{ "pass_gold": true, "failed_gates": ["gate_x"], "evidence_receipt": { "source": "go-core", "mission_id": "mission_abc" } }
+// → pass_gold:true com failed_gates não vazio
+
+// BLOQUEIO: deploy_allowed crítico
+{ "deploy_allowed": true }
+// → deploy_allowed:true — bloqueio crítico imediato
+```
+
+### Campos adicionados ao JSON (V15.2)
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `runtime_contract_checked` | bool | Contract validation foi executada |
+| `runtime_contract_pass` | bool | Todos os checks de coerência passaram |
+| `runtime_contract_errors` | string[] | Erros de coerência encontrados |
+| `runtime_contract_warnings` | string[] | Avisos (ex: failed_gates normalizado) |
+| `run_live_pass_gold` | bool\|null | pass_gold retornado pelo backend |
+| `run_live_promotion_allowed` | bool\|null | promotion_allowed retornado |
+| `run_live_failed_gates` | string[] | failed_gates normalizado da resposta |
 
 ## V15.1 — Runtime Probe
 

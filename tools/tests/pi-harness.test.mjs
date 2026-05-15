@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * PI Harness V15.0 — Test Suite
+ * PI Harness V15.2 — Test Suite
  *
  * Testa:
  * 1. Strict gate bloqueia sem evidence_source go-core
@@ -408,6 +408,230 @@ console.log('\n── Suite 7: Runtime Probe V15.1 ──');
     }
   } else {
     assert(false, '[7d] JSON parseável com --runtime-probe D4');
+  }
+}
+
+// ─── SUITE 8: Runtime Contract V15.2 ────────────────────────────
+
+console.log('\n── Suite 8: Runtime Contract V15.2 ──');
+
+// Inline reimplementação das funções de contrato para testes unitários
+function _normalizeFailedGates(value) {
+  if (Array.isArray(value)) return { normalized: value, warning: null };
+  if (value === null || value === undefined) return { normalized: [], warning: null };
+  if (typeof value === 'string') return { normalized: [value], warning: `failed_gates era string` };
+  return { normalized: [], warning: `failed_gates tipo inválido: ${typeof value}` };
+}
+
+function _validateRuntimeContract(probe) {
+  const errors   = [];
+  const warnings = [];
+  const missionId            = probe.mission_id || null;
+  const evidenceReceipt      = (probe.evidence_receipt && typeof probe.evidence_receipt === 'object') ? probe.evidence_receipt : null;
+  const evidenceSourceTop    = probe.evidence_source || null;
+  const evidenceReceiptSrc   = evidenceReceipt?.source || null;
+  const evidenceReceiptMid   = evidenceReceipt?.mission_id || null;
+
+  if (evidenceReceipt) {
+    if (!evidenceReceiptMid) {
+      errors.push('evidence_receipt.mission_id ausente');
+    } else if (evidenceReceiptMid !== missionId) {
+      errors.push(`evidence_receipt.mission_id="${evidenceReceiptMid}" diverge de mission_id="${missionId}"`);
+    }
+  }
+  if (evidenceReceipt) {
+    if (!evidenceSourceTop) {
+      errors.push('evidence_source top-level ausente com evidence_receipt presente');
+    } else if (evidenceSourceTop !== 'go-core') {
+      errors.push(`evidence_source top-level="${evidenceSourceTop}" deve ser "go-core"`);
+    }
+    if (evidenceSourceTop && evidenceReceiptSrc && evidenceSourceTop !== evidenceReceiptSrc) {
+      errors.push(`evidence_source="${evidenceSourceTop}" diverge de evidence_receipt.source="${evidenceReceiptSrc}"`);
+    }
+  }
+  const passGold = probe.pass_gold === true;
+  const { normalized: fg, warning: fgW } = _normalizeFailedGates(probe.failed_gates);
+  if (fgW) warnings.push(fgW);
+  if (passGold) {
+    if (!evidenceReceipt)        errors.push('pass_gold:true sem evidence_receipt válido');
+    if (fg.length > 0)           errors.push(`pass_gold:true com failed_gates não vazio: [${fg.join(', ')}]`);
+    if (probe.backend_stub !== false) errors.push('pass_gold:true com backend_stub não false');
+    if (evidenceReceiptSrc !== 'go-core') errors.push(`pass_gold:true com evidence_receipt.source="${evidenceReceiptSrc}" ≠ "go-core"`);
+    if (probe.deploy_allowed === true)   errors.push('pass_gold:true com deploy_allowed:true — incoerente');
+  }
+  const promotionAllowed = probe.promotion_allowed === true;
+  if (promotionAllowed) {
+    if (!passGold)                errors.push('promotion_allowed:true sem pass_gold:true');
+    if (probe.backend_stub === true) errors.push('promotion_allowed:true com backend_stub:true');
+    if (evidenceSourceTop !== 'go-core') errors.push(`promotion_allowed:true sem evidence_source go-core`);
+  }
+  if (probe.deploy_allowed === true) errors.push('deploy_allowed:true — bloqueio crítico imediato');
+  return { ok: errors.length === 0, errors, warnings, normalized: { failed_gates: fg } };
+}
+
+// 8a: normalizeFailedGates
+{
+  const { normalized: n1, warning: w1 } = _normalizeFailedGates([]);
+  assert(Array.isArray(n1) && w1 === null, '[8a] array vazio normalizado sem warning');
+
+  const { normalized: n2, warning: w2 } = _normalizeFailedGates('gate_x');
+  assert(Array.isArray(n2) && n2[0] === 'gate_x', '[8a] string normalizada para array');
+  assert(w2 !== null, '[8a] string gera warning');
+
+  const { normalized: n3, warning: w3 } = _normalizeFailedGates(null);
+  assert(Array.isArray(n3) && n3.length === 0 && w3 === null, '[8a] null normalizado para []');
+}
+
+// 8b: evidence_receipt.mission_id ausente → erro
+{
+  const probe = {
+    mission_id:       'mission_abc',
+    evidence_source:  'go-core',
+    evidence_receipt: { source: 'go-core' }, // sem mission_id
+    backend_stub:     false,
+    deploy_allowed:   false,
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(!r.ok, '[8b] evidence_receipt.mission_id ausente → falha contrato');
+  assert(r.errors.some(e => e.includes('evidence_receipt.mission_id ausente')), '[8b] mensagem de erro correta');
+}
+
+// 8c: evidence_receipt.mission_id diverge do top-level → erro
+{
+  const probe = {
+    mission_id:       'mission_abc',
+    evidence_source:  'go-core',
+    evidence_receipt: { source: 'go-core', mission_id: 'mission_XYZ' },
+    backend_stub:     false,
+    deploy_allowed:   false,
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(!r.ok, '[8c] mission_id divergente → falha contrato');
+  assert(r.errors.some(e => e.includes('diverge')), '[8c] mensagem menciona divergência');
+}
+
+// 8d: evidence_source top-level ausente com evidence_receipt presente → erro
+{
+  const probe = {
+    mission_id:       'mission_abc',
+    evidence_receipt: { source: 'go-core', mission_id: 'mission_abc' },
+    backend_stub:     false,
+    deploy_allowed:   false,
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(!r.ok, '[8d] evidence_source top-level ausente → falha contrato');
+  assert(r.errors.some(e => e.includes('top-level ausente')), '[8d] mensagem correta');
+}
+
+// 8e: evidence_source top-level ≠ evidence_receipt.source → erro
+{
+  const probe = {
+    mission_id:       'mission_abc',
+    evidence_source:  'go-core',
+    evidence_receipt: { source: 'backend', mission_id: 'mission_abc' },
+    backend_stub:     false,
+    deploy_allowed:   false,
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(!r.ok, '[8e] evidence_source top-level ≠ receipt.source → falha contrato');
+  assert(r.errors.some(e => e.includes('diverge de evidence_receipt.source')), '[8e] mensagem de divergência source');
+}
+
+// 8f: pass_gold true sem evidence_receipt → erro
+{
+  const probe = {
+    mission_id:     'mission_abc',
+    evidence_source: 'go-core',
+    pass_gold:      true,
+    backend_stub:   false,
+    deploy_allowed: false,
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(!r.ok, '[8f] pass_gold:true sem evidence_receipt → falha contrato');
+  assert(r.errors.some(e => e.includes('pass_gold:true sem evidence_receipt')), '[8f] mensagem correta');
+}
+
+// 8g: pass_gold true com failed_gates não vazio → erro
+{
+  const probe = {
+    mission_id:       'mission_abc',
+    evidence_source:  'go-core',
+    evidence_receipt: { source: 'go-core', mission_id: 'mission_abc' },
+    pass_gold:        true,
+    failed_gates:     ['gate_x'],
+    backend_stub:     false,
+    deploy_allowed:   false,
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(!r.ok, '[8g] pass_gold:true com failed_gates não vazio → falha contrato');
+  assert(r.errors.some(e => e.includes('failed_gates não vazio')), '[8g] mensagem correta');
+}
+
+// 8h: promotion_allowed true com backend_stub true → erro
+{
+  const probe = {
+    mission_id:       'mission_abc',
+    evidence_source:  'go-core',
+    evidence_receipt: { source: 'go-core', mission_id: 'mission_abc' },
+    pass_gold:        true,
+    promotion_allowed: true,
+    backend_stub:     true,
+    deploy_allowed:   false,
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(!r.ok, '[8h] promotion_allowed:true com backend_stub:true → falha contrato');
+  assert(r.errors.some(e => e.includes('promotion_allowed:true com backend_stub:true')), '[8h] mensagem correta');
+}
+
+// 8i: deploy_allowed true → erro crítico
+{
+  const probe = {
+    mission_id:     'mission_abc',
+    evidence_source: 'go-core',
+    evidence_receipt: { source: 'go-core', mission_id: 'mission_abc' },
+    backend_stub:   false,
+    deploy_allowed: true,
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(!r.ok, '[8i] deploy_allowed:true → falha crítica');
+  assert(r.errors.some(e => e.includes('deploy_allowed:true')), '[8i] mensagem crítica presente');
+}
+
+// 8j: payload válido passa contrato
+{
+  const probe = {
+    mission_id:       'mission_abc',
+    evidence_source:  'go-core',
+    evidence_receipt: { source: 'go-core', mission_id: 'mission_abc', id: 'ev_real' },
+    backend_stub:     false,
+    deploy_allowed:   false,
+    pass_gold:        false,
+    promotion_allowed: false,
+    failed_gates:     [],
+  };
+  const r = _validateRuntimeContract(probe);
+  assert(r.ok, '[8j] payload válido passa contrato');
+  assert(r.errors.length === 0, '[8j] zero erros em payload válido');
+}
+
+// 8k: JSON output contém runtime_contract_* fields
+{
+  const r = runHarness(['--json'], 90000);
+  let parsed = null;
+  try { parsed = JSON.parse(r.stdout.trim()); } catch {
+    const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
+    if (f >= 0 && l > f) try { parsed = JSON.parse(r.stdout.slice(f, l + 1)); } catch { /* noop */ }
+  }
+  if (parsed) {
+    assert('runtime_contract_checked'  in parsed, '[8k] JSON tem runtime_contract_checked');
+    assert('runtime_contract_pass'     in parsed, '[8k] JSON tem runtime_contract_pass');
+    assert(Array.isArray(parsed.runtime_contract_errors),   '[8k] runtime_contract_errors é array');
+    assert(Array.isArray(parsed.runtime_contract_warnings), '[8k] runtime_contract_warnings é array');
+    assert('run_live_pass_gold'        in parsed, '[8k] JSON tem run_live_pass_gold');
+    assert('run_live_promotion_allowed' in parsed, '[8k] JSON tem run_live_promotion_allowed');
+    assert(Array.isArray(parsed.run_live_failed_gates),     '[8k] run_live_failed_gates é array');
+  } else {
+    assert(false, '[8k] JSON parseável para verificar runtime_contract_* fields');
   }
 }
 
