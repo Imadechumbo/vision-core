@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║   PI HARNESS V15.2 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
+ * ║   PI HARNESS V15.3 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
  * ║   D0-Preflight → D1-Cleanup → D2-Contract → D3-GoCore               ║
  * ║   → D4-Backend → D5-Repair → D6-AutoFix → D7-Decision → D8-Report  ║
  * ╠══════════════════════════════════════════════════════════════════════╣
@@ -22,7 +22,7 @@
  */
 
 import { execSync, spawnSync, spawn } from 'child_process';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, rmSync } from 'fs';
 import { resolve, join, dirname, basename } from 'path';
 import { tmpdir } from 'os';
 
@@ -41,17 +41,26 @@ const JSON_MODE  = FLAG('--json');
 const CI_MODE       = FLAG('--ci');
 const RUNTIME_PROBE = FLAG('--runtime-probe');
 
+// V15.3 runtime probe flags
+const RUNTIME_PROBE_NO_START   = FLAG('--runtime-probe-no-start');
+const RUNTIME_PROBE_ROOT_ARG   = ARG('--runtime-probe-root') || null;
+const RUNTIME_PROBE_PORT       = Number(ARG('--runtime-probe-port') || process.env.PORT || 8080);
+const RUNTIME_PROBE_TIMEOUT_MS = Number(ARG('--runtime-probe-timeout-ms') || 8000);
+
 const DIFFICULTY_ORDER = ['D0','D1','D2','D3','D4','D5','D6','D7','D8'];
 const rawMaxDiff = ARG('--max-difficulty') || 'D8';
 const MAX_DIFF_IDX = DIFFICULTY_ORDER.includes(rawMaxDiff)
   ? DIFFICULTY_ORDER.indexOf(rawMaxDiff)
   : 8;
 
-const LOCAL_BACKEND_PORT = Number(process.env.PORT || 8080);
+const LOCAL_BACKEND_PORT = RUNTIME_PROBE_PORT;
 const LOCAL_BACKEND_BASE = `http://localhost:${LOCAL_BACKEND_PORT}`;
 
-// Handle for backend process started by --runtime-probe (V15.1)
-let _backendProcess = null;
+// Handle for backend process started by --runtime-probe
+let _backendProcess      = null;
+// Temp root managed by runtime probe (V15.3)
+let _probeTempRoot        = null;
+let _probeTempRootCreated = false;
 
 // ═══════════════════════════════════════════════════════════════════
 // FAKE EVIDENCE SCAN PATTERNS
@@ -344,6 +353,11 @@ function createMissionState() {
     runLivePassGold:          null,
     runLivePromotionAllowed:  null,
     runLiveFailedGates:       [],
+    // Runtime Probe V15.3: temp root + config
+    runtimeProbeTempRoot:        null,
+    runtimeProbeTempRootCreated: false,
+    runtimeProbeTempRootRemoved: false,
+    runtimeProbeNoStart:         false,
   };
 }
 
@@ -835,6 +849,12 @@ async function runLayerD3GoCoreRuntime(s) {
 // ═══════════════════════════════════════════════════════════════════
 
 async function tryStartBackend(s) {
+  // V15.3: --runtime-probe-no-start skips auto-start entirely
+  if (RUNTIME_PROBE_NO_START) {
+    s.runtimeProbeNoStart = true;
+    audit('[D4] --runtime-probe-no-start: auto-start suprimido');
+    return false;
+  }
   const serverPath = join(ROOT, 'backend', 'server.js');
   if (!existsSync(serverPath)) {
     audit('[D4] backend/server.js não encontrado — não pode iniciar');
@@ -853,7 +873,7 @@ async function tryStartBackend(s) {
     audit(`[D4] erro ao iniciar backend: ${err.message}`);
     return false;
   }
-  const MAX_WAIT_MS   = 8000;
+  const MAX_WAIT_MS   = RUNTIME_PROBE_TIMEOUT_MS;
   const POLL_INTERVAL = 500;
   let waited = 0;
   while (waited < MAX_WAIT_MS) {
@@ -883,9 +903,54 @@ function stopBackend() {
   return false;
 }
 
+// V15.3: safe temp root for runtime probe payloads
+function createProbeTempRoot() {
+  if (RUNTIME_PROBE_ROOT_ARG) {
+    _probeTempRoot        = RUNTIME_PROBE_ROOT_ARG;
+    _probeTempRootCreated = false;
+    return RUNTIME_PROBE_ROOT_ARG;
+  }
+  const dir = join(tmpdir(), `pi-harness-probe-${Date.now()}`);
+  mkdirSync(dir, { recursive: true });
+  _probeTempRoot        = dir;
+  _probeTempRootCreated = true;
+  return dir;
+}
+
+function removeProbeTempRoot() {
+  if (_probeTempRoot && _probeTempRootCreated) {
+    try {
+      rmSync(_probeTempRoot, { recursive: true, force: true });
+      return true;
+    } catch { return false; }
+  }
+  return false;
+}
+
 async function runRuntimeProbe(s) {
-  const probePayload = { input: 'self-test', root: tmpdir(), dry_run: true };
-  audit('[D4] [runtime-probe] POST /api/run-live { input:"self-test", dry_run:true }');
+  // V15.3: create safe temp root, never use repo root for patch
+  let tempRoot        = null;
+  let tempRootRemoved = false;
+  try {
+    tempRoot = createProbeTempRoot();
+    s.runtimeProbeTempRoot        = tempRoot;
+    s.runtimeProbeTempRootCreated = _probeTempRootCreated;
+    audit(`[D4] [runtime-probe] temp root: ${tempRoot} (created=${_probeTempRootCreated})`);
+  } catch (err) {
+    audit(`[D4] [runtime-probe] falha ao criar temp root: ${err.message} — usando tmpdir`);
+    tempRoot = tmpdir();
+    s.runtimeProbeTempRoot = tempRoot;
+  }
+
+  // V15.3: controlled, safe payload — always dry_run=true, never real patch
+  const probePayload = {
+    input:   'V15.3 runtime pass path self-test',
+    root:    tempRoot,
+    dry_run: true,
+    source:  'pi-harness-runtime-probe',
+    mode:    'runtime-probe',
+  };
+  audit('[D4] [runtime-probe] POST /api/run-live { dry_run:true, mode:"runtime-probe", source:"pi-harness-runtime-probe" }');
   const probe = httpPost(`${LOCAL_BACKEND_BASE}/api/run-live`, probePayload, 15000);
 
   if (!probe) {
@@ -1021,6 +1086,11 @@ async function runLayerD4BackendRuntime(s) {
       if (s.backendProcessStarted && !s.backendProcessStopped) {
         s.backendProcessStopped = stopBackend();
         audit(`[D4] backend processo parado: ${s.backendProcessStopped}`);
+      }
+      // V15.3: cleanup probe temp root regardless of outcome
+      s.runtimeProbeTempRootRemoved = removeProbeTempRoot();
+      if (s.runtimeProbeTempRootCreated) {
+        audit(`[D4] temp root removido: ${s.runtimeProbeTempRootRemoved}`);
       }
     }
     if (!probeOk) return false;
@@ -1353,6 +1423,13 @@ function renderFinalMissionReport(s, result, elapsed) {
       run_live_pass_gold:        s.runLivePassGold         !== undefined ? s.runLivePassGold        : null,
       run_live_promotion_allowed:s.runLivePromotionAllowed !== undefined ? s.runLivePromotionAllowed : null,
       run_live_failed_gates:     s.runLiveFailedGates      || [],
+      // V15.3: temp root, new probe flags
+      runtime_probe_temp_root:         s.runtimeProbeTempRoot         || null,
+      runtime_probe_temp_root_created: s.runtimeProbeTempRootCreated  || false,
+      runtime_probe_temp_root_removed: s.runtimeProbeTempRootRemoved  || false,
+      runtime_probe_port:              LOCAL_BACKEND_PORT,
+      runtime_probe_timeout_ms:        RUNTIME_PROBE_TIMEOUT_MS,
+      runtime_probe_no_start:          RUNTIME_PROBE_NO_START,
     };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
@@ -1364,7 +1441,7 @@ function renderFinalMissionReport(s, result, elapsed) {
 
   log('');
   log(`╔${sep}╗`);
-  const title = 'PI HARNESS V15.2 — VISION CORE AUTONOMOUS MISSION RUNNER';
+  const title = 'PI HARNESS V15.3 — VISION CORE AUTONOMOUS MISSION RUNNER';
   log(`║  ${title}${' '.repeat(Math.max(0, W - title.length - 2))}║`);
   const sub   = 'RELATÓRIO FINAL';
   log(`║  ${sub}${' '.repeat(Math.max(0, W - sub.length - 2))}║`);
@@ -1421,7 +1498,7 @@ function renderFinalMissionReport(s, result, elapsed) {
   log(`EVIDENCE_SOURCE:           ${s.evidenceSource || 'null'}${s.evidenceSource === 'go-core' ? ' ✓' : s.evidenceSource ? ' ← deve ser go-core' : ''}`);
 
   if (s.runtimeProbeEnabled) {
-    log(div('RUNTIME PROBE (V15.1/V15.2)'));
+    log(div('RUNTIME PROBE (V15.3)'));
     log(`RUNTIME_PROBE_ENABLED:     ${s.runtimeProbeEnabled}`);
     log(`BACKEND_PROCESS_STARTED:   ${s.backendProcessStarted}`);
     log(`BACKEND_PROCESS_STOPPED:   ${s.backendProcessStopped}`);
@@ -1495,8 +1572,8 @@ function renderFinalMissionReport(s, result, elapsed) {
   log('');
   log(`╔${sep}╗`);
   const footer = result === 'PASS'
-    ? `✓ PI HARNESS V15.2 PASS — ${s.recommendation}`
-    : `✗ PI HARNESS V15.2 ${result} — ${s.recommendation}`;
+    ? `✓ PI HARNESS V15.3 PASS — ${s.recommendation}`
+    : `✗ PI HARNESS V15.3 ${result} — ${s.recommendation}`;
   log(`║  ${footer}${' '.repeat(Math.max(0, W - footer.length - 2))}║`);
   log(`╚${sep}╝`);
   log('');
@@ -1525,8 +1602,8 @@ async function main() {
 
   if (!JSON_MODE && !CI_MODE) {
     log('');
-    log('PI HARNESS V15.2 — iniciando...');
-    log(`  max-difficulty: ${rawMaxDiff} | dry-run: ${DRY_RUN} | no-autofix: ${NO_AUTOFIX} | ci: ${CI_MODE} | runtime-probe: ${RUNTIME_PROBE}`);
+    log('PI HARNESS V15.3 — iniciando...');
+    log(`  max-difficulty: ${rawMaxDiff} | dry-run: ${DRY_RUN} | no-autofix: ${NO_AUTOFIX} | ci: ${CI_MODE} | runtime-probe: ${RUNTIME_PROBE} | no-start: ${RUNTIME_PROBE_NO_START}`);
     log('');
   }
 
@@ -1571,7 +1648,7 @@ async function main() {
 
 main().catch(err => {
   if (!JSON_MODE) {
-    process.stderr.write(`PI HARNESS V15.2 FATAL: ${err.message}\n`);
+    process.stderr.write(`PI HARNESS V15.3 FATAL: ${err.message}\n`);
   } else {
     process.stdout.write(JSON.stringify({ result: 'FAILED', error: err.message }) + '\n');
   }
