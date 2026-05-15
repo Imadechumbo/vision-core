@@ -220,3 +220,66 @@ PASS GOLD somente se:
 - `promotion_allowed: true` nunca pode ser hardcoded
 - Hermes nunca altera frontend, backend ou go-core
 - Hermes nunca faz push, PR, tag ou deploy
+
+## V15.6 — Runtime Evidence Wiring
+
+### Novo módulo: `tools/hermes/runtime-evidence.mjs`
+
+Coleta, normaliza e valida evidência de runtime de múltiplas fontes. Separado do supervisor para isolamento de responsabilidades.
+
+### 8 Fontes de Evidência
+
+| Fonte | Trust Level | Descrição |
+|-------|-------------|-----------|
+| `go_core_evidence_receipt` | **authoritative** | Único receipt válido para PASS GOLD |
+| `runtime_probe_actual` | high | Probe real contra backend vivo |
+| `github_api_ci` | high | Status CI via GitHub API |
+| `git_diff_current` | high | Diff atual do repositório |
+| `local_test_exit_code` | medium | Exit code de testes locais |
+| `scanner_current_state` | medium | Estado atual do scanner |
+| `backend_claim` | low | Claim do backend (não pode fabricar evidence) |
+| `memory_snapshot` | lowest | Snapshot de memória passada |
+| `agent_claim` | lowest | Afirmação de agente sem evidência |
+
+### 9 Regras de Validação
+
+1. `evidence_receipt.source` deve ser `"go-core"` — única fonte authoritative
+2. Backend não pode reivindicar evidence_receipt sem Go Core válido
+3. `runtime_probe_pass:true` requer `backend_alive + mission_id + evidence_receipt`
+4. CI success sem `evidence_present` → bloqueado
+5. `test_suite_pass:true` sem `exit_code` ou `test_total` → bloqueado
+6. `deploy_allowed:true` → bloqueio absoluto (`BLOCKED_POLICY`)
+7. `pass_gold_candidate:true` sem Go Core evidence → bloqueado
+8. Memória antiga com PASS contradizendo `BLOCKED_RUNTIME` → bloqueado
+9. Claim de agente contradizendo evidência → bloqueio de alucinação
+
+### Final Recommendation (máximo possível: SUPERVISED_READY)
+
+| Código | Condição |
+|--------|----------|
+| `BLOCKED_POLICY` | deploy_allowed:true detectado |
+| `BLOCKED_RUNTIME` | backend offline / runtime probe falhou |
+| `BLOCKED_EVIDENCE` | evidence inválida ou rules 1-5, 7-9 violadas |
+| `SUPERVISED_READY` | go_core válido + ≥3 sources presentes, sem erros |
+
+> **Nota:** `MERGE_READY` nunca é emitido pelo runtime evidence — é decisão do supervisor com todos os gates confirmados.
+
+### Novas Funções em `mission-supervisor.mjs`
+
+- `attachRuntimeEvidence(context, runtimeEvidence)` — anexa evidence ao contexto Hermes
+- `evaluateHermesEvidence(context)` — computa trust_score, sources e recommendation
+- `renderEvidenceGraph(context)` — grafo de nodes/edges de fontes de evidência
+
+### Novos Campos JSON (V15.6)
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `hermes_runtime_evidence_enabled` | boolean | sempre true |
+| `hermes_evidence_schema_version` | string | "v15.6" |
+| `hermes_evidence_trust_score` | number | 0-100 |
+| `hermes_evidence_sources_present` | array | fontes com evidence_present=true |
+| `hermes_evidence_sources_missing` | array | fontes sem evidência |
+| `hermes_evidence_validation_errors` | array | erros das 9 regras |
+| `hermes_evidence_validation_warnings` | array | avisos não-bloqueantes |
+| `hermes_evidence_graph` | object | grafo de evidências |
+| `hermes_runtime_evidence_summary` | object | sumário completo |

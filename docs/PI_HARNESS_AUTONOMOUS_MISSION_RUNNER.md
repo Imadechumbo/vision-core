@@ -448,3 +448,63 @@ Suites adicionadas:
 - **Suite E** — Hermes Context & JSON Integration (8 casos + JSON fields)
 
 Total: **>=200 testes** (V15.5). Todos passam com backend offline (BLOCKED_RUNTIME honesto).
+
+## V15.6 — Hermes Runtime Evidence Wiring
+
+### Novo Módulo
+
+`tools/hermes/runtime-evidence.mjs` — Builder de evidência de runtime. 7 exports:
+
+- `createRuntimeEvidence(missionId)` — estrutura vazia com 8 fontes
+- `collectRuntimeEvidence(state, missionId)` — coleta do estado PI Harness
+- `normalizeEvidenceSource(source)` — canonicaliza nomes de fontes
+- `classifyEvidenceTrust(source)` — authoritative/high/medium/low/lowest
+- `validateRuntimeEvidence(evidence)` — 9 regras, trust_score, final_recommendation
+- `mergeEvidenceSnapshots(a, b)` — B vence em `evidence_present=true`
+- `renderRuntimeEvidenceSummary(evidence)` — sumário compacto com `deploy_allowed: false`
+
+### Novas Funções em mission-supervisor.mjs
+
+- `attachRuntimeEvidence(context, runtimeEvidence)` — anexa ao contexto Hermes
+- `evaluateHermesEvidence(context)` — avalia trust_score e final_recommendation
+- `renderEvidenceGraph(context)` — grafo de evidências (nodes + edges)
+
+### Relatório Humano V15.6
+
+Nova seção `RUNTIME EVIDENCE WIRING (V15.6)` impressa antes de `HERMES SUPERVISION`:
+
+```
+EVIDENCE_SCHEMA_VERSION:   v15.6
+EVIDENCE_TRUST_SCORE:      <0-100>
+EVIDENCE_RECOMMENDATION:   BLOCKED_RUNTIME | BLOCKED_EVIDENCE | BLOCKED_POLICY | SUPERVISED_READY
+EVIDENCE_SOURCES_PRESENT:  git, tests, visual, security
+EVIDENCE_SOURCES_MISSING:  ci, runtime, backend, go_core
+EVIDENCE_GO_CORE_VALID:    false
+EVIDENCE_RUNTIME_BLOCKED:  true
+EVIDENCE_DEPLOY_ALLOWED:   false
+```
+
+### Novos Campos JSON
+
+```json
+"hermes_runtime_evidence_enabled": true,
+"hermes_evidence_schema_version": "v15.6",
+"hermes_evidence_trust_score": 40,
+"hermes_evidence_sources_present": ["git", "tests", "visual", "security"],
+"hermes_evidence_sources_missing": ["ci", "runtime", "backend", "go_core"],
+"hermes_evidence_validation_errors": [],
+"hermes_evidence_validation_warnings": ["runtime is BLOCKED_RUNTIME — backend not alive"],
+"hermes_evidence_graph": { "nodes": [...], "edges": [...], "deploy_allowed": false },
+"hermes_runtime_evidence_summary": { "deploy_allowed": false, ... }
+```
+
+### Testes V15.6
+
+Suites adicionadas (≥110 novos testes, total ≥720):
+
+- **Suite V15.6-A** — `createRuntimeEvidence`: estrutura, 8 fontes, invariants de trust
+- **Suite V15.6-B** — `collectRuntimeEvidence`: mapeamento de estado PI Harness
+- **Suite V15.6-C** — `normalizeEvidenceSource` + `classifyEvidenceTrust`: 25 casos
+- **Suite V15.6-D** — `validateRuntimeEvidence`: 9 regras, trust_score, SUPERVISED_READY
+- **Suite V15.6-E** — `mergeEvidenceSnapshots`: B vence, facts preservados
+- **Suite V15.6-F** — `renderRuntimeEvidenceSummary` + supervisor integration (attach/evaluate/graph/report)
