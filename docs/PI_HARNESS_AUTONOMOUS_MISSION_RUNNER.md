@@ -373,3 +373,78 @@ Para controle explícito: `--runtime-probe-root <path>` usa diretório fornecido
   "recommendation": "BLOCKED_EVIDENCE"
 }
 ```
+
+## V15.5 — Hermes Mission Supervisor + Multi-Agent Control Plane
+
+### O que mudou
+
+V15.5 integra o Hermes Mission Supervisor ao PI Harness. Hermes supervisiona todos os agentes, detecta conflitos, bloqueia claims de alucinação e emite uma decisão final de supervisão independente.
+
+### Garantias evidence-only
+
+- Somente `evidence_receipt.source === "go-core"` é aceito como evidência real
+- `pass_gold_candidate` só é `true` com gates reais + Go Core evidence
+- `deploy_allowed` permanece `false` sempre
+- Runtime `BLOCKED_RUNTIME` nunca é convertido em `MERGE_READY` pelo Hermes
+
+### Campos JSON hermes_* (novos em V15.5)
+
+| Campo | Tipo | Valor esperado |
+|-------|------|----------------|
+| `hermes_supervisor_enabled` | boolean | `true` sempre |
+| `hermes_mission_id` | string | `hermes_<timestamp>_<rand>` |
+| `hermes_agents_registered` | number | `11` |
+| `hermes_skills_registered` | number | `17` |
+| `hermes_apis_registered` | number | `17` |
+| `hermes_memory_policy` | object | `{ evidence_only: true, ... }` |
+| `hermes_conflicts_detected` | number | `0` ou mais |
+| `hermes_conflicts_resolved` | number | `0` ou mais |
+| `hermes_agent_outputs_validated` | number | `0` ou mais |
+| `hermes_hallucination_blocks` | number | `0` ou mais |
+| `hermes_final_decision` | string | enum: PENDING, MERGE_READY, BLOCKED_* |
+
+### Seção HERMES SUPERVISION no relatório humano
+
+```
+──── HERMES SUPERVISION (V15.5) ────────────────────────────────────────
+SUPERVISOR_ENABLED:        true
+MISSION_ID:                hermes_1748000000000_abc123
+AGENTS_REGISTERED:         11
+SKILLS_REGISTERED:         17
+APIS_REGISTERED:           17
+MEMORY_POLICY:             evidence_only=true stale_blocked=true
+AGENT_OUTPUTS_VALIDATED:   1
+CONFLICTS_DETECTED:        0
+CONFLICTS_RESOLVED:        0
+HALLUCINATION_BLOCKS:      0
+FINAL_SUPERVISOR_DECISION: BLOCKED_RUNTIME
+```
+
+### Módulo Hermes
+
+Localização: `tools/hermes/mission-supervisor.mjs`
+
+Exports:
+- `createHermesMissionContext()` — cria contexto de missão
+- `loadHermesConfig()` — configuração do supervisor
+- `loadAgentRegistry()` — 11 agentes registrados
+- `loadSkillRegistry()` — 17 skills registradas
+- `loadApiRegistry()` — 17 APIs/tools registradas
+- `loadMemoryPolicy()` — política de memória evidence-only
+- `validateAgentOutput(agentOutput, missionEvidence)` — anti-alucinação
+- `detectAgentConflict(agentA, agentB, evidence)` — detecção de conflitos
+- `resolveAgentConflict(conflict)` — resolução conservadora
+- `recordHermesEvent(context, event)` — registro de eventos
+- `renderHermesSupervisionReport(context)` — relatório de supervisão
+- `validateHermesRegistries()` — validação dos registries (usado em testes)
+
+### Testes V15.5
+
+Suites adicionadas:
+- **Suite A** — Agent Registry (11 agents), Skill Registry (17), API Registry (17)
+- **Suite B** — Memory Policy (evidence_only, stale_blocked, hierarchy)
+- **Suite C** — Anti-Hallucination (25 casos: test_pass, ci_green, backend_online, file_changed, real_evidence, pass_gold, release_actions)
+- **Suite D** — Conflict Detection & Resolution (17 casos)
+- **Suite E** — Hermes Context & JSON Integration (8 casos + JSON fields)
+
+Total: **>=200 testes** (V15.5). Todos passam com backend offline (BLOCKED_RUNTIME honesto).

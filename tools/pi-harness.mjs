@@ -25,6 +25,14 @@ import { execSync, spawnSync, spawn } from 'child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync, rmSync } from 'fs';
 import { resolve, join, dirname, basename } from 'path';
 import { tmpdir } from 'os';
+import {
+  createHermesMissionContext,
+  validateAgentOutput,
+  detectAgentConflict,
+  resolveAgentConflict,
+  recordHermesEvent,
+  renderHermesSupervisionReport,
+} from './hermes/mission-supervisor.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -61,6 +69,8 @@ let _backendProcess      = null;
 // Temp root managed by runtime probe (V15.3)
 let _probeTempRoot        = null;
 let _probeTempRootCreated = false;
+// Hermes Mission Supervisor context (V15.5)
+let _hermesCtx = null;
 
 // ═══════════════════════════════════════════════════════════════════
 // FAKE EVIDENCE SCAN PATTERNS
@@ -1351,7 +1361,7 @@ async function runLayerD7PassGoldDecision(s) {
 // D8 — RENDER FINAL MISSION REPORT
 // ═══════════════════════════════════════════════════════════════════
 
-function renderFinalMissionReport(s, result, elapsed) {
+function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
   const gates = {
     syntax_ok:            s.syntaxOk,
     visual_gold_lock:     s.visualGoldLockPass,
@@ -1430,6 +1440,18 @@ function renderFinalMissionReport(s, result, elapsed) {
       runtime_probe_port:              LOCAL_BACKEND_PORT,
       runtime_probe_timeout_ms:        RUNTIME_PROBE_TIMEOUT_MS,
       runtime_probe_no_start:          RUNTIME_PROBE_NO_START,
+      // V15.5: Hermes Mission Supervisor
+      hermes_supervisor_enabled:    hermesCtx ? hermesCtx.enabled : true,
+      hermes_mission_id:            hermesCtx ? hermesCtx.mission_id : null,
+      hermes_agents_registered:     hermesCtx ? hermesCtx.agents.length : 11,
+      hermes_skills_registered:     hermesCtx ? hermesCtx.skills.length : 17,
+      hermes_apis_registered:       hermesCtx ? hermesCtx.apis.length : 17,
+      hermes_memory_policy:         hermesCtx ? hermesCtx.memory_policy : null,
+      hermes_conflicts_detected:    hermesCtx ? hermesCtx.conflicts_detected.length : 0,
+      hermes_conflicts_resolved:    hermesCtx ? hermesCtx.conflicts_resolved.length : 0,
+      hermes_agent_outputs_validated: hermesCtx ? hermesCtx.agent_outputs_validated : 0,
+      hermes_hallucination_blocks:  hermesCtx ? hermesCtx.hallucination_blocks.length : 0,
+      hermes_final_decision:        hermesCtx ? hermesCtx.final_decision : 'PENDING',
     };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
@@ -1564,6 +1586,32 @@ function renderFinalMissionReport(s, result, elapsed) {
     log(`BLOCK_REASON: ${s.blockReason}`);
   }
 
+  if (hermesCtx) {
+    log(div('HERMES SUPERVISION (V15.5)'));
+    log(`SUPERVISOR_ENABLED:        ${hermesCtx.enabled}`);
+    log(`MISSION_ID:                ${hermesCtx.mission_id}`);
+    log(`AGENTS_REGISTERED:         ${hermesCtx.agents.length}`);
+    log(`SKILLS_REGISTERED:         ${hermesCtx.skills.length}`);
+    log(`APIS_REGISTERED:           ${hermesCtx.apis.length}`);
+    log(`MEMORY_POLICY:             evidence_only=${hermesCtx.memory_policy.evidence_only} stale_blocked=${hermesCtx.memory_policy.stale_context_blocked}`);
+    log(`AGENT_OUTPUTS_VALIDATED:   ${hermesCtx.agent_outputs_validated}`);
+    log(`CONFLICTS_DETECTED:        ${hermesCtx.conflicts_detected.length}`);
+    log(`CONFLICTS_RESOLVED:        ${hermesCtx.conflicts_resolved.length}`);
+    log(`HALLUCINATION_BLOCKS:      ${hermesCtx.hallucination_blocks.length}`);
+    log(`FINAL_SUPERVISOR_DECISION: ${hermesCtx.final_decision}`);
+    if (hermesCtx.hallucination_blocks.length > 0) {
+      log('  BLOQUEIOS DE ALUCINAÇÃO:');
+      for (const b of hermesCtx.hallucination_blocks) log(`    ✗ ${b.claim}: ${b.reason || 'blocked'}`);
+    }
+    if (hermesCtx.conflicts_detected.length > 0) {
+      log('  CONFLITOS DETECTADOS:');
+      for (const c of hermesCtx.conflicts_detected) {
+        const item = Array.isArray(c) ? c[0] : c;
+        log(`    ✗ [${item.type || 'unknown'}] ${item.detail || ''}`);
+      }
+    }
+  }
+
   if (!CI_MODE && REPORT.auditLog.length > 0) {
     log(div('AUDIT LOG'));
     for (const l of REPORT.auditLog) log(`  ${l}`);
@@ -1572,8 +1620,8 @@ function renderFinalMissionReport(s, result, elapsed) {
   log('');
   log(`╔${sep}╗`);
   const footer = result === 'PASS'
-    ? `✓ PI HARNESS V15.3 PASS — ${s.recommendation}`
-    : `✗ PI HARNESS V15.3 ${result} — ${s.recommendation}`;
+    ? `✓ PI HARNESS V15.5 PASS — ${s.recommendation}`
+    : `✗ PI HARNESS V15.5 ${result} — ${s.recommendation}`;
   log(`║  ${footer}${' '.repeat(Math.max(0, W - footer.length - 2))}║`);
   log(`╚${sep}╝`);
   log('');
@@ -1600,10 +1648,15 @@ async function main() {
   const t0 = Date.now();
   const s  = createMissionState();
 
+  // V15.5: Hermes Mission Supervisor
+  _hermesCtx = createHermesMissionContext();
+  recordHermesEvent(_hermesCtx, { type: 'mission_start', version: 'V15.5', max_difficulty: rawMaxDiff });
+
   if (!JSON_MODE && !CI_MODE) {
     log('');
-    log('PI HARNESS V15.3 — iniciando...');
+    log('PI HARNESS V15.5 — iniciando...');
     log(`  max-difficulty: ${rawMaxDiff} | dry-run: ${DRY_RUN} | no-autofix: ${NO_AUTOFIX} | ci: ${CI_MODE} | runtime-probe: ${RUNTIME_PROBE} | no-start: ${RUNTIME_PROBE_NO_START}`);
+    log(`  hermes: ${_hermesCtx.mission_id}`);
     log('');
   }
 
@@ -1613,6 +1666,7 @@ async function main() {
     for (const layer of LAYERS_DEF) {
       if (layer.id > MAX_DIFF_IDX) {
         audit(`[${layer.name}] skip (max-difficulty=${rawMaxDiff})`);
+        recordHermesEvent(_hermesCtx, { type: 'layer_skipped', layer: layer.name });
         continue;
       }
 
@@ -1624,6 +1678,13 @@ async function main() {
         s.blockReason = s.blockReason || `${layer.name}: ${err.message}`;
         ok = false;
       }
+
+      recordHermesEvent(_hermesCtx, {
+        type: ok ? 'layer_complete' : 'layer_failed',
+        layer: layer.name,
+        ok,
+        reason: ok ? null : s.blockReason,
+      });
 
       if (!ok) {
         result = 'BLOCKED';
@@ -1639,18 +1700,106 @@ async function main() {
     }
   }
 
+  // V15.5: Hermes final validation & decision
+  const missionEvidence = {
+    deploy_allowed: s.deployAllowed,
+    evidence_receipt: s.evidenceSource
+      ? { source: s.evidenceSource }
+      : (s.goRuntimeEvidenceSource ? { source: s.goRuntimeEvidenceSource } : null),
+    evidence_source: s.evidenceSource || s.goRuntimeEvidenceSource || null,
+    runtime_blocked: !s.backendAlive || (RUNTIME_PROBE && !s.runtimeProbePass),
+    recommendation: s.recommendation,
+    health_probe: s.backendAlive ? true : false,
+    gates_pass: s.passGoldCandidate,
+    gates_evaluated: s.layersExecuted.includes('D7'),
+    failed_gates: s.strictPassGoldReason || [],
+    ci_green: false,
+  };
+
+  // Validate agent output claims
+  const agentClaims = {
+    pass_gold: s.passGoldCandidate,
+    backend_online: s.backendAlive,
+    deploy_allowed: false, // always false
+  };
+  const validationResult = validateAgentOutput(agentClaims, missionEvidence);
+  _hermesCtx.agent_outputs_validated++;
+  for (const claim of validationResult.blocked_claims) {
+    const reason = validationResult.errors.find(e => e.includes(claim)) || 'blocked';
+    _hermesCtx.hallucination_blocks.push({ claim, reason });
+  }
+
+  // Detect conflicts
+  const deployConflict = detectAgentConflict(
+    { id: 'PIHarness', claim: { deploy_allowed: s.deployAllowed } },
+    { id: 'Hermes', claim: {} },
+    missionEvidence
+  );
+  if (deployConflict) {
+    _hermesCtx.conflicts_detected.push(deployConflict);
+    const resolution = resolveAgentConflict(deployConflict);
+    _hermesCtx.conflicts_resolved.push(resolution);
+  }
+
+  // Evidence source conflict
+  if (missionEvidence.evidence_source && missionEvidence.evidence_source !== 'go-core') {
+    const evConflict = detectAgentConflict(
+      { id: 'Scanner', claim: {} },
+      { id: 'PassGoldAuthority', claim: {} },
+      missionEvidence
+    );
+    if (evConflict) {
+      _hermesCtx.conflicts_detected.push(evConflict);
+      _hermesCtx.conflicts_resolved.push(resolveAgentConflict(evConflict));
+    }
+  }
+
+  // Set final Hermes decision
+  if (s.passGoldCandidate && result === 'PASS') {
+    _hermesCtx.final_decision = 'MERGE_READY';
+  } else if (RUNTIME_PROBE && !s.runtimeProbePass) {
+    _hermesCtx.final_decision = 'BLOCKED_RUNTIME';
+  } else if (!s.backendAlive) {
+    _hermesCtx.final_decision = 'BLOCKED_RUNTIME';
+  } else if (!s.fakeEvidenceAbsent || (s.evidenceSource && s.evidenceSource !== 'go-core')) {
+    _hermesCtx.final_decision = 'BLOCKED_EVIDENCE';
+  } else if (!s.visualGoldLockPass || !s.frontendVisualPass) {
+    _hermesCtx.final_decision = 'BLOCKED_VISUAL';
+  } else if (!s.syntaxOk) {
+    _hermesCtx.final_decision = 'BLOCKED_SYNTAX';
+  } else {
+    _hermesCtx.final_decision = 'BLOCKED_GATES';
+  }
+
+  recordHermesEvent(_hermesCtx, {
+    type: 'mission_end',
+    result,
+    final_decision: _hermesCtx.final_decision,
+    pass_gold_candidate: s.passGoldCandidate,
+    deploy_allowed: false,
+  });
+
   // D8 — Report
   const elapsed = Date.now() - t0;
-  renderFinalMissionReport(s, result, elapsed);
+  renderFinalMissionReport(s, result, elapsed, _hermesCtx);
 
   process.exit(result === 'PASS' ? 0 : 1);
 }
 
 main().catch(err => {
   if (!JSON_MODE) {
-    process.stderr.write(`PI HARNESS V15.3 FATAL: ${err.message}\n`);
+    process.stderr.write(`PI HARNESS V15.5 FATAL: ${err.message}\n`);
   } else {
-    process.stdout.write(JSON.stringify({ result: 'FAILED', error: err.message }) + '\n');
+    process.stdout.write(JSON.stringify({
+      result: 'FAILED',
+      error: err.message,
+      deploy_allowed: false,
+      hermes_supervisor_enabled: true,
+      hermes_agents_registered: 11,
+      hermes_skills_registered: 17,
+      hermes_apis_registered: 17,
+      hermes_final_decision: 'BLOCKED_FATAL',
+    }) + '\n');
   }
   process.exit(1);
 });
