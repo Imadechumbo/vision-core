@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║   PI HARNESS V15.0 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
+ * ║   PI HARNESS V15.1 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
  * ║   D0-Preflight → D1-Cleanup → D2-Contract → D3-GoCore               ║
  * ║   → D4-Backend → D5-Repair → D6-AutoFix → D7-Decision → D8-Report  ║
  * ╠══════════════════════════════════════════════════════════════════════╣
@@ -21,9 +21,10 @@
  *   node tools/pi-harness.mjs --no-autofix
  */
 
-import { execSync, spawnSync } from 'child_process';
+import { execSync, spawnSync, spawn } from 'child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { resolve, join, dirname, basename } from 'path';
+import { tmpdir } from 'os';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -37,7 +38,8 @@ const ARG        = prefix => { const a = ARGS.find(x => x === prefix || x.starts
 const DRY_RUN    = FLAG('--dry-run');
 const NO_AUTOFIX = FLAG('--no-autofix');
 const JSON_MODE  = FLAG('--json');
-const CI_MODE    = FLAG('--ci');
+const CI_MODE       = FLAG('--ci');
+const RUNTIME_PROBE = FLAG('--runtime-probe');
 
 const DIFFICULTY_ORDER = ['D0','D1','D2','D3','D4','D5','D6','D7','D8'];
 const rawMaxDiff = ARG('--max-difficulty') || 'D8';
@@ -47,6 +49,9 @@ const MAX_DIFF_IDX = DIFFICULTY_ORDER.includes(rawMaxDiff)
 
 const LOCAL_BACKEND_PORT = Number(process.env.PORT || 8080);
 const LOCAL_BACKEND_BASE = `http://localhost:${LOCAL_BACKEND_PORT}`;
+
+// Handle for backend process started by --runtime-probe (V15.1)
+let _backendProcess = null;
 
 // ═══════════════════════════════════════════════════════════════════
 // FAKE EVIDENCE SCAN PATTERNS
@@ -212,6 +217,17 @@ function createMissionState() {
     blockReason:      null,
     layersExecuted:   [],
     layersFailed:     [],
+    // Runtime Probe (V15.1)
+    runtimeProbeEnabled:   false,
+    backendProcessStarted: false,
+    backendProcessStopped: false,
+    backendHealthStatus:   'not_probed',
+    runLiveStatus:         'not_probed',
+    runLiveMissionId:      null,
+    runLiveEvidenceSource: null,
+    runLiveBackendStub:    null,
+    runLiveDeployAllowed:  null,
+    runtimeProbePass:      false,
   };
 }
 
@@ -699,6 +715,123 @@ async function runLayerD3GoCoreRuntime(s) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// RUNTIME PROBE HELPERS (V15.1)
+// ═══════════════════════════════════════════════════════════════════
+
+async function tryStartBackend(s) {
+  const serverPath = join(ROOT, 'backend', 'server.js');
+  if (!existsSync(serverPath)) {
+    audit('[D4] backend/server.js não encontrado — não pode iniciar');
+    return false;
+  }
+  try {
+    _backendProcess = spawn(process.execPath, [serverPath], {
+      cwd:      ROOT,
+      stdio:    ['ignore', 'pipe', 'pipe'],
+      env:      { ...process.env, PORT: String(LOCAL_BACKEND_PORT) },
+      detached: false,
+    });
+    s.backendProcessStarted = true;
+    audit(`[D4] backend processo iniciado (pid: ${_backendProcess.pid})`);
+  } catch (err) {
+    audit(`[D4] erro ao iniciar backend: ${err.message}`);
+    return false;
+  }
+  const MAX_WAIT_MS   = 8000;
+  const POLL_INTERVAL = 500;
+  let waited = 0;
+  while (waited < MAX_WAIT_MS) {
+    await new Promise(r => setTimeout(r, POLL_INTERVAL));
+    waited += POLL_INTERVAL;
+    if (_backendProcess && _backendProcess.exitCode !== null) {
+      audit(`[D4] backend terminou inesperadamente (exit: ${_backendProcess.exitCode})`);
+      return false;
+    }
+    const h = httpGet(`${LOCAL_BACKEND_BASE}/api/health`, 1500);
+    if (h) {
+      audit(`[D4] backend respondeu após ${waited}ms`);
+      return true;
+    }
+  }
+  audit(`[D4] backend não respondeu em ${MAX_WAIT_MS}ms`);
+  return false;
+}
+
+function stopBackend() {
+  if (_backendProcess) {
+    try { _backendProcess.kill('SIGTERM'); } catch { /* ignore */ }
+    try { _backendProcess.kill('SIGKILL'); } catch { /* ignore */ }
+    _backendProcess = null;
+    return true;
+  }
+  return false;
+}
+
+async function runRuntimeProbe(s) {
+  const probePayload = { input: 'self-test', root: tmpdir(), dry_run: true };
+  audit('[D4] [runtime-probe] POST /api/run-live { input:"self-test", dry_run:true }');
+  const probe = httpPost(`${LOCAL_BACKEND_BASE}/api/run-live`, probePayload, 15000);
+
+  if (!probe) {
+    audit('[D4] [runtime-probe] /api/run-live: sem resposta');
+    s.runLiveStatus    = 'no_response';
+    s.runtimeProbePass = false;
+    s.blockReason      = 'runtime-probe: /api/run-live sem resposta';
+    s.layersFailed.push('D4');
+    return false;
+  }
+
+  s.runLiveStatus        = 'ok';
+  s.runLiveMissionId     = probe.mission_id || null;
+  s.runLiveEvidenceSource = probe.evidence_receipt?.source || probe.evidence_source || null;
+  s.runLiveBackendStub   = probe.backend_stub;
+  s.runLiveDeployAllowed = probe.deploy_allowed;
+
+  // Propagar para campos padrão (alimentam computeStrictPassGoldCandidate)
+  s.backendHasMissionId       = typeof probe.mission_id === 'string' && String(probe.mission_id).startsWith('mission_');
+  s.backendHasEvidenceReceipt = !!(probe.evidence_receipt && typeof probe.evidence_receipt === 'object');
+  s.backendStub               = probe.backend_stub !== false;
+  s.evidenceSource            = s.runLiveEvidenceSource;
+
+  audit(`[D4] [runtime-probe] mission_id:        ${s.runLiveMissionId || 'null'}`);
+  audit(`[D4] [runtime-probe] evidence_receipt.source: ${s.runLiveEvidenceSource || 'null'}`);
+  audit(`[D4] [runtime-probe] backend_stub:      ${s.runLiveBackendStub}`);
+  audit(`[D4] [runtime-probe] deploy_allowed:    ${s.runLiveDeployAllowed}`);
+
+  // CRITICAL: deploy_allowed:true é bloqueio imediato
+  if (probe.deploy_allowed === true) {
+    audit('[D4] [runtime-probe] CRITICO: deploy_allowed:true — BLOQUEIO');
+    s.blockReason      = 'runtime-probe: backend deploy_allowed:true';
+    s.runtimeProbePass = false;
+    s.layersFailed.push('D4');
+    return false;
+  }
+
+  const failures = [];
+  if (!probe.mission_id || !String(probe.mission_id).startsWith('mission_'))
+    failures.push(`mission_id inválido: "${probe.mission_id}"`);
+  if (!probe.evidence_receipt || typeof probe.evidence_receipt !== 'object')
+    failures.push('evidence_receipt ausente ou inválido');
+  if (s.runLiveEvidenceSource !== 'go-core')
+    failures.push(`evidence_receipt.source="${s.runLiveEvidenceSource}" deve ser "go-core"`);
+  if (probe.backend_stub !== false)
+    failures.push(`backend_stub=${probe.backend_stub} deve ser false`);
+
+  if (failures.length > 0) {
+    audit(`[D4] [runtime-probe] ${failures.length} validações falharam:`);
+    for (const f of failures) audit(`  !! ${f}`);
+    s.runtimeProbePass = false;
+    s.blockReason      = `runtime-probe: ${failures[0]}`;
+    s.layersFailed.push('D4');
+    return false;
+  }
+
+  s.runtimeProbePass = true;
+  audit('[D4] [runtime-probe] todas validações PASS ✓');
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // D4 — BACKEND RUNTIME VALIDATION (LOCAL)
 // ═══════════════════════════════════════════════════════════════════
 
@@ -706,22 +839,64 @@ async function runLayerD4BackendRuntime(s) {
   s.layersExecuted.push('D4');
   audit(`[D4] Backend Runtime Validation (local:${LOCAL_BACKEND_PORT})`);
 
-  // Probe health — only if backend already running locally
+  s.runtimeProbeEnabled = RUNTIME_PROBE;
+
+  // Probe health — check se backend já responde
   const health = httpGet(`${LOCAL_BACKEND_BASE}/api/health`, 5000);
   s.backendAlive    = !!health;
   s.backendHealthOk = !!(health && (health.status === 'ok' || health.ok === true || health.anti_stub));
+  s.backendHealthStatus = s.backendAlive ? 'ok' : 'offline';
   audit(`[D4] /api/health: alive=${s.backendAlive} ok=${s.backendHealthOk}`);
 
+  // ── RUNTIME PROBE mode (V15.1) ─────────────────────────────────
+  if (RUNTIME_PROBE) {
+    if (!s.backendAlive) {
+      audit('[D4] [runtime-probe] backend offline — tentando iniciar');
+      const started = await tryStartBackend(s);
+      if (!started) {
+        // Re-verifica após tentativa
+        const h2 = httpGet(`${LOCAL_BACKEND_BASE}/api/health`, 2000);
+        s.backendAlive = !!h2;
+      }
+      if (!s.backendAlive) {
+        audit('[D4] [runtime-probe] backend não pôde iniciar — BLOCKED_RUNTIME');
+        s.runLiveStatus    = 'backend_offline';
+        s.runtimeProbePass = false;
+        s.blockReason      = 'runtime-probe: backend offline, não iniciou';
+        s.recommendation   = 'BLOCKED_RUNTIME';
+        if (s.backendProcessStarted) { s.backendProcessStopped = stopBackend(); }
+        s.layersFailed.push('D4');
+        return false;
+      }
+      s.backendHealthOk     = true;
+      s.backendHealthStatus = 'ok';
+    }
+
+    let probeOk = false;
+    try {
+      probeOk = await runRuntimeProbe(s);
+    } finally {
+      if (s.backendProcessStarted && !s.backendProcessStopped) {
+        s.backendProcessStopped = stopBackend();
+        audit(`[D4] backend processo parado: ${s.backendProcessStopped}`);
+      }
+    }
+    if (!probeOk) return false;
+
+    audit('[D4] Backend Runtime (runtime-probe): PASS');
+    return true;
+  }
+
+  // ── MODO NORMAL (sem --runtime-probe) ─────────────────────────
   if (!s.backendAlive) {
     audit('[D4] backend local não responde — skip POST /api/run-live');
     audit('[D4] NOTA: inicie backend com "node backend/server.js" para D4 completo');
-    // D4 não bloqueia se backend local não está rodando — é informativo
     s.backendStub = true;
     audit('[D4] Backend Runtime: SKIPPED (backend não rodando)');
     return true;
   }
 
-  // POST /api/run-live
+  // POST /api/run-live (modo normal)
   const probe = httpPost(`${LOCAL_BACKEND_BASE}/api/run-live`, {
     mission: 'pi-harness-d4-probe',
     mode:    'inspect',
@@ -921,8 +1096,15 @@ async function runLayerD7PassGoldDecision(s) {
 
   // Definir recommendation
   if (s.passGoldCandidate) {
-    s.promotionAllowed = true;
-    s.recommendation   = 'MERGE_READY';
+    // Com --runtime-probe, probe também deve passar
+    if (RUNTIME_PROBE && !s.runtimeProbePass) {
+      s.promotionAllowed = false;
+      s.recommendation   = 'BLOCKED_RUNTIME';
+      s.strictPassGoldReason.push('runtime_probe_failed');
+    } else {
+      s.promotionAllowed = true;
+      s.recommendation   = 'MERGE_READY';
+    }
   } else {
     const reason = computeStrictPassGoldReason(s);
     s.strictPassGoldReason = reason;
@@ -1011,6 +1193,16 @@ function renderFinalMissionReport(s, result, elapsed) {
       elapsed_ms:             Math.round(elapsed),
       dry_run:                DRY_RUN,
       no_autofix:             NO_AUTOFIX,
+      runtime_probe_enabled:    RUNTIME_PROBE,
+      backend_process_started:  s.backendProcessStarted || false,
+      backend_process_stopped:  s.backendProcessStopped || false,
+      backend_health_status:    s.backendHealthStatus   || 'not_probed',
+      run_live_status:          s.runLiveStatus         || 'not_probed',
+      run_live_mission_id:      s.runLiveMissionId      || null,
+      run_live_evidence_source: s.runLiveEvidenceSource || null,
+      run_live_backend_stub:    s.runLiveBackendStub    !== undefined ? s.runLiveBackendStub : null,
+      run_live_deploy_allowed:  s.runLiveDeployAllowed  !== undefined ? s.runLiveDeployAllowed : null,
+      runtime_probe_pass:       s.runtimeProbePass      || false,
     };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
@@ -1022,7 +1214,7 @@ function renderFinalMissionReport(s, result, elapsed) {
 
   log('');
   log(`╔${sep}╗`);
-  const title = 'PI HARNESS V15.0 — VISION CORE AUTONOMOUS MISSION RUNNER';
+  const title = 'PI HARNESS V15.1 — VISION CORE AUTONOMOUS MISSION RUNNER';
   log(`║  ${title}${' '.repeat(Math.max(0, W - title.length - 2))}║`);
   const sub   = 'RELATÓRIO FINAL';
   log(`║  ${sub}${' '.repeat(Math.max(0, W - sub.length - 2))}║`);
@@ -1078,6 +1270,20 @@ function renderFinalMissionReport(s, result, elapsed) {
   log(`BACKEND_EVIDENCE_RECEIPT:  ${s.backendHasEvidenceReceipt}`);
   log(`EVIDENCE_SOURCE:           ${s.evidenceSource || 'null'}${s.evidenceSource === 'go-core' ? ' ✓' : s.evidenceSource ? ' ← deve ser go-core' : ''}`);
 
+  if (s.runtimeProbeEnabled) {
+    log(div('RUNTIME PROBE (V15.1)'));
+    log(`RUNTIME_PROBE_ENABLED:     ${s.runtimeProbeEnabled}`);
+    log(`BACKEND_PROCESS_STARTED:   ${s.backendProcessStarted}`);
+    log(`BACKEND_PROCESS_STOPPED:   ${s.backendProcessStopped}`);
+    log(`BACKEND_HEALTH_STATUS:     ${s.backendHealthStatus}`);
+    log(`RUN_LIVE_STATUS:           ${s.runLiveStatus}`);
+    log(`RUN_LIVE_MISSION_ID:       ${s.runLiveMissionId || 'null'}`);
+    log(`RUN_LIVE_EVIDENCE_SOURCE:  ${s.runLiveEvidenceSource || 'null'}${s.runLiveEvidenceSource === 'go-core' ? ' ✓' : s.runLiveEvidenceSource ? ' ← deve ser go-core' : ''}`);
+    log(`RUN_LIVE_BACKEND_STUB:     ${s.runLiveBackendStub}`);
+    log(`RUN_LIVE_DEPLOY_ALLOWED:   ${s.runLiveDeployAllowed}`);
+    log(`RUNTIME_PROBE_PASS:        ${s.runtimeProbePass}`);
+  }
+
   if (s.repairPlan.length > 0) {
     log(div('REPAIR PLAN (D5)'));
     log(`ERROR_TYPES:               ${s.errorTypes.join(', ')}`);
@@ -1126,8 +1332,8 @@ function renderFinalMissionReport(s, result, elapsed) {
   log('');
   log(`╔${sep}╗`);
   const footer = result === 'PASS'
-    ? `✓ PI HARNESS V15.0 PASS — ${s.recommendation}`
-    : `✗ PI HARNESS V15.0 ${result} — ${s.recommendation}`;
+    ? `✓ PI HARNESS V15.1 PASS — ${s.recommendation}`
+    : `✗ PI HARNESS V15.1 ${result} — ${s.recommendation}`;
   log(`║  ${footer}${' '.repeat(Math.max(0, W - footer.length - 2))}║`);
   log(`╚${sep}╝`);
   log('');
@@ -1156,35 +1362,42 @@ async function main() {
 
   if (!JSON_MODE && !CI_MODE) {
     log('');
-    log('PI HARNESS V15.0 — iniciando...');
-    log(`  max-difficulty: ${rawMaxDiff} | dry-run: ${DRY_RUN} | no-autofix: ${NO_AUTOFIX} | ci: ${CI_MODE}`);
+    log('PI HARNESS V15.1 — iniciando...');
+    log(`  max-difficulty: ${rawMaxDiff} | dry-run: ${DRY_RUN} | no-autofix: ${NO_AUTOFIX} | ci: ${CI_MODE} | runtime-probe: ${RUNTIME_PROBE}`);
     log('');
   }
 
   let result = 'PASS';
 
-  for (const layer of LAYERS_DEF) {
-    if (layer.id > MAX_DIFF_IDX) {
-      audit(`[${layer.name}] skip (max-difficulty=${rawMaxDiff})`);
-      continue;
+  try {
+    for (const layer of LAYERS_DEF) {
+      if (layer.id > MAX_DIFF_IDX) {
+        audit(`[${layer.name}] skip (max-difficulty=${rawMaxDiff})`);
+        continue;
+      }
+
+      let ok = false;
+      try {
+        ok = await layer.fn(s);
+      } catch (err) {
+        s.layersFailed.push(layer.name);
+        s.blockReason = s.blockReason || `${layer.name}: ${err.message}`;
+        ok = false;
+      }
+
+      if (!ok) {
+        result = 'BLOCKED';
+        break;
+      }
     }
 
-    let ok = false;
-    try {
-      ok = await layer.fn(s);
-    } catch (err) {
-      s.layersFailed.push(layer.name);
-      s.blockReason = s.blockReason || `${layer.name}: ${err.message}`;
-      ok = false;
-    }
-
-    if (!ok) {
-      result = 'BLOCKED';
-      break;
+    if (result === 'PASS' && s.layersFailed.length > 0) result = 'BLOCKED';
+  } finally {
+    if (s.backendProcessStarted && !s.backendProcessStopped) {
+      s.backendProcessStopped = stopBackend();
+      if (s.backendProcessStopped) audit('[MAIN] backend processo parado no cleanup final');
     }
   }
-
-  if (result === 'PASS' && s.layersFailed.length > 0) result = 'BLOCKED';
 
   // D8 — Report
   const elapsed = Date.now() - t0;

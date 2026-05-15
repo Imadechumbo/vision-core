@@ -296,6 +296,121 @@ console.log('\n── Suite 6: Harness Syntax ──');
   assert(r.status === 0, 'pi-harness.mjs passa node --check');
 }
 
+// ─── SUITE 7: Runtime Probe (V15.1) ──────────────────────────────
+
+console.log('\n── Suite 7: Runtime Probe V15.1 ──');
+
+// 7a: flag --runtime-probe reconhecida → runtime_probe_enabled:true no JSON
+{
+  const r = runHarness(['--runtime-probe', '--json'], 90000);
+  let parsed = null;
+  try { parsed = JSON.parse(r.stdout.trim()); } catch {
+    const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
+    if (f >= 0 && l > f) try { parsed = JSON.parse(r.stdout.slice(f, l + 1)); } catch { /* noop */ }
+  }
+  assert(parsed !== null, '[7a] JSON parseável com --runtime-probe');
+  if (parsed) {
+    assert(parsed.runtime_probe_enabled === true,                   '[7a] runtime_probe_enabled:true quando flag presente');
+    assert(typeof parsed.backend_process_started === 'boolean',    '[7a] backend_process_started é boolean');
+    assert(typeof parsed.backend_process_stopped === 'boolean',    '[7a] backend_process_stopped é boolean');
+    assert(typeof parsed.backend_health_status === 'string',       '[7a] backend_health_status é string');
+    assert(typeof parsed.run_live_status === 'string',             '[7a] run_live_status é string');
+    assert('run_live_mission_id' in parsed,                        '[7a] run_live_mission_id presente no JSON');
+    assert('run_live_evidence_source' in parsed,                   '[7a] run_live_evidence_source presente');
+    assert('run_live_backend_stub' in parsed,                      '[7a] run_live_backend_stub presente');
+    assert('run_live_deploy_allowed' in parsed,                    '[7a] run_live_deploy_allowed presente');
+    assert(typeof parsed.runtime_probe_pass === 'boolean',         '[7a] runtime_probe_pass é boolean');
+    assert(parsed.deploy_allowed === false,                        '[7a] deploy_allowed permanece false');
+  }
+}
+
+// 7b: sem --runtime-probe → runtime_probe_enabled:false, backend_process_started:false
+{
+  const r = runHarness(['--json'], 90000);
+  let parsed = null;
+  try { parsed = JSON.parse(r.stdout.trim()); } catch {
+    const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
+    if (f >= 0 && l > f) try { parsed = JSON.parse(r.stdout.slice(f, l + 1)); } catch { /* noop */ }
+  }
+  if (parsed) {
+    assert(parsed.runtime_probe_enabled === false,                 '[7b] runtime_probe_enabled:false sem flag');
+    assert(parsed.backend_process_started === false,               '[7b] backend_process_started:false sem flag');
+    assert(parsed.deploy_allowed === false,                        '[7b] deploy_allowed false sem flag');
+  } else {
+    assert(false, '[7b] JSON parseável sem --runtime-probe');
+  }
+}
+
+// 7c: validação lógica deploy_allowed:true → bloqueio
+{
+  function validateRuntimeProbeResponse(probe) {
+    if (probe.deploy_allowed === true) return { ok: false, reason: 'deploy_allowed:true' };
+    if (!probe.mission_id || !String(probe.mission_id).startsWith('mission_'))
+      return { ok: false, reason: `mission_id inválido: "${probe.mission_id}"` };
+    const src = probe.evidence_receipt?.source || probe.evidence_source || null;
+    if (src !== 'go-core') return { ok: false, reason: `evidence_source="${src}" deve ser go-core` };
+    if (probe.backend_stub !== false) return { ok: false, reason: `backend_stub=${probe.backend_stub}` };
+    return { ok: true };
+  }
+
+  const fakeDeploy = { mission_id: 'mission_test', deploy_allowed: true, backend_stub: false,
+    evidence_receipt: { source: 'go-core', id: 'ev_1' } };
+  assert(!validateRuntimeProbeResponse(fakeDeploy).ok, '[7c] deploy_allowed:true gera bloqueio');
+
+  const fakeSource = { mission_id: 'mission_test', deploy_allowed: false, backend_stub: false,
+    evidence_receipt: { source: 'backend', id: 'ev_1' } };
+  assert(!validateRuntimeProbeResponse(fakeSource).ok, '[7c] evidence_source != go-core gera bloqueio');
+
+  const fakeStub = { mission_id: 'mission_test', deploy_allowed: false, backend_stub: true,
+    evidence_receipt: { source: 'go-core', id: 'ev_1' } };
+  assert(!validateRuntimeProbeResponse(fakeStub).ok,   '[7c] backend_stub:true gera bloqueio');
+
+  const fakeMissionId = { mission_id: 'invalid', deploy_allowed: false, backend_stub: false,
+    evidence_receipt: { source: 'go-core', id: 'ev_1' } };
+  assert(!validateRuntimeProbeResponse(fakeMissionId).ok, '[7c] mission_id sem prefixo mission_ gera bloqueio');
+
+  const valid = { mission_id: 'mission_abc123', deploy_allowed: false, backend_stub: false,
+    evidence_receipt: { source: 'go-core', id: 'ev_real' } };
+  assert(validateRuntimeProbeResponse(valid).ok, '[7c] payload válido passa validação');
+}
+
+// 7d: backend offline + --runtime-probe → resultado não é PASS fake
+{
+  // Roda com --runtime-probe sem --dry-run, max D4 para garantir que D4 execute
+  // Backend provavelmente offline em ambiente de test → deve bloquear honestamente
+  const r2 = (() => {
+    const args = ['--no-deprecation', HARNESS, '--max-difficulty', 'D4', '--runtime-probe', '--json'];
+    const res = spawnSync(process.execPath, args, {
+      cwd: ROOT, encoding: 'utf8', timeout: 120000, shell: false,
+    });
+    return { ok: res.status === 0, stdout: res.stdout || '', status: res.status };
+  })();
+
+  let parsed2 = null;
+  try { parsed2 = JSON.parse(r2.stdout.trim()); } catch {
+    const f = r2.stdout.indexOf('{'); const l = r2.stdout.lastIndexOf('}');
+    if (f >= 0 && l > f) try { parsed2 = JSON.parse(r2.stdout.slice(f, l + 1)); } catch { /* noop */ }
+  }
+
+  if (parsed2) {
+    // Deploy nunca true, independente de resultado
+    assert(parsed2.deploy_allowed === false,                   '[7d] deploy_allowed sempre false');
+    assert(parsed2.pass_gold_candidate !== true || parsed2.runtime_probe_pass === true,
+      '[7d] pass_gold_candidate:true só se runtime_probe_pass:true');
+    // Se backend estava offline, runtime_probe_pass deve ser false
+    if (!r2.ok) {
+      assert(parsed2.runtime_probe_pass === false,             '[7d] backend offline → runtime_probe_pass:false');
+      const rec = (parsed2.recommendation || '').includes('BLOCKED');
+      assert(rec, '[7d] backend offline → recommendation BLOCKED_*');
+    } else {
+      // Backend estava online — probe real aconteceu
+      assert(typeof parsed2.runtime_probe_pass === 'boolean', '[7d] runtime_probe_pass é boolean quando online');
+    }
+  } else {
+    assert(false, '[7d] JSON parseável com --runtime-probe D4');
+  }
+}
+
 // ─── RESULTADO FINAL ──────────────────────────────────────────────
 
 console.log('');

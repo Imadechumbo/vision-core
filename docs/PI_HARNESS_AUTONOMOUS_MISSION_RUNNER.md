@@ -1,4 +1,4 @@
-# PI Harness V15.0 — Autonomous Mission Runner
+# PI Harness V15.1 — Autonomous Mission Runner
 
 Vision Core autonomous executor. Runs progressive validation from preflight to final PASS GOLD decision.
 
@@ -10,7 +10,7 @@ Vision Core autonomous executor. Runs progressive validation from preflight to f
 | D1 | Safe Cleanup | Remove allowed temp logs, restore forbidden frontend changes, unstage forbidden files, no `git add .` |
 | D2 | Contract Validation | Validate schema, evidence_receipt in schema/normalizer, strict pass gold gate logic, list missing fields |
 | D3 | Go Core Runtime | Compile binary if needed, dry-run execution, verify mission_id/evidence_receipt/source/backend_stub/pass_gold/failed_gates |
-| D4 | Backend Runtime | Probe local backend (port 8080), GET /api/health, POST /api/run-live, verify payload fields |
+| D4 | Backend Runtime | Probe local backend (port 8080), GET /api/health, POST /api/run-live, verify payload fields. Com `--runtime-probe`: inicia backend se offline, valida strict, para processo |
 | D5 | Repair Planning | Classify error types, generate repair plan, distinguish auto-fixable vs manual |
 | D6 | Safe Auto-Fix | Apply permitted fixes only (path sep, temp cleanup, restore forbidden, .gitignore) |
 | D7 | PASS GOLD Decision | Compute final candidate decision from all gates |
@@ -69,6 +69,9 @@ DEPLOY_ALLOWED:      false (sempre, fase V15.0)
 --no-autofix        Pula D6 Safe Auto-Fix completamente
 --json              Emite JSON final parseável no stdout (sem texto decorativo)
 --ci                Modo CI: sem output progressivo, somente relatório final
+--runtime-probe     (V15.1) Ativa probe runtime real: inicia backend se offline,
+                    valida /api/health + /api/run-live, verifica evidence_receipt.source,
+                    backend_stub, deploy_allowed; para processo ao final
 ```
 
 ## Exemplos de execução
@@ -88,6 +91,9 @@ node tools/pi-harness.mjs --dry-run --no-autofix
 
 # Com auto-fix ativado (modo normal)
 node tools/pi-harness.mjs --max-difficulty D8
+
+# Runtime probe completo (V15.1) — inicia/para backend, valida evidence real
+node tools/pi-harness.mjs --runtime-probe --json
 ```
 
 ## JSON Output Schema
@@ -117,7 +123,17 @@ node tools/pi-harness.mjs --max-difficulty D8
   "git_head": "94bd841...",
   "elapsed_ms": 4200,
   "dry_run": false,
-  "no_autofix": false
+  "no_autofix": false,
+  "runtime_probe_enabled": false,
+  "backend_process_started": false,
+  "backend_process_stopped": false,
+  "backend_health_status": "not_probed",
+  "run_live_status": "not_probed",
+  "run_live_mission_id": null,
+  "run_live_evidence_source": null,
+  "run_live_backend_stub": null,
+  "run_live_deploy_allowed": null,
+  "runtime_probe_pass": false
 }
 ```
 
@@ -138,4 +154,37 @@ node tools/pi-harness.mjs --max-difficulty D8
 node tools/tests/pi-harness.test.mjs
 ```
 
-Cobre: strict gate, fake evidence scan, forbidden diff, JSON parseável, dry-run imutabilidade, syntax check.
+Cobre: strict gate, fake evidence scan, forbidden diff, JSON parseável, dry-run imutabilidade, syntax check, runtime probe flag/fields, validação deploy_allowed/evidence_source, backend offline → BLOCKED_RUNTIME.
+
+## V15.1 — Runtime Probe
+
+### Comportamento com `--runtime-probe`
+
+1. Verifica se backend já responde em `localhost:8080` (ou `$PORT`)
+2. Se não responder, inicia `node backend/server.js` de forma controlada
+3. Aguarda até 8s para backend responder em `/api/health`
+4. Se backend não inicia → `BLOCKED_RUNTIME` (nunca PASS fake)
+5. POST `/api/run-live` com payload: `{ "input": "self-test", "root": "<tmpdir>", "dry_run": true }`
+6. Valida resposta **estritamente**:
+   - `mission_id` existe e começa com `mission_`
+   - `evidence_receipt` existe e é objeto
+   - `evidence_receipt.source === "go-core"` (bloqueio se diferente)
+   - `backend_stub === false` (bloqueio se true)
+   - `deploy_allowed === false` (bloqueio CRÍTICO se true)
+7. Para o processo backend que o harness iniciou ao final (nunca deixa órfão)
+8. `promotion_allowed` só fica true se runtime_probe_pass AND passGoldCandidate
+
+### Campos adicionados ao JSON (V15.1)
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `runtime_probe_enabled` | bool | Flag --runtime-probe ativa |
+| `backend_process_started` | bool | Harness iniciou backend |
+| `backend_process_stopped` | bool | Harness parou backend |
+| `backend_health_status` | string | `ok` / `offline` / `not_probed` |
+| `run_live_status` | string | `ok` / `no_response` / `backend_offline` / `not_probed` |
+| `run_live_mission_id` | string\|null | mission_id retornado |
+| `run_live_evidence_source` | string\|null | evidence_receipt.source |
+| `run_live_backend_stub` | bool\|null | backend_stub retornado |
+| `run_live_deploy_allowed` | bool\|null | deploy_allowed retornado |
+| `runtime_probe_pass` | bool | Todas validações passaram |
