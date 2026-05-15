@@ -283,3 +283,80 @@ Coleta, normaliza e valida evidência de runtime de múltiplas fontes. Separado 
 | `hermes_evidence_validation_warnings` | array | avisos não-bloqueantes |
 | `hermes_evidence_graph` | object | grafo de evidências |
 | `hermes_runtime_evidence_summary` | object | sumário completo |
+
+## V15.7 — Runtime Evidence Decision Matrix + Release Readiness Gate
+
+### Visão Geral
+
+V15.7 adiciona a Decision Matrix como camada de transformação entre evidências coletadas e decisão de release explícita. A matrix avalia 8 gates, classifica o estado da missão e emite o Release Readiness Gate com score 0-100.
+
+**REGRA ABSOLUTA:** `deploy_allowed`, `promotion_allowed`, `stable_allowed`, `release_allowed` sempre `false`. `release_candidate` é classificação teórica — não executa ação automática.
+
+### Novo Módulo: `tools/hermes/decision-matrix.mjs`
+
+8 exports:
+
+| Função | Descrição |
+|--------|-----------|
+| `createDecisionMatrix()` | Cria matrix com defaults pessimistas (schema_version v15.7) |
+| `evaluateDecisionMatrix(runtimeEvidence, hermesContext)` | Avalia 8 gates e determina decision_state |
+| `evaluateReleaseReadiness(matrix, runtimeEvidence, hermesContext)` | Score 0-100, 3 levels, required_authorization |
+| `normalizeBlockingReason(reason)` | Lookup em catalog de 21 razões com severity/gate/message/remediation |
+| `deriveRequiredEvidenceChecklist(runtimeEvidence, hermesContext)` | 19 itens de checklist (release_authorization_present sempre false) |
+| `deriveSafeNextActions(matrix)` | 4 ações seguras por estado (write_capable=false sempre) |
+| `renderDecisionMatrixSummary(matrix)` | Sumário compacto com note classification-only |
+| `renderReleaseReadinessGate(readiness)` | Gate de release com required_authorization |
+
+### Decision States
+
+| Estado | Quando |
+|--------|--------|
+| `BLOCKED_POLICY` | deploy/promotion/stable true, fake evidence, hardcoded, forbidden scope |
+| `BLOCKED_RUNTIME` | backend offline, probe falhou, mission_id ausente |
+| `BLOCKED_EVIDENCE` | go_core inválido, evidence_receipt ausente ou não go-core |
+| `SUPERVISED_READY` | todos os gates locais pass, sem CI externo + sem autorização |
+| `RELEASE_CANDIDATE` | teórico — não emitido automaticamente sem autorização explícita |
+
+Policy gate é verificado primeiro — bloqueia imediatamente se violado.
+
+CI gate sempre `pass: false` no harness — verificado externamente via GitHub API.
+
+### Release Readiness Levels
+
+| Level | Score | Estado |
+|-------|-------|--------|
+| `blocked` | 0 | BLOCKED_* |
+| `supervised` | >0 | SUPERVISED_READY |
+| `candidate` | >0 | RELEASE_CANDIDATE (teórico) |
+
+Score 0 forçado em qualquer policy violation.
+
+### Novas Funções em `mission-supervisor.mjs` (V15.7)
+
+- `attachDecisionMatrix(context, matrix)` — anexa decision matrix ao contexto Hermes
+- `evaluateHermesDecision(context)` — avalia decision matrix + release readiness gate, atualiza ctx
+- `renderDecisionMatrixGraph(context)` — grafo da decision matrix com gates e blocking reasons
+
+### Novos Campos JSON (V15.7)
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `hermes_decision_matrix_enabled` | boolean | sempre true |
+| `hermes_decision_matrix_schema_version` | string | "v15.7" |
+| `hermes_decision_state` | string | BLOCKED_RUNTIME / BLOCKED_EVIDENCE / BLOCKED_POLICY / SUPERVISED_READY |
+| `hermes_release_readiness` | string | blocked / supervised / candidate |
+| `hermes_release_candidate` | boolean | sempre false |
+| `hermes_decision_score` | number | 0-100 |
+| `hermes_decision_blocking_reasons` | array | IDs das razões bloqueantes |
+| `hermes_required_evidence` | array | IDs dos 19 itens de checklist |
+| `hermes_safe_next_actions` | array | IDs das 4 ações seguras do estado atual |
+| `hermes_release_gate` | object | Release Readiness Gate renderizado |
+| `hermes_deploy_allowed` | boolean | sempre false |
+| `hermes_promotion_allowed` | boolean | sempre false |
+| `hermes_stable_allowed` | boolean | sempre false |
+
+### Novos Campos em `renderHermesSupervisionReport` (V15.7)
+
+`DECISION_MATRIX`, `DECISION_MATRIX_SUMMARY`, `RELEASE_READINESS_GATE`, `DECISION_STATE`, `DECISION_BLOCKING_REASONS`, `DECISION_SAFE_NEXT_ACTIONS`, `RELEASE_CANDIDATE`, `DEPLOY_ALLOWED`, `PROMOTION_ALLOWED`, `STABLE_ALLOWED`, `RELEASE_ALLOWED`
+
+Todos os campos de deploy/promotion/stable sempre `false`.

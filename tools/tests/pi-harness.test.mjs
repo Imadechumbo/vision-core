@@ -30,6 +30,9 @@ import {
   attachRuntimeEvidence,
   evaluateHermesEvidence,
   renderEvidenceGraph,
+  attachDecisionMatrix,
+  evaluateHermesDecision,
+  renderDecisionMatrixGraph,
 } from '../hermes/mission-supervisor.mjs';
 import {
   createRuntimeEvidence,
@@ -40,6 +43,16 @@ import {
   mergeEvidenceSnapshots,
   renderRuntimeEvidenceSummary,
 } from '../hermes/runtime-evidence.mjs';
+import {
+  createDecisionMatrix,
+  evaluateDecisionMatrix,
+  evaluateReleaseReadiness,
+  normalizeBlockingReason,
+  deriveRequiredEvidenceChecklist,
+  deriveSafeNextActions,
+  renderDecisionMatrixSummary,
+  renderReleaseReadinessGate,
+} from '../hermes/decision-matrix.mjs';
 
 const ROOT    = resolve(process.cwd());
 const HARNESS = join(ROOT, 'tools', 'pi-harness.mjs');
@@ -2196,6 +2209,495 @@ console.log('\n[V15.6-F] renderRuntimeEvidenceSummary + supervisor integration')
   assert(Array.isArray(report.EVIDENCE_SOURCES_PRESENT), '[V15.6-F-47] EVIDENCE_SOURCES_PRESENT é array');
   assert(Array.isArray(report.EVIDENCE_SOURCES_MISSING), '[V15.6-F-48] EVIDENCE_SOURCES_MISSING é array');
   assert(Array.isArray(report.EVIDENCE_VALIDATION_ERRORS), '[V15.6-F-49] EVIDENCE_VALIDATION_ERRORS é array');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.7-A — createDecisionMatrix
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.7-A] createDecisionMatrix — structure & defaults');
+
+{
+  const m = createDecisionMatrix();
+  assert(m.schema_version === 'v15.7',          '[V15.7-A-1] schema_version=v15.7');
+  assert(typeof m.created_at === 'number',       '[V15.7-A-2] created_at é number');
+  assert(m.decision_state === 'BLOCKED_RUNTIME', '[V15.7-A-3] decision_state default=BLOCKED_RUNTIME');
+  assert(m.deploy_allowed === false,             '[V15.7-A-4] deploy_allowed sempre false');
+  assert(m.promotion_allowed === false,          '[V15.7-A-5] promotion_allowed sempre false');
+  assert(m.stable_allowed === false,             '[V15.7-A-6] stable_allowed sempre false');
+  assert(m.release_allowed === false,            '[V15.7-A-7] release_allowed sempre false');
+  assert(m.release_candidate === false,          '[V15.7-A-8] release_candidate sempre false');
+  assert(Array.isArray(m.blocking_reasons),      '[V15.7-A-9] blocking_reasons é array');
+  assert(Array.isArray(m.required_evidence),     '[V15.7-A-10] required_evidence é array');
+  assert(Array.isArray(m.safe_next_actions),     '[V15.7-A-11] safe_next_actions é array');
+  assert(typeof m.gates === 'object',            '[V15.7-A-12] gates é object');
+  assert('runtime' in m.gates,                  '[V15.7-A-13] gates.runtime presente');
+  assert('evidence' in m.gates,                 '[V15.7-A-14] gates.evidence presente');
+  assert('go_core' in m.gates,                  '[V15.7-A-15] gates.go_core presente');
+  assert('ci' in m.gates,                       '[V15.7-A-16] gates.ci presente');
+  assert('tests' in m.gates,                    '[V15.7-A-17] gates.tests presente');
+  assert('security' in m.gates,                 '[V15.7-A-18] gates.security presente');
+  assert('scope' in m.gates,                    '[V15.7-A-19] gates.scope presente');
+  assert('policy' in m.gates,                   '[V15.7-A-20] gates.policy presente');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.7-B — normalizeBlockingReason
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.7-B] normalizeBlockingReason — catalog & structure');
+
+{
+  const r = normalizeBlockingReason('runtime_not_ready');
+  assert(r.id === 'runtime_not_ready',    '[V15.7-B-1] id=runtime_not_ready');
+  assert(r.severity === 'critical',       '[V15.7-B-2] severity=critical');
+  assert(r.gate === 'runtime',            '[V15.7-B-3] gate=runtime');
+  assert(typeof r.message === 'string',   '[V15.7-B-4] message é string');
+  assert(typeof r.remediation === 'string', '[V15.7-B-5] remediation é string');
+}
+
+{
+  const r = normalizeBlockingReason('deploy_policy_violation');
+  assert(r.id === 'deploy_policy_violation', '[V15.7-B-6] id=deploy_policy_violation');
+  assert(r.severity === 'critical',          '[V15.7-B-7] severity=critical');
+  assert(r.gate === 'policy',               '[V15.7-B-8] gate=policy');
+}
+
+{
+  const r = normalizeBlockingReason('ci_not_verified');
+  assert(r.id === 'ci_not_verified',   '[V15.7-B-9] id=ci_not_verified');
+  assert(r.severity === 'high',        '[V15.7-B-10] severity=high');
+  assert(r.gate === 'ci',             '[V15.7-B-11] gate=ci');
+}
+
+{
+  const r = normalizeBlockingReason('unknown_reason_xyz');
+  assert(r.id === 'unknown_reason_xyz',    '[V15.7-B-12] unknown id preservado');
+  assert(r.severity === 'medium',          '[V15.7-B-13] unknown → severity=medium');
+  assert(r.gate === 'policy',             '[V15.7-B-14] unknown → gate=policy');
+  assert(typeof r.message === 'string',   '[V15.7-B-15] unknown → message é string');
+}
+
+{
+  const r = normalizeBlockingReason('agent_claim_without_evidence');
+  assert(r.id === 'agent_claim_without_evidence', '[V15.7-B-16] agent_claim_without_evidence no catalog');
+  assert(r.severity === 'high',                   '[V15.7-B-17] severity=high');
+}
+
+{
+  const r = normalizeBlockingReason('pass_gold_not_real');
+  assert(r.id === 'pass_gold_not_real',  '[V15.7-B-18] pass_gold_not_real no catalog');
+  assert(r.severity === 'critical',      '[V15.7-B-19] severity=critical');
+  assert(r.gate === 'go_core',          '[V15.7-B-20] gate=go_core');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.7-C — evaluateDecisionMatrix: policy gate
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.7-C] evaluateDecisionMatrix — policy gate blocks');
+
+{
+  const ev = createRuntimeEvidence();
+  const m  = evaluateDecisionMatrix(ev, null);
+  assert(m.schema_version === 'v15.7',        '[V15.7-C-1] schema_version=v15.7');
+  assert(typeof m.decision_state === 'string', '[V15.7-C-2] decision_state é string');
+  assert(m.deploy_allowed === false,           '[V15.7-C-3] deploy_allowed sempre false');
+  assert(m.promotion_allowed === false,        '[V15.7-C-4] promotion_allowed sempre false');
+  assert(m.stable_allowed === false,           '[V15.7-C-5] stable_allowed sempre false');
+  assert(m.release_candidate === false,        '[V15.7-C-6] release_candidate sempre false');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  ev.deploy_allowed = true;
+  const m = evaluateDecisionMatrix(ev, null);
+  assert(m.decision_state === 'BLOCKED_POLICY',                    '[V15.7-C-7] deploy_allowed:true → BLOCKED_POLICY');
+  assert(m.gates.policy.pass === false,                             '[V15.7-C-8] policy gate failed');
+  assert(m.blocking_reasons.some(r => r.id === 'deploy_policy_violation'), '[V15.7-C-9] blocking reason deploy_policy_violation');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.security.fake_evidence_scan_clean = false;
+  const m = evaluateDecisionMatrix(ev, null);
+  assert(m.decision_state === 'BLOCKED_POLICY',                  '[V15.7-C-10] fake_evidence → BLOCKED_POLICY');
+  assert(m.blocking_reasons.some(r => r.id === 'fake_evidence_detected'), '[V15.7-C-11] fake_evidence_detected in reasons');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.git.forbidden_scope_clean = false;
+  const m = evaluateDecisionMatrix(ev, null);
+  assert(m.decision_state === 'BLOCKED_POLICY',                    '[V15.7-C-12] forbidden_scope → BLOCKED_POLICY');
+  assert(m.blocking_reasons.some(r => r.id === 'forbidden_scope_changed'), '[V15.7-C-13] forbidden_scope_changed in reasons');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.security.hardcoded_pass_gold_absent = false;
+  const m = evaluateDecisionMatrix(ev, null);
+  assert(m.decision_state === 'BLOCKED_POLICY',                        '[V15.7-C-14] hardcoded_pass_gold → BLOCKED_POLICY');
+  assert(m.blocking_reasons.some(r => r.id === 'hardcoded_pass_gold_detected'), '[V15.7-C-15] hardcoded_pass_gold_detected in reasons');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.7-D — evaluateDecisionMatrix: runtime/go_core/evidence
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.7-D] evaluateDecisionMatrix — runtime/go_core/evidence gates');
+
+{
+  const ev = createRuntimeEvidence();
+  const m  = evaluateDecisionMatrix(ev, null);
+  assert(m.decision_state === 'BLOCKED_RUNTIME', '[V15.7-D-1] default evidence → BLOCKED_RUNTIME');
+  assert(m.gates.ci.pass === false,              '[V15.7-D-2] CI gate always false at harness level');
+  assert(m.gates.ci.blocker === 'ci_not_verified', '[V15.7-D-3] CI blocker=ci_not_verified');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.runtime.blocked_runtime = false;
+  ev.sources.runtime.runtime_probe_pass = true;
+  ev.sources.runtime.evidence_present = true;
+  const m = evaluateDecisionMatrix(ev, null);
+  assert(m.gates.runtime.pass === true,        '[V15.7-D-4] runtime gate pass when probe ok');
+  assert(m.decision_state !== 'BLOCKED_POLICY', '[V15.7-D-5] not BLOCKED_POLICY with clean policy');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.go_core.evidence_present    = true;
+  ev.sources.go_core.evidence_receipt_valid = true;
+  const m = evaluateDecisionMatrix(ev, null);
+  assert(m.gates.go_core.pass === true, '[V15.7-D-6] go_core gate pass with valid receipt');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.go_core.evidence_receipt_source = 'backend-claim';
+  ev.sources.go_core.evidence_present = false;
+  const m = evaluateDecisionMatrix(ev, null);
+  assert(m.blocking_reasons.some(r => r.id === 'evidence_receipt_not_go_core' || r.id === 'go_core_evidence_missing'), '[V15.7-D-7] non-go-core source → blocking reason');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.tests.syntax_pass     = true;
+  ev.sources.tests.test_suite_pass = true;
+  ev.sources.tests.evidence_present = true;
+  const m = evaluateDecisionMatrix(ev, null);
+  assert(m.gates.tests.pass === true, '[V15.7-D-8] tests gate pass when both pass');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  const m  = evaluateDecisionMatrix(ev, null);
+  assert(m.gates.tests.pass === false,                        '[V15.7-D-9] tests gate fail by default');
+  assert(m.blocking_reasons.some(r => r.id === 'tests_not_verified'), '[V15.7-D-10] tests_not_verified in reasons');
+}
+
+{
+  // Full passing evidence → SUPERVISED_READY
+  const ev = createRuntimeEvidence('mid-full');
+  ev.sources.runtime.blocked_runtime    = false;
+  ev.sources.runtime.runtime_probe_pass = true;
+  ev.sources.runtime.evidence_present   = true;
+  ev.sources.go_core.evidence_present        = true;
+  ev.sources.go_core.evidence_receipt_valid  = true;
+  ev.sources.go_core.evidence_receipt_source = 'go-core';
+  ev.sources.go_core.go_tests_pass           = true;
+  ev.sources.go_core.go_core_compiled        = true;
+  ev.sources.backend.backend_alive           = true;
+  ev.sources.backend.backend_stub            = false;
+  ev.sources.backend.backend_has_mission_id  = true;
+  ev.sources.tests.syntax_pass               = true;
+  ev.sources.tests.test_suite_pass           = true;
+  ev.sources.tests.evidence_present          = true;
+  ev.sources.visual.visual_gold_harness_lock = true;
+  ev.sources.visual.frontend_visual_lock     = true;
+  ev.sources.visual.sddf_front_guard         = true;
+  ev.sources.visual.evidence_present         = true;
+  ev.sources.security.fake_evidence_scan_clean   = true;
+  ev.sources.security.hardcoded_pass_gold_absent = true;
+  ev.sources.security.hardcoded_deploy_absent    = true;
+  ev.sources.security.evidence_present           = true;
+  ev.sources.git.forbidden_scope_clean = true;
+  ev.sources.git.evidence_present      = true;
+  const m = evaluateDecisionMatrix(ev, null);
+  assert(m.decision_state === 'SUPERVISED_READY', '[V15.7-D-11] full passing evidence → SUPERVISED_READY');
+  assert(m.deploy_allowed === false,               '[V15.7-D-12] SUPERVISED_READY still deploy_allowed=false');
+  assert(m.release_candidate === false,            '[V15.7-D-13] SUPERVISED_READY still release_candidate=false');
+  assert(m.gates.ci.pass === false,               '[V15.7-D-14] CI always false even at SUPERVISED_READY');
+  assert(Array.isArray(m.required_evidence),       '[V15.7-D-15] required_evidence presente');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.7-E — deriveRequiredEvidenceChecklist
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.7-E] deriveRequiredEvidenceChecklist — 19 items');
+
+{
+  const checklist = deriveRequiredEvidenceChecklist(null, null);
+  assert(Array.isArray(checklist),         '[V15.7-E-1] null evidence → returns array');
+  assert(checklist.length === 19,          '[V15.7-E-2] always 19 checklist items');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  const checklist = deriveRequiredEvidenceChecklist(ev, null);
+  assert(checklist.length === 19,          '[V15.7-E-3] 19 items com evidence real');
+  const ids = checklist.map(c => c.id);
+  assert(ids.includes('git_head_current'),          '[V15.7-E-4] git_head_current presente');
+  assert(ids.includes('diff_scope_clean'),           '[V15.7-E-5] diff_scope_clean presente');
+  assert(ids.includes('visual_locks_pass'),          '[V15.7-E-6] visual_locks_pass presente');
+  assert(ids.includes('go_test_pass'),               '[V15.7-E-7] go_test_pass presente');
+  assert(ids.includes('evidence_receipt_source_go_core'), '[V15.7-E-8] evidence_receipt_source_go_core presente');
+  assert(ids.includes('release_authorization_present'), '[V15.7-E-9] release_authorization_present presente');
+  assert(ids.includes('pass_gold_real'),             '[V15.7-E-10] pass_gold_real presente');
+  assert(ids.includes('ci_success'),                 '[V15.7-E-11] ci_success presente');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  const checklist = deriveRequiredEvidenceChecklist(ev, null);
+  const authItem = checklist.find(c => c.id === 'release_authorization_present');
+  assert(authItem !== undefined,              '[V15.7-E-12] release_authorization_present encontrado');
+  assert(authItem.present === false,          '[V15.7-E-13] release_authorization_present sempre false');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  const checklist = deriveRequiredEvidenceChecklist(ev, null);
+  const ciItem = checklist.find(c => c.id === 'ci_success');
+  assert(ciItem.present === false,            '[V15.7-E-14] ci_success sempre false no harness');
+  assert(ciItem.blocking_if_missing === false, '[V15.7-E-15] ci_success não bloqueia hard');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  const checklist = deriveRequiredEvidenceChecklist(ev, null);
+  for (const item of checklist) {
+    assert('id' in item && 'required' in item && 'present' in item && 'source' in item && 'trust' in item && 'blocking_if_missing' in item,
+      `[V15.7-E-16] item ${item.id} has all required fields`);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.7-F — deriveSafeNextActions
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.7-F] deriveSafeNextActions — 4 actions per state');
+
+{
+  for (const state of ['BLOCKED_RUNTIME', 'BLOCKED_EVIDENCE', 'BLOCKED_POLICY', 'SUPERVISED_READY', 'RELEASE_CANDIDATE']) {
+    const m = createDecisionMatrix();
+    m.decision_state = state;
+    const actions = deriveSafeNextActions(m);
+    assert(Array.isArray(actions),      `[V15.7-F-${state}-1] actions é array`);
+    assert(actions.length === 4,        `[V15.7-F-${state}-2] 4 actions para ${state}`);
+    for (const a of actions) {
+      assert(a.write_capable === false, `[V15.7-F-${state}-3] write_capable=false em ${a.id}`);
+      assert(a.safe === true,           `[V15.7-F-${state}-4] safe=true em ${a.id}`);
+    }
+  }
+}
+
+{
+  const m = createDecisionMatrix();
+  m.decision_state = 'BLOCKED_RUNTIME';
+  const actions = deriveSafeNextActions(m);
+  assert(actions.some(a => a.id === 'start_backend_locally'),    '[V15.7-F-1] BLOCKED_RUNTIME: start_backend_locally');
+  assert(actions.some(a => a.id === 'run_runtime_probe'),        '[V15.7-F-2] BLOCKED_RUNTIME: run_runtime_probe');
+}
+
+{
+  const m = createDecisionMatrix();
+  m.decision_state = 'SUPERVISED_READY';
+  const actions = deriveSafeNextActions(m);
+  assert(actions.some(a => a.id === 'request_release_authorization'), '[V15.7-F-3] SUPERVISED_READY: request_release_authorization');
+  assert(actions.some(a => a.id === 'verify_ci_remote'),             '[V15.7-F-4] SUPERVISED_READY: verify_ci_remote');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.7-G — evaluateReleaseReadiness
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.7-G] evaluateReleaseReadiness — score & levels');
+
+{
+  const m   = createDecisionMatrix();
+  const r   = evaluateReleaseReadiness(m, null, null);
+  assert(typeof r.score === 'number',          '[V15.7-G-1] score é number');
+  assert(r.deploy_allowed === false,            '[V15.7-G-2] deploy_allowed sempre false');
+  assert(r.promotion_allowed === false,         '[V15.7-G-3] promotion_allowed sempre false');
+  assert(r.stable_allowed === false,            '[V15.7-G-4] stable_allowed sempre false');
+  assert(r.ready === false,                     '[V15.7-G-5] default → not ready');
+  assert(r.level === 'blocked',                 '[V15.7-G-6] default state → level=blocked');
+  assert(Array.isArray(r.required_authorization), '[V15.7-G-7] required_authorization é array');
+  assert(r.required_authorization.length === 4, '[V15.7-G-8] 4 required_authorization items');
+}
+
+{
+  const m = createDecisionMatrix();
+  m.decision_state = 'SUPERVISED_READY';
+  const r = evaluateReleaseReadiness(m, null, null);
+  assert(r.level === 'supervised',  '[V15.7-G-9] SUPERVISED_READY → level=supervised');
+  assert(r.ready === false,         '[V15.7-G-10] SUPERVISED_READY ainda não ready');
+}
+
+{
+  // Policy violation forces score=0
+  const m = createDecisionMatrix();
+  m.decision_state = 'BLOCKED_POLICY';
+  m.blocking_reasons = [normalizeBlockingReason('deploy_policy_violation')];
+  const r = evaluateReleaseReadiness(m, null, null);
+  assert(r.score === 0, '[V15.7-G-11] policy violation → score=0');
+}
+
+{
+  const r = evaluateReleaseReadiness(null, null, null);
+  assert(r.score === 0,         '[V15.7-G-12] null matrix → score=0');
+  assert(r.level === 'blocked', '[V15.7-G-13] null matrix → level=blocked');
+}
+
+{
+  // Full passing → score > 0, level supervised
+  const ev = createRuntimeEvidence();
+  ev.sources.go_core.evidence_present       = true;
+  ev.sources.go_core.evidence_receipt_valid = true;
+  ev.sources.runtime.blocked_runtime        = false;
+  ev.sources.runtime.runtime_probe_pass     = true;
+  ev.sources.tests.syntax_pass              = true;
+  ev.sources.tests.test_suite_pass          = true;
+  const m = evaluateDecisionMatrix(ev, null);
+  const r = evaluateReleaseReadiness(m, ev, null);
+  assert(r.score > 0,                           '[V15.7-G-14] partial evidence → score > 0');
+  assert(r.required_authorization.includes('release_authorization'), '[V15.7-G-15] release_authorization required');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.7-H — render functions + supervisor integration
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.7-H] renderDecisionMatrixSummary + renderReleaseReadinessGate + supervisor');
+
+{
+  const summary = renderDecisionMatrixSummary(null);
+  assert(summary === null, '[V15.7-H-1] null matrix → null summary');
+}
+
+{
+  const m = createDecisionMatrix();
+  const summary = renderDecisionMatrixSummary(m);
+  assert(summary.schema_version === 'v15.7',                    '[V15.7-H-2] summary.schema_version=v15.7');
+  assert(summary.deploy_allowed === false,                       '[V15.7-H-3] summary.deploy_allowed=false');
+  assert(summary.promotion_allowed === false,                    '[V15.7-H-4] summary.promotion_allowed=false');
+  assert(summary.stable_allowed === false,                       '[V15.7-H-5] summary.stable_allowed=false');
+  assert(summary.release_candidate === false,                    '[V15.7-H-6] summary.release_candidate=false');
+  assert(Array.isArray(summary.gates_pass),                      '[V15.7-H-7] summary.gates_pass é array');
+  assert(Array.isArray(summary.gates_blocked),                   '[V15.7-H-8] summary.gates_blocked é array');
+  assert(typeof summary.blocking_count === 'number',             '[V15.7-H-9] summary.blocking_count é number');
+  assert(summary.note.includes('classification only'),           '[V15.7-H-10] summary.note contém classification only');
+}
+
+{
+  const gate = renderReleaseReadinessGate(null);
+  assert(gate === null, '[V15.7-H-11] null readiness → null gate');
+}
+
+{
+  const m = createDecisionMatrix();
+  const r = evaluateReleaseReadiness(m, null, null);
+  const gate = renderReleaseReadinessGate(r);
+  assert(gate.deploy_allowed === false,                    '[V15.7-H-12] gate.deploy_allowed=false');
+  assert(gate.promotion_allowed === false,                 '[V15.7-H-13] gate.promotion_allowed=false');
+  assert(gate.stable_allowed === false,                    '[V15.7-H-14] gate.stable_allowed=false');
+  assert(Array.isArray(gate.required_authorization),       '[V15.7-H-15] gate.required_authorization é array');
+  assert(typeof gate.missing_count === 'number',           '[V15.7-H-16] gate.missing_count é number');
+  assert(typeof gate.blocker_count === 'number',           '[V15.7-H-17] gate.blocker_count é number');
+  assert(gate.note.includes('explicit authorization'),     '[V15.7-H-18] gate.note contém explicit authorization');
+}
+
+// attachDecisionMatrix
+{
+  const ctx = createHermesMissionContext();
+  const m   = createDecisionMatrix();
+  attachDecisionMatrix(ctx, m);
+  assert(ctx.decision_matrix === m,              '[V15.7-H-19] decision_matrix attachado ao ctx');
+  assert(ctx.decision_matrix_attached === true,  '[V15.7-H-20] decision_matrix_attached=true');
+  assert(typeof ctx.decision_matrix_at === 'number', '[V15.7-H-21] decision_matrix_at é number');
+}
+
+{
+  attachDecisionMatrix(null, createDecisionMatrix());
+  assert(true, '[V15.7-H-22] attachDecisionMatrix ctx=null não lança exceção');
+}
+
+// evaluateHermesDecision
+{
+  const ctx    = createHermesMissionContext();
+  const result = evaluateHermesDecision(ctx);
+  assert(typeof result.decision_state === 'string', '[V15.7-H-23] decision_state é string');
+  assert(result.deploy_allowed === false,            '[V15.7-H-24] deploy_allowed=false');
+  assert(result.promotion_allowed === false,         '[V15.7-H-25] promotion_allowed=false');
+  assert(result.stable_allowed === false,            '[V15.7-H-26] stable_allowed=false');
+  assert(result.release_candidate === false,         '[V15.7-H-27] release_candidate=false');
+  assert(ctx.decision_matrix !== null,              '[V15.7-H-28] ctx.decision_matrix preenchido após evaluate');
+  assert(ctx.decision_matrix_attached === true,     '[V15.7-H-29] ctx.decision_matrix_attached=true');
+  assert(ctx.release_readiness_gate !== null,       '[V15.7-H-30] ctx.release_readiness_gate preenchido');
+}
+
+{
+  const result = evaluateHermesDecision(null);
+  assert(result.decision_state === 'BLOCKED_RUNTIME', '[V15.7-H-31] null ctx → BLOCKED_RUNTIME');
+  assert(result.deploy_allowed === false,              '[V15.7-H-32] null ctx → deploy_allowed=false');
+}
+
+// renderDecisionMatrixGraph
+{
+  const ctx = createHermesMissionContext();
+  const graph = renderDecisionMatrixGraph(ctx);
+  assert(graph === null, '[V15.7-H-33] ctx sem decision_matrix → graph=null');
+}
+
+{
+  const ctx = createHermesMissionContext();
+  const ev  = createRuntimeEvidence('mid-dm');
+  attachRuntimeEvidence(ctx, ev);
+  evaluateHermesDecision(ctx);
+  const graph = renderDecisionMatrixGraph(ctx);
+  assert(graph !== null,                              '[V15.7-H-34] ctx com decision_matrix → graph não null');
+  assert(graph.schema_version === 'v15.7',            '[V15.7-H-35] graph.schema_version=v15.7');
+  assert(graph.mission_id === ctx.mission_id,         '[V15.7-H-36] graph.mission_id propagado');
+  assert(typeof graph.decision_state === 'string',    '[V15.7-H-37] graph.decision_state é string');
+  assert(graph.deploy_allowed === false,              '[V15.7-H-38] graph.deploy_allowed=false');
+  assert(graph.release_candidate === false,           '[V15.7-H-39] graph.release_candidate=false');
+  assert(graph.note.includes('classification only'), '[V15.7-H-40] graph.note contém classification only');
+}
+
+// renderHermesSupervisionReport with V15.7 decision matrix fields
+{
+  const ctx = createHermesMissionContext();
+  const ev  = createRuntimeEvidence('mid-v157');
+  attachRuntimeEvidence(ctx, ev);
+  evaluateHermesDecision(ctx);
+  const report = renderHermesSupervisionReport(ctx);
+  assert('DECISION_MATRIX' in report,            '[V15.7-H-41] report inclui DECISION_MATRIX');
+  assert('DECISION_MATRIX_SUMMARY' in report,   '[V15.7-H-42] report inclui DECISION_MATRIX_SUMMARY');
+  assert('RELEASE_READINESS_GATE' in report,    '[V15.7-H-43] report inclui RELEASE_READINESS_GATE');
+  assert('DECISION_STATE' in report,            '[V15.7-H-44] report inclui DECISION_STATE');
+  assert('DECISION_BLOCKING_REASONS' in report, '[V15.7-H-45] report inclui DECISION_BLOCKING_REASONS');
+  assert('DECISION_SAFE_NEXT_ACTIONS' in report, '[V15.7-H-46] report inclui DECISION_SAFE_NEXT_ACTIONS');
+  assert('RELEASE_CANDIDATE' in report,          '[V15.7-H-47] report inclui RELEASE_CANDIDATE');
+  assert('DEPLOY_ALLOWED' in report,             '[V15.7-H-48] report inclui DEPLOY_ALLOWED');
+  assert(report.DEPLOY_ALLOWED === false,         '[V15.7-H-49] DEPLOY_ALLOWED sempre false');
+  assert(report.PROMOTION_ALLOWED === false,      '[V15.7-H-50] PROMOTION_ALLOWED sempre false');
+  assert(report.STABLE_ALLOWED === false,         '[V15.7-H-51] STABLE_ALLOWED sempre false');
+  assert(report.RELEASE_CANDIDATE === false,      '[V15.7-H-52] RELEASE_CANDIDATE sempre false');
+  assert(Array.isArray(report.DECISION_BLOCKING_REASONS),  '[V15.7-H-53] DECISION_BLOCKING_REASONS é array');
+  assert(Array.isArray(report.DECISION_SAFE_NEXT_ACTIONS), '[V15.7-H-54] DECISION_SAFE_NEXT_ACTIONS é array');
 }
 
 // ─── RESULTADO FINAL ──────────────────────────────────────────────

@@ -508,3 +508,62 @@ Suites adicionadas (≥110 novos testes, total ≥720):
 - **Suite V15.6-D** — `validateRuntimeEvidence`: 9 regras, trust_score, SUPERVISED_READY
 - **Suite V15.6-E** — `mergeEvidenceSnapshots`: B vence, facts preservados
 - **Suite V15.6-F** — `renderRuntimeEvidenceSummary` + supervisor integration (attach/evaluate/graph/report)
+
+## V15.7 — Runtime Evidence Decision Matrix + Release Readiness Gate
+
+### Visão Geral
+
+V15.7 adiciona a Decision Matrix como camada de transformação entre evidências coletadas e decisão de release. Novo módulo `tools/hermes/decision-matrix.mjs` com 8 exports.
+
+**REGRA ABSOLUTA:** `deploy_allowed`, `promotion_allowed`, `stable_allowed`, `release_allowed` sempre `false`. `release_candidate` é classificação teórica — não executa ação automática. CI gate sempre `false` no harness — verificado externamente.
+
+### Seção no Relatório Humano
+
+```
+──── RUNTIME EVIDENCE DECISION MATRIX (V15.7) ──────────────────────────
+DECISION_STATE:            BLOCKED_RUNTIME
+DECISION_SCHEMA_VERSION:   v15.7
+RELEASE_READINESS:         blocked
+DECISION_SCORE:            0/100
+RELEASE_CANDIDATE:         false
+DEPLOY_ALLOWED:            false
+PROMOTION_ALLOWED:         false
+STABLE_ALLOWED:            false
+GATES_PASS:                policy
+GATES_BLOCKED:             runtime, evidence, go_core, ci, tests, security, scope
+  BLOCKING REASONS:
+    [CRITICAL] backend_offline: Backend is offline
+    [HIGH] tests_not_verified: Local test suite not verified or failing
+  NOTE: classification only — no deploy performed — explicit authorization required
+```
+
+### Novos Campos JSON (V15.7)
+
+```json
+"hermes_decision_matrix_enabled": true,
+"hermes_decision_matrix_schema_version": "v15.7",
+"hermes_decision_state": "BLOCKED_RUNTIME",
+"hermes_release_readiness": "blocked",
+"hermes_release_candidate": false,
+"hermes_decision_score": 0,
+"hermes_decision_blocking_reasons": ["backend_offline", "tests_not_verified"],
+"hermes_required_evidence": ["git_head_current", "diff_scope_clean", ...],
+"hermes_safe_next_actions": ["start_backend_locally", "run_runtime_probe", ...],
+"hermes_release_gate": { "ready": false, "level": "blocked", "deploy_allowed": false },
+"hermes_deploy_allowed": false,
+"hermes_promotion_allowed": false,
+"hermes_stable_allowed": false
+```
+
+### Testes V15.7
+
+Suites adicionadas (≥100 novos testes, total ≥905):
+
+- **Suite V15.7-A** — `createDecisionMatrix`: 20 assertions de estrutura e defaults
+- **Suite V15.7-B** — `normalizeBlockingReason`: 21-entry catalog, campos, unknown reasons
+- **Suite V15.7-C** — `evaluateDecisionMatrix` policy gate: deploy/fake evidence/scope/hardcoded
+- **Suite V15.7-D** — `evaluateDecisionMatrix` runtime/go_core/evidence/tests/SUPERVISED_READY
+- **Suite V15.7-E** — `deriveRequiredEvidenceChecklist`: 19 itens, release_authorization sempre false
+- **Suite V15.7-F** — `deriveSafeNextActions`: 4 ações por estado, write_capable=false
+- **Suite V15.7-G** — `evaluateReleaseReadiness`: score, levels, policy force-0, required_authorization
+- **Suite V15.7-H** — render functions + supervisor integration (attach/evaluate/graph/report)
