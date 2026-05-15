@@ -14,6 +14,20 @@
 import { spawnSync } from 'child_process';
 import { readFileSync, existsSync, statSync } from 'fs';
 import { resolve, join } from 'path';
+import {
+  createHermesMissionContext,
+  loadHermesConfig,
+  loadAgentRegistry,
+  loadSkillRegistry,
+  loadApiRegistry,
+  loadMemoryPolicy,
+  validateAgentOutput,
+  detectAgentConflict,
+  resolveAgentConflict,
+  recordHermesEvent,
+  renderHermesSupervisionReport,
+  validateHermesRegistries,
+} from '../hermes/mission-supervisor.mjs';
 
 const ROOT    = resolve(process.cwd());
 const HARNESS = join(ROOT, 'tools', 'pi-harness.mjs');
@@ -937,6 +951,652 @@ console.log('\n── Suite 12: No-start & Process Control ──');
   } else {
     assert(false, '[12b] JSON parseável para verificar process lifecycle');
   }
+}
+
+// ─── SUITE A: Hermes Registry ─────────────────────────────────────
+
+console.log('\n── Suite A: Hermes Agent Registry ──');
+
+{
+  const agents = loadAgentRegistry();
+  assert(agents.length === 11, '[A] agent registry tem 11 agentes');
+
+  const requiredIds = [
+    'PIHarness','Hermes','OpenClaw','Scanner','PatchEngine',
+    'Aegis','GoCore','PassGoldAuthority','Archivist','GitHubAgent','ReleaseController',
+  ];
+  for (const id of requiredIds) {
+    assert(agents.some(a => a.id === id), `[A] agente obrigatório existe: ${id}`);
+  }
+
+  for (const agent of agents) {
+    assert(typeof agent.id === 'string' && agent.id.length > 0,              `[A] agent ${agent.id}: id é string`);
+    assert(typeof agent.role === 'string' && agent.role.length > 0,           `[A] agent ${agent.id}: role é string`);
+    assert(typeof agent.category === 'string' && agent.category.length > 0,  `[A] agent ${agent.id}: category é string`);
+    assert(Array.isArray(agent.allowed_actions) && agent.allowed_actions.length > 0, `[A] agent ${agent.id}: allowed_actions é array não vazio`);
+    assert(Array.isArray(agent.forbidden_actions) && agent.forbidden_actions.length > 0, `[A] agent ${agent.id}: forbidden_actions é array não vazio`);
+  }
+
+  // Categorias obrigatórias presentes
+  const categories = [...new Set(agents.map(a => a.category))];
+  assert(categories.includes('execution'),  '[A] categoria execution presente');
+  assert(categories.includes('decision'),   '[A] categoria decision presente');
+  assert(categories.includes('validation'), '[A] categoria validation presente');
+  assert(categories.includes('memory'),     '[A] categoria memory presente');
+  assert(categories.includes('governance'), '[A] categoria governance presente');
+}
+
+console.log('\n── Suite A: Hermes Skill Registry ──');
+
+{
+  const skills = loadSkillRegistry();
+  assert(skills.length === 17, '[A] skill registry tem 17 skills');
+
+  const requiredSkills = [
+    'repo_scan','syntax_check','go_test','go_build','runtime_probe',
+    'contract_validation','fake_evidence_scan','visual_lock','frontend_guard',
+    'patch_plan','safe_autofix','rollback_check','pr_readiness',
+    'ci_status_check','memory_record','conflict_resolution','anti_hallucination_check',
+  ];
+  for (const id of requiredSkills) {
+    assert(skills.some(s => s.id === id), `[A] skill obrigatória existe: ${id}`);
+  }
+
+  for (const skill of skills) {
+    assert(typeof skill.id === 'string',              `[A] skill ${skill.id}: id é string`);
+    assert(typeof skill.owner_agent === 'string',     `[A] skill ${skill.id}: owner_agent é string`);
+    assert(typeof skill.requires_evidence === 'boolean', `[A] skill ${skill.id}: requires_evidence é boolean`);
+    assert(Array.isArray(skill.allowed_tools),         `[A] skill ${skill.id}: allowed_tools é array`);
+    assert(Array.isArray(skill.outputs),               `[A] skill ${skill.id}: outputs é array`);
+    assert(typeof skill.failure_mode === 'string',    `[A] skill ${skill.id}: failure_mode é string`);
+  }
+
+  // Skills críticas com requires_evidence=true
+  const runtimeProbeSkill = skills.find(s => s.id === 'runtime_probe');
+  assert(runtimeProbeSkill?.requires_evidence === true, '[A] runtime_probe: requires_evidence=true');
+  assert(runtimeProbeSkill?.failure_mode === 'BLOCKED_RUNTIME', '[A] runtime_probe: failure_mode=BLOCKED_RUNTIME');
+
+  const fakeEvScan = skills.find(s => s.id === 'fake_evidence_scan');
+  assert(fakeEvScan !== undefined, '[A] fake_evidence_scan existe');
+
+  const contractVal = skills.find(s => s.id === 'contract_validation');
+  assert(contractVal?.requires_evidence === true, '[A] contract_validation: requires_evidence=true');
+
+  const antiHallucination = skills.find(s => s.id === 'anti_hallucination_check');
+  assert(antiHallucination !== undefined, '[A] anti_hallucination_check existe');
+  assert(['Hermes','Aegis'].includes(antiHallucination?.owner_agent), '[A] anti_hallucination_check owner: Hermes ou Aegis');
+
+  const conflictRes = skills.find(s => s.id === 'conflict_resolution');
+  assert(conflictRes !== undefined, '[A] conflict_resolution existe');
+  assert(['Hermes','Aegis'].includes(conflictRes?.owner_agent), '[A] conflict_resolution owner: Hermes ou Aegis');
+}
+
+console.log('\n── Suite A: Hermes API Registry ──');
+
+{
+  const apis = loadApiRegistry();
+  assert(apis.length === 17, '[A] API registry tem 17 tools');
+
+  const writeCapableRequired = [
+    'github_api_pr_create',
+    'github_api_merge_authorized_only',
+    'github_api_deploy_authorized_only',
+    'git_tag_authorized_only',
+    'stable_promotion_authorized_only',
+  ];
+  for (const id of writeCapableRequired) {
+    const api = apis.find(a => a.id === id);
+    assert(api !== undefined, `[A] api obrigatória existe: ${id}`);
+    assert(api?.write_capable === true,          `[A] ${id}: write_capable=true`);
+    assert(api?.requires_authorization === true, `[A] ${id}: requires_authorization=true`);
+    assert(api?.forbidden_in_dry_run === true,   `[A] ${id}: forbidden_in_dry_run=true`);
+  }
+
+  const readOnlyTools = [
+    'git_status','git_diff','git_fetch','github_api_read','node_check',
+    'go_test','go_build','backend_health_probe','backend_run_live_probe',
+    'visual_lock_tool','frontend_guard_tool',
+  ];
+  for (const id of readOnlyTools) {
+    const api = apis.find(a => a.id === id);
+    assert(api !== undefined,            `[A] read-only api existe: ${id}`);
+    assert(api?.write_capable === false, `[A] ${id}: write_capable=false`);
+  }
+
+  for (const api of apis) {
+    assert('id' in api,                          `[A] api ${api.id}: campo id presente`);
+    assert('allowed' in api,                     `[A] api ${api.id}: campo allowed presente`);
+    assert('write_capable' in api,               `[A] api ${api.id}: campo write_capable presente`);
+    assert('requires_authorization' in api,      `[A] api ${api.id}: campo requires_authorization presente`);
+    assert('forbidden_in_dry_run' in api,        `[A] api ${api.id}: campo forbidden_in_dry_run presente`);
+    assert('output_must_be_cited_in_report' in api, `[A] api ${api.id}: campo output_must_be_cited_in_report presente`);
+  }
+}
+
+// ─── SUITE B: Memory Policy ────────────────────────────────────────
+
+console.log('\n── Suite B: Memory Policy ──');
+
+{
+  const policy = loadMemoryPolicy();
+
+  assert(policy.enabled === true,                       '[B] memory policy: enabled=true');
+  assert(policy.evidence_only === true,                 '[B] memory policy: evidence_only=true');
+  assert(policy.stale_context_blocked === true,         '[B] memory policy: stale_context_blocked=true');
+  assert(policy.current_scan_overrides_memory === true, '[B] memory policy: current_scan_overrides_memory=true');
+  assert(policy.evidence_overrides_agent_claim === true,'[B] memory policy: evidence_overrides_agent_claim=true');
+  assert(policy.pass_gold_requires_real_evidence === true, '[B] memory policy: pass_gold_requires_real_evidence=true');
+  assert(Array.isArray(policy.rules) && policy.rules.length > 0, '[B] memory policy: rules é array não vazio');
+  assert(Array.isArray(policy.authority_hierarchy) && policy.authority_hierarchy.length > 0, '[B] memory policy: authority_hierarchy existe');
+
+  // Go Core deve ter prioridade sobre stale_memory na hierarquia
+  const hier = policy.authority_hierarchy;
+  const goCoreIdx   = hier.indexOf('go_core_evidence');
+  const staleIdx    = hier.indexOf('stale_memory');
+  const agentOpIdx  = hier.indexOf('agent_opinion');
+  assert(goCoreIdx >= 0,  '[B] authority_hierarchy contém go_core_evidence');
+  assert(staleIdx >= 0,   '[B] authority_hierarchy contém stale_memory');
+  assert(agentOpIdx >= 0, '[B] authority_hierarchy contém agent_opinion');
+  assert(goCoreIdx < staleIdx, '[B] go_core_evidence tem prioridade sobre stale_memory');
+  assert(staleIdx < agentOpIdx, '[B] stale_memory tem prioridade sobre agent_opinion');
+
+  // Regras essenciais
+  assert(policy.rules.some(r => r.includes('stale_memory_never_overrides')), '[B] regra: stale_memory_never_overrides presente');
+  assert(policy.rules.some(r => r.includes('pass_gold_never_from_stale_memory')), '[B] regra: pass_gold_never_from_stale_memory presente');
+  assert(policy.rules.some(r => r.includes('hypothesis_never_becomes_fact')), '[B] regra: hypothesis_never_becomes_fact presente');
+}
+
+// ─── SUITE C: Anti-Hallucination ──────────────────────────────────
+
+console.log('\n── Suite C: Anti-Hallucination ──');
+
+// C1: test_pass sem exit_code/log → bloqueado
+{
+  const r = validateAgentOutput({ test_pass: true }, {});
+  assert(!r.ok,                               '[C1] test_pass sem evidence → ok=false');
+  assert(r.blocked_claims.includes('test_pass'), '[C1] test_pass → blocked_claims inclui test_pass');
+  assert(r.errors.some(e => e.includes('test_pass')), '[C1] errors menciona test_pass');
+}
+
+// C2: test_pass com exit_code → aceito
+{
+  const r = validateAgentOutput({ test_pass: true }, { exit_code: 0 });
+  assert(!r.blocked_claims.includes('test_pass'), '[C2] test_pass com exit_code → não bloqueado');
+}
+
+// C3: test_pass com log → aceito
+{
+  const r = validateAgentOutput({ test_pass: true }, { log: 'all tests passed' });
+  assert(!r.blocked_claims.includes('test_pass'), '[C3] test_pass com log → não bloqueado');
+}
+
+// C4: ci_green sem GitHub API → bloqueado
+{
+  const r = validateAgentOutput({ ci_green: true }, {});
+  assert(!r.ok,                               '[C4] ci_green sem evidence → ok=false');
+  assert(r.blocked_claims.includes('ci_green'), '[C4] ci_green → blocked_claims inclui ci_green');
+}
+
+// C5: ci_green com github_api_evidence → aceito
+{
+  const r = validateAgentOutput({ ci_green: true }, { github_api_evidence: true });
+  assert(!r.blocked_claims.includes('ci_green'), '[C5] ci_green com github_api_evidence → aceito');
+}
+
+// C6: ci_green com gh_evidence → aceito
+{
+  const r = validateAgentOutput({ ci_green: true }, { gh_evidence: true });
+  assert(!r.blocked_claims.includes('ci_green'), '[C6] ci_green com gh_evidence → aceito');
+}
+
+// C7: backend_online sem health probe → bloqueado
+{
+  const r = validateAgentOutput({ backend_online: true }, {});
+  assert(!r.ok,                                     '[C7] backend_online sem probe → ok=false');
+  assert(r.blocked_claims.includes('backend_online'), '[C7] backend_online → blocked');
+}
+
+// C8: backend_online com health probe → aceito
+{
+  const r = validateAgentOutput({ backend_online: true }, { health_probe: true });
+  assert(!r.blocked_claims.includes('backend_online'), '[C8] backend_online com probe → aceito');
+}
+
+// C9: file_changed sem git diff → bloqueado
+{
+  const r = validateAgentOutput({ file_changed: true }, {});
+  assert(r.blocked_claims.includes('file_changed'), '[C9] file_changed sem diff → bloqueado');
+}
+
+// C10: file_changed com git diff → aceito
+{
+  const r = validateAgentOutput({ file_changed: true }, { git_diff: 'diff --git a/file.js' });
+  assert(!r.blocked_claims.includes('file_changed'), '[C10] file_changed com diff → aceito');
+}
+
+// C11: real_evidence sem source go-core → bloqueado
+{
+  const r = validateAgentOutput({ real_evidence: true }, { evidence_receipt: { source: 'backend' } });
+  assert(r.blocked_claims.includes('real_evidence'), '[C11] real_evidence com source backend → bloqueado');
+}
+
+// C12: real_evidence com source go-core → aceito
+{
+  const r = validateAgentOutput({ real_evidence: true }, { evidence_receipt: { source: 'go-core' } });
+  assert(!r.blocked_claims.includes('real_evidence'), '[C12] real_evidence com source go-core → aceito');
+}
+
+// C13: pass_gold sem gates reais → bloqueado
+{
+  const r = validateAgentOutput({ pass_gold: true }, {});
+  assert(r.blocked_claims.includes('pass_gold'), '[C13] pass_gold sem gates → bloqueado');
+}
+
+// C14: pass_gold sem source go-core → bloqueado
+{
+  const r = validateAgentOutput({ pass_gold: true }, {
+    evidence_receipt: { source: 'backend' },
+    gates_pass: true,
+    gates_evaluated: true,
+    failed_gates: [],
+  });
+  assert(r.blocked_claims.includes('pass_gold'), '[C14] pass_gold com source backend → bloqueado');
+}
+
+// C15: pass_gold com go-core e gates reais → aceito
+{
+  const r = validateAgentOutput({ pass_gold: true }, {
+    evidence_receipt: { source: 'go-core' },
+    gates_pass: true,
+    gates_evaluated: true,
+    failed_gates: [],
+  });
+  assert(!r.blocked_claims.includes('pass_gold'), '[C15] pass_gold com go-core e gates → aceito');
+}
+
+// C16: merge sem autorização → bloqueado
+{
+  const r = validateAgentOutput({ merge: true }, {});
+  assert(r.blocked_claims.includes('release_action'), '[C16] merge sem autorização → bloqueado');
+}
+
+// C17: deploy sem autorização → bloqueado
+{
+  const r = validateAgentOutput({ deploy: true }, {});
+  assert(r.blocked_claims.includes('release_action'), '[C17] deploy sem autorização → bloqueado');
+}
+
+// C18: tag sem autorização → bloqueado
+{
+  const r = validateAgentOutput({ tag: true }, {});
+  assert(r.blocked_claims.includes('release_action'), '[C18] tag sem autorização → bloqueado');
+}
+
+// C19: stable sem autorização → bloqueado
+{
+  const r = validateAgentOutput({ stable: true }, {});
+  assert(r.blocked_claims.includes('release_action'), '[C19] stable sem autorização → bloqueado');
+}
+
+// C20: merge com autorização → aceito
+{
+  const r = validateAgentOutput({ merge: true }, { merge_authorized: true });
+  assert(!r.blocked_claims.includes('release_action'), '[C20] merge com autorização → aceito');
+}
+
+// C21: output vazio → ok=true (nenhuma claim)
+{
+  const r = validateAgentOutput({}, {});
+  assert(r.ok === true,                   '[C21] output vazio → ok=true');
+  assert(r.blocked_claims.length === 0,  '[C21] output vazio → sem blocked_claims');
+}
+
+// C22: output nulo → ok=false
+{
+  const r = validateAgentOutput(null, {});
+  assert(r.ok === false, '[C22] output null → ok=false');
+}
+
+// C23: múltiplas claims simultâneas → bloqueia cada uma
+{
+  const r = validateAgentOutput({ test_pass: true, ci_green: true }, {});
+  assert(r.blocked_claims.includes('test_pass'), '[C23] múltiplas claims: test_pass bloqueado');
+  assert(r.blocked_claims.includes('ci_green'),  '[C23] múltiplas claims: ci_green bloqueado');
+}
+
+// C24: pass_gold com failed_gates não vazio → gates_pass=false → bloqueado
+{
+  const r = validateAgentOutput({ pass_gold: true }, {
+    evidence_receipt: { source: 'go-core' },
+    failed_gates: ['backend_alive'],
+    gates_evaluated: true,
+  });
+  assert(r.blocked_claims.includes('pass_gold'), '[C24] pass_gold com failed_gates → bloqueado');
+}
+
+// C25: backend_online com health_probe object ok:true → aceito
+{
+  const r = validateAgentOutput({ backend_online: true }, { health_probe: { ok: true, status: 'ok' } });
+  assert(!r.blocked_claims.includes('backend_online'), '[C25] backend_online com health_probe object → aceito');
+}
+
+// ─── SUITE D: Conflict Resolution ─────────────────────────────────
+
+console.log('\n── Suite D: Conflict Detection & Resolution ──');
+
+// D1: frontend patch sem visual auth → conflito crítico
+{
+  const conflict = detectAgentConflict(
+    { id: 'PatchEngine', claim: { frontend_patch: true } },
+    { id: 'Aegis', claim: {} },
+    { visual_auth: false }
+  );
+  assert(conflict !== null, '[D1] frontend patch sem auth → conflito detectado');
+  const c = Array.isArray(conflict) ? conflict[0] : conflict;
+  assert(c.type === 'frontend_patch_no_visual_auth', '[D1] tipo correto: frontend_patch_no_visual_auth');
+  assert(c.severity === 'critical', '[D1] severidade: critical');
+}
+
+// D2: backend_online claim + health probe falhou → conflito
+{
+  const conflict = detectAgentConflict(
+    { id: 'Scanner', claim: { backend_online: true } },
+    { id: 'Hermes', claim: {} },
+    { health_probe: false }
+  );
+  assert(conflict !== null, '[D2] backend_online + probe failed → conflito');
+  const c = Array.isArray(conflict) ? conflict[0] : conflict;
+  assert(c.type === 'backend_online_claim_vs_failed_probe', '[D2] tipo correto');
+}
+
+// D3: ci_green sem CI status → conflito
+{
+  const conflict = detectAgentConflict(
+    { id: 'GitHubAgent', claim: { ci_green: true } },
+    { id: 'Hermes', claim: {} },
+    {}
+  );
+  assert(conflict !== null, '[D3] ci_green sem status → conflito');
+  const c = Array.isArray(conflict) ? conflict.find(x => x.type === 'ci_green_claim_no_ci_status') : conflict;
+  assert(c !== undefined, '[D3] tipo ci_green_claim_no_ci_status detectado');
+}
+
+// D4: deploy_allowed:true → conflito crítico
+{
+  const conflict = detectAgentConflict(
+    { id: 'PIHarness', claim: { deploy_allowed: true } },
+    { id: 'Hermes', claim: {} },
+    {}
+  );
+  assert(conflict !== null, '[D4] deploy_allowed:true → conflito');
+  const c = Array.isArray(conflict) ? conflict.find(x => x.type === 'deploy_allowed_true') : conflict;
+  assert(c !== undefined, '[D4] tipo deploy_allowed_true detectado');
+  assert(c.severity === 'critical', '[D4] severidade critical');
+}
+
+// D5: stale PASS + BLOCKED_RUNTIME atual → conflito
+{
+  const conflict = detectAgentConflict(
+    { id: 'Archivist', claim: { stale_pass: true } },
+    { id: 'Hermes', claim: {} },
+    { runtime_blocked: true }
+  );
+  assert(conflict !== null, '[D5] stale PASS + BLOCKED_RUNTIME → conflito');
+  const c = Array.isArray(conflict) ? conflict.find(x => x.type === 'stale_memory_pass_vs_blocked_runtime') : conflict;
+  assert(c !== undefined, '[D5] tipo stale_memory_pass_vs_blocked_runtime detectado');
+}
+
+// D6: PatchEngine fora de escopo → conflito
+{
+  const conflict = detectAgentConflict(
+    { id: 'PatchEngine', claim: { files_out_of_scope: ['frontend/index.html'] } },
+    { id: 'Aegis', claim: {} },
+    {}
+  );
+  assert(conflict !== null, '[D6] PatchEngine fora de escopo → conflito');
+  const c = Array.isArray(conflict) ? conflict.find(x => x.type === 'patch_engine_out_of_scope') : conflict;
+  assert(c !== undefined, '[D6] tipo patch_engine_out_of_scope detectado');
+}
+
+// D7: GitHubAgent merge sem CI green → conflito
+{
+  const conflict = detectAgentConflict(
+    { id: 'GitHubAgent', claim: { wants_merge: true } },
+    { id: 'Hermes', claim: {} },
+    { ci_green: false }
+  );
+  assert(conflict !== null, '[D7] GitHubAgent merge sem CI → conflito');
+  const c = Array.isArray(conflict) ? conflict.find(x => x.type === 'github_agent_merge_no_ci_green') : conflict;
+  assert(c !== undefined, '[D7] tipo github_agent_merge_no_ci_green detectado');
+}
+
+// D8: evidence_source !== go-core → conflito
+{
+  const conflict = detectAgentConflict(
+    { id: 'Scanner', claim: {} },
+    { id: 'PassGoldAuthority', claim: {} },
+    { evidence_source: 'backend' }
+  );
+  assert(conflict !== null, '[D8] evidence_source backend → conflito');
+  const c = Array.isArray(conflict) ? conflict.find(x => x.type === 'evidence_source_not_go_core') : conflict;
+  assert(c !== undefined, '[D8] tipo evidence_source_not_go_core detectado');
+}
+
+// D9: resolveAgentConflict bloqueia conflitos críticos
+{
+  const conflict = {
+    type: 'deploy_allowed_true',
+    agents: ['PIHarness', 'Hermes'],
+    severity: 'critical',
+    detail: 'deploy_allowed:true',
+  };
+  const resolution = resolveAgentConflict(conflict);
+  assert(resolution.action === 'BLOCK', '[D9] resolve deploy_allowed:true → BLOCK');
+  assert(typeof resolution.reason === 'string', '[D9] resolve: reason é string');
+  assert(resolution.classification === 'BLOCKED_POLICY', '[D9] resolve: classification BLOCKED_POLICY');
+}
+
+// D10: resolve frontend_patch_no_visual_auth → BLOCKED_VISUAL
+{
+  const conflict = { type: 'frontend_patch_no_visual_auth', agents: ['PatchEngine','Aegis'], severity: 'critical', detail: '' };
+  const resolution = resolveAgentConflict(conflict);
+  assert(resolution.action === 'BLOCK',          '[D10] frontend patch → BLOCK');
+  assert(resolution.classification === 'BLOCKED_VISUAL', '[D10] classification BLOCKED_VISUAL');
+}
+
+// D11: resolve backend_online_claim_vs_failed_probe → BLOCKED_RUNTIME
+{
+  const conflict = { type: 'backend_online_claim_vs_failed_probe', agents: ['Scanner','Hermes'], severity: 'critical', detail: '' };
+  const resolution = resolveAgentConflict(conflict);
+  assert(resolution.classification === 'BLOCKED_RUNTIME', '[D11] backend probe fail → BLOCKED_RUNTIME');
+}
+
+// D12: resolve stale_memory_pass_vs_blocked_runtime → BLOCKED_RUNTIME
+{
+  const conflict = { type: 'stale_memory_pass_vs_blocked_runtime', agents: ['Archivist','Hermes'], severity: 'critical', detail: '' };
+  const resolution = resolveAgentConflict(conflict);
+  assert(resolution.classification === 'BLOCKED_RUNTIME', '[D12] stale vs runtime → BLOCKED_RUNTIME');
+}
+
+// D13: resolve evidence_source_not_go_core → BLOCKED_EVIDENCE
+{
+  const conflict = { type: 'evidence_source_not_go_core', agents: ['Scanner','PassGoldAuthority'], severity: 'critical', detail: '' };
+  const resolution = resolveAgentConflict(conflict);
+  assert(resolution.classification === 'BLOCKED_EVIDENCE', '[D13] evidence source → BLOCKED_EVIDENCE');
+}
+
+// D14: resolve ci_green_claim_no_ci_status → BLOCKED_EVIDENCE
+{
+  const conflict = { type: 'ci_green_claim_no_ci_status', agents: ['GitHubAgent','Hermes'], severity: 'high', detail: '' };
+  const resolution = resolveAgentConflict(conflict);
+  assert(resolution.action === 'BLOCK', '[D14] ci_green no status → BLOCK');
+  assert(resolution.classification === 'BLOCKED_EVIDENCE', '[D14] ci_green → BLOCKED_EVIDENCE');
+}
+
+// D15: resolveAgentConflict(null) → ALLOW
+{
+  const resolution = resolveAgentConflict(null);
+  assert(resolution.action === 'ALLOW',          '[D15] resolve null → ALLOW');
+  assert(resolution.total_conflicts === 0,       '[D15] resolve null → 0 conflicts');
+}
+
+// D16: dois agentes sem conflito → null
+{
+  const conflict = detectAgentConflict(
+    { id: 'Scanner', claim: {} },
+    { id: 'GoCore', claim: {} },
+    { evidence_source: 'go-core' }
+  );
+  assert(conflict === null, '[D16] agentes limpos sem claim problemática → null');
+}
+
+// D17: resolve multiple conflicts array → BLOCK com total_conflicts > 1
+{
+  const conflicts = [
+    { type: 'deploy_allowed_true', agents: ['PIHarness','Hermes'], severity: 'critical', detail: '' },
+    { type: 'evidence_source_not_go_core', agents: ['Scanner','Aegis'], severity: 'critical', detail: '' },
+  ];
+  const resolution = resolveAgentConflict(conflicts);
+  assert(resolution.action === 'BLOCK',         '[D17] array de conflitos → BLOCK');
+  assert(resolution.total_conflicts === 2,      '[D17] total_conflicts = 2');
+  assert(resolution.critical_count >= 1,        '[D17] critical_count >= 1');
+}
+
+// ─── SUITE E: Hermes Context & JSON Integration ───────────────────
+
+console.log('\n── Suite E: Hermes Context & JSON Integration ──');
+
+// E1: createHermesMissionContext retorna estrutura completa
+{
+  const ctx = createHermesMissionContext();
+  assert(ctx.enabled === true,                    '[E1] context: enabled=true');
+  assert(typeof ctx.mission_id === 'string',      '[E1] context: mission_id é string');
+  assert(ctx.mission_id.startsWith('hermes_'),   '[E1] context: mission_id começa com hermes_');
+  assert(ctx.supervisor === 'hermes',             '[E1] context: supervisor=hermes');
+  assert(Array.isArray(ctx.agents),               '[E1] context: agents é array');
+  assert(Array.isArray(ctx.skills),               '[E1] context: skills é array');
+  assert(Array.isArray(ctx.apis),                 '[E1] context: apis é array');
+  assert(Array.isArray(ctx.events),               '[E1] context: events é array');
+  assert(Array.isArray(ctx.conflicts_detected),   '[E1] context: conflicts_detected é array');
+  assert(Array.isArray(ctx.conflicts_resolved),   '[E1] context: conflicts_resolved é array');
+  assert(Array.isArray(ctx.hallucination_blocks), '[E1] context: hallucination_blocks é array');
+  assert(ctx.final_decision === 'PENDING',        '[E1] context: final_decision=PENDING inicial');
+  assert(ctx.agent_outputs_validated === 0,       '[E1] context: agent_outputs_validated=0 inicial');
+  assert(ctx.agents.length === 11,               '[E1] context: 11 agents');
+  assert(ctx.skills.length === 17,               '[E1] context: 17 skills');
+  assert(ctx.apis.length === 17,                 '[E1] context: 17 apis');
+}
+
+// E2: recordHermesEvent adiciona evento
+{
+  const ctx = createHermesMissionContext();
+  recordHermesEvent(ctx, { type: 'test_event', layer: 'D0' });
+  assert(ctx.events.length === 1,                  '[E2] evento adicionado ao context');
+  assert(ctx.events[0].type === 'test_event',      '[E2] evento tem type correto');
+  assert(ctx.events[0].layer === 'D0',             '[E2] evento tem layer correto');
+  assert(typeof ctx.events[0].timestamp === 'number', '[E2] evento tem timestamp');
+}
+
+// E3: recordHermesEvent com null não lança exceção
+{
+  let threw = false;
+  try { recordHermesEvent(null, { type: 'x' }); } catch { threw = true; }
+  assert(!threw, '[E3] recordHermesEvent(null) não lança exceção');
+}
+
+// E4: renderHermesSupervisionReport retorna campos corretos
+{
+  const ctx = createHermesMissionContext();
+  ctx.final_decision = 'BLOCKED_RUNTIME';
+  ctx.agent_outputs_validated = 2;
+  const report = renderHermesSupervisionReport(ctx);
+  assert(report !== null,                              '[E4] report não é null');
+  assert(report.SUPERVISOR_ENABLED === true,           '[E4] SUPERVISOR_ENABLED=true');
+  assert(typeof report.MISSION_ID === 'string',        '[E4] MISSION_ID é string');
+  assert(report.AGENTS_REGISTERED === 11,             '[E4] AGENTS_REGISTERED=11');
+  assert(report.SKILLS_REGISTERED === 17,             '[E4] SKILLS_REGISTERED=17');
+  assert(report.APIS_REGISTERED === 17,               '[E4] APIS_REGISTERED=17');
+  assert(report.AGENT_OUTPUTS_VALIDATED === 2,        '[E4] AGENT_OUTPUTS_VALIDATED=2');
+  assert(report.FINAL_SUPERVISOR_DECISION === 'BLOCKED_RUNTIME', '[E4] FINAL_SUPERVISOR_DECISION correto');
+  assert('MEMORY_POLICY' in report,                   '[E4] MEMORY_POLICY presente');
+  assert('CONFLICTS_DETECTED' in report,              '[E4] CONFLICTS_DETECTED presente');
+  assert('HALLUCINATION_BLOCKS' in report,            '[E4] HALLUCINATION_BLOCKS presente');
+}
+
+// E5: validateHermesRegistries sem erros
+{
+  const result = validateHermesRegistries();
+  assert(result.ok === true,               '[E5] validateHermesRegistries: ok=true');
+  assert(result.errors.length === 0,       '[E5] validateHermesRegistries: 0 erros');
+}
+
+// E6: JSON output contém todos os campos hermes_*
+{
+  const r = runHarness(['--json'], 240000);
+  let parsed = null;
+  try { parsed = JSON.parse(r.stdout.trim()); } catch {
+    const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
+    if (f >= 0 && l > f) try { parsed = JSON.parse(r.stdout.slice(f, l + 1)); } catch { /* noop */ }
+  }
+  assert(parsed !== null, '[E6] JSON parseável');
+  if (parsed) {
+    const requiredFields = [
+      'hermes_supervisor_enabled','hermes_mission_id','hermes_agents_registered',
+      'hermes_skills_registered','hermes_apis_registered','hermes_memory_policy',
+      'hermes_conflicts_detected','hermes_conflicts_resolved','hermes_agent_outputs_validated',
+      'hermes_hallucination_blocks','hermes_final_decision',
+    ];
+    for (const field of requiredFields) {
+      assert(field in parsed, `[E6] JSON contém campo: ${field}`);
+    }
+    assert(parsed.deploy_allowed === false,          '[E6] deploy_allowed permanece false');
+    assert(parsed.hermes_agents_registered === 11,  '[E6] hermes_agents_registered=11');
+    assert(parsed.hermes_skills_registered === 17,  '[E6] hermes_skills_registered=17');
+    assert(parsed.hermes_apis_registered === 17,    '[E6] hermes_apis_registered=17');
+    assert(parsed.hermes_supervisor_enabled === true, '[E6] hermes_supervisor_enabled=true');
+    assert(typeof parsed.hermes_mission_id === 'string', '[E6] hermes_mission_id é string');
+
+    const validDecisions = [
+      'PENDING','MERGE_READY','BLOCKED_RUNTIME','BLOCKED_EVIDENCE',
+      'BLOCKED_VISUAL','BLOCKED_SYNTAX','BLOCKED_GATES','BLOCKED_FATAL',
+    ];
+    assert(validDecisions.includes(parsed.hermes_final_decision), `[E6] hermes_final_decision em enum válido: ${parsed.hermes_final_decision}`);
+
+    // PASS_GOLD_CANDIDATE somente true com evidence go-core
+    if (parsed.pass_gold_candidate === true) {
+      assert(
+        parsed.evidence_source === 'go-core' || parsed.run_live_evidence_source === 'go-core',
+        '[E6] pass_gold_candidate:true somente com evidence go-core'
+      );
+    } else {
+      assert(parsed.pass_gold_candidate === false, '[E6] pass_gold_candidate=false (sem backend/go-core online)');
+    }
+
+    // memory_policy presente e estruturado
+    if (parsed.hermes_memory_policy) {
+      assert(parsed.hermes_memory_policy.evidence_only === true, '[E6] memory_policy.evidence_only=true no JSON');
+    }
+  }
+}
+
+// E7: dois contextos têm mission_ids diferentes
+{
+  const ctx1 = createHermesMissionContext();
+  const ctx2 = createHermesMissionContext();
+  assert(ctx1.mission_id !== ctx2.mission_id, '[E7] dois contextos têm mission_ids únicos');
+}
+
+// E8: loadHermesConfig retorna estrutura correta
+{
+  const cfg = loadHermesConfig();
+  assert(cfg.supervisor === 'hermes',    '[E8] config: supervisor=hermes');
+  assert(cfg.enabled === true,           '[E8] config: enabled=true');
+  assert(cfg.agents_count === 11,       '[E8] config: agents_count=11');
+  assert(cfg.skills_count === 17,       '[E8] config: skills_count=17');
+  assert(cfg.apis_count === 17,         '[E8] config: apis_count=17');
+  assert(cfg.rules.no_hardcoded_pass_gold === true, '[E8] config: no_hardcoded_pass_gold=true');
+  assert(cfg.rules.no_hardcoded_deploy_allowed === true, '[E8] config: no_hardcoded_deploy_allowed=true');
+  assert(cfg.rules.evidence_only_from_go_core === true, '[E8] config: evidence_only_from_go_core=true');
 }
 
 // ─── RESULTADO FINAL ──────────────────────────────────────────────
