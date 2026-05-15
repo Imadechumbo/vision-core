@@ -31,7 +31,9 @@ function assert(condition, message) {
   }
 }
 
-function runHarness(extraArgs = [], timeoutMs = 60000) {
+// Windows cold Go cache: D0 runs go test ./... + go build ./... which can exceed 90s on first run.
+// Use 240000ms default to avoid false-negative timeouts on cold-cache environments.
+function runHarness(extraArgs = [], timeoutMs = 240000) {
   const args = ['--no-deprecation', HARNESS, '--max-difficulty', 'D2', '--dry-run', ...extraArgs];
   const r = spawnSync(process.execPath, args, {
     cwd: ROOT,
@@ -235,7 +237,7 @@ console.log('\n── Suite 3: Forbidden Diff Logic ──');
 console.log('\n── Suite 4: JSON Output ──');
 
 {
-  const r = runHarness(['--json'], 90000);
+  const r = runHarness(['--json'], 240000);
   // --json should output parseable JSON regardless of pass/fail
   let parsed = null;
   try {
@@ -269,7 +271,7 @@ console.log('\n── Suite 5: Dry-run imutabilidade ──');
   const targetFile = join(ROOT, 'backend/server.js');
   const before = existsSync(targetFile) ? statSync(targetFile).mtimeMs : null;
 
-  runHarness(['--json'], 90000); // já inclui --dry-run
+  runHarness(['--json'], 240000); // já inclui --dry-run
 
   const after = existsSync(targetFile) ? statSync(targetFile).mtimeMs : null;
   assert(before === after, 'backend/server.js não modificado em dry-run');
@@ -279,7 +281,7 @@ console.log('\n── Suite 5: Dry-run imutabilidade ──');
   const targetFile = join(ROOT, 'backend/src/runtime/goRunner.js');
   const before = existsSync(targetFile) ? statSync(targetFile).mtimeMs : null;
 
-  runHarness(['--json'], 90000);
+  runHarness(['--json'], 240000);
 
   const after = existsSync(targetFile) ? statSync(targetFile).mtimeMs : null;
   assert(before === after, 'goRunner.js não modificado em dry-run');
@@ -302,7 +304,7 @@ console.log('\n── Suite 7: Runtime Probe V15.1 ──');
 
 // 7a: flag --runtime-probe reconhecida → runtime_probe_enabled:true no JSON
 {
-  const r = runHarness(['--runtime-probe', '--json'], 90000);
+  const r = runHarness(['--runtime-probe', '--json'], 240000);
   let parsed = null;
   try { parsed = JSON.parse(r.stdout.trim()); } catch {
     const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
@@ -326,7 +328,7 @@ console.log('\n── Suite 7: Runtime Probe V15.1 ──');
 
 // 7b: sem --runtime-probe → runtime_probe_enabled:false, backend_process_started:false
 {
-  const r = runHarness(['--json'], 90000);
+  const r = runHarness(['--json'], 240000);
   let parsed = null;
   try { parsed = JSON.parse(r.stdout.trim()); } catch {
     const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
@@ -381,7 +383,7 @@ console.log('\n── Suite 7: Runtime Probe V15.1 ──');
   const r2 = (() => {
     const args = ['--no-deprecation', HARNESS, '--max-difficulty', 'D4', '--runtime-probe', '--json'];
     const res = spawnSync(process.execPath, args, {
-      cwd: ROOT, encoding: 'utf8', timeout: 120000, shell: false,
+      cwd: ROOT, encoding: 'utf8', timeout: 240000, shell: false,
     });
     return { ok: res.status === 0, stdout: res.stdout || '', status: res.status };
   })();
@@ -616,7 +618,7 @@ function _validateRuntimeContract(probe) {
 
 // 8k: JSON output contém runtime_contract_* fields
 {
-  const r = runHarness(['--json'], 90000);
+  const r = runHarness(['--json'], 240000);
   let parsed = null;
   try { parsed = JSON.parse(r.stdout.trim()); } catch {
     const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
@@ -641,7 +643,7 @@ console.log('\n── Suite 9: New Flags V15.3 ──');
 
 // 9a: --runtime-probe-port aceito — JSON contém runtime_probe_port
 {
-  const r = runHarness(['--runtime-probe-port', '9999', '--json'], 90000);
+  const r = runHarness(['--runtime-probe-port', '9999', '--json'], 240000);
   let parsed = null;
   try { parsed = JSON.parse(r.stdout.trim()); } catch {
     const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
@@ -655,7 +657,7 @@ console.log('\n── Suite 9: New Flags V15.3 ──');
 
 // 9b: --runtime-probe-timeout-ms aceito — JSON contém runtime_probe_timeout_ms
 {
-  const r = runHarness(['--runtime-probe-timeout-ms', '3000', '--json'], 90000);
+  const r = runHarness(['--runtime-probe-timeout-ms', '3000', '--json'], 240000);
   let parsed = null;
   try { parsed = JSON.parse(r.stdout.trim()); } catch {
     const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
@@ -669,7 +671,7 @@ console.log('\n── Suite 9: New Flags V15.3 ──');
 
 // 9c: --runtime-probe-no-start aceito — JSON contém runtime_probe_no_start:true
 {
-  const r = runHarness(['--runtime-probe-no-start', '--json'], 90000);
+  const r = runHarness(['--runtime-probe-no-start', '--json'], 240000);
   let parsed = null;
   try { parsed = JSON.parse(r.stdout.trim()); } catch {
     const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
@@ -683,7 +685,7 @@ console.log('\n── Suite 9: New Flags V15.3 ──');
 
 // 9d: sem flags novas → runtime_probe_no_start:false, runtime_probe_port=8080
 {
-  const r = runHarness(['--json'], 90000);
+  const r = runHarness(['--json'], 240000);
   let parsed = null;
   try { parsed = JSON.parse(r.stdout.trim()); } catch {
     const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
@@ -723,7 +725,7 @@ console.log('\n── Suite 10: Safe Payload & Temp Root ──');
 
 // 10b: JSON contém campos runtime_probe_temp_root*
 {
-  const r = runHarness(['--runtime-probe', '--json'], 90000);
+  const r = runHarness(['--runtime-probe', '--json'], 240000);
   let parsed = null;
   try { parsed = JSON.parse(r.stdout.trim()); } catch {
     const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
@@ -741,7 +743,7 @@ console.log('\n── Suite 10: Safe Payload & Temp Root ──');
 
 // 10c: sem --runtime-probe, campos temp_root são null/false
 {
-  const r = runHarness(['--json'], 90000);
+  const r = runHarness(['--json'], 240000);
   let parsed = null;
   try { parsed = JSON.parse(r.stdout.trim()); } catch {
     const f = r.stdout.indexOf('{'); const l = r.stdout.lastIndexOf('}');
@@ -896,7 +898,7 @@ console.log('\n── Suite 12: No-start & Process Control ──');
 {
   const args = ['--no-deprecation', HARNESS, '--max-difficulty', 'D4', '--runtime-probe', '--runtime-probe-no-start', '--json'];
   const r = spawnSync(process.execPath, args, {
-    cwd: ROOT, encoding: 'utf8', timeout: 60000, shell: false,
+    cwd: ROOT, encoding: 'utf8', timeout: 240000, shell: false,
   });
   let parsed = null;
   try { parsed = JSON.parse(r.stdout.trim()); } catch {
@@ -917,7 +919,7 @@ console.log('\n── Suite 12: No-start & Process Control ──');
   // Roda com D4 + runtime-probe, se backend for iniciado ele deve ser parado
   const args = ['--no-deprecation', HARNESS, '--max-difficulty', 'D4', '--runtime-probe', '--json'];
   const r = spawnSync(process.execPath, args, {
-    cwd: ROOT, encoding: 'utf8', timeout: 120000, shell: false,
+    cwd: ROOT, encoding: 'utf8', timeout: 240000, shell: false,
   });
   let parsed = null;
   try { parsed = JSON.parse(r.stdout.trim()); } catch {
