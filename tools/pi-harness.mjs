@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║   PI HARNESS V15.3 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
+ * ║   PI HARNESS V15.6 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
  * ║   D0-Preflight → D1-Cleanup → D2-Contract → D3-GoCore               ║
  * ║   → D4-Backend → D5-Repair → D6-AutoFix → D7-Decision → D8-Report  ║
  * ╠══════════════════════════════════════════════════════════════════════╣
@@ -32,7 +32,14 @@ import {
   resolveAgentConflict,
   recordHermesEvent,
   renderHermesSupervisionReport,
+  attachRuntimeEvidence,
 } from './hermes/mission-supervisor.mjs';
+import {
+  createRuntimeEvidence,
+  collectRuntimeEvidence,
+  validateRuntimeEvidence,
+  renderRuntimeEvidenceSummary,
+} from './hermes/runtime-evidence.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -71,6 +78,8 @@ let _probeTempRoot        = null;
 let _probeTempRootCreated = false;
 // Hermes Mission Supervisor context (V15.5)
 let _hermesCtx = null;
+// Runtime Evidence snapshot (V15.6)
+let _runtimeEvidence = null;
 
 // ═══════════════════════════════════════════════════════════════════
 // FAKE EVIDENCE SCAN PATTERNS
@@ -1452,6 +1461,35 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       hermes_agent_outputs_validated: hermesCtx ? hermesCtx.agent_outputs_validated : 0,
       hermes_hallucination_blocks:  hermesCtx ? hermesCtx.hallucination_blocks.length : 0,
       hermes_final_decision:        hermesCtx ? hermesCtx.final_decision : 'PENDING',
+      // V15.6: Runtime Evidence fields
+      hermes_runtime_evidence_enabled:    true,
+      hermes_evidence_schema_version:     _runtimeEvidence?.schema_version || 'v15.6',
+      hermes_evidence_trust_score:        (() => {
+        const v = _runtimeEvidence ? validateRuntimeEvidence(_runtimeEvidence) : null;
+        return v ? v.trust_score : 0;
+      })(),
+      hermes_evidence_sources_present:    (() => {
+        const src = _runtimeEvidence?.sources || {};
+        return Object.entries(src).filter(([,v]) => v?.evidence_present).map(([k]) => k);
+      })(),
+      hermes_evidence_sources_missing:    (() => {
+        const src = _runtimeEvidence?.sources || {};
+        return Object.entries(src).filter(([,v]) => !v?.evidence_present).map(([k]) => k);
+      })(),
+      hermes_evidence_validation_errors:  (() => {
+        const v = _runtimeEvidence ? validateRuntimeEvidence(_runtimeEvidence) : null;
+        return v ? v.errors : ['runtime_evidence_not_collected'];
+      })(),
+      hermes_evidence_validation_warnings: (() => {
+        const v = _runtimeEvidence ? validateRuntimeEvidence(_runtimeEvidence) : null;
+        return v ? v.warnings : [];
+      })(),
+      hermes_evidence_graph:              hermesCtx?.runtime_evidence
+        ? { nodes: Object.keys(hermesCtx.runtime_evidence.sources || {}), deploy_allowed: false }
+        : null,
+      hermes_runtime_evidence_summary:    _runtimeEvidence
+        ? renderRuntimeEvidenceSummary(_runtimeEvidence)
+        : null,
     };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
@@ -1463,7 +1501,7 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
 
   log('');
   log(`╔${sep}╗`);
-  const title = 'PI HARNESS V15.3 — VISION CORE AUTONOMOUS MISSION RUNNER';
+  const title = 'PI HARNESS V15.6 — VISION CORE AUTONOMOUS MISSION RUNNER';
   log(`║  ${title}${' '.repeat(Math.max(0, W - title.length - 2))}║`);
   const sub   = 'RELATÓRIO FINAL';
   log(`║  ${sub}${' '.repeat(Math.max(0, W - sub.length - 2))}║`);
@@ -1586,8 +1624,30 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
     log(`BLOCK_REASON: ${s.blockReason}`);
   }
 
+  if (_runtimeEvidence) {
+    const evValidation = validateRuntimeEvidence(_runtimeEvidence);
+    const evSummary    = renderRuntimeEvidenceSummary(_runtimeEvidence);
+    log(div('RUNTIME EVIDENCE WIRING (V15.6)'));
+    log(`EVIDENCE_SCHEMA_VERSION:   ${_runtimeEvidence.schema_version}`);
+    log(`EVIDENCE_TRUST_SCORE:      ${evValidation.trust_score}`);
+    log(`EVIDENCE_RECOMMENDATION:   ${evValidation.final_recommendation}`);
+    log(`EVIDENCE_SOURCES_PRESENT:  ${evSummary.sources_present.join(', ') || 'none'}`);
+    log(`EVIDENCE_SOURCES_MISSING:  ${evSummary.sources_missing.join(', ') || 'none'}`);
+    log(`EVIDENCE_GO_CORE_VALID:    ${evSummary.go_core_evidence_valid}`);
+    log(`EVIDENCE_RUNTIME_BLOCKED:  ${evSummary.runtime_blocked}`);
+    log(`EVIDENCE_DEPLOY_ALLOWED:   ${evSummary.deploy_allowed}`);
+    if (evValidation.errors.length > 0) {
+      log('  VALIDATION ERRORS:');
+      for (const e of evValidation.errors) log(`    ✗ ${e}`);
+    }
+    if (evValidation.warnings.length > 0) {
+      log('  VALIDATION WARNINGS:');
+      for (const w of evValidation.warnings) log(`    ! ${w}`);
+    }
+  }
+
   if (hermesCtx) {
-    log(div('HERMES SUPERVISION (V15.5)'));
+    log(div('HERMES SUPERVISION (V15.6)'));
     log(`SUPERVISOR_ENABLED:        ${hermesCtx.enabled}`);
     log(`MISSION_ID:                ${hermesCtx.mission_id}`);
     log(`AGENTS_REGISTERED:         ${hermesCtx.agents.length}`);
@@ -1620,8 +1680,8 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
   log('');
   log(`╔${sep}╗`);
   const footer = result === 'PASS'
-    ? `✓ PI HARNESS V15.5 PASS — ${s.recommendation}`
-    : `✗ PI HARNESS V15.5 ${result} — ${s.recommendation}`;
+    ? `✓ PI HARNESS V15.6 PASS — ${s.recommendation}`
+    : `✗ PI HARNESS V15.6 ${result} — ${s.recommendation}`;
   log(`║  ${footer}${' '.repeat(Math.max(0, W - footer.length - 2))}║`);
   log(`╚${sep}╝`);
   log('');
@@ -1650,11 +1710,11 @@ async function main() {
 
   // V15.5: Hermes Mission Supervisor
   _hermesCtx = createHermesMissionContext();
-  recordHermesEvent(_hermesCtx, { type: 'mission_start', version: 'V15.5', max_difficulty: rawMaxDiff });
+  recordHermesEvent(_hermesCtx, { type: 'mission_start', version: 'V15.6', max_difficulty: rawMaxDiff });
 
   if (!JSON_MODE && !CI_MODE) {
     log('');
-    log('PI HARNESS V15.5 — iniciando...');
+    log('PI HARNESS V15.6 — iniciando...');
     log(`  max-difficulty: ${rawMaxDiff} | dry-run: ${DRY_RUN} | no-autofix: ${NO_AUTOFIX} | ci: ${CI_MODE} | runtime-probe: ${RUNTIME_PROBE} | no-start: ${RUNTIME_PROBE_NO_START}`);
     log(`  hermes: ${_hermesCtx.mission_id}`);
     log('');
@@ -1699,6 +1759,10 @@ async function main() {
       if (s.backendProcessStopped) audit('[MAIN] backend processo parado no cleanup final');
     }
   }
+
+  // V15.6: Collect and attach runtime evidence
+  _runtimeEvidence = collectRuntimeEvidence(s, s.goRuntimeMissionId || null);
+  attachRuntimeEvidence(_hermesCtx, _runtimeEvidence);
 
   // V15.5: Hermes final validation & decision
   const missionEvidence = {
@@ -1788,7 +1852,7 @@ async function main() {
 
 main().catch(err => {
   if (!JSON_MODE) {
-    process.stderr.write(`PI HARNESS V15.5 FATAL: ${err.message}\n`);
+    process.stderr.write(`PI HARNESS V15.6 FATAL: ${err.message}\n`);
   } else {
     process.stdout.write(JSON.stringify({
       result: 'FAILED',
@@ -1799,6 +1863,15 @@ main().catch(err => {
       hermes_skills_registered: 17,
       hermes_apis_registered: 17,
       hermes_final_decision: 'BLOCKED_FATAL',
+      hermes_runtime_evidence_enabled: true,
+      hermes_evidence_schema_version: 'v15.6',
+      hermes_evidence_trust_score: 0,
+      hermes_evidence_sources_present: [],
+      hermes_evidence_sources_missing: ['git','ci','runtime','backend','go_core','tests','visual','security'],
+      hermes_evidence_validation_errors: [`fatal: ${err.message}`],
+      hermes_evidence_validation_warnings: [],
+      hermes_evidence_graph: null,
+      hermes_runtime_evidence_summary: null,
     }) + '\n');
   }
   process.exit(1);

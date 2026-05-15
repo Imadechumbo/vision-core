@@ -8,7 +8,7 @@
  * Memória antiga nunca vence scan/evidence atual.
  */
 
-const HERMES_VERSION = 'V15.5';
+const HERMES_VERSION = 'V15.6';
 
 // ═══════════════════════════════════════════════════════════════════
 // AGENT REGISTRY — 11 agents obrigatórios
@@ -782,18 +782,150 @@ function resolveAgentConflict(conflict) {
 
 function renderHermesSupervisionReport(context) {
   if (!context) return null;
+
+  const evidEval = evaluateHermesEvidence(context);
+  const graph    = renderEvidenceGraph(context);
+
   return {
-    SUPERVISOR_ENABLED:    context.enabled,
-    MISSION_ID:            context.mission_id,
-    AGENTS_REGISTERED:     context.agents.length,
-    SKILLS_REGISTERED:     context.skills.length,
-    APIS_REGISTERED:       context.apis.length,
-    MEMORY_POLICY:         context.memory_policy,
-    AGENT_OUTPUTS_VALIDATED: context.agent_outputs_validated,
-    CONFLICTS_DETECTED:    context.conflicts_detected.length,
-    CONFLICTS_RESOLVED:    context.conflicts_resolved.length,
-    HALLUCINATION_BLOCKS:  context.hallucination_blocks.length,
-    FINAL_SUPERVISOR_DECISION: context.final_decision,
+    SUPERVISOR_ENABLED:            context.enabled,
+    MISSION_ID:                    context.mission_id,
+    AGENTS_REGISTERED:             context.agents.length,
+    SKILLS_REGISTERED:             context.skills.length,
+    APIS_REGISTERED:               context.apis.length,
+    MEMORY_POLICY:                 context.memory_policy,
+    AGENT_OUTPUTS_VALIDATED:       context.agent_outputs_validated,
+    CONFLICTS_DETECTED:            context.conflicts_detected.length,
+    CONFLICTS_RESOLVED:            context.conflicts_resolved.length,
+    HALLUCINATION_BLOCKS:          context.hallucination_blocks.length,
+    FINAL_SUPERVISOR_DECISION:     context.final_decision,
+    RUNTIME_EVIDENCE:              context.runtime_evidence      || null,
+    EVIDENCE_TRUST_SCORE:          evidEval.trust_score,
+    EVIDENCE_SOURCES_PRESENT:      evidEval.sources_present,
+    EVIDENCE_SOURCES_MISSING:      evidEval.sources_missing,
+    EVIDENCE_VALIDATION_ERRORS:    evidEval.validation_errors,
+    EVIDENCE_VALIDATION_WARNINGS:  evidEval.validation_warnings,
+    EVIDENCE_GRAPH:                graph,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// V15.6 — RUNTIME EVIDENCE INTEGRATION
+// ═══════════════════════════════════════════════════════════════════
+
+function attachRuntimeEvidence(context, runtimeEvidence) {
+  if (!context) return;
+  context.runtime_evidence        = runtimeEvidence   || null;
+  context.runtime_evidence_attached = true;
+  context.runtime_evidence_at     = Date.now();
+}
+
+function evaluateHermesEvidence(context) {
+  if (!context) {
+    return {
+      trust_score:          0,
+      sources_present:      [],
+      sources_missing:      [],
+      validation_errors:    ['context is null'],
+      validation_warnings:  [],
+      final_recommendation: 'BLOCKED_EVIDENCE',
+      deploy_allowed:       false,
+    };
+  }
+
+  const ev  = context.runtime_evidence;
+  const src = ev?.sources || {};
+
+  const sources_present = Object.entries(src)
+    .filter(([, v]) => v && v.evidence_present === true)
+    .map(([k]) => k);
+  const sources_missing = Object.entries(src)
+    .filter(([, v]) => !v || !v.evidence_present)
+    .map(([k]) => k);
+
+  const goCore  = src.go_core  || {};
+  const runtime = src.runtime  || {};
+  const errors  = [];
+  const warnings = [];
+
+  if (!ev) {
+    errors.push('runtime_evidence not attached to context');
+  }
+  if (ev && goCore.evidence_receipt_source && goCore.evidence_receipt_source !== 'go-core') {
+    errors.push(`evidence_receipt.source="${goCore.evidence_receipt_source}" — must be go-core`);
+  }
+  if (ev && runtime.blocked_runtime) {
+    warnings.push('runtime is BLOCKED_RUNTIME — backend not alive');
+  }
+  if (ev && ev.deploy_allowed === true) {
+    errors.push('deploy_allowed:true in evidence — REGRA ABSOLUTA violation');
+  }
+
+  let score = 0;
+  if (goCore.evidence_present)        score += 40;
+  if (runtime.evidence_present)       score += 20;
+  if (src.git?.evidence_present)      score += 15;
+  if (src.tests?.evidence_present)    score += 10;
+  if (src.visual?.evidence_present)   score += 10;
+  if (src.security?.evidence_present) score +=  5;
+  score -= errors.length * 10;
+  const trust_score = Math.max(0, Math.min(100, score));
+
+  let final_recommendation;
+  if (ev?.deploy_allowed === true) {
+    final_recommendation = 'BLOCKED_POLICY';
+  } else if (!ev || runtime.blocked_runtime) {
+    final_recommendation = 'BLOCKED_RUNTIME';
+  } else if (errors.length > 0) {
+    final_recommendation = 'BLOCKED_EVIDENCE';
+  } else if (goCore.evidence_receipt_valid && sources_present.length >= 3) {
+    final_recommendation = 'SUPERVISED_READY';
+  } else {
+    final_recommendation = 'BLOCKED_RUNTIME';
+  }
+
+  return {
+    trust_score,
+    sources_present,
+    sources_missing,
+    validation_errors:   errors,
+    validation_warnings: warnings,
+    final_recommendation,
+    deploy_allowed:      false,
+  };
+}
+
+function renderEvidenceGraph(context) {
+  if (!context) return null;
+  const ev = context.runtime_evidence;
+  if (!ev) return null;
+  const src = ev.sources || {};
+
+  const nodes = Object.entries(src).map(([name, data]) => ({
+    source:           name,
+    evidence_present: data?.evidence_present || false,
+    trust:            ev.trust?.[name] || 'unknown',
+  }));
+
+  const edges = [];
+  if (src.go_core?.evidence_present) {
+    edges.push({ from: 'go_core', to: 'PassGoldAuthority', type: 'authoritative_evidence' });
+  }
+  if (src.runtime?.evidence_present) {
+    edges.push({ from: 'runtime', to: 'Hermes', type: 'runtime_probe_evidence' });
+  }
+  if (src.git?.evidence_present) {
+    edges.push({ from: 'git', to: 'Scanner', type: 'git_diff_evidence' });
+  }
+  if (src.security?.evidence_present) {
+    edges.push({ from: 'security', to: 'Aegis', type: 'security_scan_evidence' });
+  }
+
+  return {
+    schema_version: 'v15.6',
+    mission_id:     ev.mission_id || null,
+    nodes,
+    edges,
+    deploy_allowed: false,
   };
 }
 
@@ -880,4 +1012,7 @@ export {
   recordHermesEvent,
   renderHermesSupervisionReport,
   validateHermesRegistries,
+  attachRuntimeEvidence,
+  evaluateHermesEvidence,
+  renderEvidenceGraph,
 };

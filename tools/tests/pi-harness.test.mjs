@@ -27,7 +27,19 @@ import {
   recordHermesEvent,
   renderHermesSupervisionReport,
   validateHermesRegistries,
+  attachRuntimeEvidence,
+  evaluateHermesEvidence,
+  renderEvidenceGraph,
 } from '../hermes/mission-supervisor.mjs';
+import {
+  createRuntimeEvidence,
+  collectRuntimeEvidence,
+  normalizeEvidenceSource,
+  classifyEvidenceTrust,
+  validateRuntimeEvidence,
+  mergeEvidenceSnapshots,
+  renderRuntimeEvidenceSummary,
+} from '../hermes/runtime-evidence.mjs';
 
 const ROOT    = resolve(process.cwd());
 const HARNESS = join(ROOT, 'tools', 'pi-harness.mjs');
@@ -1597,6 +1609,593 @@ console.log('\n── Suite E: Hermes Context & JSON Integration ──');
   assert(cfg.rules.no_hardcoded_pass_gold === true, '[E8] config: no_hardcoded_pass_gold=true');
   assert(cfg.rules.no_hardcoded_deploy_allowed === true, '[E8] config: no_hardcoded_deploy_allowed=true');
   assert(cfg.rules.evidence_only_from_go_core === true, '[E8] config: evidence_only_from_go_core=true');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.6-A — createRuntimeEvidence: estrutura e invariants
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.6-A] createRuntimeEvidence — estrutura e invariants');
+
+{
+  const ev = createRuntimeEvidence();
+  assert(ev.schema_version === 'v15.6', '[V15.6-A-1] schema_version=v15.6');
+  assert(typeof ev.created_at === 'number', '[V15.6-A-2] created_at is number');
+  assert(ev.mission_id === null, '[V15.6-A-3] mission_id null por padrão');
+  assert(typeof ev.sources === 'object', '[V15.6-A-4] sources is object');
+  assert(typeof ev.trust === 'object', '[V15.6-A-5] trust is object');
+  assert(Array.isArray(ev.facts), '[V15.6-A-6] facts is array');
+  assert(Array.isArray(ev.claims), '[V15.6-A-7] claims is array');
+  assert(Array.isArray(ev.blocked_claims), '[V15.6-A-8] blocked_claims is array');
+  assert(Array.isArray(ev.conflicts), '[V15.6-A-9] conflicts is array');
+  assert(typeof ev.summary === 'object', '[V15.6-A-10] summary is object');
+}
+
+{
+  const ev = createRuntimeEvidence('test-mission-001');
+  assert(ev.mission_id === 'test-mission-001', '[V15.6-A-11] mission_id propagado');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  // 8 source categories
+  const srcKeys = Object.keys(ev.sources);
+  assert(srcKeys.includes('git'),      '[V15.6-A-12] sources.git presente');
+  assert(srcKeys.includes('ci'),       '[V15.6-A-13] sources.ci presente');
+  assert(srcKeys.includes('runtime'),  '[V15.6-A-14] sources.runtime presente');
+  assert(srcKeys.includes('backend'),  '[V15.6-A-15] sources.backend presente');
+  assert(srcKeys.includes('go_core'),  '[V15.6-A-16] sources.go_core presente');
+  assert(srcKeys.includes('tests'),    '[V15.6-A-17] sources.tests presente');
+  assert(srcKeys.includes('visual'),   '[V15.6-A-18] sources.visual presente');
+  assert(srcKeys.includes('security'), '[V15.6-A-19] sources.security presente');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  // All sources start with evidence_present=false
+  for (const [key, src] of Object.entries(ev.sources)) {
+    assert(src.evidence_present === false, `[V15.6-A-20] ${key}.evidence_present=false por padrão`);
+  }
+}
+
+{
+  const ev = createRuntimeEvidence();
+  // Trust hierarchy constants
+  assert(ev.trust.go_core === 'authoritative', '[V15.6-A-28] trust.go_core=authoritative');
+  assert(ev.trust.runtime_probe === 'high',    '[V15.6-A-29] trust.runtime_probe=high');
+  assert(ev.trust.ci_api === 'high',           '[V15.6-A-30] trust.ci_api=high');
+  assert(ev.trust.git_diff === 'high',         '[V15.6-A-31] trust.git_diff=high');
+  assert(ev.trust.local_test === 'medium',     '[V15.6-A-32] trust.local_test=medium');
+  assert(ev.trust.backend_claim === 'low',     '[V15.6-A-33] trust.backend_claim=low');
+  assert(ev.trust.memory === 'lowest',         '[V15.6-A-34] trust.memory=lowest');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  // visual_patch_authorized is always false — REGRA ABSOLUTA
+  assert(ev.sources.visual.visual_patch_authorized === false, '[V15.6-A-35] visual_patch_authorized=false invariant');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  // runtime defaults: blocked_runtime=true (pessimistic)
+  assert(ev.sources.runtime.blocked_runtime === true,        '[V15.6-A-36] runtime.blocked_runtime=true por padrão');
+  assert(ev.sources.runtime.runtime_probe_enabled === false, '[V15.6-A-37] runtime_probe_enabled=false por padrão');
+  assert(ev.sources.runtime.runtime_probe_pass === false,    '[V15.6-A-38] runtime_probe_pass=false por padrão');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  // backend defaults: stub=true
+  assert(ev.sources.backend.backend_stub === true,  '[V15.6-A-39] backend.backend_stub=true por padrão');
+  assert(ev.sources.backend.backend_alive === false, '[V15.6-A-40] backend.backend_alive=false por padrão');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.6-B — collectRuntimeEvidence: mapeamento de estado
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.6-B] collectRuntimeEvidence — mapeamento de estado');
+
+{
+  const ev = collectRuntimeEvidence(null);
+  assert(ev.schema_version === 'v15.6', '[V15.6-B-1] null state retorna evidência válida');
+  assert(ev.sources.git.evidence_present === false, '[V15.6-B-2] null state: git.evidence_present=false');
+}
+
+{
+  const state = { branch: 'main', gitHead: 'abc123' };
+  const ev = collectRuntimeEvidence(state);
+  assert(ev.sources.git.branch === 'main',       '[V15.6-B-3] git.branch mapeado');
+  assert(ev.sources.git.head_sha === 'abc123',   '[V15.6-B-4] git.head_sha mapeado');
+  assert(ev.sources.git.evidence_present === true, '[V15.6-B-5] git.evidence_present=true com branch+head');
+}
+
+{
+  const state = { backendAlive: true, backendStub: false, backendHasMissionId: true, backendHasEvidenceReceipt: true };
+  const ev = collectRuntimeEvidence(state);
+  assert(ev.sources.backend.backend_alive === true,                '[V15.6-B-6] backend.backend_alive mapeado');
+  assert(ev.sources.backend.backend_stub === false,                '[V15.6-B-7] backend.backend_stub=false mapeado');
+  assert(ev.sources.backend.backend_has_mission_id === true,       '[V15.6-B-8] backend_has_mission_id mapeado');
+  assert(ev.sources.backend.backend_has_evidence_receipt === true, '[V15.6-B-9] backend_has_evidence_receipt mapeado');
+  assert(ev.sources.backend.evidence_present === true,             '[V15.6-B-10] backend.evidence_present=true quando alive');
+}
+
+{
+  const state = { goCoreCompiled: true, goCoreTestPass: true, goRuntimeEvidenceSource: 'go-core', goRuntimeMissionId: 'mid-001' };
+  const ev = collectRuntimeEvidence(state);
+  assert(ev.sources.go_core.go_core_compiled === true,        '[V15.6-B-11] go_core.go_core_compiled mapeado');
+  assert(ev.sources.go_core.go_tests_pass === true,           '[V15.6-B-12] go_core.go_tests_pass mapeado');
+  assert(ev.sources.go_core.evidence_receipt_source === 'go-core', '[V15.6-B-13] evidence_receipt_source=go-core');
+  assert(ev.sources.go_core.evidence_receipt_valid === true,  '[V15.6-B-14] evidence_receipt_valid=true');
+  assert(ev.sources.go_core.mission_id_present === true,      '[V15.6-B-15] mission_id_present=true');
+  assert(ev.sources.go_core.evidence_present === true,        '[V15.6-B-16] go_core.evidence_present=true');
+}
+
+{
+  const state = { runtimeProbeEnabled: true, runtimeProbePass: false, backendAlive: false };
+  const ev = collectRuntimeEvidence(state);
+  assert(ev.sources.runtime.runtime_probe_enabled === true, '[V15.6-B-17] runtime.runtime_probe_enabled mapeado');
+  assert(ev.sources.runtime.blocked_runtime === true,       '[V15.6-B-18] blocked_runtime=true quando backend offline');
+  assert(ev.sources.runtime.evidence_present === true,      '[V15.6-B-19] evidence_present=true quando probe enabled');
+}
+
+{
+  const state = { syntaxOk: true };
+  const ev = collectRuntimeEvidence(state);
+  assert(ev.sources.tests.syntax_pass === true,      '[V15.6-B-20] tests.syntax_pass mapeado');
+  assert(ev.sources.tests.evidence_present === true, '[V15.6-B-21] tests.evidence_present=true com syntaxOk');
+}
+
+{
+  const state = { visualGoldLockPass: true, frontendVisualPass: true, guardOk: true };
+  const ev = collectRuntimeEvidence(state);
+  assert(ev.sources.visual.visual_gold_harness_lock === true, '[V15.6-B-22] visual.visual_gold_harness_lock mapeado');
+  assert(ev.sources.visual.frontend_visual_lock === true,     '[V15.6-B-23] visual.frontend_visual_lock mapeado');
+  assert(ev.sources.visual.sddf_front_guard === true,         '[V15.6-B-24] visual.sddf_front_guard mapeado');
+  assert(ev.sources.visual.visual_patch_authorized === false, '[V15.6-B-25] visual_patch_authorized sempre false');
+  assert(ev.sources.visual.evidence_present === true,         '[V15.6-B-26] visual.evidence_present=true');
+}
+
+{
+  const state = { fakeEvidenceAbsent: true, forbiddenDiffAbsent: true };
+  const ev = collectRuntimeEvidence(state);
+  assert(ev.sources.security.fake_evidence_scan_clean === true,   '[V15.6-B-27] security.fake_evidence_scan_clean mapeado');
+  assert(ev.sources.security.hardcoded_pass_gold_absent === true, '[V15.6-B-28] hardcoded_pass_gold_absent=true por design');
+  assert(ev.sources.security.hardcoded_deploy_absent === true,    '[V15.6-B-29] hardcoded_deploy_absent=true por design');
+  assert(ev.sources.security.forbidden_runtime_absent === true,   '[V15.6-B-30] forbidden_runtime_absent mapeado');
+  assert(ev.sources.security.evidence_present === true,           '[V15.6-B-31] security.evidence_present=true');
+}
+
+{
+  const state = { goRuntimeMissionId: 'mid-xyz' };
+  const ev = collectRuntimeEvidence(state, null);
+  // mission_id picked from state when missionId arg is null
+  assert(ev.mission_id === 'mid-xyz', '[V15.6-B-32] mission_id do state quando arg=null');
+}
+
+{
+  const state = { goRuntimeEvidenceSource: 'go-core', goCoreCompiled: true, goCoreTestPass: true };
+  const ev = collectRuntimeEvidence(state);
+  const goCoreFact = ev.facts.find(f => f.type === 'go_core_evidence_present');
+  assert(goCoreFact !== undefined,            '[V15.6-B-33] fact go_core_evidence_present gerado');
+  assert(goCoreFact.trust === 'authoritative', '[V15.6-B-34] go_core fact trust=authoritative');
+}
+
+{
+  const state = { backendAlive: false };
+  const ev = collectRuntimeEvidence(state);
+  const offlineFact = ev.facts.find(f => f.type === 'runtime_offline');
+  assert(offlineFact !== undefined,    '[V15.6-B-35] fact runtime_offline gerado quando backend offline');
+  assert(offlineFact.trust === 'high', '[V15.6-B-36] runtime_offline fact trust=high');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.6-C — normalizeEvidenceSource + classifyEvidenceTrust
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.6-C] normalizeEvidenceSource + classifyEvidenceTrust');
+
+{
+  assert(normalizeEvidenceSource('go-core') === 'go-core',  '[V15.6-C-1] go-core normaliza');
+  assert(normalizeEvidenceSource('go_core') === 'go-core',  '[V15.6-C-2] go_core normaliza');
+  assert(normalizeEvidenceSource('gocore') === 'go-core',   '[V15.6-C-3] gocore normaliza');
+  assert(normalizeEvidenceSource('GO-CORE') === 'go-core',  '[V15.6-C-4] GO-CORE case-insensitive');
+  assert(normalizeEvidenceSource('backend') === 'backend',  '[V15.6-C-5] backend normaliza');
+  assert(normalizeEvidenceSource('evr_backend') === 'backend', '[V15.6-C-6] evr_backend → backend');
+  assert(normalizeEvidenceSource('github_api') === 'github_api', '[V15.6-C-7] github_api normaliza');
+  assert(normalizeEvidenceSource('github-api') === 'github_api', '[V15.6-C-8] github-api normaliza');
+  assert(normalizeEvidenceSource('memory') === 'memory',    '[V15.6-C-9] memory normaliza');
+  assert(normalizeEvidenceSource('stale_memory') === 'memory', '[V15.6-C-10] stale_memory → memory');
+  assert(normalizeEvidenceSource(null) === null,            '[V15.6-C-11] null → null');
+  assert(normalizeEvidenceSource('') === null,              '[V15.6-C-12] empty string → null');
+  assert(normalizeEvidenceSource('runtime_probe') === 'runtime_probe_actual', '[V15.6-C-13] runtime_probe normaliza');
+  assert(normalizeEvidenceSource('runtime-probe') === 'runtime_probe_actual', '[V15.6-C-14] runtime-probe normaliza');
+  assert(normalizeEvidenceSource('agent') === 'agent',      '[V15.6-C-15] agent normaliza');
+}
+
+{
+  assert(classifyEvidenceTrust('go-core') === 'authoritative', '[V15.6-C-16] go-core=authoritative');
+  assert(classifyEvidenceTrust('go_core') === 'authoritative', '[V15.6-C-17] go_core=authoritative (via normalize)');
+  assert(classifyEvidenceTrust('github_api') === 'high',       '[V15.6-C-18] github_api=high');
+  assert(classifyEvidenceTrust('gh') === 'high',               '[V15.6-C-19] gh=high');
+  assert(classifyEvidenceTrust('git_diff') === 'high',         '[V15.6-C-20] git_diff=high');
+  assert(classifyEvidenceTrust('runtime_probe') === 'high',    '[V15.6-C-21] runtime_probe=high');
+  assert(classifyEvidenceTrust('backend') === 'low',           '[V15.6-C-22] backend=low');
+  assert(classifyEvidenceTrust('memory') === 'lowest',         '[V15.6-C-23] memory=lowest');
+  assert(classifyEvidenceTrust('agent') === 'lowest',          '[V15.6-C-24] agent=lowest');
+  assert(classifyEvidenceTrust('unknown_source') === 'lowest', '[V15.6-C-25] unknown → lowest');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.6-D — validateRuntimeEvidence: 9 regras
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.6-D] validateRuntimeEvidence — 9 regras');
+
+// Rule 1: evidence_receipt.source must be go-core
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.go_core.evidence_receipt_source = 'backend';
+  const r = validateRuntimeEvidence(ev);
+  assert(r.ok === false, '[V15.6-D-1] Rule1: evidence_receipt_source=backend → not ok');
+  assert(r.blocked_claims.includes('real_evidence'), '[V15.6-D-2] Rule1: real_evidence bloqueada');
+}
+
+// Rule 2: backend cannot fabricate evidence
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.backend.backend_has_evidence_receipt = true;
+  ev.sources.go_core.evidence_receipt_valid = false;
+  const r = validateRuntimeEvidence(ev);
+  assert(r.ok === false, '[V15.6-D-3] Rule2: backend sem go-core → not ok');
+  assert(r.blocked_claims.includes('backend_evidence'), '[V15.6-D-4] Rule2: backend_evidence bloqueada');
+}
+
+// Rule 3: runtime_probe_pass requires all three
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.runtime.runtime_probe_pass = true;
+  ev.sources.backend.backend_alive = false;
+  const r = validateRuntimeEvidence(ev);
+  assert(r.ok === false, '[V15.6-D-5] Rule3: runtime_probe_pass sem backend_alive → blocked');
+  assert(r.blocked_claims.includes('runtime_probe_pass'), '[V15.6-D-6] Rule3: runtime_probe_pass bloqueado');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.runtime.runtime_probe_pass = true;
+  ev.sources.backend.backend_alive = true;
+  ev.sources.backend.backend_has_mission_id = false;
+  const r = validateRuntimeEvidence(ev);
+  assert(r.blocked_claims.includes('runtime_probe_pass'), '[V15.6-D-7] Rule3: sem mission_id → blocked');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.runtime.runtime_probe_pass = true;
+  ev.sources.backend.backend_alive = true;
+  ev.sources.backend.backend_has_mission_id = true;
+  ev.sources.backend.backend_has_evidence_receipt = false;
+  const r = validateRuntimeEvidence(ev);
+  assert(r.blocked_claims.includes('runtime_probe_pass'), '[V15.6-D-8] Rule3: sem evidence_receipt → blocked');
+}
+
+// Rule 4: CI success without evidence_present
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.ci.status = 'success';
+  ev.sources.ci.evidence_present = false;
+  const r = validateRuntimeEvidence(ev);
+  assert(r.ok === false, '[V15.6-D-9] Rule4: ci.status=success sem evidence → not ok');
+  assert(r.blocked_claims.includes('ci_green'), '[V15.6-D-10] Rule4: ci_green bloqueado');
+}
+
+// Rule 5: test_suite_pass without exit_code/test_total
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.tests.test_suite_pass = true;
+  ev.sources.tests.exit_code = null;
+  ev.sources.tests.test_total = null;
+  const r = validateRuntimeEvidence(ev);
+  assert(r.ok === false, '[V15.6-D-11] Rule5: test_suite_pass sem exit_code/total → not ok');
+  assert(r.blocked_claims.includes('test_suite_pass'), '[V15.6-D-12] Rule5: test_suite_pass bloqueado');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.tests.test_suite_pass = true;
+  ev.sources.tests.exit_code = 0;
+  const r = validateRuntimeEvidence(ev);
+  assert(!r.blocked_claims.includes('test_suite_pass'), '[V15.6-D-13] Rule5: test_suite_pass com exit_code → ok');
+}
+
+// Rule 6: deploy_allowed must always be false
+{
+  const ev = createRuntimeEvidence();
+  ev.deploy_allowed = true;
+  const r = validateRuntimeEvidence(ev);
+  assert(r.ok === false, '[V15.6-D-14] Rule6: deploy_allowed=true → not ok');
+  assert(r.blocked_claims.includes('deploy_allowed'), '[V15.6-D-15] Rule6: deploy_allowed bloqueado');
+  assert(r.final_recommendation === 'BLOCKED_POLICY', '[V15.6-D-16] Rule6: final=BLOCKED_POLICY');
+}
+
+// Rule 7: pass_gold_candidate without Go Core evidence
+{
+  const ev = createRuntimeEvidence();
+  ev.pass_gold_candidate = true;
+  ev.sources.go_core.evidence_receipt_valid = false;
+  const r = validateRuntimeEvidence(ev);
+  assert(r.ok === false, '[V15.6-D-17] Rule7: pass_gold sem go-core → not ok');
+  assert(r.blocked_claims.includes('pass_gold_candidate'), '[V15.6-D-18] Rule7: pass_gold_candidate bloqueado');
+}
+
+// Rule 8: stale memory PASS vs BLOCKED_RUNTIME
+{
+  const ev = createRuntimeEvidence();
+  ev.stale_memory_pass = true;
+  ev.sources.runtime.blocked_runtime = true;
+  const r = validateRuntimeEvidence(ev);
+  assert(r.ok === false, '[V15.6-D-19] Rule8: stale_pass vs BLOCKED_RUNTIME → not ok');
+  assert(r.blocked_claims.includes('stale_memory_pass'), '[V15.6-D-20] Rule8: stale_memory_pass bloqueado');
+}
+
+// Rule 9: agent claim contradicting evidence
+{
+  const ev = createRuntimeEvidence();
+  ev.agent_claims = { backend_online: true };
+  ev.sources.backend.backend_alive = false;
+  const r = validateRuntimeEvidence(ev);
+  assert(r.ok === false, '[V15.6-D-21] Rule9: agent claims backend_online sem backend_alive → not ok');
+  assert(r.blocked_claims.includes('agent_backend_online'), '[V15.6-D-22] Rule9: agent_backend_online bloqueado');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  ev.agent_claims = { ci_green: true };
+  ev.sources.ci.source = 'unknown';
+  const r = validateRuntimeEvidence(ev);
+  assert(r.ok === false, '[V15.6-D-23] Rule9: agent ci_green sem evidence → not ok');
+  assert(r.blocked_claims.includes('agent_ci_green'), '[V15.6-D-24] Rule9: agent_ci_green bloqueado');
+}
+
+// Trust score and BLOCKED_RUNTIME default
+{
+  const ev = createRuntimeEvidence();
+  const r = validateRuntimeEvidence(ev);
+  assert(r.trust_score >= 0, '[V15.6-D-25] trust_score >= 0');
+  assert(r.trust_score <= 100, '[V15.6-D-26] trust_score <= 100');
+  assert(r.final_recommendation === 'BLOCKED_RUNTIME', '[V15.6-D-27] default: BLOCKED_RUNTIME');
+}
+
+// SUPERVISED_READY requires go_core + ≥3 sources
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.go_core.evidence_receipt_valid = true;
+  ev.sources.go_core.evidence_present = true;
+  ev.sources.git.evidence_present = true;
+  ev.sources.tests.evidence_present = true;
+  ev.sources.runtime.blocked_runtime = false;
+  const r = validateRuntimeEvidence(ev);
+  assert(r.final_recommendation === 'SUPERVISED_READY', '[V15.6-D-28] SUPERVISED_READY com go-core + 3 sources');
+}
+
+// null evidence → BLOCKED_EVIDENCE
+{
+  const r = validateRuntimeEvidence(null);
+  assert(r.ok === false, '[V15.6-D-29] null evidence → not ok');
+  assert(r.final_recommendation === 'BLOCKED_EVIDENCE', '[V15.6-D-30] null → BLOCKED_EVIDENCE');
+  assert(r.trust_score === 0, '[V15.6-D-31] null → trust_score=0');
+}
+
+// evidence with multiple sources present increases trust_score
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.git.evidence_present = true;
+  ev.sources.tests.evidence_present = true;
+  ev.sources.visual.evidence_present = true;
+  ev.sources.security.evidence_present = true;
+  const r = validateRuntimeEvidence(ev);
+  assert(r.trust_score >= 30, '[V15.6-D-32] multiple sources → trust_score ≥ 30');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.6-E — mergeEvidenceSnapshots: B vence em evidence_present
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.6-E] mergeEvidenceSnapshots — B vence em evidence_present');
+
+{
+  const a = createRuntimeEvidence('mission-a');
+  const b = createRuntimeEvidence('mission-b');
+  const merged = mergeEvidenceSnapshots(a, b);
+  assert(merged !== null, '[V15.6-E-1] merge não retorna null');
+  assert(merged.schema_version === 'v15.6', '[V15.6-E-2] schema_version preservado');
+  assert(merged.merged === true, '[V15.6-E-3] merged flag=true');
+  assert(typeof merged.merged_at === 'number', '[V15.6-E-4] merged_at=number');
+}
+
+{
+  const a = mergeEvidenceSnapshots(null, null);
+  assert(a === null, '[V15.6-E-5] merge(null, null)=null');
+}
+
+{
+  const a = createRuntimeEvidence('mission-a');
+  const merged = mergeEvidenceSnapshots(a, null);
+  assert(merged === a, '[V15.6-E-6] merge(a, null)=a');
+}
+
+{
+  const b = createRuntimeEvidence('mission-b');
+  const merged = mergeEvidenceSnapshots(null, b);
+  assert(merged === b, '[V15.6-E-7] merge(null, b)=b');
+}
+
+{
+  const a = createRuntimeEvidence();
+  a.sources.git.evidence_present = false;
+  a.sources.git.branch = 'old-branch';
+  const b = createRuntimeEvidence();
+  b.sources.git.evidence_present = true;
+  b.sources.git.branch = 'new-branch';
+  const merged = mergeEvidenceSnapshots(a, b);
+  assert(merged.sources.git.evidence_present === true,  '[V15.6-E-8] B evidence_present wins');
+  assert(merged.sources.git.branch === 'new-branch',    '[V15.6-E-9] B branch wins when B.evidence_present=true');
+}
+
+{
+  const a = createRuntimeEvidence();
+  a.facts.push({ type: 'fact_a', value: 1, trust: 'high' });
+  const b = createRuntimeEvidence();
+  b.facts.push({ type: 'fact_b', value: 2, trust: 'medium' });
+  const merged = mergeEvidenceSnapshots(a, b);
+  assert(merged.facts.some(f => f.type === 'fact_a'), '[V15.6-E-10] A facts preservados no merge');
+  assert(merged.facts.some(f => f.type === 'fact_b'), '[V15.6-E-11] B facts presentes no merge');
+}
+
+{
+  const a = createRuntimeEvidence();
+  a.blocked_claims = ['claim_x'];
+  const b = createRuntimeEvidence();
+  b.blocked_claims = ['claim_y'];
+  const merged = mergeEvidenceSnapshots(a, b);
+  assert(merged.blocked_claims.includes('claim_x'), '[V15.6-E-12] A blocked_claims preservados');
+  assert(merged.blocked_claims.includes('claim_y'), '[V15.6-E-13] B blocked_claims preservados');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.6-F — renderRuntimeEvidenceSummary + supervisor integration
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.6-F] renderRuntimeEvidenceSummary + supervisor integration');
+
+{
+  const summary = renderRuntimeEvidenceSummary(null);
+  assert(summary === null, '[V15.6-F-1] null evidence → null summary');
+}
+
+{
+  const ev = createRuntimeEvidence('mid-001');
+  const summary = renderRuntimeEvidenceSummary(ev);
+  assert(summary.schema_version === 'v15.6',      '[V15.6-F-2] schema_version=v15.6');
+  assert(summary.mission_id === 'mid-001',         '[V15.6-F-3] mission_id propagado');
+  assert(Array.isArray(summary.sources_present),   '[V15.6-F-4] sources_present é array');
+  assert(Array.isArray(summary.sources_missing),   '[V15.6-F-5] sources_missing é array');
+  assert(typeof summary.trust === 'object',        '[V15.6-F-6] trust é object');
+  assert(typeof summary.facts_count === 'number',  '[V15.6-F-7] facts_count é number');
+  assert(summary.deploy_allowed === false,          '[V15.6-F-8] deploy_allowed sempre false');
+  assert(summary.runtime_blocked === true,          '[V15.6-F-9] runtime_blocked=true por padrão');
+  assert(summary.go_core_evidence_valid === false,  '[V15.6-F-10] go_core_evidence_valid=false por padrão');
+}
+
+{
+  const ev = createRuntimeEvidence();
+  ev.sources.git.evidence_present = true;
+  ev.sources.tests.evidence_present = true;
+  const summary = renderRuntimeEvidenceSummary(ev);
+  assert(summary.sources_present.includes('git'),         '[V15.6-F-11] git em sources_present');
+  assert(summary.sources_present.includes('tests'),       '[V15.6-F-12] tests em sources_present');
+  assert(!summary.sources_present.includes('ci'),         '[V15.6-F-13] ci não em sources_present');
+  assert(summary.sources_missing.includes('ci'),          '[V15.6-F-14] ci em sources_missing');
+  assert(summary.sources_present.length === 2,            '[V15.6-F-15] sources_present.length=2');
+}
+
+// attachRuntimeEvidence
+{
+  const ctx = createHermesMissionContext();
+  const ev  = createRuntimeEvidence('mid-xyz');
+  attachRuntimeEvidence(ctx, ev);
+  assert(ctx.runtime_evidence === ev,               '[V15.6-F-16] runtime_evidence attachado ao ctx');
+  assert(ctx.runtime_evidence_attached === true,    '[V15.6-F-17] runtime_evidence_attached=true');
+  assert(typeof ctx.runtime_evidence_at === 'number', '[V15.6-F-18] runtime_evidence_at é number');
+}
+
+{
+  attachRuntimeEvidence(null, createRuntimeEvidence());
+  assert(true, '[V15.6-F-19] attachRuntimeEvidence com ctx=null não lança exceção');
+}
+
+// evaluateHermesEvidence
+{
+  const ctx = createHermesMissionContext();
+  const result = evaluateHermesEvidence(ctx);
+  assert(result.trust_score === 0,                        '[V15.6-F-20] sem evidence → trust_score=0');
+  assert(result.deploy_allowed === false,                  '[V15.6-F-21] deploy_allowed sempre false');
+  assert(result.final_recommendation === 'BLOCKED_RUNTIME', '[V15.6-F-22] sem evidence → BLOCKED_RUNTIME');
+  assert(Array.isArray(result.sources_present),           '[V15.6-F-23] sources_present é array');
+  assert(Array.isArray(result.sources_missing),           '[V15.6-F-24] sources_missing é array');
+}
+
+{
+  const result = evaluateHermesEvidence(null);
+  assert(result.trust_score === 0,                         '[V15.6-F-25] ctx=null → trust_score=0');
+  assert(result.final_recommendation === 'BLOCKED_EVIDENCE', '[V15.6-F-26] ctx=null → BLOCKED_EVIDENCE');
+}
+
+{
+  const ctx = createHermesMissionContext();
+  const ev  = createRuntimeEvidence();
+  ev.sources.go_core.evidence_present = true;
+  ev.sources.go_core.evidence_receipt_valid = true;
+  ev.sources.git.evidence_present = true;
+  ev.sources.tests.evidence_present = true;
+  ev.sources.runtime.blocked_runtime = false;
+  attachRuntimeEvidence(ctx, ev);
+  const result = evaluateHermesEvidence(ctx);
+  assert(result.trust_score > 50,                          '[V15.6-F-27] go_core + sources → trust_score > 50');
+  assert(result.final_recommendation === 'SUPERVISED_READY', '[V15.6-F-28] go_core + 3 sources → SUPERVISED_READY');
+}
+
+// renderEvidenceGraph
+{
+  const ctx = createHermesMissionContext();
+  const graph = renderEvidenceGraph(ctx);
+  assert(graph === null, '[V15.6-F-29] ctx sem runtime_evidence → graph=null');
+}
+
+{
+  const ctx = createHermesMissionContext();
+  const ev  = createRuntimeEvidence('mid-graph');
+  attachRuntimeEvidence(ctx, ev);
+  const graph = renderEvidenceGraph(ctx);
+  assert(graph !== null,                         '[V15.6-F-30] ctx com evidence → graph não null');
+  assert(graph.schema_version === 'v15.6',       '[V15.6-F-31] graph.schema_version=v15.6');
+  assert(graph.mission_id === 'mid-graph',        '[V15.6-F-32] graph.mission_id propagado');
+  assert(Array.isArray(graph.nodes),             '[V15.6-F-33] graph.nodes é array');
+  assert(Array.isArray(graph.edges),             '[V15.6-F-34] graph.edges é array');
+  assert(graph.deploy_allowed === false,          '[V15.6-F-35] graph.deploy_allowed sempre false');
+  assert(graph.nodes.length === 8,               '[V15.6-F-36] 8 source nodes no graph');
+}
+
+{
+  const ctx = createHermesMissionContext();
+  const ev  = createRuntimeEvidence();
+  ev.sources.go_core.evidence_present = true;
+  attachRuntimeEvidence(ctx, ev);
+  const graph = renderEvidenceGraph(ctx);
+  const goEdge = graph.edges.find(e => e.from === 'go_core');
+  assert(goEdge !== undefined,                        '[V15.6-F-37] go_core edge presente quando evidence_present');
+  assert(goEdge.type === 'authoritative_evidence',    '[V15.6-F-38] go_core edge type=authoritative_evidence');
+}
+
+// renderHermesSupervisionReport with evidence
+{
+  const ctx = createHermesMissionContext();
+  const ev  = createRuntimeEvidence('mid-report');
+  attachRuntimeEvidence(ctx, ev);
+  const report = renderHermesSupervisionReport(ctx);
+  assert('RUNTIME_EVIDENCE' in report,            '[V15.6-F-39] report inclui RUNTIME_EVIDENCE');
+  assert('EVIDENCE_TRUST_SCORE' in report,        '[V15.6-F-40] report inclui EVIDENCE_TRUST_SCORE');
+  assert('EVIDENCE_SOURCES_PRESENT' in report,   '[V15.6-F-41] report inclui EVIDENCE_SOURCES_PRESENT');
+  assert('EVIDENCE_SOURCES_MISSING' in report,   '[V15.6-F-42] report inclui EVIDENCE_SOURCES_MISSING');
+  assert('EVIDENCE_VALIDATION_ERRORS' in report, '[V15.6-F-43] report inclui EVIDENCE_VALIDATION_ERRORS');
+  assert('EVIDENCE_VALIDATION_WARNINGS' in report, '[V15.6-F-44] report inclui EVIDENCE_VALIDATION_WARNINGS');
+  assert('EVIDENCE_GRAPH' in report,             '[V15.6-F-45] report inclui EVIDENCE_GRAPH');
+  assert(typeof report.EVIDENCE_TRUST_SCORE === 'number', '[V15.6-F-46] EVIDENCE_TRUST_SCORE é number');
+  assert(Array.isArray(report.EVIDENCE_SOURCES_PRESENT), '[V15.6-F-47] EVIDENCE_SOURCES_PRESENT é array');
+  assert(Array.isArray(report.EVIDENCE_SOURCES_MISSING), '[V15.6-F-48] EVIDENCE_SOURCES_MISSING é array');
+  assert(Array.isArray(report.EVIDENCE_VALIDATION_ERRORS), '[V15.6-F-49] EVIDENCE_VALIDATION_ERRORS é array');
 }
 
 // ─── RESULTADO FINAL ──────────────────────────────────────────────
