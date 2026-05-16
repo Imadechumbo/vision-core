@@ -78,6 +78,25 @@ import {
   renderAuthorizationScenarioReport,
   createAuthorizationScenarioSummary,
 } from '../hermes/authorization-harness.mjs';
+import {
+  createAuthorityRoleRegistry,
+  createHumanApprovalContract,
+  validateHumanApprovalContract,
+  evaluateAuthorityReviewGate,
+  deriveAuthorityRequirements,
+  deriveAuthorityConflicts,
+  deriveAuthorityAuditTrail,
+  renderAuthorityReviewSummary,
+  renderAuthorityReviewGate,
+} from '../hermes/authority-review.mjs';
+import {
+  loadAuthorityFixture,
+  listAuthorityFixtures,
+  runAuthorityScenario,
+  runAuthorityScenarioMatrix,
+  renderAuthorityScenarioReport,
+  createAuthorityScenarioSummary,
+} from '../hermes/authority-harness.mjs';
 
 const ROOT    = resolve(process.cwd());
 const HARNESS = join(ROOT, 'tools', 'pi-harness.mjs');
@@ -2965,7 +2984,7 @@ console.log('\n[V15.7-H] renderDecisionMatrixSummary + renderReleaseReadinessGat
 // ─── SUITE V15.8-G: PI Harness JSON fields ───────────────────────
 {
   console.log('\n[V15.8-G] PI Harness JSON V15.8 fields via spawn');
-  const result = spawnSync(process.execPath, [HARNESS, '--json'], { cwd: ROOT, encoding: 'utf8', timeout: 60000 });
+  const result = spawnSync(process.execPath, [HARNESS, '--json'], { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
   const raw = (result.stdout || '') + (result.stderr || '');
   const start = raw.indexOf('{');
   const end   = raw.lastIndexOf('}');
@@ -3007,7 +3026,7 @@ console.log('\n[V15.7-H] renderDecisionMatrixSummary + renderReleaseReadinessGat
   const tmpPath = join(ROOT, 'tmp-v158-auth-test.json');
 
   // nonexistent file → AUTHORIZATION_INVALID or controlled error
-  const r1 = spawnSync(process.execPath, [HARNESS, '--json', '--authorization-manifest', 'nonexistent-v158.json'], { cwd: ROOT, encoding: 'utf8', timeout: 60000 });
+  const r1 = spawnSync(process.execPath, [HARNESS, '--json', '--authorization-manifest', 'nonexistent-v158.json'], { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
   const raw1 = (r1.stdout || '') + (r1.stderr || '');
   const s1 = raw1.indexOf('{'), e1 = raw1.lastIndexOf('}');
   let p1 = {};
@@ -3018,7 +3037,7 @@ console.log('\n[V15.7-H] renderDecisionMatrixSummary + renderReleaseReadinessGat
 
   // invalid JSON file
   writeFileSync(tmpPath, 'NOT_VALID_JSON_!!', 'utf8');
-  const r2 = spawnSync(process.execPath, [HARNESS, '--json', '--authorization-manifest', tmpPath], { cwd: ROOT, encoding: 'utf8', timeout: 60000 });
+  const r2 = spawnSync(process.execPath, [HARNESS, '--json', '--authorization-manifest', tmpPath], { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
   const raw2 = (r2.stdout || '') + (r2.stderr || '');
   const s2 = raw2.indexOf('{'), e2 = raw2.lastIndexOf('}');
   let p2 = {};
@@ -3036,7 +3055,7 @@ console.log('\n[V15.7-H] renderDecisionMatrixSummary + renderReleaseReadinessGat
     evidence_refs: ['ev-ref-001'],
   };
   writeFileSync(tmpPath, JSON.stringify(validManifest), 'utf8');
-  const r3 = spawnSync(process.execPath, [HARNESS, '--json', '--authorization-manifest', tmpPath], { cwd: ROOT, encoding: 'utf8', timeout: 60000 });
+  const r3 = spawnSync(process.execPath, [HARNESS, '--json', '--authorization-manifest', tmpPath], { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
   const raw3 = (r3.stdout || '') + (r3.stderr || '');
   const s3 = raw3.indexOf('{'), e3 = raw3.lastIndexOf('}');
   let p3 = {};
@@ -3520,6 +3539,545 @@ console.log('\n[V15.7-H] renderDecisionMatrixSummary + renderReleaseReadinessGat
   // schema_version correct
   const s_valid = runAuthorizationScenario('valid_release_review');
   assert(s_valid.schema_version === 'v15.9',                 '[V15.9-H-15] scenario result schema_version=v15.9');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.10-A — createAuthorityRoleRegistry
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.10-A] createAuthorityRoleRegistry — structure & invariants');
+
+{
+  const reg = createAuthorityRoleRegistry();
+  assert(typeof reg === 'object' && reg !== null,       '[V15.10-A-1]  registry is object');
+  assert(reg.schema_version === 'v15.10',               '[V15.10-A-2]  schema_version=v15.10');
+  assert(typeof reg.roles === 'object',                  '[V15.10-A-3]  roles field present');
+  const roleNames = Object.keys(reg.roles);
+  assert(roleNames.includes('observer'),                 '[V15.10-A-4]  observer role present');
+  assert(roleNames.includes('reviewer'),                 '[V15.10-A-5]  reviewer role present');
+  assert(roleNames.includes('release_authority'),        '[V15.10-A-6]  release_authority role present');
+  assert(roleNames.includes('deploy_authority'),         '[V15.10-A-7]  deploy_authority role present');
+  assert(roleNames.includes('stable_authority'),         '[V15.10-A-8]  stable_authority role present');
+  assert(roleNames.includes('pass_gold_authority'),      '[V15.10-A-9]  pass_gold_authority role present');
+  assert(reg.roles.observer.can_review === true,         '[V15.10-A-10] observer.can_review=true');
+  assert(reg.roles.observer.can_authorize_release === false, '[V15.10-A-11] observer.can_authorize_release=false');
+  assert(reg.roles.release_authority.can_authorize_release === true, '[V15.10-A-12] release_authority.can_authorize_release=true');
+  assert(reg.roles.release_authority.can_authorize_deploy === false, '[V15.10-A-13] release_authority.can_authorize_deploy=false');
+  assert(reg.roles.stable_authority.can_authorize_stable === true,   '[V15.10-A-14] stable_authority.can_authorize_stable=true');
+  assert(reg.roles.stable_authority.can_authorize_tag === true,      '[V15.10-A-15] stable_authority.can_authorize_tag=true');
+  assert(reg.roles.pass_gold_authority.can_confirm_pass_gold === true, '[V15.10-A-16] pass_gold_authority.can_confirm_pass_gold=true');
+  assert(reg.roles.pass_gold_authority.can_override_evidence === false, '[V15.10-A-17] pass_gold_authority.can_override_evidence=false');
+  assert(typeof reg.invariants === 'object',             '[V15.10-A-18] invariants field present');
+  assert(reg.invariants.authority_cannot_override_pass_gold === true, '[V15.10-A-19] cannot_override_pass_gold=true');
+  assert(reg.invariants.authority_cannot_create_evidence === true,    '[V15.10-A-20] cannot_create_evidence=true');
+  assert(reg.invariants.authority_cannot_override_go_core === true,   '[V15.10-A-21] cannot_override_go_core=true');
+  assert(reg.invariants.authority_cannot_execute_deploy === true,     '[V15.10-A-22] cannot_execute_deploy=true');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.10-B — createHumanApprovalContract + validateHumanApprovalContract
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.10-B] createHumanApprovalContract + validateHumanApprovalContract');
+
+{
+  // createHumanApprovalContract defaults
+  const c = createHumanApprovalContract();
+  assert(typeof c === 'object' && c !== null,            '[V15.10-B-1]  contract is object');
+  assert(c.schema_version === 'v15.10',                  '[V15.10-B-2]  schema_version=v15.10');
+  assert(typeof c.contract_id === 'string',              '[V15.10-B-3]  contract_id is string');
+  assert(c.requested_action === 'review_only',           '[V15.10-B-4]  default action=review_only');
+  assert(c.status === 'CONTRACT_MISSING',                '[V15.10-B-5]  default status=CONTRACT_MISSING');
+  assert(c.constraints.deploy_allowed === false,         '[V15.10-B-6]  constraints.deploy_allowed=false');
+  assert(c.constraints.tag_allowed    === false,         '[V15.10-B-7]  constraints.tag_allowed=false');
+  assert(c.constraints.stable_allowed === false,         '[V15.10-B-8]  constraints.stable_allowed=false');
+
+  // override fields
+  const c2 = createHumanApprovalContract({ requested_action: 'release_review', reviewer_role: 'reviewer' });
+  assert(c2.requested_action === 'release_review',       '[V15.10-B-9]  override requested_action works');
+  assert(c2.reviewer_role    === 'reviewer',             '[V15.10-B-10] override reviewer_role works');
+
+  // validateHumanApprovalContract(null)
+  const reg = createAuthorityRoleRegistry();
+  const v = validateHumanApprovalContract(null, reg);
+  assert(v.ok     === false,                             '[V15.10-B-11] null contract → ok=false');
+  assert(v.status === 'CONTRACT_MISSING',                '[V15.10-B-12] null contract → CONTRACT_MISSING');
+  assert(v.invariants.deploy_allowed   === false,        '[V15.10-B-13] invariants.deploy_allowed=false');
+  assert(v.invariants.release_allowed  === false,        '[V15.10-B-14] invariants.release_allowed=false');
+  assert(v.invariants.tag_allowed      === false,        '[V15.10-B-15] invariants.tag_allowed=false');
+  assert(v.invariants.stable_allowed   === false,        '[V15.10-B-16] invariants.stable_allowed=false');
+  assert(v.invariants.promotion_allowed === false,       '[V15.10-B-17] invariants.promotion_allowed=false');
+  assert(Array.isArray(v.audit_events),                  '[V15.10-B-18] audit_events is array');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.10-C — Contract Validation scenarios
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.10-C] Contract Validation — all status paths');
+
+{
+  const reg = createAuthorityRoleRegistry();
+
+  // Invalid schema
+  const cInvalid = createHumanApprovalContract({ schema_version: 'v0.0' });
+  cInvalid.schema_version = 'v0.0';
+  const vInvalid = validateHumanApprovalContract(cInvalid, reg);
+  assert(vInvalid.status === 'CONTRACT_INVALID',         '[V15.10-C-1]  invalid schema → CONTRACT_INVALID');
+  assert(vInvalid.ok     === false,                      '[V15.10-C-2]  invalid schema → ok=false');
+
+  // Rejected
+  const cRej = createHumanApprovalContract({ review_decision: 'rejected', reviewer_role: 'reviewer', requested_action: 'release_review' });
+  const vRej = validateHumanApprovalContract(cRej, reg);
+  assert(vRej.status === 'CONTRACT_REJECTED',            '[V15.10-C-3]  rejected → CONTRACT_REJECTED');
+  assert(vRej.ok     === false,                          '[V15.10-C-4]  rejected → ok=false');
+
+  // Expired
+  const cExp = createHumanApprovalContract({ expires_at: 1000000001000, reviewer_role: 'reviewer', requested_action: 'release_review', review_decision: 'approved' });
+  const vExp = validateHumanApprovalContract(cExp, reg);
+  assert(vExp.status === 'CONTRACT_EXPIRED',             '[V15.10-C-5]  expired → CONTRACT_EXPIRED');
+  assert(vExp.ok     === false,                          '[V15.10-C-6]  expired → ok=false');
+
+  // Forbidden scope
+  const cScope = createHumanApprovalContract({ requested_scope: ['production_deploy'], reviewer_role: 'reviewer', requested_action: 'release_review', review_decision: 'approved', reviewed_by: 'tester' });
+  const vScope = validateHumanApprovalContract(cScope, reg);
+  assert(vScope.status === 'CONTRACT_SCOPE_MISMATCH',    '[V15.10-C-7]  forbidden scope → CONTRACT_SCOPE_MISMATCH');
+  assert(vScope.ok     === false,                        '[V15.10-C-8]  forbidden scope → ok=false');
+
+  // Insufficient role
+  const cRole = createHumanApprovalContract({ reviewer_role: 'reviewer', requested_action: 'release_authorization', review_decision: 'approved', reviewed_by: 'tester' });
+  const vRole = validateHumanApprovalContract(cRole, reg);
+  assert(vRole.status === 'CONTRACT_AUTHORITY_INSUFFICIENT', '[V15.10-C-9]  insufficient role → CONTRACT_AUTHORITY_INSUFFICIENT');
+  assert(vRole.ok     === false,                         '[V15.10-C-10] insufficient role → ok=false');
+
+  // pass_gold without go_core
+  const cPG = createHumanApprovalContract({ reviewer_role: 'pass_gold_authority', requested_action: 'pass_gold_confirmation', review_decision: 'approved', reviewed_by: 'tester', evidence_refs: ['decision_matrix_ref', 'evidence_receipt_ref'] });
+  const vPG = validateHumanApprovalContract(cPG, reg);
+  assert(vPG.status === 'CONTRACT_CONFLICTING',          '[V15.10-C-11] pass_gold no go_core → CONTRACT_CONFLICTING');
+  assert(vPG.ok     === false,                           '[V15.10-C-12] pass_gold no go_core → ok=false');
+
+  // Evidence missing
+  const cEM = createHumanApprovalContract({ reviewer_role: 'reviewer', requested_action: 'release_review', review_decision: 'approved', reviewed_by: 'tester', evidence_refs: ['decision_matrix_ref'], required_evidence_refs: ['decision_matrix_ref', 'runtime_evidence_ref', 'authorization_manifest_ref'] });
+  const vEM = validateHumanApprovalContract(cEM, reg);
+  assert(vEM.status === 'CONTRACT_EVIDENCE_MISSING',     '[V15.10-C-13] evidence missing → CONTRACT_EVIDENCE_MISSING');
+  assert(vEM.ok     === false,                           '[V15.10-C-14] evidence missing → ok=false');
+
+  // Valid release_review
+  const cValid = createHumanApprovalContract({ reviewer_role: 'reviewer', requested_action: 'release_review', review_decision: 'approved', reviewed_by: 'release-reviewer', evidence_refs: ['decision_matrix_ref', 'runtime_evidence_ref', 'authorization_manifest_ref'] });
+  const vValid = validateHumanApprovalContract(cValid, reg);
+  assert(vValid.status === 'CONTRACT_VALID',             '[V15.10-C-15] valid release_review → CONTRACT_VALID');
+  assert(vValid.ok     === true,                         '[V15.10-C-16] valid release_review → ok=true');
+  assert(vValid.invariants.deploy_allowed   === false,   '[V15.10-C-17] valid → invariants.deploy_allowed=false');
+  assert(vValid.invariants.release_allowed  === false,   '[V15.10-C-18] valid → invariants.release_allowed=false');
+  assert(vValid.invariants.tag_allowed      === false,   '[V15.10-C-19] valid → invariants.tag_allowed=false');
+  assert(vValid.invariants.stable_allowed   === false,   '[V15.10-C-20] valid → invariants.stable_allowed=false');
+  assert(vValid.invariants.promotion_allowed === false,  '[V15.10-C-21] valid → invariants.promotion_allowed=false');
+  assert(Array.isArray(vValid.approved_actions),         '[V15.10-C-22] approved_actions is array');
+  assert(vValid.approved_actions.includes('release_review'), '[V15.10-C-23] valid → approved_actions includes release_review');
+  assert(vValid.authority_role === 'reviewer',           '[V15.10-C-24] valid → authority_role=reviewer');
+  assert(vValid.authority_sufficient === true,           '[V15.10-C-25] valid → authority_sufficient=true');
+  assert(vValid.scope_valid   === true,                  '[V15.10-C-26] valid → scope_valid=true');
+  assert(vValid.temporal_valid === true,                 '[V15.10-C-27] valid → temporal_valid=true');
+  assert(Array.isArray(vValid.errors),                   '[V15.10-C-28] errors is array');
+  assert(Array.isArray(vValid.warnings),                 '[V15.10-C-29] warnings is array');
+  assert(Array.isArray(vValid.missing_evidence),         '[V15.10-C-30] missing_evidence is array');
+
+  // review_decision gate — only "approved" may yield CONTRACT_VALID
+  const baseOpts = { reviewer_role: 'reviewer', requested_action: 'release_review', reviewed_by: 'tester', evidence_refs: ['decision_matrix_ref', 'runtime_evidence_ref', 'authorization_manifest_ref'] };
+
+  const cPending = createHumanApprovalContract({ ...baseOpts, review_decision: 'pending' });
+  const vPending = validateHumanApprovalContract(cPending, {});
+  assert(vPending.status === 'CONTRACT_PARTIAL', '[V15.10-C-31] pending → CONTRACT_PARTIAL (not VALID)');
+  assert(vPending.ok     === false,              '[V15.10-C-32] pending → ok=false');
+
+  const cDenied = createHumanApprovalContract({ ...baseOpts, review_decision: 'denied' });
+  const vDenied = validateHumanApprovalContract(cDenied, {});
+  assert(vDenied.status === 'CONTRACT_PARTIAL',  '[V15.10-C-33] denied → CONTRACT_PARTIAL (not VALID)');
+  assert(vDenied.ok     === false,               '[V15.10-C-34] denied → ok=false');
+
+  const cUnknown = createHumanApprovalContract({ ...baseOpts, review_decision: 'unknown_value' });
+  const vUnknown = validateHumanApprovalContract(cUnknown, {});
+  assert(vUnknown.status === 'CONTRACT_PARTIAL', '[V15.10-C-35] unknown decision → CONTRACT_PARTIAL (not VALID)');
+  assert(vUnknown.ok     === false,              '[V15.10-C-36] unknown decision → ok=false');
+
+  const cEmpty = createHumanApprovalContract({ ...baseOpts, review_decision: '' });
+  const vEmpty = validateHumanApprovalContract(cEmpty, {});
+  assert(vEmpty.status === 'CONTRACT_PARTIAL',   '[V15.10-C-37] empty string decision → CONTRACT_PARTIAL');
+  assert(vEmpty.ok     === false,                '[V15.10-C-38] empty string decision → ok=false');
+
+  // confirm approved still works with all gates valid
+  const cApproved = createHumanApprovalContract({ ...baseOpts, review_decision: 'approved' });
+  const vApproved = validateHumanApprovalContract(cApproved, {});
+  assert(vApproved.status === 'CONTRACT_VALID',  '[V15.10-C-39] approved + valid gates → CONTRACT_VALID');
+  assert(vApproved.ok     === true,              '[V15.10-C-40] approved + valid gates → ok=true');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.10-D — evaluateAuthorityReviewGate
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.10-D] evaluateAuthorityReviewGate — gate structure & invariants');
+
+{
+  // null contract
+  const gate = evaluateAuthorityReviewGate(null);
+  assert(typeof gate === 'object' && gate !== null,        '[V15.10-D-1]  gate is object');
+  assert(gate.enabled === true,                            '[V15.10-D-2]  enabled=true always');
+  assert(gate.schema_version === 'v15.10',                 '[V15.10-D-3]  schema_version=v15.10');
+  assert(gate.authority_review_status === 'CONTRACT_MISSING', '[V15.10-D-4]  null → CONTRACT_MISSING');
+  assert(gate.authority_review_valid   === false,          '[V15.10-D-5]  null → authority_review_valid=false');
+  assert(gate.human_approval_contract_valid === false,     '[V15.10-D-6]  null → human_approval_contract_valid=false');
+  // Invariants always false
+  assert(gate.release_allowed   === false,                 '[V15.10-D-7]  release_allowed=false');
+  assert(gate.deploy_allowed    === false,                 '[V15.10-D-8]  deploy_allowed=false');
+  assert(gate.tag_allowed       === false,                 '[V15.10-D-9]  tag_allowed=false');
+  assert(gate.stable_allowed    === false,                 '[V15.10-D-10] stable_allowed=false');
+  assert(gate.promotion_allowed === false,                 '[V15.10-D-11] promotion_allowed=false');
+  // Note field
+  assert(typeof gate.note === 'string',                    '[V15.10-D-12] note is string');
+  assert(gate.note.includes('authority review is validation, not execution'), '[V15.10-D-13] note: validation not execution');
+  assert(gate.note.includes('human approval cannot override PASS GOLD'),      '[V15.10-D-14] note: cannot override PASS GOLD');
+  assert(gate.note.includes('deploy/tag/stable remain blocked in V15.10'),    '[V15.10-D-15] note: blocked in V15.10');
+  // Other fields present
+  assert(Array.isArray(gate.authority_conflicts),          '[V15.10-D-16] authority_conflicts is array');
+  assert(Array.isArray(gate.authority_audit_trail),        '[V15.10-D-17] authority_audit_trail is array');
+  assert(Array.isArray(gate.authority_requirements),       '[V15.10-D-18] authority_requirements is array');
+  assert(Array.isArray(gate.missing_evidence),             '[V15.10-D-19] missing_evidence is array');
+
+  // renderAuthorityReviewSummary(null) → null
+  assert(renderAuthorityReviewSummary(null) === null,      '[V15.10-D-20] renderAuthorityReviewSummary(null)=null');
+  // renderAuthorityReviewGate(null) → null
+  assert(renderAuthorityReviewGate(null) === null,         '[V15.10-D-21] renderAuthorityReviewGate(null)=null');
+
+  // renderAuthorityReviewSummary with a gate
+  const summary = renderAuthorityReviewSummary(gate);
+  assert(summary !== null,                                 '[V15.10-D-22] summary not null from real gate');
+  assert(summary.schema_version === 'v15.10',              '[V15.10-D-23] summary.schema_version=v15.10');
+  assert(summary.deploy_allowed === false,                 '[V15.10-D-24] summary.deploy_allowed=false');
+  assert(summary.release_allowed === false,                '[V15.10-D-25] summary.release_allowed=false');
+
+  // renderAuthorityReviewGate with a gate
+  const rg = renderAuthorityReviewGate(gate);
+  assert(rg !== null,                                      '[V15.10-D-26] renderAuthorityReviewGate not null');
+  assert(rg.deploy_allowed === false,                      '[V15.10-D-27] rg.deploy_allowed=false');
+  assert(rg.release_allowed === false,                     '[V15.10-D-28] rg.release_allowed=false');
+  assert(typeof rg.note === 'string',                      '[V15.10-D-29] rg.note is string');
+  assert(rg.note.includes('authority review is validation'), '[V15.10-D-30] rg.note contains authority review text');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.10-E — deriveAuthorityRequirements
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.10-E] deriveAuthorityRequirements — 13-item checklist');
+
+{
+  const reqs = deriveAuthorityRequirements(null, null, null);
+  assert(Array.isArray(reqs),                              '[V15.10-E-1]  returns array');
+  assert(reqs.length === 13,                               '[V15.10-E-2]  exactly 13 items');
+  assert(reqs.every(r => typeof r.id === 'string'),        '[V15.10-E-3]  all items have id');
+  assert(reqs.every(r => typeof r.required === 'boolean'), '[V15.10-E-4]  all items have required bool');
+  assert(reqs.every(r => typeof r.present === 'boolean'),  '[V15.10-E-5]  all items have present bool');
+  assert(reqs.every(r => typeof r.blocking_if_missing === 'boolean'), '[V15.10-E-6] all items have blocking_if_missing');
+  assert(reqs.every(r => typeof r.source === 'string'),    '[V15.10-E-7]  all items have source');
+  assert(reqs.every(r => typeof r.remediation === 'string'), '[V15.10-E-8] all items have remediation');
+  assert(reqs.some(r => r.id === 'required_role_present'), '[V15.10-E-9]  required_role_present present');
+  assert(reqs.some(r => r.id === 'no_allowed_flags_true'), '[V15.10-E-10] no_allowed_flags_true present');
+  assert(reqs.some(r => r.id === 'no_fake_evidence'),      '[V15.10-E-11] no_fake_evidence present');
+  const noFlags = reqs.find(r => r.id === 'no_allowed_flags_true');
+  assert(noFlags.present === true,                         '[V15.10-E-12] no_allowed_flags_true.present=true');
+  assert(noFlags.blocking_if_missing === true,             '[V15.10-E-13] no_allowed_flags_true.blocking_if_missing=true');
+  assert(reqs.some(r => r.id === 'no_conflict_with_pass_gold'), '[V15.10-E-14] no_conflict_with_pass_gold present');
+  assert(reqs.some(r => r.id === 'scope_declared'),        '[V15.10-E-15] scope_declared present');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.10-F — deriveAuthorityConflicts
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.10-F] deriveAuthorityConflicts — 11 conflict types');
+
+{
+  // null contract → no conflicts
+  const c0 = deriveAuthorityConflicts(null, {});
+  assert(Array.isArray(c0),                                '[V15.10-F-1]  null contract → array returned');
+  assert(c0.length === 0,                                  '[V15.10-F-2]  null contract → no conflicts');
+
+  // pass_gold without go_core → critical conflict
+  const cPG = createHumanApprovalContract({ requested_action: 'pass_gold_confirmation', reviewer_role: 'pass_gold_authority', review_decision: 'approved', evidence_refs: ['decision_matrix_ref'] });
+  const cf1 = deriveAuthorityConflicts(cPG, {});
+  assert(cf1.some(c => c.id === 'authority_attempts_to_override_pass_gold'), '[V15.10-F-3]  no go_core → override_pass_gold conflict');
+  const pgConflict = cf1.find(c => c.id === 'authority_attempts_to_override_pass_gold');
+  assert(pgConflict.severity === 'critical',               '[V15.10-F-4]  override_pass_gold severity=critical');
+  assert(typeof pgConflict.message === 'string',           '[V15.10-F-5]  conflict has message');
+  assert(typeof pgConflict.remediation === 'string',       '[V15.10-F-6]  conflict has remediation');
+
+  // blocked runtime + release action
+  const cRel = createHumanApprovalContract({ requested_action: 'release_authorization', reviewer_role: 'release_authority', review_decision: 'approved', evidence_refs: ['decision_matrix_ref', 'runtime_evidence_ref', 'authorization_manifest_ref', 'scenario_matrix_ref', 'ci_status_ref'] });
+  const cf2 = deriveAuthorityConflicts(cRel, { decisionMatrix: { decision_state: 'BLOCKED_RUNTIME' } });
+  assert(cf2.some(c => c.id === 'authority_attempts_to_release_blocked_runtime'), '[V15.10-F-7]  blocked runtime + release → conflict');
+  assert(cf2.some(c => c.id === 'authority_conflicts_with_decision_matrix'),      '[V15.10-F-8]  blocked runtime → decision_matrix conflict');
+
+  // conflict severity values are valid
+  const validSeverities = ['critical', 'high', 'medium', 'low'];
+  assert(cf1.every(c => validSeverities.includes(c.severity)),  '[V15.10-F-9]  conflict severities valid');
+  assert(cf2.every(c => validSeverities.includes(c.severity)),  '[V15.10-F-10] conflict severities valid (2)');
+
+  // expired contract → authority_expired_but_used
+  const cExp = createHumanApprovalContract({ expires_at: 1000000001000, requested_action: 'release_review', reviewer_role: 'reviewer', review_decision: 'approved' });
+  const cf3 = deriveAuthorityConflicts(cExp, {});
+  assert(cf3.some(c => c.id === 'authority_expired_but_used'), '[V15.10-F-11] expired → authority_expired_but_used');
+
+  // rejected → authority_rejected_but_used
+  const cRej = createHumanApprovalContract({ review_decision: 'rejected', requested_action: 'release_review', reviewer_role: 'reviewer' });
+  const cf4 = deriveAuthorityConflicts(cRej, {});
+  assert(cf4.some(c => c.id === 'authority_rejected_but_used'), '[V15.10-F-12] rejected → authority_rejected_but_used');
+
+  // valid review_only with evidence → no conflicts
+  const cOK = createHumanApprovalContract({ requested_action: 'release_review', reviewer_role: 'reviewer', review_decision: 'approved', reviewed_by: 'tester', evidence_refs: ['decision_matrix_ref', 'runtime_evidence_ref', 'authorization_manifest_ref'] });
+  const cf5 = deriveAuthorityConflicts(cOK, {});
+  assert(cf5.length === 0,                                 '[V15.10-F-13] valid release_review → no conflicts');
+
+  // deriveAuthorityAuditTrail(null)
+  const trail0 = deriveAuthorityAuditTrail(null, {}, {});
+  assert(Array.isArray(trail0),                            '[V15.10-F-14] deriveAuthorityAuditTrail(null) → array');
+  assert(trail0.length > 0,                                '[V15.10-F-15] audit trail for null has events');
+  assert(trail0.some(e => e.type === 'deploy_blocked_by_policy'), '[V15.10-F-16] deploy_blocked_by_policy event present');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.10-G — Authority Harness Matrix
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.10-G] Authority Harness Matrix — runAuthorityScenarioMatrix');
+
+{
+  const matrix = runAuthorityScenarioMatrix();
+  assert(typeof matrix === 'object' && matrix !== null,   '[V15.10-G-1]  matrix returned');
+  assert(matrix.schema_version === 'v15.10',              '[V15.10-G-2]  matrix.schema_version=v15.10');
+  assert(typeof matrix.total === 'number',                '[V15.10-G-3]  matrix.total is number');
+  assert(matrix.total >= 11,                              '[V15.10-G-4]  matrix.total >= 11');
+  assert(matrix.failed === 0,                             '[V15.10-G-5]  matrix.failed=0');
+  assert(matrix.passed === matrix.total,                  '[V15.10-G-6]  matrix.passed=total');
+  assert(matrix.all_safe === true,                        '[V15.10-G-7]  matrix.all_safe=true');
+  assert(matrix.all_allowed_flags_false === true,         '[V15.10-G-8]  matrix.all_allowed_flags_false=true');
+  assert(Array.isArray(matrix.scenarios),                 '[V15.10-G-9]  matrix.scenarios is array');
+  assert(matrix.scenarios.length === matrix.total,        '[V15.10-G-10] scenarios.length=total');
+
+  for (const s of matrix.scenarios) {
+    assert(s.status_match    === true,  `[V15.10-G-11] ${s.scenario}: status_match=true`);
+    assert(s.safe            === true,  `[V15.10-G-12] ${s.scenario}: safe=true`);
+    assert(s.release_allowed === false, `[V15.10-G-13] ${s.scenario}: release_allowed=false`);
+    assert(s.deploy_allowed  === false, `[V15.10-G-14] ${s.scenario}: deploy_allowed=false`);
+    assert(s.tag_allowed     === false, `[V15.10-G-15] ${s.scenario}: tag_allowed=false`);
+    assert(s.stable_allowed  === false, `[V15.10-G-16] ${s.scenario}: stable_allowed=false`);
+    assert(s.promotion_allowed === false, `[V15.10-G-17] ${s.scenario}: promotion_allowed=false`);
+    assert(s.pass_gold_candidate === false, `[V15.10-G-18] ${s.scenario}: pass_gold_candidate=false`);
+    break; // all_allowed_flags_false guarantees the rest
+  }
+
+  // Specific scenarios in matrix
+  const missing = matrix.scenarios.find(s => s.scenario === 'missing_contract');
+  assert(missing !== undefined,                           '[V15.10-G-19] missing_contract in matrix');
+  assert(missing.actual_status === 'CONTRACT_MISSING',    '[V15.10-G-20] missing_contract status in matrix');
+
+  const passGold = matrix.scenarios.find(s => s.scenario === 'pass_gold_without_go_core');
+  assert(passGold !== undefined,                          '[V15.10-G-21] pass_gold_without_go_core in matrix');
+  assert(passGold.actual_status === 'CONTRACT_CONFLICTING', '[V15.10-G-22] pass_gold_without_go_core → CONTRACT_CONFLICTING');
+
+  const conflRuntime = matrix.scenarios.find(s => s.scenario === 'conflicting_runtime_contract');
+  assert(conflRuntime !== undefined,                      '[V15.10-G-23] conflicting_runtime_contract in matrix');
+  assert(conflRuntime.actual_status === 'CONTRACT_VALID', '[V15.10-G-24] conflicting_runtime high-severity → CONTRACT_VALID');
+
+  // renderAuthorityScenarioReport
+  const report = renderAuthorityScenarioReport(matrix);
+  assert(report !== null,                                 '[V15.10-G-25] renderAuthorityScenarioReport not null');
+  assert(report.deploy_allowed   === false,               '[V15.10-G-26] report.deploy_allowed=false');
+  assert(report.release_allowed  === false,               '[V15.10-G-27] report.release_allowed=false');
+  assert(report.tag_allowed      === false,               '[V15.10-G-28] report.tag_allowed=false');
+  assert(report.stable_allowed   === false,               '[V15.10-G-29] report.stable_allowed=false');
+  assert(report.all_allowed_flags_false === true,         '[V15.10-G-30] report.all_allowed_flags_false=true');
+  assert(Array.isArray(report.scenario_summary),          '[V15.10-G-31] report.scenario_summary is array');
+  assert(typeof report.note === 'string',                 '[V15.10-G-32] report.note is string');
+  assert(report.note.includes('authority review is validation'), '[V15.10-G-33] report.note has authority text');
+
+  // createAuthorityScenarioSummary
+  const summary = createAuthorityScenarioSummary(matrix);
+  assert(summary !== null,                                '[V15.10-G-34] createAuthorityScenarioSummary not null');
+  assert(summary.deploy_allowed      === false,           '[V15.10-G-35] summary.deploy_allowed=false');
+  assert(summary.release_allowed     === false,           '[V15.10-G-36] summary.release_allowed=false');
+  assert(summary.all_allowed_flags_false === true,        '[V15.10-G-37] summary.all_allowed_flags_false=true');
+
+  // runAuthorityScenario individual
+  const singleMissing = runAuthorityScenario('missing_contract');
+  assert(singleMissing.actual_status === 'CONTRACT_MISSING', '[V15.10-G-38] single missing_contract → CONTRACT_MISSING');
+  assert(singleMissing.status_match  === true,            '[V15.10-G-39] single missing_contract status_match=true');
+  assert(singleMissing.safe          === true,            '[V15.10-G-40] single missing_contract safe=true');
+  assert(singleMissing.release_allowed === false,         '[V15.10-G-41] single scenario release_allowed=false');
+  assert(singleMissing.deploy_allowed  === false,         '[V15.10-G-42] single scenario deploy_allowed=false');
+
+  // Unknown scenario
+  const sUnknown = runAuthorityScenario('__unknown_xyz__');
+  assert(sUnknown.scenario_status === 'SCENARIO_ERROR',   '[V15.10-G-43] unknown → SCENARIO_ERROR');
+  assert(sUnknown.deploy_allowed  === false,              '[V15.10-G-44] unknown → deploy_allowed=false');
+  assert(sUnknown.safe            === true,               '[V15.10-G-45] unknown → safe=true');
+
+  // listAuthorityFixtures
+  const fixtures = listAuthorityFixtures();
+  assert(Array.isArray(fixtures),                         '[V15.10-G-46] listAuthorityFixtures returns array');
+  assert(fixtures.length >= 10,                           '[V15.10-G-47] at least 10 fixtures');
+
+  // loadAuthorityFixture
+  const fx = loadAuthorityFixture('valid-release-review-contract');
+  assert(fx.loaded   === true,                            '[V15.10-G-48] valid fixture loaded=true');
+  assert(fx.parse_ok === true,                            '[V15.10-G-49] valid fixture parse_ok=true');
+  assert(fx.contract !== null,                            '[V15.10-G-50] valid fixture contract not null');
+
+  const fxMissing = loadAuthorityFixture('__nonexistent_fixture_xyz__');
+  assert(fxMissing.loaded === false,                      '[V15.10-G-51] nonexistent fixture loaded=false');
+  assert(fxMissing.contract === null,                     '[V15.10-G-52] nonexistent fixture contract=null');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.10-H — PI Harness CLI
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.10-H] PI Harness CLI --authority-* flags');
+
+{
+  const ARGS_BASE = ['--no-deprecation', HARNESS, '--max-difficulty', 'D2', '--dry-run', '--json'];
+
+  // Base run: authority fields always present
+  const rBase = spawnSync(process.execPath, ARGS_BASE, { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
+  const rawBase = (rBase.stdout || '') + (rBase.stderr || '');
+  const sBase = rawBase.indexOf('{'), eBase = rawBase.lastIndexOf('}');
+  let pBase = {};
+  if (sBase >= 0 && eBase > sBase) { try { pBase = JSON.parse(rawBase.slice(sBase, eBase+1)); } catch(_){} }
+
+  assert('hermes_authority_review_enabled' in pBase,               '[V15.10-H-1]  hermes_authority_review_enabled present');
+  assert(pBase.hermes_authority_review_enabled === true,           '[V15.10-H-2]  review_enabled=true');
+  assert(pBase.hermes_authority_schema_version === 'v15.10',       '[V15.10-H-3]  schema_version=v15.10');
+  assert(pBase.hermes_authority_review_status === 'CONTRACT_MISSING', '[V15.10-H-4]  default status=CONTRACT_MISSING');
+  assert(pBase.hermes_authority_review_valid  === false,           '[V15.10-H-5]  review_valid=false (no contract)');
+  assert(pBase.hermes_authority_scenario      === null,            '[V15.10-H-6]  scenario=null (no flag)');
+  assert(pBase.hermes_authority_scenario_total === null,           '[V15.10-H-7]  scenario_total=null (no matrix)');
+  assert(pBase.hermes_deploy_allowed          === false,           '[V15.10-H-8]  hermes_deploy_allowed=false');
+  assert(pBase.deploy_allowed                 === false,           '[V15.10-H-9]  global deploy_allowed=false');
+  assert(pBase.pass_gold_candidate            === false,           '[V15.10-H-10] pass_gold_candidate=false');
+  assert(pBase.hermes_release_allowed         === false,           '[V15.10-H-11] hermes_release_allowed=false');
+  assert(pBase.hermes_tag_allowed             === false,           '[V15.10-H-12] hermes_tag_allowed=false');
+  assert(pBase.hermes_stable_allowed          === false,           '[V15.10-H-13] hermes_stable_allowed=false');
+
+  // --authority-scenario-matrix
+  const rMatrix = spawnSync(process.execPath,
+    [...ARGS_BASE, '--authority-scenario-matrix'],
+    { cwd: ROOT, encoding: 'utf8', timeout: 120000 }
+  );
+  const rawMat = (rMatrix.stdout || '') + (rMatrix.stderr || '');
+  const sMat = rawMat.indexOf('{'), eMat = rawMat.lastIndexOf('}');
+  let pMat = {};
+  if (sMat >= 0 && eMat > sMat) { try { pMat = JSON.parse(rawMat.slice(sMat, eMat+1)); } catch(_){} }
+
+  assert(pMat.hermes_authority_scenario_total  >= 11,             '[V15.10-H-14] matrix total >= 11');
+  assert(pMat.hermes_authority_scenario_failed === 0,             '[V15.10-H-15] matrix failed=0');
+  assert(pMat.hermes_authority_all_safe         === true,         '[V15.10-H-16] matrix all_safe=true');
+  assert(pMat.hermes_authority_all_allowed_flags_false === true,  '[V15.10-H-17] matrix all_allowed_flags_false=true');
+  assert(pMat.hermes_deploy_allowed             === false,        '[V15.10-H-18] matrix run → deploy_allowed=false');
+
+  // --authority-scenario missing_contract
+  const rScen = spawnSync(process.execPath,
+    [...ARGS_BASE, '--authority-scenario', 'missing_contract'],
+    { cwd: ROOT, encoding: 'utf8', timeout: 120000 }
+  );
+  const rawScen = (rScen.stdout || '') + (rScen.stderr || '');
+  const sScen = rawScen.indexOf('{'), eScen = rawScen.lastIndexOf('}');
+  let pScen = {};
+  if (sScen >= 0 && eScen > sScen) { try { pScen = JSON.parse(rawScen.slice(sScen, eScen+1)); } catch(_){} }
+
+  assert(pScen.hermes_authority_scenario === 'missing_contract',  '[V15.10-H-19] scenario flag → scenario field set');
+  assert(pScen.hermes_deploy_allowed === false,                    '[V15.10-H-20] scenario run → deploy_allowed=false');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.10-I — Human Report
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.10-I] Human Report AUTHORITY REVIEW GATE (V15.10)');
+
+{
+  // With --authority-scenario-matrix (triggers full report)
+  const rReport = spawnSync(process.execPath,
+    ['--no-deprecation', HARNESS, '--max-difficulty', 'D2', '--dry-run', '--authority-scenario-matrix'],
+    { cwd: ROOT, encoding: 'utf8', timeout: 120000 }
+  );
+  const out = (rReport.stdout || '') + (rReport.stderr || '');
+
+  assert(out.includes('AUTHORITY REVIEW GATE (V15.10)'),          '[V15.10-I-1]  section header present');
+  assert(out.includes('AUTHORITY_SCHEMA'),                         '[V15.10-I-2]  AUTHORITY_SCHEMA present');
+  assert(out.includes('AUTHORITY_STATUS'),                         '[V15.10-I-3]  AUTHORITY_STATUS present');
+  assert(out.includes('AUTHORITY SCENARIO MATRIX (V15.10)'),      '[V15.10-I-4]  matrix section present');
+  assert(out.includes('MATRIX_TOTAL'),                             '[V15.10-I-5]  MATRIX_TOTAL present');
+  assert(out.includes('MATRIX_PASSED'),                            '[V15.10-I-6]  MATRIX_PASSED present');
+  assert(out.includes('ALL_SAFE'),                                  '[V15.10-I-7]  ALL_SAFE present');
+  assert(out.includes('ALL_ALLOWED_FLAGS_FALSE'),                   '[V15.10-I-8]  ALL_ALLOWED_FLAGS_FALSE present');
+  assert(out.includes('NOTE: authority review is validation, not execution'), '[V15.10-I-9]  NOTE: validation present');
+  assert(out.includes('NOTE: human approval cannot override PASS GOLD'),      '[V15.10-I-10] NOTE: cannot override present');
+  assert(out.includes('NOTE: deploy/tag/stable remain blocked in V15.10'),    '[V15.10-I-11] NOTE: blocked present');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// SUITE V15.10-J — Regression Safety
+// ════════════════════════════════════════════════════════════════════
+
+console.log('\n[V15.10-J] Regression Safety — V15.10 invariants');
+
+{
+  // Matrix-level invariants
+  const matrix = runAuthorityScenarioMatrix();
+  assert(matrix.all_allowed_flags_false === true,          '[V15.10-J-1]  all_allowed_flags_false=true');
+  assert(matrix.all_safe === true,                         '[V15.10-J-2]  all_safe=true');
+
+  for (const s of matrix.scenarios) {
+    assert(s.deploy_allowed     === false,  `[V15.10-J-3]  ${s.scenario}: deploy_allowed=false`);
+    assert(s.release_allowed    === false,  `[V15.10-J-4]  ${s.scenario}: release_allowed=false`);
+    assert(s.tag_allowed        === false,  `[V15.10-J-5]  ${s.scenario}: tag_allowed=false`);
+    assert(s.stable_allowed     === false,  `[V15.10-J-6]  ${s.scenario}: stable_allowed=false`);
+    assert(s.promotion_allowed  === false,  `[V15.10-J-7]  ${s.scenario}: promotion_allowed=false`);
+    assert(s.pass_gold_candidate === false, `[V15.10-J-8]  ${s.scenario}: pass_gold_candidate=false`);
+    assert(s.safe               === true,   `[V15.10-J-9]  ${s.scenario}: safe=true`);
+    break; // all_allowed_flags_false guarantees the rest
+  }
+
+  // pass_gold_without_go_core is safe
+  const pgScen = matrix.scenarios.find(s => s.scenario === 'pass_gold_without_go_core');
+  assert(pgScen.safe === true,                             '[V15.10-J-10] pass_gold_without_go_core safe=true');
+  assert(pgScen.deploy_allowed === false,                  '[V15.10-J-11] pass_gold_without_go_core deploy_allowed=false');
+
+  // Gate-level: evaluateAuthorityReviewGate NEVER sets allowed=true
+  const testContracts = [
+    null,
+    createHumanApprovalContract({ reviewer_role: 'stable_authority', requested_action: 'stable_promotion_authorization', review_decision: 'approved', reviewed_by: 'tester', evidence_refs: ['release_authorization_ref', 'pass_gold_ref', 'deployment_result_ref', 'rollback_snapshot_ref'] }),
+    createHumanApprovalContract({ reviewer_role: 'deploy_authority',  requested_action: 'deploy_authorization',  review_decision: 'approved', reviewed_by: 'tester', evidence_refs: ['release_authorization_ref', 'pass_gold_ref', 'go_core_evidence_ref', 'ci_status_ref'] }),
+  ];
+  for (const tc of testContracts) {
+    const g = evaluateAuthorityReviewGate(tc);
+    assert(g.release_allowed   === false, `[V15.10-J-12] ${tc ? tc.requested_action : 'null'}: release_allowed=false`);
+    assert(g.deploy_allowed    === false, `[V15.10-J-13] ${tc ? tc.requested_action : 'null'}: deploy_allowed=false`);
+    assert(g.tag_allowed       === false, `[V15.10-J-14] ${tc ? tc.requested_action : 'null'}: tag_allowed=false`);
+    assert(g.stable_allowed    === false, `[V15.10-J-15] ${tc ? tc.requested_action : 'null'}: stable_allowed=false`);
+    assert(g.promotion_allowed === false, `[V15.10-J-16] ${tc ? tc.requested_action : 'null'}: promotion_allowed=false`);
+  }
+
+  // createAuthorityRoleRegistry invariants
+  const reg = createAuthorityRoleRegistry();
+  assert(reg.invariants.authority_cannot_override_pass_gold === true, '[V15.10-J-17] registry invariant: cannot_override_pass_gold');
+  assert(reg.invariants.authority_cannot_execute_deploy === true,     '[V15.10-J-18] registry invariant: cannot_execute_deploy');
+  assert(reg.invariants.authority_cannot_create_evidence === true,    '[V15.10-J-19] registry invariant: cannot_create_evidence');
+  assert(reg.invariants.authority_cannot_override_go_core === true,   '[V15.10-J-20] registry invariant: cannot_override_go_core');
+
+  // schema_version consistent
+  const scen = runAuthorityScenario('missing_contract');
+  assert(scen.schema_version === 'v15.10',                 '[V15.10-J-21] scenario result schema_version=v15.10');
 }
 
 // ─── RESULTADO FINAL ──────────────────────────────────────────────

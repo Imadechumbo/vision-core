@@ -1,0 +1,21 @@
+{
+  "schema_version": "v15.10",
+  "contract_id": "contract-v1510-evidence-missing",
+  "mission_id": "mission-v1510-test",
+  "requested_action": "release_review",
+  "requested_scope": ["review_only"],
+  "requested_by": "pi-harness",
+  "reviewed_by": "authority-reviewer",
+  "reviewer_role": "reviewer",
+  "review_decision": "approved",
+  "review_reason": "Approved but required evidence missing",
+  "evidence_refs": ["decision_matrix_ref"],
+  "required_evidence_refs": ["decision_matrix_ref", "runtime_evidence_ref", "authorization_manifest_ref"],
+  "constraints": {
+    "deploy_allowed": false,
+    "tag_allowed": false,
+    "stable_allowed": false
+  },
+  "issued_at": 1704067200000,
+  "expires_at": 9999999999999
+}

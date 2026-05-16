@@ -1,0 +1,21 @@
+{
+  "schema_version": "v15.10",
+  "contract_id": "contract-v1510-conflicting-runtime",
+  "mission_id": "mission-v1510-test",
+  "requested_action": "release_authorization",
+  "requested_scope": ["release_candidate"],
+  "requested_by": "pi-harness",
+  "reviewed_by": "release-authority-reviewer",
+  "reviewer_role": "release_authority",
+  "review_decision": "approved",
+  "review_reason": "Attempting release_authorization while decision state is BLOCKED_RUNTIME",
+  "evidence_refs": ["decision_matrix_ref", "runtime_evidence_ref", "authorization_manifest_ref", "scenario_matrix_ref", "ci_status_ref"],
+  "required_evidence_refs": [],
+  "constraints": {
+    "deploy_allowed": false,
+    "tag_allowed": false,
+    "stable_allowed": false
+  },
+  "issued_at": 1704067200000,
+  "expires_at": 9999999999999
+}

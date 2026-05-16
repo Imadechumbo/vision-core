@@ -504,3 +504,90 @@ Assinatura **simulada e determinística** para teste. Não utiliza chave criptog
 
 `authorization_valid=true` e `signature_valid=true` **não executam** deploy, tag, ou stable. A autorização é modelada, não executada. Sem PASS GOLD real (evidence_receipt do Go Core), nenhuma ação de release é liberada.
 
+
+---
+
+## V15.10 — Authority Review Gate + Human Approval Contract
+
+### Módulo: `tools/hermes/authority-review.mjs`
+
+| Export | Descrição |
+|---|---|
+| `createAuthorityRoleRegistry()` | Retorna registry com 6 roles e invariantes |
+| `createHumanApprovalContract(overrides)` | Cria contrato de aprovação humana com defaults seguros |
+| `validateHumanApprovalContract(contract, registry, ...)` | Valida contrato, retorna status + invariantes |
+| `evaluateAuthorityReviewGate(contract, context)` | Gate completo: valida + conflicts + audit trail |
+| `deriveAuthorityRequirements(action, dm, al)` | Gera checklist de 13 requisitos |
+| `deriveAuthorityConflicts(contract, context)` | Detecta 11 tipos de conflito |
+| `deriveAuthorityAuditTrail(contract, validation, context)` | Gera trilha de auditoria |
+| `renderAuthorityReviewSummary(gate)` | Sumário compacto do gate |
+| `renderAuthorityReviewGate(gate)` | Renderização completa do gate |
+
+### Authority Role Registry
+
+| Role | can_authorize_release | can_authorize_deploy | can_authorize_tag | can_authorize_stable |
+|---|---|---|---|---|
+| `observer` | false | false | false | false |
+| `reviewer` | false | false | false | false |
+| `release_authority` | true | false | false | false |
+| `deploy_authority` | true | true | false | false |
+| `stable_authority` | true | true | true | true |
+| `pass_gold_authority` | — | — | — | — (can_confirm_pass_gold=true, can_override_evidence=false) |
+
+**Invariantes do registry:**
+- `authority_cannot_override_pass_gold = true`
+- `authority_cannot_create_evidence = true`
+- `authority_cannot_override_go_core = true`
+- `authority_cannot_execute_deploy = true`
+
+### Contract Statuses
+
+| Status | Descrição |
+|---|---|
+| `CONTRACT_MISSING` | Nenhum contrato fornecido |
+| `CONTRACT_INVALID` | Schema inválido ou ação desconhecida |
+| `CONTRACT_REJECTED` | `review_decision=rejected` |
+| `CONTRACT_EXPIRED` | `expires_at` no passado |
+| `CONTRACT_SCOPE_MISMATCH` | Scope proibido encontrado |
+| `CONTRACT_AUTHORITY_INSUFFICIENT` | Role não autorizado para a ação |
+| `CONTRACT_EVIDENCE_MISSING` | Evidence refs obrigatórias ausentes |
+| `CONTRACT_CONFLICTING` | Conflito crítico detectado |
+| `CONTRACT_PARTIAL` | Falta `reviewed_by` ou `review_decision` |
+| `CONTRACT_VALID` | Contrato válido e aprovado |
+
+### Conflict Types (11)
+
+| ID | Severity |
+|---|---|
+| `authority_attempts_to_override_pass_gold` | critical |
+| `authority_attempts_to_create_evidence` | critical |
+| `authority_attempts_to_deploy_without_pass_gold` | critical |
+| `authority_claims_backend_evidence_as_real` | critical |
+| `authority_attempts_to_release_blocked_runtime` | high |
+| `authority_scope_exceeds_role` | high |
+| `authority_expired_but_used` | high |
+| `authority_rejected_but_used` | high |
+| `authority_missing_required_evidence` | high |
+| `authority_conflicts_with_decision_matrix` | high |
+| `authority_conflicts_with_authorization_layer` | medium |
+
+Somente conflitos `severity=critical` mudam o `authority_review_status` para `CONTRACT_CONFLICTING`.
+
+### Fixtures (`tools/fixtures/authority/`)
+
+| Fixture | Status Esperado |
+|---|---|
+| `invalid-schema.json` | `CONTRACT_INVALID` |
+| `insufficient-role-release.json` | `CONTRACT_AUTHORITY_INSUFFICIENT` |
+| `valid-release-review-contract.json` | `CONTRACT_VALID` |
+| `valid-release-authority-contract.json` | `CONTRACT_VALID` |
+| `rejected-contract.json` | `CONTRACT_REJECTED` |
+| `expired-contract.json` | `CONTRACT_EXPIRED` |
+| `scope-mismatch-contract.json` | `CONTRACT_SCOPE_MISMATCH` |
+| `evidence-missing-contract.json` | `CONTRACT_EVIDENCE_MISSING` |
+| `pass-gold-confirmation-without-go-core.json` | `CONTRACT_CONFLICTING` |
+| `conflicting-runtime-contract.json` | `CONTRACT_VALID` (conflito high, não critical) |
+
+### Regra ABSOLUTA V15.10
+
+`authority_review_valid=true` e `human_approval_contract_valid=true` **não executam** deploy, tag, ou stable. A aprovação humana é validação, não execução. Aprovação humana **não pode** sobrescrever PASS GOLD. Sem evidence real do Go Core, nenhuma ação de release é liberada.
