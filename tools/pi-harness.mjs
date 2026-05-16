@@ -73,6 +73,9 @@ import {
   evaluateReleaseCandidate,
 } from './release-candidate-controller.mjs';
 import {
+  generateReleasePlan,
+} from './release-plan-generator.mjs';
+import {
   createDecisionMatrix,
   evaluateDecisionMatrix,
   evaluateReleaseReadiness,
@@ -148,6 +151,8 @@ let _authorityScenarioMatrix = null;
 let _passGoldBinding        = null;
 // Release Candidate Controller (V15.13)
 let _releaseCandidateResult = null;
+// Release Plan Generator (V15.14)
+let _releasePlan            = null;
 
 // ═══════════════════════════════════════════════════════════════════
 // FAKE EVIDENCE SCAN PATTERNS
@@ -1673,6 +1678,14 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       release_candidate_dry_run_only:     _releaseCandidateResult?.release_candidate_dry_run_only     ?? true,
       release_candidate_blockers:         _releaseCandidateResult?.release_candidate_blockers         ?? [],
       release_candidate_required_evidence: _releaseCandidateResult?.release_candidate_required_evidence ?? [],
+      // V15.14: Release Plan Generator
+      release_plan_status:      _releasePlan?.release_plan_status      ?? 'PLAN_BLOCKED_NO_CANDIDATE',
+      release_plan_ready:       _releasePlan?.release_plan_ready       ?? false,
+      release_plan_id:          _releasePlan?.release_plan_id          ?? null,
+      release_plan_schema_version: _releasePlan?.schema_version        ?? 'v15.14',
+      release_plan_deploy_performed:  false,
+      release_plan_tag_created:       false,
+      release_plan_stable_promoted:   false,
     };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
@@ -2009,6 +2022,16 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       }
       log(`NOTE: RC_ALLOWED is classification only — no deploy/tag/stable in V15.13`);
     }
+    if (_releasePlan) {
+      log(div('RELEASE PLAN (V15.14)'));
+      log(`PLAN_STATUS:               ${_releasePlan.release_plan_status}`);
+      log(`PLAN_READY:                ${_releasePlan.release_plan_ready}`);
+      log(`PLAN_ID:                   ${_releasePlan.release_plan_id || 'none'}`);
+      log(`PLAN_DEPLOY_PERFORMED:     false`);
+      log(`PLAN_TAG_CREATED:          false`);
+      log(`PLAN_STABLE_PROMOTED:      false`);
+      log(`NOTE: release plan is auditable documentation — no tag, no deploy, no stable in V15.14`);
+    }
   }
 
   if (hermesCtx) {
@@ -2202,6 +2225,16 @@ async function main() {
     evidenceReceipt: s.goRuntimeEvidenceId
       ? { id: s.goRuntimeEvidenceId, source: s.evidenceSource || null }
       : null,
+  });
+  // V15.14: Release Plan Generator
+  _releasePlan = generateReleasePlan({
+    releaseCandidateResult: _releaseCandidateResult,
+    passGoldBinding:        _passGoldBinding,
+    authorityGate:          _authorityGate,
+    harnessState:           s,
+    gitHead:                s.gitHead  || null,
+    branch:                 s.branch   || null,
+    authorityContractId:    _authorityContract?.contract_id || null,
   });
   if (AUTHORITY_SCENARIO) {
     try {
