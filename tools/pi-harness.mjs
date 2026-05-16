@@ -97,6 +97,9 @@ const AUTHORIZATION_SCENARIO_MATRIX  = FLAG('--authorization-scenario-matrix');
 const AUTHORITY_CONTRACT_PATH        = ARG('--authority-contract')            || null;
 const AUTHORITY_SCENARIO             = ARG('--authority-scenario')            || null;
 const AUTHORITY_SCENARIO_MATRIX      = FLAG('--authority-scenario-matrix');
+// V15.11: Harness execution mode
+const HARNESS_MODE = ARG('--mode') || 'certify';
+const FAST_MODE    = HARNESS_MODE === 'interactive' || HARNESS_MODE === 'patch';
 
 // V15.3 runtime probe flags
 const RUNTIME_PROBE_NO_START   = FLAG('--runtime-probe-no-start');
@@ -105,10 +108,12 @@ const RUNTIME_PROBE_PORT       = Number(ARG('--runtime-probe-port') || process.e
 const RUNTIME_PROBE_TIMEOUT_MS = Number(ARG('--runtime-probe-timeout-ms') || 8000);
 
 const DIFFICULTY_ORDER = ['D0','D1','D2','D3','D4','D5','D6','D7','D8'];
-const rawMaxDiff = ARG('--max-difficulty') || 'D8';
+const rawMaxDiff = ARG('--max-difficulty') || ((HARNESS_MODE === 'interactive' || HARNESS_MODE === 'patch' || HARNESS_MODE === 'verify') ? 'D2' : 'D8');
 const MAX_DIFF_IDX = DIFFICULTY_ORDER.includes(rawMaxDiff)
   ? DIFFICULTY_ORDER.indexOf(rawMaxDiff)
   : 8;
+// Skip go test/build in D0 when fast mode OR when max-difficulty is D2 or lower
+const SKIP_GO_D0 = MAX_DIFF_IDX <= 2 || HARNESS_MODE === 'interactive' || HARNESS_MODE === 'patch' || HARNESS_MODE === 'verify';
 
 const LOCAL_BACKEND_PORT = RUNTIME_PROBE_PORT;
 const LOCAL_BACKEND_BASE = `http://localhost:${LOCAL_BACKEND_PORT}`;
@@ -491,27 +496,34 @@ async function runLayerD0Preflight(s) {
   s.gitHead   = sh('git rev-parse HEAD') || '?';
   audit(`[D0] git head: ${s.gitHead.slice(0,8)} | status: ${s.gitStatus === 'clean' ? 'clean' : 'dirty'}`);
 
-  // Visual locks
-  if (existsSync(join(ROOT, 'tools/visual-gold-harness-lock.mjs'))) {
-    const r = shFull('node tools/visual-gold-harness-lock.mjs', 20000);
-    s.visualGoldLockPass = r.out.includes('LOCK PASS') || r.out.includes('VISUAL GOLD HARNESS LOCK PASS');
-    audit(`[D0] visual-gold-harness-lock: ${s.visualGoldLockPass ? 'PASS' : 'FAIL'}`);
-  } else {
+  // Visual locks — skipped in fast modes (interactive/patch)
+  if (FAST_MODE) {
     s.visualGoldLockPass = true;
-    audit('[D0] visual-gold-harness-lock: ausente (skip)');
-  }
-
-  if (existsSync(join(ROOT, 'tools/frontend-visual-lock.mjs'))) {
-    const r = shFull('node tools/frontend-visual-lock.mjs', 20000);
-    s.frontendVisualPass = r.out.includes('LOCK PASS') || r.out.includes('FRONTEND VISUAL LOCK PASS') || r.out.includes('VISUAL LOCK PASS');
-    audit(`[D0] frontend-visual-lock: ${s.frontendVisualPass ? 'PASS' : 'FAIL'}`);
-  } else {
     s.frontendVisualPass = true;
-    audit('[D0] frontend-visual-lock: ausente (skip)');
-  }
+    s.guardOk = true;
+    audit(`[D0] mode=${HARNESS_MODE}: visual locks + guard skipped (fast mode)`);
+  } else {
+    if (existsSync(join(ROOT, 'tools/visual-gold-harness-lock.mjs'))) {
+      const r = shFull('node tools/visual-gold-harness-lock.mjs', 20000);
+      s.visualGoldLockPass = r.out.includes('LOCK PASS') || r.out.includes('VISUAL GOLD HARNESS LOCK PASS');
+      audit(`[D0] visual-gold-harness-lock: ${s.visualGoldLockPass ? 'PASS' : 'FAIL'}`);
+    } else {
+      s.visualGoldLockPass = true;
+      audit('[D0] visual-gold-harness-lock: ausente (skip)');
+    }
 
-  s.guardOk = guardPass();
-  audit(`[D0] sddf-front-guard: ${s.guardOk ? 'PASS' : 'FAIL'}`);
+    if (existsSync(join(ROOT, 'tools/frontend-visual-lock.mjs'))) {
+      const r = shFull('node tools/frontend-visual-lock.mjs', 20000);
+      s.frontendVisualPass = r.out.includes('LOCK PASS') || r.out.includes('FRONTEND VISUAL LOCK PASS') || r.out.includes('VISUAL LOCK PASS');
+      audit(`[D0] frontend-visual-lock: ${s.frontendVisualPass ? 'PASS' : 'FAIL'}`);
+    } else {
+      s.frontendVisualPass = true;
+      audit('[D0] frontend-visual-lock: ausente (skip)');
+    }
+
+    s.guardOk = guardPass();
+    audit(`[D0] sddf-front-guard: ${s.guardOk ? 'PASS' : 'FAIL'}`);
+  }
 
   // Node syntax checks
   const syntaxTargets = [
@@ -536,7 +548,11 @@ async function runLayerD0Preflight(s) {
   // Go test/build — run inside go-core/ where go.mod lives
   const goVer = sh('go version 2>/dev/null || go version 2>nul');
   const goCoreDir = join(ROOT, 'go-core');
-  if (goVer && existsSync(goCoreDir)) {
+  if (SKIP_GO_D0) {
+    s.goCoreTestPass  = false;
+    s.goCoreBuildPass = false;
+    audit(`[D0] mode=${HARNESS_MODE}: go test/build skipped (fast mode)`);
+  } else if (goVer && existsSync(goCoreDir)) {
     const goTest = spawnSync('go', ['test', './...'], {
       cwd: goCoreDir, shell: false, encoding: 'utf8', timeout: 120000,
     });
@@ -1619,6 +1635,12 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       hermes_tag_authorized_by_authority:          _authorityGate?.tag_authorized               || false,
       hermes_stable_authorized_by_authority:       _authorityGate?.stable_promotion_authorized  || false,
       hermes_pass_gold_confirmed_by_authority:     _authorityGate?.pass_gold_confirmed          || false,
+      // V15.11: Mode fields
+      mode:                   HARNESS_MODE,
+      fast_feedback_pass:     FAST_MODE && s.syntaxOk && failedGates.filter(g => !['legacy_clean','v14_clean_ownership','backend_alive','backend_health_ok','backend_not_stub','backend_mission_id','backend_evidence_receipt','evidence_source_go_core','go_core_compiled','go_test_pass','go_build_pass'].includes(g)).length === 0,
+      full_suite_required:    FAST_MODE || HARNESS_MODE === 'verify',
+      certify_required:       HARNESS_MODE !== 'certify' && HARNESS_MODE !== 'release',
+      recommendation:         s.recommendation?.startsWith('BLOCKED_') ? s.recommendation : (FAST_MODE ? (s.syntaxOk ? 'FAST_FEEDBACK_ONLY' : 'CERTIFY_REQUIRED') : s.recommendation),
     };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
@@ -1637,6 +1659,7 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
   log(`╚${sep}╝`);
 
   log(div('SUMÁRIO'));
+  log(`MODE:                      ${HARNESS_MODE}`);
   log(`RESULT:                    ${result}`);
   log(`MAX_DIFFICULTY:            ${rawMaxDiff}`);
   log(`LAYERS_EXECUTED:           ${s.layersExecuted.join(' → ')}`);
@@ -1733,6 +1756,12 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
   log(`PROMOTION_ALLOWED:         ${s.promotionAllowed}`);
   log(`DEPLOY_ALLOWED:            false (sempre manual)`);
   log(`RECOMMENDATION:            ${s.recommendation}`);
+  if (FAST_MODE) {
+    const _ffp = s.syntaxOk && failedGates.filter(g => !['legacy_clean','v14_clean_ownership','backend_alive','backend_health_ok','backend_not_stub','backend_mission_id','backend_evidence_receipt','evidence_source_go_core','go_core_compiled','go_test_pass','go_build_pass'].includes(g)).length === 0;
+    log(`FAST_FEEDBACK_PASS:        ${_ffp}`);
+    log(`FULL_SUITE_REQUIRED:       ${FAST_MODE || HARNESS_MODE === 'verify'}`);
+    log(`NOTE: ${HARNESS_MODE} mode — run test:prepush before push — deploy_allowed=false always`);
+  }
 
   if (!s.passGoldCandidate) {
     const reason = computeStrictPassGoldReason(s);

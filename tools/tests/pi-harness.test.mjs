@@ -2984,7 +2984,7 @@ console.log('\n[V15.7-H] renderDecisionMatrixSummary + renderReleaseReadinessGat
 // ─── SUITE V15.8-G: PI Harness JSON fields ───────────────────────
 {
   console.log('\n[V15.8-G] PI Harness JSON V15.8 fields via spawn');
-  const result = spawnSync(process.execPath, [HARNESS, '--json'], { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
+  const result = spawnSync(process.execPath, ['--no-deprecation', HARNESS, '--max-difficulty', 'D2', '--dry-run', '--json'], { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
   const raw = (result.stdout || '') + (result.stderr || '');
   const start = raw.indexOf('{');
   const end   = raw.lastIndexOf('}');
@@ -3026,7 +3026,7 @@ console.log('\n[V15.7-H] renderDecisionMatrixSummary + renderReleaseReadinessGat
   const tmpPath = join(ROOT, 'tmp-v158-auth-test.json');
 
   // nonexistent file → AUTHORIZATION_INVALID or controlled error
-  const r1 = spawnSync(process.execPath, [HARNESS, '--json', '--authorization-manifest', 'nonexistent-v158.json'], { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
+  const r1 = spawnSync(process.execPath, ['--no-deprecation', HARNESS, '--max-difficulty', 'D2', '--dry-run', '--json', '--authorization-manifest', 'nonexistent-v158.json'], { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
   const raw1 = (r1.stdout || '') + (r1.stderr || '');
   const s1 = raw1.indexOf('{'), e1 = raw1.lastIndexOf('}');
   let p1 = {};
@@ -3037,7 +3037,7 @@ console.log('\n[V15.7-H] renderDecisionMatrixSummary + renderReleaseReadinessGat
 
   // invalid JSON file
   writeFileSync(tmpPath, 'NOT_VALID_JSON_!!', 'utf8');
-  const r2 = spawnSync(process.execPath, [HARNESS, '--json', '--authorization-manifest', tmpPath], { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
+  const r2 = spawnSync(process.execPath, ['--no-deprecation', HARNESS, '--max-difficulty', 'D2', '--dry-run', '--json', '--authorization-manifest', tmpPath], { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
   const raw2 = (r2.stdout || '') + (r2.stderr || '');
   const s2 = raw2.indexOf('{'), e2 = raw2.lastIndexOf('}');
   let p2 = {};
@@ -3055,7 +3055,7 @@ console.log('\n[V15.7-H] renderDecisionMatrixSummary + renderReleaseReadinessGat
     evidence_refs: ['ev-ref-001'],
   };
   writeFileSync(tmpPath, JSON.stringify(validManifest), 'utf8');
-  const r3 = spawnSync(process.execPath, [HARNESS, '--json', '--authorization-manifest', tmpPath], { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
+  const r3 = spawnSync(process.execPath, ['--no-deprecation', HARNESS, '--max-difficulty', 'D2', '--dry-run', '--json', '--authorization-manifest', tmpPath], { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
   const raw3 = (r3.stdout || '') + (r3.stderr || '');
   const s3 = raw3.indexOf('{'), e3 = raw3.lastIndexOf('}');
   let p3 = {};
