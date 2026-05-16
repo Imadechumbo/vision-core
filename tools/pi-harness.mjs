@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║   PI HARNESS V15.7 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
+ * ║   PI HARNESS V15.8 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
  * ║   D0-Preflight → D1-Cleanup → D2-Contract → D3-GoCore               ║
  * ║   → D4-Backend → D5-Repair → D6-AutoFix → D7-Decision → D8-Report  ║
  * ╠══════════════════════════════════════════════════════════════════════╣
@@ -34,7 +34,17 @@ import {
   renderHermesSupervisionReport,
   attachRuntimeEvidence,
   evaluateHermesDecision,
+  evaluateHermesAuthorization,
 } from './hermes/mission-supervisor.mjs';
+import {
+  createAuthorizationManifest,
+  createAuthorizationPolicy,
+  validateAuthorizationManifest,
+  evaluateAuthorizationLayer,
+  deriveAuthorizationRequirements,
+  renderAuthorizationSummary,
+  renderAuthorizationGate,
+} from './hermes/authorization-layer.mjs';
 import {
   createRuntimeEvidence,
   collectRuntimeEvidence,
@@ -63,6 +73,8 @@ const NO_AUTOFIX = FLAG('--no-autofix');
 const JSON_MODE  = FLAG('--json');
 const CI_MODE       = FLAG('--ci');
 const RUNTIME_PROBE = FLAG('--runtime-probe');
+// V15.8: optional authorization manifest path
+const AUTHORIZATION_MANIFEST_PATH = ARG('--authorization-manifest') || null;
 
 // V15.3 runtime probe flags
 const RUNTIME_PROBE_NO_START   = FLAG('--runtime-probe-no-start');
@@ -90,6 +102,8 @@ let _hermesCtx = null;
 let _runtimeEvidence = null;
 // Decision Matrix snapshot (V15.7)
 let _decisionMatrix = null;
+// Authorization Layer snapshot (V15.8)
+let _authorizationLayer = null;
 
 // ═══════════════════════════════════════════════════════════════════
 // FAKE EVIDENCE SCAN PATTERNS
@@ -1516,6 +1530,23 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       hermes_deploy_allowed:              false,
       hermes_promotion_allowed:           false,
       hermes_stable_allowed:              false,
+      // V15.8: Authorization Layer fields
+      hermes_authorization_layer_enabled:   true,
+      hermes_authorization_schema_version:  'v15.8',
+      hermes_authorization_status:          _authorizationLayer?.authorization_status         || 'AUTHORIZATION_MISSING',
+      hermes_authorization_valid:           _authorizationLayer?.authorization_valid           || false,
+      hermes_authorization_requirements:    (_authorizationLayer?.authorization_requirements   || []).map(r => r.id),
+      hermes_authorization_missing:         _authorizationLayer?.missing_authorizations        || [],
+      hermes_authorization_errors:          _authorizationLayer?.authorization_errors          || [],
+      hermes_authorization_warnings:        _authorizationLayer?.authorization_warnings        || [],
+      hermes_authorization_audit_trail:     (_authorizationLayer?.authorization_audit_trail    || []).map(e => e.type),
+      hermes_authorization_gate:            _authorizationLayer ? renderAuthorizationGate(_authorizationLayer) : null,
+      hermes_release_authorized:            _authorizationLayer?.release_authorized            || false,
+      hermes_deploy_authorized:             _authorizationLayer?.deploy_authorized             || false,
+      hermes_tag_authorized:                _authorizationLayer?.tag_authorized                || false,
+      hermes_stable_promotion_authorized:   _authorizationLayer?.stable_promotion_authorized   || false,
+      hermes_release_allowed:               false,
+      hermes_tag_allowed:                   false,
     };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
@@ -1527,7 +1558,7 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
 
   log('');
   log(`╔${sep}╗`);
-  const title = 'PI HARNESS V15.7 — VISION CORE AUTONOMOUS MISSION RUNNER';
+  const title = 'PI HARNESS V15.8 — VISION CORE AUTONOMOUS MISSION RUNNER';
   log(`║  ${title}${' '.repeat(Math.max(0, W - title.length - 2))}║`);
   const sub   = 'RELATÓRIO FINAL';
   log(`║  ${sub}${' '.repeat(Math.max(0, W - sub.length - 2))}║`);
@@ -1701,8 +1732,47 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
     log(`  NOTE: classification only — no deploy performed — explicit authorization required`);
   }
 
+  if (_authorizationLayer) {
+    log(div('RUNTIME EVIDENCE AUTHORIZATION LAYER (V15.8)'));
+    log(`AUTHORIZATION_SCHEMA:      ${_authorizationLayer.schema_version || 'v15.8'}`);
+    log(`AUTHORIZATION_STATUS:      ${_authorizationLayer.authorization_status}`);
+    log(`AUTHORIZATION_VALID:       ${_authorizationLayer.authorization_valid}`);
+    log(`RELEASE_AUTHORIZED:        ${_authorizationLayer.release_authorized}`);
+    log(`DEPLOY_AUTHORIZED:         ${_authorizationLayer.deploy_authorized}`);
+    log(`TAG_AUTHORIZED:            ${_authorizationLayer.tag_authorized}`);
+    log(`STABLE_PROMOTION_AUTHORIZED: ${_authorizationLayer.stable_promotion_authorized}`);
+    log(`RELEASE_ALLOWED:           false`);
+    log(`DEPLOY_ALLOWED:            false`);
+    log(`TAG_ALLOWED:               false`);
+    log(`STABLE_ALLOWED:            false`);
+    const missing = _authorizationLayer.missing_authorizations || [];
+    if (missing.length > 0) {
+      log(`MISSING_AUTHORIZATIONS:`);
+      for (const m of missing) log(`  ✗ ${m}`);
+    }
+    const authErrors = _authorizationLayer.authorization_errors || [];
+    if (authErrors.length > 0) {
+      log(`AUTHORIZATION_ERRORS:`);
+      for (const e of authErrors) log(`  ✗ ${e}`);
+    }
+    const authWarnings = _authorizationLayer.authorization_warnings || [];
+    if (authWarnings.length > 0) {
+      log(`AUTHORIZATION_WARNINGS:`);
+      for (const w of authWarnings) log(`  ! ${w}`);
+    }
+    log(`AUDIT_TRAIL_EVENTS:        ${(_authorizationLayer.authorization_audit_trail || []).length}`);
+    const gate = renderAuthorizationGate(_authorizationLayer);
+    if (gate) {
+      log(`FINAL_AUTHORIZATION_GATE:  ${gate.authorization_status}`);
+      log(`EFFECTIVE_STATE:           ${gate.release_gate_effective_state}`);
+    }
+    log(`NOTE: authorization is modeled, not executed`);
+    log(`NOTE: explicit authorization is required`);
+    log(`NOTE: deploy/tag/stable remain blocked in V15.8`);
+  }
+
   if (hermesCtx) {
-    log(div('HERMES SUPERVISION (V15.7)'));
+    log(div('HERMES SUPERVISION (V15.8)'));
     log(`SUPERVISOR_ENABLED:        ${hermesCtx.enabled}`);
     log(`MISSION_ID:                ${hermesCtx.mission_id}`);
     log(`AGENTS_REGISTERED:         ${hermesCtx.agents.length}`);
@@ -1735,8 +1805,8 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
   log('');
   log(`╔${sep}╗`);
   const footer = result === 'PASS'
-    ? `✓ PI HARNESS V15.7 PASS — ${s.recommendation}`
-    : `✗ PI HARNESS V15.7 ${result} — ${s.recommendation}`;
+    ? `✓ PI HARNESS V15.8 PASS — ${s.recommendation}`
+    : `✗ PI HARNESS V15.8 ${result} — ${s.recommendation}`;
   log(`║  ${footer}${' '.repeat(Math.max(0, W - footer.length - 2))}║`);
   log(`╚${sep}╝`);
   log('');
@@ -1765,11 +1835,11 @@ async function main() {
 
   // V15.5: Hermes Mission Supervisor
   _hermesCtx = createHermesMissionContext();
-  recordHermesEvent(_hermesCtx, { type: 'mission_start', version: 'V15.7', max_difficulty: rawMaxDiff });
+  recordHermesEvent(_hermesCtx, { type: 'mission_start', version: 'V15.8', max_difficulty: rawMaxDiff });
 
   if (!JSON_MODE && !CI_MODE) {
     log('');
-    log('PI HARNESS V15.7 — iniciando...');
+    log('PI HARNESS V15.8 — iniciando...');
     log(`  max-difficulty: ${rawMaxDiff} | dry-run: ${DRY_RUN} | no-autofix: ${NO_AUTOFIX} | ci: ${CI_MODE} | runtime-probe: ${RUNTIME_PROBE} | no-start: ${RUNTIME_PROBE_NO_START}`);
     log(`  hermes: ${_hermesCtx.mission_id}`);
     log('');
@@ -1822,6 +1892,18 @@ async function main() {
   // V15.7: Evaluate decision matrix and release readiness
   const hermesDecision = evaluateHermesDecision(_hermesCtx);
   _decisionMatrix = _hermesCtx.decision_matrix;
+
+  // V15.8: Load authorization manifest and evaluate authorization layer
+  let _authManifest = null;
+  if (AUTHORIZATION_MANIFEST_PATH) {
+    try {
+      const raw = readFileSync(resolve(AUTHORIZATION_MANIFEST_PATH), 'utf8');
+      _authManifest = JSON.parse(raw);
+    } catch (err) {
+      _authManifest = { _load_error: err.message, schema_version: 'invalid' };
+    }
+  }
+  _authorizationLayer = evaluateHermesAuthorization(_hermesCtx, _authManifest);
 
   // V15.5: Hermes final validation & decision
   const missionEvidence = {
@@ -1911,7 +1993,7 @@ async function main() {
 
 main().catch(err => {
   if (!JSON_MODE) {
-    process.stderr.write(`PI HARNESS V15.7 FATAL: ${err.message}\n`);
+    process.stderr.write(`PI HARNESS V15.8 FATAL: ${err.message}\n`);
   } else {
     process.stdout.write(JSON.stringify({
       result: 'FAILED',
@@ -1944,6 +2026,23 @@ main().catch(err => {
       hermes_deploy_allowed: false,
       hermes_promotion_allowed: false,
       hermes_stable_allowed: false,
+      // V15.8: Authorization Layer fallback fields
+      hermes_authorization_layer_enabled:   true,
+      hermes_authorization_schema_version:  'v15.8',
+      hermes_authorization_status:          'AUTHORIZATION_MISSING',
+      hermes_authorization_valid:           false,
+      hermes_authorization_requirements:    [],
+      hermes_authorization_missing:         ['authorization_manifest'],
+      hermes_authorization_errors:          [`fatal: ${err.message}`],
+      hermes_authorization_warnings:        [],
+      hermes_authorization_audit_trail:     ['authorization_missing'],
+      hermes_authorization_gate:            null,
+      hermes_release_authorized:            false,
+      hermes_deploy_authorized:             false,
+      hermes_tag_authorized:                false,
+      hermes_stable_promotion_authorized:   false,
+      hermes_release_allowed:               false,
+      hermes_tag_allowed:                   false,
     }) + '\n');
   }
   process.exit(1);

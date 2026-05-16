@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
- * Hermes Mission Supervisor — V15.7
+ * Hermes Mission Supervisor — V15.8
  * Multi-Agent Control Plane for Vision Core
  *
  * REGRA ABSOLUTA: SEM PASS GOLD REAL → não promove, não libera, não stable.
  * Evidence receipt somente do Go Core.
  * Memória antiga nunca vence scan/evidence atual.
+ * Authorization is modeled, not executed — deploy/tag/stable remain blocked.
  */
 
 import {
@@ -14,8 +15,15 @@ import {
   renderDecisionMatrixSummary,
   renderReleaseReadinessGate,
 } from './decision-matrix.mjs';
+import {
+  createAuthorizationManifest,
+  createAuthorizationPolicy,
+  evaluateAuthorizationLayer,
+  renderAuthorizationSummary,
+  renderAuthorizationGate,
+} from './authorization-layer.mjs';
 
-const HERMES_VERSION = 'V15.7';
+const HERMES_VERSION = 'V15.8';
 
 // ═══════════════════════════════════════════════════════════════════
 // AGENT REGISTRY — 11 agents obrigatórios
@@ -1018,6 +1026,71 @@ function renderDecisionMatrixGraph(context) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// V15.8 — AUTHORIZATION LAYER INTEGRATION
+// ═══════════════════════════════════════════════════════════════════
+
+function attachAuthorizationLayer(context, authLayer) {
+  if (!context) return;
+  context.authorization_layer          = authLayer || null;
+  context.authorization_status         = authLayer?.authorization_status         || 'AUTHORIZATION_MISSING';
+  context.authorization_valid          = authLayer?.authorization_valid           || false;
+  context.authorization_requirements   = authLayer?.authorization_requirements   || [];
+  context.authorization_audit_trail    = authLayer?.authorization_audit_trail    || [];
+  context.authorization_gate           = authLayer ? renderAuthorizationGate(authLayer) : null;
+  context.authorization_layer_attached = true;
+  context.authorization_layer_at       = Date.now();
+}
+
+function evaluateHermesAuthorization(context, manifest = null) {
+  if (!context) {
+    return {
+      authorization_status:         'AUTHORIZATION_MISSING',
+      authorization_valid:          false,
+      release_authorized:           false,
+      deploy_authorized:            false,
+      tag_authorized:               false,
+      stable_promotion_authorized:  false,
+      deploy_allowed:               false,
+      promotion_allowed:            false,
+      stable_allowed:               false,
+      release_allowed:              false,
+      tag_allowed:                  false,
+    };
+  }
+
+  const decisionMatrix   = context.decision_matrix   || null;
+  const runtimeEvidence  = context.runtime_evidence  || null;
+  const authLayer = evaluateAuthorizationLayer(manifest, decisionMatrix, runtimeEvidence, context);
+  attachAuthorizationLayer(context, authLayer);
+  return authLayer;
+}
+
+function renderAuthorizationGraph(context) {
+  if (!context) return null;
+  const authLayer = context.authorization_layer;
+  if (!authLayer) return null;
+
+  return {
+    schema_version:               'v15.8',
+    mission_id:                   context.mission_id || null,
+    authorization_status:         authLayer.authorization_status,
+    authorization_valid:          authLayer.authorization_valid,
+    release_gate_effective_state: authLayer.release_gate_effective_state,
+    release_authorized:           authLayer.release_authorized,
+    deploy_authorized:            authLayer.deploy_authorized,
+    tag_authorized:               authLayer.tag_authorized,
+    stable_promotion_authorized:  authLayer.stable_promotion_authorized,
+    deploy_allowed:               false,
+    promotion_allowed:            false,
+    stable_allowed:               false,
+    release_allowed:              false,
+    tag_allowed:                  false,
+    audit_event_count:            (authLayer.authorization_audit_trail || []).length,
+    note: 'authorization is modeled, not executed — deploy/tag/stable remain blocked in V15.8',
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // REGISTRY VALIDATOR (usado em testes)
 // ═══════════════════════════════════════════════════════════════════
 
@@ -1106,4 +1179,7 @@ export {
   attachDecisionMatrix,
   evaluateHermesDecision,
   renderDecisionMatrixGraph,
+  attachAuthorizationLayer,
+  evaluateHermesAuthorization,
+  renderAuthorizationGraph,
 };

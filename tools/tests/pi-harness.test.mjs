@@ -53,6 +53,21 @@ import {
   renderDecisionMatrixSummary,
   renderReleaseReadinessGate,
 } from '../hermes/decision-matrix.mjs';
+import {
+  createAuthorizationManifest,
+  createAuthorizationPolicy,
+  validateAuthorizationManifest,
+  evaluateAuthorizationLayer,
+  deriveAuthorizationRequirements,
+  deriveAuthorizationAuditTrail,
+  renderAuthorizationSummary,
+  renderAuthorizationGate,
+} from '../hermes/authorization-layer.mjs';
+import {
+  attachAuthorizationLayer,
+  evaluateHermesAuthorization,
+  renderAuthorizationGraph,
+} from '../hermes/mission-supervisor.mjs';
 
 const ROOT    = resolve(process.cwd());
 const HARNESS = join(ROOT, 'tools', 'pi-harness.mjs');
@@ -2698,6 +2713,417 @@ console.log('\n[V15.7-H] renderDecisionMatrixSummary + renderReleaseReadinessGat
   assert(report.RELEASE_CANDIDATE === false,      '[V15.7-H-52] RELEASE_CANDIDATE sempre false');
   assert(Array.isArray(report.DECISION_BLOCKING_REASONS),  '[V15.7-H-53] DECISION_BLOCKING_REASONS é array');
   assert(Array.isArray(report.DECISION_SAFE_NEXT_ACTIONS), '[V15.7-H-54] DECISION_SAFE_NEXT_ACTIONS é array');
+}
+
+// ─── V15.8 — AUTHORIZATION LAYER ─────────────────────────────────
+
+// ─── SUITE V15.8-A: createAuthorizationManifest ───────────────────
+{
+  console.log('\n[V15.8-A] createAuthorizationManifest');
+  const m = createAuthorizationManifest();
+  assert(m.schema_version === 'v15.8',               '[V15.8-A-1] schema_version=v15.8');
+  assert(m.status === 'AUTHORIZATION_MISSING',       '[V15.8-A-2] default status AUTHORIZATION_MISSING');
+  assert(Array.isArray(m.approvals),                 '[V15.8-A-3] approvals é array');
+  assert(Array.isArray(m.evidence_refs),             '[V15.8-A-4] evidence_refs é array');
+  assert(m.requested_action === 'release_review',    '[V15.8-A-5] default requested_action release_review');
+  assert(typeof m.authorization_id === 'string',     '[V15.8-A-6] authorization_id existe e é string');
+  assert(m.authorization_id.length > 0,             '[V15.8-A-7] authorization_id não vazio');
+  assert(m.mission_id === null || typeof m.mission_id === 'string', '[V15.8-A-8] mission_id null ou string');
+  assert(typeof m.created_at === 'number',           '[V15.8-A-9] created_at é number');
+  assert(typeof m.constraints === 'object',          '[V15.8-A-10] constraints é object');
+  const m2 = createAuthorizationManifest({ mission_id: 'mid-test', requested_action: 'deploy_approval' });
+  assert(m2.mission_id === 'mid-test',              '[V15.8-A-11] mission_id propagado via override');
+  assert(m2.requested_action === 'deploy_approval', '[V15.8-A-12] requested_action override');
+  assert(m2.status === 'AUTHORIZATION_MISSING',     '[V15.8-A-13] status always starts AUTHORIZATION_MISSING');
+}
+
+// ─── SUITE V15.8-B: createAuthorizationPolicy ────────────────────
+{
+  console.log('\n[V15.8-B] createAuthorizationPolicy');
+  const p = createAuthorizationPolicy();
+  assert(p.schema_version === 'v15.8',              '[V15.8-B-1] schema_version=v15.8');
+  assert(Array.isArray(p.required_authorizations),  '[V15.8-B-2] required_authorizations é array');
+  assert(p.required_authorizations.includes('release_authorization'),         '[V15.8-B-3] contém release_authorization');
+  assert(p.required_authorizations.includes('deploy_authorization'),          '[V15.8-B-4] contém deploy_authorization');
+  assert(p.required_authorizations.includes('tag_authorization'),             '[V15.8-B-5] contém tag_authorization');
+  assert(p.required_authorizations.includes('stable_promotion_authorization'),'[V15.8-B-6] contém stable_promotion_authorization');
+  assert(Array.isArray(p.forbidden_actions),        '[V15.8-B-7] forbidden_actions é array');
+  assert(p.forbidden_actions.includes('deploy'),    '[V15.8-B-8] forbidden: deploy');
+  assert(p.forbidden_actions.includes('tag'),       '[V15.8-B-9] forbidden: tag');
+  assert(p.forbidden_actions.includes('stable_promotion'), '[V15.8-B-10] forbidden: stable_promotion');
+  assert(p.forbidden_actions.includes('bypass_pass_gold'), '[V15.8-B-11] forbidden: bypass_pass_gold');
+  assert(p.invariants.deploy_allowed === false,     '[V15.8-B-12] invariants.deploy_allowed=false');
+  assert(p.invariants.promotion_allowed === false,  '[V15.8-B-13] invariants.promotion_allowed=false');
+  assert(p.invariants.stable_allowed === false,     '[V15.8-B-14] invariants.stable_allowed=false');
+  assert(p.invariants.release_allowed === false,    '[V15.8-B-15] invariants.release_allowed=false');
+  assert(p.invariants.tag_allowed === false,        '[V15.8-B-16] invariants.tag_allowed=false');
+  assert(Array.isArray(p.allowed_actions),          '[V15.8-B-17] allowed_actions é array');
+  assert(p.allowed_actions.length === 0,            '[V15.8-B-18] allowed_actions vazio nesta fase');
+}
+
+// ─── SUITE V15.8-C: validateAuthorizationManifest ────────────────
+{
+  console.log('\n[V15.8-C] validateAuthorizationManifest');
+  // null manifest → AUTHORIZATION_MISSING
+  const r0 = validateAuthorizationManifest(null, null, null);
+  assert(r0.status === 'AUTHORIZATION_MISSING', '[V15.8-C-1] null manifest → AUTHORIZATION_MISSING');
+  assert(r0.ok === false,                       '[V15.8-C-2] null manifest → ok=false');
+  assert(r0.invariants.deploy_allowed === false,'[V15.8-C-3] invariants.deploy_allowed=false on missing');
+  assert(Array.isArray(r0.audit_events),        '[V15.8-C-4] audit_events é array');
+
+  // invalid schema
+  const rSchema = validateAuthorizationManifest({ schema_version: 'v1.0', requested_action: 'release_review' }, null, null);
+  assert(rSchema.status === 'AUTHORIZATION_INVALID', '[V15.8-C-5] schema inválido → AUTHORIZATION_INVALID');
+  assert(rSchema.ok === false,                       '[V15.8-C-6] schema inválido → ok=false');
+
+  // invalid action
+  const rAction = validateAuthorizationManifest({ schema_version: 'v15.8', requested_action: 'do_deploy_now' }, null, null);
+  assert(rAction.status === 'AUTHORIZATION_INVALID', '[V15.8-C-7] action inválida → AUTHORIZATION_INVALID');
+
+  // expired
+  const rExp = validateAuthorizationManifest({ schema_version: 'v15.8', requested_action: 'release_review', expires_at: Date.now() - 10000 }, null, null);
+  assert(rExp.status === 'AUTHORIZATION_EXPIRED', '[V15.8-C-8] expired → AUTHORIZATION_EXPIRED');
+  assert(rExp.expired === true,                   '[V15.8-C-9] expired=true');
+
+  // rejected approval
+  const rRej = validateAuthorizationManifest({
+    schema_version: 'v15.8', requested_action: 'release_review',
+    approvals: [{ approver: 'alice', approved: false, approved_at: Date.now() }],
+  }, null, null);
+  assert(rRej.status === 'AUTHORIZATION_REJECTED', '[V15.8-C-10] approved=false → AUTHORIZATION_REJECTED');
+
+  // partial — critical action missing approvals
+  const rPart = validateAuthorizationManifest({
+    schema_version: 'v15.8', requested_action: 'deploy_approval',
+    approvals: [], evidence_refs: [],
+  }, null, null);
+  assert(rPart.status === 'AUTHORIZATION_PARTIAL', '[V15.8-C-11] missing approval for critical → AUTHORIZATION_PARTIAL');
+
+  // partial — missing evidence_refs for critical action
+  const rPartEv = validateAuthorizationManifest({
+    schema_version: 'v15.8', requested_action: 'release_candidate_approval',
+    approvals: [{ approver: 'bob', approved: true, approved_at: Date.now() }],
+    evidence_refs: [],
+  }, null, null);
+  assert(rPartEv.status === 'AUTHORIZATION_PARTIAL', '[V15.8-C-12] missing evidence_refs → AUTHORIZATION_PARTIAL');
+
+  // valid
+  const rValid = validateAuthorizationManifest({
+    schema_version: 'v15.8', requested_action: 'release_review',
+    approvals: [{ approver: 'alice', approved: true, approved_at: Date.now() }],
+    evidence_refs: ['ev-001'],
+  }, null, null);
+  assert(rValid.status === 'AUTHORIZATION_VALID', '[V15.8-C-13] valid manifest → AUTHORIZATION_VALID');
+  assert(rValid.ok === true,                      '[V15.8-C-14] valid manifest → ok=true');
+
+  // invariants always false
+  assert(rValid.invariants.deploy_allowed === false,    '[V15.8-C-15] invariants.deploy_allowed=false always');
+  assert(rValid.invariants.promotion_allowed === false, '[V15.8-C-16] invariants.promotion_allowed=false always');
+  assert(rValid.invariants.stable_allowed === false,    '[V15.8-C-17] invariants.stable_allowed=false always');
+  assert(rValid.invariants.release_allowed === false,   '[V15.8-C-18] invariants.release_allowed=false always');
+  assert(rValid.invariants.tag_allowed === false,       '[V15.8-C-19] invariants.tag_allowed=false always');
+}
+
+// ─── SUITE V15.8-D: evaluateAuthorizationLayer ───────────────────
+{
+  console.log('\n[V15.8-D] evaluateAuthorizationLayer');
+  const validManifest = {
+    schema_version: 'v15.8', requested_action: 'release_review',
+    approvals: [{ approver: 'alice', approved: true, approved_at: Date.now() }],
+    evidence_refs: ['ev-001'],
+  };
+
+  // BLOCKED_RUNTIME + valid auth still blocked
+  const dmBlocked = createDecisionMatrix();
+  const layerBlocked = evaluateAuthorizationLayer(validManifest, dmBlocked, null, null);
+  assert(layerBlocked.release_gate_effective_state === 'BLOCKED_RUNTIME', '[V15.8-D-1] BLOCKED_RUNTIME + valid auth → stays BLOCKED_RUNTIME');
+  assert(layerBlocked.release_authorized === false,  '[V15.8-D-2] BLOCKED_RUNTIME → release_authorized=false');
+  assert(layerBlocked.deploy_allowed === false,      '[V15.8-D-3] deploy_allowed always false');
+  assert(layerBlocked.release_allowed === false,     '[V15.8-D-4] release_allowed always false');
+  assert(layerBlocked.tag_allowed === false,         '[V15.8-D-5] tag_allowed always false');
+  assert(layerBlocked.stable_allowed === false,      '[V15.8-D-6] stable_allowed always false');
+  assert(layerBlocked.promotion_allowed === false,   '[V15.8-D-7] promotion_allowed always false');
+
+  // SUPERVISED_READY + valid auth can release_authorized=true
+  const dmSupervised = { ...createDecisionMatrix(), decision_state: 'SUPERVISED_READY' };
+  const layerSupervised = evaluateAuthorizationLayer(validManifest, dmSupervised, null, null);
+  assert(layerSupervised.release_authorized === true, '[V15.8-D-8] SUPERVISED_READY + valid → release_authorized=true');
+  assert(layerSupervised.deploy_allowed === false,   '[V15.8-D-9] deploy_allowed still false');
+  assert(layerSupervised.deploy_authorized === false,'[V15.8-D-10] deploy_authorized=false (not RELEASE_CANDIDATE)');
+
+  // RELEASE_CANDIDATE + valid auth
+  const dmCandidate = { ...createDecisionMatrix(), decision_state: 'RELEASE_CANDIDATE' };
+  const layerCandidate = evaluateAuthorizationLayer(validManifest, dmCandidate, null, null);
+  assert(layerCandidate.release_authorized === true,         '[V15.8-D-11] RELEASE_CANDIDATE + valid → release_authorized=true');
+  assert(layerCandidate.deploy_authorized === true,          '[V15.8-D-12] RELEASE_CANDIDATE + valid → deploy_authorized=true');
+  assert(layerCandidate.tag_authorized === true,             '[V15.8-D-13] RELEASE_CANDIDATE + valid → tag_authorized=true');
+  assert(layerCandidate.stable_promotion_authorized === true,'[V15.8-D-14] RELEASE_CANDIDATE + valid → stable_promotion_authorized=true');
+  assert(layerCandidate.deploy_allowed === false,            '[V15.8-D-15] deploy_allowed still false');
+  assert(layerCandidate.release_allowed === false,           '[V15.8-D-16] release_allowed still false');
+  assert(layerCandidate.tag_allowed === false,               '[V15.8-D-17] tag_allowed still false');
+  assert(layerCandidate.stable_allowed === false,            '[V15.8-D-18] stable_allowed still false');
+
+  // null manifest → AUTHORIZATION_MISSING regardless of decision state
+  const layerMissing = evaluateAuthorizationLayer(null, dmCandidate, null, null);
+  assert(layerMissing.authorization_status === 'AUTHORIZATION_MISSING', '[V15.8-D-19] null manifest → AUTHORIZATION_MISSING');
+  assert(layerMissing.authorization_valid === false,  '[V15.8-D-20] null manifest → authorization_valid=false');
+  assert(layerMissing.deploy_allowed === false,       '[V15.8-D-21] null manifest → deploy_allowed=false');
+  assert(layerMissing.release_authorized === false,   '[V15.8-D-22] null manifest → release_authorized=false');
+
+  // schema_version present
+  assert(layerBlocked.schema_version === 'v15.8',    '[V15.8-D-23] schema_version=v15.8');
+  assert(layerBlocked.enabled === true,              '[V15.8-D-24] enabled=true');
+}
+
+// ─── SUITE V15.8-E: deriveAuthorizationRequirements ──────────────
+{
+  console.log('\n[V15.8-E] deriveAuthorizationRequirements');
+  const dm = createDecisionMatrix();
+  const reqs = deriveAuthorizationRequirements(dm, null);
+  assert(Array.isArray(reqs),                  '[V15.8-E-1] returns array');
+  assert(reqs.length === 9,                    '[V15.8-E-2] 9 requirements');
+
+  const ids = reqs.map(r => r.id);
+  assert(ids.includes('release_authorization'),           '[V15.8-E-3] contém release_authorization');
+  assert(ids.includes('deploy_authorization'),            '[V15.8-E-4] contém deploy_authorization');
+  assert(ids.includes('tag_authorization'),               '[V15.8-E-5] contém tag_authorization');
+  assert(ids.includes('stable_promotion_authorization'),  '[V15.8-E-6] contém stable_promotion_authorization');
+  assert(ids.includes('pass_gold_authority_confirmation'),'[V15.8-E-7] contém pass_gold_authority_confirmation');
+  assert(ids.includes('go_core_evidence_confirmation'),   '[V15.8-E-8] contém go_core_evidence_confirmation');
+  assert(ids.includes('ci_remote_confirmation'),          '[V15.8-E-9] contém ci_remote_confirmation');
+  assert(ids.includes('scope_review_confirmation'),       '[V15.8-E-10] contém scope_review_confirmation');
+  assert(ids.includes('security_review_confirmation'),    '[V15.8-E-11] contém security_review_confirmation');
+
+  const pgAuth = reqs.find(r => r.id === 'pass_gold_authority_confirmation');
+  assert(pgAuth.required === true,             '[V15.8-E-12] pass_gold_authority_confirmation required=true');
+  const goCore = reqs.find(r => r.id === 'go_core_evidence_confirmation');
+  assert(goCore.required === true,             '[V15.8-E-13] go_core_evidence_confirmation required=true');
+
+  // deploy/tag/stable required only for RELEASE_CANDIDATE
+  const deployReq = reqs.find(r => r.id === 'deploy_authorization');
+  assert(deployReq.required === false,         '[V15.8-E-14] deploy_authorization not required for BLOCKED_RUNTIME');
+
+  const dmCandidate = { ...dm, decision_state: 'RELEASE_CANDIDATE' };
+  const reqsCandidate = deriveAuthorizationRequirements(dmCandidate, null);
+  const deployReqC = reqsCandidate.find(r => r.id === 'deploy_authorization');
+  assert(deployReqC.required === true,         '[V15.8-E-15] deploy_authorization required for RELEASE_CANDIDATE');
+
+  // each item has required fields
+  for (const req of reqs) {
+    assert('id'                in req, `[V15.8-E-16] ${req.id}: tem id`);
+    assert('required'          in req, `[V15.8-E-17] ${req.id}: tem required`);
+    assert('present'           in req, `[V15.8-E-18] ${req.id}: tem present`);
+    assert('blocking_if_missing' in req, `[V15.8-E-19] ${req.id}: tem blocking_if_missing`);
+    assert('source'            in req, `[V15.8-E-20] ${req.id}: tem source`);
+    assert('required_role'     in req, `[V15.8-E-21] ${req.id}: tem required_role`);
+    assert('remediation'       in req, `[V15.8-E-22] ${req.id}: tem remediation`);
+  }
+}
+
+// ─── SUITE V15.8-F: deriveAuthorizationAuditTrail ────────────────
+{
+  console.log('\n[V15.8-F] deriveAuthorizationAuditTrail');
+  // no manifest → authorization_missing event
+  const trailMissing = deriveAuthorizationAuditTrail(null, null, null);
+  assert(Array.isArray(trailMissing),                   '[V15.8-F-1] trail é array');
+  assert(trailMissing.some(e => e.type === 'authorization_missing'), '[V15.8-F-2] contém authorization_missing');
+  assert(trailMissing.some(e => e.type === 'deploy_blocked_by_policy'), '[V15.8-F-3] contém deploy_blocked_by_policy');
+  assert(trailMissing.some(e => e.type === 'tag_blocked_by_policy'),    '[V15.8-F-4] contém tag_blocked_by_policy');
+  assert(trailMissing.some(e => e.type === 'stable_blocked_by_policy'), '[V15.8-F-5] contém stable_blocked_by_policy');
+
+  // with manifest + validation
+  const manifest = createAuthorizationManifest();
+  const validation = validateAuthorizationManifest(null, null, null);
+  const trailValid = deriveAuthorizationAuditTrail(manifest, validation, null);
+  assert(Array.isArray(trailValid),                   '[V15.8-F-6] trail com manifest é array');
+  assert(trailValid.some(e => e.type === 'authorization_manifest_created'),   '[V15.8-F-7] contém authorization_manifest_created');
+  assert(trailValid.some(e => e.type === 'authorization_validation_started'), '[V15.8-F-8] contém authorization_validation_started');
+  assert(trailValid.some(e => e.type === 'authorization_status_resolved'),    '[V15.8-F-9] contém authorization_status_resolved');
+  assert(trailValid.some(e => e.type === 'invariant_enforced'),               '[V15.8-F-10] contém invariant_enforced');
+
+  // each event has required fields
+  for (const evt of trailMissing) {
+    assert('event_id'   in evt, `[V15.8-F-11] event_id presente em ${evt.type}`);
+    assert('timestamp'  in evt, `[V15.8-F-12] timestamp presente em ${evt.type}`);
+    assert('type'       in evt, `[V15.8-F-13] type presente em ${evt.type}`);
+    assert('action'     in evt, `[V15.8-F-14] action presente em ${evt.type}`);
+    assert('status'     in evt, `[V15.8-F-15] status presente em ${evt.type}`);
+    break; // check only first event to keep test count manageable
+  }
+}
+
+// ─── SUITE V15.8-G: PI Harness JSON fields ───────────────────────
+{
+  console.log('\n[V15.8-G] PI Harness JSON V15.8 fields via spawn');
+  const result = spawnSync(process.execPath, [HARNESS, '--json'], { cwd: ROOT, encoding: 'utf8', timeout: 60000 });
+  const raw = (result.stdout || '') + (result.stderr || '');
+  const start = raw.indexOf('{');
+  const end   = raw.lastIndexOf('}');
+  let p = {};
+  if (start >= 0 && end > start) {
+    try { p = JSON.parse(raw.slice(start, end + 1)); } catch (_) { /* parse failed */ }
+  }
+
+  assert('hermes_authorization_layer_enabled'  in p, '[V15.8-G-1] hermes_authorization_layer_enabled presente');
+  assert('hermes_authorization_schema_version' in p, '[V15.8-G-2] hermes_authorization_schema_version presente');
+  assert('hermes_authorization_status'         in p, '[V15.8-G-3] hermes_authorization_status presente');
+  assert('hermes_authorization_valid'          in p, '[V15.8-G-4] hermes_authorization_valid presente');
+  assert('hermes_authorization_requirements'   in p, '[V15.8-G-5] hermes_authorization_requirements presente');
+  assert('hermes_authorization_missing'        in p, '[V15.8-G-6] hermes_authorization_missing presente');
+  assert('hermes_authorization_errors'         in p, '[V15.8-G-7] hermes_authorization_errors presente');
+  assert('hermes_authorization_warnings'       in p, '[V15.8-G-8] hermes_authorization_warnings presente');
+  assert('hermes_authorization_audit_trail'    in p, '[V15.8-G-9] hermes_authorization_audit_trail presente');
+  assert('hermes_authorization_gate'           in p, '[V15.8-G-10] hermes_authorization_gate presente');
+  assert('hermes_release_authorized'           in p, '[V15.8-G-11] hermes_release_authorized presente');
+  assert('hermes_deploy_authorized'            in p, '[V15.8-G-12] hermes_deploy_authorized presente');
+  assert('hermes_tag_authorized'               in p, '[V15.8-G-13] hermes_tag_authorized presente');
+  assert('hermes_stable_promotion_authorized'  in p, '[V15.8-G-14] hermes_stable_promotion_authorized presente');
+  assert('hermes_release_allowed'              in p, '[V15.8-G-15] hermes_release_allowed presente');
+  assert('hermes_tag_allowed'                  in p, '[V15.8-G-16] hermes_tag_allowed presente');
+  assert(p.hermes_authorization_schema_version === 'v15.8',     '[V15.8-G-17] schema_version=v15.8');
+  assert(p.hermes_authorization_status === 'AUTHORIZATION_MISSING', '[V15.8-G-18] default status AUTHORIZATION_MISSING');
+  assert(p.hermes_release_allowed === false,   '[V15.8-G-19] hermes_release_allowed=false');
+  assert(p.hermes_deploy_allowed === false,    '[V15.8-G-20] hermes_deploy_allowed=false');
+  assert(p.hermes_tag_allowed === false,       '[V15.8-G-21] hermes_tag_allowed=false');
+  assert(p.hermes_stable_allowed === false,    '[V15.8-G-22] hermes_stable_allowed=false');
+  assert(p.deploy_allowed === false,           '[V15.8-G-23] deploy_allowed=false');
+  assert(p.promotion_allowed === false,        '[V15.8-G-24] promotion_allowed=false');
+}
+
+// ─── SUITE V15.8-H: CLI --authorization-manifest ─────────────────
+{
+  console.log('\n[V15.8-H] CLI --authorization-manifest');
+  const { writeFileSync, unlinkSync } = await import('fs');
+  const tmpPath = join(ROOT, 'tmp-v158-auth-test.json');
+
+  // nonexistent file → AUTHORIZATION_INVALID or controlled error
+  const r1 = spawnSync(process.execPath, [HARNESS, '--json', '--authorization-manifest', 'nonexistent-v158.json'], { cwd: ROOT, encoding: 'utf8', timeout: 60000 });
+  const raw1 = (r1.stdout || '') + (r1.stderr || '');
+  const s1 = raw1.indexOf('{'), e1 = raw1.lastIndexOf('}');
+  let p1 = {};
+  if (s1 >= 0 && e1 > s1) { try { p1 = JSON.parse(raw1.slice(s1, e1 + 1)); } catch(_){} }
+  // Must return JSON (parseable) with some authorization status
+  assert('hermes_authorization_status' in p1, '[V15.8-H-1] nonexistent file → JSON still parseable with auth status');
+  assert(p1.hermes_deploy_allowed === false,  '[V15.8-H-2] nonexistent file → deploy_allowed=false');
+
+  // invalid JSON file
+  writeFileSync(tmpPath, 'NOT_VALID_JSON_!!', 'utf8');
+  const r2 = spawnSync(process.execPath, [HARNESS, '--json', '--authorization-manifest', tmpPath], { cwd: ROOT, encoding: 'utf8', timeout: 60000 });
+  const raw2 = (r2.stdout || '') + (r2.stderr || '');
+  const s2 = raw2.indexOf('{'), e2 = raw2.lastIndexOf('}');
+  let p2 = {};
+  if (s2 >= 0 && e2 > s2) { try { p2 = JSON.parse(raw2.slice(s2, e2 + 1)); } catch(_){} }
+  assert('hermes_authorization_status' in p2,   '[V15.8-H-3] invalid JSON file → JSON parseable');
+  const invalidStatuses = ['AUTHORIZATION_INVALID','AUTHORIZATION_MISSING','AUTHORIZATION_PARTIAL'];
+  assert(invalidStatuses.includes(p2.hermes_authorization_status), '[V15.8-H-4] invalid JSON → invalid status');
+  assert(p2.hermes_deploy_allowed === false,     '[V15.8-H-5] invalid JSON → deploy_allowed=false');
+
+  // valid manifest file
+  const validManifest = {
+    schema_version: 'v15.8',
+    requested_action: 'release_review',
+    approvals: [{ approver: 'alice', approved: true, approved_at: Date.now() }],
+    evidence_refs: ['ev-ref-001'],
+  };
+  writeFileSync(tmpPath, JSON.stringify(validManifest), 'utf8');
+  const r3 = spawnSync(process.execPath, [HARNESS, '--json', '--authorization-manifest', tmpPath], { cwd: ROOT, encoding: 'utf8', timeout: 60000 });
+  const raw3 = (r3.stdout || '') + (r3.stderr || '');
+  const s3 = raw3.indexOf('{'), e3 = raw3.lastIndexOf('}');
+  let p3 = {};
+  if (s3 >= 0 && e3 > s3) { try { p3 = JSON.parse(raw3.slice(s3, e3 + 1)); } catch(_){} }
+  assert('hermes_authorization_status' in p3,   '[V15.8-H-6] valid manifest → JSON parseable');
+  assert(p3.hermes_deploy_allowed === false,     '[V15.8-H-7] valid manifest → deploy_allowed always false');
+  assert(p3.hermes_release_allowed === false,    '[V15.8-H-8] valid manifest → release_allowed always false');
+  assert(p3.hermes_tag_allowed === false,        '[V15.8-H-9] valid manifest → tag_allowed always false');
+  assert(p3.hermes_stable_allowed === false,     '[V15.8-H-10] valid manifest → stable_allowed always false');
+
+  try { unlinkSync(tmpPath); } catch(_) {}
+}
+
+// ─── SUITE V15.8-I: Human Report section ─────────────────────────
+{
+  console.log('\n[V15.8-I] Human Report AUTHORIZATION LAYER section');
+  const authLayer = evaluateAuthorizationLayer(null, createDecisionMatrix(), null, null);
+  const summary   = renderAuthorizationSummary(authLayer);
+  const gate      = renderAuthorizationGate(authLayer);
+
+  assert(summary !== null,                        '[V15.8-I-1] renderAuthorizationSummary não null');
+  assert(summary.schema_version === 'v15.8',      '[V15.8-I-2] summary.schema_version=v15.8');
+  assert(summary.deploy_allowed === false,        '[V15.8-I-3] summary.deploy_allowed=false');
+  assert(summary.release_allowed === false,       '[V15.8-I-4] summary.release_allowed=false');
+  assert(summary.tag_allowed === false,           '[V15.8-I-5] summary.tag_allowed=false');
+  assert(summary.stable_allowed === false,        '[V15.8-I-6] summary.stable_allowed=false');
+  assert(typeof summary.note === 'string',        '[V15.8-I-7] summary.note é string');
+  assert(summary.note.includes('modeled'),        '[V15.8-I-8] note contém "modeled" (authorization is modeled, not executed)');
+  assert(summary.note.includes('explicit authorization'), '[V15.8-I-9] note contém "explicit authorization"');
+  assert(summary.note.includes('remain blocked'), '[V15.8-I-10] note contém "remain blocked" (deploy/tag/stable remain blocked)');
+
+  assert(gate !== null,                           '[V15.8-I-11] renderAuthorizationGate não null');
+  assert(gate.deploy_allowed === false,           '[V15.8-I-12] gate.deploy_allowed=false');
+  assert(gate.release_allowed === false,          '[V15.8-I-13] gate.release_allowed=false');
+  assert(gate.tag_allowed === false,              '[V15.8-I-14] gate.tag_allowed=false');
+  assert(gate.stable_allowed === false,           '[V15.8-I-15] gate.stable_allowed=false');
+  assert(typeof gate.note === 'string',           '[V15.8-I-16] gate.note é string');
+  assert(gate.note.includes('explicit authorization'), '[V15.8-I-17] gate.note contém "explicit authorization"');
+  assert(gate.note.includes('remain blocked'),    '[V15.8-I-18] gate.note contém "remain blocked"');
+  assert(Array.isArray(gate.required_authorizations), '[V15.8-I-19] gate.required_authorizations é array');
+  assert(typeof gate.missing_count === 'number',  '[V15.8-I-20] gate.missing_count é number');
+}
+
+// ─── SUITE V15.8-J: Supervisor integration ───────────────────────
+{
+  console.log('\n[V15.8-J] Authorization supervisor integration');
+  // attachAuthorizationLayer
+  const ctx = createHermesMissionContext();
+  const authLayer = evaluateAuthorizationLayer(null, createDecisionMatrix(), null, null);
+  attachAuthorizationLayer(ctx, authLayer);
+  assert(ctx.authorization_layer_attached === true, '[V15.8-J-1] ctx.authorization_layer_attached=true');
+  assert(typeof ctx.authorization_layer_at === 'number', '[V15.8-J-2] ctx.authorization_layer_at é number');
+  assert(ctx.authorization_status === 'AUTHORIZATION_MISSING', '[V15.8-J-3] ctx.authorization_status=AUTHORIZATION_MISSING');
+
+  // attachAuthorizationLayer null ctx → no exception
+  let threw = false;
+  try { attachAuthorizationLayer(null, authLayer); } catch(_) { threw = true; }
+  assert(threw === false, '[V15.8-J-4] attachAuthorizationLayer null ctx não lança exceção');
+
+  // evaluateHermesAuthorization null ctx → AUTHORIZATION_MISSING
+  const r0 = evaluateHermesAuthorization(null, null);
+  assert(r0.authorization_status === 'AUTHORIZATION_MISSING', '[V15.8-J-5] null ctx → AUTHORIZATION_MISSING');
+  assert(r0.deploy_allowed === false,                         '[V15.8-J-6] null ctx → deploy_allowed=false');
+
+  // evaluateHermesAuthorization real ctx
+  const ctx2 = createHermesMissionContext();
+  const r2 = evaluateHermesAuthorization(ctx2, null);
+  assert(r2.authorization_status === 'AUTHORIZATION_MISSING', '[V15.8-J-7] real ctx, null manifest → AUTHORIZATION_MISSING');
+  assert(ctx2.authorization_layer_attached === true,          '[V15.8-J-8] ctx2.authorization_layer_attached=true after evaluate');
+  assert(ctx2.authorization_gate !== null,                   '[V15.8-J-9] ctx2.authorization_gate preenchido');
+  assert(r2.deploy_allowed === false,                         '[V15.8-J-10] deploy_allowed=false always');
+  assert(r2.promotion_allowed === false,                      '[V15.8-J-11] promotion_allowed=false always');
+  assert(r2.stable_allowed === false,                         '[V15.8-J-12] stable_allowed=false always');
+  assert(r2.release_allowed === false,                        '[V15.8-J-13] release_allowed=false always');
+  assert(r2.tag_allowed === false,                            '[V15.8-J-14] tag_allowed=false always');
+
+  // renderAuthorizationGraph null ctx
+  const g0 = renderAuthorizationGraph(null);
+  assert(g0 === null, '[V15.8-J-15] renderAuthorizationGraph null ctx → null');
+
+  // renderAuthorizationGraph ctx without authorization_layer
+  const ctx3 = createHermesMissionContext();
+  const g1 = renderAuthorizationGraph(ctx3);
+  assert(g1 === null, '[V15.8-J-16] ctx sem authorization_layer → graph=null');
+
+  // renderAuthorizationGraph ctx with authorization_layer
+  const ctx4 = createHermesMissionContext();
+  evaluateHermesAuthorization(ctx4, null);
+  const g2 = renderAuthorizationGraph(ctx4);
+  assert(g2 !== null,                            '[V15.8-J-17] ctx com authorization_layer → graph não null');
+  assert(g2.schema_version === 'v15.8',          '[V15.8-J-18] graph.schema_version=v15.8');
+  assert(g2.deploy_allowed === false,            '[V15.8-J-19] graph.deploy_allowed=false');
+  assert(g2.release_allowed === false,           '[V15.8-J-20] graph.release_allowed=false');
+  assert(g2.tag_allowed === false,               '[V15.8-J-21] graph.tag_allowed=false');
+  assert(g2.stable_allowed === false,            '[V15.8-J-22] graph.stable_allowed=false');
+  assert(typeof g2.authorization_status === 'string', '[V15.8-J-23] graph.authorization_status é string');
+  assert(typeof g2.note === 'string',            '[V15.8-J-24] graph.note é string');
 }
 
 // ─── RESULTADO FINAL ──────────────────────────────────────────────

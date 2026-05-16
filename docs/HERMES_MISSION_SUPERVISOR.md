@@ -360,3 +360,69 @@ Score 0 forçado em qualquer policy violation.
 `DECISION_MATRIX`, `DECISION_MATRIX_SUMMARY`, `RELEASE_READINESS_GATE`, `DECISION_STATE`, `DECISION_BLOCKING_REASONS`, `DECISION_SAFE_NEXT_ACTIONS`, `RELEASE_CANDIDATE`, `DEPLOY_ALLOWED`, `PROMOTION_ALLOWED`, `STABLE_ALLOWED`, `RELEASE_ALLOWED`
 
 Todos os campos de deploy/promotion/stable sempre `false`.
+
+## V15.8 — Runtime Evidence Authorization Layer
+
+### Objetivo
+
+Separar readiness técnico de autorização humana/operacional. A camada modela, valida e reporta autorização — não executa ação.
+
+**authorization is modeled, not executed — explicit authorization is required — deploy/tag/stable remain blocked in V15.8**
+
+### Módulo: `tools/hermes/authorization-layer.mjs`
+
+| Export | Descrição |
+|---|---|
+| `createAuthorizationManifest()` | Cria manifest com `status: AUTHORIZATION_MISSING` |
+| `createAuthorizationPolicy()` | Política com forbidden_actions e invariants todos false |
+| `validateAuthorizationManifest(manifest, ev, dm)` | Valida manifest — retorna status + invariants |
+| `evaluateAuthorizationLayer(manifest, dm, ev, ctx)` | Avalia camada completa — retorna deploy_allowed=false sempre |
+| `deriveAuthorizationRequirements(dm, ev)` | Checklist de 9 itens de autorização necessária |
+| `deriveAuthorizationAuditTrail(manifest, validation, dm)` | Trail de auditoria com eventos mínimos |
+| `renderAuthorizationSummary(authLayer)` | Resumo para report humano |
+| `renderAuthorizationGate(authLayer)` | Gate para output JSON |
+
+### Estados de Autorização
+
+| Status | Condição |
+|---|---|
+| `AUTHORIZATION_MISSING` | Manifest ausente — default |
+| `AUTHORIZATION_INVALID` | Schema errado ou action inválida |
+| `AUTHORIZATION_PARTIAL` | Falta approval ou evidence_refs crítico |
+| `AUTHORIZATION_VALID` | Todas as validações passaram |
+| `AUTHORIZATION_REJECTED` | Ao menos um approver rejeitou |
+| `AUTHORIZATION_EXPIRED` | `expires_at` no passado |
+
+### Invariantes — Sempre False
+
+Independente do status de autorização:
+
+- `deploy_allowed: false`
+- `promotion_allowed: false`
+- `stable_allowed: false`
+- `release_allowed: false`
+- `tag_allowed: false`
+
+### Regras de Autorização vs. Decision State
+
+| Decision State | release_authorized | deploy_authorized |
+|---|---|---|
+| `BLOCKED_*` | false | false |
+| `SUPERVISED_READY` + valid auth | true | false |
+| `RELEASE_CANDIDATE` + valid auth | true | true (mas deploy_allowed=false) |
+
+### Novos Exports no Supervisor (V15.8)
+
+- `attachAuthorizationLayer(context, authLayer)` — annexa ao contexto Hermes
+- `evaluateHermesAuthorization(context, manifest)` — avalia e anexa camada de autorização
+- `renderAuthorizationGraph(context)` — graph schema v15.8
+
+### CLI: `--authorization-manifest <path>`
+
+Opção segura para injetar manifest JSON. Se ausente → `AUTHORIZATION_MISSING`. Se inválido → `AUTHORIZATION_INVALID`. Nunca executa deploy/tag/stable.
+
+### Novos Campos JSON (V15.8)
+
+`hermes_authorization_layer_enabled`, `hermes_authorization_schema_version`, `hermes_authorization_status`, `hermes_authorization_valid`, `hermes_authorization_requirements`, `hermes_authorization_missing`, `hermes_authorization_errors`, `hermes_authorization_warnings`, `hermes_authorization_audit_trail`, `hermes_authorization_gate`, `hermes_release_authorized`, `hermes_deploy_authorized`, `hermes_tag_authorized`, `hermes_stable_promotion_authorized`, `hermes_release_allowed`, `hermes_deploy_allowed`, `hermes_tag_allowed`, `hermes_stable_allowed`
+
+Todos os campos `*_allowed` sempre `false`.

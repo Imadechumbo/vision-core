@@ -567,3 +567,95 @@ Suites adicionadas (≥100 novos testes, total ≥905):
 - **Suite V15.7-F** — `deriveSafeNextActions`: 4 ações por estado, write_capable=false
 - **Suite V15.7-G** — `evaluateReleaseReadiness`: score, levels, policy force-0, required_authorization
 - **Suite V15.7-H** — render functions + supervisor integration (attach/evaluate/graph/report)
+
+## V15.8 — Runtime Evidence Authorization Layer
+
+### Novos Campos JSON (V15.8)
+
+```json
+{
+  "hermes_authorization_layer_enabled": true,
+  "hermes_authorization_schema_version": "v15.8",
+  "hermes_authorization_status": "AUTHORIZATION_MISSING",
+  "hermes_authorization_valid": false,
+  "hermes_authorization_requirements": ["release_authorization", "deploy_authorization", "..."],
+  "hermes_authorization_missing": ["authorization_manifest"],
+  "hermes_authorization_errors": [],
+  "hermes_authorization_warnings": [],
+  "hermes_authorization_audit_trail": ["authorization_missing", "deploy_blocked_by_policy", "..."],
+  "hermes_authorization_gate": null,
+  "hermes_release_authorized": false,
+  "hermes_deploy_authorized": false,
+  "hermes_tag_authorized": false,
+  "hermes_stable_promotion_authorized": false,
+  "hermes_release_allowed": false,
+  "hermes_deploy_allowed": false,
+  "hermes_tag_allowed": false,
+  "hermes_stable_allowed": false
+}
+```
+
+### Seção Humana: RUNTIME EVIDENCE AUTHORIZATION LAYER (V15.8)
+
+```
+──── RUNTIME EVIDENCE AUTHORIZATION LAYER (V15.8) ────
+AUTHORIZATION_SCHEMA:      v15.8
+AUTHORIZATION_STATUS:      AUTHORIZATION_MISSING
+AUTHORIZATION_VALID:       false
+RELEASE_AUTHORIZED:        false
+DEPLOY_AUTHORIZED:         false
+TAG_AUTHORIZED:            false
+STABLE_PROMOTION_AUTHORIZED: false
+RELEASE_ALLOWED:           false
+DEPLOY_ALLOWED:            false
+TAG_ALLOWED:               false
+STABLE_ALLOWED:            false
+NOTE: authorization is modeled, not executed
+NOTE: explicit authorization is required
+NOTE: deploy/tag/stable remain blocked in V15.8
+```
+
+### CLI --authorization-manifest
+
+```
+node tools/pi-harness.mjs --authorization-manifest ./auth-manifest.json --json
+```
+
+Manifest ausente → `AUTHORIZATION_MISSING`. JSON inválido → `AUTHORIZATION_INVALID`. Nunca executa deploy/tag/stable.
+
+### Manifest Válido (exemplo)
+
+```json
+{
+  "schema_version": "v15.8",
+  "requested_action": "release_review",
+  "approvals": [
+    { "approver": "alice", "approved": true, "approved_at": 1747350000000 }
+  ],
+  "evidence_refs": ["ev-ref-001"]
+}
+```
+
+### Manifest Ausente (default)
+
+```json
+{ "hermes_authorization_status": "AUTHORIZATION_MISSING" }
+```
+
+### Invariantes V15.8
+
+`deploy_allowed=false`, `promotion_allowed=false`, `stable_allowed=false`, `release_allowed=false`, `tag_allowed=false` — **sempre**, independente do status de autorização.
+
+### Suites de Teste V15.8 (245 novos asserts, total 1277)
+
+- **Suite V15.8-A** (13) — `createAuthorizationManifest`: schema v15.8, status AUTHORIZATION_MISSING, arrays
+- **Suite V15.8-B** (18) — `createAuthorizationPolicy`: required_authorizations, forbidden_actions, invariants todos false
+- **Suite V15.8-C** (19) — `validateAuthorizationManifest`: MISSING/INVALID/EXPIRED/REJECTED/PARTIAL/VALID, invariants always false
+- **Suite V15.8-D** (24) — `evaluateAuthorizationLayer`: BLOCKED_RUNTIME stays blocked, SUPERVISED_READY/RELEASE_CANDIDATE auth, deploy_allowed=false always
+- **Suite V15.8-E** (22) — `deriveAuthorizationRequirements`: 9 itens, required roles, deploy/tag/stable só em RELEASE_CANDIDATE
+- **Suite V15.8-F** (15) — `deriveAuthorizationAuditTrail`: events por state, event fields, invariant_enforced
+- **Suite V15.8-G** (24) — PI Harness JSON V15.8 via spawn: all 18 required fields, schema v15.8, all *_allowed=false
+- **Suite V15.8-H** (10) — CLI `--authorization-manifest`: nonexistent/invalid/valid, deploy_allowed=false always
+- **Suite V15.8-I** (20) — Human report: summary/gate notes contain "modeled", "explicit authorization", "remain blocked"
+- **Suite V15.8-J** (24) — Supervisor integration: attach/evaluate/graph, null ctx safe, graph schema v15.8
+
