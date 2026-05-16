@@ -1,0 +1,21 @@
+{
+  "schema_version": "v15.10",
+  "contract_id": "contract-v1512-pass-gold-binding-ready",
+  "mission_id": "mission_v1512_binding_test",
+  "requested_action": "pass_gold_confirmation",
+  "requested_scope": ["pass_gold_confirmation"],
+  "requested_by": "pi-harness",
+  "reviewed_by": "pass-gold-authority-reviewer",
+  "reviewer_role": "pass_gold_authority",
+  "review_decision": "approved",
+  "review_reason": "PASS GOLD authority binding — Go Core evidence verified, all conditions met",
+  "evidence_refs": ["go_core_evidence_ref", "evidence_receipt_ref", "pass_gold_report_ref"],
+  "required_evidence_refs": [],
+  "constraints": {
+    "deploy_allowed": false,
+    "tag_allowed": false,
+    "stable_allowed": false
+  },
+  "issued_at": 1704067200000,
+  "expires_at": 9999999999999
+}
