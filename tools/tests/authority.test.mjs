@@ -16,6 +16,11 @@ import {
   renderAuthorityReviewSummary,
   renderAuthorityReviewGate,
 } from '../hermes/authority-review.mjs';
+import {
+  evaluatePassGoldAuthorityBinding,
+  BINDING_STATUSES,
+  BINDING_SCHEMA_VERSION,
+} from '../hermes/pass-gold-authority-binding.mjs';
 
 let passed = 0;
 let failed = 0;
@@ -323,6 +328,157 @@ for (const g of allGates) {
   assert(g.stable_allowed === false,    `[J] stable_allowed=false for status=${g.authority_review_status}`);
   assert(g.promotion_allowed === false, `[J] promotion_allowed=false for status=${g.authority_review_status}`);
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Suite X — PASS GOLD Authority Binding (V15.12)
+// ═══════════════════════════════════════════════════════════════
+
+console.log('\n[Suite X] PASS GOLD Authority Binding (V15.12)');
+
+// Helpers: simulated harness state and authority gate
+const fullEvidenceState = {
+  backendAlive:            true,
+  evidenceSource:          'go-core',
+  goRuntimeEvidenceId:     'ev_gocore_test_123',
+  backendHasEvidenceReceipt: true,
+  runtimeProbePass:        true,
+  fakeEvidenceAbsent:      true,
+};
+
+const noEvidenceState = {
+  backendAlive:            false,
+  evidenceSource:          null,
+  goRuntimeEvidenceId:     null,
+  backendHasEvidenceReceipt: false,
+  runtimeProbePass:        false,
+  fakeEvidenceAbsent:      false,
+};
+
+const fullAuthorityGate = {
+  human_approval_contract_valid: true,
+  review_decision:               'approved',
+  authority_sufficient:          true,
+  scope_valid:                   true,
+  temporal_valid:                true,
+  release_allowed:               false,
+  deploy_allowed:                false,
+  tag_allowed:                   false,
+  stable_allowed:                false,
+  authority_role:                'pass_gold_authority',
+  approved_actions:              ['pass_gold_confirmation'],
+  pass_gold_confirmed:           true,
+};
+
+const noAuthorityGate = {
+  human_approval_contract_valid: false,
+  review_decision:               null,
+  authority_sufficient:          false,
+  scope_valid:                   false,
+  temporal_valid:                true,
+  release_allowed:               false,
+  deploy_allowed:                false,
+  tag_allowed:                   false,
+  stable_allowed:                false,
+  authority_role:                null,
+  approved_actions:              [],
+  pass_gold_confirmed:           false,
+};
+
+const pendingAuthorityGate = {
+  ...fullAuthorityGate,
+  human_approval_contract_valid: false,
+  review_decision:               'pending',
+  authority_sufficient:          false,
+};
+
+const allowedFlagsTrueGate = {
+  ...fullAuthorityGate,
+  release_allowed: true, // violation
+};
+
+const mockContract = { contract_id: 'contract_test_v1512' };
+
+// [X-01] schema and constants
+const bindingBasic = evaluatePassGoldAuthorityBinding({}, null, null);
+assert(bindingBasic.pass_gold_authority_binding_enabled === true,    '[X-01] binding_enabled=true always');
+assert(BINDING_SCHEMA_VERSION === 'v15.12',                          '[X-02] BINDING_SCHEMA_VERSION=v15.12');
+assert(Array.isArray(BINDING_STATUSES) && BINDING_STATUSES.length === 3, '[X-03] BINDING_STATUSES has 3 entries');
+
+// [X-04] no evidence, no authority → BINDING_BLOCKED_EVIDENCE
+const bNoEvNoAuth = evaluatePassGoldAuthorityBinding(noEvidenceState, noAuthorityGate, null);
+assert(bNoEvNoAuth.pass_gold_authority_binding_status === 'BINDING_BLOCKED_EVIDENCE', '[X-04] no evidence+no authority → BINDING_BLOCKED_EVIDENCE');
+assert(bNoEvNoAuth.pass_gold_authority_binding_valid === false,                        '[X-05] no evidence+no authority → binding_valid=false');
+
+// [X-06] no evidence + authority ok → BINDING_BLOCKED_EVIDENCE (evidence takes priority)
+const bNoEvYesAuth = evaluatePassGoldAuthorityBinding(noEvidenceState, fullAuthorityGate, null);
+assert(bNoEvYesAuth.pass_gold_authority_binding_status === 'BINDING_BLOCKED_EVIDENCE', '[X-06] no evidence+authority ok → BINDING_BLOCKED_EVIDENCE');
+
+// [X-07] evidence ok + no authority → BINDING_BLOCKED_AUTHORITY
+const bYesEvNoAuth = evaluatePassGoldAuthorityBinding(fullEvidenceState, noAuthorityGate, null);
+assert(bYesEvNoAuth.pass_gold_authority_binding_status === 'BINDING_BLOCKED_AUTHORITY', '[X-07] evidence ok+no authority → BINDING_BLOCKED_AUTHORITY');
+assert(bYesEvNoAuth.pass_gold_authority_binding_valid === false,                         '[X-08] evidence ok+no authority → binding_valid=false');
+
+// [X-09] evidence ok + authority pending → BINDING_BLOCKED_AUTHORITY
+const bYesEvPending = evaluatePassGoldAuthorityBinding(fullEvidenceState, pendingAuthorityGate, null);
+assert(bYesEvPending.pass_gold_authority_binding_status === 'BINDING_BLOCKED_AUTHORITY', '[X-09] authority pending → BINDING_BLOCKED_AUTHORITY');
+
+// [X-10] evidence ok + authority denied → BINDING_BLOCKED_AUTHORITY
+const deniedGate = { ...fullAuthorityGate, human_approval_contract_valid: false, review_decision: 'denied', authority_sufficient: false };
+const bYesEvDenied = evaluatePassGoldAuthorityBinding(fullEvidenceState, deniedGate, null);
+assert(bYesEvDenied.pass_gold_authority_binding_status === 'BINDING_BLOCKED_AUTHORITY', '[X-10] authority denied → BINDING_BLOCKED_AUTHORITY');
+
+// [X-11] fake evidence (fakeEvidenceAbsent=false) + authority ok → BINDING_BLOCKED_EVIDENCE
+const fakeEvState = { ...fullEvidenceState, fakeEvidenceAbsent: false };
+const bFakeEvAuth = evaluatePassGoldAuthorityBinding(fakeEvState, fullAuthorityGate, null);
+assert(bFakeEvAuth.pass_gold_authority_binding_status === 'BINDING_BLOCKED_EVIDENCE', '[X-11] fake evidence → BINDING_BLOCKED_EVIDENCE');
+
+// [X-12] allowed flags true in gate → BINDING_BLOCKED_AUTHORITY
+const bAllowedTrue = evaluatePassGoldAuthorityBinding(fullEvidenceState, allowedFlagsTrueGate, null);
+assert(bAllowedTrue.pass_gold_authority_binding_status === 'BINDING_BLOCKED_AUTHORITY', '[X-12] allowed flags true → BINDING_BLOCKED_AUTHORITY');
+
+// [X-13] full evidence + full authority → BINDING_READY
+const bReady = evaluatePassGoldAuthorityBinding(fullEvidenceState, fullAuthorityGate, mockContract);
+assert(bReady.pass_gold_authority_binding_status === 'BINDING_READY',   '[X-13] full evidence+authority → BINDING_READY');
+assert(bReady.pass_gold_authority_binding_valid === true,                '[X-14] BINDING_READY → binding_valid=true');
+
+// [X-15..19] BINDING_READY invariants — all allowed flags false
+assert(bReady.deploy_allowed    === false, '[X-15] BINDING_READY deploy_allowed=false');
+assert(bReady.release_allowed   === false, '[X-16] BINDING_READY release_allowed=false');
+assert(bReady.tag_allowed       === false, '[X-17] BINDING_READY tag_allowed=false');
+assert(bReady.stable_allowed    === false, '[X-18] BINDING_READY stable_allowed=false');
+assert(bReady.promotion_allowed === false, '[X-19] BINDING_READY promotion_allowed=false');
+
+// [X-20] BINDING_READY fields populated correctly
+assert(bReady.pass_gold_confirmed_by_authority === true,               '[X-20] BINDING_READY pass_gold_confirmed_by_authority=true');
+assert(bReady.pass_gold_confirmed_by_go_core === true,                 '[X-21] BINDING_READY pass_gold_confirmed_by_go_core=true');
+assert(bReady.pass_gold_binding_evidence_receipt_id === 'ev_gocore_test_123', '[X-22] BINDING_READY evidence_receipt_id correct');
+assert(bReady.pass_gold_binding_evidence_source === 'go-core',         '[X-23] BINDING_READY evidence_source=go-core');
+assert(bReady.pass_gold_binding_contract_id === 'contract_test_v1512', '[X-24] BINDING_READY contract_id populated');
+assert(bReady.pass_gold_binding_reviewer === 'pass_gold_authority',    '[X-25] BINDING_READY reviewer populated');
+assert(Array.isArray(bReady.pass_gold_binding_allowed_actions),        '[X-26] BINDING_READY allowed_actions is array');
+assert(bReady.pass_gold_binding_allowed_actions.length > 0,            '[X-27] BINDING_READY allowed_actions non-empty');
+assert(bReady.pass_gold_authority_binding_errors.length === 0,         '[X-28] BINDING_READY no errors');
+
+// [X-29] BINDING_BLOCKED → pass_gold_confirmed_by_authority=false
+assert(bNoEvNoAuth.pass_gold_confirmed_by_authority === false, '[X-29] BLOCKED → confirmed_by_authority=false');
+assert(bYesEvNoAuth.pass_gold_confirmed_by_authority === false, '[X-30] BLOCKED_AUTHORITY → confirmed_by_authority=false');
+
+// [X-31] BINDING_BLOCKED_EVIDENCE → errors contain evidence_condition_failed
+assert(bNoEvYesAuth.pass_gold_authority_binding_errors.some(e => e.includes('evidence_condition_failed')), '[X-31] BLOCKED_EVIDENCE errors contain evidence_condition_failed');
+
+// [X-32] BINDING_BLOCKED_AUTHORITY → errors contain authority_condition_failed
+assert(bYesEvNoAuth.pass_gold_authority_binding_errors.some(e => e.includes('authority_condition_failed')), '[X-32] BLOCKED_AUTHORITY errors contain authority_condition_failed');
+
+// [X-33] schema_version in output
+assert(bReady.pass_gold_authority_binding_schema_version === 'v15.12', '[X-33] output schema_version=v15.12');
+
+// [X-34] null gate → BINDING_BLOCKED_EVIDENCE (not crash)
+const bNullGate = evaluatePassGoldAuthorityBinding(fullEvidenceState, null, null);
+assert(typeof bNullGate.pass_gold_authority_binding_status === 'string', '[X-34] null gate → no crash, returns status');
+
+// [X-35] empty state → BINDING_BLOCKED_EVIDENCE (not crash)
+const bEmptyState = evaluatePassGoldAuthorityBinding({}, fullAuthorityGate, null);
+assert(bEmptyState.pass_gold_authority_binding_status === 'BINDING_BLOCKED_EVIDENCE', '[X-35] empty state → BINDING_BLOCKED_EVIDENCE');
 
 // ═══════════════════════════════════════════════════════════════
 // Result

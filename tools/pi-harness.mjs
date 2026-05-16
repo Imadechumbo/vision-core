@@ -67,6 +67,9 @@ import {
   renderAuthorityScenarioReport,
 } from './hermes/authority-harness.mjs';
 import {
+  evaluatePassGoldAuthorityBinding,
+} from './hermes/pass-gold-authority-binding.mjs';
+import {
   createDecisionMatrix,
   evaluateDecisionMatrix,
   evaluateReleaseReadiness,
@@ -138,6 +141,8 @@ let _authorizationScenarioMatrix = null;
 let _authorityGate          = null;
 let _authorityScenario      = null;
 let _authorityScenarioMatrix = null;
+// PASS GOLD Authority Binding (V15.12)
+let _passGoldBinding        = null;
 
 // ═══════════════════════════════════════════════════════════════════
 // FAKE EVIDENCE SCAN PATTERNS
@@ -1641,6 +1646,20 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       full_suite_required:    FAST_MODE || HARNESS_MODE === 'verify',
       certify_required:       HARNESS_MODE !== 'certify' && HARNESS_MODE !== 'release',
       recommendation:         s.recommendation?.startsWith('BLOCKED_') ? s.recommendation : (FAST_MODE ? (s.syntaxOk ? 'FAST_FEEDBACK_ONLY' : 'CERTIFY_REQUIRED') : s.recommendation),
+      // V15.12: PASS GOLD Authority Binding
+      pass_gold_authority_binding_enabled:        _passGoldBinding?.pass_gold_authority_binding_enabled        ?? true,
+      pass_gold_authority_binding_schema_version: _passGoldBinding?.pass_gold_authority_binding_schema_version ?? 'v15.12',
+      pass_gold_authority_binding_status:         _passGoldBinding?.pass_gold_authority_binding_status         ?? 'BINDING_BLOCKED_EVIDENCE',
+      pass_gold_authority_binding_valid:          _passGoldBinding?.pass_gold_authority_binding_valid          ?? false,
+      pass_gold_authority_binding_errors:         _passGoldBinding?.pass_gold_authority_binding_errors         ?? [],
+      pass_gold_authority_binding_warnings:       _passGoldBinding?.pass_gold_authority_binding_warnings       ?? [],
+      pass_gold_confirmed_by_authority:           _passGoldBinding?.pass_gold_confirmed_by_authority           ?? false,
+      pass_gold_confirmed_by_go_core:             _passGoldBinding?.pass_gold_confirmed_by_go_core             ?? false,
+      pass_gold_binding_evidence_receipt_id:      _passGoldBinding?.pass_gold_binding_evidence_receipt_id      ?? null,
+      pass_gold_binding_evidence_source:          _passGoldBinding?.pass_gold_binding_evidence_source          ?? null,
+      pass_gold_binding_contract_id:              _passGoldBinding?.pass_gold_binding_contract_id              ?? null,
+      pass_gold_binding_reviewer:                 _passGoldBinding?.pass_gold_binding_reviewer                 ?? null,
+      pass_gold_binding_allowed_actions:          _passGoldBinding?.pass_gold_binding_allowed_actions          ?? [],
     };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
@@ -1953,6 +1972,20 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
     log(`NOTE: authority review is validation, not execution`);
     log(`NOTE: human approval cannot override PASS GOLD`);
     log(`NOTE: deploy/tag/stable remain blocked in V15.10`);
+    if (_passGoldBinding) {
+      log(div('PASS GOLD AUTHORITY BINDING (V15.12)'));
+      log(`BINDING_STATUS:            ${_passGoldBinding.pass_gold_authority_binding_status}`);
+      log(`BINDING_VALID:             ${_passGoldBinding.pass_gold_authority_binding_valid}`);
+      log(`CONFIRMED_BY_AUTHORITY:    ${_passGoldBinding.pass_gold_confirmed_by_authority}`);
+      log(`CONFIRMED_BY_GO_CORE:      ${_passGoldBinding.pass_gold_confirmed_by_go_core}`);
+      log(`BINDING_EVIDENCE_SOURCE:   ${_passGoldBinding.pass_gold_binding_evidence_source || 'none'}`);
+      log(`BINDING_EVIDENCE_RECEIPT:  ${_passGoldBinding.pass_gold_binding_evidence_receipt_id || 'none'}`);
+      log(`BINDING_CONTRACT:          ${_passGoldBinding.pass_gold_binding_contract_id || 'none'}`);
+      if (_passGoldBinding.pass_gold_authority_binding_errors.length > 0) {
+        log(`BINDING_ERRORS:            ${_passGoldBinding.pass_gold_authority_binding_errors.join(', ')}`);
+      }
+      log(`NOTE: BINDING_READY never enables deploy/tag/stable — V15.12 classification only`);
+    }
   }
 
   if (hermesCtx) {
@@ -2131,6 +2164,8 @@ async function main() {
     authorityRegistry: createAuthorityRoleRegistry(),
     authorizationLayer: _authorizationLayer,
   });
+  // V15.12: PASS GOLD Authority Binding
+  _passGoldBinding = evaluatePassGoldAuthorityBinding(s, _authorityGate, _authorityContract);
   if (AUTHORITY_SCENARIO) {
     try {
       _authorityScenario = runAuthorityScenario(AUTHORITY_SCENARIO);
