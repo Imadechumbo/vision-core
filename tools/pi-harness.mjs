@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║   PI HARNESS V15.9 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
+ * ║   PI HARNESS V15.10 — VISION CORE AUTONOMOUS MISSION RUNNER         ║
  * ║   D0-Preflight → D1-Cleanup → D2-Contract → D3-GoCore               ║
  * ║   → D4-Backend → D5-Repair → D6-AutoFix → D7-Decision → D8-Report  ║
  * ╠══════════════════════════════════════════════════════════════════════╣
@@ -57,6 +57,16 @@ import {
   renderAuthorizationScenarioReport,
 } from './hermes/authorization-harness.mjs';
 import {
+  evaluateAuthorityReviewGate,
+  createAuthorityRoleRegistry,
+  renderAuthorityReviewGate,
+} from './hermes/authority-review.mjs';
+import {
+  runAuthorityScenario,
+  runAuthorityScenarioMatrix,
+  renderAuthorityScenarioReport,
+} from './hermes/authority-harness.mjs';
+import {
   createDecisionMatrix,
   evaluateDecisionMatrix,
   evaluateReleaseReadiness,
@@ -83,6 +93,10 @@ const AUTHORIZATION_MANIFEST_PATH    = ARG('--authorization-manifest')      || n
 // V15.9: authorization scenario and matrix flags
 const AUTHORIZATION_SCENARIO         = ARG('--authorization-scenario')       || null;
 const AUTHORIZATION_SCENARIO_MATRIX  = FLAG('--authorization-scenario-matrix');
+// V15.10: authority review flags
+const AUTHORITY_CONTRACT_PATH        = ARG('--authority-contract')            || null;
+const AUTHORITY_SCENARIO             = ARG('--authority-scenario')            || null;
+const AUTHORITY_SCENARIO_MATRIX      = FLAG('--authority-scenario-matrix');
 
 // V15.3 runtime probe flags
 const RUNTIME_PROBE_NO_START   = FLAG('--runtime-probe-no-start');
@@ -115,6 +129,10 @@ let _authorizationLayer = null;
 // Authorization Scenario snapshots (V15.9)
 let _authorizationScenario       = null;
 let _authorizationScenarioMatrix = null;
+// Authority Review Gate snapshots (V15.10)
+let _authorityGate          = null;
+let _authorityScenario      = null;
+let _authorityScenarioMatrix = null;
 
 // ═══════════════════════════════════════════════════════════════════
 // FAKE EVIDENCE SCAN PATTERNS
@@ -1573,6 +1591,34 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       hermes_authorization_scenario_failed:        _authorizationScenarioMatrix?.failed ?? null,
       hermes_authorization_all_safe:               _authorizationScenarioMatrix?.all_safe               ?? null,
       hermes_authorization_all_allowed_flags_false: _authorizationScenarioMatrix?.all_allowed_flags_false ?? null,
+      // V15.10: Authority Review Gate fields
+      hermes_authority_review_enabled:             true,
+      hermes_authority_schema_version:             'v15.10',
+      hermes_authority_review_status:              _authorityGate?.authority_review_status              || 'CONTRACT_MISSING',
+      hermes_authority_review_valid:               _authorityGate?.authority_review_valid               || false,
+      hermes_human_approval_contract_valid:        _authorityGate?.human_approval_contract_valid        || false,
+      hermes_authority_role:                       _authorityGate?.authority_role                       || null,
+      hermes_authority_sufficient:                 _authorityGate?.authority_sufficient                 || false,
+      hermes_authority_scope_valid:                _authorityGate?.scope_valid                          || false,
+      hermes_authority_temporal_valid:             _authorityGate?.temporal_valid                       || false,
+      hermes_authority_missing_evidence:           _authorityGate?.missing_evidence                     || [],
+      hermes_authority_conflicts:                  (_authorityGate?.authority_conflicts                  || []).map(c => ({ id: c.id, severity: c.severity })),
+      hermes_authority_audit_trail:                (_authorityGate?.authority_audit_trail                || []).map(e => e.type),
+      hermes_authority_requirements:               (_authorityGate?.authority_requirements               || []).map(r => r.id),
+      hermes_authority_scenario:                   AUTHORITY_SCENARIO || null,
+      hermes_authority_scenario_matrix:            AUTHORITY_SCENARIO_MATRIX
+        ? { total: _authorityScenarioMatrix?.total, passed: _authorityScenarioMatrix?.passed, failed: _authorityScenarioMatrix?.failed, all_safe: _authorityScenarioMatrix?.all_safe, scenarios: (_authorityScenarioMatrix?.scenarios || []).map(s => ({ scenario: s.scenario, actual_status: s.actual_status, status_match: s.status_match })) }
+        : null,
+      hermes_authority_scenario_total:             _authorityScenarioMatrix?.total             ?? null,
+      hermes_authority_scenario_passed:            _authorityScenarioMatrix?.passed            ?? null,
+      hermes_authority_scenario_failed:            _authorityScenarioMatrix?.failed            ?? null,
+      hermes_authority_all_safe:                   _authorityScenarioMatrix?.all_safe          ?? null,
+      hermes_authority_all_allowed_flags_false:    _authorityScenarioMatrix?.all_allowed_flags_false ?? null,
+      hermes_release_authorized_by_authority:      _authorityGate?.release_authorized           || false,
+      hermes_deploy_authorized_by_authority:       _authorityGate?.deploy_authorized            || false,
+      hermes_tag_authorized_by_authority:          _authorityGate?.tag_authorized               || false,
+      hermes_stable_authorized_by_authority:       _authorityGate?.stable_promotion_authorized  || false,
+      hermes_pass_gold_confirmed_by_authority:     _authorityGate?.pass_gold_confirmed          || false,
     };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
@@ -1584,7 +1630,7 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
 
   log('');
   log(`╔${sep}╗`);
-  const title = 'PI HARNESS V15.9 — VISION CORE AUTONOMOUS MISSION RUNNER';
+  const title = 'PI HARNESS V15.10 — VISION CORE AUTONOMOUS MISSION RUNNER';
   log(`║  ${title}${' '.repeat(Math.max(0, W - title.length - 2))}║`);
   const sub   = 'RELATÓRIO FINAL';
   log(`║  ${sub}${' '.repeat(Math.max(0, W - sub.length - 2))}║`);
@@ -1830,6 +1876,56 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
     log(`NOTE: authorization test harness never executes deploy/tag/stable`);
   }
 
+  if (_authorityGate || _authorityScenario || _authorityScenarioMatrix) {
+    log(div('AUTHORITY REVIEW GATE (V15.10)'));
+    log(`AUTHORITY_SCHEMA:          v15.10`);
+    if (_authorityGate) {
+      log(`AUTHORITY_STATUS:          ${_authorityGate.authority_review_status}`);
+      log(`AUTHORITY_VALID:           ${_authorityGate.authority_review_valid}`);
+      log(`CONTRACT_VALID:            ${_authorityGate.human_approval_contract_valid}`);
+      log(`AUTHORITY_ROLE:            ${_authorityGate.authority_role || 'none'}`);
+      log(`AUTHORITY_SUFFICIENT:      ${_authorityGate.authority_sufficient}`);
+      log(`SCOPE_VALID:               ${_authorityGate.scope_valid}`);
+      log(`TEMPORAL_VALID:            ${_authorityGate.temporal_valid}`);
+      const missEv = _authorityGate.missing_evidence || [];
+      log(`MISSING_EVIDENCE:          ${missEv.length > 0 ? missEv.join(', ') : 'none'}`);
+      const conflicts = _authorityGate.authority_conflicts || [];
+      log(`CONFLICTS:                 ${conflicts.length > 0 ? conflicts.map(c => `${c.id}(${c.severity})`).join(', ') : 'none'}`);
+      log(`RELEASE_AUTHORIZED_BY_AUTHORITY:  ${_authorityGate.release_authorized}`);
+      log(`DEPLOY_AUTHORIZED_BY_AUTHORITY:   ${_authorityGate.deploy_authorized}`);
+      log(`TAG_AUTHORIZED_BY_AUTHORITY:      ${_authorityGate.tag_authorized}`);
+      log(`STABLE_AUTHORIZED_BY_AUTHORITY:   ${_authorityGate.stable_promotion_authorized}`);
+      log(`PASS_GOLD_CONFIRMED_BY_AUTHORITY: ${_authorityGate.pass_gold_confirmed}`);
+      log(`RELEASE_ALLOWED:           false`);
+      log(`DEPLOY_ALLOWED:            false`);
+      log(`TAG_ALLOWED:               false`);
+      log(`STABLE_ALLOWED:            false`);
+      const gate = renderAuthorityReviewGate(_authorityGate);
+      if (gate) log(`FINAL_AUTHORITY_GATE:      ${gate.authority_review_status}`);
+    }
+    if (_authorityScenario) {
+      log(`AUTHORITY_SCENARIO:        ${_authorityScenario.scenario}`);
+      log(`AUTHORITY_SCENARIO_STATUS: ${_authorityScenario.actual_status}`);
+    }
+    if (_authorityScenarioMatrix) {
+      const arpt = renderAuthorityScenarioReport(_authorityScenarioMatrix);
+      log(div('AUTHORITY SCENARIO MATRIX (V15.10)'));
+      log(`MATRIX_TOTAL:              ${_authorityScenarioMatrix.total}`);
+      log(`MATRIX_PASSED:             ${_authorityScenarioMatrix.passed}`);
+      log(`MATRIX_FAILED:             ${_authorityScenarioMatrix.failed}`);
+      log(`ALL_SAFE:                  ${_authorityScenarioMatrix.all_safe}`);
+      log(`ALL_ALLOWED_FLAGS_FALSE:   ${_authorityScenarioMatrix.all_allowed_flags_false}`);
+      if (arpt && Array.isArray(arpt.scenario_summary)) {
+        for (const sc of arpt.scenario_summary) {
+          log(`  [${sc.status_match ? 'PASS' : 'FAIL'}] ${sc.scenario}: ${sc.actual_status}`);
+        }
+      }
+    }
+    log(`NOTE: authority review is validation, not execution`);
+    log(`NOTE: human approval cannot override PASS GOLD`);
+    log(`NOTE: deploy/tag/stable remain blocked in V15.10`);
+  }
+
   if (hermesCtx) {
     log(div('HERMES SUPERVISION (V15.8)'));
     log(`SUPERVISOR_ENABLED:        ${hermesCtx.enabled}`);
@@ -1864,8 +1960,8 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
   log('');
   log(`╔${sep}╗`);
   const footer = result === 'PASS'
-    ? `✓ PI HARNESS V15.9 PASS — ${s.recommendation}`
-    : `✗ PI HARNESS V15.9 ${result} — ${s.recommendation}`;
+    ? `✓ PI HARNESS V15.10 PASS — ${s.recommendation}`
+    : `✗ PI HARNESS V15.10 ${result} — ${s.recommendation}`;
   log(`║  ${footer}${' '.repeat(Math.max(0, W - footer.length - 2))}║`);
   log(`╚${sep}╝`);
   log('');
@@ -1894,11 +1990,11 @@ async function main() {
 
   // V15.5: Hermes Mission Supervisor
   _hermesCtx = createHermesMissionContext();
-  recordHermesEvent(_hermesCtx, { type: 'mission_start', version: 'V15.9', max_difficulty: rawMaxDiff });
+  recordHermesEvent(_hermesCtx, { type: 'mission_start', version: 'V15.10', max_difficulty: rawMaxDiff });
 
   if (!JSON_MODE && !CI_MODE) {
     log('');
-    log('PI HARNESS V15.9 — iniciando...');
+    log('PI HARNESS V15.10 — iniciando...');
     log(`  max-difficulty: ${rawMaxDiff} | dry-run: ${DRY_RUN} | no-autofix: ${NO_AUTOFIX} | ci: ${CI_MODE} | runtime-probe: ${RUNTIME_PROBE} | no-start: ${RUNTIME_PROBE_NO_START}`);
     log(`  hermes: ${_hermesCtx.mission_id}`);
     log('');
@@ -1984,6 +2080,47 @@ async function main() {
       _authorizationScenarioMatrix = runAuthorizationScenarioMatrix();
     } catch (err) {
       _authorizationScenarioMatrix = {
+        total: 0, passed: 0, failed: 0,
+        all_safe: false, all_allowed_flags_false: false,
+        error: err.message, scenarios: [],
+      };
+    }
+  }
+
+  // V15.10: Authority Contract / Scenario / Matrix
+  let _authorityContract = null;
+  if (AUTHORITY_CONTRACT_PATH) {
+    try {
+      const raw = readFileSync(resolve(AUTHORITY_CONTRACT_PATH), 'utf8');
+      _authorityContract = JSON.parse(raw);
+    } catch (err) {
+      _authorityContract = { _load_error: err.message, schema_version: 'invalid' };
+    }
+  }
+  _authorityGate = evaluateAuthorityReviewGate(_authorityContract, {
+    decisionMatrix: _decisionMatrix,
+    authorityRegistry: createAuthorityRoleRegistry(),
+    authorizationLayer: _authorizationLayer,
+  });
+  if (AUTHORITY_SCENARIO) {
+    try {
+      _authorityScenario = runAuthorityScenario(AUTHORITY_SCENARIO);
+    } catch (err) {
+      _authorityScenario = {
+        scenario: AUTHORITY_SCENARIO, error: err.message,
+        actual_status: null, scenario_status: 'SCENARIO_ERROR',
+        authority_review_valid: false, human_approval_contract_valid: false,
+        release_allowed: false, deploy_allowed: false, tag_allowed: false,
+        stable_allowed: false, promotion_allowed: false, pass_gold_candidate: false,
+        safe: true,
+      };
+    }
+  }
+  if (AUTHORITY_SCENARIO_MATRIX) {
+    try {
+      _authorityScenarioMatrix = runAuthorityScenarioMatrix();
+    } catch (err) {
+      _authorityScenarioMatrix = {
         total: 0, passed: 0, failed: 0,
         all_safe: false, all_allowed_flags_false: false,
         error: err.message, scenarios: [],
@@ -2079,7 +2216,7 @@ async function main() {
 
 main().catch(err => {
   if (!JSON_MODE) {
-    process.stderr.write(`PI HARNESS V15.9 FATAL: ${err.message}\n`);
+    process.stderr.write(`PI HARNESS V15.10 FATAL: ${err.message}\n`);
   } else {
     process.stdout.write(JSON.stringify({
       result: 'FAILED',
@@ -2142,6 +2279,32 @@ main().catch(err => {
       hermes_authorization_scenario_failed:        null,
       hermes_authorization_all_safe:               null,
       hermes_authorization_all_allowed_flags_false: null,
+      // V15.10: Authority Review Gate fallback fields
+      hermes_authority_review_enabled:             true,
+      hermes_authority_schema_version:             'v15.10',
+      hermes_authority_review_status:              'CONTRACT_MISSING',
+      hermes_authority_review_valid:               false,
+      hermes_human_approval_contract_valid:        false,
+      hermes_authority_role:                       null,
+      hermes_authority_sufficient:                 false,
+      hermes_authority_scope_valid:                false,
+      hermes_authority_temporal_valid:             false,
+      hermes_authority_missing_evidence:           ['contract'],
+      hermes_authority_conflicts:                  [],
+      hermes_authority_audit_trail:                ['contract_missing'],
+      hermes_authority_requirements:               [],
+      hermes_authority_scenario:                   null,
+      hermes_authority_scenario_matrix:            null,
+      hermes_authority_scenario_total:             null,
+      hermes_authority_scenario_passed:            null,
+      hermes_authority_scenario_failed:            null,
+      hermes_authority_all_safe:                   null,
+      hermes_authority_all_allowed_flags_false:    null,
+      hermes_release_authorized_by_authority:      false,
+      hermes_deploy_authorized_by_authority:       false,
+      hermes_tag_authorized_by_authority:          false,
+      hermes_stable_authorized_by_authority:       false,
+      hermes_pass_gold_confirmed_by_authority:     false,
     }) + '\n');
   }
   process.exit(1);

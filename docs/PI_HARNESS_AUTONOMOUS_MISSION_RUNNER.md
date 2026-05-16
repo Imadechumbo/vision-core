@@ -763,3 +763,133 @@ NOTE: authorization test harness never executes deploy/tag/stable
 - `pass_gold_candidate=false` sem Go Core evidence real
 - `authorization_valid=true` + `signature_valid=true` **não executa** nenhuma ação
 
+
+---
+
+## V15.10 — Authority Review Gate + Human Approval Contract
+
+### Módulo: `tools/hermes/authority-harness.mjs`
+
+| Export | Descrição |
+|---|---|
+| `loadAuthorityFixture(name)` | Carrega fixture JSON de `tools/fixtures/authority/` |
+| `listAuthorityFixtures()` | Lista fixtures disponíveis |
+| `runAuthorityScenario(name, opts)` | Executa cenário individual com invariantes |
+| `runAuthorityScenarioMatrix(opts)` | Executa todos os 11 cenários, retorna matrix |
+| `renderAuthorityScenarioReport(matrix)` | Renderiza relatório de cenários |
+| `createAuthorityScenarioSummary(matrix)` | Cria sumário compacto |
+
+### Scenario Matrix (11 cenários)
+
+| Cenário | Status Esperado |
+|---|---|
+| `missing_contract` | `CONTRACT_MISSING` |
+| `invalid_schema` | `CONTRACT_INVALID` |
+| `insufficient_role_release` | `CONTRACT_AUTHORITY_INSUFFICIENT` |
+| `valid_release_review_contract` | `CONTRACT_VALID` |
+| `valid_release_authority_contract` | `CONTRACT_VALID` |
+| `rejected_contract` | `CONTRACT_REJECTED` |
+| `expired_contract` | `CONTRACT_EXPIRED` |
+| `scope_mismatch_contract` | `CONTRACT_SCOPE_MISMATCH` |
+| `evidence_missing_contract` | `CONTRACT_EVIDENCE_MISSING` |
+| `pass_gold_without_go_core` | `CONTRACT_CONFLICTING` |
+| `conflicting_runtime_contract` | `CONTRACT_VALID` |
+
+### CLI Flags V15.10
+
+```
+--authority-contract <path>       Carrega contrato de aprovação humana do arquivo JSON
+--authority-scenario <name>       Roda cenário individual de autoridade, inclui no JSON
+--authority-scenario-matrix       Roda todos os 11 cenários, inclui matrix no JSON
+```
+
+### Campos JSON V15.10
+
+```json
+{
+  "hermes_authority_review_enabled": true,
+  "hermes_authority_schema_version": "v15.10",
+  "hermes_authority_review_status": "CONTRACT_MISSING",
+  "hermes_authority_review_valid": false,
+  "hermes_human_approval_contract_valid": false,
+  "hermes_authority_role": null,
+  "hermes_authority_sufficient": false,
+  "hermes_authority_scope_valid": false,
+  "hermes_authority_temporal_valid": false,
+  "hermes_authority_missing_evidence": ["contract"],
+  "hermes_authority_conflicts": [],
+  "hermes_authority_audit_trail": ["contract_missing"],
+  "hermes_authority_requirements": [],
+  "hermes_authority_scenario": null,
+  "hermes_authority_scenario_matrix": null,
+  "hermes_authority_scenario_total": null,
+  "hermes_authority_scenario_passed": null,
+  "hermes_authority_scenario_failed": null,
+  "hermes_authority_all_safe": null,
+  "hermes_authority_all_allowed_flags_false": null,
+  "hermes_release_authorized_by_authority": false,
+  "hermes_deploy_authorized_by_authority": false,
+  "hermes_tag_authorized_by_authority": false,
+  "hermes_stable_authorized_by_authority": false,
+  "hermes_pass_gold_confirmed_by_authority": false
+}
+```
+
+### Seção Humana V15.10
+
+```
+──── AUTHORITY REVIEW GATE (V15.10) ────
+AUTHORITY_SCHEMA:          v15.10
+AUTHORITY_STATUS:          CONTRACT_MISSING
+AUTHORITY_VALID:           false
+CONTRACT_VALID:            false
+AUTHORITY_ROLE:            none
+AUTHORITY_SUFFICIENT:      false
+SCOPE_VALID:               false
+TEMPORAL_VALID:            false
+MISSING_EVIDENCE:          contract
+CONFLICTS:                 none
+RELEASE_AUTHORIZED_BY_AUTHORITY:  false
+DEPLOY_AUTHORIZED_BY_AUTHORITY:   false
+TAG_AUTHORIZED_BY_AUTHORITY:      false
+STABLE_AUTHORIZED_BY_AUTHORITY:   false
+PASS_GOLD_CONFIRMED_BY_AUTHORITY: false
+RELEASE_ALLOWED:           false
+DEPLOY_ALLOWED:            false
+TAG_ALLOWED:               false
+STABLE_ALLOWED:            false
+──── AUTHORITY SCENARIO MATRIX (V15.10) ────
+MATRIX_TOTAL:              11
+MATRIX_PASSED:             11
+MATRIX_FAILED:             0
+ALL_SAFE:                  true
+ALL_ALLOWED_FLAGS_FALSE:   true
+NOTE: authority review is validation, not execution
+NOTE: human approval cannot override PASS GOLD
+NOTE: deploy/tag/stable remain blocked in V15.10
+```
+
+### Suites de Teste V15.10
+
+- **Suite V15.10-A** — Authority Role Registry: 6 roles, invariantes, capabilities
+- **Suite V15.10-B** — Human Approval Contract: defaults, overrides, validate null
+- **Suite V15.10-C** — Contract Validation: todos os status paths, invariantes em VALID
+- **Suite V15.10-D** — Authority Review Gate: estrutura, invariantes, render functions
+- **Suite V15.10-E** — Authority Requirements: 13 items, campos obrigatórios
+- **Suite V15.10-F** — Authority Conflicts: 11 tipos, critical vs high, audit trail
+- **Suite V15.10-G** — Authority Harness Matrix: 11 cenários, failed=0, all_safe
+- **Suite V15.10-H** — PI Harness CLI: flags authority-*, campos JSON V15.10
+- **Suite V15.10-I** — Human Report: seção V15.10, NOTEs obrigatórios
+- **Suite V15.10-J** — Regression Safety: invariantes em todos os cenários
+
+### Invariantes V15.10
+
+- `deploy_allowed=false` sempre
+- `release_allowed=false` sempre
+- `tag_allowed=false` sempre
+- `stable_allowed=false` sempre
+- `promotion_allowed=false` sempre
+- `pass_gold_candidate=false` sem Go Core evidence real
+- `authority_review_valid=true` + `human_approval_contract_valid=true` **não executam** nenhuma ação
+- Aprovação humana **não pode** sobrescrever PASS GOLD
+- Evidence só pode vir do Go Core — authority não pode criar evidence

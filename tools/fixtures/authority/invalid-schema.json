@@ -1,0 +1,10 @@
+{
+  "schema_version": "v0.0",
+  "contract_id": "contract-v1510-invalid-schema",
+  "mission_id": "mission-v1510-test",
+  "requested_action": "release_review",
+  "requested_scope": ["review_only"],
+  "reviewer_role": "reviewer",
+  "review_decision": "approved",
+  "evidence_refs": []
+}
