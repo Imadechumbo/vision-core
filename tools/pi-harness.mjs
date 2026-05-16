@@ -2190,10 +2190,12 @@ async function main() {
   // V15.12: PASS GOLD Authority Binding
   _passGoldBinding = evaluatePassGoldAuthorityBinding(s, _authorityGate, _authorityContract);
   // V15.13: Release Candidate Dry-Run Controller
+  const _gitStatusPorcelain = sh('git status --porcelain') || '';
+  const _rcGitClean         = _gitStatusPorcelain.trim() === '';
   _releaseCandidateResult = evaluateReleaseCandidate({
     harnessState:    s,
     passGoldBinding: _passGoldBinding,
-    gitClean:        (s.filesChanged || 0) === 0 && (s.filesRestored || 0) === 0,
+    gitClean:        _rcGitClean,
     testsPassed:     s.syntaxOk === true && s.fakeEvidenceAbsent !== false,
     goTestsPassed:   s.goCoreTestPass === true && s.goCoreBuildPass === true,
     branch:          s.branch || null,
