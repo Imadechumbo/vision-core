@@ -1,0 +1,16 @@
+{
+  "name": "vision-core",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:syntax": "node --no-deprecation -e \"import('./tools/pi-harness.mjs').then(() => console.log('Syntax OK')).catch(e => { console.error(e.message); process.exit(1); })\"",
+    "test:guards": "node --no-deprecation tools/visual-gold-harness-lock.mjs && node --no-deprecation tools/frontend-visual-lock.mjs && node --no-deprecation tools/sddf-front-guard.mjs",
+    "test:authority": "node --no-deprecation tools/hermes/authority-harness.mjs",
+    "test:authority-unit": "node --no-deprecation tools/tests/authority.test.mjs",
+    "test:fast": "node --no-deprecation tools/tests/authority.test.mjs",
+    "test:full": "node --no-deprecation tools/tests/pi-harness.test.mjs",
+    "test:go": "cd go-core && go test ./... && go build ./...",
+    "test:prepush": "node --no-deprecation tools/tests/pi-harness.test.mjs",
+    "test:affected": "node --no-deprecation tools/test-lane.mjs"
+  }
+}
