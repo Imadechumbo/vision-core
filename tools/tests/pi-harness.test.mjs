@@ -3681,6 +3681,35 @@ console.log('\n[V15.10-C] Contract Validation — all status paths');
   assert(Array.isArray(vValid.errors),                   '[V15.10-C-28] errors is array');
   assert(Array.isArray(vValid.warnings),                 '[V15.10-C-29] warnings is array');
   assert(Array.isArray(vValid.missing_evidence),         '[V15.10-C-30] missing_evidence is array');
+
+  // review_decision gate — only "approved" may yield CONTRACT_VALID
+  const baseOpts = { reviewer_role: 'reviewer', requested_action: 'release_review', reviewed_by: 'tester', evidence_refs: ['decision_matrix_ref', 'runtime_evidence_ref', 'authorization_manifest_ref'] };
+
+  const cPending = createHumanApprovalContract({ ...baseOpts, review_decision: 'pending' });
+  const vPending = validateHumanApprovalContract(cPending, {});
+  assert(vPending.status === 'CONTRACT_PARTIAL', '[V15.10-C-31] pending → CONTRACT_PARTIAL (not VALID)');
+  assert(vPending.ok     === false,              '[V15.10-C-32] pending → ok=false');
+
+  const cDenied = createHumanApprovalContract({ ...baseOpts, review_decision: 'denied' });
+  const vDenied = validateHumanApprovalContract(cDenied, {});
+  assert(vDenied.status === 'CONTRACT_PARTIAL',  '[V15.10-C-33] denied → CONTRACT_PARTIAL (not VALID)');
+  assert(vDenied.ok     === false,               '[V15.10-C-34] denied → ok=false');
+
+  const cUnknown = createHumanApprovalContract({ ...baseOpts, review_decision: 'unknown_value' });
+  const vUnknown = validateHumanApprovalContract(cUnknown, {});
+  assert(vUnknown.status === 'CONTRACT_PARTIAL', '[V15.10-C-35] unknown decision → CONTRACT_PARTIAL (not VALID)');
+  assert(vUnknown.ok     === false,              '[V15.10-C-36] unknown decision → ok=false');
+
+  const cEmpty = createHumanApprovalContract({ ...baseOpts, review_decision: '' });
+  const vEmpty = validateHumanApprovalContract(cEmpty, {});
+  assert(vEmpty.status === 'CONTRACT_PARTIAL',   '[V15.10-C-37] empty string decision → CONTRACT_PARTIAL');
+  assert(vEmpty.ok     === false,                '[V15.10-C-38] empty string decision → ok=false');
+
+  // confirm approved still works with all gates valid
+  const cApproved = createHumanApprovalContract({ ...baseOpts, review_decision: 'approved' });
+  const vApproved = validateHumanApprovalContract(cApproved, {});
+  assert(vApproved.status === 'CONTRACT_VALID',  '[V15.10-C-39] approved + valid gates → CONTRACT_VALID');
+  assert(vApproved.ok     === true,              '[V15.10-C-40] approved + valid gates → ok=true');
 }
 
 // ════════════════════════════════════════════════════════════════════

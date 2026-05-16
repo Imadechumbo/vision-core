@@ -316,7 +316,8 @@ function validateHumanApprovalContract(contract, authorityRegistry, runtimeEvide
     status = 'CONTRACT_INVALID';
   } else if (missingEvidence.length > 0) {
     status = 'CONTRACT_EVIDENCE_MISSING';
-  } else if (!contract.reviewed_by || !contract.review_decision) {
+  } else if (!contract.reviewed_by || !contract.review_decision || contract.review_decision !== 'approved') {
+    // review_decision must be exactly "approved" — pending/denied/unknown are not sufficient
     status = 'CONTRACT_PARTIAL';
   } else {
     status = 'CONTRACT_VALID';
