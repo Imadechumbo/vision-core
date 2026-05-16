@@ -70,6 +70,9 @@ import {
   evaluatePassGoldAuthorityBinding,
 } from './hermes/pass-gold-authority-binding.mjs';
 import {
+  evaluateReleaseCandidate,
+} from './release-candidate-controller.mjs';
+import {
   createDecisionMatrix,
   evaluateDecisionMatrix,
   evaluateReleaseReadiness,
@@ -143,6 +146,8 @@ let _authorityScenario      = null;
 let _authorityScenarioMatrix = null;
 // PASS GOLD Authority Binding (V15.12)
 let _passGoldBinding        = null;
+// Release Candidate Controller (V15.13)
+let _releaseCandidateResult = null;
 
 // ═══════════════════════════════════════════════════════════════════
 // FAKE EVIDENCE SCAN PATTERNS
@@ -1660,6 +1665,14 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       pass_gold_binding_contract_id:              _passGoldBinding?.pass_gold_binding_contract_id              ?? null,
       pass_gold_binding_reviewer:                 _passGoldBinding?.pass_gold_binding_reviewer                 ?? null,
       pass_gold_binding_allowed_actions:          _passGoldBinding?.pass_gold_binding_allowed_actions          ?? [],
+      // V15.13: Release Candidate Dry-Run Controller
+      release_candidate_dry_run_enabled:  _releaseCandidateResult?.release_candidate_dry_run_enabled  ?? true,
+      release_candidate_schema_version:   _releaseCandidateResult?.release_candidate_schema_version   ?? 'v15.13',
+      release_candidate_status:           _releaseCandidateResult?.release_candidate_status           ?? 'RC_BLOCKED_EVIDENCE',
+      release_candidate_allowed:          _releaseCandidateResult?.release_candidate_allowed          ?? false,
+      release_candidate_dry_run_only:     _releaseCandidateResult?.release_candidate_dry_run_only     ?? true,
+      release_candidate_blockers:         _releaseCandidateResult?.release_candidate_blockers         ?? [],
+      release_candidate_required_evidence: _releaseCandidateResult?.release_candidate_required_evidence ?? [],
     };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
@@ -1986,6 +1999,16 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       }
       log(`NOTE: BINDING_READY never enables deploy/tag/stable — V15.12 classification only`);
     }
+    if (_releaseCandidateResult) {
+      log(div('RELEASE CANDIDATE DRY-RUN (V15.13)'));
+      log(`RC_STATUS:                 ${_releaseCandidateResult.release_candidate_status}`);
+      log(`RC_ALLOWED:                ${_releaseCandidateResult.release_candidate_allowed}`);
+      log(`RC_DRY_RUN_ONLY:           ${_releaseCandidateResult.release_candidate_dry_run_only}`);
+      if (_releaseCandidateResult.release_candidate_blockers.length > 0) {
+        log(`RC_BLOCKERS:               ${_releaseCandidateResult.release_candidate_blockers.join(', ')}`);
+      }
+      log(`NOTE: RC_ALLOWED is classification only — no deploy/tag/stable in V15.13`);
+    }
   }
 
   if (hermesCtx) {
@@ -2166,6 +2189,18 @@ async function main() {
   });
   // V15.12: PASS GOLD Authority Binding
   _passGoldBinding = evaluatePassGoldAuthorityBinding(s, _authorityGate, _authorityContract);
+  // V15.13: Release Candidate Dry-Run Controller
+  _releaseCandidateResult = evaluateReleaseCandidate({
+    harnessState:    s,
+    passGoldBinding: _passGoldBinding,
+    gitClean:        (s.filesChanged || 0) === 0 && (s.filesRestored || 0) === 0,
+    testsPassed:     s.syntaxOk === true && s.fakeEvidenceAbsent !== false,
+    goTestsPassed:   s.goCoreTestPass === true && s.goCoreBuildPass === true,
+    branch:          s.branch || null,
+    evidenceReceipt: s.goRuntimeEvidenceId
+      ? { id: s.goRuntimeEvidenceId, source: s.evidenceSource || null }
+      : null,
+  });
   if (AUTHORITY_SCENARIO) {
     try {
       _authorityScenario = runAuthorityScenario(AUTHORITY_SCENARIO);
