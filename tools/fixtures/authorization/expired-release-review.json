@@ -1,0 +1,27 @@
+{
+  "schema_version": "v15.8",
+  "authorization_id": "auth-v159-expired",
+  "mission_id": "mission-v159-simulated",
+  "requested_action": "release_review",
+  "requested_by": "pi-harness",
+  "requested_at": 1704067200000,
+  "expires_at": 1000000000000,
+  "scope": ["review_only"],
+  "reason": "V15.9 expired authorization simulation",
+  "approvals": [
+    {
+      "approver": "test-authority",
+      "role": "release_reviewer",
+      "approved": true,
+      "approved_at": 1704067200000,
+      "method": "simulation",
+      "evidence_ref": "ev-v159-expired"
+    }
+  ],
+  "constraints": {
+    "deploy_allowed": false,
+    "tag_allowed": false,
+    "stable_allowed": false
+  },
+  "evidence_refs": ["ev-v159-expired"]
+}

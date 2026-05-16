@@ -1,0 +1,15 @@
+{
+  "schema_version": "v15.8",
+  "requested_action": "release_candidate_approval",
+  "approvals": [
+    {
+      "approver": "test-authority",
+      "role": "release_reviewer",
+      "approved": true,
+      "approved_at": 1704067200000,
+      "method": "simulation",
+      "evidence_ref": "ev-test-001"
+    }
+  ],
+  "evidence_refs": []
+}

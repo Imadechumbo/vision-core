@@ -659,3 +659,107 @@ Manifest ausente → `AUTHORIZATION_MISSING`. JSON inválido → `AUTHORIZATION_
 - **Suite V15.8-I** (20) — Human report: summary/gate notes contain "modeled", "explicit authorization", "remain blocked"
 - **Suite V15.8-J** (24) — Supervisor integration: attach/evaluate/graph, null ctx safe, graph schema v15.8
 
+---
+
+## V15.9 — Authorization Manifest Test Harness
+
+### CLI Flags
+
+```
+--authorization-scenario <name>       Roda cenário específico
+--authorization-scenario-matrix       Roda todos os 10 cenários
+```
+
+### Exemplo de manifest válido (`valid-release-review.json`)
+
+```json
+{
+  "schema_version": "v15.8",
+  "authorization_id": "auth-v159-release-review",
+  "requested_action": "release_review",
+  "expires_at": 9999999999999,
+  "approvals": [{ "approver": "test-authority", "approved": true, "approved_at": 1704067200000 }],
+  "evidence_refs": ["ev-v159-release-review"]
+}
+```
+
+### Exemplo de assinatura simulada (adicionada em runtime)
+
+```json
+{
+  "signature": {
+    "algorithm": "simulation-sha256",
+    "signed_by": "test-authority",
+    "signed_at": 1704067200000,
+    "payload_hash": "<sha256 do payload canonicalizado>",
+    "signature_value": "<sha256 do hash + ::simulation:: + signed_by>",
+    "simulation": true,
+    "note": "signed approval simulation only — no real cryptographic production key used"
+  }
+}
+```
+
+### Exemplo de tampered signature (detecção)
+
+```js
+// payload_hash errado → verifySignedApprovalSimulation retorna valid=false
+manifest.signature.payload_hash = 'tampered_hash_value';
+// runAuthorizationScenario → actual_status = AUTHORIZATION_INVALID
+```
+
+### Campos JSON V15.9
+
+```json
+{
+  "hermes_authorization_harness_enabled": true,
+  "hermes_authorization_harness_schema_version": "v15.9",
+  "hermes_authorization_scenario": "valid_release_review",
+  "hermes_authorization_scenario_status": "AUTHORIZATION_VALID",
+  "hermes_authorization_signature_present": false,
+  "hermes_authorization_signature_valid": false,
+  "hermes_authorization_scenario_matrix": null,
+  "hermes_authorization_scenario_total": null,
+  "hermes_authorization_scenario_passed": null,
+  "hermes_authorization_scenario_failed": null,
+  "hermes_authorization_all_safe": null,
+  "hermes_authorization_all_allowed_flags_false": null
+}
+```
+
+### Seção Humana V15.9
+
+```
+──── AUTHORIZATION MANIFEST TEST HARNESS (V15.9) ────
+HARNESS_SCHEMA:            v15.9
+MATRIX_TOTAL:              10
+MATRIX_PASSED:             10
+MATRIX_FAILED:             0
+ALL_SAFE:                  true
+ALL_ALLOWED_FLAGS_FALSE:   true
+FINAL_HARNESS_DECISION:    HARNESS_PASS
+NOTE: signed approval simulation only
+NOTE: no real cryptographic production key used
+NOTE: authorization test harness never executes deploy/tag/stable
+```
+
+### Suites de Teste V15.9
+
+- **Suite V15.9-A** — Fixture Presence: 8 fixtures presentes e parseáveis
+- **Suite V15.9-B** — Signed Approval Simulation: criar/verificar/tamper, signature_valid, allowed flags false
+- **Suite V15.9-C** — Scenario Runner: 10 cenários com status corretos, invariantes confirmados
+- **Suite V15.9-D** — Scenario Matrix: total>=10, failed=0, all_safe=true, all_allowed_flags_false=true
+- **Suite V15.9-E** — CLI Scenarios (spawn): valid/signed/tampered/unknown, deploy_allowed=false always
+- **Suite V15.9-F** — CLI Matrix (spawn): total>=10, passed=total, all_safe=true
+- **Suite V15.9-G** — Human Report: seção V15.9, "signed approval simulation only", "no real cryptographic production key used", "never executes deploy/tag/stable"
+- **Suite V15.9-H** — Regression Safety: allowed flags false, dry-run safe, JSON parseable
+
+### Invariantes V15.9
+
+- `deploy_allowed=false` sempre
+- `release_allowed=false` sempre
+- `tag_allowed=false` sempre
+- `stable_allowed=false` sempre
+- `promotion_allowed=false` sempre
+- `pass_gold_candidate=false` sem Go Core evidence real
+- `authorization_valid=true` + `signature_valid=true` **não executa** nenhuma ação
+

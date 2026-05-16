@@ -10,6 +10,7 @@
  */
 
 const SCHEMA_VERSION = 'v15.8';
+const VALID_SIGNATURE_ALGORITHMS = ['simulation-sha256', 'simulation-hmac-sha256'];
 
 // ═══════════════════════════════════════════════════════════════════
 // AUTHORIZATION STATUSES
@@ -142,6 +143,17 @@ function validateAuthorizationManifest(manifest, runtimeEvidence, decisionMatrix
     return _buildResult('AUTHORIZATION_INVALID', false, errors, warnings, missing, [], [], false, auditEvents, invariants);
   }
 
+  // Signature structure check (V15.9) — hash verification is done by authorization-harness
+  const sigPresent = !!(manifest.signature);
+  if (sigPresent) {
+    const sigCheck = _validateSignatureStructure(manifest.signature);
+    if (!sigCheck.valid) {
+      for (const e of sigCheck.errors) errors.push(`signature: ${e}`);
+      auditEvents.push(_auditEvent('authorization_status_resolved', manifest.authorization_id, 'validation', 'system', 'AUTHORIZATION_INVALID: signature structure invalid', 'AUTHORIZATION_INVALID'));
+      return _buildResult('AUTHORIZATION_INVALID', false, errors, warnings, missing, [], [], false, auditEvents, invariants, sigPresent);
+    }
+  }
+
   // Expiry check
   const now = Date.now();
   let expired = false;
@@ -232,8 +244,29 @@ function validateAuthorizationManifest(manifest, runtimeEvidence, decisionMatrix
   return _buildResult(status, ok, errors, warnings, missing, approvedActions, rejectedActions, expired, auditEvents, invariants);
 }
 
-function _buildResult(status, ok, errors, warnings, missing, approvedActions, rejectedActions, expired, auditEvents, invariants) {
-  return { ok, status, errors, warnings, missing, approved_actions: approvedActions, rejected_actions: rejectedActions, expired, audit_events: auditEvents, invariants };
+function _buildResult(status, ok, errors, warnings, missing, approvedActions, rejectedActions, expired, auditEvents, invariants, signaturePresent = false) {
+  return { ok, status, errors, warnings, missing, approved_actions: approvedActions, rejected_actions: rejectedActions, expired, audit_events: auditEvents, invariants, signature_present: signaturePresent };
+}
+
+function _validateSignatureStructure(sig) {
+  if (!sig) return { valid: false, errors: ['signature block is null or undefined'] };
+  const errors = [];
+  if (!sig.algorithm || !VALID_SIGNATURE_ALGORITHMS.includes(sig.algorithm)) {
+    errors.push(`signature.algorithm must be one of [${VALID_SIGNATURE_ALGORITHMS.join(', ')}], got: ${sig.algorithm}`);
+  }
+  if (sig.simulation !== true) {
+    errors.push('signature.simulation must be true — only simulation signatures accepted in V15.9 harness');
+  }
+  if (!sig.signed_by) {
+    errors.push('signature.signed_by is required');
+  }
+  if (!sig.payload_hash) {
+    errors.push('signature.payload_hash is required');
+  }
+  if (!sig.signature_value) {
+    errors.push('signature.signature_value is required');
+  }
+  return { valid: errors.length === 0, errors };
 }
 
 function _auditEvent(type, authId, category, actor, message, status = null) {
@@ -296,6 +329,7 @@ function evaluateAuthorizationLayer(manifest, decisionMatrix, runtimeEvidence, h
     authorization_audit_trail:    auditTrail,
     authorization_requirements:   requirements,
     release_gate_effective_state: releaseGateEffectiveState,
+    signature_present:            !!(manifest?.signature),
     // Invariants — always false
     deploy_allowed:    false,
     promotion_allowed: false,

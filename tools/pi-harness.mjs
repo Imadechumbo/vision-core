@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║   PI HARNESS V15.8 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
+ * ║   PI HARNESS V15.9 — VISION CORE AUTONOMOUS MISSION RUNNER          ║
  * ║   D0-Preflight → D1-Cleanup → D2-Contract → D3-GoCore               ║
  * ║   → D4-Backend → D5-Repair → D6-AutoFix → D7-Decision → D8-Report  ║
  * ╠══════════════════════════════════════════════════════════════════════╣
@@ -52,6 +52,11 @@ import {
   renderRuntimeEvidenceSummary,
 } from './hermes/runtime-evidence.mjs';
 import {
+  runAuthorizationScenario,
+  runAuthorizationScenarioMatrix,
+  renderAuthorizationScenarioReport,
+} from './hermes/authorization-harness.mjs';
+import {
   createDecisionMatrix,
   evaluateDecisionMatrix,
   evaluateReleaseReadiness,
@@ -74,7 +79,10 @@ const JSON_MODE  = FLAG('--json');
 const CI_MODE       = FLAG('--ci');
 const RUNTIME_PROBE = FLAG('--runtime-probe');
 // V15.8: optional authorization manifest path
-const AUTHORIZATION_MANIFEST_PATH = ARG('--authorization-manifest') || null;
+const AUTHORIZATION_MANIFEST_PATH    = ARG('--authorization-manifest')      || null;
+// V15.9: authorization scenario and matrix flags
+const AUTHORIZATION_SCENARIO         = ARG('--authorization-scenario')       || null;
+const AUTHORIZATION_SCENARIO_MATRIX  = FLAG('--authorization-scenario-matrix');
 
 // V15.3 runtime probe flags
 const RUNTIME_PROBE_NO_START   = FLAG('--runtime-probe-no-start');
@@ -104,6 +112,9 @@ let _runtimeEvidence = null;
 let _decisionMatrix = null;
 // Authorization Layer snapshot (V15.8)
 let _authorizationLayer = null;
+// Authorization Scenario snapshots (V15.9)
+let _authorizationScenario       = null;
+let _authorizationScenarioMatrix = null;
 
 // ═══════════════════════════════════════════════════════════════════
 // FAKE EVIDENCE SCAN PATTERNS
@@ -1547,6 +1558,21 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       hermes_stable_promotion_authorized:   _authorizationLayer?.stable_promotion_authorized   || false,
       hermes_release_allowed:               false,
       hermes_tag_allowed:                   false,
+      // V15.9: Authorization Harness fields
+      hermes_authorization_harness_enabled:        true,
+      hermes_authorization_harness_schema_version: 'v15.9',
+      hermes_authorization_scenario:               AUTHORIZATION_SCENARIO || null,
+      hermes_authorization_scenario_status:        _authorizationScenario?.actual_status  || null,
+      hermes_authorization_signature_present:      _authorizationScenario?.signature_present || false,
+      hermes_authorization_signature_valid:        _authorizationScenario?.signature_valid   || false,
+      hermes_authorization_scenario_matrix:        AUTHORIZATION_SCENARIO_MATRIX
+        ? { total: _authorizationScenarioMatrix?.total, passed: _authorizationScenarioMatrix?.passed, failed: _authorizationScenarioMatrix?.failed, all_safe: _authorizationScenarioMatrix?.all_safe, scenarios: (_authorizationScenarioMatrix?.scenarios || []).map(s => ({ scenario: s.scenario, actual_status: s.actual_status, status_match: s.status_match })) }
+        : null,
+      hermes_authorization_scenario_total:         _authorizationScenarioMatrix?.total  ?? null,
+      hermes_authorization_scenario_passed:        _authorizationScenarioMatrix?.passed ?? null,
+      hermes_authorization_scenario_failed:        _authorizationScenarioMatrix?.failed ?? null,
+      hermes_authorization_all_safe:               _authorizationScenarioMatrix?.all_safe               ?? null,
+      hermes_authorization_all_allowed_flags_false: _authorizationScenarioMatrix?.all_allowed_flags_false ?? null,
     };
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
@@ -1558,7 +1584,7 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
 
   log('');
   log(`╔${sep}╗`);
-  const title = 'PI HARNESS V15.8 — VISION CORE AUTONOMOUS MISSION RUNNER';
+  const title = 'PI HARNESS V15.9 — VISION CORE AUTONOMOUS MISSION RUNNER';
   log(`║  ${title}${' '.repeat(Math.max(0, W - title.length - 2))}║`);
   const sub   = 'RELATÓRIO FINAL';
   log(`║  ${sub}${' '.repeat(Math.max(0, W - sub.length - 2))}║`);
@@ -1771,6 +1797,39 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
     log(`NOTE: deploy/tag/stable remain blocked in V15.8`);
   }
 
+  if (_authorizationScenario || _authorizationScenarioMatrix) {
+    log(div('AUTHORIZATION MANIFEST TEST HARNESS (V15.9)'));
+    log(`HARNESS_SCHEMA:            v15.9`);
+    if (_authorizationScenario) {
+      log(`SCENARIO:                  ${_authorizationScenario.scenario}`);
+      log(`SCENARIO_STATUS:           ${_authorizationScenario.scenario_status}`);
+      log(`SIGNATURE_PRESENT:         ${_authorizationScenario.signature_present}`);
+      log(`SIGNATURE_VALID:           ${_authorizationScenario.signature_valid}`);
+      log(`STATUS_MATCH:              ${_authorizationScenario.status_match}`);
+      log(`SCENARIO_RELEASE_ALLOWED:  false`);
+      log(`SCENARIO_DEPLOY_ALLOWED:   false`);
+      log(`SCENARIO_TAG_ALLOWED:      false`);
+      log(`SCENARIO_STABLE_ALLOWED:   false`);
+    }
+    if (_authorizationScenarioMatrix) {
+      const mreport = renderAuthorizationScenarioReport(_authorizationScenarioMatrix);
+      log(`MATRIX_TOTAL:              ${_authorizationScenarioMatrix.total}`);
+      log(`MATRIX_PASSED:             ${_authorizationScenarioMatrix.passed}`);
+      log(`MATRIX_FAILED:             ${_authorizationScenarioMatrix.failed}`);
+      log(`ALL_SAFE:                  ${_authorizationScenarioMatrix.all_safe}`);
+      log(`ALL_ALLOWED_FLAGS_FALSE:   ${_authorizationScenarioMatrix.all_allowed_flags_false}`);
+      if (mreport && Array.isArray(mreport.scenario_summary)) {
+        for (const s of mreport.scenario_summary) {
+          log(`  [${s.status_match ? 'PASS' : 'FAIL'}] ${s.scenario}: ${s.actual_status}  sig=${s.signature}`);
+        }
+      }
+    }
+    log(`FINAL_HARNESS_DECISION:    ${(_authorizationScenarioMatrix?.failed === 0 || !_authorizationScenarioMatrix) ? 'HARNESS_PASS' : 'HARNESS_FAIL'}`);
+    log(`NOTE: signed approval simulation only`);
+    log(`NOTE: no real cryptographic production key used`);
+    log(`NOTE: authorization test harness never executes deploy/tag/stable`);
+  }
+
   if (hermesCtx) {
     log(div('HERMES SUPERVISION (V15.8)'));
     log(`SUPERVISOR_ENABLED:        ${hermesCtx.enabled}`);
@@ -1805,8 +1864,8 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
   log('');
   log(`╔${sep}╗`);
   const footer = result === 'PASS'
-    ? `✓ PI HARNESS V15.8 PASS — ${s.recommendation}`
-    : `✗ PI HARNESS V15.8 ${result} — ${s.recommendation}`;
+    ? `✓ PI HARNESS V15.9 PASS — ${s.recommendation}`
+    : `✗ PI HARNESS V15.9 ${result} — ${s.recommendation}`;
   log(`║  ${footer}${' '.repeat(Math.max(0, W - footer.length - 2))}║`);
   log(`╚${sep}╝`);
   log('');
@@ -1835,11 +1894,11 @@ async function main() {
 
   // V15.5: Hermes Mission Supervisor
   _hermesCtx = createHermesMissionContext();
-  recordHermesEvent(_hermesCtx, { type: 'mission_start', version: 'V15.8', max_difficulty: rawMaxDiff });
+  recordHermesEvent(_hermesCtx, { type: 'mission_start', version: 'V15.9', max_difficulty: rawMaxDiff });
 
   if (!JSON_MODE && !CI_MODE) {
     log('');
-    log('PI HARNESS V15.8 — iniciando...');
+    log('PI HARNESS V15.9 — iniciando...');
     log(`  max-difficulty: ${rawMaxDiff} | dry-run: ${DRY_RUN} | no-autofix: ${NO_AUTOFIX} | ci: ${CI_MODE} | runtime-probe: ${RUNTIME_PROBE} | no-start: ${RUNTIME_PROBE_NO_START}`);
     log(`  hermes: ${_hermesCtx.mission_id}`);
     log('');
@@ -1904,6 +1963,33 @@ async function main() {
     }
   }
   _authorizationLayer = evaluateHermesAuthorization(_hermesCtx, _authManifest);
+
+  // V15.9: Authorization Scenario / Matrix
+  if (AUTHORIZATION_SCENARIO) {
+    try {
+      _authorizationScenario = runAuthorizationScenario(AUTHORIZATION_SCENARIO);
+    } catch (err) {
+      _authorizationScenario = {
+        scenario: AUTHORIZATION_SCENARIO, error: err.message,
+        actual_status: null, scenario_status: 'SCENARIO_ERROR',
+        signature_present: false, signature_valid: false,
+        deploy_allowed: false, release_allowed: false, tag_allowed: false,
+        stable_allowed: false, promotion_allowed: false, pass_gold_candidate: false,
+        safe: true,
+      };
+    }
+  }
+  if (AUTHORIZATION_SCENARIO_MATRIX) {
+    try {
+      _authorizationScenarioMatrix = runAuthorizationScenarioMatrix();
+    } catch (err) {
+      _authorizationScenarioMatrix = {
+        total: 0, passed: 0, failed: 0,
+        all_safe: false, all_allowed_flags_false: false,
+        error: err.message, scenarios: [],
+      };
+    }
+  }
 
   // V15.5: Hermes final validation & decision
   const missionEvidence = {
@@ -1993,7 +2079,7 @@ async function main() {
 
 main().catch(err => {
   if (!JSON_MODE) {
-    process.stderr.write(`PI HARNESS V15.8 FATAL: ${err.message}\n`);
+    process.stderr.write(`PI HARNESS V15.9 FATAL: ${err.message}\n`);
   } else {
     process.stdout.write(JSON.stringify({
       result: 'FAILED',
@@ -2043,6 +2129,19 @@ main().catch(err => {
       hermes_stable_promotion_authorized:   false,
       hermes_release_allowed:               false,
       hermes_tag_allowed:                   false,
+      // V15.9: Authorization Harness fallback fields
+      hermes_authorization_harness_enabled:        true,
+      hermes_authorization_harness_schema_version: 'v15.9',
+      hermes_authorization_scenario:               null,
+      hermes_authorization_scenario_status:        null,
+      hermes_authorization_signature_present:      false,
+      hermes_authorization_signature_valid:        false,
+      hermes_authorization_scenario_matrix:        null,
+      hermes_authorization_scenario_total:         null,
+      hermes_authorization_scenario_passed:        null,
+      hermes_authorization_scenario_failed:        null,
+      hermes_authorization_all_safe:               null,
+      hermes_authorization_all_allowed_flags_false: null,
     }) + '\n');
   }
   process.exit(1);

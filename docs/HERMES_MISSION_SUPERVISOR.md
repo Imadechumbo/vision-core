@@ -426,3 +426,81 @@ Opção segura para injetar manifest JSON. Se ausente → `AUTHORIZATION_MISSING
 `hermes_authorization_layer_enabled`, `hermes_authorization_schema_version`, `hermes_authorization_status`, `hermes_authorization_valid`, `hermes_authorization_requirements`, `hermes_authorization_missing`, `hermes_authorization_errors`, `hermes_authorization_warnings`, `hermes_authorization_audit_trail`, `hermes_authorization_gate`, `hermes_release_authorized`, `hermes_deploy_authorized`, `hermes_tag_authorized`, `hermes_stable_promotion_authorized`, `hermes_release_allowed`, `hermes_deploy_allowed`, `hermes_tag_allowed`, `hermes_stable_allowed`
 
 Todos os campos `*_allowed` sempre `false`.
+
+---
+
+## V15.9 — Authorization Manifest Test Harness + Signed Approval Simulation
+
+### Módulo: `tools/hermes/authorization-harness.mjs`
+
+| Export | Descrição |
+|---|---|
+| `loadAuthorizationFixture(name)` | Carrega fixture JSON de `tools/fixtures/authorization/` |
+| `listAuthorizationFixtures()` | Lista todas as fixtures disponíveis |
+| `createSignedApprovalSimulation(manifest, opts)` | Adiciona bloco de assinatura simulada (sha256, não produção) |
+| `verifySignedApprovalSimulation(manifest)` | Verifica assinatura simulada, detecta tampering |
+| `runAuthorizationScenario(name, opts)` | Executa cenário individual, retorna resultado com invariantes |
+| `runAuthorizationScenarioMatrix(opts)` | Executa todos os 10 cenários, retorna matrix summary |
+| `renderAuthorizationScenarioReport(matrix)` | Renderiza relatório de cenários |
+| `createAuthorizationScenarioSummary(matrix)` | Cria sumário compacto |
+
+### Fixtures (`tools/fixtures/authorization/`)
+
+| Fixture | Status Esperado |
+|---|---|
+| `invalid-schema.json` | `AUTHORIZATION_INVALID` |
+| `invalid-action.json` | `AUTHORIZATION_INVALID` |
+| `partial-missing-approval.json` | `AUTHORIZATION_PARTIAL` |
+| `partial-missing-evidence.json` | `AUTHORIZATION_PARTIAL` |
+| `valid-release-review.json` | `AUTHORIZATION_VALID` |
+| `rejected-release-review.json` | `AUTHORIZATION_REJECTED` |
+| `expired-release-review.json` | `AUTHORIZATION_EXPIRED` |
+| `signed-simulated-release-review.json` | `AUTHORIZATION_VALID` + `signature_valid=true` (assinatura adicionada em runtime) |
+
+### Scenario Matrix (10 cenários)
+
+| Cenário | Status Esperado |
+|---|---|
+| `missing_manifest` | `AUTHORIZATION_MISSING` |
+| `invalid_schema` | `AUTHORIZATION_INVALID` |
+| `invalid_action` | `AUTHORIZATION_INVALID` |
+| `partial_missing_approval` | `AUTHORIZATION_PARTIAL` |
+| `partial_missing_evidence` | `AUTHORIZATION_PARTIAL` |
+| `valid_release_review` | `AUTHORIZATION_VALID` |
+| `rejected_release_review` | `AUTHORIZATION_REJECTED` |
+| `expired_release_review` | `AUTHORIZATION_EXPIRED` |
+| `signed_simulated_release_review` | `AUTHORIZATION_VALID` + `signature_valid=true` |
+| `tampered_signature` | `AUTHORIZATION_INVALID` + `signature_valid=false` |
+
+### Signed Approval Simulation
+
+Assinatura **simulada e determinística** para teste. Não utiliza chave criptográfica real de produção.
+
+- Algoritmo: `simulation-sha256`
+- `payload_hash` = `sha256(canonical_manifest_json)`
+- `signature_value` = `sha256(payload_hash + "::simulation::" + signed_by)`
+- `simulation: true` sempre presente
+- Tampering detectado por divergência de `payload_hash` ou `signature_value`
+
+**Invariante**: assinatura válida (`signature_valid=true`) **não libera** `deploy_allowed`, `release_allowed`, `tag_allowed`, ou `stable_allowed`. Todos permanecem `false`.
+
+### CLI Flags V15.9
+
+```
+--authorization-scenario <name>       Roda cenário específico, inclui resultado no JSON
+--authorization-scenario-matrix       Roda todos os 10 cenários, inclui matrix no JSON
+```
+
+### Campos JSON V15.9
+
+`hermes_authorization_harness_enabled`, `hermes_authorization_harness_schema_version` (`v15.9`),
+`hermes_authorization_scenario`, `hermes_authorization_scenario_status`,
+`hermes_authorization_signature_present`, `hermes_authorization_signature_valid`,
+`hermes_authorization_scenario_matrix`, `hermes_authorization_scenario_total`,
+`hermes_authorization_scenario_passed`, `hermes_authorization_scenario_failed`,
+`hermes_authorization_all_safe`, `hermes_authorization_all_allowed_flags_false`
+
+### Por que deploy/tag/stable permanecem bloqueados
+
+`authorization_valid=true` e `signature_valid=true` **não executam** deploy, tag, ou stable. A autorização é modelada, não executada. Sem PASS GOLD real (evidence_receipt do Go Core), nenhuma ação de release é liberada.
+
