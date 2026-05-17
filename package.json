@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:syntax": "node --check tools/pi-harness.mjs && node --check tools/hermes/authority-review.mjs && node --check tools/hermes/authority-harness.mjs && node --check tools/test-lane.mjs && node --check tools/tests/authority.test.mjs && node --check tools/release-candidate-controller.mjs && node --check tools/tests/release-candidate.test.mjs && node --check tools/release-plan-generator.mjs && node --check tools/tests/release-plan.test.mjs && node --check tools/release-execution-simulator.mjs && node --check tools/tests/release-execution-simulator.test.mjs && node --check tools/manual-release-gate.mjs && node --check tools/tests/manual-release-gate.test.mjs && node --check tools/github-release-tag-controller.mjs && node --check tools/tests/github-release-tag-controller.test.mjs",
+    "test:syntax": "node --check tools/pi-harness.mjs && node --check tools/hermes/authority-review.mjs && node --check tools/hermes/authority-harness.mjs && node --check tools/test-lane.mjs && node --check tools/tests/authority.test.mjs && node --check tools/release-candidate-controller.mjs && node --check tools/tests/release-candidate.test.mjs && node --check tools/release-plan-generator.mjs && node --check tools/tests/release-plan.test.mjs && node --check tools/release-execution-simulator.mjs && node --check tools/tests/release-execution-simulator.test.mjs && node --check tools/manual-release-gate.mjs && node --check tools/tests/manual-release-gate.test.mjs && node --check tools/github-release-tag-controller.mjs && node --check tools/tests/github-release-tag-controller.test.mjs && node --check tools/stable-promotion-gate.mjs && node --check tools/tests/stable-promotion-gate.test.mjs",
     "test:guards": "node --no-deprecation tools/visual-gold-harness-lock.mjs && node --no-deprecation tools/frontend-visual-lock.mjs && node --no-deprecation tools/sddf-front-guard.mjs",
     "test:authority": "node --no-deprecation tools/hermes/authority-harness.mjs",
     "test:authority-unit": "node --no-deprecation tools/tests/authority.test.mjs",
@@ -12,7 +12,8 @@
     "test:release-simulation-unit": "node --no-deprecation tools/tests/release-execution-simulator.test.mjs",
     "test:manual-release-gate-unit": "node --no-deprecation tools/tests/manual-release-gate.test.mjs",
     "test:tag-controller-unit": "node --no-deprecation tools/tests/github-release-tag-controller.test.mjs",
-    "test:quick": "npm run test:syntax && npm run test:authority-unit && npm run test:release-unit && npm run test:release-plan-unit && npm run test:release-simulation-unit && npm run test:manual-release-gate-unit && npm run test:tag-controller-unit && npm run test:affected",
+    "test:stable-gate-unit": "node --no-deprecation tools/tests/stable-promotion-gate.test.mjs",
+    "test:quick": "npm run test:syntax && npm run test:authority-unit && npm run test:release-unit && npm run test:release-plan-unit && npm run test:release-simulation-unit && npm run test:manual-release-gate-unit && npm run test:tag-controller-unit && npm run test:stable-gate-unit && npm run test:affected",
     "test:postmerge": "npm run test:quick && npm run test:guards",
     "test:fast": "npm run test:authority-unit",
     "test:full": "node --no-deprecation tools/tests/pi-harness.test.mjs",
