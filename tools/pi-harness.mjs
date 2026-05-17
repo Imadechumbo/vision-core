@@ -1712,7 +1712,7 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       fast_feedback_pass:     FAST_MODE && s.syntaxOk && failedGates.filter(g => !['legacy_clean','v14_clean_ownership','backend_alive','backend_health_ok','backend_not_stub','backend_mission_id','backend_evidence_receipt','evidence_source_go_core','go_core_compiled','go_test_pass','go_build_pass'].includes(g)).length === 0,
       full_suite_required:    FAST_MODE || HARNESS_MODE === 'verify',
       certify_required:       HARNESS_MODE !== 'certify' && HARNESS_MODE !== 'release',
-      recommendation:         s.recommendation?.startsWith('BLOCKED_') ? s.recommendation : (FAST_MODE ? (s.syntaxOk ? 'FAST_FEEDBACK_ONLY' : 'CERTIFY_REQUIRED') : s.recommendation),
+      recommendation:         (RUNTIME_PROBE && !s.runtimeProbePass) ? 'BLOCKED_RUNTIME' : (s.recommendation?.startsWith('BLOCKED_') ? s.recommendation : (FAST_MODE ? (s.syntaxOk ? 'FAST_FEEDBACK_ONLY' : 'CERTIFY_REQUIRED') : s.recommendation)),
       // V15.12: PASS GOLD Authority Binding
       pass_gold_authority_binding_enabled:        _passGoldBinding?.pass_gold_authority_binding_enabled        ?? true,
       pass_gold_authority_binding_schema_version: _passGoldBinding?.pass_gold_authority_binding_schema_version ?? 'v15.12',
