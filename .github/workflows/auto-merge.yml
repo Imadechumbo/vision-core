@@ -51,7 +51,7 @@ jobs:
           echo "Changed files:"
           git diff --name-only origin/main...HEAD | tee /tmp/changed-files.txt
 
-          BAD_FILES="$(grep -Ev '^(package\.json|tools/|docs/|\.github/workflows/auto-merge\.yml|\.github/workflows/vision-roadmap-automerge\.yml)$' /tmp/changed-files.txt || true)"
+          BAD_FILES="$(grep -Ev '^(package\.json|tools/.*|docs/.*|\.github/workflows/(auto-merge|vision-roadmap-automerge)\.yml)$' /tmp/changed-files.txt || true)"
 
           if [ -n "$BAD_FILES" ]; then
             echo "Blocked: files outside allowed roadmap scope:"
