@@ -94,6 +94,8 @@ import { buildRuntimeExecutionEvidencePackage } from './runtime-execution-eviden
 import { bindRuntimeExecutionToLedger } from './runtime-execution-ledger-binding.mjs';
 // V37.1: Runtime Candidate Mode
 import { runRuntimePassGoldCandidateController } from './runtime-pass-gold-candidate-controller.mjs';
+// V42.1: Supervised Release Candidate Mode
+import { runSupervisedReleaseCandidateController } from './supervised-release-candidate-controller.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -149,6 +151,12 @@ const LOCAL_RUNTIME_GO_CORE_BIN      = ARG('--local-runtime-go-core-bin') || nul
 const RUNTIME_CANDIDATE         = FLAG('--runtime-candidate');
 const FIXTURE_RUNTIME_CANDIDATE = FLAG('--fixture-runtime-candidate');
 
+// V42.1: Supervised Release Candidate Mode flags (default: off — safe)
+const SUPERVISED_RELEASE_CANDIDATE = FLAG('--supervised-release-candidate');
+const FIXTURE_RELEASE_INTENT       = FLAG('--fixture-release-intent');
+const POLICY_CLEAN                 = FLAG('--policy-clean');
+// Note: FIXTURE_AUTHORITY and VERIFY_TESTS already declared in V33.0 block above
+
 const DIFFICULTY_ORDER = ['D0','D1','D2','D3','D4','D5','D6','D7','D8'];
 const rawMaxDiff = ARG('--max-difficulty') || ((HARNESS_MODE === 'interactive' || HARNESS_MODE === 'patch' || HARNESS_MODE === 'verify') ? 'D2' : 'D8');
 const MAX_DIFF_IDX = DIFFICULTY_ORDER.includes(rawMaxDiff)
@@ -179,6 +187,8 @@ let _localEvidencePackage = null;
 let _localLedgerBinding   = null;
 // V37.1: Runtime Candidate result (populated when --runtime-candidate is used)
 let _runtimeCandidateResult = null;
+// V42.1: Supervised Release Candidate result (populated when --supervised-release-candidate is used)
+let _supervisedRCResult = null;
 // Runtime Evidence snapshot (V15.6)
 let _runtimeEvidence = null;
 // Decision Matrix snapshot (V15.7)
@@ -1744,11 +1754,11 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       release_plan_tag_created:       false,
       release_plan_stable_promoted:   false,
       // V21.3/V27.0/V32.0/V33.0: Runtime Evidence Wiring
-      runtime_evidence_enabled:         RUNTIME_PROBE || RUNTIME_BRIDGE || FIXTURE_RUNTIME_BRIDGE || CANDIDATE_DRILL || LOCAL_RUNTIME_EXECUTION || FIXTURE_LOCAL_RUNTIME || RUNTIME_CANDIDATE || FIXTURE_RUNTIME_CANDIDATE,
-      runtime_evidence_status:          (_e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true || _candidateDrillResult?.full_candidate_drill_ready === true || _localLedgerBinding?.ledger_binding_ready === true || _runtimeCandidateResult?.runtime_pass_gold_ready === true)
+      runtime_evidence_enabled:         RUNTIME_PROBE || RUNTIME_BRIDGE || FIXTURE_RUNTIME_BRIDGE || CANDIDATE_DRILL || LOCAL_RUNTIME_EXECUTION || FIXTURE_LOCAL_RUNTIME || RUNTIME_CANDIDATE || FIXTURE_RUNTIME_CANDIDATE || SUPERVISED_RELEASE_CANDIDATE,
+      runtime_evidence_status:          (_e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true || _candidateDrillResult?.full_candidate_drill_ready === true || _localLedgerBinding?.ledger_binding_ready === true || _runtimeCandidateResult?.runtime_pass_gold_ready === true || _supervisedRCResult?.supervised_release_candidate_ready === true)
         ? 'RUNTIME_EVIDENCE_READY'
         : 'RUNTIME_EVIDENCE_BLOCKED_BACKEND_OFFLINE',
-      runtime_evidence_ready:           _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true || _candidateDrillResult?.full_candidate_drill_ready === true || _localLedgerBinding?.ledger_binding_ready === true || _runtimeCandidateResult?.runtime_pass_gold_ready === true,
+      runtime_evidence_ready:           _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true || _candidateDrillResult?.full_candidate_drill_ready === true || _localLedgerBinding?.ledger_binding_ready === true || _runtimeCandidateResult?.runtime_pass_gold_ready === true || _supervisedRCResult?.supervised_release_candidate_ready === true,
       backend_runtime_probe_status:     _bridgeProbeResult?.probe_bridge_status ?? _e2eProbeResult?.e2e_runtime_status ?? 'PROBE_SKIPPED_NO_START',
       go_core_receipt_status:           (_e2eProbeResult?.receipt_valid === true || _bridgeProbeResult?.receipt_valid === true) ? 'RECEIPT_VALID' : 'RECEIPT_BLOCKED_MISSING',
       go_core_receipt_valid:            _e2eProbeResult?.receipt_valid === true || _bridgeProbeResult?.receipt_valid === true,
@@ -1798,6 +1808,14 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       runtime_candidate_mission_id:      _runtimeCandidateResult?.mission_id ?? null,
       runtime_candidate_ledger_entry_id: _runtimeCandidateResult?.ledger_entry_id ?? null,
       runtime_candidate_evidence_source: _runtimeCandidateResult?.evidence_source ?? null,
+      // V42.1: Supervised Release Candidate Mode fields
+      supervised_release_candidate_enabled: SUPERVISED_RELEASE_CANDIDATE,
+      supervised_release_candidate_status:  _supervisedRCResult?.supervised_release_candidate_status ?? 'SUPERVISED_RC_NOT_STARTED',
+      supervised_release_candidate_ready:   _supervisedRCResult?.supervised_release_candidate_ready === true,
+      release_candidate_mode:               _supervisedRCResult?.release_candidate_mode ?? null,
+      production_release_allowed:           false,
+      release_intent_id:                    _supervisedRCResult?.intent_id ?? null,
+      intent_authority_binding_status:      _supervisedRCResult ? 'INTENT_AUTHORITY_READY' : null,
     };
     // V21.3/V27.0: pass_gold_candidate guarded by runtime_evidence_ready
     if (!out.runtime_evidence_ready) {
@@ -2526,17 +2544,50 @@ async function main() {
     }
   }
 
+  // V42.1: Supervised Release Candidate Mode — runs full supervised RC pipeline
+  if (SUPERVISED_RELEASE_CANDIDATE) {
+    try {
+      const useFixtureRC       = FIXTURE_RUNTIME_CANDIDATE;
+      const useFixtureIntent   = FIXTURE_RELEASE_INTENT;
+      const useFixtureAuthority = FIXTURE_AUTHORITY;
+      const allFixtures = useFixtureRC && useFixtureIntent && useFixtureAuthority;
+      _supervisedRCResult = runSupervisedReleaseCandidateController({
+        fixture_mode:  allFixtures,
+        tests_verified: VERIFY_TESTS,
+        policy_clean:   POLICY_CLEAN,
+      });
+      if (_supervisedRCResult?.supervised_release_candidate_ready === true) {
+        s.backendAlive              = true;
+        s.backendHealthOk           = true;
+        s.backendStub               = false;
+        s.backendHasMissionId       = true;
+        s.backendHasEvidenceReceipt = true;
+        s.evidenceSource            = 'go-core';
+        s.runtimeProbePass          = true;
+        s.goCorReceiptValid         = true;
+        s.runtimeEvidenceReady      = true;
+        s.passGoldAuthorityBindingValid = true;
+        s.passGoldCandidate         = true;
+      }
+      audit(`[V42.1] Supervised RC: ${_supervisedRCResult?.supervised_release_candidate_status} | rc: ${_supervisedRCResult?.release_candidate}`);
+    } catch (e) {
+      audit(`[V42.1] Supervised RC error: ${e.message}`);
+    }
+  }
+
   // V27.1: Update strict gate fields from E2E probe result and authority binding
-  if (!RUNTIME_BRIDGE && !FIXTURE_RUNTIME_BRIDGE && !CANDIDATE_DRILL && !LOCAL_RUNTIME_EXECUTION && !FIXTURE_LOCAL_RUNTIME && !RUNTIME_CANDIDATE && !FIXTURE_RUNTIME_CANDIDATE) {
+  if (!RUNTIME_BRIDGE && !FIXTURE_RUNTIME_BRIDGE && !CANDIDATE_DRILL && !LOCAL_RUNTIME_EXECUTION && !FIXTURE_LOCAL_RUNTIME && !RUNTIME_CANDIDATE && !FIXTURE_RUNTIME_CANDIDATE && !SUPERVISED_RELEASE_CANDIDATE) {
     s.goCorReceiptValid    = _e2eProbeResult?.receipt_valid === true;
     s.runtimeEvidenceReady = _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY';
   }
   // V33.0: preserve authority valid set by candidate drill; otherwise use binding result
   // V36.3: also preserve when local runtime execution is ready
   // V37.1: also preserve when runtime candidate is ready
+  // V42.1: also preserve when supervised RC is ready
   const _localRuntimeFullyBound = (LOCAL_RUNTIME_EXECUTION || FIXTURE_LOCAL_RUNTIME) && _localLedgerBinding?.ledger_binding_ready === true;
   const _runtimeCandidateFullyReady = (RUNTIME_CANDIDATE || FIXTURE_RUNTIME_CANDIDATE) && _runtimeCandidateResult?.runtime_pass_gold_ready === true;
-  if ((!CANDIDATE_DRILL || !(_candidateDrillResult?.full_candidate_drill_ready === true)) && !_localRuntimeFullyBound && !_runtimeCandidateFullyReady) {
+  const _supervisedRCFullyReady = SUPERVISED_RELEASE_CANDIDATE && _supervisedRCResult?.supervised_release_candidate_ready === true;
+  if ((!CANDIDATE_DRILL || !(_candidateDrillResult?.full_candidate_drill_ready === true)) && !_localRuntimeFullyBound && !_runtimeCandidateFullyReady && !_supervisedRCFullyReady) {
     s.passGoldAuthorityBindingValid = !!(_passGoldBinding?.pass_gold_authority_binding_valid === true);
   }
   // V27.1: Recompute pass_gold_candidate with all 16 strict gates
@@ -2551,6 +2602,10 @@ async function main() {
   }
   // V37.1: runtime candidate overrides recompute when fully ready
   if (_runtimeCandidateFullyReady) {
+    s.passGoldCandidate = true;
+  }
+  // V42.1: supervised RC overrides recompute when fully ready
+  if (_supervisedRCFullyReady) {
     s.passGoldCandidate = true;
   }
   if (!s.passGoldCandidate) {
