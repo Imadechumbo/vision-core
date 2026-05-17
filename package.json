@@ -3,12 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:syntax": "node --check tools/pi-harness.mjs && node --check tools/hermes/authority-review.mjs && node --check tools/hermes/authority-harness.mjs && node --check tools/test-lane.mjs && node --check tools/tests/authority.test.mjs && node --check tools/release-candidate-controller.mjs && node --check tools/tests/release-candidate.test.mjs",
+    "test:syntax": "node --check tools/pi-harness.mjs && node --check tools/hermes/authority-review.mjs && node --check tools/hermes/authority-harness.mjs && node --check tools/test-lane.mjs && node --check tools/tests/authority.test.mjs && node --check tools/release-candidate-controller.mjs && node --check tools/tests/release-candidate.test.mjs && node --check tools/release-plan-generator.mjs && node --check tools/tests/release-plan.test.mjs",
     "test:guards": "node --no-deprecation tools/visual-gold-harness-lock.mjs && node --no-deprecation tools/frontend-visual-lock.mjs && node --no-deprecation tools/sddf-front-guard.mjs",
     "test:authority": "node --no-deprecation tools/hermes/authority-harness.mjs",
     "test:authority-unit": "node --no-deprecation tools/tests/authority.test.mjs",
     "test:release-unit": "node --no-deprecation tools/tests/release-candidate.test.mjs",
-    "test:quick": "npm run test:syntax && npm run test:authority-unit && npm run test:release-unit && npm run test:affected",
+    "test:release-plan-unit": "node --no-deprecation tools/tests/release-plan.test.mjs",
+    "test:quick": "npm run test:syntax && npm run test:authority-unit && npm run test:release-unit && npm run test:release-plan-unit && npm run test:affected",
     "test:postmerge": "npm run test:quick && npm run test:guards",
     "test:fast": "npm run test:authority-unit",
     "test:full": "node --no-deprecation tools/tests/pi-harness.test.mjs",
@@ -22,6 +23,6 @@
     "certify:full": "npm run test:prepush",
     "certify:release": "node --no-deprecation tools/pi-harness.mjs --mode release",
     "release:dry-run": "node --no-deprecation tools/pi-harness.mjs --mode certify --dry-run --json",
-    "release:plan": "node --no-deprecation tools/pi-harness.mjs --mode certify --dry-run --json"
+    "release:plan": "node --no-deprecation tools/pi-harness.mjs --mode certify --dry-run --json --release-plan"
   }
 }
