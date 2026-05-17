@@ -22,7 +22,7 @@
 
 import { createHash } from 'crypto';
 
-const SCHEMA_VERSION = 'v20.0';
+const SCHEMA_VERSION = 'v24.0';
 
 const REPORT_VERDICTS = [
   'READY',          // all checks pass, pipeline is release-ready (human decision required to proceed)
@@ -50,6 +50,10 @@ const REPORT_VERDICTS = [
  * @param {string} input.releaseVersion         - Semantic version string being released
  * @param {string} input.gitHead
  * @param {string} input.branch
+ * @param {Object} input.runtimeEvidenceResult    - Output of activateRuntimeEvidence() [V24.0]
+ * @param {Object} input.goCorReceiptResult       - Output of validateGoCorEvidenceReceipt() [V24.0]
+ * @param {Object} input.passGoldRuntimeBinding   - Output of evaluatePassGoldRuntimeBinding() [V24.0]
+ * @param {Object} input.localDrillResult         - Output of runLocalPassGoldDrill() [V24.0]
  */
 function generateReadinessReport(input = {}) {
   const {
@@ -66,6 +70,11 @@ function generateReadinessReport(input = {}) {
     releaseVersion       = null,
     gitHead              = null,
     branch               = null,
+    // V24.0: Runtime Evidence
+    runtimeEvidenceResult  = null,
+    goCorReceiptResult     = null,
+    passGoldRuntimeBinding = null,
+    localDrillResult       = null,
   } = input;
 
   const reportId    = _buildId(gitHead, branch, releaseVersion);
@@ -91,6 +100,27 @@ function generateReadinessReport(input = {}) {
   const chainValid         = chainValidatorResult?.chain_valid === true;
   const chainStatus        = chainValidatorResult?.chain_validator_status ?? null;
 
+  // ── V24.0: Runtime Evidence summary ─────────────────────────────
+  const runtimeEvidenceStatus      = runtimeEvidenceResult?.runtime_evidence_status ?? null;
+  const runtimeEvidenceReady       = runtimeEvidenceResult?.runtime_evidence_ready  === true;
+  const goCorReceiptStatus         = goCorReceiptResult?.receipt_status              ?? null;
+  const goCorReceiptValid          = goCorReceiptResult?.receipt_valid               === true;
+  const passGoldBindingStatus      = passGoldRuntimeBinding?.pass_gold_runtime_binding_status ?? null;
+  const passGoldBindingValid       = passGoldRuntimeBinding?.pass_gold_runtime_binding_valid  === true;
+  const localDrillStatus           = localDrillResult?.drill_status                 ?? null;
+  const localDrillReady            = localDrillResult?.drill_ready                  === true;
+  const runtimeReleaseReady        = runtimeEvidenceReady && goCorReceiptValid && passGoldBindingValid;
+
+  const missingRuntimeEvidence = [];
+  if (!runtimeEvidenceReady)  missingRuntimeEvidence.push('runtime_evidence_ready');
+  if (!goCorReceiptValid)     missingRuntimeEvidence.push('go_core_receipt_valid');
+  if (!passGoldBindingValid)  missingRuntimeEvidence.push('pass_gold_runtime_binding_valid');
+
+  const runtimeBlockers = [];
+  if (runtimeEvidenceResult && !runtimeEvidenceReady) runtimeBlockers.push(runtimeEvidenceStatus);
+  if (goCorReceiptResult    && !goCorReceiptValid)    runtimeBlockers.push(goCorReceiptStatus);
+  if (passGoldRuntimeBinding && !passGoldBindingValid) runtimeBlockers.push(passGoldBindingStatus);
+
   // ── Overall verdict ──────────────────────────────────────────────
   let verdict;
   const hasMinInputs = stageTable.some(s => s.result !== null);
@@ -99,6 +129,8 @@ function generateReadinessReport(input = {}) {
   } else if (policyChecked && !policyPass) {
     verdict = 'POLICY_FAIL';
   } else if (stagesNotReady > 0) {
+    verdict = 'NOT_READY';
+  } else if (!runtimeReleaseReady && (runtimeEvidenceResult || goCorReceiptResult || passGoldRuntimeBinding)) {
     verdict = 'NOT_READY';
   } else {
     verdict = 'READY';
@@ -140,6 +172,19 @@ function generateReadinessReport(input = {}) {
     summary_lines:        summaryLines,
     summary_text:         summaryLines.join('\n'),
 
+    // V24.0: Runtime Evidence fields
+    runtime_evidence_status:          runtimeEvidenceStatus,
+    runtime_evidence_ready:           runtimeEvidenceReady,
+    go_core_receipt_status:           goCorReceiptStatus,
+    go_core_receipt_valid:            goCorReceiptValid,
+    pass_gold_runtime_binding_status: passGoldBindingStatus,
+    pass_gold_runtime_binding_valid:  passGoldBindingValid,
+    local_runtime_drill_status:       localDrillStatus,
+    local_runtime_drill_ready:        localDrillReady,
+    runtime_release_ready:            runtimeReleaseReady,
+    missing_runtime_evidence:         missingRuntimeEvidence,
+    runtime_blockers:                 runtimeBlockers,
+
     // Invariants — always false
     deploy_performed:     false,
     deploy_allowed:       false,
@@ -147,7 +192,7 @@ function generateReadinessReport(input = {}) {
     stable_promoted:      false,
     release_performed:    false,
 
-    note: 'Release readiness report — classification and summary only. Human decision required to proceed in V20.0',
+    note: 'Release readiness report — classification and summary only. Human decision required to proceed in V24.0',
   };
 }
 
