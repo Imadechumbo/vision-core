@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * PASS GOLD Runtime Evidence Binding — Unit Tests V21.4
+ * PASS GOLD Runtime Evidence Binding — Unit Tests V27.1
+ * (updated from V21.4)
  */
 
 import { spawnSync } from 'child_process';
@@ -39,12 +40,28 @@ const validReceipt = {
 const validAuthority = { authority_valid: true };
 const validTests     = true;
 
-function makeFullValid() {
+// V27.1: all 16 strict gate inputs for full valid
+const ALL_STRICT_GATES = {
+  syntax_ok:             true,
+  go_core_compiled:      true,
+  go_test_pass:          true,
+  go_build_pass:         true,
+  fake_evidence_absent:  true,
+  forbidden_diff_absent: true,
+  backend_health_ok:     true,
+  runtime_probe_pass:    true,
+  go_core_receipt_valid: true,
+  runtime_evidence_ready: true,
+};
+
+function makeFullValid(overrides = {}) {
   return {
     runtime_evidence:  validEvidence,
     go_core_receipt:   validReceipt,
     authority_binding: validAuthority,
     tests_verified:    validTests,
+    ...ALL_STRICT_GATES,
+    ...overrides,
   };
 }
 
@@ -89,46 +106,32 @@ assert(notReadyEvidence.pass_gold_runtime_binding_status === 'PASSGOLD_RUNTIME_B
 
 // ─── Suite D: Invalid receipt → BLOCKED_RECEIPT ───────────────────
 console.log('\n[Suite D] Invalid receipt');
-const noReceipt = evaluatePassGoldRuntimeBinding({
-  runtime_evidence: validEvidence, go_core_receipt: null, authority_binding: validAuthority, tests_verified: true,
-});
+const noReceipt = evaluatePassGoldRuntimeBinding(makeFullValid({ go_core_receipt: null, go_core_receipt_valid: false }));
 assert(noReceipt.pass_gold_runtime_binding_status === 'PASSGOLD_RUNTIME_BLOCKED_RECEIPT', '[D-01] null receipt → BLOCKED_RECEIPT');
 assert(noReceipt.pass_gold_candidate_allowed      === false,                              '[D-02] candidate_allowed=false');
 
-const invalidReceipt = evaluatePassGoldRuntimeBinding({
-  runtime_evidence: validEvidence,
-  go_core_receipt: { ...validReceipt, receipt_valid: false },
-  authority_binding: validAuthority, tests_verified: true,
-});
+const invalidReceipt = evaluatePassGoldRuntimeBinding(makeFullValid({
+  go_core_receipt: { ...validReceipt, receipt_valid: false }, go_core_receipt_valid: false,
+}));
 assert(invalidReceipt.pass_gold_runtime_binding_status === 'PASSGOLD_RUNTIME_BLOCKED_RECEIPT', '[D-03] invalid receipt → BLOCKED_RECEIPT');
 
-const backendReceipt = evaluatePassGoldRuntimeBinding({
-  runtime_evidence: validEvidence,
-  go_core_receipt: { ...validReceipt, source: 'backend' },
-  authority_binding: validAuthority, tests_verified: true,
-});
+const backendReceipt = evaluatePassGoldRuntimeBinding(makeFullValid({
+  go_core_receipt: { ...validReceipt, source: 'backend' }, go_core_receipt_valid: false,
+}));
 assert(backendReceipt.pass_gold_runtime_binding_status === 'PASSGOLD_RUNTIME_BLOCKED_RECEIPT', '[D-04] backend source → BLOCKED_RECEIPT');
 
 // ─── Suite E: Missing authority → BLOCKED_AUTHORITY ──────────────
 console.log('\n[Suite E] Missing authority');
-const noAuthority = evaluatePassGoldRuntimeBinding({
-  runtime_evidence: validEvidence, go_core_receipt: validReceipt, authority_binding: null, tests_verified: true,
-});
+const noAuthority = evaluatePassGoldRuntimeBinding(makeFullValid({ authority_binding: null }));
 assert(noAuthority.pass_gold_runtime_binding_status === 'PASSGOLD_RUNTIME_BLOCKED_AUTHORITY', '[E-01] null authority → BLOCKED_AUTHORITY');
 assert(noAuthority.pass_gold_candidate_allowed      === false,                                '[E-02] candidate_allowed=false');
 
-const invalidAuthority = evaluatePassGoldRuntimeBinding({
-  runtime_evidence: validEvidence, go_core_receipt: validReceipt,
-  authority_binding: { authority_valid: false }, tests_verified: true,
-});
+const invalidAuthority = evaluatePassGoldRuntimeBinding(makeFullValid({ authority_binding: { authority_valid: false } }));
 assert(invalidAuthority.pass_gold_runtime_binding_status === 'PASSGOLD_RUNTIME_BLOCKED_AUTHORITY', '[E-03] invalid authority → BLOCKED_AUTHORITY');
 
 // ─── Suite F: Tests not verified → BLOCKED_TESTS ─────────────────
 console.log('\n[Suite F] Tests not verified');
-const noTests = evaluatePassGoldRuntimeBinding({
-  runtime_evidence: validEvidence, go_core_receipt: validReceipt,
-  authority_binding: validAuthority, tests_verified: false,
-});
+const noTests = evaluatePassGoldRuntimeBinding(makeFullValid({ tests_verified: false }));
 assert(noTests.pass_gold_runtime_binding_status === 'PASSGOLD_RUNTIME_BLOCKED_TESTS', '[F-01] tests=false → BLOCKED_TESTS');
 assert(noTests.pass_gold_candidate_allowed      === false,                            '[F-02] candidate_allowed=false');
 
@@ -164,8 +167,12 @@ assert(parsed && parsed.promotion_allowed === false,            '[H-06] promotio
 
 // ─── Suite I: Schema ──────────────────────────────────────────────
 console.log('\n[Suite I] Schema');
-assert(emptyResult.schema_version === 'v21.4', '[I-01] schema=v21.4 (blocked)');
-assert(readyResult.schema_version === 'v21.4', '[I-02] schema=v21.4 (ready)');
+assert(emptyResult.schema_version === 'v27.1', '[I-01] schema=v27.1 (blocked)');
+assert(readyResult.schema_version === 'v27.1', '[I-02] schema=v27.1 (ready)');
+// V27.1: strict_gates and missing_gates present
+assert(Array.isArray(readyResult.missing_gates),  '[I-03] missing_gates array in READY');
+assert(readyResult.missing_gates.length === 0,    '[I-04] no missing gates in READY');
+assert(typeof readyResult.strict_gates === 'object', '[I-05] strict_gates object in READY');
 
 // ─── Summary ──────────────────────────────────────────────────────
 console.log(`\npass-gold-runtime-binding: ${passed} passed, ${failed} failed`);
