@@ -65,9 +65,10 @@ function generateReleasePlan(input = {}) {
   const evidenceSource = hs.evidenceSource                    || _pg?.pass_gold_binding_evidence_source     || null;
   const evidenceOk     = !!evidenceId && evidenceSource === 'go-core';
   const bindingReady   = _pg?.pass_gold_authority_binding_status === 'BINDING_READY';
-  const contractId     = authorityContractId                  || _pg?.pass_gold_binding_contract_id        || _ag?.approved_actions?.length > 0 ? (_pg?.pass_gold_binding_contract_id || null) : null;
+  const contractId     = authorityContractId                  || _pg?.pass_gold_binding_contract_id        || null;
 
   // ── Determine plan status ────────────────────────────────────────
+  const policyViolation = hs.fakeEvidenceAbsent === false;
   let planStatus;
   if (!rcReady) {
     planStatus = 'PLAN_BLOCKED_NO_CANDIDATE';
@@ -75,6 +76,8 @@ function generateReleasePlan(input = {}) {
     planStatus = 'PLAN_BLOCKED_NO_EVIDENCE';
   } else if (!bindingReady) {
     planStatus = 'PLAN_BLOCKED_NO_AUTHORITY';
+  } else if (policyViolation) {
+    planStatus = 'PLAN_BLOCKED_POLICY';
   } else {
     planStatus = 'PLAN_READY';
   }

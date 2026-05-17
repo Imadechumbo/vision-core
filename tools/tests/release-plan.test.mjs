@@ -146,6 +146,17 @@ assert(pNoEv.release_plan_status === 'PLAN_BLOCKED_NO_EVIDENCE', '[C-04] no evid
 const pNoAuth = generateReleasePlan({ ...fullInput, passGoldBinding: blockedBinding });
 assert(pNoAuth.release_plan_status === 'PLAN_BLOCKED_NO_AUTHORITY', '[C-05] blocked binding → PLAN_BLOCKED_NO_AUTHORITY');
 
+// All ready but fakeEvidenceAbsent=false → PLAN_BLOCKED_POLICY
+const pPolicy = generateReleasePlan({
+  ...fullInput,
+  harnessState: { ...fullHarnessState, fakeEvidenceAbsent: false },
+});
+assert(pPolicy.release_plan_status === 'PLAN_BLOCKED_POLICY', '[C-06] fakeEvidenceAbsent=false → PLAN_BLOCKED_POLICY');
+assert(pPolicy.release_plan_ready === false,                   '[C-07] PLAN_BLOCKED_POLICY → release_plan_ready=false');
+assert(pPolicy.deploy_performed   === false,                   '[C-08] PLAN_BLOCKED_POLICY → deploy_performed=false');
+assert(pPolicy.tag_created        === false,                   '[C-09] PLAN_BLOCKED_POLICY → tag_created=false');
+assert(pPolicy.stable_promoted    === false,                   '[C-10] PLAN_BLOCKED_POLICY → stable_promoted=false');
+
 // ═══════════════════════════════════════════════════════════════════
 // Suite D — PLAN_READY
 // ═══════════════════════════════════════════════════════════════════
@@ -284,6 +295,28 @@ assert(pA.release_plan_id !== pB.release_plan_id, '[K-07] plan_ids are unique (t
 
 // Note field present
 assert(typeof p.note === 'string' && p.note.length > 0, '[K-08] note field present');
+
+// ═══════════════════════════════════════════════════════════════════
+// Suite L — Authority contract ID preservation
+// ═══════════════════════════════════════════════════════════════════
+
+console.log('\n[Suite L] Authority contract ID preservation');
+
+// Explicit authorityContractId preserved even without pass_gold_binding_contract_id
+const pExplicitContract = generateReleasePlan({
+  ...fullInput,
+  authorityContractId: 'explicit_contract_id',
+  passGoldBinding: { ...fullBinding, pass_gold_binding_contract_id: null },
+});
+assert(pExplicitContract.authority_contract_id === 'explicit_contract_id', '[L-01] explicit authorityContractId preserved without pass_gold_binding_contract_id');
+
+// authorityContractId takes precedence over pass_gold_binding_contract_id
+const pContractPrecedence = generateReleasePlan({
+  ...fullInput,
+  authorityContractId: 'primary_contract',
+  passGoldBinding: { ...fullBinding, pass_gold_binding_contract_id: 'secondary_contract' },
+});
+assert(pContractPrecedence.authority_contract_id === 'primary_contract', '[L-02] authorityContractId takes precedence over pass_gold_binding_contract_id');
 
 // ═══════════════════════════════════════════════════════════════════
 // Result
