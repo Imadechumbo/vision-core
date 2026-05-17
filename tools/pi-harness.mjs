@@ -92,6 +92,8 @@ import { runLocalPassGoldFullCandidateDrill } from './local-pass-gold-full-candi
 import { runLocalRuntimeExecutionController } from './local-runtime-execution-controller.mjs';
 import { buildRuntimeExecutionEvidencePackage } from './runtime-execution-evidence-package.mjs';
 import { bindRuntimeExecutionToLedger } from './runtime-execution-ledger-binding.mjs';
+// V37.1: Runtime Candidate Mode
+import { runRuntimePassGoldCandidateController } from './runtime-pass-gold-candidate-controller.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -143,6 +145,10 @@ const FIXTURE_LOCAL_RUNTIME          = FLAG('--fixture-local-runtime');
 const LOCAL_RUNTIME_START_BACKEND    = FLAG('--local-runtime-start-backend');
 const LOCAL_RUNTIME_GO_CORE_BIN      = ARG('--local-runtime-go-core-bin') || null;
 
+// V37.1: Runtime Candidate Mode flags (default: off — safe)
+const RUNTIME_CANDIDATE         = FLAG('--runtime-candidate');
+const FIXTURE_RUNTIME_CANDIDATE = FLAG('--fixture-runtime-candidate');
+
 const DIFFICULTY_ORDER = ['D0','D1','D2','D3','D4','D5','D6','D7','D8'];
 const rawMaxDiff = ARG('--max-difficulty') || ((HARNESS_MODE === 'interactive' || HARNESS_MODE === 'patch' || HARNESS_MODE === 'verify') ? 'D2' : 'D8');
 const MAX_DIFF_IDX = DIFFICULTY_ORDER.includes(rawMaxDiff)
@@ -171,6 +177,8 @@ let _candidateDrillResult = null;
 let _localRuntimeResult   = null;
 let _localEvidencePackage = null;
 let _localLedgerBinding   = null;
+// V37.1: Runtime Candidate result (populated when --runtime-candidate is used)
+let _runtimeCandidateResult = null;
 // Runtime Evidence snapshot (V15.6)
 let _runtimeEvidence = null;
 // Decision Matrix snapshot (V15.7)
@@ -1736,11 +1744,11 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       release_plan_tag_created:       false,
       release_plan_stable_promoted:   false,
       // V21.3/V27.0/V32.0/V33.0: Runtime Evidence Wiring
-      runtime_evidence_enabled:         RUNTIME_PROBE || RUNTIME_BRIDGE || FIXTURE_RUNTIME_BRIDGE || CANDIDATE_DRILL || LOCAL_RUNTIME_EXECUTION || FIXTURE_LOCAL_RUNTIME,
-      runtime_evidence_status:          (_e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true || _candidateDrillResult?.full_candidate_drill_ready === true || _localLedgerBinding?.ledger_binding_ready === true)
+      runtime_evidence_enabled:         RUNTIME_PROBE || RUNTIME_BRIDGE || FIXTURE_RUNTIME_BRIDGE || CANDIDATE_DRILL || LOCAL_RUNTIME_EXECUTION || FIXTURE_LOCAL_RUNTIME || RUNTIME_CANDIDATE || FIXTURE_RUNTIME_CANDIDATE,
+      runtime_evidence_status:          (_e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true || _candidateDrillResult?.full_candidate_drill_ready === true || _localLedgerBinding?.ledger_binding_ready === true || _runtimeCandidateResult?.runtime_pass_gold_ready === true)
         ? 'RUNTIME_EVIDENCE_READY'
         : 'RUNTIME_EVIDENCE_BLOCKED_BACKEND_OFFLINE',
-      runtime_evidence_ready:           _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true || _candidateDrillResult?.full_candidate_drill_ready === true || _localLedgerBinding?.ledger_binding_ready === true,
+      runtime_evidence_ready:           _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true || _candidateDrillResult?.full_candidate_drill_ready === true || _localLedgerBinding?.ledger_binding_ready === true || _runtimeCandidateResult?.runtime_pass_gold_ready === true,
       backend_runtime_probe_status:     _bridgeProbeResult?.probe_bridge_status ?? _e2eProbeResult?.e2e_runtime_status ?? 'PROBE_SKIPPED_NO_START',
       go_core_receipt_status:           (_e2eProbeResult?.receipt_valid === true || _bridgeProbeResult?.receipt_valid === true) ? 'RECEIPT_VALID' : 'RECEIPT_BLOCKED_MISSING',
       go_core_receipt_valid:            _e2eProbeResult?.receipt_valid === true || _bridgeProbeResult?.receipt_valid === true,
@@ -1781,6 +1789,15 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       local_mission_id:                  _localRuntimeResult?.mission_id ?? null,
       local_evidence_receipt_id:         _localRuntimeResult?.evidence_receipt_id ?? null,
       local_evidence_source:             _localRuntimeResult?.evidence_source ?? null,
+      // V37.1: Runtime Candidate Mode fields
+      runtime_candidate_enabled:         RUNTIME_CANDIDATE || FIXTURE_RUNTIME_CANDIDATE,
+      runtime_pass_gold_status:          _runtimeCandidateResult?.runtime_pass_gold_status ?? 'RUNTIME_PASS_GOLD_NOT_STARTED',
+      runtime_pass_gold_ready:           _runtimeCandidateResult?.runtime_pass_gold_ready === true,
+      runtime_candidate_pass_gold:       _runtimeCandidateResult?.pass_gold_candidate === true,
+      runtime_candidate_local_only:      _runtimeCandidateResult?.candidate_is_local_only !== false,
+      runtime_candidate_mission_id:      _runtimeCandidateResult?.mission_id ?? null,
+      runtime_candidate_ledger_entry_id: _runtimeCandidateResult?.ledger_entry_id ?? null,
+      runtime_candidate_evidence_source: _runtimeCandidateResult?.evidence_source ?? null,
     };
     // V21.3/V27.0: pass_gold_candidate guarded by runtime_evidence_ready
     if (!out.runtime_evidence_ready) {
@@ -2480,15 +2497,46 @@ async function main() {
     }
   }
 
+  // V37.1: Runtime Candidate Mode — runs full V37.0 pipeline as single call
+  if (RUNTIME_CANDIDATE || FIXTURE_RUNTIME_CANDIDATE) {
+    try {
+      _runtimeCandidateResult = runRuntimePassGoldCandidateController({
+        candidate_requested: RUNTIME_CANDIDATE,
+        fixture_mode:        FIXTURE_RUNTIME_CANDIDATE,
+        start_local_backend: LOCAL_RUNTIME_START_BACKEND,
+        go_core_bin:         LOCAL_RUNTIME_GO_CORE_BIN,
+        timeout_ms:          RUNTIME_BRIDGE_TIMEOUT,
+      });
+      if (_runtimeCandidateResult?.runtime_pass_gold_ready === true) {
+        s.backendAlive              = true;
+        s.backendHealthOk           = true;
+        s.backendStub               = false;
+        s.backendHasMissionId       = true;
+        s.backendHasEvidenceReceipt = true;
+        s.evidenceSource            = 'go-core';
+        s.runtimeProbePass          = true;
+        s.goCorReceiptValid         = true;
+        s.runtimeEvidenceReady      = true;
+        s.passGoldAuthorityBindingValid = true;
+        s.passGoldCandidate         = true;
+      }
+      audit(`[V37.1] Runtime candidate: ${_runtimeCandidateResult?.runtime_pass_gold_status} | pass_gold: ${_runtimeCandidateResult?.pass_gold_candidate}`);
+    } catch (e) {
+      audit(`[V37.1] Runtime candidate error: ${e.message}`);
+    }
+  }
+
   // V27.1: Update strict gate fields from E2E probe result and authority binding
-  if (!RUNTIME_BRIDGE && !FIXTURE_RUNTIME_BRIDGE && !CANDIDATE_DRILL && !LOCAL_RUNTIME_EXECUTION && !FIXTURE_LOCAL_RUNTIME) {
+  if (!RUNTIME_BRIDGE && !FIXTURE_RUNTIME_BRIDGE && !CANDIDATE_DRILL && !LOCAL_RUNTIME_EXECUTION && !FIXTURE_LOCAL_RUNTIME && !RUNTIME_CANDIDATE && !FIXTURE_RUNTIME_CANDIDATE) {
     s.goCorReceiptValid    = _e2eProbeResult?.receipt_valid === true;
     s.runtimeEvidenceReady = _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY';
   }
   // V33.0: preserve authority valid set by candidate drill; otherwise use binding result
   // V36.3: also preserve when local runtime execution is ready
+  // V37.1: also preserve when runtime candidate is ready
   const _localRuntimeFullyBound = (LOCAL_RUNTIME_EXECUTION || FIXTURE_LOCAL_RUNTIME) && _localLedgerBinding?.ledger_binding_ready === true;
-  if ((!CANDIDATE_DRILL || !(_candidateDrillResult?.full_candidate_drill_ready === true)) && !_localRuntimeFullyBound) {
+  const _runtimeCandidateFullyReady = (RUNTIME_CANDIDATE || FIXTURE_RUNTIME_CANDIDATE) && _runtimeCandidateResult?.runtime_pass_gold_ready === true;
+  if ((!CANDIDATE_DRILL || !(_candidateDrillResult?.full_candidate_drill_ready === true)) && !_localRuntimeFullyBound && !_runtimeCandidateFullyReady) {
     s.passGoldAuthorityBindingValid = !!(_passGoldBinding?.pass_gold_authority_binding_valid === true);
   }
   // V27.1: Recompute pass_gold_candidate with all 16 strict gates
@@ -2499,6 +2547,10 @@ async function main() {
   }
   // V36.3: local runtime execution overrides recompute when fully bound
   if (_localRuntimeFullyBound) {
+    s.passGoldCandidate = true;
+  }
+  // V37.1: runtime candidate overrides recompute when fully ready
+  if (_runtimeCandidateFullyReady) {
     s.passGoldCandidate = true;
   }
   if (!s.passGoldCandidate) {
