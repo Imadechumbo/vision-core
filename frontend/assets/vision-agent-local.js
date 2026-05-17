@@ -14,6 +14,19 @@
     { key: 'github',      name: 'GitHub Agent',  contract: 'Depende de integração autorizada pelo servidor.' }
   ];
 
+  var NODES = [
+    { id: 'pi_harness',   label: 'PI Harness',   role: 'Orchestrator',  color: '#c084fc', icon: 'π',  top: 20.0, left: 50.0 },
+    { id: 'hermes',       label: 'Hermes',        role: 'Supervisor',    color: '#f59e0b', icon: 'H',  top: 25.6, left: 65.9 },
+    { id: 'openclaw',     label: 'OpenClaw',      role: 'Coordinator',   color: '#a855f7', icon: '⬡', top: 40.0, left: 78.0 },
+    { id: 'scanner',      label: 'Scanner',       role: 'Inspector',     color: '#22c55e', icon: '⊕', top: 60.0, left: 78.0 },
+    { id: 'patchengine',  label: 'PatchEngine',   role: 'Patch',         color: '#22d3ee', icon: '⚙', top: 74.4, left: 65.9 },
+    { id: 'aegis',        label: 'Aegis',         role: 'Security',      color: '#22c55e', icon: '⬡', top: 80.0, left: 50.0 },
+    { id: 'gocore',       label: 'Go Core',       role: 'Runtime Truth', color: '#60a5fa', icon: '◈', top: 74.4, left: 34.1 },
+    { id: 'pass_gold',    label: 'PASS GOLD',     role: 'Gold Gate',     color: '#facc15', icon: '★', top: 60.0, left: 22.0 },
+    { id: 'archivist',    label: 'Archivist',     role: 'Memory',        color: '#a3e635', icon: '⬡', top: 40.0, left: 22.0 },
+    { id: 'github_agent', label: 'GitHub Agent',  role: 'Integrations',  color: '#94a3b8', icon: '⬡', top: 25.6, left: 34.1 },
+  ];
+
   var fallbackMetrics = [
     { key: 'openclaw', name: 'OpenClaw', width: 0, value: '—' },
     { key: 'hermes', name: 'Hermes RCA', width: 0, value: '—' },
@@ -110,7 +123,7 @@
     orbit.replaceChildren();
     agents.forEach(function (agent, index) {
       var node = document.createElement('button');
-      var point = position(index, agents.length);
+      var point = NODES[index] ? { top: NODES[index].top, left: NODES[index].left } : position(index, agents.length);
       node.type = 'button';
       node.className = 'agent-node' + (agent.gold ? ' is-gold' : '');
       node.style.left = 'calc(' + point.left + '% - 56px)';
