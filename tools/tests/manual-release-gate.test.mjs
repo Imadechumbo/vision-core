@@ -1,14 +1,30 @@
 #!/usr/bin/env node
 /**
- * Manual Release Gate — Unit Tests V16.0
- * No subprocess spawning. No PI Harness invocation.
+ * Manual Release Gate — Unit Tests V16.0.1
+ * No subprocess spawning for unit suites. CLI suite uses spawnSync.
  */
 
+import { spawnSync }  from 'child_process';
+import { resolve }    from 'path';
 import {
   evaluateManualReleaseGate,
   GATE_STATUSES,
   GATE_SCHEMA_VERSION,
 } from '../manual-release-gate.mjs';
+
+const GATE_CLI = resolve(process.cwd(), 'tools', 'manual-release-gate.mjs');
+
+function runGateCLI(args = []) {
+  const result = spawnSync(process.execPath, ['--no-deprecation', GATE_CLI, ...args], {
+    encoding: 'utf-8',
+    timeout:  15000,
+  });
+  return {
+    stdout:   result.stdout || '',
+    stderr:   result.stderr || '',
+    exitCode: result.status,
+  };
+}
 
 let passed = 0;
 let failed = 0;
@@ -306,6 +322,79 @@ assert(g.deploy_performed  === false,  '[I-08] MANUAL_RELEASE_READY → deploy_p
 assert(g.tag_created       === false,  '[I-09] MANUAL_RELEASE_READY → tag_created=false');
 assert(g.stable_promoted   === false,  '[I-10] MANUAL_RELEASE_READY → stable_promoted=false');
 assert(g.release_performed === false,  '[I-11] MANUAL_RELEASE_READY → release_performed=false');
+
+// ═══════════════════════════════════════════════════════════════════
+// Suite J — CLI entrypoint
+// ═══════════════════════════════════════════════════════════════════
+
+console.log('\n[Suite J] CLI entrypoint');
+
+// No flags → blocked JSON + exit 2
+const cliNoFlags = runGateCLI(['--dry-run', '--json']);
+assert(cliNoFlags.exitCode === 2,                                                       '[J-01] no flags → exit code 2');
+assert(cliNoFlags.stdout.length > 0,                                                    '[J-02] no flags → stdout not empty');
+(() => {
+  try {
+    const out = JSON.parse(cliNoFlags.stdout);
+    assert(out.manual_release_gate_status === 'MANUAL_RELEASE_BLOCKED_SIMULATION',     '[J-03] no flags → MANUAL_RELEASE_BLOCKED_SIMULATION');
+    assert(out.manual_release_gate_ready  === false,                                   '[J-04] no flags → gate_ready=false');
+    assert(out.deploy_allowed             === false,                                   '[J-05] no flags → deploy_allowed=false');
+    assert(out.tag_allowed                === false,                                   '[J-06] no flags → tag_allowed=false');
+    assert(out.stable_allowed             === false,                                   '[J-07] no flags → stable_allowed=false');
+  } catch {
+    assert(false, '[J-03..07] no flags → valid JSON output');
+  }
+})();
+
+// Incomplete flags → blocked JSON + exit 2
+const cliPartial = runGateCLI([
+  '--dry-run', '--json',
+  '--manual-release-intent', '--confirm-no-auto-deploy',
+]);
+assert(cliPartial.exitCode === 2,                                                        '[J-08] partial flags → exit code 2');
+(() => {
+  try {
+    const out = JSON.parse(cliPartial.stdout);
+    assert(out.manual_release_gate_ready === false,                                    '[J-09] partial flags → gate_ready=false');
+    assert(out.confirmations_received.manual_release_intent === true,                  '[J-10] partial flags → manual_release_intent captured');
+    assert(out.confirmations_received.no_stable_promotion   === false,                 '[J-11] partial flags → no_stable_promotion=false');
+  } catch {
+    assert(false, '[J-09..11] partial flags → valid JSON');
+  }
+})();
+
+// All flags → MANUAL_RELEASE_READY + exit 0
+const cliReady = runGateCLI([
+  '--dry-run', '--json',
+  '--manual-release-intent', '--confirm-no-auto-deploy',
+  '--confirm-no-stable-promotion', '--confirm-rollback-plan-reviewed',
+  '--simulation-ready',
+  '--evidence-receipt-id', 'ev_cli_test', '--evidence-source', 'go-core',
+  '--authority-binding-ready', '--authority-contract-id', 'contract_cli_test',
+  '--rollback-target', 'deadbeef123', '--rollback-step', 'snapshot current state',
+  '--git-clean', '--ci-green',
+]);
+assert(cliReady.exitCode === 0,                                                          '[J-12] all flags → exit code 0');
+(() => {
+  try {
+    const out = JSON.parse(cliReady.stdout);
+    assert(out.manual_release_gate_status === 'MANUAL_RELEASE_READY',                 '[J-13] all flags → MANUAL_RELEASE_READY');
+    assert(out.manual_release_gate_ready  === true,                                   '[J-14] all flags → gate_ready=true');
+    assert(out.deploy_allowed             === false,                                   '[J-15] MANUAL_RELEASE_READY → deploy_allowed=false');
+    assert(out.tag_allowed                === false,                                   '[J-16] MANUAL_RELEASE_READY → tag_allowed=false');
+    assert(out.stable_allowed             === false,                                   '[J-17] MANUAL_RELEASE_READY → stable_allowed=false');
+    assert(out.release_performed          === false,                                   '[J-18] MANUAL_RELEASE_READY → release_performed=false');
+    assert(out.inputs_evaluated.evidence_receipt_id === 'ev_cli_test',                '[J-19] evidence_receipt_id from CLI');
+    assert(out.inputs_evaluated.evidence_source === 'go-core',                        '[J-20] evidence_source=go-core from CLI');
+    assert(out.inputs_evaluated.rollback_target === 'deadbeef123',                    '[J-21] rollback_target from CLI');
+  } catch {
+    assert(false, '[J-13..21] all flags → valid JSON with MANUAL_RELEASE_READY');
+  }
+})();
+
+// npm run release:gate output is not silent
+const cliViaScript = runGateCLI(['--json']);
+assert(cliViaScript.stdout.trim().length > 0,                                           '[J-22] release:gate --json → non-empty stdout');
 
 // ═══════════════════════════════════════════════════════════════════
 // Result

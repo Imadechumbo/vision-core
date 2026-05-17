@@ -198,3 +198,108 @@ export {
   GATE_STATUSES,
   SCHEMA_VERSION as GATE_SCHEMA_VERSION,
 };
+
+// ═══════════════════════════════════════════════════════════════════
+// CLI ENTRYPOINT
+// ═══════════════════════════════════════════════════════════════════
+
+// Only run when invoked directly (not when imported as a module)
+if (process.argv[1] && process.argv[1].endsWith('manual-release-gate.mjs')) {
+  _runCLI();
+}
+
+function _parseCLIArgs(argv) {
+  const args = argv.slice(2);
+  const flags = {
+    dryRun:               false,
+    json:                 false,
+    // Confirmations
+    manualReleaseIntent:  false,
+    noAutoDeploy:         false,
+    noStablePromotion:    false,
+    rollbackPlanReviewed: false,
+    // State
+    simulationReady:      false,
+    evidenceReceiptId:    null,
+    evidenceSource:       null,
+    authorityBindingReady: false,
+    authorityContractId:  null,
+    rollbackTarget:       null,
+    rollbackSteps:        [],
+    gitClean:             false,
+    ciGreen:              false,
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    switch (a) {
+      case '--dry-run':                          flags.dryRun               = true; break;
+      case '--json':                             flags.json                 = true; break;
+      case '--manual-release-intent':            flags.manualReleaseIntent  = true; break;
+      case '--confirm-no-auto-deploy':           flags.noAutoDeploy         = true; break;
+      case '--confirm-no-stable-promotion':      flags.noStablePromotion    = true; break;
+      case '--confirm-rollback-plan-reviewed':   flags.rollbackPlanReviewed = true; break;
+      case '--simulation-ready':                 flags.simulationReady      = true; break;
+      case '--authority-binding-ready':          flags.authorityBindingReady = true; break;
+      case '--git-clean':                        flags.gitClean             = true; break;
+      case '--ci-green':                         flags.ciGreen              = true; break;
+      case '--evidence-receipt-id':              flags.evidenceReceiptId    = args[++i] || null; break;
+      case '--evidence-source':                  flags.evidenceSource       = args[++i] || null; break;
+      case '--authority-contract-id':            flags.authorityContractId  = args[++i] || null; break;
+      case '--rollback-target':                  flags.rollbackTarget       = args[++i] || null; break;
+      case '--rollback-step':                    flags.rollbackSteps.push({ id: `step_${flags.rollbackSteps.length}`, description: args[++i] || '' }); break;
+      default: break;
+    }
+  }
+
+  return flags;
+}
+
+function _runCLI() {
+  const flags = _parseCLIArgs(process.argv);
+
+  const simulationResult = flags.simulationReady
+    ? { simulation_status: 'SIM_READY_MANUAL_RELEASE', simulation_safe: true }
+    : null;
+
+  const evidenceReceipt = flags.evidenceReceiptId
+    ? { id: flags.evidenceReceiptId, source: flags.evidenceSource }
+    : null;
+
+  const authorityBinding = flags.authorityBindingReady
+    ? { status: 'BINDING_READY', contract_id: flags.authorityContractId }
+    : null;
+
+  const rollbackPlan = flags.rollbackTarget
+    ? { rollback_target: flags.rollbackTarget, steps: flags.rollbackSteps.length > 0 ? flags.rollbackSteps : [{ id: 'step_0', description: 'rollback target set' }] }
+    : null;
+
+  const result = evaluateManualReleaseGate({
+    simulationResult,
+    evidenceReceipt,
+    authorityBinding,
+    rollbackPlan,
+    gitClean:       flags.gitClean,
+    ciGreenEvidence: flags.ciGreen,
+    confirmations: {
+      manualReleaseIntent:  flags.manualReleaseIntent,
+      noAutoDeploy:         flags.noAutoDeploy,
+      noStablePromotion:    flags.noStablePromotion,
+      rollbackPlanReviewed: flags.rollbackPlanReviewed,
+    },
+    gitHead: null,
+    branch:  null,
+  });
+
+  if (flags.json) {
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+  } else {
+    process.stdout.write(`manual_release_gate_status: ${result.manual_release_gate_status}\n`);
+    process.stdout.write(`manual_release_gate_ready:  ${result.manual_release_gate_ready}\n`);
+    if (result.manual_release_gate_blockers.length > 0) {
+      process.stdout.write(`blockers: ${result.manual_release_gate_blockers.join(', ')}\n`);
+    }
+  }
+
+  process.exit(result.manual_release_gate_ready ? 0 : 2);
+}
