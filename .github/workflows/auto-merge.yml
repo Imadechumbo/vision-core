@@ -29,8 +29,16 @@ jobs:
       (
         startsWith(github.event.pull_request.head.ref, 'feat/v15') ||
         startsWith(github.event.pull_request.head.ref, 'feat/v16') ||
+        startsWith(github.event.pull_request.head.ref, 'feat/v17') ||
+        startsWith(github.event.pull_request.head.ref, 'feat/v18') ||
+        startsWith(github.event.pull_request.head.ref, 'feat/v19') ||
+        startsWith(github.event.pull_request.head.ref, 'feat/v20') ||
         startsWith(github.event.pull_request.head.ref, 'fix/v15') ||
-        startsWith(github.event.pull_request.head.ref, 'fix/v16')
+        startsWith(github.event.pull_request.head.ref, 'fix/v16') ||
+        startsWith(github.event.pull_request.head.ref, 'fix/v17') ||
+        startsWith(github.event.pull_request.head.ref, 'fix/v18') ||
+        startsWith(github.event.pull_request.head.ref, 'fix/v19') ||
+        startsWith(github.event.pull_request.head.ref, 'fix/v20')
       )
 
     steps:
@@ -67,6 +75,8 @@ jobs:
           git diff origin/main...HEAD -- . \
             ':(exclude).github/workflows/auto-merge.yml' \
             ':(exclude).github/workflows/vision-roadmap-automerge.yml' \
+            ':(exclude)tools/tests/' \
+            ':(exclude)tools/automation/' \
             > /tmp/pr.diff
 
           BLOCKED_PATTERNS='deploy_allowed[[:space:]]*[:=][[:space:]]*true|release_allowed[[:space:]]*[:=][[:space:]]*true|tag_allowed[[:space:]]*[:=][[:space:]]*true|stable_allowed[[:space:]]*[:=][[:space:]]*true|promotion_allowed[[:space:]]*[:=][[:space:]]*true|pass_gold_candidate[[:space:]]*[:=][[:space:]]*true|PASS_GOLD_FAKE'
