@@ -38,7 +38,7 @@ const authorityRefs = { contract_id: 'contract_v164', reviewer: 'pass_gold_autho
 // ─── Suite A: Constants ───────────────────────────────────────────
 console.log('\n[Suite A] Constants');
 assert(LEDGER_SCHEMA_VERSION === 'v16.4',                          '[A-01] schema=v16.4');
-assert(Array.isArray(LEDGER_EVENT_TYPES) && LEDGER_EVENT_TYPES.length === 9, '[A-02] 9 event types');
+assert(Array.isArray(LEDGER_EVENT_TYPES) && LEDGER_EVENT_TYPES.length === 13, '[A-02] 13 event types (9 original + 4 V23.0 runtime)');
 assert(LEDGER_EVENT_TYPES.includes('RELEASE_PLAN_CREATED'),       '[A-03] RELEASE_PLAN_CREATED');
 assert(LEDGER_EVENT_TYPES.includes('RELEASE_SIMULATED'),          '[A-04] RELEASE_SIMULATED');
 assert(LEDGER_EVENT_TYPES.includes('TAG_CREATED'),                '[A-05] TAG_CREATED');
