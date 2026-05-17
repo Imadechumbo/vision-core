@@ -35,7 +35,7 @@ const allStagesReady = {
 
 // ─── Suite A: Constants ───────────────────────────────────────────
 console.log('\n[Suite A] Constants');
-assert(REPORT_SCHEMA_VERSION === 'v20.0',                               '[A-01] schema=v20.0');
+assert(REPORT_SCHEMA_VERSION === 'v24.0',                               '[A-01] schema=v24.0');
 assert(Array.isArray(REPORT_VERDICTS) && REPORT_VERDICTS.length === 4,  '[A-02] 4 verdicts');
 assert(REPORT_VERDICTS.includes('READY'),                               '[A-03] READY');
 assert(REPORT_VERDICTS.includes('NOT_READY'),                           '[A-04] NOT_READY');
@@ -50,7 +50,7 @@ assert(anyR.deploy_allowed    === false,  '[B-02] deploy_allowed=false');
 assert(anyR.tag_created       === false,  '[B-03] tag_created=false');
 assert(anyR.stable_promoted   === false,  '[B-04] stable_promoted=false');
 assert(anyR.release_performed === false,  '[B-05] release_performed=false');
-assert(anyR.schema_version === 'v20.0',   '[B-06] schema=v20.0');
+assert(anyR.schema_version === 'v24.0',   '[B-06] schema=v24.0');
 
 // ─── Suite C: No inputs → INCOMPLETE ─────────────────────────────
 console.log('\n[Suite C] No inputs');
@@ -153,6 +153,67 @@ assert(cliNone.exitCode === 2,                                          '[J-01] 
 const cliText = runCLI(['--version', '20.0.0']);
 assert(cliText.exitCode === 2,                                          '[J-05] text mode → exit 2 (incomplete)');
 assert(cliText.stdout.includes('RELEASE READINESS REPORT'),            '[J-06] text output includes header');
+
+// ─── Suite K: V24.0 Runtime Evidence fields ──────────────────────
+console.log('\n[Suite K] V24.0 Runtime Evidence fields');
+
+// No runtime input → fields present with null/false defaults
+const noRuntime = generateReadinessReport({ ...allStagesReady });
+assert('runtime_evidence_status'          in noRuntime, '[K-01] runtime_evidence_status field present');
+assert('runtime_evidence_ready'           in noRuntime, '[K-02] runtime_evidence_ready field present');
+assert('go_core_receipt_status'           in noRuntime, '[K-03] go_core_receipt_status field present');
+assert('go_core_receipt_valid'            in noRuntime, '[K-04] go_core_receipt_valid field present');
+assert('pass_gold_runtime_binding_status' in noRuntime, '[K-05] pass_gold_runtime_binding_status field present');
+assert('pass_gold_runtime_binding_valid'  in noRuntime, '[K-06] pass_gold_runtime_binding_valid field present');
+assert('local_runtime_drill_status'       in noRuntime, '[K-07] local_runtime_drill_status field present');
+assert('runtime_release_ready'            in noRuntime, '[K-08] runtime_release_ready field present');
+assert(Array.isArray(noRuntime.missing_runtime_evidence),   '[K-09] missing_runtime_evidence is array');
+assert(Array.isArray(noRuntime.runtime_blockers),           '[K-10] runtime_blockers is array');
+assert(noRuntime.runtime_release_ready === false,           '[K-11] runtime_release_ready=false (no runtime input)');
+
+// Valid runtime → report with READY verdict reflects runtime evidence
+const validRuntimeEvidence  = { runtime_evidence_status: 'RUNTIME_EVIDENCE_READY',  runtime_evidence_ready: true };
+const validGoCorReceipt     = { receipt_status: 'RECEIPT_VALID',  receipt_valid: true, source: 'go-core' };
+const validPassGoldBinding  = { pass_gold_runtime_binding_status: 'PASSGOLD_RUNTIME_READY', pass_gold_runtime_binding_valid: true };
+const validLocalDrill       = { drill_status: 'DRILL_PASS_GOLD_READY_LOCAL', drill_ready: true };
+
+const withRuntime = generateReadinessReport({
+  ...allStagesReady,
+  runtimeEvidenceResult:  validRuntimeEvidence,
+  goCorReceiptResult:     validGoCorReceipt,
+  passGoldRuntimeBinding: validPassGoldBinding,
+  localDrillResult:       validLocalDrill,
+});
+assert(withRuntime.runtime_evidence_ready           === true,                        '[K-12] runtime_evidence_ready=true');
+assert(withRuntime.go_core_receipt_valid            === true,                        '[K-13] go_core_receipt_valid=true');
+assert(withRuntime.pass_gold_runtime_binding_valid  === true,                        '[K-14] binding_valid=true');
+assert(withRuntime.local_runtime_drill_ready        === true,                        '[K-15] drill_ready=true');
+assert(withRuntime.runtime_release_ready            === true,                        '[K-16] runtime_release_ready=true');
+assert(withRuntime.missing_runtime_evidence.length  === 0,                           '[K-17] no missing runtime evidence');
+assert(withRuntime.report_verdict                   === 'READY',                     '[K-18] all stages + runtime → READY');
+
+// Runtime blocker → NOT_READY
+const blockedRuntime = generateReadinessReport({
+  ...allStagesReady,
+  runtimeEvidenceResult: { runtime_evidence_status: 'RUNTIME_EVIDENCE_BLOCKED_BACKEND_OFFLINE', runtime_evidence_ready: false },
+  goCorReceiptResult:    validGoCorReceipt,
+});
+assert(blockedRuntime.report_verdict    === 'NOT_READY',  '[K-19] runtime blocked → NOT_READY');
+assert(blockedRuntime.runtime_release_ready === false,    '[K-20] runtime_release_ready=false');
+assert(blockedRuntime.missing_runtime_evidence.length > 0, '[K-21] missing_runtime_evidence non-empty');
+assert(blockedRuntime.runtime_blockers.length > 0,        '[K-22] runtime_blockers non-empty');
+
+// Policy fail still wins over runtime blocker
+const policyVsRuntime = generateReadinessReport({
+  ...allStagesReady,
+  runtimeEvidenceResult: { runtime_evidence_status: 'RUNTIME_EVIDENCE_BLOCKED_BACKEND_OFFLINE', runtime_evidence_ready: false },
+  policyResult: { policy_pass: false, violations_found: 1 },
+});
+assert(policyVsRuntime.report_verdict === 'POLICY_FAIL', '[K-23] POLICY_FAIL wins over runtime blocker');
+
+// Invariants with runtime present
+assert(withRuntime.deploy_performed === false,  '[K-24] deploy_performed=false (with runtime)');
+assert(withRuntime.deploy_allowed   === false,  '[K-25] deploy_allowed=false (with runtime)');
 
 // ─── Result ───────────────────────────────────────────────────────
 console.log(`\nRelease Readiness Report Tests: ${passed} passed, ${failed} failed`);
