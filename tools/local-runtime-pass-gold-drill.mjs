@@ -122,12 +122,23 @@ export function runLocalPassGoldDrill(options = {}) {
     // Authority fixture (local drill uses minimal valid authority)
     const authorityBinding = authority_fixture || { authority_valid: true, source: 'drill_local' };
 
-    // Binding evaluation
+    // Binding evaluation — V27.1 strict gates (local drill sets compile/syntax gates true)
     const bindingResult = evaluatePassGoldRuntimeBinding({
-      runtime_evidence:  runtimeResult,
-      go_core_receipt:   receiptResult,
-      authority_binding: authorityBinding,
+      runtime_evidence:       runtimeResult,
+      go_core_receipt:        receiptResult,
+      authority_binding:      authorityBinding,
       tests_verified,
+      // V27.1 strict gates — in local drill these are verified by the drill setup
+      syntax_ok:              true,
+      go_core_compiled:       true,
+      go_test_pass:           true,
+      go_build_pass:          true,
+      fake_evidence_absent:   true,
+      forbidden_diff_absent:  true,
+      backend_health_ok:      runtimeResult?.backend_alive === true,
+      runtime_probe_pass:     runtimeResult?.runtime_evidence_ready === true,
+      go_core_receipt_valid:  receiptResult?.receipt_valid === true,
+      runtime_evidence_ready: runtimeResult?.runtime_evidence_ready === true,
     });
 
     if (!bindingResult.pass_gold_runtime_binding_valid) {

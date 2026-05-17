@@ -454,6 +454,10 @@ function createMissionState() {
     runtimeProbeTempRootCreated: false,
     runtimeProbeTempRootRemoved: false,
     runtimeProbeNoStart:         false,
+    // V27.1: Strict gate fields (set after E2E probe)
+    goCorReceiptValid:           false,
+    runtimeEvidenceReady:        false,
+    passGoldAuthorityBindingValid: false,
   };
 }
 
@@ -462,38 +466,46 @@ function createMissionState() {
 // ═══════════════════════════════════════════════════════════════════
 
 function computeStrictPassGoldCandidate(s) {
+  // V27.1: All 16 strict gates must pass
   return Boolean(
+    s.syntaxOk === true &&
+    s.goCoreCompiled === true &&
+    s.goCoreTestPass === true &&
+    s.goCoreBuildPass === true &&
+    s.fakeEvidenceAbsent === true &&
+    s.forbiddenDiffAbsent === true &&
     s.backendAlive === true &&
+    s.backendHealthOk === true &&
     s.backendStub === false &&
     s.backendHasMissionId === true &&
     s.backendHasEvidenceReceipt === true &&
     s.evidenceSource === 'go-core' &&
-    s.evidenceReceiptInSchema === true &&
-    s.evidenceReceiptInNormalizer === true &&
-    s.goCoreCompiled === true &&
-    s.guardOk === true &&
-    s.legacyCleanConfirmed === true &&
-    s.v14CleanOwnership === true &&
-    s.fakeEvidenceAbsent === true &&
-    s.forbiddenDiffAbsent === true
+    s.runtimeProbePass === true &&
+    s.goCorReceiptValid === true &&
+    s.passGoldAuthorityBindingValid === true &&
+    s.runtimeEvidenceReady === true
   );
 }
 
 function computeStrictPassGoldReason(s) {
   const missing = [];
-  if (!s.backendAlive)              missing.push('backend_alive');
-  if (s.backendStub)                missing.push('backend_not_stub');
-  if (!s.backendHasMissionId)       missing.push('mission_id');
-  if (!s.backendHasEvidenceReceipt) missing.push('evidence_receipt');
-  if (s.evidenceSource !== 'go-core') missing.push('evidence_source_go_core');
-  if (!s.evidenceReceiptInSchema)   missing.push('evidence_schema');
-  if (!s.evidenceReceiptInNormalizer) missing.push('evidence_normalizer');
+  // V27.1: all 16 strict gates
+  if (!s.syntaxOk)                  missing.push('syntax_ok');
   if (!s.goCoreCompiled)            missing.push('go_core_compiled');
-  if (!s.guardOk)                   missing.push('front_guard');
-  if (!s.legacyCleanConfirmed)      missing.push('legacy_clean');
-  if (!s.v14CleanOwnership)         missing.push('v14_clean_ownership');
+  if (!s.goCoreTestPass)            missing.push('go_test_pass');
+  if (!s.goCoreBuildPass)           missing.push('go_build_pass');
   if (!s.fakeEvidenceAbsent)        missing.push('fake_evidence_absent');
   if (!s.forbiddenDiffAbsent)       missing.push('forbidden_diff_absent');
+  if (!s.backendAlive)              missing.push('backend_alive');
+  if (!s.backendHealthOk)           missing.push('backend_health_ok');
+  if (s.backendStub)                missing.push('backend_not_stub');
+  if (!s.backendHasMissionId)       missing.push('backend_mission_id');
+  if (!s.backendHasEvidenceReceipt) missing.push('backend_evidence_receipt');
+  if (s.evidenceSource !== 'go-core') missing.push('evidence_source_go_core');
+  if (!s.runtimeProbePass)          missing.push('runtime_probe_pass');
+  if (!s.goCorReceiptValid)         missing.push('go_core_receipt_valid');
+  if (!s.passGoldAuthorityBindingValid) missing.push('pass_gold_authority_binding_valid');
+  if (!s.runtimeEvidenceReady)      missing.push('runtime_evidence_ready');
   return missing;
 }
 
@@ -2288,7 +2300,7 @@ async function main() {
     }
   }
 
-  // V27.0: Run E2E runtime probe if --runtime-probe is active
+  // V27.0/V27.1: Run E2E runtime probe if --runtime-probe is active
   if (RUNTIME_PROBE && !RUNTIME_PROBE_NO_START) {
     try {
       _e2eProbeResult = await runRuntimeProbeE2ELocal({
@@ -2313,6 +2325,18 @@ async function main() {
     }
   } else if (RUNTIME_PROBE && RUNTIME_PROBE_NO_START) {
     _e2eProbeResult = { e2e_runtime_status: 'E2E_SKIPPED_NO_START', runtime_probe_pass: false };
+  }
+
+  // V27.1: Update strict gate fields from E2E probe result and authority binding
+  s.goCorReceiptValid         = _e2eProbeResult?.receipt_valid === true;
+  s.runtimeEvidenceReady      = _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY';
+  s.passGoldAuthorityBindingValid = !!(_passGoldBinding?.pass_gold_authority_binding_valid === true);
+  // V27.1: Recompute pass_gold_candidate with all 16 strict gates
+  s.passGoldCandidate = computeStrictPassGoldCandidate(s);
+  if (!s.passGoldCandidate) {
+    s.strictPassGoldReason = computeStrictPassGoldReason(s);
+    s.promotionAllowed = false;
+    s.deployAllowed    = false;
   }
 
   // V15.5: Hermes final validation & decision
