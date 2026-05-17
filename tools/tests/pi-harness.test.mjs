@@ -351,6 +351,13 @@ console.log('\n── Suite 4: JSON Output ──');
     assert('go_core_receipt_status'    in parsed,           'V21.3: go_core_receipt_status present');
     assert(parsed.go_core_receipt_valid === false,          'V21.3: go_core_receipt_valid=false (no receipt)');
     assert(parsed.pass_gold_candidate   === false,          'V21.3: pass_gold_candidate=false (no runtime evidence)');
+    // V27.0: E2E runtime probe fields
+    assert('e2e_runtime_status'         in parsed,          'V27.0: e2e_runtime_status present');
+    assert('e2e_mission_id'             in parsed,          'V27.0: e2e_mission_id present');
+    assert('e2e_evidence_receipt_id'    in parsed,          'V27.0: e2e_evidence_receipt_id present');
+    assert('e2e_evidence_source'        in parsed,          'V27.0: e2e_evidence_source present');
+    assert('e2e_runtime_probe_pass'     in parsed,          'V27.0: e2e_runtime_probe_pass present');
+    assert(parsed.e2e_runtime_probe_pass === false,         'V27.0: e2e_runtime_probe_pass=false (no --runtime-probe in dry-run)');
   }
 }
 
