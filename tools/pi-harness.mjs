@@ -96,6 +96,14 @@ import { bindRuntimeExecutionToLedger } from './runtime-execution-ledger-binding
 import { runRuntimePassGoldCandidateController } from './runtime-pass-gold-candidate-controller.mjs';
 // V42.1: Supervised Release Candidate Mode
 import { runSupervisedReleaseCandidateController } from './supervised-release-candidate-controller.mjs';
+// V44.1: Supervised Release Ledger Wiring
+import {
+  appendSupervisedLedgerEvent,
+  verifySupervisedLedgerChain,
+  _resetSupervisedLedgerForTest,
+} from './supervised-release-ledger-events.mjs';
+import { buildManualPromotionPackage }   from './manual-promotion-package-builder.mjs';
+import { runManualPromotionReviewGate }  from './manual-promotion-review-gate.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -157,6 +165,11 @@ const FIXTURE_RELEASE_INTENT       = FLAG('--fixture-release-intent');
 const POLICY_CLEAN                 = FLAG('--policy-clean');
 // Note: FIXTURE_AUTHORITY and VERIFY_TESTS already declared in V33.0 block above
 
+// V44.1: Supervised Release Ledger Wiring flags (default: off — safe)
+const SUPERVISED_RELEASE_LEDGER       = FLAG('--supervised-release-ledger');
+const FIXTURE_SUPERVISED_RELEASE      = FLAG('--fixture-supervised-release');
+const FIXTURE_MANUAL_PROMOTION_REVIEW = FLAG('--fixture-manual-promotion-review');
+
 const DIFFICULTY_ORDER = ['D0','D1','D2','D3','D4','D5','D6','D7','D8'];
 const rawMaxDiff = ARG('--max-difficulty') || ((HARNESS_MODE === 'interactive' || HARNESS_MODE === 'patch' || HARNESS_MODE === 'verify') ? 'D2' : 'D8');
 const MAX_DIFF_IDX = DIFFICULTY_ORDER.includes(rawMaxDiff)
@@ -189,6 +202,11 @@ let _localLedgerBinding   = null;
 let _runtimeCandidateResult = null;
 // V42.1: Supervised Release Candidate result (populated when --supervised-release-candidate is used)
 let _supervisedRCResult = null;
+// V44.1: Supervised Release Ledger results
+let _supervisedLedgerEvents = [];
+let _supervisedLedgerChain  = null;
+let _supervisedPromoPkg     = null;
+let _supervisedPromoReview  = null;
 // Runtime Evidence snapshot (V15.6)
 let _runtimeEvidence = null;
 // Decision Matrix snapshot (V15.7)
@@ -1816,6 +1834,13 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       production_release_allowed:           false,
       release_intent_id:                    _supervisedRCResult?.intent_id ?? null,
       intent_authority_binding_status:      _supervisedRCResult ? 'INTENT_AUTHORITY_READY' : null,
+      // V44.1: Supervised Release Ledger fields
+      supervised_ledger_enabled:            SUPERVISED_RELEASE_LEDGER,
+      supervised_ledger_size:               _supervisedLedgerEvents.length,
+      supervised_ledger_chain_valid:        _supervisedLedgerChain?.valid ?? null,
+      supervised_ledger_events:             _supervisedLedgerEvents.map(e => ({ seq: e.seq, event_type: e.event_type, supervised_ledger_ready: e.supervised_ledger_ready })),
+      promotion_package_ready:              _supervisedPromoPkg?.promotion_package_ready ?? false,
+      promotion_review_ready:               _supervisedPromoReview?.promotion_review_ready ?? false,
     };
     // V21.3/V27.0: pass_gold_candidate guarded by runtime_evidence_ready
     if (!out.runtime_evidence_ready) {
@@ -2572,6 +2597,95 @@ async function main() {
       audit(`[V42.1] Supervised RC: ${_supervisedRCResult?.supervised_release_candidate_status} | rc: ${_supervisedRCResult?.release_candidate}`);
     } catch (e) {
       audit(`[V42.1] Supervised RC error: ${e.message}`);
+    }
+  }
+
+  // V44.1: Supervised Release Ledger Wiring — append events when ledger enabled
+  if (SUPERVISED_RELEASE_LEDGER) {
+    try {
+      _resetSupervisedLedgerForTest();
+      const useFixtureRC     = FIXTURE_SUPERVISED_RELEASE || FIXTURE_RUNTIME_CANDIDATE;
+      const useFixtureReview = FIXTURE_MANUAL_PROMOTION_REVIEW;
+      const rcReady          = _supervisedRCResult?.supervised_release_candidate_ready === true;
+
+      if (rcReady || useFixtureRC) {
+        const rcForLedger = rcReady ? _supervisedRCResult
+          : runSupervisedReleaseCandidateController({ fixture_mode: true });
+
+        // Append RC declared event
+        const evRC = appendSupervisedLedgerEvent({
+          event_type:      'SUPERVISED_RC_CANDIDATE_DECLARED',
+          actor_id:        'pi-harness',
+          rc_id:           rcForLedger.rc_id ?? null,
+          intent_id:       rcForLedger.intent_id ?? null,
+          evidence_source: 'go-core',
+          payload:         { release_candidate_mode: rcForLedger.release_candidate_mode ?? 'supervised' },
+        });
+        _supervisedLedgerEvents.push(evRC);
+
+        // Append intent created event
+        const evIntent = appendSupervisedLedgerEvent({
+          event_type: 'SUPERVISED_RELEASE_INTENT_CREATED',
+          actor_id:   'pi-harness',
+          rc_id:      rcForLedger.rc_id ?? null,
+          intent_id:  rcForLedger.intent_id ?? null,
+          evidence_source: 'go-core',
+        });
+        _supervisedLedgerEvents.push(evIntent);
+
+        // Append authority bound event
+        const evAuth = appendSupervisedLedgerEvent({
+          event_type: 'SUPERVISED_INTENT_AUTHORITY_BOUND',
+          actor_id:   'pi-harness',
+          rc_id:      rcForLedger.rc_id ?? null,
+          intent_id:  rcForLedger.intent_id ?? null,
+          evidence_source: 'go-core',
+        });
+        _supervisedLedgerEvents.push(evAuth);
+
+        if (useFixtureReview || useFixtureRC) {
+          // Build promotion package
+          _supervisedPromoPkg = buildManualPromotionPackage({
+            supervised_rc_result: rcForLedger,
+          });
+          if (_supervisedPromoPkg?.promotion_package_ready === true) {
+            const evPkg = appendSupervisedLedgerEvent({
+              event_type:   'SUPERVISED_PROMOTION_PACKAGE_BUILT',
+              actor_id:     'pi-harness',
+              rc_id:        rcForLedger.rc_id ?? null,
+              package_hash: _supervisedPromoPkg.package_hash,
+              evidence_source: 'go-core',
+            });
+            _supervisedLedgerEvents.push(evPkg);
+
+            // Run review gate in fixture mode
+            _supervisedPromoReview = runManualPromotionReviewGate({ fixture_mode: true });
+            if (_supervisedPromoReview?.promotion_review_ready === true) {
+              const evReq = appendSupervisedLedgerEvent({
+                event_type: 'SUPERVISED_PROMOTION_REVIEW_REQUESTED',
+                actor_id:   'pi-harness',
+                rc_id:      rcForLedger.rc_id ?? null,
+                review_id:  _supervisedPromoReview.review_id ?? null,
+                package_hash: _supervisedPromoPkg.package_hash,
+              });
+              _supervisedLedgerEvents.push(evReq);
+              const evComp = appendSupervisedLedgerEvent({
+                event_type: 'SUPERVISED_PROMOTION_REVIEW_COMPLETED',
+                actor_id:   'pi-harness',
+                rc_id:      rcForLedger.rc_id ?? null,
+                review_id:  _supervisedPromoReview.review_id ?? null,
+                package_hash: _supervisedPromoPkg.package_hash,
+              });
+              _supervisedLedgerEvents.push(evComp);
+            }
+          }
+        }
+      }
+
+      _supervisedLedgerChain = verifySupervisedLedgerChain();
+      audit(`[V44.1] Supervised ledger: ${_supervisedLedgerEvents.length} events | chain_valid=${_supervisedLedgerChain?.valid}`);
+    } catch (e) {
+      audit(`[V44.1] Supervised ledger error: ${e.message}`);
     }
   }
 
