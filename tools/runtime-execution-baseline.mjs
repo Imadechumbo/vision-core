@@ -266,7 +266,7 @@ if (process.argv[1] && process.argv[1].endsWith('runtime-execution-baseline.mjs'
   const args      = process.argv.slice(2);
   const json      = args.includes('--json');
   const fixture   = args.includes('--fixture-mode');
-  const requested = args.includes('--baseline-requested');
+  const requested = args.includes('--baseline-requested') || args.includes('--verify-baseline') || args.includes('--baseline') || args.includes('--run-baseline');
 
   const result = runRuntimeExecutionBaseline({
     baseline_requested: requested,
