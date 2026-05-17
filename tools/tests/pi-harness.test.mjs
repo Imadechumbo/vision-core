@@ -343,6 +343,14 @@ console.log('\n── Suite 4: JSON Output ──');
     assert(Array.isArray(parsed.actions_taken),      'JSON.actions_taken é array');
     assert(typeof parsed.recommendation === 'string', 'JSON.recommendation é string');
     assert(parsed.dry_run === true, 'JSON.dry_run is true (passei --dry-run)');
+    // V21.3: Runtime Evidence Wiring fields
+    assert('runtime_evidence_enabled'  in parsed,          'V21.3: runtime_evidence_enabled present');
+    assert('runtime_evidence_status'   in parsed,          'V21.3: runtime_evidence_status present');
+    assert(parsed.runtime_evidence_ready  === false,        'V21.3: runtime_evidence_ready=false (no live runtime)');
+    assert('backend_runtime_probe_status' in parsed,        'V21.3: backend_runtime_probe_status present');
+    assert('go_core_receipt_status'    in parsed,           'V21.3: go_core_receipt_status present');
+    assert(parsed.go_core_receipt_valid === false,          'V21.3: go_core_receipt_valid=false (no receipt)');
+    assert(parsed.pass_gold_candidate   === false,          'V21.3: pass_gold_candidate=false (no runtime evidence)');
   }
 }
 

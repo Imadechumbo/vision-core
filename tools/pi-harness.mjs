@@ -1686,7 +1686,21 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       release_plan_deploy_performed:  false,
       release_plan_tag_created:       false,
       release_plan_stable_promoted:   false,
+      // V21.3: Runtime Evidence Wiring
+      runtime_evidence_enabled:         false,
+      runtime_evidence_status:          'RUNTIME_EVIDENCE_BLOCKED_BACKEND_OFFLINE',
+      runtime_evidence_ready:           false,
+      backend_runtime_probe_status:     'PROBE_SKIPPED_NO_START',
+      go_core_receipt_status:           'RECEIPT_BLOCKED_MISSING',
+      go_core_receipt_valid:            false,
+      runtime_evidence_pass_gold_candidate_allowed: false,
     };
+    // V21.3: pass_gold_candidate guarded by runtime_evidence_ready
+    if (!out.runtime_evidence_ready) {
+      out.pass_gold_candidate   = false;
+      out.promotion_allowed     = false;
+      out.deploy_allowed        = false;
+    }
     process.stdout.write(JSON.stringify(out, null, 2) + '\n');
     return out;
   }
@@ -2439,6 +2453,14 @@ main().catch(err => {
       hermes_tag_authorized_by_authority:          false,
       hermes_stable_authorized_by_authority:       false,
       hermes_pass_gold_confirmed_by_authority:     false,
+      // V21.3: Runtime Evidence Wiring fallback fields
+      runtime_evidence_enabled:                    false,
+      runtime_evidence_status:                     'RUNTIME_EVIDENCE_BLOCKED_BACKEND_OFFLINE',
+      runtime_evidence_ready:                      false,
+      backend_runtime_probe_status:                'PROBE_SKIPPED_NO_START',
+      go_core_receipt_status:                      'RECEIPT_BLOCKED_MISSING',
+      go_core_receipt_valid:                       false,
+      runtime_evidence_pass_gold_candidate_allowed: false,
     }) + '\n');
   }
   process.exit(1);
