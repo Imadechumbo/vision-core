@@ -82,6 +82,8 @@ import {
   renderDecisionMatrixSummary,
   renderReleaseReadinessGate,
 } from './hermes/decision-matrix.mjs';
+// V27.0: Real Runtime Probe E2E integration
+import { runRuntimeProbeE2ELocal } from './runtime-probe-e2e-local.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -134,6 +136,8 @@ let _probeTempRoot        = null;
 let _probeTempRootCreated = false;
 // Hermes Mission Supervisor context (V15.5)
 let _hermesCtx = null;
+// V27.0: E2E runtime probe result (populated when --runtime-probe is used)
+let _e2eProbeResult = null;
 // Runtime Evidence snapshot (V15.6)
 let _runtimeEvidence = null;
 // Decision Matrix snapshot (V15.7)
@@ -1686,16 +1690,24 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       release_plan_deploy_performed:  false,
       release_plan_tag_created:       false,
       release_plan_stable_promoted:   false,
-      // V21.3: Runtime Evidence Wiring
-      runtime_evidence_enabled:         false,
-      runtime_evidence_status:          'RUNTIME_EVIDENCE_BLOCKED_BACKEND_OFFLINE',
-      runtime_evidence_ready:           false,
-      backend_runtime_probe_status:     'PROBE_SKIPPED_NO_START',
-      go_core_receipt_status:           'RECEIPT_BLOCKED_MISSING',
-      go_core_receipt_valid:            false,
-      runtime_evidence_pass_gold_candidate_allowed: false,
+      // V21.3/V27.0: Runtime Evidence Wiring
+      runtime_evidence_enabled:         RUNTIME_PROBE,
+      runtime_evidence_status:          _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY'
+        ? 'RUNTIME_EVIDENCE_READY'
+        : 'RUNTIME_EVIDENCE_BLOCKED_BACKEND_OFFLINE',
+      runtime_evidence_ready:           _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY',
+      backend_runtime_probe_status:     _e2eProbeResult?.e2e_runtime_status ?? 'PROBE_SKIPPED_NO_START',
+      go_core_receipt_status:           _e2eProbeResult?.receipt_valid === true ? 'RECEIPT_VALID' : 'RECEIPT_BLOCKED_MISSING',
+      go_core_receipt_valid:            _e2eProbeResult?.receipt_valid === true,
+      runtime_evidence_pass_gold_candidate_allowed: _e2eProbeResult?.runtime_probe_pass === true,
+      // V27.0: E2E probe fields
+      e2e_runtime_status:               _e2eProbeResult?.e2e_runtime_status ?? 'E2E_SKIPPED_NO_START',
+      e2e_mission_id:                   _e2eProbeResult?.mission_id ?? null,
+      e2e_evidence_receipt_id:          _e2eProbeResult?.evidence_receipt_id ?? null,
+      e2e_evidence_source:              _e2eProbeResult?.evidence_source ?? null,
+      e2e_runtime_probe_pass:           _e2eProbeResult?.runtime_probe_pass === true,
     };
-    // V21.3: pass_gold_candidate guarded by runtime_evidence_ready
+    // V21.3/V27.0: pass_gold_candidate guarded by runtime_evidence_ready
     if (!out.runtime_evidence_ready) {
       out.pass_gold_candidate   = false;
       out.promotion_allowed     = false;
@@ -2276,6 +2288,33 @@ async function main() {
     }
   }
 
+  // V27.0: Run E2E runtime probe if --runtime-probe is active
+  if (RUNTIME_PROBE && !RUNTIME_PROBE_NO_START) {
+    try {
+      _e2eProbeResult = await runRuntimeProbeE2ELocal({
+        no_start:            false,
+        start_local_backend: true,
+        port:                LOCAL_BACKEND_PORT,
+        timeout_ms:          RUNTIME_PROBE_TIMEOUT_MS,
+        git_head:            s.gitHead || 'unknown',
+        base_url:            LOCAL_BACKEND_BASE,
+      });
+      if (_e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY') {
+        s.backendAlive           = true;
+        s.backendHealthOk        = true;
+        s.backendStub            = false;
+        s.backendHasMissionId    = true;
+        s.backendHasEvidenceReceipt = true;
+        s.evidenceSource         = 'go-core';
+        s.runtimeProbePass       = true;
+      }
+    } catch (e) {
+      audit(`[V27.0] E2E probe error: ${e.message}`);
+    }
+  } else if (RUNTIME_PROBE && RUNTIME_PROBE_NO_START) {
+    _e2eProbeResult = { e2e_runtime_status: 'E2E_SKIPPED_NO_START', runtime_probe_pass: false };
+  }
+
   // V15.5: Hermes final validation & decision
   const missionEvidence = {
     deploy_allowed: s.deployAllowed,
@@ -2453,7 +2492,7 @@ main().catch(err => {
       hermes_tag_authorized_by_authority:          false,
       hermes_stable_authorized_by_authority:       false,
       hermes_pass_gold_confirmed_by_authority:     false,
-      // V21.3: Runtime Evidence Wiring fallback fields
+      // V21.3/V27.0: Runtime Evidence Wiring fallback fields
       runtime_evidence_enabled:                    false,
       runtime_evidence_status:                     'RUNTIME_EVIDENCE_BLOCKED_BACKEND_OFFLINE',
       runtime_evidence_ready:                      false,
@@ -2461,6 +2500,11 @@ main().catch(err => {
       go_core_receipt_status:                      'RECEIPT_BLOCKED_MISSING',
       go_core_receipt_valid:                       false,
       runtime_evidence_pass_gold_candidate_allowed: false,
+      e2e_runtime_status:                          'E2E_SKIPPED_NO_START',
+      e2e_mission_id:                              null,
+      e2e_evidence_receipt_id:                     null,
+      e2e_evidence_source:                         null,
+      e2e_runtime_probe_pass:                      false,
     }) + '\n');
   }
   process.exit(1);
