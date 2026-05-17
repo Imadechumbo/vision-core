@@ -116,6 +116,17 @@ import {
   verifyHandoffLedgerChain,
   _resetHandoffLedgerForTest,
 } from './manual-release-handoff-ledger.mjs';
+// V53.1: Release Rehearsal Mode
+import { createReleaseExecutionSandbox }       from './release-execution-sandbox-contract.mjs';
+import { createSandboxOperationPolicy }        from './sandbox-operation-policy.mjs';
+import { runReleaseCommandSimulator }          from './release-command-simulator.mjs';
+import { buildImmutableReleaseRehearsalPlan }  from './immutable-release-rehearsal-plan.mjs';
+import { runReleaseRehearsal }                 from './release-rehearsal-executor.mjs';
+import {
+  appendRehearsalLedgerEvent,
+  verifyRehearsalLedgerChain,
+  _resetRehearsalLedgerForTest,
+} from './release-rehearsal-ledger.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -190,6 +201,13 @@ const FIXTURE_PREFLIGHT               = FLAG('--fixture-preflight');
 const FIXTURE_DRY_RUN                 = FLAG('--fixture-dry-run');
 const LEDGER_HANDOFF                  = FLAG('--ledger-handoff');
 
+// V53.1: Release Rehearsal Mode flags (default: off — safe)
+const RELEASE_REHEARSAL               = FLAG('--release-rehearsal');
+const FIXTURE_MANUAL_RELEASE_HANDOFF  = FLAG('--fixture-manual-release-handoff');
+const FIXTURE_SANDBOX                 = FLAG('--fixture-sandbox');
+const FIXTURE_REHEARSAL_PLAN          = FLAG('--fixture-rehearsal-plan');
+const LEDGER_REHEARSAL                = FLAG('--ledger-rehearsal');
+
 const DIFFICULTY_ORDER = ['D0','D1','D2','D3','D4','D5','D6','D7','D8'];
 const rawMaxDiff = ARG('--max-difficulty') || ((HARNESS_MODE === 'interactive' || HARNESS_MODE === 'patch' || HARNESS_MODE === 'verify') ? 'D2' : 'D8');
 const MAX_DIFF_IDX = DIFFICULTY_ORDER.includes(rawMaxDiff)
@@ -236,6 +254,14 @@ let _dryRunResult            = null;
 let _handoffPackage          = null;
 let _handoffLedgerChain      = null;
 let _handoffLedgerEventIds   = [];
+// V53.1: Release Rehearsal results
+let _rehearsalSandbox        = null;
+let _rehearsalPolicy         = null;
+let _rehearsalSimulator      = null;
+let _rehearsalPlan           = null;
+let _rehearsalResult         = null;
+let _rehearsalLedgerChain    = null;
+let _rehearsalLedgerEventIds = [];
 // Runtime Evidence snapshot (V15.6)
 let _runtimeEvidence = null;
 // Decision Matrix snapshot (V15.7)
@@ -1887,6 +1913,19 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       tag_created:                          false,
       stable_promoted:                      false,
       deploy_performed:                     false,
+      // V53.1: Release Rehearsal Mode fields
+      release_rehearsal_enabled:            RELEASE_REHEARSAL,
+      sandbox_status:                       _rehearsalSandbox?.sandbox_status ?? null,
+      sandbox_ready:                        _rehearsalSandbox?.sandbox_ready === true,
+      command_simulator_status:             _rehearsalSimulator?.simulator_status ?? null,
+      command_simulator_ready:              _rehearsalSimulator?.simulator_ready === true,
+      rehearsal_plan_status:                _rehearsalPlan?.rehearsal_plan_status ?? null,
+      rehearsal_plan_ready:                 _rehearsalPlan?.rehearsal_plan_ready === true,
+      rehearsal_status:                     _rehearsalResult?.rehearsal_status ?? null,
+      rehearsal_ready:                      _rehearsalResult?.rehearsal_ready === true,
+      rehearsal_report_id:                  _rehearsalResult?.rehearsal_report_id ?? null,
+      rehearsal_ledger_event_ids:           _rehearsalLedgerEventIds,
+      rehearsal_ledger_chain_valid:         _rehearsalLedgerChain?.valid ?? null,
     };
     // V21.3/V27.0: pass_gold_candidate guarded by runtime_evidence_ready
     if (!out.runtime_evidence_ready) {
@@ -2818,6 +2857,54 @@ async function main() {
       audit(`[V49.0] Manual handoff: request=${_manualReleaseRequest?.manual_release_request_valid} preflight=${_executionPreflight?.manual_release_preflight_ready} dry_run=${_dryRunResult?.manual_release_dry_run_ready} handoff=${_handoffPackage?.handoff_ready} ledger_events=${_handoffLedgerEventIds.length}`);
     } catch (e) {
       audit(`[V49.0] Manual handoff error: ${e.message}`);
+    }
+  }
+
+  // V53.1: Release Rehearsal Mode
+  if (RELEASE_REHEARSAL) {
+    try {
+      // Build sandbox
+      if (FIXTURE_SANDBOX || FIXTURE_REHEARSAL_PLAN || FIXTURE_MANUAL_RELEASE_HANDOFF) {
+        _rehearsalSandbox = createReleaseExecutionSandbox({ fixture_mode: true });
+      }
+      // Build policy
+      if (_rehearsalSandbox?.sandbox_ready) {
+        _rehearsalPolicy = createSandboxOperationPolicy({ sandbox: _rehearsalSandbox });
+      } else if (FIXTURE_SANDBOX || FIXTURE_REHEARSAL_PLAN) {
+        _rehearsalPolicy = createSandboxOperationPolicy({ fixture_mode: true });
+      }
+      // Run simulator
+      if (_rehearsalSandbox?.sandbox_ready && _rehearsalPolicy?.policy_ready) {
+        _rehearsalSimulator = runReleaseCommandSimulator({ sandbox: _rehearsalSandbox, policy: _rehearsalPolicy });
+      } else if (FIXTURE_REHEARSAL_PLAN) {
+        _rehearsalSimulator = runReleaseCommandSimulator({ fixture_mode: true });
+      }
+      // Build plan
+      if (FIXTURE_REHEARSAL_PLAN) {
+        _rehearsalPlan = buildImmutableReleaseRehearsalPlan({ fixture_mode: true });
+      } else if (_rehearsalSandbox?.sandbox_ready && _rehearsalSimulator?.simulator_ready) {
+        _rehearsalPlan = buildImmutableReleaseRehearsalPlan({ sandbox: _rehearsalSandbox, simulator: _rehearsalSimulator });
+      }
+      // Run rehearsal
+      if (_rehearsalPlan?.rehearsal_plan_ready) {
+        _rehearsalResult = runReleaseRehearsal({ rehearsal_plan: _rehearsalPlan });
+      } else if (FIXTURE_REHEARSAL_PLAN) {
+        _rehearsalResult = runReleaseRehearsal({ fixture_mode: true });
+      }
+      // Append ledger events
+      if (LEDGER_REHEARSAL && _rehearsalResult?.rehearsal_ready === true) {
+        _resetRehearsalLedgerForTest();
+        const rehearsalId = _rehearsalResult.rehearsal_report_id ?? 'harness-rehearsal';
+        const evRefs = ['go-core-rehearsal-receipt'];
+        for (const et of ['RELEASE_SANDBOX_CREATED','SANDBOX_POLICY_VERIFIED','RELEASE_COMMANDS_SIMULATED','IMMUTABLE_REHEARSAL_PLAN_READY','RELEASE_REHEARSAL_READY']) {
+          const r = appendRehearsalLedgerEvent({ event_type: et, actor_id: 'pi-harness', rehearsal_id: rehearsalId, evidence_refs: evRefs, evidence_source: 'go-core' });
+          if (r.appended) _rehearsalLedgerEventIds.push(r.event_id);
+        }
+        _rehearsalLedgerChain = verifyRehearsalLedgerChain();
+      }
+      audit(`[V53.1] Rehearsal: sandbox=${_rehearsalSandbox?.sandbox_ready} plan=${_rehearsalPlan?.rehearsal_plan_ready} rehearsal=${_rehearsalResult?.rehearsal_ready} ledger_events=${_rehearsalLedgerEventIds.length}`);
+    } catch (e) {
+      audit(`[V53.1] Rehearsal error: ${e.message}`);
     }
   }
 
