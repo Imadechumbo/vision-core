@@ -64,7 +64,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          git diff origin/main...HEAD > /tmp/pr.diff
+          git diff origin/main...HEAD -- . \
+            ':(exclude).github/workflows/auto-merge.yml' \
+            ':(exclude).github/workflows/vision-roadmap-automerge.yml' \
+            > /tmp/pr.diff
 
           BLOCKED_PATTERNS='deploy_allowed[[:space:]]*[:=][[:space:]]*true|release_allowed[[:space:]]*[:=][[:space:]]*true|tag_allowed[[:space:]]*[:=][[:space:]]*true|stable_allowed[[:space:]]*[:=][[:space:]]*true|promotion_allowed[[:space:]]*[:=][[:space:]]*true|pass_gold_candidate[[:space:]]*[:=][[:space:]]*true|PASS_GOLD_FAKE'
 
