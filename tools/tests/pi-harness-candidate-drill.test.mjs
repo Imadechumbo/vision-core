@@ -13,7 +13,7 @@ function assert(c, m) {
   else    { console.error(`  ✗ FAIL: ${m}`); failed++; }
 }
 function runCLI(args = []) {
-  const r = spawnSync(process.execPath, ['--no-deprecation', CLI, ...args], { encoding: 'utf-8', timeout: 30000 });
+  const r = spawnSync(process.execPath, ['--no-deprecation', CLI, '--mode', 'interactive', '--dry-run', ...args], { encoding: 'utf-8', timeout: 30000 });
   return { stdout: r.stdout || '', stderr: r.stderr || '', exitCode: r.status };
 }
 function parseJSON(str) {

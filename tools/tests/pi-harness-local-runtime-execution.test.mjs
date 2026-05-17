@@ -14,7 +14,7 @@ function assert(c, m) {
 }
 
 function runHarness(args = []) {
-  const r = spawnSync(process.execPath, ['--no-deprecation', CLI, '--json', '--dry-run', ...args], {
+  const r = spawnSync(process.execPath, ['--no-deprecation', CLI, '--mode', 'interactive', '--dry-run', '--json', ...args], {
     encoding: 'utf-8',
     timeout: 30000,
   });
