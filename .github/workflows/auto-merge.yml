@@ -1,0 +1,90 @@
+name: Vision Roadmap Auto-Merge
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+jobs:
+  roadmap-automerge:
+    name: Controlled roadmap auto-merge
+    runs-on: ubuntu-latest
+
+    if: >
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.base.ref == 'main' &&
+      contains(github.event.pull_request.labels.*.name, 'vision-automerge') &&
+      (
+        startsWith(github.event.pull_request.head.ref, 'feat/v15') ||
+        startsWith(github.event.pull_request.head.ref, 'feat/v16') ||
+        startsWith(github.event.pull_request.head.ref, 'fix/v15') ||
+        startsWith(github.event.pull_request.head.ref, 'fix/v16')
+      )
+
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Fetch main
+        run: git fetch origin main
+
+      - name: Scope guard
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Changed files:"
+          git diff --name-only origin/main...HEAD | tee /tmp/changed-files.txt
+
+          BAD_FILES="$(grep -Ev '^(package\.json|tools/|docs/|\.github/workflows/auto-merge\.yml|\.github/workflows/vision-roadmap-automerge\.yml)$' /tmp/changed-files.txt || true)"
+
+          if [ -n "$BAD_FILES" ]; then
+            echo "Blocked: files outside allowed roadmap scope:"
+            echo "$BAD_FILES"
+            exit 1
+          fi
+
+      - name: Safety diff guard
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git diff origin/main...HEAD > /tmp/pr.diff
+
+          BLOCKED_PATTERNS='deploy_allowed[[:space:]]*[:=][[:space:]]*true|release_allowed[[:space:]]*[:=][[:space:]]*true|tag_allowed[[:space:]]*[:=][[:space:]]*true|stable_allowed[[:space:]]*[:=][[:space:]]*true|promotion_allowed[[:space:]]*[:=][[:space:]]*true|pass_gold_candidate[[:space:]]*[:=][[:space:]]*true|PASS_GOLD_FAKE'
+
+          if grep -E "$BLOCKED_PATTERNS" /tmp/pr.diff; then
+            echo "Blocked: forbidden release/deploy/stable/PASS GOLD pattern found."
+            exit 1
+          fi
+
+      - name: Fast validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run test:quick
+          npm run test:postmerge
+
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
