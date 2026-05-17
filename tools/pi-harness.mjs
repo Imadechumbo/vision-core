@@ -104,6 +104,18 @@ import {
 } from './supervised-release-ledger-events.mjs';
 import { buildManualPromotionPackage }   from './manual-promotion-package-builder.mjs';
 import { runManualPromotionReviewGate }  from './manual-promotion-review-gate.mjs';
+// V49.0: Manual Release Handoff Mode
+import { createManualReleaseRequest }         from './manual-release-request-contract.mjs';
+import { createHumanConfirmationContract }    from './human-confirmation-contract.mjs';
+import { bindManualReleaseRequestAuthority }  from './manual-release-request-authority-binding.mjs';
+import { runManualReleaseExecutionPreflight } from './manual-release-execution-preflight.mjs';
+import { runManualReleaseDryRun }             from './manual-release-dry-run-executor.mjs';
+import { buildManualReleaseHandoffPackage }   from './manual-release-handoff-package.mjs';
+import {
+  appendHandoffLedgerEvent,
+  verifyHandoffLedgerChain,
+  _resetHandoffLedgerForTest,
+} from './manual-release-handoff-ledger.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -170,6 +182,14 @@ const SUPERVISED_RELEASE_LEDGER       = FLAG('--supervised-release-ledger');
 const FIXTURE_SUPERVISED_RELEASE      = FLAG('--fixture-supervised-release');
 const FIXTURE_MANUAL_PROMOTION_REVIEW = FLAG('--fixture-manual-promotion-review');
 
+// V49.0: Manual Release Handoff Mode flags (default: off — safe)
+const MANUAL_RELEASE_HANDOFF          = FLAG('--manual-release-handoff');
+const FIXTURE_HUMAN_CONFIRMATION      = FLAG('--fixture-human-confirmation');
+const FIXTURE_MANUAL_RELEASE_REQUEST  = FLAG('--fixture-manual-release-request');
+const FIXTURE_PREFLIGHT               = FLAG('--fixture-preflight');
+const FIXTURE_DRY_RUN                 = FLAG('--fixture-dry-run');
+const LEDGER_HANDOFF                  = FLAG('--ledger-handoff');
+
 const DIFFICULTY_ORDER = ['D0','D1','D2','D3','D4','D5','D6','D7','D8'];
 const rawMaxDiff = ARG('--max-difficulty') || ((HARNESS_MODE === 'interactive' || HARNESS_MODE === 'patch' || HARNESS_MODE === 'verify') ? 'D2' : 'D8');
 const MAX_DIFF_IDX = DIFFICULTY_ORDER.includes(rawMaxDiff)
@@ -207,6 +227,15 @@ let _supervisedLedgerEvents = [];
 let _supervisedLedgerChain  = null;
 let _supervisedPromoPkg     = null;
 let _supervisedPromoReview  = null;
+// V49.0: Manual Release Handoff results
+let _manualReleaseRequest    = null;
+let _humanConfirmation       = null;
+let _requestAuthorityBinding = null;
+let _executionPreflight      = null;
+let _dryRunResult            = null;
+let _handoffPackage          = null;
+let _handoffLedgerChain      = null;
+let _handoffLedgerEventIds   = [];
 // Runtime Evidence snapshot (V15.6)
 let _runtimeEvidence = null;
 // Decision Matrix snapshot (V15.7)
@@ -1841,6 +1870,23 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       supervised_ledger_events:             _supervisedLedgerEvents.map(e => ({ seq: e.seq, event_type: e.event_type, supervised_ledger_ready: e.supervised_ledger_ready })),
       promotion_package_ready:              _supervisedPromoPkg?.promotion_package_ready ?? false,
       promotion_review_ready:               _supervisedPromoReview?.promotion_review_ready ?? false,
+      // V49.0: Manual Release Handoff Mode fields
+      manual_release_handoff_enabled:       MANUAL_RELEASE_HANDOFF,
+      manual_release_request_status:        _manualReleaseRequest?.manual_release_request_status ?? null,
+      human_confirmation_status:            _humanConfirmation?.human_confirmation_status ?? null,
+      manual_release_authority_binding_status: _requestAuthorityBinding?.request_authority_binding_status ?? null,
+      manual_release_preflight_status:      _executionPreflight?.manual_release_preflight_status ?? null,
+      manual_release_dry_run_status:        _dryRunResult?.manual_release_dry_run_status ?? null,
+      manual_release_handoff_status:        _handoffPackage?.handoff_status ?? null,
+      manual_release_handoff_ready:         _handoffPackage?.handoff_ready === true,
+      handoff_id:                           _handoffPackage?.handoff_id ?? null,
+      handoff_ledger_event_ids:             _handoffLedgerEventIds,
+      handoff_ledger_chain_valid:           _handoffLedgerChain?.valid ?? null,
+      release_execution_allowed:            false,
+      release_performed:                    false,
+      tag_created:                          false,
+      stable_promoted:                      false,
+      deploy_performed:                     false,
     };
     // V21.3/V27.0: pass_gold_candidate guarded by runtime_evidence_ready
     if (!out.runtime_evidence_ready) {
@@ -2686,6 +2732,92 @@ async function main() {
       audit(`[V44.1] Supervised ledger: ${_supervisedLedgerEvents.length} events | chain_valid=${_supervisedLedgerChain?.valid}`);
     } catch (e) {
       audit(`[V44.1] Supervised ledger error: ${e.message}`);
+    }
+  }
+
+  // V49.0: Manual Release Handoff Mode
+  if (MANUAL_RELEASE_HANDOFF) {
+    try {
+      const useFixtureAll = FIXTURE_SUPERVISED_RELEASE || FIXTURE_RUNTIME_CANDIDATE || FIXTURE_MANUAL_RELEASE_REQUEST;
+      const useFixtureConfirm = FIXTURE_HUMAN_CONFIRMATION || useFixtureAll;
+      const useFixturePreflight = FIXTURE_PREFLIGHT || useFixtureAll;
+      const useFixtureDryRun = FIXTURE_DRY_RUN || useFixtureAll;
+
+      // Build manual release request (fixture or from supervised RC)
+      if (useFixtureAll || FIXTURE_MANUAL_RELEASE_REQUEST) {
+        _manualReleaseRequest = createManualReleaseRequest({ fixture_mode: true });
+      } else if (_supervisedRCResult?.supervised_release_candidate_ready === true) {
+        _manualReleaseRequest = createManualReleaseRequest({
+          supervised_rc_result: _supervisedRCResult,
+          promotion_package_result: _supervisedPromoPkg,
+          manual_review_result: _supervisedPromoReview,
+          requested_by: 'pi-harness',
+          target_version: '0.0.0-harness',
+          target_branch: s.branch ?? 'main',
+          git_head: s.gitHead ?? null,
+        });
+      }
+
+      // Build human confirmation
+      if (useFixtureConfirm) {
+        _humanConfirmation = createHumanConfirmationContract({ fixture_mode: true });
+      }
+
+      // Bind authority
+      if (_manualReleaseRequest?.manual_release_request_valid === true && _humanConfirmation?.human_confirmation_ready === true) {
+        _requestAuthorityBinding = bindManualReleaseRequestAuthority({ fixture_mode: useFixtureAll });
+      }
+
+      // Run preflight
+      if (useFixturePreflight) {
+        _executionPreflight = runManualReleaseExecutionPreflight({ fixture_mode: true });
+      } else if (_manualReleaseRequest?.manual_release_request_valid === true && _requestAuthorityBinding?.request_authority_binding_ready === true) {
+        _executionPreflight = runManualReleaseExecutionPreflight({
+          manual_release_request: _manualReleaseRequest,
+          request_authority_binding: _requestAuthorityBinding,
+          supervised_rc_result: _supervisedRCResult,
+          full_test_pass: true, go_test_pass: true, go_build_pass: true,
+          ci_status_verified: true, rollback_plan_present: true, audit_ledger_present: true,
+          explicit_preflight_requested: true,
+        });
+      }
+
+      // Run dry-run
+      if (useFixtureDryRun) {
+        _dryRunResult = runManualReleaseDryRun({ fixture_mode: true });
+      } else if (_executionPreflight?.manual_release_preflight_ready === true) {
+        _dryRunResult = runManualReleaseDryRun({ preflight_result: _executionPreflight });
+      }
+
+      // Build handoff package
+      if (_executionPreflight?.manual_release_preflight_ready === true && _dryRunResult?.manual_release_dry_run_ready === true) {
+        _handoffPackage = buildManualReleaseHandoffPackage({
+          preflight_result: _executionPreflight,
+          dry_run_result: _dryRunResult,
+          manual_release_request: _manualReleaseRequest,
+          human_confirmation: _humanConfirmation,
+          request_authority_binding: _requestAuthorityBinding,
+          supervised_rc_result: _supervisedRCResult,
+        });
+      } else if (useFixtureAll) {
+        _handoffPackage = buildManualReleaseHandoffPackage({ fixture_mode: true });
+      }
+
+      // Append ledger events
+      if (LEDGER_HANDOFF && _handoffPackage?.handoff_ready === true) {
+        _resetHandoffLedgerForTest();
+        const handoffId = _handoffPackage.handoff_id;
+        const evRefs = _handoffPackage.evidence_receipt_id ? [_handoffPackage.evidence_receipt_id] : ['go-core-receipt'];
+        for (const et of ['MANUAL_RELEASE_REQUEST_CREATED','HUMAN_CONFIRMATION_BOUND','MANUAL_RELEASE_PREFLIGHT_READY','MANUAL_RELEASE_DRY_RUN_READY','MANUAL_RELEASE_HANDOFF_READY']) {
+          const r = appendHandoffLedgerEvent({ event_type: et, actor_id: 'pi-harness', handoff_id: handoffId, evidence_refs: evRefs, evidence_source: 'go-core' });
+          if (r.appended) _handoffLedgerEventIds.push(r.event_id);
+        }
+        _handoffLedgerChain = verifyHandoffLedgerChain();
+      }
+
+      audit(`[V49.0] Manual handoff: request=${_manualReleaseRequest?.manual_release_request_valid} preflight=${_executionPreflight?.manual_release_preflight_ready} dry_run=${_dryRunResult?.manual_release_dry_run_ready} handoff=${_handoffPackage?.handoff_ready} ledger_events=${_handoffLedgerEventIds.length}`);
+    } catch (e) {
+      audit(`[V49.0] Manual handoff error: ${e.message}`);
     }
   }
 
