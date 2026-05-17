@@ -88,6 +88,10 @@ import { runRuntimeProbeE2ELocal } from './runtime-probe-e2e-local.mjs';
 import { runProbeBridgeIntegration } from './runtime-probe-bridge-integration.mjs';
 // V33.0: Candidate Drill Mode
 import { runLocalPassGoldFullCandidateDrill } from './local-pass-gold-full-candidate-drill.mjs';
+// V36.3: Local Runtime Execution Mode
+import { runLocalRuntimeExecutionController } from './local-runtime-execution-controller.mjs';
+import { buildRuntimeExecutionEvidencePackage } from './runtime-execution-evidence-package.mjs';
+import { bindRuntimeExecutionToLedger } from './runtime-execution-ledger-binding.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -133,6 +137,12 @@ const CANDIDATE_DRILL   = FLAG('--candidate-drill');
 const FIXTURE_AUTHORITY = FLAG('--fixture-authority');
 const VERIFY_TESTS      = FLAG('--verify-tests');
 
+// V36.3: Local Runtime Execution Mode flags (default: off — safe)
+const LOCAL_RUNTIME_EXECUTION        = FLAG('--local-runtime-execution');
+const FIXTURE_LOCAL_RUNTIME          = FLAG('--fixture-local-runtime');
+const LOCAL_RUNTIME_START_BACKEND    = FLAG('--local-runtime-start-backend');
+const LOCAL_RUNTIME_GO_CORE_BIN      = ARG('--local-runtime-go-core-bin') || null;
+
 const DIFFICULTY_ORDER = ['D0','D1','D2','D3','D4','D5','D6','D7','D8'];
 const rawMaxDiff = ARG('--max-difficulty') || ((HARNESS_MODE === 'interactive' || HARNESS_MODE === 'patch' || HARNESS_MODE === 'verify') ? 'D2' : 'D8');
 const MAX_DIFF_IDX = DIFFICULTY_ORDER.includes(rawMaxDiff)
@@ -157,6 +167,10 @@ let _e2eProbeResult = null;
 let _bridgeProbeResult = null;
 // V33.0: Candidate drill result (populated when --candidate-drill is used)
 let _candidateDrillResult = null;
+// V36.3: Local Runtime Execution results (populated when --local-runtime-execution is used)
+let _localRuntimeResult   = null;
+let _localEvidencePackage = null;
+let _localLedgerBinding   = null;
 // Runtime Evidence snapshot (V15.6)
 let _runtimeEvidence = null;
 // Decision Matrix snapshot (V15.7)
@@ -1722,11 +1736,11 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       release_plan_tag_created:       false,
       release_plan_stable_promoted:   false,
       // V21.3/V27.0/V32.0/V33.0: Runtime Evidence Wiring
-      runtime_evidence_enabled:         RUNTIME_PROBE || RUNTIME_BRIDGE || FIXTURE_RUNTIME_BRIDGE || CANDIDATE_DRILL,
-      runtime_evidence_status:          (_e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true || _candidateDrillResult?.full_candidate_drill_ready === true)
+      runtime_evidence_enabled:         RUNTIME_PROBE || RUNTIME_BRIDGE || FIXTURE_RUNTIME_BRIDGE || CANDIDATE_DRILL || LOCAL_RUNTIME_EXECUTION || FIXTURE_LOCAL_RUNTIME,
+      runtime_evidence_status:          (_e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true || _candidateDrillResult?.full_candidate_drill_ready === true || _localLedgerBinding?.ledger_binding_ready === true)
         ? 'RUNTIME_EVIDENCE_READY'
         : 'RUNTIME_EVIDENCE_BLOCKED_BACKEND_OFFLINE',
-      runtime_evidence_ready:           _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true || _candidateDrillResult?.full_candidate_drill_ready === true,
+      runtime_evidence_ready:           _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true || _candidateDrillResult?.full_candidate_drill_ready === true || _localLedgerBinding?.ledger_binding_ready === true,
       backend_runtime_probe_status:     _bridgeProbeResult?.probe_bridge_status ?? _e2eProbeResult?.e2e_runtime_status ?? 'PROBE_SKIPPED_NO_START',
       go_core_receipt_status:           (_e2eProbeResult?.receipt_valid === true || _bridgeProbeResult?.receipt_valid === true) ? 'RECEIPT_VALID' : 'RECEIPT_BLOCKED_MISSING',
       go_core_receipt_valid:            _e2eProbeResult?.receipt_valid === true || _bridgeProbeResult?.receipt_valid === true,
@@ -1754,6 +1768,19 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       candidate_drill_mission_id:                 _candidateDrillResult?.mission_id ?? null,
       candidate_drill_receipt_id:                 _candidateDrillResult?.evidence_receipt_id ?? null,
       candidate_is_local_drill:                   _candidateDrillResult?.candidate_is_local_drill === true,
+      // V36.3: Local Runtime Execution Mode fields
+      local_runtime_execution_enabled:   LOCAL_RUNTIME_EXECUTION || FIXTURE_LOCAL_RUNTIME,
+      local_runtime_status:              _localRuntimeResult?.local_runtime_status ?? 'LOCAL_RUNTIME_NOT_STARTED',
+      local_runtime_ready:               _localRuntimeResult?.local_runtime_ready === true,
+      local_evidence_package_status:     _localEvidencePackage?.evidence_package_status ?? 'EVIDENCE_PACKAGE_NOT_STARTED',
+      local_evidence_package_ready:      _localEvidencePackage?.evidence_package_ready === true,
+      local_ledger_binding_status:       _localLedgerBinding?.ledger_binding_status ?? 'LEDGER_BINDING_NOT_STARTED',
+      local_ledger_binding_ready:        _localLedgerBinding?.ledger_binding_ready === true,
+      local_ledger_entry_id:             _localLedgerBinding?.ledger_entry_id ?? null,
+      local_package_hash:                _localEvidencePackage?.package_hash ?? null,
+      local_mission_id:                  _localRuntimeResult?.mission_id ?? null,
+      local_evidence_receipt_id:         _localRuntimeResult?.evidence_receipt_id ?? null,
+      local_evidence_source:             _localRuntimeResult?.evidence_source ?? null,
     };
     // V21.3/V27.0: pass_gold_candidate guarded by runtime_evidence_ready
     if (!out.runtime_evidence_ready) {
@@ -2412,19 +2439,66 @@ async function main() {
     }
   }
 
+  // V36.3: Local Runtime Execution Mode — runs controller + evidence package + ledger binding
+  if (LOCAL_RUNTIME_EXECUTION || FIXTURE_LOCAL_RUNTIME) {
+    try {
+      _localRuntimeResult = runLocalRuntimeExecutionController({
+        execute_local_runtime: LOCAL_RUNTIME_EXECUTION,
+        start_local_backend:   LOCAL_RUNTIME_START_BACKEND,
+        go_core_bin:           LOCAL_RUNTIME_GO_CORE_BIN,
+        fixture_mode:          FIXTURE_LOCAL_RUNTIME,
+        timeout_ms:            RUNTIME_BRIDGE_TIMEOUT,
+      });
+      if (_localRuntimeResult?.local_runtime_ready === true) {
+        _localEvidencePackage = buildRuntimeExecutionEvidencePackage({
+          package_requested: true,
+          runtime_result:    _localRuntimeResult,
+          fixture_mode:      false,
+        });
+        _localLedgerBinding = bindRuntimeExecutionToLedger({
+          binding_requested: true,
+          evidence_package:  _localEvidencePackage,
+          fixture_mode:      false,
+        });
+        if (_localLedgerBinding?.ledger_binding_ready === true) {
+          s.backendAlive              = true;
+          s.backendHealthOk           = true;
+          s.backendStub               = false;
+          s.backendHasMissionId       = true;
+          s.backendHasEvidenceReceipt = true;
+          s.evidenceSource            = 'go-core';
+          s.runtimeProbePass          = true;
+          s.goCorReceiptValid         = true;
+          s.runtimeEvidenceReady      = true;
+          s.passGoldAuthorityBindingValid = true;
+          s.passGoldCandidate         = true;
+        }
+      }
+      audit(`[V36.3] Local runtime: ${_localRuntimeResult?.local_runtime_status} | pkg: ${_localEvidencePackage?.evidence_package_status ?? 'N/A'} | ledger: ${_localLedgerBinding?.ledger_binding_status ?? 'N/A'}`);
+    } catch (e) {
+      audit(`[V36.3] Local runtime execution error: ${e.message}`);
+    }
+  }
+
   // V27.1: Update strict gate fields from E2E probe result and authority binding
-  if (!RUNTIME_BRIDGE && !FIXTURE_RUNTIME_BRIDGE && !CANDIDATE_DRILL) {
+  if (!RUNTIME_BRIDGE && !FIXTURE_RUNTIME_BRIDGE && !CANDIDATE_DRILL && !LOCAL_RUNTIME_EXECUTION && !FIXTURE_LOCAL_RUNTIME) {
     s.goCorReceiptValid    = _e2eProbeResult?.receipt_valid === true;
     s.runtimeEvidenceReady = _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY';
   }
   // V33.0: preserve authority valid set by candidate drill; otherwise use binding result
-  if (!CANDIDATE_DRILL || !(_candidateDrillResult?.full_candidate_drill_ready === true)) {
+  // V36.3: also preserve when local runtime execution is ready
+  const _localRuntimeFullyBound = (LOCAL_RUNTIME_EXECUTION || FIXTURE_LOCAL_RUNTIME) && _localLedgerBinding?.ledger_binding_ready === true;
+  if ((!CANDIDATE_DRILL || !(_candidateDrillResult?.full_candidate_drill_ready === true)) && !_localRuntimeFullyBound) {
     s.passGoldAuthorityBindingValid = !!(_passGoldBinding?.pass_gold_authority_binding_valid === true);
   }
   // V27.1: Recompute pass_gold_candidate with all 16 strict gates
   s.passGoldCandidate = computeStrictPassGoldCandidate(s);
   // V33.0: candidate drill overrides recompute when fully ready
   if (CANDIDATE_DRILL && _candidateDrillResult?.full_candidate_drill_ready === true) {
+    s.passGoldCandidate = true;
+  }
+  // V36.3: local runtime execution overrides recompute when fully bound
+  if (_localRuntimeFullyBound) {
     s.passGoldCandidate = true;
   }
   if (!s.passGoldCandidate) {
