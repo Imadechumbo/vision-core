@@ -84,6 +84,8 @@ import {
 } from './hermes/decision-matrix.mjs';
 // V27.0: Real Runtime Probe E2E integration
 import { runRuntimeProbeE2ELocal } from './runtime-probe-e2e-local.mjs';
+// V32.0: Runtime Bridge Execution Mode
+import { runProbeBridgeIntegration } from './runtime-probe-bridge-integration.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -118,6 +120,12 @@ const RUNTIME_PROBE_ROOT_ARG   = ARG('--runtime-probe-root') || null;
 const RUNTIME_PROBE_PORT       = Number(ARG('--runtime-probe-port') || process.env.PORT || 8080);
 const RUNTIME_PROBE_TIMEOUT_MS = Number(ARG('--runtime-probe-timeout-ms') || 8000);
 
+// V32.0: Runtime Bridge Execution Mode flags (default: off — safe)
+const RUNTIME_BRIDGE         = FLAG('--runtime-bridge');
+const FIXTURE_RUNTIME_BRIDGE = FLAG('--fixture-runtime-bridge');
+const GO_CORE_BIN_ARG        = ARG('--go-core-bin') || null;
+const RUNTIME_BRIDGE_TIMEOUT = Number(ARG('--runtime-bridge-timeout-ms') || 10000);
+
 const DIFFICULTY_ORDER = ['D0','D1','D2','D3','D4','D5','D6','D7','D8'];
 const rawMaxDiff = ARG('--max-difficulty') || ((HARNESS_MODE === 'interactive' || HARNESS_MODE === 'patch' || HARNESS_MODE === 'verify') ? 'D2' : 'D8');
 const MAX_DIFF_IDX = DIFFICULTY_ORDER.includes(rawMaxDiff)
@@ -138,6 +146,8 @@ let _probeTempRootCreated = false;
 let _hermesCtx = null;
 // V27.0: E2E runtime probe result (populated when --runtime-probe is used)
 let _e2eProbeResult = null;
+// V32.0: Runtime bridge result (populated when --runtime-bridge is used)
+let _bridgeProbeResult = null;
 // Runtime Evidence snapshot (V15.6)
 let _runtimeEvidence = null;
 // Decision Matrix snapshot (V15.7)
@@ -1702,22 +1712,30 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       release_plan_deploy_performed:  false,
       release_plan_tag_created:       false,
       release_plan_stable_promoted:   false,
-      // V21.3/V27.0: Runtime Evidence Wiring
-      runtime_evidence_enabled:         RUNTIME_PROBE,
-      runtime_evidence_status:          _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY'
+      // V21.3/V27.0/V32.0: Runtime Evidence Wiring
+      runtime_evidence_enabled:         RUNTIME_PROBE || RUNTIME_BRIDGE || FIXTURE_RUNTIME_BRIDGE,
+      runtime_evidence_status:          (_e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true)
         ? 'RUNTIME_EVIDENCE_READY'
         : 'RUNTIME_EVIDENCE_BLOCKED_BACKEND_OFFLINE',
-      runtime_evidence_ready:           _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY',
-      backend_runtime_probe_status:     _e2eProbeResult?.e2e_runtime_status ?? 'PROBE_SKIPPED_NO_START',
-      go_core_receipt_status:           _e2eProbeResult?.receipt_valid === true ? 'RECEIPT_VALID' : 'RECEIPT_BLOCKED_MISSING',
-      go_core_receipt_valid:            _e2eProbeResult?.receipt_valid === true,
-      runtime_evidence_pass_gold_candidate_allowed: _e2eProbeResult?.runtime_probe_pass === true,
+      runtime_evidence_ready:           _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY' || _bridgeProbeResult?.probe_bridge_ready === true,
+      backend_runtime_probe_status:     _bridgeProbeResult?.probe_bridge_status ?? _e2eProbeResult?.e2e_runtime_status ?? 'PROBE_SKIPPED_NO_START',
+      go_core_receipt_status:           (_e2eProbeResult?.receipt_valid === true || _bridgeProbeResult?.receipt_valid === true) ? 'RECEIPT_VALID' : 'RECEIPT_BLOCKED_MISSING',
+      go_core_receipt_valid:            _e2eProbeResult?.receipt_valid === true || _bridgeProbeResult?.receipt_valid === true,
+      runtime_evidence_pass_gold_candidate_allowed: _e2eProbeResult?.runtime_probe_pass === true || _bridgeProbeResult?.runtime_probe_pass === true,
       // V27.0: E2E probe fields
       e2e_runtime_status:               _e2eProbeResult?.e2e_runtime_status ?? 'E2E_SKIPPED_NO_START',
       e2e_mission_id:                   _e2eProbeResult?.mission_id ?? null,
       e2e_evidence_receipt_id:          _e2eProbeResult?.evidence_receipt_id ?? null,
       e2e_evidence_source:              _e2eProbeResult?.evidence_source ?? null,
       e2e_runtime_probe_pass:           _e2eProbeResult?.runtime_probe_pass === true,
+      // V32.0: Runtime bridge fields
+      runtime_bridge_enabled:           RUNTIME_BRIDGE || FIXTURE_RUNTIME_BRIDGE,
+      runtime_bridge_status:            _bridgeProbeResult?.probe_bridge_status ?? 'BRIDGE_NOT_STARTED',
+      runtime_bridge_ready:             _bridgeProbeResult?.probe_bridge_ready === true,
+      runtime_bridge_mission_id:        _bridgeProbeResult?.mission_id ?? null,
+      runtime_bridge_receipt_id:        _bridgeProbeResult?.evidence_receipt_id ?? null,
+      runtime_bridge_evidence_source:   _bridgeProbeResult?.evidence_source ?? null,
+      runtime_bridge_probe_pass:        _bridgeProbeResult?.runtime_probe_pass === true,
     };
     // V21.3/V27.0: pass_gold_candidate guarded by runtime_evidence_ready
     if (!out.runtime_evidence_ready) {
@@ -2327,9 +2345,35 @@ async function main() {
     _e2eProbeResult = { e2e_runtime_status: 'E2E_SKIPPED_NO_START', runtime_probe_pass: false };
   }
 
+  // V32.0: Runtime Bridge Execution Mode
+  if (RUNTIME_BRIDGE || FIXTURE_RUNTIME_BRIDGE) {
+    try {
+      _bridgeProbeResult = runProbeBridgeIntegration({
+        go_core_bin:  GO_CORE_BIN_ARG,
+        fixture_mode: FIXTURE_RUNTIME_BRIDGE,
+        timeout_ms:   RUNTIME_BRIDGE_TIMEOUT,
+      });
+      if (_bridgeProbeResult?.probe_bridge_ready === true) {
+        s.backendAlive              = true;
+        s.backendHealthOk           = true;
+        s.backendStub               = false;
+        s.backendHasMissionId       = true;
+        s.backendHasEvidenceReceipt = true;
+        s.evidenceSource            = 'go-core';
+        s.runtimeProbePass          = true;
+        s.goCorReceiptValid         = true;
+        s.runtimeEvidenceReady      = true;
+      }
+    } catch (e) {
+      audit(`[V32.0] Bridge probe error: ${e.message}`);
+    }
+  }
+
   // V27.1: Update strict gate fields from E2E probe result and authority binding
-  s.goCorReceiptValid         = _e2eProbeResult?.receipt_valid === true;
-  s.runtimeEvidenceReady      = _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY';
+  if (!RUNTIME_BRIDGE && !FIXTURE_RUNTIME_BRIDGE) {
+    s.goCorReceiptValid    = _e2eProbeResult?.receipt_valid === true;
+    s.runtimeEvidenceReady = _e2eProbeResult?.e2e_runtime_status === 'E2E_RUNTIME_READY';
+  }
   s.passGoldAuthorityBindingValid = !!(_passGoldBinding?.pass_gold_authority_binding_valid === true);
   // V27.1: Recompute pass_gold_candidate with all 16 strict gates
   s.passGoldCandidate = computeStrictPassGoldCandidate(s);
