@@ -127,6 +127,15 @@ import {
   verifyRehearsalLedgerChain,
   _resetRehearsalLedgerForTest,
 } from './release-rehearsal-ledger.mjs';
+import { createRealManualReleaseGate }       from './real-manual-release-gate-contract.mjs';
+import { createProductionExecutionLock }     from './production-execution-lock.mjs';
+import { evaluateRealReleaseReadiness }      from './real-release-readiness-decision-matrix.mjs';
+import { buildRealReleaseEvidenceFinalizer } from './real-release-evidence-finalizer.mjs';
+import {
+  appendRealReleaseLedgerEvent,
+  verifyRealReleaseLedgerChain,
+  _resetRealReleaseLedgerForTest,
+} from './real-release-locked-ledger.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -208,6 +217,13 @@ const FIXTURE_SANDBOX                 = FLAG('--fixture-sandbox');
 const FIXTURE_REHEARSAL_PLAN          = FLAG('--fixture-rehearsal-plan');
 const LEDGER_REHEARSAL                = FLAG('--ledger-rehearsal');
 
+// V58.0: Real Manual Release Gate Mode flags (default: off — safe)
+const REAL_MANUAL_RELEASE_GATE        = FLAG('--real-manual-release-gate');
+const FIXTURE_RELEASE_REHEARSAL_V58   = FLAG('--fixture-release-rehearsal');
+const FIXTURE_MANUAL_HANDOFF_V58      = FLAG('--fixture-manual-handoff');
+const FIXTURE_PRODUCTION_LOCK         = FLAG('--fixture-production-lock');
+const LEDGER_REAL_RELEASE_LOCKED      = FLAG('--ledger-real-release-locked');
+
 const DIFFICULTY_ORDER = ['D0','D1','D2','D3','D4','D5','D6','D7','D8'];
 const rawMaxDiff = ARG('--max-difficulty') || ((HARNESS_MODE === 'interactive' || HARNESS_MODE === 'patch' || HARNESS_MODE === 'verify') ? 'D2' : 'D8');
 const MAX_DIFF_IDX = DIFFICULTY_ORDER.includes(rawMaxDiff)
@@ -262,6 +278,13 @@ let _rehearsalPlan           = null;
 let _rehearsalResult         = null;
 let _rehearsalLedgerChain    = null;
 let _rehearsalLedgerEventIds = [];
+// V58.0: Real Manual Release Gate results
+let _realGate                    = null;
+let _productionLock              = null;
+let _realReadiness               = null;
+let _evidenceFinalizer           = null;
+let _realLockedLedgerChain       = null;
+let _realLockedLedgerEventIds    = [];
 // Runtime Evidence snapshot (V15.6)
 let _runtimeEvidence = null;
 // Decision Matrix snapshot (V15.7)
@@ -1926,6 +1949,16 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       rehearsal_report_id:                  _rehearsalResult?.rehearsal_report_id ?? null,
       rehearsal_ledger_event_ids:           _rehearsalLedgerEventIds,
       rehearsal_ledger_chain_valid:         _rehearsalLedgerChain?.valid ?? null,
+      // V58.0: Real Manual Release Gate Mode fields
+      real_manual_release_gate_enabled:     REAL_MANUAL_RELEASE_GATE,
+      real_manual_release_gate_status:      _realGate?.gate_status ?? null,
+      real_manual_release_gate_ready:       _realGate?.gate_ready === true,
+      production_execution_lock_status:     _productionLock?.lock_status ?? null,
+      production_execution_locked:          true,
+      real_release_readiness_status:        _realReadiness?.real_release_readiness_status ?? null,
+      evidence_finalizer_status:            _evidenceFinalizer?.finalizer_status ?? null,
+      real_release_locked_ledger_event_ids: _realLockedLedgerEventIds,
+      unlock_required:                      true,
     };
     // V21.3/V27.0: pass_gold_candidate guarded by runtime_evidence_ready
     if (!out.runtime_evidence_ready) {
@@ -2905,6 +2938,69 @@ async function main() {
       audit(`[V53.1] Rehearsal: sandbox=${_rehearsalSandbox?.sandbox_ready} plan=${_rehearsalPlan?.rehearsal_plan_ready} rehearsal=${_rehearsalResult?.rehearsal_ready} ledger_events=${_rehearsalLedgerEventIds.length}`);
     } catch (e) {
       audit(`[V53.1] Rehearsal error: ${e.message}`);
+    }
+  }
+
+  // V58.0: Real Manual Release Gate Mode
+  if (REAL_MANUAL_RELEASE_GATE) {
+    try {
+      // Build gate (fixture mode)
+      if (FIXTURE_RELEASE_REHEARSAL_V58 || FIXTURE_MANUAL_HANDOFF_V58 || FIXTURE_PRODUCTION_LOCK) {
+        _realGate = createRealManualReleaseGate({ fixture_mode: true });
+      }
+      // Build production execution lock
+      if (_realGate?.gate_ready === true) {
+        _productionLock = createProductionExecutionLock({ gate_id: _realGate.gate_id });
+      } else if (FIXTURE_PRODUCTION_LOCK) {
+        _productionLock = createProductionExecutionLock({ fixture_mode: true });
+      }
+      // Evaluate readiness
+      if (FIXTURE_PRODUCTION_LOCK) {
+        _realReadiness = evaluateRealReleaseReadiness({ fixture_mode: true });
+      } else if (_realGate?.gate_ready === true && _productionLock?.lock_active === true) {
+        _realReadiness = evaluateRealReleaseReadiness({
+          real_manual_release_gate: _realGate,
+          production_execution_lock: _productionLock,
+        });
+      }
+      // Build evidence finalizer
+      if (_realReadiness?.real_release_readiness_status === 'REAL_READINESS_READY_LOCKED') {
+        _evidenceFinalizer = buildRealReleaseEvidenceFinalizer({
+          readiness_status:  _realReadiness.real_release_readiness_status,
+          evidence_receipt_id: _realGate?.evidence_receipt_id ?? 'harness-receipt',
+          evidence_source:   'go-core',
+          ledger_chain_refs: _realLockedLedgerEventIds.length > 0
+            ? _realLockedLedgerEventIds
+            : ['harness-ledger-ref'],
+        });
+      } else if (FIXTURE_PRODUCTION_LOCK) {
+        _evidenceFinalizer = buildRealReleaseEvidenceFinalizer({ fixture_mode: true });
+      }
+      // Append locked ledger events
+      if (LEDGER_REAL_RELEASE_LOCKED && _realGate?.gate_ready === true) {
+        _resetRealReleaseLedgerForTest();
+        const ledgerId = _realGate.gate_id ?? 'harness-gate';
+        const evRefs   = ['go-core-real-release-receipt'];
+        for (const et of [
+          'REAL_MANUAL_RELEASE_GATE_READY_LOCKED',
+          'PRODUCTION_EXECUTION_LOCK_ACTIVE',
+          'REAL_RELEASE_READINESS_READY_LOCKED',
+          'REAL_RELEASE_EVIDENCE_FINALIZER_READY_LOCKED',
+        ]) {
+          const r = appendRealReleaseLedgerEvent({
+            event_type:      et,
+            actor_id:        'pi-harness',
+            ledger_id:       ledgerId,
+            evidence_refs:   evRefs,
+            evidence_source: 'go-core',
+          });
+          if (r.appended) _realLockedLedgerEventIds.push(r.event_id);
+        }
+        _realLockedLedgerChain = verifyRealReleaseLedgerChain();
+      }
+      audit(`[V58.0] Real gate: gate=${_realGate?.gate_ready} lock=${_productionLock?.lock_active} readiness=${_realReadiness?.real_release_readiness_status} finalizer=${_evidenceFinalizer?.finalizer_ready} ledger_events=${_realLockedLedgerEventIds.length}`);
+    } catch (e) {
+      audit(`[V58.0] Real gate error: ${e.message}`);
     }
   }
 
