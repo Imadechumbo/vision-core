@@ -196,6 +196,8 @@ const FILES = [
   'tools/controlled-execution-ledger.mjs',
   'tools/tests/controlled-execution-ledger.test.mjs',
   'tools/tests/pi-harness-controlled-execution-review.test.mjs',
+  'tools/final-pre-production-safety-report.mjs',
+  'tools/tests/final-pre-production-safety-report.test.mjs',
 ];
 
 let failures = 0;
