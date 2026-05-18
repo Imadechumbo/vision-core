@@ -183,6 +183,8 @@ const FILES = [
   'tools/tests/unlock-review-report.test.mjs',
   'tools/unlock-governance-baseline.mjs',
   'tools/tests/unlock-governance-baseline.test.mjs',
+  'tools/controlled-execution-contract.mjs',
+  'tools/tests/controlled-execution-contract.test.mjs',
 ];
 
 let failures = 0;
