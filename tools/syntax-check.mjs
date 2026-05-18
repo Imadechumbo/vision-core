@@ -240,6 +240,8 @@ const FILES = [
   'tools/tests/real-tag-manual-executor-contract.test.mjs',
   'tools/real-tag-manual-confirmation-contract.mjs',
   'tools/tests/real-tag-manual-confirmation-contract.test.mjs',
+  'tools/real-tag-manual-safety-lock.mjs',
+  'tools/tests/real-tag-manual-safety-lock.test.mjs',
 ];
 
 let failures = 0;
