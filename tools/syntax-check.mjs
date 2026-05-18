@@ -176,6 +176,8 @@ const FILES = [
   'tools/tests/unlock-decision-matrix.test.mjs',
   'tools/unlock-evidence-review-package.mjs',
   'tools/tests/unlock-evidence-review-package.test.mjs',
+  'tools/unlock-review-ledger.mjs',
+  'tools/tests/unlock-review-ledger.test.mjs',
 ];
 
 let failures = 0;
