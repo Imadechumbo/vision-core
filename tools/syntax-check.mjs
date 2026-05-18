@@ -191,6 +191,8 @@ const FILES = [
   'tools/tests/controlled-execution-authority-binding.test.mjs',
   'tools/controlled-execution-risk-matrix.mjs',
   'tools/tests/controlled-execution-risk-matrix.test.mjs',
+  'tools/controlled-execution-evidence-package.mjs',
+  'tools/tests/controlled-execution-evidence-package.test.mjs',
 ];
 
 let failures = 0;
