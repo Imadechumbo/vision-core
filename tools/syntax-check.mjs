@@ -181,6 +181,8 @@ const FILES = [
   'tools/tests/pi-harness-unlock-review.test.mjs',
   'tools/unlock-review-report.mjs',
   'tools/tests/unlock-review-report.test.mjs',
+  'tools/unlock-governance-baseline.mjs',
+  'tools/tests/unlock-governance-baseline.test.mjs',
 ];
 
 let failures = 0;
