@@ -244,6 +244,8 @@ const FILES = [
   'tools/tests/real-tag-manual-safety-lock.test.mjs',
   'tools/real-tag-manual-command-builder.mjs',
   'tools/tests/real-tag-manual-command-builder.test.mjs',
+  'tools/real-tag-manual-dry-run-executor.mjs',
+  'tools/tests/real-tag-manual-dry-run-executor.test.mjs',
 ];
 
 let failures = 0;
