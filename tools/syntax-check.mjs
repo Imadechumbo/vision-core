@@ -198,6 +198,8 @@ const FILES = [
   'tools/tests/pi-harness-controlled-execution-review.test.mjs',
   'tools/final-pre-production-safety-report.mjs',
   'tools/tests/final-pre-production-safety-report.test.mjs',
+  'tools/final-pre-production-safety-baseline.mjs',
+  'tools/tests/final-pre-production-safety-baseline.test.mjs',
 ];
 
 let failures = 0;
