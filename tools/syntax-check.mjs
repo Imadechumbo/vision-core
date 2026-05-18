@@ -260,6 +260,8 @@ const FILES = [
   'tools/tests/real-tag-one-shot-local-executor.test.mjs',
   'tools/real-tag-one-shot-post-execution-verifier.mjs',
   'tools/tests/real-tag-one-shot-post-execution-verifier.test.mjs',
+  'tools/real-tag-one-shot-rollback-executor.mjs',
+  'tools/tests/real-tag-one-shot-rollback-executor.test.mjs',
 ];
 
 let failures = 0;
