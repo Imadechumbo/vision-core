@@ -193,6 +193,8 @@ const FILES = [
   'tools/tests/controlled-execution-risk-matrix.test.mjs',
   'tools/controlled-execution-evidence-package.mjs',
   'tools/tests/controlled-execution-evidence-package.test.mjs',
+  'tools/controlled-execution-ledger.mjs',
+  'tools/tests/controlled-execution-ledger.test.mjs',
 ];
 
 let failures = 0;
