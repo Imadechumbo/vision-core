@@ -187,6 +187,8 @@ const FILES = [
   'tools/tests/controlled-execution-contract.test.mjs',
   'tools/controlled-execution-human-authority.mjs',
   'tools/tests/controlled-execution-human-authority.test.mjs',
+  'tools/controlled-execution-authority-binding.mjs',
+  'tools/tests/controlled-execution-authority-binding.test.mjs',
 ];
 
 let failures = 0;
