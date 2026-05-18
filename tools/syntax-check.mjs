@@ -252,6 +252,8 @@ const FILES = [
   'tools/tests/real-tag-manual-armed-executor-guard.test.mjs',
   'tools/real-tag-manual-executor-audit-plan.mjs',
   'tools/tests/real-tag-manual-executor-audit-plan.test.mjs',
+  'tools/real-tag-manual-executor-baseline.mjs',
+  'tools/tests/real-tag-manual-executor-baseline.test.mjs',
 ];
 
 let failures = 0;
