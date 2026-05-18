@@ -185,6 +185,8 @@ const FILES = [
   'tools/tests/unlock-governance-baseline.test.mjs',
   'tools/controlled-execution-contract.mjs',
   'tools/tests/controlled-execution-contract.test.mjs',
+  'tools/controlled-execution-human-authority.mjs',
+  'tools/tests/controlled-execution-human-authority.test.mjs',
 ];
 
 let failures = 0;
