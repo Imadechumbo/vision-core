@@ -270,6 +270,8 @@ const FILES = [
   'tools/tests/real-tag-execution-report.test.mjs',
   'tools/real-tag-execution-baseline.mjs',
   'tools/tests/real-tag-execution-baseline.test.mjs',
+  'tools/real-tag-human-runbook.mjs',
+  'tools/tests/real-tag-human-runbook.test.mjs',
 ];
 
 let failures = 0;
