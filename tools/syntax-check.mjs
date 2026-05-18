@@ -276,6 +276,8 @@ const FILES = [
   'tools/tests/real-tag-human-runbook-validator.test.mjs',
   'tools/real-tag-actual-command-gate.mjs',
   'tools/tests/real-tag-actual-command-gate.test.mjs',
+  'tools/real-tag-actual-command-renderer.mjs',
+  'tools/tests/real-tag-actual-command-renderer.test.mjs',
 ];
 
 let failures = 0;
