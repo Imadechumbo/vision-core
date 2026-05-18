@@ -174,6 +174,8 @@ const FILES = [
   'tools/tests/unlock-contract-authority-binding.test.mjs',
   'tools/unlock-decision-matrix.mjs',
   'tools/tests/unlock-decision-matrix.test.mjs',
+  'tools/unlock-evidence-review-package.mjs',
+  'tools/tests/unlock-evidence-review-package.test.mjs',
 ];
 
 let failures = 0;
