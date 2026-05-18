@@ -195,6 +195,7 @@ const FILES = [
   'tools/tests/controlled-execution-evidence-package.test.mjs',
   'tools/controlled-execution-ledger.mjs',
   'tools/tests/controlled-execution-ledger.test.mjs',
+  'tools/tests/pi-harness-controlled-execution-review.test.mjs',
 ];
 
 let failures = 0;
