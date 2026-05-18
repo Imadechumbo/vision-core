@@ -286,6 +286,8 @@ const FILES = [
   'tools/tests/real-tag-post-human-audit-ledger.test.mjs',
   'tools/real-tag-post-human-stabilization-report.mjs',
   'tools/tests/real-tag-post-human-stabilization-report.test.mjs',
+  'tools/real-tag-human-operational-baseline.mjs',
+  'tools/tests/real-tag-human-operational-baseline.test.mjs',
 ];
 
 let failures = 0;
