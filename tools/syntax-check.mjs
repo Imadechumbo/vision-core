@@ -268,6 +268,8 @@ const FILES = [
   'tools/tests/real-tag-execution-audit-ledger.test.mjs',
   'tools/real-tag-execution-report.mjs',
   'tools/tests/real-tag-execution-report.test.mjs',
+  'tools/real-tag-execution-baseline.mjs',
+  'tools/tests/real-tag-execution-baseline.test.mjs',
 ];
 
 let failures = 0;
