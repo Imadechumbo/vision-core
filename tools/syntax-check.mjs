@@ -236,6 +236,8 @@ const FILES = [
   'tools/tests/real-tag-one-shot-report.test.mjs',
   'tools/real-tag-one-shot-baseline.mjs',
   'tools/tests/real-tag-one-shot-baseline.test.mjs',
+  'tools/real-tag-manual-executor-contract.mjs',
+  'tools/tests/real-tag-manual-executor-contract.test.mjs',
 ];
 
 let failures = 0;
