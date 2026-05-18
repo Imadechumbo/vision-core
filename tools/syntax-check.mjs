@@ -264,6 +264,8 @@ const FILES = [
   'tools/tests/real-tag-one-shot-rollback-executor.test.mjs',
   'tools/real-tag-execution-receipt.mjs',
   'tools/tests/real-tag-execution-receipt.test.mjs',
+  'tools/real-tag-execution-audit-ledger.mjs',
+  'tools/tests/real-tag-execution-audit-ledger.test.mjs',
 ];
 
 let failures = 0;
