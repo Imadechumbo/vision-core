@@ -272,6 +272,8 @@ const FILES = [
   'tools/tests/real-tag-execution-baseline.test.mjs',
   'tools/real-tag-human-runbook.mjs',
   'tools/tests/real-tag-human-runbook.test.mjs',
+  'tools/real-tag-human-runbook-validator.mjs',
+  'tools/tests/real-tag-human-runbook-validator.test.mjs',
 ];
 
 let failures = 0;
