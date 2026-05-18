@@ -178,6 +178,7 @@ const FILES = [
   'tools/tests/unlock-evidence-review-package.test.mjs',
   'tools/unlock-review-ledger.mjs',
   'tools/tests/unlock-review-ledger.test.mjs',
+  'tools/tests/pi-harness-unlock-review.test.mjs',
 ];
 
 let failures = 0;

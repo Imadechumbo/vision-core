@@ -136,6 +136,16 @@ import {
   verifyRealReleaseLedgerChain,
   _resetRealReleaseLedgerForTest,
 } from './real-release-locked-ledger.mjs';
+import { createProductionUnlockContract }      from './production-unlock-contract.mjs';
+import { createUnlockHumanAuthorityContract }  from './unlock-human-authority-contract.mjs';
+import { bindUnlockContractAuthority }         from './unlock-contract-authority-binding.mjs';
+import { evaluateUnlockDecision }              from './unlock-decision-matrix.mjs';
+import { buildUnlockEvidenceReviewPackage }    from './unlock-evidence-review-package.mjs';
+import {
+  appendUnlockReviewLedgerEvent,
+  verifyUnlockReviewLedgerChain,
+  _resetUnlockReviewLedgerForTest,
+} from './unlock-review-ledger.mjs';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONFIG — FLAGS
@@ -217,6 +227,14 @@ const FIXTURE_SANDBOX                 = FLAG('--fixture-sandbox');
 const FIXTURE_REHEARSAL_PLAN          = FLAG('--fixture-rehearsal-plan');
 const LEDGER_REHEARSAL                = FLAG('--ledger-rehearsal');
 
+// V63.1: Unlock Review Mode flags (default: off — safe)
+const UNLOCK_REVIEW                   = FLAG('--unlock-review');
+const FIXTURE_REAL_GATE_BASELINE      = FLAG('--fixture-real-gate-baseline');
+const FIXTURE_UNLOCK_CONTRACT         = FLAG('--fixture-unlock-contract');
+const FIXTURE_UNLOCK_AUTHORITY        = FLAG('--fixture-unlock-authority');
+const FIXTURE_UNLOCK_BINDING          = FLAG('--fixture-unlock-binding');
+const LEDGER_UNLOCK_REVIEW            = FLAG('--ledger-unlock-review');
+
 // V58.0: Real Manual Release Gate Mode flags (default: off — safe)
 const REAL_MANUAL_RELEASE_GATE        = FLAG('--real-manual-release-gate');
 const FIXTURE_RELEASE_REHEARSAL_V58   = FLAG('--fixture-release-rehearsal');
@@ -278,6 +296,15 @@ let _rehearsalPlan           = null;
 let _rehearsalResult         = null;
 let _rehearsalLedgerChain    = null;
 let _rehearsalLedgerEventIds = [];
+// V63.1: Unlock Review results
+let _unlockContract              = null;
+let _unlockAuthority             = null;
+let _unlockBinding               = null;
+let _unlockDecision              = null;
+let _unlockEvidencePackage       = null;
+let _unlockReviewLedgerChain     = null;
+let _unlockReviewLedgerEventIds  = [];
+
 // V58.0: Real Manual Release Gate results
 let _realGate                    = null;
 let _productionLock              = null;
@@ -1959,6 +1986,21 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       evidence_finalizer_status:            _evidenceFinalizer?.finalizer_status ?? null,
       real_release_locked_ledger_event_ids: _realLockedLedgerEventIds,
       unlock_required:                      true,
+      // V63.1: Unlock Review Mode fields
+      unlock_review_enabled:                UNLOCK_REVIEW,
+      unlock_contract_status:               _unlockContract?.contract_status ?? null,
+      unlock_contract_ready:                _unlockContract?.contract_ready === true,
+      unlock_authority_status:              _unlockAuthority?.authority_status ?? null,
+      unlock_authority_ready:               _unlockAuthority?.authority_ready === true,
+      unlock_binding_status:                _unlockBinding?.binding_status ?? null,
+      unlock_binding_ready:                 _unlockBinding?.binding_ready === true,
+      unlock_decision_status:               _unlockDecision?.unlock_decision_status ?? null,
+      unlock_review_ready:                  _unlockDecision?.unlock_review_ready === true,
+      unlock_evidence_package_ready:        _unlockEvidencePackage?.evidence_review_ready === true,
+      unlock_review_ledger_event_ids:       _unlockReviewLedgerEventIds,
+      unlock_executed:                      false,
+      unlock_review_only:                   true,
+      future_execution_phase_required:      true,
     };
     // V21.3/V27.0: pass_gold_candidate guarded by runtime_evidence_ready
     if (!out.runtime_evidence_ready) {
@@ -3001,6 +3043,93 @@ async function main() {
       audit(`[V58.0] Real gate: gate=${_realGate?.gate_ready} lock=${_productionLock?.lock_active} readiness=${_realReadiness?.real_release_readiness_status} finalizer=${_evidenceFinalizer?.finalizer_ready} ledger_events=${_realLockedLedgerEventIds.length}`);
     } catch (e) {
       audit(`[V58.0] Real gate error: ${e.message}`);
+    }
+  }
+
+  // V63.1: Unlock Review Mode
+  if (UNLOCK_REVIEW) {
+    try {
+      const useFixture = FIXTURE_UNLOCK_CONTRACT || FIXTURE_UNLOCK_AUTHORITY || FIXTURE_UNLOCK_BINDING || FIXTURE_REAL_GATE_BASELINE;
+
+      // Baseline fixture
+      const baseline = FIXTURE_REAL_GATE_BASELINE
+        ? { baseline_ready: true, baseline_status: 'REAL_GATE_BASELINE_READY', baseline_version: 'v60.0' }
+        : null;
+
+      // Contract
+      _unlockContract = useFixture
+        ? createProductionUnlockContract({ fixture_mode: true })
+        : createProductionUnlockContract({
+            lock_id:             _productionLock?.lock_id ?? null,
+            gate_id:             _realGate?.gate_id ?? null,
+            evidence_receipt_id: _realGate?.evidence_receipt_id ?? null,
+            evidence_source:     'go-core',
+            requested_scope:     'review_full_manual_release_unlock',
+          });
+
+      // Authority
+      const { REQUIRED_CONFIRMATION_PHRASE } = await import('./unlock-human-authority-contract.mjs');
+      _unlockAuthority = useFixture
+        ? createUnlockHumanAuthorityContract({ fixture_mode: true })
+        : createUnlockHumanAuthorityContract({
+            unlock_contract_id:           _unlockContract?.unlock_contract_id ?? null,
+            confirmed_by:                 'pi-harness',
+            confirmer_role:               'release_authority',
+            authority_decision:           'approved',
+            authority_scope:              'review_full_manual_release_unlock',
+            confirmation_phrase:          REQUIRED_CONFIRMATION_PHRASE,
+            evidence_acknowledged:        true,
+            lock_acknowledged:            true,
+            production_risk_acknowledged: true,
+            rollback_acknowledged:        true,
+          });
+
+      // Binding
+      _unlockBinding = useFixture
+        ? bindUnlockContractAuthority({ fixture_mode: true })
+        : bindUnlockContractAuthority({
+            unlock_contract:    _unlockContract,
+            unlock_authority:   _unlockAuthority,
+            real_gate_baseline: baseline,
+          });
+
+      // Decision
+      _unlockDecision = evaluateUnlockDecision({
+        unlock_contract:    useFixture ? { contract_ready: true, unlock_contract_id: _unlockContract?.unlock_contract_id ?? 'fixture' } : _unlockContract,
+        unlock_authority:   useFixture ? { authority_ready: true, unlock_authority_id: _unlockAuthority?.unlock_authority_id ?? 'fixture' } : _unlockAuthority,
+        unlock_binding:     useFixture ? { binding_ready: true, binding_id: _unlockBinding?.binding_id ?? 'fixture' } : _unlockBinding,
+        real_gate_baseline: useFixture ? { baseline_ready: true } : baseline,
+      });
+
+      // Evidence package
+      _unlockEvidencePackage = buildUnlockEvidenceReviewPackage({
+        unlock_contract:    useFixture ? { contract_ready: true, unlock_contract_id: _unlockContract?.unlock_contract_id ?? 'fixture' } : _unlockContract,
+        unlock_authority:   useFixture ? { authority_ready: true, unlock_authority_id: _unlockAuthority?.unlock_authority_id ?? 'fixture' } : _unlockAuthority,
+        unlock_binding:     useFixture ? { binding_ready: true, binding_id: _unlockBinding?.binding_id ?? 'fixture' } : _unlockBinding,
+        unlock_decision:    useFixture ? { unlock_review_ready: true, decision_id: _unlockDecision?.decision_id ?? 'fixture' } : _unlockDecision,
+        real_gate_baseline: useFixture ? { baseline_ready: true, baseline_version: 'v60.0' } : baseline,
+      });
+
+      // Ledger
+      if (LEDGER_UNLOCK_REVIEW) {
+        _resetUnlockReviewLedgerForTest();
+        const ledgerEvents = [
+          { event_type: 'UNLOCK_CONTRACT_CREATED',       artifact_id: _unlockContract?.unlock_contract_id ?? 'fixture', artifact_status: _unlockContract?.contract_status ?? 'UNLOCK_CONTRACT_READY_REVIEW' },
+          { event_type: 'UNLOCK_AUTHORITY_GRANTED',      artifact_id: _unlockAuthority?.unlock_authority_id ?? 'fixture', artifact_status: _unlockAuthority?.authority_status ?? 'UNLOCK_AUTHORITY_READY_REVIEW' },
+          { event_type: 'UNLOCK_BINDING_CREATED',        artifact_id: _unlockBinding?.binding_id ?? 'fixture', artifact_status: _unlockBinding?.binding_status ?? 'UNLOCK_BINDING_READY_REVIEW' },
+          { event_type: 'UNLOCK_DECISION_EVALUATED',     artifact_id: _unlockDecision?.decision_id ?? 'fixture', artifact_status: _unlockDecision?.unlock_decision_status ?? 'UNLOCK_DECISION_READY_REVIEW' },
+          { event_type: 'UNLOCK_EVIDENCE_PACKAGE_BUILT', artifact_id: _unlockEvidencePackage?.package_id ?? 'fixture', artifact_status: _unlockEvidencePackage?.evidence_review_status ?? 'EVIDENCE_REVIEW_READY', evidence_package_id: _unlockEvidencePackage?.package_id ?? null },
+        ];
+        for (const ev of ledgerEvents) {
+          const r = appendUnlockReviewLedgerEvent({ ...ev, fixture_mode: useFixture });
+          if (r.appended) _unlockReviewLedgerEventIds.push(r.event_id);
+        }
+        _unlockReviewLedgerChain = verifyUnlockReviewLedgerChain();
+      }
+
+      audit(`[V63.1] Unlock review: contract=${_unlockContract?.contract_ready} authority=${_unlockAuthority?.authority_ready} binding=${_unlockBinding?.binding_ready} decision=${_unlockDecision?.unlock_review_ready} evidence=${_unlockEvidencePackage?.evidence_review_ready} ledger_events=${_unlockReviewLedgerEventIds.length}`);
+    } catch (e) {
+      audit(`[V63.1] Unlock review error: ${e.message}`);
     }
   }
 
