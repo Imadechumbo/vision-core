@@ -278,6 +278,8 @@ const FILES = [
   'tools/tests/real-tag-actual-command-gate.test.mjs',
   'tools/real-tag-actual-command-renderer.mjs',
   'tools/tests/real-tag-actual-command-renderer.test.mjs',
+  'tools/real-tag-human-execution-receipt-importer.mjs',
+  'tools/tests/real-tag-human-execution-receipt-importer.test.mjs',
 ];
 
 let failures = 0;
