@@ -235,6 +235,14 @@ const FIXTURE_UNLOCK_AUTHORITY        = FLAG('--fixture-unlock-authority');
 const FIXTURE_UNLOCK_BINDING          = FLAG('--fixture-unlock-binding');
 const LEDGER_UNLOCK_REVIEW            = FLAG('--ledger-unlock-review');
 
+// V68.1: Controlled Execution Review Mode flags (default: off — safe)
+const CONTROLLED_EXECUTION_REVIEW           = FLAG('--controlled-execution-review');
+const FIXTURE_UNLOCK_GOVERNANCE_BASELINE    = FLAG('--fixture-unlock-governance-baseline');
+const FIXTURE_CONTROLLED_CONTRACT          = FLAG('--fixture-controlled-contract');
+const FIXTURE_CONTROLLED_AUTHORITY         = FLAG('--fixture-controlled-authority');
+const FIXTURE_CONTROLLED_BINDING           = FLAG('--fixture-controlled-binding');
+const LEDGER_CONTROLLED_EXECUTION          = FLAG('--ledger-controlled-execution');
+
 // V58.0: Real Manual Release Gate Mode flags (default: off — safe)
 const REAL_MANUAL_RELEASE_GATE        = FLAG('--real-manual-release-gate');
 const FIXTURE_RELEASE_REHEARSAL_V58   = FLAG('--fixture-release-rehearsal');
@@ -304,6 +312,14 @@ let _unlockDecision              = null;
 let _unlockEvidencePackage       = null;
 let _unlockReviewLedgerChain     = null;
 let _unlockReviewLedgerEventIds  = [];
+// V68.1: Controlled Execution Review results
+let _controlledContract               = null;
+let _controlledAuthority              = null;
+let _controlledBinding                = null;
+let _controlledRisk                   = null;
+let _controlledEvidencePackage        = null;
+let _controlledLedgerChain            = null;
+let _controlledLedgerEventIds         = [];
 
 // V58.0: Real Manual Release Gate results
 let _realGate                    = null;
@@ -2001,6 +2017,23 @@ function renderFinalMissionReport(s, result, elapsed, hermesCtx = null) {
       unlock_executed:                      false,
       unlock_review_only:                   true,
       future_execution_phase_required:      true,
+      // V68.1: Controlled Execution Review Mode fields
+      controlled_execution_review_enabled:      CONTROLLED_EXECUTION_REVIEW,
+      controlled_contract_status:               _controlledContract?.contract_status ?? null,
+      controlled_authority_status:              _controlledAuthority?.authority_status ?? null,
+      controlled_binding_status:                _controlledBinding?.binding_status ?? null,
+      controlled_risk_status:                   _controlledRisk?.controlled_risk_status ?? null,
+      controlled_evidence_package_status:       _controlledEvidencePackage?.evidence_package_status ?? null,
+      controlled_execution_ledger_event_ids:    _controlledLedgerEventIds,
+      controlled_execution_review_ready:        _controlledBinding?.controlled_execution_review_ready === true,
+      final_execution_phase_required:           true,
+      controlled_execution_allowed:             false,
+      production_execution_locked:              true,
+      release_execution_allowed:                false,
+      release_performed:                        false,
+      tag_created:                              false,
+      stable_promoted:                          false,
+      deploy_performed:                         false,
     };
     // V21.3/V27.0: pass_gold_candidate guarded by runtime_evidence_ready
     if (!out.runtime_evidence_ready) {
@@ -3130,6 +3163,91 @@ async function main() {
       audit(`[V63.1] Unlock review: contract=${_unlockContract?.contract_ready} authority=${_unlockAuthority?.authority_ready} binding=${_unlockBinding?.binding_ready} decision=${_unlockDecision?.unlock_review_ready} evidence=${_unlockEvidencePackage?.evidence_review_ready} ledger_events=${_unlockReviewLedgerEventIds.length}`);
     } catch (e) {
       audit(`[V63.1] Unlock review error: ${e.message}`);
+    }
+  }
+
+  // V68.1: Controlled Execution Review Mode
+  if (CONTROLLED_EXECUTION_REVIEW) {
+    try {
+      const useFixture = FIXTURE_CONTROLLED_CONTRACT || FIXTURE_CONTROLLED_AUTHORITY || FIXTURE_CONTROLLED_BINDING || FIXTURE_UNLOCK_GOVERNANCE_BASELINE;
+      const { createControlledExecutionContract }     = await import('./controlled-execution-contract.mjs');
+      const { createControlledExecutionHumanAuthority, REQUIRED_CONTROLLED_CONFIRMATION_PHRASE } = await import('./controlled-execution-human-authority.mjs');
+      const { bindControlledExecutionAuthorityToBaseline } = await import('./controlled-execution-authority-binding.mjs');
+      const { evaluateControlledExecutionRisk }       = await import('./controlled-execution-risk-matrix.mjs');
+      const { buildControlledExecutionEvidencePackage } = await import('./controlled-execution-evidence-package.mjs');
+      const { appendControlledExecutionLedgerEvent, verifyControlledExecutionLedgerChain, _resetControlledExecutionLedgerForTest, CONTROLLED_EXECUTION_EVENT_TYPES } = await import('./controlled-execution-ledger.mjs');
+      const { runUnlockGovernanceBaseline }           = await import('./unlock-governance-baseline.mjs');
+
+      const _ts = new Date().toISOString();
+
+      const unlockBaseline = useFixture
+        ? { baseline_ready: true, baseline_hash: 'fixture-baseline-hash', baseline_status: 'UNLOCK_GOVERNANCE_BASELINE_READY' }
+        : runUnlockGovernanceBaseline({ _mock_timestamp: _ts });
+
+      _controlledContract = createControlledExecutionContract({
+        fixture_mode: useFixture,
+        unlock_baseline_id: unlockBaseline.baseline_hash ?? 'no-baseline',
+        unlock_report_id: useFixture ? 'fixture-report' : null,
+        evidence_source: 'go-core',
+        requested_execution_scope: 'review_controlled_full_manual_execution',
+        _mock_timestamp: _ts,
+      });
+
+      _controlledAuthority = createControlledExecutionHumanAuthority({
+        fixture_mode: useFixture,
+        authority_decision: useFixture ? 'approved' : undefined,
+        confirmation_phrase: useFixture ? REQUIRED_CONTROLLED_CONFIRMATION_PHRASE : undefined,
+        evidence_acknowledged: useFixture ? true : undefined,
+        unlock_governance_acknowledged: useFixture ? true : undefined,
+        production_risk_acknowledged: useFixture ? true : undefined,
+        rollback_acknowledged: useFixture ? true : undefined,
+        _mock_timestamp: _ts,
+      });
+
+      _controlledBinding = bindControlledExecutionAuthorityToBaseline({
+        fixture_mode: useFixture,
+        controlled_contract:        useFixture ? { contract_ready: true, controlled_contract_id: _controlledContract.controlled_contract_id ?? 'fixture-cid', requested_execution_scope: 'review_controlled_full_manual_execution' } : _controlledContract,
+        controlled_authority:       useFixture ? { authority_ready: true, controlled_authority_id: _controlledAuthority.controlled_authority_id ?? 'fixture-aid', authority_scope: 'review_controlled_full_manual_execution', evidence_acknowledged: true, unlock_governance_acknowledged: true, rollback_acknowledged: true, production_risk_acknowledged: true } : _controlledAuthority,
+        unlock_governance_baseline: useFixture ? { baseline_ready: true, baseline_hash: 'fixture-baseline-hash' } : unlockBaseline,
+        _mock_timestamp: _ts,
+      });
+
+      _controlledRisk = evaluateControlledExecutionRisk({
+        fixture_mode: useFixture,
+        controlled_contract:        useFixture ? { contract_ready: true, controlled_contract_id: _controlledContract.controlled_contract_id ?? 'fixture-cid' } : _controlledContract,
+        controlled_authority:       useFixture ? { authority_ready: true, controlled_authority_id: _controlledAuthority.controlled_authority_id ?? 'fixture-aid' } : _controlledAuthority,
+        controlled_binding:         useFixture ? { binding_ready: true, binding_id: _controlledBinding.binding_id ?? 'fixture-bid' } : _controlledBinding,
+        unlock_governance_baseline: useFixture ? { baseline_ready: true, baseline_hash: 'fixture-baseline-hash' } : unlockBaseline,
+        _mock_timestamp: _ts,
+      });
+
+      _controlledEvidencePackage = buildControlledExecutionEvidencePackage({
+        fixture_mode: useFixture,
+        controlled_risk: useFixture ? { controlled_execution_review_ready: true, controlled_risk_status: 'CONTROLLED_RISK_READY_REVIEW', risk_matrix_id: _controlledRisk.risk_matrix_id ?? 'fixture-rid' } : _controlledRisk,
+        evidence_source: 'go-core',
+        _mock_timestamp: _ts,
+      });
+
+      if (LEDGER_CONTROLLED_EXECUTION) {
+        _resetControlledExecutionLedgerForTest();
+        const eventArtifacts = [
+          ['CONTROLLED_EXECUTION_CONTRACT_READY_REVIEW',  _controlledContract?.controlled_contract_id  ?? 'cid'],
+          ['CONTROLLED_EXECUTION_AUTHORITY_READY_REVIEW', _controlledAuthority?.controlled_authority_id ?? 'aid'],
+          ['CONTROLLED_EXECUTION_BINDING_READY_REVIEW',   _controlledBinding?.binding_id               ?? 'bid'],
+          ['CONTROLLED_EXECUTION_RISK_READY_REVIEW',      _controlledRisk?.risk_matrix_id              ?? 'rid'],
+          ['CONTROLLED_EXECUTION_EVIDENCE_READY_REVIEW',  _controlledEvidencePackage?.controlled_evidence_package_id ?? 'eid'],
+        ];
+        for (const [event_type, artifact_id] of eventArtifacts) {
+          const ev = appendControlledExecutionLedgerEvent({ event_type, artifact_id, fixture_mode: true, _mock_timestamp: _ts });
+          if (ev.appended) _controlledLedgerEventIds.push(ev.event_hash);
+        }
+        _controlledLedgerChain = verifyControlledExecutionLedgerChain();
+        _resetControlledExecutionLedgerForTest();
+      }
+
+      audit(`[V68.1] Controlled execution review: contract=${_controlledContract?.contract_ready} authority=${_controlledAuthority?.authority_ready} binding=${_controlledBinding?.binding_ready} risk=${_controlledRisk?.controlled_execution_review_ready} evidence=${_controlledEvidencePackage?.evidence_review_ready} ledger_events=${_controlledLedgerEventIds.length}`);
+    } catch (e) {
+      audit(`[V68.1] Controlled execution review error: ${e.message}`);
     }
   }
 
