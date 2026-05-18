@@ -282,6 +282,8 @@ const FILES = [
   'tools/tests/real-tag-human-execution-receipt-importer.test.mjs',
   'tools/real-tag-human-receipt-verifier.mjs',
   'tools/tests/real-tag-human-receipt-verifier.test.mjs',
+  'tools/real-tag-post-human-audit-ledger.mjs',
+  'tools/tests/real-tag-post-human-audit-ledger.test.mjs',
 ];
 
 let failures = 0;
