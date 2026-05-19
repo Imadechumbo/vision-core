@@ -302,6 +302,8 @@ const FILES = [
   'tools/tests/post-tag-stabilization-decision-matrix.test.mjs',
   'tools/real-tag-operation-report.mjs',
   'tools/tests/real-tag-operation-report.test.mjs',
+  'tools/real-tag-operation-baseline.mjs',
+  'tools/tests/real-tag-operation-baseline.test.mjs',
 ];
 
 let failures = 0;
