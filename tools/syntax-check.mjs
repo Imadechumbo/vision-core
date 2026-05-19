@@ -322,6 +322,8 @@ const FILES = [
   'tools/tests/real-tag-human-execution-readiness-baseline.test.mjs',
   'tools/one-real-tag-final-execution-packet.mjs',
   'tools/tests/one-real-tag-final-execution-packet.test.mjs',
+  'tools/one-real-tag-local-manual-command-export.mjs',
+  'tools/tests/one-real-tag-local-manual-command-export.test.mjs',
 ];
 
 let failures = 0;
