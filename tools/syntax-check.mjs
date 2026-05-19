@@ -326,6 +326,8 @@ const FILES = [
   'tools/tests/one-real-tag-local-manual-command-export.test.mjs',
   'tools/one-real-tag-human-receipt-capture.mjs',
   'tools/tests/one-real-tag-human-receipt-capture.test.mjs',
+  'tools/one-real-tag-human-receipt-import-verify.mjs',
+  'tools/tests/one-real-tag-human-receipt-import-verify.test.mjs',
 ];
 
 let failures = 0;
