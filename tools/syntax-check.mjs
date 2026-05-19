@@ -296,6 +296,8 @@ const FILES = [
   'tools/tests/human-one-shot-tag-receipt-import-gate.test.mjs',
   'tools/human-one-shot-tag-receipt-verifier.mjs',
   'tools/tests/human-one-shot-tag-receipt-verifier.test.mjs',
+  'tools/post-tag-audit-ledger-binding.mjs',
+  'tools/tests/post-tag-audit-ledger-binding.test.mjs',
 ];
 
 let failures = 0;
