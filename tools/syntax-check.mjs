@@ -332,6 +332,8 @@ const FILES = [
   'tools/tests/one-real-tag-post-verification-ledger.test.mjs',
   'tools/one-real-tag-rollback-readiness-gate.mjs',
   'tools/tests/one-real-tag-rollback-readiness-gate.test.mjs',
+  'tools/one-real-tag-operation-final-report.mjs',
+  'tools/tests/one-real-tag-operation-final-report.test.mjs',
 ];
 
 let failures = 0;
