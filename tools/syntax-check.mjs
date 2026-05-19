@@ -320,6 +320,8 @@ const FILES = [
   'tools/tests/real-tag-post-execution-governance-ledger.test.mjs',
   'tools/real-tag-human-execution-readiness-baseline.mjs',
   'tools/tests/real-tag-human-execution-readiness-baseline.test.mjs',
+  'tools/one-real-tag-final-execution-packet.mjs',
+  'tools/tests/one-real-tag-final-execution-packet.test.mjs',
 ];
 
 let failures = 0;
