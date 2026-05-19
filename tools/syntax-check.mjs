@@ -298,6 +298,8 @@ const FILES = [
   'tools/tests/human-one-shot-tag-receipt-verifier.test.mjs',
   'tools/post-tag-audit-ledger-binding.mjs',
   'tools/tests/post-tag-audit-ledger-binding.test.mjs',
+  'tools/post-tag-stabilization-decision-matrix.mjs',
+  'tools/tests/post-tag-stabilization-decision-matrix.test.mjs',
 ];
 
 let failures = 0;
