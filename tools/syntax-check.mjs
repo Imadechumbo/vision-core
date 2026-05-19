@@ -310,6 +310,8 @@ const FILES = [
   'tools/tests/real-tag-manual-command-sealing-package.test.mjs',
   'tools/real-tag-manual-execution-receipt-template.mjs',
   'tools/tests/real-tag-manual-execution-receipt-template.test.mjs',
+  'tools/real-tag-manual-receipt-import-after-execution.mjs',
+  'tools/tests/real-tag-manual-receipt-import-after-execution.test.mjs',
 ];
 
 let failures = 0;
