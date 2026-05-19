@@ -306,6 +306,8 @@ const FILES = [
   'tools/tests/real-tag-operation-baseline.test.mjs',
   'tools/real-tag-human-execution-final-runbook.mjs',
   'tools/tests/real-tag-human-execution-final-runbook.test.mjs',
+  'tools/real-tag-manual-command-sealing-package.mjs',
+  'tools/tests/real-tag-manual-command-sealing-package.test.mjs',
 ];
 
 let failures = 0;
