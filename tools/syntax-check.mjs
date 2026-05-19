@@ -318,6 +318,8 @@ const FILES = [
   'tools/tests/real-tag-stable-review-eligibility-gate.test.mjs',
   'tools/real-tag-post-execution-governance-ledger.mjs',
   'tools/tests/real-tag-post-execution-governance-ledger.test.mjs',
+  'tools/real-tag-human-execution-readiness-baseline.mjs',
+  'tools/tests/real-tag-human-execution-readiness-baseline.test.mjs',
 ];
 
 let failures = 0;
