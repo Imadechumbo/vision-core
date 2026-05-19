@@ -290,6 +290,8 @@ const FILES = [
   'tools/tests/real-tag-human-operational-baseline.test.mjs',
   'tools/final-one-tag-preflight-snapshot.mjs',
   'tools/tests/final-one-tag-preflight-snapshot.test.mjs',
+  'tools/final-one-tag-human-command-package.mjs',
+  'tools/tests/final-one-tag-human-command-package.test.mjs',
 ];
 
 let failures = 0;
