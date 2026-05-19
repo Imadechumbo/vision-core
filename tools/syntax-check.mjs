@@ -314,6 +314,8 @@ const FILES = [
   'tools/tests/real-tag-manual-receipt-import-after-execution.test.mjs',
   'tools/real-tag-verified-state-classifier.mjs',
   'tools/tests/real-tag-verified-state-classifier.test.mjs',
+  'tools/real-tag-stable-review-eligibility-gate.mjs',
+  'tools/tests/real-tag-stable-review-eligibility-gate.test.mjs',
 ];
 
 let failures = 0;
