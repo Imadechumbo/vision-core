@@ -340,6 +340,8 @@ const FILES = [
   'tools/tests/stable-review-contract-after-one-tag.test.mjs',
   'tools/stable-review-evidence-binding.mjs',
   'tools/tests/stable-review-evidence-binding.test.mjs',
+  'tools/stable-review-decision-matrix.mjs',
+  'tools/tests/stable-review-decision-matrix.test.mjs',
 ];
 
 let failures = 0;
