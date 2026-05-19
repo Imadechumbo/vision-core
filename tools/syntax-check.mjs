@@ -292,6 +292,8 @@ const FILES = [
   'tools/tests/final-one-tag-preflight-snapshot.test.mjs',
   'tools/final-one-tag-human-command-package.mjs',
   'tools/tests/final-one-tag-human-command-package.test.mjs',
+  'tools/human-one-shot-tag-receipt-import-gate.mjs',
+  'tools/tests/human-one-shot-tag-receipt-import-gate.test.mjs',
 ];
 
 let failures = 0;
