@@ -336,6 +336,8 @@ const FILES = [
   'tools/tests/one-real-tag-operation-final-report.test.mjs',
   'tools/one-real-tag-executed-baseline.mjs',
   'tools/tests/one-real-tag-executed-baseline.test.mjs',
+  'tools/stable-review-contract-after-one-tag.mjs',
+  'tools/tests/stable-review-contract-after-one-tag.test.mjs',
 ];
 
 let failures = 0;
