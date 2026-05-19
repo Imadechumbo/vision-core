@@ -300,6 +300,8 @@ const FILES = [
   'tools/tests/post-tag-audit-ledger-binding.test.mjs',
   'tools/post-tag-stabilization-decision-matrix.mjs',
   'tools/tests/post-tag-stabilization-decision-matrix.test.mjs',
+  'tools/real-tag-operation-report.mjs',
+  'tools/tests/real-tag-operation-report.test.mjs',
 ];
 
 let failures = 0;
