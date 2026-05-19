@@ -330,6 +330,8 @@ const FILES = [
   'tools/tests/one-real-tag-human-receipt-import-verify.test.mjs',
   'tools/one-real-tag-post-verification-ledger.mjs',
   'tools/tests/one-real-tag-post-verification-ledger.test.mjs',
+  'tools/one-real-tag-rollback-readiness-gate.mjs',
+  'tools/tests/one-real-tag-rollback-readiness-gate.test.mjs',
 ];
 
 let failures = 0;
