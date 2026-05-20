@@ -342,6 +342,14 @@ const FILES = [
   'tools/tests/stable-review-evidence-binding.test.mjs',
   'tools/stable-review-decision-matrix.mjs',
   'tools/tests/stable-review-decision-matrix.test.mjs',
+  'tools/stable-review-human-approval-contract.mjs',
+  'tools/tests/stable-review-human-approval-contract.test.mjs',
+  'tools/stable-review-ledger.mjs',
+  'tools/tests/stable-review-ledger.test.mjs',
+  'tools/stable-review-report.mjs',
+  'tools/tests/stable-review-report.test.mjs',
+  'tools/stable-promotion-preflight-gate.mjs',
+  'tools/tests/stable-promotion-preflight-gate.test.mjs',
 ];
 
 let failures = 0;
