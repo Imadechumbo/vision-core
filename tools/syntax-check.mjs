@@ -361,6 +361,7 @@ const FILES = [
   'tools/stable-promotion-safety-lock.mjs',
   'tools/stable-promotion-rollback-plan.mjs',
   'tools/stable-promotion-audit-ledger.mjs',
+  'tools/stable-promotion-governance-report.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
