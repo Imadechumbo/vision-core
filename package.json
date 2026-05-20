@@ -233,6 +233,7 @@
     "test:prompt-cache-ledger-unit": "node --no-deprecation tools/tests/prompt-cache-ledger.test.mjs",
     "test:cache-hit-miss-reporter-unit": "node --no-deprecation tools/tests/cache-hit-miss-reporter.test.mjs",
     "test:token-budget-controller-unit": "node --no-deprecation tools/tests/token-budget-controller.test.mjs",
-    "test:mission-cost-estimator-unit": "node --no-deprecation tools/tests/mission-cost-estimator.test.mjs"
+    "test:mission-cost-estimator-unit": "node --no-deprecation tools/tests/mission-cost-estimator.test.mjs",
+    "test:cost-gate-policy-unit": "node --no-deprecation tools/tests/cost-gate-policy.test.mjs"
   }
 }
