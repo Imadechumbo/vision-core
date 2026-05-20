@@ -353,6 +353,7 @@ const FILES = [
   'tools/stable-review-baseline.mjs',
   'tools/tests/stable-review-baseline.test.mjs',
   'tools/stable-promotion-human-command-contract.mjs',
+  'tools/stable-promotion-human-approval-binding.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
