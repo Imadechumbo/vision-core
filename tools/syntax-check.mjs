@@ -375,6 +375,7 @@ const FILES = [
   'tools/stable-execution-diff-verifier.mjs',
   'tools/stable-execution-post-state-snapshot.mjs',
   'tools/stable-promotion-confirmation-document.mjs',
+  'tools/stable-execution-post-promotion-ledger.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
