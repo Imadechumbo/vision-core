@@ -358,6 +358,7 @@ const FILES = [
   'tools/stable-promotion-command-renderer.mjs',
   'tools/stable-promotion-dry-run-executor.mjs',
   'tools/stable-promotion-dry-run-receipt.mjs',
+  'tools/stable-promotion-safety-lock.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
