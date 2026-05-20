@@ -396,6 +396,8 @@ const FILES = [
   'tools/tests/cost-gate-policy.test.mjs',
   'tools/cost-gate-enforcement-report.mjs',
   'tools/tests/cost-gate-enforcement-report.test.mjs',
+  'tools/budget-aware-test-lane-selector.mjs',
+  'tools/tests/budget-aware-test-lane-selector.test.mjs',
 ];
 
 let failures = 0;
