@@ -365,6 +365,7 @@ const FILES = [
   'tools/stable-promotion-readiness-classifier.mjs',
   'tools/stable-promotion-human-runbook.mjs',
   'tools/stable-promotion-final-preflight-snapshot.mjs',
+  'tools/stable-promotion-final-command-seal.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
