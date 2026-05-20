@@ -235,6 +235,7 @@
     "test:token-budget-controller-unit": "node --no-deprecation tools/tests/token-budget-controller.test.mjs",
     "test:mission-cost-estimator-unit": "node --no-deprecation tools/tests/mission-cost-estimator.test.mjs",
     "test:cost-gate-policy-unit": "node --no-deprecation tools/tests/cost-gate-policy.test.mjs",
-    "test:cost-gate-enforcement-report-unit": "node --no-deprecation tools/tests/cost-gate-enforcement-report.test.mjs"
+    "test:cost-gate-enforcement-report-unit": "node --no-deprecation tools/tests/cost-gate-enforcement-report.test.mjs",
+    "test:budget-aware-test-lane-selector-unit": "node --no-deprecation tools/tests/budget-aware-test-lane-selector.test.mjs"
   }
 }
