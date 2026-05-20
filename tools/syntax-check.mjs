@@ -406,6 +406,8 @@ const FILES = [
   'tools/tests/peak-offpeak-execution-scheduler.test.mjs',
   'tools/agent-usage-ledger.mjs',
   'tools/tests/agent-usage-ledger.test.mjs',
+  'tools/cost-cache-governance-report.mjs',
+  'tools/tests/cost-cache-governance-report.test.mjs',
 ];
 
 let failures = 0;
