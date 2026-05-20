@@ -243,6 +243,7 @@
     "test:agent-usage-ledger-unit": "node --no-deprecation tools/tests/agent-usage-ledger.test.mjs",
     "test:cost-cache-governance-report-unit": "node --no-deprecation tools/tests/cost-cache-governance-report.test.mjs",
     "test:budget-regression-guard-unit": "node --no-deprecation tools/tests/budget-regression-guard.test.mjs",
-    "test:mission-budget-receipt-unit": "node --no-deprecation tools/tests/mission-budget-receipt.test.mjs"
+    "test:mission-budget-receipt-unit": "node --no-deprecation tools/tests/mission-budget-receipt.test.mjs",
+    "test:cost-aware-mission-finalizer-unit": "node --no-deprecation tools/tests/cost-aware-mission-finalizer.test.mjs"
   }
 }

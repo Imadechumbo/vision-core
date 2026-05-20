@@ -412,6 +412,8 @@ const FILES = [
   'tools/tests/budget-regression-guard.test.mjs',
   'tools/mission-budget-receipt.mjs',
   'tools/tests/mission-budget-receipt.test.mjs',
+  'tools/cost-aware-mission-finalizer.mjs',
+  'tools/tests/cost-aware-mission-finalizer.test.mjs',
 ];
 
 let failures = 0;
