@@ -388,6 +388,8 @@ const FILES = [
   'tools/cache-hit-miss-reporter.mjs',
   'tools/tests/cache-hit-miss-reporter.test.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
+  'tools/token-budget-controller.mjs',
+  'tools/tests/token-budget-controller.test.mjs',
 ];
 
 let failures = 0;
