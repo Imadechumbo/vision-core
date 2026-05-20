@@ -380,6 +380,7 @@ const FILES = [
   'tools/stable-promotion-finalization-gate.mjs',
   'tools/stable-promotion-archive-record.mjs',
   'tools/stable-execution-confirmation-baseline.mjs',
+  'tools/agent-context-cache-contract.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
