@@ -408,6 +408,8 @@ const FILES = [
   'tools/tests/agent-usage-ledger.test.mjs',
   'tools/cost-cache-governance-report.mjs',
   'tools/tests/cost-cache-governance-report.test.mjs',
+  'tools/budget-regression-guard.mjs',
+  'tools/tests/budget-regression-guard.test.mjs',
 ];
 
 let failures = 0;
