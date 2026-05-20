@@ -369,6 +369,7 @@ const FILES = [
   'tools/stable-promotion-receipt-import-gate.mjs',
   'tools/stable-promotion-receipt-verifier.mjs',
   'tools/stable-promotion-post-receipt-ledger.mjs',
+  'tools/stable-promotion-post-receipt-report.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
