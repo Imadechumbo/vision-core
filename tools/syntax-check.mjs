@@ -355,6 +355,7 @@ const FILES = [
   'tools/stable-promotion-human-command-contract.mjs',
   'tools/stable-promotion-human-approval-binding.mjs',
   'tools/stable-promotion-command-package.mjs',
+  'tools/stable-promotion-command-renderer.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
