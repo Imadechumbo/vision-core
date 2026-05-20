@@ -390,6 +390,8 @@ const FILES = [
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
   'tools/token-budget-controller.mjs',
   'tools/tests/token-budget-controller.test.mjs',
+  'tools/mission-cost-estimator.mjs',
+  'tools/tests/mission-cost-estimator.test.mjs',
 ];
 
 let failures = 0;
