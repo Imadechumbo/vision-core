@@ -373,6 +373,7 @@ const FILES = [
   'tools/stable-promotion-governance-baseline.mjs',
   'tools/stable-execution-receipt-import.mjs',
   'tools/stable-execution-diff-verifier.mjs',
+  'tools/stable-execution-post-state-snapshot.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
