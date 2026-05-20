@@ -394,6 +394,8 @@ const FILES = [
   'tools/tests/mission-cost-estimator.test.mjs',
   'tools/cost-gate-policy.mjs',
   'tools/tests/cost-gate-policy.test.mjs',
+  'tools/cost-gate-enforcement-report.mjs',
+  'tools/tests/cost-gate-enforcement-report.test.mjs',
 ];
 
 let failures = 0;
