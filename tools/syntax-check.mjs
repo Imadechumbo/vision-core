@@ -379,6 +379,7 @@ const FILES = [
   'tools/stable-execution-post-promotion-report.mjs',
   'tools/stable-promotion-finalization-gate.mjs',
   'tools/stable-promotion-archive-record.mjs',
+  'tools/stable-execution-confirmation-baseline.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
