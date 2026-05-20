@@ -398,6 +398,8 @@ const FILES = [
   'tools/tests/cost-gate-enforcement-report.test.mjs',
   'tools/budget-aware-test-lane-selector.mjs',
   'tools/tests/budget-aware-test-lane-selector.test.mjs',
+  'tools/budget-aware-agent-router.mjs',
+  'tools/tests/budget-aware-agent-router.test.mjs',
 ];
 
 let failures = 0;
