@@ -363,6 +363,7 @@ const FILES = [
   'tools/stable-promotion-audit-ledger.mjs',
   'tools/stable-promotion-governance-report.mjs',
   'tools/stable-promotion-readiness-classifier.mjs',
+  'tools/stable-promotion-human-runbook.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
