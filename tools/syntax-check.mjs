@@ -350,6 +350,8 @@ const FILES = [
   'tools/tests/stable-review-report.test.mjs',
   'tools/stable-promotion-preflight-gate.mjs',
   'tools/tests/stable-promotion-preflight-gate.test.mjs',
+  'tools/stable-review-baseline.mjs',
+  'tools/tests/stable-review-baseline.test.mjs',
 ];
 
 let failures = 0;
