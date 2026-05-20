@@ -367,6 +367,7 @@ const FILES = [
   'tools/stable-promotion-final-preflight-snapshot.mjs',
   'tools/stable-promotion-final-command-seal.mjs',
   'tools/stable-promotion-receipt-import-gate.mjs',
+  'tools/stable-promotion-receipt-verifier.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
