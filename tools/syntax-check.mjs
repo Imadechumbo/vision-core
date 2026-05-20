@@ -404,6 +404,8 @@ const FILES = [
   'tools/tests/local-free-fallback-governor.test.mjs',
   'tools/peak-offpeak-execution-scheduler.mjs',
   'tools/tests/peak-offpeak-execution-scheduler.test.mjs',
+  'tools/agent-usage-ledger.mjs',
+  'tools/tests/agent-usage-ledger.test.mjs',
 ];
 
 let failures = 0;

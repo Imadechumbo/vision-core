@@ -239,6 +239,7 @@
     "test:budget-aware-test-lane-selector-unit": "node --no-deprecation tools/tests/budget-aware-test-lane-selector.test.mjs",
     "test:budget-aware-agent-router-unit": "node --no-deprecation tools/tests/budget-aware-agent-router.test.mjs",
     "test:local-free-fallback-governor-unit": "node --no-deprecation tools/tests/local-free-fallback-governor.test.mjs",
-    "test:peak-offpeak-scheduler-unit": "node --no-deprecation tools/tests/peak-offpeak-execution-scheduler.test.mjs"
+    "test:peak-offpeak-scheduler-unit": "node --no-deprecation tools/tests/peak-offpeak-execution-scheduler.test.mjs",
+    "test:agent-usage-ledger-unit": "node --no-deprecation tools/tests/agent-usage-ledger.test.mjs"
   }
 }
