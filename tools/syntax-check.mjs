@@ -410,6 +410,8 @@ const FILES = [
   'tools/tests/cost-cache-governance-report.test.mjs',
   'tools/budget-regression-guard.mjs',
   'tools/tests/budget-regression-guard.test.mjs',
+  'tools/mission-budget-receipt.mjs',
+  'tools/tests/mission-budget-receipt.test.mjs',
 ];
 
 let failures = 0;
