@@ -392,6 +392,8 @@ const FILES = [
   'tools/tests/token-budget-controller.test.mjs',
   'tools/mission-cost-estimator.mjs',
   'tools/tests/mission-cost-estimator.test.mjs',
+  'tools/cost-gate-policy.mjs',
+  'tools/tests/cost-gate-policy.test.mjs',
 ];
 
 let failures = 0;
