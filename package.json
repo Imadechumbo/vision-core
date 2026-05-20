@@ -194,6 +194,9 @@
     "release:dry-run": "node --no-deprecation tools/pi-harness.mjs --mode certify --dry-run --json",
     "release:plan": "node --no-deprecation tools/pi-harness.mjs --mode certify --dry-run --json --release-plan",
     "release:simulate": "node --no-deprecation tools/release-execution-simulator.mjs --dry-run --json",
-    "release:gate": "node --no-deprecation tools/manual-release-gate.mjs --dry-run --json"
+    "release:gate": "node --no-deprecation tools/manual-release-gate.mjs --dry-run --json",
+    "test:stable-review-human-approval-unit": "node --no-deprecation tools/tests/stable-review-human-approval-contract.test.mjs",
+    "test:stable-review-ledger-unit": "node --no-deprecation tools/tests/stable-review-ledger.test.mjs",
+    "test:stable-review-report-unit": "node --no-deprecation tools/tests/stable-review-report.test.mjs"
   }
 }
