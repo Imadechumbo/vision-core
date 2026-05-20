@@ -352,6 +352,8 @@ const FILES = [
   'tools/tests/stable-promotion-preflight-gate.test.mjs',
   'tools/stable-review-baseline.mjs',
   'tools/tests/stable-review-baseline.test.mjs',
+  'tools/stable-promotion-human-command-contract.mjs',
+  'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
 let failures = 0;
