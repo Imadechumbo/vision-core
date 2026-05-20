@@ -402,6 +402,8 @@ const FILES = [
   'tools/tests/budget-aware-agent-router.test.mjs',
   'tools/local-free-fallback-governor.mjs',
   'tools/tests/local-free-fallback-governor.test.mjs',
+  'tools/peak-offpeak-execution-scheduler.mjs',
+  'tools/tests/peak-offpeak-execution-scheduler.test.mjs',
 ];
 
 let failures = 0;
