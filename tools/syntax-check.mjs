@@ -400,6 +400,8 @@ const FILES = [
   'tools/tests/budget-aware-test-lane-selector.test.mjs',
   'tools/budget-aware-agent-router.mjs',
   'tools/tests/budget-aware-agent-router.test.mjs',
+  'tools/local-free-fallback-governor.mjs',
+  'tools/tests/local-free-fallback-governor.test.mjs',
 ];
 
 let failures = 0;
