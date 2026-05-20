@@ -383,6 +383,8 @@ const FILES = [
   'tools/agent-context-cache-contract.mjs',
   'tools/agent-context-cache-store.mjs',
   'tools/tests/agent-context-cache-store.test.mjs',
+  'tools/prompt-cache-ledger.mjs',
+  'tools/tests/prompt-cache-ledger.test.mjs',
   'tools/tests/stable-promotion-human-command-contract.test.mjs',
 ];
 
