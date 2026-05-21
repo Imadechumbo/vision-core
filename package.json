@@ -262,6 +262,7 @@
     "test:tool-execution-proof-ledger-unit": "node --no-deprecation tools/tests/tool-execution-proof-ledger.test.mjs",
     "test:hermes-hallucination-incident-memory-unit": "node --no-deprecation tools/tests/hermes-hallucination-incident-memory.test.mjs",
     "test:agent-truth-score-gate-unit": "node --no-deprecation tools/tests/agent-truth-score-gate.test.mjs",
-    "test:real-execution-controlled-gate-unit": "node --no-deprecation tools/tests/real-execution-controlled-gate.test.mjs"
+    "test:real-execution-controlled-gate-unit": "node --no-deprecation tools/tests/real-execution-controlled-gate.test.mjs",
+    "test:real-execution-dry-run-proof-report-unit": "node --no-deprecation tools/tests/real-execution-dry-run-proof-report.test.mjs"
   }
 }

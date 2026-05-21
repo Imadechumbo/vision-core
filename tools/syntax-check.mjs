@@ -450,6 +450,8 @@ const FILES = [
   'tools/tests/agent-truth-score-gate.test.mjs',
   'tools/real-execution-controlled-gate.mjs',
   'tools/tests/real-execution-controlled-gate.test.mjs',
+  'tools/real-execution-dry-run-proof-report.mjs',
+  'tools/tests/real-execution-dry-run-proof-report.test.mjs',
 ];
 
 let failures = 0;
