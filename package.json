@@ -273,6 +273,7 @@
     "test:pre-execution-snapshot-contract-unit": "node --no-deprecation tools/tests/pre-execution-snapshot-contract.test.mjs",
     "test:real-execution-proof-receipt-unit": "node --no-deprecation tools/tests/real-execution-proof-receipt.test.mjs",
     "test:controlled-runtime-evidence-package-unit": "node --no-deprecation tools/tests/controlled-runtime-evidence-package.test.mjs",
-    "test:controlled-runtime-execution-ledger-unit": "node --no-deprecation tools/tests/controlled-runtime-execution-ledger.test.mjs"
+    "test:controlled-runtime-execution-ledger-unit": "node --no-deprecation tools/tests/controlled-runtime-execution-ledger.test.mjs",
+    "test:controlled-runtime-execution-report-unit": "node --no-deprecation tools/tests/controlled-runtime-execution-report.test.mjs"
   }
 }
