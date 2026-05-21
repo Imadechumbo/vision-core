@@ -444,6 +444,8 @@ const FILES = [
   'tools/tests/git-diff-truth-binding.test.mjs',
   'tools/tool-execution-proof-ledger.mjs',
   'tools/tests/tool-execution-proof-ledger.test.mjs',
+  'tools/hermes-hallucination-incident-memory.mjs',
+  'tools/tests/hermes-hallucination-incident-memory.test.mjs',
 ];
 
 let failures = 0;
