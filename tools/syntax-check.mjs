@@ -426,6 +426,8 @@ const FILES = [
   'tools/tests/hermes-evidence-reuse-gate.test.mjs',
   'tools/hermes-similar-mission-classifier.mjs',
   'tools/tests/hermes-similar-mission-classifier.test.mjs',
+  'tools/hermes-expensive-analysis-skip-gate.mjs',
+  'tools/tests/hermes-expensive-analysis-skip-gate.test.mjs',
 ];
 
 let failures = 0;

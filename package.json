@@ -250,6 +250,7 @@
     "test:hermes-cache-learning-contract-unit": "node --no-deprecation tools/tests/hermes-cache-learning-contract.test.mjs",
     "test:hermes-cost-pattern-memory-unit": "node --no-deprecation tools/tests/hermes-cost-pattern-memory.test.mjs",
     "test:hermes-evidence-reuse-gate-unit": "node --no-deprecation tools/tests/hermes-evidence-reuse-gate.test.mjs",
-    "test:hermes-similar-mission-classifier-unit": "node --no-deprecation tools/tests/hermes-similar-mission-classifier.test.mjs"
+    "test:hermes-similar-mission-classifier-unit": "node --no-deprecation tools/tests/hermes-similar-mission-classifier.test.mjs",
+    "test:hermes-expensive-analysis-skip-gate-unit": "node --no-deprecation tools/tests/hermes-expensive-analysis-skip-gate.test.mjs"
   }
 }
