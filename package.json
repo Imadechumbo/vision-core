@@ -247,6 +247,7 @@
     "test:cost-aware-mission-finalizer-unit": "node --no-deprecation tools/tests/cost-aware-mission-finalizer.test.mjs",
     "test:cache-budget-audit-baseline-unit": "node --no-deprecation tools/tests/cache-budget-audit-baseline.test.mjs",
     "test:cost-cache-governance-baseline-unit": "node --no-deprecation tools/tests/cost-cache-agent-budget-governance-baseline.test.mjs",
-    "test:hermes-cache-learning-contract-unit": "node --no-deprecation tools/tests/hermes-cache-learning-contract.test.mjs"
+    "test:hermes-cache-learning-contract-unit": "node --no-deprecation tools/tests/hermes-cache-learning-contract.test.mjs",
+    "test:hermes-cost-pattern-memory-unit": "node --no-deprecation tools/tests/hermes-cost-pattern-memory.test.mjs"
   }
 }
