@@ -265,6 +265,11 @@
     "test:real-execution-controlled-gate-unit": "node --no-deprecation tools/tests/real-execution-controlled-gate.test.mjs",
     "test:real-execution-dry-run-proof-report-unit": "node --no-deprecation tools/tests/real-execution-dry-run-proof-report.test.mjs",
     "test:anti-hallucination-runtime-baseline-unit": "node --no-deprecation tools/tests/anti-hallucination-runtime-baseline.test.mjs",
+    "test:human-command-phrase-verifier-unit": "node --no-deprecation tools/tests/human-command-phrase-verifier.test.mjs",
+    "test:human-execution-command-contract-unit": "node --no-deprecation tools/tests/human-execution-command-contract.test.mjs",
+    "test:controlled-runtime-execution-dry-run-unit": "node --no-deprecation tools/tests/controlled-runtime-execution-dry-run.test.mjs",
+    "test:controlled-runtime-execution-plan-unit": "node --no-deprecation tools/tests/controlled-runtime-execution-plan.test.mjs",
+    "test:rollback-plan-binding-gate-unit": "node --no-deprecation tools/tests/rollback-plan-binding-gate.test.mjs",
     "test:pre-execution-snapshot-contract-unit": "node --no-deprecation tools/tests/pre-execution-snapshot-contract.test.mjs"
   }
 }
