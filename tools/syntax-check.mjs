@@ -446,6 +446,8 @@ const FILES = [
   'tools/tests/tool-execution-proof-ledger.test.mjs',
   'tools/hermes-hallucination-incident-memory.mjs',
   'tools/tests/hermes-hallucination-incident-memory.test.mjs',
+  'tools/agent-truth-score-gate.mjs',
+  'tools/tests/agent-truth-score-gate.test.mjs',
 ];
 
 let failures = 0;
