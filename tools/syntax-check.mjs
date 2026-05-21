@@ -518,6 +518,8 @@ const FILES = [
   'tools/tests/real-local-patch-apply-proof.test.mjs',
   'tools/real-local-patch-test-lane.mjs',
   'tools/tests/real-local-patch-test-lane.test.mjs',
+  'tools/real-local-patch-rollback-drill.mjs',
+  'tools/tests/real-local-patch-rollback-drill.test.mjs',
 ];
 
 let failures = 0;
