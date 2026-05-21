@@ -293,6 +293,8 @@
     "test:local-execution-evidence-package-unit": "node --no-deprecation tools/tests/local-execution-evidence-package.test.mjs",
     "test:local-execution-pass-gold-candidate-gate-unit": "node --no-deprecation tools/tests/local-execution-pass-gold-candidate-gate.test.mjs",
     "test:local-execution-final-report-unit": "node --no-deprecation tools/tests/local-execution-final-report.test.mjs",
-    "test:local-execution-chain-baseline-unit": "node --no-deprecation tools/tests/local-execution-chain-baseline.test.mjs"
+    "test:local-execution-chain-baseline-unit": "node --no-deprecation tools/tests/local-execution-chain-baseline.test.mjs",
+    "test:real-local-patch-sandbox-unit": "node --no-deprecation tools/tests/real-local-patch-sandbox.test.mjs",
+    "test:real-local-patch-apply-proof-unit": "node --no-deprecation tools/tests/real-local-patch-apply-proof.test.mjs"
   }
 }
