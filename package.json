@@ -302,6 +302,7 @@
     "test:real-local-patch-baseline-unit": "node --no-deprecation tools/tests/real-local-patch-baseline.test.mjs",
     "test:real-repo-patch-scope-contract-unit": "node --no-deprecation tools/tests/real-repo-patch-scope-contract.test.mjs",
     "test:real-repo-patch-pre-state-snapshot-unit": "node --no-deprecation tools/tests/real-repo-patch-pre-state-snapshot.test.mjs",
-    "test:real-repo-patch-apply-controller-unit": "node --no-deprecation tools/tests/real-repo-patch-apply-controller.test.mjs"
+    "test:real-repo-patch-apply-controller-unit": "node --no-deprecation tools/tests/real-repo-patch-apply-controller.test.mjs",
+    "test:real-repo-patch-pass-gold-candidate-gate-unit": "node --no-deprecation tools/tests/real-repo-patch-pass-gold-candidate-gate.test.mjs"
   }
 }
