@@ -452,6 +452,8 @@ const FILES = [
   'tools/tests/real-execution-controlled-gate.test.mjs',
   'tools/real-execution-dry-run-proof-report.mjs',
   'tools/tests/real-execution-dry-run-proof-report.test.mjs',
+  'tools/anti-hallucination-runtime-baseline.mjs',
+  'tools/tests/anti-hallucination-runtime-baseline.test.mjs',
 ];
 
 let failures = 0;
