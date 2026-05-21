@@ -496,6 +496,8 @@ const FILES = [
   'tools/tests/first-real-human-approved-local-execution-drill.test.mjs',
   'tools/local-execution-proof-capture.mjs',
   'tools/tests/local-execution-proof-capture.test.mjs',
+  'tools/local-execution-receipt-builder.mjs',
+  'tools/tests/local-execution-receipt-builder.test.mjs',
 ];
 
 let failures = 0;
