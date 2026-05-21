@@ -486,6 +486,8 @@ const FILES = [
   'tools/tests/controlled-runtime-execution-simulator.test.mjs',
   'tools/controlled-runtime-execution-drill-report.mjs',
   'tools/tests/controlled-runtime-execution-drill-report.test.mjs',
+  'tools/real-execution-final-readiness-gate.mjs',
+  'tools/tests/real-execution-final-readiness-gate.test.mjs',
 ];
 
 let failures = 0;

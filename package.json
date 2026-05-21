@@ -280,6 +280,7 @@
     "test:controlled-execution-command-sealer-unit": "node --no-deprecation tools/tests/controlled-execution-command-sealer.test.mjs",
     "test:controlled-execution-command-diff-guard-unit": "node --no-deprecation tools/tests/controlled-execution-command-diff-guard.test.mjs",
     "test:controlled-runtime-execution-simulator-unit": "node --no-deprecation tools/tests/controlled-runtime-execution-simulator.test.mjs",
-    "test:controlled-runtime-execution-drill-report-unit": "node --no-deprecation tools/tests/controlled-runtime-execution-drill-report.test.mjs"
+    "test:controlled-runtime-execution-drill-report-unit": "node --no-deprecation tools/tests/controlled-runtime-execution-drill-report.test.mjs",
+    "test:real-execution-final-readiness-gate-unit": "node --no-deprecation tools/tests/real-execution-final-readiness-gate.test.mjs"
   }
 }
