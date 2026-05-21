@@ -438,6 +438,8 @@ const FILES = [
   'tools/tests/hermes-cache-intelligence-baseline.test.mjs',
   'tools/agent-claim-verification-gate.mjs',
   'tools/tests/agent-claim-verification-gate.test.mjs',
+  'tools/filesystem-reality-check.mjs',
+  'tools/tests/filesystem-reality-check.test.mjs',
 ];
 
 let failures = 0;

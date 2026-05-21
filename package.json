@@ -256,6 +256,7 @@
     "test:hermes-extra-records-connector-unit": "node --no-deprecation tools/tests/hermes-extra-records-connector.test.mjs",
     "test:hermes-learning-safety-ledger-unit": "node --no-deprecation tools/tests/hermes-learning-safety-ledger.test.mjs",
     "test:hermes-cache-intelligence-baseline-unit": "node --no-deprecation tools/tests/hermes-cache-intelligence-baseline.test.mjs",
-    "test:agent-claim-verification-gate-unit": "node --no-deprecation tools/tests/agent-claim-verification-gate.test.mjs"
+    "test:agent-claim-verification-gate-unit": "node --no-deprecation tools/tests/agent-claim-verification-gate.test.mjs",
+    "test:filesystem-reality-check-unit": "node --no-deprecation tools/tests/filesystem-reality-check.test.mjs"
   }
 }
