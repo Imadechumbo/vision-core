@@ -420,6 +420,8 @@ const FILES = [
   'tools/tests/cost-cache-agent-budget-governance-baseline.test.mjs',
   'tools/hermes-cache-learning-contract.mjs',
   'tools/tests/hermes-cache-learning-contract.test.mjs',
+  'tools/hermes-cost-pattern-memory.mjs',
+  'tools/tests/hermes-cost-pattern-memory.test.mjs',
 ];
 
 let failures = 0;
