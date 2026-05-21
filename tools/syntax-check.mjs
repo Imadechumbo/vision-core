@@ -512,6 +512,12 @@ const FILES = [
   'tools/tests/local-execution-final-report.test.mjs',
   'tools/local-execution-chain-baseline.mjs',
   'tools/tests/local-execution-chain-baseline.test.mjs',
+  'tools/real-local-patch-sandbox.mjs',
+  'tools/tests/real-local-patch-sandbox.test.mjs',
+  'tools/real-local-patch-apply-proof.mjs',
+  'tools/tests/real-local-patch-apply-proof.test.mjs',
+  'tools/real-local-patch-test-lane.mjs',
+  'tools/tests/real-local-patch-test-lane.test.mjs',
 ];
 
 let failures = 0;
