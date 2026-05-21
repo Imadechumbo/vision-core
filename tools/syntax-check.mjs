@@ -448,6 +448,8 @@ const FILES = [
   'tools/tests/hermes-hallucination-incident-memory.test.mjs',
   'tools/agent-truth-score-gate.mjs',
   'tools/tests/agent-truth-score-gate.test.mjs',
+  'tools/real-execution-controlled-gate.mjs',
+  'tools/tests/real-execution-controlled-gate.test.mjs',
 ];
 
 let failures = 0;
