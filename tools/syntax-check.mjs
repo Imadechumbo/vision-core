@@ -530,6 +530,8 @@ const FILES = [
   'tools/tests/real-repo-patch-pre-state-snapshot.test.mjs',
   'tools/real-repo-patch-pass-gold-candidate-gate.mjs',
   'tools/tests/real-repo-patch-pass-gold-candidate-gate.test.mjs',
+  'tools/real-repo-patch-archive-record.mjs',
+  'tools/tests/real-repo-patch-archive-record.test.mjs',
 ];
 
 let failures = 0;
