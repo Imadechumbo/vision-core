@@ -414,6 +414,8 @@ const FILES = [
   'tools/tests/mission-budget-receipt.test.mjs',
   'tools/cost-aware-mission-finalizer.mjs',
   'tools/tests/cost-aware-mission-finalizer.test.mjs',
+  'tools/cache-budget-audit-baseline.mjs',
+  'tools/tests/cache-budget-audit-baseline.test.mjs',
 ];
 
 let failures = 0;
