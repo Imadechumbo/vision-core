@@ -432,6 +432,8 @@ const FILES = [
   'tools/tests/hermes-runtime-prompt-compression-plan.test.mjs',
   'tools/hermes-extra-records-connector.mjs',
   'tools/tests/hermes-extra-records-connector.test.mjs',
+  'tools/hermes-learning-safety-ledger.mjs',
+  'tools/tests/hermes-learning-safety-ledger.test.mjs',
 ];
 
 let failures = 0;
