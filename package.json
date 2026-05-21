@@ -306,6 +306,14 @@
     "test:real-repo-patch-pass-gold-candidate-gate-unit": "node --no-deprecation tools/tests/real-repo-patch-pass-gold-candidate-gate.test.mjs",
     "test:real-repo-patch-baseline-unit": "node --no-deprecation tools/tests/real-repo-patch-baseline.test.mjs",
     "test:real-repo-patch-archive-record-unit": "node --no-deprecation tools/tests/real-repo-patch-archive-record.test.mjs",
-    "test:first-real-repo-patch-execution-baseline-unit": "node --no-deprecation tools/tests/first-real-repo-patch-execution-baseline.test.mjs"
+    "test:first-real-repo-patch-execution-baseline-unit": "node --no-deprecation tools/tests/first-real-repo-patch-execution-baseline.test.mjs",
+    "test:real-repo-patch-physical-apply-proof-unit": "node --no-deprecation tools/tests/real-repo-patch-physical-apply-proof.test.mjs",
+    "test:real-repo-patch-diff-truth-binding-unit": "node --no-deprecation tools/tests/real-repo-patch-diff-truth-binding.test.mjs",
+    "test:real-repo-patch-test-lane-unit": "node --no-deprecation tools/tests/real-repo-patch-test-lane.test.mjs",
+    "test:real-repo-patch-rollback-plan-unit": "node --no-deprecation tools/tests/real-repo-patch-rollback-plan.test.mjs",
+    "test:real-repo-patch-rollback-drill-unit": "node --no-deprecation tools/tests/real-repo-patch-rollback-drill.test.mjs",
+    "test:real-repo-patch-evidence-receipt-unit": "node --no-deprecation tools/tests/real-repo-patch-evidence-receipt.test.mjs",
+    "test:real-repo-patch-ledger-unit": "node --no-deprecation tools/tests/real-repo-patch-ledger.test.mjs",
+    "test:real-repo-patch-final-report-unit": "node --no-deprecation tools/tests/real-repo-patch-final-report.test.mjs"
   }
 }
