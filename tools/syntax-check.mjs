@@ -480,6 +480,8 @@ const FILES = [
   'tools/tests/human-approval-expiration-gate.test.mjs',
   'tools/controlled-execution-command-sealer.mjs',
   'tools/tests/controlled-execution-command-sealer.test.mjs',
+  'tools/controlled-execution-command-diff-guard.mjs',
+  'tools/tests/controlled-execution-command-diff-guard.test.mjs',
 ];
 
 let failures = 0;

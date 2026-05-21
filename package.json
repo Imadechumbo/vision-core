@@ -277,6 +277,7 @@
     "test:controlled-runtime-execution-report-unit": "node --no-deprecation tools/tests/controlled-runtime-execution-report.test.mjs",
     "test:human-execution-approval-ledger-unit": "node --no-deprecation tools/tests/human-execution-approval-ledger.test.mjs",
     "test:human-approval-expiration-gate-unit": "node --no-deprecation tools/tests/human-approval-expiration-gate.test.mjs",
-    "test:controlled-execution-command-sealer-unit": "node --no-deprecation tools/tests/controlled-execution-command-sealer.test.mjs"
+    "test:controlled-execution-command-sealer-unit": "node --no-deprecation tools/tests/controlled-execution-command-sealer.test.mjs",
+    "test:controlled-execution-command-diff-guard-unit": "node --no-deprecation tools/tests/controlled-execution-command-diff-guard.test.mjs"
   }
 }
