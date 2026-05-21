@@ -287,6 +287,10 @@
     "test:first-real-human-approved-local-execution-drill-unit": "node --no-deprecation tools/tests/first-real-human-approved-local-execution-drill.test.mjs",
     "test:local-execution-proof-capture-unit": "node --no-deprecation tools/tests/local-execution-proof-capture.test.mjs",
     "test:local-execution-receipt-builder-unit": "node --no-deprecation tools/tests/local-execution-receipt-builder.test.mjs",
-    "test:local-execution-ledger-unit": "node --no-deprecation tools/tests/local-execution-ledger.test.mjs"
+    "test:local-execution-ledger-unit": "node --no-deprecation tools/tests/local-execution-ledger.test.mjs",
+    "test:local-rollback-proof-gate-unit": "node --no-deprecation tools/tests/local-rollback-proof-gate.test.mjs",
+    "test:local-execution-post-state-verifier-unit": "node --no-deprecation tools/tests/local-execution-post-state-verifier.test.mjs",
+    "test:local-execution-evidence-package-unit": "node --no-deprecation tools/tests/local-execution-evidence-package.test.mjs",
+    "test:local-execution-pass-gold-candidate-gate-unit": "node --no-deprecation tools/tests/local-execution-pass-gold-candidate-gate.test.mjs"
   }
 }
