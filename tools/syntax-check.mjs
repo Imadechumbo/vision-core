@@ -464,6 +464,8 @@ const FILES = [
   'tools/tests/controlled-runtime-execution-plan.test.mjs',
   'tools/rollback-plan-binding-gate.mjs',
   'tools/tests/rollback-plan-binding-gate.test.mjs',
+  'tools/pre-execution-snapshot-contract.mjs',
+  'tools/tests/pre-execution-snapshot-contract.test.mjs',
 ];
 
 let failures = 0;
