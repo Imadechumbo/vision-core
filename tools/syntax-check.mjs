@@ -528,6 +528,8 @@ const FILES = [
   'tools/tests/real-repo-patch-scope-contract.test.mjs',
   'tools/real-repo-patch-pre-state-snapshot.mjs',
   'tools/tests/real-repo-patch-pre-state-snapshot.test.mjs',
+  'tools/real-repo-patch-baseline.mjs',
+  'tools/tests/real-repo-patch-baseline.test.mjs',
 ];
 
 let failures = 0;
