@@ -468,6 +468,8 @@ const FILES = [
   'tools/tests/pre-execution-snapshot-contract.test.mjs',
   'tools/real-execution-proof-receipt.mjs',
   'tools/tests/real-execution-proof-receipt.test.mjs',
+  'tools/controlled-runtime-evidence-package.mjs',
+  'tools/tests/controlled-runtime-evidence-package.test.mjs',
 ];
 
 let failures = 0;
