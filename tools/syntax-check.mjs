@@ -502,6 +502,14 @@ const FILES = [
   'tools/tests/local-execution-ledger.test.mjs',
   'tools/local-rollback-proof-gate.mjs',
   'tools/tests/local-rollback-proof-gate.test.mjs',
+  'tools/local-execution-post-state-verifier.mjs',
+  'tools/tests/local-execution-post-state-verifier.test.mjs',
+  'tools/local-execution-evidence-package.mjs',
+  'tools/tests/local-execution-evidence-package.test.mjs',
+  'tools/local-execution-pass-gold-candidate-gate.mjs',
+  'tools/tests/local-execution-pass-gold-candidate-gate.test.mjs',
+  'tools/local-execution-final-report.mjs',
+  'tools/tests/local-execution-final-report.test.mjs',
 ];
 
 let failures = 0;
