@@ -264,6 +264,11 @@
     "test:agent-truth-score-gate-unit": "node --no-deprecation tools/tests/agent-truth-score-gate.test.mjs",
     "test:real-execution-controlled-gate-unit": "node --no-deprecation tools/tests/real-execution-controlled-gate.test.mjs",
     "test:real-execution-dry-run-proof-report-unit": "node --no-deprecation tools/tests/real-execution-dry-run-proof-report.test.mjs",
-    "test:anti-hallucination-runtime-baseline-unit": "node --no-deprecation tools/tests/anti-hallucination-runtime-baseline.test.mjs"
+    "test:anti-hallucination-runtime-baseline-unit": "node --no-deprecation tools/tests/anti-hallucination-runtime-baseline.test.mjs",
+    "test:controlled-runtime-evidence-package-unit": "node --no-deprecation tools/tests/controlled-runtime-evidence-package.test.mjs",
+    "test:controlled-runtime-execution-ledger-unit": "node --no-deprecation tools/tests/controlled-runtime-execution-ledger.test.mjs",
+    "test:controlled-runtime-execution-report-unit": "node --no-deprecation tools/tests/controlled-runtime-execution-report.test.mjs",
+    "test:human-execution-approval-ledger-unit": "node --no-deprecation tools/tests/human-execution-approval-ledger.test.mjs",
+    "test:human-approval-expiration-gate-unit": "node --no-deprecation tools/tests/human-approval-expiration-gate.test.mjs"
   }
 }
