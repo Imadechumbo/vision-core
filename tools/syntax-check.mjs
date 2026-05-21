@@ -554,6 +554,8 @@ const FILES = [
   'tools/tests/first-real-repo-patch-execution-baseline.test.mjs',
   'tools/real-repo-patch-chain-integrity-gate.mjs',
   'tools/tests/real-repo-patch-chain-integrity-gate.test.mjs',
+  'tools/real-repo-patch-evidence-graph.mjs',
+  'tools/tests/real-repo-patch-evidence-graph.test.mjs',
 ];
 
 let failures = 0;
