@@ -416,6 +416,8 @@ const FILES = [
   'tools/tests/cost-aware-mission-finalizer.test.mjs',
   'tools/cache-budget-audit-baseline.mjs',
   'tools/tests/cache-budget-audit-baseline.test.mjs',
+  'tools/cost-cache-agent-budget-governance-baseline.mjs',
+  'tools/tests/cost-cache-agent-budget-governance-baseline.test.mjs',
 ];
 
 let failures = 0;
