@@ -494,6 +494,14 @@ const FILES = [
   'tools/tests/controlled-runtime-execution-baseline.test.mjs',
   'tools/first-real-human-approved-local-execution-drill.mjs',
   'tools/tests/first-real-human-approved-local-execution-drill.test.mjs',
+  'tools/local-execution-proof-capture.mjs',
+  'tools/tests/local-execution-proof-capture.test.mjs',
+  'tools/local-execution-receipt-builder.mjs',
+  'tools/tests/local-execution-receipt-builder.test.mjs',
+  'tools/local-execution-ledger.mjs',
+  'tools/tests/local-execution-ledger.test.mjs',
+  'tools/local-rollback-proof-gate.mjs',
+  'tools/tests/local-rollback-proof-gate.test.mjs',
 ];
 
 let failures = 0;
