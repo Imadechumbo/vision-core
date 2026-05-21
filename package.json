@@ -300,6 +300,7 @@
     "test:real-local-patch-rollback-drill-unit": "node --no-deprecation tools/tests/real-local-patch-rollback-drill.test.mjs",
     "test:real-local-patch-evidence-report-unit": "node --no-deprecation tools/tests/real-local-patch-evidence-report.test.mjs",
     "test:real-local-patch-baseline-unit": "node --no-deprecation tools/tests/real-local-patch-baseline.test.mjs",
-    "test:real-repo-patch-scope-contract-unit": "node --no-deprecation tools/tests/real-repo-patch-scope-contract.test.mjs"
+    "test:real-repo-patch-scope-contract-unit": "node --no-deprecation tools/tests/real-repo-patch-scope-contract.test.mjs",
+    "test:real-repo-patch-pre-state-snapshot-unit": "node --no-deprecation tools/tests/real-repo-patch-pre-state-snapshot.test.mjs"
   }
 }
