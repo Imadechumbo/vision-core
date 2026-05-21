@@ -502,6 +502,8 @@ const FILES = [
   'tools/tests/local-execution-ledger.test.mjs',
   'tools/local-rollback-proof-gate.mjs',
   'tools/tests/local-rollback-proof-gate.test.mjs',
+  'tools/local-execution-post-state-verifier.mjs',
+  'tools/tests/local-execution-post-state-verifier.test.mjs',
 ];
 
 let failures = 0;
