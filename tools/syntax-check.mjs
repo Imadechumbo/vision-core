@@ -436,6 +436,8 @@ const FILES = [
   'tools/tests/hermes-learning-safety-ledger.test.mjs',
   'tools/hermes-cache-intelligence-baseline.mjs',
   'tools/tests/hermes-cache-intelligence-baseline.test.mjs',
+  'tools/agent-claim-verification-gate.mjs',
+  'tools/tests/agent-claim-verification-gate.test.mjs',
 ];
 
 let failures = 0;
