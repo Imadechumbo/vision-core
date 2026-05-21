@@ -488,6 +488,8 @@ const FILES = [
   'tools/tests/controlled-runtime-execution-drill-report.test.mjs',
   'tools/real-execution-final-readiness-gate.mjs',
   'tools/tests/real-execution-final-readiness-gate.test.mjs',
+  'tools/real-execution-final-readiness-report.mjs',
+  'tools/tests/real-execution-final-readiness-report.test.mjs',
 ];
 
 let failures = 0;
