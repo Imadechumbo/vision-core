@@ -492,6 +492,8 @@ const FILES = [
   'tools/tests/real-execution-final-readiness-report.test.mjs',
   'tools/controlled-runtime-execution-baseline.mjs',
   'tools/tests/controlled-runtime-execution-baseline.test.mjs',
+  'tools/first-real-human-approved-local-execution-drill.mjs',
+  'tools/tests/first-real-human-approved-local-execution-drill.test.mjs',
 ];
 
 let failures = 0;
