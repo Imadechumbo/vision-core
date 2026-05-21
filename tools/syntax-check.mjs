@@ -498,6 +498,8 @@ const FILES = [
   'tools/tests/local-execution-proof-capture.test.mjs',
   'tools/local-execution-receipt-builder.mjs',
   'tools/tests/local-execution-receipt-builder.test.mjs',
+  'tools/local-execution-ledger.mjs',
+  'tools/tests/local-execution-ledger.test.mjs',
 ];
 
 let failures = 0;
