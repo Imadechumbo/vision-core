@@ -440,6 +440,8 @@ const FILES = [
   'tools/tests/agent-claim-verification-gate.test.mjs',
   'tools/filesystem-reality-check.mjs',
   'tools/tests/filesystem-reality-check.test.mjs',
+  'tools/git-diff-truth-binding.mjs',
+  'tools/tests/git-diff-truth-binding.test.mjs',
 ];
 
 let failures = 0;
