@@ -454,6 +454,8 @@ const FILES = [
   'tools/tests/real-execution-dry-run-proof-report.test.mjs',
   'tools/anti-hallucination-runtime-baseline.mjs',
   'tools/tests/anti-hallucination-runtime-baseline.test.mjs',
+  'tools/rollback-plan-binding-gate.mjs',
+  'tools/tests/rollback-plan-binding-gate.test.mjs',
 ];
 
 let failures = 0;
