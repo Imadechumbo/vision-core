@@ -484,6 +484,8 @@ const FILES = [
   'tools/tests/controlled-execution-command-diff-guard.test.mjs',
   'tools/controlled-runtime-execution-simulator.mjs',
   'tools/tests/controlled-runtime-execution-simulator.test.mjs',
+  'tools/controlled-runtime-execution-drill-report.mjs',
+  'tools/tests/controlled-runtime-execution-drill-report.test.mjs',
 ];
 
 let failures = 0;
