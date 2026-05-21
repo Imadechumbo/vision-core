@@ -508,6 +508,8 @@ const FILES = [
   'tools/tests/local-execution-evidence-package.test.mjs',
   'tools/local-execution-pass-gold-candidate-gate.mjs',
   'tools/tests/local-execution-pass-gold-candidate-gate.test.mjs',
+  'tools/local-execution-final-report.mjs',
+  'tools/tests/local-execution-final-report.test.mjs',
 ];
 
 let failures = 0;

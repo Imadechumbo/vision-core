@@ -291,6 +291,7 @@
     "test:local-rollback-proof-gate-unit": "node --no-deprecation tools/tests/local-rollback-proof-gate.test.mjs",
     "test:local-execution-post-state-verifier-unit": "node --no-deprecation tools/tests/local-execution-post-state-verifier.test.mjs",
     "test:local-execution-evidence-package-unit": "node --no-deprecation tools/tests/local-execution-evidence-package.test.mjs",
-    "test:local-execution-pass-gold-candidate-gate-unit": "node --no-deprecation tools/tests/local-execution-pass-gold-candidate-gate.test.mjs"
+    "test:local-execution-pass-gold-candidate-gate-unit": "node --no-deprecation tools/tests/local-execution-pass-gold-candidate-gate.test.mjs",
+    "test:local-execution-final-report-unit": "node --no-deprecation tools/tests/local-execution-final-report.test.mjs"
   }
 }
