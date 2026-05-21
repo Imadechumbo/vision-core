@@ -418,6 +418,8 @@ const FILES = [
   'tools/tests/cache-budget-audit-baseline.test.mjs',
   'tools/cost-cache-agent-budget-governance-baseline.mjs',
   'tools/tests/cost-cache-agent-budget-governance-baseline.test.mjs',
+  'tools/hermes-cache-learning-contract.mjs',
+  'tools/tests/hermes-cache-learning-contract.test.mjs',
 ];
 
 let failures = 0;
