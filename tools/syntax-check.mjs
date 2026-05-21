@@ -458,6 +458,8 @@ const FILES = [
   'tools/tests/human-command-phrase-verifier.test.mjs',
   'tools/human-execution-command-contract.mjs',
   'tools/tests/human-execution-command-contract.test.mjs',
+  'tools/controlled-runtime-execution-dry-run.mjs',
+  'tools/tests/controlled-runtime-execution-dry-run.test.mjs',
 ];
 
 let failures = 0;
