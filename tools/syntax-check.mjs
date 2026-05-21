@@ -462,6 +462,8 @@ const FILES = [
   'tools/tests/controlled-runtime-execution-dry-run.test.mjs',
   'tools/controlled-runtime-execution-plan.mjs',
   'tools/tests/controlled-runtime-execution-plan.test.mjs',
+  'tools/rollback-plan-binding-gate.mjs',
+  'tools/tests/rollback-plan-binding-gate.test.mjs',
 ];
 
 let failures = 0;
