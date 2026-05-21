@@ -422,6 +422,8 @@ const FILES = [
   'tools/tests/hermes-cache-learning-contract.test.mjs',
   'tools/hermes-cost-pattern-memory.mjs',
   'tools/tests/hermes-cost-pattern-memory.test.mjs',
+  'tools/hermes-evidence-reuse-gate.mjs',
+  'tools/tests/hermes-evidence-reuse-gate.test.mjs',
 ];
 
 let failures = 0;
