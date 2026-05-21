@@ -474,6 +474,8 @@ const FILES = [
   'tools/tests/controlled-runtime-execution-ledger.test.mjs',
   'tools/controlled-runtime-execution-report.mjs',
   'tools/tests/controlled-runtime-execution-report.test.mjs',
+  'tools/human-execution-approval-ledger.mjs',
+  'tools/tests/human-execution-approval-ledger.test.mjs',
 ];
 
 let failures = 0;
