@@ -434,6 +434,8 @@ const FILES = [
   'tools/tests/hermes-extra-records-connector.test.mjs',
   'tools/hermes-learning-safety-ledger.mjs',
   'tools/tests/hermes-learning-safety-ledger.test.mjs',
+  'tools/hermes-cache-intelligence-baseline.mjs',
+  'tools/tests/hermes-cache-intelligence-baseline.test.mjs',
 ];
 
 let failures = 0;

@@ -254,6 +254,7 @@
     "test:hermes-expensive-analysis-skip-gate-unit": "node --no-deprecation tools/tests/hermes-expensive-analysis-skip-gate.test.mjs",
     "test:hermes-runtime-prompt-compression-plan-unit": "node --no-deprecation tools/tests/hermes-runtime-prompt-compression-plan.test.mjs",
     "test:hermes-extra-records-connector-unit": "node --no-deprecation tools/tests/hermes-extra-records-connector.test.mjs",
-    "test:hermes-learning-safety-ledger-unit": "node --no-deprecation tools/tests/hermes-learning-safety-ledger.test.mjs"
+    "test:hermes-learning-safety-ledger-unit": "node --no-deprecation tools/tests/hermes-learning-safety-ledger.test.mjs",
+    "test:hermes-cache-intelligence-baseline-unit": "node --no-deprecation tools/tests/hermes-cache-intelligence-baseline.test.mjs"
   }
 }
