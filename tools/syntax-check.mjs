@@ -524,6 +524,8 @@ const FILES = [
   'tools/tests/real-local-patch-evidence-report.test.mjs',
   'tools/real-local-patch-baseline.mjs',
   'tools/tests/real-local-patch-baseline.test.mjs',
+  'tools/real-repo-patch-scope-contract.mjs',
+  'tools/tests/real-repo-patch-scope-contract.test.mjs',
 ];
 
 let failures = 0;
