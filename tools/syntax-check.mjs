@@ -456,6 +456,8 @@ const FILES = [
   'tools/tests/anti-hallucination-runtime-baseline.test.mjs',
   'tools/human-command-phrase-verifier.mjs',
   'tools/tests/human-command-phrase-verifier.test.mjs',
+  'tools/human-execution-command-contract.mjs',
+  'tools/tests/human-execution-command-contract.test.mjs',
 ];
 
 let failures = 0;
