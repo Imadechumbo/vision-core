@@ -442,6 +442,8 @@ const FILES = [
   'tools/tests/filesystem-reality-check.test.mjs',
   'tools/git-diff-truth-binding.mjs',
   'tools/tests/git-diff-truth-binding.test.mjs',
+  'tools/tool-execution-proof-ledger.mjs',
+  'tools/tests/tool-execution-proof-ledger.test.mjs',
 ];
 
 let failures = 0;

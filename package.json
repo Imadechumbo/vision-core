@@ -258,6 +258,7 @@
     "test:hermes-cache-intelligence-baseline-unit": "node --no-deprecation tools/tests/hermes-cache-intelligence-baseline.test.mjs",
     "test:agent-claim-verification-gate-unit": "node --no-deprecation tools/tests/agent-claim-verification-gate.test.mjs",
     "test:filesystem-reality-check-unit": "node --no-deprecation tools/tests/filesystem-reality-check.test.mjs",
-    "test:git-diff-truth-binding-unit": "node --no-deprecation tools/tests/git-diff-truth-binding.test.mjs"
+    "test:git-diff-truth-binding-unit": "node --no-deprecation tools/tests/git-diff-truth-binding.test.mjs",
+    "test:tool-execution-proof-ledger-unit": "node --no-deprecation tools/tests/tool-execution-proof-ledger.test.mjs"
   }
 }
