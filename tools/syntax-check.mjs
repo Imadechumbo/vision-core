@@ -430,6 +430,8 @@ const FILES = [
   'tools/tests/hermes-expensive-analysis-skip-gate.test.mjs',
   'tools/hermes-runtime-prompt-compression-plan.mjs',
   'tools/tests/hermes-runtime-prompt-compression-plan.test.mjs',
+  'tools/hermes-extra-records-connector.mjs',
+  'tools/tests/hermes-extra-records-connector.test.mjs',
 ];
 
 let failures = 0;
