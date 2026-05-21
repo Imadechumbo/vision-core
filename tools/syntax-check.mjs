@@ -516,6 +516,8 @@ const FILES = [
   'tools/tests/real-local-patch-sandbox.test.mjs',
   'tools/real-local-patch-apply-proof.mjs',
   'tools/tests/real-local-patch-apply-proof.test.mjs',
+  'tools/real-local-patch-test-lane.mjs',
+  'tools/tests/real-local-patch-test-lane.test.mjs',
 ];
 
 let failures = 0;
