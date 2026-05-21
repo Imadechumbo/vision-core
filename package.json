@@ -314,6 +314,7 @@
     "test:real-repo-patch-rollback-drill-unit": "node --no-deprecation tools/tests/real-repo-patch-rollback-drill.test.mjs",
     "test:real-repo-patch-evidence-receipt-unit": "node --no-deprecation tools/tests/real-repo-patch-evidence-receipt.test.mjs",
     "test:real-repo-patch-ledger-unit": "node --no-deprecation tools/tests/real-repo-patch-ledger.test.mjs",
-    "test:real-repo-patch-final-report-unit": "node --no-deprecation tools/tests/real-repo-patch-final-report.test.mjs"
+    "test:real-repo-patch-final-report-unit": "node --no-deprecation tools/tests/real-repo-patch-final-report.test.mjs",
+    "test:real-repo-patch-chain-integrity-gate-unit": "node --no-deprecation tools/tests/real-repo-patch-chain-integrity-gate.test.mjs"
   }
 }
