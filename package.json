@@ -297,6 +297,7 @@
     "test:real-local-patch-sandbox-unit": "node --no-deprecation tools/tests/real-local-patch-sandbox.test.mjs",
     "test:real-local-patch-apply-proof-unit": "node --no-deprecation tools/tests/real-local-patch-apply-proof.test.mjs",
     "test:real-local-patch-test-lane-unit": "node --no-deprecation tools/tests/real-local-patch-test-lane.test.mjs",
-    "test:real-local-patch-rollback-drill-unit": "node --no-deprecation tools/tests/real-local-patch-rollback-drill.test.mjs"
+    "test:real-local-patch-rollback-drill-unit": "node --no-deprecation tools/tests/real-local-patch-rollback-drill.test.mjs",
+    "test:real-local-patch-evidence-report-unit": "node --no-deprecation tools/tests/real-local-patch-evidence-report.test.mjs"
   }
 }
