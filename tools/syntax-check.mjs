@@ -460,6 +460,8 @@ const FILES = [
   'tools/tests/human-execution-command-contract.test.mjs',
   'tools/controlled-runtime-execution-dry-run.mjs',
   'tools/tests/controlled-runtime-execution-dry-run.test.mjs',
+  'tools/controlled-runtime-execution-plan.mjs',
+  'tools/tests/controlled-runtime-execution-plan.test.mjs',
 ];
 
 let failures = 0;
