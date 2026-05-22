@@ -383,6 +383,7 @@
     "test:software-factory-pr-command-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-command-binder.test.mjs",
     "test:software-factory-pr-execution-sandbox-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-execution-sandbox.test.mjs",
     "test:software-factory-pr-execution-dry-run-verifier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-execution-dry-run-verifier.test.mjs",
-    "test:software-factory-pr-human-approval-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-human-approval-gate.test.mjs"
+    "test:software-factory-pr-human-approval-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-human-approval-gate.test.mjs",
+    "test:software-factory-real-pr-creation-final-authority-ledger-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-pr-creation-final-authority-ledger.test.mjs"
   }
 }
