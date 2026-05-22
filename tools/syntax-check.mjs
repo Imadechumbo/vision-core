@@ -592,6 +592,8 @@ const FILES = [
   'tools/tests/release-authority-final-report.test.mjs',
   'tools/explicit-release-execution-decision-barrier.mjs',
   'tools/tests/explicit-release-execution-decision-barrier.test.mjs',
+  'tools/software-factory/software-factory-contract.mjs',
+  'tools/tests/software-factory/software-factory-contract.test.mjs',
 ];
 
 let failures = 0;
