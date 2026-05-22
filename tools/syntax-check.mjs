@@ -636,6 +636,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-security-review.test.mjs',
   'tools/software-factory/software-factory-pass-gold-binding.mjs',
   'tools/tests/software-factory/software-factory-pass-gold-binding.test.mjs',
+  'tools/software-factory/software-factory-pr-controller-dry-run.mjs',
+  'tools/tests/software-factory/software-factory-pr-controller-dry-run.test.mjs',
 ];
 
 let failures = 0;
