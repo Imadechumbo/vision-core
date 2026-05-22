@@ -391,7 +391,8 @@
     "test:software-factory-pr-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-execution-phase-gate.test.mjs",
     "test:software-factory-real-pr-command-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-pr-command-contract.test.mjs",
     "test:software-factory-github-pr-safety-preflight-unit": "node --no-deprecation tools/tests/software-factory/software-factory-github-pr-safety-preflight.test.mjs",
-    "test:software-factory-real-pr-branch-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-pr-branch-binder.test.mjs"
+    "test:software-factory-real-pr-branch-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-pr-branch-binder.test.mjs",
+    "test:software-factory-real-pr-body-evidence-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-pr-body-evidence-binder.test.mjs"
   }
 }
 

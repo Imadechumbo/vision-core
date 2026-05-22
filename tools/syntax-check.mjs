@@ -706,6 +706,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-github-pr-safety-preflight.test.mjs',
   'tools/software-factory/software-factory-real-pr-branch-binder.mjs',
   'tools/tests/software-factory/software-factory-real-pr-branch-binder.test.mjs',
+  'tools/software-factory/software-factory-real-pr-body-evidence-binder.mjs',
+  'tools/tests/software-factory/software-factory-real-pr-body-evidence-binder.test.mjs',
 ];
 
 let failures = 0;
