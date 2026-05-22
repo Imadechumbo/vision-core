@@ -606,6 +606,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-prompt-builder.test.mjs',
   'tools/software-factory/software-factory-todo-planner.mjs',
   'tools/tests/software-factory/software-factory-todo-planner.test.mjs',
+  'tools/software-factory/software-factory-agent-registry.mjs',
+  'tools/tests/software-factory/software-factory-agent-registry.test.mjs',
 ];
 
 let failures = 0;
