@@ -576,6 +576,8 @@ const FILES = [
   'tools/tests/manual-release-authority-contract.test.mjs',
   'tools/real-release-decision-request.mjs',
   'tools/tests/real-release-decision-request.test.mjs',
+  'tools/release-risk-classifier.mjs',
+  'tools/tests/release-risk-classifier.test.mjs',
 ];
 
 let failures = 0;
