@@ -732,6 +732,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-real-patch-physical-apply-proof.test.mjs',
   'tools/software-factory/software-factory-real-patch-test-lane.mjs',
   'tools/tests/software-factory/software-factory-real-patch-test-lane.test.mjs',
+  'tools/software-factory/software-factory-real-patch-rollback-plan.mjs',
+  'tools/tests/software-factory/software-factory-real-patch-rollback-plan.test.mjs',
 ];
 
 let failures = 0;
