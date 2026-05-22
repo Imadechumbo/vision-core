@@ -578,6 +578,8 @@ const FILES = [
   'tools/tests/real-release-decision-request.test.mjs',
   'tools/release-risk-classifier.mjs',
   'tools/tests/release-risk-classifier.test.mjs',
+  'tools/release-impact-manifest.mjs',
+  'tools/tests/release-impact-manifest.test.mjs',
 ];
 
 let failures = 0;
