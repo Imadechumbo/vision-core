@@ -42,6 +42,8 @@ const BUILD_PIPELINE_BLOCKED_STEPS = {
   errors: ['BUILD_PIPELINE_BLOCKED_STEPS'],
 };
 
+const VALID_OPS = ['create_file', 'modify_file', 'delete_file'];
+
 function id() {
   return 'build-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
 }
@@ -89,8 +91,8 @@ export function build(input) {
       stepErrors.push(`step[${i}]: invalid step object`);
       continue;
     }
-    if (!s.op || typeof s.op !== 'string') {
-      stepErrors.push(`step[${i}]: missing or invalid op`);
+    if (!s.op || typeof s.op !== 'string' || !VALID_OPS.includes(s.op)) {
+      stepErrors.push(`step[${i}]: missing or invalid op (must be one of: ${VALID_OPS.join(', ')})`);
       continue;
     }
     if (!s.file_path || typeof s.file_path !== 'string') {
