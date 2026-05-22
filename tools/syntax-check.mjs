@@ -670,6 +670,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-controlled-pr-dry-run.test.mjs',
   'tools/software-factory/software-factory-real-pr-creation-barrier.mjs',
   'tools/tests/software-factory/software-factory-real-pr-creation-barrier.test.mjs',
+  'tools/software-factory/software-factory-supervised-pr-creation-drill.mjs',
+  'tools/tests/software-factory/software-factory-supervised-pr-creation-drill.test.mjs',
 ];
 
 let failures = 0;
