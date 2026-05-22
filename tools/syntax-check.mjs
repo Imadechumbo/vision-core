@@ -656,6 +656,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-controlled-patch-plan.test.mjs',
   'tools/software-factory/software-factory-real-patch-execution-barrier.mjs',
   'tools/tests/software-factory/software-factory-real-patch-execution-barrier.test.mjs',
+  'tools/software-factory/software-factory-supervised-patch-execution-drill.mjs',
+  'tools/tests/software-factory/software-factory-supervised-patch-execution-drill.test.mjs',
 ];
 
 let failures = 0;
