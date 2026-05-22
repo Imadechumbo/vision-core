@@ -413,7 +413,8 @@
     "test:software-factory-runtime-mission-scope-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-scope-binder.test.mjs",
     "test:software-factory-runtime-mission-context-builder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-context-builder.test.mjs",
     "test:software-factory-runtime-mission-plan-builder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-plan-builder.test.mjs",
-    "test:software-factory-runtime-mission-execution-dry-run-controller-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-execution-dry-run-controller.test.mjs"
+    "test:software-factory-runtime-mission-execution-dry-run-controller-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-execution-dry-run-controller.test.mjs",
+    "test:software-factory-runtime-mission-approval-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-approval-gate.test.mjs"
   }
 }
 

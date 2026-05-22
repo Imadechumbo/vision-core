@@ -750,6 +750,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-runtime-mission-plan-builder.test.mjs',
   'tools/software-factory/software-factory-runtime-mission-execution-dry-run-controller.mjs',
   'tools/tests/software-factory/software-factory-runtime-mission-execution-dry-run-controller.test.mjs',
+  'tools/software-factory/software-factory-runtime-mission-approval-gate.mjs',
+  'tools/tests/software-factory/software-factory-runtime-mission-approval-gate.test.mjs',
 ];
 
 let failures = 0;
