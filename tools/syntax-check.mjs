@@ -696,6 +696,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-supervised-real-pr-execution-drill.test.mjs',
   'tools/software-factory/software-factory-pr-execution-evidence-ledger.mjs',
   'tools/tests/software-factory/software-factory-pr-execution-evidence-ledger.test.mjs',
+  'tools/software-factory/software-factory-pr-execution-final-authority-review.mjs',
+  'tools/tests/software-factory/software-factory-pr-execution-final-authority-review.test.mjs',
 ];
 
 let failures = 0;
