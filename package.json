@@ -400,7 +400,8 @@
     "test:software-factory-pr-merge-blocker-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-merge-blocker-gate.test.mjs",
     "test:software-factory-controlled-real-pr-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-real-pr-execution-phase-gate.test.mjs",
     "test:software-factory-real-patch-command-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-command-contract.test.mjs",
-    "test:software-factory-real-patch-scope-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-scope-binder.test.mjs"
+    "test:software-factory-real-patch-scope-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-scope-binder.test.mjs",
+    "test:software-factory-real-patch-pre-state-snapshot-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-pre-state-snapshot.test.mjs"
   }
 }
 
