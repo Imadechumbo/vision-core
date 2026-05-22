@@ -676,6 +676,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pr-authority-ledger.test.mjs',
   'tools/software-factory/software-factory-pr-review-router.mjs',
   'tools/tests/software-factory/software-factory-pr-review-router.test.mjs',
+  'tools/software-factory/software-factory-pr-final-authority-review.mjs',
+  'tools/tests/software-factory/software-factory-pr-final-authority-review.test.mjs',
 ];
 
 let failures = 0;
