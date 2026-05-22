@@ -686,6 +686,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pr-command-binder.test.mjs',
   'tools/software-factory/software-factory-pr-execution-sandbox.mjs',
   'tools/tests/software-factory/software-factory-pr-execution-sandbox.test.mjs',
+  'tools/software-factory/software-factory-pr-execution-dry-run-verifier.mjs',
+  'tools/tests/software-factory/software-factory-pr-execution-dry-run-verifier.test.mjs',
 ];
 
 let failures = 0;
