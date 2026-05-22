@@ -688,6 +688,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pr-execution-sandbox.test.mjs',
   'tools/software-factory/software-factory-pr-execution-dry-run-verifier.mjs',
   'tools/tests/software-factory/software-factory-pr-execution-dry-run-verifier.test.mjs',
+  'tools/software-factory/software-factory-pr-human-approval-gate.mjs',
+  'tools/tests/software-factory/software-factory-pr-human-approval-gate.test.mjs',
 ];
 
 let failures = 0;
