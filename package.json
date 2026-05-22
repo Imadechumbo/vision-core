@@ -375,6 +375,7 @@
     "test:software-factory-controlled-pr-dry-run-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-pr-dry-run.test.mjs",
     "test:software-factory-real-pr-creation-barrier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-pr-creation-barrier.test.mjs",
     "test:software-factory-supervised-pr-creation-drill-unit": "node --no-deprecation tools/tests/software-factory/software-factory-supervised-pr-creation-drill.test.mjs",
-    "test:software-factory-pr-authority-ledger-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-authority-ledger.test.mjs"
+    "test:software-factory-pr-authority-ledger-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-authority-ledger.test.mjs",
+    "test:software-factory-pr-review-router-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-review-router.test.mjs"
   }
 }
