@@ -341,6 +341,7 @@
     "test:software-factory-build-pipeline-unit": "node --no-deprecation tools/tests/software-factory/software-factory-build-pipeline.test.mjs",
     "test:software-factory-final-verifier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-final-verifier.test.mjs",
     "test:software-factory-prompt-builder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-prompt-builder.test.mjs",
-    "test:software-factory-todo-planner-unit": "node --no-deprecation tools/tests/software-factory/software-factory-todo-planner.test.mjs"
+    "test:software-factory-todo-planner-unit": "node --no-deprecation tools/tests/software-factory/software-factory-todo-planner.test.mjs",
+    "test:software-factory-agent-registry-unit": "node --no-deprecation tools/tests/software-factory/software-factory-agent-registry.test.mjs"
   }
 }
