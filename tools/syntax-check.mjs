@@ -692,6 +692,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pr-human-approval-gate.test.mjs',
   'tools/software-factory/software-factory-real-pr-execution-barrier.mjs',
   'tools/tests/software-factory/software-factory-real-pr-execution-barrier.test.mjs',
+  'tools/software-factory/software-factory-supervised-real-pr-execution-drill.mjs',
+  'tools/tests/software-factory/software-factory-supervised-real-pr-execution-drill.test.mjs',
 ];
 
 let failures = 0;
