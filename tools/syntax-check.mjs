@@ -610,6 +610,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-agent-registry.test.mjs',
   'tools/software-factory/software-factory-tool-policy.mjs',
   'tools/tests/software-factory/software-factory-tool-policy.test.mjs',
+  'tools/software-factory/software-factory-subagent-manager.mjs',
+  'tools/tests/software-factory/software-factory-subagent-manager.test.mjs',
 ];
 
 let failures = 0;
