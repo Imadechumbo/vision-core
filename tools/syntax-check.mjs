@@ -684,6 +684,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-real-pr-execution-authority-contract.test.mjs',
   'tools/software-factory/software-factory-pr-command-binder.mjs',
   'tools/tests/software-factory/software-factory-pr-command-binder.test.mjs',
+  'tools/software-factory/software-factory-pr-execution-sandbox.mjs',
+  'tools/tests/software-factory/software-factory-pr-execution-sandbox.test.mjs',
 ];
 
 let failures = 0;
