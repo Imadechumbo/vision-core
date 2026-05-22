@@ -660,6 +660,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-supervised-patch-execution-drill.test.mjs',
   'tools/software-factory/software-factory-patch-execution-phase-gate.mjs',
   'tools/tests/software-factory/software-factory-patch-execution-phase-gate.test.mjs',
+  'tools/software-factory/software-factory-pr-audit-contract.mjs',
+  'tools/tests/software-factory/software-factory-pr-audit-contract.test.mjs',
 ];
 
 let failures = 0;
