@@ -421,7 +421,8 @@
     "test:software-factory-runtime-mission-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-execution-phase-gate.test.mjs",
     "test:software-factory-product-dashboard-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-product-dashboard-contract.test.mjs",
     "test:software-factory-product-dashboard-data-model-unit": "node --no-deprecation tools/tests/software-factory/software-factory-product-dashboard-data-model.test.mjs",
-    "test:software-factory-multi-project-registry-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-multi-project-registry-contract.test.mjs"
+    "test:software-factory-multi-project-registry-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-multi-project-registry-contract.test.mjs",
+    "test:software-factory-project-context-isolation-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-project-context-isolation-gate.test.mjs"
   }
 }
 
