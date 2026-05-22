@@ -680,6 +680,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pr-final-authority-review.test.mjs',
   'tools/software-factory/software-factory-pr-creation-phase-gate.mjs',
   'tools/tests/software-factory/software-factory-pr-creation-phase-gate.test.mjs',
+  'tools/software-factory/software-factory-real-pr-execution-authority-contract.mjs',
+  'tools/tests/software-factory/software-factory-real-pr-execution-authority-contract.test.mjs',
 ];
 
 let failures = 0;
