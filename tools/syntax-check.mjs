@@ -718,6 +718,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pr-checks-monitor.test.mjs',
   'tools/software-factory/software-factory-pr-merge-blocker-gate.mjs',
   'tools/tests/software-factory/software-factory-pr-merge-blocker-gate.test.mjs',
+  'tools/software-factory/software-factory-controlled-real-pr-execution-phase-gate.mjs',
+  'tools/tests/software-factory/software-factory-controlled-real-pr-execution-phase-gate.test.mjs',
 ];
 
 let failures = 0;
