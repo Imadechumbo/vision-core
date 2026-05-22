@@ -370,6 +370,7 @@
     "test:software-factory-supervised-patch-execution-drill-unit": "node --no-deprecation tools/tests/software-factory/software-factory-supervised-patch-execution-drill.test.mjs",
     "test:software-factory-patch-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-patch-execution-phase-gate.test.mjs",
     "test:software-factory-pr-audit-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-audit-contract.test.mjs",
-    "test:software-factory-pr-body-builder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-body-builder.test.mjs"
+    "test:software-factory-pr-body-builder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-body-builder.test.mjs",
+    "test:software-factory-pr-checklist-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-checklist-gate.test.mjs"
   }
 }

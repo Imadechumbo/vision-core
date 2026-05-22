@@ -664,6 +664,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pr-audit-contract.test.mjs',
   'tools/software-factory/software-factory-pr-body-builder.mjs',
   'tools/tests/software-factory/software-factory-pr-body-builder.test.mjs',
+  'tools/software-factory/software-factory-pr-checklist-gate.mjs',
+  'tools/tests/software-factory/software-factory-pr-checklist-gate.test.mjs',
 ];
 
 let failures = 0;
