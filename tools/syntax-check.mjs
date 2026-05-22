@@ -742,6 +742,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-controlled-real-patch-execution-phase-gate.test.mjs',
   'tools/software-factory/software-factory-runtime-mission-command-contract.mjs',
   'tools/tests/software-factory/software-factory-runtime-mission-command-contract.test.mjs',
+  'tools/software-factory/software-factory-runtime-mission-scope-binder.mjs',
+  'tools/tests/software-factory/software-factory-runtime-mission-scope-binder.test.mjs',
 ];
 
 let failures = 0;
