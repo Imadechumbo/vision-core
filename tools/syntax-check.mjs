@@ -594,6 +594,8 @@ const FILES = [
   'tools/tests/explicit-release-execution-decision-barrier.test.mjs',
   'tools/software-factory/software-factory-contract.mjs',
   'tools/tests/software-factory/software-factory-contract.test.mjs',
+  'tools/software-factory/software-factory-scope-inspector.mjs',
+  'tools/tests/software-factory/software-factory-scope-inspector.test.mjs',
 ];
 
 let failures = 0;

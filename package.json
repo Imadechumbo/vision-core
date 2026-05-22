@@ -335,6 +335,7 @@
     "test:pre-release-final-verifier-unit": "node --no-deprecation tools/tests/pre-release-final-verifier.test.mjs",
     "test:release-authority-final-report-unit": "node --no-deprecation tools/tests/release-authority-final-report.test.mjs",
     "test:explicit-release-execution-decision-barrier-unit": "node --no-deprecation tools/tests/explicit-release-execution-decision-barrier.test.mjs",
-    "test:software-factory-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-contract.test.mjs"
+    "test:software-factory-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-contract.test.mjs",
+    "test:software-factory-scope-inspector-unit": "node --no-deprecation tools/tests/software-factory/software-factory-scope-inspector.test.mjs"
   }
 }
