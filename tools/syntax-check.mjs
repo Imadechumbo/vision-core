@@ -700,3 +700,4 @@ if (failures === 0) {
   console.error(`syntax-check: ${failures} file(s) failed`);
   process.exit(1);
 }
+
