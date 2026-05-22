@@ -365,6 +365,7 @@
     "test:software-factory-sandbox-test-lane-unit": "node --no-deprecation tools/tests/software-factory/software-factory-sandbox-test-lane.test.mjs",
     "test:software-factory-sandbox-security-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-sandbox-security-review.test.mjs",
     "test:software-factory-real-patch-approval-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-approval-gate.test.mjs",
-    "test:software-factory-controlled-patch-plan-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-patch-plan.test.mjs"
+    "test:software-factory-controlled-patch-plan-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-patch-plan.test.mjs",
+    "test:software-factory-real-patch-execution-barrier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-execution-barrier.test.mjs"
   }
 }
