@@ -616,6 +616,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-fork-manager.test.mjs',
   'tools/software-factory/software-factory-loop-engine.mjs',
   'tools/tests/software-factory/software-factory-loop-engine.test.mjs',
+  'tools/software-factory/software-factory-patch-controller.mjs',
+  'tools/tests/software-factory/software-factory-patch-controller.test.mjs',
 ];
 
 let failures = 0;
