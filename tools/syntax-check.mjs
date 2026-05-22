@@ -582,6 +582,8 @@ const FILES = [
   'tools/tests/release-impact-manifest.test.mjs',
   'tools/manual-go-no-go-decision-gate.mjs',
   'tools/tests/manual-go-no-go-decision-gate.test.mjs',
+  'tools/controlled-tag-plan.mjs',
+  'tools/tests/controlled-tag-plan.test.mjs',
 ];
 
 let failures = 0;

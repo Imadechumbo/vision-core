@@ -329,6 +329,7 @@
     "test:real-release-decision-request-unit": "node --no-deprecation tools/tests/real-release-decision-request.test.mjs",
     "test:release-risk-classifier-unit": "node --no-deprecation tools/tests/release-risk-classifier.test.mjs",
     "test:release-impact-manifest-unit": "node --no-deprecation tools/tests/release-impact-manifest.test.mjs",
-    "test:manual-go-no-go-decision-gate-unit": "node --no-deprecation tools/tests/manual-go-no-go-decision-gate.test.mjs"
+    "test:manual-go-no-go-decision-gate-unit": "node --no-deprecation tools/tests/manual-go-no-go-decision-gate.test.mjs",
+    "test:controlled-tag-plan-unit": "node --no-deprecation tools/tests/controlled-tag-plan.test.mjs"
   }
 }
