@@ -385,7 +385,8 @@
     "test:software-factory-pr-execution-dry-run-verifier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-execution-dry-run-verifier.test.mjs",
     "test:software-factory-pr-human-approval-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-human-approval-gate.test.mjs",
     "test:software-factory-real-pr-execution-barrier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-pr-execution-barrier.test.mjs",
-    "test:software-factory-supervised-real-pr-execution-drill-unit": "node --no-deprecation tools/tests/software-factory/software-factory-supervised-real-pr-execution-drill.test.mjs"
+    "test:software-factory-supervised-real-pr-execution-drill-unit": "node --no-deprecation tools/tests/software-factory/software-factory-supervised-real-pr-execution-drill.test.mjs",
+    "test:software-factory-pr-execution-evidence-ledger-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-execution-evidence-ledger.test.mjs"
   }
 }
 
