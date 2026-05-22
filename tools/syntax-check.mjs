@@ -648,6 +648,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-sandbox-patch-env.test.mjs',
   'tools/software-factory/software-factory-sandbox-test-lane.mjs',
   'tools/tests/software-factory/software-factory-sandbox-test-lane.test.mjs',
+  'tools/software-factory/software-factory-sandbox-security-review.mjs',
+  'tools/tests/software-factory/software-factory-sandbox-security-review.test.mjs',
 ];
 
 let failures = 0;
