@@ -378,6 +378,7 @@
     "test:software-factory-pr-authority-ledger-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-authority-ledger.test.mjs",
     "test:software-factory-pr-review-router-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-review-router.test.mjs",
     "test:software-factory-pr-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-final-authority-review.test.mjs",
-    "test:software-factory-pr-creation-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-creation-phase-gate.test.mjs"
+    "test:software-factory-pr-creation-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-creation-phase-gate.test.mjs",
+    "test:software-factory-real-pr-execution-authority-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-pr-execution-authority-contract.test.mjs"
   }
 }
