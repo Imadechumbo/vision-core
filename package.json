@@ -343,6 +343,7 @@
     "test:software-factory-prompt-builder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-prompt-builder.test.mjs",
     "test:software-factory-todo-planner-unit": "node --no-deprecation tools/tests/software-factory/software-factory-todo-planner.test.mjs",
     "test:software-factory-agent-registry-unit": "node --no-deprecation tools/tests/software-factory/software-factory-agent-registry.test.mjs",
-    "test:software-factory-tool-policy-unit": "node --no-deprecation tools/tests/software-factory/software-factory-tool-policy.test.mjs"
+    "test:software-factory-tool-policy-unit": "node --no-deprecation tools/tests/software-factory/software-factory-tool-policy.test.mjs",
+    "test:software-factory-subagent-manager-unit": "node --no-deprecation tools/tests/software-factory/software-factory-subagent-manager.test.mjs"
   }
 }
