@@ -368,6 +368,7 @@
     "test:software-factory-controlled-patch-plan-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-patch-plan.test.mjs",
     "test:software-factory-real-patch-execution-barrier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-execution-barrier.test.mjs",
     "test:software-factory-supervised-patch-execution-drill-unit": "node --no-deprecation tools/tests/software-factory/software-factory-supervised-patch-execution-drill.test.mjs",
-    "test:software-factory-patch-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-patch-execution-phase-gate.test.mjs"
+    "test:software-factory-patch-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-patch-execution-phase-gate.test.mjs",
+    "test:software-factory-pr-audit-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-audit-contract.test.mjs"
   }
 }
