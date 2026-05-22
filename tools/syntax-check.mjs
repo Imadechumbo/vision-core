@@ -748,6 +748,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-runtime-mission-context-builder.test.mjs',
   'tools/software-factory/software-factory-runtime-mission-plan-builder.mjs',
   'tools/tests/software-factory/software-factory-runtime-mission-plan-builder.test.mjs',
+  'tools/software-factory/software-factory-runtime-mission-execution-dry-run-controller.mjs',
+  'tools/tests/software-factory/software-factory-runtime-mission-execution-dry-run-controller.test.mjs',
 ];
 
 let failures = 0;
