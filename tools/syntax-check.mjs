@@ -708,6 +708,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-real-pr-branch-binder.test.mjs',
   'tools/software-factory/software-factory-real-pr-body-evidence-binder.mjs',
   'tools/tests/software-factory/software-factory-real-pr-body-evidence-binder.test.mjs',
+  'tools/software-factory/software-factory-real-pr-creation-approval-gate.mjs',
+  'tools/tests/software-factory/software-factory-real-pr-creation-approval-gate.test.mjs',
 ];
 
 let failures = 0;
