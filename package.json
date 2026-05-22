@@ -351,6 +351,7 @@
     "test:software-factory-validation-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-validation-gate.test.mjs",
     "test:software-factory-evidence-receipt-unit": "node --no-deprecation tools/tests/software-factory/software-factory-evidence-receipt.test.mjs",
     "test:software-factory-pr-readiness-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-readiness-gate.test.mjs",
-    "test:software-factory-mission-report-unit": "node --no-deprecation tools/tests/software-factory/software-factory-mission-report.test.mjs"
+    "test:software-factory-mission-report-unit": "node --no-deprecation tools/tests/software-factory/software-factory-mission-report.test.mjs",
+    "test:software-factory-orchestrator-unit": "node --no-deprecation tools/tests/software-factory/software-factory-orchestrator.test.mjs"
   }
 }

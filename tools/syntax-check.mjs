@@ -626,6 +626,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pr-readiness-gate.test.mjs',
   'tools/software-factory/software-factory-mission-report.mjs',
   'tools/tests/software-factory/software-factory-mission-report.test.mjs',
+  'tools/software-factory/software-factory-orchestrator.mjs',
+  'tools/tests/software-factory/software-factory-orchestrator.test.mjs',
 ];
 
 let failures = 0;
