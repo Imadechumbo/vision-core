@@ -758,6 +758,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-runtime-mission-result-verifier.test.mjs',
   'tools/software-factory/software-factory-runtime-mission-evidence-receipt.mjs',
   'tools/tests/software-factory/software-factory-runtime-mission-evidence-receipt.test.mjs',
+  'tools/software-factory/software-factory-runtime-mission-execution-phase-gate.mjs',
+  'tools/tests/software-factory/software-factory-runtime-mission-execution-phase-gate.test.mjs',
 ];
 
 let failures = 0;
