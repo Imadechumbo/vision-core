@@ -596,6 +596,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-contract.test.mjs',
   'tools/software-factory/software-factory-scope-inspector.mjs',
   'tools/tests/software-factory/software-factory-scope-inspector.test.mjs',
+  'tools/software-factory/software-factory-recipe-engine.mjs',
+  'tools/tests/software-factory/software-factory-recipe-engine.test.mjs',
 ];
 
 let failures = 0;
