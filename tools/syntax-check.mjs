@@ -762,6 +762,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-runtime-mission-execution-phase-gate.test.mjs',
   'tools/software-factory/software-factory-product-dashboard-contract.mjs',
   'tools/tests/software-factory/software-factory-product-dashboard-contract.test.mjs',
+  'tools/software-factory/software-factory-product-dashboard-data-model.mjs',
+  'tools/tests/software-factory/software-factory-product-dashboard-data-model.test.mjs',
 ];
 
 let failures = 0;
