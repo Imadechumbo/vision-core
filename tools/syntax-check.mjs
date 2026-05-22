@@ -590,6 +590,8 @@ const FILES = [
   'tools/tests/pre-release-final-verifier.test.mjs',
   'tools/release-authority-final-report.mjs',
   'tools/tests/release-authority-final-report.test.mjs',
+  'tools/explicit-release-execution-decision-barrier.mjs',
+  'tools/tests/explicit-release-execution-decision-barrier.test.mjs',
 ];
 
 let failures = 0;

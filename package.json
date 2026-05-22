@@ -333,6 +333,7 @@
     "test:controlled-tag-plan-unit": "node --no-deprecation tools/tests/controlled-tag-plan.test.mjs",
     "test:controlled-release-plan-lock-unit": "node --no-deprecation tools/tests/controlled-release-plan-lock.test.mjs",
     "test:pre-release-final-verifier-unit": "node --no-deprecation tools/tests/pre-release-final-verifier.test.mjs",
-    "test:release-authority-final-report-unit": "node --no-deprecation tools/tests/release-authority-final-report.test.mjs"
+    "test:release-authority-final-report-unit": "node --no-deprecation tools/tests/release-authority-final-report.test.mjs",
+    "test:explicit-release-execution-decision-barrier-unit": "node --no-deprecation tools/tests/explicit-release-execution-decision-barrier.test.mjs"
   }
 }
