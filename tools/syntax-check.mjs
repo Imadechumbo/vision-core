@@ -760,6 +760,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-runtime-mission-evidence-receipt.test.mjs',
   'tools/software-factory/software-factory-runtime-mission-execution-phase-gate.mjs',
   'tools/tests/software-factory/software-factory-runtime-mission-execution-phase-gate.test.mjs',
+  'tools/software-factory/software-factory-product-dashboard-contract.mjs',
+  'tools/tests/software-factory/software-factory-product-dashboard-contract.test.mjs',
 ];
 
 let failures = 0;

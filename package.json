@@ -418,7 +418,8 @@
     "test:software-factory-runtime-mission-sandbox-executor-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-sandbox-executor.test.mjs",
     "test:software-factory-runtime-mission-result-verifier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-result-verifier.test.mjs",
     "test:software-factory-runtime-mission-evidence-receipt-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-evidence-receipt.test.mjs",
-    "test:software-factory-runtime-mission-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-execution-phase-gate.test.mjs"
+    "test:software-factory-runtime-mission-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-execution-phase-gate.test.mjs",
+    "test:software-factory-product-dashboard-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-product-dashboard-contract.test.mjs"
   }
 }
 
