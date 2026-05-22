@@ -566,6 +566,8 @@ const FILES = [
   'tools/tests/real-repo-patch-release-plan-generator.test.mjs',
   'tools/real-repo-patch-release-simulator.mjs',
   'tools/tests/real-repo-patch-release-simulator.test.mjs',
+  'tools/real-repo-patch-final-authority-review.mjs',
+  'tools/tests/real-repo-patch-final-authority-review.test.mjs',
 ];
 
 let failures = 0;

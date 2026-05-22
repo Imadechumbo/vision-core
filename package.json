@@ -321,6 +321,7 @@
     "test:real-repo-patch-human-approval-binding-unit": "node --no-deprecation tools/tests/real-repo-patch-human-approval-binding.test.mjs",
     "test:real-repo-patch-rc-dry-run-unit": "node --no-deprecation tools/tests/real-repo-patch-rc-dry-run.test.mjs",
     "test:real-repo-patch-release-plan-generator-unit": "node --no-deprecation tools/tests/real-repo-patch-release-plan-generator.test.mjs",
-    "test:real-repo-patch-release-simulator-unit": "node --no-deprecation tools/tests/real-repo-patch-release-simulator.test.mjs"
+    "test:real-repo-patch-release-simulator-unit": "node --no-deprecation tools/tests/real-repo-patch-release-simulator.test.mjs",
+    "test:real-repo-patch-final-authority-review-unit": "node --no-deprecation tools/tests/real-repo-patch-final-authority-review.test.mjs"
   }
 }
