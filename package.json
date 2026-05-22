@@ -347,6 +347,7 @@
     "test:software-factory-subagent-manager-unit": "node --no-deprecation tools/tests/software-factory/software-factory-subagent-manager.test.mjs",
     "test:software-factory-fork-manager-unit": "node --no-deprecation tools/tests/software-factory/software-factory-fork-manager.test.mjs",
     "test:software-factory-loop-engine-unit": "node --no-deprecation tools/tests/software-factory/software-factory-loop-engine.test.mjs",
-    "test:software-factory-patch-controller-unit": "node --no-deprecation tools/tests/software-factory/software-factory-patch-controller.test.mjs"
+    "test:software-factory-patch-controller-unit": "node --no-deprecation tools/tests/software-factory/software-factory-patch-controller.test.mjs",
+    "test:software-factory-validation-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-validation-gate.test.mjs"
   }
 }

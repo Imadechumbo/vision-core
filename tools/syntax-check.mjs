@@ -618,6 +618,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-loop-engine.test.mjs',
   'tools/software-factory/software-factory-patch-controller.mjs',
   'tools/tests/software-factory/software-factory-patch-controller.test.mjs',
+  'tools/software-factory/software-factory-validation-gate.mjs',
+  'tools/tests/software-factory/software-factory-validation-gate.test.mjs',
 ];
 
 let failures = 0;
