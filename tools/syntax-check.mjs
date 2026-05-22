@@ -580,6 +580,8 @@ const FILES = [
   'tools/tests/release-risk-classifier.test.mjs',
   'tools/release-impact-manifest.mjs',
   'tools/tests/release-impact-manifest.test.mjs',
+  'tools/manual-go-no-go-decision-gate.mjs',
+  'tools/tests/manual-go-no-go-decision-gate.test.mjs',
 ];
 
 let failures = 0;
