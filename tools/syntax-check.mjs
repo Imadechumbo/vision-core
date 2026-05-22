@@ -754,6 +754,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-runtime-mission-approval-gate.test.mjs',
   'tools/software-factory/software-factory-runtime-mission-sandbox-executor.mjs',
   'tools/tests/software-factory/software-factory-runtime-mission-sandbox-executor.test.mjs',
+  'tools/software-factory/software-factory-runtime-mission-result-verifier.mjs',
+  'tools/tests/software-factory/software-factory-runtime-mission-result-verifier.test.mjs',
 ];
 
 let failures = 0;

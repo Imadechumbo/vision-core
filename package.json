@@ -415,7 +415,8 @@
     "test:software-factory-runtime-mission-plan-builder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-plan-builder.test.mjs",
     "test:software-factory-runtime-mission-execution-dry-run-controller-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-execution-dry-run-controller.test.mjs",
     "test:software-factory-runtime-mission-approval-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-approval-gate.test.mjs",
-    "test:software-factory-runtime-mission-sandbox-executor-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-sandbox-executor.test.mjs"
+    "test:software-factory-runtime-mission-sandbox-executor-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-sandbox-executor.test.mjs",
+    "test:software-factory-runtime-mission-result-verifier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-result-verifier.test.mjs"
   }
 }
 
