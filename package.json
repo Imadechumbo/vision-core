@@ -387,7 +387,8 @@
     "test:software-factory-real-pr-execution-barrier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-pr-execution-barrier.test.mjs",
     "test:software-factory-supervised-real-pr-execution-drill-unit": "node --no-deprecation tools/tests/software-factory/software-factory-supervised-real-pr-execution-drill.test.mjs",
     "test:software-factory-pr-execution-evidence-ledger-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-execution-evidence-ledger.test.mjs",
-    "test:software-factory-pr-execution-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-execution-final-authority-review.test.mjs"
+    "test:software-factory-pr-execution-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-execution-final-authority-review.test.mjs",
+    "test:software-factory-pr-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-execution-phase-gate.test.mjs"
   }
 }
 
