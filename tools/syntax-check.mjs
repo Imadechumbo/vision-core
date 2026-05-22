@@ -588,6 +588,8 @@ const FILES = [
   'tools/tests/controlled-release-plan-lock.test.mjs',
   'tools/pre-release-final-verifier.mjs',
   'tools/tests/pre-release-final-verifier.test.mjs',
+  'tools/release-authority-final-report.mjs',
+  'tools/tests/release-authority-final-report.test.mjs',
 ];
 
 let failures = 0;
