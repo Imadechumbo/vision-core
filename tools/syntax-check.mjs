@@ -702,6 +702,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pr-execution-phase-gate.test.mjs',
   'tools/software-factory/software-factory-real-pr-command-contract.mjs',
   'tools/tests/software-factory/software-factory-real-pr-command-contract.test.mjs',
+  'tools/software-factory/software-factory-github-pr-safety-preflight.mjs',
+  'tools/tests/software-factory/software-factory-github-pr-safety-preflight.test.mjs',
 ];
 
 let failures = 0;
