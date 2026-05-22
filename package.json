@@ -317,6 +317,7 @@
     "test:real-repo-patch-final-report-unit": "node --no-deprecation tools/tests/real-repo-patch-final-report.test.mjs",
     "test:real-repo-patch-chain-integrity-gate-unit": "node --no-deprecation tools/tests/real-repo-patch-chain-integrity-gate.test.mjs",
     "test:real-repo-patch-evidence-graph-unit": "node --no-deprecation tools/tests/real-repo-patch-evidence-graph.test.mjs",
-    "test:real-repo-patch-replay-verifier-unit": "node --no-deprecation tools/tests/real-repo-patch-replay-verifier.test.mjs"
+    "test:real-repo-patch-replay-verifier-unit": "node --no-deprecation tools/tests/real-repo-patch-replay-verifier.test.mjs",
+    "test:real-repo-patch-human-approval-binding-unit": "node --no-deprecation tools/tests/real-repo-patch-human-approval-binding.test.mjs"
   }
 }

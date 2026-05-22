@@ -558,6 +558,8 @@ const FILES = [
   'tools/tests/real-repo-patch-evidence-graph.test.mjs',
   'tools/real-repo-patch-replay-verifier.mjs',
   'tools/tests/real-repo-patch-replay-verifier.test.mjs',
+  'tools/real-repo-patch-human-approval-binding.mjs',
+  'tools/tests/real-repo-patch-human-approval-binding.test.mjs',
 ];
 
 let failures = 0;
