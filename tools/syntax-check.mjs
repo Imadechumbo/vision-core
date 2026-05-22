@@ -756,6 +756,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-runtime-mission-sandbox-executor.test.mjs',
   'tools/software-factory/software-factory-runtime-mission-result-verifier.mjs',
   'tools/tests/software-factory/software-factory-runtime-mission-result-verifier.test.mjs',
+  'tools/software-factory/software-factory-runtime-mission-evidence-receipt.mjs',
+  'tools/tests/software-factory/software-factory-runtime-mission-evidence-receipt.test.mjs',
 ];
 
 let failures = 0;
