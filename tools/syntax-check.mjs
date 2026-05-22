@@ -604,6 +604,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-final-verifier.test.mjs',
   'tools/software-factory/software-factory-prompt-builder.mjs',
   'tools/tests/software-factory/software-factory-prompt-builder.test.mjs',
+  'tools/software-factory/software-factory-todo-planner.mjs',
+  'tools/tests/software-factory/software-factory-todo-planner.test.mjs',
 ];
 
 let failures = 0;
