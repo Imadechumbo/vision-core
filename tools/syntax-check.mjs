@@ -598,6 +598,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-scope-inspector.test.mjs',
   'tools/software-factory/software-factory-recipe-engine.mjs',
   'tools/tests/software-factory/software-factory-recipe-engine.test.mjs',
+  'tools/software-factory/software-factory-build-pipeline.mjs',
+  'tools/tests/software-factory/software-factory-build-pipeline.test.mjs',
 ];
 
 let failures = 0;

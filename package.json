@@ -337,6 +337,7 @@
     "test:explicit-release-execution-decision-barrier-unit": "node --no-deprecation tools/tests/explicit-release-execution-decision-barrier.test.mjs",
     "test:software-factory-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-contract.test.mjs",
     "test:software-factory-scope-inspector-unit": "node --no-deprecation tools/tests/software-factory/software-factory-scope-inspector.test.mjs",
-    "test:software-factory-recipe-engine-unit": "node --no-deprecation tools/tests/software-factory/software-factory-recipe-engine.test.mjs"
+    "test:software-factory-recipe-engine-unit": "node --no-deprecation tools/tests/software-factory/software-factory-recipe-engine.test.mjs",
+    "test:software-factory-build-pipeline-unit": "node --no-deprecation tools/tests/software-factory/software-factory-build-pipeline.test.mjs"
   }
 }
