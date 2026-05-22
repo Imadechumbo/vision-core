@@ -668,6 +668,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pr-checklist-gate.test.mjs',
   'tools/software-factory/software-factory-controlled-pr-dry-run.mjs',
   'tools/tests/software-factory/software-factory-controlled-pr-dry-run.test.mjs',
+  'tools/software-factory/software-factory-real-pr-creation-barrier.mjs',
+  'tools/tests/software-factory/software-factory-real-pr-creation-barrier.test.mjs',
 ];
 
 let failures = 0;
