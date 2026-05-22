@@ -372,6 +372,7 @@
     "test:software-factory-pr-audit-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-audit-contract.test.mjs",
     "test:software-factory-pr-body-builder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-body-builder.test.mjs",
     "test:software-factory-pr-checklist-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-checklist-gate.test.mjs",
-    "test:software-factory-controlled-pr-dry-run-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-pr-dry-run.test.mjs"
+    "test:software-factory-controlled-pr-dry-run-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-pr-dry-run.test.mjs",
+    "test:software-factory-real-pr-creation-barrier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-pr-creation-barrier.test.mjs"
   }
 }
