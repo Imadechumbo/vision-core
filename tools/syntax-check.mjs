@@ -738,6 +738,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-real-patch-rollback-drill.test.mjs',
   'tools/software-factory/software-factory-real-patch-evidence-receipt.mjs',
   'tools/tests/software-factory/software-factory-real-patch-evidence-receipt.test.mjs',
+  'tools/software-factory/software-factory-controlled-real-patch-execution-phase-gate.mjs',
+  'tools/tests/software-factory/software-factory-controlled-real-patch-execution-phase-gate.test.mjs',
 ];
 
 let failures = 0;
