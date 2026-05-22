@@ -642,6 +642,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-phase-gate.test.mjs',
   'tools/software-factory/software-factory-patch-audit-contract.mjs',
   'tools/tests/software-factory/software-factory-patch-audit-contract.test.mjs',
+  'tools/software-factory/software-factory-patch-diff-binder.mjs',
+  'tools/tests/software-factory/software-factory-patch-diff-binder.test.mjs',
 ];
 
 let failures = 0;

@@ -359,6 +359,7 @@
     "test:software-factory-pass-gold-binding-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pass-gold-binding.test.mjs",
     "test:software-factory-pr-controller-dry-run-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pr-controller-dry-run.test.mjs",
     "test:software-factory-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-phase-gate.test.mjs",
-    "test:software-factory-patch-audit-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-patch-audit-contract.test.mjs"
+    "test:software-factory-patch-audit-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-patch-audit-contract.test.mjs",
+    "test:software-factory-patch-diff-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-patch-diff-binder.test.mjs"
   }
 }
