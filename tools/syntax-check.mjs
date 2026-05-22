@@ -638,6 +638,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pass-gold-binding.test.mjs',
   'tools/software-factory/software-factory-pr-controller-dry-run.mjs',
   'tools/tests/software-factory/software-factory-pr-controller-dry-run.test.mjs',
+  'tools/software-factory/software-factory-phase-gate.mjs',
+  'tools/tests/software-factory/software-factory-phase-gate.test.mjs',
 ];
 
 let failures = 0;
