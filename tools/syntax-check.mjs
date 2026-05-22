@@ -612,6 +612,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-tool-policy.test.mjs',
   'tools/software-factory/software-factory-subagent-manager.mjs',
   'tools/tests/software-factory/software-factory-subagent-manager.test.mjs',
+  'tools/software-factory/software-factory-fork-manager.mjs',
+  'tools/tests/software-factory/software-factory-fork-manager.test.mjs',
 ];
 
 let failures = 0;
