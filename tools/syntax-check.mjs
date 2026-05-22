@@ -584,6 +584,8 @@ const FILES = [
   'tools/tests/manual-go-no-go-decision-gate.test.mjs',
   'tools/controlled-tag-plan.mjs',
   'tools/tests/controlled-tag-plan.test.mjs',
+  'tools/controlled-release-plan-lock.mjs',
+  'tools/tests/controlled-release-plan-lock.test.mjs',
 ];
 
 let failures = 0;
