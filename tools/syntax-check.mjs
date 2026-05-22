@@ -640,6 +640,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pr-controller-dry-run.test.mjs',
   'tools/software-factory/software-factory-phase-gate.mjs',
   'tools/tests/software-factory/software-factory-phase-gate.test.mjs',
+  'tools/software-factory/software-factory-patch-audit-contract.mjs',
+  'tools/tests/software-factory/software-factory-patch-audit-contract.test.mjs',
 ];
 
 let failures = 0;
