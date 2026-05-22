@@ -406,7 +406,8 @@
     "test:software-factory-real-patch-physical-apply-proof-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-physical-apply-proof.test.mjs",
     "test:software-factory-real-patch-test-lane-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-test-lane.test.mjs",
     "test:software-factory-real-patch-rollback-plan-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-rollback-plan.test.mjs",
-    "test:software-factory-real-patch-rollback-drill-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-rollback-drill.test.mjs"
+    "test:software-factory-real-patch-rollback-drill-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-rollback-drill.test.mjs",
+    "test:software-factory-real-patch-evidence-receipt-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-evidence-receipt.test.mjs"
   }
 }
 
