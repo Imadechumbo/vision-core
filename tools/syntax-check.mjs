@@ -630,6 +630,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-orchestrator.test.mjs',
   'tools/software-factory/software-factory-cli.mjs',
   'tools/tests/software-factory/software-factory-cli.test.mjs',
+  'tools/software-factory/software-factory-memory-ledger.mjs',
+  'tools/tests/software-factory/software-factory-memory-ledger.test.mjs',
 ];
 
 let failures = 0;
