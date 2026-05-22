@@ -93,11 +93,11 @@ const TESTS = [
   () => {
     const input = validInput();
     input.proposed_changes.push('tools/release/production-tag.mjs');
-    input.proposed_changes.push('tools/tests/scope.test.mjs');
+    input.proposed_changes.push('tools/tests/software-factory/scope.test.mjs');
     const r = build(input);
     assert.equal(r.scope_valid, false);
     assert.equal(r.matched_forbidden.length, 1);
-    assert.ok(r.matched_allowed.some(m => m.file === 'tools/tests/scope.test.mjs'));
+    assert.ok(r.matched_allowed.some(m => m.file === 'tools/tests/software-factory/scope.test.mjs'));
     console.log('  PASS: mixed allowed+forbidden: allowed matched, forbidden blocked');
   },
   () => {
