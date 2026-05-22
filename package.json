@@ -408,7 +408,8 @@
     "test:software-factory-real-patch-rollback-plan-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-rollback-plan.test.mjs",
     "test:software-factory-real-patch-rollback-drill-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-rollback-drill.test.mjs",
     "test:software-factory-real-patch-evidence-receipt-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-evidence-receipt.test.mjs",
-    "test:software-factory-controlled-real-patch-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-real-patch-execution-phase-gate.test.mjs"
+    "test:software-factory-controlled-real-patch-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-real-patch-execution-phase-gate.test.mjs",
+    "test:software-factory-runtime-mission-command-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-command-contract.test.mjs"
   }
 }
 
