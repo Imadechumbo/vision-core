@@ -1,43 +1,39 @@
 import * as assert from 'assert/strict';
 import {
-  SOFTWARE_FACTORY_SCOPE_INSPECTOR_STATUSES,
+  SOFTWARE_FACTORY_RECIPE_ENGINE_STATUSES,
   build,
   validate,
   render,
-} from '../../software-factory/software-factory-scope-inspector.mjs';
-
-const ALLOWED = ['tools/software-factory/*', 'tools/tests/software-factory/*'];
-const FORBIDDEN = ['tools/release/*', 'tools/tag/*', 'tools/deployment/*', 'tools/stable/*'];
+} from '../../software-factory/software-factory-recipe-engine.mjs';
 
 function validInput() {
   return {
-    contract_id: 'sfc-v202-test',
-    proposed_changes: [
-      'tools/software-factory/scope-inspector.mjs',
-      'tools/tests/software-factory/scope-inspector.test.mjs',
+    contract_id: 'sfc-v203-test',
+    scope_inspector_id: 'scope-v203-test',
+    recipes: [
+      { op: 'create_file', file_path: 'tools/software-factory/feature.mjs', description: 'Create feature module' },
+      { op: 'modify_file', file_path: 'tools/software-factory/index.mjs', description: 'Export new module' },
     ],
-    allowed_files: ALLOWED,
-    forbidden_files: FORBIDDEN,
   };
 }
 
 const TESTS = [
   // --- exports ---
   () => {
-    assert.ok(Array.isArray(SOFTWARE_FACTORY_SCOPE_INSPECTOR_STATUSES));
+    assert.ok(Array.isArray(SOFTWARE_FACTORY_RECIPE_ENGINE_STATUSES));
     console.log('  PASS: STATUSES is array');
   },
   () => {
-    assert.ok(SOFTWARE_FACTORY_SCOPE_INSPECTOR_STATUSES.includes('SCOPE_INSPECTOR_BLOCKED_INPUT'));
-    console.log('  PASS: has SCOPE_INSPECTOR_BLOCKED_INPUT');
+    assert.ok(SOFTWARE_FACTORY_RECIPE_ENGINE_STATUSES.includes('RECIPE_ENGINE_BLOCKED_INPUT'));
+    console.log('  PASS: has RECIPE_ENGINE_BLOCKED_INPUT');
   },
   () => {
-    assert.ok(SOFTWARE_FACTORY_SCOPE_INSPECTOR_STATUSES.includes('SCOPE_INSPECTOR_BLOCKED_SCOPE'));
-    console.log('  PASS: has SCOPE_INSPECTOR_BLOCKED_SCOPE');
+    assert.ok(SOFTWARE_FACTORY_RECIPE_ENGINE_STATUSES.includes('RECIPE_ENGINE_BLOCKED_RECIPE'));
+    console.log('  PASS: has RECIPE_ENGINE_BLOCKED_RECIPE');
   },
   () => {
-    assert.ok(SOFTWARE_FACTORY_SCOPE_INSPECTOR_STATUSES.includes('SCOPE_INSPECTOR_READY'));
-    console.log('  PASS: has SCOPE_INSPECTOR_READY');
+    assert.ok(SOFTWARE_FACTORY_RECIPE_ENGINE_STATUSES.includes('RECIPE_ENGINE_READY'));
+    console.log('  PASS: has RECIPE_ENGINE_READY');
   },
   () => {
     assert.equal(typeof build, 'function');
@@ -55,82 +51,89 @@ const TESTS = [
   // --- blocked input ---
   () => {
     const r = build(null);
-    assert.equal(r.scope_valid, false);
-    assert.ok(r.errors.includes('SCOPE_INSPECTOR_BLOCKED_INPUT'));
+    assert.equal(r.recipe_valid, false);
+    assert.ok(r.errors.includes('RECIPE_ENGINE_BLOCKED_INPUT'));
     console.log('  PASS: null -> BLOCKED_INPUT');
   },
   () => {
     const r = build(null);
-    assert.equal(r.contract_id, null);
     assert.equal(r.release_allowed, false);
     assert.equal(r.real_execution_allowed, false);
+    assert.equal(r.recipe_count, 0);
     console.log('  PASS: null: all flags false');
   },
   () => {
     const r = build({});
-    assert.equal(r.scope_valid, false);
-    assert.ok(r.errors[0].startsWith('SCOPE_INSPECTOR_BLOCKED_INPUT'));
+    assert.equal(r.recipe_valid, false);
+    assert.ok(r.errors[0].startsWith('RECIPE_ENGINE_BLOCKED_INPUT'));
     console.log('  PASS: {} -> BLOCKED_INPUT');
   },
   () => {
-    const r = build({ contract_id: 'c', proposed_changes: [] });
-    assert.equal(r.scope_valid, false);
-    assert.ok(r.errors[0].startsWith('SCOPE_INSPECTOR_BLOCKED_SCOPE'));
-    console.log('  PASS: no allowed_files -> BLOCKED_SCOPE');
+    const r = build({ contract_id: 'c', scope_inspector_id: 's', recipes: [] });
+    assert.equal(r.recipe_valid, false);
+    assert.ok(r.errors[0].startsWith('RECIPE_ENGINE_BLOCKED_RECIPE'));
+    console.log('  PASS: empty recipes -> BLOCKED_RECIPE');
   },
 
-  // --- blocked scope ---
+  // --- blocked recipe ---
   () => {
     const input = validInput();
-    input.proposed_changes.push('tools/release/production-tag.mjs');
+    input.recipes.push({ op: 'invalid_op', file_path: 'x.mjs', description: 'bad' });
     const r = build(input);
-    assert.equal(r.scope_valid, false);
-    assert.ok(r.errors.some(e => e.startsWith('SCOPE_INSPECTOR_BLOCKED_SCOPE')));
-    assert.equal(r.matched_forbidden.length, 1);
-    assert.equal(r.matched_forbidden[0].file, 'tools/release/production-tag.mjs');
-    console.log('  PASS: forbidden file -> BLOCKED_SCOPE');
+    assert.equal(r.recipe_valid, false);
+    assert.ok(r.errors.some(e => e.startsWith('RECIPE_ENGINE_BLOCKED_RECIPE')));
+    console.log('  PASS: invalid op -> BLOCKED_RECIPE');
   },
   () => {
     const input = validInput();
-    input.proposed_changes.push('tools/release/production-tag.mjs');
-    input.proposed_changes.push('tools/tests/software-factory/scope.test.mjs');
+    input.recipes.push({ op: 'create_file', description: 'no path' });
     const r = build(input);
-    assert.equal(r.scope_valid, false);
-    assert.equal(r.matched_forbidden.length, 1);
-    assert.ok(r.matched_allowed.some(m => m.file === 'tools/tests/software-factory/scope.test.mjs'));
-    console.log('  PASS: mixed allowed+forbidden: allowed matched, forbidden blocked');
+    assert.equal(r.recipe_valid, false);
+    console.log('  PASS: missing file_path -> BLOCKED_RECIPE');
   },
   () => {
     const input = validInput();
-    input.proposed_changes = ['tools/stable/promote.mjs'];
+    input.recipes.push({ op: 'create_file', file_path: 'x.mjs' });
     const r = build(input);
-    assert.equal(r.scope_valid, false);
-    assert.equal(r.matched_forbidden.length, 1);
-    console.log('  PASS: stable file -> BLOCKED_SCOPE');
+    assert.equal(r.recipe_valid, false);
+    console.log('  PASS: missing description -> BLOCKED_RECIPE');
+  },
+  () => {
+    const input = validInput();
+    input.recipes.push(null);
+    const r = build(input);
+    assert.equal(r.recipe_valid, false);
+    console.log('  PASS: null recipe -> BLOCKED_RECIPE');
   },
 
   // --- ready ---
   () => {
     const r = build(validInput());
-    assert.equal(r.scope_valid, true);
+    assert.equal(r.recipe_valid, true);
     assert.equal(r.errors.length, 0);
-    assert.equal(r.schema_version, 'v202.0');
-    console.log('  PASS: valid -> SCOPE_INSPECTOR_READY');
+    assert.equal(r.schema_version, 'v203.0');
+    console.log('  PASS: valid -> RECIPE_ENGINE_READY');
   },
   () => {
     const r = build(validInput());
-    assert.ok(r.scope_inspector_id);
-    console.log('  PASS: ready: scope_inspector_id set');
+    assert.ok(r.recipe_engine_id);
+    console.log('  PASS: ready: recipe_engine_id set');
   },
   () => {
     const r = build(validInput());
-    assert.ok(r.contract_id);
+    assert.equal(r.contract_id, 'sfc-v203-test');
     console.log('  PASS: ready: contract_id set');
   },
   () => {
     const r = build(validInput());
-    assert.equal(r.proposed_changes.length, 2);
-    console.log('  PASS: ready: proposed_changes size correct');
+    assert.equal(r.recipe_count, 2);
+    console.log('  PASS: ready: recipe_count correct');
+  },
+  () => {
+    const r = build(validInput());
+    assert.ok(r.recipe_hash);
+    assert.equal(r.recipe_hash.length, 64);
+    console.log('  PASS: ready: recipe_hash 64 chars');
   },
   () => {
     const r = build(validInput());
@@ -142,14 +145,10 @@ const TESTS = [
     console.log('  PASS: ready: all flags false');
   },
   () => {
-    const r = build(validInput());
-    assert.equal(r.matched_allowed.length, 2);
-    console.log('  PASS: ready: matched_allowed count');
-  },
-  () => {
-    const r = build(validInput());
-    assert.equal(r.matched_forbidden.length, 0);
-    console.log('  PASS: ready: matched_forbidden zero');
+    const r1 = build(validInput());
+    const r2 = build(validInput());
+    assert.equal(r1.recipe_hash, r2.recipe_hash);
+    console.log('  PASS: ready: hash deterministic');
   },
 
   // --- validate ---
@@ -176,7 +175,7 @@ const TESTS = [
   () => {
     const r = render(build(validInput()));
     assert.equal(typeof r, 'string');
-    assert.ok(r.includes('SCOPE_INSPECTOR_READY'));
+    assert.ok(r.includes('RECIPE_ENGINE_READY'));
     console.log('  PASS: render: is string');
   },
   () => {
@@ -186,10 +185,10 @@ const TESTS = [
   },
   () => {
     const input = validInput();
-    input.proposed_changes.push('tools/release/x.mjs');
+    input.recipes.push({ op: 'bad_op', file_path: 'x', description: 'y' });
     const r = render(build(input));
-    assert.ok(r.includes('SCOPE_INSPECTOR_BLOCKED_SCOPE'));
-    console.log('  PASS: render blocked: contains SCOPE_INSPECTOR_BLOCKED_SCOPE');
+    assert.ok(r.includes('RECIPE_ENGINE_BLOCKED_RECIPE'));
+    console.log('  PASS: render blocked: contains BLOCKED_RECIPE');
   },
   () => {
     const r = render(null);
@@ -205,32 +204,18 @@ const TESTS = [
     assert.equal(r.stable_allowed, false);
     assert.equal(r.tag_allowed, false);
     assert.equal(r.real_execution_allowed, false);
-    console.log('  PASS: ready: release_allowed=false');
+    console.log('  PASS: ready: flags false');
   },
   () => {
     const r = build(null);
     assert.equal(r.release_allowed, false);
-    assert.equal(r.deploy_allowed, false);
-    assert.equal(r.stable_allowed, false);
-    assert.equal(r.tag_allowed, false);
     assert.equal(r.real_execution_allowed, false);
-    console.log('  PASS: blocked: all flags false');
-  },
-  () => {
-    const input = validInput();
-    input.proposed_changes.push('tools/stable/promote.mjs');
-    const r = build(input);
-    assert.equal(r.release_allowed, false);
-    assert.equal(r.deploy_allowed, false);
-    assert.equal(r.stable_allowed, false);
-    assert.equal(r.tag_allowed, false);
-    assert.equal(r.real_execution_allowed, false);
-    console.log('  PASS: scope blocked: all flags false');
+    console.log('  PASS: blocked: flags false');
   },
 ];
 
 function run() {
-  console.log('\n=== software-factory-scope-inspector tests ===\n');
+  console.log('\n=== software-factory-recipe-engine tests ===\n');
   console.log('--- exports ---');
   let passed = 0;
   let failed = 0;
@@ -241,24 +226,24 @@ function run() {
   for (let i = 7; i < 11; i++) {
     try { TESTS[i](); passed++; } catch (e) { console.error(`  FAIL: ${e.message}`); failed++; }
   }
-  console.log('--- blocked scope ---');
-  for (let i = 11; i < 14; i++) {
+  console.log('--- blocked recipe ---');
+  for (let i = 11; i < 15; i++) {
     try { TESTS[i](); passed++; } catch (e) { console.error(`  FAIL: ${e.message}`); failed++; }
   }
   console.log('--- ready ---');
-  for (let i = 14; i < 21; i++) {
+  for (let i = 15; i < 22; i++) {
     try { TESTS[i](); passed++; } catch (e) { console.error(`  FAIL: ${e.message}`); failed++; }
   }
   console.log('--- validate ---');
-  for (let i = 21; i < 24; i++) {
+  for (let i = 22; i < 25; i++) {
     try { TESTS[i](); passed++; } catch (e) { console.error(`  FAIL: ${e.message}`); failed++; }
   }
   console.log('--- render ---');
-  for (let i = 24; i < 28; i++) {
+  for (let i = 25; i < 29; i++) {
     try { TESTS[i](); passed++; } catch (e) { console.error(`  FAIL: ${e.message}`); failed++; }
   }
   console.log('--- invariants ---');
-  for (let i = 28; i < 31; i++) {
+  for (let i = 29; i < 31; i++) {
     try { TESTS[i](); passed++; } catch (e) { console.error(`  FAIL: ${e.message}`); failed++; }
   }
   console.log(`\n=== Results: ${passed} passed, ${failed} failed ===\n`);
