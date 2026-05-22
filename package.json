@@ -354,6 +354,7 @@
     "test:software-factory-mission-report-unit": "node --no-deprecation tools/tests/software-factory/software-factory-mission-report.test.mjs",
     "test:software-factory-orchestrator-unit": "node --no-deprecation tools/tests/software-factory/software-factory-orchestrator.test.mjs",
     "test:software-factory-cli-unit": "node --no-deprecation tools/tests/software-factory/software-factory-cli.test.mjs",
-    "test:software-factory-memory-ledger-unit": "node --no-deprecation tools/tests/software-factory/software-factory-memory-ledger.test.mjs"
+    "test:software-factory-memory-ledger-unit": "node --no-deprecation tools/tests/software-factory/software-factory-memory-ledger.test.mjs",
+    "test:software-factory-security-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-security-review.test.mjs"
   }
 }
