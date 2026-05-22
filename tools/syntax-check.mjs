@@ -728,6 +728,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-real-patch-pre-state-snapshot.test.mjs',
   'tools/software-factory/software-factory-real-patch-apply-controller.mjs',
   'tools/tests/software-factory/software-factory-real-patch-apply-controller.test.mjs',
+  'tools/software-factory/software-factory-real-patch-physical-apply-proof.mjs',
+  'tools/tests/software-factory/software-factory-real-patch-physical-apply-proof.test.mjs',
 ];
 
 let failures = 0;

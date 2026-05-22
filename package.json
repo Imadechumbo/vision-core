@@ -402,7 +402,8 @@
     "test:software-factory-real-patch-command-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-command-contract.test.mjs",
     "test:software-factory-real-patch-scope-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-scope-binder.test.mjs",
     "test:software-factory-real-patch-pre-state-snapshot-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-pre-state-snapshot.test.mjs",
-    "test:software-factory-real-patch-apply-controller-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-apply-controller.test.mjs"
+    "test:software-factory-real-patch-apply-controller-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-apply-controller.test.mjs",
+    "test:software-factory-real-patch-physical-apply-proof-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-patch-physical-apply-proof.test.mjs"
   }
 }
 
