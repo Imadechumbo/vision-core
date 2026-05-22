@@ -766,6 +766,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-product-dashboard-data-model.test.mjs',
   'tools/software-factory/software-factory-multi-project-registry-contract.mjs',
   'tools/tests/software-factory/software-factory-multi-project-registry-contract.test.mjs',
+  'tools/software-factory/software-factory-project-context-isolation-gate.mjs',
+  'tools/tests/software-factory/software-factory-project-context-isolation-gate.test.mjs',
 ];
 
 let failures = 0;
