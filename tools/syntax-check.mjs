@@ -632,6 +632,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-cli.test.mjs',
   'tools/software-factory/software-factory-memory-ledger.mjs',
   'tools/tests/software-factory/software-factory-memory-ledger.test.mjs',
+  'tools/software-factory/software-factory-security-review.mjs',
+  'tools/tests/software-factory/software-factory-security-review.test.mjs',
 ];
 
 let failures = 0;
