@@ -710,6 +710,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-real-pr-body-evidence-binder.test.mjs',
   'tools/software-factory/software-factory-real-pr-creation-approval-gate.mjs',
   'tools/tests/software-factory/software-factory-real-pr-creation-approval-gate.test.mjs',
+  'tools/software-factory/software-factory-real-pr-creation-executor.mjs',
+  'tools/tests/software-factory/software-factory-real-pr-creation-executor.test.mjs',
 ];
 
 let failures = 0;
