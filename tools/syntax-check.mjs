@@ -646,6 +646,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-patch-diff-binder.test.mjs',
   'tools/software-factory/software-factory-sandbox-patch-env.mjs',
   'tools/tests/software-factory/software-factory-sandbox-patch-env.test.mjs',
+  'tools/software-factory/software-factory-sandbox-test-lane.mjs',
+  'tools/tests/software-factory/software-factory-sandbox-test-lane.test.mjs',
 ];
 
 let failures = 0;
