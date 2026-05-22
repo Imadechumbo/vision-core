@@ -411,7 +411,8 @@
     "test:software-factory-controlled-real-patch-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-real-patch-execution-phase-gate.test.mjs",
     "test:software-factory-runtime-mission-command-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-command-contract.test.mjs",
     "test:software-factory-runtime-mission-scope-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-scope-binder.test.mjs",
-    "test:software-factory-runtime-mission-context-builder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-context-builder.test.mjs"
+    "test:software-factory-runtime-mission-context-builder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-context-builder.test.mjs",
+    "test:software-factory-runtime-mission-plan-builder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-runtime-mission-plan-builder.test.mjs"
   }
 }
 

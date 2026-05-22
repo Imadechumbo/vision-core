@@ -746,6 +746,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-runtime-mission-scope-binder.test.mjs',
   'tools/software-factory/software-factory-runtime-mission-context-builder.mjs',
   'tools/tests/software-factory/software-factory-runtime-mission-context-builder.test.mjs',
+  'tools/software-factory/software-factory-runtime-mission-plan-builder.mjs',
+  'tools/tests/software-factory/software-factory-runtime-mission-plan-builder.test.mjs',
 ];
 
 let failures = 0;
