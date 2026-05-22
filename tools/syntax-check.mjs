@@ -714,6 +714,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-real-pr-creation-executor.test.mjs',
   'tools/software-factory/software-factory-real-pr-creation-verifier.mjs',
   'tools/tests/software-factory/software-factory-real-pr-creation-verifier.test.mjs',
+  'tools/software-factory/software-factory-pr-checks-monitor.mjs',
+  'tools/tests/software-factory/software-factory-pr-checks-monitor.test.mjs',
 ];
 
 let failures = 0;
