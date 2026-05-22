@@ -586,6 +586,8 @@ const FILES = [
   'tools/tests/controlled-tag-plan.test.mjs',
   'tools/controlled-release-plan-lock.mjs',
   'tools/tests/controlled-release-plan-lock.test.mjs',
+  'tools/pre-release-final-verifier.mjs',
+  'tools/tests/pre-release-final-verifier.test.mjs',
 ];
 
 let failures = 0;
