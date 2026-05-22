@@ -720,6 +720,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pr-merge-blocker-gate.test.mjs',
   'tools/software-factory/software-factory-controlled-real-pr-execution-phase-gate.mjs',
   'tools/tests/software-factory/software-factory-controlled-real-pr-execution-phase-gate.test.mjs',
+  'tools/software-factory/software-factory-real-patch-command-contract.mjs',
+  'tools/tests/software-factory/software-factory-real-patch-command-contract.test.mjs',
 ];
 
 let failures = 0;
