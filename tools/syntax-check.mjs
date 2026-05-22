@@ -726,6 +726,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-real-patch-scope-binder.test.mjs',
   'tools/software-factory/software-factory-real-patch-pre-state-snapshot.mjs',
   'tools/tests/software-factory/software-factory-real-patch-pre-state-snapshot.test.mjs',
+  'tools/software-factory/software-factory-real-patch-apply-controller.mjs',
+  'tools/tests/software-factory/software-factory-real-patch-apply-controller.test.mjs',
 ];
 
 let failures = 0;
