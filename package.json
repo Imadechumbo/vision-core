@@ -319,6 +319,7 @@
     "test:real-repo-patch-evidence-graph-unit": "node --no-deprecation tools/tests/real-repo-patch-evidence-graph.test.mjs",
     "test:real-repo-patch-replay-verifier-unit": "node --no-deprecation tools/tests/real-repo-patch-replay-verifier.test.mjs",
     "test:real-repo-patch-human-approval-binding-unit": "node --no-deprecation tools/tests/real-repo-patch-human-approval-binding.test.mjs",
-    "test:real-repo-patch-rc-dry-run-unit": "node --no-deprecation tools/tests/real-repo-patch-rc-dry-run.test.mjs"
+    "test:real-repo-patch-rc-dry-run-unit": "node --no-deprecation tools/tests/real-repo-patch-rc-dry-run.test.mjs",
+    "test:real-repo-patch-release-plan-generator-unit": "node --no-deprecation tools/tests/real-repo-patch-release-plan-generator.test.mjs"
   }
 }
