@@ -744,6 +744,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-runtime-mission-command-contract.test.mjs',
   'tools/software-factory/software-factory-runtime-mission-scope-binder.mjs',
   'tools/tests/software-factory/software-factory-runtime-mission-scope-binder.test.mjs',
+  'tools/software-factory/software-factory-runtime-mission-context-builder.mjs',
+  'tools/tests/software-factory/software-factory-runtime-mission-context-builder.test.mjs',
 ];
 
 let failures = 0;
