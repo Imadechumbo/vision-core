@@ -678,6 +678,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-pr-review-router.test.mjs',
   'tools/software-factory/software-factory-pr-final-authority-review.mjs',
   'tools/tests/software-factory/software-factory-pr-final-authority-review.test.mjs',
+  'tools/software-factory/software-factory-pr-creation-phase-gate.mjs',
+  'tools/tests/software-factory/software-factory-pr-creation-phase-gate.test.mjs',
 ];
 
 let failures = 0;
