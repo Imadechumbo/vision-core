@@ -562,6 +562,8 @@ const FILES = [
   'tools/tests/real-repo-patch-human-approval-binding.test.mjs',
   'tools/real-repo-patch-rc-dry-run.mjs',
   'tools/tests/real-repo-patch-rc-dry-run.test.mjs',
+  'tools/real-repo-patch-release-plan-generator.mjs',
+  'tools/tests/real-repo-patch-release-plan-generator.test.mjs',
 ];
 
 let failures = 0;
