@@ -325,6 +325,7 @@
     "test:real-repo-patch-final-authority-review-unit": "node --no-deprecation tools/tests/real-repo-patch-final-authority-review.test.mjs",
     "test:real-repo-patch-certification-report-unit": "node --no-deprecation tools/tests/real-repo-patch-certification-report.test.mjs",
     "test:real-repo-patch-phase-gate-consolidator-unit": "node --no-deprecation tools/tests/real-repo-patch-phase-gate-consolidator.test.mjs",
-    "test:manual-release-authority-contract-unit": "node --no-deprecation tools/tests/manual-release-authority-contract.test.mjs"
+    "test:manual-release-authority-contract-unit": "node --no-deprecation tools/tests/manual-release-authority-contract.test.mjs",
+    "test:real-release-decision-request-unit": "node --no-deprecation tools/tests/real-release-decision-request.test.mjs"
   }
 }

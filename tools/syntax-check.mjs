@@ -574,6 +574,8 @@ const FILES = [
   'tools/tests/real-repo-patch-phase-gate-consolidator.test.mjs',
   'tools/manual-release-authority-contract.mjs',
   'tools/tests/manual-release-authority-contract.test.mjs',
+  'tools/real-release-decision-request.mjs',
+  'tools/tests/real-release-decision-request.test.mjs',
 ];
 
 let failures = 0;
