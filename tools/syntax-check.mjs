@@ -826,6 +826,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-saas-enablement-scope-binder.test.mjs',
   'tools/software-factory/software-factory-production-readiness-evidence-binder.mjs',
   'tools/tests/software-factory/software-factory-production-readiness-evidence-binder.test.mjs',
+  'tools/software-factory/software-factory-activation-dry-run-controller.mjs',
+  'tools/tests/software-factory/software-factory-activation-dry-run-controller.test.mjs',
 ];
 
 let failures = 0;

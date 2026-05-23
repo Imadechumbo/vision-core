@@ -451,7 +451,8 @@
     "test:software-factory-saas-hardening-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-saas-hardening-phase-gate.test.mjs",
     "test:software-factory-product-activation-command-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-product-activation-command-contract.test.mjs",
     "test:software-factory-saas-enablement-scope-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-saas-enablement-scope-binder.test.mjs",
-    "test:software-factory-production-readiness-evidence-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-production-readiness-evidence-binder.test.mjs"
+    "test:software-factory-production-readiness-evidence-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-production-readiness-evidence-binder.test.mjs",
+    "test:software-factory-activation-dry-run-controller-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-dry-run-controller.test.mjs"
   }
 }
 
