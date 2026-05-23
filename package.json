@@ -488,7 +488,8 @@
     "test:software-factory-release-execution-plan-receipt-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-execution-plan-receipt.test.mjs",
     "test:software-factory-final-rollback-authority-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-final-rollback-authority-binder.test.mjs",
     "test:software-factory-production-release-final-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-production-release-final-review.test.mjs",
-    "test:software-factory-pass-gold-release-authority-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pass-gold-release-authority-phase-gate.test.mjs"
+    "test:software-factory-pass-gold-release-authority-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pass-gold-release-authority-phase-gate.test.mjs",
+    "test:software-factory-explicit-release-execution-command-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-explicit-release-execution-command-contract.test.mjs"
   }
 }
 

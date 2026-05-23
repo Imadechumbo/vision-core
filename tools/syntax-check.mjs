@@ -830,6 +830,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-activation-dry-run-controller.test.mjs',
   'tools/software-factory/software-factory-activation-risk-gate.mjs',
   'tools/tests/software-factory/software-factory-activation-risk-gate.test.mjs',
+  'tools/software-factory/software-factory-explicit-release-execution-command-contract.mjs',
+  'tools/tests/software-factory/software-factory-explicit-release-execution-command-contract.test.mjs',
 ];
 
 let failures = 0;
