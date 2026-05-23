@@ -468,7 +468,12 @@
     "test:software-factory-activation-execution-evidence-receipt-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-execution-evidence-receipt.test.mjs",
     "test:software-factory-activation-execution-rollback-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-execution-rollback-binder.test.mjs",
     "test:software-factory-activation-execution-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-execution-final-authority-review.test.mjs",
-    "test:software-factory-controlled-product-activation-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-product-activation-execution-phase-gate.test.mjs"
+    "test:software-factory-controlled-product-activation-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-product-activation-execution-phase-gate.test.mjs",
+    "test:software-factory-release-execution-command-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-execution-command-contract.test.mjs",
+    "test:software-factory-deployment-scope-boundary-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-deployment-scope-boundary-contract.test.mjs",
+    "test:software-factory-release-artifact-evidence-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-artifact-evidence-binder.test.mjs",
+    "test:software-factory-deployment-dry-run-plan-unit": "node --no-deprecation tools/tests/software-factory/software-factory-deployment-dry-run-plan.test.mjs",
+    "test:software-factory-release-execution-readiness-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-execution-readiness-gate.test.mjs"
   }
 }
 
