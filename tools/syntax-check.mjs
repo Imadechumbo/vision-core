@@ -796,6 +796,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-compliance-evidence-receipt.test.mjs',
   'tools/software-factory/software-factory-enterprise-security-report-contract.mjs',
   'tools/tests/software-factory/software-factory-enterprise-security-report-contract.test.mjs',
+  'tools/software-factory/software-factory-enterprise-security-final-authority-review.mjs',
+  'tools/tests/software-factory/software-factory-enterprise-security-final-authority-review.test.mjs',
 ];
 
 let failures = 0;
