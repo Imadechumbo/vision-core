@@ -780,6 +780,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-dashboard-evidence-projection.test.mjs',
   'tools/software-factory/software-factory-product-dashboard-policy-phase-gate.mjs',
   'tools/tests/software-factory/software-factory-product-dashboard-policy-phase-gate.test.mjs',
+  'tools/software-factory/software-factory-enterprise-security-contract.mjs',
+  'tools/tests/software-factory/software-factory-enterprise-security-contract.test.mjs',
 ];
 
 let failures = 0;
