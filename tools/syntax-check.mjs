@@ -806,6 +806,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-tenant-isolation-contract.test.mjs',
   'tools/software-factory/software-factory-subscription-policy-matrix.mjs',
   'tools/tests/software-factory/software-factory-subscription-policy-matrix.test.mjs',
+  'tools/software-factory/software-factory-billing-dry-run-contract.mjs',
+  'tools/tests/software-factory/software-factory-billing-dry-run-contract.test.mjs',
 ];
 
 let failures = 0;
