@@ -814,6 +814,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-saas-policy-binding.test.mjs',
   'tools/software-factory/software-factory-saas-evidence-receipt.mjs',
   'tools/tests/software-factory/software-factory-saas-evidence-receipt.test.mjs',
+  'tools/software-factory/software-factory-saas-security-report-contract.mjs',
+  'tools/tests/software-factory/software-factory-saas-security-report-contract.test.mjs',
 ];
 
 let failures = 0;
