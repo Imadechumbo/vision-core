@@ -442,7 +442,8 @@
     "test:software-factory-saas-platform-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-saas-platform-contract.test.mjs",
     "test:software-factory-tenant-isolation-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-tenant-isolation-contract.test.mjs",
     "test:software-factory-subscription-policy-matrix-unit": "node --no-deprecation tools/tests/software-factory/software-factory-subscription-policy-matrix.test.mjs",
-    "test:software-factory-billing-dry-run-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-billing-dry-run-contract.test.mjs"
+    "test:software-factory-billing-dry-run-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-billing-dry-run-contract.test.mjs",
+    "test:software-factory-saas-risk-classification-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-saas-risk-classification-gate.test.mjs"
   }
 }
 
