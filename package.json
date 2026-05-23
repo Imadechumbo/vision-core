@@ -432,7 +432,8 @@
     "test:software-factory-enterprise-security-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-enterprise-security-contract.test.mjs",
     "test:software-factory-secrets-access-boundary-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-secrets-access-boundary-contract.test.mjs",
     "test:software-factory-compliance-control-matrix-unit": "node --no-deprecation tools/tests/software-factory/software-factory-compliance-control-matrix.test.mjs",
-    "test:software-factory-security-scan-dry-run-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-security-scan-dry-run-contract.test.mjs"
+    "test:software-factory-security-scan-dry-run-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-security-scan-dry-run-contract.test.mjs",
+    "test:software-factory-enterprise-risk-classification-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-enterprise-risk-classification-gate.test.mjs"
   }
 }
 
