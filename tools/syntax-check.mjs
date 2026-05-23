@@ -790,6 +790,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-security-scan-dry-run-contract.test.mjs',
   'tools/software-factory/software-factory-enterprise-risk-classification-gate.mjs',
   'tools/tests/software-factory/software-factory-enterprise-risk-classification-gate.test.mjs',
+  'tools/software-factory/software-factory-enterprise-security-policy-binding.mjs',
+  'tools/tests/software-factory/software-factory-enterprise-security-policy-binding.test.mjs',
 ];
 
 let failures = 0;
