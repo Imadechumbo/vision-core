@@ -444,7 +444,8 @@
     "test:software-factory-subscription-policy-matrix-unit": "node --no-deprecation tools/tests/software-factory/software-factory-subscription-policy-matrix.test.mjs",
     "test:software-factory-billing-dry-run-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-billing-dry-run-contract.test.mjs",
     "test:software-factory-saas-risk-classification-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-saas-risk-classification-gate.test.mjs",
-    "test:software-factory-saas-policy-binding-unit": "node --no-deprecation tools/tests/software-factory/software-factory-saas-policy-binding.test.mjs"
+    "test:software-factory-saas-policy-binding-unit": "node --no-deprecation tools/tests/software-factory/software-factory-saas-policy-binding.test.mjs",
+    "test:software-factory-saas-evidence-receipt-unit": "node --no-deprecation tools/tests/software-factory/software-factory-saas-evidence-receipt.test.mjs"
   }
 }
 

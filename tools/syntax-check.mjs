@@ -812,6 +812,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-saas-risk-classification-gate.test.mjs',
   'tools/software-factory/software-factory-saas-policy-binding.mjs',
   'tools/tests/software-factory/software-factory-saas-policy-binding.test.mjs',
+  'tools/software-factory/software-factory-saas-evidence-receipt.mjs',
+  'tools/tests/software-factory/software-factory-saas-evidence-receipt.test.mjs',
 ];
 
 let failures = 0;
