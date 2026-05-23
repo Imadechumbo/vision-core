@@ -463,7 +463,12 @@
     "test:software-factory-product-activation-preflight-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-product-activation-preflight-gate.test.mjs",
     "test:software-factory-production-touch-boundary-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-production-touch-boundary-contract.test.mjs",
     "test:software-factory-activation-execution-dry-run-plan-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-execution-dry-run-plan.test.mjs",
-    "test:software-factory-activation-execution-readiness-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-execution-readiness-gate.test.mjs"
+    "test:software-factory-activation-execution-readiness-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-execution-readiness-gate.test.mjs",
+    "test:software-factory-activation-execution-approval-binding-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-execution-approval-binding.test.mjs",
+    "test:software-factory-activation-execution-evidence-receipt-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-execution-evidence-receipt.test.mjs",
+    "test:software-factory-activation-execution-rollback-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-execution-rollback-binder.test.mjs",
+    "test:software-factory-activation-execution-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-execution-final-authority-review.test.mjs",
+    "test:software-factory-controlled-product-activation-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-product-activation-execution-phase-gate.test.mjs"
   }
 }
 
