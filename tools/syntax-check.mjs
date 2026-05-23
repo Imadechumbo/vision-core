@@ -770,6 +770,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-project-context-isolation-gate.test.mjs',
   'tools/software-factory/software-factory-policy-vault-contract.mjs',
   'tools/tests/software-factory/software-factory-policy-vault-contract.test.mjs',
+  'tools/software-factory/software-factory-dashboard-view-contract.mjs',
+  'tools/tests/software-factory/software-factory-dashboard-view-contract.test.mjs',
 ];
 
 let failures = 0;
