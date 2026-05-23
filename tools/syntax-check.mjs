@@ -838,6 +838,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-final-production-execution-preflight.test.mjs',
   'tools/software-factory/software-factory-real-release-execution-barrier.mjs',
   'tools/tests/software-factory/software-factory-real-release-execution-barrier.test.mjs',
+  'tools/software-factory/software-factory-explicit-release-execution-phase-gate.mjs',
+  'tools/tests/software-factory/software-factory-explicit-release-execution-phase-gate.test.mjs',
 ];
 
 let failures = 0;

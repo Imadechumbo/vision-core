@@ -492,7 +492,8 @@
     "test:software-factory-explicit-release-execution-command-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-explicit-release-execution-command-contract.test.mjs",
     "test:software-factory-release-execution-consent-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-execution-consent-binder.test.mjs",
     "test:software-factory-final-production-execution-preflight-unit": "node --no-deprecation tools/tests/software-factory/software-factory-final-production-execution-preflight.test.mjs",
-    "test:software-factory-real-release-execution-barrier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-release-execution-barrier.test.mjs"
+    "test:software-factory-real-release-execution-barrier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-release-execution-barrier.test.mjs",
+    "test:software-factory-explicit-release-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-explicit-release-execution-phase-gate.test.mjs"
   }
 }
 
