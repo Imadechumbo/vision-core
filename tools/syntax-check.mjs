@@ -784,6 +784,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-enterprise-security-contract.test.mjs',
   'tools/software-factory/software-factory-secrets-access-boundary-contract.mjs',
   'tools/tests/software-factory/software-factory-secrets-access-boundary-contract.test.mjs',
+  'tools/software-factory/software-factory-compliance-control-matrix.mjs',
+  'tools/tests/software-factory/software-factory-compliance-control-matrix.test.mjs',
 ];
 
 let failures = 0;
