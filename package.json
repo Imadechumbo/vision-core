@@ -490,7 +490,8 @@
     "test:software-factory-production-release-final-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-production-release-final-review.test.mjs",
     "test:software-factory-pass-gold-release-authority-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pass-gold-release-authority-phase-gate.test.mjs",
     "test:software-factory-explicit-release-execution-command-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-explicit-release-execution-command-contract.test.mjs",
-    "test:software-factory-release-execution-consent-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-execution-consent-binder.test.mjs"
+    "test:software-factory-release-execution-consent-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-execution-consent-binder.test.mjs",
+    "test:software-factory-final-production-execution-preflight-unit": "node --no-deprecation tools/tests/software-factory/software-factory-final-production-execution-preflight.test.mjs"
   }
 }
 
