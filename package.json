@@ -480,7 +480,10 @@
     "test:software-factory-release-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-final-authority-review.test.mjs",
     "test:software-factory-controlled-release-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-release-execution-phase-gate.test.mjs",
     "test:software-factory-pass-gold-release-evidence-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-pass-gold-release-evidence-contract.test.mjs",
-    "test:software-factory-release-go-no-go-decision-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-go-no-go-decision-gate.test.mjs"
+    "test:software-factory-release-go-no-go-decision-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-go-no-go-decision-gate.test.mjs",
+    "test:software-factory-production-release-scope-lock-unit": "node --no-deprecation tools/tests/software-factory/software-factory-production-release-scope-lock.test.mjs",
+    "test:software-factory-release-candidate-integrity-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-candidate-integrity-binder.test.mjs",
+    "test:software-factory-final-release-readiness-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-final-release-readiness-gate.test.mjs"
   }
 }
 
