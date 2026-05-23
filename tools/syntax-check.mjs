@@ -834,6 +834,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-explicit-release-execution-command-contract.test.mjs',
   'tools/software-factory/software-factory-release-execution-consent-binder.mjs',
   'tools/tests/software-factory/software-factory-release-execution-consent-binder.test.mjs',
+  'tools/software-factory/software-factory-final-production-execution-preflight.mjs',
+  'tools/tests/software-factory/software-factory-final-production-execution-preflight.test.mjs',
 ];
 
 let failures = 0;
