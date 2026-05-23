@@ -473,7 +473,12 @@
     "test:software-factory-deployment-scope-boundary-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-deployment-scope-boundary-contract.test.mjs",
     "test:software-factory-release-artifact-evidence-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-artifact-evidence-binder.test.mjs",
     "test:software-factory-deployment-dry-run-plan-unit": "node --no-deprecation tools/tests/software-factory/software-factory-deployment-dry-run-plan.test.mjs",
-    "test:software-factory-release-execution-readiness-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-execution-readiness-gate.test.mjs"
+    "test:software-factory-release-execution-readiness-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-execution-readiness-gate.test.mjs",
+    "test:software-factory-release-approval-binding-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-approval-binding.test.mjs",
+    "test:software-factory-deployment-evidence-receipt-unit": "node --no-deprecation tools/tests/software-factory/software-factory-deployment-evidence-receipt.test.mjs",
+    "test:software-factory-release-rollback-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-rollback-binder.test.mjs",
+    "test:software-factory-release-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-final-authority-review.test.mjs",
+    "test:software-factory-controlled-release-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-release-execution-phase-gate.test.mjs"
   }
 }
 
