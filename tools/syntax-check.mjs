@@ -820,16 +820,10 @@ const FILES = [
   'tools/tests/software-factory/software-factory-saas-final-authority-review.test.mjs',
   'tools/software-factory/software-factory-saas-hardening-phase-gate.mjs',
   'tools/tests/software-factory/software-factory-saas-hardening-phase-gate.test.mjs',
-  'tools/software-factory/software-factory-product-activation-command-contract.mjs',
+'tools/software-factory/software-factory-product-activation-command-contract.mjs',
   'tools/tests/software-factory/software-factory-product-activation-command-contract.test.mjs',
-  'tools/software-factory/software-factory-saas-enablement-scope-binder.mjs',
-  'tools/tests/software-factory/software-factory-saas-enablement-scope-binder.test.mjs',
-  'tools/software-factory/software-factory-production-readiness-evidence-binder.mjs',
-  'tools/tests/software-factory/software-factory-production-readiness-evidence-binder.test.mjs',
-  'tools/software-factory/software-factory-activation-dry-run-controller.mjs',
-  'tools/tests/software-factory/software-factory-activation-dry-run-controller.test.mjs',
-  'tools/software-factory/software-factory-activation-risk-gate.mjs',
-  'tools/tests/software-factory/software-factory-activation-risk-gate.test.mjs',
+  'tools/software-factory/software-factory-explicit-release-execution-command-contract.mjs',
+  'tools/tests/software-factory/software-factory-explicit-release-execution-command-contract.test.mjs',
 ];
 
 let failures = 0;
