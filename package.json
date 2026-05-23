@@ -423,7 +423,8 @@
     "test:software-factory-product-dashboard-data-model-unit": "node --no-deprecation tools/tests/software-factory/software-factory-product-dashboard-data-model.test.mjs",
     "test:software-factory-multi-project-registry-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-multi-project-registry-contract.test.mjs",
     "test:software-factory-project-context-isolation-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-project-context-isolation-gate.test.mjs",
-    "test:software-factory-policy-vault-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-policy-vault-contract.test.mjs"
+    "test:software-factory-policy-vault-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-policy-vault-contract.test.mjs",
+    "test:software-factory-dashboard-view-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-dashboard-view-contract.test.mjs"
   }
 }
 
