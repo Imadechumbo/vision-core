@@ -822,6 +822,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-saas-hardening-phase-gate.test.mjs',
   'tools/software-factory/software-factory-product-activation-command-contract.mjs',
   'tools/tests/software-factory/software-factory-product-activation-command-contract.test.mjs',
+  'tools/software-factory/software-factory-saas-enablement-scope-binder.mjs',
+  'tools/tests/software-factory/software-factory-saas-enablement-scope-binder.test.mjs',
 ];
 
 let failures = 0;
