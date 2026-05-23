@@ -832,6 +832,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-activation-risk-gate.test.mjs',
   'tools/software-factory/software-factory-explicit-release-execution-command-contract.mjs',
   'tools/tests/software-factory/software-factory-explicit-release-execution-command-contract.test.mjs',
+  'tools/software-factory/software-factory-release-execution-consent-binder.mjs',
+  'tools/tests/software-factory/software-factory-release-execution-consent-binder.test.mjs',
 ];
 
 let failures = 0;
