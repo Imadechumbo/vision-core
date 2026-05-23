@@ -778,6 +778,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-product-audit-ledger-contract.test.mjs',
   'tools/software-factory/software-factory-dashboard-evidence-projection.mjs',
   'tools/tests/software-factory/software-factory-dashboard-evidence-projection.test.mjs',
+  'tools/software-factory/software-factory-product-dashboard-policy-phase-gate.mjs',
+  'tools/tests/software-factory/software-factory-product-dashboard-policy-phase-gate.test.mjs',
 ];
 
 let failures = 0;
