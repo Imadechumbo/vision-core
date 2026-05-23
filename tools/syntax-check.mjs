@@ -810,6 +810,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-billing-dry-run-contract.test.mjs',
   'tools/software-factory/software-factory-saas-risk-classification-gate.mjs',
   'tools/tests/software-factory/software-factory-saas-risk-classification-gate.test.mjs',
+  'tools/software-factory/software-factory-saas-policy-binding.mjs',
+  'tools/tests/software-factory/software-factory-saas-policy-binding.test.mjs',
 ];
 
 let failures = 0;
