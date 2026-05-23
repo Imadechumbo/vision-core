@@ -449,7 +449,8 @@
     "test:software-factory-saas-security-report-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-saas-security-report-contract.test.mjs",
     "test:software-factory-saas-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-saas-final-authority-review.test.mjs",
     "test:software-factory-saas-hardening-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-saas-hardening-phase-gate.test.mjs",
-    "test:software-factory-product-activation-command-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-product-activation-command-contract.test.mjs"
+    "test:software-factory-product-activation-command-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-product-activation-command-contract.test.mjs",
+    "test:software-factory-saas-enablement-scope-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-saas-enablement-scope-binder.test.mjs"
   }
 }
 
