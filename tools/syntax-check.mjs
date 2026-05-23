@@ -794,6 +794,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-enterprise-security-policy-binding.test.mjs',
   'tools/software-factory/software-factory-compliance-evidence-receipt.mjs',
   'tools/tests/software-factory/software-factory-compliance-evidence-receipt.test.mjs',
+  'tools/software-factory/software-factory-enterprise-security-report-contract.mjs',
+  'tools/tests/software-factory/software-factory-enterprise-security-report-contract.test.mjs',
 ];
 
 let failures = 0;
