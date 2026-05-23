@@ -453,7 +453,12 @@
     "test:software-factory-saas-enablement-scope-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-saas-enablement-scope-binder.test.mjs",
     "test:software-factory-production-readiness-evidence-binder-unit": "node --no-deprecation tools/tests/software-factory/software-factory-production-readiness-evidence-binder.test.mjs",
     "test:software-factory-activation-dry-run-controller-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-dry-run-controller.test.mjs",
-    "test:software-factory-activation-risk-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-risk-gate.test.mjs"
+    "test:software-factory-activation-risk-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-risk-gate.test.mjs",
+    "test:software-factory-activation-policy-binding-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-policy-binding.test.mjs",
+    "test:software-factory-activation-evidence-receipt-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-evidence-receipt.test.mjs",
+    "test:software-factory-activation-final-report-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-final-report.test.mjs",
+    "test:software-factory-activation-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-activation-final-authority-review.test.mjs",
+    "test:software-factory-product-activation-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-product-activation-phase-gate.test.mjs"
   }
 }
 
