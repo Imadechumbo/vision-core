@@ -437,7 +437,8 @@
     "test:software-factory-enterprise-security-policy-binding-unit": "node --no-deprecation tools/tests/software-factory/software-factory-enterprise-security-policy-binding.test.mjs",
     "test:software-factory-compliance-evidence-receipt-unit": "node --no-deprecation tools/tests/software-factory/software-factory-compliance-evidence-receipt.test.mjs",
     "test:software-factory-enterprise-security-report-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-enterprise-security-report-contract.test.mjs",
-    "test:software-factory-enterprise-security-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-enterprise-security-final-authority-review.test.mjs"
+    "test:software-factory-enterprise-security-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-enterprise-security-final-authority-review.test.mjs",
+    "test:software-factory-enterprise-security-compliance-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-enterprise-security-compliance-phase-gate.test.mjs"
   }
 }
 
