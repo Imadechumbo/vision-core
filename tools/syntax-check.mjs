@@ -818,6 +818,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-saas-security-report-contract.test.mjs',
   'tools/software-factory/software-factory-saas-final-authority-review.mjs',
   'tools/tests/software-factory/software-factory-saas-final-authority-review.test.mjs',
+  'tools/software-factory/software-factory-saas-hardening-phase-gate.mjs',
+  'tools/tests/software-factory/software-factory-saas-hardening-phase-gate.test.mjs',
 ];
 
 let failures = 0;
