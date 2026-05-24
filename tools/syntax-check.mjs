@@ -850,6 +850,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-real-release-rollback-readiness-gate.test.mjs',
   'tools/software-factory/software-factory-controlled-real-release-execution-preparation-phase-gate.mjs',
   'tools/tests/software-factory/software-factory-controlled-real-release-execution-preparation-phase-gate.test.mjs',
+  'tools/software-factory/software-factory-release-execution-firewall-contract.mjs',
+  'tools/tests/software-factory/software-factory-release-execution-firewall-contract.test.mjs',
 ];
 
 let failures = 0;
