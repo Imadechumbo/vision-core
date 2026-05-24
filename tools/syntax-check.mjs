@@ -854,6 +854,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-release-execution-firewall-contract.test.mjs',
   'tools/software-factory/software-factory-production-mutation-firewall.mjs',
   'tools/tests/software-factory/software-factory-production-mutation-firewall.test.mjs',
+  'tools/software-factory/software-factory-secret-access-firewall.mjs',
+  'tools/tests/software-factory/software-factory-secret-access-firewall.test.mjs',
 ];
 
 let failures = 0;
