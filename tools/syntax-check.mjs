@@ -870,6 +870,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-firewall-evidence-receipt.test.mjs',
   'tools/software-factory/software-factory-firewall-final-authority-review.mjs',
   'tools/tests/software-factory/software-factory-firewall-final-authority-review.test.mjs',
+  'tools/software-factory/software-factory-release-execution-firewall-phase-gate.mjs',
+  'tools/tests/software-factory/software-factory-release-execution-firewall-phase-gate.test.mjs',
 ];
 
 let failures = 0;
