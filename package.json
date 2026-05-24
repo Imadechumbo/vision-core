@@ -495,7 +495,8 @@
     "test:software-factory-real-release-execution-barrier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-release-execution-barrier.test.mjs",
     "test:software-factory-explicit-release-execution-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-explicit-release-execution-phase-gate.test.mjs",
     "test:software-factory-real-release-execution-command-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-release-execution-command-contract.test.mjs",
-    "test:software-factory-production-execution-environment-verifier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-production-execution-environment-verifier.test.mjs"
+    "test:software-factory-production-execution-environment-verifier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-production-execution-environment-verifier.test.mjs",
+    "test:software-factory-real-release-execution-dry-run-verifier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-release-execution-dry-run-verifier.test.mjs"
   }
 }
 
