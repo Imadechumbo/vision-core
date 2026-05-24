@@ -508,7 +508,8 @@
     "test:software-factory-rollback-execution-firewall-unit": "node --no-deprecation tools/tests/software-factory/software-factory-rollback-execution-firewall.test.mjs",
     "test:software-factory-last-mile-noop-execution-drill-unit": "node --no-deprecation tools/tests/software-factory/software-factory-last-mile-noop-execution-drill.test.mjs",
     "test:software-factory-firewall-evidence-receipt-unit": "node --no-deprecation tools/tests/software-factory/software-factory-firewall-evidence-receipt.test.mjs",
-    "test:software-factory-firewall-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-firewall-final-authority-review.test.mjs"
+    "test:software-factory-firewall-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-firewall-final-authority-review.test.mjs",
+    "test:software-factory-release-execution-firewall-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-execution-firewall-phase-gate.test.mjs"
   }
 }
 
