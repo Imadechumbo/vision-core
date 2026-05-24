@@ -498,7 +498,8 @@
     "test:software-factory-production-execution-environment-verifier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-production-execution-environment-verifier.test.mjs",
     "test:software-factory-real-release-execution-dry-run-verifier-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-release-execution-dry-run-verifier.test.mjs",
     "test:software-factory-real-release-rollback-readiness-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-real-release-rollback-readiness-gate.test.mjs",
-    "test:software-factory-controlled-real-release-execution-preparation-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-real-release-execution-preparation-phase-gate.test.mjs"
+    "test:software-factory-controlled-real-release-execution-preparation-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-controlled-real-release-execution-preparation-phase-gate.test.mjs",
+    "test:software-factory-release-execution-firewall-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-execution-firewall-contract.test.mjs"
   }
 }
 
