@@ -848,6 +848,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-real-release-execution-dry-run-verifier.test.mjs',
   'tools/software-factory/software-factory-real-release-rollback-readiness-gate.mjs',
   'tools/tests/software-factory/software-factory-real-release-rollback-readiness-gate.test.mjs',
+  'tools/software-factory/software-factory-controlled-real-release-execution-preparation-phase-gate.mjs',
+  'tools/tests/software-factory/software-factory-controlled-real-release-execution-preparation-phase-gate.test.mjs',
 ];
 
 let failures = 0;
