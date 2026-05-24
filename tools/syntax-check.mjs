@@ -866,6 +866,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-rollback-execution-firewall.test.mjs',
   'tools/software-factory/software-factory-last-mile-noop-execution-drill.mjs',
   'tools/tests/software-factory/software-factory-last-mile-noop-execution-drill.test.mjs',
+  'tools/software-factory/software-factory-firewall-evidence-receipt.mjs',
+  'tools/tests/software-factory/software-factory-firewall-evidence-receipt.test.mjs',
 ];
 
 let failures = 0;
