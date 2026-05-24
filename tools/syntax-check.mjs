@@ -858,6 +858,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-secret-access-firewall.test.mjs',
   'tools/software-factory/software-factory-billing-execution-firewall.mjs',
   'tools/tests/software-factory/software-factory-billing-execution-firewall.test.mjs',
+  'tools/software-factory/software-factory-network-execution-firewall.mjs',
+  'tools/tests/software-factory/software-factory-network-execution-firewall.test.mjs',
 ];
 
 let failures = 0;

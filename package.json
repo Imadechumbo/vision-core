@@ -502,7 +502,8 @@
     "test:software-factory-release-execution-firewall-contract-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-execution-firewall-contract.test.mjs",
     "test:software-factory-production-mutation-firewall-unit": "node --no-deprecation tools/tests/software-factory/software-factory-production-mutation-firewall.test.mjs",
     "test:software-factory-secret-access-firewall-unit": "node --no-deprecation tools/tests/software-factory/software-factory-secret-access-firewall.test.mjs",
-    "test:software-factory-billing-execution-firewall-unit": "node --no-deprecation tools/tests/software-factory/software-factory-billing-execution-firewall.test.mjs"
+    "test:software-factory-billing-execution-firewall-unit": "node --no-deprecation tools/tests/software-factory/software-factory-billing-execution-firewall.test.mjs",
+    "test:software-factory-network-execution-firewall-unit": "node --no-deprecation tools/tests/software-factory/software-factory-network-execution-firewall.test.mjs"
   }
 }
 
