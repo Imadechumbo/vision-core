@@ -842,6 +842,8 @@ const FILES = [
   'tools/tests/software-factory/software-factory-explicit-release-execution-phase-gate.test.mjs',
   'tools/software-factory/software-factory-real-release-execution-command-contract.mjs',
   'tools/tests/software-factory/software-factory-real-release-execution-command-contract.test.mjs',
+  'tools/software-factory/software-factory-production-execution-environment-verifier.mjs',
+  'tools/tests/software-factory/software-factory-production-execution-environment-verifier.test.mjs',
 ];
 
 let failures = 0;
