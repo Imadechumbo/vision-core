@@ -5,6 +5,7 @@
  */
 
 import { spawnSync } from 'child_process';
+import { discoverSoftwareFactorySyntaxFiles } from './software-factory-syntax-discovery.mjs';
 
 const FILES = [
   'tools/pi-harness.mjs',
@@ -872,10 +873,15 @@ const FILES = [
   'tools/tests/software-factory/software-factory-firewall-final-authority-review.test.mjs',
   'tools/software-factory/software-factory-release-execution-firewall-phase-gate.mjs',
   'tools/tests/software-factory/software-factory-release-execution-firewall-phase-gate.test.mjs',
+  'tools/run-software-factory-test.mjs',
+  'tools/software-factory-syntax-discovery.mjs',
 ];
 
+const discovered = discoverSoftwareFactorySyntaxFiles();
+const allFiles = [...new Set([...FILES, ...discovered])];
+
 let failures = 0;
-for (const file of FILES) {
+for (const file of allFiles) {
   const r = spawnSync(process.execPath, ['--check', file], { encoding: 'utf8' });
   if (r.status !== 0) {
     console.error(`SYNTAX FAIL: ${file}`);
@@ -885,7 +891,7 @@ for (const file of FILES) {
 }
 
 if (failures === 0) {
-  console.log(`syntax-check: ${FILES.length} files OK`);
+  console.log(`syntax-check: ${allFiles.length} files OK`);
 } else {
   console.error(`syntax-check: ${failures} file(s) failed`);
   process.exit(1);
