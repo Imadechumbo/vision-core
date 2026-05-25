@@ -132,7 +132,12 @@ export function build(input) {
 
   // Check controlled_release_unlock_request_contract_ready
   if (typeof controlled_release_unlock_request_contract_ready !== 'boolean') {
-    errors.push('INVALID_CONTRACT_READY');
+    return {
+      schema_version: MODULE_VERSION,
+      status: STATUSES.FINAL_RELEASE_INTERLOCK_BINDER_BLOCKED_INPUT,
+      errors: ['INVALID_CONTRACT_READY'],
+      hash: null,
+    };
   }
 
   // If controlled_release_unlock_request_contract_ready is false, return BLOCKED_UNLOCK_REQUEST
