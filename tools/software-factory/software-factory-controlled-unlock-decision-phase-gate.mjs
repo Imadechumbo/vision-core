@@ -31,49 +31,59 @@ const REQUIRED_MODULE_IDS = [
 export function build(input) {
   const errors = [];
 
-  // Check for null or undefined input
-  if (input === null || input === undefined) {
-    return {
-      schema_version: MODULE_VERSION,
-      status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
-      errors: ['INPUT_IS_NULL'],
-      hash: null,
-    };
-  }
+// Check for null or undefined input
+if (input === null || input === undefined) {
+  return {
+    schema_version: MODULE_VERSION,
+    status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
+    errors: ['INPUT_IS_NULL'],
+    hash: null,
+  };
+}
 
-  // Check for empty object
-  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
-    return {
-      schema_version: MODULE_VERSION,
-      status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
-      errors: ['INPUT_IS_NOT_AN_OBJECT'],
-      hash: null,
-    };
-  }
+// Check for empty object
+if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+  return {
+    schema_version: MODULE_VERSION,
+    status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
+    errors: ['INPUT_IS_NOT_AN_OBJECT'],
+    hash: null,
+  };
+}
 
-  // Check required fields
-  for (const field of REQUIRED_FIELDS) {
-    if (!input.hasOwnProperty(field)) {
-      errors.push(`MISSING_REQUIRED_FIELD: ${field}`);
-    }
-  }
+// Validate ids
+if (typeof ids !== 'object' || ids === null || Array.isArray(ids)) {
+  return {
+    schema_version: MODULE_VERSION,
+    status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
+    errors: ['IDS_NOT_AN_OBJECT'],
+    hash: null,
+  };
+}
 
-  if (errors.length > 0) {
-    return {
-      schema_version: MODULE_VERSION,
-      status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
-      errors,
-      hash: null,
-    };
+// Check required fields
+for (const field of REQUIRED_FIELDS) {
+  if (!input.hasOwnProperty(field)) {
+    errors.push(`MISSING_REQUIRED_FIELD: ${field}`);
   }
+}
 
-  const {
-    controlled_unlock_decision_phase_gate_id,
-    final_execution_barrier_review_id,
-    final_execution_barrier_review_ready,
-    ids,
-    phase_summary,
-  } = input;
+if (errors.length > 0) {
+  return {
+    schema_version: MODULE_VERSION,
+    status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
+    errors,
+    hash: null,
+  };
+}
+
+const {
+  controlled_unlock_decision_phase_gate_id,
+  final_execution_barrier_review_id,
+  final_execution_barrier_review_ready,
+  ids,
+  phase_summary,
+} = input;
 
   // Validate phase_gate_id
   if (typeof controlled_unlock_decision_phase_gate_id !== 'string' || controlled_unlock_decision_phase_gate_id.trim().length === 0) {
@@ -87,11 +97,13 @@ export function build(input) {
 
   // Check review_ready
   if (typeof final_execution_barrier_review_ready !== 'boolean') {
-    errors.push('INVALID_REVIEW_READY');
-  }
-
-  // If review_ready is false, return BLOCKED_REVIEW
-  if (final_execution_barrier_review_ready === false) {
+    return {
+      schema_version: MODULE_VERSION,
+      status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
+      errors: ['INVALID_REVIEW_READY'],
+      hash: null,
+    };
+  } else if (final_execution_barrier_review_ready === false) {
     return {
       schema_version: MODULE_VERSION,
       status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_REVIEW,
@@ -102,14 +114,20 @@ export function build(input) {
 
   // Validate ids
   if (typeof ids !== 'object' || ids === null || Array.isArray(ids)) {
-    errors.push('IDS_NOT_AN_OBJECT');
-  } else {
-    for (const requiredId of REQUIRED_MODULE_IDS) {
-      if (!ids.hasOwnProperty(requiredId)) {
-        errors.push(`MISSING_REQUIRED_ID: ${requiredId}`);
-      } else if (typeof ids[requiredId] !== 'string' || ids[requiredId].trim().length === 0) {
-        errors.push(`INVALID_${requiredId.toUpperCase().replace(/-/g, '_')}_ID`);
-      }
+    return {
+      schema_version: MODULE_VERSION,
+      status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
+      errors: ['IDS_NOT_AN_OBJECT'],
+      hash: null,
+    };
+  }
+
+  // Check for missing required module IDs
+  for (const requiredId of REQUIRED_MODULE_IDS) {
+    if (!ids.hasOwnProperty(requiredId)) {
+      errors.push(`MISSING_REQUIRED_ID: ${requiredId}`);
+    } else if (typeof ids[requiredId] !== 'string' || ids[requiredId].trim().length === 0) {
+      errors.push(`INVALID_${requiredId.toUpperCase().replace(/-/g, '_')}_ID`);
     }
   }
 

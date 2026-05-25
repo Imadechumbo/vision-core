@@ -134,7 +134,12 @@ export function build(input) {
 
   // Check contract_ready
   if (typeof controlled_unlock_decision_contract_ready !== 'boolean') {
-    errors.push('INVALID_CONTRACT_READY');
+    return {
+      schema_version: MODULE_VERSION,
+      status: STATUSES.FINAL_EXECUTION_BARRIER_BINDER_BLOCKED_INPUT,
+      errors: ['INVALID_CONTRACT_READY'],
+      hash: null,
+    };
   }
 
   // If contract_ready is false, return BLOCKED_DECISION

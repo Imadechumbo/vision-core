@@ -134,7 +134,12 @@ export function build(input) {
 
   // Check phase_gate_ready
   if (typeof controlled_release_unlock_request_phase_gate_ready !== 'boolean') {
-    errors.push('INVALID_PHASE_GATE_READY');
+    return {
+      schema_version: MODULE_VERSION,
+      status: STATUSES.CONTROLLED_UNLOCK_DECISION_BLOCKED_INPUT,
+      errors: ['INVALID_PHASE_GATE_READY'],
+      hash: null,
+    };
   }
 
   // If phase_gate_ready is false, return BLOCKED_UNLOCK_REQUEST_PHASE

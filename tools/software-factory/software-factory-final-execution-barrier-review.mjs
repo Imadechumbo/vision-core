@@ -134,7 +134,12 @@ export function build(input) {
 
   // Check receipt_ready
   if (typeof unlock_decision_evidence_receipt_ready !== 'boolean') {
-    errors.push('INVALID_RECEIPT_READY');
+    return {
+      schema_version: MODULE_VERSION,
+      status: STATUSES.FINAL_EXECUTION_BARRIER_REVIEW_BLOCKED_INPUT,
+      errors: ['INVALID_RECEIPT_READY'],
+      hash: null,
+    };
   }
 
   // If receipt_ready is false, return BLOCKED_EVIDENCE
