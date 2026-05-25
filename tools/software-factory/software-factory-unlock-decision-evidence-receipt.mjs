@@ -131,7 +131,12 @@ export function build(input) {
 
   // Check binder_ready
   if (typeof final_execution_barrier_binder_ready !== 'boolean') {
-    errors.push('INVALID_BINDER_READY');
+    return {
+      schema_version: MODULE_VERSION,
+      status: STATUSES.UNLOCK_DECISION_EVIDENCE_RECEIPT_BLOCKED_INPUT,
+      errors: ['INVALID_BINDER_READY'],
+      hash: null,
+    };
   }
 
   // If binder_ready is false, return BLOCKED_BARRIER
