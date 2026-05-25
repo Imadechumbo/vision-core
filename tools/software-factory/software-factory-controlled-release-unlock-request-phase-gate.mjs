@@ -85,33 +85,40 @@ export function build(input) {
     errors.push('INVALID_REVIEW_ID');
   }
 
-  // Check final_unlock_authority_review_ready
-  if (typeof final_unlock_authority_review_ready !== 'boolean') {
-    errors.push('INVALID_REVIEW_READY');
-  }
+// Check final_unlock_authority_review_ready
+if (typeof final_unlock_authority_review_ready !== 'boolean') {
+  return {
+    schema_version: MODULE_VERSION,
+    status: STATUSES.CONTROLLED_RELEASE_UNLOCK_REQUEST_PHASE_GATE_BLOCKED_INPUT,
+    errors: ['INVALID_REVIEW_READY'],
+    hash: null,
+  };
+} else if (final_unlock_authority_review_ready === false) {
+  return {
+    schema_version: MODULE_VERSION,
+    status: STATUSES.CONTROLLED_RELEASE_UNLOCK_REQUEST_PHASE_GATE_BLOCKED_REVIEW,
+    errors: ['REVIEW_NOT_READY'],
+    hash: null,
+  };
+}
 
-  // If final_unlock_authority_review_ready is false, return BLOCKED_REVIEW
-  if (final_unlock_authority_review_ready === false) {
-    return {
-      schema_version: MODULE_VERSION,
-      status: STATUSES.CONTROLLED_RELEASE_UNLOCK_REQUEST_PHASE_GATE_BLOCKED_REVIEW,
-      errors: ['REVIEW_NOT_READY'],
-      hash: null,
-    };
-  }
-
-  // Validate ids
-  if (typeof ids !== 'object' || ids === null || Array.isArray(ids)) {
-    errors.push('IDS_NOT_AN_OBJECT');
-  } else {
-    for (const requiredId of REQUIRED_MODULE_IDS) {
-      if (!ids.hasOwnProperty(requiredId)) {
-        errors.push(`MISSING_REQUIRED_ID: ${requiredId}`);
-      } else if (typeof ids[requiredId] !== 'string' || ids[requiredId].trim().length === 0) {
-        errors.push(`INVALID_${requiredId.toUpperCase().replace(/-/g, '_')}_ID`);
-      }
+// Validate ids
+if (typeof ids !== 'object' || ids === null || Array.isArray(ids)) {
+  return {
+    schema_version: MODULE_VERSION,
+    status: STATUSES.CONTROLLED_RELEASE_UNLOCK_REQUEST_PHASE_GATE_BLOCKED_INPUT,
+    errors: ['IDS_NOT_AN_OBJECT'],
+    hash: null,
+  };
+} else {
+  for (const requiredId of REQUIRED_MODULE_IDS) {
+    if (!ids.hasOwnProperty(requiredId)) {
+      errors.push(`MISSING_REQUIRED_ID: ${requiredId}`);
+    } else if (typeof ids[requiredId] !== 'string' || ids[requiredId].trim().length === 0) {
+      errors.push(`INVALID_${requiredId.toUpperCase().replace(/-/g, '_')}_ID`);
     }
   }
+}
 
   // Validate phase_summary
   if (typeof phase_summary !== 'string' || phase_summary.trim().length === 0) {
