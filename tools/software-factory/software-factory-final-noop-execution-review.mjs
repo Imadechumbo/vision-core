@@ -1,0 +1,289 @@
+import { createHash } from 'crypto';
+
+export const STATUSES = {
+  FINAL_NOOP_EXECUTION_REVIEW_BLOCKED_INPUT: 'FINAL_NOOP_EXECUTION_REVIEW_BLOCKED_INPUT',
+  FINAL_NOOP_EXECUTION_REVIEW_BLOCKED_EVIDENCE: 'FINAL_NOOP_EXECUTION_REVIEW_BLOCKED_EVIDENCE',
+  FINAL_NOOP_EXECUTION_REVIEW_FAIL: 'FINAL_NOOP_EXECUTION_REVIEW_FAIL',
+  FINAL_NOOP_EXECUTION_REVIEW_READY: 'FINAL_NOOP_EXECUTION_REVIEW_READY',
+};
+
+const REQUIRED_CONTROLS = [
+  'final-noop-execution-review-required',
+  'noop-execution-evidence-required',
+  'metadata-only-review',
+  'noop-execution-not-granted',
+  'noop-not-executed',
+  'real-release-command-not-armed',
+  'real-release-not-executed',
+  'no-real-release',
+  'no-real-deploy',
+  'no-tag-create',
+  'no-stable-promotion',
+  'no-artifact-publish',
+  'no-production-touch',
+  'no-billing-execution',
+  'no-secret-access',
+  'no-network',
+  'no-real-rollback',
+  'audit-required',
+  'pass-gold-real-required',
+];
+
+const ALLOWED_REVIEW_MODES = [
+  'blocked',
+  'metadata-only',
+  'contract-only',
+  'dry-run',
+  'planning',
+  'no-op',
+];
+
+const ALLOWED_REVIEW_TYPES = [
+  'final_release_noop_execution_review',
+  'final_deploy_noop_execution_review',
+  'final_tag_noop_execution_review',
+  'final_stable_noop_execution_review',
+  'final_artifact_noop_execution_review',
+  'final_production_noop_execution_review',
+  'final_billing_noop_execution_review',
+  'final_secret_noop_execution_review',
+  'final_network_noop_execution_review',
+  'final_rollback_noop_execution_review',
+  'operator_noop_execution_review',
+  'emergency_stop_noop_execution_review',
+];
+
+function invariants() {
+  return {
+    release_allowed: false,
+    deploy_allowed: false,
+    stable_allowed: false,
+    tag_allowed: false,
+    real_execution_allowed: false,
+    real_release_executed: false,
+    real_deploy_executed: false,
+    real_tag_created: false,
+    real_stable_promoted: false,
+    artifact_published: false,
+    production_touched: false,
+    billing_executed: false,
+    secrets_accessed: false,
+    network_accessed: false,
+    rollback_executed: false,
+    real_release_command_arming_barrier_passed: false,
+    real_release_command_armed: false,
+    final_command_arming_granted: false,
+    real_release_execution_allowed: false,
+    real_release_hard_stop_lifted: false,
+    explicit_human_go_granted: false,
+    final_command_authority_granted: false,
+    final_release_command_authority_phase_passed: false,
+    final_release_command_authority_created: false,
+    explicit_human_go_seal_bound: false,
+    explicit_human_go_seal_verified: false,
+    human_go_evidence_receipt_published: false,
+    final_command_authority_reviewed: false,
+    manual_release_approval_capsule_phase_passed: false,
+    manual_release_execution_approved: false,
+    release_authorization_ledger_phase_passed: false,
+    manual_release_execution_authorized: false,
+    final_manual_go_command_created: false,
+    release_command_arming_bound: false,
+    release_command_arming_verified: false,
+    command_arming_evidence_receipt_published: false,
+    final_command_arming_reviewed: false,
+    real_release_command_seal_created: false,
+    final_noop_execution_bound: false,
+    final_noop_execution_verified: false,
+    noop_execution_evidence_receipt_published: false,
+    final_noop_execution_reviewed: false,
+    final_noop_execution_granted: false,
+    final_noop_execution_gate_passed: false,
+    real_release_noop_executed: false,
+  };
+}
+
+export function build(input) {
+  if (!input || typeof input !== 'object') {
+    return {
+      schema_version: 'v434',
+      status: STATUSES.FINAL_NOOP_EXECUTION_REVIEW_BLOCKED_INPUT,
+      errors: ['input required'],
+      ...invariants(),
+    };
+  }
+
+  const {
+    final_noop_execution_review_id,
+    noop_execution_evidence_receipt_id,
+    noop_execution_evidence_receipt_ready,
+    noop_review_actor,
+    noop_review_reason,
+    noop_review_mode,
+    noop_review_items,
+    required_noop_review_controls,
+  } = input;
+
+  const errors = [];
+
+  if (!final_noop_execution_review_id || typeof final_noop_execution_review_id !== 'string') {
+    errors.push('final_noop_execution_review_id required (string)');
+  }
+  if (!noop_execution_evidence_receipt_id || typeof noop_execution_evidence_receipt_id !== 'string') {
+    errors.push('noop_execution_evidence_receipt_id required (string)');
+  }
+  if (typeof noop_execution_evidence_receipt_ready !== 'boolean') {
+    errors.push('noop_execution_evidence_receipt_ready required (boolean)');
+  }
+  if (!noop_review_actor || typeof noop_review_actor !== 'string') {
+    errors.push('noop_review_actor required (string)');
+  }
+  if (!noop_review_reason || typeof noop_review_reason !== 'string') {
+    errors.push('noop_review_reason required (string)');
+  }
+  if (!noop_review_mode || typeof noop_review_mode !== 'string') {
+    errors.push('noop_review_mode required (string)');
+  }
+  if (!Array.isArray(noop_review_items)) {
+    errors.push('noop_review_items required (array)');
+  }
+  if (!Array.isArray(required_noop_review_controls)) {
+    errors.push('required_noop_review_controls required (array)');
+  }
+
+  if (errors.length > 0) {
+    return {
+      schema_version: 'v434',
+      status: STATUSES.FINAL_NOOP_EXECUTION_REVIEW_BLOCKED_INPUT,
+      errors,
+      ...invariants(),
+    };
+  }
+
+  if (!ALLOWED_REVIEW_MODES.includes(noop_review_mode)) {
+    return {
+      schema_version: 'v434',
+      status: STATUSES.FINAL_NOOP_EXECUTION_REVIEW_FAIL,
+      errors: [`invalid noop_review_mode: ${noop_review_mode}`],
+      ...invariants(),
+    };
+  }
+
+  for (const item of noop_review_items) {
+    if (!item || typeof item !== 'object') {
+      return {
+        schema_version: 'v434',
+        status: STATUSES.FINAL_NOOP_EXECUTION_REVIEW_FAIL,
+        errors: ['each noop_review_item must be an object'],
+        ...invariants(),
+      };
+    }
+    if (!ALLOWED_REVIEW_TYPES.includes(item.noop_review_type)) {
+      return {
+        schema_version: 'v434',
+        status: STATUSES.FINAL_NOOP_EXECUTION_REVIEW_FAIL,
+        errors: [`invalid noop_review_type: ${item.noop_review_type}`],
+        ...invariants(),
+      };
+    }
+  }
+
+  const missing = REQUIRED_CONTROLS.filter(c => !required_noop_review_controls.includes(c));
+  if (missing.length > 0) {
+    return {
+      schema_version: 'v434',
+      status: STATUSES.FINAL_NOOP_EXECUTION_REVIEW_FAIL,
+      errors: [`missing required_noop_review_controls: ${missing.join(', ')}`],
+      ...invariants(),
+    };
+  }
+
+  if (!noop_execution_evidence_receipt_ready) {
+    return {
+      schema_version: 'v434',
+      status: STATUSES.FINAL_NOOP_EXECUTION_REVIEW_BLOCKED_EVIDENCE,
+      errors: ['noop_execution_evidence_receipt_ready must be true'],
+      ...invariants(),
+    };
+  }
+
+  const hash = createHash('sha256')
+    .update(JSON.stringify({
+      schema_version: 'v434',
+      final_noop_execution_review_id,
+      noop_execution_evidence_receipt_id,
+      noop_review_actor,
+      noop_review_reason,
+      noop_review_mode,
+    }))
+    .digest('hex');
+
+  return {
+    schema_version: 'v434',
+    status: STATUSES.FINAL_NOOP_EXECUTION_REVIEW_READY,
+    hash,
+    errors: [],
+    final_noop_execution_review_id,
+    noop_execution_evidence_receipt_id,
+    noop_review_actor,
+    noop_review_reason,
+    noop_review_mode,
+    noop_review_items_count: noop_review_items.length,
+    final_message: 'V434 final no-op execution review recorded. Real release execution remains blocked.',
+    ...invariants(),
+  };
+}
+
+export function validate(result) {
+  if (!result || typeof result !== 'object') return false;
+  if (result.status !== STATUSES.FINAL_NOOP_EXECUTION_REVIEW_READY) return false;
+  if (result.final_noop_execution_reviewed !== false) return false;
+  if (result.final_noop_execution_granted !== false) return false;
+  if (result.real_release_noop_executed !== false) return false;
+  if (result.real_release_execution_allowed !== false) return false;
+  if (result.real_release_command_armed !== false) return false;
+  if (result.real_release_command_seal_created !== false) return false;
+  if (result.final_noop_execution_bound !== false) return false;
+  if (result.final_noop_execution_verified !== false) return false;
+  if (result.release_allowed !== false) return false;
+  if (!result.hash || result.hash.length !== 64) return false;
+  return true;
+}
+
+export function render(result) {
+  if (!result || typeof result !== 'object') {
+    return '[V434] Final No-Op Execution Review — no result\nSEM PASS GOLD REAL → não promove, não libera, não marca stable.';
+  }
+  const lines = [
+    '[V434] Final No-Op Execution Review',
+    `Status: ${result.status}`,
+  ];
+  if (result.errors && result.errors.length > 0) {
+    lines.push(`Errors: ${result.errors.join('; ')}`);
+  }
+  if (result.hash) {
+    lines.push(`Hash: ${result.hash}`);
+  }
+  if (result.final_noop_execution_review_id) {
+    lines.push(`Review ID: ${result.final_noop_execution_review_id}`);
+  }
+  if (result.noop_review_mode) {
+    lines.push(`Review Mode: ${result.noop_review_mode}`);
+  }
+  if (result.noop_review_actor) {
+    lines.push(`Review Actor: ${result.noop_review_actor}`);
+  }
+  lines.push(`final_noop_execution_reviewed: ${result.final_noop_execution_reviewed}`);
+  lines.push(`final_noop_execution_granted: ${result.final_noop_execution_granted}`);
+  lines.push(`real_release_noop_executed: ${result.real_release_noop_executed}`);
+  lines.push(`real_release_execution_allowed: ${result.real_release_execution_allowed}`);
+  lines.push(`real_release_command_armed: ${result.real_release_command_armed}`);
+  lines.push(`real_release_command_seal_created: ${result.real_release_command_seal_created}`);
+  lines.push(`final_noop_execution_bound: ${result.final_noop_execution_bound}`);
+  lines.push(`final_noop_execution_verified: ${result.final_noop_execution_verified}`);
+  if (result.final_message) {
+    lines.push(`Final: ${result.final_message}`);
+  }
+  lines.push('SEM PASS GOLD REAL → não promove, não libera, não marca stable.');
+  return lines.join('\n');
+}
