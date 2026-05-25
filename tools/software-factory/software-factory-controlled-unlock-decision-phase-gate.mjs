@@ -51,12 +51,79 @@ if (typeof input !== 'object' || input === null || Array.isArray(input)) {
   };
 }
 
+// Check required fields
+for (const field of REQUIRED_FIELDS) {
+  if (!input.hasOwnProperty(field)) {
+    errors.push(`MISSING_REQUIRED_FIELD: ${field}`);
+  }
+}
+
+if (errors.length > 0) {
+  return {
+    schema_version: MODULE_VERSION,
+    status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
+    errors,
+    hash: null,
+  };
+}
+
+// Validate phase_gate_id
+if (typeof controlled_unlock_decision_phase_gate_id !== 'string' || controlled_unlock_decision_phase_gate_id.trim().length === 0) {
+  errors.push('INVALID_PHASE_GATE_ID');
+}
+
+// Validate review_id
+if (typeof final_execution_barrier_review_id !== 'string' || final_execution_barrier_review_id.trim().length === 0) {
+  errors.push('INVALID_REVIEW_ID');
+}
+
+// Check review_ready
+if (typeof final_execution_barrier_review_ready !== 'boolean') {
+  return {
+    schema_version: MODULE_VERSION,
+    status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
+    errors: ['INVALID_REVIEW_READY'],
+    hash: null,
+  };
+} else if (final_execution_barrier_review_ready === false) {
+  return {
+    schema_version: MODULE_VERSION,
+    status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_REVIEW,
+    errors: ['REVIEW_NOT_READY'],
+    hash: null,
+  };
+}
+
 // Validate ids
 if (typeof ids !== 'object' || ids === null || Array.isArray(ids)) {
   return {
     schema_version: MODULE_VERSION,
     status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
     errors: ['IDS_NOT_AN_OBJECT'],
+    hash: null,
+  };
+}
+
+// Check for missing required module IDs
+for (const requiredId of REQUIRED_MODULE_IDS) {
+  if (!ids.hasOwnProperty(requiredId)) {
+    errors.push(`MISSING_REQUIRED_ID: ${requiredId}`);
+  } else if (typeof ids[requiredId] !== 'string' || ids[requiredId].trim().length === 0) {
+    errors.push(`INVALID_${requiredId.toUpperCase().replace(/-/g, '_')}_ID`);
+  }
+}
+
+// Validate phase_summary
+if (typeof phase_summary !== 'string' || phase_summary.trim().length === 0) {
+  errors.push('INVALID_PHASE_SUMMARY');
+}
+
+// If there are validation errors, return INCOMPLETE
+if (errors.length > 0) {
+  return {
+    schema_version: MODULE_VERSION,
+    status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_INCOMPLETE,
+    errors,
     hash: null,
   };
 }
