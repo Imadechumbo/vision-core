@@ -126,7 +126,7 @@ export function build(input) {
   } = input;
 
   // Validate execution_hold_evidence_receipt_ready is boolean
-  if (typeof execution_hold_evidence_receipt_ready !== 'boolean')) {
+  if (typeof execution_hold_evidence_receipt_ready !== 'boolean') {
     return {
       schema_version: MODULE_VERSION,
       status: STATUSES.FINAL_RELEASE_LOCK_REVIEW_BLOCKED_INPUT,
