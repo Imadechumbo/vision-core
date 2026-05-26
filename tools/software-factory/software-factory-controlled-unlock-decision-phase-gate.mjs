@@ -1,3 +1,40 @@
+import { createHash } from 'crypto';
+
+const MODULE_NAME = 'software-factory-controlled-unlock-decision-phase-gate';
+const MODULE_VERSION = 'V450';
+
+// STATUSES
+export const STATUSES = {
+  CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT: 'CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT',
+  CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_REVIEW: 'CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_REVIEW',
+  CONTROLLED_UNLOCK_DECISION_PHASE_GATE_INCOMPLETE: 'CONTROLLED_UNLOCK_DECISION_PHASE_GATE_INCOMPLETE',
+  CONTROLLED_UNLOCK_DECISION_PHASE_GATE_READY: 'CONTROLLED_UNLOCK_DECISION_PHASE_GATE_READY',
+};
+
+// Top-level fields (excluding ids)
+const TOP_LEVEL_FIELDS = [
+  'controlled_unlock_decision_phase_gate_id',
+  'final_execution_barrier_review_id',
+  'final_execution_barrier_review_ready',
+  'phase_summary',
+];
+
+// All required fields (including ids)
+const ALL_REQUIRED_FIELDS = [
+  'controlled_unlock_decision_phase_gate_id',
+  'final_execution_barrier_review_id',
+  'final_execution_barrier_review_ready',
+  'ids',
+  'phase_summary',
+];
+
+const REQUIRED_MODULE_IDS = [
+  'controlled_unlock_decision_contract',
+  'final_execution_barrier_binder',
+  'unlock_decision_evidence_receipt',
+  'final_execution_barrier_review',
+];
+
 // Build function
 export function build(input) {
   const errors = [];
@@ -12,7 +49,7 @@ export function build(input) {
     };
   }
 
-  // Check for empty object
+  // Check if input is an object (not array)
   if (typeof input !== 'object' || input === null || Array.isArray(input)) {
     return {
       schema_version: MODULE_VERSION,
@@ -22,16 +59,8 @@ export function build(input) {
     };
   }
 
-  const {
-    controlled_unlock_decision_phase_gate_id,
-    final_execution_barrier_review_id,
-    final_execution_barrier_review_ready,
-    ids,
-    phase_summary,
-  } = input;
-
-  // Check required fields
-  for (const field of REQUIRED_FIELDS) {
+  // Check all required top-level fields are present (excluding ids)
+  for (const field of TOP_LEVEL_FIELDS) {
     if (!input.hasOwnProperty(field)) {
       errors.push(`MISSING_REQUIRED_FIELD: ${field}`);
     }
@@ -46,34 +75,15 @@ export function build(input) {
     };
   }
 
-  // Validate phase_gate_id
-  if (typeof controlled_unlock_decision_phase_gate_id !== 'string' || controlled_unlock_decision_phase_gate_id.trim().length === 0) {
-    errors.push('INVALID_PHASE_GATE_ID');
-  }
+  const {
+    controlled_unlock_decision_phase_gate_id,
+    final_execution_barrier_review_id,
+    final_execution_barrier_review_ready,
+    ids,
+    phase_summary,
+  } = input;
 
-  // Validate review_id
-  if (typeof final_execution_barrier_review_id !== 'string' || final_execution_barrier_review_id.trim().length === 0) {
-    errors.push('INVALID_REVIEW_ID');
-  }
-
-  // Check review_ready
-  if (typeof final_execution_barrier_review_ready !== 'boolean') {
-    return {
-      schema_version: MODULE_VERSION,
-      status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
-      errors: ['INVALID_REVIEW_READY'],
-      hash: null,
-    };
-  } else if (final_execution_barrier_review_ready === false) {
-    return {
-      schema_version: MODULE_VERSION,
-      status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_REVIEW,
-      errors: ['REVIEW_NOT_READY'],
-      hash: null,
-    };
-  }
-
-  // Validate ids
+  // Validate ids is an object
   if (typeof ids !== 'object' || ids === null || Array.isArray(ids)) {
     return {
       schema_version: MODULE_VERSION,
@@ -83,7 +93,27 @@ export function build(input) {
     };
   }
 
-  // Check for missing required module IDs
+  // Validate final_execution_barrier_review_ready is boolean
+  if (typeof final_execution_barrier_review_ready !== 'boolean') {
+    return {
+      schema_version: MODULE_VERSION,
+      status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_INPUT,
+      errors: ['INVALID_REVIEW_READY'],
+      hash: null,
+    };
+  }
+
+  // If review not ready, block
+  if (final_execution_barrier_review_ready === false) {
+    return {
+      schema_version: MODULE_VERSION,
+      status: STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_BLOCKED_REVIEW,
+      errors: ['REVIEW_NOT_READY'],
+      hash: null,
+    };
+  }
+
+  // Check required module IDs in ids
   for (const requiredId of REQUIRED_MODULE_IDS) {
     if (!ids.hasOwnProperty(requiredId)) {
       errors.push(`MISSING_REQUIRED_ID: ${requiredId}`);
@@ -144,4 +174,75 @@ export function build(input) {
     controlled_release_execution_unlocked: false,
     real_release_execution_allowed: false,
   };
+}
+
+// Validate function
+export function validate(input) {
+  const result = build(input);
+  if (result.status !== STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_READY) {
+    return false;
+  }
+  // Check final_message is correct
+  if (result.final_message !== 'V446-V450 controlled release execution unlock decision and final execution barrier complete. Real release execution remains blocked until explicit V451 command.') {
+    return false;
+  }
+  // Check modules_verified has exactly 4 entries
+  if (!Array.isArray(result.modules_verified) || result.modules_verified.length !== 4) {
+    return false;
+  }
+  // Check all critical flags are false
+  const criticalFlags = [
+    'controlled_unlock_decision_phase_passed',
+    'final_real_execution_barrier_lifted',
+    'final_execution_barrier_granted',
+    'controlled_release_execution_unlocked',
+    'real_release_execution_allowed',
+  ];
+  for (const flag of criticalFlags) {
+    if (result[flag] !== false) {
+      return false;
+    }
+  }
+  return result.errors.length === 0;
+}
+
+// Render function
+export function render(data) {
+  const REGRA = 'SEM PASS GOLD REAL → não promove, não libera, não marca stable.';
+  
+  if (data === null || data === undefined) {
+    return JSON.stringify({
+      error: 'NO_DATA',
+      message: 'Input is null or undefined',
+      regra: REGRA,
+    });
+  }
+
+  const status = data.status || 'UNKNOWN';
+  
+  // Prepare output object
+  const output = {
+    schema_version: data.schema_version || MODULE_VERSION,
+    status: status,
+    regra: REGRA,
+  };
+
+  // Include hash if available
+  if (data.hash) {
+    output.hash = data.hash;
+  }
+
+  // Include errors if any
+  if (data.errors && data.errors.length > 0) {
+    output.errors = data.errors;
+  }
+
+  // Include additional fields from READY state
+  if (status === STATUSES.CONTROLLED_UNLOCK_DECISION_PHASE_GATE_READY) {
+    output.modules_verified = data.modules_verified;
+    output.final_message = data.final_message;
+    // All other critical flags are already false by default
+  }
+
+  return JSON.stringify(output, null, 2);
 }
