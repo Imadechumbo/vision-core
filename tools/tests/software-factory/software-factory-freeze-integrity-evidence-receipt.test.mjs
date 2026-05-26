@@ -60,7 +60,7 @@ function validInput() {
 }
 
 // Test suite
-console.log('=== TESTING V462 FREEZE INTEGRITY EVIDENCE RECEIPT ===');
+console.log('=== TESTING V463 FREEZE INTEGRITY EVIDENCE RECEIPT ===');
 
 // Test 1: STATUSES exported
 console.log('\nTEST: STATUSES exported');
@@ -234,7 +234,7 @@ if (!Array.isArray(resultReady.freeze_integrity_evidence_items_verified) || resu
 
 // Test 16: READY final_message exact
 console.log('\nTEST: READY final_message exact');
-if (resultReady.final_message !== 'V462-V465 final execution lock verification and release freeze integrity complete. Real release execution remains blocked until explicit V466 command.') {
+if (resultReady.final_message !== 'V461-V465 final execution lock verification and release freeze integrity complete. Real release execution remains blocked until explicit V466 command.') {
   console.error('FAIL: final_message should be exact');
 } else {
   console.log('PASS: READY final_message exact');
@@ -341,13 +341,13 @@ if (!renderNull.includes('SEM PASS GOLD REAL')) {
   console.log('PASS: render null → string with REGRA');
 }
 
-// Test 24: render READY → contains V462
-console.log('\nTEST: render READY → contains V462');
+// Test 24: render READY → contains V461-V465
+console.log('\nTEST: render READY → contains V461-V465');
 const renderReady = render(resultReady);
-if (!renderReady.includes('V462-V465')) {
-  console.error('FAIL: render READY should contain V462');
+if (!renderReady.includes('V461-V465')) {
+  console.error('FAIL: render READY should contain V461-V465');
 } else {
-  console.log('PASS: render READY → contains V462');
+  console.log('PASS: render READY → contains V461-V465');
 }
 
 // Test 25: render READY → REGRA ABSOLUTA
@@ -384,10 +384,10 @@ if (!renderReady.includes('"freeze_integrity_evidence_items_verified":')) {
 
 // Test 29: render READY → contains final_message
 console.log('\nTEST: render READY → contains final_message');
-if (!renderReady.includes('V462-V465 final execution lock verification and release freeze integrity complete')) {
+if (!renderReady.includes('V461-V465 final execution lock verification and release freeze integrity complete')) {
   console.error('FAIL: render READY should contain final_message');
 } else {
   console.log('PASS: render READY → contains final_message');
 }
 
-console.log('\n=== V462 TESTING COMPLETE ===');
+console.log('\n=== V463 TESTING COMPLETE ===');

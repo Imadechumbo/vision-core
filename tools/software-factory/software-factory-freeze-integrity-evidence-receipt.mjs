@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 
 const MODULE_NAME = 'software-factory-freeze-integrity-evidence-receipt';
-const MODULE_VERSION = 'V462';
+const MODULE_VERSION = 'V463';
 
 // STATUSES
 export const STATUSES = {
@@ -229,7 +229,7 @@ export function build(input) {
   }));
 
   // Final message
-  const finalMessage = 'V462-V465 final execution lock verification and release freeze integrity complete. Real release execution remains blocked until explicit V466 command.';
+  const finalMessage = 'V461-V465 final execution lock verification and release freeze integrity complete. Real release execution remains blocked until explicit V466 command.';
 
   // Return READY state - all critical flags remain false
   return {
@@ -278,7 +278,7 @@ export function validate(input) {
     return false;
   }
   // Check final_message is correct
-  if (result.final_message !== 'V462-V465 final execution lock verification and release freeze integrity complete. Real release execution remains blocked until explicit V466 command.') {
+  if (result.final_message !== 'V461-V465 final execution lock verification and release freeze integrity complete. Real release execution remains blocked until explicit V466 command.') {
     return false;
   }
   // Check freeze_integrity_evidence_items_verified has same length as input
