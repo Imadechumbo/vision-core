@@ -129,17 +129,17 @@ if (test7Result.status !== STATUSES.RELEASE_READINESS_REVALIDATION_BLOCKED_INPUT
 }
 
 // Test 8: V450 not ready → BLOCKED_UNLOCK_DECISION
-console.log('\nTEST: V450 not ready → BLOCKED_UNLOCK_DECISION');
-const resultV450NotReady = { ...validInput(), controlled_unlock_decision_phase_gate_ready: false };
-const test8Result = build(resultV450NotReady);
-console.log('Test8 - Status:', test8Result.status, 'Errors:', test8Result.errors);
-if (test8Result.status !== STATUSES.RELEASE_READINESS_REVALIDATION_BLOCKED_UNLOCK_DECISION || !test8Result.errors.includes('CONTROLLED_UNLOCK_DECISION_PHASE_GATE_NOT_READY')) {
-  console.error('FAIL: V450 not ready not handled correctly');
-} console.error('Actual status:', test8Result.status);
-  console.error('Actual errors:', test8Result.errors);
-} else {
-  console.log('PASS: V450 not ready → BLOCKED_UNLOCK_DECISION');
-}
+  console.log('\nTEST: V450 not ready → BLOCKED_UNLOCK_DECISION');
+  const resultV450NotReady = { ...validInput(), controlled_unlock_decision_phase_gate_ready: false };
+  const test8Result = build(resultV450NotReady);
+  console.log('Test8 - Status:', test8Result.status, 'Errors:', test8Result.errors);
+  if (test8Result.status !== STATUSES.RELEASE_READINESS_REVALIDATION_BLOCKED_UNLOCK_DECISION || !test8Result.errors.includes('CONTROLLED_UNLOCK_DECISION_PHASE_GATE_NOT_READY')) {
+    console.error('FAIL: V450 not ready not handled correctly');
+    console.error('Actual status:', test8Result.status);
+    console.error('Actual errors:', test8Result.errors);
+  } else {
+    console.log('PASS: V450 not ready → BLOCKED_UNLOCK_DECISION');
+  }
 
 // Test 9: invalid revalidation_mode → BLOCKED_INPUT
 console.log('\nTEST: invalid revalidation_mode → BLOCKED_INPUT');
