@@ -1,0 +1,1074 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VISION CORE V2.9.10 CLEAN FRONT</title>
+
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/v23-ui-system.css">
+<link rel="stylesheet" href="assets/v231-colors-agents.css">
+<link rel="stylesheet" href="assets/v233-realtime.css">
+<link rel="stylesheet" href="assets/v233-topbar-final-fix.css">
+<link rel="stylesheet" href="assets/v272-layout-force.css">
+<link rel="stylesheet" href="assets/v273-sddf-command-chat.css">
+<link rel="stylesheet" href="assets/v290-hardening.css">
+<link rel="stylesheet" href="assets/vision-v297-ui.css">
+<link rel="stylesheet" href="assets/vision-v298-command-chat.css">
+<link rel="stylesheet" href="assets/vision-v298-final-hardened.css">
+<link rel="stylesheet" href="assets/vision-v298-final-hard-fix2.css">
+<link rel="stylesheet" href="assets/vision-v33-orbit.css">
+<link rel="stylesheet" href="assets/vision-gold.css">
+<link rel="stylesheet" href="assets/vc-metrics-reserve.css">
+<style>
+/* V2.9.10 CLEAN FRONT — v299 quota/badge inline (no runtime JS needed) */
+.v299-quota-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;font-size:11px;flex-shrink:0;}
+.v299-plan-tag{font-weight:700;letter-spacing:.06em;border-radius:4px;padding:1px 6px;}
+.v299-plan-tag.free{color:#888;background:#1a1a1a;}
+.v299-quota-ok{color:#22c55e;}
+.v299-quota-warn{color:#f59e0b;}
+.v299-quota-full{color:#ef4444;font-weight:700;}
+.v299-config-btn{color:#9ca3af!important;}
+.v299-obsidian-btn{color:#a78bfa!important;}
+.v299-obsidian-btn.active{color:#22c55e!important;border-color:#22c55e!important;}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="shell topin">
+    <div class="brand-block v23-brand-block">
+      <div class="v23-top-eye" title="VISION CORE ativo">
+        <div class="v23-eye"><div class="v23-pupil"></div></div>
+      </div>
+      <div>
+        <div class="brand">VISION CORE</div>
+        <div class="sub">VISION CORE V2.9.10 • FULLSTACK • SAAS • HERMES • PASS GOLD</div>
+      </div>
+    </div>
+    <nav class="v231-topnav" aria-label="Navegação principal">
+      <a class="active" href="#mission">▣ Mission</a>
+      <a href="#vault">▤ Vault</a>
+      <a href="#githubPanel">⌬ GitHub</a>
+      <a href="#marketplace">☷ Tools</a>
+      <a href="#metricsBoard">▥ Métricas</a>
+      <a href="#agentsBoard">⚙ Agentes</a>
+    </nav>
+    <div class="top-actions">
+      <a class="btn ghost" href="landing.html">LANDING STARTUP</a>
+      <a class="btn github" href="https://github.com/Imadechumbo/vision-core-master" target="_blank" rel="noopener">GITHUB</a>
+      <a class="btn agent-download" href="downloads/VisionAgentSetup.exe" download>BAIXAR AGENT</a>
+      <button class="btn ghost" id="openAuthBtn" type="button">SIGN IN</button>
+      <a class="btn enviar-missao" href="#mission">ENVIAR MISSÃO</a>
+    </div>
+  </div>
+</header>
+
+<main class="shell grid">
+  <aside>
+    <section class="panel logo premium-logo">
+      <div class="eye-wrap" title="VISION CORE ativo">
+        <div class="ai-eye"><div class="pupil"></div></div>
+      </div>
+      <h1>VISION CORE</h1>
+      <p class="cyan">SEE. DECIDE. EXECUTE.</p>
+      <a class="marketing-link" href="about.html">um sistema que corrige sistemas</a>
+    </section>
+    <nav class="panel menu premium-menu">
+      <a class="active" href="#mission">◎ MISSION CONTROL</a>
+      <a href="#timeline">⌁ MISSION TIMELINE</a>
+      <a href="#runtime">⌁ EXECUTION MONITOR</a>
+      <a href="#hermes">☷ DIAGNOSTICS / HERMES</a>
+      <a href="#score">☑ VALIDATION / SDDF</a>
+      <a href="#diff">☷ DIFF PREVIEW</a>
+      <a href="#vault">⌂ VAULT / ROLLBACK</a>
+      <a href="#memory">▤ MEMORY / OBSIDIAN</a>
+      <a href="#opensquad" class="menu-reserved">⌘ OPENCLAW / OPENSQUAD <span class="menu-badge">SCALE</span></a>
+      <a href="#osint">◇ OSINT DOCKER</a>
+      <a href="#githubPanel">⌬ GITHUB / PR REAL</a>
+      <a href="#saasAuth">◉ SAAS / PLANOS</a>
+      <a href="#v10">◇ V10 ENTERPRISE</a>
+      <a href="#aiApiVault">AI API VAULT</a>
+      <a href="#marketplace">▣ TOOLS MARKETPLACE</a>
+      <a href="#metricsBoard">▥ MÉTRICAS</a>
+      <a href="#agentsBoard">⚙ AGENTES EXTRAS</a>
+    </nav>
+  </aside>
+
+  <section>
+    <div class="panel" id="mission">
+      <!-- V2.9.10 CLEAN FRONT: static command panel — approved V2.9.10 visual -->
+      <div class="v298-command-chat" id="v298CommandChat">
+        <div class="v298-command-head">
+          <div class="v298-command-title">
+            <strong>VISION AI COMMAND</strong>
+            <span>Chat universal + correção de projetos com PASS GOLD</span>
+          </div>
+          <div class="v298-command-status" id="v298CommandStatus">READY</div>
+        </div>
+        <div class="v298-chat-stream" id="v298ChatStream">
+          <div class="v298-empty-hint">Vision AI pronto. Converse sobre qualquer assunto, cole erros, envie arquivos/imagens ou execute uma missão SDDF.</div>
+        </div>
+        <div class="v298-composer">
+          <div class="v298-input-wrap">
+            <textarea class="v298-input" id="v298Prompt" placeholder="Pergunte qualquer coisa, cole erro, log, código... Enter = enviar, Shift+Enter = quebrar linha"></textarea>
+            <div class="v298-send-stack">
+              <button class="v298-send" id="v298SendBtn" type="button">ENVIAR</button>
+              <button class="v298-run" id="v298RunBtn" type="button">EXECUTAR MISSÃO</button>
+            </div>
+          </div>
+          <div class="v298-tool-row">
+            <div class="v299-quota-badge" id="v299QuotaBadge"><span class="v299-plan-tag free">FREE</span><span class="v299-quota-ok">ilimitado</span></div>
+            <button class="v298-tool-btn" id="v298AddFilesBtn" type="button">＋ Adicionar arquivos</button>
+            <button class="v298-tool-btn" id="v298ReadPrintBtn" type="button">▧ Ler print/imagem</button>
+            <select class="v298-select" id="v298Mode">
+              <option value="vision-geral">Vision geral</option>
+              <option value="corrigir-projeto">Corrigir projeto</option>
+              <option value="debug-cors">Debug CORS</option>
+              <option value="explicar-leigo">Explicar para leigo</option>
+              <option value="rodar-sddf">Rodar SDDF</option>
+            </select>
+            <select class="v298-select" id="v298Model">
+              <option value="auto">Modelo automático</option>
+              <option value="claude-sonnet">Claude Sonnet</option>
+              <option value="gemini-flash">Gemini Flash</option>
+              <option value="groq-llama">Groq/Llama</option>
+              <option value="ollama-local">Ollama Local</option>
+            </select>
+            <select class="v298-select" id="v298Streaming">
+              <option value="on">Streaming ligado</option>
+              <option value="off">Streaming desligado</option>
+            </select>
+            <button class="v298-tool-btn" id="v298ClearBtn" type="button">Limpar sessão</button>
+            <button class="v298-tool-btn v299-config-btn" id="v299ConfigBtn" type="button">⚙ Configurar IA</button>
+            <button class="v298-tool-btn v299-obsidian-btn" id="v299ObsidianBtn" type="button">📓 Obsidian</button>
+            <input type="file" id="v298FileInput" multiple hidden>
+          </div>
+          <div class="v298-file-note" id="v298FileNote">Nenhum arquivo anexado.</div>
+        </div>
+      </div>
+      <!-- legacy v297 IDs kept hidden for JS compat -->
+      <div id="v297UniversalChat" style="display:none"><div id="v297ChatLog"></div><input id="v297FileInput" type="file" multiple hidden></div>
+      <h2>MISSION CONTROL</h2>
+      <p>Operador técnico multi-projeto, multi-stack, com aprendizado contínuo.</p>
+      <div class="project-strip">
+        <label>Projeto ativo</label>
+        <select class="select" id="projectSelector"><option>Carregando projetos...</option></select>
+        <button class="btn mini" id="enqueueBtn" type="button">ENFILEIRAR WORKER</button>
+      </div>
+
+      <div class="pipeline-headline" aria-label="Frase de impacto VISION CORE">
+        <span>IAs criam.</span>
+        <strong>VISION CORE</strong>
+        <span>corrige</span>
+      </div>
+
+      <div class="v236-compact-timeline" id="v236CompactTimeline" aria-label="Timeline compacta do pipeline">
+        <div class="v236-tl-step" data-stage="Scanner"><b>✓</b><span>Scanner</span><small>aguardando</small></div>
+        <i></i>
+        <div class="v236-tl-step" data-stage="Hermes"><b>✓</b><span>Hermes</span><small>aguardando</small></div>
+        <i></i>
+        <div class="v236-tl-step" data-stage="PatchEngine"><b>✓</b><span>Patch Engine</span><small>aguardando</small></div>
+        <i></i>
+        <div class="v236-tl-step" data-stage="Aegis"><b>✓</b><span>Aegis</span><small>aguardando</small></div>
+        <i></i>
+        <div class="v236-tl-step gold" data-stage="PASS GOLD"><b>★</b><span>PASS GOLD</span><small>aguardando</small></div>
+        <i class="pending"></i>
+        <div class="v236-tl-step pending" data-stage="PR GitHub"><b></b><span>PR GitHub</span><small>aguardando</small></div>
+      </div>
+
+      <div class="vc-process-screen v236-copilot-screen" id="processScreen" aria-live="polite" style="display:none">
+        <div class="vc-process-orb" id="processOrb">◉</div>
+        <div class="vc-process-copy">
+          <strong id="processTitle">Copiloto VISION aguardando missão</strong>
+          <span id="processMessage">Converse no mesmo campo abaixo. Posso explicar o erro para usuário leigo ou executar o pipeline em tempo real.</span>
+          <div class="v236-copilot-mini-chat" id="v236CopilotMiniChat">
+            <div class="v236-copilot-msg bot">Pergunte sobre a plataforma, cole um erro ou peça para eu explicar o que o PASS GOLD está validando.</div>
+          </div>
+        </div>
+        <div class="vc-process-stage" id="processStage">READY</div>
+      </div>
+      <textarea class="mission" id="missionText" placeholder="Descreva a missão, cole erro, log, endpoint, stack ou contexto..." style="display:none"></textarea>
+      <br><br>
+      <div class="row v236-action-row" style="display:none">
+        <button class="btn mini v236-file-btn" id="v236FileBtn" type="button">＋ ADICIONAR ARQUIVOS</button>
+        <button class="btn mini v236-copilot-btn" id="v236CopilotBtn" type="button">💬 COPILOTO</button>
+        <input id="v236FileInput" type="file" multiple hidden>
+        <select class="select">
+          <option>MODELO: AUTO melhor disponível</option>
+          <option>Gemini 2.0 Flash</option>
+          <option>Llama 3.3 70B Groq</option>
+          <option>OpenRouter Auto</option>
+          <option>DeepSeek Reasoner</option>
+          <option>Ollama Local</option>
+        </select>
+        <select class="select compact-select" id="runMode"><option value="dry-run">DRY RUN</option><option value="safe-patch">SAFE PATCH</option><option value="pr">PR MODE</option></select>
+        <button class="btn" id="executeBtn">▷ EXECUTAR LIVE</button>
+      </div>
+    </div>
+
+    <br>
+    <div class="panel hero-copy hero-under-mission moved-below-mission-control" id="missionHeroBelowControl">
+      <p class="eyebrow">DEPLOY SEGURO • PASS GOLD • GITHUB PR REAL • DIFF • CI • VAULT • AUTO-ROLLBACK</p>
+      <h2>Sistema operacional para desenvolvimento com IA.</h2>
+      <p>IAs criam software rápido. O VISION CORE fecha o loop: diagnostica, executa, valida, protege e mostra tudo em logs vivos.</p>
+      <div class="mini-pipeline"><span>Missão</span><b>→</b><span>Diagnóstico</span><b>→</b><span>Diff</span><b>→</b><span>PASS GOLD</span><b>→</b><span>PR</span><b>→</b><span>Stable Vault</span></div>
+    </div>
+
+    <br>
+    <div class="panel saas-panel" id="saasAuth">
+      <p class="eyebrow">SAAS ONBOARDING • SOCIAL LOGIN / OAUTH SIGNUP POPUP • PLANS</p>
+      <h2>Cadastro SaaS automático, simples e popular.</h2>
+      <p><strong>Autonomous Software Repair System.</strong> Isso não é chat, copiloto ou automação simples. É um sistema que detecta → entende → corrige → valida → protege → aprende.</p>
+      <div class="plans" id="plansBox">
+        <div class="plan active" data-plan="free"><strong>FREE</strong><span>5 missões/mês</span><small>sem auto-merge</small></div>
+        <div class="plan" data-plan="pro"><strong>PRO</strong><span>missões ilimitadas</span><small>GitHub auto PR + rollback</small></div>
+        <div class="plan" data-plan="enterprise"><strong>ENTERPRISE</strong><span>multi-projeto + workers</span><small>dashboard completo</small></div>
+      </div>
+      <div class="operator-auth-card inline-auth-card">
+        <p class="side-auth-kicker">OPERADOR</p>
+        <button class="btn ghost side-signin" id="openAuthBtn2" type="button">SIGN IN</button>
+        <small>Social Login / OAuth Signup Popup</small>
+      </div>
+      <div id="signupResult" class="signup-result inline-result">Plano selecionado: <b>FREE</b></div>
+    </div>
+
+    <br>
+    <br>
+    <div class="panel" id="timeline">
+      <h2>MISSION TIMELINE</h2>
+      <p>Fluxo visual: missão recebida → Hermes → snapshot → diff → validação → GitHub PR.</p>
+      <div id="timelineBox" class="timelineBox"></div>
+    </div>
+
+    <br>
+    <div class="panel" id="diff">
+      <h2>DIFF PREVIEW</h2>
+      <p>Mostra o patch antes de criar branch, commit ou Pull Request.</p>
+      <button class="btn mini" id="diffBtn">GERAR DIFF DEMO</button>
+      <pre id="diffViewer" class="diffViewer">Aguardando diff...</pre>
+    </div>
+
+    <br>
+    <div class="panel" id="score">
+      <h2>PASS GOLD SCORE</h2>
+      <p>Promoção só é liberada acima do corte GOLD.</p>
+      <div id="scoreBox" class="scoreGrid"></div>
+    </div>
+
+    <br>
+    <div class="panel github-panel" id="githubPanel">
+      <h2>GitHub Integration Real</h2>
+      <p>Cria branch, aplica commit e abre Pull Request real via GitHub REST API. Bloqueado sem PASS GOLD.</p>
+      <div class="github-status" id="githubStatus">Verificando GitHub...</div>
+      <div class="github-actions">
+        <button class="btn github" id="githubStatusBtn">Verificar GitHub</button>
+        <button class="btn" id="githubPrBtn">Criar PR PASS GOLD</button>
+        <button class="btn ghost" id="policyBtn">Auto-merge Policy</button>
+      </div>
+      <div class="github-result" id="githubResult"></div>
+    </div>
+
+    <br>
+    <div class="panel" id="v10">
+      <h2>V10 ENTERPRISE FOUNDATION</h2>
+      <div class="cards">
+        <div class="card"><strong>Multi-projeto</strong><span>gestão por stack e estado GOLD</span></div>
+        <div class="card"><strong>Métricas reais</strong><span>runtime, delivery e GitHub</span></div>
+        <div class="card"><strong>Hermes votando</strong><span>consenso antes do PR</span></div>
+        <div class="card"><strong>Auto-merge condicionado</strong><span>só com checks + GOLD</span></div>
+        <div class="card"><strong>Workers distribuídos</strong><span>filas por execução/rollback</span></div>
+        <div class="card"><strong>Billing SaaS</strong><span>planos prontos para Stripe</span></div>
+      </div>
+    </div>
+
+    <br>
+    <br>
+    <div class="panel ai-api-panel" id="aiApiVault">
+      <p class="eyebrow">AI API VAULT - PROVEDORES PAGOS - ROTEAMENTO INTELIGENTE</p>
+      <h2>Menu para adicionar APIs de IAs pagas</h2>
+      <p>Conecte provedores comerciais e defina prioridade/fallback. As chaves ficam preparadas para uso via variaveis de ambiente ou vault local em desenvolvimento.</p>
+      <div class="provider-grid">
+        <button class="provider active" data-provider="openai"><strong>OpenAI</strong><span>GPT / Vision / Assistants</span></button>
+        <button class="provider" data-provider="anthropic"><strong>Anthropic</strong><span>Claude</span></button>
+        <button class="provider" data-provider="gemini"><strong>Google Gemini</strong><span>Flash / Pro / Vision</span></button>
+        <button class="provider" data-provider="openrouter"><strong>OpenRouter</strong><span>multi-model fallback</span></button>
+        <button class="provider" data-provider="groq"><strong>Groq</strong><span>alta velocidade</span></button>
+        <button class="provider" data-provider="deepseek"><strong>DeepSeek</strong><span>reasoner/code</span></button>
+      </div>
+      <div class="api-form">
+        <label>Provider</label><select class="select" id="aiProviderSelect"><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="gemini">Google Gemini</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="deepseek">DeepSeek</option></select>
+        <label>API Key</label><input class="api-input" id="aiApiKey" type="password" placeholder="cole sua chave aqui...">
+        <label>Modelo padrao</label><input class="api-input" id="aiModel" type="text" placeholder="ex: gpt-4.1, claude-3.7-sonnet, gemini-2.0-flash">
+        <label>Prioridade</label><select class="select" id="aiPriority"><option>primary</option><option>fallback</option><option>disabled</option></select>
+      </div>
+      <div class="github-actions">
+        <button class="btn github" id="saveAiProviderBtn" type="button">SALVAR PROVIDER</button>
+        <button class="btn ghost" id="testAiProviderBtn" type="button">TESTAR MOCK</button>
+        <a class="btn ghost" href="landing.html">VER LANDING STARTUP</a>
+      </div>
+      <div class="ai-provider-status" id="aiProviderStatus">Nenhuma API salva nesta sessao.</div>
+    </div>
+
+    <br>
+    <div class="panel" id="marketplace">
+      <h2>TOOLS MARKETPLACE</h2>
+      <p>Conectores preparados para GitHub, Cloudflare, Railway, Docker, Langfuse e billing.</p>
+      <div id="toolsBox" class="toolGrid"></div>
+    </div>
+
+    <br>
+    <div class="panel logs-panel" id="logsPanel" aria-live="polite">
+      <div class="log-head">
+        <h2>LIVE EXECUTION STREAM</h2>
+        <button class="btn mini" id="downloadLogsBtn">BAIXAR LOGS</button>
+      </div>
+      <div class="logs empty" id="logsBox"><span class="muted">Aguardando eventos SSE / polling do missionRunner v1.1...</span></div>
+    </div>
+
+    <br>
+    <div class="panel metrics-board vc-agent-metrics-panel" id="metricsBoard">
+      <div class="vc-metrics-headline">
+        <div class="vc-metrics-headline-text">
+          <p class="eyebrow">AGENT METRICS • CUSTO POR AGENTE • PIPELINE</p>
+          <h2>MÉTRICAS DOS AGENTES</h2>
+          <p>Ligado ao backend em <code>/api/metrics/agents</code>. Quando o backend estiver offline, a tela mantém fallback local marcado como UI local.</p>
+        </div>
+        <span class="vc-ui-local-badge" id="metricsSourceBadge">UI LOCAL</span>
+      </div>
+      <!-- Static metric rows — no API call -->
+      <div class="metrics-bars-large" id="agentMetricsLarge">
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">OpenClaw</div>
+          <div><span class="vc-agent-method-chip conversa">CONVERSA</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-purple" id="bar-openclaw" style="width:28%"></div></div>
+          <div class="vc-agent-cost" id="val-openclaw">$0.163</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">Hermes RCA</div>
+          <div><span class="vc-agent-method-chip conversa">CONVERSA</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-purple" id="bar-hermes" style="width:62%"></div></div>
+          <div class="vc-agent-cost" id="val-hermes">$0.815</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">Scanner</div>
+          <div><span class="vc-agent-method-chip conversa">CONVERSA</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-green" id="bar-scanner" style="width:41%"></div></div>
+          <div class="vc-agent-cost" id="val-scanner">$0.377</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">Aegis</div>
+          <div><span class="vc-agent-method-chip conversa">CONVERSA</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-cyan" id="bar-aegis" style="width:34%"></div></div>
+          <div class="vc-agent-cost" id="val-aegis">$0.264</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">PatchEngine</div>
+          <div><span class="vc-agent-method-chip loop">LOOP</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-orange" id="bar-patchengine" style="width:55%"></div></div>
+          <div class="vc-agent-cost" id="val-patchengine">$0.668</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">PI HARNESS</div>
+          <div><span class="vc-agent-method-chip adaptive">ADAPTIVE</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-gray" id="bar-piharness" style="width:20%"></div></div>
+          <div class="vc-agent-cost gray" id="val-piharness">L0-L9</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">PASS GOLD</div>
+          <div><span class="vc-agent-method-chip loop">LOOP</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-yellow" id="bar-passgold" style="width:47%"></div></div>
+          <div class="vc-agent-cost" id="val-passgold">$0.471</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">Benchmark</div>
+          <div><span class="vc-agent-method-chip auto">AUTO</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-pink" id="bar-benchmark" style="width:79%"></div></div>
+          <div class="vc-agent-cost" id="val-benchmark">$1.469</div>
+        </div>
+      </div>
+      <div class="vc-total-pipeline">
+        <span class="vc-total-label">TOTAL PIPELINE</span>
+        <span class="vc-total-value" id="mcTotalCost">$13.227</span>
+      </div>
+    </div>
+
+    <br>
+    <div class="panel agents-board vc-reserve-panel" id="agentsBoard">
+      <div class="vc-reserve-headline">
+        <div class="vc-reserve-headline-text">
+          <p class="eyebrow">OPENSQUAD RESERVE • AGENTES QUE TRABALHAM FORA DO MENU PRINCIPAL</p>
+          <h2>AGENTES EXTRAS EM EXECUÇÃO</h2>
+          <p>Catálogo lido do backend em <code>/api/agents/catalog</code>, usando os nomes e funções reais do projeto.</p>
+        </div>
+        <button class="btn ghost mini" type="button" onclick="document.getElementById('opensquad')&&document.getElementById('opensquad').scrollIntoView({behavior:'smooth'})">Ver OpenSquad</button>
+      </div>
+      <!-- Static reserve agent cards — no API call -->
+      <div class="vc-reserve-grid" id="agentsCatalogGrid">
+
+        <div class="vc-reserve-card" data-agent-id="backend">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">BACKEND</div>
+          <div class="vc-reserve-name">Agente Backend</div>
+          <div class="vc-reserve-desc">Express, Node.js, rotas, middlewares e erros de servidor.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">routes</span>
+            <span class="vc-reserve-tag">api</span>
+            <span class="vc-reserve-tag">server</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method conversa">CONVERSA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="database">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">DATABASE</div>
+          <div class="vc-reserve-name">Agente Database</div>
+          <div class="vc-reserve-desc">SQL, queries, conexões, migrations e modelos de dados.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">sql</span>
+            <span class="vc-reserve-tag">schema</span>
+            <span class="vc-reserve-tag">db</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method conversa">CONVERSA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="auth">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">AUTH</div>
+          <div class="vc-reserve-name">Agente Auth</div>
+          <div class="vc-reserve-desc">Autenticação, tokens, sessões, CORS e permissões.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">jwt</span>
+            <span class="vc-reserve-tag">cors</span>
+            <span class="vc-reserve-tag">401/403</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method conversa">CONVERSA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="upload_media">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon orange">▣</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">UPLOAD</div>
+          <div class="vc-reserve-name">Agente Upload/Media</div>
+          <div class="vc-reserve-desc">Multer, arquivos, mimetypes, storage, imagens e vision upload.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">multer</span>
+            <span class="vc-reserve-tag">req.file</span>
+            <span class="vc-reserve-tag">media</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method conversa">CONVERSA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn active-off" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="config">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">CONFIG</div>
+          <div class="vc-reserve-name">Agente Config</div>
+          <div class="vc-reserve-desc">.env, variáveis, portas, host e configuração de ambiente.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">env</span>
+            <span class="vc-reserve-tag">port</span>
+            <span class="vc-reserve-tag">config</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method conversa">CONVERSA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="network">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">NETWORK</div>
+          <div class="vc-reserve-name">Agente Network</div>
+          <div class="vc-reserve-desc">HTTP, timeouts, DNS, fetch, axios e conexões externas.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">http</span>
+            <span class="vc-reserve-tag">timeout</span>
+            <span class="vc-reserve-tag">dns</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method conversa">CONVERSA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="locator">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon orange">▣</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">LOCATOR</div>
+          <div class="vc-reserve-name">Reserve Locator</div>
+          <div class="vc-reserve-desc">Localizar arquivo alvo quando o Scanner falhar.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">extra_scan_hints</span>
+            <span class="vc-reserve-tag">target_recommendations</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method cirurgico">CIRÚRGICO</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="security">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon orange">▣</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">SECURITY</div>
+          <div class="vc-reserve-name">Reserve Security</div>
+          <div class="vc-reserve-desc">Revisar patches de alto risco e autenticação.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">risk_review</span>
+            <span class="vc-reserve-tag">security_notes</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method cirurgico">CIRÚRGICO</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="validator">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">VALIDATOR</div>
+          <div class="vc-reserve-name">Reserve Validator</div>
+          <div class="vc-reserve-desc">Sugerir validações adicionais antes do PASS GOLD.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">validation_suggestions</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method loop">LOOP</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="architect">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon orange">▣</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">ARCHITECT</div>
+          <div class="vc-reserve-name">Reserve Architect</div>
+          <div class="vc-reserve-desc">Revisar mudanças amplas de arquitetura.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">architecture</span>
+            <span class="vc-reserve-tag">refactor</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method cirurgico">CIRÚRGICO</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn active-off" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="memory">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">MEMORY</div>
+          <div class="vc-reserve-name">Reserve Memory</div>
+          <div class="vc-reserve-desc">Consultar histórico de incidentes sem executar ações.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">memory</span>
+            <span class="vc-reserve-tag">incidents</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method consulta">CONSULTA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end .vc-reserve-grid -->
+    </div><!-- end #agentsBoard -->
+
+    <!-- Prompt Preview Panel — local only, no API -->
+    <div class="vc-prompt-preview-panel" id="vcPromptPreview" role="dialog" aria-modal="true" aria-label="Prompt Pack do Agente">
+      <div class="vc-prompt-preview-header">
+        <span class="vc-prompt-preview-title">PROMPT PACK DO AGENTE</span>
+        <button class="vc-prompt-preview-close" id="vcPromptPreviewClose" type="button" aria-label="Fechar">×</button>
+      </div>
+      <div class="vc-prompt-meta" id="vcPromptMeta"></div>
+      <div class="vc-prompt-body" id="vcPromptBody"></div>
+      <div class="vc-prompt-perms">
+        <strong>PERMISSÕES</strong>
+        <div class="vc-prompt-perm-list" id="vcPromptPerms"></div>
+      </div>
+      <br>
+      <div class="vc-prompt-prohib">
+        <strong>PROIBIÇÕES</strong>
+        <div class="vc-prompt-prohib-list" id="vcPromptProhibs"></div>
+      </div>
+    </div>
+  </section>
+
+  <aside>
+    <!-- ── MISSION INPUT — Decágono Multiagente ─────────────────────── -->
+    <section class="panel mc-panel" id="agentDownload">
+      <p class="eyebrow">MISSION INPUT</p>
+      <p style="font-size:9px;letter-spacing:2px;color:#7c6fa0;margin:0 0 8px;text-align:center;">Arquitetura multiagente sugerida</p>
+
+      <!-- ── Decágono Multiagente ── -->
+      <div class="mi-decagon-wrap">
+        <svg class="mi-svg" viewBox="0 0 460 480" aria-hidden="true">
+          <circle cx="230" cy="240" r="210" fill="none" stroke="rgba(192,132,252,0.10)" stroke-width="0.5" stroke-dasharray="4 7"/>
+          <polygon points="230,24 352,65 427,173 427,307 352,415 230,456 108,415 33,307 33,173 108,65" fill="none" stroke="rgba(192,132,252,0.16)" stroke-width="0.5" stroke-dasharray="5 6"/>
+          <line x1="230" y1="240" x2="230" y2="24"  stroke="rgba(192,132,252,0.16)" stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="352" y2="65"  stroke="rgba(52,211,153,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="427" y2="173" stroke="rgba(96,165,250,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="427" y2="307" stroke="rgba(96,165,250,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="352" y2="415" stroke="rgba(192,132,252,0.16)" stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="230" y2="456" stroke="rgba(251,191,36,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="108" y2="415" stroke="rgba(251,191,36,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="33"  y2="307" stroke="rgba(248,113,113,0.16)" stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="33"  y2="173" stroke="rgba(34,211,238,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+          <line x1="230" y1="240" x2="108" y2="65"  stroke="rgba(34,211,238,0.16)"  stroke-width="0.5" stroke-dasharray="3 6"/>
+        </svg>
+
+        <!-- Núcleo central -->
+        <div class="mi-center" id="mcCore">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="11" r="5" stroke="#c084fc" stroke-width="1.5"/>
+            <path d="M6 28c0-5.523 4.477-10 10-10s10 4.477 10 10" stroke="#c084fc" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <div class="mi-center-label" id="mcCoreStatus">AGUARDA</div>
+          <div class="mi-center-sub" id="mcCoreSub">USER / MISSION INPUT</div>
+          <div class="mi-center-hint">origem da missão, objetivo, contexto e restrições</div>
+        </div>
+
+        <div class="mi-tooltip" id="mcTooltip"></div>
+
+        <!-- N1: PI Harness — top:20%, left:50% -->
+        <div class="mi-node" style="top:20%;left:50%;" data-key="piharness">
+          <div class="mi-icon mi-icon--p">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <rect x="4" y="6" width="18" height="14" rx="3" stroke="#c084fc" stroke-width="1.4"/>
+              <line x1="9" y1="6" x2="9" y2="20" stroke="#c084fc" stroke-width="1" opacity="0.6"/>
+              <line x1="13" y1="6" x2="13" y2="20" stroke="#c084fc" stroke-width="1" opacity="0.6"/>
+              <line x1="17" y1="6" x2="17" y2="20" stroke="#c084fc" stroke-width="1" opacity="0.6"/>
+              <line x1="4" y1="11" x2="22" y2="11" stroke="#c084fc" stroke-width="1" opacity="0.6"/>
+              <line x1="4" y1="15" x2="22" y2="15" stroke="#c084fc" stroke-width="1" opacity="0.6"/>
+              <line x1="9" y1="3" x2="9" y2="6"  stroke="#c084fc" stroke-width="1.2"/>
+              <line x1="13" y1="2" x2="13" y2="6" stroke="#c084fc" stroke-width="1.2"/>
+              <line x1="17" y1="3" x2="17" y2="6" stroke="#c084fc" stroke-width="1.2"/>
+              <line x1="9" y1="20" x2="9" y2="23"  stroke="#c084fc" stroke-width="1.2"/>
+              <line x1="13" y1="20" x2="13" y2="24" stroke="#c084fc" stroke-width="1.2"/>
+              <line x1="17" y1="20" x2="17" y2="23" stroke="#c084fc" stroke-width="1.2"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#c084fc;">PI HARNESS</div>
+          <div class="mi-role">Mission Runner</div>
+          <small id="v33-t-piharness" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N2: Hermes — top:25.6%, left:65.9% -->
+        <div class="mi-node" style="top:25.6%;left:65.9%;" data-key="hermes">
+          <div class="mi-icon mi-icon--t">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <circle cx="13" cy="13" r="4" stroke="#34d399" stroke-width="1.4"/>
+              <path d="M13 9 C10 6 5 5 3 8 C5 9 8 9 10 11" stroke="#34d399" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+              <path d="M13 9 C16 6 21 5 23 8 C21 9 18 9 16 11" stroke="#34d399" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+              <line x1="13" y1="17" x2="13" y2="22" stroke="#34d399" stroke-width="1.3" stroke-linecap="round"/>
+              <line x1="11" y1="21" x2="13" y2="22" stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="15" y1="21" x2="13" y2="22" stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#34d399;">HERMES</div>
+          <div class="mi-role">Supervisor / RCA</div>
+          <small id="v33-t-hermes" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N3: OpenClaw — top:40%, left:78% -->
+        <div class="mi-node" style="top:40%;left:78%;" data-key="openclaw">
+          <div class="mi-icon mi-icon--b">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <line x1="13" y1="22" x2="13" y2="8"  stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="8"  y1="4"  x2="8"  y2="11" stroke="#60a5fa" stroke-width="1.4" stroke-linecap="round"/>
+              <line x1="18" y1="4"  x2="18" y2="11" stroke="#60a5fa" stroke-width="1.4" stroke-linecap="round"/>
+              <path d="M8 11 Q8 14 13 14 Q18 14 18 11" stroke="#60a5fa" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+              <line x1="13" y1="4" x2="13" y2="8" stroke="#60a5fa" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#60a5fa;">OPENCLAW</div>
+          <div class="mi-role">Orchestrator</div>
+          <small id="v33-t-openclaw" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N4: Scanner — top:60%, left:78% -->
+        <div class="mi-node" style="top:60%;left:78%;" data-key="scanner">
+          <div class="mi-icon mi-icon--b">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <circle cx="11" cy="11" r="6" stroke="#60a5fa" stroke-width="1.5"/>
+              <line x1="15.5" y1="15.5" x2="22" y2="22" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="8" y1="11" x2="14" y2="11" stroke="#60a5fa" stroke-width="1" opacity="0.6"/>
+              <line x1="11" y1="8" x2="11" y2="14" stroke="#60a5fa" stroke-width="1" opacity="0.6"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#60a5fa;">SCANNER</div>
+          <div class="mi-role">Context Builder</div>
+          <small id="v33-t-scanner" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N5: PatchEngine — top:74.4%, left:65.9% -->
+        <div class="mi-node" style="top:74.4%;left:65.9%;" data-key="patchengine">
+          <div class="mi-icon mi-icon--p">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <circle cx="13" cy="13" r="4" stroke="#c084fc" stroke-width="1.4"/>
+              <path d="M13 3 L14.5 6.5 L18 5 L17 8.5 L20.5 10 L18 13 L20.5 16 L17 17.5 L18 21 L14.5 19.5 L13 23 L11.5 19.5 L8 21 L9 17.5 L5.5 16 L8 13 L5.5 10 L9 8.5 L8 5 L11.5 6.5 Z" stroke="#c084fc" stroke-width="1.3" fill="none" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#c084fc;">PATCH ENGINE</div>
+          <div class="mi-role">Exec. controlada</div>
+          <small id="v33-t-patchengine" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N6: Aegis — top:80%, left:50% -->
+        <div class="mi-node" style="top:80%;left:50%;" data-key="aegis">
+          <div class="mi-icon mi-icon--y">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <path d="M13 3 L22 7 L22 14 C22 19 13 23 13 23 C13 23 4 19 4 14 L4 7 Z" stroke="#fbbf24" stroke-width="1.4" fill="none" stroke-linejoin="round"/>
+              <path d="M9 13 L12 16 L17 10" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#fbbf24;">AEGIS</div>
+          <div class="mi-role">Security Gate</div>
+          <small id="v33-t-aegis" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N7: Go Core — top:74.4%, left:34.1% -->
+        <div class="mi-node" style="top:74.4%;left:34.1%;" data-key="gocore">
+          <div class="mi-icon mi-icon--y">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <ellipse cx="13" cy="7" rx="7" ry="3" stroke="#fbbf24" stroke-width="1.4"/>
+              <line x1="6" y1="7" x2="6" y2="19"  stroke="#fbbf24" stroke-width="1.4"/>
+              <line x1="20" y1="7" x2="20" y2="19" stroke="#fbbf24" stroke-width="1.4"/>
+              <ellipse cx="13" cy="19" rx="7" ry="3" stroke="#fbbf24" stroke-width="1.4"/>
+              <ellipse cx="13" cy="13" rx="7" ry="3" stroke="#fbbf24" stroke-width="1" opacity="0.5"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#fbbf24;">GO CORE</div>
+          <div class="mi-role">Runtime Truth</div>
+          <small id="v33-t-gocore" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N8: PASS GOLD — top:60%, left:22% -->
+        <div class="mi-node" style="top:60%;left:22%;" data-key="passgold">
+          <div class="mi-icon mi-icon--r">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <polygon points="13,3 15.5,9.5 22.5,10 17.5,15 19.5,22 13,18 6.5,22 8.5,15 3.5,10 10.5,9.5" stroke="#f87171" stroke-width="1.4" fill="none" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#f87171;">PASS GOLD</div>
+          <div class="mi-role">Final Authority</div>
+          <small id="v33-t-passgold" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N9: Archivist — top:40%, left:22% -->
+        <div class="mi-node" style="top:40%;left:22%;" data-key="archivist">
+          <div class="mi-icon mi-icon--c">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <rect x="5" y="4" width="16" height="18" rx="2" stroke="#22d3ee" stroke-width="1.4"/>
+              <line x1="9" y1="9"  x2="17" y2="9"  stroke="#22d3ee" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="9" y1="13" x2="17" y2="13" stroke="#22d3ee" stroke-width="1.2" stroke-linecap="round"/>
+              <line x1="9" y1="17" x2="14" y2="17" stroke="#22d3ee" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#22d3ee;">ARCHIVIST</div>
+          <div class="mi-role">Memory Guard</div>
+          <small id="v33-t-archivist" class="mi-status">AGUARDA</small>
+        </div>
+
+        <!-- N10: GitHub Agent — top:25.6%, left:34.1% -->
+        <div class="mi-node" style="top:25.6%;left:34.1%;" data-key="github">
+          <div class="mi-icon mi-icon--c">
+            <svg width="18" height="18" viewBox="0 0 26 26" fill="none">
+              <circle cx="9"  cy="6"  r="2.5" stroke="#22d3ee" stroke-width="1.4"/>
+              <circle cx="9"  cy="20" r="2.5" stroke="#22d3ee" stroke-width="1.4"/>
+              <circle cx="19" cy="10" r="2.5" stroke="#22d3ee" stroke-width="1.4"/>
+              <line x1="9" y1="8.5" x2="9" y2="17.5" stroke="#22d3ee" stroke-width="1.3" stroke-linecap="round"/>
+              <path d="M9 8.5 Q9 10 19 10" stroke="#22d3ee" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="mi-name" style="color:#22d3ee;">GITHUB AGENT</div>
+          <div class="mi-role">PR / CI / Release</div>
+          <small id="v33-t-github" class="mi-status">AGUARDA</small>
+        </div>
+      </div>
+
+      <!-- Legenda compacta -->
+      <div class="mi-legend">
+        <span class="mi-leg-item"><span class="mi-dot mi-dot--p">●</span> Decisão: Hermes, OpenClaw</span>
+        <span class="mi-leg-item"><span class="mi-dot mi-dot--t">●</span> Execução: PI Harness, Scanner, PatchEngine</span>
+        <span class="mi-leg-item"><span class="mi-dot mi-dot--b">●</span> Validação: Aegis, Go Core, PASS GOLD</span>
+        <span class="mi-leg-item"><span class="mi-dot mi-dot--c">●</span> Memória: Archivist · Governança: GitHub Agent</span>
+      </div>
+
+      <!-- Métricas estilo LionClaw abaixo do orb -->
+      <div class="mc-metrics-header">
+        <span class="eyebrow">AGENT METRICS</span>
+        <span class="mc-live-badge" id="mcLiveBadge">● LIVE</span>
+      </div>
+
+      <div class="mc-metrics-grid" id="mcMetricsGrid">
+        <div class="mc-metric-row" data-agent="openclaw">
+          <div class="mc-metric-name">OpenClaw</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-openclaw" style="width:0%;background:var(--purple2)"></div></div>
+          <div class="mc-metric-val cyan" id="val-openclaw">—</div>
+        </div>
+        <div class="mc-metric-row" data-agent="hermes">
+          <div class="mc-metric-name">Hermes RCA</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-hermes" style="width:0%;background:#8b5cf6"></div></div>
+          <div class="mc-metric-val cyan" id="val-hermes">—</div>
+        </div>
+        <div class="mc-metric-row" data-agent="scanner">
+          <div class="mc-metric-name">Scanner</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-scanner" style="width:0%;background:#22c55e"></div></div>
+          <div class="mc-metric-val green" id="val-scanner">—</div>
+        </div>
+        <div class="mc-metric-row" data-agent="aegis">
+          <div class="mc-metric-name">Aegis</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-aegis" style="width:0%;background:#22d3ee"></div></div>
+          <div class="mc-metric-val cyan" id="val-aegis">—</div>
+        </div>
+        <div class="mc-metric-row" data-agent="patchengine">
+          <div class="mc-metric-name">PatchEngine</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-patchengine" style="width:0%;background:#f59e0b"></div></div>
+          <div class="mc-metric-val yellow" id="val-patchengine">—</div>
+        </div>
+        <div class="mc-metric-row" data-agent="passgold">
+          <div class="mc-metric-name">PASS GOLD</div>
+          <div class="mc-metric-bar-wrap"><div class="mc-metric-bar" id="bar-passgold" style="width:0%;background:#facc15"></div></div>
+          <div class="mc-metric-val yellow" id="val-passgold">—</div>
+        </div>
+      </div>
+
+      <div class="mc-cost-row">
+        <span class="mc-cost-label">TOTAL PIPELINE</span>
+        <span class="mc-cost-val" id="mcTotalCost">—</span>
+      </div>
+
+      <div class="mc-tabs">
+        <button class="mc-tab active" data-tab="pipeline">PIPELINE</button>
+        <button class="mc-tab" data-tab="agent">AGENT LOCAL</button>
+      </div>
+
+      <div id="mc-tab-pipeline" class="mc-tab-pane active">
+        <div class="mc-pipeline-status" id="mcPipelineStatus">
+          <div class="mc-ps-row"><span class="mc-ps-label">OpenClaw</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
+          <div class="mc-ps-row"><span class="mc-ps-label">Scanner</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
+          <div class="mc-ps-row"><span class="mc-ps-label">Hermes</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
+          <div class="mc-ps-row"><span class="mc-ps-label">Aegis</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
+          <div class="mc-ps-row"><span class="mc-ps-label">PASS GOLD</span><span class="mc-ps-badge" data-live-status="pending">—</span></div>
+        </div>
+      </div>
+
+      <div id="mc-tab-agent" class="mc-tab-pane">
+        <a class="btn agent-download full" href="downloads/VisionAgentSetup.exe" download>⬇ BAIXAR VISION AGENT v1.1</a>
+        <div class="agent-cmd">npm install<br>npm link<br>vision-agent status</div>
+      </div>
+    </section>
+
+    <br>
+    <section class="panel">
+      <h2>GATES (SDDF)</h2>
+      <div class="gate"><span>SECURITY</span><span class="green" id="gate-security">—</span></div>
+      <div class="gate"><span>COMPATIBILITY</span><span class="green" id="gate-compatibility">—</span></div>
+      <div class="gate"><span>STABILITY</span><span class="green" id="gate-stability">—</span></div>
+      <div class="gate"><span>RUNTIME</span><span class="cyan" id="gate-runtime">—</span></div>
+      <div class="gate"><span>DIFF</span><span class="cyan">READY</span></div>
+      <div class="gate"><span>VAULT</span><span class="green">ACTIVE</span></div>
+      <div class="gate"><span>PROMOTION</span><span class="yellow">REQUIRES GOLD</span></div>
+      <div class="gate"><span>GITHUB PR</span><span class="cyan">REAL API</span></div>
+    </section>
+
+    <br>
+    <section class="panel" id="hermes">
+      <h2>HERMES CONSENSUS</h2>
+      <div id="votesBox"></div>
+    </section>
+
+    <br>
+    <section class="panel" id="vault">
+      <h2>STABLE VAULT</h2>
+      <div class="gate"><span>Snapshots</span><span class="green">ACTIVE</span></div>
+      <div class="gate"><span>Patches</span><span class="cyan">TRACKED</span></div>
+      <div class="gate"><span>Rollback</span><span class="yellow">READY</span></div>
+    </section>
+
+    <br>
+    <section class="panel" id="memory">
+      <h2>MEMORY / OBSIDIAN</h2>
+      <div class="gate"><span>Vault</span><span class="cyan">LINKED</span></div>
+      <div class="gate"><span>Incidents</span><span class="green">PERSIST</span></div>
+    </section>
+
+    <br>
+    <section class="panel opensquad-panel" id="opensquad">
+      <div class="opensquad-header">
+        <div>
+          <p class="eyebrow" style="color:var(--purple2);margin:0 0 6px">ARQUITETURA ESCALÁVEL — RESERVADO</p>
+          <h2 style="margin:0">OPENCLAW / OPENSQUAD</h2>
+        </div>
+        <div class="opensquad-badge">SCALE TIER</div>
+      </div>
+      <p style="color:var(--muted);font-size:13px;line-height:1.65;margin:14px 0">
+        Infraestrutura de agentes paralelos para problemas que exigem trabalho simultâneo em múltiplas camadas — banco de dados, backend e frontend ao mesmo tempo. Reservado para casos de escala onde um único agente não é suficiente.
+      </p>
+      <div class="opensquad-agents">
+        <div class="agent-slot active">
+          <div class="agent-dot" style="background:var(--green)"></div>
+          <div><strong>HERMES</strong><span>RCA · Orquestrador principal</span></div>
+          <span class="agent-status green">ATIVO</span>
+        </div>
+        <div class="agent-slot reserved">
+          <div class="agent-dot" style="background:var(--purple2)"></div>
+          <div><strong>OPENCLAW</strong><span>Router · Distribuição de missões</span></div>
+          <span class="agent-status" style="color:var(--purple2)">RESERVADO</span>
+        </div>
+        <div class="agent-slot reserved">
+          <div class="agent-dot" style="background:#555"></div>
+          <div><strong>SQUAD α</strong><span>Agente especialista · Database layer</span></div>
+          <span class="agent-status muted">ESCALA</span>
+        </div>
+        <div class="agent-slot reserved">
+          <div class="agent-dot" style="background:#555"></div>
+          <div><strong>SQUAD β</strong><span>Agente especialista · API layer</span></div>
+          <span class="agent-status muted">ESCALA</span>
+        </div>
+        <div class="agent-slot reserved">
+          <div class="agent-dot" style="background:#555"></div>
+          <div><strong>SQUAD γ</strong><span>Agente especialista · Frontend layer</span></div>
+          <span class="agent-status muted">ESCALA</span>
+        </div>
+      </div>
+      <div class="opensquad-flow">
+        <span>Erro complexo</span><b>→</b>
+        <span>OPENCLAW</span><b>→</b>
+        <span>N squads paralelos</span><b>→</b>
+        <span>Consolidação</span><b>→</b>
+        <span class="green">PASS GOLD</span>
+      </div>
+      <div class="gate" style="margin-top:14px;border-color:rgba(139,92,246,.25);background:rgba(139,92,246,.04);border-radius:10px;padding:10px 12px">
+        <span style="font-size:12px;color:var(--muted)">Ativação automática quando missão exige &gt; 1 agente</span>
+        <span style="font-size:11px;color:var(--purple2);font-weight:600">MULTI-TENANT TIER</span>
+      </div>
+    </section>
+
+    <br>
+    <section class="panel" id="osint">
+      <h2>OSINT TOOLS</h2>
+      <div class="gate"><span>SpiderFoot</span><span class="green">DOCKER</span></div>
+      <div class="gate"><span>Recon-ng</span><span class="yellow">SANDBOX</span></div>
+      <div class="gate"><span>Maryam</span><span class="yellow">SANDBOX</span></div>
+    </section>
+
+    <br>
+    <section class="panel">
+      <h2>WORKERS</h2>
+      <div id="workersBox"></div>
+      <br>
+      <button class="btn mini" id="workerRefreshBtn" type="button">ATUALIZAR FILA</button>
+      <div id="queueBox" class="queueBox"></div>
+    </section>
+  </aside>
+</main>
+
+<div class="auth-backdrop" id="authBackdrop" aria-hidden="true">
+  <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <button class="auth-close" id="closeAuthBtn" type="button" aria-label="Fechar">×</button>
+    <h2 id="authTitle">Sign in</h2>
+    <p>Use seu email ou entre automaticamente com um provedor popular.</p>
+    <label for="signupEmail">Username or email address*</label>
+    <input class="signup-input" id="signupEmail" type="email" autocomplete="email" placeholder="operator@visioncore.local">
+    <button class="auth-primary" id="signupBtn" type="button">Continue</button>
+    <div class="or"><span></span><b>OR</b><span></span></div>
+    <button class="oauth" type="button" data-provider="google"><b class="google-mark">G</b><span>Continue with Google</span></button>
+    <button class="oauth" type="button" data-provider="github"><b>●</b><span>Continue with GitHub</span></button>
+    <button class="oauth" type="button" data-provider="sso"><b>⌁</b><span>Continue with SSO</span></button>
+    <small>Mock SaaS: cria usuário automaticamente com plano FREE. Preparado para OAuth real depois.</small>
+  </div>
+</div>
+
+<div id="runtimeMonitor" class="stable" title="Runtime protegido por GOLD state • Auto-rollback ativo">
+  <span id="runtimeDot"></span>
+  <span id="runtimeText">LIVE</span>
+  <span>▂▄▆█</span>
+</div>
+
+<script src="assets/vision-core-clean-state.js"></script>
+<script src="assets/vision-core-clean-runtime.js" defer></script>
+</body>
+</html>

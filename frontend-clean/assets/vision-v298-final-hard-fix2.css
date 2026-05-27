@@ -1,0 +1,129 @@
+
+/* V2.9.8 FINAL HARDENED FIX2
+   Remove select nativo branco e timeline duplicada abaixo do chat. */
+
+/* timeline antiga abaixo do chat */
+#mission .v298-command-chat ~ .v236-compact-timeline,
+#mission .v298-command-chat ~ .timeline,
+#mission .v298-command-chat ~ [class*="timeline"]{
+  display:none!important;
+}
+
+/* caso existam duas timelines, deixa só a primeira antes do chat */
+#mission .v236-compact-timeline:nth-of-type(n+2){
+  display:none!important;
+}
+
+/* nunca mostrar select nativo do command chat */
+#v298Mode,
+#v298Model,
+#v298Streaming,
+.v298-command-chat select,
+.v298-select{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  position:absolute!important;
+  pointer-events:none!important;
+  width:0!important;
+  height:0!important;
+  max-width:0!important;
+  max-height:0!important;
+}
+
+/* dropdown custom real */
+.v298-dd{
+  position:relative;
+  min-width:170px;
+  flex:0 0 auto;
+}
+
+.v298-dd-btn{
+  width:100%;
+  min-height:38px;
+  border-radius:12px;
+  border:1px solid rgba(168,85,247,.34);
+  background:linear-gradient(180deg,rgba(24,18,36,.96),rgba(10,10,18,.98));
+  color:#fff;
+  padding:9px 34px 9px 12px;
+  font-size:12px;
+  font-weight:800;
+  text-align:left;
+  cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.v298-dd-btn::after{
+  content:"⌄";
+  position:absolute;
+  right:12px;
+  top:50%;
+  transform:translateY(-50%);
+  color:#c4b5fd;
+}
+
+.v298-dd.open .v298-dd-btn{
+  border-color:#a855f7;
+  box-shadow:0 0 0 3px rgba(168,85,247,.13),0 0 18px rgba(168,85,247,.2);
+}
+
+.v298-dd-menu{
+  display:none;
+  position:absolute;
+  left:0;
+  bottom:calc(100% + 8px);
+  min-width:100%;
+  width:max-content;
+  max-width:260px;
+  background:#090912!important;
+  border:1px solid rgba(168,85,247,.48);
+  border-radius:12px;
+  overflow:hidden;
+  z-index:2147483647;
+  box-shadow:0 22px 48px rgba(0,0,0,.72),0 0 24px rgba(168,85,247,.22);
+}
+
+.v298-dd.open .v298-dd-menu{
+  display:block;
+}
+
+.v298-dd-item{
+  display:block;
+  padding:10px 12px;
+  color:#e5e7eb;
+  background:#090912;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:800;
+  white-space:nowrap;
+}
+
+.v298-dd-item:hover,
+.v298-dd-item.active{
+  background:rgba(168,85,247,.32);
+  color:#fff;
+}
+
+/* compactar área inferior */
+.v298-tool-row{
+  align-items:center!important;
+  gap:8px!important;
+}
+
+.v298-file-note{
+  margin-top:6px!important;
+}
+
+/* evitar espaço morto */
+.v298-command-chat{
+  min-height:520px!important;
+}
+
+.v298-chat-stream{
+  min-height:300px!important;
+}
+
+@media(max-width:900px){
+  .v298-dd{flex:1 1 100%;width:100%}
+  .v298-dd-menu{bottom:auto;top:calc(100% + 8px);width:100%}
+}
