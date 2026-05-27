@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="assets/vc-metrics-reserve.css">
 <link rel="stylesheet" href="assets/vc-project-builder.css">
 <link rel="stylesheet" href="assets/vc-project-templates.css">
+<link rel="stylesheet" href="assets/vc-mission-composer.css">
 <style>
 /* V2.9.10 CLEAN FRONT — v299 quota/badge inline (no runtime JS needed) */
 .v299-quota-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;font-size:11px;flex-shrink:0;}
@@ -1021,6 +1022,65 @@
           <div class="vc-template-next-action" id="vcTplDetailNextAction"></div>
         </div>
       </div>
+
+      <!-- ── Section I — Mission Plan Composer ─────────────────── -->
+      <div class="vc-pb-section vc-mission-composer" id="vcMissionComposer">
+
+        <!-- Headline -->
+        <div class="vc-composer-headline">
+          <div class="vc-pb-headline-text">
+            <p class="eyebrow">SOFTWARE FACTORY • MISSION COMPOSER • COPY-READY PROMPT</p>
+            <h2 style="font-size:14px;margin:0 0 4px;">COMPOSITOR DE MISSÃO</h2>
+            <p style="font-size:11px;color:#4b5563;margin:0;">Transforme o template selecionado em um prompt operacional completo para uma IA worker. Nenhum arquivo é criado; nenhum comando é executado.</p>
+          </div>
+          <span class="vc-composer-badge">COPY-READY LOCAL</span>
+        </div>
+
+        <!-- Worker target -->
+        <div class="vc-composer-row">
+          <p class="vc-pb-section-label">Worker Alvo</p>
+          <div class="vc-worker-target-row" id="vcWorkerTargetRow"></div>
+        </div>
+
+        <!-- Output mode -->
+        <div class="vc-composer-row">
+          <p class="vc-pb-section-label">Modo de Saída</p>
+          <div class="vc-output-mode-row" id="vcOutputModeRow"></div>
+        </div>
+
+        <!-- Composer options -->
+        <div class="vc-composer-row">
+          <p class="vc-pb-section-label">Seções do Prompt</p>
+          <div class="vc-composer-options" id="vcComposerOptions"></div>
+        </div>
+
+        <!-- Generated prompt panel -->
+        <div class="vc-generated-prompt-panel" id="vcGeneratedPromptPanel">
+          <div class="vc-generated-prompt-header">
+            <span class="vc-generated-prompt-title">PROMPT DE MISSÃO GERADO</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="vc-prompt-metric" id="vcPromptMetric"><span id="vcPromptLineCount">0</span> linhas · <span id="vcPromptSectionCount">0</span> seções</span>
+              <span class="vc-local-only-badge">LOCAL ONLY</span>
+            </div>
+          </div>
+          <textarea
+            class="vc-generated-prompt-output empty"
+            id="vcMissionPromptOutput"
+            readonly
+            spellcheck="false"
+            aria-label="Prompt de missão gerado localmente"
+          >Clique em GERAR PROMPT DE MISSÃO para compor o prompt local.</textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="vc-composer-actions">
+          <button class="vc-composer-btn" id="vcGenerateMissionBtn" type="button">⬡ GERAR PROMPT DE MISSÃO</button>
+          <button class="vc-composer-btn secondary" id="vcCopyMissionBtn" type="button">⎘ COPIAR PROMPT</button>
+          <button class="vc-composer-btn danger" id="vcClearMissionBtn" type="button">✕ LIMPAR PROMPT</button>
+          <span class="vc-copy-status" id="vcCopyStatus">✓ Copiado!</span>
+        </div>
+
+      </div><!-- end vcMissionComposer -->
 
     </div><!-- end #projectBuilder -->
 

@@ -1,0 +1,312 @@
+/* ================================================================
+   VISION CORE V2.9.10
+   vc-mission-composer.css
+   Template-to-Mission Plan Composer — local UI only
+   No API. No fetch. No execution. No file creation.
+   ================================================================ */
+
+/* ── Section wrapper ─────────────────────────────────────────── */
+.vc-mission-composer {
+  margin-top: 4px;
+}
+
+/* ── Headline ────────────────────────────────────────────────── */
+.vc-composer-headline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vc-composer-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(168,85,247,.08);
+  border: 1px solid rgba(168,85,247,.30);
+  color: #c084fc;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* ── Config rows ─────────────────────────────────────────────── */
+.vc-composer-row {
+  margin-bottom: 14px;
+}
+
+/* ── Worker target chips ─────────────────────────────────────── */
+.vc-worker-target-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.vc-worker-chip {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: transparent;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+  text-transform: uppercase;
+}
+
+.vc-worker-chip:hover {
+  border-color: rgba(192,132,252,.40);
+  color: #c084fc;
+}
+
+.vc-worker-chip.selected {
+  border-color: rgba(168,85,247,.75);
+  color: #a855f7;
+  background: rgba(168,85,247,.12);
+  box-shadow: 0 0 10px rgba(168,85,247,.10);
+}
+
+/* ── Output mode chips ───────────────────────────────────────── */
+.vc-output-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.vc-output-mode-chip {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: 4px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: transparent;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+}
+
+.vc-output-mode-chip:hover {
+  border-color: rgba(34,211,238,.35);
+  color: #94a3b8;
+}
+
+.vc-output-mode-chip.selected {
+  border-color: rgba(34,211,238,.65);
+  color: #22d3ee;
+  background: rgba(34,211,238,.08);
+}
+
+/* ── Composer options ────────────────────────────────────────── */
+.vc-composer-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+@media (max-width: 700px) { .vc-composer-options { grid-template-columns: 1fr; } }
+
+.vc-composer-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.02);
+  cursor: pointer;
+  transition: all .14s;
+  user-select: none;
+}
+
+.vc-composer-option:hover {
+  border-color: rgba(168,85,247,.25);
+  background: rgba(168,85,247,.04);
+}
+
+.vc-composer-option.active {
+  border-color: rgba(34,197,94,.30);
+  background: rgba(34,197,94,.04);
+}
+
+.vc-composer-option-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.18);
+  background: transparent;
+  flex-shrink: 0;
+  transition: all .14s;
+}
+
+.vc-composer-option.active .vc-composer-option-dot {
+  background: #22c55e;
+  border-color: rgba(34,197,94,.80);
+  box-shadow: 0 0 6px rgba(34,197,94,.40);
+}
+
+.vc-composer-option-label {
+  font-size: 11px;
+  color: #4b5563;
+  transition: color .14s;
+}
+
+.vc-composer-option.active .vc-composer-option-label {
+  color: #e2e8f0;
+}
+
+/* ── Generated prompt panel ──────────────────────────────────── */
+.vc-generated-prompt-panel {
+  background: rgba(8,6,20,.92);
+  border: 1px solid rgba(168,85,247,.22);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-top: 4px;
+}
+
+.vc-generated-prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.vc-generated-prompt-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  color: #a855f7;
+  text-transform: uppercase;
+}
+
+.vc-prompt-metric {
+  font-size: 9px;
+  color: #4b5563;
+  letter-spacing: .06em;
+}
+
+.vc-prompt-metric span {
+  color: #22d3ee;
+  font-weight: 700;
+}
+
+.vc-local-only-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: rgba(34,211,238,.06);
+  border: 1px solid rgba(34,211,238,.25);
+  color: #22d3ee;
+  text-transform: uppercase;
+}
+
+.vc-generated-prompt-output {
+  width: 100%;
+  min-height: 220px;
+  max-height: 480px;
+  background: rgba(4,4,12,.90);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  line-height: 1.65;
+  padding: 12px 14px;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  letter-spacing: .01em;
+  white-space: pre;
+  overflow: auto;
+}
+
+.vc-generated-prompt-output:read-only {
+  cursor: default;
+}
+
+.vc-generated-prompt-output.empty {
+  color: #374151;
+  font-style: italic;
+}
+
+/* ── Action buttons ──────────────────────────────────────────── */
+.vc-composer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.vc-composer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: 1px solid rgba(168,85,247,.50);
+  background: rgba(124,58,237,.12);
+  color: #c084fc;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .17s;
+  user-select: none;
+}
+
+.vc-composer-btn:hover {
+  background: rgba(124,58,237,.22);
+  border-color: rgba(192,132,252,.70);
+  color: #e9d5ff;
+  box-shadow: 0 0 16px rgba(168,85,247,.15);
+}
+
+.vc-composer-btn:active { transform: scale(.97); }
+
+.vc-composer-btn.secondary {
+  border-color: rgba(34,211,238,.40);
+  background: rgba(34,211,238,.06);
+  color: #22d3ee;
+}
+
+.vc-composer-btn.secondary:hover {
+  background: rgba(34,211,238,.12);
+  border-color: rgba(34,211,238,.70);
+  box-shadow: 0 0 14px rgba(34,211,238,.10);
+}
+
+.vc-composer-btn.danger {
+  border-color: rgba(239,68,68,.30);
+  background: transparent;
+  color: #4b5563;
+}
+
+.vc-composer-btn.danger:hover {
+  border-color: rgba(239,68,68,.55);
+  color: #fca5a5;
+}
+
+/* ── Copy status message ─────────────────────────────────────── */
+.vc-copy-status {
+  font-size: 10px;
+  color: #22c55e;
+  letter-spacing: .05em;
+  transition: opacity .3s;
+  display: none;
+}
+
+.vc-copy-status.visible { display: inline; }
+.vc-copy-status.error   { color: #fca5a5; }

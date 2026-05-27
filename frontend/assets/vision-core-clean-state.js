@@ -779,7 +779,67 @@ window.VISION_CORE_PROJECT_BUILDER = Object.freeze({
       forbidden_actions: ['no_deploy', 'no_release', 'no_tag', 'no_stable_promotion', 'no_production_touch', 'no_pass_gold_real_claim'],
       next_safe_action: 'Definir escopo do projeto e gerar plano local.'
     }
-  ])
+  ]),
+
+  /* ── Mission Composer ─────────────────────────────────────────── */
+  /* Local-only. No API. No fetch. No execution. No file creation.  */
+  mission_composer: Object.freeze({
+    composer_version: 'FRONT-PRODUCT-3',
+
+    worker_targets: Object.freeze([
+      { id: 'claude_code',      label: 'Claude Code' },
+      { id: 'codex',            label: 'Codex' },
+      { id: 'manual_operator',  label: 'Manual Operator' },
+      { id: 'generic_worker',   label: 'Generic Worker' }
+    ]),
+
+    output_modes: Object.freeze([
+      { id: 'full_mission',        label: 'Full Mission Prompt' },
+      { id: 'agent_prompts_only',  label: 'Agent Prompts Only' },
+      { id: 'checklist_only',      label: 'Validation Checklist Only' },
+      { id: 'file_blueprint_only', label: 'File Blueprint Only' },
+      { id: 'safety_contract_only',label: 'Safety Contract Only' }
+    ]),
+
+    prompt_sections: Object.freeze([
+      'Mission Header',
+      'Project Brief',
+      'Template Blueprint',
+      'Selected Stack',
+      'Reserve Agent Plan',
+      'Agent Prompt Sequence',
+      'Expected Files and Folders',
+      'Validation Checklist',
+      'Risk Warnings',
+      'Forbidden Actions',
+      'Human Approval Boundary',
+      'Final Output Format'
+    ]),
+
+    composer_options: Object.freeze([
+      { id: 'include_project_context',       label: 'Include project context',          default: true },
+      { id: 'include_template_blueprint',    label: 'Include template blueprint',       default: true },
+      { id: 'include_agent_prompt_sequence', label: 'Include agent prompt sequence',    default: true },
+      { id: 'include_validation_checklist',  label: 'Include validation checklist',     default: true },
+      { id: 'include_safety_contract',       label: 'Include safety contract',          default: true },
+      { id: 'include_expected_final_report', label: 'Include expected final report',    default: true },
+      { id: 'include_ps_validation_commands',label: 'Include PowerShell validation commands', default: true }
+    ]),
+
+    safety_contract: Object.freeze([
+      'no backend call from frontend',
+      'no API call from frontend',
+      'no file creation from frontend',
+      'no command execution from frontend',
+      'no deploy',
+      'no release',
+      'no tag',
+      'no stable promotion',
+      'no production touch',
+      'no PASS GOLD REAL claim',
+      'human decision required'
+    ])
+  })
 });
 
 window.VISION_CORE_FINAL_STATE = Object.freeze({
