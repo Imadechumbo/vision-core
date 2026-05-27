@@ -257,13 +257,409 @@
     initReserveAgentControls();
   }
 
+  /* ── Project Builder — local UI state only ───────────────────── */
+  /* No API. No fetch. No execution. Local state + DOM only.        */
+
+  var pbState = {
+    selectedProjectType: null,
+    selectedProjectSize: null,
+    selectedStacks: [],
+    selectedMode: 'auto_assistido',
+    agentModes: {}
+  };
+
+  function getPBRegistry() {
+    return (window.VISION_CORE_PROJECT_BUILDER) ? window.VISION_CORE_PROJECT_BUILDER : null;
+  }
+
+  function findProjectType(typeId) {
+    var reg = getPBRegistry();
+    if (!reg) { return null; }
+    var types = reg.project_types;
+    for (var i = 0; i < types.length; i++) {
+      if (types[i].id === typeId) { return types[i]; }
+    }
+    return null;
+  }
+
+  function findProjectSize(sizeId) {
+    var reg = getPBRegistry();
+    if (!reg) { return null; }
+    var sizes = reg.project_sizes;
+    for (var i = 0; i < sizes.length; i++) {
+      if (sizes[i].id === sizeId) { return sizes[i]; }
+    }
+    return null;
+  }
+
+  function findOrchMode(modeId) {
+    var reg = getPBRegistry();
+    if (!reg) { return null; }
+    var modes = reg.orchestration_modes;
+    for (var i = 0; i < modes.length; i++) {
+      if (modes[i].id === modeId) { return modes[i]; }
+    }
+    return null;
+  }
+
+  function setProjectType(typeId) {
+    pbState.selectedProjectType = typeId;
+    document.querySelectorAll('.vc-project-type-card').forEach(function (card) {
+      if (card.getAttribute('data-type-id') === typeId) {
+        card.classList.add('selected');
+      } else {
+        card.classList.remove('selected');
+      }
+    });
+    applyRecommendedAgents(typeId);
+    renderOrchestrationPreview();
+  }
+
+  function setProjectSize(sizeId) {
+    pbState.selectedProjectSize = sizeId;
+    var reg = getPBRegistry();
+    document.querySelectorAll('.vc-size-chip').forEach(function (chip) {
+      chip.classList.remove('selected-cyan','selected-green','selected-purple','selected-yellow','selected-red');
+    });
+    if (reg) {
+      var sizes = reg.project_sizes;
+      for (var i = 0; i < sizes.length; i++) {
+        if (sizes[i].id === sizeId) {
+          var chip = document.querySelector('.vc-size-chip[data-size-id="' + sizeId + '"]');
+          if (chip) { chip.classList.add('selected-' + sizes[i].color); }
+          var hint = document.getElementById('vcSizeHint');
+          if (hint) { hint.textContent = 'Modo sugerido: ' + sizes[i].mode_hint + ' · Validação: ' + sizes[i].validation; }
+          break;
+        }
+      }
+    }
+    renderOrchestrationPreview();
+  }
+
+  function toggleStack(stackId) {
+    var idx = pbState.selectedStacks.indexOf(stackId);
+    if (idx === -1) {
+      pbState.selectedStacks.push(stackId);
+    } else {
+      pbState.selectedStacks.splice(idx, 1);
+    }
+    document.querySelectorAll('.vc-stack-chip').forEach(function (chip) {
+      if (chip.getAttribute('data-stack-id') === stackId) {
+        if (idx === -1) { chip.classList.add('selected'); } else { chip.classList.remove('selected'); }
+      }
+    });
+    renderOrchestrationPreview();
+  }
+
+  function setOrchestrationMode(modeId) {
+    pbState.selectedMode = modeId;
+    document.querySelectorAll('.vc-mode-chip').forEach(function (chip) {
+      chip.classList.remove('selected');
+    });
+    var active = document.querySelector('.vc-mode-chip[data-orch-mode="' + modeId + '"]');
+    if (active) { active.classList.add('selected'); }
+    var desc = document.getElementById('vcOrchModeDesc');
+    if (desc) {
+      var mode = findOrchMode(modeId);
+      desc.textContent = mode ? mode.desc : '';
+      desc.className = 'vc-mode-desc active';
+    }
+    renderOrchestrationPreview();
+  }
+
+  function applyRecommendedAgents(typeId) {
+    var pt = findProjectType(typeId);
+    /* Update matrix rows in project builder */
+    document.querySelectorAll('.vc-agent-matrix-row').forEach(function (row) {
+      var agentId = row.getAttribute('data-agent-id');
+      if (!pt || !pt.agents) {
+        row.classList.remove('vc-agent-recommended', 'vc-agent-selected');
+        var badge = row.querySelector('.vc-agent-matrix-badge');
+        if (badge) { badge.textContent = '—'; badge.className = 'vc-agent-matrix-badge norec'; }
+        return;
+      }
+      var recommended = pt.agents[agentId] || 'AUTO';
+      pbState.agentModes[agentId] = recommended;
+      /* Visual badge */
+      var badge = row.querySelector('.vc-agent-matrix-badge');
+      if (badge) {
+        if (recommended === 'ON') {
+          badge.textContent = 'ON'; badge.className = 'vc-agent-matrix-badge rec';
+          row.classList.add('vc-agent-recommended', 'vc-agent-selected');
+        } else if (recommended === 'AUTO') {
+          badge.textContent = 'AUTO'; badge.className = 'vc-agent-matrix-badge rec';
+          row.classList.add('vc-agent-recommended');
+          row.classList.remove('vc-agent-selected');
+        } else {
+          badge.textContent = 'OFF'; badge.className = 'vc-agent-matrix-badge norec';
+          row.classList.remove('vc-agent-recommended', 'vc-agent-selected');
+        }
+      }
+      /* Sync mode buttons in matrix row */
+      row.querySelectorAll('.vc-matrix-mode-btn').forEach(function (btn) {
+        btn.classList.remove('active-off','active-auto','active-on');
+        var m = btn.getAttribute('data-mode');
+        if (m === 'off'  && recommended === 'OFF')  { btn.classList.add('active-off'); }
+        if (m === 'auto' && recommended === 'AUTO') { btn.classList.add('active-auto'); }
+        if (m === 'on'   && recommended === 'ON')   { btn.classList.add('active-on'); }
+      });
+    });
+  }
+
+  function updateAgentMode(agentId, mode) {
+    pbState.agentModes[agentId] = mode;
+    var row = document.querySelector('.vc-agent-matrix-row[data-agent-id="' + agentId + '"]');
+    if (!row) { return; }
+    row.querySelectorAll('.vc-matrix-mode-btn').forEach(function (btn) {
+      btn.classList.remove('active-off','active-auto','active-on');
+      var m = btn.getAttribute('data-mode');
+      if (m === 'off'  && mode === 'OFF')  { btn.classList.add('active-off'); }
+      if (m === 'auto' && mode === 'AUTO') { btn.classList.add('active-auto'); }
+      if (m === 'on'   && mode === 'ON')   { btn.classList.add('active-on'); }
+    });
+    var badge = row.querySelector('.vc-agent-matrix-badge');
+    if (badge) {
+      if (mode === 'ON')   { badge.textContent = 'ON';   badge.className = 'vc-agent-matrix-badge rec'; }
+      if (mode === 'AUTO') { badge.textContent = 'AUTO'; badge.className = 'vc-agent-matrix-badge rec'; }
+      if (mode === 'OFF')  { badge.textContent = 'OFF';  badge.className = 'vc-agent-matrix-badge norec'; }
+    }
+    renderOrchestrationPreview();
+  }
+
+  function renderOrchestrationPreview() {
+    var reg = getPBRegistry();
+    var preview = document.getElementById('vcBuilderPreview');
+    if (!preview) { return; }
+
+    var pt   = findProjectType(pbState.selectedProjectType);
+    var ps   = findProjectSize(pbState.selectedProjectSize);
+    var mode = findOrchMode(pbState.selectedMode);
+
+    function set(id, val, cls) {
+      var el = document.getElementById(id);
+      if (!el) { return; }
+      el.textContent = val;
+      if (cls) { el.className = 'vc-preview-value ' + cls; }
+    }
+
+    set('vcPreviewType',  pt   ? pt.label   : '—');
+    set('vcPreviewSize',  ps   ? ps.label   : '—');
+    set('vcPreviewMode',  mode ? mode.label : '—', 'highlight');
+    set('vcPreviewStack', pbState.selectedStacks.length ? pbState.selectedStacks.join(', ') : '—', 'cyan');
+
+    /* Agent summary */
+    var agents = getAgentRegistry();
+    var on = [], auto = [], off = [];
+    agents.forEach(function (a) {
+      var m = pbState.agentModes[a.id] || a.default_mode || 'AUTO';
+      if (m === 'ON')   { on.push(a.name); }
+      else if (m === 'OFF') { off.push(a.name); }
+      else              { auto.push(a.name); }
+    });
+
+    set('vcPreviewAgentsOn',   on.length   ? on.join(', ')   : '—', 'green');
+    set('vcPreviewAgentsAuto', auto.length ? auto.join(', ') : '—');
+    set('vcPreviewAgentsOff',  off.length  ? off.join(', ')  : '—');
+
+    var nextAction = 'Gerar plano de missão local antes de qualquer execução.';
+    if (ps && ps.id === 'high_risk_refactor') {
+      nextAction = 'Revisão por agentes Security + Architect + Validator obrigatória antes de qualquer ação.';
+    } else if (ps && ps.id === 'enterprise') {
+      nextAction = 'Aprovação humana + Architecture + Security + Validator requeridos.';
+    }
+    set('vcPreviewNextAction', nextAction, 'cyan');
+  }
+
+  function generateLocalMissionPlan() {
+    var output = document.getElementById('vcLocalPlanOutput');
+    if (!output) { return; }
+    output.classList.add('visible');
+
+    var plan  = document.getElementById('vcBuilderPlan');
+    if (!plan) { return; }
+
+    var pt    = findProjectType(pbState.selectedProjectType);
+    var ps    = findProjectSize(pbState.selectedProjectSize);
+    var mode  = findOrchMode(pbState.selectedMode);
+    var agents = getAgentRegistry();
+    var reg   = getPBRegistry();
+
+    var lines = [];
+
+    lines.push('');
+    lines.push('PROJETO:    ' + (pt   ? pt.label   : '(não selecionado)'));
+    lines.push('TAMANHO:    ' + (ps   ? ps.label + ' — ' + ps.mode_hint : '(não selecionado)'));
+    lines.push('MODO:       ' + (mode ? mode.label  : pbState.selectedMode));
+    lines.push('STACK:      ' + (pbState.selectedStacks.length ? pbState.selectedStacks.join(', ') : '(nenhuma)'));
+    lines.push('');
+
+    plan.innerHTML = '';
+
+    /* Mission summary */
+    appendPlanSection(plan, 'RESUMO DA MISSÃO');
+    var summaryDiv = document.createElement('div');
+    summaryDiv.className = 'vc-builder-plan';
+    summaryDiv.textContent = lines.join('\n');
+    plan.appendChild(summaryDiv);
+
+    /* Agent blocks */
+    appendPlanSection(plan, 'AGENTES SELECIONADOS');
+    agents.forEach(function (a) {
+      var m = pbState.agentModes[a.id] || a.default_mode || 'AUTO';
+      if (m === 'OFF') { return; }
+      var block = document.createElement('div');
+      block.className = 'vc-plan-agent-block';
+      block.innerHTML =
+        '<div class="vc-plan-agent-name">' + a.name + ' <span class="vc-plan-agent-mode">[' + m + ']</span></div>' +
+        '<div class="vc-plan-agent-prompt">' + a.prompt_title + '</div>' +
+        '<div class="vc-plan-agent-prompt">' + a.description + '</div>';
+      plan.appendChild(block);
+    });
+
+    /* Validation checklist */
+    appendPlanSection(plan, 'CHECKLIST DE VALIDAÇÃO');
+    var checks = [
+      'Revisar arquivos-alvo antes de qualquer modificação.',
+      'Executar testes locais (node --check / npm test) após cada patch.',
+      'Confirmar que nenhum arquivo de produção foi tocado.',
+      'Verificar evidências de cada agente antes de avançar.',
+      'Obter aprovação humana antes de qualquer release, tag ou deploy.'
+    ];
+    if (ps) {
+      if (ps.id === 'production_ready' || ps.id === 'enterprise' || ps.id === 'high_risk_refactor') {
+        checks.push('Revisão de Security obrigatória.');
+        checks.push('Revisão de Architect obrigatória antes de refatoração ampla.');
+        checks.push('Validator deve aprovar todos os critérios de aceite.');
+      }
+    }
+    var checkDiv = document.createElement('div');
+    checkDiv.className = 'vc-builder-plan';
+    checkDiv.textContent = checks.map(function (c, i) { return (i + 1) + '. ' + c; }).join('\n');
+    plan.appendChild(checkDiv);
+
+    /* Safety prohibitions */
+    appendPlanSection(plan, 'PROIBIÇÕES DE SEGURANÇA');
+    if (reg) {
+      var prohibList = document.createElement('div');
+      prohibList.className = 'vc-plan-prohib-list';
+      reg.safety_gates.forEach(function (g) {
+        var chip = document.createElement('span');
+        chip.className = 'vc-prohib-chip';
+        chip.textContent = g;
+        prohibList.appendChild(chip);
+      });
+      plan.appendChild(prohibList);
+    }
+
+    /* Human approval */
+    appendPlanSection(plan, 'APROVAÇÃO HUMANA');
+    var approvalDiv = document.createElement('div');
+    approvalDiv.className = 'vc-builder-plan';
+    approvalDiv.textContent =
+      'Nenhuma execução real, deploy, release, tag, promoção stable ou reivindicação\n' +
+      'de PASS GOLD REAL pode ocorrer sem decisão humana explícita.\n' +
+      'Este plano é preview local. Ação real requer aprovação humana separada.';
+    plan.appendChild(approvalDiv);
+  }
+
+  function appendPlanSection(parent, title) {
+    var h = document.createElement('div');
+    h.className = 'vc-plan-section-title';
+    h.textContent = title;
+    parent.appendChild(h);
+  }
+
+  function initProjectBuilder() {
+    var reg = getPBRegistry();
+    if (!reg) { return; }
+
+    /* Project type cards */
+    document.querySelectorAll('.vc-project-type-card').forEach(function (card) {
+      card.addEventListener('click', function () {
+        setProjectType(card.getAttribute('data-type-id'));
+      });
+    });
+
+    /* Size chips */
+    document.querySelectorAll('.vc-size-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        setProjectSize(chip.getAttribute('data-size-id'));
+      });
+    });
+
+    /* Stack chips */
+    document.querySelectorAll('.vc-stack-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        toggleStack(chip.getAttribute('data-stack-id'));
+      });
+    });
+
+    /* Orchestration mode chips */
+    document.querySelectorAll('.vc-mode-chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        setOrchestrationMode(chip.getAttribute('data-orch-mode'));
+      });
+    });
+
+    /* Agent matrix mode buttons */
+    document.querySelectorAll('.vc-agent-matrix-row').forEach(function (row) {
+      var agentId = row.getAttribute('data-agent-id');
+      row.querySelectorAll('.vc-matrix-mode-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var modeRaw = btn.getAttribute('data-mode');
+          var modeUpper = modeRaw === 'off' ? 'OFF' : modeRaw === 'auto' ? 'AUTO' : 'ON';
+          updateAgentMode(agentId, modeUpper);
+        });
+      });
+    });
+
+    /* Generate plan button */
+    var genBtn = document.getElementById('vcGeneratePlanBtn');
+    if (genBtn) {
+      genBtn.addEventListener('click', function () {
+        generateLocalMissionPlan();
+        genBtn.textContent = '✓ PLANO GERADO — PREVIEW LOCAL';
+        genBtn.style.borderColor = 'rgba(34,197,94,.65)';
+        genBtn.style.color = '#22c55e';
+      });
+    }
+
+    /* Set default mode selection visually */
+    setOrchestrationMode('auto_assistido');
+
+    /* Initialize agent matrix modes from registry defaults */
+    var agents = getAgentRegistry();
+    agents.forEach(function (a) {
+      pbState.agentModes[a.id] = a.default_mode || 'AUTO';
+    });
+
+    /* Sync matrix button active states from defaults */
+    agents.forEach(function (a) {
+      var row = document.querySelector('.vc-agent-matrix-row[data-agent-id="' + a.id + '"]');
+      if (!row) { return; }
+      var def = a.default_mode || 'AUTO';
+      row.querySelectorAll('.vc-matrix-mode-btn').forEach(function (btn) {
+        btn.classList.remove('active-off','active-auto','active-on');
+        var m = btn.getAttribute('data-mode');
+        if (m === 'off'  && def === 'OFF')  { btn.classList.add('active-off'); }
+        if (m === 'auto' && def === 'AUTO') { btn.classList.add('active-auto'); }
+        if (m === 'on'   && def === 'ON')   { btn.classList.add('active-on'); }
+      });
+    });
+
+    renderOrchestrationPreview();
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       init();
       initReserve();
+      initProjectBuilder();
     });
   } else {
     init();
     initReserve();
+    initProjectBuilder();
   }
 })();
