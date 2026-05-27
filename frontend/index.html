@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="assets/vision-gold.css">
 <link rel="stylesheet" href="assets/vc-metrics-reserve.css">
 <link rel="stylesheet" href="assets/vc-project-builder.css">
+<link rel="stylesheet" href="assets/vc-project-templates.css">
 <style>
 /* V2.9.10 CLEAN FRONT — v299 quota/badge inline (no runtime JS needed) */
 .v299-quota-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;font-size:11px;flex-shrink:0;}
@@ -950,6 +951,74 @@
         </button>
         <div class="vc-local-plan-output" id="vcLocalPlanOutput">
           <div id="vcBuilderPlan"></div>
+        </div>
+      </div>
+
+      <!-- ── Section H — Project Template Packs ─────────────────── -->
+      <div class="vc-pb-section vc-template-packs" id="vcTemplatePacks">
+        <div class="vc-tpl-headline">
+          <div class="vc-pb-headline-text">
+            <p class="eyebrow">SOFTWARE FACTORY • TEMPLATE PACKS • LOCAL BLUEPRINTS</p>
+            <h2 style="font-size:14px;margin:0 0 4px;">TEMPLATES DE PROJETO</h2>
+            <p style="font-size:11px;color:#4b5563;margin:0;">Blueprints locais para iniciar projetos com estrutura, agentes, prompts e validações sugeridas. Nenhum arquivo é criado automaticamente.</p>
+          </div>
+          <span class="vc-tpl-badge">LOCAL BLUEPRINT</span>
+        </div>
+
+        <!-- Template selector grid -->
+        <div class="vc-template-grid" id="vcTemplateGrid">
+          <!-- populated by JS from template_packs registry -->
+        </div>
+
+        <!-- Template detail panel -->
+        <div class="vc-template-detail" id="vcTemplateDetail">
+          <div class="vc-template-detail-header">
+            <div>
+              <div class="vc-template-detail-title" id="vcTplDetailName">BLUEPRINT LOCAL</div>
+              <p class="vc-template-detail-summary" id="vcTplDetailSummary"></p>
+            </div>
+            <span class="vc-template-detail-bp-badge">BLUEPRINT LOCAL</span>
+          </div>
+
+          <!-- Recommended stack -->
+          <div class="vc-tpl-section-label">Stack Recomendada</div>
+          <div class="vc-template-stack-row" id="vcTplDetailStack"></div>
+
+          <!-- Folder structure + Initial files (2 col) -->
+          <div class="vc-tpl-two-col" style="margin-top:14px;">
+            <div>
+              <div class="vc-tpl-section-label">Estrutura de Pastas</div>
+              <div class="vc-template-tree" id="vcTplDetailTree"></div>
+            </div>
+            <div>
+              <div class="vc-tpl-section-label">Arquivos Iniciais</div>
+              <div class="vc-template-file-list" id="vcTplDetailFiles"></div>
+            </div>
+          </div>
+
+          <!-- Reserve agents -->
+          <div class="vc-tpl-section-label">Agentes Reserva</div>
+          <div class="vc-template-agent-list" id="vcTplDetailAgents"></div>
+
+          <!-- Prompt sequence -->
+          <div class="vc-tpl-section-label">Sequência de Prompts</div>
+          <div class="vc-template-prompt-sequence" id="vcTplDetailPrompts"></div>
+
+          <!-- Validation checklist -->
+          <div class="vc-tpl-section-label">Checklist de Validação</div>
+          <div class="vc-template-validation-list" id="vcTplDetailChecklist"></div>
+
+          <!-- Risk warnings -->
+          <div class="vc-tpl-section-label">Avisos de Risco</div>
+          <div class="vc-template-risk-list" id="vcTplDetailRisks"></div>
+
+          <!-- Forbidden actions -->
+          <div class="vc-tpl-section-label">Ações Proibidas</div>
+          <div class="vc-template-forbidden-row" id="vcTplDetailForbidden"></div>
+
+          <!-- Next safe action -->
+          <div class="vc-tpl-section-label" style="margin-top:14px;">Próxima Ação Segura</div>
+          <div class="vc-template-next-action" id="vcTplDetailNextAction"></div>
         </div>
       </div>
 
