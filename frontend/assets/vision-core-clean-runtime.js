@@ -876,17 +876,510 @@
     renderOrchestrationPreview();
   }
 
+  /* ── Mission Plan Composer — local UI only ──────────────────── */
+  /* No API. No fetch. No file creation. No command execution.     */
+  /* No eval. No localStorage. In-memory state only.               */
+
+  var mcState = {
+    selectedWorkerTarget: 'claude_code',
+    selectedOutputMode:   'full_mission',
+    options: {
+      include_project_context:        true,
+      include_template_blueprint:     true,
+      include_agent_prompt_sequence:  true,
+      include_validation_checklist:   true,
+      include_safety_contract:        true,
+      include_expected_final_report:  true,
+      include_ps_validation_commands: true
+    },
+    generatedPrompt: ''
+  };
+
+  function getMissionComposerRegistry() {
+    var reg = getPBRegistry();
+    return (reg && reg.mission_composer) ? reg.mission_composer : null;
+  }
+
+  function getSelectedTemplate() {
+    return pbTemplateState.selectedTemplateId
+      ? findTemplateById(pbTemplateState.selectedTemplateId)
+      : null;
+  }
+
+  function getSelectedAgentsForMission() {
+    var agents = getAgentRegistry();
+    var on = [], auto = [];
+    agents.forEach(function (a) {
+      var m = pbState.agentModes[a.id] || a.default_mode || 'AUTO';
+      if (m === 'ON')   { on.push(a); }
+      else if (m === 'AUTO') { auto.push(a); }
+    });
+    return { on: on, auto: auto };
+  }
+
+  function getSelectedStackForMission() {
+    if (pbState.selectedStacks.length) { return pbState.selectedStacks; }
+    var tpl = getSelectedTemplate();
+    return tpl ? tpl.recommended_stack : [];
+  }
+
+  function getSelectedProjectContext() {
+    return {
+      projectType: findProjectType(pbState.selectedProjectType),
+      projectSize: findProjectSize(pbState.selectedProjectSize),
+      orchMode:    findOrchMode(pbState.selectedMode),
+      stack:       getSelectedStackForMission()
+    };
+  }
+
+  function setMissionWorkerTarget(targetId) {
+    mcState.selectedWorkerTarget = targetId;
+    document.querySelectorAll('.vc-worker-chip').forEach(function (c) {
+      c.classList.toggle('selected', c.getAttribute('data-worker-id') === targetId);
+    });
+  }
+
+  function setMissionOutputMode(modeId) {
+    mcState.selectedOutputMode = modeId;
+    document.querySelectorAll('.vc-output-mode-chip').forEach(function (c) {
+      c.classList.toggle('selected', c.getAttribute('data-mode-id') === modeId);
+    });
+  }
+
+  function toggleMissionComposerOption(optionId) {
+    mcState.options[optionId] = !mcState.options[optionId];
+    var el = document.querySelector('.vc-composer-option[data-option-id="' + optionId + '"]');
+    if (el) { el.classList.toggle('active', mcState.options[optionId]); }
+  }
+
+  function nl(n) { return new Array((n || 1) + 1).join('\n'); }
+
+  function hr(ch, len) { return new Array((len || 72) + 1).join(ch || '─'); }
+
+  function buildMissionPrompt() {
+    var mc   = getMissionComposerRegistry();
+    var tpl  = getSelectedTemplate();
+    var ctx  = getSelectedProjectContext();
+    var agts = getSelectedAgentsForMission();
+    var stack = getSelectedStackForMission();
+    var reg  = getPBRegistry();
+
+    /* Worker target label */
+    var workerLabel = 'Claude Code';
+    if (mc) {
+      mc.worker_targets.forEach(function (w) {
+        if (w.id === mcState.selectedWorkerTarget) { workerLabel = w.label; }
+      });
+    }
+
+    var mode      = mcState.selectedOutputMode;
+    var opts      = mcState.options;
+    var lines     = [];
+    var sectionCount = 0;
+
+    function section(title) {
+      sectionCount++;
+      lines.push(hr('═'));
+      lines.push('  ' + title);
+      lines.push(hr('─'));
+    }
+
+    /* ── Full Mission Prompt ── */
+    if (mode === 'full_mission') {
+
+      /* Header */
+      lines.push(hr('═'));
+      lines.push('  MISSION — ' + (tpl ? tpl.name.toUpperCase() : (ctx.projectType ? ctx.projectType.label.toUpperCase() : 'CUSTOM PROJECT')));
+      lines.push(hr('─'));
+      lines.push('  Target Worker  : ' + workerLabel);
+      lines.push('  Mode           : ' + (ctx.orchMode ? ctx.orchMode.label : pbState.selectedMode));
+      lines.push('  Project Type   : ' + (ctx.projectType ? ctx.projectType.label : '(not selected)'));
+      lines.push('  Project Size   : ' + (ctx.projectSize ? ctx.projectSize.label + ' — ' + ctx.projectSize.mode_hint : '(not selected)'));
+      lines.push('  Selected Stack : ' + (stack.length ? stack.join(', ') : '(none)'));
+      lines.push(hr('═'));
+      sectionCount++;
+
+      /* Context */
+      if (opts.include_project_context) {
+        section('CONTEXT');
+        lines.push('You are working inside Vision Core Software Factory.');
+        lines.push('Use the selected blueprint below.');
+        lines.push('Do not execute real deployment, release, tag, stable promotion,');
+        lines.push('production access, billing, secrets access, or PASS GOLD REAL claim.');
+        lines.push('All actions described here are PLAN-ONLY unless explicitly authorized');
+        lines.push('by a human operator outside this frontend.');
+        lines.push('');
+      }
+
+      /* Template blueprint */
+      if (opts.include_template_blueprint && tpl) {
+        section('TEMPLATE BLUEPRINT: ' + tpl.name.toUpperCase());
+        lines.push('Summary:');
+        lines.push('  ' + tpl.summary);
+        lines.push('');
+        lines.push('Recommended Stack:');
+        lines.push('  ' + tpl.recommended_stack.join(', '));
+        lines.push('');
+        lines.push('Folder Structure:');
+        tpl.folder_structure.forEach(function (f) { lines.push('  ' + f); });
+        lines.push('');
+        lines.push('Initial Files:');
+        tpl.initial_files.forEach(function (f) { lines.push('  ' + f); });
+        lines.push('');
+        lines.push('Next Safe Action:');
+        lines.push('  ' + tpl.next_safe_action);
+        lines.push('');
+      }
+
+      /* Agent plan */
+      section('RESERVE AGENT PLAN');
+      if (agts.on.length) {
+        lines.push('[ ON — Active ]');
+        agts.on.forEach(function (a) {
+          lines.push('  • ' + a.name + ' [' + a.type + '] — ' + a.method);
+          lines.push('    ' + a.description);
+        });
+        lines.push('');
+      }
+      if (agts.auto.length) {
+        lines.push('[ AUTO — Recommended ]');
+        agts.auto.forEach(function (a) {
+          lines.push('  • ' + a.name + ' [' + a.type + '] — ' + a.method);
+          lines.push('    ' + a.description);
+        });
+        lines.push('');
+      }
+
+      /* Agent prompts */
+      if (opts.include_agent_prompt_sequence) {
+        section('AGENT PROMPT SEQUENCE');
+        if (tpl && tpl.prompt_sequence.length) {
+          tpl.prompt_sequence.forEach(function (p) { lines.push('  ' + p); });
+        } else {
+          var allAgents = agts.on.concat(agts.auto);
+          allAgents.forEach(function (a, i) {
+            lines.push('  ' + (i + 1) + '. ' + a.prompt_title);
+          });
+        }
+        lines.push('');
+        /* Default prompts for ON agents */
+        if (agts.on.length) {
+          lines.push('[ Agent System Prompts — ON agents ]');
+          agts.on.forEach(function (a) {
+            lines.push('');
+            lines.push('  ── ' + a.name + ' ──');
+            lines.push('  ' + a.default_prompt);
+          });
+          lines.push('');
+        }
+      }
+
+      /* Validation checklist */
+      if (opts.include_validation_checklist) {
+        section('VALIDATION CHECKLIST');
+        if (tpl) {
+          lines.push('Template Checklist:');
+          tpl.validation_checklist.forEach(function (c, i) {
+            lines.push('  ' + (i + 1) + '. ✓ ' + c);
+          });
+          lines.push('');
+        }
+        lines.push('Generic Safety Validation:');
+        lines.push('  1. ✓ Revisar arquivos-alvo antes de qualquer modificação.');
+        lines.push('  2. ✓ Executar testes locais após cada patch.');
+        lines.push('  3. ✓ Confirmar que nenhum arquivo de produção foi tocado.');
+        lines.push('  4. ✓ Verificar evidências de cada agente antes de avançar.');
+        lines.push('  5. ✓ Obter aprovação humana antes de qualquer release, tag ou deploy.');
+        lines.push('');
+      }
+
+      /* Risk warnings */
+      if (tpl && tpl.risk_warnings.length) {
+        section('RISK WARNINGS');
+        tpl.risk_warnings.forEach(function (r) { lines.push('  ⚠ ' + r); });
+        lines.push('');
+      }
+
+      /* Forbidden actions */
+      section('FORBIDDEN ACTIONS');
+      var forbidden = tpl ? tpl.forbidden_actions.slice() : [];
+      if (mc) {
+        mc.safety_contract.forEach(function (s) {
+          if (forbidden.indexOf(s) === -1) { forbidden.push(s); }
+        });
+      }
+      forbidden.forEach(function (f) { lines.push('  ✗ ' + f); });
+      lines.push('');
+
+      /* Human approval boundary */
+      section('HUMAN APPROVAL BOUNDARY');
+      lines.push('Any real execution, file creation, release, deploy, tag, stable promotion,');
+      lines.push('production touch, PASS GOLD REAL claim, secrets access, network action,');
+      lines.push('or external side effect REQUIRES EXPLICIT HUMAN APPROVAL outside this frontend.');
+      lines.push('');
+      lines.push('This prompt is PLAN-ONLY. Execution authority is NEVER granted by this composer.');
+      lines.push('');
+
+      /* Expected final report */
+      if (opts.include_expected_final_report) {
+        section('EXPECTED FINAL REPORT (Worker Must Provide)');
+        lines.push('Worker must report:');
+        lines.push('  □ files changed');
+        lines.push('  □ commands run');
+        lines.push('  □ tests passed/failed');
+        lines.push('  □ forbidden scan result');
+        lines.push('  □ whether any backend/go-core/tools/package.json changed');
+        lines.push('  □ whether PASS GOLD REAL was claimed');
+        lines.push('  □ whether stable/release/deploy/tag remained blocked');
+        lines.push('  □ whether production was touched');
+        lines.push('  □ whether output was local-only or real file changes were made');
+        lines.push('');
+      }
+
+      /* PowerShell validation commands */
+      if (opts.include_ps_validation_commands) {
+        section('POWERSHELL VALIDATION COMMANDS (display only — do not auto-execute)');
+        lines.push('node --check frontend\\assets\\vision-core-clean-state.js');
+        lines.push('node --check frontend\\assets\\vision-core-clean-runtime.js');
+        lines.push('');
+        lines.push('Select-String -Path frontend\\*.html,frontend\\assets\\*.css,frontend\\assets\\*.js `');
+        lines.push('  -Pattern "fetch\\(","XMLHttpRequest","child_process","exec\\(","spawn\\(","eval\\(",' );
+        lines.push('  "vision-runtime-v297\\.js","vision-v297-interactions\\.js","v23-ui-system\\.js",');
+        lines.push('  "v231-backend-agents\\.js","vision-v298-command-chat\\.js",');
+        lines.push('  "vision-v298-final-hard-fix2\\.js","vision-v299-fullstack-runtime\\.js",');
+        lines.push('  "vision-v2910-clean-runtime\\.js","vision-v32-orbit-runtime\\.js",');
+        lines.push('  "vision-v34-enterprise\\.js","vision-v35-telemetry\\.js","vision-v44-runtime-consistency\\.js"');
+        lines.push('');
+        lines.push('Expected: 0 hits, exit 0 on node --check');
+        lines.push('');
+      }
+
+    /* ── Agent Prompts Only ── */
+    } else if (mode === 'agent_prompts_only') {
+      section('AGENT PROMPTS — ' + workerLabel);
+      var allActive = agts.on.concat(agts.auto);
+      if (!allActive.length) {
+        lines.push('(No agents active. Select a project type to activate agents.)');
+      } else {
+        allActive.forEach(function (a) {
+          lines.push('── ' + a.name + ' [' + a.type + '] — ' + a.method + ' ──');
+          lines.push(a.default_prompt);
+          lines.push('');
+        });
+      }
+      if (tpl && tpl.prompt_sequence.length) {
+        section('TEMPLATE PROMPT SEQUENCE');
+        tpl.prompt_sequence.forEach(function (p) { lines.push('  ' + p); });
+      }
+
+    /* ── Validation Checklist Only ── */
+    } else if (mode === 'checklist_only') {
+      section('VALIDATION CHECKLIST — ' + (tpl ? tpl.name : 'Project'));
+      if (tpl) {
+        tpl.validation_checklist.forEach(function (c, i) {
+          lines.push('  ' + (i + 1) + '. ✓ ' + c);
+        });
+        lines.push('');
+      }
+      lines.push('Generic Safety Gates:');
+      if (reg) {
+        reg.safety_gates.forEach(function (g) { lines.push('  ✗ ' + g); });
+      }
+      lines.push('');
+      section('VALIDATION COMMANDS');
+      lines.push('node --check frontend\\assets\\vision-core-clean-state.js');
+      lines.push('node --check frontend\\assets\\vision-core-clean-runtime.js');
+
+    /* ── File Blueprint Only ── */
+    } else if (mode === 'file_blueprint_only') {
+      section('FILE BLUEPRINT — ' + (tpl ? tpl.name : 'Project'));
+      if (tpl) {
+        lines.push('Folder Structure:');
+        tpl.folder_structure.forEach(function (f) { lines.push('  ' + f); });
+        lines.push('');
+        lines.push('Initial Files:');
+        tpl.initial_files.forEach(function (f) { lines.push('  ' + f); });
+        lines.push('');
+        lines.push('Stack: ' + tpl.recommended_stack.join(', '));
+        lines.push('');
+        lines.push('Next Safe Action:');
+        lines.push('  ' + tpl.next_safe_action);
+      } else {
+        lines.push('(No template selected. Select a project type or template to see blueprint.)');
+      }
+
+    /* ── Safety Contract Only ── */
+    } else if (mode === 'safety_contract_only') {
+      section('SAFETY CONTRACT');
+      if (mc) {
+        mc.safety_contract.forEach(function (s) { lines.push('  ✗ ' + s); });
+      }
+      lines.push('');
+      if (tpl && tpl.forbidden_actions.length) {
+        section('TEMPLATE FORBIDDEN ACTIONS');
+        tpl.forbidden_actions.forEach(function (f) { lines.push('  ✗ ' + f); });
+        lines.push('');
+      }
+      section('HUMAN APPROVAL BOUNDARY');
+      lines.push('Any real execution, file creation, release, deploy, tag, stable promotion,');
+      lines.push('production touch, PASS GOLD REAL claim, secrets access, network action,');
+      lines.push('or external side effect REQUIRES EXPLICIT HUMAN APPROVAL outside this frontend.');
+    }
+
+    mcState.generatedPrompt = lines.join('\n');
+
+    /* Update metrics */
+    var lineEl = document.getElementById('vcPromptLineCount');
+    var sectEl = document.getElementById('vcPromptSectionCount');
+    if (lineEl) { lineEl.textContent = lines.length; }
+    if (sectEl) { sectEl.textContent = sectionCount; }
+
+    return mcState.generatedPrompt;
+  }
+
+  function renderMissionPrompt() {
+    var output = document.getElementById('vcMissionPromptOutput');
+    if (!output) { return; }
+    var text = buildMissionPrompt();
+    output.value = text;
+    output.classList.remove('empty');
+  }
+
+  function copyMissionPrompt() {
+    var statusEl = document.getElementById('vcCopyStatus');
+    if (!mcState.generatedPrompt) {
+      if (statusEl) {
+        statusEl.textContent = 'Gere o prompt primeiro.';
+        statusEl.className = 'vc-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-copy-status'; }, 2800);
+      }
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(mcState.generatedPrompt).then(function () {
+        if (statusEl) {
+          statusEl.textContent = '✓ Copiado!';
+          statusEl.className = 'vc-copy-status visible';
+          setTimeout(function () { statusEl.className = 'vc-copy-status'; }, 2800);
+        }
+      }, function () {
+        if (statusEl) {
+          statusEl.textContent = 'Selecione e copie manualmente.';
+          statusEl.className = 'vc-copy-status visible error';
+          setTimeout(function () { statusEl.className = 'vc-copy-status'; }, 3500);
+        }
+      });
+    } else {
+      if (statusEl) {
+        statusEl.textContent = 'Selecione e copie manualmente.';
+        statusEl.className = 'vc-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-copy-status'; }, 3500);
+      }
+    }
+  }
+
+  function clearMissionPrompt() {
+    mcState.generatedPrompt = '';
+    var output = document.getElementById('vcMissionPromptOutput');
+    if (output) {
+      output.value = 'Clique em GERAR PROMPT DE MISSÃO para compor o prompt local.';
+      output.classList.add('empty');
+    }
+    var lineEl = document.getElementById('vcPromptLineCount');
+    var sectEl = document.getElementById('vcPromptSectionCount');
+    if (lineEl) { lineEl.textContent = '0'; }
+    if (sectEl) { sectEl.textContent = '0'; }
+    var statusEl = document.getElementById('vcCopyStatus');
+    if (statusEl) { statusEl.className = 'vc-copy-status'; }
+  }
+
+  function initMissionComposer() {
+    var mc = getMissionComposerRegistry();
+    if (!mc) { return; }
+
+    /* Build worker target chips */
+    var workerRow = document.getElementById('vcWorkerTargetRow');
+    if (workerRow) {
+      mc.worker_targets.forEach(function (w) {
+        var chip = document.createElement('button');
+        chip.className = 'vc-worker-chip' + (w.id === mcState.selectedWorkerTarget ? ' selected' : '');
+        chip.setAttribute('data-worker-id', w.id);
+        chip.type = 'button';
+        chip.textContent = w.label;
+        chip.addEventListener('click', function () { setMissionWorkerTarget(w.id); });
+        workerRow.appendChild(chip);
+      });
+    }
+
+    /* Build output mode chips */
+    var modeRow = document.getElementById('vcOutputModeRow');
+    if (modeRow) {
+      mc.output_modes.forEach(function (m) {
+        var chip = document.createElement('button');
+        chip.className = 'vc-output-mode-chip' + (m.id === mcState.selectedOutputMode ? ' selected' : '');
+        chip.setAttribute('data-mode-id', m.id);
+        chip.type = 'button';
+        chip.textContent = m.label;
+        chip.addEventListener('click', function () { setMissionOutputMode(m.id); });
+        modeRow.appendChild(chip);
+      });
+    }
+
+    /* Build composer option toggles */
+    var optsContainer = document.getElementById('vcComposerOptions');
+    if (optsContainer) {
+      mc.composer_options.forEach(function (opt) {
+        var el = document.createElement('div');
+        el.className = 'vc-composer-option' + (mcState.options[opt.id] ? ' active' : '');
+        el.setAttribute('data-option-id', opt.id);
+        el.innerHTML =
+          '<div class="vc-composer-option-dot"></div>' +
+          '<span class="vc-composer-option-label">' + opt.label + '</span>';
+        el.addEventListener('click', function () { toggleMissionComposerOption(opt.id); });
+        optsContainer.appendChild(el);
+      });
+    }
+
+    /* Wire buttons */
+    var genBtn = document.getElementById('vcGenerateMissionBtn');
+    if (genBtn) {
+      genBtn.addEventListener('click', function () {
+        renderMissionPrompt();
+        genBtn.textContent = '✓ PROMPT GERADO — LOCAL ONLY';
+        genBtn.style.borderColor = 'rgba(34,197,94,.65)';
+        genBtn.style.color = '#22c55e';
+      });
+    }
+
+    var copyBtn = document.getElementById('vcCopyMissionBtn');
+    if (copyBtn) { copyBtn.addEventListener('click', copyMissionPrompt); }
+
+    var clearBtn = document.getElementById('vcClearMissionBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        clearMissionPrompt();
+        if (genBtn) {
+          genBtn.textContent = '⬡ GERAR PROMPT DE MISSÃO';
+          genBtn.style.borderColor = '';
+          genBtn.style.color = '';
+        }
+      });
+    }
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       init();
       initReserve();
       initProjectBuilder();
       initTemplatePacks();
+      initMissionComposer();
     });
   } else {
     init();
     initReserve();
     initProjectBuilder();
     initTemplatePacks();
+    initMissionComposer();
   }
 })();
