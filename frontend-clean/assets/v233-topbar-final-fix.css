@@ -1,0 +1,132 @@
+/* VISION CORE V2.3.4 FINAL — TOPBAR FIX
+   Mantém o layout do print 1 e impede quebra dos botões do topo.
+   Regras: botões sempre em uma linha; menu central some antes; cores originais preservadas. */
+
+.top{
+  overflow:visible !important;
+}
+
+.top .shell.topin{
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:space-between !important;
+  flex-wrap:nowrap !important;
+  gap:14px !important;
+  min-height:68px !important;
+  width:min(1580px,calc(100% - 28px)) !important;
+  padding:0 !important;
+}
+
+.v23-brand-block{
+  flex:0 0 auto !important;
+  min-width:245px !important;
+  max-width:310px !important;
+}
+
+.v231-topnav{
+  flex:1 1 auto !important;
+  min-width:0 !important;
+  display:flex !important;
+  justify-content:center !important;
+  overflow:hidden !important;
+  white-space:nowrap !important;
+}
+
+.top-actions{
+  flex:0 0 auto !important;
+  width:auto !important;
+  min-width:max-content !important;
+  max-width:none !important;
+  display:flex !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:flex-end !important;
+  flex-wrap:nowrap !important;
+  gap:10px !important;
+  white-space:nowrap !important;
+}
+
+.top-actions .btn,
+.top-actions a.btn,
+.top-actions button.btn{
+  flex:0 0 auto !important;
+  width:auto !important;
+  min-width:auto !important;
+  height:42px !important;
+  padding:0 20px !important;
+  border-radius:16px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  text-align:center !important;
+  white-space:nowrap !important;
+  font-weight:900 !important;
+  line-height:1 !important;
+}
+
+/* Cores pedidas dos prints */
+.top-actions .btn.github{
+  background:linear-gradient(135deg,#7c3aed 0%,#a855f7 100%) !important;
+  color:#fff !important;
+  border-color:rgba(168,85,247,.95) !important;
+  box-shadow:0 0 22px rgba(168,85,247,.18), inset 0 1px 0 rgba(255,255,255,.10) !important;
+}
+
+.top-actions .btn.agent-download{
+  background:linear-gradient(135deg,#06b6d4 0%,#22c55e 100%) !important;
+  color:#020405 !important;
+  border-color:rgba(34,197,94,.55) !important;
+  box-shadow:0 0 22px rgba(34,197,94,.14), inset 0 1px 0 rgba(255,255,255,.14) !important;
+}
+
+.top-actions .btn[href="#mission"],
+.top-actions a.btn:not(.ghost):not(.github):not(.agent-download){
+  background:linear-gradient(135deg,#8b5cf6 0%,#c044ff 100%) !important;
+  color:#fff !important;
+  border-color:rgba(192,68,255,.95) !important;
+  box-shadow:0 0 22px rgba(192,68,255,.18), inset 0 1px 0 rgba(255,255,255,.10) !important;
+}
+
+.top-actions .btn.ghost{
+  background:#101014 !important;
+  color:#fff !important;
+  border-color:rgba(255,255,255,.16) !important;
+}
+
+/* Primeiro reduz um pouco, sem mudar o print em desktop largo */
+@media(max-width:1540px){
+  .v23-brand-block{min-width:230px !important;max-width:285px !important}
+  .v231-topnav{gap:10px !important;margin-right:6px !important}
+  .v231-topnav a{font-size:12px !important;padding:8px 6px !important}
+  .top-actions{gap:9px !important}
+  .top-actions .btn,
+  .top-actions a.btn,
+  .top-actions button.btn{height:42px !important;padding:0 16px !important;font-size:13px !important}
+}
+
+/* Ponto crítico do seu print 3: em largura média, some o menu central, NÃO quebra botões. */
+@media(max-width:1380px){
+  .v231-topnav{display:none !important}
+  .top .shell.topin{justify-content:space-between !important}
+  .v23-brand-block{min-width:220px !important;max-width:300px !important}
+  .top-actions .btn,
+  .top-actions a.btn,
+  .top-actions button.btn{height:44px !important;padding:0 18px !important;font-size:14px !important}
+}
+
+/* Em telas menores ainda, mantém tudo numa faixa rolável horizontal em vez de quebrar linha. */
+@media(max-width:980px){
+  .top .shell.topin{
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    scrollbar-width:thin !important;
+    -webkit-overflow-scrolling:touch !important;
+  }
+  .v23-brand-block{min-width:210px !important}
+  .sub{display:none !important}
+  .top-actions{min-width:max-content !important}
+  .top-actions .btn,
+  .top-actions a.btn,
+  .top-actions button.btn{height:42px !important;padding:0 14px !important;font-size:12px !important}
+}
