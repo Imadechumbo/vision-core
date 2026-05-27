@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VISION CORE — V2.9.10 Clean Front</title>
+  <link rel="stylesheet" href="assets/vision-core-next.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── Top Bar ──────────────────────────────────────────────────────── -->
+  <header id="topbar">
+    <div class="topbar__logo">
+      <span class="topbar__logo-name">⬡ VISION CORE</span>
+      <span class="topbar__logo-ver">V2.9.10 CLEAN FRONT</span>
+    </div>
+    <span class="topbar__subtitle">CONTROLLED CLOSURE&nbsp;•&nbsp;REVIEW READY&nbsp;•&nbsp;PASS GOLD NOT CLAIMED</span>
+
+    <nav class="topbar__nav">
+      <button class="nav-tab nav-tab--active">Mission</button>
+      <button class="nav-tab">Vault</button>
+      <button class="nav-tab">GitHub</button>
+      <button class="nav-tab">Tools</button>
+      <button class="nav-tab">Metrics</button>
+      <button class="nav-tab">Agents</button>
+    </nav>
+
+    <div class="topbar__actions">
+      <button class="action-btn" data-blocked>LANDING STARTUP</button>
+      <button class="action-btn" data-blocked>GITHUB</button>
+      <button class="action-btn" data-blocked>BAIXAR AGENT</button>
+      <button class="action-btn" data-blocked>SIGN IN</button>
+      <button class="action-btn" data-blocked>ENVIAR MISSÃO</button>
+    </div>
+  </header>
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────────── -->
+  <aside id="sidebar">
+    <div class="sidebar__section-label">Navigation</div>
+
+    <div class="sidebar__item sidebar__item--active">
+      <span class="sidebar__dot"></span>Mission Control
+    </div>
+    <div class="sidebar__item">
+      <span class="sidebar__dot"></span>Mission Timeline
+    </div>
+    <div class="sidebar__item">
+      <span class="sidebar__dot"></span>Execution Monitor
+    </div>
+    <div class="sidebar__item">
+      <span class="sidebar__dot"></span>Diagnostics / Hermes
+    </div>
+    <div class="sidebar__item">
+      <span class="sidebar__dot"></span>Validation / SDDF
+    </div>
+    <div class="sidebar__item">
+      <span class="sidebar__dot"></span>Diff Preview
+    </div>
+    <div class="sidebar__item">
+      <span class="sidebar__dot"></span>Vault / Rollback
+    </div>
+    <div class="sidebar__item">
+      <span class="sidebar__dot"></span>Memory / Obsidian
+    </div>
+    <div class="sidebar__item">
+      <span class="sidebar__dot"></span>OpenClaw / OpenSquad
+    </div>
+    <div class="sidebar__item">
+      <span class="sidebar__dot"></span>OSINT Docker
+    </div>
+    <div class="sidebar__item">
+      <span class="sidebar__dot"></span>GitHub / PR Real
+    </div>
+    <div class="sidebar__item">
+      <span class="sidebar__dot"></span>SaaS / Planos
+    </div>
+    <div class="sidebar__item">
+      <span class="sidebar__dot"></span>V10 Enterprise
+    </div>
+    <div class="sidebar__item">
+      <span class="sidebar__dot"></span>Final Closure
+    </div>
+  </aside>
+
+  <!-- ── Main scroll area ─────────────────────────────────────────────── -->
+  <main class="main-scroll">
+
+    <!-- Mission Command + Agent Orbit -->
+    <div class="cols-2">
+
+      <!-- Mission Command -->
+      <section id="mission-command">
+        <div class="mission-command__hero">IAs criam. VISION CORE corrige</div>
+        <div class="mission-command__title">VISION AI COMMAND</div>
+        <div class="mission-command__status">CONTROLLED CLOSURE</div>
+        <p class="mission-command__msg">
+          Vision Core está em controlled closure / review-ready state.
+          PASS GOLD REAL não foi claimado e stable promotion permanece bloqueado.
+          Final human decision is required before any release, deploy, or stable promotion.
+        </p>
+        <textarea
+          class="mission-command__input-area"
+          readonly
+          placeholder="Pergunte qualquer coisa, cole erro, log, código..."
+        ></textarea>
+        <div class="mission-command__btns">
+          <button class="cmd-btn cmd-btn--send" data-blocked>ENVIAR</button>
+          <button class="cmd-btn cmd-btn--exec" data-blocked>EXECUTAR MISSÃO</button>
+        </div>
+      </section>
+
+      <!-- Agent Orbit -->
+      <section id="agent-orbit" class="panel">
+        <div class="panel-heading">Multi-Agent Orbit</div>
+        <!-- populated by vision-core-dashboard.js -->
+      </section>
+
+    </div>
+
+    <!-- Final State Cards -->
+    <div id="final-state">
+      <!-- populated by vision-core-dashboard.js -->
+    </div>
+
+    <!-- 2-column row: authority + metrics -->
+    <div class="panels-row">
+
+      <!-- PASS GOLD / Authority Panel -->
+      <section id="authority-panel" class="panel">
+        <div class="panel-heading">PASS GOLD &amp; Authority State</div>
+        <!-- populated by vision-core-dashboard.js -->
+      </section>
+
+      <!-- Agent Metrics -->
+      <section id="metrics-panel" class="panel">
+        <!-- populated by vision-core-dashboard.js -->
+      </section>
+
+    </div>
+
+    <!-- 3-column row: RTE chain / closure / blocked -->
+    <div class="panels-row-3">
+
+      <!-- RTE Chain -->
+      <section id="rte-chain" class="panel">
+        <div class="panel-heading">RTE Chain</div>
+        <!-- populated by vision-core-dashboard.js -->
+      </section>
+
+      <!-- Final Closure Panel -->
+      <section id="closure-panel" class="panel">
+        <div class="panel-heading">Final Closure</div>
+        <!-- populated by vision-core-dashboard.js -->
+      </section>
+
+      <!-- Blocked / Forbidden Panel -->
+      <section id="blocked-panel" class="panel">
+        <div class="panel-heading">Blocked &amp; Forbidden</div>
+        <!-- populated by vision-core-dashboard.js -->
+      </section>
+
+    </div>
+
+    <!-- REGRA ABSOLUTA Footer -->
+    <footer class="regra-footer">
+      <div class="regra-footer__title">⚠ REGRA ABSOLUTA</div>
+      <div class="regra-footer__text">
+        SEM PASS GOLD REAL → não promove, não libera, não marca stable.
+      </div>
+    </footer>
+
+  </main>
+
+</div>
+
+<!-- Toast container -->
+<div id="status-toast"></div>
+
+<!-- Only FRONT-NEW-0 scripts. No legacy runtime scripts. -->
+<script src="assets/vision-core-state.js"></script>
+<script src="assets/vision-core-dashboard.js"></script>
+
+</body>
+</html>
