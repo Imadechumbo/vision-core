@@ -213,6 +213,572 @@ window.VISION_CORE_PROJECT_BUILDER = Object.freeze({
   safety_gates: Object.freeze([
     'no_deploy', 'no_release', 'no_tag', 'no_stable_promotion',
     'no_production_touch', 'no_pass_gold_real_claim', 'human_decision_required'
+  ]),
+
+  /* ── Template Packs ─────────────────────────────────────────── */
+  /* Local blueprint registry. No files created. No API. No exec. */
+  template_packs: Object.freeze([
+    {
+      id: 'tpl_saas_fullstack',
+      project_type_id: 'saas_fullstack',
+      name: 'SaaS Fullstack Starter',
+      summary: 'Aplicação SaaS fullstack com autenticação, dashboard, API, banco de dados, segurança e validação controlada.',
+      recommended_stack: ['React', 'Node/Express', 'PostgreSQL', 'Docker', 'GitHub Actions'],
+      folder_structure: [
+        'frontend/',
+        'backend/',
+        'backend/routes/',
+        'backend/controllers/',
+        'backend/middlewares/',
+        'backend/models/',
+        'backend/services/',
+        'database/migrations/',
+        'tests/',
+        'docs/'
+      ],
+      initial_files: [
+        'frontend/index.html',
+        'frontend/assets/app.css',
+        'backend/server.js',
+        'backend/routes/auth.routes.js',
+        'backend/routes/app.routes.js',
+        'backend/middlewares/auth.js',
+        'backend/middlewares/error-handler.js',
+        'database/schema.sql',
+        'tests/smoke.test.js',
+        'docs/README.md'
+      ],
+      reserve_agents: ['backend', 'database', 'auth', 'config', 'network', 'security', 'validator', 'architect', 'locator', 'memory'],
+      prompt_sequence: [
+        '1. Reserve Architect — desenhar módulos e fronteiras.',
+        '2. Agente Backend — propor API contract.',
+        '3. Agente Database — propor schema inicial.',
+        '4. Agente Auth — propor fluxo de autenticação.',
+        '5. Reserve Security — revisar riscos.',
+        '6. Reserve Validator — definir checklist de validação.',
+        '7. Reserve Memory — verificar padrões e decisões anteriores.'
+      ],
+      validation_checklist: [
+        'API contract documentado',
+        'schema validado',
+        'autenticação sem secrets expostos',
+        'rotas protegidas',
+        'smoke test local definido',
+        'security review pendente antes de produção'
+      ],
+      risk_warnings: [
+        'autenticação e billing exigem revisão humana',
+        'schema pode gerar migração destrutiva se mal definido',
+        'produção bloqueada até evidência real'
+      ],
+      forbidden_actions: ['no_deploy', 'no_release', 'no_tag', 'no_stable_promotion', 'no_production_touch', 'no_pass_gold_real_claim'],
+      next_safe_action: 'Gerar plano local e revisar API/schema antes de criar qualquer arquivo.'
+    },
+    {
+      id: 'tpl_api_backend',
+      project_type_id: 'api_backend',
+      name: 'API Backend Starter',
+      summary: 'Backend API com rotas, controllers, middlewares, autenticação opcional, configuração e validação local.',
+      recommended_stack: ['Node/Express', 'PostgreSQL', 'Docker', 'GitHub Actions'],
+      folder_structure: [
+        'backend/',
+        'backend/routes/',
+        'backend/controllers/',
+        'backend/middlewares/',
+        'backend/services/',
+        'backend/models/',
+        'tests/',
+        'docs/'
+      ],
+      initial_files: [
+        'backend/server.js',
+        'backend/routes/index.js',
+        'backend/controllers/health.controller.js',
+        'backend/middlewares/error-handler.js',
+        'backend/config/env.js',
+        'tests/api-smoke.test.js',
+        'docs/API.md'
+      ],
+      reserve_agents: ['backend', 'database', 'auth', 'config', 'network', 'security', 'validator', 'locator', 'memory'],
+      prompt_sequence: [
+        '1. Agente Backend — definir rotas e controllers.',
+        '2. Agente Config — revisar env e portas.',
+        '3. Agente Database — mapear persistência se necessária.',
+        '4. Agente Auth — revisar proteção de rotas se necessário.',
+        '5. Reserve Validator — definir testes de API.'
+      ],
+      validation_checklist: [
+        'health route definida',
+        'error handler definido',
+        'env sem secrets expostos',
+        'API smoke test planejado',
+        'CORS e auth revisados se aplicável'
+      ],
+      risk_warnings: [
+        'endpoints públicos exigem revisão de segurança',
+        'CORS incorreto pode quebrar frontend',
+        'secrets não podem ser expostos'
+      ],
+      forbidden_actions: ['no_deploy', 'no_release', 'no_tag', 'no_stable_promotion', 'no_production_touch', 'no_pass_gold_real_claim'],
+      next_safe_action: 'Gerar contrato de API local antes de implementar rotas.'
+    },
+    {
+      id: 'tpl_landing_page',
+      project_type_id: 'landing_page',
+      name: 'Landing Page Starter',
+      summary: 'Landing page estática com hero, seções, CTA, assets e checklist de performance/acessibilidade.',
+      recommended_stack: ['HTML/CSS/JS'],
+      folder_structure: [
+        'frontend/',
+        'frontend/assets/',
+        'frontend/assets/images/',
+        'docs/'
+      ],
+      initial_files: [
+        'frontend/index.html',
+        'frontend/assets/style.css',
+        'frontend/assets/app.js',
+        'docs/content-outline.md'
+      ],
+      reserve_agents: ['upload_media', 'config', 'network', 'security', 'validator', 'locator', 'memory'],
+      prompt_sequence: [
+        '1. Reserve Architect — estruturar seções.',
+        '2. Agente Upload/Media — revisar imagens e assets.',
+        '3. Agente Config — revisar caminhos.',
+        '4. Reserve Validator — checklist visual e acessibilidade.'
+      ],
+      validation_checklist: [
+        'hero definido',
+        'CTA definido',
+        'assets otimizados',
+        'responsividade verificada',
+        'links e formulários revisados'
+      ],
+      risk_warnings: [
+        'formulários não devem enviar dados sem backend seguro',
+        'scripts externos devem ser aprovados',
+        'imagens grandes afetam performance'
+      ],
+      forbidden_actions: ['no_deploy', 'no_release', 'no_tag', 'no_stable_promotion', 'no_production_touch'],
+      next_safe_action: 'Gerar outline visual e checklist de conteúdo.'
+    },
+    {
+      id: 'tpl_dashboard_admin',
+      project_type_id: 'dashboard_admin',
+      name: 'Admin Dashboard Starter',
+      summary: 'Dashboard administrativo com autenticação, tabelas, métricas, filtros e permissões.',
+      recommended_stack: ['React', 'Node/Express', 'PostgreSQL'],
+      folder_structure: [
+        'frontend/',
+        'frontend/components/',
+        'frontend/pages/',
+        'frontend/assets/',
+        'backend/',
+        'backend/routes/',
+        'backend/controllers/',
+        'backend/middlewares/',
+        'tests/'
+      ],
+      initial_files: [
+        'frontend/index.html',
+        'frontend/assets/dashboard.css',
+        'frontend/components/sidebar.js',
+        'frontend/components/table.js',
+        'backend/routes/admin.routes.js',
+        'backend/middlewares/auth.js',
+        'tests/dashboard-smoke.test.js'
+      ],
+      reserve_agents: ['backend', 'database', 'auth', 'config', 'network', 'security', 'validator', 'architect', 'locator', 'memory'],
+      prompt_sequence: [
+        '1. Reserve Architect — definir módulos de tela.',
+        '2. Agente Auth — definir permissões.',
+        '3. Agente Backend — definir endpoints admin.',
+        '4. Agente Database — definir queries.',
+        '5. Reserve Security — revisar acesso.',
+        '6. Reserve Validator — validar fluxos críticos.'
+      ],
+      validation_checklist: [
+        'autenticação obrigatória',
+        'permissões por rota',
+        'tabelas com estados vazios',
+        'filtros testados',
+        'erros tratados'
+      ],
+      risk_warnings: [
+        'dashboard admin expõe dados sensíveis',
+        'permissões precisam ser explícitas',
+        'produção bloqueada sem auditoria'
+      ],
+      forbidden_actions: ['no_deploy', 'no_release', 'no_tag', 'no_stable_promotion', 'no_production_touch', 'no_secret_exposure'],
+      next_safe_action: 'Gerar mapa de telas e permissões antes de implementar.'
+    },
+    {
+      id: 'tpl_game_indie',
+      project_type_id: 'game_indie',
+      name: 'Game / Indie Project Starter',
+      summary: 'Projeto indie com loop de jogo, assets, cenas, estado local e validação visual.',
+      recommended_stack: ['HTML/CSS/JS'],
+      folder_structure: [
+        'game/',
+        'game/assets/',
+        'game/scenes/',
+        'game/systems/',
+        'game/entities/',
+        'docs/'
+      ],
+      initial_files: [
+        'game/index.html',
+        'game/assets/style.css',
+        'game/main.js',
+        'game/scenes/menu.scene.js',
+        'game/scenes/game.scene.js',
+        'game/systems/input.js',
+        'game/systems/audio.js',
+        'docs/game-design.md'
+      ],
+      reserve_agents: ['upload_media', 'config', 'network', 'validator', 'architect', 'locator', 'memory'],
+      prompt_sequence: [
+        '1. Reserve Architect — definir game loop e cenas.',
+        '2. Agente Upload/Media — revisar assets.',
+        '3. Agente Config — revisar paths.',
+        '4. Reserve Validator — checklist de execução local.',
+        '5. Reserve Memory — consultar decisões anteriores.'
+      ],
+      validation_checklist: [
+        'game loop inicial definido',
+        'assets organizados',
+        'input testado',
+        'cena de menu e jogo planejadas',
+        'sem dependência externa não aprovada'
+      ],
+      risk_warnings: [
+        'assets grandes podem pesar o build',
+        'áudio e imagens precisam fallback',
+        'multiplayer exigiria Network/Auth adicionais'
+      ],
+      forbidden_actions: ['no_deploy', 'no_release', 'no_tag', 'no_stable_promotion', 'no_production_touch'],
+      next_safe_action: 'Gerar game design local e mapa de cenas.'
+    },
+    {
+      id: 'tpl_mobile_app',
+      project_type_id: 'mobile_app',
+      name: 'Mobile App Starter',
+      summary: 'Aplicativo mobile com telas, autenticação opcional, API, assets e validação de navegação.',
+      recommended_stack: ['React', 'Node/Express', 'Firebase'],
+      folder_structure: [
+        'mobile/',
+        'mobile/screens/',
+        'mobile/components/',
+        'mobile/assets/',
+        'backend/',
+        'docs/'
+      ],
+      initial_files: [
+        'mobile/App.js',
+        'mobile/screens/HomeScreen.js',
+        'mobile/screens/LoginScreen.js',
+        'mobile/components/Button.js',
+        'backend/routes/mobile.routes.js',
+        'docs/mobile-flow.md'
+      ],
+      reserve_agents: ['backend', 'database', 'auth', 'config', 'network', 'security', 'validator', 'architect', 'upload_media', 'locator', 'memory'],
+      prompt_sequence: [
+        '1. Reserve Architect — mapear telas e navegação.',
+        '2. Agente Network — revisar comunicação API.',
+        '3. Agente Auth — revisar login se existir.',
+        '4. Agente Upload/Media — revisar assets.',
+        '5. Reserve Validator — definir smoke flow.'
+      ],
+      validation_checklist: [
+        'navegação definida',
+        'estados offline planejados',
+        'auth revisada',
+        'assets compatíveis',
+        'API contract definido'
+      ],
+      risk_warnings: [
+        'mobile exige validação de rede e permissões',
+        'auth e storage podem expor dados',
+        'builds reais continuam fora de escopo'
+      ],
+      forbidden_actions: ['no_deploy', 'no_release', 'no_tag', 'no_stable_promotion', 'no_production_touch'],
+      next_safe_action: 'Gerar mapa de telas e contrato de API local.'
+    },
+    {
+      id: 'tpl_desktop_app',
+      project_type_id: 'desktop_app',
+      name: 'Desktop App Starter',
+      summary: 'Aplicação desktop com interface local, configuração, storage e validação de fluxo offline.',
+      recommended_stack: ['HTML/CSS/JS', 'SQLite'],
+      folder_structure: [
+        'desktop/',
+        'desktop/ui/',
+        'desktop/assets/',
+        'desktop/services/',
+        'desktop/storage/',
+        'docs/'
+      ],
+      initial_files: [
+        'desktop/index.html',
+        'desktop/ui/app.js',
+        'desktop/assets/style.css',
+        'desktop/services/config.js',
+        'desktop/storage/schema.sql',
+        'docs/desktop-flow.md'
+      ],
+      reserve_agents: ['database', 'config', 'network', 'security', 'validator', 'architect', 'upload_media', 'locator', 'memory'],
+      prompt_sequence: [
+        '1. Reserve Architect — definir camadas desktop.',
+        '2. Agente Config — revisar paths e ambiente.',
+        '3. Agente Database — revisar storage local.',
+        '4. Reserve Security — revisar acesso a arquivos.',
+        '5. Reserve Validator — definir validações offline.'
+      ],
+      validation_checklist: [
+        'fluxo offline definido',
+        'storage local documentado',
+        'paths configuráveis',
+        'erros tratados',
+        'sem acesso externo não aprovado'
+      ],
+      risk_warnings: [
+        'acesso a filesystem exige revisão',
+        'storage local pode guardar dados sensíveis',
+        'distribuição/build real fora de escopo'
+      ],
+      forbidden_actions: ['no_deploy', 'no_release', 'no_tag', 'no_stable_promotion', 'no_production_touch'],
+      next_safe_action: 'Gerar mapa de telas e storage local.'
+    },
+    {
+      id: 'tpl_automation_bot',
+      project_type_id: 'automation_bot',
+      name: 'Automation / Bot Starter',
+      summary: 'Automação controlada com configuração, rede, limites, logs e checklist de segurança.',
+      recommended_stack: ['Node/Express', 'Python/FastAPI', 'GitHub Actions'],
+      folder_structure: [
+        'automation/',
+        'automation/tasks/',
+        'automation/config/',
+        'automation/logs/',
+        'tests/',
+        'docs/'
+      ],
+      initial_files: [
+        'automation/main.js',
+        'automation/tasks/example-task.js',
+        'automation/config/config.example.json',
+        'tests/automation-dry-run.test.js',
+        'docs/automation-policy.md'
+      ],
+      reserve_agents: ['backend', 'auth', 'config', 'network', 'security', 'validator', 'locator', 'memory'],
+      prompt_sequence: [
+        '1. Agente Config — definir config segura.',
+        '2. Agente Network — revisar endpoints e timeouts.',
+        '3. Reserve Security — bloquear ações perigosas.',
+        '4. Reserve Validator — definir dry-run obrigatório.',
+        '5. Reserve Memory — consultar incidentes anteriores.'
+      ],
+      validation_checklist: [
+        'dry-run obrigatório',
+        'limites definidos',
+        'logs sem secrets',
+        'rede aprovada',
+        'sem ação destrutiva'
+      ],
+      risk_warnings: [
+        'automação pode executar ações perigosas',
+        'rede externa requer aprovação',
+        'secrets nunca devem aparecer em logs'
+      ],
+      forbidden_actions: ['no_deploy', 'no_release', 'no_tag', 'no_stable_promotion', 'no_production_touch', 'no_unapproved_network', 'no_secret_exposure'],
+      next_safe_action: 'Gerar plano dry-run sem executar tarefas.'
+    },
+    {
+      id: 'tpl_ai_agent_system',
+      project_type_id: 'ai_agent_system',
+      name: 'AI Agent System Starter',
+      summary: 'Sistema multiagente com papéis, prompts, memória, validação, segurança e governança.',
+      recommended_stack: ['Node/Express', 'Python/FastAPI', 'PostgreSQL', 'Docker'],
+      folder_structure: [
+        'agents/',
+        'agents/prompts/',
+        'agents/memory/',
+        'orchestrator/',
+        'validators/',
+        'docs/'
+      ],
+      initial_files: [
+        'agents/prompts/system.md',
+        'agents/prompts/backend-agent.md',
+        'agents/prompts/validator-agent.md',
+        'orchestrator/index.js',
+        'validators/safety-check.js',
+        'docs/agent-contract.md'
+      ],
+      reserve_agents: ['backend', 'database', 'auth', 'config', 'network', 'security', 'validator', 'architect', 'upload_media', 'locator', 'memory'],
+      prompt_sequence: [
+        '1. Reserve Architect — definir arquitetura multiagente.',
+        '2. Reserve Security — definir limites e permissões.',
+        '3. Reserve Memory — definir estratégia de contexto.',
+        '4. Reserve Validator — definir critérios.',
+        '5. Agente Backend — definir orquestrador.',
+        '6. Agente Database — definir persistência se necessária.'
+      ],
+      validation_checklist: [
+        'papéis dos agentes definidos',
+        'permissões explícitas',
+        'proibições explícitas',
+        'memória controlada',
+        'validação antes de qualquer execução'
+      ],
+      risk_warnings: [
+        'agentes podem alucinar sem contrato claro',
+        'execução automática deve permanecer bloqueada',
+        'memória pode vazar contexto se mal definida'
+      ],
+      forbidden_actions: ['no_deploy', 'no_release', 'no_tag', 'no_stable_promotion', 'no_production_touch', 'no_pass_gold_real_claim', 'no_unapproved_network'],
+      next_safe_action: 'Gerar contrato de agentes e matriz de permissões.'
+    },
+    {
+      id: 'tpl_ecommerce',
+      project_type_id: 'ecommerce',
+      name: 'E-commerce Starter',
+      summary: 'Loja online com catálogo, carrinho, autenticação, pedidos, banco e validação de segurança.',
+      recommended_stack: ['React', 'Node/Express', 'PostgreSQL', 'Docker'],
+      folder_structure: [
+        'frontend/',
+        'frontend/pages/',
+        'frontend/components/',
+        'backend/',
+        'backend/routes/',
+        'backend/controllers/',
+        'backend/models/',
+        'database/migrations/',
+        'tests/',
+        'docs/'
+      ],
+      initial_files: [
+        'frontend/pages/catalog.html',
+        'frontend/pages/cart.html',
+        'frontend/components/product-card.js',
+        'backend/routes/products.routes.js',
+        'backend/routes/orders.routes.js',
+        'backend/middlewares/auth.js',
+        'database/schema.sql',
+        'tests/ecommerce-smoke.test.js',
+        'docs/ecommerce-flow.md'
+      ],
+      reserve_agents: ['backend', 'database', 'auth', 'config', 'network', 'security', 'validator', 'architect', 'upload_media', 'locator', 'memory'],
+      prompt_sequence: [
+        '1. Reserve Architect — definir fluxo catálogo/carrinho/pedido.',
+        '2. Agente Database — definir schema.',
+        '3. Agente Auth — revisar conta e sessão.',
+        '4. Agente Backend — definir endpoints.',
+        '5. Reserve Security — revisar pagamento/dados.',
+        '6. Reserve Validator — checklist crítico.'
+      ],
+      validation_checklist: [
+        'catálogo definido',
+        'carrinho planejado',
+        'pedidos com status',
+        'auth revisada',
+        'dados sensíveis protegidos',
+        'pagamento real fora de escopo'
+      ],
+      risk_warnings: [
+        'pagamento real exige integração segura externa',
+        'dados pessoais exigem proteção',
+        'produção bloqueada sem auditoria'
+      ],
+      forbidden_actions: ['no_deploy', 'no_release', 'no_tag', 'no_stable_promotion', 'no_production_touch', 'no_secret_exposure'],
+      next_safe_action: 'Gerar fluxo de entidades e endpoints locais.'
+    },
+    {
+      id: 'tpl_blog_content',
+      project_type_id: 'blog_content',
+      name: 'Blog / Content Platform Starter',
+      summary: 'Plataforma de conteúdo com posts, assets, categorias, editor e validação de SEO/acessibilidade.',
+      recommended_stack: ['HTML/CSS/JS', 'Node/Express', 'SQLite'],
+      folder_structure: [
+        'frontend/',
+        'frontend/posts/',
+        'frontend/assets/',
+        'backend/',
+        'backend/routes/',
+        'content/',
+        'docs/'
+      ],
+      initial_files: [
+        'frontend/index.html',
+        'frontend/assets/blog.css',
+        'content/example-post.md',
+        'backend/routes/posts.routes.js',
+        'docs/content-model.md'
+      ],
+      reserve_agents: ['backend', 'database', 'auth', 'config', 'network', 'security', 'validator', 'upload_media', 'locator', 'memory'],
+      prompt_sequence: [
+        '1. Reserve Architect — definir modelo de conteúdo.',
+        '2. Agente Upload/Media — revisar imagens.',
+        '3. Agente Database — definir storage se necessário.',
+        '4. Agente Backend — definir rotas se dinâmico.',
+        '5. Reserve Validator — SEO/acessibilidade/checklist.'
+      ],
+      validation_checklist: [
+        'modelo de post definido',
+        'assets organizados',
+        'rotas de conteúdo planejadas',
+        'SEO básico revisado',
+        'acessibilidade revisada'
+      ],
+      risk_warnings: [
+        'upload de mídia exige validação',
+        'editor admin exige auth',
+        'conteúdo dinâmico exige sanitização'
+      ],
+      forbidden_actions: ['no_deploy', 'no_release', 'no_tag', 'no_stable_promotion', 'no_production_touch'],
+      next_safe_action: 'Gerar modelo de conteúdo e mapa de rotas.'
+    },
+    {
+      id: 'tpl_custom',
+      project_type_id: 'custom',
+      name: 'Custom Project Blueprint',
+      summary: 'Blueprint livre para projeto personalizado com seleção manual de stack, agentes e validações.',
+      recommended_stack: ['Custom'],
+      folder_structure: [
+        'project/',
+        'project/src/',
+        'project/assets/',
+        'project/tests/',
+        'docs/'
+      ],
+      initial_files: [
+        'docs/project-brief.md',
+        'docs/agent-plan.md',
+        'docs/validation-checklist.md'
+      ],
+      reserve_agents: ['locator', 'security', 'validator', 'architect', 'memory'],
+      prompt_sequence: [
+        '1. Reserve Memory — recuperar contexto.',
+        '2. Reserve Architect — propor arquitetura inicial.',
+        '3. Reserve Locator — sugerir arquivos ou estrutura.',
+        '4. Reserve Security — revisar riscos.',
+        '5. Reserve Validator — montar checklist.'
+      ],
+      validation_checklist: [
+        'objetivo definido',
+        'stack definida',
+        'agentes selecionados',
+        'riscos listados',
+        'checklist de validação criado'
+      ],
+      risk_warnings: [
+        'projeto custom precisa escopo explícito',
+        'agentes automáticos devem ser aprovados manualmente',
+        'nenhuma execução real sem decisão humana'
+      ],
+      forbidden_actions: ['no_deploy', 'no_release', 'no_tag', 'no_stable_promotion', 'no_production_touch', 'no_pass_gold_real_claim'],
+      next_safe_action: 'Definir escopo do projeto e gerar plano local.'
+    }
   ])
 });
 

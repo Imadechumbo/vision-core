@@ -313,6 +313,7 @@
     });
     applyRecommendedAgents(typeId);
     renderOrchestrationPreview();
+    syncTemplateWithProjectType(typeId);
   }
 
   function setProjectSize(sizeId) {
@@ -486,11 +487,19 @@
 
     var lines = [];
 
+    var activeTpl = pbTemplateState.selectedTemplateId
+      ? findTemplateById(pbTemplateState.selectedTemplateId)
+      : null;
+
     lines.push('');
     lines.push('PROJETO:    ' + (pt   ? pt.label   : '(não selecionado)'));
     lines.push('TAMANHO:    ' + (ps   ? ps.label + ' — ' + ps.mode_hint : '(não selecionado)'));
     lines.push('MODO:       ' + (mode ? mode.label  : pbState.selectedMode));
     lines.push('STACK:      ' + (pbState.selectedStacks.length ? pbState.selectedStacks.join(', ') : '(nenhuma)'));
+    if (activeTpl) {
+      lines.push('TEMPLATE:   ' + activeTpl.name);
+      lines.push('STACK REC:  ' + activeTpl.recommended_stack.join(', '));
+    }
     lines.push('');
 
     plan.innerHTML = '';
@@ -515,6 +524,49 @@
         '<div class="vc-plan-agent-prompt">' + a.description + '</div>';
       plan.appendChild(block);
     });
+
+    /* Template blueprint sections */
+    if (activeTpl) {
+      appendPlanSection(plan, 'TEMPLATE BLUEPRINT: ' + activeTpl.name.toUpperCase());
+
+      /* Folder structure */
+      var tplStructDiv = document.createElement('div');
+      tplStructDiv.className = 'vc-builder-plan';
+      tplStructDiv.textContent =
+        'Estrutura:\n' + activeTpl.folder_structure.join('\n') +
+        '\n\nArquivos Iniciais:\n' + activeTpl.initial_files.join('\n');
+      plan.appendChild(tplStructDiv);
+
+      appendPlanSection(plan, 'SEQUÊNCIA DE PROMPTS — TEMPLATE');
+      var tplPromptDiv = document.createElement('div');
+      tplPromptDiv.className = 'vc-builder-plan';
+      tplPromptDiv.textContent = activeTpl.prompt_sequence.join('\n');
+      plan.appendChild(tplPromptDiv);
+
+      appendPlanSection(plan, 'CHECKLIST TEMPLATE');
+      var tplCheckDiv = document.createElement('div');
+      tplCheckDiv.className = 'vc-builder-plan';
+      tplCheckDiv.textContent = activeTpl.validation_checklist.map(function (c, i) {
+        return (i + 1) + '. ' + c;
+      }).join('\n');
+      plan.appendChild(tplCheckDiv);
+
+      appendPlanSection(plan, 'AVISOS DE RISCO — TEMPLATE');
+      var tplRiskDiv = document.createElement('div');
+      tplRiskDiv.className = 'vc-builder-plan';
+      tplRiskDiv.style.color = '#fca5a5';
+      tplRiskDiv.textContent = activeTpl.risk_warnings.map(function (r) {
+        return '⚠ ' + r;
+      }).join('\n');
+      plan.appendChild(tplRiskDiv);
+
+      appendPlanSection(plan, 'PRÓXIMA AÇÃO SEGURA');
+      var tplNextDiv = document.createElement('div');
+      tplNextDiv.className = 'vc-builder-plan';
+      tplNextDiv.style.color = '#22d3ee';
+      tplNextDiv.textContent = activeTpl.next_safe_action;
+      plan.appendChild(tplNextDiv);
+    }
 
     /* Validation checklist */
     appendPlanSection(plan, 'CHECKLIST DE VALIDAÇÃO');
@@ -567,6 +619,179 @@
     h.className = 'vc-plan-section-title';
     h.textContent = title;
     parent.appendChild(h);
+  }
+
+  /* ── Template Packs — local UI only ─────────────────────────── */
+  /* No API. No fetch. No file creation. Local state + DOM only.  */
+
+  var pbTemplateState = {
+    selectedTemplateId: null
+  };
+
+  function getTemplatePacks() {
+    var reg = getPBRegistry();
+    if (!reg || !reg.template_packs) { return []; }
+    return reg.template_packs;
+  }
+
+  function findTemplateForProjectType(projectTypeId) {
+    var packs = getTemplatePacks();
+    for (var i = 0; i < packs.length; i++) {
+      if (packs[i].project_type_id === projectTypeId) { return packs[i]; }
+    }
+    return null;
+  }
+
+  function findTemplateById(templateId) {
+    var packs = getTemplatePacks();
+    for (var i = 0; i < packs.length; i++) {
+      if (packs[i].id === templateId) { return packs[i]; }
+    }
+    return null;
+  }
+
+  function renderTemplatePack(templateId) {
+    var tpl = findTemplateById(templateId);
+    var detail = document.getElementById('vcTemplateDetail');
+    if (!detail) { return; }
+    if (!tpl) { detail.classList.remove('visible'); return; }
+
+    /* Highlight selected card */
+    document.querySelectorAll('.vc-template-card').forEach(function (c) {
+      if (c.getAttribute('data-tpl-id') === templateId) {
+        c.classList.add('selected');
+      } else {
+        c.classList.remove('selected');
+      }
+    });
+
+    function setText(id, val) {
+      var el = document.getElementById(id);
+      if (el) { el.textContent = val; }
+    }
+    function setHTML(id, html) {
+      var el = document.getElementById(id);
+      if (el) { el.innerHTML = html; }
+    }
+
+    setText('vcTplDetailName', tpl.name);
+    setText('vcTplDetailSummary', tpl.summary);
+
+    /* Stack chips */
+    setHTML('vcTplDetailStack',
+      tpl.recommended_stack.map(function (s) {
+        return '<span class="vc-tpl-stack-chip">' + s + '</span>';
+      }).join('')
+    );
+
+    /* Folder tree */
+    setHTML('vcTplDetailTree',
+      tpl.folder_structure.map(function (f) {
+        return '<div class="vc-tpl-tree-item">' + f + '</div>';
+      }).join('')
+    );
+
+    /* File list */
+    setHTML('vcTplDetailFiles',
+      tpl.initial_files.map(function (f) {
+        return '<div class="vc-tpl-file-item">' + f + '</div>';
+      }).join('')
+    );
+
+    /* Agent chips */
+    setHTML('vcTplDetailAgents',
+      tpl.reserve_agents.map(function (a) {
+        return '<span class="vc-tpl-agent-chip">' + a + '</span>';
+      }).join('')
+    );
+
+    /* Prompt sequence */
+    setHTML('vcTplDetailPrompts',
+      tpl.prompt_sequence.map(function (p) {
+        return '<div class="vc-tpl-prompt-step">' + p + '</div>';
+      }).join('')
+    );
+
+    /* Validation checklist */
+    setHTML('vcTplDetailChecklist',
+      tpl.validation_checklist.map(function (c) {
+        return '<div class="vc-tpl-check-item">' + c + '</div>';
+      }).join('')
+    );
+
+    /* Risk warnings */
+    setHTML('vcTplDetailRisks',
+      tpl.risk_warnings.map(function (r) {
+        return '<div class="vc-tpl-risk-item">' + r + '</div>';
+      }).join('')
+    );
+
+    /* Forbidden chips */
+    setHTML('vcTplDetailForbidden',
+      tpl.forbidden_actions.map(function (f) {
+        return '<span class="vc-tpl-forbidden-chip">' + f + '</span>';
+      }).join('')
+    );
+
+    /* Next safe action */
+    setText('vcTplDetailNextAction', tpl.next_safe_action);
+
+    detail.classList.add('visible');
+  }
+
+  function setTemplatePack(templateId) {
+    pbTemplateState.selectedTemplateId = templateId;
+    renderTemplatePack(templateId);
+  }
+
+  function syncTemplateWithProjectType(projectTypeId) {
+    var tpl = findTemplateForProjectType(projectTypeId);
+    if (tpl) {
+      setTemplatePack(tpl.id);
+    }
+  }
+
+  function buildTemplateGrid() {
+    var grid = document.getElementById('vcTemplateGrid');
+    if (!grid) { return; }
+    var packs = getTemplatePacks();
+    if (!packs.length) { return; }
+
+    var typeIcons = {
+      saas_fullstack: '⬡',
+      api_backend: '⌬',
+      landing_page: '◻',
+      dashboard_admin: '▥',
+      game_indie: '◈',
+      mobile_app: '▣',
+      desktop_app: '⊞',
+      automation_bot: '⚙',
+      ai_agent_system: '◎',
+      ecommerce: '◇',
+      blog_content: '⌁',
+      custom: '✦'
+    };
+
+    grid.innerHTML = '';
+    packs.forEach(function (tpl) {
+      var card = document.createElement('div');
+      card.className = 'vc-template-card';
+      card.setAttribute('data-tpl-id', tpl.id);
+      card.setAttribute('data-tpl-type', tpl.project_type_id);
+      var icon = typeIcons[tpl.project_type_id] || '◆';
+      card.innerHTML =
+        '<div class="vc-template-card-icon">' + icon + '</div>' +
+        '<div class="vc-template-card-name">' + tpl.name + '</div>' +
+        '<div class="vc-template-card-type">' + tpl.project_type_id + '</div>';
+      card.addEventListener('click', function () {
+        setTemplatePack(tpl.id);
+      });
+      grid.appendChild(card);
+    });
+  }
+
+  function initTemplatePacks() {
+    buildTemplateGrid();
   }
 
   function initProjectBuilder() {
@@ -656,10 +881,12 @@
       init();
       initReserve();
       initProjectBuilder();
+      initTemplatePacks();
     });
   } else {
     init();
     initReserve();
     initProjectBuilder();
+    initTemplatePacks();
   }
 })();
