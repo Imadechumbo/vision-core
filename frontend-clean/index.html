@@ -13,8 +13,24 @@
 <link rel="stylesheet" href="assets/v272-layout-force.css">
 <link rel="stylesheet" href="assets/v273-sddf-command-chat.css">
 <link rel="stylesheet" href="assets/v290-hardening.css">
+<link rel="stylesheet" href="assets/vision-v297-ui.css">
+<link rel="stylesheet" href="assets/vision-v298-command-chat.css">
+<link rel="stylesheet" href="assets/vision-v298-final-hardened.css">
+<link rel="stylesheet" href="assets/vision-v298-final-hard-fix2.css">
 <link rel="stylesheet" href="assets/vision-v33-orbit.css">
 <link rel="stylesheet" href="assets/vision-gold.css">
+<style>
+/* V2.9.10 CLEAN FRONT — v299 quota/badge inline (no runtime JS needed) */
+.v299-quota-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;font-size:11px;flex-shrink:0;}
+.v299-plan-tag{font-weight:700;letter-spacing:.06em;border-radius:4px;padding:1px 6px;}
+.v299-plan-tag.free{color:#888;background:#1a1a1a;}
+.v299-quota-ok{color:#22c55e;}
+.v299-quota-warn{color:#f59e0b;}
+.v299-quota-full{color:#ef4444;font-weight:700;}
+.v299-config-btn{color:#9ca3af!important;}
+.v299-obsidian-btn{color:#a78bfa!important;}
+.v299-obsidian-btn.active{color:#22c55e!important;border-color:#22c55e!important;}
+</style>
 </head>
 <body>
 <header class="top">
@@ -79,11 +95,58 @@
 
   <section>
     <div class="panel" id="mission">
-      <div class="v297-chat-shell" id="v297UniversalChat">
-        <div class="v297-chat-head"><div><strong>CHAT UNIVERSAL VISION</strong><span>perguntas, imagens, arquivos e correção de projetos</span></div><b id="v297ChatStatus">READY</b></div>
-        <div class="v297-chat-log" id="v297ChatLog"><div class="v297-msg bot">Pronto. Converse sobre qualquer assunto ou execute uma missão SDDF.</div></div>
-        <div class="v297-chat-tools"><button class="btn mini" id="v297AddImageBtn" type="button">+ IMAGEM</button><button class="btn mini" id="v297AddFileBtn" type="button">+ ARQUIVO</button><button class="btn mini" id="v297RunSddfBtn" type="button">RODAR SDDF</button><input id="v297FileInput" type="file" multiple hidden></div>
+      <!-- V2.9.10 CLEAN FRONT: static command panel — approved V2.9.10 visual -->
+      <div class="v298-command-chat" id="v298CommandChat">
+        <div class="v298-command-head">
+          <div class="v298-command-title">
+            <strong>VISION AI COMMAND</strong>
+            <span>Chat universal + correção de projetos com PASS GOLD</span>
+          </div>
+          <div class="v298-command-status" id="v298CommandStatus">READY</div>
+        </div>
+        <div class="v298-chat-stream" id="v298ChatStream">
+          <div class="v298-empty-hint">Vision AI pronto. Converse sobre qualquer assunto, cole erros, envie arquivos/imagens ou execute uma missão SDDF.</div>
+        </div>
+        <div class="v298-composer">
+          <div class="v298-input-wrap">
+            <textarea class="v298-input" id="v298Prompt" placeholder="Pergunte qualquer coisa, cole erro, log, código... Enter = enviar, Shift+Enter = quebrar linha"></textarea>
+            <div class="v298-send-stack">
+              <button class="v298-send" id="v298SendBtn" type="button">ENVIAR</button>
+              <button class="v298-run" id="v298RunBtn" type="button">EXECUTAR MISSÃO</button>
+            </div>
+          </div>
+          <div class="v298-tool-row">
+            <div class="v299-quota-badge" id="v299QuotaBadge"><span class="v299-plan-tag free">FREE</span><span class="v299-quota-ok">ilimitado</span></div>
+            <button class="v298-tool-btn" id="v298AddFilesBtn" type="button">＋ Adicionar arquivos</button>
+            <button class="v298-tool-btn" id="v298ReadPrintBtn" type="button">▧ Ler print/imagem</button>
+            <select class="v298-select" id="v298Mode">
+              <option value="vision-geral">Vision geral</option>
+              <option value="corrigir-projeto">Corrigir projeto</option>
+              <option value="debug-cors">Debug CORS</option>
+              <option value="explicar-leigo">Explicar para leigo</option>
+              <option value="rodar-sddf">Rodar SDDF</option>
+            </select>
+            <select class="v298-select" id="v298Model">
+              <option value="auto">Modelo automático</option>
+              <option value="claude-sonnet">Claude Sonnet</option>
+              <option value="gemini-flash">Gemini Flash</option>
+              <option value="groq-llama">Groq/Llama</option>
+              <option value="ollama-local">Ollama Local</option>
+            </select>
+            <select class="v298-select" id="v298Streaming">
+              <option value="on">Streaming ligado</option>
+              <option value="off">Streaming desligado</option>
+            </select>
+            <button class="v298-tool-btn" id="v298ClearBtn" type="button">Limpar sessão</button>
+            <button class="v298-tool-btn v299-config-btn" id="v299ConfigBtn" type="button">⚙ Configurar IA</button>
+            <button class="v298-tool-btn v299-obsidian-btn" id="v299ObsidianBtn" type="button">📓 Obsidian</button>
+            <input type="file" id="v298FileInput" multiple hidden>
+          </div>
+          <div class="v298-file-note" id="v298FileNote">Nenhum arquivo anexado.</div>
+        </div>
       </div>
+      <!-- legacy v297 IDs kept hidden for JS compat -->
+      <div id="v297UniversalChat" style="display:none"><div id="v297ChatLog"></div><input id="v297FileInput" type="file" multiple hidden></div>
       <h2>MISSION CONTROL</h2>
       <p>Operador técnico multi-projeto, multi-stack, com aprendizado contínuo.</p>
       <div class="project-strip">
@@ -112,7 +175,7 @@
         <div class="v236-tl-step pending" data-stage="PR GitHub"><b></b><span>PR GitHub</span><small>aguardando</small></div>
       </div>
 
-      <div class="vc-process-screen v236-copilot-screen" id="processScreen" aria-live="polite">
+      <div class="vc-process-screen v236-copilot-screen" id="processScreen" aria-live="polite" style="display:none">
         <div class="vc-process-orb" id="processOrb">◉</div>
         <div class="vc-process-copy">
           <strong id="processTitle">Copiloto VISION aguardando missão</strong>
@@ -123,9 +186,9 @@
         </div>
         <div class="vc-process-stage" id="processStage">READY</div>
       </div>
-      <textarea class="mission" id="missionText" placeholder="Descreva a missão, cole erro, log, endpoint, stack ou contexto..."></textarea>
+      <textarea class="mission" id="missionText" placeholder="Descreva a missão, cole erro, log, endpoint, stack ou contexto..." style="display:none"></textarea>
       <br><br>
-      <div class="row v236-action-row">
+      <div class="row v236-action-row" style="display:none">
         <button class="btn mini v236-file-btn" id="v236FileBtn" type="button">＋ ADICIONAR ARQUIVOS</button>
         <button class="btn mini v236-copilot-btn" id="v236CopilotBtn" type="button">💬 COPILOTO</button>
         <input id="v236FileInput" type="file" multiple hidden>
