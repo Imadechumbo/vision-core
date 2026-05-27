@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="assets/vision-v33-orbit.css">
 <link rel="stylesheet" href="assets/vision-gold.css">
 <link rel="stylesheet" href="assets/vc-metrics-reserve.css">
+<link rel="stylesheet" href="assets/vc-project-builder.css">
 <style>
 /* V2.9.10 CLEAN FRONT — v299 quota/badge inline (no runtime JS needed) */
 .v299-quota-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;font-size:11px;flex-shrink:0;}
@@ -654,6 +655,305 @@
 
       </div><!-- end .vc-reserve-grid -->
     </div><!-- end #agentsBoard -->
+
+    <br>
+
+    <!-- ══════════════════════════════════════════════════════════
+         PROJECT BUILDER — local UI only, no API, no execution
+         ══════════════════════════════════════════════════════════ -->
+    <div class="panel vc-project-builder-panel" id="projectBuilder">
+
+      <!-- Headline -->
+      <div class="vc-pb-headline">
+        <div class="vc-pb-headline-text">
+          <p class="eyebrow">SOFTWARE FACTORY • PROJECT BUILDER • AGENT ORCHESTRATION</p>
+          <h2>MONTAR PROJETO DO ZERO</h2>
+          <p>Configure tipo de projeto, stack, agentes reservas e modo de orquestração antes de qualquer execução. Tudo aqui é preview local e seguro.</p>
+        </div>
+        <span class="vc-ui-local-badge">LOCAL PREVIEW</span>
+      </div>
+
+      <!-- ── Section A — Project Type ──────────────────────────── -->
+      <div class="vc-pb-section">
+        <p class="vc-pb-section-label">Tipo de Projeto</p>
+        <div class="vc-project-type-grid">
+          <div class="vc-project-type-card" data-type-id="saas_fullstack">
+            <div class="vc-project-type-icon">⬡</div>
+            <div class="vc-project-type-label">SaaS Fullstack</div>
+          </div>
+          <div class="vc-project-type-card" data-type-id="api_backend">
+            <div class="vc-project-type-icon">⌬</div>
+            <div class="vc-project-type-label">API Backend</div>
+          </div>
+          <div class="vc-project-type-card" data-type-id="landing_page">
+            <div class="vc-project-type-icon">◻</div>
+            <div class="vc-project-type-label">Landing Page</div>
+          </div>
+          <div class="vc-project-type-card" data-type-id="dashboard_admin">
+            <div class="vc-project-type-icon">▥</div>
+            <div class="vc-project-type-label">Dashboard Admin</div>
+          </div>
+          <div class="vc-project-type-card" data-type-id="game_indie">
+            <div class="vc-project-type-icon">◈</div>
+            <div class="vc-project-type-label">Game / Indie Project</div>
+          </div>
+          <div class="vc-project-type-card" data-type-id="mobile_app">
+            <div class="vc-project-type-icon">▣</div>
+            <div class="vc-project-type-label">Mobile App</div>
+          </div>
+          <div class="vc-project-type-card" data-type-id="desktop_app">
+            <div class="vc-project-type-icon">⊞</div>
+            <div class="vc-project-type-label">Desktop App</div>
+          </div>
+          <div class="vc-project-type-card" data-type-id="automation_bot">
+            <div class="vc-project-type-icon">⚙</div>
+            <div class="vc-project-type-label">Automation / Bot</div>
+          </div>
+          <div class="vc-project-type-card" data-type-id="ai_agent_system">
+            <div class="vc-project-type-icon">◎</div>
+            <div class="vc-project-type-label">AI Agent System</div>
+          </div>
+          <div class="vc-project-type-card" data-type-id="ecommerce">
+            <div class="vc-project-type-icon">◇</div>
+            <div class="vc-project-type-label">E-commerce</div>
+          </div>
+          <div class="vc-project-type-card" data-type-id="blog_content">
+            <div class="vc-project-type-icon">⌁</div>
+            <div class="vc-project-type-label">Blog / Content Platform</div>
+          </div>
+          <div class="vc-project-type-card" data-type-id="custom">
+            <div class="vc-project-type-icon">✦</div>
+            <div class="vc-project-type-label">Custom</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Section B — Project Size / Risk ───────────────────── -->
+      <div class="vc-pb-section">
+        <p class="vc-pb-section-label">Tamanho / Risco do Projeto</p>
+        <div class="vc-project-size-row">
+          <span class="vc-size-chip" data-size-id="prototype">Prototype</span>
+          <span class="vc-size-chip" data-size-id="mvp">MVP</span>
+          <span class="vc-size-chip" data-size-id="production_ready">Production Ready</span>
+          <span class="vc-size-chip" data-size-id="enterprise">Enterprise</span>
+          <span class="vc-size-chip" data-size-id="high_risk_refactor">High Risk Refactor</span>
+        </div>
+        <div class="vc-size-hint" id="vcSizeHint">Selecione o tamanho para ver modo sugerido.</div>
+      </div>
+
+      <!-- ── Section C — Stack Selector ────────────────────────── -->
+      <div class="vc-pb-section">
+        <p class="vc-pb-section-label">Stack Tecnológico</p>
+        <div class="vc-stack-row">
+          <span class="vc-stack-chip" data-stack-id="HTML/CSS/JS">HTML/CSS/JS</span>
+          <span class="vc-stack-chip" data-stack-id="React">React</span>
+          <span class="vc-stack-chip" data-stack-id="Vue">Vue</span>
+          <span class="vc-stack-chip" data-stack-id="Node/Express">Node/Express</span>
+          <span class="vc-stack-chip" data-stack-id="Python/FastAPI">Python/FastAPI</span>
+          <span class="vc-stack-chip" data-stack-id="PHP/Laravel">PHP/Laravel</span>
+          <span class="vc-stack-chip" data-stack-id="Go">Go</span>
+          <span class="vc-stack-chip" data-stack-id="MySQL">MySQL</span>
+          <span class="vc-stack-chip" data-stack-id="PostgreSQL">PostgreSQL</span>
+          <span class="vc-stack-chip" data-stack-id="SQLite">SQLite</span>
+          <span class="vc-stack-chip" data-stack-id="Firebase">Firebase</span>
+          <span class="vc-stack-chip" data-stack-id="Supabase">Supabase</span>
+          <span class="vc-stack-chip" data-stack-id="Docker">Docker</span>
+          <span class="vc-stack-chip" data-stack-id="GitHub Actions">GitHub Actions</span>
+        </div>
+      </div>
+
+      <!-- ── Section D — Orchestration Mode ────────────────────── -->
+      <div class="vc-pb-section">
+        <p class="vc-pb-section-label">Modo de Orquestração</p>
+        <div class="vc-orchestration-mode-row">
+          <button class="vc-mode-chip" data-orch-mode="manual"         type="button">Manual</button>
+          <button class="vc-mode-chip" data-orch-mode="cirurgico"      type="button">Cirúrgico</button>
+          <button class="vc-mode-chip" data-orch-mode="auto_assistido" type="button">Auto Assistido</button>
+          <button class="vc-mode-chip" data-orch-mode="full_sf"        type="button">Full Software Factory</button>
+          <button class="vc-mode-chip" data-orch-mode="review_only"    type="button">Review Only</button>
+        </div>
+        <div class="vc-mode-desc" id="vcOrchModeDesc"></div>
+      </div>
+
+      <!-- ── Section E — Agent Reserve Control Matrix ───────────── -->
+      <div class="vc-pb-section">
+        <p class="vc-pb-section-label">Matriz de Controle de Agentes</p>
+        <div class="vc-agent-matrix">
+
+          <div class="vc-agent-matrix-row" data-agent-id="backend">
+            <span class="vc-agent-matrix-name">Agente Backend</span>
+            <span class="vc-agent-matrix-badge norec">—</span>
+            <div class="vc-agent-matrix-modes">
+              <button class="vc-matrix-mode-btn" data-mode="off"  type="button">OFF</button>
+              <button class="vc-matrix-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-matrix-mode-btn" data-mode="on"   type="button">ON</button>
+            </div>
+          </div>
+
+          <div class="vc-agent-matrix-row" data-agent-id="database">
+            <span class="vc-agent-matrix-name">Agente Database</span>
+            <span class="vc-agent-matrix-badge norec">—</span>
+            <div class="vc-agent-matrix-modes">
+              <button class="vc-matrix-mode-btn" data-mode="off"  type="button">OFF</button>
+              <button class="vc-matrix-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-matrix-mode-btn" data-mode="on"   type="button">ON</button>
+            </div>
+          </div>
+
+          <div class="vc-agent-matrix-row" data-agent-id="auth">
+            <span class="vc-agent-matrix-name">Agente Auth</span>
+            <span class="vc-agent-matrix-badge norec">—</span>
+            <div class="vc-agent-matrix-modes">
+              <button class="vc-matrix-mode-btn" data-mode="off"  type="button">OFF</button>
+              <button class="vc-matrix-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-matrix-mode-btn" data-mode="on"   type="button">ON</button>
+            </div>
+          </div>
+
+          <div class="vc-agent-matrix-row" data-agent-id="upload_media">
+            <span class="vc-agent-matrix-name">Agente Upload/Media</span>
+            <span class="vc-agent-matrix-badge norec">—</span>
+            <div class="vc-agent-matrix-modes">
+              <button class="vc-matrix-mode-btn active-off" data-mode="off"  type="button">OFF</button>
+              <button class="vc-matrix-mode-btn" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-matrix-mode-btn" data-mode="on"   type="button">ON</button>
+            </div>
+          </div>
+
+          <div class="vc-agent-matrix-row" data-agent-id="config">
+            <span class="vc-agent-matrix-name">Agente Config</span>
+            <span class="vc-agent-matrix-badge norec">—</span>
+            <div class="vc-agent-matrix-modes">
+              <button class="vc-matrix-mode-btn" data-mode="off"  type="button">OFF</button>
+              <button class="vc-matrix-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-matrix-mode-btn" data-mode="on"   type="button">ON</button>
+            </div>
+          </div>
+
+          <div class="vc-agent-matrix-row" data-agent-id="network">
+            <span class="vc-agent-matrix-name">Agente Network</span>
+            <span class="vc-agent-matrix-badge norec">—</span>
+            <div class="vc-agent-matrix-modes">
+              <button class="vc-matrix-mode-btn" data-mode="off"  type="button">OFF</button>
+              <button class="vc-matrix-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-matrix-mode-btn" data-mode="on"   type="button">ON</button>
+            </div>
+          </div>
+
+          <div class="vc-agent-matrix-row" data-agent-id="locator">
+            <span class="vc-agent-matrix-name">Reserve Locator</span>
+            <span class="vc-agent-matrix-badge norec">—</span>
+            <div class="vc-agent-matrix-modes">
+              <button class="vc-matrix-mode-btn" data-mode="off"  type="button">OFF</button>
+              <button class="vc-matrix-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-matrix-mode-btn" data-mode="on"   type="button">ON</button>
+            </div>
+          </div>
+
+          <div class="vc-agent-matrix-row" data-agent-id="security">
+            <span class="vc-agent-matrix-name">Reserve Security</span>
+            <span class="vc-agent-matrix-badge norec">—</span>
+            <div class="vc-agent-matrix-modes">
+              <button class="vc-matrix-mode-btn" data-mode="off"  type="button">OFF</button>
+              <button class="vc-matrix-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-matrix-mode-btn" data-mode="on"   type="button">ON</button>
+            </div>
+          </div>
+
+          <div class="vc-agent-matrix-row" data-agent-id="validator">
+            <span class="vc-agent-matrix-name">Reserve Validator</span>
+            <span class="vc-agent-matrix-badge norec">—</span>
+            <div class="vc-agent-matrix-modes">
+              <button class="vc-matrix-mode-btn" data-mode="off"  type="button">OFF</button>
+              <button class="vc-matrix-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-matrix-mode-btn" data-mode="on"   type="button">ON</button>
+            </div>
+          </div>
+
+          <div class="vc-agent-matrix-row" data-agent-id="architect">
+            <span class="vc-agent-matrix-name">Reserve Architect</span>
+            <span class="vc-agent-matrix-badge norec">—</span>
+            <div class="vc-agent-matrix-modes">
+              <button class="vc-matrix-mode-btn active-off" data-mode="off"  type="button">OFF</button>
+              <button class="vc-matrix-mode-btn" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-matrix-mode-btn" data-mode="on"   type="button">ON</button>
+            </div>
+          </div>
+
+          <div class="vc-agent-matrix-row" data-agent-id="memory">
+            <span class="vc-agent-matrix-name">Reserve Memory</span>
+            <span class="vc-agent-matrix-badge norec">—</span>
+            <div class="vc-agent-matrix-modes">
+              <button class="vc-matrix-mode-btn" data-mode="off"  type="button">OFF</button>
+              <button class="vc-matrix-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-matrix-mode-btn" data-mode="on"   type="button">ON</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── Section F — Orchestration Preview ─────────────────── -->
+      <div class="vc-pb-section">
+        <p class="vc-pb-section-label">Orchestration Preview</p>
+        <div class="vc-builder-preview" id="vcBuilderPreview">
+          <div class="vc-preview-title">CONFIGURAÇÃO ATUAL — LOCAL ONLY</div>
+          <div class="vc-preview-row">
+            <span class="vc-preview-label">Projeto</span>
+            <span class="vc-preview-value" id="vcPreviewType">—</span>
+          </div>
+          <div class="vc-preview-row">
+            <span class="vc-preview-label">Tamanho/Risco</span>
+            <span class="vc-preview-value" id="vcPreviewSize">—</span>
+          </div>
+          <div class="vc-preview-row">
+            <span class="vc-preview-label">Modo</span>
+            <span class="vc-preview-value highlight" id="vcPreviewMode">Auto Assistido</span>
+          </div>
+          <div class="vc-preview-row">
+            <span class="vc-preview-label">Stack</span>
+            <span class="vc-preview-value cyan" id="vcPreviewStack">—</span>
+          </div>
+          <div class="vc-preview-row">
+            <span class="vc-preview-label">Agentes ON</span>
+            <span class="vc-preview-value green" id="vcPreviewAgentsOn">—</span>
+          </div>
+          <div class="vc-preview-row">
+            <span class="vc-preview-label">Agentes AUTO</span>
+            <span class="vc-preview-value" id="vcPreviewAgentsAuto">—</span>
+          </div>
+          <div class="vc-preview-row">
+            <span class="vc-preview-label">Agentes OFF</span>
+            <span class="vc-preview-value" id="vcPreviewAgentsOff">—</span>
+          </div>
+          <div class="vc-preview-row">
+            <span class="vc-preview-label">Próxima ação segura</span>
+            <span class="vc-preview-value cyan" id="vcPreviewNextAction">Selecione tipo de projeto para começar.</span>
+          </div>
+          <div class="vc-safety-gate-list">
+            <span class="vc-safety-gate-chip">no_deploy</span>
+            <span class="vc-safety-gate-chip">no_release</span>
+            <span class="vc-safety-gate-chip">no_tag</span>
+            <span class="vc-safety-gate-chip">no_stable_promotion</span>
+            <span class="vc-safety-gate-chip">no_production_touch</span>
+            <span class="vc-safety-gate-chip">no_pass_gold_real_claim</span>
+            <span class="vc-safety-gate-chip">human_decision_required</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Section G — Generate Local Mission Plan ────────────── -->
+      <div class="vc-pb-section">
+        <p class="vc-pb-section-label">Plano de Missão Local</p>
+        <button class="vc-generate-plan-btn" id="vcGeneratePlanBtn" type="button">
+          ⬡ GERAR PLANO LOCAL
+        </button>
+        <div class="vc-local-plan-output" id="vcLocalPlanOutput">
+          <div id="vcBuilderPlan"></div>
+        </div>
+      </div>
+
+    </div><!-- end #projectBuilder -->
 
     <!-- Prompt Preview Panel — local only, no API -->
     <div class="vc-prompt-preview-panel" id="vcPromptPreview" role="dialog" aria-modal="true" aria-label="Prompt Pack do Agente">

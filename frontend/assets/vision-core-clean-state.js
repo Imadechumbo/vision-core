@@ -160,6 +160,62 @@ window.VISION_CORE_RESERVE_AGENTS = Object.freeze([
   }
 ]);
 
+/* ================================================================
+   VISION CORE V2.9.10 — Project Builder Registry
+   Local UI state only. No API calls. No LLM execution.
+   ================================================================ */
+window.VISION_CORE_PROJECT_BUILDER = Object.freeze({
+  project_types: Object.freeze([
+    { id: 'saas_fullstack',    label: 'SaaS Fullstack',          icon: '⬡',
+      agents: { backend:'AUTO', database:'AUTO', auth:'AUTO', config:'AUTO', network:'AUTO', security:'AUTO', validator:'AUTO', architect:'AUTO', upload_media:'OFF', locator:'AUTO', memory:'AUTO' } },
+    { id: 'api_backend',       label: 'API Backend',             icon: '⌬',
+      agents: { backend:'ON',   database:'AUTO', auth:'AUTO', config:'AUTO', network:'AUTO', security:'AUTO', validator:'AUTO', architect:'OFF', upload_media:'OFF', locator:'AUTO', memory:'AUTO' } },
+    { id: 'landing_page',      label: 'Landing Page',            icon: '◻',
+      agents: { backend:'OFF',  database:'OFF',  auth:'OFF',  config:'AUTO', network:'AUTO', security:'AUTO', validator:'AUTO', architect:'OFF', upload_media:'AUTO', locator:'AUTO', memory:'AUTO' } },
+    { id: 'dashboard_admin',   label: 'Dashboard Admin',         icon: '▥',
+      agents: { backend:'AUTO', database:'AUTO', auth:'ON',   config:'AUTO', network:'AUTO', security:'ON',   validator:'AUTO', architect:'AUTO', upload_media:'OFF', locator:'AUTO', memory:'AUTO' } },
+    { id: 'game_indie',        label: 'Game / Indie Project',    icon: '◈',
+      agents: { backend:'AUTO', database:'OFF',  auth:'OFF',  config:'AUTO', network:'AUTO', security:'AUTO', validator:'AUTO', architect:'AUTO', upload_media:'AUTO', locator:'AUTO', memory:'AUTO' } },
+    { id: 'mobile_app',        label: 'Mobile App',              icon: '▣',
+      agents: { backend:'AUTO', database:'AUTO', auth:'AUTO', config:'AUTO', network:'ON',   security:'ON',   validator:'AUTO', architect:'AUTO', upload_media:'AUTO', locator:'AUTO', memory:'AUTO' } },
+    { id: 'desktop_app',       label: 'Desktop App',             icon: '⊞',
+      agents: { backend:'OFF',  database:'AUTO', auth:'OFF',  config:'AUTO', network:'AUTO', security:'AUTO', validator:'AUTO', architect:'AUTO', upload_media:'AUTO', locator:'AUTO', memory:'AUTO' } },
+    { id: 'automation_bot',    label: 'Automation / Bot',        icon: '⚙',
+      agents: { backend:'AUTO', database:'OFF',  auth:'AUTO', config:'ON',   network:'ON',   security:'ON',   validator:'AUTO', architect:'OFF', upload_media:'OFF', locator:'AUTO', memory:'AUTO' } },
+    { id: 'ai_agent_system',   label: 'AI Agent System',         icon: '◎',
+      agents: { backend:'AUTO', database:'AUTO', auth:'AUTO', config:'ON',   network:'ON',   security:'ON',   validator:'ON',   architect:'ON',   upload_media:'AUTO', locator:'AUTO', memory:'ON'   } },
+    { id: 'ecommerce',         label: 'E-commerce',              icon: '◇',
+      agents: { backend:'ON',   database:'ON',   auth:'ON',   config:'ON',   network:'ON',   security:'ON',   validator:'ON',   architect:'AUTO', upload_media:'AUTO', locator:'AUTO', memory:'AUTO' } },
+    { id: 'blog_content',      label: 'Blog / Content Platform', icon: '⌁',
+      agents: { backend:'AUTO', database:'AUTO', auth:'AUTO', config:'AUTO', network:'AUTO', security:'AUTO', validator:'AUTO', architect:'OFF', upload_media:'ON',   locator:'AUTO', memory:'AUTO' } },
+    { id: 'custom',            label: 'Custom',                  icon: '✦',
+      agents: null }
+  ]),
+  project_sizes: Object.freeze([
+    { id: 'prototype',         label: 'Prototype',           mode_hint: 'CIRÚRGICO',               validation: 'lighter',   color: 'cyan'   },
+    { id: 'mvp',               label: 'MVP',                 mode_hint: 'ASSISTED',                validation: 'standard',  color: 'green'  },
+    { id: 'production_ready',  label: 'Production Ready',    mode_hint: 'SOFTWARE FACTORY',        validation: 'required',  color: 'purple' },
+    { id: 'enterprise',        label: 'Enterprise',          mode_hint: 'GOVERNED SOFTWARE FACTORY', validation: 'required', color: 'yellow' },
+    { id: 'high_risk_refactor',label: 'High Risk Refactor',  mode_hint: 'REVIEW ONLY',             validation: 'required',  color: 'red'    }
+  ]),
+  stack_options: Object.freeze([
+    'HTML/CSS/JS', 'React', 'Vue', 'Node/Express', 'Python/FastAPI',
+    'PHP/Laravel', 'Go', 'MySQL', 'PostgreSQL', 'SQLite',
+    'Firebase', 'Supabase', 'Docker', 'GitHub Actions'
+  ]),
+  orchestration_modes: Object.freeze([
+    { id: 'manual',           label: 'Manual',                desc: 'Usuário seleciona agentes manualmente.' },
+    { id: 'cirurgico',        label: 'Cirúrgico',             desc: 'Apenas agentes reservas selecionados para tarefa específica.' },
+    { id: 'auto_assistido',   label: 'Auto Assistido',        desc: 'Vision Core sugere agentes por tipo e stack — usuário aprova.' },
+    { id: 'full_sf',          label: 'Full Software Factory', desc: 'Vision Core prepara plano multi-agente completo — sem execução.' },
+    { id: 'review_only',      label: 'Review Only',           desc: 'Agentes apenas revisam. Sem patch nem execução.' }
+  ]),
+  safety_gates: Object.freeze([
+    'no_deploy', 'no_release', 'no_tag', 'no_stable_promotion',
+    'no_production_touch', 'no_pass_gold_real_claim', 'human_decision_required'
+  ])
+});
+
 window.VISION_CORE_FINAL_STATE = Object.freeze({
   main_commit: 'd8e3967',
   syntax_check: '1164 files OK',
