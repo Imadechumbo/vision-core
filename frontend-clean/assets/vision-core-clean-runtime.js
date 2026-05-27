@@ -156,9 +156,114 @@
     console.info('[VISION CORE CLEAN] stable_promotion_allowed:', state.stable_promotion_allowed);
   }
 
+  /* ── Reserve Agent mode buttons + prompt preview ─────────────── */
+  /* No API calls. No fetch. Local UI state only.                   */
+
+  function getAgentRegistry() {
+    return (window.VISION_CORE_RESERVE_AGENTS && Array.isArray(window.VISION_CORE_RESERVE_AGENTS))
+      ? window.VISION_CORE_RESERVE_AGENTS
+      : [];
+  }
+
+  function findAgent(agentId) {
+    var registry = getAgentRegistry();
+    for (var i = 0; i < registry.length; i++) {
+      if (registry[i].id === agentId) { return registry[i]; }
+    }
+    return null;
+  }
+
+  function showPromptPreview(agentId) {
+    var agent = findAgent(agentId);
+    var panel = document.getElementById('vcPromptPreview');
+    if (!panel) { return; }
+    if (!agent) { panel.classList.remove('visible'); return; }
+
+    var meta = document.getElementById('vcPromptMeta');
+    var body = document.getElementById('vcPromptBody');
+    var perms = document.getElementById('vcPromptPerms');
+    var prohibs = document.getElementById('vcPromptProhibs');
+
+    if (meta) {
+      meta.innerHTML =
+        '<span class="vc-prompt-meta-chip">' + agent.name + '</span>' +
+        '<span class="vc-prompt-meta-chip">' + agent.method + '</span>' +
+        '<span class="vc-prompt-meta-chip">' + agent.type + '</span>';
+    }
+    if (body) { body.textContent = agent.default_prompt; }
+    if (perms) {
+      perms.innerHTML = agent.permissions.map(function (p) {
+        return '<span class="vc-perm-chip">' + p + '</span>';
+      }).join('');
+    }
+    if (prohibs) {
+      prohibs.innerHTML = agent.prohibitions.map(function (p) {
+        return '<span class="vc-prohib-chip">' + p + '</span>';
+      }).join('');
+    }
+
+    panel.classList.add('visible');
+  }
+
+  function hidePromptPreview() {
+    var panel = document.getElementById('vcPromptPreview');
+    if (panel) { panel.classList.remove('visible'); }
+  }
+
+  function initReserveAgentControls() {
+    /* Mode buttons — local UI state only */
+    document.querySelectorAll('.vc-reserve-card').forEach(function (card) {
+      var agentId = card.getAttribute('data-agent-id');
+
+      /* Mode buttons */
+      card.querySelectorAll('.vc-mode-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var mode = btn.getAttribute('data-mode');
+          /* Deactivate all siblings */
+          card.querySelectorAll('.vc-mode-btn').forEach(function (b) {
+            b.classList.remove('active-off', 'active-auto', 'active-on');
+          });
+          /* Activate selected */
+          if (mode === 'off')  { btn.classList.add('active-off'); }
+          if (mode === 'auto') { btn.classList.add('active-auto'); }
+          if (mode === 'on')   { btn.classList.add('active-on'); }
+        });
+      });
+
+      /* Card click — open prompt preview */
+      card.addEventListener('click', function () {
+        showPromptPreview(agentId);
+      });
+    });
+
+    /* Close prompt preview */
+    var closeBtn = document.getElementById('vcPromptPreviewClose');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', hidePromptPreview);
+    }
+    var previewPanel = document.getElementById('vcPromptPreview');
+    if (previewPanel) {
+      previewPanel.addEventListener('click', function (e) {
+        if (e.target === previewPanel) { hidePromptPreview(); }
+      });
+    }
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { hidePromptPreview(); }
+    });
+  }
+
+  function initReserve() {
+    initReserveAgentControls();
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function () {
+      init();
+      initReserve();
+    });
   } else {
     init();
+    initReserve();
   }
 })();

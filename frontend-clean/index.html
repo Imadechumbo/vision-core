@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="assets/vision-v298-final-hard-fix2.css">
 <link rel="stylesheet" href="assets/vision-v33-orbit.css">
 <link rel="stylesheet" href="assets/vision-gold.css">
+<link rel="stylesheet" href="assets/vc-metrics-reserve.css">
 <style>
 /* V2.9.10 CLEAN FRONT — v299 quota/badge inline (no runtime JS needed) */
 .v299-quota-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;font-size:11px;flex-shrink:0;}
@@ -325,29 +326,352 @@
     </div>
 
     <br>
-    <div class="panel metrics-board" id="metricsBoard">
-      <div class="section-headline">
-        <div>
+    <div class="panel metrics-board vc-agent-metrics-panel" id="metricsBoard">
+      <div class="vc-metrics-headline">
+        <div class="vc-metrics-headline-text">
           <p class="eyebrow">AGENT METRICS • CUSTO POR AGENTE • PIPELINE</p>
           <h2>MÉTRICAS DOS AGENTES</h2>
           <p>Ligado ao backend em <code>/api/metrics/agents</code>. Quando o backend estiver offline, a tela mantém fallback local marcado como UI local.</p>
         </div>
-        <span class="live-pill">● LIVE</span>
+        <span class="vc-ui-local-badge" id="metricsSourceBadge">UI LOCAL</span>
       </div>
-      <div class="metrics-bars-large" id="agentMetricsLarge"></div>
+      <!-- Static metric rows — no API call -->
+      <div class="metrics-bars-large" id="agentMetricsLarge">
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">OpenClaw</div>
+          <div><span class="vc-agent-method-chip conversa">CONVERSA</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-purple" id="bar-openclaw" style="width:28%"></div></div>
+          <div class="vc-agent-cost" id="val-openclaw">$0.163</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">Hermes RCA</div>
+          <div><span class="vc-agent-method-chip conversa">CONVERSA</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-purple" id="bar-hermes" style="width:62%"></div></div>
+          <div class="vc-agent-cost" id="val-hermes">$0.815</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">Scanner</div>
+          <div><span class="vc-agent-method-chip conversa">CONVERSA</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-green" id="bar-scanner" style="width:41%"></div></div>
+          <div class="vc-agent-cost" id="val-scanner">$0.377</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">Aegis</div>
+          <div><span class="vc-agent-method-chip conversa">CONVERSA</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-cyan" id="bar-aegis" style="width:34%"></div></div>
+          <div class="vc-agent-cost" id="val-aegis">$0.264</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">PatchEngine</div>
+          <div><span class="vc-agent-method-chip loop">LOOP</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-orange" id="bar-patchengine" style="width:55%"></div></div>
+          <div class="vc-agent-cost" id="val-patchengine">$0.668</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">PI HARNESS</div>
+          <div><span class="vc-agent-method-chip adaptive">ADAPTIVE</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-gray" id="bar-piharness" style="width:20%"></div></div>
+          <div class="vc-agent-cost gray" id="val-piharness">L0-L9</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">PASS GOLD</div>
+          <div><span class="vc-agent-method-chip loop">LOOP</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-yellow" id="bar-passgold" style="width:47%"></div></div>
+          <div class="vc-agent-cost" id="val-passgold">$0.471</div>
+        </div>
+        <div class="vc-agent-metric-row">
+          <div class="vc-agent-metric-name">Benchmark</div>
+          <div><span class="vc-agent-method-chip auto">AUTO</span></div>
+          <div class="vc-agent-bar"><div class="vc-agent-bar-fill vc-bar-pink" id="bar-benchmark" style="width:79%"></div></div>
+          <div class="vc-agent-cost" id="val-benchmark">$1.469</div>
+        </div>
+      </div>
+      <div class="vc-total-pipeline">
+        <span class="vc-total-label">TOTAL PIPELINE</span>
+        <span class="vc-total-value" id="mcTotalCost">$13.227</span>
+      </div>
     </div>
 
     <br>
-    <div class="panel agents-board" id="agentsBoard">
-      <div class="section-headline">
-        <div>
+    <div class="panel agents-board vc-reserve-panel" id="agentsBoard">
+      <div class="vc-reserve-headline">
+        <div class="vc-reserve-headline-text">
           <p class="eyebrow">OPENSQUAD RESERVE • AGENTES QUE TRABALHAM FORA DO MENU PRINCIPAL</p>
           <h2>AGENTES EXTRAS EM EXECUÇÃO</h2>
           <p>Catálogo lido do backend em <code>/api/agents/catalog</code>, usando os nomes e funções reais do projeto.</p>
         </div>
-        <a class="btn ghost mini" href="#opensquad">Ver OpenSquad</a>
+        <button class="btn ghost mini" type="button" onclick="document.getElementById('opensquad')&&document.getElementById('opensquad').scrollIntoView({behavior:'smooth'})">Ver OpenSquad</button>
       </div>
-      <div class="agents-grid-real" id="agentsCatalogGrid"></div>
+      <!-- Static reserve agent cards — no API call -->
+      <div class="vc-reserve-grid" id="agentsCatalogGrid">
+
+        <div class="vc-reserve-card" data-agent-id="backend">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">BACKEND</div>
+          <div class="vc-reserve-name">Agente Backend</div>
+          <div class="vc-reserve-desc">Express, Node.js, rotas, middlewares e erros de servidor.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">routes</span>
+            <span class="vc-reserve-tag">api</span>
+            <span class="vc-reserve-tag">server</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method conversa">CONVERSA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="database">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">DATABASE</div>
+          <div class="vc-reserve-name">Agente Database</div>
+          <div class="vc-reserve-desc">SQL, queries, conexões, migrations e modelos de dados.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">sql</span>
+            <span class="vc-reserve-tag">schema</span>
+            <span class="vc-reserve-tag">db</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method conversa">CONVERSA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="auth">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">AUTH</div>
+          <div class="vc-reserve-name">Agente Auth</div>
+          <div class="vc-reserve-desc">Autenticação, tokens, sessões, CORS e permissões.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">jwt</span>
+            <span class="vc-reserve-tag">cors</span>
+            <span class="vc-reserve-tag">401/403</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method conversa">CONVERSA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="upload_media">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon orange">▣</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">UPLOAD</div>
+          <div class="vc-reserve-name">Agente Upload/Media</div>
+          <div class="vc-reserve-desc">Multer, arquivos, mimetypes, storage, imagens e vision upload.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">multer</span>
+            <span class="vc-reserve-tag">req.file</span>
+            <span class="vc-reserve-tag">media</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method conversa">CONVERSA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn active-off" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="config">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">CONFIG</div>
+          <div class="vc-reserve-name">Agente Config</div>
+          <div class="vc-reserve-desc">.env, variáveis, portas, host e configuração de ambiente.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">env</span>
+            <span class="vc-reserve-tag">port</span>
+            <span class="vc-reserve-tag">config</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method conversa">CONVERSA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="network">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">NETWORK</div>
+          <div class="vc-reserve-name">Agente Network</div>
+          <div class="vc-reserve-desc">HTTP, timeouts, DNS, fetch, axios e conexões externas.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">http</span>
+            <span class="vc-reserve-tag">timeout</span>
+            <span class="vc-reserve-tag">dns</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method conversa">CONVERSA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="locator">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon orange">▣</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">LOCATOR</div>
+          <div class="vc-reserve-name">Reserve Locator</div>
+          <div class="vc-reserve-desc">Localizar arquivo alvo quando o Scanner falhar.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">extra_scan_hints</span>
+            <span class="vc-reserve-tag">target_recommendations</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method cirurgico">CIRÚRGICO</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="security">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon orange">▣</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">SECURITY</div>
+          <div class="vc-reserve-name">Reserve Security</div>
+          <div class="vc-reserve-desc">Revisar patches de alto risco e autenticação.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">risk_review</span>
+            <span class="vc-reserve-tag">security_notes</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method cirurgico">CIRÚRGICO</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="validator">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">VALIDATOR</div>
+          <div class="vc-reserve-name">Reserve Validator</div>
+          <div class="vc-reserve-desc">Sugerir validações adicionais antes do PASS GOLD.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">validation_suggestions</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method loop">LOOP</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="architect">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon orange">▣</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">ARCHITECT</div>
+          <div class="vc-reserve-name">Reserve Architect</div>
+          <div class="vc-reserve-desc">Revisar mudanças amplas de arquitetura.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">architecture</span>
+            <span class="vc-reserve-tag">refactor</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method cirurgico">CIRÚRGICO</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn active-off" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="vc-reserve-card" data-agent-id="memory">
+          <div class="vc-reserve-card-top">
+            <div class="vc-reserve-icon">⬡</div>
+            <span class="vc-reserve-status">ATIVO</span>
+          </div>
+          <div class="vc-reserve-type">MEMORY</div>
+          <div class="vc-reserve-name">Reserve Memory</div>
+          <div class="vc-reserve-desc">Consultar histórico de incidentes sem executar ações.</div>
+          <div class="vc-reserve-tags">
+            <span class="vc-reserve-tag">memory</span>
+            <span class="vc-reserve-tag">incidents</span>
+          </div>
+          <div class="vc-reserve-footer">
+            <span class="vc-reserve-method consulta">CONSULTA</span>
+            <div class="vc-reserve-modes">
+              <button class="vc-mode-btn" data-mode="off" type="button">OFF</button>
+              <button class="vc-mode-btn active-auto" data-mode="auto" type="button">AUTO</button>
+              <button class="vc-mode-btn" data-mode="on" type="button">ON</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end .vc-reserve-grid -->
+    </div><!-- end #agentsBoard -->
+
+    <!-- Prompt Preview Panel — local only, no API -->
+    <div class="vc-prompt-preview-panel" id="vcPromptPreview" role="dialog" aria-modal="true" aria-label="Prompt Pack do Agente">
+      <div class="vc-prompt-preview-header">
+        <span class="vc-prompt-preview-title">PROMPT PACK DO AGENTE</span>
+        <button class="vc-prompt-preview-close" id="vcPromptPreviewClose" type="button" aria-label="Fechar">×</button>
+      </div>
+      <div class="vc-prompt-meta" id="vcPromptMeta"></div>
+      <div class="vc-prompt-body" id="vcPromptBody"></div>
+      <div class="vc-prompt-perms">
+        <strong>PERMISSÕES</strong>
+        <div class="vc-prompt-perm-list" id="vcPromptPerms"></div>
+      </div>
+      <br>
+      <div class="vc-prompt-prohib">
+        <strong>PROIBIÇÕES</strong>
+        <div class="vc-prompt-prohib-list" id="vcPromptProhibs"></div>
+      </div>
     </div>
   </section>
 
