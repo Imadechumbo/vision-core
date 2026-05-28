@@ -546,6 +546,7 @@ body,
   user-select: none;
   transition: background .15s;
 }
+
 .vc-engineer-summary::-webkit-details-marker { display: none; }
 .vc-engineer-summary::marker { content: ''; }
 
@@ -638,4 +639,193 @@ body,
   margin-top: 28px;
   padding-top: 24px;
   border-top: 1px solid rgba(255,255,255,.045);
+}
+
+/* ── 18. SaaS & API Connectors Roadmap — locked/static display ───
+   No auth. No OAuth. No billing. No key storage. No API calls.
+   Visible=true. Enabled=false. Display only.                   */
+
+.vc-saas-api-roadmap {
+  /* inherits .vc-pb-section rhythm */
+}
+
+/* Headline */
+.vc-saas-headline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+/* Roadmap badge */
+.vc-saas-roadmap-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(239,68,68,.06);
+  border: 1px solid rgba(239,68,68,.22);
+  color: #fca5a5;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* Locked capability grid */
+.vc-saas-locked-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+@media (max-width: 1100px) { .vc-saas-locked-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 720px)  { .vc-saas-locked-grid { grid-template-columns: 1fr; } }
+
+/* Locked card base */
+.vc-saas-locked-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(239,68,68,.18);
+  background: rgba(239,68,68,.03);
+}
+
+/* Required variant — orange */
+.vc-saas-locked-card.required {
+  border-color: rgba(251,146,60,.20);
+  background: rgba(251,146,60,.03);
+}
+
+.vc-saas-locked-icon {
+  font-size: 11px;
+  flex-shrink: 0;
+  color: #ef4444;
+  line-height: 1;
+}
+.vc-saas-locked-card.required .vc-saas-locked-icon { color: #fb923c; }
+
+.vc-saas-locked-text { flex: 1; }
+
+.vc-saas-locked-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.vc-saas-locked-status {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: #fca5a5;
+}
+.vc-saas-locked-status.required { color: #fb923c; }
+
+/* Engineer-only collapsible details */
+.vc-saas-engineer-details {
+  border: 1px solid rgba(168,85,247,.12);
+  border-radius: 9px;
+  background: rgba(8,6,20,.55);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.vc-saas-engineer-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 13px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: background .15s;
+}
+
+.vc-saas-engineer-summary::-webkit-details-marker { display: none; }
+.vc-saas-engineer-summary::marker { content: ''; }
+
+.vc-saas-engineer-summary:hover { background: rgba(168,85,247,.05); }
+.vc-saas-engineer-details[open] .vc-saas-engineer-summary {
+  border-bottom: 1px solid rgba(168,85,247,.12);
+  background: rgba(168,85,247,.04);
+}
+
+.vc-saas-engineer-summary-icon {
+  font-size: 12px;
+  color: #4b5563;
+  flex-shrink: 0;
+}
+.vc-saas-engineer-details[open] .vc-saas-engineer-summary-icon { color: #a855f7; }
+
+.vc-saas-engineer-summary-label {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  color: #4b5563;
+  transition: color .15s;
+}
+.vc-saas-engineer-details[open] .vc-saas-engineer-summary-label { color: #a855f7; }
+
+.vc-saas-engineer-summary::after {
+  content: '▸';
+  font-size: 10px;
+  color: #374151;
+  flex-shrink: 0;
+  transition: transform .18s;
+}
+.vc-saas-engineer-details[open] .vc-saas-engineer-summary::after {
+  transform: rotate(90deg);
+  color: #a855f7;
+}
+
+/* Plan content */
+.vc-saas-plan-content {
+  padding: 14px 16px;
+}
+
+.vc-saas-plan-note {
+  font-size: 10px;
+  color: #374151;
+  line-height: 1.5;
+  margin: 0 0 12px;
+  font-style: italic;
+}
+
+.vc-saas-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+@media (max-width: 720px) { .vc-saas-plan-grid { grid-template-columns: 1fr; } }
+
+.vc-saas-plan-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.04);
+  background: rgba(255,255,255,.02);
+}
+
+.vc-saas-plan-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: #374151;
+}
+
+.vc-saas-plan-val {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
 }

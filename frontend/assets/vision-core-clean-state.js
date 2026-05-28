@@ -1381,6 +1381,24 @@ window.VISION_CORE_PROJECT_BUILDER = Object.freeze({
     no_execution: true,
     no_file_io: true,
     no_backend_api: true
+  }),
+
+  saas_api_roadmap: Object.freeze({
+    roadmap_version:           'SAAS-API-LOCKED-0',
+    saas_signup_visible:       true,
+    api_connectors_visible:    true,
+    saas_signup_enabled:       false,
+    login_enabled:             false,
+    oauth_enabled:             false,
+    billing_enabled:           false,
+    api_connectors_enabled:    false,
+    api_key_storage_enabled:   false,
+    secrets_access_enabled:    false,
+    backend_api_required:      true,
+    human_approval_required:   true,
+    production_touched:        false,
+    non_authority_statement:
+      'SaaS/API controls are non-operational. No auth, no OAuth, no billing, no key storage, no backend calls, no API calls. Activation requires a separate explicit human-authorized phase.'
   })
 });
 
