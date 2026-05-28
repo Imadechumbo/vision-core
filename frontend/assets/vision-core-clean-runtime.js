@@ -3858,6 +3858,19 @@
 
   var _sfActiveModule = 'project_builder';
 
+  // Maps module IDs to the original #projectBuilder section IDs
+  var SF_MODULE_SECTION_MAP = {
+    project_builder:   'projectBuilder',
+    export_preview:    'vcExportPreview',
+    project_templates: 'vcTemplatePacks',
+    mission_composer:  'vcMissionComposer',
+    worker_handoff:    'vcWorkerHandoff',
+    real_file_command: 'vcRealFileCommandPackage',
+    worker_receipt:    'vcWorkerResultReceipt',
+    saas_api:          'vcSaasApiRoadmap',
+    final_dashboard:   'vcFinalProductDashboard'
+  };
+
   function showMainCockpitPage() {
     var sfPage  = document.getElementById('vcSoftwareFactoryPage');
     var cockpit = document.getElementById('vcCockpitView');
@@ -3872,6 +3885,12 @@
     if (sfPage)  {
       sfPage.style.display = 'flex';
       sfPage.removeAttribute('aria-hidden');
+      // Move original #projectBuilder into SF page mount (idempotent)
+      var mount = document.getElementById('vcSfOriginalProjectBuilderMount');
+      var pb    = document.getElementById('projectBuilder');
+      if (mount && pb && !mount.contains(pb)) {
+        mount.appendChild(pb);
+      }
       setSoftwareFactoryModule(_sfActiveModule);
     }
   }
@@ -3885,11 +3904,12 @@
       btn.classList.toggle('active', btn.dataset.sfModule === moduleId);
     });
 
-    // Show/hide module panels
-    var panels = document.querySelectorAll('.vc-sf-module-panel');
-    panels.forEach(function (p) {
-      p.classList.toggle('active', p.id === 'vcSfPanel-' + moduleId);
-    });
+    // Scroll to corresponding section in original #projectBuilder
+    var sectionId = SF_MODULE_SECTION_MAP[moduleId] || 'projectBuilder';
+    var target = document.getElementById(sectionId);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
     // Update SDDF timeline
     renderSoftwareFactoryTimelineState(moduleId);

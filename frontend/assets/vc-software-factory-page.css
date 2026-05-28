@@ -878,3 +878,29 @@
   color: #a78bfa; background: rgba(139,92,246,.07);
   border-left-color: rgba(139,92,246,.35);
 }
+
+/* ── Original #projectBuilder reused in SF page ──────────────── */
+/* JS moves #projectBuilder into this mount on showSoftwareFactoryPage() */
+#vcSfOriginalProjectBuilderMount {
+  display: block;
+  width: 100%;
+}
+
+/* Simplified placeholder panels no longer used — stay hidden */
+#vcSoftwareFactoryPage .vc-sf-module-panel {
+  display: none !important;
+}
+
+/* Make #projectBuilder look right inside the SF page center column */
+#vcSoftwareFactoryPage #projectBuilder {
+  display: block !important;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 20px 16px;
+  box-shadow: none;
+  border: 1px solid rgba(139,92,246,.15);
+  border-radius: 6px;
+  background: rgba(17,24,39,.65);
+  box-sizing: border-box;
+}
