@@ -516,3 +516,126 @@ body,
 [data-fp10-stabilized] {
   /* marker only — no visual change */
 }
+
+/* ── 17. Engineer-only section — Advanced Safety Gate ────────────
+   Human Approval Gate hidden from normal user flow.
+   Collapsed by default via <details>. No JS required.
+   Local-only. No backend. No authority change.                */
+
+/* Outer wrapper — same spacing as a normal vc-pb-section */
+.vc-engineer-only-section {
+  margin-top: 0;
+}
+
+/* details element — no default marker, clean background */
+.vc-engineer-details {
+  border: 1px solid rgba(168,85,247,.14);
+  border-radius: 10px;
+  background: rgba(8,6,20,.60);
+  overflow: hidden;
+}
+
+/* summary — clickable affordance bar */
+.vc-engineer-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: background .15s;
+}
+.vc-engineer-summary::-webkit-details-marker { display: none; }
+.vc-engineer-summary::marker { content: ''; }
+
+.vc-engineer-summary:hover {
+  background: rgba(168,85,247,.06);
+}
+
+.vc-engineer-details[open] .vc-engineer-summary {
+  border-bottom: 1px solid rgba(168,85,247,.14);
+  background: rgba(168,85,247,.04);
+}
+
+/* Icon */
+.vc-engineer-summary-icon {
+  font-size: 14px;
+  color: #6b7280;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: color .15s;
+}
+.vc-engineer-details[open] .vc-engineer-summary-icon { color: #a855f7; }
+
+/* Text block */
+.vc-engineer-summary-text {
+  flex: 1;
+  min-width: 0;
+}
+.vc-engineer-summary-text strong {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  color: #6b7280;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  transition: color .15s;
+}
+.vc-engineer-details[open] .vc-engineer-summary-text strong { color: #a855f7; }
+
+.vc-engineer-summary-text span {
+  display: block;
+  font-size: 10px;
+  color: #374151;
+  line-height: 1.4;
+  font-weight: 400;
+  white-space: normal;
+}
+
+/* Badge */
+.vc-engineer-badge {
+  flex-shrink: 0;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: rgba(168,85,247,.07);
+  border: 1px solid rgba(168,85,247,.28);
+  color: #a855f7;
+  white-space: nowrap;
+}
+
+/* Content area — inner padding when open */
+.vc-engineer-details[open] .vc-human-approval {
+  padding: 16px;
+}
+
+/* Collapse chevron indicator via CSS */
+.vc-engineer-summary::after {
+  content: '▸';
+  font-size: 10px;
+  color: #374151;
+  flex-shrink: 0;
+  transition: transform .18s;
+}
+.vc-engineer-details[open] .vc-engineer-summary::after {
+  transform: rotate(90deg);
+  color: #a855f7;
+}
+
+/* Suppress the vc-pb-section separator inside the engineer section */
+.vc-engineer-only-section.vc-pb-section + .vc-pb-section,
+.vc-pb-section + .vc-engineer-only-section {
+  margin-top: 28px;
+  padding-top: 0;
+  border-top: none;
+}
+.vc-engineer-only-section + .vc-pb-section {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,.045);
+}
