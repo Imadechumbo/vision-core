@@ -2209,30 +2209,41 @@
     <!-- CENTER: SF Home (LLM Control) + Module Workspace -->
     <div class="vc-sf-col-center">
 
-      <!-- HOME: Software Factory LLM Control (visible on home; compact when workspace opens) -->
+      <!-- HOME: exclusive landing — hidden completely when workspace opens -->
       <div id="vcSfHomeControl">
-      <div class="vc-sf-llm-control">
-        <div class="vc-sf-llm-control-header">
-          <span class="vc-sf-llm-title">⬡ SOFTWARE FACTORY LLM CONTROL</span>
-          <span class="vc-sf-llm-status">LOCAL · SEM BACKEND</span>
+
+        <!-- Hero intro -->
+        <div class="vc-sf-hero">
+          <div class="vc-sf-hero-title">⬡ Vamos construir algo extraordinário.</div>
+          <div class="vc-sf-hero-subtitle">Descreva sua ideia de projeto, objetivos, funcionalidades principais, regras de negócio e requisitos técnicos. Tudo fica na memória local desta sessão — sem backend, sem API.</div>
         </div>
-        <div class="vc-sf-chat-stream" id="vcSfChatStream">
-          <div class="vc-sf-chat-hint">Bem-vindo ao Software Factory Builder. Descreva sua ideia de projeto ou clique em INICIAR MONTAGEM para abrir o fluxo SDDF completo.</div>
-        </div>
-        <div class="vc-sf-chat-composer">
-          <textarea class="vc-sf-chat-input" id="vcSfChatInput" rows="2" placeholder="Descreva sua ideia de projeto... (Enter = enviar, Shift+Enter = nova linha)"></textarea>
-          <div class="vc-sf-chat-btn-group">
-            <button class="vc-sf-chat-send" id="vcSfChatSendBtn" type="button">ENVIAR</button>
-            <button class="vc-sf-run-btn" id="vcSfRunBtn" type="button">EXECUTAR MISSÃO SDDF</button>
+
+        <!-- Large central LLM Control -->
+        <div class="vc-sf-llm-control">
+          <div class="vc-sf-llm-control-header">
+            <span class="vc-sf-llm-title">⬡ SOFTWARE FACTORY LLM CONTROL</span>
+            <span class="vc-sf-llm-status">LOCAL · SEM BACKEND · SEM API</span>
+          </div>
+          <div class="vc-sf-chat-stream" id="vcSfChatStream">
+            <div class="vc-sf-chat-hint">Descreva sua ideia de projeto aqui. Mensagens ficam na memória local desta sessão. Nenhuma informação é enviada a servidores externos.</div>
+          </div>
+          <div class="vc-sf-chat-composer">
+            <textarea class="vc-sf-chat-input" id="vcSfChatInput" rows="4" placeholder="Ex.: Quero construir um SaaS de gestão de projetos com autenticação, dashboard, planos de assinatura e API REST. Stack preferida: Node.js + React + PostgreSQL. Tamanho: Production Ready.&#10;&#10;(Enter = enviar · Shift+Enter = nova linha)"></textarea>
+            <div class="vc-sf-chat-btn-group">
+              <button class="vc-sf-chat-send" id="vcSfChatSendBtn" type="button">ENVIAR</button>
+              <button class="vc-sf-run-btn" id="vcSfRunBtn" type="button">EXECUTAR MISSÃO SDDF</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Quick start: open full module workspace -->
-      <div class="vc-sf-start-row">
-        <button class="vc-sf-start-btn" id="vcSfStartBtn" type="button">▶ INICIAR MONTAGEM DO PROJETO</button>
-        <span class="vc-sf-start-hint">Ou selecione um módulo no menu acima para iniciar o fluxo SDDF</span>
-      </div>
+        <!-- Quick action buttons -->
+        <div class="vc-sf-action-grid">
+          <button class="vc-sf-action-btn" data-sf-fill="descricao" type="button">💡 Descrever ideia do projeto</button>
+          <button class="vc-sf-action-btn" data-sf-fill="briefing"  type="button">📋 Importar briefing</button>
+          <button class="vc-sf-action-btn" data-sf-fill="exemplos"  type="button">🗂️ Ver exemplos de projetos</button>
+          <button class="vc-sf-action-btn primary" id="vcSfStartBtn" type="button">▶ INICIAR MONTAGEM DO PROJETO</button>
+        </div>
+
       </div><!-- end #vcSfHomeControl -->
 
       <!-- MODULE WORKSPACE: original Project Builder panels (hidden until user navigates) -->

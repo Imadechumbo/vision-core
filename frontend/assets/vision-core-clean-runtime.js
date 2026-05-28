@@ -3872,27 +3872,27 @@
     final_dashboard:   'vcFinalProductDashboard'
   };
 
-  // Show home view (LLM Control full-height, workspace hidden)
+  // Show home view — HOME is exclusive; workspace completely hidden
   function _sfShowHome() {
     _sfHomeVisible = true;
     var homeCtrl  = document.getElementById('vcSfHomeControl');
     var workspace = document.getElementById('vcSfModuleWorkspace');
-    if (homeCtrl)  { homeCtrl.classList.remove('compact'); }
+    if (homeCtrl)  { homeCtrl.style.display = 'flex'; }
     if (workspace) { workspace.style.display = 'none'; }
     var homeBtn = document.getElementById('vcSfHomeBtn');
     if (homeBtn) { homeBtn.classList.add('active'); }
-    // Remove active from all module buttons
+    // Clear active from all module tabs
     document.querySelectorAll('.vc-sf-module-btn').forEach(function (b) {
       if (b !== homeBtn) { b.classList.remove('active'); }
     });
   }
 
-  // Show module workspace (LLM Control compact, workspace visible)
+  // Show module workspace — HOME completely hidden, workspace fills center
   function _sfShowWorkspace() {
     _sfHomeVisible = false;
     var homeCtrl  = document.getElementById('vcSfHomeControl');
     var workspace = document.getElementById('vcSfModuleWorkspace');
-    if (homeCtrl)  { homeCtrl.classList.add('compact'); }
+    if (homeCtrl)  { homeCtrl.style.display = 'none'; }
     if (workspace) { workspace.style.display = 'flex'; }
     var homeBtn = document.getElementById('vcSfHomeBtn');
     if (homeBtn) { homeBtn.classList.remove('active'); }
@@ -4061,6 +4061,20 @@
         setSoftwareFactoryModule('project_builder');
       });
     }
+
+    // Quick-fill action buttons (populate textarea with template, no backend)
+    var SF_FILL_TEMPLATES = {
+      descricao: 'Tipo de projeto: [SaaS / API / App / Outro]\nObjetivo principal: [descreva aqui]\nFuncionalidades principais:\n  - [funcionalidade 1]\n  - [funcionalidade 2]\n  - [funcionalidade 3]\nStack preferida: [Node.js / Go / Python / etc]\nTamanho estimado: [MVP / Production Ready / Enterprise]',
+      briefing:  'BRIEFING DO PROJETO\n\nCliente / Produto: [nome]\nDescrição: [descrição completa do produto]\nEntregas esperadas:\n  - [módulo 1]\n  - [módulo 2]\nRestrições técnicas: [lista]\nCritérios de aceite: [lista]\nPrazo estimado: [data ou duração]',
+      exemplos:  'EXEMPLO A — SaaS Fullstack\nTipo: SaaS Fullstack\nStack: Node.js + React + PostgreSQL\nFuncionalidades: autenticação JWT, dashboard, billing Stripe, API REST\nTamanho: Production Ready\n\nEXEMPLO B — API Backend\nTipo: API Backend\nStack: Go + PostgreSQL + Docker\nFuncionalidades: CRUD completo, JWT auth, rate limiting\nTamanho: MVP\n\nEXEMPLO C — AI Agent System\nTipo: AI Agent System\nStack: Python + FastAPI + Redis\nFuncionalidades: orchestrator, workers, task queue, webhooks\nTamanho: Enterprise'
+    };
+    sfPage.addEventListener('click', function (e) {
+      var fillBtn = e.target.closest('[data-sf-fill]');
+      if (!fillBtn) return;
+      var tpl = SF_FILL_TEMPLATES[fillBtn.dataset.sfFill] || '';
+      var inp = document.getElementById('vcSfChatInput');
+      if (inp && tpl) { inp.value = tpl; inp.focus(); }
+    });
 
     // Chat send
     var sendBtn = document.getElementById('vcSfChatSendBtn');
