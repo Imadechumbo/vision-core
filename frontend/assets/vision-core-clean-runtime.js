@@ -3092,6 +3092,392 @@
     }
   }
 
+  /* ── Worker Result Receipt — local UI only ────────────────────── */
+  /* No file read/write. No commands. No download. No API. No exec. */
+  /* Input is manual text paste only. All matching is local string. */
+
+  var workerResultReceiptState = {
+    selectedMode:     'evidence_completeness_review',
+    reportText:       '',
+    evidenceStatus:   {},
+    generatedReceipt: ''
+  };
+
+  function getWorkerResultReceiptRegistry() {
+    var pb = window.VISION_CORE_PROJECT_BUILDER;
+    return (pb && pb.worker_result_receipt) ? pb.worker_result_receipt : null;
+  }
+
+  function setWorkerResultReviewMode(modeId) {
+    workerResultReceiptState.selectedMode = modeId;
+    var modeRow = document.getElementById('vcResultModeRow');
+    if (modeRow) {
+      Array.prototype.forEach.call(modeRow.querySelectorAll('.vc-result-mode-chip'), function (c) {
+        c.className = 'vc-result-mode-chip' + (c.getAttribute('data-result-mode') === modeId ? ' selected' : '');
+      });
+    }
+  }
+
+  function getWorkerReportText() {
+    var el = document.getElementById('vcWorkerReportInput');
+    return el ? el.value : '';
+  }
+
+  function normalizeWorkerReportText(text) {
+    return text.toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  function analyzeWorkerEvidenceText() {
+    var wrr = getWorkerResultReceiptRegistry();
+    if (!wrr) { return; }
+
+    var rawText = getWorkerReportText();
+    workerResultReceiptState.reportText = rawText;
+    var normText = normalizeWorkerReportText(rawText);
+
+    var ambiguousMarkers = ['unknown', 'not sure', 'unclear', 'needs review', 'necessita revisão'];
+
+    wrr.required_evidence_fields.forEach(function (field) {
+      var found       = false;
+      var foundMarker = '';
+      var ambiguous   = false;
+
+      /* Check each marker */
+      field.markers.forEach(function (marker) {
+        if (normText.indexOf(normalizeWorkerReportText(marker)) !== -1) {
+          found       = true;
+          foundMarker = marker;
+        }
+      });
+
+      /* Check ambiguous proximity — simple: ambiguous word in whole text near field name */
+      if (found) {
+        ambiguousMarkers.forEach(function (am) {
+          if (normText.indexOf(am) !== -1) {
+            /* Only flag ambiguous if the ambiguous word appears close to any field marker */
+            var markerIdx  = normText.indexOf(normalizeWorkerReportText(foundMarker));
+            var ambigIdx   = normText.indexOf(am);
+            if (Math.abs(markerIdx - ambigIdx) < 120) { ambiguous = true; }
+          }
+        });
+      }
+
+      workerResultReceiptState.evidenceStatus[field.id] = {
+        status:      found ? (ambiguous ? 'needs_review' : 'present') : 'missing',
+        foundMarker: found ? foundMarker : ''
+      };
+    });
+
+    renderWorkerEvidenceChecklist();
+    _updateEvidenceSummary(wrr);
+  }
+
+  function _updateEvidenceSummary(wrr) {
+    var total    = wrr.required_evidence_fields.length;
+    var present  = 0;
+    var missing  = 0;
+    var review   = 0;
+
+    wrr.required_evidence_fields.forEach(function (f) {
+      var s = workerResultReceiptState.evidenceStatus[f.id];
+      if (!s) { missing++; return; }
+      if (s.status === 'present')      { present++; }
+      else if (s.status === 'missing') { missing++; }
+      else                             { review++;  }
+    });
+
+    var chip  = document.getElementById('vcEvidenceSummaryChip');
+    var label = document.getElementById('vcEvidenceCountLabel');
+    if (label) { label.textContent = present + ' / ' + total + ' campos'; }
+    if (chip) {
+      if (missing === 0 && review === 0) {
+        chip.textContent = 'EVIDENCE COMPLETE';
+        chip.className   = 'vc-evidence-count-chip complete';
+      } else if (review > 0) {
+        chip.textContent = 'NEEDS REVIEW (' + review + ')';
+        chip.className   = 'vc-evidence-count-chip review';
+      } else {
+        chip.textContent = 'EVIDENCE INCOMPLETE (' + missing + ' MISSING)';
+        chip.className   = 'vc-evidence-count-chip incomplete';
+      }
+    }
+  }
+
+  function renderWorkerEvidenceChecklist() {
+    var wrr       = getWorkerResultReceiptRegistry();
+    var container = document.getElementById('vcEvidenceChecklistGrid');
+    if (!wrr || !container) { return; }
+
+    container.innerHTML = '';
+    wrr.required_evidence_fields.forEach(function (field) {
+      var status = workerResultReceiptState.evidenceStatus[field.id];
+      var st     = status ? status.status : 'missing';
+      var marker = status ? status.foundMarker : '';
+
+      var iconMap  = { present: '✓', missing: '⊗', needs_review: '◈' };
+      var labelMap = { present: 'PRESENT', missing: 'MISSING', needs_review: 'NEEDS REVIEW' };
+
+      var card = document.createElement('div');
+      card.className = 'vc-evidence-card ' + (st === 'needs_review' ? 'review' : st);
+
+      var icon = document.createElement('span');
+      icon.className   = 'vc-evidence-icon';
+      icon.textContent = iconMap[st] || '—';
+
+      var textEl = document.createElement('div');
+      textEl.className = 'vc-evidence-text';
+
+      var labelEl = document.createElement('div');
+      labelEl.className   = 'vc-evidence-label';
+      labelEl.textContent = field.label;
+
+      var statusEl = document.createElement('div');
+      statusEl.className   = 'vc-evidence-status';
+      statusEl.textContent = labelMap[st] || '—';
+
+      var markerEl = document.createElement('div');
+      markerEl.className   = 'vc-evidence-marker';
+      markerEl.textContent = marker ? 'Detectado: "' + marker + '"' : (st === 'missing' ? 'Não detectado' : '');
+
+      textEl.appendChild(labelEl);
+      textEl.appendChild(statusEl);
+      textEl.appendChild(markerEl);
+      card.appendChild(icon);
+      card.appendChild(textEl);
+      container.appendChild(card);
+    });
+  }
+
+  function buildWorkerEvidenceReceipt() {
+    var wrr = getWorkerResultReceiptRegistry();
+    if (!wrr) { return ''; }
+
+    var ctx       = (typeof getRealFileCommandContext === 'function') ? getRealFileCommandContext() : {};
+    var total     = wrr.required_evidence_fields.length;
+    var present   = 0;
+    var missing   = 0;
+    var review    = 0;
+
+    wrr.required_evidence_fields.forEach(function (f) {
+      var s = workerResultReceiptState.evidenceStatus[f.id];
+      if (!s || s.status === 'missing')        { missing++; }
+      else if (s.status === 'needs_review')    { review++;  }
+      else                                     { present++; }
+    });
+
+    var overallStatus = (missing === 0 && review === 0)
+      ? 'EVIDENCE COMPLETE'
+      : (review > 0 ? 'NEEDS REVIEW' : 'EVIDENCE INCOMPLETE');
+
+    var lines = [];
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push('   VISION CORE — RECIBO DO WORKER EXTERNO');
+    lines.push('   FRONT-PRODUCT-8 | Manual Evidence Review Only');
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push('');
+    lines.push('STATUS GERAL: ' + overallStatus);
+    lines.push('Campos presentes : ' + present + ' / ' + total);
+    lines.push('Campos ausentes  : ' + missing);
+    lines.push('Necessitam revisão: ' + review);
+    lines.push('');
+    lines.push('── Contexto do Projeto ─────────────────────────────────────────');
+    lines.push('  Tipo de Projeto  : ' + (ctx.type     || '—'));
+    lines.push('  Template         : ' + (ctx.template || '—'));
+    lines.push('  Stack            : ' + (ctx.stack    || '—'));
+    lines.push('  Modo do Pacote   : ' + workerResultReceiptState.selectedMode.replace(/_/g, ' '));
+    lines.push('');
+    lines.push('── Checklist de Evidências ─────────────────────────────────────');
+    wrr.required_evidence_fields.forEach(function (field) {
+      var s   = workerResultReceiptState.evidenceStatus[field.id];
+      var st  = s ? s.status : 'missing';
+      var mk  = (s && s.foundMarker) ? ' ["' + s.foundMarker + '"]' : '';
+      var sym = st === 'present' ? '[✓]' : (st === 'needs_review' ? '[◈]' : '[ ]');
+      var lbl = st === 'present' ? 'PRESENT' : (st === 'needs_review' ? 'NEEDS REVIEW' : 'MISSING');
+      lines.push('  ' + sym + ' ' + field.label + ' — ' + lbl + mk);
+    });
+    lines.push('');
+    lines.push('── Estado de Autoridade ────────────────────────────────────────');
+    lines.push('  real_execution_verified_by_frontend : false');
+    lines.push('  pass_gold_real_claimed              : false');
+    lines.push('  file_creation_allowed               : false');
+    lines.push('  real_file_creation_enabled          : false');
+    lines.push('  frontend_file_write_allowed         : false');
+    lines.push('  backend_write_allowed               : false');
+    lines.push('  command_execution_allowed           : false');
+    lines.push('  deploy_allowed                      : false');
+    lines.push('  release_allowed                     : false');
+    lines.push('  tag_allowed                         : false');
+    lines.push('  stable_promotion_allowed            : false');
+    lines.push('  production_touched                  : false');
+    lines.push('');
+    lines.push('── Declaração de Não-Autoridade ────────────────────────────────');
+    lines.push('  ' + wrr.non_authority_statement);
+    lines.push('');
+    lines.push('── Fronteira de Decisão Final ──────────────────────────────────');
+    lines.push('  ' + wrr.final_decision_boundary);
+    lines.push('');
+    lines.push('═══════════════════════════════════════════════════════════════');
+    return lines.join('\n');
+  }
+
+  function renderWorkerEvidenceReceipt() {
+    var receipt = buildWorkerEvidenceReceipt();
+    workerResultReceiptState.generatedReceipt = receipt;
+    var output = document.getElementById('vcResultReceiptOutput');
+    if (output) {
+      output.value     = receipt;
+      output.className = 'vc-result-output' + (receipt ? '' : ' empty');
+    }
+    var lineEl = document.getElementById('vcResultLineCount');
+    if (lineEl && receipt) { lineEl.textContent = receipt.split('\n').length; }
+  }
+
+  function copyWorkerEvidenceReceipt() {
+    var text     = workerResultReceiptState.generatedReceipt;
+    var statusEl = document.getElementById('vcResultCopyStatus');
+    if (!text) {
+      if (statusEl) {
+        statusEl.textContent = '⚠ Gere o recibo primeiro.';
+        statusEl.className   = 'vc-result-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-result-copy-status'; }, 2500);
+      }
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        if (statusEl) {
+          statusEl.textContent = '✓ Copiado!';
+          statusEl.className   = 'vc-result-copy-status visible';
+          setTimeout(function () { statusEl.className = 'vc-result-copy-status'; }, 2500);
+        }
+      }).catch(function () {
+        if (statusEl) {
+          statusEl.textContent = 'Selecione e copie manualmente.';
+          statusEl.className   = 'vc-result-copy-status visible error';
+          setTimeout(function () { statusEl.className = 'vc-result-copy-status'; }, 3000);
+        }
+      });
+    } else {
+      if (statusEl) {
+        statusEl.textContent = 'Selecione e copie manualmente.';
+        statusEl.className   = 'vc-result-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-result-copy-status'; }, 3000);
+      }
+    }
+  }
+
+  function clearWorkerEvidenceReview() {
+    workerResultReceiptState.reportText       = '';
+    workerResultReceiptState.evidenceStatus   = {};
+    workerResultReceiptState.generatedReceipt = '';
+
+    var input = document.getElementById('vcWorkerReportInput');
+    if (input) { input.value = ''; }
+
+    var output = document.getElementById('vcResultReceiptOutput');
+    if (output) {
+      output.value     = 'Clique em ANALISAR TEXTO LOCAL e depois GERAR RECIBO DE EVIDÊNCIA.';
+      output.className = 'vc-result-output empty';
+    }
+
+    var lineEl = document.getElementById('vcResultLineCount');
+    if (lineEl) { lineEl.textContent = '0'; }
+
+    var statusEl = document.getElementById('vcResultCopyStatus');
+    if (statusEl) { statusEl.className = 'vc-result-copy-status'; }
+
+    /* Reset evidence cards to empty */
+    var wrr = getWorkerResultReceiptRegistry();
+    if (wrr) {
+      renderWorkerEvidenceChecklist();
+      _updateEvidenceSummary(wrr);
+    }
+
+    var chip  = document.getElementById('vcEvidenceSummaryChip');
+    var label = document.getElementById('vcEvidenceCountLabel');
+    if (chip)  { chip.textContent  = 'AGUARDANDO ANÁLISE'; chip.className = 'vc-evidence-count-chip incomplete'; }
+    if (label) { label.textContent = '0 / 13 campos'; }
+  }
+
+  function renderWorkerResultAuthorityPanel() {
+    /* Authority panel is static HTML — all flags false, no dynamic state needed */
+  }
+
+  function initWorkerResultReceipt() {
+    var wrr = getWorkerResultReceiptRegistry();
+    if (!wrr) { return; }
+
+    /* Build mode chips */
+    var modeRow = document.getElementById('vcResultModeRow');
+    if (modeRow) {
+      wrr.review_modes.forEach(function (m) {
+        var chip = document.createElement('button');
+        chip.className = 'vc-result-mode-chip' + (m.id === workerResultReceiptState.selectedMode ? ' selected' : '');
+        chip.setAttribute('data-result-mode', m.id);
+        chip.type = 'button';
+        chip.textContent = m.label;
+        chip.addEventListener('click', function () { setWorkerResultReviewMode(m.id); });
+        modeRow.appendChild(chip);
+      });
+    }
+
+    /* Initial empty checklist render */
+    renderWorkerEvidenceChecklist();
+
+    /* Wire buttons */
+    var analyzeBtn = document.getElementById('vcAnalyzeWorkerReportBtn');
+    if (analyzeBtn) {
+      analyzeBtn.addEventListener('click', function () {
+        analyzeWorkerEvidenceText();
+        analyzeBtn.textContent    = '✓ TEXTO ANALISADO';
+        analyzeBtn.style.borderColor = 'rgba(34,197,94,.65)';
+        analyzeBtn.style.color       = '#22c55e';
+        setTimeout(function () {
+          analyzeBtn.textContent       = '⬡ ANALISAR TEXTO LOCAL';
+          analyzeBtn.style.borderColor = '';
+          analyzeBtn.style.color       = '';
+        }, 2000);
+      });
+    }
+
+    var genBtn = document.getElementById('vcGenerateEvidenceReceiptBtn');
+    if (genBtn) {
+      genBtn.addEventListener('click', function () {
+        analyzeWorkerEvidenceText();
+        renderWorkerEvidenceReceipt();
+        var wrr2   = getWorkerResultReceiptRegistry();
+        var total  = wrr2 ? wrr2.required_evidence_fields.length : 13;
+        var pCount = Object.keys(workerResultReceiptState.evidenceStatus).filter(function (k) {
+          return workerResultReceiptState.evidenceStatus[k].status === 'present';
+        }).length;
+        var allOk  = pCount === total;
+        genBtn.textContent       = allOk ? '✓ RECIBO COMPLETO' : '✓ RECIBO GERADO — INCOMPLETO';
+        genBtn.style.borderColor = allOk ? 'rgba(34,197,94,.65)' : 'rgba(251,146,60,.65)';
+        genBtn.style.color       = allOk ? '#22c55e'             : '#fb923c';
+      });
+    }
+
+    var copyBtn = document.getElementById('vcCopyEvidenceReceiptBtn');
+    if (copyBtn) { copyBtn.addEventListener('click', copyWorkerEvidenceReceipt); }
+
+    var clearBtn = document.getElementById('vcClearEvidenceReviewBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        clearWorkerEvidenceReview();
+        if (analyzeBtn) {
+          analyzeBtn.textContent       = '⬡ ANALISAR TEXTO LOCAL';
+          analyzeBtn.style.borderColor = '';
+          analyzeBtn.style.color       = '';
+        }
+        if (genBtn) {
+          genBtn.textContent       = '⊡ GERAR RECIBO DE EVIDÊNCIA';
+          genBtn.style.borderColor = '';
+          genBtn.style.color       = '';
+        }
+      });
+    }
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       init();
@@ -3103,6 +3489,7 @@
       initProjectExportPreview();
       initHumanApprovalGate();
       initRealFileCommandPackage();
+      initWorkerResultReceipt();
     });
   } else {
     init();
@@ -3114,5 +3501,6 @@
     initProjectExportPreview();
     initHumanApprovalGate();
     initRealFileCommandPackage();
+    initWorkerResultReceipt();
   }
 })();

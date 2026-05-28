@@ -1154,6 +1154,135 @@ window.VISION_CORE_PROJECT_BUILDER = Object.freeze({
       'production touched yes/no',
       'final human review required yes/no'
     ])
+  }),
+
+  /* ── Worker Result Receipt ───────────────────────────────────── */
+  /* Local-only. No file read/write. No commands. No API. No exec. */
+  worker_result_receipt: Object.freeze({
+    receipt_version: 'FRONT-PRODUCT-8',
+
+    authority_state: Object.freeze({
+      evidence_review_complete:            false,
+      evidence_receipt_ready:              false,
+      real_execution_verified_by_frontend: false,
+      pass_gold_real_claimed:              false,
+      file_creation_allowed:               false,
+      real_file_creation_enabled:          false,
+      frontend_file_write_allowed:         false,
+      backend_write_allowed:               false,
+      command_execution_allowed:           false,
+      deploy_allowed:                      false,
+      release_allowed:                     false,
+      tag_allowed:                         false,
+      stable_promotion_allowed:            false,
+      production_touched:                  false
+    }),
+
+    required_evidence_fields: Object.freeze([
+      {
+        id: 'branch_used',
+        label: 'Branch Used',
+        markers: ['branch used', 'branch:', 'git branch', 'branch —', 'branch :']
+      },
+      {
+        id: 'files_created',
+        label: 'Files Created',
+        markers: ['files created', 'created files', 'arquivos criados', 'file created']
+      },
+      {
+        id: 'files_modified',
+        label: 'Files Modified',
+        markers: ['files modified', 'modified files', 'arquivos modificados', 'file modified']
+      },
+      {
+        id: 'files_skipped',
+        label: 'Files Skipped',
+        markers: ['files skipped', 'skipped files', 'arquivos ignorados', 'file skipped', 'skipped:']
+      },
+      {
+        id: 'commands_run',
+        label: 'Commands Run Manually',
+        markers: ['commands run', 'commands run manually', 'comandos executados', 'comandos manuais', 'command run']
+      },
+      {
+        id: 'syntax_checks',
+        label: 'Syntax Checks',
+        markers: ['syntax check', 'node --check', 'syntax checks', 'verificação de sintaxe']
+      },
+      {
+        id: 'forbidden_scan',
+        label: 'Forbidden Scan Result',
+        markers: ['forbidden scan', 'scan result', 'forbidden patterns', 'scan de segurança']
+      },
+      {
+        id: 'scope_confirmation',
+        label: 'Scope Confirmation',
+        markers: ['scope confirmation', 'scope confirmed', 'escopo confirmado', 'scope:']
+      },
+      {
+        id: 'backend_gocore_changed',
+        label: 'Backend/go-core/tools/package.json Changed',
+        markers: [
+          'backend/go-core/tools/package.json',
+          'package.json changed',
+          'no backend/go-core',
+          'backend não modificado',
+          'backend unchanged'
+        ]
+      },
+      {
+        id: 'pass_gold_claimed',
+        label: 'PASS GOLD REAL Claimed',
+        markers: ['pass gold real', 'pass_gold_real_claimed', 'pass gold']
+      },
+      {
+        id: 'stable_release_blocked',
+        label: 'Stable/Release/Deploy/Tag Blocked',
+        markers: [
+          'stable/release/deploy/tag',
+          'deploy blocked', 'release blocked', 'tag blocked', 'stable blocked',
+          'deploy: false', 'release: false', 'tag: false'
+        ]
+      },
+      {
+        id: 'production_touched',
+        label: 'Production Touched',
+        markers: ['production touched', 'production_touched', 'produção', 'production:']
+      },
+      {
+        id: 'final_human_review',
+        label: 'Final Human Review Required',
+        markers: ['final human review', 'human review required', 'revisão humana', 'human review:']
+      }
+    ]),
+
+    optional_evidence_fields: Object.freeze([
+      { id: 'screenshots',     label: 'Screenshots Reviewed' },
+      { id: 'visual',          label: 'Visual Inspection Completed' },
+      { id: 'browser',         label: 'Browser Opened' },
+      { id: 'limitations',     label: 'Known Limitations' },
+      { id: 'next_action',     label: 'Next Recommended Action' }
+    ]),
+
+    review_modes: Object.freeze([
+      { id: 'evidence_completeness_review', label: 'Evidence Completeness Review' },
+      { id: 'safety_flag_review',           label: 'Safety Flag Review' },
+      { id: 'scope_review',                 label: 'Scope Review' },
+      { id: 'final_receipt_summary',        label: 'Final Receipt Summary' }
+    ]),
+
+    evidence_status_labels: Object.freeze({
+      present:      'PRESENT',
+      missing:      'MISSING',
+      needs_review: 'NEEDS REVIEW',
+      blocked:      'BLOCKED'
+    }),
+
+    non_authority_statement:
+      'This local evidence review does not verify the filesystem, does not validate real execution, does not claim PASS GOLD REAL, and does not grant deployment/release/stable authority.',
+
+    final_decision_boundary:
+      'Any final PASS GOLD REAL, stable promotion, release, deploy, tag, or production decision remains external and requires explicit human authority.'
   })
 });
 
