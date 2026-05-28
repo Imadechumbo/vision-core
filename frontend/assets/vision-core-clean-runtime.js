@@ -2220,6 +2220,340 @@
     }
   }
 
+  /* ── Human Approval Gate — local UI only ─────────────────────── */
+  /* No file creation. No write. No download. No export. No API.   */
+  /* No Blob. No URL.createObjectURL. In-memory state only.        */
+
+  var humanApprovalState = {
+    checked:           {},
+    generatedReceipt:  ''
+  };
+
+  function getHumanApprovalGateRegistry() {
+    var pb = window.VISION_CORE_PROJECT_BUILDER;
+    return (pb && pb.human_approval_gate) ? pb.human_approval_gate : null;
+  }
+
+  function getHumanApprovalContext() {
+    /* Pull from existing in-memory states — no disk, no API */
+    var type     = (typeof pbState !== 'undefined' && pbState.selectedType)     ? pbState.selectedType     : '—';
+    var stack    = (typeof pbState !== 'undefined' && pbState.selectedStack)    ? pbState.selectedStack    : '—';
+    var size     = (typeof pbState !== 'undefined' && pbState.selectedSize)     ? pbState.selectedSize     : '—';
+    var tpl      = (typeof pbTemplateState !== 'undefined' && pbTemplateState.selectedTemplate) ? pbTemplateState.selectedTemplate : '—';
+    var agents   = (typeof pbState !== 'undefined' && Array.isArray(pbState.activeAgents)) ? pbState.activeAgents.length : 0;
+
+    /* Derive folder/file counts from export preview if generated */
+    var folderCount = 6;
+    var fileCount   = 10;
+    var validCount  = 4;
+    var riskCount   = 3;
+    if (typeof exportPreviewState !== 'undefined' && exportPreviewState.generatedPreview) {
+      var lines = exportPreviewState.generatedPreview.split('\n');
+      var fc = lines.filter(function (l) { return l.indexOf('/') !== -1 && l.trim().slice(-1) === '/'; }).length;
+      var fl = lines.filter(function (l) { return l.indexOf('.') !== -1 && l.trim().slice(-1) !== '/'; }).length;
+      if (fc > 0) { folderCount = fc; }
+      if (fl > 0) { fileCount   = fl; }
+    }
+
+    return {
+      type:        type,
+      template:    tpl,
+      stack:       stack,
+      size:        size,
+      agentCount:  agents,
+      folderCount: folderCount,
+      fileCount:   fileCount,
+      validCount:  validCount,
+      riskCount:   riskCount
+    };
+  }
+
+  function toggleHumanAcknowledgement(ackId) {
+    humanApprovalState.checked[ackId] = !humanApprovalState.checked[ackId];
+    renderHumanApprovalChecklist();
+    _updateHumanGateProgress();
+  }
+
+  function resetHumanApprovalChecklist() {
+    humanApprovalState.checked = {};
+    humanApprovalState.generatedReceipt = '';
+    renderHumanApprovalChecklist();
+    _updateHumanGateProgress();
+    var output = document.getElementById('vcHumanReceiptOutput');
+    if (output) {
+      output.value = 'Clique em GERAR RECIBO LOCAL para gerar o recibo.';
+      output.className = 'vc-human-receipt-output empty';
+    }
+    var statusEl = document.getElementById('vcHumanCopyStatus');
+    if (statusEl) { statusEl.className = 'vc-human-copy-status'; }
+    var genBtn = document.getElementById('vcGenerateReceiptBtn');
+    if (genBtn) {
+      genBtn.textContent = '⬡ GERAR RECIBO LOCAL';
+      genBtn.style.borderColor = '';
+      genBtn.style.color = '';
+    }
+  }
+
+  function areAllHumanAcknowledgementsChecked() {
+    var hag = getHumanApprovalGateRegistry();
+    if (!hag) { return false; }
+    return hag.required_acknowledgements.every(function (a) {
+      return !!humanApprovalState.checked[a.id];
+    });
+  }
+
+  function _updateHumanGateProgress() {
+    var hag = getHumanApprovalGateRegistry();
+    if (!hag) { return; }
+    var total   = hag.required_acknowledgements.length;
+    var checked = hag.required_acknowledgements.filter(function (a) {
+      return !!humanApprovalState.checked[a.id];
+    }).length;
+    var allDone = checked === total;
+
+    /* Summary approval status */
+    var approvalEl = document.getElementById('vcHagApprovalStatus');
+    if (approvalEl) { approvalEl.textContent = allDone ? 'PRONTO' : (checked + '/' + total + ' pendentes'); }
+
+    /* Counter + gate badge in checklist area */
+    var countEl = document.getElementById('vcHagAckCount');
+    if (countEl) { countEl.textContent = checked; }
+    var gateEl = document.getElementById('vcHagGateStatus');
+    if (gateEl) {
+      gateEl.textContent = allDone ? 'PRONTO' : 'INCOMPLETO';
+      gateEl.className   = 'vc-human-status ' + (allDone ? 'ready' : 'incomplete');
+    }
+
+    /* Receipt header counters */
+    var rcAckEl = document.getElementById('vcHagReceiptAckCount');
+    if (rcAckEl) { rcAckEl.textContent = checked; }
+    var rcStatusEl = document.getElementById('vcHagReceiptStatus');
+    if (rcStatusEl) {
+      rcStatusEl.textContent = allDone ? 'PRONTO' : 'INCOMPLETO';
+      rcStatusEl.className   = 'vc-human-status ' + (allDone ? 'ready' : 'incomplete');
+    }
+  }
+
+  function buildHumanApprovalReceipt() {
+    var hag = getHumanApprovalGateRegistry();
+    if (!hag) { return ''; }
+    var ctx     = getHumanApprovalContext();
+    var allDone = areAllHumanAcknowledgementsChecked();
+    var total   = hag.required_acknowledgements.length;
+    var checked = hag.required_acknowledgements.filter(function (a) {
+      return !!humanApprovalState.checked[a.id];
+    }).length;
+
+    var lines = [];
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push('   VISION CORE — RECIBO DE APROVAÇÃO HUMANA');
+    lines.push('   FRONT-PRODUCT-6 | Local Preview Only');
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push('');
+    lines.push('STATUS: ' + (allDone ? 'LOCAL PREVIEW READY' : 'INCOMPLETO'));
+    lines.push('');
+    lines.push('── Contexto do Projeto ─────────────────────────────────────────');
+    lines.push('  Tipo de Projeto  : ' + ctx.type);
+    lines.push('  Template         : ' + ctx.template);
+    lines.push('  Stack            : ' + ctx.stack);
+    lines.push('  Tamanho/Risco    : ' + ctx.size);
+    lines.push('  Agentes Ativos   : ' + ctx.agentCount);
+    lines.push('  Pastas Previstas : ' + ctx.folderCount);
+    lines.push('  Arquivos Previstos: ' + ctx.fileCount);
+    lines.push('  Validações       : ' + ctx.validCount);
+    lines.push('  Riscos           : ' + ctx.riskCount);
+    lines.push('');
+    lines.push('── Confirmações (' + checked + '/' + total + ') ──────────────────────────────────────');
+    hag.required_acknowledgements.forEach(function (a) {
+      var mark = humanApprovalState.checked[a.id] ? '[✓]' : '[ ]';
+      lines.push('  ' + mark + ' ' + a.text);
+    });
+    lines.push('');
+    lines.push('── Capacidades Bloqueadas ───────────────────────────────────────');
+    hag.locked_capabilities.forEach(function (cap) {
+      lines.push('  ⊗ ' + cap.toUpperCase().replace(/_/g, ' ') + ' — LOCKED');
+    });
+    lines.push('');
+    lines.push('── Estado de Autoridade Final ──────────────────────────────────');
+    lines.push('  human_approval_gate_ready  : ' + allDone);
+    lines.push('  human_approval_collected   : ' + allDone);
+    lines.push('  file_creation_allowed      : false');
+    lines.push('  real_file_creation_enabled : false');
+    lines.push('  backend_write_allowed      : false');
+    lines.push('  command_execution_allowed  : false');
+    lines.push('  deploy_allowed             : false');
+    lines.push('  release_allowed            : false');
+    lines.push('  tag_allowed                : false');
+    lines.push('  stable_promotion_allowed   : false');
+    lines.push('  production_touched         : false');
+    lines.push('  pass_gold_real_claimed     : false');
+    lines.push('');
+    lines.push('── Fronteira do Próximo Phase ──────────────────────────────────');
+    lines.push('  ' + hag.next_phase_boundary);
+    lines.push('');
+    lines.push('── Aviso Final ─────────────────────────────────────────────────');
+    lines.push('  ' + hag.required_final_warning);
+    lines.push('  Este recibo é evidência local de prévia apenas.');
+    lines.push('  Não cria arquivos.');
+    lines.push('  Não concede autoridade de escrita backend.');
+    lines.push('  Não concede autoridade de execução de comandos.');
+    lines.push('  Não concede autoridade de deploy/release/tag/stable.');
+    lines.push('  Não reivindica PASS GOLD REAL.');
+    if (allDone) {
+      lines.push('');
+      lines.push('  Próximo phase obrigatório:');
+      lines.push('  FRONT-PRODUCT-7 ou comando explícito separado de criação real de arquivos.');
+    }
+    lines.push('');
+    lines.push('═══════════════════════════════════════════════════════════════');
+    return lines.join('\n');
+  }
+
+  function renderHumanApprovalReceipt() {
+    var receipt = buildHumanApprovalReceipt();
+    humanApprovalState.generatedReceipt = receipt;
+    var output = document.getElementById('vcHumanReceiptOutput');
+    if (!output) { return; }
+    output.value = receipt;
+    output.className = 'vc-human-receipt-output' + (receipt ? '' : ' empty');
+    _updateHumanGateProgress();
+  }
+
+  function copyHumanApprovalReceipt() {
+    var text     = humanApprovalState.generatedReceipt;
+    var statusEl = document.getElementById('vcHumanCopyStatus');
+    if (!text) {
+      if (statusEl) {
+        statusEl.textContent  = '⚠ Gere o recibo primeiro.';
+        statusEl.className    = 'vc-human-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-human-copy-status'; }, 2500);
+      }
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        if (statusEl) {
+          statusEl.textContent = '✓ Copiado!';
+          statusEl.className   = 'vc-human-copy-status visible';
+          setTimeout(function () { statusEl.className = 'vc-human-copy-status'; }, 2500);
+        }
+      }).catch(function () {
+        if (statusEl) {
+          statusEl.textContent = 'Selecione e copie manualmente.';
+          statusEl.className   = 'vc-human-copy-status visible error';
+          setTimeout(function () { statusEl.className = 'vc-human-copy-status'; }, 3000);
+        }
+      });
+    } else {
+      if (statusEl) {
+        statusEl.textContent = 'Selecione e copie manualmente.';
+        statusEl.className   = 'vc-human-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-human-copy-status'; }, 3000);
+      }
+    }
+  }
+
+  function clearHumanApprovalReceipt() {
+    humanApprovalState.generatedReceipt = '';
+    var output = document.getElementById('vcHumanReceiptOutput');
+    if (output) {
+      output.value     = 'Clique em GERAR RECIBO LOCAL para gerar o recibo.';
+      output.className = 'vc-human-receipt-output empty';
+    }
+    var statusEl = document.getElementById('vcHumanCopyStatus');
+    if (statusEl) { statusEl.className = 'vc-human-copy-status'; }
+  }
+
+  function renderHumanApprovalChecklist() {
+    var hag = getHumanApprovalGateRegistry();
+    var container = document.getElementById('vcHumanAckChecklist');
+    if (!hag || !container) { return; }
+    /* Rebuild checklist DOM */
+    container.innerHTML = '';
+    hag.required_acknowledgements.forEach(function (ack) {
+      var item = document.createElement('div');
+      var isChecked = !!humanApprovalState.checked[ack.id];
+      item.className = 'vc-human-ack-item' + (isChecked ? ' checked' : '');
+      item.setAttribute('role', 'checkbox');
+      item.setAttribute('aria-checked', isChecked ? 'true' : 'false');
+      item.setAttribute('tabindex', '0');
+      item.setAttribute('data-ack-id', ack.id);
+
+      var box = document.createElement('span');
+      box.className   = 'vc-human-ack-box';
+      box.textContent = isChecked ? '✓' : '';
+
+      var textEl = document.createElement('span');
+      textEl.className   = 'vc-human-ack-text';
+      textEl.textContent = ack.text;
+
+      item.appendChild(box);
+      item.appendChild(textEl);
+      item.addEventListener('click', function () { toggleHumanAcknowledgement(ack.id); });
+      item.addEventListener('keydown', function (e) {
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleHumanAcknowledgement(ack.id); }
+      });
+      container.appendChild(item);
+    });
+  }
+
+  function renderHumanApprovalSummary() {
+    var ctx = getHumanApprovalContext();
+    var map = {
+      vcHagSrcType:     ctx.type,
+      vcHagSrcTemplate: ctx.template,
+      vcHagSrcStack:    ctx.stack,
+      vcHagSrcSize:     ctx.size,
+      vcHagSrcAgents:   ctx.agentCount + ' agente(s)',
+      vcHagFolderCount: ctx.folderCount + ' pasta(s)',
+      vcHagFileCount:   ctx.fileCount  + ' arquivo(s)'
+    };
+    Object.keys(map).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) { el.textContent = map[id]; }
+    });
+  }
+
+  function initHumanApprovalGate() {
+    var hag = getHumanApprovalGateRegistry();
+    if (!hag) { return; }
+
+    renderHumanApprovalChecklist();
+    renderHumanApprovalSummary();
+    _updateHumanGateProgress();
+
+    /* Wire buttons */
+    var genBtn = document.getElementById('vcGenerateReceiptBtn');
+    if (genBtn) {
+      genBtn.addEventListener('click', function () {
+        renderHumanApprovalSummary();
+        renderHumanApprovalReceipt();
+        var allDone = areAllHumanAcknowledgementsChecked();
+        genBtn.textContent    = allDone ? '✓ RECIBO LOCAL PRONTO' : '✓ RECIBO GERADO — INCOMPLETO';
+        genBtn.style.borderColor = allDone ? 'rgba(34,197,94,.65)' : 'rgba(251,146,60,.65)';
+        genBtn.style.color       = allDone ? '#22c55e'             : '#fb923c';
+      });
+    }
+
+    var copyBtn = document.getElementById('vcCopyReceiptBtn');
+    if (copyBtn) { copyBtn.addEventListener('click', copyHumanApprovalReceipt); }
+
+    var clearBtn = document.getElementById('vcClearReceiptBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        clearHumanApprovalReceipt();
+        if (genBtn) {
+          genBtn.textContent       = '⬡ GERAR RECIBO LOCAL';
+          genBtn.style.borderColor = '';
+          genBtn.style.color       = '';
+        }
+      });
+    }
+
+    var resetBtn = document.getElementById('vcResetAckBtn');
+    if (resetBtn) { resetBtn.addEventListener('click', resetHumanApprovalChecklist); }
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       init();
@@ -2229,6 +2563,7 @@
       initMissionComposer();
       initWorkerHandoff();
       initProjectExportPreview();
+      initHumanApprovalGate();
     });
   } else {
     init();
@@ -2238,5 +2573,6 @@
     initMissionComposer();
     initWorkerHandoff();
     initProjectExportPreview();
+    initHumanApprovalGate();
   }
 })();
