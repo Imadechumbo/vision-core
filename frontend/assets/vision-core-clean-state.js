@@ -1057,6 +1057,103 @@ window.VISION_CORE_PROJECT_BUILDER = Object.freeze({
 
     required_final_warning:
       'This local approval gate does not create files and does not grant execution authority.'
+  }),
+
+  /* ── Real File Command Package ──────────────────────────────── */
+  /* Local-only. No file creation. No write. No download. No API. */
+  real_file_command_package: Object.freeze({
+    command_package_version: 'FRONT-PRODUCT-7',
+
+    authority_state: Object.freeze({
+      external_worker_required:     true,
+      human_approval_required:      true,
+      command_package_ready:        false,
+      file_creation_allowed:        false,
+      real_file_creation_enabled:   false,
+      frontend_file_write_allowed:  false,
+      backend_write_allowed:        false,
+      command_execution_allowed:    false,
+      download_allowed:             false,
+      export_allowed:               false,
+      deploy_allowed:               false,
+      release_allowed:              false,
+      tag_allowed:                  false,
+      stable_promotion_allowed:     false,
+      production_touched:           false,
+      pass_gold_real_claimed:       false
+    }),
+
+    package_modes: Object.freeze([
+      { id: 'full_real_file_creation_package',        label: 'Full Real File Creation Package' },
+      { id: 'claude_code_file_creation_task',         label: 'Claude Code File Creation Task' },
+      { id: 'manual_operator_file_creation_checklist',label: 'Manual Operator File Creation Checklist' },
+      { id: 'safety_first_dry_run_package',           label: 'Safety-First Dry Run Package' },
+      { id: 'validation_only_package',                label: 'Validation-Only Package' }
+    ]),
+
+    required_inputs: Object.freeze([
+      'selected_project_type',
+      'selected_template',
+      'selected_stack',
+      'export_preview',
+      'human_approval_receipt',
+      'acknowledgement_status',
+      'locked_capabilities',
+      'final_safety_boundary'
+    ]),
+
+    external_worker_profiles: Object.freeze([
+      {
+        id:               'claude_code',
+        label:            'Claude Code',
+        role:             'external local coding worker',
+        instruction_style:'precise file creation task with strict scope and validation'
+      },
+      {
+        id:               'manual_operator',
+        label:            'Manual Operator',
+        role:             'human operator',
+        instruction_style:'step-by-step checklist with manual command execution'
+      },
+      {
+        id:               'generic_worker',
+        label:            'Generic Worker',
+        role:             'external worker',
+        instruction_style:'neutral creation brief with strict non-deployment boundary'
+      }
+    ]),
+
+    command_safety_rules: Object.freeze([
+      'frontend does not create files',
+      'frontend does not write files',
+      'frontend does not execute commands',
+      'frontend does not call backend',
+      'frontend does not call API',
+      'frontend does not download or export files',
+      'real file creation requires separate external execution',
+      'deploy/release/tag/stable remain blocked',
+      'production remains untouched',
+      'PASS GOLD REAL is not claimed'
+    ]),
+
+    explicit_non_authority_statement:
+      'This command package is not execution authority. It is copy-ready planning text only. Real file creation must be performed by a separate explicitly authorized worker or human operator.',
+
+    final_report_contract: Object.freeze([
+      'branch used',
+      'files created',
+      'files modified',
+      'files skipped',
+      'commands run manually',
+      'syntax checks',
+      'forbidden scan result',
+      'scope confirmation',
+      'no backend/go-core/tools/package.json unless explicitly authorized',
+      'PASS GOLD REAL claimed yes/no',
+      'stable/release/deploy/tag blocked yes/no',
+      'production touched yes/no',
+      'final human review required yes/no'
+    ])
   })
 });
 

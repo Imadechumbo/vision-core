@@ -1,0 +1,358 @@
+/* ================================================================
+   VISION CORE V2.9.10
+   vc-real-file-command.css
+   Real File Creation Command Package — local UI only
+   No file creation. No write. No download. No export. No API.
+   ================================================================ */
+
+/* ── Section wrapper ─────────────────────────────────────────── */
+.vc-real-file-command {
+  margin-top: 4px;
+}
+
+/* ── Headline ────────────────────────────────────────────────── */
+.vc-real-command-headline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vc-real-command-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(34,211,238,.07);
+  border: 1px solid rgba(34,211,238,.32);
+  color: #22d3ee;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* ── Mode selector ───────────────────────────────────────────── */
+.vc-real-command-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.vc-real-command-mode-chip {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: 4px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: transparent;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+}
+
+.vc-real-command-mode-chip:hover {
+  border-color: rgba(168,85,247,.35);
+  color: #94a3b8;
+}
+
+.vc-real-command-mode-chip.selected {
+  border-color: rgba(168,85,247,.65);
+  color: #a855f7;
+  background: rgba(168,85,247,.08);
+}
+
+/* ── Worker selector ─────────────────────────────────────────── */
+.vc-real-command-worker-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.vc-real-command-worker-chip {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: transparent;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+  text-transform: uppercase;
+}
+
+.vc-real-command-worker-chip:hover {
+  border-color: rgba(34,211,238,.40);
+  color: #22d3ee;
+}
+
+.vc-real-command-worker-chip.selected {
+  border-color: rgba(34,211,238,.72);
+  color: #22d3ee;
+  background: rgba(34,211,238,.08);
+  box-shadow: 0 0 10px rgba(34,211,238,.08);
+}
+
+/* ── Authority grid ──────────────────────────────────────────── */
+.vc-real-authority-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 600px) { .vc-real-authority-grid { grid-template-columns: 1fr; } }
+
+.vc-real-authority-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+}
+
+.vc-real-authority-card.locked {
+  border-color: rgba(239,68,68,.22);
+  background: rgba(239,68,68,.04);
+}
+
+.vc-real-authority-card.required {
+  border-color: rgba(251,146,60,.22);
+  background: rgba(251,146,60,.04);
+}
+
+.vc-real-authority-card.external {
+  border-color: rgba(34,211,238,.20);
+  background: rgba(34,211,238,.03);
+}
+
+.vc-real-authority-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.vc-real-authority-card.locked   .vc-real-authority-icon { color: #ef4444; }
+.vc-real-authority-card.required .vc-real-authority-icon { color: #fb923c; }
+.vc-real-authority-card.external .vc-real-authority-icon { color: #22d3ee; }
+
+.vc-real-authority-text { flex: 1; }
+
+.vc-real-authority-name {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: #4b5563;
+  text-transform: uppercase;
+}
+
+.vc-real-authority-val {
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.vc-real-authority-card.locked   .vc-real-authority-val { color: #fca5a5; }
+.vc-real-authority-card.required .vc-real-authority-val { color: #fb923c; }
+.vc-real-authority-card.external .vc-real-authority-val { color: #22d3ee; }
+
+/* ── Readiness grid ──────────────────────────────────────────── */
+.vc-real-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 800px) { .vc-real-readiness-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .vc-real-readiness-grid { grid-template-columns: 1fr; } }
+
+.vc-real-readiness-card {
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+}
+
+.vc-real-readiness-card.ready {
+  border-color: rgba(34,197,94,.25);
+  background: rgba(34,197,94,.04);
+}
+
+.vc-real-readiness-card.blocked {
+  border-color: rgba(251,146,60,.22);
+  background: rgba(251,146,60,.04);
+}
+
+.vc-real-readiness-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  color: #374151;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.vc-real-readiness-val {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.vc-real-readiness-card.ready   .vc-real-readiness-val { color: #22c55e; }
+.vc-real-readiness-card.blocked .vc-real-readiness-val { color: #fb923c; }
+.vc-real-readiness-card:not(.ready):not(.blocked) .vc-real-readiness-val { color: #4b5563; }
+
+/* ── Command output panel ────────────────────────────────────── */
+.vc-real-command-output-panel {
+  background: rgba(8,6,20,.92);
+  border: 1px solid rgba(34,211,238,.15);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-top: 4px;
+}
+
+.vc-real-command-output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.vc-real-command-output-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  color: #22d3ee;
+  text-transform: uppercase;
+}
+
+.vc-real-command-metric {
+  font-size: 9px;
+  color: #4b5563;
+  letter-spacing: .05em;
+}
+
+.vc-real-command-metric span {
+  color: #22d3ee;
+  font-weight: 700;
+}
+
+.vc-external-only-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: rgba(34,211,238,.06);
+  border: 1px solid rgba(34,211,238,.28);
+  color: #22d3ee;
+  text-transform: uppercase;
+}
+
+.vc-real-command-output {
+  width: 100%;
+  min-height: 240px;
+  max-height: 500px;
+  background: rgba(4,4,12,.90);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  line-height: 1.65;
+  padding: 12px 14px;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  letter-spacing: .01em;
+  white-space: pre;
+  overflow: auto;
+}
+
+.vc-real-command-output:read-only { cursor: default; }
+
+.vc-real-command-output.empty {
+  color: #374151;
+  font-style: italic;
+}
+
+/* ── Action buttons ──────────────────────────────────────────── */
+.vc-real-command-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.vc-real-command-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: 1px solid rgba(34,211,238,.45);
+  background: rgba(34,211,238,.07);
+  color: #22d3ee;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .17s;
+  user-select: none;
+}
+
+.vc-real-command-btn:hover {
+  background: rgba(34,211,238,.14);
+  border-color: rgba(34,211,238,.70);
+  box-shadow: 0 0 16px rgba(34,211,238,.10);
+}
+
+.vc-real-command-btn:active { transform: scale(.97); }
+
+.vc-real-command-btn.secondary {
+  border-color: rgba(168,85,247,.40);
+  background: rgba(168,85,247,.06);
+  color: #c084fc;
+}
+
+.vc-real-command-btn.secondary:hover {
+  background: rgba(168,85,247,.12);
+  border-color: rgba(168,85,247,.68);
+}
+
+.vc-real-command-btn.danger {
+  border-color: rgba(239,68,68,.28);
+  background: transparent;
+  color: #4b5563;
+}
+
+.vc-real-command-btn.danger:hover {
+  border-color: rgba(239,68,68,.50);
+  color: #fca5a5;
+}
+
+/* ── Copy status ─────────────────────────────────────────────── */
+.vc-real-command-copy-status {
+  font-size: 10px;
+  color: #22c55e;
+  letter-spacing: .05em;
+  display: none;
+}
+
+.vc-real-command-copy-status.visible { display: inline; }
+.vc-real-command-copy-status.error   { color: #fca5a5; }
