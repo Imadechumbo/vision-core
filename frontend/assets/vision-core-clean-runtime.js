@@ -1367,6 +1367,551 @@
     }
   }
 
+  /* ── Worker Handoff Packages — local UI only ────────────────── */
+  /* No API. No fetch. No file creation. No download. No export.  */
+  /* No localStorage. No sessionStorage. In-memory state only.    */
+
+  var handoffState = {
+    selectedType:     'full_package',
+    selectedTarget:   'claude_code',
+    generatedPackage: ''
+  };
+
+  function getWorkerHandoffRegistry() {
+    var reg = getPBRegistry();
+    return (reg && reg.worker_handoff) ? reg.worker_handoff : null;
+  }
+
+  function setHandoffType(typeId) {
+    handoffState.selectedType = typeId;
+    document.querySelectorAll('.vc-handoff-type-chip').forEach(function (c) {
+      c.classList.toggle('selected', c.getAttribute('data-handoff-type') === typeId);
+    });
+  }
+
+  function setHandoffTarget(targetId) {
+    handoffState.selectedTarget = targetId;
+    document.querySelectorAll('.vc-handoff-target-chip').forEach(function (c) {
+      c.classList.toggle('selected', c.getAttribute('data-handoff-target') === targetId);
+    });
+  }
+
+  function getCurrentMissionPromptForHandoff() {
+    /* Reuse in-memory generated prompt if available, otherwise build fresh */
+    if (mcState && mcState.generatedPrompt) { return mcState.generatedPrompt; }
+    return buildMissionPrompt();
+  }
+
+  /* ─── Package builders ─────────────────────────────────────── */
+
+  function hr4(ch, len) { return new Array((len || 72) + 1).join(ch || '─'); }
+
+  function buildFullPackage(ctx, tpl, agts, stack, wh) {
+    var lines = [];
+    lines.push(hr4('═'));
+    lines.push('  FULL WORKER PACKAGE — ' + (tpl ? tpl.name.toUpperCase() : 'CUSTOM PROJECT'));
+    lines.push(hr4('─'));
+    lines.push('  Target Worker   : ' + handoffState.selectedTarget.replace(/_/g, ' ').toUpperCase());
+    lines.push('  Project Type    : ' + (ctx.projectType ? ctx.projectType.label : '(not selected)'));
+    lines.push('  Template        : ' + (tpl ? tpl.name : '(none)'));
+    lines.push('  Stack           : ' + (stack.length ? stack.join(', ') : '(none)'));
+    lines.push('  Risk/Size       : ' + (ctx.projectSize ? ctx.projectSize.label + ' — ' + ctx.projectSize.mode_hint : '(not selected)'));
+    lines.push(hr4('═'));
+    lines.push('');
+
+    lines.push(hr4('─'));
+    lines.push('  ACTIVE AGENTS');
+    lines.push(hr4('─'));
+    var allActive = agts.on.concat(agts.auto);
+    if (allActive.length) {
+      allActive.forEach(function (a) {
+        lines.push('  • ' + a.name + ' [' + a.type + '] — ' + a.method + ' — ' + a.description);
+      });
+    } else {
+      lines.push('  (none — select a project type to activate agents)');
+    }
+    lines.push('');
+
+    lines.push(hr4('─'));
+    lines.push('  MISSION PROMPT');
+    lines.push(hr4('─'));
+    lines.push(getCurrentMissionPromptForHandoff());
+    lines.push('');
+
+    lines.push(hr4('─'));
+    lines.push('  SAFETY RULES');
+    lines.push(hr4('─'));
+    if (wh) { wh.handoff_safety_rules.forEach(function (r) { lines.push('  ✗ ' + r); }); }
+    lines.push('');
+
+    lines.push(hr4('─'));
+    lines.push('  FINAL REPORT CONTRACT (Worker Must Provide)');
+    lines.push(hr4('─'));
+    if (wh) { wh.final_report_contract.forEach(function (r) { lines.push('  □ ' + r); }); }
+    return lines;
+  }
+
+  function buildClaudeCodePackage(ctx, tpl, agts, stack, wh) {
+    var lines = [];
+    lines.push(hr4('═'));
+    lines.push('  CLAUDE CODE PACKAGE');
+    lines.push(hr4('─'));
+    lines.push('  Repo     : C:\\Users\\imadechumbo\\Desktop\\vision-core');
+    lines.push('  Branch   : [create branch: feat/<your-feature-name>]');
+    lines.push('  Type     : ' + (ctx.projectType ? ctx.projectType.label : '(not selected)'));
+    lines.push('  Template : ' + (tpl ? tpl.name : '(none)'));
+    lines.push('  Stack    : ' + (stack.length ? stack.join(', ') : '(none)'));
+    lines.push(hr4('═'));
+    lines.push('');
+
+    lines.push('SCOPE RULES');
+    lines.push(hr4('─'));
+    lines.push('Allowed paths (from template):');
+    if (tpl) {
+      tpl.folder_structure.forEach(function (f) { lines.push('  + ' + f); });
+    } else {
+      lines.push('  (no template selected — define scope manually)');
+    }
+    lines.push('');
+    lines.push('Forbidden paths (unless explicitly authorized):');
+    lines.push('  ✗ backend/*');
+    lines.push('  ✗ go-core/*');
+    lines.push('  ✗ tools/*');
+    lines.push('  ✗ package.json');
+    lines.push('');
+
+    if (tpl) {
+      lines.push('INITIAL FILES TO CREATE/EDIT:');
+      lines.push(hr4('─'));
+      tpl.initial_files.forEach(function (f) { lines.push('  ' + f); });
+      lines.push('');
+    }
+
+    lines.push('ACTIVE AGENTS:');
+    lines.push(hr4('─'));
+    var allActive = agts.on.concat(agts.auto);
+    allActive.forEach(function (a) {
+      lines.push('  • ' + a.name + ' — ' + a.prompt_title);
+    });
+    lines.push('');
+
+    if (tpl) {
+      lines.push('PROMPT SEQUENCE:');
+      lines.push(hr4('─'));
+      tpl.prompt_sequence.forEach(function (p) { lines.push('  ' + p); });
+      lines.push('');
+      lines.push('VALIDATION CHECKLIST:');
+      lines.push(hr4('─'));
+      tpl.validation_checklist.forEach(function (c, i) { lines.push('  ' + (i + 1) + '. ' + c); });
+      lines.push('');
+    }
+
+    lines.push('VALIDATION COMMANDS (display only — do not auto-execute):');
+    lines.push(hr4('─'));
+    lines.push('node --check frontend\\assets\\vision-core-clean-state.js');
+    lines.push('node --check frontend\\assets\\vision-core-clean-runtime.js');
+    lines.push('');
+
+    lines.push('FINAL RULES:');
+    lines.push(hr4('─'));
+    lines.push('  ✗ Do not push unless explicitly requested.');
+    lines.push('  ✗ Do not open PR unless explicitly requested.');
+    lines.push('  ✗ Do not deploy, release, tag, stable promote, or touch production.');
+    lines.push('  ✗ Do not claim PASS GOLD REAL.');
+    lines.push('');
+
+    lines.push('FINAL REPORT CONTRACT:');
+    lines.push(hr4('─'));
+    if (wh) { wh.final_report_contract.forEach(function (r) { lines.push('  □ ' + r); }); }
+    return lines;
+  }
+
+  function buildCodexPackage(ctx, tpl, agts, stack) {
+    var lines = [];
+    lines.push(hr4('═'));
+    lines.push('  CODEX PACKAGE');
+    lines.push(hr4('─'));
+    lines.push('  Task     : ' + (tpl ? tpl.summary : 'Custom project — define task below.'));
+    lines.push('  Template : ' + (tpl ? tpl.name : '(none)'));
+    lines.push('  Stack    : ' + (stack.length ? stack.join(', ') : '(none)'));
+    lines.push(hr4('═'));
+    lines.push('');
+
+    if (tpl) {
+      lines.push('FILES AND FOLDERS:');
+      lines.push(hr4('─'));
+      lines.push('Folder structure:');
+      tpl.folder_structure.forEach(function (f) { lines.push('  ' + f); });
+      lines.push('');
+      lines.push('Initial files:');
+      tpl.initial_files.forEach(function (f) { lines.push('  ' + f); });
+      lines.push('');
+    }
+
+    lines.push('CONSTRAINTS:');
+    lines.push(hr4('─'));
+    lines.push('  • No execution beyond requested code reasoning.');
+    lines.push('  • No network calls.');
+    lines.push('  • No file writes unless explicitly requested.');
+    lines.push('  • No deployment, release, or production access.');
+    lines.push('  • No PASS GOLD REAL claim.');
+    lines.push('');
+
+    if (tpl) {
+      lines.push('VALIDATION CHECKLIST:');
+      lines.push(hr4('─'));
+      tpl.validation_checklist.forEach(function (c, i) { lines.push('  ' + (i + 1) + '. ' + c); });
+      lines.push('');
+
+      lines.push('EXPECTED OUTPUT:');
+      lines.push(hr4('─'));
+      lines.push('  • Next safe action: ' + tpl.next_safe_action);
+      lines.push('  • Code/plan for: ' + tpl.folder_structure.slice(0, 3).join(', '));
+    }
+    return lines;
+  }
+
+  function buildManualOperatorChecklist(ctx, tpl, agts, stack, wh) {
+    var lines = [];
+    lines.push(hr4('═'));
+    lines.push('  MANUAL OPERATOR CHECKLIST');
+    lines.push(hr4('─'));
+    lines.push('  Project  : ' + (ctx.projectType ? ctx.projectType.label : '(not selected)'));
+    lines.push('  Template : ' + (tpl ? tpl.name : '(none)'));
+    lines.push(hr4('═'));
+    lines.push('');
+
+    lines.push('PRE-FLIGHT STEPS:');
+    lines.push(hr4('─'));
+    lines.push('  [ ] git checkout main');
+    lines.push('  [ ] git pull origin main');
+    lines.push('  [ ] git status (confirm clean)');
+    lines.push('  [ ] git checkout -b feat/<your-branch-name>');
+    lines.push('');
+
+    if (tpl) {
+      lines.push('TEMPLATE CHECKLIST:');
+      lines.push(hr4('─'));
+      tpl.validation_checklist.forEach(function (c, i) {
+        lines.push('  [ ] ' + (i + 1) + '. ' + c);
+      });
+      lines.push('');
+
+      lines.push('RISK WARNINGS:');
+      lines.push(hr4('─'));
+      tpl.risk_warnings.forEach(function (r) { lines.push('  ⚠ ' + r); });
+      lines.push('');
+    }
+
+    lines.push('VALIDATION COMMANDS (run manually):');
+    lines.push(hr4('─'));
+    lines.push('  node --check frontend\\assets\\vision-core-clean-state.js');
+    lines.push('  node --check frontend\\assets\\vision-core-clean-runtime.js');
+    lines.push('  git diff --name-only');
+    lines.push('  git log -5 --oneline');
+    lines.push('');
+
+    lines.push('DECISION BOUNDARY:');
+    lines.push(hr4('─'));
+    lines.push('  Do NOT deploy, release, tag, or promote stable without explicit human GO.');
+    lines.push('  Do NOT claim PASS GOLD REAL.');
+    lines.push('  Do NOT touch production.');
+    lines.push('');
+
+    lines.push('FINAL REPORT CONTRACT:');
+    lines.push(hr4('─'));
+    if (wh) { wh.final_report_contract.forEach(function (r) { lines.push('  [ ] ' + r); }); }
+    return lines;
+  }
+
+  function buildPerAgentPromptPack(ctx, tpl, agts) {
+    var lines = [];
+    lines.push(hr4('═'));
+    lines.push('  PER-AGENT PROMPT PACK');
+    lines.push('  Project: ' + (ctx.projectType ? ctx.projectType.label : '(not selected)'));
+    lines.push(hr4('═'));
+    lines.push('');
+
+    var allActive = agts.on.concat(agts.auto);
+    if (!allActive.length) {
+      lines.push('(No agents active. Select a project type to activate agents.)');
+      return lines;
+    }
+
+    allActive.forEach(function (a) {
+      lines.push(hr4('─'));
+      lines.push('  AGENT: ' + a.name.toUpperCase() + ' [' + a.type + ']');
+      lines.push(hr4('─'));
+      lines.push('  Method         : ' + a.method);
+      lines.push('  Prompt Title   : ' + a.prompt_title);
+      lines.push('  Responsibility : ' + a.description);
+      if (tpl) {
+        lines.push('  Project Relevance:');
+        var seq = tpl.prompt_sequence.filter(function (s) {
+          return s.toLowerCase().indexOf(a.name.split(' ').pop().toLowerCase()) !== -1 ||
+                 s.toLowerCase().indexOf(a.type.toLowerCase()) !== -1;
+        });
+        if (seq.length) {
+          seq.forEach(function (s) { lines.push('    ' + s); });
+        } else {
+          lines.push('    Support role for this template.');
+        }
+      }
+      lines.push('');
+      lines.push('  SYSTEM PROMPT:');
+      lines.push('  ' + a.default_prompt);
+      lines.push('');
+      lines.push('  Expected Output:');
+      lines.push('    Diagnostic, proposed plan, files to check, validation steps.');
+      lines.push('    No deploy, no release, no production touch.');
+      lines.push('');
+      lines.push('  Prohibitions:');
+      a.prohibitions.forEach(function (p) { lines.push('    ✗ ' + p); });
+      lines.push('');
+    });
+
+    return lines;
+  }
+
+  function buildSafetyReviewPack(ctx, tpl, wh) {
+    var reg = getPBRegistry();
+    var lines = [];
+    lines.push(hr4('═'));
+    lines.push('  SAFETY REVIEW PACK');
+    lines.push('  Project: ' + (ctx.projectType ? ctx.projectType.label : '(not selected)'));
+    lines.push(hr4('═'));
+    lines.push('');
+
+    if (tpl && tpl.risk_warnings.length) {
+      lines.push('TEMPLATE RISK WARNINGS:');
+      lines.push(hr4('─'));
+      tpl.risk_warnings.forEach(function (r) { lines.push('  ⚠ ' + r); });
+      lines.push('');
+    }
+
+    lines.push('GLOBAL SAFETY GATES:');
+    lines.push(hr4('─'));
+    if (reg) { reg.safety_gates.forEach(function (g) { lines.push('  ✗ ' + g); }); }
+    lines.push('');
+
+    if (tpl && tpl.forbidden_actions.length) {
+      lines.push('TEMPLATE FORBIDDEN ACTIONS:');
+      lines.push(hr4('─'));
+      tpl.forbidden_actions.forEach(function (f) { lines.push('  ✗ ' + f); });
+      lines.push('');
+    }
+
+    lines.push('HANDOFF SAFETY RULES:');
+    lines.push(hr4('─'));
+    if (wh) { wh.handoff_safety_rules.forEach(function (r) { lines.push('  ✗ ' + r); }); }
+    lines.push('');
+
+    lines.push('HUMAN APPROVAL BOUNDARY:');
+    lines.push(hr4('─'));
+    lines.push('  Any real execution, file creation, release, deploy, tag, stable promotion,');
+    lines.push('  production touch, PASS GOLD REAL claim, secrets access, network action,');
+    lines.push('  or external side effect REQUIRES EXPLICIT HUMAN APPROVAL.');
+    lines.push('');
+    lines.push('  ✗ No PASS GOLD REAL claim.');
+    lines.push('  ✗ No production touch.');
+    lines.push('  ✗ No automatic execution from this frontend.');
+    return lines;
+  }
+
+  function buildValidationPack(ctx, tpl, wh) {
+    var lines = [];
+    lines.push(hr4('═'));
+    lines.push('  VALIDATION PACK');
+    lines.push('  Project: ' + (ctx.projectType ? ctx.projectType.label : '(not selected)'));
+    lines.push(hr4('═'));
+    lines.push('');
+
+    if (tpl) {
+      lines.push('TEMPLATE VALIDATION CHECKLIST:');
+      lines.push(hr4('─'));
+      tpl.validation_checklist.forEach(function (c, i) { lines.push('  ' + (i + 1) + '. ✓ ' + c); });
+      lines.push('');
+    }
+
+    lines.push('GENERIC SAFETY VALIDATION:');
+    lines.push(hr4('─'));
+    lines.push('  1. ✓ Revisar arquivos-alvo antes de qualquer modificação.');
+    lines.push('  2. ✓ Executar testes locais após cada patch.');
+    lines.push('  3. ✓ Confirmar que nenhum arquivo de produção foi tocado.');
+    lines.push('  4. ✓ Verificar evidências de cada agente antes de avançar.');
+    lines.push('  5. ✓ Obter aprovação humana antes de qualquer release, tag ou deploy.');
+    lines.push('');
+
+    lines.push('VALIDATION COMMANDS (display only — run manually):');
+    lines.push(hr4('─'));
+    lines.push('  node --check frontend\\assets\\vision-core-clean-state.js');
+    lines.push('  node --check frontend\\assets\\vision-core-clean-runtime.js');
+    lines.push('  git diff --name-only');
+    lines.push('  git status --short');
+    lines.push('');
+
+    lines.push('SCOPE CHECK:');
+    lines.push(hr4('─'));
+    lines.push('  Expected changed files (frontend only):');
+    lines.push('  frontend/index.html');
+    lines.push('  frontend/assets/*.js');
+    lines.push('  frontend/assets/*.css');
+    lines.push('  No backend/go-core/tools/package.json changes.');
+    lines.push('');
+
+    lines.push('FINAL REPORT CHECKLIST:');
+    lines.push(hr4('─'));
+    if (wh) { wh.final_report_contract.forEach(function (r) { lines.push('  □ ' + r); }); }
+    return lines;
+  }
+
+  function buildWorkerHandoffPackage() {
+    var wh   = getWorkerHandoffRegistry();
+    var tpl  = getSelectedTemplate();
+    var ctx  = getSelectedProjectContext();
+    var agts = getSelectedAgentsForMission();
+    var stack = getSelectedStackForMission();
+    var type  = handoffState.selectedType;
+
+    var lines = [];
+
+    if (type === 'full_package') {
+      lines = buildFullPackage(ctx, tpl, agts, stack, wh);
+    } else if (type === 'claude_code_pkg') {
+      lines = buildClaudeCodePackage(ctx, tpl, agts, stack, wh);
+    } else if (type === 'codex_pkg') {
+      lines = buildCodexPackage(ctx, tpl, agts, stack);
+    } else if (type === 'manual_checklist') {
+      lines = buildManualOperatorChecklist(ctx, tpl, agts, stack, wh);
+    } else if (type === 'per_agent_pack') {
+      lines = buildPerAgentPromptPack(ctx, tpl, agts);
+    } else if (type === 'safety_review_pack') {
+      lines = buildSafetyReviewPack(ctx, tpl, wh);
+    } else if (type === 'validation_pack') {
+      lines = buildValidationPack(ctx, tpl, wh);
+    }
+
+    handoffState.generatedPackage = lines.join('\n');
+
+    var lineEl = document.getElementById('vcHandoffLineCount');
+    if (lineEl) { lineEl.textContent = lines.length; }
+
+    return handoffState.generatedPackage;
+  }
+
+  function renderWorkerHandoffPackage() {
+    var output = document.getElementById('vcHandoffOutput');
+    if (!output) { return; }
+    var text = buildWorkerHandoffPackage();
+    output.value = text;
+    output.classList.remove('empty');
+  }
+
+  function copyWorkerHandoffPackage() {
+    var statusEl = document.getElementById('vcHandoffCopyStatus');
+    if (!handoffState.generatedPackage) {
+      if (statusEl) {
+        statusEl.textContent = 'Gere o pacote primeiro.';
+        statusEl.className = 'vc-handoff-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-handoff-copy-status'; }, 2800);
+      }
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(handoffState.generatedPackage).then(function () {
+        if (statusEl) {
+          statusEl.textContent = '✓ Copiado!';
+          statusEl.className = 'vc-handoff-copy-status visible';
+          setTimeout(function () { statusEl.className = 'vc-handoff-copy-status'; }, 2800);
+        }
+      }, function () {
+        if (statusEl) {
+          statusEl.textContent = 'Selecione e copie manualmente.';
+          statusEl.className = 'vc-handoff-copy-status visible error';
+          setTimeout(function () { statusEl.className = 'vc-handoff-copy-status'; }, 3500);
+        }
+      });
+    } else {
+      if (statusEl) {
+        statusEl.textContent = 'Selecione e copie manualmente.';
+        statusEl.className = 'vc-handoff-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-handoff-copy-status'; }, 3500);
+      }
+    }
+  }
+
+  function clearWorkerHandoffPackage() {
+    handoffState.generatedPackage = '';
+    var output = document.getElementById('vcHandoffOutput');
+    if (output) {
+      output.value = 'Clique em GERAR PACOTE para compor o pacote de handoff local.';
+      output.classList.add('empty');
+    }
+    var lineEl = document.getElementById('vcHandoffLineCount');
+    if (lineEl) { lineEl.textContent = '0'; }
+    var statusEl = document.getElementById('vcHandoffCopyStatus');
+    if (statusEl) { statusEl.className = 'vc-handoff-copy-status'; }
+  }
+
+  function initWorkerHandoff() {
+    var wh = getWorkerHandoffRegistry();
+    if (!wh) { return; }
+
+    /* Build package type chips */
+    var typeRow = document.getElementById('vcHandoffTypeRow');
+    if (typeRow) {
+      wh.package_types.forEach(function (pt) {
+        var chip = document.createElement('button');
+        chip.className = 'vc-handoff-type-chip' + (pt.id === handoffState.selectedType ? ' selected' : '');
+        chip.setAttribute('data-handoff-type', pt.id);
+        chip.type = 'button';
+        chip.textContent = pt.label;
+        chip.addEventListener('click', function () { setHandoffType(pt.id); });
+        typeRow.appendChild(chip);
+      });
+    }
+
+    /* Build target chips */
+    var targetRow = document.getElementById('vcHandoffTargetRow');
+    if (targetRow) {
+      wh.worker_profiles.forEach(function (wp) {
+        var chip = document.createElement('button');
+        chip.className = 'vc-handoff-target-chip' + (wp.id === handoffState.selectedTarget ? ' selected' : '');
+        chip.setAttribute('data-handoff-target', wp.id);
+        chip.type = 'button';
+        chip.textContent = wp.label;
+        chip.addEventListener('click', function () { setHandoffTarget(wp.id); });
+        targetRow.appendChild(chip);
+      });
+    }
+
+    /* Wire buttons */
+    var genBtn = document.getElementById('vcGenerateHandoffBtn');
+    if (genBtn) {
+      genBtn.addEventListener('click', function () {
+        renderWorkerHandoffPackage();
+        genBtn.textContent = '✓ PACOTE GERADO — LOCAL ONLY';
+        genBtn.style.borderColor = 'rgba(34,197,94,.65)';
+        genBtn.style.color = '#22c55e';
+      });
+    }
+
+    var copyBtn = document.getElementById('vcCopyHandoffBtn');
+    if (copyBtn) { copyBtn.addEventListener('click', copyWorkerHandoffPackage); }
+
+    var clearBtn = document.getElementById('vcClearHandoffBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        clearWorkerHandoffPackage();
+        if (genBtn) {
+          genBtn.textContent = '⬡ GERAR PACOTE';
+          genBtn.style.borderColor = '';
+          genBtn.style.color = '';
+        }
+      });
+    }
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       init();
@@ -1374,6 +1919,7 @@
       initProjectBuilder();
       initTemplatePacks();
       initMissionComposer();
+      initWorkerHandoff();
     });
   } else {
     init();
@@ -1381,5 +1927,6 @@
     initProjectBuilder();
     initTemplatePacks();
     initMissionComposer();
+    initWorkerHandoff();
   }
 })();

@@ -1,0 +1,283 @@
+/* ================================================================
+   VISION CORE V2.9.10
+   vc-worker-handoff.css
+   Worker Handoff Packages — local UI only
+   No API. No fetch. No execution. No file creation. No export.
+   ================================================================ */
+
+/* ── Section wrapper ─────────────────────────────────────────── */
+.vc-worker-handoff {
+  margin-top: 4px;
+}
+
+/* ── Headline ────────────────────────────────────────────────── */
+.vc-handoff-headline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vc-handoff-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(250,204,21,.07);
+  border: 1px solid rgba(250,204,21,.28);
+  color: #facc15;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* ── Config rows ─────────────────────────────────────────────── */
+.vc-handoff-row {
+  margin-bottom: 14px;
+}
+
+/* ── Handoff type chips ──────────────────────────────────────── */
+.vc-handoff-type-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.vc-handoff-type-chip {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: 4px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: transparent;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+}
+
+.vc-handoff-type-chip:hover {
+  border-color: rgba(250,204,21,.35);
+  color: #94a3b8;
+}
+
+.vc-handoff-type-chip.selected {
+  border-color: rgba(250,204,21,.65);
+  color: #facc15;
+  background: rgba(250,204,21,.07);
+}
+
+/* ── Handoff target chips ────────────────────────────────────── */
+.vc-handoff-target-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.vc-handoff-target-chip {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  padding: 5px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: transparent;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+  text-transform: uppercase;
+}
+
+.vc-handoff-target-chip:hover {
+  border-color: rgba(168,85,247,.40);
+  color: #c084fc;
+}
+
+.vc-handoff-target-chip.selected {
+  border-color: rgba(168,85,247,.75);
+  color: #a855f7;
+  background: rgba(168,85,247,.10);
+  box-shadow: 0 0 10px rgba(168,85,247,.08);
+}
+
+/* ── Handoff preview panel ───────────────────────────────────── */
+.vc-handoff-preview-panel {
+  background: rgba(8,6,20,.92);
+  border: 1px solid rgba(250,204,21,.18);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-top: 4px;
+}
+
+.vc-handoff-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.vc-handoff-preview-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  color: #facc15;
+  text-transform: uppercase;
+}
+
+.vc-handoff-metric {
+  font-size: 9px;
+  color: #4b5563;
+  letter-spacing: .05em;
+}
+
+.vc-handoff-metric span {
+  color: #facc15;
+  font-weight: 700;
+}
+
+.vc-manual-handoff-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: rgba(250,204,21,.06);
+  border: 1px solid rgba(250,204,21,.25);
+  color: #facc15;
+  text-transform: uppercase;
+}
+
+.vc-handoff-output {
+  width: 100%;
+  min-height: 200px;
+  max-height: 460px;
+  background: rgba(4,4,12,.90);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  line-height: 1.65;
+  padding: 12px 14px;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  letter-spacing: .01em;
+  white-space: pre;
+  overflow: auto;
+}
+
+.vc-handoff-output:read-only { cursor: default; }
+
+.vc-handoff-output.empty {
+  color: #374151;
+  font-style: italic;
+}
+
+/* ── Per-agent package blocks ────────────────────────────────── */
+.vc-agent-package-block {
+  padding: 10px 12px;
+  margin: 6px 0;
+  border-radius: 8px;
+  border-left: 3px solid rgba(168,85,247,.45);
+  background: rgba(168,85,247,.04);
+  font-size: 11px;
+}
+
+.vc-agent-package-name {
+  font-weight: 800;
+  color: #e2e8f0;
+  font-size: 12px;
+  letter-spacing: .03em;
+  margin-bottom: 4px;
+}
+
+.vc-agent-package-meta {
+  color: #6b7280;
+  font-size: 10px;
+  letter-spacing: .05em;
+  margin-bottom: 6px;
+}
+
+.vc-agent-package-prompt {
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.55;
+  font-family: 'Courier New', monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Action buttons ──────────────────────────────────────────── */
+.vc-handoff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.vc-handoff-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: 1px solid rgba(250,204,21,.45);
+  background: rgba(250,204,21,.07);
+  color: #facc15;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .17s;
+  user-select: none;
+}
+
+.vc-handoff-btn:hover {
+  background: rgba(250,204,21,.13);
+  border-color: rgba(250,204,21,.70);
+  box-shadow: 0 0 16px rgba(250,204,21,.10);
+}
+
+.vc-handoff-btn:active { transform: scale(.97); }
+
+.vc-handoff-btn.secondary {
+  border-color: rgba(34,211,238,.38);
+  background: rgba(34,211,238,.05);
+  color: #22d3ee;
+}
+
+.vc-handoff-btn.secondary:hover {
+  background: rgba(34,211,238,.10);
+  border-color: rgba(34,211,238,.65);
+}
+
+.vc-handoff-btn.danger {
+  border-color: rgba(239,68,68,.28);
+  background: transparent;
+  color: #4b5563;
+}
+
+.vc-handoff-btn.danger:hover {
+  border-color: rgba(239,68,68,.50);
+  color: #fca5a5;
+}
+
+/* ── Copy status ─────────────────────────────────────────────── */
+.vc-handoff-copy-status {
+  font-size: 10px;
+  color: #22c55e;
+  letter-spacing: .05em;
+  display: none;
+}
+
+.vc-handoff-copy-status.visible { display: inline; }
+.vc-handoff-copy-status.error   { color: #fca5a5; }

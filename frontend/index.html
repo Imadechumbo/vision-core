@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="assets/vc-project-builder.css">
 <link rel="stylesheet" href="assets/vc-project-templates.css">
 <link rel="stylesheet" href="assets/vc-mission-composer.css">
+<link rel="stylesheet" href="assets/vc-worker-handoff.css">
 <style>
 /* V2.9.10 CLEAN FRONT — v299 quota/badge inline (no runtime JS needed) */
 .v299-quota-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;font-size:11px;flex-shrink:0;}
@@ -1081,6 +1082,59 @@
         </div>
 
       </div><!-- end vcMissionComposer -->
+
+      <!-- ── Section J — Worker Handoff Packages ────────────────── -->
+      <div class="vc-pb-section vc-worker-handoff" id="vcWorkerHandoff">
+
+        <!-- Headline -->
+        <div class="vc-handoff-headline">
+          <div class="vc-pb-headline-text">
+            <p class="eyebrow">SOFTWARE FACTORY • WORKER HANDOFF • COPY PACKAGES</p>
+            <h2 style="font-size:14px;margin:0 0 4px;">PACOTES DE ENTREGA PARA WORKERS</h2>
+            <p style="font-size:11px;color:#4b5563;margin:0;">Separe o plano de missão em pacotes copiáveis por worker ou agente. Nada é enviado automaticamente; tudo é local e manual.</p>
+          </div>
+          <span class="vc-handoff-badge">MANUAL HANDOFF</span>
+        </div>
+
+        <!-- Handoff type selector -->
+        <div class="vc-handoff-row">
+          <p class="vc-pb-section-label">Tipo de Pacote</p>
+          <div class="vc-handoff-type-row" id="vcHandoffTypeRow"></div>
+        </div>
+
+        <!-- Target selector -->
+        <div class="vc-handoff-row">
+          <p class="vc-pb-section-label">Worker Alvo</p>
+          <div class="vc-handoff-target-row" id="vcHandoffTargetRow"></div>
+        </div>
+
+        <!-- Handoff preview panel -->
+        <div class="vc-handoff-preview-panel" id="vcHandoffPreviewPanel">
+          <div class="vc-handoff-preview-header">
+            <span class="vc-handoff-preview-title">PACOTE DE HANDOFF GERADO</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="vc-handoff-metric" id="vcHandoffMetric"><span id="vcHandoffLineCount">0</span> linhas</span>
+              <span class="vc-manual-handoff-badge">MANUAL HANDOFF</span>
+            </div>
+          </div>
+          <textarea
+            class="vc-handoff-output empty"
+            id="vcHandoffOutput"
+            readonly
+            spellcheck="false"
+            aria-label="Pacote de handoff gerado localmente"
+          >Clique em GERAR PACOTE para compor o pacote de handoff local.</textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="vc-handoff-actions">
+          <button class="vc-handoff-btn" id="vcGenerateHandoffBtn" type="button">⬡ GERAR PACOTE</button>
+          <button class="vc-handoff-btn secondary" id="vcCopyHandoffBtn" type="button">⎘ COPIAR PACOTE</button>
+          <button class="vc-handoff-btn danger" id="vcClearHandoffBtn" type="button">✕ LIMPAR PACOTE</button>
+          <span class="vc-handoff-copy-status" id="vcHandoffCopyStatus">✓ Copiado!</span>
+        </div>
+
+      </div><!-- end vcWorkerHandoff -->
 
     </div><!-- end #projectBuilder -->
 
