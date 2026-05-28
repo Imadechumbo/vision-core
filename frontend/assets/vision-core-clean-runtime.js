@@ -3838,6 +3838,208 @@
     }
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // SOFTWARE FACTORY BUILDER PAGE
+  // Local in-memory view switching. No backend. No API. No exec.
+  // ─────────────────────────────────────────────────────────────
+
+  var SF_MODULES = [
+    { id: 'project_builder',  num: '01', name: 'MONTAR PROJETO DO ZERO',           next: 'Selecione tipo, stack e modo de orquestração.' },
+    { id: 'project_templates',num: '02', name: 'TEMPLATES DE PROJETO',             next: 'Escolha um template base para o projeto.' },
+    { id: 'mission_composer', num: '03', name: 'COMPOSITOR DE MISSÃO',             next: 'Compose a missão e gere o pacote de instrução.' },
+    { id: 'worker_handoff',   num: '04', name: 'PACOTES PARA WORKERS',             next: 'Gere pacote de entrega para o worker externo.' },
+    { id: 'export_preview',   num: '05', name: 'PREVIEW DE CRIAÇÃO',               next: 'Revise a lista de arquivos antes de continuar.' },
+    { id: 'real_file_command',num: '06', name: 'COMANDO PARA CRIAÇÃO REAL',        next: 'Revisão do pacote de comando. Execução bloqueada.' },
+    { id: 'worker_receipt',   num: '07', name: 'RECIBO DO WORKER',                 next: 'Cole o resultado do worker para análise local.' },
+    { id: 'final_dashboard',  num: '08', name: 'PAINEL FINAL DO PRODUTO',          next: 'Gere o relatório final de produto.' },
+    { id: 'saas_api',         num: '09', name: 'SAAS & API ROADMAP',               next: 'Controles SaaS/API bloqueados. Requer autorização.' }
+  ];
+
+  var _sfActiveModule = 'project_builder';
+
+  function showMainCockpitPage() {
+    var sfPage  = document.getElementById('vcSoftwareFactoryPage');
+    var cockpit = document.getElementById('vcCockpitView');
+    if (sfPage)  { sfPage.style.display  = 'none';  sfPage.setAttribute('aria-hidden', 'true'); }
+    if (cockpit) { cockpit.style.display = '';       cockpit.removeAttribute('aria-hidden'); }
+  }
+
+  function showSoftwareFactoryPage() {
+    var sfPage  = document.getElementById('vcSoftwareFactoryPage');
+    var cockpit = document.getElementById('vcCockpitView');
+    if (cockpit) { cockpit.style.display = 'none'; cockpit.setAttribute('aria-hidden', 'true'); }
+    if (sfPage)  {
+      sfPage.style.display = 'flex';
+      sfPage.removeAttribute('aria-hidden');
+      setSoftwareFactoryModule(_sfActiveModule);
+    }
+  }
+
+  function setSoftwareFactoryModule(moduleId) {
+    _sfActiveModule = moduleId;
+
+    // Update module nav buttons
+    var btns = document.querySelectorAll('.vc-sf-module-btn');
+    btns.forEach(function (btn) {
+      var active = btn.dataset.sfModule === moduleId;
+      btn.classList.toggle('active', active);
+    });
+
+    // Show/hide module panels
+    var panels = document.querySelectorAll('.vc-sf-module-panel');
+    panels.forEach(function (p) {
+      var active = p.id === 'vcSfPanel-' + moduleId;
+      p.classList.toggle('active', active);
+    });
+
+    // Update SDDF timeline
+    renderSoftwareFactoryTimelineState(moduleId);
+
+    // Update next action
+    var mod = SF_MODULES.find(function (m) { return m.id === moduleId; });
+    var nextEl = document.getElementById('vcSfNextActionText');
+    if (nextEl && mod) { nextEl.textContent = mod.next; }
+  }
+
+  function renderSoftwareFactoryTimelineState(activeModuleId) {
+    var steps = document.querySelectorAll('#vcSfSddfSteps .vc-sf-sddf-step');
+    var activeIdx = SF_MODULES.findIndex(function (m) { return m.id === activeModuleId; });
+    steps.forEach(function (step, idx) {
+      step.classList.remove('active', 'done');
+      if (idx < activeIdx) step.classList.add('done');
+      else if (idx === activeIdx) step.classList.add('active');
+    });
+  }
+
+  function _sfChatSend(inputId, streamId) {
+    var input  = document.getElementById(inputId);
+    var stream = document.getElementById(streamId);
+    if (!input || !stream) return;
+    var text = (input.value || '').trim();
+    if (!text) return;
+    input.value = '';
+
+    // Remove hint if present
+    var hint = stream.querySelector('.vc-sf-chat-hint');
+    if (hint) hint.remove();
+
+    // User message
+    var uMsg = document.createElement('div');
+    uMsg.className = 'vc-sf-chat-msg user';
+    uMsg.textContent = text;
+    stream.appendChild(uMsg);
+
+    // Local echo — no backend call
+    var bMsg = document.createElement('div');
+    bMsg.className = 'vc-sf-chat-msg';
+    bMsg.textContent = '[LOCAL] Mensagem registrada. Backend não conectado. Use os controles do módulo ativo.';
+    stream.appendChild(bMsg);
+
+    stream.scrollTop = stream.scrollHeight;
+  }
+
+  function initSoftwareFactoryPage() {
+    var sfPage = document.getElementById('vcSoftwareFactoryPage');
+    if (!sfPage) return;
+
+    // Back button
+    var backBtn = document.getElementById('vcSfBackBtn');
+    if (backBtn) {
+      backBtn.addEventListener('click', showMainCockpitPage);
+    }
+
+    // Nav open buttons (cockpit header/sidebar)
+    document.querySelectorAll('[data-open-sf-page]').forEach(function (btn) {
+      btn.addEventListener('click', showSoftwareFactoryPage);
+    });
+
+    // Module nav buttons
+    document.querySelectorAll('.vc-sf-module-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setSoftwareFactoryModule(btn.dataset.sfModule);
+      });
+    });
+
+    // Chat send
+    var sendBtn = document.getElementById('vcSfChatSendBtn');
+    if (sendBtn) {
+      sendBtn.addEventListener('click', function () {
+        _sfChatSend('vcSfChatInput', 'vcSfChatStream');
+      });
+    }
+    var chatInput = document.getElementById('vcSfChatInput');
+    if (chatInput) {
+      chatInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          _sfChatSend('vcSfChatInput', 'vcSfChatStream');
+        }
+      });
+    }
+
+    // Chip group toggles (single-active per group)
+    sfPage.addEventListener('click', function (e) {
+      var chip = e.target.closest('[data-sf-chip-group]');
+      if (!chip) return;
+      var group = chip.dataset.sfChipGroup;
+      sfPage.querySelectorAll('[data-sf-chip-group="' + group + '"]').forEach(function (c) {
+        c.classList.remove('active');
+      });
+      chip.classList.add('active');
+      // Update config display cards
+      var label = chip.textContent.trim();
+      var displayMap = { project_type: 'vcSfConfigType', stack: 'vcSfConfigStack', orch: 'vcSfConfigOrch' };
+      if (displayMap[group]) {
+        var el = document.getElementById(displayMap[group]);
+        if (el) el.textContent = label;
+      }
+    });
+
+    // Module-level generate / copy buttons
+    document.querySelectorAll('[data-sf-generate]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var targetId = btn.dataset.sfGenerate;
+        var output   = document.getElementById(targetId);
+        if (!output) return;
+        var moduleId = btn.closest('.vc-sf-module-panel') &&
+          btn.closest('.vc-sf-module-panel').id.replace('vcSfPanel-', '');
+        var mod = SF_MODULES.find(function (m) { return m.id === moduleId; });
+        var modName = mod ? mod.name : 'MÓDULO';
+        output.value = '── ' + modName + ' ──────────────────────────────────\n' +
+          'Gerado em: ' + new Date().toLocaleString('pt-BR') + '\n' +
+          'Status: LOCAL PREVIEW\n' +
+          'Execução real: BLOQUEADA\n' +
+          'Backend: NÃO CONECTADO\n\n' +
+          '[Use o painel completo no cockpit para configuração detalhada.]';
+        output.classList.remove('empty');
+        btn.textContent = '✓ GERADO';
+        setTimeout(function () { btn.textContent = btn.dataset.sfLabel || '⬡ GERAR'; }, 2400);
+      });
+    });
+
+    document.querySelectorAll('[data-sf-copy]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var sourceId = btn.dataset.sfCopy;
+        var source   = document.getElementById(sourceId);
+        if (!source) return;
+        var text = source.value || source.textContent || '';
+        if (!text || !text.trim()) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () {
+            btn.textContent = '✓ COPIADO';
+            setTimeout(function () { btn.textContent = '⎘ COPIAR'; }, 1800);
+          }).catch(function () {
+            btn.textContent = 'SELECIONE MANUALMENTE';
+            setTimeout(function () { btn.textContent = '⎘ COPIAR'; }, 2200);
+          });
+        }
+      });
+    });
+
+    // Initialize first module
+    setSoftwareFactoryModule(_sfActiveModule);
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       init();
@@ -3851,6 +4053,7 @@
       initRealFileCommandPackage();
       initWorkerResultReceipt();
       initFinalProductDashboard();
+      initSoftwareFactoryPage();
     });
   } else {
     init();
@@ -3864,5 +4067,6 @@
     initRealFileCommandPackage();
     initWorkerResultReceipt();
     initFinalProductDashboard();
+    initSoftwareFactoryPage();
   }
 })();

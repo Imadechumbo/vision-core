@@ -1,0 +1,799 @@
+/* ================================================================
+   VISION CORE V2.9.10
+   vc-software-factory-page.css
+   Software Factory Builder Page — dedicated page view
+   Local UI only. No API. No execution. No file write.
+   ================================================================ */
+
+/* ── Full-page overlay ───────────────────────────────────────── */
+.vc-sf-page {
+  position: fixed;
+  inset: 0;
+  background: #060414;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Page header ─────────────────────────────────────────────── */
+.vc-sf-page-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(139,92,246,.18);
+  background: rgba(8,4,24,.92);
+  flex-shrink: 0;
+}
+
+.vc-sf-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 7px;
+  border: 1px solid rgba(139,92,246,.35);
+  background: rgba(139,92,246,.07);
+  color: #a78bfa;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .15s;
+  flex-shrink: 0;
+  user-select: none;
+}
+.vc-sf-back-btn:hover {
+  background: rgba(139,92,246,.15);
+  border-color: rgba(139,92,246,.60);
+}
+
+.vc-sf-page-identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.vc-sf-eyebrow {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #a78bfa;
+  margin: 0 0 2px;
+  line-height: 1;
+}
+
+.vc-sf-title {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  color: #f3f4f6;
+  margin: 0;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+@media (max-width: 700px) {
+  .vc-sf-title { font-size: 14px; }
+}
+
+.vc-sf-local-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(139,92,246,.07);
+  border: 1px solid rgba(139,92,246,.30);
+  color: #a78bfa;
+  white-space: nowrap;
+}
+
+/* ── Two-pane layout ─────────────────────────────────────────── */
+.vc-sf-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .vc-sf-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    overflow-y: auto;
+  }
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────── */
+.vc-sf-sidebar {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(139,92,246,.12);
+  background: rgba(6,4,20,.70);
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+/* ── Module nav ──────────────────────────────────────────────── */
+.vc-sf-module-nav {
+  padding: 12px 0 8px;
+}
+
+.vc-sf-module-nav-label {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  color: #374151;
+  text-transform: uppercase;
+  padding: 0 14px 6px;
+}
+
+.vc-sf-module-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: all .14s;
+  text-align: left;
+  border-left: 2px solid transparent;
+  line-height: 1.3;
+  user-select: none;
+}
+
+.vc-sf-module-btn:hover {
+  background: rgba(139,92,246,.07);
+  color: #94a3b8;
+  border-left-color: rgba(139,92,246,.30);
+}
+
+.vc-sf-module-btn.active {
+  background: rgba(139,92,246,.10);
+  color: #a78bfa;
+  border-left-color: #a78bfa;
+}
+
+.vc-sf-module-num {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  color: #374151;
+  flex-shrink: 0;
+  min-width: 16px;
+}
+
+.vc-sf-module-btn.active .vc-sf-module-num { color: #a78bfa; }
+
+/* ── SDDF Timeline ───────────────────────────────────────────── */
+.vc-sf-sddf-timeline {
+  margin: 4px 0;
+  border-top: 1px solid rgba(255,255,255,.04);
+  padding: 10px 0 6px;
+}
+
+.vc-sf-sddf-label {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  color: #374151;
+  text-transform: uppercase;
+  padding: 0 14px 8px;
+}
+
+.vc-sf-sddf-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 10px;
+}
+
+.vc-sf-sddf-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px;
+  border-radius: 5px;
+  transition: background .12s;
+}
+
+.vc-sf-sddf-step.active {
+  background: rgba(139,92,246,.08);
+}
+
+.vc-sf-sddf-step.done {
+  background: rgba(34,197,94,.04);
+}
+
+.vc-sf-sddf-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(255,255,255,.08);
+}
+
+.vc-sf-sddf-step.active .vc-sf-sddf-dot {
+  background: #a78bfa;
+  box-shadow: 0 0 5px rgba(139,92,246,.50);
+}
+
+.vc-sf-sddf-step.done .vc-sf-sddf-dot {
+  background: #22c55e;
+  box-shadow: 0 0 4px rgba(34,197,94,.40);
+}
+
+.vc-sf-sddf-step-text {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+}
+
+.vc-sf-sddf-step-num {
+  font-size: 8px;
+  font-weight: 800;
+  color: #374151;
+  flex-shrink: 0;
+}
+
+.vc-sf-sddf-step.active .vc-sf-sddf-step-num { color: #a78bfa; }
+.vc-sf-sddf-step.done   .vc-sf-sddf-step-num { color: #22c55e; }
+
+.vc-sf-sddf-step-name {
+  font-size: 9px;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vc-sf-sddf-step.active .vc-sf-sddf-step-name { color: #94a3b8; }
+.vc-sf-sddf-step.done   .vc-sf-sddf-step-name { color: #4b5563; }
+
+/* ── Next safe action ────────────────────────────────────────── */
+.vc-sf-next-action {
+  margin-top: auto;
+  padding: 10px 14px 14px;
+  border-top: 1px solid rgba(255,255,255,.04);
+}
+
+.vc-sf-next-action-label {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #374151;
+  margin-bottom: 5px;
+}
+
+.vc-sf-next-action-text {
+  font-size: 10px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+/* ── Main area ───────────────────────────────────────────────── */
+.vc-sf-main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── SF Chat bar ─────────────────────────────────────────────── */
+.vc-sf-chat-bar {
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(34,211,238,.10);
+  background: rgba(4,4,14,.80);
+  padding: 10px 16px 12px;
+}
+
+.vc-sf-chat-label {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: #22d3ee;
+  margin-bottom: 7px;
+}
+
+.vc-sf-chat-stream {
+  min-height: 36px;
+  max-height: 80px;
+  overflow-y: auto;
+  margin-bottom: 7px;
+}
+
+.vc-sf-chat-hint {
+  font-size: 11px;
+  color: #374151;
+  font-style: italic;
+}
+
+.vc-sf-chat-msg {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.55;
+  margin-bottom: 4px;
+}
+
+.vc-sf-chat-msg.user {
+  color: #a78bfa;
+}
+
+.vc-sf-chat-input-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.vc-sf-chat-input {
+  flex: 1;
+  min-height: 38px;
+  max-height: 90px;
+  resize: vertical;
+  background: rgba(4,4,12,.90);
+  border: 1px solid rgba(34,211,238,.15);
+  border-radius: 7px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-family: inherit;
+  padding: 8px 11px;
+  outline: none;
+  box-sizing: border-box;
+  line-height: 1.5;
+  transition: border-color .14s;
+}
+
+.vc-sf-chat-input:focus {
+  border-color: rgba(34,211,238,.35);
+}
+
+.vc-sf-chat-input::placeholder { color: #374151; }
+
+.vc-sf-chat-send {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 7px;
+  border: 1px solid rgba(34,211,238,.40);
+  background: rgba(34,211,238,.07);
+  color: #22d3ee;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: all .14s;
+  user-select: none;
+}
+
+.vc-sf-chat-send:hover {
+  background: rgba(34,211,238,.14);
+  border-color: rgba(34,211,238,.65);
+}
+
+/* ── Module content area ─────────────────────────────────────── */
+.vc-sf-module-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px 24px;
+}
+
+/* ── Individual module panels ────────────────────────────────── */
+.vc-sf-module-panel {
+  display: none;
+}
+
+.vc-sf-module-panel.active {
+  display: block;
+}
+
+.vc-sf-module-panel-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vc-sf-module-panel-num {
+  font-size: 11px;
+  font-weight: 900;
+  color: #374151;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.vc-sf-module-panel-title {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #e2e8f0;
+  margin: 0 0 3px;
+}
+
+.vc-sf-module-panel-desc {
+  font-size: 11px;
+  color: #4b5563;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.vc-sf-module-panel-badge {
+  flex-shrink: 0;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 5px;
+  border: 1px solid rgba(139,92,246,.30);
+  background: rgba(139,92,246,.07);
+  color: #a78bfa;
+  margin-top: 2px;
+}
+
+.vc-sf-module-panel-badge.locked {
+  border-color: rgba(239,68,68,.25);
+  background: rgba(239,68,68,.04);
+  color: #fca5a5;
+}
+
+/* ── Module section grid ─────────────────────────────────────── */
+.vc-sf-module-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 700px) {
+  .vc-sf-module-grid { grid-template-columns: 1fr; }
+}
+
+.vc-sf-card {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+}
+
+.vc-sf-card-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.vc-sf-card-value {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* ── Chip rows ───────────────────────────────────────────────── */
+.vc-sf-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.vc-sf-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(255,255,255,.02);
+  color: #4b5563;
+  cursor: pointer;
+  transition: all .13s;
+  user-select: none;
+}
+
+.vc-sf-chip:hover {
+  border-color: rgba(139,92,246,.30);
+  color: #94a3b8;
+}
+
+.vc-sf-chip.active {
+  border-color: rgba(139,92,246,.60);
+  background: rgba(139,92,246,.10);
+  color: #a78bfa;
+}
+
+/* ── Readonly output areas ───────────────────────────────────── */
+.vc-sf-output {
+  width: 100%;
+  min-height: 160px;
+  max-height: 340px;
+  background: rgba(4,4,12,.90);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  line-height: 1.65;
+  padding: 12px 14px;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  letter-spacing: .01em;
+  white-space: pre;
+  overflow: auto;
+}
+
+.vc-sf-output:read-only { cursor: default; }
+
+.vc-sf-output.empty {
+  color: #374151;
+  font-style: italic;
+}
+
+/* ── Section divider ─────────────────────────────────────────── */
+.vc-sf-section-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #374151;
+  margin: 14px 0 7px;
+}
+
+/* ── Locked capability cards ─────────────────────────────────── */
+.vc-sf-locked-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 700px) {
+  .vc-sf-locked-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.vc-sf-locked-card {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(239,68,68,.18);
+  background: rgba(239,68,68,.03);
+}
+
+.vc-sf-locked-card.required {
+  border-color: rgba(251,146,60,.20);
+  background: rgba(251,146,60,.03);
+}
+
+.vc-sf-locked-card-icon {
+  font-size: 14px;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.vc-sf-locked-card-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.vc-sf-locked-card-status {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  color: #ef4444;
+}
+
+.vc-sf-locked-card.required .vc-sf-locked-card-status {
+  color: #fb923c;
+}
+
+/* ── Authority row ───────────────────────────────────────────── */
+.vc-sf-authority-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.vc-sf-authority-chip {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  padding: 3px 9px;
+  border-radius: 5px;
+  border: 1px solid rgba(239,68,68,.20);
+  background: rgba(239,68,68,.03);
+  color: #fca5a5;
+  text-transform: uppercase;
+}
+
+/* ── Action buttons (module level) ──────────────────────────── */
+.vc-sf-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.vc-sf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(139,92,246,.40);
+  background: rgba(139,92,246,.07);
+  color: #a78bfa;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+}
+
+.vc-sf-btn:hover {
+  background: rgba(139,92,246,.14);
+  border-color: rgba(139,92,246,.65);
+}
+
+.vc-sf-btn:active { transform: scale(.97); }
+
+.vc-sf-btn.secondary {
+  border-color: rgba(34,211,238,.35);
+  background: rgba(34,211,238,.05);
+  color: #22d3ee;
+}
+
+.vc-sf-btn.secondary:hover {
+  background: rgba(34,211,238,.11);
+  border-color: rgba(34,211,238,.60);
+}
+
+/* ── Nav entry button (cockpit nav) ──────────────────────────── */
+.vc-sf-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: 1px solid rgba(139,92,246,.35);
+  background: rgba(139,92,246,.07);
+  color: #a78bfa;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.vc-sf-nav-btn:hover {
+  background: rgba(139,92,246,.15);
+  border-color: rgba(139,92,246,.60);
+}
+
+/* Sidebar menu item */
+.vc-sf-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4b5563;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: all .13s;
+  user-select: none;
+  text-decoration: none;
+}
+
+.vc-sf-sidebar-link:hover {
+  color: #a78bfa;
+  background: rgba(139,92,246,.07);
+  border-left-color: rgba(139,92,246,.35);
+}
+
+/* ── Timeline readiness items (Module 08) ────────────────────── */
+.vc-sf-chain-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.vc-sf-chain-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.04);
+  background: rgba(255,255,255,.01);
+}
+
+.vc-sf-chain-item.ready {
+  border-color: rgba(34,197,94,.20);
+  background: rgba(34,197,94,.03);
+}
+
+.vc-sf-chain-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(255,255,255,.10);
+}
+
+.vc-sf-chain-item.ready .vc-sf-chain-dot {
+  background: #22c55e;
+  box-shadow: 0 0 5px rgba(34,197,94,.40);
+}
+
+.vc-sf-chain-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: #4b5563;
+  flex: 1;
+}
+
+.vc-sf-chain-item.ready .vc-sf-chain-name { color: #94a3b8; }
+
+.vc-sf-chain-tag {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  background: rgba(139,92,246,.07);
+  border: 1px solid rgba(139,92,246,.22);
+  color: #a78bfa;
+}
+
+/* ── Non-authority notice ────────────────────────────────────── */
+.vc-sf-non-authority {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(34,211,238,.12);
+  background: rgba(34,211,238,.03);
+  margin-top: 14px;
+}
+
+.vc-sf-non-authority-label {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #22d3ee;
+  margin-bottom: 5px;
+}
+
+.vc-sf-non-authority-text {
+  font-size: 10px;
+  color: #4b5563;
+  line-height: 1.55;
+}
