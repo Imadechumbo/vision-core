@@ -829,3 +829,12 @@ body,
   font-weight: 600;
   color: #6b7280;
 }
+
+/* ── Software Factory panels moved to dedicated page ──────────
+   #projectBuilder and all .vc-pb-section content now lives
+   exclusively inside #vcSoftwareFactoryPage.
+   Hidden here to avoid duplicate display in old cockpit.
+   JS init functions (initProjectBuilder etc.) still run safely
+   against hidden DOM — display:none does not prevent JS access.
+   ───────────────────────────────────────────────────────────── */
+#projectBuilder { display: none !important; }
