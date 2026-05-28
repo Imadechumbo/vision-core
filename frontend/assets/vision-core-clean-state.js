@@ -1372,6 +1372,15 @@ window.VISION_CORE_PROJECT_BUILDER = Object.freeze({
 
     next_phase_boundary:
       'Any real file creation, real validation, PASS GOLD REAL claim, deploy, release, tag, stable promotion, or production decision requires a separate explicit human-authorized phase outside this frontend dashboard.'
+  }),
+
+  frontend_stabilization: Object.freeze({
+    stabilization_version: 'FRONT-PRODUCT-10',
+    scope: 'visual QA and final polish only',
+    no_new_authority: true,
+    no_execution: true,
+    no_file_io: true,
+    no_backend_api: true
   })
 });
 
