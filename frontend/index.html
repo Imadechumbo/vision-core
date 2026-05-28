@@ -25,6 +25,7 @@
 <link rel="stylesheet" href="assets/vc-mission-composer.css">
 <link rel="stylesheet" href="assets/vc-worker-handoff.css">
 <link rel="stylesheet" href="assets/vc-export-preview.css">
+<link rel="stylesheet" href="assets/vc-human-approval.css">
 <style>
 /* V2.9.10 CLEAN FRONT — v299 quota/badge inline (no runtime JS needed) */
 .v299-quota-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;font-size:11px;flex-shrink:0;}
@@ -1202,6 +1203,89 @@
         </div>
 
       </div><!-- end vcExportPreview -->
+
+      <!-- ── Section L — Human Approval Gate ──────────────────── -->
+      <div class="vc-pb-section vc-human-approval" id="vcHumanApprovalGate">
+
+        <!-- Headline -->
+        <div class="vc-human-headline">
+          <div class="vc-pb-headline-text">
+            <p class="eyebrow">SOFTWARE FACTORY • HUMAN APPROVAL • FILE CREATION GATE</p>
+            <h2 style="font-size:14px;margin:0 0 4px;">GATE DE APROVAÇÃO HUMANA</h2>
+            <p style="font-size:11px;color:#4b5563;margin:0;">Revise o contrato de criação real de arquivos. Esta tela apenas gera um recibo de aprovação local; ela não cria arquivos.</p>
+          </div>
+          <span class="vc-human-badge">HUMAN GATE</span>
+        </div>
+
+        <!-- Gate Summary Panel -->
+        <p class="vc-pb-section-label">Contexto do Gate</p>
+        <div class="vc-human-summary-grid" id="vcHumanSummaryGrid">
+          <div class="vc-human-summary-card"><div class="vc-human-summary-label">Tipo de Projeto</div><div class="vc-human-summary-value" id="vcHagSrcType">—</div></div>
+          <div class="vc-human-summary-card"><div class="vc-human-summary-label">Template</div><div class="vc-human-summary-value" id="vcHagSrcTemplate">—</div></div>
+          <div class="vc-human-summary-card"><div class="vc-human-summary-label">Stack</div><div class="vc-human-summary-value" id="vcHagSrcStack">—</div></div>
+          <div class="vc-human-summary-card"><div class="vc-human-summary-label">Tamanho/Risco</div><div class="vc-human-summary-value" id="vcHagSrcSize">—</div></div>
+          <div class="vc-human-summary-card"><div class="vc-human-summary-label">Agentes Ativos</div><div class="vc-human-summary-value" id="vcHagSrcAgents">—</div></div>
+          <div class="vc-human-summary-card"><div class="vc-human-summary-label">Aprovação</div><div class="vc-human-summary-value" id="vcHagApprovalStatus">—</div></div>
+          <div class="vc-human-summary-card"><div class="vc-human-summary-label">Pastas Previstas</div><div class="vc-human-summary-value" id="vcHagFolderCount">—</div></div>
+          <div class="vc-human-summary-card"><div class="vc-human-summary-label">Arquivos Previstos</div><div class="vc-human-summary-value" id="vcHagFileCount">—</div></div>
+        </div>
+
+        <!-- Required Acknowledgements Checklist -->
+        <p class="vc-pb-section-label">Confirmações Obrigatórias</p>
+        <div class="vc-human-checklist" id="vcHumanAckChecklist"></div>
+
+        <!-- Progress indicator -->
+        <p style="font-size:10px;color:#4b5563;margin:0 0 14px;letter-spacing:.05em;">
+          <span id="vcHagAckCount">0</span> / 12 confirmações — Gate:
+          <span class="vc-human-status incomplete" id="vcHagGateStatus">INCOMPLETO</span>
+        </p>
+
+        <!-- Locked Capabilities Grid -->
+        <p class="vc-pb-section-label">Capacidades Bloqueadas</p>
+        <div class="vc-human-lock-grid">
+          <div class="vc-human-lock-card locked"><span class="vc-human-lock-icon">⊗</span><div class="vc-human-lock-text"><div class="vc-human-lock-name">File Creation</div><div class="vc-human-lock-status">LOCKED</div></div></div>
+          <div class="vc-human-lock-card locked"><span class="vc-human-lock-icon">⊗</span><div class="vc-human-lock-text"><div class="vc-human-lock-name">File Write</div><div class="vc-human-lock-status">LOCKED</div></div></div>
+          <div class="vc-human-lock-card locked"><span class="vc-human-lock-icon">⊗</span><div class="vc-human-lock-text"><div class="vc-human-lock-name">Backend Write</div><div class="vc-human-lock-status">LOCKED</div></div></div>
+          <div class="vc-human-lock-card locked"><span class="vc-human-lock-icon">⊗</span><div class="vc-human-lock-text"><div class="vc-human-lock-name">Command Execution</div><div class="vc-human-lock-status">LOCKED</div></div></div>
+          <div class="vc-human-lock-card locked"><span class="vc-human-lock-icon">⊗</span><div class="vc-human-lock-text"><div class="vc-human-lock-name">Download</div><div class="vc-human-lock-status">LOCKED</div></div></div>
+          <div class="vc-human-lock-card locked"><span class="vc-human-lock-icon">⊗</span><div class="vc-human-lock-text"><div class="vc-human-lock-name">Export</div><div class="vc-human-lock-status">LOCKED</div></div></div>
+          <div class="vc-human-lock-card locked"><span class="vc-human-lock-icon">⊗</span><div class="vc-human-lock-text"><div class="vc-human-lock-name">Deploy</div><div class="vc-human-lock-status">LOCKED</div></div></div>
+          <div class="vc-human-lock-card locked"><span class="vc-human-lock-icon">⊗</span><div class="vc-human-lock-text"><div class="vc-human-lock-name">Release</div><div class="vc-human-lock-status">LOCKED</div></div></div>
+          <div class="vc-human-lock-card locked"><span class="vc-human-lock-icon">⊗</span><div class="vc-human-lock-text"><div class="vc-human-lock-name">Tag</div><div class="vc-human-lock-status">LOCKED</div></div></div>
+          <div class="vc-human-lock-card locked"><span class="vc-human-lock-icon">⊗</span><div class="vc-human-lock-text"><div class="vc-human-lock-name">Stable Promotion</div><div class="vc-human-lock-status">LOCKED</div></div></div>
+          <div class="vc-human-lock-card locked"><span class="vc-human-lock-icon">⊗</span><div class="vc-human-lock-text"><div class="vc-human-lock-name">Production Touch</div><div class="vc-human-lock-status">LOCKED</div></div></div>
+          <div class="vc-human-lock-card locked"><span class="vc-human-lock-icon">⊗</span><div class="vc-human-lock-text"><div class="vc-human-lock-name">Pass Gold Real Claim</div><div class="vc-human-lock-status">LOCKED</div></div></div>
+        </div>
+
+        <!-- Approval Receipt Panel -->
+        <!-- No download/export/create/execute/deploy/release/tag/stable buttons -->
+        <div class="vc-human-receipt-panel" id="vcHumanReceiptPanel">
+          <div class="vc-human-receipt-header">
+            <span class="vc-human-receipt-title">RECIBO DE APROVAÇÃO LOCAL</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="vc-human-ack-metric">Confirmações: <span id="vcHagReceiptAckCount">0</span>/12</span>
+              <span class="vc-human-status incomplete" id="vcHagReceiptStatus">INCOMPLETO</span>
+            </div>
+          </div>
+          <textarea
+            class="vc-human-receipt-output empty"
+            id="vcHumanReceiptOutput"
+            readonly
+            spellcheck="false"
+            aria-label="Recibo de aprovação humana — somente leitura"
+          >Clique em GERAR RECIBO LOCAL para gerar o recibo.</textarea>
+        </div>
+
+        <!-- Actions — no file creation / export / download / execute buttons -->
+        <div class="vc-human-actions">
+          <button class="vc-human-btn" id="vcGenerateReceiptBtn" type="button">⬡ GERAR RECIBO LOCAL</button>
+          <button class="vc-human-btn secondary" id="vcCopyReceiptBtn" type="button">⎘ COPIAR RECIBO</button>
+          <button class="vc-human-btn danger" id="vcClearReceiptBtn" type="button">✕ LIMPAR RECIBO</button>
+          <button class="vc-human-btn danger" id="vcResetAckBtn" type="button">↺ RESETAR CHECKLIST</button>
+          <span class="vc-human-copy-status" id="vcHumanCopyStatus">✓ Copiado!</span>
+        </div>
+
+      </div><!-- end vcHumanApprovalGate -->
 
     </div><!-- end #projectBuilder -->
 

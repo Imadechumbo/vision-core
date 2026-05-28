@@ -983,6 +983,80 @@ window.VISION_CORE_PROJECT_BUILDER = Object.freeze({
       'schema.sql':   '-- <Project Name> database schema\n-- Preview only. Review before creation.\n',
       '_default':     '// Preview placeholder for <file>\n// No file created by FRONT-PRODUCT-5.\n'
     })
+  }),
+
+  /* ── Human Approval Gate ────────────────────────────────────── */
+  /* Local-only. No file creation. No write. No download. No API. */
+  human_approval_gate: Object.freeze({
+    approval_gate_version: 'FRONT-PRODUCT-6',
+
+    gate_status: Object.freeze({
+      human_approval_gate_ready:    false,
+      human_approval_collected:     false,
+      file_creation_allowed:        false,
+      real_file_creation_enabled:   false,
+      backend_write_allowed:        false,
+      command_execution_allowed:    false,
+      deploy_allowed:               false,
+      release_allowed:              false,
+      tag_allowed:                  false,
+      stable_promotion_allowed:     false,
+      production_touched:           false,
+      pass_gold_real_claimed:       false
+    }),
+
+    required_acknowledgements: Object.freeze([
+      { id: 'ack_01', text: 'I reviewed the selected project template.' },
+      { id: 'ack_02', text: 'I reviewed the folder tree preview.' },
+      { id: 'ack_03', text: 'I reviewed the file list preview.' },
+      { id: 'ack_04', text: 'I reviewed the file content placeholders.' },
+      { id: 'ack_05', text: 'I reviewed the impact summary.' },
+      { id: 'ack_06', text: 'I reviewed the risk warnings.' },
+      { id: 'ack_07', text: 'I understand no files are created by this frontend.' },
+      { id: 'ack_08', text: 'I understand real file creation requires a separate controlled phase.' },
+      { id: 'ack_09', text: 'I understand backend/API/command execution remains blocked.' },
+      { id: 'ack_10', text: 'I understand deploy/release/tag/stable/production remain blocked.' },
+      { id: 'ack_11', text: 'I understand PASS GOLD REAL is not claimed.' },
+      { id: 'ack_12', text: 'I understand this approval receipt is local preview evidence only.' }
+    ]),
+
+    approval_receipt_fields: Object.freeze([
+      'selected_project_type',
+      'selected_template',
+      'selected_stack',
+      'selected_size_risk',
+      'active_agents',
+      'folder_count',
+      'file_count',
+      'validation_count',
+      'risk_count',
+      'acknowledgements_checked',
+      'gate_ready',
+      'file_creation_allowed',
+      'real_file_creation_enabled',
+      'next_required_phase'
+    ]),
+
+    locked_capabilities: Object.freeze([
+      'file_creation',
+      'file_write',
+      'backend_write',
+      'command_execution',
+      'download',
+      'export',
+      'deploy',
+      'release',
+      'tag',
+      'stable_promotion',
+      'production_touch',
+      'pass_gold_real_claim'
+    ]),
+
+    next_phase_boundary:
+      'FRONT-PRODUCT-7 or separate explicit real-file-creation command required.',
+
+    required_final_warning:
+      'This local approval gate does not create files and does not grant execution authority.'
   })
 });
 

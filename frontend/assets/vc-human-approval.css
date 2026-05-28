@@ -1,0 +1,340 @@
+/* ================================================================
+   VISION CORE V2.9.10
+   vc-human-approval.css
+   Human Approval Gate — local UI only
+   No file creation. No write. No download. No export. No API.
+   ================================================================ */
+
+/* ── Section wrapper ─────────────────────────────────────────── */
+.vc-human-approval {
+  margin-top: 4px;
+}
+
+/* ── Headline ────────────────────────────────────────────────── */
+.vc-human-headline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vc-human-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(251,146,60,.08);
+  border: 1px solid rgba(251,146,60,.35);
+  color: #fb923c;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* ── Gate summary grid ───────────────────────────────────────── */
+.vc-human-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 900px) { .vc-human-summary-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .vc-human-summary-grid { grid-template-columns: 1fr; } }
+
+.vc-human-summary-card {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+}
+
+.vc-human-summary-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: #374151;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.vc-human-summary-value {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+/* ── Acknowledgement checklist ───────────────────────────────── */
+.vc-human-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.vc-human-ack-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.02);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  user-select: none;
+}
+
+.vc-human-ack-item:hover {
+  border-color: rgba(168,85,247,.30);
+  background: rgba(168,85,247,.04);
+}
+
+.vc-human-ack-item.checked {
+  border-color: rgba(34,197,94,.35);
+  background: rgba(34,197,94,.04);
+}
+
+.vc-human-ack-box {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(255,255,255,.18);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: transparent;
+  margin-top: 1px;
+  transition: border-color .15s, background .15s;
+}
+
+.vc-human-ack-item.checked .vc-human-ack-box {
+  border-color: #22c55e;
+  background: rgba(34,197,94,.15);
+  color: #22c55e;
+}
+
+.vc-human-ack-text {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.5;
+  flex: 1;
+  transition: color .15s;
+}
+
+.vc-human-ack-item.checked .vc-human-ack-text {
+  color: #94a3b8;
+}
+
+/* ── Locked capabilities grid ────────────────────────────────── */
+.vc-human-lock-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 800px) { .vc-human-lock-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .vc-human-lock-grid { grid-template-columns: 1fr; } }
+
+.vc-human-lock-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+}
+
+.vc-human-lock-card.locked {
+  border-color: rgba(239,68,68,.22);
+  background: rgba(239,68,68,.04);
+}
+
+.vc-human-lock-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  line-height: 1;
+  color: #ef4444;
+}
+
+.vc-human-lock-text {
+  flex: 1;
+}
+
+.vc-human-lock-name {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: #4b5563;
+  text-transform: uppercase;
+}
+
+.vc-human-lock-status {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fca5a5;
+  margin-top: 2px;
+}
+
+/* ── Gate status badge ───────────────────────────────────────── */
+.vc-human-status {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  padding: 2px 8px;
+  border-radius: 5px;
+  text-transform: uppercase;
+}
+
+.vc-human-status.incomplete {
+  background: rgba(251,146,60,.07);
+  border: 1px solid rgba(251,146,60,.28);
+  color: #fb923c;
+}
+
+.vc-human-status.ready {
+  background: rgba(34,197,94,.07);
+  border: 1px solid rgba(34,197,94,.35);
+  color: #22c55e;
+}
+
+/* ── Receipt panel ───────────────────────────────────────────── */
+.vc-human-receipt-panel {
+  background: rgba(8,6,20,.92);
+  border: 1px solid rgba(168,85,247,.18);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-top: 4px;
+}
+
+.vc-human-receipt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.vc-human-receipt-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  color: #a855f7;
+  text-transform: uppercase;
+}
+
+.vc-human-ack-metric {
+  font-size: 9px;
+  color: #4b5563;
+  letter-spacing: .05em;
+}
+
+.vc-human-ack-metric span {
+  color: #a855f7;
+  font-weight: 700;
+}
+
+.vc-human-receipt-output {
+  width: 100%;
+  min-height: 220px;
+  max-height: 480px;
+  background: rgba(4,4,12,.90);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  line-height: 1.65;
+  padding: 12px 14px;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  letter-spacing: .01em;
+  white-space: pre;
+  overflow: auto;
+}
+
+.vc-human-receipt-output:read-only { cursor: default; }
+
+.vc-human-receipt-output.empty {
+  color: #374151;
+  font-style: italic;
+}
+
+/* ── Action buttons ──────────────────────────────────────────── */
+.vc-human-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.vc-human-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: 1px solid rgba(168,85,247,.48);
+  background: rgba(124,58,237,.10);
+  color: #c084fc;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .17s;
+  user-select: none;
+}
+
+.vc-human-btn:hover {
+  background: rgba(124,58,237,.20);
+  border-color: rgba(192,132,252,.68);
+  box-shadow: 0 0 16px rgba(168,85,247,.12);
+}
+
+.vc-human-btn:active { transform: scale(.97); }
+
+.vc-human-btn.secondary {
+  border-color: rgba(34,211,238,.38);
+  background: rgba(34,211,238,.05);
+  color: #22d3ee;
+}
+
+.vc-human-btn.secondary:hover {
+  background: rgba(34,211,238,.10);
+  border-color: rgba(34,211,238,.65);
+}
+
+.vc-human-btn.danger {
+  border-color: rgba(239,68,68,.28);
+  background: transparent;
+  color: #4b5563;
+}
+
+.vc-human-btn.danger:hover {
+  border-color: rgba(239,68,68,.50);
+  color: #fca5a5;
+}
+
+/* ── Copy status ─────────────────────────────────────────────── */
+.vc-human-copy-status {
+  font-size: 10px;
+  color: #22c55e;
+  letter-spacing: .05em;
+  display: none;
+}
+
+.vc-human-copy-status.visible { display: inline; }
+.vc-human-copy-status.error   { color: #fca5a5; }
