@@ -2554,6 +2554,544 @@
     if (resetBtn) { resetBtn.addEventListener('click', resetHumanApprovalChecklist); }
   }
 
+  /* ── Real File Creation Command Package — local UI only ──────── */
+  /* No file creation. No write. No download. No export. No API.  */
+  /* No Blob. No URL.createObjectURL. In-memory state only.       */
+
+  var realFileCommandState = {
+    selectedMode:      'full_real_file_creation_package',
+    selectedWorker:    'claude_code',
+    generatedPackage:  ''
+  };
+
+  function getRealFileCommandPackageRegistry() {
+    var pb = window.VISION_CORE_PROJECT_BUILDER;
+    return (pb && pb.real_file_command_package) ? pb.real_file_command_package : null;
+  }
+
+  function setRealFileCommandMode(modeId) {
+    realFileCommandState.selectedMode = modeId;
+    var modeRow = document.getElementById('vcRealCommandModeRow');
+    if (modeRow) {
+      Array.prototype.forEach.call(modeRow.querySelectorAll('.vc-real-command-mode-chip'), function (c) {
+        c.className = 'vc-real-command-mode-chip' + (c.getAttribute('data-cmd-mode') === modeId ? ' selected' : '');
+      });
+    }
+  }
+
+  function setRealFileCommandWorker(workerId) {
+    realFileCommandState.selectedWorker = workerId;
+    var workerRow = document.getElementById('vcRealCommandWorkerRow');
+    if (workerRow) {
+      Array.prototype.forEach.call(workerRow.querySelectorAll('.vc-real-command-worker-chip'), function (c) {
+        c.className = 'vc-real-command-worker-chip' + (c.getAttribute('data-cmd-worker') === workerId ? ' selected' : '');
+      });
+    }
+  }
+
+  function getRealFileCommandContext() {
+    var type    = (typeof pbState !== 'undefined' && pbState.selectedType)  ? pbState.selectedType  : '—';
+    var stack   = (typeof pbState !== 'undefined' && pbState.selectedStack) ? pbState.selectedStack : '—';
+    var size    = (typeof pbState !== 'undefined' && pbState.selectedSize)  ? pbState.selectedSize  : '—';
+    var tpl     = (typeof pbTemplateState !== 'undefined' && pbTemplateState.selectedTemplate) ? pbTemplateState.selectedTemplate : '—';
+    var agents  = (typeof pbState !== 'undefined' && Array.isArray(pbState.activeAgents)) ? pbState.activeAgents : [];
+
+    /* Template registry detail */
+    var tplDetail = null;
+    var pb = window.VISION_CORE_PROJECT_BUILDER;
+    if (pb && pb.template_packs && tpl !== '—') {
+      tplDetail = null;
+      for (var i = 0; i < pb.template_packs.length; i++) {
+        if (pb.template_packs[i].id === tpl) { tplDetail = pb.template_packs[i]; break; }
+      }
+    }
+
+    var exportAvailable = (typeof exportPreviewState !== 'undefined' && !!exportPreviewState.generatedPreview);
+    var approvalReady   = (typeof humanApprovalState !== 'undefined' && areAllHumanAcknowledgementsChecked());
+    var receiptAvailable = (typeof humanApprovalState !== 'undefined' && !!humanApprovalState.generatedReceipt);
+
+    return {
+      type:            type,
+      template:        tpl,
+      tplDetail:       tplDetail,
+      stack:           stack,
+      size:            size,
+      agents:          agents,
+      exportAvailable: exportAvailable,
+      approvalReady:   approvalReady,
+      receiptAvailable:receiptAvailable
+    };
+  }
+
+  function isHumanApprovalGateReadyForCommand() {
+    return (typeof humanApprovalState !== 'undefined') && areAllHumanAcknowledgementsChecked();
+  }
+
+  function renderRealFileCommandStatus() {
+    var ctx = getRealFileCommandContext();
+
+    /* Readiness cards */
+    var setCard = function (cardId, valId, label, isReady) {
+      var card = document.getElementById(cardId);
+      var val  = document.getElementById(valId);
+      if (card) { card.className = 'vc-real-readiness-card ' + (isReady ? 'ready' : 'blocked'); }
+      if (val)  { val.textContent = label; }
+    };
+
+    setCard('vcRealReadyType',     'vcRealReadyTypeVal',     ctx.type !== '—'  ? ctx.type  : 'Não selecionado', ctx.type !== '—');
+    setCard('vcRealReadyTpl',      'vcRealReadyTplVal',      ctx.template !== '—' ? ctx.template : 'Não selecionado', ctx.template !== '—');
+    setCard('vcRealReadyStack',    'vcRealReadyStackVal',    ctx.stack !== '—' ? ctx.stack : 'Não selecionado', ctx.stack !== '—');
+    setCard('vcRealReadyExport',   'vcRealReadyExportVal',   ctx.exportAvailable  ? 'Disponível'  : 'Não gerado',   ctx.exportAvailable);
+    setCard('vcRealReadyApproval', 'vcRealReadyApprovalVal', ctx.approvalReady    ? 'PRONTO'      : 'Incompleto',   ctx.approvalReady);
+
+    var hag = getHumanApprovalGateRegistry ? getHumanApprovalGateRegistry() : null;
+    var total   = hag ? hag.required_acknowledgements.length : 12;
+    var checked = (typeof humanApprovalState !== 'undefined')
+      ? (hag ? hag.required_acknowledgements.filter(function (a) { return !!humanApprovalState.checked[a.id]; }).length : 0)
+      : 0;
+    setCard('vcRealReadyAck', 'vcRealReadyAckVal', checked + '/' + total, checked === total);
+  }
+
+  /* ── Package builders ──────────────────────────────────────── */
+
+  function _cmdHeader(ctx, mode, worker, gateReady) {
+    var lines = [];
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push('   VISION CORE — PACOTE DE COMANDO PARA CRIAÇÃO REAL');
+    lines.push('   FRONT-PRODUCT-7 | External Command Package — Text Only');
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push('');
+    lines.push('MODO     : ' + mode);
+    lines.push('WORKER   : ' + worker);
+    lines.push('STATUS   : ' + (gateReady ? 'READY FOR EXTERNAL HUMAN-CONTROLLED WORKER' : 'BLOCKED UNTIL HUMAN APPROVAL GATE READY'));
+    lines.push('');
+    lines.push('── Autoridade ──────────────────────────────────────────────────');
+    lines.push('  frontend_file_creation_allowed  : false');
+    lines.push('  real_file_creation_enabled      : false');
+    lines.push('  frontend_file_write_allowed     : false');
+    lines.push('  backend_write_allowed           : false');
+    lines.push('  command_execution_allowed       : false');
+    lines.push('  external_worker_required        : true');
+    lines.push('  human_approval_required         : true');
+    lines.push('  deploy_allowed                  : false');
+    lines.push('  release_allowed                 : false');
+    lines.push('  tag_allowed                     : false');
+    lines.push('  stable_promotion_allowed        : false');
+    lines.push('  production_touched              : false');
+    lines.push('  pass_gold_real_claimed          : false');
+    lines.push('');
+    lines.push('── Contexto do Projeto ─────────────────────────────────────────');
+    lines.push('  Tipo de Projeto  : ' + ctx.type);
+    lines.push('  Template         : ' + ctx.template);
+    lines.push('  Stack            : ' + ctx.stack);
+    lines.push('  Tamanho/Risco    : ' + ctx.size);
+    lines.push('  Agentes Ativos   : ' + ctx.agents.length);
+    if (ctx.tplDetail) {
+      lines.push('  Pastas Previstas : ' + (ctx.tplDetail.folder_count || ctx.tplDetail.preview_folders || '—'));
+      lines.push('  Arquivos Previstos: ' + (ctx.tplDetail.file_count || ctx.tplDetail.preview_files || '—'));
+    }
+    lines.push('  Export Preview   : ' + (ctx.exportAvailable ? 'Disponível' : 'Não gerado'));
+    lines.push('  Aprovação Gate   : ' + (ctx.approvalReady ? 'PRONTO' : 'INCOMPLETO'));
+    lines.push('');
+    return lines;
+  }
+
+  function _cmdFooter(pkg) {
+    var lines = [];
+    lines.push('');
+    lines.push('── Regras de Segurança do Pacote ───────────────────────────────');
+    pkg.command_safety_rules.forEach(function (r) {
+      lines.push('  ✓ ' + r);
+    });
+    lines.push('');
+    lines.push('── Aviso de Não-Autoridade ─────────────────────────────────────');
+    lines.push('  ' + pkg.explicit_non_authority_statement);
+    lines.push('');
+    lines.push('── Contrato de Relatório Final ─────────────────────────────────');
+    pkg.final_report_contract.forEach(function (item) {
+      lines.push('  [ ] ' + item);
+    });
+    lines.push('');
+    lines.push('═══════════════════════════════════════════════════════════════');
+    return lines;
+  }
+
+  function buildFullRealFileCreationPackage() {
+    var pkg = getRealFileCommandPackageRegistry();
+    if (!pkg) { return ''; }
+    var ctx       = getRealFileCommandContext();
+    var gateReady = isHumanApprovalGateReadyForCommand();
+    var workerProfile = pkg.external_worker_profiles.filter(function (w) {
+      return w.id === realFileCommandState.selectedWorker;
+    })[0] || pkg.external_worker_profiles[0];
+
+    var lines = _cmdHeader(ctx, 'Full Real File Creation Package', workerProfile.label, gateReady);
+    lines.push('── Tarefa do Worker Externo ────────────────────────────────────');
+    lines.push('  Worker: ' + workerProfile.label + ' (' + workerProfile.role + ')');
+    lines.push('  Estilo: ' + workerProfile.instruction_style);
+    lines.push('');
+    lines.push('  INSTRUÇÃO:');
+    lines.push('  Crie os arquivos abaixo em uma fase externa separada e autorizada.');
+    lines.push('  Siga a estrutura de pastas e os arquivos iniciais do template selecionado.');
+    lines.push('  Use o conteúdo placeholder do export preview como ponto de partida.');
+    lines.push('');
+    lines.push('  CAMINHOS PERMITIDOS (baseados no template "' + ctx.template + '"):');
+    if (ctx.tplDetail && ctx.tplDetail.folder_structure) {
+      ctx.tplDetail.folder_structure.forEach(function (f) {
+        lines.push('    + ' + f);
+      });
+    } else {
+      lines.push('    (Ver export preview para estrutura detalhada)');
+    }
+    lines.push('');
+    lines.push('  ARQUIVOS INICIAIS:');
+    if (ctx.tplDetail && ctx.tplDetail.initial_files) {
+      ctx.tplDetail.initial_files.forEach(function (f) {
+        lines.push('    + ' + f);
+      });
+    } else {
+      lines.push('    (Ver export preview para lista de arquivos)');
+    }
+    lines.push('');
+    lines.push('  RESTRIÇÕES ABSOLUTAS:');
+    lines.push('  ⊗ Não modificar backend/*, go-core/*, tools/*, package.json');
+    lines.push('  ⊗ Não fazer deploy/release/tag/stable/produção');
+    lines.push('  ⊗ Não reivindicar PASS GOLD REAL');
+    lines.push('  ⊗ Reportar todo arquivo criado/modificado');
+    lines.push('');
+    lines.push('  VALIDAÇÃO (executar manualmente após criar arquivos):');
+    lines.push('  $ node --check <arquivo.js>');
+    lines.push('  $ git status');
+    lines.push('  $ git diff --stat');
+    lines = lines.concat(_cmdFooter(pkg));
+    return lines.join('\n');
+  }
+
+  function buildClaudeCodeFileCreationTask() {
+    var pkg = getRealFileCommandPackageRegistry();
+    if (!pkg) { return ''; }
+    var ctx       = getRealFileCommandContext();
+    var gateReady = isHumanApprovalGateReadyForCommand();
+
+    var lines = _cmdHeader(ctx, 'Claude Code File Creation Task', 'Claude Code', gateReady);
+    lines.push('── Tarefa para Claude Code ─────────────────────────────────────');
+    lines.push('  Você é um worker externo local. Não é o Vision Core frontend.');
+    lines.push('');
+    lines.push('  CONTEXTO DO PROJETO:');
+    lines.push('  Repositório: C:\\Users\\<operador>\\Desktop\\vision-core  (ajustar)');
+    lines.push('  Template   : ' + ctx.template);
+    lines.push('  Stack      : ' + ctx.stack);
+    lines.push('  Tipo       : ' + ctx.type);
+    lines.push('');
+    lines.push('  FASE: Criação local de arquivos em branch separado.');
+    lines.push('');
+    lines.push('  PASSO 1 — CRIAR BRANCH:');
+    lines.push('  git checkout main');
+    lines.push('  git pull origin main');
+    lines.push('  git checkout -b feat/real-file-creation-<data>');
+    lines.push('');
+    lines.push('  PASSO 2 — CRIAR ESTRUTURA DE PASTAS E ARQUIVOS:');
+    if (ctx.tplDetail && ctx.tplDetail.folder_structure) {
+      ctx.tplDetail.folder_structure.forEach(function (f) {
+        lines.push('  mkdir -p ' + f.replace(/\/$/, ''));
+      });
+    } else {
+      lines.push('  (Consulte o export preview para estrutura de pastas)');
+    }
+    lines.push('');
+    if (ctx.tplDetail && ctx.tplDetail.initial_files) {
+      ctx.tplDetail.initial_files.forEach(function (f) {
+        lines.push('  Criar arquivo: ' + f);
+      });
+    } else {
+      lines.push('  (Consulte o export preview para lista de arquivos)');
+    }
+    lines.push('');
+    lines.push('  PASSO 3 — VALIDAÇÃO:');
+    lines.push('  node --check <arquivos JS criados>');
+    lines.push('  git status');
+    lines.push('  git diff --stat');
+    lines.push('');
+    lines.push('  CAMINHOS PROIBIDOS (não tocar):');
+    lines.push('  ⊗ backend/*');
+    lines.push('  ⊗ go-core/*');
+    lines.push('  ⊗ tools/*');
+    lines.push('  ⊗ package.json');
+    lines.push('');
+    lines.push('  NÃO FAZER SEM INSTRUÇÃO EXPLÍCITA:');
+    lines.push('  ⊗ git push');
+    lines.push('  ⊗ gh pr create');
+    lines.push('  ⊗ git tag');
+    lines.push('  ⊗ npm publish / deploy');
+    lines.push('');
+    lines.push('  RELATÓRIO FINAL OBRIGATÓRIO:');
+    pkg.final_report_contract.forEach(function (item) {
+      lines.push('  [ ] ' + item);
+    });
+    lines = lines.concat(_cmdFooter(pkg));
+    return lines.join('\n');
+  }
+
+  function buildManualOperatorFileCreationChecklist() {
+    var pkg = getRealFileCommandPackageRegistry();
+    if (!pkg) { return ''; }
+    var ctx       = getRealFileCommandContext();
+    var gateReady = isHumanApprovalGateReadyForCommand();
+
+    var lines = _cmdHeader(ctx, 'Manual Operator File Creation Checklist', 'Manual Operator', gateReady);
+    lines.push('── Checklist para Operador Manual ──────────────────────────────');
+    lines.push('');
+    lines.push('  [ ] 1. Verificar branch atual:');
+    lines.push('          git branch');
+    lines.push('          git status');
+    lines.push('');
+    lines.push('  [ ] 2. Criar branch de trabalho:');
+    lines.push('          git checkout main && git pull origin main');
+    lines.push('          git checkout -b feat/real-file-creation-<data>');
+    lines.push('');
+    lines.push('  [ ] 3. Criar estrutura de pastas manualmente:');
+    if (ctx.tplDetail && ctx.tplDetail.folder_structure) {
+      ctx.tplDetail.folder_structure.forEach(function (f) {
+        lines.push('          [ ] mkdir ' + f);
+      });
+    } else {
+      lines.push('          (Ver export preview para estrutura)');
+    }
+    lines.push('');
+    lines.push('  [ ] 4. Criar arquivos iniciais manualmente:');
+    if (ctx.tplDetail && ctx.tplDetail.initial_files) {
+      ctx.tplDetail.initial_files.forEach(function (f) {
+        lines.push('          [ ] Criar e preencher: ' + f);
+      });
+    } else {
+      lines.push('          (Ver export preview para lista de arquivos)');
+    }
+    lines.push('');
+    lines.push('  [ ] 5. Colar conteúdo placeholder do export preview');
+    lines.push('  [ ] 6. Revisar diff: git diff --stat');
+    lines.push('  [ ] 7. Executar validação: node --check <arquivos.js>');
+    lines.push('  [ ] 8. Confirmar: git status');
+    lines.push('  [ ] 9. NÃO fazer deploy/release/tag/stable/push sem instrução explícita');
+    lines.push('  [ ] 10. NÃO reivindicar PASS GOLD REAL');
+    lines.push('  [ ] 11. Preencher relatório final');
+    lines.push('');
+    lines = lines.concat(_cmdFooter(pkg));
+    return lines.join('\n');
+  }
+
+  function buildSafetyFirstDryRunPackage() {
+    var pkg = getRealFileCommandPackageRegistry();
+    if (!pkg) { return ''; }
+    var ctx       = getRealFileCommandContext();
+    var gateReady = isHumanApprovalGateReadyForCommand();
+
+    var lines = _cmdHeader(ctx, 'Safety-First Dry Run Package', realFileCommandState.selectedWorker, gateReady);
+    lines.push('── Dry Run — Simulação Apenas (NÃO CRIA ARQUIVOS REAIS) ────────');
+    lines.push('');
+    lines.push('  Este pacote solicita SIMULAÇÃO da criação de arquivos apenas.');
+    lines.push('  Nenhum arquivo real deve ser criado nesta fase.');
+    lines.push('');
+    lines.push('  SIMULAÇÃO — Estrutura que SERIA criada:');
+    if (ctx.tplDetail && ctx.tplDetail.folder_structure) {
+      ctx.tplDetail.folder_structure.forEach(function (f) {
+        lines.push('  [DRY RUN] pasta : ' + f);
+      });
+    }
+    if (ctx.tplDetail && ctx.tplDetail.initial_files) {
+      ctx.tplDetail.initial_files.forEach(function (f) {
+        lines.push('  [DRY RUN] arquivo: ' + f);
+      });
+    }
+    if (!ctx.tplDetail) {
+      lines.push('  (Ver export preview para estrutura simulada)');
+    }
+    lines.push('');
+    lines.push('  VALIDAÇÃO DRY RUN (não cria arquivos):');
+    lines.push('  $ git status   # verificar branch limpo');
+    lines.push('  $ git diff     # nenhum diff esperado');
+    lines.push('');
+    lines.push('  PRÓXIMO PASSO (após revisão humana do dry run):');
+    lines.push('  Usar Full Real File Creation Package com aprovação explícita.');
+    lines.push('');
+    lines = lines.concat(_cmdFooter(pkg));
+    return lines.join('\n');
+  }
+
+  function buildValidationOnlyPackage() {
+    var pkg = getRealFileCommandPackageRegistry();
+    if (!pkg) { return ''; }
+    var ctx       = getRealFileCommandContext();
+    var gateReady = isHumanApprovalGateReadyForCommand();
+
+    var lines = _cmdHeader(ctx, 'Validation-Only Package', realFileCommandState.selectedWorker, gateReady);
+    lines.push('── Pacote de Validação Apenas (SEM CRIAÇÃO DE ARQUIVOS) ────────');
+    lines.push('');
+    lines.push('  Este pacote NÃO inclui instruções de criação de arquivos.');
+    lines.push('  Use-o para verificar o estado atual do repositório e validar');
+    lines.push('  precondições antes de qualquer fase real de criação.');
+    lines.push('');
+    lines.push('  VERIFICAÇÕES DE PRÉ-ESTADO:');
+    lines.push('  $ git status              # repositório limpo?');
+    lines.push('  $ git branch              # branch correto?');
+    lines.push('  $ git log --oneline -5    # histórico recente');
+    lines.push('  $ node --version          # Node.js disponível?');
+    lines.push('');
+    lines.push('  SCAN DE SEGURANÇA (exibir resultado, não executar ação):');
+    lines.push('  Verificar manualmente ausência de:');
+    lines.push('  - fetch(), XMLHttpRequest, eval(), exec(), spawn()');
+    lines.push('  - localStorage, sessionStorage');
+    lines.push('  - Blob, URL.createObjectURL');
+    lines.push('  - file_creation_allowed: true');
+    lines.push('  - real_file_creation_enabled: true');
+    lines.push('');
+    lines.push('  VERIFICAÇÃO DE ESCOPO:');
+    lines.push('  $ git diff --name-only main...HEAD');
+    lines.push('  Confirmar: apenas arquivos frontend/ alterados');
+    lines.push('');
+    lines.push('  VERIFICAÇÃO DE FLAGS DE SEGURANÇA:');
+    lines.push('  Confirmar em vision-core-clean-state.js:');
+    lines.push('  - pass_gold_real_claimed: false');
+    lines.push('  - stable_promotion_allowed: false');
+    lines.push('  - release_allowed: false');
+    lines.push('  - production_touched: false');
+    lines.push('');
+    lines = lines.concat(_cmdFooter(pkg));
+    return lines.join('\n');
+  }
+
+  function buildRealFileCommandPackage() {
+    var mode = realFileCommandState.selectedMode;
+    if (mode === 'claude_code_file_creation_task')          { return buildClaudeCodeFileCreationTask(); }
+    if (mode === 'manual_operator_file_creation_checklist') { return buildManualOperatorFileCreationChecklist(); }
+    if (mode === 'safety_first_dry_run_package')            { return buildSafetyFirstDryRunPackage(); }
+    if (mode === 'validation_only_package')                 { return buildValidationOnlyPackage(); }
+    return buildFullRealFileCreationPackage();
+  }
+
+  function renderRealFileCommandPackage() {
+    renderRealFileCommandStatus();
+    var pkg = buildRealFileCommandPackage();
+    realFileCommandState.generatedPackage = pkg;
+
+    var output = document.getElementById('vcRealCommandOutput');
+    if (output) {
+      output.value     = pkg;
+      output.className = 'vc-real-command-output' + (pkg ? '' : ' empty');
+    }
+    var lineEl = document.getElementById('vcRealCommandLineCount');
+    if (lineEl && pkg) { lineEl.textContent = pkg.split('\n').length; }
+  }
+
+  function copyRealFileCommandPackage() {
+    var text     = realFileCommandState.generatedPackage;
+    var statusEl = document.getElementById('vcRealCommandCopyStatus');
+    if (!text) {
+      if (statusEl) {
+        statusEl.textContent = '⚠ Gere o pacote primeiro.';
+        statusEl.className   = 'vc-real-command-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-real-command-copy-status'; }, 2500);
+      }
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        if (statusEl) {
+          statusEl.textContent = '✓ Copiado!';
+          statusEl.className   = 'vc-real-command-copy-status visible';
+          setTimeout(function () { statusEl.className = 'vc-real-command-copy-status'; }, 2500);
+        }
+      }).catch(function () {
+        if (statusEl) {
+          statusEl.textContent = 'Selecione e copie manualmente.';
+          statusEl.className   = 'vc-real-command-copy-status visible error';
+          setTimeout(function () { statusEl.className = 'vc-real-command-copy-status'; }, 3000);
+        }
+      });
+    } else {
+      if (statusEl) {
+        statusEl.textContent = 'Selecione e copie manualmente.';
+        statusEl.className   = 'vc-real-command-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-real-command-copy-status'; }, 3000);
+      }
+    }
+  }
+
+  function clearRealFileCommandPackage() {
+    realFileCommandState.generatedPackage = '';
+    var output = document.getElementById('vcRealCommandOutput');
+    if (output) {
+      output.value     = 'Clique em GERAR PACOTE DE COMANDO para gerar o pacote.';
+      output.className = 'vc-real-command-output empty';
+    }
+    var lineEl = document.getElementById('vcRealCommandLineCount');
+    if (lineEl) { lineEl.textContent = '0'; }
+    var statusEl = document.getElementById('vcRealCommandCopyStatus');
+    if (statusEl) { statusEl.className = 'vc-real-command-copy-status'; }
+  }
+
+  function initRealFileCommandPackage() {
+    var pkg = getRealFileCommandPackageRegistry();
+    if (!pkg) { return; }
+
+    /* Build mode chips */
+    var modeRow = document.getElementById('vcRealCommandModeRow');
+    if (modeRow) {
+      pkg.package_modes.forEach(function (m) {
+        var chip = document.createElement('button');
+        chip.className = 'vc-real-command-mode-chip' + (m.id === realFileCommandState.selectedMode ? ' selected' : '');
+        chip.setAttribute('data-cmd-mode', m.id);
+        chip.type = 'button';
+        chip.textContent = m.label;
+        chip.addEventListener('click', function () { setRealFileCommandMode(m.id); });
+        modeRow.appendChild(chip);
+      });
+    }
+
+    /* Build worker chips */
+    var workerRow = document.getElementById('vcRealCommandWorkerRow');
+    if (workerRow) {
+      pkg.external_worker_profiles.forEach(function (w) {
+        var chip = document.createElement('button');
+        chip.className = 'vc-real-command-worker-chip' + (w.id === realFileCommandState.selectedWorker ? ' selected' : '');
+        chip.setAttribute('data-cmd-worker', w.id);
+        chip.type = 'button';
+        chip.textContent = w.label;
+        chip.addEventListener('click', function () { setRealFileCommandWorker(w.id); });
+        workerRow.appendChild(chip);
+      });
+    }
+
+    /* Initial readiness render */
+    renderRealFileCommandStatus();
+
+    /* Wire buttons */
+    var genBtn = document.getElementById('vcGenerateCommandPkgBtn');
+    if (genBtn) {
+      genBtn.addEventListener('click', function () {
+        renderRealFileCommandPackage();
+        var gateReady = isHumanApprovalGateReadyForCommand();
+        genBtn.textContent    = gateReady ? '✓ PACOTE PRONTO — EXTERNAL ONLY' : '✓ PACOTE GERADO — GATE INCOMPLETO';
+        genBtn.style.borderColor = gateReady ? 'rgba(34,211,238,.70)' : 'rgba(251,146,60,.65)';
+        genBtn.style.color       = gateReady ? '#22d3ee'              : '#fb923c';
+      });
+    }
+
+    var copyBtn = document.getElementById('vcCopyCommandPkgBtn');
+    if (copyBtn) { copyBtn.addEventListener('click', copyRealFileCommandPackage); }
+
+    var clearBtn = document.getElementById('vcClearCommandPkgBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        clearRealFileCommandPackage();
+        if (genBtn) {
+          genBtn.textContent       = '⬡ GERAR PACOTE DE COMANDO';
+          genBtn.style.borderColor = '';
+          genBtn.style.color       = '';
+        }
+      });
+    }
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       init();
@@ -2564,6 +3102,7 @@
       initWorkerHandoff();
       initProjectExportPreview();
       initHumanApprovalGate();
+      initRealFileCommandPackage();
     });
   } else {
     init();
@@ -2574,5 +3113,6 @@
     initWorkerHandoff();
     initProjectExportPreview();
     initHumanApprovalGate();
+    initRealFileCommandPackage();
   }
 })();

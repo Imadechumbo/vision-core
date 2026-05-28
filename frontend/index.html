@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="assets/vc-worker-handoff.css">
 <link rel="stylesheet" href="assets/vc-export-preview.css">
 <link rel="stylesheet" href="assets/vc-human-approval.css">
+<link rel="stylesheet" href="assets/vc-real-file-command.css">
 <style>
 /* V2.9.10 CLEAN FRONT — v299 quota/badge inline (no runtime JS needed) */
 .v299-quota-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;font-size:11px;flex-shrink:0;}
@@ -1286,6 +1287,80 @@
         </div>
 
       </div><!-- end vcHumanApprovalGate -->
+
+      <!-- ── Section M — Real File Creation Command Package ──────── -->
+      <div class="vc-pb-section vc-real-file-command" id="vcRealFileCommandPackage">
+
+        <!-- Headline -->
+        <div class="vc-real-command-headline">
+          <div class="vc-pb-headline-text">
+            <p class="eyebrow">SOFTWARE FACTORY • EXTERNAL COMMAND PACKAGE • HUMAN CONTROLLED</p>
+            <h2 style="font-size:14px;margin:0 0 4px;">PACOTE DE COMANDO PARA CRIAÇÃO REAL</h2>
+            <p style="font-size:11px;color:#4b5563;margin:0;">Gere um pacote de instruções copiável para um operador ou worker externo criar arquivos em uma fase separada. Esta tela não cria arquivos.</p>
+          </div>
+          <span class="vc-real-command-badge">EXTERNAL ONLY</span>
+        </div>
+
+        <!-- Package mode selector -->
+        <p class="vc-pb-section-label">Modo do Pacote</p>
+        <div class="vc-real-command-mode-row" id="vcRealCommandModeRow"></div>
+
+        <!-- Worker target selector -->
+        <p class="vc-pb-section-label">Worker Externo</p>
+        <div class="vc-real-command-worker-row" id="vcRealCommandWorkerRow"></div>
+
+        <!-- Authority status panel -->
+        <p class="vc-pb-section-label">Status de Autoridade</p>
+        <div class="vc-real-authority-grid">
+          <div class="vc-real-authority-card external"><span class="vc-real-authority-icon">⟡</span><div class="vc-real-authority-text"><div class="vc-real-authority-name">Pacote</div><div class="vc-real-authority-val">TEXTO LOCAL APENAS</div></div></div>
+          <div class="vc-real-authority-card external"><span class="vc-real-authority-icon">⟡</span><div class="vc-real-authority-text"><div class="vc-real-authority-name">Worker Externo</div><div class="vc-real-authority-val">OBRIGATÓRIO</div></div></div>
+          <div class="vc-real-authority-card required"><span class="vc-real-authority-icon">◈</span><div class="vc-real-authority-text"><div class="vc-real-authority-name">Aprovação Humana</div><div class="vc-real-authority-val">OBRIGATÓRIA</div></div></div>
+          <div class="vc-real-authority-card locked"><span class="vc-real-authority-icon">⊗</span><div class="vc-real-authority-text"><div class="vc-real-authority-name">Criação de Arquivos (Frontend)</div><div class="vc-real-authority-val">LOCKED</div></div></div>
+          <div class="vc-real-authority-card locked"><span class="vc-real-authority-icon">⊗</span><div class="vc-real-authority-text"><div class="vc-real-authority-name">Backend Write</div><div class="vc-real-authority-val">LOCKED</div></div></div>
+          <div class="vc-real-authority-card locked"><span class="vc-real-authority-icon">⊗</span><div class="vc-real-authority-text"><div class="vc-real-authority-name">Command Execution</div><div class="vc-real-authority-val">LOCKED</div></div></div>
+          <div class="vc-real-authority-card locked"><span class="vc-real-authority-icon">⊗</span><div class="vc-real-authority-text"><div class="vc-real-authority-name">Deploy/Release/Tag/Stable</div><div class="vc-real-authority-val">LOCKED</div></div></div>
+          <div class="vc-real-authority-card locked"><span class="vc-real-authority-icon">⊗</span><div class="vc-real-authority-text"><div class="vc-real-authority-name">Pass Gold Real</div><div class="vc-real-authority-val">NOT CLAIMED</div></div></div>
+        </div>
+
+        <!-- Input readiness panel -->
+        <p class="vc-pb-section-label">Prontidão dos Inputs</p>
+        <div class="vc-real-readiness-grid" id="vcRealReadinessGrid">
+          <div class="vc-real-readiness-card" id="vcRealReadyType"><div class="vc-real-readiness-label">Tipo de Projeto</div><div class="vc-real-readiness-val" id="vcRealReadyTypeVal">—</div></div>
+          <div class="vc-real-readiness-card" id="vcRealReadyTpl"><div class="vc-real-readiness-label">Template</div><div class="vc-real-readiness-val" id="vcRealReadyTplVal">—</div></div>
+          <div class="vc-real-readiness-card" id="vcRealReadyStack"><div class="vc-real-readiness-label">Stack</div><div class="vc-real-readiness-val" id="vcRealReadyStackVal">—</div></div>
+          <div class="vc-real-readiness-card" id="vcRealReadyExport"><div class="vc-real-readiness-label">Export Preview</div><div class="vc-real-readiness-val" id="vcRealReadyExportVal">—</div></div>
+          <div class="vc-real-readiness-card" id="vcRealReadyApproval"><div class="vc-real-readiness-label">Aprovação Humana</div><div class="vc-real-readiness-val" id="vcRealReadyApprovalVal">—</div></div>
+          <div class="vc-real-readiness-card" id="vcRealReadyAck"><div class="vc-real-readiness-label">Confirmações (12/12)</div><div class="vc-real-readiness-val" id="vcRealReadyAckVal">—</div></div>
+        </div>
+
+        <!-- Command package output panel -->
+        <!-- No file creation / write / export / download / execute / deploy / release / tag / stable buttons -->
+        <div class="vc-real-command-output-panel" id="vcRealCommandOutputPanel">
+          <div class="vc-real-command-output-header">
+            <span class="vc-real-command-output-title">PACOTE DE COMANDO EXTERNO</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="vc-real-command-metric" id="vcRealCommandMetric"><span id="vcRealCommandLineCount">0</span> linhas</span>
+              <span class="vc-external-only-badge">EXTERNAL ONLY</span>
+            </div>
+          </div>
+          <textarea
+            class="vc-real-command-output empty"
+            id="vcRealCommandOutput"
+            readonly
+            spellcheck="false"
+            aria-label="Pacote de comando externo — somente leitura"
+          >Clique em GERAR PACOTE DE COMANDO para gerar o pacote.</textarea>
+        </div>
+
+        <!-- Actions — no create/write/execute/deploy/release/tag/stable/export/download buttons -->
+        <div class="vc-real-command-actions">
+          <button class="vc-real-command-btn" id="vcGenerateCommandPkgBtn" type="button">⬡ GERAR PACOTE DE COMANDO</button>
+          <button class="vc-real-command-btn secondary" id="vcCopyCommandPkgBtn" type="button">⎘ COPIAR PACOTE</button>
+          <button class="vc-real-command-btn danger" id="vcClearCommandPkgBtn" type="button">✕ LIMPAR PACOTE</button>
+          <span class="vc-real-command-copy-status" id="vcRealCommandCopyStatus">✓ Copiado!</span>
+        </div>
+
+      </div><!-- end vcRealFileCommandPackage -->
 
     </div><!-- end #projectBuilder -->
 
