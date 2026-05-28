@@ -2071,6 +2071,7 @@
 
   <!-- ── Horizontal module nav ──────────────────────────────── -->
   <div class="vc-sf-module-nav-h" role="tablist" aria-label="Módulos Software Factory">
+    <button class="vc-sf-module-btn vc-sf-home-btn active" id="vcSfHomeBtn" role="tab" type="button">⌂ HOME</button>
     <button class="vc-sf-module-btn" data-sf-module="project_builder"   role="tab" type="button"><span class="vc-sf-module-num">01</span> MONTAR PROJETO DO ZERO</button>
     <button class="vc-sf-module-btn" data-sf-module="export_preview"    role="tab" type="button"><span class="vc-sf-module-num">02</span> PREVIEW DE CRIAÇÃO</button>
     <button class="vc-sf-module-btn" data-sf-module="project_templates" role="tab" type="button"><span class="vc-sf-module-num">03</span> TEMPLATES DE PROJETO</button>
@@ -2205,28 +2206,37 @@
 
     </div><!-- end .vc-sf-col-left -->
 
-    <!-- CENTER: SF LLM Control + active module panel -->
+    <!-- CENTER: SF Home (LLM Control) + Module Workspace -->
     <div class="vc-sf-col-center">
 
-      <!-- SOFTWARE FACTORY LLM CONTROL -->
+      <!-- HOME: Software Factory LLM Control (visible on home; compact when workspace opens) -->
+      <div id="vcSfHomeControl">
       <div class="vc-sf-llm-control">
         <div class="vc-sf-llm-control-header">
           <span class="vc-sf-llm-title">⬡ SOFTWARE FACTORY LLM CONTROL</span>
           <span class="vc-sf-llm-status">LOCAL · SEM BACKEND</span>
         </div>
         <div class="vc-sf-chat-stream" id="vcSfChatStream">
-          <div class="vc-sf-chat-hint">Software Factory Builder pronto. Configure seu projeto nos módulos acima. Mensagens ficam na memória local desta sessão.</div>
+          <div class="vc-sf-chat-hint">Bem-vindo ao Software Factory Builder. Descreva sua ideia de projeto ou clique em INICIAR MONTAGEM para abrir o fluxo SDDF completo.</div>
         </div>
         <div class="vc-sf-chat-composer">
-          <textarea class="vc-sf-chat-input" id="vcSfChatInput" rows="2" placeholder="Descreva o projeto ou configure o módulo ativo... (Enter = enviar, Shift+Enter = nova linha)"></textarea>
+          <textarea class="vc-sf-chat-input" id="vcSfChatInput" rows="2" placeholder="Descreva sua ideia de projeto... (Enter = enviar, Shift+Enter = nova linha)"></textarea>
           <div class="vc-sf-chat-btn-group">
             <button class="vc-sf-chat-send" id="vcSfChatSendBtn" type="button">ENVIAR</button>
-            <button class="vc-sf-run-btn" id="vcSfRunBtn" type="button">EXECUTAR SDDF</button>
+            <button class="vc-sf-run-btn" id="vcSfRunBtn" type="button">EXECUTAR MISSÃO SDDF</button>
           </div>
         </div>
       </div>
 
-      <!-- Active module content -->
+      <!-- Quick start: open full module workspace -->
+      <div class="vc-sf-start-row">
+        <button class="vc-sf-start-btn" id="vcSfStartBtn" type="button">▶ INICIAR MONTAGEM DO PROJETO</button>
+        <span class="vc-sf-start-hint">Ou selecione um módulo no menu acima para iniciar o fluxo SDDF</span>
+      </div>
+      </div><!-- end #vcSfHomeControl -->
+
+      <!-- MODULE WORKSPACE: original Project Builder panels (hidden until user navigates) -->
+      <div id="vcSfModuleWorkspace" style="display:none">
       <div class="vc-sf-module-content" id="vcSfModuleContent">
 
         <!-- JS moves original #projectBuilder here on showSoftwareFactoryPage() -->
@@ -2623,6 +2633,7 @@
         </div>
 
       </div><!-- end #vcSfModuleContent -->
+      </div><!-- end #vcSfModuleWorkspace -->
 
     </div><!-- end .vc-sf-col-center -->
 

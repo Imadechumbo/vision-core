@@ -3856,7 +3856,8 @@
     { id: 'final_dashboard',  num: '09', name: 'PAINEL FINAL DO PRODUTO',          sddf: 'Roadmap & Conectores',         next: 'Gere o relatório final de produto e revise toda a cadeia.' }
   ];
 
-  var _sfActiveModule = 'project_builder';
+  var _sfActiveModule  = 'project_builder';
+  var _sfHomeVisible   = true;   // true = LLM home shown; false = module workspace shown
 
   // Maps module IDs to the original #projectBuilder section IDs
   var SF_MODULE_SECTION_MAP = {
@@ -3870,6 +3871,32 @@
     saas_api:          'vcSaasApiRoadmap',
     final_dashboard:   'vcFinalProductDashboard'
   };
+
+  // Show home view (LLM Control full-height, workspace hidden)
+  function _sfShowHome() {
+    _sfHomeVisible = true;
+    var homeCtrl  = document.getElementById('vcSfHomeControl');
+    var workspace = document.getElementById('vcSfModuleWorkspace');
+    if (homeCtrl)  { homeCtrl.classList.remove('compact'); }
+    if (workspace) { workspace.style.display = 'none'; }
+    var homeBtn = document.getElementById('vcSfHomeBtn');
+    if (homeBtn) { homeBtn.classList.add('active'); }
+    // Remove active from all module buttons
+    document.querySelectorAll('.vc-sf-module-btn').forEach(function (b) {
+      if (b !== homeBtn) { b.classList.remove('active'); }
+    });
+  }
+
+  // Show module workspace (LLM Control compact, workspace visible)
+  function _sfShowWorkspace() {
+    _sfHomeVisible = false;
+    var homeCtrl  = document.getElementById('vcSfHomeControl');
+    var workspace = document.getElementById('vcSfModuleWorkspace');
+    if (homeCtrl)  { homeCtrl.classList.add('compact'); }
+    if (workspace) { workspace.style.display = 'flex'; }
+    var homeBtn = document.getElementById('vcSfHomeBtn');
+    if (homeBtn) { homeBtn.classList.remove('active'); }
+  }
 
   function showMainCockpitPage() {
     var sfPage  = document.getElementById('vcSoftwareFactoryPage');
@@ -3891,12 +3918,19 @@
       if (mount && pb && !mount.contains(pb)) {
         mount.appendChild(pb);
       }
-      setSoftwareFactoryModule(_sfActiveModule);
+      // Always reset to home view on every open
+      _sfShowHome();
+      renderSoftwareFactoryTimelineState(_sfActiveModule);
     }
   }
 
   function setSoftwareFactoryModule(moduleId) {
     _sfActiveModule = moduleId;
+
+    // Open module workspace if user is still on home
+    if (_sfHomeVisible) {
+      _sfShowWorkspace();
+    }
 
     // Update module nav buttons
     var btns = document.querySelectorAll('.vc-sf-module-btn');
@@ -4013,6 +4047,20 @@
         setSoftwareFactoryModule(btn.dataset.sfModule);
       });
     });
+
+    // HOME button → reset to home view
+    var homeBtn = document.getElementById('vcSfHomeBtn');
+    if (homeBtn) {
+      homeBtn.addEventListener('click', _sfShowHome);
+    }
+
+    // INICIAR MONTAGEM → open workspace at first module
+    var startBtn = document.getElementById('vcSfStartBtn');
+    if (startBtn) {
+      startBtn.addEventListener('click', function () {
+        setSoftwareFactoryModule('project_builder');
+      });
+    }
 
     // Chat send
     var sendBtn = document.getElementById('vcSfChatSendBtn');
