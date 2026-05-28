@@ -3843,16 +3843,17 @@
   // Local in-memory view switching. No backend. No API. No exec.
   // ─────────────────────────────────────────────────────────────
 
+  // New order aligned with SDDF timeline and horizontal menu
   var SF_MODULES = [
-    { id: 'project_builder',  num: '01', name: 'MONTAR PROJETO DO ZERO',           next: 'Selecione tipo, stack e modo de orquestração.' },
-    { id: 'project_templates',num: '02', name: 'TEMPLATES DE PROJETO',             next: 'Escolha um template base para o projeto.' },
-    { id: 'mission_composer', num: '03', name: 'COMPOSITOR DE MISSÃO',             next: 'Compose a missão e gere o pacote de instrução.' },
-    { id: 'worker_handoff',   num: '04', name: 'PACOTES PARA WORKERS',             next: 'Gere pacote de entrega para o worker externo.' },
-    { id: 'export_preview',   num: '05', name: 'PREVIEW DE CRIAÇÃO',               next: 'Revise a lista de arquivos antes de continuar.' },
-    { id: 'real_file_command',num: '06', name: 'COMANDO PARA CRIAÇÃO REAL',        next: 'Revisão do pacote de comando. Execução bloqueada.' },
-    { id: 'worker_receipt',   num: '07', name: 'RECIBO DO WORKER',                 next: 'Cole o resultado do worker para análise local.' },
-    { id: 'final_dashboard',  num: '08', name: 'PAINEL FINAL DO PRODUTO',          next: 'Gere o relatório final de produto.' },
-    { id: 'saas_api',         num: '09', name: 'SAAS & API ROADMAP',               next: 'Controles SaaS/API bloqueados. Requer autorização.' }
+    { id: 'project_builder',  num: '01', name: 'MONTAR PROJETO DO ZERO',           sddf: 'Descoberta & Planejamento',    next: 'Selecione tipo de projeto, stack e modo de orquestração.' },
+    { id: 'export_preview',   num: '02', name: 'PREVIEW DE CRIAÇÃO DO PROJETO',    sddf: 'Modelagem & Template',         next: 'Revise a lista de arquivos que seriam criados. Nenhum arquivo é escrito.' },
+    { id: 'project_templates',num: '03', name: 'TEMPLATES DE PROJETO',             sddf: 'Composição da Missão',         next: 'Escolha um template base com stack e estrutura pré-configurada.' },
+    { id: 'mission_composer', num: '04', name: 'COMPOSITOR DE MISSÃO',             sddf: 'Preview & Verificação',        next: 'Componha o pacote de instrução e copie para o agente externo.' },
+    { id: 'worker_handoff',   num: '05', name: 'PACOTES PARA WORKERS',             sddf: 'Pacotes para Workers',         next: 'Gere pacote completo de entrega para o worker externo executar.' },
+    { id: 'real_file_command',num: '06', name: 'COMANDO PARA CRIAÇÃO REAL',        sddf: 'Comando para Criação Real',    next: 'Revisão do pacote de comando. Execução real bloqueada.' },
+    { id: 'worker_receipt',   num: '07', name: 'RECIBO DO WORKER EXTERNO',         sddf: 'Execução & Recibo',            next: 'Cole o resultado do worker externo para análise local.' },
+    { id: 'saas_api',         num: '08', name: 'SAAS & API CONNECTORS ROADMAP',    sddf: 'Validação & Entrega',          next: 'Controles SaaS/API bloqueados. Ativação requer autorização explícita.' },
+    { id: 'final_dashboard',  num: '09', name: 'PAINEL FINAL DO PRODUTO',          sddf: 'Roadmap & Conectores',         next: 'Gere o relatório final de produto e revise toda a cadeia.' }
   ];
 
   var _sfActiveModule = 'project_builder';
@@ -3881,33 +3882,66 @@
     // Update module nav buttons
     var btns = document.querySelectorAll('.vc-sf-module-btn');
     btns.forEach(function (btn) {
-      var active = btn.dataset.sfModule === moduleId;
-      btn.classList.toggle('active', active);
+      btn.classList.toggle('active', btn.dataset.sfModule === moduleId);
     });
 
     // Show/hide module panels
     var panels = document.querySelectorAll('.vc-sf-module-panel');
     panels.forEach(function (p) {
-      var active = p.id === 'vcSfPanel-' + moduleId;
-      p.classList.toggle('active', active);
+      p.classList.toggle('active', p.id === 'vcSfPanel-' + moduleId);
     });
 
     // Update SDDF timeline
     renderSoftwareFactoryTimelineState(moduleId);
 
-    // Update next action
+    // Find module metadata
     var mod = SF_MODULES.find(function (m) { return m.id === moduleId; });
+    if (!mod) return;
+
+    // Update next action
     var nextEl = document.getElementById('vcSfNextActionText');
-    if (nextEl && mod) { nextEl.textContent = mod.next; }
+    if (nextEl) { nextEl.textContent = mod.next; }
+
+    // Update left summary: active module number
+    var summaryModule = document.getElementById('vcSfSummaryModule');
+    if (summaryModule) { summaryModule.textContent = mod.num; }
+
+    // Update progress bar
+    var modIdx = SF_MODULES.findIndex(function (m) { return m.id === moduleId; });
+    var pct = Math.round(((modIdx + 1) / SF_MODULES.length) * 100);
+    var fill = document.getElementById('vcSfProgressFill');
+    if (fill) { fill.style.width = pct + '%'; }
+    var progressLabel = document.getElementById('vcSfProgressLabel');
+    if (progressLabel) { progressLabel.textContent = (modIdx + 1) + ' / ' + SF_MODULES.length; }
+
+    // Add activity entry
+    var feed = document.getElementById('vcSfActivityFeed');
+    if (feed) {
+      var item = document.createElement('div');
+      item.className = 'vc-sf-activity-item';
+      item.innerHTML = '<span>Módulo ' + mod.num + ' selecionado</span>';
+      feed.insertBefore(item, feed.firstChild);
+      // Keep feed to 8 entries
+      while (feed.children.length > 8) { feed.removeChild(feed.lastChild); }
+    }
   }
 
   function renderSoftwareFactoryTimelineState(activeModuleId) {
-    var steps = document.querySelectorAll('#vcSfSddfSteps .vc-sf-sddf-step');
+    var container = document.getElementById('vcSfSddfSteps');
+    if (!container) return;
+    var steps = container.querySelectorAll('.vc-sf-sddf-step');
+    var connectors = container.querySelectorAll('.vc-sf-sddf-connector');
     var activeIdx = SF_MODULES.findIndex(function (m) { return m.id === activeModuleId; });
+
     steps.forEach(function (step, idx) {
       step.classList.remove('active', 'done');
-      if (idx < activeIdx) step.classList.add('done');
+      if (idx < activeIdx)      step.classList.add('done');
       else if (idx === activeIdx) step.classList.add('active');
+    });
+
+    // Color connectors between done steps
+    connectors.forEach(function (c, idx) {
+      c.classList.toggle('done', idx < activeIdx);
     });
   }
 
@@ -3977,6 +4011,17 @@
       });
     }
 
+    // SDDF timeline node clicks → switch module
+    var sddfContainer = document.getElementById('vcSfSddfSteps');
+    if (sddfContainer) {
+      sddfContainer.addEventListener('click', function (e) {
+        var step = e.target.closest('.vc-sf-sddf-step');
+        if (step && step.dataset.sfModule) {
+          setSoftwareFactoryModule(step.dataset.sfModule);
+        }
+      });
+    }
+
     // Chip group toggles (single-active per group)
     sfPage.addEventListener('click', function (e) {
       var chip = e.target.closest('[data-sf-chip-group]');
@@ -3986,14 +4031,44 @@
         c.classList.remove('active');
       });
       chip.classList.add('active');
-      // Update config display cards
       var label = chip.textContent.trim();
-      var displayMap = { project_type: 'vcSfConfigType', stack: 'vcSfConfigStack', orch: 'vcSfConfigOrch' };
-      if (displayMap[group]) {
-        var el = document.getElementById(displayMap[group]);
+      // Update config cards in module panel
+      var panelMap = { project_type: 'vcSfConfigType', stack: 'vcSfConfigStack', orch: 'vcSfConfigOrch' };
+      if (panelMap[group]) {
+        var el = document.getElementById(panelMap[group]);
         if (el) el.textContent = label;
       }
+      // Mirror to left summary
+      var summaryMap = { project_type: 'vcSfSummaryType', stack: 'vcSfSummaryStack', orch: 'vcSfSummaryOrch' };
+      if (summaryMap[group]) {
+        var sel = document.getElementById(summaryMap[group]);
+        if (sel) sel.textContent = label;
+      }
     });
+
+    // EXECUTAR SDDF button (local echo only)
+    var runBtn = document.getElementById('vcSfRunBtn');
+    if (runBtn) {
+      runBtn.addEventListener('click', function () {
+        var stream = document.getElementById('vcSfChatStream');
+        if (!stream) return;
+        var hint = stream.querySelector('.vc-sf-chat-hint');
+        if (hint) hint.remove();
+        var msg = document.createElement('div');
+        msg.className = 'vc-sf-chat-msg';
+        msg.textContent = '[LOCAL] SDDF local: nenhum backend conectado. Configure módulo e copie para worker externo.';
+        stream.appendChild(msg);
+        stream.scrollTop = stream.scrollHeight;
+        var feed = document.getElementById('vcSfActivityFeed');
+        if (feed) {
+          var item = document.createElement('div');
+          item.className = 'vc-sf-activity-item';
+          item.innerHTML = '<span>EXECUTAR SDDF pressionado — local only</span>';
+          feed.insertBefore(item, feed.firstChild);
+          while (feed.children.length > 8) { feed.removeChild(feed.lastChild); }
+        }
+      });
+    }
 
     // Module-level generate / copy buttons
     document.querySelectorAll('[data-sf-generate]').forEach(function (btn) {

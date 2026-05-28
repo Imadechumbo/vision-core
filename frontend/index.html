@@ -2069,11 +2069,165 @@
     <span class="vc-sf-local-badge">LOCAL PREVIEW</span>
   </div>
 
-  <!-- Two-pane layout -->
-  <div class="vc-sf-layout">
+  <!-- ── Horizontal module nav ──────────────────────────────── -->
+  <div class="vc-sf-module-nav-h" role="tablist" aria-label="Módulos Software Factory">
+    <button class="vc-sf-module-btn" data-sf-module="project_builder"   role="tab" type="button"><span class="vc-sf-module-num">01</span> MONTAR PROJETO DO ZERO</button>
+    <button class="vc-sf-module-btn" data-sf-module="export_preview"    role="tab" type="button"><span class="vc-sf-module-num">02</span> PREVIEW DE CRIAÇÃO</button>
+    <button class="vc-sf-module-btn" data-sf-module="project_templates" role="tab" type="button"><span class="vc-sf-module-num">03</span> TEMPLATES DE PROJETO</button>
+    <button class="vc-sf-module-btn" data-sf-module="mission_composer"  role="tab" type="button"><span class="vc-sf-module-num">04</span> COMPOSITOR DE MISSÃO</button>
+    <button class="vc-sf-module-btn" data-sf-module="worker_handoff"    role="tab" type="button"><span class="vc-sf-module-num">05</span> PACOTES PARA WORKERS</button>
+    <button class="vc-sf-module-btn" data-sf-module="real_file_command" role="tab" type="button"><span class="vc-sf-module-num">06</span> COMANDO PARA CRIAÇÃO REAL</button>
+    <button class="vc-sf-module-btn" data-sf-module="worker_receipt"    role="tab" type="button"><span class="vc-sf-module-num">07</span> RECIBO DO WORKER</button>
+    <button class="vc-sf-module-btn" data-sf-module="saas_api"          role="tab" type="button"><span class="vc-sf-module-num">08</span> SAAS &amp; API ROADMAP</button>
+    <button class="vc-sf-module-btn" data-sf-module="final_dashboard"   role="tab" type="button"><span class="vc-sf-module-num">09</span> PAINEL FINAL</button>
+  </div>
 
-    <!-- ── Sidebar: module nav + SDDF timeline + next action ── -->
-    <div class="vc-sf-sidebar">
+  <!-- ── Horizontal SDDF timeline ──────────────────────────── -->
+  <div class="vc-sf-sddf-timeline-h" aria-label="SDDF Timeline">
+    <div id="vcSfSddfSteps">
+      <div class="vc-sf-sddf-step" data-sf-module="project_builder">
+        <div class="vc-sf-sddf-node-circle">01</div>
+        <div class="vc-sf-sddf-step-name">Descoberta &amp; Planejamento</div>
+      </div>
+      <i class="vc-sf-sddf-connector"></i>
+      <div class="vc-sf-sddf-step" data-sf-module="export_preview">
+        <div class="vc-sf-sddf-node-circle">02</div>
+        <div class="vc-sf-sddf-step-name">Modelagem &amp; Template</div>
+      </div>
+      <i class="vc-sf-sddf-connector"></i>
+      <div class="vc-sf-sddf-step" data-sf-module="project_templates">
+        <div class="vc-sf-sddf-node-circle">03</div>
+        <div class="vc-sf-sddf-step-name">Composição da Missão</div>
+      </div>
+      <i class="vc-sf-sddf-connector"></i>
+      <div class="vc-sf-sddf-step" data-sf-module="mission_composer">
+        <div class="vc-sf-sddf-node-circle">04</div>
+        <div class="vc-sf-sddf-step-name">Preview &amp; Verificação</div>
+      </div>
+      <i class="vc-sf-sddf-connector"></i>
+      <div class="vc-sf-sddf-step" data-sf-module="worker_handoff">
+        <div class="vc-sf-sddf-node-circle">05</div>
+        <div class="vc-sf-sddf-step-name">Pacotes para Workers</div>
+      </div>
+      <i class="vc-sf-sddf-connector"></i>
+      <div class="vc-sf-sddf-step" data-sf-module="real_file_command">
+        <div class="vc-sf-sddf-node-circle">06</div>
+        <div class="vc-sf-sddf-step-name">Comando para Criação Real</div>
+      </div>
+      <i class="vc-sf-sddf-connector"></i>
+      <div class="vc-sf-sddf-step" data-sf-module="worker_receipt">
+        <div class="vc-sf-sddf-node-circle">07</div>
+        <div class="vc-sf-sddf-step-name">Execução &amp; Recibo</div>
+      </div>
+      <i class="vc-sf-sddf-connector"></i>
+      <div class="vc-sf-sddf-step" data-sf-module="saas_api">
+        <div class="vc-sf-sddf-node-circle">08</div>
+        <div class="vc-sf-sddf-step-name">Validação &amp; Entrega</div>
+      </div>
+      <i class="vc-sf-sddf-connector"></i>
+      <div class="vc-sf-sddf-step" data-sf-module="final_dashboard">
+        <div class="vc-sf-sddf-node-circle">09</div>
+        <div class="vc-sf-sddf-step-name">Roadmap &amp; Conectores</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Three-column layout ──────────────────────────────── -->
+  <div class="vc-sf-columns">
+
+    <!-- LEFT: Resumo + Config + Progresso -->
+    <div class="vc-sf-col-left">
+
+      <div class="vc-sf-panel-box">
+        <div class="vc-sf-panel-box-title">Resumo do Projeto</div>
+        <div class="vc-sf-stat-row">
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">Tipo</span>
+            <span class="vc-sf-stat-val highlight" id="vcSfSummaryType">SaaS Fullstack</span>
+          </div>
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">Stack</span>
+            <span class="vc-sf-stat-val highlight" id="vcSfSummaryStack">Node.js</span>
+          </div>
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">Orquestração</span>
+            <span class="vc-sf-stat-val highlight" id="vcSfSummaryOrch">Hermes Review</span>
+          </div>
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">Módulo Ativo</span>
+            <span class="vc-sf-stat-val" id="vcSfSummaryModule">01</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="vc-sf-panel-box">
+        <div class="vc-sf-panel-box-title">Configuração Rápida</div>
+        <div class="vc-sf-stat-row">
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">Backend</span>
+            <span class="vc-sf-stat-val blocked">NÃO CONECTADO</span>
+          </div>
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">Exec Real</span>
+            <span class="vc-sf-stat-val blocked">BLOQUEADA</span>
+          </div>
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">Criação de Arquivos</span>
+            <span class="vc-sf-stat-val blocked">BLOQUEADA</span>
+          </div>
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">Modo</span>
+            <span class="vc-sf-stat-val ready">LOCAL PREVIEW</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="vc-sf-panel-box">
+        <div class="vc-sf-panel-box-title">Progresso Geral</div>
+        <div class="vc-sf-progress-bar">
+          <div class="vc-sf-progress-fill" id="vcSfProgressFill" style="width:11%"></div>
+        </div>
+        <div class="vc-sf-stat-row">
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">Módulo</span>
+            <span class="vc-sf-stat-val" id="vcSfProgressLabel">1 / 9</span>
+          </div>
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">PASS GOLD REAL</span>
+            <span class="vc-sf-stat-val blocked">NÃO REIVINDICADO</span>
+          </div>
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">Produção</span>
+            <span class="vc-sf-stat-val blocked">NÃO TOCADA</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end .vc-sf-col-left -->
+
+    <!-- CENTER: SF LLM Control + active module panel -->
+    <div class="vc-sf-col-center">
+
+      <!-- SOFTWARE FACTORY LLM CONTROL -->
+      <div class="vc-sf-llm-control">
+        <div class="vc-sf-llm-control-header">
+          <span class="vc-sf-llm-title">⬡ SOFTWARE FACTORY LLM CONTROL</span>
+          <span class="vc-sf-llm-status">LOCAL · SEM BACKEND</span>
+        </div>
+        <div class="vc-sf-chat-stream" id="vcSfChatStream">
+          <div class="vc-sf-chat-hint">Software Factory Builder pronto. Configure seu projeto nos módulos acima. Mensagens ficam na memória local desta sessão.</div>
+        </div>
+        <div class="vc-sf-chat-composer">
+          <textarea class="vc-sf-chat-input" id="vcSfChatInput" rows="2" placeholder="Descreva o projeto ou configure o módulo ativo... (Enter = enviar, Shift+Enter = nova linha)"></textarea>
+          <div class="vc-sf-chat-btn-group">
+            <button class="vc-sf-chat-send" id="vcSfChatSendBtn" type="button">ENVIAR</button>
+            <button class="vc-sf-run-btn" id="vcSfRunBtn" type="button">EXECUTAR SDDF</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active module content -->
+      <div class="vc-sf-module-content" id="vcSfModuleContent">
 
       <div class="vc-sf-module-nav">
         <div class="vc-sf-module-nav-label">MÓDULOS</div>
@@ -2593,9 +2747,78 @@
 
       </div><!-- end #vcSfModuleContent -->
 
-    </div><!-- end .vc-sf-main -->
+    </div><!-- end .vc-sf-col-center -->
 
-  </div><!-- end .vc-sf-layout -->
+    <!-- RIGHT: Agentes + Atividade + Próxima Ação -->
+    <div class="vc-sf-col-right">
+
+      <div class="vc-sf-panel-box">
+        <div class="vc-sf-panel-box-title">Agentes Orquestradores</div>
+        <div class="vc-sf-agent-list">
+          <div class="vc-sf-agent-item">
+            <div class="vc-sf-agent-dot active"></div>
+            <span class="vc-sf-agent-name">Hermes</span>
+            <span class="vc-sf-agent-status active">ATIVO</span>
+          </div>
+          <div class="vc-sf-agent-item">
+            <div class="vc-sf-agent-dot standby"></div>
+            <span class="vc-sf-agent-name">Backend Agent</span>
+            <span class="vc-sf-agent-status standby">STANDBY</span>
+          </div>
+          <div class="vc-sf-agent-item">
+            <div class="vc-sf-agent-dot standby"></div>
+            <span class="vc-sf-agent-name">Frontend Agent</span>
+            <span class="vc-sf-agent-status standby">STANDBY</span>
+          </div>
+          <div class="vc-sf-agent-item">
+            <div class="vc-sf-agent-dot locked"></div>
+            <span class="vc-sf-agent-name">OpenSquad</span>
+            <span class="vc-sf-agent-status locked">ESCALA</span>
+          </div>
+          <div class="vc-sf-agent-item">
+            <div class="vc-sf-agent-dot locked"></div>
+            <span class="vc-sf-agent-name">Go Core Runner</span>
+            <span class="vc-sf-agent-status locked">BLOQUEADO</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="vc-sf-panel-box">
+        <div class="vc-sf-panel-box-title">Atividade Recente</div>
+        <div class="vc-sf-activity-feed" id="vcSfActivityFeed">
+          <div class="vc-sf-activity-item"><span>Página SF Builder aberta</span></div>
+          <div class="vc-sf-activity-item">Módulo 01 selecionado</div>
+          <div class="vc-sf-activity-item">Nenhuma execução real realizada</div>
+          <div class="vc-sf-activity-item">Backend: não conectado</div>
+        </div>
+      </div>
+
+      <div class="vc-sf-panel-box">
+        <div class="vc-sf-panel-box-title">Segurança</div>
+        <div class="vc-sf-stat-row">
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">PASS GOLD REAL</span>
+            <span class="vc-sf-stat-val blocked">NÃO</span>
+          </div>
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">Produção</span>
+            <span class="vc-sf-stat-val blocked">NÃO TOCADA</span>
+          </div>
+          <div class="vc-sf-stat-item">
+            <span class="vc-sf-stat-key">Deploy</span>
+            <span class="vc-sf-stat-val blocked">BLOQUEADO</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="vc-sf-next-action-box">
+        <div class="vc-sf-next-action-label">PRÓXIMA AÇÃO SEGURA</div>
+        <div class="vc-sf-next-action-text" id="vcSfNextActionText">Selecione tipo de projeto, stack e modo de orquestração.</div>
+      </div>
+
+    </div><!-- end .vc-sf-col-right -->
+
+  </div><!-- end .vc-sf-columns -->
 
 </div><!-- end #vcSoftwareFactoryPage -->
 
