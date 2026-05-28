@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="assets/vc-export-preview.css">
 <link rel="stylesheet" href="assets/vc-human-approval.css">
 <link rel="stylesheet" href="assets/vc-real-file-command.css">
+<link rel="stylesheet" href="assets/vc-worker-result-receipt.css">
 <style>
 /* V2.9.10 CLEAN FRONT — v299 quota/badge inline (no runtime JS needed) */
 .v299-quota-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;font-size:11px;flex-shrink:0;}
@@ -1361,6 +1362,89 @@
         </div>
 
       </div><!-- end vcRealFileCommandPackage -->
+
+      <!-- ── Section N — External Worker Result Receipt ──────────── -->
+      <div class="vc-pb-section vc-worker-result-receipt" id="vcWorkerResultReceipt">
+
+        <!-- Headline -->
+        <div class="vc-result-headline">
+          <div class="vc-pb-headline-text">
+            <p class="eyebrow">SOFTWARE FACTORY • WORKER RESULT • EVIDENCE REVIEW</p>
+            <h2 style="font-size:14px;margin:0 0 4px;">RECIBO DO WORKER EXTERNO</h2>
+            <p style="font-size:11px;color:#4b5563;margin:0;">Cole o relatório final do worker externo para revisar campos de evidência. Esta tela não lê arquivos, não executa comandos e não valida execução real.</p>
+          </div>
+          <span class="vc-result-badge">MANUAL EVIDENCE</span>
+        </div>
+
+        <!-- Review mode selector -->
+        <p class="vc-pb-section-label">Modo de Revisão</p>
+        <div class="vc-result-mode-row" id="vcResultModeRow"></div>
+
+        <!-- Worker report input panel (editable) -->
+        <div class="vc-worker-report-input-panel">
+          <div class="vc-worker-report-input-header">
+            <span class="vc-worker-report-input-title">RELATÓRIO DO WORKER EXTERNO</span>
+            <span style="font-size:9px;color:#374151;letter-spacing:.05em;">LOCAL APENAS — SEM UPLOAD</span>
+          </div>
+          <textarea
+            class="vc-worker-report-input"
+            id="vcWorkerReportInput"
+            spellcheck="false"
+            aria-label="Relatório do worker externo — entrada manual local"
+            placeholder="Cole aqui o relatório final do Claude Code, Codex, operador manual ou worker externo."
+          ></textarea>
+        </div>
+
+        <!-- Evidence checklist -->
+        <p class="vc-pb-section-label">Checklist de Evidências</p>
+        <div class="vc-evidence-summary" id="vcEvidenceSummary">
+          <span class="vc-evidence-count-chip incomplete" id="vcEvidenceSummaryChip">AGUARDANDO ANÁLISE</span>
+          <span style="font-size:9px;color:#374151;letter-spacing:.05em;" id="vcEvidenceCountLabel">0 / 13 campos</span>
+        </div>
+        <div class="vc-evidence-checklist-grid" id="vcEvidenceChecklistGrid"></div>
+
+        <!-- Safety authority panel -->
+        <!-- No PASS GOLD REAL / file creation / command execution authority granted -->
+        <p class="vc-pb-section-label">Estado de Autoridade</p>
+        <div class="vc-result-authority-grid">
+          <div class="vc-result-authority-card locked"><span class="vc-result-authority-icon">⊗</span><div class="vc-result-authority-text"><div class="vc-result-authority-name">Real Execution Verified (Frontend)</div><div class="vc-result-authority-val">FALSE</div></div></div>
+          <div class="vc-result-authority-card locked"><span class="vc-result-authority-icon">⊗</span><div class="vc-result-authority-text"><div class="vc-result-authority-name">Pass Gold Real Claimed</div><div class="vc-result-authority-val">FALSE</div></div></div>
+          <div class="vc-result-authority-card locked"><span class="vc-result-authority-icon">⊗</span><div class="vc-result-authority-text"><div class="vc-result-authority-name">File Creation Authority</div><div class="vc-result-authority-val">FALSE</div></div></div>
+          <div class="vc-result-authority-card locked"><span class="vc-result-authority-icon">⊗</span><div class="vc-result-authority-text"><div class="vc-result-authority-name">Backend Write Authority</div><div class="vc-result-authority-val">FALSE</div></div></div>
+          <div class="vc-result-authority-card locked"><span class="vc-result-authority-icon">⊗</span><div class="vc-result-authority-text"><div class="vc-result-authority-name">Command Execution Authority</div><div class="vc-result-authority-val">FALSE</div></div></div>
+          <div class="vc-result-authority-card locked"><span class="vc-result-authority-icon">⊗</span><div class="vc-result-authority-text"><div class="vc-result-authority-name">Deploy/Release/Tag/Stable</div><div class="vc-result-authority-val">FALSE</div></div></div>
+          <div class="vc-result-authority-card locked"><span class="vc-result-authority-icon">⊗</span><div class="vc-result-authority-text"><div class="vc-result-authority-name">Production Touched</div><div class="vc-result-authority-val">FALSE</div></div></div>
+        </div>
+
+        <!-- Receipt summary output -->
+        <!-- No upload / import file / validate repo / run command / PASS GOLD / deploy buttons -->
+        <div class="vc-result-output-panel" id="vcResultOutputPanel">
+          <div class="vc-result-output-header">
+            <span class="vc-result-output-title">RECIBO DE EVIDÊNCIA LOCAL</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="vc-result-metric">Linhas: <span id="vcResultLineCount">0</span></span>
+              <span class="vc-manual-evidence-badge">MANUAL EVIDENCE</span>
+            </div>
+          </div>
+          <textarea
+            class="vc-result-output empty"
+            id="vcResultReceiptOutput"
+            readonly
+            spellcheck="false"
+            aria-label="Recibo de evidência local — somente leitura"
+          >Clique em ANALISAR TEXTO LOCAL e depois GERAR RECIBO DE EVIDÊNCIA.</textarea>
+        </div>
+
+        <!-- Actions — no upload/import/run/create/deploy/PASS GOLD buttons -->
+        <div class="vc-result-actions">
+          <button class="vc-result-btn" id="vcAnalyzeWorkerReportBtn" type="button">⬡ ANALISAR TEXTO LOCAL</button>
+          <button class="vc-result-btn secondary" id="vcGenerateEvidenceReceiptBtn" type="button">⊡ GERAR RECIBO DE EVIDÊNCIA</button>
+          <button class="vc-result-btn secondary" id="vcCopyEvidenceReceiptBtn" type="button">⎘ COPIAR RECIBO</button>
+          <button class="vc-result-btn danger" id="vcClearEvidenceReviewBtn" type="button">✕ LIMPAR</button>
+          <span class="vc-result-copy-status" id="vcResultCopyStatus">✓ Copiado!</span>
+        </div>
+
+      </div><!-- end vcWorkerResultReceipt -->
 
     </div><!-- end #projectBuilder -->
 
