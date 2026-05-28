@@ -1912,6 +1912,314 @@
     }
   }
 
+  /* ── Project Export Preview — local UI only ─────────────────── */
+  /* No file creation. No write. No download. No export. No API.  */
+  /* No Blob. No URL.createObjectURL. In-memory state only.       */
+
+  var exportPreviewState = {
+    selectedMode:     'folder_tree',
+    generatedPreview: ''
+  };
+
+  function getExportPreviewRegistry() {
+    var reg = getPBRegistry();
+    return (reg && reg.export_preview) ? reg.export_preview : null;
+  }
+
+  function setExportPreviewMode(modeId) {
+    exportPreviewState.selectedMode = modeId;
+    document.querySelectorAll('.vc-export-mode-chip').forEach(function (c) {
+      c.classList.toggle('selected', c.getAttribute('data-export-mode') === modeId);
+    });
+  }
+
+  function getExportPreviewContext() {
+    var tpl  = getSelectedTemplate();
+    var ctx  = getSelectedProjectContext();
+    var agts = getSelectedAgentsForMission();
+    var stack = getSelectedStackForMission();
+    return { tpl: tpl, ctx: ctx, agts: agts, stack: stack };
+  }
+
+  function getFilePlaceholder(filePath, ep) {
+    if (!ep) { return '// Preview placeholder for ' + filePath + '\n// No file created by FRONT-PRODUCT-5.\n'; }
+    var tpl = ep.file_content_templates;
+    var base = filePath.split('/').pop().split('\\').pop();
+    return tpl[base] || tpl['_default'].replace(/<file>/g, filePath);
+  }
+
+  function hr5(ch, len) { return new Array((len || 64) + 1).join(ch || '─'); }
+
+  function buildFolderTreePreview() {
+    var c = getExportPreviewContext();
+    var lines = [];
+    lines.push('PROJECT EXPORT PREVIEW — FOLDER TREE');
+    lines.push('Status: PREVIEW ONLY');
+    lines.push('File creation: LOCKED');
+    lines.push(hr5('═'));
+    lines.push('');
+    if (c.tpl && c.tpl.folder_structure.length) {
+      c.tpl.folder_structure.forEach(function (f) { lines.push('  ' + f); });
+    } else {
+      lines.push('  (no template selected — select a project type to see folder structure)');
+    }
+    lines.push('');
+    lines.push(hr5('─'));
+    lines.push('No folders created. Preview only.');
+    return lines;
+  }
+
+  function buildFileListPreview() {
+    var c = getExportPreviewContext();
+    var lines = [];
+    lines.push('PROJECT EXPORT PREVIEW — FILE LIST');
+    lines.push('Status: PREVIEW ONLY');
+    lines.push('File creation: LOCKED');
+    lines.push(hr5('═'));
+    lines.push('');
+    if (c.tpl && c.tpl.initial_files.length) {
+      c.tpl.initial_files.forEach(function (f) { lines.push('  ○ ' + f); });
+      lines.push('');
+      lines.push('Total files: ' + c.tpl.initial_files.length);
+    } else {
+      lines.push('  (no template selected — select a project type to see file list)');
+    }
+    lines.push('');
+    lines.push(hr5('─'));
+    lines.push('No files created. Preview only.');
+    return lines;
+  }
+
+  function buildFileContentPreview() {
+    var c  = getExportPreviewContext();
+    var ep = getExportPreviewRegistry();
+    var lines = [];
+    lines.push('PROJECT EXPORT PREVIEW — FILE CONTENT PLACEHOLDERS');
+    lines.push('Status: PREVIEW ONLY');
+    lines.push('File creation: LOCKED');
+    lines.push(hr5('═'));
+    lines.push('');
+    if (!c.tpl || !c.tpl.initial_files.length) {
+      lines.push('(no template selected — select a project type to see content preview)');
+    } else {
+      c.tpl.initial_files.forEach(function (f) {
+        lines.push(hr5('─'));
+        lines.push('FILE   : ' + f);
+        lines.push('ACTION : WOULD CREATE IF APPROVED IN FUTURE PHASE');
+        lines.push('CONTENT PREVIEW:');
+        var content = getFilePlaceholder(f, ep);
+        content.split('\n').forEach(function (l) { lines.push('  ' + l); });
+        lines.push('');
+      });
+    }
+    lines.push(hr5('─'));
+    lines.push('No files created. Placeholders only.');
+    return lines;
+  }
+
+  function buildImpactSummaryPreview() {
+    var c  = getExportPreviewContext();
+    var ep = getExportPreviewRegistry();
+    var lines = [];
+    lines.push('PROJECT EXPORT PREVIEW — IMPACT SUMMARY');
+    lines.push('Status: PREVIEW ONLY');
+    lines.push('File creation: LOCKED');
+    lines.push(hr5('═'));
+    lines.push('');
+
+    var folderCount = c.tpl ? c.tpl.folder_structure.length : 0;
+    var fileCount   = c.tpl ? c.tpl.initial_files.length    : 0;
+    var agentCount  = c.agts ? (c.agts.on.length + c.agts.auto.length) : 0;
+    var checkCount  = c.tpl ? c.tpl.validation_checklist.length : 0;
+    var riskCount   = c.tpl ? c.tpl.risk_warnings.length : 0;
+    var blockedCount = ep ? ep.blocked_actions.length : 0;
+
+    lines.push('  Project Type    : ' + (c.ctx.projectType ? c.ctx.projectType.label : '(not selected)'));
+    lines.push('  Template        : ' + (c.tpl ? c.tpl.name : '(none)'));
+    lines.push('  Stack           : ' + (c.stack.length ? c.stack.join(', ') : '(none)'));
+    lines.push('  Folders to create : ' + folderCount);
+    lines.push('  Files to create   : ' + fileCount);
+    lines.push('  Active agents     : ' + agentCount);
+    lines.push('  Validation checks : ' + checkCount);
+    lines.push('  Risk warnings     : ' + riskCount);
+    lines.push('  Blocked actions   : ' + blockedCount);
+    lines.push('');
+
+    if (c.tpl && c.tpl.risk_warnings.length) {
+      lines.push('Risks before creation:');
+      c.tpl.risk_warnings.forEach(function (r) { lines.push('  ⚠ ' + r); });
+      lines.push('');
+    }
+
+    lines.push('Next safe action:');
+    lines.push('  Review preview and approval contract.');
+    lines.push('  Real file creation remains locked.');
+    if (ep) {
+      lines.push('  Next required phase: ' + ep.file_creation_lock.next_required_phase);
+    }
+    return lines;
+  }
+
+  function buildApprovalContractPreview() {
+    var ep  = getExportPreviewRegistry();
+    var lines = [];
+    lines.push('PROJECT EXPORT PREVIEW — APPROVAL CONTRACT');
+    lines.push('Status: PREVIEW ONLY');
+    lines.push('File creation: LOCKED');
+    lines.push(hr5('═'));
+    lines.push('');
+
+    lines.push('Approval contract:');
+    if (ep) {
+      ep.approval_contract.forEach(function (c) { lines.push('  ✓ ' + c); });
+    }
+    lines.push('');
+
+    lines.push('Blocked actions:');
+    if (ep) {
+      ep.blocked_actions.forEach(function (b) { lines.push('  ✗ ' + b); });
+    }
+    lines.push('');
+
+    lines.push(hr5('─'));
+    lines.push('Human approval boundary:');
+    lines.push('  Real file creation requires explicit external human approval');
+    lines.push('  and a separate controlled phase.');
+    lines.push('  This frontend preview does not grant file creation authority.');
+    return lines;
+  }
+
+  function buildProjectExportPreview() {
+    var mode = exportPreviewState.selectedMode;
+    var lines = [];
+
+    if (mode === 'folder_tree')       { lines = buildFolderTreePreview(); }
+    else if (mode === 'file_list')    { lines = buildFileListPreview(); }
+    else if (mode === 'content_preview') { lines = buildFileContentPreview(); }
+    else if (mode === 'impact_summary')  { lines = buildImpactSummaryPreview(); }
+    else if (mode === 'approval_contract') { lines = buildApprovalContractPreview(); }
+
+    exportPreviewState.generatedPreview = lines.join('\n');
+
+    var lineEl = document.getElementById('vcExportLineCount');
+    if (lineEl) { lineEl.textContent = lines.length; }
+
+    return exportPreviewState.generatedPreview;
+  }
+
+  function renderProjectExportPreview() {
+    /* Sync source summary */
+    var c = getExportPreviewContext();
+    function setVal(id, v) { var el = document.getElementById(id); if (el) { el.textContent = v || '—'; } }
+    setVal('vcExpSrcType',     c.ctx.projectType ? c.ctx.projectType.label : null);
+    setVal('vcExpSrcTemplate', c.tpl ? c.tpl.name : null);
+    setVal('vcExpSrcStack',    c.stack.length ? c.stack.join(', ') : null);
+    setVal('vcExpSrcSize',     c.ctx.projectSize ? c.ctx.projectSize.label : null);
+    var agentCount = c.agts ? (c.agts.on.length + c.agts.auto.length) : 0;
+    setVal('vcExpSrcAgents',   agentCount ? agentCount + ' ativos' : null);
+    setVal('vcExpSrcHandoff',  handoffState && handoffState.selectedTarget
+      ? handoffState.selectedTarget.replace(/_/g, ' ')
+      : null);
+
+    /* Build and render preview */
+    var output = document.getElementById('vcExportOutput');
+    if (!output) { return; }
+    var text = buildProjectExportPreview();
+    output.value = text;
+    output.classList.remove('empty');
+  }
+
+  function copyProjectExportPreview() {
+    var statusEl = document.getElementById('vcExportCopyStatus');
+    if (!exportPreviewState.generatedPreview) {
+      if (statusEl) {
+        statusEl.textContent = 'Gere o preview primeiro.';
+        statusEl.className = 'vc-export-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-export-copy-status'; }, 2800);
+      }
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(exportPreviewState.generatedPreview).then(function () {
+        if (statusEl) {
+          statusEl.textContent = '✓ Copiado!';
+          statusEl.className = 'vc-export-copy-status visible';
+          setTimeout(function () { statusEl.className = 'vc-export-copy-status'; }, 2800);
+        }
+      }, function () {
+        if (statusEl) {
+          statusEl.textContent = 'Selecione e copie manualmente.';
+          statusEl.className = 'vc-export-copy-status visible error';
+          setTimeout(function () { statusEl.className = 'vc-export-copy-status'; }, 3500);
+        }
+      });
+    } else {
+      if (statusEl) {
+        statusEl.textContent = 'Selecione e copie manualmente.';
+        statusEl.className = 'vc-export-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-export-copy-status'; }, 3500);
+      }
+    }
+  }
+
+  function clearProjectExportPreview() {
+    exportPreviewState.generatedPreview = '';
+    var output = document.getElementById('vcExportOutput');
+    if (output) {
+      output.value = 'Clique em GERAR PREVIEW para visualizar a estrutura local.';
+      output.classList.add('empty');
+    }
+    var lineEl = document.getElementById('vcExportLineCount');
+    if (lineEl) { lineEl.textContent = '0'; }
+    var statusEl = document.getElementById('vcExportCopyStatus');
+    if (statusEl) { statusEl.className = 'vc-export-copy-status'; }
+  }
+
+  function initProjectExportPreview() {
+    var ep = getExportPreviewRegistry();
+    if (!ep) { return; }
+
+    /* Build mode chips */
+    var modeRow = document.getElementById('vcExportModeRow');
+    if (modeRow) {
+      ep.preview_modes.forEach(function (m) {
+        var chip = document.createElement('button');
+        chip.className = 'vc-export-mode-chip' + (m.id === exportPreviewState.selectedMode ? ' selected' : '');
+        chip.setAttribute('data-export-mode', m.id);
+        chip.type = 'button';
+        chip.textContent = m.label;
+        chip.addEventListener('click', function () { setExportPreviewMode(m.id); });
+        modeRow.appendChild(chip);
+      });
+    }
+
+    /* Wire buttons */
+    var genBtn = document.getElementById('vcGenerateExportBtn');
+    if (genBtn) {
+      genBtn.addEventListener('click', function () {
+        renderProjectExportPreview();
+        genBtn.textContent = '✓ PREVIEW GERADO — CREATION LOCKED';
+        genBtn.style.borderColor = 'rgba(34,197,94,.65)';
+        genBtn.style.color = '#22c55e';
+      });
+    }
+
+    var copyBtn = document.getElementById('vcCopyExportBtn');
+    if (copyBtn) { copyBtn.addEventListener('click', copyProjectExportPreview); }
+
+    var clearBtn = document.getElementById('vcClearExportBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        clearProjectExportPreview();
+        if (genBtn) {
+          genBtn.textContent = '⬡ GERAR PREVIEW';
+          genBtn.style.borderColor = '';
+          genBtn.style.color = '';
+        }
+      });
+    }
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       init();
@@ -1920,6 +2228,7 @@
       initTemplatePacks();
       initMissionComposer();
       initWorkerHandoff();
+      initProjectExportPreview();
     });
   } else {
     init();
@@ -1928,5 +2237,6 @@
     initTemplatePacks();
     initMissionComposer();
     initWorkerHandoff();
+    initProjectExportPreview();
   }
 })();
