@@ -1,0 +1,518 @@
+/* ================================================================
+   VISION CORE V2.9.10
+   vc-final-stabilization.css
+   FRONT-PRODUCT-10 — Final Stabilization / Visual QA Pass
+   ----------------------------------------------------------------
+   CSS-only override layer applied after all product CSS files.
+   No new logic. No new authority. No new product flow.
+   No file read/write. No API. No execution. No download.
+   ================================================================ */
+
+/* ── 1. Global page overflow guard ──────────────────────────────
+   Prevent horizontal scroll caused by wide panels at any width. */
+body,
+.shell,
+.grid {
+  overflow-x: hidden;
+}
+
+.panel {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+/* ── 2. Project Builder section rhythm ───────────────────────────
+   Consistent spacing between every FP sub-section.             */
+
+/* Separator rule above each FP section inside the builder panel */
+.vc-pb-section + .vc-pb-section {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,.045);
+}
+
+/* First child gets no top border */
+.vc-pb-section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Section labels — unified across all FP products */
+.vc-pb-section-label,
+.vc-tpl-section-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  color: #4b5563;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+  padding: 0 0 6px;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  display: block;
+}
+
+/* Headline separators within product panels */
+.vc-pb-headline,
+.vc-tpl-headline,
+.vc-mc-headline,
+.vc-handoff-headline,
+.vc-export-headline,
+.vc-human-headline,
+.vc-real-command-headline,
+.vc-result-headline,
+.vc-final-headline {
+  margin-bottom: 18px;
+}
+
+/* ── 3. Responsive grid hardening ────────────────────────────────
+   All product grids collapse cleanly at ≤1100px and ≤720px.   */
+
+/* Context / stat grids: 4-col → 2-col → 1-col */
+.vc-final-context-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+@media (max-width: 1100px) {
+  .vc-final-context-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .vc-final-context-grid { grid-template-columns: 1fr; }
+}
+
+/* Authority grids: 3-col → 2-col → 1-col */
+.vc-final-authority-grid,
+.vc-result-authority-grid {
+  display: grid;
+  gap: 6px;
+}
+.vc-final-authority-grid { grid-template-columns: repeat(3, 1fr); }
+.vc-result-authority-grid { grid-template-columns: repeat(2, 1fr); }
+
+@media (max-width: 1100px) {
+  .vc-final-authority-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .vc-final-authority-grid,
+  .vc-result-authority-grid { grid-template-columns: 1fr; }
+}
+
+/* Readiness grids: 2-col → 1-col */
+.vc-final-readiness-grid,
+.vc-human-lock-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+@media (max-width: 720px) {
+  .vc-final-readiness-grid,
+  .vc-human-lock-grid { grid-template-columns: 1fr; }
+}
+
+/* Evidence checklist: 2-col → 1-col */
+.vc-evidence-checklist-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+@media (max-width: 720px) {
+  .vc-evidence-checklist-grid { grid-template-columns: 1fr; }
+}
+
+/* Export / real-file readiness pairs: 2-col → 1-col */
+.vc-export-readiness-grid,
+.vc-real-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+@media (max-width: 720px) {
+  .vc-export-readiness-grid,
+  .vc-real-readiness-grid { grid-template-columns: 1fr; }
+}
+
+/* ── 4. Textarea readability ─────────────────────────────────────
+   Unified readable style for all readonly + editable outputs.  */
+
+/* Readonly output textareas */
+.vc-export-output,
+.vc-handoff-output,
+.vc-human-receipt-output,
+.vc-real-command-output,
+.vc-result-output,
+.vc-final-output {
+  width: 100%;
+  min-height: 240px;
+  max-height: 540px;
+  background: rgba(4,4,12,.90);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 11.5px;
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  line-height: 1.70;
+  padding: 12px 14px;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  letter-spacing: .01em;
+  white-space: pre;
+  overflow: auto;
+  tab-size: 2;
+  word-break: normal;
+}
+
+.vc-export-output:read-only,
+.vc-handoff-output:read-only,
+.vc-human-receipt-output:read-only,
+.vc-real-command-output:read-only,
+.vc-result-output:read-only,
+.vc-final-output:read-only { cursor: default; }
+
+/* Editable input textareas (FP8 worker report input) */
+.vc-worker-report-input {
+  min-height: 200px;
+  max-height: 400px;
+  font-size: 11.5px;
+  line-height: 1.68;
+  resize: vertical;
+  overflow: auto;
+  tab-size: 2;
+  box-sizing: border-box;
+}
+
+/* Empty state dimming */
+.vc-export-output.empty,
+.vc-handoff-output.empty,
+.vc-human-receipt-output.empty,
+.vc-real-command-output.empty,
+.vc-result-output.empty,
+.vc-final-output.empty {
+  color: #374151;
+  font-style: italic;
+}
+
+/* ── 5. Chip / badge rows — wrapping ─────────────────────────────
+   All chip rows wrap cleanly. No overflow beyond parent.       */
+
+.vc-result-mode-row,
+.vc-real-command-mode-row,
+.vc-real-command-worker-row,
+.vc-human-ack-list,
+.vc-handoff-mode-row,
+.vc-export-mode-row,
+.vc-template-stack-row,
+.vc-project-size-row,
+.vc-stack-row,
+.vc-orchestration-mode-row,
+.vc-evidence-summary,
+.vc-result-actions,
+.vc-final-actions,
+.vc-human-actions,
+.vc-real-command-actions,
+.vc-export-actions,
+.vc-handoff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Decision chip rows — column layout, max-width constrained */
+.vc-final-decision-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.vc-final-decision-chip {
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+/* ── 6. Authority / locked card consistency ──────────────────────
+   All locked authority cards: clear red tone + FALSE readable.  */
+
+.vc-final-authority-card.locked,
+.vc-export-authority-card.locked,
+.vc-human-lock-card.locked,
+.vc-real-authority-card.locked,
+.vc-result-authority-card.locked {
+  border-color: rgba(239,68,68,.22) !important;
+  background: rgba(239,68,68,.04) !important;
+}
+
+.vc-final-authority-icon,
+.vc-export-authority-icon,
+.vc-result-authority-icon {
+  color: #ef4444 !important;
+  flex-shrink: 0;
+}
+
+.vc-final-authority-val,
+.vc-export-authority-val,
+.vc-result-authority-val {
+  color: #fca5a5 !important;
+  font-weight: 700;
+  font-size: 10px;
+}
+
+.vc-final-authority-name,
+.vc-export-authority-name,
+.vc-result-authority-name {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  color: #4b5563;
+  text-transform: uppercase;
+}
+
+/* ── 7. Ready / review / waiting color semantics ─────────────────
+   Green = local artifact readiness only.
+   Orange = review / waiting states.
+   Red = locked real authority flags (never green for those).   */
+
+/* Local readiness — green OK */
+.vc-final-readiness-card.ready,
+.vc-real-readiness-card.ready,
+.vc-export-readiness-card.ready,
+.vc-evidence-card.present {
+  border-color: rgba(34,197,94,.25) !important;
+  background: rgba(34,197,94,.04) !important;
+}
+
+/* Review state — orange */
+.vc-final-readiness-card.review,
+.vc-real-readiness-card.blocked,
+.vc-evidence-card.review {
+  border-color: rgba(251,146,60,.22) !important;
+  background: rgba(251,146,60,.04) !important;
+}
+
+/* Waiting / missing — muted */
+.vc-final-readiness-card.waiting,
+.vc-evidence-card.missing {
+  border-color: rgba(239,68,68,.20) !important;
+  background: rgba(239,68,68,.03) !important;
+}
+
+/* ── 8. Final dashboard polish ───────────────────────────────────
+   Timeline, readiness grid, operator decisions, report output.  */
+
+/* Timeline items — no crowding */
+.vc-final-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.vc-final-timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 13px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+  min-height: 34px;
+}
+
+.vc-final-timeline-item.ready {
+  border-color: rgba(34,197,94,.22);
+  background: rgba(34,197,94,.03);
+}
+
+.vc-final-timeline-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  word-break: break-word;
+}
+.vc-final-timeline-item.ready .vc-final-timeline-label { color: #94a3b8; }
+
+.vc-final-timeline-tags {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* Context grid card values — wrap safely */
+.vc-final-context-value {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: normal;
+}
+
+/* Readiness cards — consistent min-height */
+.vc-final-readiness-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+  min-height: 44px;
+}
+
+/* Report output — large enough to inspect long reports */
+.vc-final-output {
+  min-height: 300px;
+  max-height: 580px;
+}
+
+/* Output panel — no bleed */
+.vc-final-output-panel,
+.vc-result-output-panel,
+.vc-real-command-output-panel,
+.vc-export-output-panel,
+.vc-human-receipt-panel,
+.vc-handoff-output-panel {
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ── 9. Section header spacing ───────────────────────────────────
+   Prevent section label from sitting flush against prior content. */
+.vc-pb-section-label + .vc-final-timeline,
+.vc-pb-section-label + .vc-final-context-grid,
+.vc-pb-section-label + .vc-final-readiness-grid,
+.vc-pb-section-label + .vc-final-authority-grid,
+.vc-pb-section-label + .vc-final-decision-row,
+.vc-pb-section-label + .vc-final-output-panel,
+.vc-pb-section-label + .vc-human-checklist,
+.vc-pb-section-label + .vc-human-lock-grid,
+.vc-pb-section-label + .vc-evidence-checklist-grid,
+.vc-pb-section-label + .vc-result-authority-grid,
+.vc-pb-section-label + .vc-real-authority-grid,
+.vc-pb-section-label + .vc-export-authority-grid {
+  margin-top: 2px;
+}
+
+/* ── 10. Secondary label contrast boost ──────────────────────────
+   Weak contrast labels get a slight lift for readability.      */
+
+.vc-final-context-label,
+.vc-final-authority-name,
+.vc-result-authority-name,
+.vc-real-authority-name,
+.vc-export-authority-name,
+.vc-evidence-label,
+.vc-final-readiness-name,
+.vc-result-mode-chip,
+.vc-real-command-mode-chip {
+  letter-spacing: .09em;
+}
+
+/* ── 11. Button row alignment ────────────────────────────────────
+   Action button rows: consistent gap, wrap, vertical alignment. */
+
+.vc-final-actions,
+.vc-result-actions,
+.vc-human-actions,
+.vc-real-command-actions,
+.vc-export-actions,
+.vc-handoff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Buttons min-width so short labels don't collapse */
+.vc-final-btn,
+.vc-result-btn,
+.vc-human-btn,
+.vc-real-command-btn,
+.vc-export-btn,
+.vc-handoff-btn {
+  min-width: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── 12. Mobile overflow guard ───────────────────────────────────
+   At <= 720px everything must remain in-column with no bleed.  */
+@media (max-width: 720px) {
+  .vc-final-timeline-tags { display: none; } /* hide tag chips on small screens */
+  .vc-final-actions,
+  .vc-result-actions,
+  .vc-human-actions,
+  .vc-real-command-actions,
+  .vc-export-actions,
+  .vc-handoff-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .vc-final-btn,
+  .vc-result-btn,
+  .vc-human-btn,
+  .vc-real-command-btn,
+  .vc-export-btn,
+  .vc-handoff-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .vc-final-output-header,
+  .vc-result-output-header,
+  .vc-real-command-output-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+/* ── 13. Project builder large card padding ──────────────────────
+   Large inner card-like containers get consistent padding.     */
+.vc-template-detail,
+.vc-export-output-panel,
+.vc-handoff-output-panel,
+.vc-human-receipt-panel,
+.vc-real-command-output-panel,
+.vc-result-output-panel,
+.vc-worker-report-input-panel,
+.vc-final-output-panel {
+  padding: 14px 16px;
+  box-sizing: border-box;
+}
+
+/* ── 14. Evidence count chips — flex-wrap ────────────────────────  */
+.vc-evidence-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* ── 15. Agent mode button rows — no overflow ────────────────────
+   Reserve + matrix mode buttons stay inline, no bleed.        */
+.vc-reserve-modes,
+.vc-agent-matrix-modes {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── 16. Final stabilization marker (no behavior) ────────────────
+   Attribute present on stabilized panels for audit tracing.   */
+[data-fp10-stabilized] {
+  /* marker only — no visual change */
+}
