@@ -839,6 +839,83 @@ window.VISION_CORE_PROJECT_BUILDER = Object.freeze({
       'no PASS GOLD REAL claim',
       'human decision required'
     ])
+  }),
+
+  /* ── Worker Handoff ───────────────────────────────────────────── */
+  /* Local-only. No API. No fetch. No execution. No file creation.  */
+  worker_handoff: Object.freeze({
+    handoff_version: 'FRONT-PRODUCT-4',
+
+    package_types: Object.freeze([
+      { id: 'full_package',       label: 'Full Worker Package' },
+      { id: 'claude_code_pkg',    label: 'Claude Code Package' },
+      { id: 'codex_pkg',          label: 'Codex Package' },
+      { id: 'manual_checklist',   label: 'Manual Operator Checklist' },
+      { id: 'per_agent_pack',     label: 'Per-Agent Prompt Pack' },
+      { id: 'safety_review_pack', label: 'Safety Review Pack' },
+      { id: 'validation_pack',    label: 'Validation Pack' }
+    ]),
+
+    worker_profiles: Object.freeze([
+      {
+        id: 'claude_code',
+        label: 'Claude Code',
+        use_case: 'file-aware local coding worker',
+        package_style: 'precise implementation prompt with strict scope and validation'
+      },
+      {
+        id: 'codex',
+        label: 'Codex',
+        use_case: 'code generation and patch reasoning',
+        package_style: 'concise task spec with files, constraints and expected result'
+      },
+      {
+        id: 'manual_operator',
+        label: 'Manual Operator',
+        use_case: 'human executing commands manually',
+        package_style: 'checklist with commands and verification steps'
+      },
+      {
+        id: 'generic_worker',
+        label: 'Generic Worker',
+        use_case: 'any assistant/agent',
+        package_style: 'neutral mission brief with safety boundaries'
+      },
+      {
+        id: 'reserve_agents',
+        label: 'Reserve Agents',
+        use_case: 'selected reserve agent roster',
+        package_style: 'per-agent prompt packs with method, responsibility and prohibitions'
+      }
+    ]),
+
+    handoff_safety_rules: Object.freeze([
+      'no automatic execution',
+      'no file creation from frontend',
+      'no backend call from frontend',
+      'no API call from frontend',
+      'no deploy',
+      'no release',
+      'no tag',
+      'no stable promotion',
+      'no production touch',
+      'no PASS GOLD REAL claim',
+      'human approval required'
+    ]),
+
+    final_report_contract: Object.freeze([
+      'files changed',
+      'commands run',
+      'tests passed',
+      'tests failed',
+      'forbidden scan result',
+      'scope confirmation',
+      'backend/go-core/tools/package.json changed yes/no',
+      'PASS GOLD REAL claimed yes/no',
+      'stable/release/deploy/tag blocked yes/no',
+      'production touched yes/no',
+      'local-only or real changes'
+    ])
   })
 });
 
