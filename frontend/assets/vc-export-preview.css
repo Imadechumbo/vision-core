@@ -1,0 +1,306 @@
+/* ================================================================
+   VISION CORE V2.9.10
+   vc-export-preview.css
+   Project Export Preview — local UI only
+   No file creation. No write. No download. No export. No API.
+   ================================================================ */
+
+/* ── Section wrapper ─────────────────────────────────────────── */
+.vc-export-preview {
+  margin-top: 4px;
+}
+
+/* ── Headline ────────────────────────────────────────────────── */
+.vc-export-headline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vc-export-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(239,68,68,.08);
+  border: 1px solid rgba(239,68,68,.35);
+  color: #fca5a5;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* ── Preview mode chips ──────────────────────────────────────── */
+.vc-export-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.vc-export-mode-chip {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: 4px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: transparent;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+}
+
+.vc-export-mode-chip:hover {
+  border-color: rgba(168,85,247,.35);
+  color: #94a3b8;
+}
+
+.vc-export-mode-chip.selected {
+  border-color: rgba(168,85,247,.65);
+  color: #a855f7;
+  background: rgba(168,85,247,.08);
+}
+
+/* ── Export source summary ───────────────────────────────────── */
+.vc-export-source-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 800px) { .vc-export-source-summary { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .vc-export-source-summary { grid-template-columns: 1fr; } }
+
+.vc-export-source-item {
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+}
+
+.vc-export-source-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: #374151;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.vc-export-source-value {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* ── File creation lock grid ─────────────────────────────────── */
+.vc-export-lock-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 800px) { .vc-export-lock-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .vc-export-lock-grid { grid-template-columns: 1fr; } }
+
+.vc-export-lock-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+}
+
+.vc-export-lock-card.locked {
+  border-color: rgba(239,68,68,.22);
+  background: rgba(239,68,68,.04);
+}
+
+.vc-export-lock-card.approved {
+  border-color: rgba(34,197,94,.22);
+  background: rgba(34,197,94,.04);
+}
+
+.vc-export-lock-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.vc-export-lock-card.locked  .vc-export-lock-icon { color: #ef4444; }
+.vc-export-lock-card.approved .vc-export-lock-icon { color: #22c55e; }
+
+.vc-export-lock-text {
+  flex: 1;
+}
+
+.vc-export-lock-name {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: #4b5563;
+  text-transform: uppercase;
+}
+
+.vc-export-lock-status {
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.vc-export-lock-card.locked  .vc-export-lock-status { color: #fca5a5; }
+.vc-export-lock-card.approved .vc-export-lock-status { color: #22c55e; }
+
+/* ── Preview output panel ────────────────────────────────────── */
+.vc-export-output-panel {
+  background: rgba(8,6,20,.92);
+  border: 1px solid rgba(168,85,247,.18);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-top: 4px;
+}
+
+.vc-export-output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.vc-export-output-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  color: #a855f7;
+  text-transform: uppercase;
+}
+
+.vc-export-metric {
+  font-size: 9px;
+  color: #4b5563;
+  letter-spacing: .05em;
+}
+
+.vc-export-metric span {
+  color: #a855f7;
+  font-weight: 700;
+}
+
+.vc-creation-locked-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: rgba(239,68,68,.07);
+  border: 1px solid rgba(239,68,68,.30);
+  color: #fca5a5;
+  text-transform: uppercase;
+}
+
+.vc-export-output {
+  width: 100%;
+  min-height: 200px;
+  max-height: 440px;
+  background: rgba(4,4,12,.90);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  line-height: 1.65;
+  padding: 12px 14px;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  letter-spacing: .01em;
+  white-space: pre;
+  overflow: auto;
+}
+
+.vc-export-output:read-only { cursor: default; }
+
+.vc-export-output.empty {
+  color: #374151;
+  font-style: italic;
+}
+
+/* ── Action buttons ──────────────────────────────────────────── */
+.vc-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.vc-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: 1px solid rgba(168,85,247,.48);
+  background: rgba(124,58,237,.10);
+  color: #c084fc;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .17s;
+  user-select: none;
+}
+
+.vc-export-btn:hover {
+  background: rgba(124,58,237,.20);
+  border-color: rgba(192,132,252,.68);
+  box-shadow: 0 0 16px rgba(168,85,247,.12);
+}
+
+.vc-export-btn:active { transform: scale(.97); }
+
+.vc-export-btn.secondary {
+  border-color: rgba(34,211,238,.38);
+  background: rgba(34,211,238,.05);
+  color: #22d3ee;
+}
+
+.vc-export-btn.secondary:hover {
+  background: rgba(34,211,238,.10);
+  border-color: rgba(34,211,238,.65);
+}
+
+.vc-export-btn.danger {
+  border-color: rgba(239,68,68,.28);
+  background: transparent;
+  color: #4b5563;
+}
+
+.vc-export-btn.danger:hover {
+  border-color: rgba(239,68,68,.50);
+  color: #fca5a5;
+}
+
+/* ── Copy status ─────────────────────────────────────────────── */
+.vc-export-copy-status {
+  font-size: 10px;
+  color: #22c55e;
+  letter-spacing: .05em;
+  display: none;
+}
+
+.vc-export-copy-status.visible { display: inline; }
+.vc-export-copy-status.error   { color: #fca5a5; }

@@ -916,6 +916,73 @@ window.VISION_CORE_PROJECT_BUILDER = Object.freeze({
       'production touched yes/no',
       'local-only or real changes'
     ])
+  }),
+
+  /* ── Export Preview ─────────────────────────────────────────── */
+  /* Local-only. No file creation. No write. No download. No API. */
+  export_preview: Object.freeze({
+    export_preview_version: 'FRONT-PRODUCT-5',
+
+    preview_modes: Object.freeze([
+      { id: 'folder_tree',      label: 'Folder Tree' },
+      { id: 'file_list',        label: 'File List' },
+      { id: 'content_preview',  label: 'File Content Preview' },
+      { id: 'impact_summary',   label: 'Impact Summary' },
+      { id: 'approval_contract',label: 'Approval Contract' }
+    ]),
+
+    file_creation_lock: Object.freeze({
+      file_creation_allowed:    false,
+      download_allowed:         false,
+      export_allowed:           false,
+      backend_write_allowed:    false,
+      command_execution_allowed:false,
+      human_approval_required:  true,
+      next_required_phase:      'FRONT-PRODUCT-6 or explicit external approval'
+    }),
+
+    approval_contract: Object.freeze([
+      'I understand this frontend only previews file creation.',
+      'I understand no files are created by FRONT-PRODUCT-5.',
+      'I understand real file creation requires explicit human approval.',
+      'I understand backend/API/command execution remains blocked.',
+      'I understand deploy/release/tag/stable/production remain blocked.',
+      'I understand PASS GOLD REAL is not claimed.'
+    ]),
+
+    impact_categories: Object.freeze([
+      'folders_to_create',
+      'files_to_create',
+      'files_to_review',
+      'validation_required',
+      'risks_before_creation',
+      'human_approval_required'
+    ]),
+
+    blocked_actions: Object.freeze([
+      'no_file_creation',
+      'no_file_write',
+      'no_download',
+      'no_export',
+      'no_backend_call',
+      'no_api_call',
+      'no_command_execution',
+      'no_deploy',
+      'no_release',
+      'no_tag',
+      'no_stable_promotion',
+      'no_production_touch',
+      'no_pass_gold_real_claim'
+    ]),
+
+    file_content_templates: Object.freeze({
+      'README.md':    '# <Project Name>\n\nGenerated from Vision Core Project Builder preview.\n\nStatus: preview only.\n',
+      'package.json': '{\n  "name": "<project-name>",\n  "version": "0.1.0",\n  "private": true,\n  "scripts": {}\n}\n',
+      'index.html':   '<!doctype html>\n<html>\n<head>\n  <meta charset="utf-8">\n  <title><Project Name></title>\n</head>\n<body>\n  <div id="app"></div>\n</body>\n</html>\n',
+      'server.js':    '// <Project Name> server entry\n// Preview only. No file created by frontend.\n',
+      'schema.sql':   '-- <Project Name> database schema\n-- Preview only. Review before creation.\n',
+      '_default':     '// Preview placeholder for <file>\n// No file created by FRONT-PRODUCT-5.\n'
+    })
   })
 });
 

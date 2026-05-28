@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="assets/vc-project-templates.css">
 <link rel="stylesheet" href="assets/vc-mission-composer.css">
 <link rel="stylesheet" href="assets/vc-worker-handoff.css">
+<link rel="stylesheet" href="assets/vc-export-preview.css">
 <style>
 /* V2.9.10 CLEAN FRONT — v299 quota/badge inline (no runtime JS needed) */
 .v299-quota-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;font-size:11px;flex-shrink:0;}
@@ -1135,6 +1136,72 @@
         </div>
 
       </div><!-- end vcWorkerHandoff -->
+
+      <!-- ── Section K — Project Export Preview ─────────────────── -->
+      <div class="vc-pb-section vc-export-preview" id="vcExportPreview">
+
+        <!-- Headline -->
+        <div class="vc-export-headline">
+          <div class="vc-pb-headline-text">
+            <p class="eyebrow">SOFTWARE FACTORY • EXPORT PREVIEW • FILE CREATION CONTRACT</p>
+            <h2 style="font-size:14px;margin:0 0 4px;">PREVIEW DE CRIAÇÃO DO PROJETO</h2>
+            <p style="font-size:11px;color:#4b5563;margin:0;">Visualize a estrutura e os arquivos que seriam criados em uma etapa futura. Nenhum arquivo é criado nesta tela.</p>
+          </div>
+          <span class="vc-export-badge">CREATION LOCKED</span>
+        </div>
+
+        <!-- Preview mode selector -->
+        <div class="vc-export-mode-row" id="vcExportModeRow"></div>
+
+        <!-- Export source summary -->
+        <p class="vc-pb-section-label">Contexto Selecionado</p>
+        <div class="vc-export-source-summary" id="vcExportSourceSummary">
+          <div class="vc-export-source-item"><div class="vc-export-source-label">Tipo de Projeto</div><div class="vc-export-source-value" id="vcExpSrcType">—</div></div>
+          <div class="vc-export-source-item"><div class="vc-export-source-label">Template</div><div class="vc-export-source-value" id="vcExpSrcTemplate">—</div></div>
+          <div class="vc-export-source-item"><div class="vc-export-source-label">Stack</div><div class="vc-export-source-value" id="vcExpSrcStack">—</div></div>
+          <div class="vc-export-source-item"><div class="vc-export-source-label">Tamanho/Risco</div><div class="vc-export-source-value" id="vcExpSrcSize">—</div></div>
+          <div class="vc-export-source-item"><div class="vc-export-source-label">Agentes Ativos</div><div class="vc-export-source-value" id="vcExpSrcAgents">—</div></div>
+          <div class="vc-export-source-item"><div class="vc-export-source-label">Handoff Target</div><div class="vc-export-source-value" id="vcExpSrcHandoff">—</div></div>
+        </div>
+
+        <!-- File creation lock panel -->
+        <p class="vc-pb-section-label">Status de Criação de Arquivos</p>
+        <div class="vc-export-lock-grid">
+          <div class="vc-export-lock-card locked"><span class="vc-export-lock-icon">⊗</span><div class="vc-export-lock-text"><div class="vc-export-lock-name">File Creation</div><div class="vc-export-lock-status">LOCKED</div></div></div>
+          <div class="vc-export-lock-card locked"><span class="vc-export-lock-icon">⊗</span><div class="vc-export-lock-text"><div class="vc-export-lock-name">Download</div><div class="vc-export-lock-status">LOCKED</div></div></div>
+          <div class="vc-export-lock-card locked"><span class="vc-export-lock-icon">⊗</span><div class="vc-export-lock-text"><div class="vc-export-lock-name">Export</div><div class="vc-export-lock-status">LOCKED</div></div></div>
+          <div class="vc-export-lock-card locked"><span class="vc-export-lock-icon">⊗</span><div class="vc-export-lock-text"><div class="vc-export-lock-name">Backend Write</div><div class="vc-export-lock-status">LOCKED</div></div></div>
+          <div class="vc-export-lock-card locked"><span class="vc-export-lock-icon">⊗</span><div class="vc-export-lock-text"><div class="vc-export-lock-name">Command Exec</div><div class="vc-export-lock-status">LOCKED</div></div></div>
+          <div class="vc-export-lock-card approved"><span class="vc-export-lock-icon">✓</span><div class="vc-export-lock-text"><div class="vc-export-lock-name">Human Approval</div><div class="vc-export-lock-status">REQUIRED</div></div></div>
+        </div>
+
+        <!-- Preview output panel -->
+        <div class="vc-export-output-panel" id="vcExportOutputPanel">
+          <div class="vc-export-output-header">
+            <span class="vc-export-output-title">PREVIEW DE ESTRUTURA</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="vc-export-metric" id="vcExportMetric"><span id="vcExportLineCount">0</span> linhas</span>
+              <span class="vc-creation-locked-badge">CREATION LOCKED</span>
+            </div>
+          </div>
+          <textarea
+            class="vc-export-output empty"
+            id="vcExportOutput"
+            readonly
+            spellcheck="false"
+            aria-label="Preview de criação do projeto — somente leitura"
+          >Clique em GERAR PREVIEW para visualizar a estrutura local.</textarea>
+        </div>
+
+        <!-- Actions — no download/export/create buttons -->
+        <div class="vc-export-actions">
+          <button class="vc-export-btn" id="vcGenerateExportBtn" type="button">⬡ GERAR PREVIEW</button>
+          <button class="vc-export-btn secondary" id="vcCopyExportBtn" type="button">⎘ COPIAR PREVIEW</button>
+          <button class="vc-export-btn danger" id="vcClearExportBtn" type="button">✕ LIMPAR PREVIEW</button>
+          <span class="vc-export-copy-status" id="vcExportCopyStatus">✓ Copiado!</span>
+        </div>
+
+      </div><!-- end vcExportPreview -->
 
     </div><!-- end #projectBuilder -->
 
