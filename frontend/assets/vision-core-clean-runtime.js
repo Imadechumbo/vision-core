@@ -3838,6 +3838,365 @@
     }
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // SOFTWARE FACTORY BUILDER PAGE
+  // Local in-memory view switching. No backend. No API. No exec.
+  // ─────────────────────────────────────────────────────────────
+
+  // New order aligned with SDDF timeline and horizontal menu
+  var SF_MODULES = [
+    { id: 'project_builder',  num: '01', name: 'MONTAR PROJETO DO ZERO',           sddf: 'Descoberta & Planejamento',    next: 'Selecione tipo de projeto, stack e modo de orquestração.' },
+    { id: 'export_preview',   num: '02', name: 'PREVIEW DE CRIAÇÃO DO PROJETO',    sddf: 'Modelagem & Template',         next: 'Revise a lista de arquivos que seriam criados. Nenhum arquivo é escrito.' },
+    { id: 'project_templates',num: '03', name: 'TEMPLATES DE PROJETO',             sddf: 'Composição da Missão',         next: 'Escolha um template base com stack e estrutura pré-configurada.' },
+    { id: 'mission_composer', num: '04', name: 'COMPOSITOR DE MISSÃO',             sddf: 'Preview & Verificação',        next: 'Componha o pacote de instrução e copie para o agente externo.' },
+    { id: 'worker_handoff',   num: '05', name: 'PACOTES PARA WORKERS',             sddf: 'Pacotes para Workers',         next: 'Gere pacote completo de entrega para o worker externo executar.' },
+    { id: 'real_file_command',num: '06', name: 'COMANDO PARA CRIAÇÃO REAL',        sddf: 'Comando para Criação Real',    next: 'Revisão do pacote de comando. Execução real bloqueada.' },
+    { id: 'worker_receipt',   num: '07', name: 'RECIBO DO WORKER EXTERNO',         sddf: 'Execução & Recibo',            next: 'Cole o resultado do worker externo para análise local.' },
+    { id: 'saas_api',         num: '08', name: 'SAAS & API CONNECTORS ROADMAP',    sddf: 'Validação & Entrega',          next: 'Controles SaaS/API bloqueados. Ativação requer autorização explícita.' },
+    { id: 'final_dashboard',  num: '09', name: 'PAINEL FINAL DO PRODUTO',          sddf: 'Roadmap & Conectores',         next: 'Gere o relatório final de produto e revise toda a cadeia.' }
+  ];
+
+  var _sfActiveModule  = 'project_builder';
+  var _sfHomeVisible   = true;   // true = LLM home shown; false = module workspace shown
+
+  // Maps module IDs to the original #projectBuilder section IDs
+  var SF_MODULE_SECTION_MAP = {
+    project_builder:   'projectBuilder',
+    export_preview:    'vcExportPreview',
+    project_templates: 'vcTemplatePacks',
+    mission_composer:  'vcMissionComposer',
+    worker_handoff:    'vcWorkerHandoff',
+    real_file_command: 'vcRealFileCommandPackage',
+    worker_receipt:    'vcWorkerResultReceipt',
+    saas_api:          'vcSaasApiRoadmap',
+    final_dashboard:   'vcFinalProductDashboard'
+  };
+
+  // Show home view — HOME is exclusive; workspace completely hidden
+  function _sfShowHome() {
+    _sfHomeVisible = true;
+    var homeCtrl  = document.getElementById('vcSfHomeControl');
+    var workspace = document.getElementById('vcSfModuleWorkspace');
+    if (homeCtrl)  { homeCtrl.style.display = 'flex'; }
+    if (workspace) { workspace.style.display = 'none'; }
+    var homeBtn = document.getElementById('vcSfHomeBtn');
+    if (homeBtn) { homeBtn.classList.add('active'); }
+    // Clear active from all module tabs
+    document.querySelectorAll('.vc-sf-module-btn').forEach(function (b) {
+      if (b !== homeBtn) { b.classList.remove('active'); }
+    });
+  }
+
+  // Show module workspace — HOME completely hidden, workspace fills center
+  function _sfShowWorkspace() {
+    _sfHomeVisible = false;
+    var homeCtrl  = document.getElementById('vcSfHomeControl');
+    var workspace = document.getElementById('vcSfModuleWorkspace');
+    if (homeCtrl)  { homeCtrl.style.display = 'none'; }
+    if (workspace) { workspace.style.display = 'flex'; }
+    var homeBtn = document.getElementById('vcSfHomeBtn');
+    if (homeBtn) { homeBtn.classList.remove('active'); }
+  }
+
+  function showMainCockpitPage() {
+    var sfPage  = document.getElementById('vcSoftwareFactoryPage');
+    var cockpit = document.getElementById('vcCockpitView');
+    if (sfPage)  { sfPage.style.display  = 'none';  sfPage.setAttribute('aria-hidden', 'true'); }
+    if (cockpit) { cockpit.style.display = '';       cockpit.removeAttribute('aria-hidden'); }
+  }
+
+  function showSoftwareFactoryPage() {
+    var sfPage  = document.getElementById('vcSoftwareFactoryPage');
+    var cockpit = document.getElementById('vcCockpitView');
+    if (cockpit) { cockpit.style.display = 'none'; cockpit.setAttribute('aria-hidden', 'true'); }
+    if (sfPage)  {
+      sfPage.style.display = 'flex';
+      sfPage.removeAttribute('aria-hidden');
+      // Move original #projectBuilder into SF page mount (idempotent)
+      var mount = document.getElementById('vcSfOriginalProjectBuilderMount');
+      var pb    = document.getElementById('projectBuilder');
+      if (mount && pb && !mount.contains(pb)) {
+        mount.appendChild(pb);
+      }
+      // Always reset to home view on every open
+      _sfShowHome();
+      renderSoftwareFactoryTimelineState(_sfActiveModule);
+    }
+  }
+
+  function setSoftwareFactoryModule(moduleId) {
+    _sfActiveModule = moduleId;
+
+    // Open module workspace if user is still on home
+    if (_sfHomeVisible) {
+      _sfShowWorkspace();
+    }
+
+    // Update module nav buttons
+    var btns = document.querySelectorAll('.vc-sf-module-btn');
+    btns.forEach(function (btn) {
+      btn.classList.toggle('active', btn.dataset.sfModule === moduleId);
+    });
+
+    // Scroll to corresponding section in original #projectBuilder
+    var sectionId = SF_MODULE_SECTION_MAP[moduleId] || 'projectBuilder';
+    var target = document.getElementById(sectionId);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Update SDDF timeline
+    renderSoftwareFactoryTimelineState(moduleId);
+
+    // Find module metadata
+    var mod = SF_MODULES.find(function (m) { return m.id === moduleId; });
+    if (!mod) return;
+
+    // Update next action
+    var nextEl = document.getElementById('vcSfNextActionText');
+    if (nextEl) { nextEl.textContent = mod.next; }
+
+    // Update left summary: active module number
+    var summaryModule = document.getElementById('vcSfSummaryModule');
+    if (summaryModule) { summaryModule.textContent = mod.num; }
+
+    // Update progress bar
+    var modIdx = SF_MODULES.findIndex(function (m) { return m.id === moduleId; });
+    var pct = Math.round(((modIdx + 1) / SF_MODULES.length) * 100);
+    var fill = document.getElementById('vcSfProgressFill');
+    if (fill) { fill.style.width = pct + '%'; }
+    var progressLabel = document.getElementById('vcSfProgressLabel');
+    if (progressLabel) { progressLabel.textContent = (modIdx + 1) + ' / ' + SF_MODULES.length; }
+
+    // Add activity entry
+    var feed = document.getElementById('vcSfActivityFeed');
+    if (feed) {
+      var item = document.createElement('div');
+      item.className = 'vc-sf-activity-item';
+      item.innerHTML = '<span>Módulo ' + mod.num + ' selecionado</span>';
+      feed.insertBefore(item, feed.firstChild);
+      // Keep feed to 8 entries
+      while (feed.children.length > 8) { feed.removeChild(feed.lastChild); }
+    }
+  }
+
+  function renderSoftwareFactoryTimelineState(activeModuleId) {
+    var container = document.getElementById('vcSfSddfSteps');
+    if (!container) return;
+    var steps = container.querySelectorAll('.vc-sf-sddf-step');
+    var connectors = container.querySelectorAll('.vc-sf-sddf-connector');
+    var activeIdx = SF_MODULES.findIndex(function (m) { return m.id === activeModuleId; });
+
+    steps.forEach(function (step, idx) {
+      step.classList.remove('active', 'done');
+      if (idx < activeIdx)      step.classList.add('done');
+      else if (idx === activeIdx) step.classList.add('active');
+    });
+
+    // Color connectors between done steps
+    connectors.forEach(function (c, idx) {
+      c.classList.toggle('done', idx < activeIdx);
+    });
+  }
+
+  function _sfChatSend(inputId, streamId) {
+    var input  = document.getElementById(inputId);
+    var stream = document.getElementById(streamId);
+    if (!input || !stream) return;
+    var text = (input.value || '').trim();
+    if (!text) return;
+    input.value = '';
+
+    // Remove hint if present
+    var hint = stream.querySelector('.vc-sf-chat-hint');
+    if (hint) hint.remove();
+
+    // User message
+    var uMsg = document.createElement('div');
+    uMsg.className = 'vc-sf-chat-msg user';
+    uMsg.textContent = text;
+    stream.appendChild(uMsg);
+
+    // Local echo — no backend call
+    var bMsg = document.createElement('div');
+    bMsg.className = 'vc-sf-chat-msg';
+    bMsg.textContent = '[LOCAL] Mensagem registrada. Backend não conectado. Use os controles do módulo ativo.';
+    stream.appendChild(bMsg);
+
+    stream.scrollTop = stream.scrollHeight;
+  }
+
+  function initSoftwareFactoryPage() {
+    var sfPage = document.getElementById('vcSoftwareFactoryPage');
+    if (!sfPage) return;
+
+    // Back button
+    var backBtn = document.getElementById('vcSfBackBtn');
+    if (backBtn) {
+      backBtn.addEventListener('click', showMainCockpitPage);
+    }
+
+    // Nav open buttons (cockpit header/sidebar)
+    document.querySelectorAll('[data-open-sf-page]').forEach(function (btn) {
+      btn.addEventListener('click', showSoftwareFactoryPage);
+    });
+
+    // Module nav buttons
+    document.querySelectorAll('.vc-sf-module-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setSoftwareFactoryModule(btn.dataset.sfModule);
+      });
+    });
+
+    // HOME button → reset to home view
+    var homeBtn = document.getElementById('vcSfHomeBtn');
+    if (homeBtn) {
+      homeBtn.addEventListener('click', _sfShowHome);
+    }
+
+    // INICIAR MONTAGEM → open workspace at first module
+    var startBtn = document.getElementById('vcSfStartBtn');
+    if (startBtn) {
+      startBtn.addEventListener('click', function () {
+        setSoftwareFactoryModule('project_builder');
+      });
+    }
+
+    // Quick-fill action buttons (populate textarea with template, no backend)
+    var SF_FILL_TEMPLATES = {
+      descricao: 'Tipo de projeto: [SaaS / API / App / Outro]\nObjetivo principal: [descreva aqui]\nFuncionalidades principais:\n  - [funcionalidade 1]\n  - [funcionalidade 2]\n  - [funcionalidade 3]\nStack preferida: [Node.js / Go / Python / etc]\nTamanho estimado: [MVP / Production Ready / Enterprise]',
+      briefing:  'BRIEFING DO PROJETO\n\nCliente / Produto: [nome]\nDescrição: [descrição completa do produto]\nEntregas esperadas:\n  - [módulo 1]\n  - [módulo 2]\nRestrições técnicas: [lista]\nCritérios de aceite: [lista]\nPrazo estimado: [data ou duração]',
+      exemplos:  'EXEMPLO A — SaaS Fullstack\nTipo: SaaS Fullstack\nStack: Node.js + React + PostgreSQL\nFuncionalidades: autenticação JWT, dashboard, billing Stripe, API REST\nTamanho: Production Ready\n\nEXEMPLO B — API Backend\nTipo: API Backend\nStack: Go + PostgreSQL + Docker\nFuncionalidades: CRUD completo, JWT auth, rate limiting\nTamanho: MVP\n\nEXEMPLO C — AI Agent System\nTipo: AI Agent System\nStack: Python + FastAPI + Redis\nFuncionalidades: orchestrator, workers, task queue, webhooks\nTamanho: Enterprise'
+    };
+    sfPage.addEventListener('click', function (e) {
+      var fillBtn = e.target.closest('[data-sf-fill]');
+      if (!fillBtn) return;
+      var tpl = SF_FILL_TEMPLATES[fillBtn.dataset.sfFill] || '';
+      var inp = document.getElementById('vcSfChatInput');
+      if (inp && tpl) { inp.value = tpl; inp.focus(); }
+    });
+
+    // Chat send
+    var sendBtn = document.getElementById('vcSfChatSendBtn');
+    if (sendBtn) {
+      sendBtn.addEventListener('click', function () {
+        _sfChatSend('vcSfChatInput', 'vcSfChatStream');
+      });
+    }
+    var chatInput = document.getElementById('vcSfChatInput');
+    if (chatInput) {
+      chatInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          _sfChatSend('vcSfChatInput', 'vcSfChatStream');
+        }
+      });
+    }
+
+    // SDDF timeline node clicks → switch module
+    var sddfContainer = document.getElementById('vcSfSddfSteps');
+    if (sddfContainer) {
+      sddfContainer.addEventListener('click', function (e) {
+        var step = e.target.closest('.vc-sf-sddf-step');
+        if (step && step.dataset.sfModule) {
+          setSoftwareFactoryModule(step.dataset.sfModule);
+        }
+      });
+    }
+
+    // Chip group toggles (single-active per group)
+    sfPage.addEventListener('click', function (e) {
+      var chip = e.target.closest('[data-sf-chip-group]');
+      if (!chip) return;
+      var group = chip.dataset.sfChipGroup;
+      sfPage.querySelectorAll('[data-sf-chip-group="' + group + '"]').forEach(function (c) {
+        c.classList.remove('active');
+      });
+      chip.classList.add('active');
+      var label = chip.textContent.trim();
+      // Update config cards in module panel
+      var panelMap = { project_type: 'vcSfConfigType', stack: 'vcSfConfigStack', orch: 'vcSfConfigOrch' };
+      if (panelMap[group]) {
+        var el = document.getElementById(panelMap[group]);
+        if (el) el.textContent = label;
+      }
+      // Mirror to left summary
+      var summaryMap = { project_type: 'vcSfSummaryType', stack: 'vcSfSummaryStack', orch: 'vcSfSummaryOrch' };
+      if (summaryMap[group]) {
+        var sel = document.getElementById(summaryMap[group]);
+        if (sel) sel.textContent = label;
+      }
+    });
+
+    // EXECUTAR SDDF button (local echo only)
+    var runBtn = document.getElementById('vcSfRunBtn');
+    if (runBtn) {
+      runBtn.addEventListener('click', function () {
+        var stream = document.getElementById('vcSfChatStream');
+        if (!stream) return;
+        var hint = stream.querySelector('.vc-sf-chat-hint');
+        if (hint) hint.remove();
+        var msg = document.createElement('div');
+        msg.className = 'vc-sf-chat-msg';
+        msg.textContent = '[LOCAL] SDDF local: nenhum backend conectado. Configure módulo e copie para worker externo.';
+        stream.appendChild(msg);
+        stream.scrollTop = stream.scrollHeight;
+        var feed = document.getElementById('vcSfActivityFeed');
+        if (feed) {
+          var item = document.createElement('div');
+          item.className = 'vc-sf-activity-item';
+          item.innerHTML = '<span>EXECUTAR SDDF pressionado — local only</span>';
+          feed.insertBefore(item, feed.firstChild);
+          while (feed.children.length > 8) { feed.removeChild(feed.lastChild); }
+        }
+      });
+    }
+
+    // Module-level generate / copy buttons
+    document.querySelectorAll('[data-sf-generate]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var targetId = btn.dataset.sfGenerate;
+        var output   = document.getElementById(targetId);
+        if (!output) return;
+        var moduleId = btn.closest('.vc-sf-module-panel') &&
+          btn.closest('.vc-sf-module-panel').id.replace('vcSfPanel-', '');
+        var mod = SF_MODULES.find(function (m) { return m.id === moduleId; });
+        var modName = mod ? mod.name : 'MÓDULO';
+        output.value = '── ' + modName + ' ──────────────────────────────────\n' +
+          'Gerado em: ' + new Date().toLocaleString('pt-BR') + '\n' +
+          'Status: LOCAL PREVIEW\n' +
+          'Execução real: BLOQUEADA\n' +
+          'Backend: NÃO CONECTADO\n\n' +
+          '[Use o painel completo no cockpit para configuração detalhada.]';
+        output.classList.remove('empty');
+        btn.textContent = '✓ GERADO';
+        setTimeout(function () { btn.textContent = btn.dataset.sfLabel || '⬡ GERAR'; }, 2400);
+      });
+    });
+
+    document.querySelectorAll('[data-sf-copy]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var sourceId = btn.dataset.sfCopy;
+        var source   = document.getElementById(sourceId);
+        if (!source) return;
+        var text = source.value || source.textContent || '';
+        if (!text || !text.trim()) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () {
+            btn.textContent = '✓ COPIADO';
+            setTimeout(function () { btn.textContent = '⎘ COPIAR'; }, 1800);
+          }).catch(function () {
+            btn.textContent = 'SELECIONE MANUALMENTE';
+            setTimeout(function () { btn.textContent = '⎘ COPIAR'; }, 2200);
+          });
+        }
+      });
+    });
+
+    // Initialize first module
+    setSoftwareFactoryModule(_sfActiveModule);
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       init();
@@ -3851,6 +4210,7 @@
       initRealFileCommandPackage();
       initWorkerResultReceipt();
       initFinalProductDashboard();
+      initSoftwareFactoryPage();
     });
   } else {
     init();
@@ -3864,5 +4224,6 @@
     initRealFileCommandPackage();
     initWorkerResultReceipt();
     initFinalProductDashboard();
+    initSoftwareFactoryPage();
   }
 })();

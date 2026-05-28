@@ -829,3 +829,12 @@ body,
   font-weight: 600;
   color: #6b7280;
 }
+
+/* ── Software Factory panels: cockpit-scoped hide ─────────────
+   #projectBuilder hidden in cockpit only (scoped to #vcCockpitView).
+   When JS moves it into #vcSfOriginalProjectBuilderMount the scoped
+   rule no longer applies; the SF-page rule below makes it visible.
+   JS init functions (initProjectBuilder etc.) still run safely.
+   ───────────────────────────────────────────────────────────── */
+#vcCockpitView #projectBuilder { display: none !important; }
+#vcSoftwareFactoryPage #projectBuilder { display: block !important; }

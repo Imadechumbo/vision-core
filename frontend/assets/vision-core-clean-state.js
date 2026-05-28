@@ -1399,6 +1399,21 @@ window.VISION_CORE_PROJECT_BUILDER = Object.freeze({
     production_touched:        false,
     non_authority_statement:
       'SaaS/API controls are non-operational. No auth, no OAuth, no billing, no key storage, no backend calls, no API calls. Activation requires a separate explicit human-authorized phase.'
+  }),
+
+  software_factory_page: Object.freeze({
+    page_version:                  'SOFTWARE-FACTORY-PAGE-0',
+    added_as_extra_page:           true,
+    replaces_existing_cockpit:     false,
+    active_default_module:         'project_builder',
+    routing_mode:                  'local_in_memory_view',
+    frontend_only:                 true,
+    backend_calls_enabled:         false,
+    api_calls_enabled:             false,
+    file_write_enabled:            false,
+    command_execution_enabled:     false,
+    pass_gold_real_claimed:        false,
+    production_touched:            false
   })
 });
 
