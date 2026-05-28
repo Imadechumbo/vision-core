@@ -1283,6 +1283,95 @@ window.VISION_CORE_PROJECT_BUILDER = Object.freeze({
 
     final_decision_boundary:
       'Any final PASS GOLD REAL, stable promotion, release, deploy, tag, or production decision remains external and requires explicit human authority.'
+  }),
+
+  /* ── Final Product Dashboard ────────────────────────────────── */
+  /* Local-only. No exec. No file read/write. No API. No claims.  */
+  final_product_dashboard: Object.freeze({
+    dashboard_version: 'FRONT-PRODUCT-9',
+
+    chain_sections: Object.freeze([
+      { id: 'project_builder',            label: 'Project Builder' },
+      { id: 'project_template_packs',     label: 'Project Template Packs' },
+      { id: 'mission_plan_composer',      label: 'Mission Plan Composer' },
+      { id: 'worker_handoff_packages',    label: 'Worker Handoff Packages' },
+      { id: 'project_export_preview',     label: 'Project Export Preview' },
+      { id: 'human_approval_gate',        label: 'Human Approval Gate' },
+      { id: 'real_file_command_package',  label: 'Real File Creation Command Package' },
+      { id: 'worker_result_receipt',      label: 'External Worker Result Receipt' }
+    ]),
+
+    dashboard_status: Object.freeze({
+      product_chain_complete:              true,
+      frontend_operator_summary_ready:     false,
+      next_action_required:                true,
+      real_execution_verified_by_frontend: false,
+      pass_gold_real_claimed:              false,
+      file_creation_allowed:               false,
+      real_file_creation_enabled:          false,
+      frontend_file_write_allowed:         false,
+      backend_write_allowed:               false,
+      command_execution_allowed:           false,
+      deploy_allowed:                      false,
+      release_allowed:                     false,
+      tag_allowed:                         false,
+      stable_promotion_allowed:            false,
+      production_touched:                  false
+    }),
+
+    decision_options: Object.freeze([
+      {
+        id:    'review_frontend_flow',
+        label: 'Review generated frontend flow manually.'
+      },
+      {
+        id:    'continue_external_worker',
+        label: 'Continue with external worker execution outside frontend.'
+      },
+      {
+        id:    'request_controlled_creation',
+        label: 'Request a separate controlled real file creation phase.'
+      },
+      {
+        id:    'stop_preserve_state',
+        label: 'Stop and preserve local-only product state.'
+      },
+      {
+        id:    'prepare_demo',
+        label: 'Prepare final product demo without execution authority.'
+      }
+    ]),
+
+    locked_authority_state: Object.freeze([
+      { label: 'Real execution verification by frontend', value: false },
+      { label: 'PASS GOLD REAL claim',                   value: false },
+      { label: 'File creation authority',                 value: false },
+      { label: 'Frontend file write authority',           value: false },
+      { label: 'Backend write authority',                 value: false },
+      { label: 'Command execution authority',             value: false },
+      { label: 'Deploy authority',                        value: false },
+      { label: 'Release authority',                       value: false },
+      { label: 'Tag authority',                           value: false },
+      { label: 'Stable promotion authority',              value: false },
+      { label: 'Production touch',                        value: false }
+    ]),
+
+    final_report_sections: Object.freeze([
+      'Product chain summary',
+      'Selected project context',
+      'Generated planning artifacts',
+      'Evidence review status',
+      'Authority lock status',
+      'Recommended next action',
+      'Non-authority statement',
+      'Final operator decision boundary'
+    ]),
+
+    non_authority_statement:
+      'This frontend dashboard summarizes planning artifacts only. It does not verify real execution, does not create or read files, does not claim PASS GOLD REAL, and does not grant deploy/release/tag/stable authority.',
+
+    next_phase_boundary:
+      'Any real file creation, real validation, PASS GOLD REAL claim, deploy, release, tag, stable promotion, or production decision requires a separate explicit human-authorized phase outside this frontend dashboard.'
   })
 });
 

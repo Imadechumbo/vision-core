@@ -1,0 +1,425 @@
+/* ================================================================
+   VISION CORE V2.9.10
+   vc-final-product-dashboard.css
+   Final Product Operator Dashboard — local UI only
+   No file read/write. No commands. No download. No API. No exec.
+   ================================================================ */
+
+/* ── Section wrapper ─────────────────────────────────────────── */
+.vc-final-product-dashboard {
+  margin-top: 4px;
+}
+
+/* ── Headline ────────────────────────────────────────────────── */
+.vc-final-headline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.vc-final-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(34,211,238,.07);
+  border: 1px solid rgba(34,211,238,.30);
+  color: #22d3ee;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* ── Product chain timeline ──────────────────────────────────── */
+.vc-final-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+.vc-final-timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+}
+
+.vc-final-timeline-item.ready {
+  border-color: rgba(34,197,94,.22);
+  background: rgba(34,197,94,.03);
+}
+
+.vc-final-timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(255,255,255,.12);
+}
+
+.vc-final-timeline-item.ready .vc-final-timeline-dot {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34,197,94,.45);
+}
+
+.vc-final-timeline-label {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  flex: 1;
+}
+
+.vc-final-timeline-item.ready .vc-final-timeline-label { color: #94a3b8; }
+
+.vc-final-timeline-tags {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.vc-final-tag {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.vc-final-tag.local {
+  background: rgba(168,85,247,.07);
+  border: 1px solid rgba(168,85,247,.25);
+  color: #a855f7;
+}
+
+.vc-final-tag.locked {
+  background: rgba(239,68,68,.06);
+  border: 1px solid rgba(239,68,68,.20);
+  color: #fca5a5;
+}
+
+/* ── Context grid ────────────────────────────────────────────── */
+.vc-final-context-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 900px) { .vc-final-context-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .vc-final-context-grid { grid-template-columns: 1fr; } }
+
+.vc-final-context-card {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+}
+
+.vc-final-context-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  color: #374151;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.vc-final-context-value {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+/* ── Readiness grid ──────────────────────────────────────────── */
+.vc-final-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 600px) { .vc-final-readiness-grid { grid-template-columns: 1fr; } }
+
+.vc-final-readiness-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+}
+
+.vc-final-readiness-card.ready {
+  border-color: rgba(34,197,94,.25);
+  background: rgba(34,197,94,.04);
+}
+
+.vc-final-readiness-card.waiting {
+  border-color: rgba(255,255,255,.06);
+  background: rgba(255,255,255,.02);
+}
+
+.vc-final-readiness-card.review {
+  border-color: rgba(251,146,60,.22);
+  background: rgba(251,146,60,.04);
+}
+
+.vc-final-readiness-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.vc-final-readiness-card.ready   .vc-final-readiness-icon { color: #22c55e; }
+.vc-final-readiness-card.waiting .vc-final-readiness-icon { color: #374151; }
+.vc-final-readiness-card.review  .vc-final-readiness-icon { color: #fb923c; }
+
+.vc-final-readiness-text { flex: 1; }
+
+.vc-final-readiness-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.vc-final-readiness-card.ready   .vc-final-readiness-name { color: #94a3b8; }
+
+.vc-final-readiness-status {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.vc-final-readiness-card.ready   .vc-final-readiness-status { color: #22c55e; }
+.vc-final-readiness-card.waiting .vc-final-readiness-status { color: #374151; }
+.vc-final-readiness-card.review  .vc-final-readiness-status { color: #fb923c; }
+
+/* ── Authority lock grid ─────────────────────────────────────── */
+.vc-final-authority-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 800px) { .vc-final-authority-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .vc-final-authority-grid { grid-template-columns: 1fr; } }
+
+.vc-final-authority-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+}
+
+.vc-final-authority-card.locked {
+  border-color: rgba(239,68,68,.20);
+  background: rgba(239,68,68,.03);
+}
+
+.vc-final-authority-icon {
+  font-size: 11px;
+  flex-shrink: 0;
+  color: #ef4444;
+  line-height: 1;
+}
+
+.vc-final-authority-text { flex: 1; }
+
+.vc-final-authority-name {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  color: #4b5563;
+  text-transform: uppercase;
+}
+
+.vc-final-authority-val {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fca5a5;
+  margin-top: 1px;
+}
+
+/* ── Decision chips ──────────────────────────────────────────── */
+.vc-final-decision-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.vc-final-decision-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.07);
+  background: transparent;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+  text-align: left;
+  line-height: 1.45;
+}
+
+.vc-final-decision-chip:hover {
+  border-color: rgba(34,211,238,.30);
+  color: #94a3b8;
+}
+
+.vc-final-decision-chip.selected {
+  border-color: rgba(34,211,238,.65);
+  color: #22d3ee;
+  background: rgba(34,211,238,.07);
+}
+
+/* ── Final output panel ──────────────────────────────────────── */
+.vc-final-output-panel {
+  background: rgba(8,6,20,.92);
+  border: 1px solid rgba(34,211,238,.15);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-top: 4px;
+}
+
+.vc-final-output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.vc-final-output-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  color: #22d3ee;
+  text-transform: uppercase;
+}
+
+.vc-summary-only-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: rgba(34,211,238,.06);
+  border: 1px solid rgba(34,211,238,.25);
+  color: #22d3ee;
+  text-transform: uppercase;
+}
+
+.vc-final-output {
+  width: 100%;
+  min-height: 260px;
+  max-height: 520px;
+  background: rgba(4,4,12,.90);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-family: 'Courier New', 'Lucida Console', monospace;
+  line-height: 1.65;
+  padding: 12px 14px;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  letter-spacing: .01em;
+  white-space: pre;
+  overflow: auto;
+}
+
+.vc-final-output:read-only { cursor: default; }
+
+.vc-final-output.empty {
+  color: #374151;
+  font-style: italic;
+}
+
+/* ── Action buttons ──────────────────────────────────────────── */
+.vc-final-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.vc-final-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: 1px solid rgba(34,211,238,.45);
+  background: rgba(34,211,238,.07);
+  color: #22d3ee;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all .17s;
+  user-select: none;
+}
+
+.vc-final-btn:hover {
+  background: rgba(34,211,238,.14);
+  border-color: rgba(34,211,238,.70);
+  box-shadow: 0 0 16px rgba(34,211,238,.10);
+}
+
+.vc-final-btn:active { transform: scale(.97); }
+
+.vc-final-btn.secondary {
+  border-color: rgba(168,85,247,.40);
+  background: rgba(168,85,247,.06);
+  color: #c084fc;
+}
+
+.vc-final-btn.secondary:hover {
+  background: rgba(168,85,247,.12);
+  border-color: rgba(168,85,247,.68);
+}
+
+.vc-final-btn.danger {
+  border-color: rgba(239,68,68,.28);
+  background: transparent;
+  color: #4b5563;
+}
+
+.vc-final-btn.danger:hover {
+  border-color: rgba(239,68,68,.50);
+  color: #fca5a5;
+}
+
+/* ── Copy status ─────────────────────────────────────────────── */
+.vc-final-copy-status {
+  font-size: 10px;
+  color: #22c55e;
+  letter-spacing: .05em;
+  display: none;
+}
+
+.vc-final-copy-status.visible { display: inline; }
+.vc-final-copy-status.error   { color: #fca5a5; }

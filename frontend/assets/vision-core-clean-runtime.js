@@ -3478,6 +3478,366 @@
     }
   }
 
+  /* ── Final Product Dashboard — local UI only ──────────────────── */
+  /* No exec. No file read/write. No download. No API. No claims.  */
+
+  var finalProductDashboardState = {
+    selectedDecision: 'review_frontend_flow',
+    generatedReport:  ''
+  };
+
+  function getFinalProductDashboardRegistry() {
+    var pb = window.VISION_CORE_PROJECT_BUILDER;
+    return (pb && pb.final_product_dashboard) ? pb.final_product_dashboard : null;
+  }
+
+  function setFinalOperatorDecision(decisionId) {
+    finalProductDashboardState.selectedDecision = decisionId;
+    var row = document.getElementById('vcFinalDecisionRow');
+    if (row) {
+      Array.prototype.forEach.call(row.querySelectorAll('.vc-final-decision-chip'), function (c) {
+        c.className = 'vc-final-decision-chip' + (c.getAttribute('data-decision') === decisionId ? ' selected' : '');
+      });
+    }
+    /* Update context card */
+    var decisionEl = document.getElementById('vcFinalCtxDecision');
+    if (decisionEl) {
+      var fpd = getFinalProductDashboardRegistry();
+      if (fpd) {
+        var opt = fpd.decision_options.filter(function (d) { return d.id === decisionId; })[0];
+        if (opt) { decisionEl.textContent = opt.label; }
+      }
+    }
+  }
+
+  function getFinalProductContext() {
+    var type         = (typeof pbState !== 'undefined' && pbState.selectedType)  ? pbState.selectedType  : '—';
+    var stack        = (typeof pbState !== 'undefined' && pbState.selectedStack) ? pbState.selectedStack : '—';
+    var size         = (typeof pbState !== 'undefined' && pbState.selectedSize)  ? pbState.selectedSize  : '—';
+    var tpl          = (typeof pbTemplateState !== 'undefined' && pbTemplateState.selectedTemplate) ? pbTemplateState.selectedTemplate : '—';
+    var agents       = (typeof pbState !== 'undefined' && Array.isArray(pbState.activeAgents)) ? pbState.activeAgents.length : 0;
+    var workerTarget = (typeof realFileCommandState !== 'undefined') ? realFileCommandState.selectedWorker   : '—';
+    var pkgMode      = (typeof realFileCommandState !== 'undefined') ? realFileCommandState.selectedMode.replace(/_/g, ' ') : '—';
+    var fpd          = getFinalProductDashboardRegistry();
+    var decisionOpt  = fpd ? fpd.decision_options.filter(function (d) { return d.id === finalProductDashboardState.selectedDecision; })[0] : null;
+    var decision     = decisionOpt ? decisionOpt.label : finalProductDashboardState.selectedDecision;
+    return { type: type, template: tpl, stack: stack, size: size, agents: agents, workerTarget: workerTarget, pkgMode: pkgMode, decision: decision };
+  }
+
+  function getFinalArtifactReadiness() {
+    var tpl              = (typeof pbTemplateState !== 'undefined' && pbTemplateState.selectedTemplate);
+    var missionReady     = (typeof mcState !== 'undefined' && !!mcState.generatedPrompt);
+    var handoffReady     = (typeof handoffState !== 'undefined' && !!handoffState.generatedPackage);
+    var exportReady      = (typeof exportPreviewState !== 'undefined' && !!exportPreviewState.generatedPreview);
+    var approvalReady    = (typeof humanApprovalState !== 'undefined' && !!humanApprovalState.generatedReceipt);
+    var cmdPkgReady      = (typeof realFileCommandState !== 'undefined' && !!realFileCommandState.generatedPackage);
+    var workerRcptReady  = (typeof workerResultReceiptState !== 'undefined' && !!workerResultReceiptState.generatedReceipt);
+    var evidenceHasData  = (typeof workerResultReceiptState !== 'undefined' && Object.keys(workerResultReceiptState.evidenceStatus).length > 0);
+    var evidenceHasMiss  = evidenceHasData && Object.keys(workerResultReceiptState.evidenceStatus).some(function (k) {
+      var s = workerResultReceiptState.evidenceStatus[k].status;
+      return s === 'missing' || s === 'needs_review';
+    });
+    var evidenceStatus   = !evidenceHasData ? 'waiting' : (evidenceHasMiss ? 'review' : 'ready');
+
+    return [
+      { id: 'template_selected',     label: 'Template Selected',              status: tpl         ? 'ready' : 'waiting' },
+      { id: 'mission_generated',     label: 'Mission Prompt Generated',       status: missionReady ? 'ready' : 'waiting' },
+      { id: 'handoff_generated',     label: 'Handoff Package Generated',      status: handoffReady ? 'ready' : 'waiting' },
+      { id: 'export_generated',      label: 'Export Preview Generated',       status: exportReady  ? 'ready' : 'waiting' },
+      { id: 'approval_generated',    label: 'Human Approval Receipt Generated',status: approvalReady? 'ready' : 'waiting' },
+      { id: 'cmdpkg_generated',      label: 'Real File Command Package',      status: cmdPkgReady  ? 'ready' : 'waiting' },
+      { id: 'worker_rcpt_generated', label: 'Worker Result Receipt Generated',status: workerRcptReady? 'ready' : 'waiting' },
+      { id: 'evidence_reviewed',     label: 'Evidence Checklist Reviewed',    status: evidenceStatus }
+    ];
+  }
+
+  function renderFinalProductTimeline() {
+    var fpd = getFinalProductDashboardRegistry();
+    var container = document.getElementById('vcFinalTimeline');
+    if (!fpd || !container) { return; }
+    container.innerHTML = '';
+    fpd.chain_sections.forEach(function (sec, idx) {
+      var item = document.createElement('div');
+      item.className = 'vc-final-timeline-item ready';
+
+      var dot = document.createElement('div');
+      dot.className = 'vc-final-timeline-dot';
+
+      var num = document.createElement('span');
+      num.style.cssText = 'font-size:9px;font-weight:800;color:#4b5563;flex-shrink:0;width:18px;';
+      num.textContent = (idx + 1) + '.';
+
+      var lbl = document.createElement('span');
+      lbl.className   = 'vc-final-timeline-label';
+      lbl.textContent = sec.label;
+
+      var tags = document.createElement('div');
+      tags.className = 'vc-final-timeline-tags';
+
+      var localTag = document.createElement('span');
+      localTag.className   = 'vc-final-tag local';
+      localTag.textContent = 'LOCAL ONLY';
+
+      tags.appendChild(localTag);
+
+      /* Add LOCKED AUTHORITY tag for execution-sensitive stages */
+      if (['human_approval_gate', 'real_file_command_package', 'worker_result_receipt'].indexOf(sec.id) !== -1) {
+        var lockedTag = document.createElement('span');
+        lockedTag.className   = 'vc-final-tag locked';
+        lockedTag.textContent = 'LOCKED AUTH';
+        tags.appendChild(lockedTag);
+      }
+
+      item.appendChild(dot);
+      item.appendChild(num);
+      item.appendChild(lbl);
+      item.appendChild(tags);
+      container.appendChild(item);
+    });
+  }
+
+  function renderFinalProductContext() {
+    var ctx = getFinalProductContext();
+    var map = {
+      vcFinalCtxType:        ctx.type,
+      vcFinalCtxTemplate:    ctx.template,
+      vcFinalCtxStack:       ctx.stack,
+      vcFinalCtxSize:        ctx.size,
+      vcFinalCtxAgents:      ctx.agents + ' agente(s)',
+      vcFinalCtxWorker:      ctx.workerTarget,
+      vcFinalCtxPackageMode: ctx.pkgMode,
+      vcFinalCtxDecision:    ctx.decision
+    };
+    Object.keys(map).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) { el.textContent = map[id]; }
+    });
+  }
+
+  function renderFinalArtifactReadiness() {
+    var items     = getFinalArtifactReadiness();
+    var container = document.getElementById('vcFinalReadinessGrid');
+    if (!container) { return; }
+    container.innerHTML = '';
+    items.forEach(function (item) {
+      var card = document.createElement('div');
+      card.className = 'vc-final-readiness-card ' + item.status;
+
+      var iconMap  = { ready: '✓', waiting: '○', review: '◈' };
+      var icon = document.createElement('span');
+      icon.className   = 'vc-final-readiness-icon';
+      icon.textContent = iconMap[item.status] || '—';
+
+      var text = document.createElement('div');
+      text.className = 'vc-final-readiness-text';
+
+      var name = document.createElement('div');
+      name.className   = 'vc-final-readiness-name';
+      name.textContent = item.label;
+
+      var statusLabelMap = { ready: 'READY', waiting: 'WAITING', review: 'REVIEW NEEDED' };
+      var statusEl = document.createElement('div');
+      statusEl.className   = 'vc-final-readiness-status';
+      statusEl.textContent = statusLabelMap[item.status] || item.status.toUpperCase();
+
+      text.appendChild(name);
+      text.appendChild(statusEl);
+      card.appendChild(icon);
+      card.appendChild(text);
+      container.appendChild(card);
+    });
+  }
+
+  function renderFinalAuthorityMatrix() {
+    /* Authority matrix is static HTML — all flags false, no dynamic state */
+  }
+
+  function renderFinalOperatorDecisions() {
+    var fpd = getFinalProductDashboardRegistry();
+    var row = document.getElementById('vcFinalDecisionRow');
+    if (!fpd || !row) { return; }
+    row.innerHTML = '';
+    fpd.decision_options.forEach(function (opt) {
+      var chip = document.createElement('button');
+      chip.className = 'vc-final-decision-chip' + (opt.id === finalProductDashboardState.selectedDecision ? ' selected' : '');
+      chip.setAttribute('data-decision', opt.id);
+      chip.type = 'button';
+      chip.textContent = opt.label;
+      chip.addEventListener('click', function () { setFinalOperatorDecision(opt.id); });
+      row.appendChild(chip);
+    });
+  }
+
+  function buildFinalProductReport() {
+    var fpd = getFinalProductDashboardRegistry();
+    if (!fpd) { return ''; }
+    var ctx       = getFinalProductContext();
+    var readiness = getFinalArtifactReadiness();
+    var decisionOpt = fpd.decision_options.filter(function (d) {
+      return d.id === finalProductDashboardState.selectedDecision;
+    })[0];
+    var decision = decisionOpt ? decisionOpt.label : finalProductDashboardState.selectedDecision;
+
+    var lines = [];
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push('   VISION CORE — RELATÓRIO FINAL DO PRODUTO FRONTEND');
+    lines.push('   FRONT-PRODUCT-9 | Operator Decision Dashboard');
+    lines.push('═══════════════════════════════════════════════════════════════');
+    lines.push('');
+    lines.push('── Cadeia de Produtos Frontend ─────────────────────────────────');
+    fpd.chain_sections.forEach(function (sec, idx) {
+      lines.push('  ' + (idx + 1) + '. ' + sec.label + ' [LOCAL ONLY]');
+    });
+    lines.push('');
+    lines.push('── Contexto do Projeto ─────────────────────────────────────────');
+    lines.push('  Tipo de Projeto  : ' + ctx.type);
+    lines.push('  Template         : ' + ctx.template);
+    lines.push('  Stack            : ' + ctx.stack);
+    lines.push('  Tamanho/Risco    : ' + ctx.size);
+    lines.push('  Agentes Ativos   : ' + ctx.agents);
+    lines.push('  Worker Target    : ' + ctx.workerTarget);
+    lines.push('  Modo do Pacote   : ' + ctx.pkgMode);
+    lines.push('');
+    lines.push('── Prontidão dos Artefatos ─────────────────────────────────────');
+    readiness.forEach(function (item) {
+      var symMap = { ready: '[✓]', waiting: '[ ]', review: '[◈]' };
+      var lblMap = { ready: 'READY', waiting: 'WAITING', review: 'REVIEW NEEDED' };
+      lines.push('  ' + (symMap[item.status] || '[ ]') + ' ' + item.label + ' — ' + (lblMap[item.status] || item.status.toUpperCase()));
+    });
+    lines.push('');
+    lines.push('── Decisão do Operador ─────────────────────────────────────────');
+    lines.push('  [✓] ' + decision);
+    lines.push('');
+    lines.push('── Estado de Autoridade Bloqueada ──────────────────────────────');
+    fpd.locked_authority_state.forEach(function (item) {
+      lines.push('  ⊗ ' + item.label + ': ' + item.value);
+    });
+    lines.push('');
+    lines.push('── Status de Segurança ─────────────────────────────────────────');
+    lines.push('  real_execution_verified_by_frontend : false');
+    lines.push('  pass_gold_real_claimed              : false');
+    lines.push('  file_creation_allowed               : false');
+    lines.push('  real_file_creation_enabled          : false');
+    lines.push('  frontend_file_write_allowed         : false');
+    lines.push('  backend_write_allowed               : false');
+    lines.push('  command_execution_allowed           : false');
+    lines.push('  deploy_allowed                      : false');
+    lines.push('  release_allowed                     : false');
+    lines.push('  tag_allowed                         : false');
+    lines.push('  stable_promotion_allowed            : false');
+    lines.push('  production_touched                  : false');
+    lines.push('');
+    lines.push('── Declaração de Não-Autoridade ────────────────────────────────');
+    lines.push('  ' + fpd.non_authority_statement);
+    lines.push('');
+    lines.push('── Fronteira do Próximo Phase ──────────────────────────────────');
+    lines.push('  ' + fpd.next_phase_boundary);
+    lines.push('');
+    lines.push('── Nota Final ──────────────────────────────────────────────────');
+    lines.push('  Este relatório é local apenas. Resume o estado de planejamento');
+    lines.push('  do frontend e não realiza nem verifica execução real.');
+    lines.push('');
+    lines.push('═══════════════════════════════════════════════════════════════');
+    return lines.join('\n');
+  }
+
+  function renderFinalProductReport() {
+    renderFinalProductContext();
+    renderFinalArtifactReadiness();
+    var report = buildFinalProductReport();
+    finalProductDashboardState.generatedReport = report;
+    var output = document.getElementById('vcFinalReportOutput');
+    if (output) {
+      output.value     = report;
+      output.className = 'vc-final-output' + (report ? '' : ' empty');
+    }
+    var lineEl = document.getElementById('vcFinalReportLineCount');
+    if (lineEl && report) { lineEl.textContent = report.split('\n').length; }
+  }
+
+  function copyFinalProductReport() {
+    var text     = finalProductDashboardState.generatedReport;
+    var statusEl = document.getElementById('vcFinalCopyStatus');
+    if (!text) {
+      if (statusEl) {
+        statusEl.textContent = '⚠ Gere o relatório primeiro.';
+        statusEl.className   = 'vc-final-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-final-copy-status'; }, 2500);
+      }
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        if (statusEl) {
+          statusEl.textContent = '✓ Copiado!';
+          statusEl.className   = 'vc-final-copy-status visible';
+          setTimeout(function () { statusEl.className = 'vc-final-copy-status'; }, 2500);
+        }
+      }).catch(function () {
+        if (statusEl) {
+          statusEl.textContent = 'Selecione e copie manualmente.';
+          statusEl.className   = 'vc-final-copy-status visible error';
+          setTimeout(function () { statusEl.className = 'vc-final-copy-status'; }, 3000);
+        }
+      });
+    } else {
+      if (statusEl) {
+        statusEl.textContent = 'Selecione e copie manualmente.';
+        statusEl.className   = 'vc-final-copy-status visible error';
+        setTimeout(function () { statusEl.className = 'vc-final-copy-status'; }, 3000);
+      }
+    }
+  }
+
+  function clearFinalProductReport() {
+    finalProductDashboardState.generatedReport = '';
+    var output = document.getElementById('vcFinalReportOutput');
+    if (output) {
+      output.value     = 'Clique em GERAR RELATÓRIO FINAL para gerar o relatório.';
+      output.className = 'vc-final-output empty';
+    }
+    var lineEl = document.getElementById('vcFinalReportLineCount');
+    if (lineEl) { lineEl.textContent = '0'; }
+    var statusEl = document.getElementById('vcFinalCopyStatus');
+    if (statusEl) { statusEl.className = 'vc-final-copy-status'; }
+  }
+
+  function initFinalProductDashboard() {
+    var fpd = getFinalProductDashboardRegistry();
+    if (!fpd) { return; }
+
+    renderFinalProductTimeline();
+    renderFinalProductContext();
+    renderFinalArtifactReadiness();
+    renderFinalOperatorDecisions();
+
+    /* Wire buttons */
+    var genBtn = document.getElementById('vcGenerateFinalReportBtn');
+    if (genBtn) {
+      genBtn.addEventListener('click', function () {
+        renderFinalProductReport();
+        genBtn.textContent       = '✓ RELATÓRIO GERADO';
+        genBtn.style.borderColor = 'rgba(34,197,94,.65)';
+        genBtn.style.color       = '#22c55e';
+      });
+    }
+
+    var copyBtn = document.getElementById('vcCopyFinalReportBtn');
+    if (copyBtn) { copyBtn.addEventListener('click', copyFinalProductReport); }
+
+    var clearBtn = document.getElementById('vcClearFinalReportBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function () {
+        clearFinalProductReport();
+        if (genBtn) {
+          genBtn.textContent       = '⬡ GERAR RELATÓRIO FINAL';
+          genBtn.style.borderColor = '';
+          genBtn.style.color       = '';
+        }
+      });
+    }
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       init();
@@ -3490,6 +3850,7 @@
       initHumanApprovalGate();
       initRealFileCommandPackage();
       initWorkerResultReceipt();
+      initFinalProductDashboard();
     });
   } else {
     init();
@@ -3502,5 +3863,6 @@
     initHumanApprovalGate();
     initRealFileCommandPackage();
     initWorkerResultReceipt();
+    initFinalProductDashboard();
   }
 })();

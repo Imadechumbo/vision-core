@@ -28,6 +28,7 @@
 <link rel="stylesheet" href="assets/vc-human-approval.css">
 <link rel="stylesheet" href="assets/vc-real-file-command.css">
 <link rel="stylesheet" href="assets/vc-worker-result-receipt.css">
+<link rel="stylesheet" href="assets/vc-final-product-dashboard.css">
 <style>
 /* V2.9.10 CLEAN FRONT — v299 quota/badge inline (no runtime JS needed) */
 .v299-quota-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;font-size:11px;flex-shrink:0;}
@@ -1445,6 +1446,90 @@
         </div>
 
       </div><!-- end vcWorkerResultReceipt -->
+
+      <!-- ── Section O — Final Product Operator Dashboard ───────── -->
+      <div class="vc-pb-section vc-final-product-dashboard" id="vcFinalProductDashboard">
+
+        <!-- Headline -->
+        <div class="vc-final-headline">
+          <div class="vc-pb-headline-text">
+            <p class="eyebrow">SOFTWARE FACTORY • FINAL FRONTEND SUMMARY • OPERATOR DECISION</p>
+            <h2 style="font-size:14px;margin:0 0 4px;">PAINEL FINAL DO PRODUTO</h2>
+            <p style="font-size:11px;color:#4b5563;margin:0;">Resumo local do fluxo completo do frontend. Esta tela não executa, não lê arquivos, não valida filesystem e não concede autoridade real.</p>
+          </div>
+          <span class="vc-final-badge">SUMMARY ONLY</span>
+        </div>
+
+        <!-- Product chain timeline -->
+        <p class="vc-pb-section-label">Cadeia de Produtos Frontend</p>
+        <div class="vc-final-timeline" id="vcFinalTimeline"></div>
+
+        <!-- Current project context panel -->
+        <p class="vc-pb-section-label">Contexto Atual do Projeto</p>
+        <div class="vc-final-context-grid" id="vcFinalContextGrid">
+          <div class="vc-final-context-card"><div class="vc-final-context-label">Tipo de Projeto</div><div class="vc-final-context-value" id="vcFinalCtxType">—</div></div>
+          <div class="vc-final-context-card"><div class="vc-final-context-label">Template</div><div class="vc-final-context-value" id="vcFinalCtxTemplate">—</div></div>
+          <div class="vc-final-context-card"><div class="vc-final-context-label">Stack</div><div class="vc-final-context-value" id="vcFinalCtxStack">—</div></div>
+          <div class="vc-final-context-card"><div class="vc-final-context-label">Tamanho/Risco</div><div class="vc-final-context-value" id="vcFinalCtxSize">—</div></div>
+          <div class="vc-final-context-card"><div class="vc-final-context-label">Agentes Ativos</div><div class="vc-final-context-value" id="vcFinalCtxAgents">—</div></div>
+          <div class="vc-final-context-card"><div class="vc-final-context-label">Worker Target</div><div class="vc-final-context-value" id="vcFinalCtxWorker">—</div></div>
+          <div class="vc-final-context-card"><div class="vc-final-context-label">Modo do Pacote</div><div class="vc-final-context-value" id="vcFinalCtxPackageMode">—</div></div>
+          <div class="vc-final-context-card"><div class="vc-final-context-label">Decisão Operador</div><div class="vc-final-context-value" id="vcFinalCtxDecision">—</div></div>
+        </div>
+
+        <!-- Artifact readiness grid -->
+        <p class="vc-pb-section-label">Prontidão dos Artefatos</p>
+        <div class="vc-final-readiness-grid" id="vcFinalReadinessGrid"></div>
+
+        <!-- Authority lock matrix -->
+        <!-- No execution / PASS GOLD REAL / deploy / release / tag / stable authority -->
+        <p class="vc-pb-section-label">Matriz de Autoridade Bloqueada</p>
+        <div class="vc-final-authority-grid">
+          <div class="vc-final-authority-card locked"><span class="vc-final-authority-icon">⊗</span><div class="vc-final-authority-text"><div class="vc-final-authority-name">Real Execution Verified</div><div class="vc-final-authority-val">FALSE</div></div></div>
+          <div class="vc-final-authority-card locked"><span class="vc-final-authority-icon">⊗</span><div class="vc-final-authority-text"><div class="vc-final-authority-name">Pass Gold Real Claim</div><div class="vc-final-authority-val">FALSE</div></div></div>
+          <div class="vc-final-authority-card locked"><span class="vc-final-authority-icon">⊗</span><div class="vc-final-authority-text"><div class="vc-final-authority-name">File Creation Authority</div><div class="vc-final-authority-val">FALSE</div></div></div>
+          <div class="vc-final-authority-card locked"><span class="vc-final-authority-icon">⊗</span><div class="vc-final-authority-text"><div class="vc-final-authority-name">Frontend File Write</div><div class="vc-final-authority-val">FALSE</div></div></div>
+          <div class="vc-final-authority-card locked"><span class="vc-final-authority-icon">⊗</span><div class="vc-final-authority-text"><div class="vc-final-authority-name">Backend Write</div><div class="vc-final-authority-val">FALSE</div></div></div>
+          <div class="vc-final-authority-card locked"><span class="vc-final-authority-icon">⊗</span><div class="vc-final-authority-text"><div class="vc-final-authority-name">Command Execution</div><div class="vc-final-authority-val">FALSE</div></div></div>
+          <div class="vc-final-authority-card locked"><span class="vc-final-authority-icon">⊗</span><div class="vc-final-authority-text"><div class="vc-final-authority-name">Deploy</div><div class="vc-final-authority-val">FALSE</div></div></div>
+          <div class="vc-final-authority-card locked"><span class="vc-final-authority-icon">⊗</span><div class="vc-final-authority-text"><div class="vc-final-authority-name">Release</div><div class="vc-final-authority-val">FALSE</div></div></div>
+          <div class="vc-final-authority-card locked"><span class="vc-final-authority-icon">⊗</span><div class="vc-final-authority-text"><div class="vc-final-authority-name">Tag</div><div class="vc-final-authority-val">FALSE</div></div></div>
+          <div class="vc-final-authority-card locked"><span class="vc-final-authority-icon">⊗</span><div class="vc-final-authority-text"><div class="vc-final-authority-name">Stable Promotion</div><div class="vc-final-authority-val">FALSE</div></div></div>
+          <div class="vc-final-authority-card locked"><span class="vc-final-authority-icon">⊗</span><div class="vc-final-authority-text"><div class="vc-final-authority-name">Production Touch</div><div class="vc-final-authority-val">FALSE</div></div></div>
+        </div>
+
+        <!-- Operator decision panel -->
+        <p class="vc-pb-section-label">Decisão do Operador</p>
+        <div class="vc-final-decision-row" id="vcFinalDecisionRow"></div>
+
+        <!-- Final product report output -->
+        <!-- No upload / run / create / deploy / release / tag / stable / PASS GOLD buttons -->
+        <div class="vc-final-output-panel" id="vcFinalOutputPanel">
+          <div class="vc-final-output-header">
+            <span class="vc-final-output-title">RELATÓRIO FINAL DO PRODUTO</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:9px;color:#4b5563;letter-spacing:.05em;">Linhas: <span id="vcFinalReportLineCount">0</span></span>
+              <span class="vc-summary-only-badge">SUMMARY ONLY</span>
+            </div>
+          </div>
+          <textarea
+            class="vc-final-output empty"
+            id="vcFinalReportOutput"
+            readonly
+            spellcheck="false"
+            aria-label="Relatório final do produto — somente leitura"
+          >Clique em GERAR RELATÓRIO FINAL para gerar o relatório.</textarea>
+        </div>
+
+        <!-- Actions — no file creation / exec / deploy / release / tag / stable / PASS GOLD buttons -->
+        <div class="vc-final-actions">
+          <button class="vc-final-btn" id="vcGenerateFinalReportBtn" type="button">⬡ GERAR RELATÓRIO FINAL</button>
+          <button class="vc-final-btn secondary" id="vcCopyFinalReportBtn" type="button">⎘ COPIAR RELATÓRIO</button>
+          <button class="vc-final-btn danger" id="vcClearFinalReportBtn" type="button">✕ LIMPAR RELATÓRIO</button>
+          <span class="vc-final-copy-status" id="vcFinalCopyStatus">✓ Copiado!</span>
+        </div>
+
+      </div><!-- end vcFinalProductDashboard -->
 
     </div><!-- end #projectBuilder -->
 
