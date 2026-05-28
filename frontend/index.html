@@ -1208,17 +1208,29 @@
 
       </div><!-- end vcExportPreview -->
 
-      <!-- ── Section L — Human Approval Gate ──────────────────── -->
-      <div class="vc-pb-section vc-human-approval" id="vcHumanApprovalGate">
+      <!-- ── Section L — Advanced Engineer Controls (Human Approval Safety Gate) ── -->
+      <!-- Hidden by default. Not part of normal user flow. Engineer-only. -->
+      <div class="vc-pb-section vc-engineer-only-section">
+        <details class="vc-engineer-details">
+          <summary class="vc-engineer-summary" aria-label="Mostrar controles avançados de engenharia">
+            <span class="vc-engineer-summary-icon">⚙</span>
+            <div class="vc-engineer-summary-text">
+              <strong>CONTROLES AVANÇADOS DE ENGENHARIA</strong>
+              <span>Painel oculto para operadores experientes revisarem travas de autoridade. Não faz parte do fluxo normal do usuário e não concede execução real.</span>
+            </div>
+            <span class="vc-engineer-badge">ENGINEER ONLY</span>
+          </summary>
+
+          <div class="vc-human-approval" id="vcHumanApprovalGate">
 
         <!-- Headline -->
         <div class="vc-human-headline">
           <div class="vc-pb-headline-text">
-            <p class="eyebrow">SOFTWARE FACTORY • HUMAN APPROVAL • FILE CREATION GATE</p>
-            <h2 style="font-size:14px;margin:0 0 4px;">GATE DE APROVAÇÃO HUMANA</h2>
-            <p style="font-size:11px;color:#4b5563;margin:0;">Revise o contrato de criação real de arquivos. Esta tela apenas gera um recibo de aprovação local; ela não cria arquivos.</p>
+            <p class="eyebrow">SOFTWARE FACTORY • SAFETY GATE • ENGINEER CONTROLS</p>
+            <h2 style="font-size:14px;margin:0 0 4px;">CONTROLES AVANÇADOS DE ENGENHARIA</h2>
+            <p style="font-size:11px;color:#4b5563;margin:0;">Painel oculto para operadores experientes revisarem travas de autoridade. Não faz parte do fluxo normal do usuário e não concede execução real.</p>
           </div>
-          <span class="vc-human-badge">HUMAN GATE</span>
+          <span class="vc-human-badge">ENGINEER ONLY</span>
         </div>
 
         <!-- Gate Summary Panel -->
@@ -1289,7 +1301,9 @@
           <span class="vc-human-copy-status" id="vcHumanCopyStatus">✓ Copiado!</span>
         </div>
 
-      </div><!-- end vcHumanApprovalGate -->
+          </div><!-- end vcHumanApprovalGate -->
+        </details>
+      </div><!-- end vc-engineer-only-section -->
 
       <!-- ── Section M — Real File Creation Command Package ──────── -->
       <div class="vc-pb-section vc-real-file-command" id="vcRealFileCommandPackage">

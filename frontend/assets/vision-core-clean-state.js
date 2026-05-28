@@ -1296,7 +1296,7 @@ window.VISION_CORE_PROJECT_BUILDER = Object.freeze({
       { id: 'mission_plan_composer',      label: 'Mission Plan Composer' },
       { id: 'worker_handoff_packages',    label: 'Worker Handoff Packages' },
       { id: 'project_export_preview',     label: 'Project Export Preview' },
-      { id: 'human_approval_gate',        label: 'Human Approval Gate' },
+      { id: 'human_approval_gate',        label: 'Advanced Safety Gate' },
       { id: 'real_file_command_package',  label: 'Real File Creation Command Package' },
       { id: 'worker_result_receipt',      label: 'External Worker Result Receipt' }
     ]),
