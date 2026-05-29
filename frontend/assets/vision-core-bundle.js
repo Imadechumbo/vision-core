@@ -1,10 +1,3 @@
-/* vision-core-bundle.js — concatenated JS bundle
- * Generated: 2026-05-29 — Vision Core V2.9.10
- * Order: vision-core-clean-state.js → vision-core-clean-runtime.js
- */
-
-
-/* === vision-core-clean-state.js === */
 /* ================================================================
    VISION CORE V2.9.10 CLEAN FRONT — Reserve Agent Registry
    Static prompt packs. No API calls. No LLM execution.
@@ -1447,11 +1440,30 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   final_human_decision_required: true,
 });
 
-/* === vision-core-clean-runtime.js === */
 (function () {
   'use strict';
 
   var TOAST_MSG = 'Ação bloqueada: controlled closure ativo. Decisão humana final requerida.';
+
+  /* ── Backend connection ─────────────────────────────────────── */
+  var BACKEND_URL = 'https://visioncore-api-gateway.weiganlight.workers.dev';
+  var _backendConnected = false;
+  var _backendVersion = '';
+
+  function checkBackendHealth() {
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 5000) : null;
+    fetch(BACKEND_URL + '/api/health', { method: 'GET', signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { if (timer) clearTimeout(timer); return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (data) {
+        _backendConnected = true;
+        _backendVersion = (data && data.version) ? String(data.version) : '';
+      })
+      .catch(function () {
+        _backendConnected = false;
+        _backendVersion = '';
+      });
+  }
 
   function showToast(msg) {
     var existing = document.getElementById('vc-clean-toast');
@@ -5614,9 +5626,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         var modName = mod ? mod.name : 'MÓDULO';
         output.value = '── ' + modName + ' ──────────────────────────────────\n' +
           'Gerado em: ' + new Date().toLocaleString('pt-BR') + '\n' +
-          'Status: LOCAL PREVIEW\n' +
+          'Status: ' + (_backendConnected ? 'WORKER CONECTADO' : 'LOCAL PREVIEW') + '\n' +
           'Execução real: BLOQUEADA\n' +
-          'Backend: NÃO CONECTADO\n\n' +
+          'Backend: ' + (_backendConnected ? 'CONECTADO' + (_backendVersion ? ' — v' + _backendVersion : '') : 'NÃO CONECTADO') + '\n' +
+          'Worker: ' + BACKEND_URL + '\n\n' +
           '[Use o painel completo no cockpit para configuração detalhada.]';
         output.classList.remove('empty');
         btn.textContent = '✓ GERADO';
@@ -5646,6 +5659,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     // Initialize first module
     setSoftwareFactoryModule(_sfActiveModule);
   }
+
+  checkBackendHealth();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
@@ -5677,3 +5692,4 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     initSoftwareFactoryPage();
   }
 })();
+
