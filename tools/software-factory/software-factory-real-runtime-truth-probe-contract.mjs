@@ -30,7 +30,7 @@ export function build(input = {}) {
       local_scope_only,
       supervised_execution_plan_ready,
       runtime_truth_probe_prepared,
-      timestamp: Date.now()
+      hash_schema: 'rtp0-runtime-truth-probe-contract-v1'
     }))
     .digest('hex');
 
