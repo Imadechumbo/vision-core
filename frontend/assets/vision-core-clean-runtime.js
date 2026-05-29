@@ -85,9 +85,6 @@
     'githubStatusBtn',
     'githubPrBtn',
     'policyBtn',
-    'signupBtn',
-    'openAuthBtn',
-    'openAuthBtn2',
     'v297AddImageBtn',
     'v297AddFileBtn',
     'v297RunSddfBtn',
@@ -4116,11 +4113,31 @@
       return el;
     }
 
+    /* Attachment state — shared by sendMessage + file button handlers */
+    var _attachedFiles = [];
+    var _attachedImg   = null;
+    var addFilesBtn  = document.getElementById('v298AddFilesBtn');
+    var fileInput    = document.getElementById('v298FileInput');
+    var fileNote     = document.getElementById('v298FileNote');
+    var readPrintBtn = document.getElementById('v298ReadPrintBtn');
+
     function sendMessage() {
       var text = (promptInput.value || '').trim();
-      if (!text) return;
+      /* Prepend attached text files */
+      if (_attachedFiles.length) {
+        var fileCtx = _attachedFiles.map(function (f) {
+          return '[Arquivo: ' + f.name + ']\n' + f.content.slice(0, 3000);
+        }).join('\n---\n');
+        text = fileCtx + (text ? '\n\n' + text : '');
+        _attachedFiles = [];
+        if (fileNote)    { fileNote.textContent = 'Nenhum arquivo anexado.'; }
+        if (addFilesBtn) { addFilesBtn.textContent = '＋ Adicionar arquivos'; }
+      }
+      if (!text && !_attachedImg) return;
       promptInput.value = '';
-      appendMsg(text, 'user');
+      var display = text.slice(0, 300) + (text.length > 300 ? '…' : '');
+      if (_attachedImg) { display += '\n[Imagem: ' + _attachedImg.name + ']'; }
+      appendMsg(display, 'user');
 
       var mode  = modeSelect  ? modeSelect.value  : 'vision-geral';
       var model = modelSelect ? modelSelect.value : 'auto';
@@ -4128,10 +4145,15 @@
       setStatus('PROCESSANDO...', 'busy');
       var thinking = appendMsg('▪ processando...', 'thinking');
 
+      var imgName  = _attachedImg ? _attachedImg.name : null;
+      _attachedImg = null;
+      var payload  = { message: text || '(análise de imagem: ' + imgName + ')', mode: mode, model: model };
+      if (imgName)  { payload.image_name = imgName; }
+
       fetch(BACKEND_URL + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, mode: mode, model: model })
+        body: JSON.stringify(payload)
       })
       .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function(data) {
@@ -4183,7 +4205,75 @@
     if (clearBtn) {
       clearBtn.addEventListener('click', function() {
         chatStream.innerHTML = '<div class="v298-empty-hint">Vision AI pronto. Converse sobre qualquer assunto, cole erros, envie arquivos/imagens ou execute uma missão SDDF.</div>';
+        _attachedFiles = [];
+        _attachedImg   = null;
+        if (fileNote)    { fileNote.textContent = 'Nenhum arquivo anexado.'; }
+        if (addFilesBtn) { addFilesBtn.textContent = '＋ Adicionar arquivos'; }
         setStatus('READY');
+      });
+    }
+
+    /* ── File upload wiring ───────────────────────────────────── */
+    if (addFilesBtn && fileInput) {
+      addFilesBtn.addEventListener('click', function () {
+        fileInput.value = '';
+        fileInput.click();
+      });
+      fileInput.addEventListener('change', function () {
+        var files = fileInput.files;
+        if (!files || !files.length) { return; }
+        _attachedFiles = [];
+        var pending = files.length;
+        Array.prototype.forEach.call(files, function (f) {
+          var reader = new FileReader();
+          reader.onload = function (ev) {
+            _attachedFiles.push({ name: f.name, content: ev.target.result || '' });
+            pending--;
+            if (pending === 0) {
+              if (fileNote) {
+                fileNote.textContent = _attachedFiles.length + ' arquivo(s): ' +
+                  _attachedFiles.map(function (a) { return a.name; }).join(', ');
+              }
+              if (addFilesBtn) {
+                addFilesBtn.textContent = '✓ ' + _attachedFiles.length + ' arquivo(s)';
+              }
+            }
+          };
+          reader.onerror = function () {
+            pending--;
+            if (pending === 0 && fileNote) {
+              fileNote.textContent = 'Erro ao ler arquivo(s).';
+            }
+          };
+          reader.readAsText(f);
+        });
+      });
+    }
+
+    /* ── Image reader wiring ─────────────────────────────────── */
+    if (readPrintBtn) {
+      var _imgFileInput = document.createElement('input');
+      _imgFileInput.type = 'file';
+      _imgFileInput.accept = 'image/*';
+      _imgFileInput.style.display = 'none';
+      document.body.appendChild(_imgFileInput);
+      readPrintBtn.addEventListener('click', function () {
+        _imgFileInput.value = '';
+        _imgFileInput.click();
+      });
+      _imgFileInput.addEventListener('change', function () {
+        var f = _imgFileInput.files && _imgFileInput.files[0];
+        if (!f) { return; }
+        var reader = new FileReader();
+        reader.onload = function () {
+          _attachedImg = { name: f.name };
+          appendMsg('[Imagem pronta: ' + f.name + ' — pressione ENVIAR]', 'user');
+          if (readPrintBtn) { readPrintBtn.textContent = '✓ ' + f.name.slice(0, 20); }
+        };
+        reader.onerror = function () {
+          appendMsg('[Erro ao ler imagem]', 'error');
+        };
+        reader.readAsDataURL(f);
       });
     }
   }
@@ -4360,6 +4450,149 @@
     setSoftwareFactoryModule(_sfActiveModule);
   }
 
+  /* ── Auth modal wiring ───────────────────────────────────────── */
+  function initAuthModal() {
+    var authBackdrop = document.getElementById('authBackdrop');
+    if (!authBackdrop) { return; }
+
+    function openModal() {
+      authBackdrop.classList.add('show');
+      authBackdrop.removeAttribute('aria-hidden');
+      var emailEl = document.getElementById('signupEmail');
+      if (emailEl) { setTimeout(function () { emailEl.focus(); }, 80); }
+    }
+
+    ['openAuthBtn', 'openAuthBtn2'].forEach(function (id) {
+      var btn = document.getElementById(id);
+      if (!btn) { return; }
+      btn.disabled = false;
+      btn.style.opacity = '';
+      btn.style.cursor  = '';
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        openModal();
+      });
+    });
+
+    var signupBtn = document.getElementById('signupBtn');
+    var emailEl   = document.getElementById('signupEmail');
+    var resultEl  = document.getElementById('signupResult');
+
+    if (signupBtn && emailEl) {
+      signupBtn.disabled = false;
+      signupBtn.style.opacity = '';
+      signupBtn.style.cursor  = '';
+
+      function doAuth() {
+        var email = (emailEl.value || '').trim();
+        if (!email || email.indexOf('@') === -1) {
+          if (resultEl) { resultEl.textContent = 'Email inválido.'; resultEl.style.color = '#f87171'; }
+          return;
+        }
+        if (resultEl) { resultEl.textContent = 'Conectando…'; resultEl.style.color = '#94a3b8'; }
+        signupBtn.disabled = true;
+
+        fetch(BACKEND_URL + '/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, password: 'vc-user-auto', name: '' })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data && data.ok) {
+            if (data.token) {
+              try { sessionStorage.setItem('vc_token', data.token); } catch (ex) {}
+            }
+            if (resultEl) {
+              resultEl.textContent = '✓ Conta criada! Token: ' + (data.token ? data.token.slice(0, 14) + '…' : 'ok');
+              resultEl.style.color = '#22c55e';
+            }
+            setTimeout(function () {
+              authBackdrop.classList.remove('show');
+              authBackdrop.setAttribute('aria-hidden', 'true');
+            }, 2000);
+            signupBtn.disabled = false;
+          } else {
+            /* Fall back to login */
+            return fetch(BACKEND_URL + '/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: email, password: 'vc-user-auto' })
+            })
+            .then(function (r2) { return r2.json(); })
+            .then(function (d2) {
+              signupBtn.disabled = false;
+              if (d2 && d2.ok) {
+                if (d2.token) {
+                  try { sessionStorage.setItem('vc_token', d2.token); } catch (ex) {}
+                }
+                if (resultEl) { resultEl.textContent = '✓ Login realizado!'; resultEl.style.color = '#22c55e'; }
+                setTimeout(function () {
+                  authBackdrop.classList.remove('show');
+                  authBackdrop.setAttribute('aria-hidden', 'true');
+                }, 2000);
+              } else {
+                if (resultEl) {
+                  resultEl.textContent = 'Erro: ' + (d2 && d2.error ? d2.error : 'falha ao autenticar');
+                  resultEl.style.color = '#f87171';
+                }
+              }
+            });
+          }
+        })
+        .catch(function (err) {
+          signupBtn.disabled = false;
+          if (resultEl) { resultEl.textContent = 'Erro de rede: ' + err; resultEl.style.color = '#f87171'; }
+        });
+      }
+
+      signupBtn.addEventListener('click', doAuth);
+      emailEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); doAuth(); }
+      });
+    }
+  }
+
+  /* ── Quick config + Obsidian buttons ─────────────────────────── */
+  function initQuickConfig() {
+    var configBtn = document.getElementById('v299ConfigBtn');
+    if (configBtn) {
+      configBtn.addEventListener('click', function () {
+        var target = document.getElementById('aiProviderSelect');
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(function () { target.focus(); }, 300);
+          showToast('Configuração de provedor IA ↑');
+        } else {
+          showToast('Painel de configuração não visível na aba atual.');
+        }
+      });
+    }
+
+    var obsidianBtn = document.getElementById('v299ObsidianBtn');
+    if (obsidianBtn) {
+      obsidianBtn.addEventListener('click', function () {
+        var origText = obsidianBtn.textContent;
+        obsidianBtn.disabled = true;
+        obsidianBtn.textContent = '…';
+        fetch(BACKEND_URL + '/api/obsidian/status')
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (data) {
+          var msg = 'Obsidian: ' + (data.connected ? '✅ CONECTADO' : '⚠ desconectado');
+          if (data.vault) { msg += ' — vault: ' + data.vault; }
+          showToast(msg);
+          obsidianBtn.textContent = data.connected ? '✓ Obsidian' : origText;
+          obsidianBtn.disabled = false;
+        })
+        .catch(function (err) {
+          showToast('Obsidian: erro — ' + err);
+          obsidianBtn.textContent = origText;
+          obsidianBtn.disabled = false;
+        });
+      });
+    }
+  }
+
   checkBackendHealth();
   window.addEventListener('load', function () { checkBackendHealth(); });
   /* Chat init guaranteed independent of DOMContentLoaded chain errors */
@@ -4379,6 +4612,8 @@
     try { initFinalProductDashboard(); } catch (e) { console.error('[vc] initFinalProductDashboard:', e); }
     try { initSoftwareFactoryPage(); } catch (e) { console.error('[vc] initSoftwareFactoryPage:', e); }
     try { initMainChat(); } catch (e) { console.error('[vc] initMainChat:', e); }
+    try { initAuthModal(); } catch (e) { console.error('[vc] initAuthModal:', e); }
+    try { initQuickConfig(); } catch (e) { console.error('[vc] initQuickConfig:', e); }
   }
 
   if (document.readyState === 'loading') {
