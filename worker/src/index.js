@@ -7,10 +7,10 @@
  * - SSE passthrough for /api/run-live-stream
  *
  * Origin atual:
- * http://tngh-aws-final-v2-env.eba-fi8g5gme.us-east-1.elasticbeanstalk.com
+ * http://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com
  */
 
-const DEFAULT_ORIGIN = "http://tngh-aws-final-v2-env.eba-fi8g5gme.us-east-1.elasticbeanstalk.com";
+const DEFAULT_ORIGIN = "http://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com";
 
 const ALLOWED_ORIGINS = new Set([
   "https://visioncoreai.pages.dev",
