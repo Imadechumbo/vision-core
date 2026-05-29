@@ -876,10 +876,141 @@ app.all('/api/api/*', (req, res) => {
   });
 });
 
-app.post('/api/chat', (req, res) => {
-  const body = normalizeBody(req);
-  if (!body.message && !body.prompt) return res.status(400).json({ ok: false, error: 'message_required', time: now() });
-  return sendOk(res, { answer: copilotAnswer(body), mode: body.mode || 'vision-geral', model: body.model || 'auto', anti_stub: true });
+app.post('/api/chat', async (req, res) => {
+  const body    = normalizeBody(req);
+  const message = body.message || body.prompt || '';
+  const mode    = body.mode  || 'vision-geral';
+  const reqModel= body.model || 'auto';
+  if (!message) return res.status(400).json({ ok: false, error: 'message_required', time: now() });
+
+  const systemPrompt =
+    `Você é o Vision Core Copilot — assistente técnico especializado em diagnóstico e ` +
+    `correção de bugs em projetos web full-stack (Node.js, React, APIs REST, Docker, AWS, Cloudflare). ` +
+    `Modo atual: ${mode}. ` +
+    `Analise a mensagem do usuário com profundidade: identifique a causa-raiz do problema, ` +
+    `proponha a correção com código quando aplicável, e explique de forma clara. ` +
+    `Responda sempre em português brasileiro.`;
+
+  /* ── 1. Anthropic ───────────────────────────────────────────── */
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
+  if (ANTHROPIC_KEY && !ANTHROPIC_KEY.includes('placeholder')) {
+    try {
+      const anthropicModel = (reqModel && reqModel !== 'auto') ? reqModel : 'claude-sonnet-4-6';
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': ANTHROPIC_KEY,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: anthropicModel,
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: message }]
+        }),
+        signal: AbortSignal.timeout(20000)
+      });
+      if (r.ok) {
+        const data = await r.json();
+        const answer = data?.content?.[0]?.text || '';
+        if (answer) return sendOk(res, { answer, provider: 'anthropic', model: data.model || anthropicModel, mode, anti_stub: true });
+      }
+    } catch (_) { /* fall through */ }
+  }
+
+  /* ── 2. Gemini ──────────────────────────────────────────────── */
+  const GEMINI_KEY   = process.env.GEMINI_API_KEY   || '';
+  const GEMINI_MODEL = process.env.GEMINI_MODEL     || 'gemini-2.5-flash';
+  if (GEMINI_KEY && !GEMINI_KEY.includes('placeholder')) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: message }] }]
+        }),
+        signal: AbortSignal.timeout(20000)
+      });
+      if (r.ok) {
+        const data = await r.json();
+        const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (answer) return sendOk(res, { answer, provider: 'gemini', model: GEMINI_MODEL, mode, anti_stub: true });
+      }
+    } catch (_) { /* fall through */ }
+  }
+
+  /* ── 3. Groq ────────────────────────────────────────────────── */
+  const GROQ_KEY = process.env.GROQ_API_KEY || '';
+  if (GROQ_KEY && !GROQ_KEY.includes('placeholder')) {
+    try {
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          max_tokens: 1024,
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }]
+        }),
+        signal: AbortSignal.timeout(20000)
+      });
+      if (r.ok) {
+        const data = await r.json();
+        const answer = data?.choices?.[0]?.message?.content || '';
+        if (answer) return sendOk(res, { answer, provider: 'groq', model: data.model || 'llama-3.3-70b-versatile', mode, anti_stub: true });
+      }
+    } catch (_) { /* fall through */ }
+  }
+
+  /* ── 4. DeepSeek ────────────────────────────────────────────── */
+  const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || '';
+  if (DEEPSEEK_KEY && !DEEPSEEK_KEY.includes('placeholder')) {
+    try {
+      const r = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${DEEPSEEK_KEY}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          max_tokens: 1024,
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }]
+        }),
+        signal: AbortSignal.timeout(20000)
+      });
+      if (r.ok) {
+        const data = await r.json();
+        const answer = data?.choices?.[0]?.message?.content || '';
+        if (answer) return sendOk(res, { answer, provider: 'deepseek', model: data.model || 'deepseek-chat', mode, anti_stub: true });
+      }
+    } catch (_) { /* fall through */ }
+  }
+
+  /* ── 5. OpenRouter ──────────────────────────────────────────── */
+  const OR_KEY   = process.env.OPENROUTER_API_KEY || '';
+  const OR_MODEL = process.env.OPENROUTER_MODEL   || 'qwen/qwen3-plus:free';
+  if (OR_KEY && !OR_KEY.includes('placeholder')) {
+    try {
+      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${OR_KEY}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: OR_MODEL,
+          max_tokens: 1024,
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }]
+        }),
+        signal: AbortSignal.timeout(20000)
+      });
+      if (r.ok) {
+        const data = await r.json();
+        const answer = data?.choices?.[0]?.message?.content || '';
+        if (answer) return sendOk(res, { answer, provider: 'openrouter', model: OR_MODEL, mode, anti_stub: true });
+      }
+    } catch (_) { /* fall through */ }
+  }
+
+  /* ── 6. Local fallback ──────────────────────────────────────── */
+  return sendOk(res, { answer: copilotAnswer(body), provider: 'local', model: 'copilot-local', mode, anti_stub: true });
 });
 
 app.get('/api/auth/status', (req, res) => {
