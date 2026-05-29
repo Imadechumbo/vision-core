@@ -876,6 +876,12 @@ app.all('/api/api/*', (req, res) => {
   });
 });
 
+app.post('/api/chat', (req, res) => {
+  const body = normalizeBody(req);
+  if (!body.message && !body.prompt) return res.status(400).json({ ok: false, error: 'message_required', time: now() });
+  return sendOk(res, { answer: copilotAnswer(body), mode: body.mode || 'vision-geral', model: body.model || 'auto', anti_stub: true });
+});
+
 app.get('/api/auth/status', (req, res) => {
   const user = getAuthUser(req);
   return sendOk(res, { authenticated: Boolean(user), plan: user ? (user.plan || 'free') : null, anti_stub: true });

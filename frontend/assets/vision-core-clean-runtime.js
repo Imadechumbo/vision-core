@@ -4051,14 +4051,138 @@
     uMsg.className = 'vc-sf-chat-msg user';
     uMsg.textContent = text;
     stream.appendChild(uMsg);
-
-    // Local echo — no backend call
-    var bMsg = document.createElement('div');
-    bMsg.className = 'vc-sf-chat-msg';
-    bMsg.textContent = '[LOCAL] Mensagem registrada. Backend não conectado. Use os controles do módulo ativo.';
-    stream.appendChild(bMsg);
-
     stream.scrollTop = stream.scrollHeight;
+
+    // Call backend
+    var thinking = document.createElement('div');
+    thinking.className = 'vc-sf-chat-msg';
+    thinking.textContent = '▪ processando...';
+    stream.appendChild(thinking);
+    stream.scrollTop = stream.scrollHeight;
+
+    fetch(BACKEND_URL + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, mode: 'vision-geral' })
+    })
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function(data) {
+      thinking.textContent = (data && data.answer) ? data.answer : JSON.stringify(data);
+      stream.scrollTop = stream.scrollHeight;
+    })
+    .catch(function(err) {
+      thinking.textContent = '[Erro: ' + err + '. Worker: ' + BACKEND_URL + ']';
+      stream.scrollTop = stream.scrollHeight;
+    });
+  }
+
+  /* ── Main VISION AI COMMAND chat ────────────────────────────── */
+  function initMainChat() {
+    var chatStream  = document.getElementById('v298ChatStream');
+    var promptInput = document.getElementById('v298Prompt');
+    var sendBtn     = document.getElementById('v298SendBtn');
+    var runBtn      = document.getElementById('v298RunBtn');
+    var clearBtn    = document.getElementById('v298ClearBtn');
+    var statusEl    = document.getElementById('v298CommandStatus');
+    var modeSelect  = document.getElementById('v298Mode');
+    var modelSelect = document.getElementById('v298Model');
+
+    if (!chatStream || !promptInput || !sendBtn) return;
+
+    function setStatus(text, extra) {
+      if (!statusEl) return;
+      statusEl.textContent = text;
+      statusEl.style.color = extra === 'busy' ? '#fbbf24' : extra === 'error' ? '#f87171' : '';
+    }
+
+    function appendMsg(text, cls) {
+      var hint = chatStream.querySelector('.v298-empty-hint');
+      if (hint) hint.remove();
+      var el = document.createElement('div');
+      el.className = 'v298-chat-msg' + (cls ? ' ' + cls : '');
+      el.style.cssText = cls === 'user'
+        ? 'padding:8px 12px;margin:4px 0;background:rgba(124,58,237,0.18);border-radius:8px;text-align:right;'
+        : cls === 'thinking'
+        ? 'padding:8px 12px;margin:4px 0;color:#94a3b8;font-style:italic;'
+        : cls === 'error'
+        ? 'padding:8px 12px;margin:4px 0;color:#f87171;'
+        : 'padding:8px 12px;margin:4px 0;background:rgba(255,255,255,0.05);border-radius:8px;white-space:pre-wrap;';
+      el.textContent = text;
+      chatStream.appendChild(el);
+      chatStream.scrollTop = chatStream.scrollHeight;
+      return el;
+    }
+
+    function sendMessage() {
+      var text = (promptInput.value || '').trim();
+      if (!text) return;
+      promptInput.value = '';
+      appendMsg(text, 'user');
+
+      var mode  = modeSelect  ? modeSelect.value  : 'vision-geral';
+      var model = modelSelect ? modelSelect.value : 'auto';
+
+      setStatus('PROCESSANDO...', 'busy');
+      var thinking = appendMsg('▪ processando...', 'thinking');
+
+      fetch(BACKEND_URL + '/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, mode: mode, model: model })
+      })
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function(data) {
+        thinking.remove();
+        appendMsg((data && data.answer) ? data.answer : JSON.stringify(data));
+        setStatus('READY');
+      })
+      .catch(function(err) {
+        thinking.remove();
+        appendMsg('[Erro de conexão com worker: ' + BACKEND_URL + ' — ' + err + ']', 'error');
+        setStatus('ERRO', 'error');
+        setTimeout(function() { setStatus('READY'); }, 3000);
+      });
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+
+    promptInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+
+    if (runBtn) {
+      runBtn.addEventListener('click', function() {
+        var text = (promptInput.value || '').trim() || 'missão SDDF padrão';
+        promptInput.value = '';
+        appendMsg('[MISSÃO] ' + text, 'user');
+        setStatus('EXECUTANDO MISSÃO...', 'busy');
+        var thinking = appendMsg('▪ executando missão via go-core...', 'thinking');
+        fetch(BACKEND_URL + '/api/run-live', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ input: text, root: '.' })
+        })
+        .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function(data) {
+          thinking.remove();
+          var pg = (data && data.pass_gold) ? '✅ PASS GOLD' : '⚠️ ' + ((data && data.status) || 'ver relatório');
+          appendMsg('[MISSÃO CONCLUÍDA] ' + pg + (data && data.summary ? '\n' + data.summary : ''));
+          setStatus('READY');
+        })
+        .catch(function(err) {
+          thinking.remove();
+          appendMsg('[Erro na missão: ' + err + ']', 'error');
+          setStatus('READY');
+        });
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function() {
+        chatStream.innerHTML = '<div class="v298-empty-hint">Vision AI pronto. Converse sobre qualquer assunto, cole erros, envie arquivos/imagens ou execute uma missão SDDF.</div>';
+        setStatus('READY');
+      });
+    }
   }
 
   function initSoftwareFactoryPage() {
@@ -4250,6 +4374,7 @@
       initWorkerResultReceipt();
       initFinalProductDashboard();
       initSoftwareFactoryPage();
+      initMainChat();
     });
   } else {
     init();
@@ -4264,5 +4389,6 @@
     initWorkerResultReceipt();
     initFinalProductDashboard();
     initSoftwareFactoryPage();
+    initMainChat();
   }
 })();
