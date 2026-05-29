@@ -46,7 +46,7 @@ export function build(input = {}) {
       secret_access_allowed,
       network_allowed,
       rollback_execution_allowed,
-      timestamp: Date.now()
+      hash_schema: 'rtp2-pass-gold-real-review-receipt-v1'
     }))
     .digest('hex');
 
