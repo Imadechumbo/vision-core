@@ -333,7 +333,7 @@ app.all('/api/auth/register', (req, res) => {
   db.users.push(user); writeJsonFile(USERS_DB, db);
   const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
   res.setHeader('Set-Cookie', `vision_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`);
-  return sendOk(res, { user: publicUser(user), token_type: 'session', persisted: true, anti_stub: true });
+  return sendOk(res, { user: publicUser(user), token, token_type: 'session', persisted: true, anti_stub: true });
 });
 
 app.all('/api/auth/login', (req, res) => {
@@ -346,7 +346,7 @@ app.all('/api/auth/login', (req, res) => {
   user.last_login = now(); writeJsonFile(USERS_DB, db);
   const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
   res.setHeader('Set-Cookie', `vision_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`);
-  return sendOk(res, { user: publicUser(user), token_type: 'session', persisted: true, anti_stub: true });
+  return sendOk(res, { user: publicUser(user), token, token_type: 'session', persisted: true, anti_stub: true });
 });
 
 app.get('/api/auth/me', (req, res) => {
@@ -781,7 +781,7 @@ app.get('/api/billing/card', requireVisionAuth, async (req, res) => {
   try { const customer = await ensureStripeCustomer(stripe, req.visionUser); const methods = await stripe.paymentMethods.list({ customer, type: 'card', limit: 1 }); const card = methods.data[0] && methods.data[0].card; return sendOk(res, { card: card ? { brand: card.brand, last4: card.last4, exp_month: card.exp_month, exp_year: card.exp_year } : null, anti_stub:true }); }
   catch (err) { return res.status(502).json({ ok:false, error:'stripe_card_failed', message: err.message, time: now() }); }
 });
-app.post('/api/webhooks/stripe', async (req, res) => {
+app.post(['/api/webhooks/stripe', '/api/webhook/stripe'], async (req, res) => {
   const stripe = getStripeClient(); if (!stripe) return billingUnavailable(res);
   const sig = req.headers['stripe-signature'];
   let event;
@@ -874,6 +874,11 @@ app.all('/api/api/*', (req, res) => {
     error: 'bad_path_api_api_detected',
     time: now()
   });
+});
+
+app.get('/api/auth/status', (req, res) => {
+  const user = getAuthUser(req);
+  return sendOk(res, { authenticated: Boolean(user), plan: user ? (user.plan || 'free') : null, anti_stub: true });
 });
 
 /* SAFE 404 — nunca 405 */
