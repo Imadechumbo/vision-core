@@ -5519,7 +5519,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   }
 
   /* ── Main VISION AI COMMAND chat ────────────────────────────── */
+  var _chatInitialized = false;
   function initMainChat() {
+    if (_chatInitialized) return;
     var chatStream  = document.getElementById('v298ChatStream');
     var promptInput = document.getElementById('v298Prompt');
     var sendBtn     = document.getElementById('v298SendBtn');
@@ -5530,6 +5532,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var modelSelect = document.getElementById('v298Model');
 
     if (!chatStream || !promptInput || !sendBtn) return;
+    _chatInitialized = true;
 
     function setStatus(text, extra) {
       if (!statusEl) return;
@@ -5801,37 +5804,29 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
   checkBackendHealth();
   window.addEventListener('load', function () { checkBackendHealth(); });
+  /* Chat init guaranteed independent of DOMContentLoaded chain errors */
+  window.addEventListener('load', function () { initMainChat(); });
+
+  function _runAllInits() {
+    try { init(); } catch (e) { console.error('[vc] init:', e); }
+    try { initReserve(); } catch (e) { console.error('[vc] initReserve:', e); }
+    try { initProjectBuilder(); } catch (e) { console.error('[vc] initProjectBuilder:', e); }
+    try { initTemplatePacks(); } catch (e) { console.error('[vc] initTemplatePacks:', e); }
+    try { initMissionComposer(); } catch (e) { console.error('[vc] initMissionComposer:', e); }
+    try { initWorkerHandoff(); } catch (e) { console.error('[vc] initWorkerHandoff:', e); }
+    try { initProjectExportPreview(); } catch (e) { console.error('[vc] initProjectExportPreview:', e); }
+    try { initHumanApprovalGate(); } catch (e) { console.error('[vc] initHumanApprovalGate:', e); }
+    try { initRealFileCommandPackage(); } catch (e) { console.error('[vc] initRealFileCommandPackage:', e); }
+    try { initWorkerResultReceipt(); } catch (e) { console.error('[vc] initWorkerResultReceipt:', e); }
+    try { initFinalProductDashboard(); } catch (e) { console.error('[vc] initFinalProductDashboard:', e); }
+    try { initSoftwareFactoryPage(); } catch (e) { console.error('[vc] initSoftwareFactoryPage:', e); }
+    try { initMainChat(); } catch (e) { console.error('[vc] initMainChat:', e); }
+  }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
-      init();
-      initReserve();
-      initProjectBuilder();
-      initTemplatePacks();
-      initMissionComposer();
-      initWorkerHandoff();
-      initProjectExportPreview();
-      initHumanApprovalGate();
-      initRealFileCommandPackage();
-      initWorkerResultReceipt();
-      initFinalProductDashboard();
-      initSoftwareFactoryPage();
-      initMainChat();
-    });
+    document.addEventListener('DOMContentLoaded', _runAllInits);
   } else {
-    init();
-    initReserve();
-    initProjectBuilder();
-    initTemplatePacks();
-    initMissionComposer();
-    initWorkerHandoff();
-    initProjectExportPreview();
-    initHumanApprovalGate();
-    initRealFileCommandPackage();
-    initWorkerResultReceipt();
-    initFinalProductDashboard();
-    initSoftwareFactoryPage();
-    initMainChat();
+    _runAllInits();
   }
 })();
 
