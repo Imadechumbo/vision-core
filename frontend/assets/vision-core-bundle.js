@@ -1450,6 +1450,19 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   var _backendConnected = false;
   var _backendVersion = '';
 
+  function _patchBackendStatusDOM(connected, version) {
+    var statusEl = document.getElementById('vc-backend-status');
+    var modeEl   = document.getElementById('vc-mode-badge');
+    if (statusEl) {
+      statusEl.textContent = connected ? ('CONECTADO' + (version ? ' — v' + version : '')) : 'NÃO CONECTADO';
+      statusEl.className   = 'vc-sf-stat-val ' + (connected ? 'highlight' : 'blocked');
+    }
+    if (modeEl) {
+      modeEl.textContent = connected ? 'WORKER LIVE' : 'LOCAL PREVIEW';
+      modeEl.className   = 'vc-sf-stat-val ' + (connected ? 'highlight' : 'ready');
+    }
+  }
+
   function checkBackendHealth() {
     var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 5000) : null;
@@ -1458,10 +1471,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       .then(function (data) {
         _backendConnected = true;
         _backendVersion = (data && data.version) ? String(data.version) : '';
+        _patchBackendStatusDOM(true, _backendVersion);
       })
       .catch(function () {
         _backendConnected = false;
         _backendVersion = '';
+        _patchBackendStatusDOM(false, '');
       });
   }
 
@@ -5661,6 +5676,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   }
 
   checkBackendHealth();
+  window.addEventListener('load', function () { checkBackendHealth(); });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
