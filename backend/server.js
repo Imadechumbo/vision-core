@@ -967,6 +967,41 @@ app.get('/api/auth/status', (req, res) => {
   return sendOk(res, { authenticated: Boolean(user), plan: user ? (user.plan || 'free') : null, anti_stub: true });
 });
 
+/* ── Vision Agent Local endpoints ──────────────────────────── */
+/* Fila em memória — reset ao reiniciar o processo                */
+const _agentQueue   = [];
+const _agentResults = {};
+
+app.post('/api/agent/mission/queue', (req, res) => {
+  const body    = normalizeBody(req);
+  const mission = {
+    id:        `mission_${Date.now()}_${Math.random().toString(16).slice(2,6)}`,
+    input:     body.input || body.message || '',
+    type:      body.type  || 'general',
+    queued_at: now()
+  };
+  _agentQueue.push(mission);
+  return sendOk(res, { mission_id: mission.id, queued: true, queue_length: _agentQueue.length });
+});
+
+app.get('/api/agent/mission/pending', (req, res) => {
+  const mission = _agentQueue.shift();
+  return sendOk(res, { mission: mission || null, queue_remaining: _agentQueue.length });
+});
+
+app.post('/api/agent/mission/result', (req, res) => {
+  const body = normalizeBody(req);
+  if (!body.mission_id) return res.status(400).json({ ok: false, error: 'mission_id_required', time: now() });
+  _agentResults[body.mission_id] = { ...body, received_at: now() };
+  return sendOk(res, { received: true, mission_id: body.mission_id });
+});
+
+app.get('/api/agent/mission/result/:id', (req, res) => {
+  const result = _agentResults[req.params.id];
+  if (!result) return res.status(404).json({ ok: false, error: 'result_not_found', time: now() });
+  return sendOk(res, result);
+});
+
 /* SAFE 404 — nunca 405 */
 app.all('/api/*', (req, res) => {
   return res.status(404).json({

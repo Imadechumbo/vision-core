@@ -1,0 +1,14 @@
+{
+  "name": "vision-agent-local",
+  "version": "1.0.0",
+  "description": "Vision Agent Local — ponte entre Vision Core e projetos no PC",
+  "main": "index.js",
+  "bin": { "vision-agent": "./index.js" },
+  "scripts": {
+    "start": "node index.js",
+    "start:dev": "node index.js ."
+  },
+  "engines": { "node": ">=18.0.0" },
+  "keywords": ["vision-core", "agent", "local", "ai"],
+  "license": "MIT"
+}
