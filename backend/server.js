@@ -503,10 +503,61 @@ app.get('/api/go-core/health', async (req, res) => {
   }
 });
 
+// Local path detection — servidor remoto não tem acesso ao PC do usuário
+const LOCAL_PATH_PATTERNS = [
+  /[A-Z]:\\/i,
+  /OneDrive/i,
+  /Desktop/i,
+  /Documents/i,
+  /Downloads/i,
+  /PROJETOS/i,
+  /\/Users\//i,
+  /Users\\/i
+];
+function hasLocalPath(text) {
+  return LOCAL_PATH_PATTERNS.some(p => p.test(text));
+}
+
 // POST /api/run-live — executa Go Core, retorna JSON final
 app.all('/api/run-live', async (req, res) => {
   const body     = normalizeBody(req);
   const input    = body.mission || body.message || body.prompt || body.input || 'self-test';
+
+  // Detectar caminhos locais inacessíveis ao servidor remoto
+  if (hasLocalPath(input)) {
+    return res.status(200).json({
+      ok: false,
+      status: 'LOCAL_ACCESS_REQUIRED',
+      pass_gold: false,
+      promotion_allowed: false,
+      deploy_allowed: false,
+      agent_required: true,
+      summary: [
+        '⚠️ Esta missão requer acesso ao seu sistema de arquivos local.',
+        '',
+        'O Vision Core roda em servidor remoto (AWS us-east-1) e não tem',
+        'acesso direto ao seu computador.',
+        '',
+        'Escolha uma das opções abaixo:',
+        '',
+        '① Colar código no chat — copie o conteúdo do arquivo e envie como mensagem',
+        '② Adicionar arquivos — clique em "+ Adicionar arquivos" na interface',
+        '③ Repositório público — cole a URL do GitHub no chat',
+        '④ Vision Agent Local — execute no seu PC:',
+        '   node backend/agent-local/index.js ' + input.trim(),
+        '',
+        'O Vision Agent Local faz ponte direta entre o Vision Core e o seu projeto.'
+      ].join('\n'),
+      methods: [
+        { id: 1, name: 'Colar código no chat', action: 'Copie o conteúdo e envie como mensagem' },
+        { id: 2, name: 'Adicionar arquivos', action: 'Clique em + Adicionar arquivos' },
+        { id: 3, name: 'Repositório público', action: 'Cole a URL do GitHub no chat' },
+        { id: 4, name: 'Vision Agent Local', action: 'node backend/agent-local/index.js /projeto' }
+      ],
+      time: now()
+    });
+  }
+
   const missionRoot = path.resolve(process.env.VISION_PROJECT_ROOT || ROOT || process.cwd(), '..');
 
   let result;

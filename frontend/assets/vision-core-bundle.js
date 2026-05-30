@@ -1439,7 +1439,6 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   rc0_created: false,
   final_human_decision_required: true,
 });
-
 (function () {
   'use strict';
 
@@ -5632,8 +5631,14 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
         .then(function(data) {
           thinking.remove();
-          var pg = (data && data.pass_gold) ? '✅ PASS GOLD' : '⚠️ ' + ((data && data.status) || 'ver relatório');
-          appendMsg('[MISSÃO CONCLUÍDA] ' + pg + (data && data.summary ? '\n' + data.summary : ''));
+          var isLocal = data && data.status === 'LOCAL_ACCESS_REQUIRED';
+          var header  = isLocal
+            ? '📋 ACESSO LOCAL NECESSÁRIO'
+            : (data && data.pass_gold)
+              ? '✅ MISSÃO CONCLUÍDA — PASS GOLD'
+              : '⚠️ MISSÃO — ' + ((data && data.status) || 'ver relatório');
+          var body = (data && data.summary) ? data.summary : '';
+          appendMsg(header + (body ? '\n\n' + body : ''), isLocal ? 'info' : '');
           setStatus('READY');
         })
         .catch(function(err) {
