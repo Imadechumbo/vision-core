@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VISION CORE — Um sistema que corrige sistemas</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .chain-flow { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:16px 0; }
+  .chain-step { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:7px; padding:8px 14px; font-size:13px; color:#e2e8f0; text-align:center; line-height:1.4; }
+  .chain-step small { display:block; color:#64748b; font-size:10px; margin-top:2px; }
+  .chain-arrow { color:#38bdf8; font-size:16px; font-weight:700; }
+  .stat-inline { display:flex; flex-wrap:wrap; gap:12px; margin:16px 0; }
+  .stat-pill { background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.2); border-radius:20px; padding:6px 16px; font-size:13px; color:#22c55e; font-weight:600; }
+  .stat-pill.blue { background:rgba(56,189,248,.1); border-color:rgba(56,189,248,.2); color:#38bdf8; }
+  .stat-pill.yellow { background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.2); color:#f59e0b; }
+  .endpoint-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px; margin-top:14px; }
+  .endpoint-tag { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:6px; padding:7px 12px; font-size:12px; font-family:monospace; color:#94a3b8; }
+  .endpoint-tag .method { color:#22c55e; font-weight:700; margin-right:6px; }
+  .version-badge { display:inline-block; background:rgba(34,197,94,.15); border:1px solid rgba(34,197,94,.3); border-radius:5px; padding:3px 10px; font-size:11px; color:#22c55e; font-weight:700; margin-bottom:8px; }
+</style>
+</head>
+<body class="marketing-page">
+
+<header class="top"><div class="shell topin">
+  <div>
+    <div class="brand">VISION CORE</div>
+    <div class="sub">V2.9.10 CLEAN FULLSTACK • UM SISTEMA QUE CORRIGE SISTEMAS</div>
+  </div>
+  <div class="top-actions">
+    <a class="btn ghost" href="index.html">VOLTAR AO PAINEL</a>
+    <a class="btn ghost" href="billing.html">BILLING</a>
+    <a class="btn ghost" href="landing.html">TRAJETÓRIA</a>
+  </div>
+</div></header>
+
+<main class="shell marketing">
+
+  <!-- HERO -->
+  <section class="marketing-hero panel">
+    <div>
+      <p class="eyebrow">EXECUÇÃO • DIAGNÓSTICO • VALIDAÇÃO • IA REAL</p>
+      <h1>Deploy sem medo de falhar.</h1>
+      <p class="lead">Plataforma operacional de execução, diagnóstico e validação para desenvolvedores — agora com IA real no chat.</p>
+      <p>Projetos novos podem falhar no deploy ou pós-deploy. O VISION CORE foi desenhado para manter uma base GOLD ativa, validar alterações e acionar auto-rollback quando uma mudança não atinge o padrão esperado. Na V2.9.10, o chat conecta você a Groq, Gemini e OpenRouter para diagnóstico técnico real em português.</p>
+      <p class="impact">O erro pode acontecer. A falha visível, não.</p>
+      <div class="stat-inline">
+        <span class="stat-pill">✅ 1730 testes passando</span>
+        <span class="stat-pill blue">🔗 29/29 endpoints e2e</span>
+        <span class="stat-pill yellow">⭐ PASS GOLD score=100</span>
+      </div>
+    </div>
+    <div class="eye-wrap large"><div class="ai-eye"><div class="pupil"></div></div></div>
+  </section>
+
+  <!-- COMO FUNCIONA -->
+  <section class="panel marketing-block">
+    <h2>Como funciona</h2>
+    <div class="chain-flow">
+      <div class="chain-step">Missão<small>linguagem natural</small></div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">Diagnóstico<small>Hermes RCA + IA</small></div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">Scanner<small>AST + contexto</small></div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">Patch<small>snapshot + apply</small></div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">AEGIS<small>security check</small></div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">PASS GOLD<small>score=100</small></div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">Deploy<small>supervisionado</small></div>
+    </div>
+    <p>Você define uma missão. O sistema interpreta o contexto, identifica a causa raiz com Hermes + IA real (Groq/Gemini), planeja a correção e executa mudanças controladas. Nada é promovido sem validação PASS GOLD.</p>
+    <p><strong>Sem PASS GOLD, nada existe. Sem aprovação humana, nada vai para produção.</strong></p>
+  </section>
+
+  <!-- IA REAL -->
+  <section class="panel marketing-block">
+    <div class="version-badge">NOVO — V2.9.10</div>
+    <h2>Chat com IA real integrada</h2>
+    <p>O chat VISION AI COMMAND agora está conectado a um fallback chain de IAs gratuitas. Você envia uma mensagem — ou faz upload de um arquivo de código — e recebe diagnóstico técnico real em português.</p>
+    <div class="chain-flow">
+      <div class="chain-step">🟢 Groq<small>llama-3.3-70b<br>gratuito, rápido</small></div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">🔵 Gemini<small>2.5-flash<br>gratuito</small></div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">🟣 OpenRouter<small>qwen3-plus:free<br>gratuito</small></div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">⚪ Local<small>copilotAnswer()<br>fallback</small></div>
+    </div>
+    <p>Cada provider tem timeout de 15s. Se um falha, o próximo entra automaticamente. A resposta sempre inclui <code>provider</code> e <code>model</code> para rastreabilidade.</p>
+    <p class="impact" style="color:var(--cyan);font-size:15px">Cole um erro, faça upload de um arquivo, descreva o bug — a IA diagnostica e propõe o fix.</p>
+  </section>
+
+  <!-- SEGURANÇA NO DEPLOY -->
+  <section class="panel marketing-block">
+    <h2>Segurança no deploy e pós-deploy</h2>
+    <p>O deploy não encerra o risco. Algumas funcionalidades só podem ser analisadas online, sob carga real, com APIs externas, usuários reais e condições de rede reais.</p>
+    <p>Por isso, o VISION CORE mantém uma camada de <strong>runtime validation</strong>: observa funcionalidades recém-ativadas, detecta anomalias, compara comportamento esperado e reverte para o último estado GOLD se houver desvio crítico.</p>
+    <p>Na V2.9.10, o AEGIS security gate bloqueia automaticamente secrets reais em código (AEGIS_SECRET_005) com score de segurança 0–100. Apenas score=100 libera PASS GOLD.</p>
+    <p class="impact">Validação antes do deploy. Proteção durante o deploy. Segurança contínua após o deploy.</p>
+  </section>
+
+  <!-- AUTO-ROLLBACK -->
+  <section class="panel marketing-block">
+    <h2>Auto-rollback com estado GOLD</h2>
+    <p>Cada alteração é tratada como uma transação: snapshot do estado atual, aplicação controlada, validação obrigatória e promoção somente após PASS GOLD.</p>
+    <p>Se falhar, o sistema descarta a alteração e volta automaticamente para o último estado estável, preservando continuidade operacional.</p>
+    <p>A cadeia RTP-0 a RTP-6 (Real Truth Probe) garante 7 estágios de verificação supervisionada antes de qualquer promoção. O PR #737 (RTP-6) foi o último gate desta versão — mergeado manualmente com autorização humana explícita.</p>
+  </section>
+
+  <!-- ENDPOINTS EM PRODUÇÃO -->
+  <section class="panel marketing-block">
+    <div class="version-badge">29/29 e2e — V2.9.10</div>
+    <h2>Endpoints em produção verificados</h2>
+    <p>Todos os endpoints foram testados via worker Cloudflare → EB prod. Resultado: 29/29 PASS documentado em FUNCTIONAL_TEST_REPORT.md.</p>
+    <div class="endpoint-list">
+      <div class="endpoint-tag"><span class="method">GET</span>/api/health</div>
+      <div class="endpoint-tag"><span class="method">GET</span>/api/auth/status</div>
+      <div class="endpoint-tag"><span class="method">POST</span>/api/auth/register</div>
+      <div class="endpoint-tag"><span class="method">POST</span>/api/auth/login</div>
+      <div class="endpoint-tag"><span class="method">POST</span>/api/chat</div>
+      <div class="endpoint-tag"><span class="method">POST</span>/api/copilot</div>
+      <div class="endpoint-tag"><span class="method">POST</span>/api/run-live</div>
+      <div class="endpoint-tag"><span class="method">GET</span>/api/billing/plans</div>
+      <div class="endpoint-tag"><span class="method">GET</span>/api/billing/status</div>
+      <div class="endpoint-tag"><span class="method">POST</span>/api/webhook/stripe</div>
+      <div class="endpoint-tag"><span class="method">GET</span>/api/obsidian/status</div>
+      <div class="endpoint-tag"><span class="method">GET</span>/api/agent/status</div>
+      <div class="endpoint-tag"><span class="method">GET</span>/api/mission/status</div>
+      <div class="endpoint-tag"><span class="method">GET</span>/api/workers/status</div>
+      <div class="endpoint-tag"><span class="method">GET</span>/api/runtime/contracts</div>
+      <div class="endpoint-tag"><span class="method">GET</span>/api/github/status</div>
+    </div>
+  </section>
+
+  <!-- REFATORAÇÃO LEGADO -->
+  <section class="panel marketing-block">
+    <h2>Refatoração assistida de código legado</h2>
+    <p>Sistemas legados acumulam acoplamento, duplicidade, configurações esquecidas e decisões antigas. O VISION CORE auxilia a modernização com etapas menores, análise de impacto, validação por fase e rollback disponível em cada mudança.</p>
+    <p>Não é reescrita cega. É evolução controlada.</p>
+    <p>Na prática: faça upload do arquivo com bug no chat, descreva o problema, e a IA diagnostica a causa raiz com o fix exato — como foi feito com o bug de imagem do TechNetGame durante os testes desta versão.</p>
+  </section>
+
+  <!-- POR QUE EXISTE -->
+  <section class="panel marketing-block">
+    <div class="ai-pitch-box">
+      <p class="pitch-eyebrow">POR QUE O VISION CORE EXISTE</p>
+      <h2>IAs criam. VISION CORE corrige.</h2>
+      <p>Este software foi desenvolvido para resolver o problema mais frustrante de quem desenvolve com IAs: os projetos gerados por inteligência artificial quebram — e você passa horas, às vezes dias, rodando comandos manuais no terminal tentando consertar.</p>
+      <p>Com o sistema de diagnóstico inteligente e segurança <strong style="color:var(--yellow)">PASS GOLD</strong>, você nunca mais vai subir um deploy quebrado. Com apenas um pedido, o VISION CORE assume como missão padrão e recruta uma equipe de agentes para trabalhar simultaneamente no problema — executando todos os comandos necessários, descobrindo a causa raiz e resolvendo até consolidar o PASS GOLD para um deploy saudável e seguro.</p>
+      <p>Na V2.9.10: o chat está conectado a IA real. Você pode fazer upload de arquivos de código, colar erros, descrever bugs — e receber diagnóstico técnico profundo em português, com causa raiz e fix com código.</p>
+      <p class="impact" style="color:var(--cyan);font-size:16px;margin-top:0">Pare de perder horas corrigindo erros manualmente. Deixa o VISION CORE fazer isso.</p>
+      <div class="cta-strip">
+        <a class="btn" href="index.html#mission">▷ ABRIR VISION AI COMMAND</a>
+        <a class="btn ghost" href="index.html#saasAuth">VER PLANOS</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- POSICIONAMENTO -->
+  <section class="panel marketing-block">
+    <h2>Software que corrige sistemas automaticamente</h2>
+    <p>VISION CORE não é um software de validação. É um sistema que resolve problemas de software de forma autônoma.</p>
+    <div class="compare-grid">
+      <div class="compare-box wrong">
+        <h3>❌ Abordagem antiga</h3>
+        <p>Validação = mercado saturado. Testes, CI/CD e validação já são resolvidos por milhares de ferramentas.</p>
+      </div>
+      <div class="compare-box right">
+        <h3>🚀 Nova abordagem</h3>
+        <p>Correção automática = mercado novo. Sistemas que detectam, entendem e corrigem erros automaticamente — com IA real e PASS GOLD.</p>
+      </div>
+    </div>
+    <div class="market-warning">
+      <h3>⚠️ Posicionamento define o sucesso</h3>
+      <div class="vs-row">
+        <div class="vs-col bad">
+          <div class="label">Se você se vende como</div>
+          <div class="value">"software de validação"</div>
+          <div class="result">→ você vira só mais um</div>
+        </div>
+        <div class="vs-col good">
+          <div class="label">Se você se vende como</div>
+          <div class="value">"sistema que corrige sistemas automaticamente"</div>
+          <div class="result">→ você cria uma nova categoria</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONCORRÊNCIA -->
+  <section class="panel marketing-block">
+    <h2>Onde estamos no mercado</h2>
+    <p>O VISION CORE <strong style="color:#fff">não compete</strong> com ferramentas de teste comuns:</p>
+    <div class="compare-grid">
+      <div class="compare-box wrong">
+        <h3>❌ O que não somos</h3>
+        <ul style="margin:8px 0;padding-left:18px;color:#94a3b8;font-size:13px">
+          <li>Jest / Vitest — testes unitários</li>
+          <li>GitHub Actions — CI/CD genérico</li>
+          <li>Sentry — monitoramento de erros</li>
+          <li>Copilot / Cursor — autocomplete de código</li>
+        </ul>
+      </div>
+      <div class="compare-box right">
+        <h3>✅ O que somos</h3>
+        <ul style="margin:8px 0;padding-left:18px;color:#22c55e;font-size:13px">
+          <li>Sistema operacional para bugs</li>
+          <li>IA que diagnostica + propõe + aplica fix</li>
+          <li>PASS GOLD como porta de promoção</li>
+          <li>Governança declarativa com REGRA ABSOLUTA</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLANOS -->
+  <section class="panel marketing-block">
+    <h2>Planos disponíveis</h2>
+    <p>Billing Stripe integrado com Price IDs reais em produção. Webhook configurado e testado.</p>
+    <div class="compare-grid">
+      <div class="compare-box right">
+        <h3>🚀 Pro — R$49/mês</h3>
+        <p>Acesso completo ao VISION AI COMMAND, chat com IA real, upload de arquivos, missões SDDF e PASS GOLD supervisionado.</p>
+        <div style="margin-top:10px"><code style="font-size:11px">price_1TcImIHNPx1MfVELFNHZ16Vw</code></div>
+      </div>
+      <div class="compare-box right">
+        <h3>🏢 Enterprise — R$149/mês</h3>
+        <p>Pro + Software Factory completa, multi-projeto, agentes orquestradores, OpenClaw/OpenSquad e suporte prioritário.</p>
+        <div style="margin-top:10px"><code style="font-size:11px">price_1TcImJHNPx1MfVELSMiAAasS</code></div>
+      </div>
+    </div>
+    <div style="margin-top:16px;padding:14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px">
+      <strong style="color:#f59e0b">⚠️ Fase de testes:</strong> <span style="color:#94a3b8;font-size:13px">O VISION CORE está em aperfeiçoamento ativo. Funcionalidades evoluem a cada sessão. Stripe em modo teste (sk_test_). Produção real na V3.0.0.</span>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="panel marketing-block" style="text-align:center;padding:48px 24px">
+    <h2 style="font-size:28px">Você não corrige mais sistemas.</h2>
+    <p style="font-size:18px;color:#94a3b8;margin:12px 0 24px">Você supervisiona um sistema que corrige sistemas.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a class="btn github" href="index.html">Abrir VISION AI COMMAND</a>
+      <a class="btn ghost" href="landing.html">Ver trajetória completa</a>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

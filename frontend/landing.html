@@ -1,0 +1,342 @@
+<!-- bundle-version: v2.9.10-updated -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>VISION CORE — Sistema Operacional para Desenvolvimento com IA</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <style>
+    .badge-live { background: #22c55e; color: #000; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: 1px; vertical-align: middle; margin-left: 6px; }
+    .badge-blue { background: #38bdf8; color: #000; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: 1px; vertical-align: middle; margin-left: 6px; }
+    .badge-gold { background: #f59e0b; color: #000; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: 1px; vertical-align: middle; margin-left: 6px; }
+    .api-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 18px; }
+    .api-card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 10px; padding: 14px 16px; }
+    .api-card .api-name { font-size: 13px; font-weight: 700; color: #22d3ee; }
+    .api-card .api-model { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+    .api-card .api-status { font-size: 11px; color: #22c55e; margin-top: 4px; }
+    .stack-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .stack-tag { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); border-radius: 6px; padding: 5px 12px; font-size: 12px; color: #cbd5e1; }
+    .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-top: 20px; }
+    .stat-box { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 16px; text-align: center; }
+    .stat-box .stat-num { font-size: 28px; font-weight: 800; color: #22c55e; }
+    .stat-box .stat-label { font-size: 11px; color: #64748b; margin-top: 4px; }
+    .roadmap-table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 13px; }
+    .roadmap-table th { text-align: left; padding: 8px 12px; color: #64748b; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .roadmap-table td { padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,.05); color: #cbd5e1; }
+    .roadmap-table tr.current td { background: rgba(34,197,94,.06); }
+    .roadmap-table tr.planned td { color: #64748b; }
+    .chain-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; }
+    .chain-step { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 6px; padding: 6px 12px; font-size: 12px; color: #e2e8f0; }
+    .chain-arrow { color: #38bdf8; font-size: 14px; }
+  </style>
+</head>
+<body class="landing-body devops-landing">
+
+<header class="top landing-top">
+  <div class="shell topin">
+    <div>
+      <div class="brand">VISION CORE</div>
+      <div class="sub">V2.9.10 CLEAN FULLSTACK • SAAS • HERMES • PASS GOLD</div>
+    </div>
+    <div class="top-actions">
+      <a class="btn ghost" href="index.html">DASHBOARD</a>
+      <a class="btn agent-download" href="downloads/VisionAgentSetup.exe" download>BAIXAR AGENT</a>
+      <a class="btn github" href="https://github.com/Imadechumbo/vision-core" target="_blank" rel="noopener">GITHUB</a>
+      <a class="btn" href="#timeline">VER TRAJETÓRIA</a>
+      <a class="btn ghost" href="billing.html">BILLING</a>
+    </div>
+  </div>
+</header>
+
+<main class="landing-shell">
+
+  <!-- HERO -->
+  <section class="story-hero">
+    <div class="story-copy">
+      <p class="eyebrow">IAs criam. VISION CORE corrige.</p>
+      <h1>O sistema operacional para desenvolvimento com IA.</h1>
+      <p class="hero-lead">A IA acelerou a criação de software. Mas também criou um novo problema: código que nasce rápido… e quebra rápido. O VISION CORE fecha esse ciclo com diagnóstico real, execução supervisionada, rollback automático e PASS GOLD.</p>
+      <div class="hero-actions">
+        <a class="btn github" href="index.html#mission">Abrir Mission Control</a>
+        <a class="btn ghost" href="#pillars">Ver os 6 pilares</a>
+        <a class="btn agent-download" href="downloads/VisionAgentSetup.exe" download>Baixar Vision Agent</a>
+      </div>
+    </div>
+    <div class="startup-card devops-terminal">
+      <div class="terminal-line green">PASS GOLD: score=100 status=GOLD ✅</div>
+      <div class="terminal-line cyan">go-core v5.6.0-go-safe-core — PASS SECURE</div>
+      <div class="terminal-line">Hermes RCA + OpenClaw + Scanner LIVE</div>
+      <div class="terminal-line yellow">Anthropic → Gemini → Groq → fallback chain</div>
+      <div class="terminal-line purple">CF Pages + Worker + EB prod — all green</div>
+      <div class="terminal-line green">29 testes e2e — 29/29 PASS ✅</div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="startup-section">
+    <p class="eyebrow">NÚMEROS REAIS</p>
+    <h2>Produção em produção.</h2>
+    <div class="stat-row">
+      <div class="stat-box"><div class="stat-num">1730</div><div class="stat-label">Testes pi-harness passando</div></div>
+      <div class="stat-box"><div class="stat-num">295+</div><div class="stat-label">Testes real-validation (RV0–RV5)</div></div>
+      <div class="stat-box"><div class="stat-num">66+</div><div class="stat-label">Testes RTP chain (RTP-0 a RTP-6)</div></div>
+      <div class="stat-box"><div class="stat-num">100</div><div class="stat-label">Security score AEGIS</div></div>
+      <div class="stat-box"><div class="stat-num">29/29</div><div class="stat-label">E2E endpoints produção</div></div>
+      <div class="stat-box"><div class="stat-num">5</div><div class="stat-label">APIs de IA no fallback chain</div></div>
+    </div>
+  </section>
+
+  <!-- 6 PILARES -->
+  <section class="startup-section" id="pillars">
+    <p class="eyebrow">NOVA CATEGORIA</p>
+    <h2>Sistema operacional para desenvolvimento com IA</h2>
+    <p class="section-lead">Não é chatbot. Não é copiloto. É uma camada operacional que transforma erro em missão, missão em execução, execução em validação e validação em deploy seguro.</p>
+    <div class="so-ia-grid compact-pillar-grid">
+      <div class="so-ia-card"><div class="so-ia-icon">🧠</div><h3>Diagnóstico Inteligente</h3><p>Hermes RCA identifica causa raiz usando logs, contexto e scanner do projeto. Agora com IA real: Groq, Gemini e Anthropic no fallback chain.</p></div>
+      <div class="so-ia-card"><div class="so-ia-icon">🤖</div><h3>Equipe de Agentes</h3><p>OpenClaw/OpenSquad distribui tarefas quando o problema exige múltiplas camadas. Go Core Runner valida com score 100.</p></div>
+      <div class="so-ia-card"><div class="so-ia-icon">⚙️</div><h3>Execução Automática</h3><p>MissionRunner executa steps, comandos permitidos e validações com logs vivos. Pipeline completo scanner → hermes → patcher → PASS GOLD.</p></div>
+      <div class="so-ia-card"><div class="so-ia-icon">🛡️</div><h3>PASS GOLD</h3><p>Promoção só acontece quando a correção é validada, segura e reversível. AEGIS bloqueia secrets em produção. Security score 100 obrigatório.</p></div>
+      <div class="so-ia-card"><div class="so-ia-icon">🚀</div><h3>Deploy Confiável</h3><p>CF Pages + Cloudflare Worker + AWS Elastic Beanstalk. Cadeia RTP-0 a RTP-6 garante que nada sobe sem aprovação humana explícita.</p></div>
+      <div class="so-ia-card"><div class="so-ia-icon">🔁</div><h3>Fecha o Loop</h3><p>O ciclo de erro manual vira fluxo operacional. Chat conectado a IA real, upload de arquivos, auth JWT, billing Stripe integrado.</p></div>
+    </div>
+  </section>
+
+  <!-- STACK TÉCNICO -->
+  <section class="startup-section" id="stack">
+    <p class="eyebrow">STACK TÉCNICO V2.9.10</p>
+    <h2>Full-stack real em produção.</h2>
+    <p class="section-lead">Cada camada deployada, testada e com health check verificado.</p>
+    <div class="so-ia-grid compact-pillar-grid">
+      <div class="so-ia-card">
+        <div class="so-ia-icon">☁️</div>
+        <h3>Frontend</h3>
+        <div class="stack-row">
+          <span class="stack-tag">Cloudflare Pages</span>
+          <span class="stack-tag">visioncoreai.pages.dev</span>
+          <span class="stack-tag">JS bundle 257KB</span>
+          <span class="stack-tag">Chat + Auth + Upload</span>
+        </div>
+      </div>
+      <div class="so-ia-card">
+        <div class="so-ia-icon">⚡</div>
+        <h3>Worker / Proxy</h3>
+        <div class="stack-row">
+          <span class="stack-tag">Cloudflare Worker</span>
+          <span class="stack-tag">CORS configurado</span>
+          <span class="stack-tag">visioncore-api-gateway</span>
+          <span class="stack-tag">→ EB prod</span>
+        </div>
+      </div>
+      <div class="so-ia-card">
+        <div class="so-ia-icon">🖥️</div>
+        <h3>Backend</h3>
+        <div class="stack-row">
+          <span class="stack-tag">Node.js Express</span>
+          <span class="stack-tag">AWS EB prod</span>
+          <span class="stack-tag">JWT Auth</span>
+          <span class="stack-tag">Stripe Pro/Enterprise</span>
+          <span class="stack-tag">DB JSON + /tmp</span>
+        </div>
+      </div>
+      <div class="so-ia-card">
+        <div class="so-ia-icon">🔬</div>
+        <h3>go-core</h3>
+        <div class="stack-row">
+          <span class="stack-tag">v5.6.0-go-safe-core</span>
+          <span class="stack-tag">PASS GOLD score=100</span>
+          <span class="stack-tag">AEGIS security</span>
+          <span class="stack-tag">1730 testes</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="eyebrow" style="margin-top:32px">IA FALLBACK CHAIN — APIs GRATUITAS</p>
+    <div class="chain-flow">
+      <div class="chain-step">🟢 Groq<br><small>llama-3.3-70b</small></div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">🔵 Gemini<br><small>2.5-flash</small></div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">🟣 OpenRouter<br><small>qwen3-plus:free</small></div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">⚪ Local<br><small>copilotAnswer()</small></div>
+    </div>
+  </section>
+
+  <!-- ANTES E DEPOIS -->
+  <section class="startup-section loop-story" id="loop">
+    <p class="eyebrow">ANTES E DEPOIS</p>
+    <h2>O loop de erros antigo vs o fluxo VISION CORE</h2>
+    <div class="loop-comparison interactive-loop">
+      <div class="loop-col manual-loop">
+        <div class="loop-col-title red">🔴 Loop de erros</div>
+        <div class="loop-item"><b>1</b><span>Erro acontece</span><small>Bug, configuração quebrada ou endpoint falhando.</small></div>
+        <div class="loop-item"><b>2</b><span>Caça manual</span><small>Logs, arquivos, dependências e comandos.</small></div>
+        <div class="loop-item"><b>3</b><span>Tentativas e erros</span><small>Muda algo, testa, quebra outra parte.</small></div>
+        <div class="loop-item"><b>4</b><span>Mais tempo perdido</span><small>Horas viram dias. Contexto se perde.</small></div>
+        <div class="loop-item"><b>5</b><span>Solução frágil</span><small>Parece corrigido, mas não foi validado.</small></div>
+        <div class="loop-item"><b>6</b><span>O ciclo recomeça</span><small>Outro erro aparece e tudo volta ao terminal.</small></div>
+      </div>
+      <div class="loop-arrow">➜</div>
+      <div class="loop-col vision-loop">
+        <div class="loop-col-title green">🟢 Fluxo VISION CORE</div>
+        <div class="loop-item"><b>1</b><span>Você descreve o problema</span><small>Uma frase vira missão operacional.</small></div>
+        <div class="loop-item"><b>2</b><span>IA real diagnostica</span><small>Groq/Gemini analisa logs, código e contexto.</small></div>
+        <div class="loop-item"><b>3</b><span>Plano + patch seguro</span><small>Scanner escolhe arquivo alvo e patch engine aplica com snapshot.</small></div>
+        <div class="loop-item"><b>4</b><span>Execução automática</span><small>Comandos, ajustes, testes e logs em tempo real.</small></div>
+        <div class="loop-item"><b>5</b><span>Validação PASS GOLD</span><small>Build, segurança AEGIS, snapshot e risco precisam passar.</small></div>
+        <div class="loop-item"><b>6</b><span>Deploy saudável</span><small>Só libera quando está seguro e reversível.</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRAJETÓRIA -->
+  <section class="startup-section" id="timeline">
+    <p class="eyebrow">TRAJETÓRIA REAL</p>
+    <h2>Credibilidade vem de evolução, não promessa.</h2>
+    <p class="section-lead">Do motor de fila ao SaaS full-stack com IA real, chat conectado e governança declarativa PASS GOLD.</p>
+
+    <div class="roadmap-table" style="overflow-x:auto">
+      <table class="roadmap-table">
+        <thead>
+          <tr><th>Versão</th><th>Status</th><th>Descrição</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>V4.4</td><td>✅ Fusão</td><td>Linha de base GOLD legada (Nó + Elétrons + CF)</td></tr>
+          <tr><td>V5.0–V5.6</td><td>✅ Fusão</td><td>Go Safe Core + motor PASS GOLD (score 100)</td></tr>
+          <tr><td>V6.0–V6.1</td><td>✅ Fusão</td><td>Camada de segurança AEGIS + PASS SECURE</td></tr>
+          <tr><td>V7.0–V7.9</td><td>✅ Fusão</td><td>Fluxo GitHub + automação controlada de relações públicas</td></tr>
+          <tr><td>V15.0–V20.0</td><td>✅ Fusão</td><td>Hermes inteligência + projeto final de oleoduto</td></tr>
+          <tr><td>V21.0–V50.0</td><td>✅ Fusão</td><td>Governança em tempo de execução + liberação supervisionada</td></tr>
+          <tr><td>V51.0–V200.0</td><td>✅ Fusão</td><td>Cadeia completa de governança (sandbox, patch, tag, estável)</td></tr>
+          <tr><td>V285–V450</td><td>✅ Fusão</td><td>Reforço do SaaS, segurança corporativa, desbloqueio da governança</td></tr>
+          <tr class="current"><td><strong>V2.9.10</strong></td><td>✅ <strong>Atualidade</strong></td><td>Cadeia RTP (RTP-0 a RTP-6), Software Factory, chat com IA real, auth JWT, Stripe, CF Pages + Worker + EB prod, 29/29 testes e2e</td></tr>
+          <tr class="planned"><td>V3.0.0</td><td>⏩ Planejado</td><td>Execução real de staging da sonda (pós-despedida do operador)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- TIMELINE TÉCNICA DETALHADA -->
+  <section class="startup-section" id="timeline-detail">
+    <p class="eyebrow">ENTREGAS V2.9.10</p>
+    <h2>O que foi construído nesta versão.</h2>
+    <div class="timeline-vc devops-timeline">
+
+      <div class="tl-item">
+        <span class="tl-dot" style="color:#38bdf8;background:#38bdf8"></span>
+        <div class="tl-content">
+          <div class="tl-header"><span class="tl-version">Go Core</span><span class="tl-badge blue">PASS GOLD</span></div>
+          <h3 class="tl-title">go-core v5.6.0 — score 100, GOLD</h3>
+          <p class="tl-desc">Binary compilado em Go com pipeline completo: scanner → hermes → fileops → snapshot → patcher → validador → rollback → passsecure → memória → passgold. 1730 testes pi-harness + 295 real-validation passando.</p>
+          <div class="tl-tags"><span>go-safe-core</span><span>AEGIS</span><span>score=100</span><span>1730 testes</span></div>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <span class="tl-dot" style="color:#22c55e;background:#22c55e"></span>
+        <div class="tl-content">
+          <div class="tl-header"><span class="tl-version">Backend</span><span class="tl-badge green">EB PROD</span></div>
+          <h3 class="tl-title">Node.js Express — 29/29 endpoints e2e</h3>
+          <p class="tl-desc">Auth JWT real (register/login/status/Bearer), Stripe Pro R$49 + Enterprise R$149, webhook /api/webhook/stripe, /api/chat com fallback chain Groq→Gemini→OpenRouter, /api/copilot, /api/run-live, /api/obsidian e mais 20+ endpoints.</p>
+          <div class="tl-tags"><span>JWT auth</span><span>Stripe</span><span>IA chain</span><span>29 endpoints</span></div>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <span class="tl-dot" style="color:#a855f7;background:#a855f7"></span>
+        <div class="tl-content">
+          <div class="tl-header"><span class="tl-version">Frontend</span><span class="tl-badge purple">CF PAGES</span></div>
+          <h3 class="tl-title">Chat real + Upload + Auth modal + Software Factory</h3>
+          <p class="tl-desc">Chat VISION AI COMMAND conectado ao backend com IA real. Upload de arquivos via FileReader. Auth modal com register/login. Software Factory com 9 módulos. Botão SIGN IN funcional. Status backend dinâmico.</p>
+          <div class="tl-tags"><span>chat real</span><span>file upload</span><span>auth modal</span><span>257KB bundle</span></div>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <span class="tl-dot" style="color:#f59e0b;background:#f59e0b"></span>
+        <div class="tl-content">
+          <div class="tl-header"><span class="tl-version">Infra</span><span class="tl-badge yellow">CLOUDFLARE</span></div>
+          <h3 class="tl-title">Worker + CF Pages + AWS EB — chain completa</h3>
+          <p class="tl-desc">CF Pages → Worker (CORS) → EB prod. Worker com ORIGIN_BASE apontando para vision-core-prod. 5 ambientes EB configurados. Deploy automatizado com wrangler + eb CLI.</p>
+          <div class="tl-tags"><span>CF Worker</span><span>CF Pages</span><span>AWS EB</span><span>CORS</span></div>
+        </div>
+      </div>
+
+      <div class="tl-item tl-current">
+        <span class="tl-dot tl-dot-pulse" style="color:#22c55e;background:#22c55e"></span>
+        <div class="tl-content">
+          <div class="tl-header"><span class="tl-version">V2.9.10</span><span class="tl-badge live-badge">LIVE AGORA</span></div>
+          <h3 class="tl-title">RTP-0 a RTP-6 + PR #737 mergeado + IA real</h3>
+          <p class="tl-desc">Cadeia RTP completa com 66+ testes. PR #737 (RTP-6) mergeado. Chat com Groq/Gemini respondendo em português. Upload de arquivos funcionando. Auth JWT na produção. Stripe configurado com price IDs reais.</p>
+          <div class="tl-tags"><span>RTP chain</span><span>PR #737</span><span>Groq live</span><span>Gemini live</span><span>em testes</span></div>
+          <div class="tl-current-bar"><span class="tl-live-dot"></span> fase de testes e aperfeiçoamento — produto em evolução ativa</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- GARGALOS / TRANSPARÊNCIA -->
+  <section class="startup-section" id="gargalos">
+    <p class="eyebrow">TRANSPARÊNCIA TÉCNICA</p>
+    <h2>O que está resolvido e o que vem a seguir.</h2>
+    <div class="bottleneck-grid">
+      <div class="bn-card" style="border-color:rgba(34,197,94,.3)">
+        <div class="bn-header"><span class="bn-icon">✅</span><div><div class="bn-label" style="color:var(--green)">RESOLVIDO — V2.9.10</div><h3>Chat com IA real</h3></div></div>
+        <p>Chat VISION AI COMMAND conectado ao backend. Fallback chain Groq → Gemini → OpenRouter. Respostas em português com análise técnica real.</p>
+        <div class="bn-fix" style="color:var(--green)"><strong>Entregue:</strong> /api/chat com provider + model na resposta. Upload de arquivos prepended ao contexto.</div>
+      </div>
+      <div class="bn-card" style="border-color:rgba(34,197,94,.3)">
+        <div class="bn-header"><span class="bn-icon">✅</span><div><div class="bn-label" style="color:var(--green)">RESOLVIDO — V2.9.10</div><h3>Auth JWT real</h3></div></div>
+        <p>Register, login, status e Bearer header funcionando. Token JWT no body JSON (length=116). sessionStorage no frontend. Fallback register→login automático.</p>
+        <div class="bn-fix" style="color:var(--green)"><strong>Entregue:</strong> /api/auth/register + /api/auth/login + /api/auth/status. Modal SIGN IN funcional.</div>
+      </div>
+      <div class="bn-card" style="border-color:rgba(34,197,94,.3)">
+        <div class="bn-header"><span class="bn-icon">✅</span><div><div class="bn-label" style="color:var(--green)">RESOLVIDO — V2.9.10</div><h3>29/29 testes e2e</h3></div></div>
+        <p>Todos os endpoints de produção verificados via worker. Auth, billing, go-core PASS GOLD, webhook Stripe, CF Pages CORS — tudo passando.</p>
+        <div class="bn-fix" style="color:var(--green)"><strong>Entregue:</strong> FUNCTIONAL_TEST_REPORT.md + TECHNICAL_TEST_REPORT.md em produção.</div>
+      </div>
+      <div class="bn-card bn-medium">
+        <div class="bn-header"><span class="bn-icon">🔄</span><div><div class="bn-label">EM EVOLUÇÃO — V3.0.0</div><h3>EXECUTAR MISSÃO real</h3></div></div>
+        <p>EXECUTAR MISSÃO chama /api/run-live → go-core no servidor EB. Para missões em projetos locais, o servidor precisa ter acesso ao código. V3.0.0 endereça isso.</p>
+        <div class="bn-fix"><strong>Próximo:</strong> Vision Agent local + integração com projetos via path/GitHub.</div>
+      </div>
+      <div class="bn-card bn-low">
+        <div class="bn-header"><span class="bn-icon">🔄</span><div><div class="bn-label">EM EVOLUÇÃO</div><h3>APIs pagas opcionais</h3></div></div>
+        <p>Atualmente usando apenas APIs gratuitas (Groq, Gemini, OpenRouter). Anthropic Claude disponível quando necessário para missões críticas.</p>
+        <div class="bn-fix"><strong>Configurável:</strong> ANTHROPIC_API_KEY no EB para ativar Claude em produção.</div>
+      </div>
+      <div class="bn-card bn-low">
+        <div class="bn-header"><span class="bn-icon">🔄</span><div><div class="bn-label">EM EVOLUÇÃO</div><h3>DB persistente</h3></div></div>
+        <p>Atualmente JSON + /tmp no EB (reinicia com o servidor). V3.0.0 migra para banco persistente (PostgreSQL/RDS) para histórico de missões e usuários.</p>
+        <div class="bn-fix"><strong>Próximo:</strong> migração para banco persistente com histórico completo de missões.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOWNLOAD AGENT -->
+  <section class="startup-section agent-cta-section" id="download-agent">
+    <div class="agent-cta-card">
+      <div>
+        <p class="eyebrow">VISION AGENT</p>
+        <h2>Baixe o executor local.</h2>
+        <p>O agente conecta projetos locais ao VISION CORE, registra paths, executa missões, acompanha timeline e prepara rollback com segurança.</p>
+      </div>
+      <div class="agent-download-box">
+        <a class="btn agent-download big" href="downloads/VisionAgentSetup.exe" download>⬇ Download Vision Agent v2.9.10</a>
+        <code>npm install<br>npm link<br>vision-agent login<br>vision-agent register ./meu-projeto</code>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA FINAL -->
+  <section class="startup-cta">
+    <h2>Você não corrige mais sistemas.</h2>
+    <p>Você supervisiona um sistema que corrige sistemas.</p>
+    <a class="btn github" href="index.html">Abrir VISION AI COMMAND</a>
+  </section>
+
+</main>
+</body>
+</html>
