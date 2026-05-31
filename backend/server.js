@@ -929,11 +929,38 @@ app.all('/api/api/*', (req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   const body    = normalizeBody(req);
-  const message = body.message || body.prompt || '';
   const mode    = body.mode  || 'vision-geral';
+  let   message = body.message || body.prompt || '';
   if (!message) return res.status(400).json({ ok: false, error: 'message_required', time: now() });
 
-  const systemPrompt = [
+  /* ── toolFetchUrl — detecta URLs e injeta conteúdo no contexto ── */
+  const urlRegex = /https?:\/\/[^\s"'<>)\]]+/g;
+  const foundUrls = [...new Set((message.match(urlRegex) || [])
+    .filter(u => !u.includes('localhost') && !u.includes('127.0.0.1'))
+    .slice(0, 2))]; // máx 2 URLs por request
+
+  if (foundUrls.length) {
+    const fetched = [];
+    for (const rawUrl of foundUrls) {
+      // Converter GitHub blob → raw
+      const fetchUrl = rawUrl
+        .replace('https://github.com/', 'https://raw.githubusercontent.com/')
+        .replace('/blob/', '/');
+      try {
+        const r = await fetch(fetchUrl, { signal: AbortSignal.timeout(8000) });
+        if (r.ok) {
+          const text = (await r.text()).slice(0, 4000);
+          fetched.push(`[CONTEÚDO DE ${rawUrl}]\n${text}`);
+        }
+      } catch(_) { /* URL inacessível — ignorar */ }
+    }
+    if (fetched.length) {
+      message = message + '\n\n' + fetched.join('\n\n---\n\n');
+    }
+  }
+
+  /* ── systemPrompt — base + override por modo ─────────────────── */
+  const basePrompt = [
     `Você é o Vision Core Copilot — assistente técnico especializado em diagnóstico e correção de bugs`,
     `em projetos web full-stack (Node.js, React, APIs REST, Docker, AWS, Cloudflare).`,
     ``,
@@ -967,7 +994,7 @@ app.post('/api/chat', async (req, res) => {
     `MÉTODO 4 — Vision Agent Local`,
     `Processo Node.js que roda na sua máquina e serve como ponte entre Vision Core e seus projetos.`,
     `Quando ativo, consigo ler arquivos, analisar e sugerir patches diretamente no seu projeto.`,
-    `Para ativar: node backend/agent-local/index.js /caminho/do/projeto`,
+    `Para ativar: node vision-agent.js /caminho/do/projeto`,
     ``,
     `QUANDO IDENTIFICAR PEDIDO DE ACESSO LOCAL:`,
     `Se o usuário pedir para acessar arquivos em caminhos locais (C:\\, OneDrive, etc.),`,
@@ -977,6 +1004,36 @@ app.post('/api/chat', async (req, res) => {
     `Analise com profundidade, identifique a causa-raiz, proponha correção com código.`,
     `Seja direto, técnico e objetivo. Responda sempre em português brasileiro.`
   ].join('\n');
+
+  /* Modo fix — instrução para retornar JSON estruturado */
+  const fixModeInstructions = mode === 'fix' ? [
+    ``,
+    `══════════════════════════════════════════════════════`,
+    `MODO FIX ATIVO — RETORNE OBRIGATORIAMENTE UM BLOCO JSON`,
+    `══════════════════════════════════════════════════════`,
+    ``,
+    `Analise o arquivo fornecido e retorne PRIMEIRO um bloco \`\`\`json com o patch:`,
+    ``,
+    `\`\`\`json`,
+    `{`,
+    `  "diagnosis": "descrição objetiva do problema",`,
+    `  "file": "caminho/relativo/do/arquivo",`,
+    `  "fix_type": "json_field | code_patch | full_replace",`,
+    `  "patch": "<conteúdo do fix>",`,
+    `  "confidence": 0.0`,
+    `}`,
+    `\`\`\``,
+    ``,
+    `fix_type:`,
+    `  json_field   → patch é objeto { campo: valor } para merge em JSON`,
+    `  code_patch   → patch é { search: "trecho original", replace: "trecho novo" }`,
+    `  full_replace → patch é o conteúdo completo novo do arquivo`,
+    ``,
+    `Após o bloco JSON, explique brevemente o diagnóstico e o fix aplicado.`,
+    `Seja preciso e cirúrgico — não altere o que não precisa ser alterado.`
+  ].join('\n') : '';
+
+  const systemPrompt = basePrompt + fixModeInstructions;
 
   /* ── 1. Groq — rápido, tier gratuito ───────────────────────── */
   const GROQ_KEY = process.env.GROQ_API_KEY || '';
