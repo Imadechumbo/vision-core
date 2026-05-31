@@ -280,3 +280,9 @@ body{font-size:13px}.topin{min-height:58px}.brand{font-size:21px}.sub{font-size:
   border-color:rgba(168,85,247,.24);
 }
 #mission .hero-under-mission h2{ margin-top:8px; }
+
+/* ===== MISSION INPUT agent animation ===== */
+@keyframes agentBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}

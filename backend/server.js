@@ -1166,6 +1166,37 @@ app.get('/api/agent/mission/result/:id', (req, res) => {
   return sendOk(res, result);
 });
 
+/* Aprovação humana — push e revert via fila (SDDF: deploy_allowed=false, necessita autorização) */
+app.post('/api/agent/mission/push', (req, res) => {
+  const body    = normalizeBody(req);
+  const mission = {
+    id:          `push_${Date.now()}_${Math.random().toString(16).slice(2,6)}`,
+    input:       'git push origin HEAD',
+    type:        'git_push',
+    origin_id:   body.mission_id || null,
+    file:        body.file  || null,
+    hash:        body.hash  || null,
+    queued_at:   now()
+  };
+  _agentQueue.push(mission);
+  return sendOk(res, { ok: true, mission_id: mission.id, queued: true, action: 'push_enqueued' });
+});
+
+app.post('/api/agent/mission/revert', (req, res) => {
+  const body    = normalizeBody(req);
+  const mission = {
+    id:          `revert_${Date.now()}_${Math.random().toString(16).slice(2,6)}`,
+    input:       'git reset --hard HEAD~1',
+    type:        'git_revert',
+    origin_id:   body.mission_id || null,
+    file:        body.file  || null,
+    hash:        body.hash  || null,
+    queued_at:   now()
+  };
+  _agentQueue.push(mission);
+  return sendOk(res, { ok: true, mission_id: mission.id, queued: true, action: 'revert_enqueued' });
+});
+
 /* SAFE 404 — nunca 405 */
 app.all('/api/*', (req, res) => {
   return res.status(404).json({

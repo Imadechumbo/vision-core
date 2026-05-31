@@ -4175,6 +4175,135 @@
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 
+    /* ── MISSION INPUT agent animation ─────────────────────────── */
+    var AGENT_KEYS   = ['scanner','hermes','patchengine','aegis','gocore','passgold'];
+    var AGENT_COLORS = { scanner:'#60a5fa', hermes:'#34d399', patchengine:'#c084fc', aegis:'#fbbf24', gocore:'#fbbf24', passgold:'#facc15' };
+    var AGENT_ATXT   = { scanner:'SCAN...', hermes:'RCA...', patchengine:'PATCH...', aegis:'AEGIS...', gocore:'COMMIT...', passgold:'GOLD...' };
+    var AGENT_DTXT   = { scanner:'✓ SCAN',  hermes:'✓ RCA',  patchengine:'✓ PATCH',  aegis:'✓ AEGIS',  gocore:'✓ COMMIT',  passgold:'★ GOLD' };
+    var _agentAnimTimer = null;
+
+    function activateAgent(key, state) {
+      var el   = document.getElementById('v33-t-' + key);
+      var node = document.querySelector('[data-key="' + key + '"]');
+      if (!el) return;
+      var color = AGENT_COLORS[key] || '#a1a1aa';
+      if (state === 'active') {
+        el.textContent = AGENT_ATXT[key] || '...';
+        el.style.color = color;
+        el.style.animation = 'agentBlink 0.6s ease-in-out infinite';
+        if (node) { node.style.boxShadow = '0 0 14px ' + color + '55'; node.style.borderColor = color + '66'; node.style.transition = 'all 0.3s ease'; }
+      } else if (state === 'done') {
+        el.textContent = AGENT_DTXT[key] || '✓';
+        el.style.color = '#22c55e';
+        el.style.animation = '';
+        if (node) { node.style.boxShadow = '0 0 6px #22c55e22'; node.style.borderColor = ''; node.style.transition = 'all 0.3s ease'; }
+      } else if (state === 'error') {
+        el.textContent = '✕ ERRO';
+        el.style.color = '#f87171';
+        el.style.animation = '';
+        if (node) { node.style.boxShadow = ''; node.style.borderColor = '#f8717155'; node.style.transition = 'all 0.3s ease'; }
+      } else {
+        el.textContent = 'AGUARDA';
+        el.style.color = '';
+        el.style.animation = '';
+        if (node) { node.style.boxShadow = ''; node.style.borderColor = ''; node.style.transition = ''; }
+      }
+    }
+
+    function resetAllAgents() {
+      AGENT_KEYS.forEach(function(k) { activateAgent(k, 'idle'); });
+    }
+
+    function startMissionAnimation() {
+      if (_agentAnimTimer) { clearTimeout(_agentAnimTimer); _agentAnimTimer = null; }
+      resetAllAgents();
+      var seq = ['scanner','hermes','patchengine','aegis','gocore'];
+      var i = 0;
+      function tick() {
+        if (i > 0) activateAgent(seq[i - 1], 'done');
+        if (i >= seq.length) return;
+        activateAgent(seq[i], 'active');
+        i++;
+        _agentAnimTimer = setTimeout(tick, 1500);
+      }
+      tick();
+    }
+
+    function stopMissionAnimation(result) {
+      if (_agentAnimTimer) { clearTimeout(_agentAnimTimer); _agentAnimTimer = null; }
+      var seq = ['scanner','hermes','patchengine','aegis','gocore'];
+      if (!result) { resetAllAgents(); return; }
+      var steps = (result && result.steps) || [];
+      var stMap = {};
+      steps.forEach(function(s) {
+        var n = (s.agent || '').toLowerCase().replace(/\s+/g, '');
+        if (n.indexOf('scan')    >= 0) stMap['scanner']     = s.ok ? 'done' : 'error';
+        if (n.indexOf('hermes')  >= 0) stMap['hermes']      = s.ok ? 'done' : 'error';
+        if (n.indexOf('patch')   >= 0) stMap['patchengine'] = s.ok ? 'done' : 'error';
+        if (n.indexOf('aegis')   >= 0) stMap['aegis']       = s.ok ? 'done' : 'error';
+        if (n.indexOf('gocore')  >= 0 || n.indexOf('commit') >= 0) stMap['gocore'] = s.ok ? 'done' : 'error';
+      });
+      var overall = result.ok ? 'done' : 'error';
+      seq.forEach(function(k) { activateAgent(k, stMap[k] || overall); });
+      if (result.ok && result.action === 'patch_applied_committed') { activateAgent('passgold', 'done'); }
+      else if (!result.ok) { activateAgent('passgold', 'idle'); }
+    }
+
+    function renderValidationPanel(res) {
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'background:#050a08;border:1px solid rgba(34,197,94,.4);border-radius:14px;padding:16px;margin:4px 0 8px;font-size:13px;font-family:inherit;';
+      var title = document.createElement('div');
+      title.style.cssText = 'color:#4ade80;font-weight:600;font-size:14px;margin-bottom:10px;';
+      title.textContent = '✅ Patch aplicado e commitado — validação manual obrigatória (SDDF §14)';
+      wrap.appendChild(title);
+      var info = document.createElement('pre');
+      info.style.cssText = 'background:#020504;border:1px solid #1a2e1a;border-radius:10px;padding:12px;color:#d4d4d8;overflow:auto;max-height:180px;font-size:11px;margin:0 0 12px;white-space:pre-wrap;word-break:break-all;';
+      var pstr = '';
+      try { pstr = JSON.stringify(res.patch, null, 2); } catch(e) { pstr = String(res.patch || ''); }
+      info.textContent = [
+        'Arquivo : ' + (res.file     || '—'),
+        'Fix type: ' + (res.fix_type || '—'),
+        'Commit  : ' + (res.hash     || 'sem hash'),
+        '', '── PATCH ──', pstr
+      ].join('\n');
+      wrap.appendChild(info);
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
+      function mkBtn(txt, bg, bc, fg) {
+        var b = document.createElement('button');
+        b.style.cssText = 'background:' + bg + ';border:1px solid ' + bc + ';color:' + fg + ';font-size:12px;padding:8px 14px;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:500;';
+        b.textContent = txt;
+        return b;
+      }
+      var approveBtn = mkBtn('✅ Aprovar e fazer Push', '#14532d', '#22c55e', '#4ade80');
+      var revertBtn  = mkBtn('❌ Reverter commit',      '#7f1d1d', '#f87171', '#fca5a5');
+      approveBtn.onclick = function() {
+        approveBtn.disabled = true; revertBtn.disabled = true;
+        approveBtn.textContent = '⏳ Enviando push...';
+        fetch(BACKEND_URL + '/api/agent/mission/push', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ mission_id: res.mission_id, file: res.file, hash: res.hash })
+        }).then(function(r){ return r.json(); })
+          .then(function(d){ approveBtn.textContent = d.ok ? '✅ Push enfileirado' : '❌ ' + (d.error || 'Erro'); approveBtn.style.opacity = '0.7'; })
+          .catch(function(){ approveBtn.textContent = '❌ Erro de rede'; approveBtn.disabled = false; revertBtn.disabled = false; });
+      };
+      revertBtn.onclick = function() {
+        if (!confirm('Reverter o último commit? Isso desfaz o patch aplicado.')) return;
+        approveBtn.disabled = true; revertBtn.disabled = true;
+        revertBtn.textContent = '⏳ Revertendo...';
+        fetch(BACKEND_URL + '/api/agent/mission/revert', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ mission_id: res.mission_id, file: res.file, hash: res.hash })
+        }).then(function(r){ return r.json(); })
+          .then(function(d){ revertBtn.textContent = d.ok ? '✅ Reversão enfileirada' : '❌ ' + (d.error || 'Erro'); revertBtn.style.opacity = '0.7'; })
+          .catch(function(){ revertBtn.textContent = '❌ Erro de rede'; approveBtn.disabled = false; revertBtn.disabled = false; });
+      };
+      row.appendChild(approveBtn);
+      row.appendChild(revertBtn);
+      wrap.appendChild(row);
+      return wrap;
+    }
+
     /* ── EXECUTAR MISSÃO — tenta agent local primeiro ─────── */
     if (runBtn) {
       runBtn.addEventListener('click', function() {
@@ -4183,6 +4312,7 @@
         appendMsg('[MISSÃO] ' + text, 'user');
         setStatus('EXECUTANDO MISSÃO...', 'busy');
         var thinking = appendMsg('▪ verificando agent local...', 'thinking');
+        startMissionAnimation();
 
         /* Tentar agent local em 7070, 7071, 7072 */
         var agentPorts = [7070, 7071, 7072];
@@ -4223,25 +4353,34 @@
                   .then(function(res) {
                     if (res && res.ok) {
                       thinking.remove();
-                      appendMsg('✅ AGENT EXECUTOU\n\n' + (res.output || ''));
+                      stopMissionAnimation(res);
+                      if (res.action === 'patch_applied_committed') {
+                        appendMsg('✅ PATCH APLICADO — ' + (res.file || 'arquivo'), '');
+                        chatStream.appendChild(renderValidationPanel(res));
+                        chatStream.scrollTop = chatStream.scrollHeight;
+                      } else {
+                        appendMsg('✅ AGENT EXECUTOU\n\n' + (res.output || ''));
+                      }
                       setStatus('READY');
                     } else if (attempts < 15) {
                       setTimeout(pollResult, 2000);
                     } else {
                       thinking.remove();
+                      resetAllAgents();
                       appendMsg('⏱ Agent não respondeu em 30s. Rode: node vision-agent.js /seu-projeto');
                       setStatus('READY');
                     }
                   })
                   .catch(function() {
                     if (attempts < 15) { setTimeout(pollResult, 2000); }
-                    else { thinking.remove(); setStatus('READY'); }
+                    else { thinking.remove(); resetAllAgents(); setStatus('READY'); }
                   });
               }
               setTimeout(pollResult, 2000);
             })
             .catch(function(err) {
               thinking.remove();
+              resetAllAgents();
               appendMsg('[Erro ao enfileirar missão: ' + err + ']', 'error');
               setStatus('READY');
             });
@@ -4259,6 +4398,7 @@
             .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
             .then(function(data) {
               thinking.remove();
+              resetAllAgents();
               var isLocal = data && data.status === 'LOCAL_ACCESS_REQUIRED';
               var header  = isLocal
                 ? '📋 ACESSO LOCAL NECESSÁRIO'
@@ -4271,6 +4411,7 @@
             })
             .catch(function(err) {
               thinking.remove();
+              resetAllAgents();
               appendMsg('[Erro na missão: ' + err + ']', 'error');
               setStatus('READY');
             });

@@ -242,6 +242,38 @@ function gitCommit(filePath, message) {
   return { ok: true, hash: (logR.stdout || '').trim(), output: comR.stdout.trim().slice(0, 80) };
 }
 
+/* ── gitPush — push autorizado por humano (OBJETIVO 2) ─────── */
+function gitPush(m) {
+  return new Promise(function(resolve) {
+    console.log('[GoCore] git push origin HEAD — aprovação humana recebida');
+    var r = spawnSync('git', ['push', 'origin', 'HEAD'], { cwd: ROOT, encoding: 'utf8', timeout: 30000 });
+    var ok = r.status === 0;
+    resolve({
+      ok:            ok,
+      action:        ok ? 'pushed' : 'push_failed',
+      mission_id:    m.id,
+      output:        ((r.stdout || '') + (r.stderr || '')).trim().slice(0, 300),
+      sddf_baseline: SDDF_BASELINE
+    });
+  });
+}
+
+/* ── gitRevert — reverte último commit autorizado por humano ── */
+function gitRevert(m) {
+  return new Promise(function(resolve) {
+    console.log('[GoCore] git reset --hard HEAD~1 — reversão humana recebida');
+    var r = spawnSync('git', ['reset', '--hard', 'HEAD~1'], { cwd: ROOT, encoding: 'utf8', timeout: 15000 });
+    var ok = r.status === 0;
+    resolve({
+      ok:            ok,
+      action:        ok ? 'reverted' : 'revert_failed',
+      mission_id:    m.id,
+      output:        ((r.stdout || '') + (r.stderr || '')).trim().slice(0, 300),
+      sddf_baseline: SDDF_BASELINE
+    });
+  });
+}
+
 /* ── SDDF baseline obrigatório ───────────────────────────────── */
 var SDDF_BASELINE = {
   deploy_allowed:         false,
@@ -398,7 +430,10 @@ function poll() {
       console.log('[' + new Date().toLocaleTimeString() + '] Missão: ' + m.id);
       console.log('Input : ' + (m.input || '').slice(0, 100));
 
-      executeMission(m).then(function(result) {
+      var handler = m.type === 'git_push'   ? gitPush   :
+                    m.type === 'git_revert' ? gitRevert :
+                    executeMission;
+      handler(m).then(function(result) {
         console.log('Ação  : ' + result.action);
         httpRequest(WORKER + '/api/agent/mission/result', {
           method: 'POST', body: result
