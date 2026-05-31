@@ -469,3 +469,177 @@ READY ≠ PASS GOLD REAL
 READY ≠ deploy permitido
 READY ≠ release permitido
 ```
+
+---
+
+## 17. Evidence-Bound Answer Protocol — Anti-Generic-Answer
+
+> Protocolo de Resposta Ancorada em Evidência
+> Anti-alucinação obrigatório em todas as fases da Software Factory
+
+### 17.1 Princípio central
+
+Toda resposta, fase, PR, diagnóstico ou decisão deve estar ancorada em pelo menos um destes elementos:
+log real          commit real       PR real
+arquivo real      teste real        scan real
+checkpoint real   diff real         erro real
+estado git real
+
+Se não houver evidência suficiente, a resposta obrigatória é:
+não tenho evidência suficiente para afirmar isso
+preciso do checkpoint
+preciso do diff
+preciso do log
+preciso do resultado do teste
+
+### 17.2 Regras absolutas
+NÃO responder por padrão.
+NÃO preencher lacuna com frase genérica.
+NÃO assumir sucesso sem prova.
+NÃO avançar fase sem checkpoint.
+
+### 17.3 O que o protocolo proíbe
+
+| Frase proibida | Por quê |
+|---|---|
+| "parece estar tudo certo" | sem log |
+| "provavelmente passou" | sem teste |
+| "pode mergear" | sem diff/scan |
+| "PASS GOLD" | sem prova real |
+| "produção liberada" | sem runtime proof |
+| "arquivo corrigido" | sem git diff |
+| "PR limpo" | sem gh pr diff --name-only |
+| "hash determinístico" | sem teste de duas chamadas iguais |
+| "scan limpo" | sem classificar hits |
+| "deve funcionar" | sem evidência |
+| "está ok" | sem checkpoint |
+
+### 17.4 Formato obrigatório de resposta com decisão
+
+Estado observado
+Evidência usada
+Diagnóstico
+Decisão
+Próximo comando seguro
+Bloqueio, se existir
+
+
+Exemplo correto:
+Estado observado:
+PR #736 OPEN/MERGEABLE, 2 arquivos no diff.
+Evidência:
+gh pr view, gh pr diff --name-only, node test 69/69, scan sem EXECUTABLE.
+Diagnóstico:
+Escopo correto, testes OK, hits apenas comentário/fixture.
+Decisão:
+Apto para merge controlado.
+Próximo comando:
+gh pr merge 736 --squash --delete-branch
+
+### 17.5 Classificador anti-genérico
+
+Uma resposta é **inválida** se:
+
+não cita estado atual
+não cita comando ou evidência concreta
+não diferencia hipótese de fato
+não mostra próximo passo
+não mostra bloqueio quando existe
+usa termos vagos sem prova
+
+
+### 17.6 Regra de confiança
+Sem checkpoint → sem decisão final.
+Sem diff       → sem merge.
+Sem teste      → sem READY.
+Sem scan       → sem segurança.
+Sem evidência  → sem PASS GOLD REAL.
+
+### 17.7 Aplicação por fase na Software Factory
+
+Para cada fase, os seguintes elementos precisam existir e ser verificados:
+
+| Elemento | Verificação obrigatória |
+|---|---|
+| PhaseId | precisa existir no plano |
+| Branch | precisa existir no repo |
+| Arquivos | precisam bater com escopo permitido |
+| Teste | precisa passar (resultado real) |
+| Scan | precisa ser classificado (COMMENT/FIXTURE/EXECUTABLE/UNKNOWN) |
+| PR | precisa ser real (número, state, mergeable) |
+| Merge | precisa gerar commit real na main |
+| Checkpoint | precisa confirmar working tree clean |
+
+### 17.8 Anti-alucinação em PRs
+
+**Antes de dizer "pode mergear"**, executar obrigatoriamente:
+
+```powershell
+gh pr view <id> --json number,title,state,mergeable,headRefName,baseRefName,url
+gh pr diff <id> --name-only
+node --check <source>
+node --check <test>
+node <test>
+forbidden scan
+```
+
+**Antes de dizer "mergeado"**, confirmar obrigatoriamente:
+
+```powershell
+git checkout main
+git pull origin main
+git status
+git log -12 --oneline
+```
+
+### 17.9 Anti-alucinação em diagnóstico de erro
+
+Nunca responder só com "corrija X". Formato obrigatório:
+Sintoma:
+O que falhou (linha, comando, output).
+Evidência:
+Linha, teste, comando ou log exato.
+Causa provável:
+Hipótese técnica (marcada como hipótese).
+Causa raiz:
+Só declarar se houver prova concreta.
+Correção mínima:
+Patch específico e cirúrgico.
+Validação:
+Comandos para provar que o fix funcionou.
+
+### 17.10 Regra para respostas com dados faltantes
+
+Se faltar dado, a resposta correta é pedir **exatamente** o dado faltante:
+
+```powershell
+# Se falta estado do repo:
+git status
+git log -12 --oneline
+gh pr list --state open --limit 20
+
+# Se falta diff do PR:
+gh pr diff 736 --name-only
+
+# Se falta resultado de teste:
+node tools/tests/<arquivo>
+```
+
+Não inventar o estado. Não assumir o resultado.
+
+### 17.11 Aplicação no Vision Agent Local
+
+O Vision Agent também segue o Evidence-Bound Answer Protocol:
+
+| Ação do agent | Evidência exigida |
+|---|---|
+| "arquivo encontrado" | path real retornado pelo scanner |
+| "IA analisou" | resposta real do /api/chat com conteúdo do arquivo |
+| "patch aplicado" | applyPatch() retornou ok: true |
+| "arquivo válido" | validatePatch() retornou ok: true |
+| "commitado" | gitCommit() retornou hash real |
+| "PASS GOLD" | NUNCA — apenas Go Core real pode emitir |
+
+### 17.12 Frase-síntese
+A Software Factory não acredita em intenção; acredita em evidência.
+SEM PASS GOLD REAL → não promove, não libera, não marca stable.

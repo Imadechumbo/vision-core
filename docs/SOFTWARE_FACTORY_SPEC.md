@@ -307,3 +307,25 @@ Evidence garante auditabilidade.
 
 SEM PASS GOLD REAL → não promove, não libera, não marca stable.
 ```
+
+---
+
+## 18. Evidence-Bound Answer Protocol
+
+> Spec completa: SDDF_SPEC.md seção 17
+
+**Princípio:** toda resposta deve estar ancorada em evidência concreta — log, commit, diff, teste, scan ou checkpoint real.
+
+**Proibido:** "parece ok" · "provavelmente passou" · "pode mergear" · "está correto" · sem prova.
+
+**Formato obrigatório:**
+Estado observado → Evidência → Diagnóstico → Decisão → Próximo comando → Bloqueio
+
+**Regra de confiança:**
+Sem checkpoint → sem decisão.
+Sem diff       → sem merge.
+Sem teste      → sem READY.
+Sem evidência  → sem PASS GOLD REAL.
+
+**Frase-síntese:**
+A Software Factory não acredita em intenção; acredita em evidência.
