@@ -420,6 +420,106 @@ Quando o chat recebe uma mensagem contendo URLs públicas, o servidor faz fetch 
 
 ---
 
+
+---
+
+## 15. Decágono Multiagente — Arquitetura dos 10 Agentes
+
+### 15.1 Visão geral
+
+O MISSION INPUT do Vision Core exibe um decágono de 10 agentes especializados.
+Cada agente tem papel único, responsabilidade definida e estado visual (AGUARDA / RUNNING / DONE / FAIL).
+
+### 15.2 Os 10 agentes — papéis e data-key
+
+| data-key | Nome | Papel | Categoria |
+|---|---|---|---|
+| `piharness` | PI HARNESS | Mission Runner / Orquestrador | Decisão |
+| `hermes` | HERMES | Supervisor / RCA / Decisão | Decisão |
+| `openclaw` | OPENCLAW | Executor / Patch Strategist | Decisão/Execução |
+| `scanner` | SCANNER | Context Builder / Análise de Riscos | Execução |
+| `patchengine` | PATCH ENGINE | Aplicação de Patch Controlada | Execução |
+| `aegis` | AEGIS | Security Gate / Gatekeeper | Validação |
+| `gocore` | GO CORE | Runtime Truth / Execução Controlada | Validação |
+| `passgold` | PASS GOLD | Autoridade Final | Validação |
+| `archivist` | ARCHIVIST | Memory Guard / Contexto | Memória |
+| `githubagent` | GITHUB AGENT | PR / CI / Release Workflow | Governança |
+
+### 15.3 Fluxo de execução — sequência decagonal
+User / Mission Input
+→ PI Harness          (orquestrador — aciona fluxo)
+→ OpenClaw            (patch strategist — quebra em tarefas)
+→ Scanner             (lê arquivos, logs, contratos, riscos)
+→ Hermes              (RCA — supervisiona, decide, bloqueia)
+→ PatchEngine         (aplica patch com backup + rollback)
+→ Aegis               (valida — JSON.parse / node --check)
+→ Go Core             (runtime truth — commit + evidence)
+→ PASS GOLD           (autoridade final — gate)
+→ GitHub Agent        (PR / CI / release)
+→ Archivist           (memória — preserva histórico)
+
+### 15.4 Estados visuais dos agentes
+
+| Classe CSS | Estado | Visual |
+|---|---|---|
+| `v33-running` | Ativo | `.mi-icon` pulsa com glow (glow-running 1.2s) |
+| `v33-done` | Concluído | `.mi-icon` brilho estável (glow-done 2s) |
+| `v33-fail` | Erro | `.mi-icon` flash vermelho (glow-fail 0.6s) |
+| `v33-idle` | Aguardando | `.mi-node` opacidade 0.45 |
+
+Implementado via `activateAgent(key, state)` no `vision-core-clean-runtime.js`.
+
+Estados possíveis: `'active'` → v33-running · `'done'` → v33-done · `'error'` → v33-fail · `'idle'` → v33-idle
+
+### 15.5 Categorias de responsabilidade
+
+| Categoria | Agentes |
+|---|---|
+| **Decisão** | PI Harness, Hermes, OpenClaw |
+| **Execução** | Scanner, PatchEngine |
+| **Validação** | Aegis, Go Core, PASS GOLD |
+| **Memória** | Archivist |
+| **Governança** | GitHub Agent |
+
+### 15.6 Regras críticas do decágono
+
+| Regra | Impacto |
+|---|---|
+| **SEM PASS GOLD REAL → não promove** | Nenhuma promoção sem evidence receipt do Go Core |
+| **Evidence receipt só vem do Go Core** | Nenhum agente pode fabricar evidence receipt |
+| **Aegis tem veto absoluto** | Em conflito de segurança, Aegis bloqueia |
+| **Scan atual vence memória antiga** | Scanner sempre prevalece sobre contexto cacheado |
+| **deploy_allowed=false até autorização** | Push/deploy nunca automático |
+
+### 15.7 Mapeamento Vision Agent Local → Decágono
+
+| Agente Decágono | Implementação no vision-agent.js |
+|---|---|
+| Scanner | `scanProject()` — byName > byContent |
+| Hermes | `askIA()` — POST /api/chat mode=fix |
+| PatchEngine | `applyPatch()` — json_field/code_patch/full_replace + backup |
+| Aegis | `validatePatch()` — JSON.parse / node --check |
+| Go Core (parcial) | `gitCommit()` — commit sem push |
+| PASS GOLD | `pass_gold: false` sempre no agent local |
+
+**O que ainda requer Go Core real:**
+`evidence_receipt` SHA-256 · `promotion_allowed: true` · `deploy_allowed: true`
+
+### 15.8 Status atual dos agentes (V2.9.10)
+
+| Agente | Status | Nota |
+|---|---|---|
+| PI Harness | 🟡 Parcial | Frontend + go-core pipeline |
+| Hermes | ✅ Funcional | /api/chat mode=fix + Decision Matrix |
+| OpenClaw | 🟡 Stub | /api/openclaw/orchestrate mock |
+| Scanner | ✅ Funcional | vision-agent.js scanProject() byName>byContent |
+| PatchEngine | ✅ Funcional | applyPatch() com backup automático |
+| Aegis | ✅ Funcional | validatePatch() JSON + node --check |
+| Go Core | ✅ Funcional | go-core v5.6.0, PASS GOLD real |
+| PASS GOLD | ✅ Funcional | gate real — sem evidência = sem promoção |
+| Archivist | 🟡 Parcial | /api/memory/save + /api/memory/search |
+| GitHub Agent | 🟡 Stub | /api/github/create-pr — requer GITHUB_TOKEN |
+
 ## 16. Software Factory — Orquestração com Hermes
 
 > Spec completa: [docs/SOFTWARE_FACTORY_SPEC.md](docs/SOFTWARE_FACTORY_SPEC.md)
@@ -643,3 +743,4 @@ O Vision Agent também segue o Evidence-Bound Answer Protocol:
 ### 17.12 Frase-síntese
 A Software Factory não acredita em intenção; acredita em evidência.
 SEM PASS GOLD REAL → não promove, não libera, não marca stable.
+
