@@ -4175,35 +4175,106 @@
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 
+    /* ── EXECUTAR MISSÃO — tenta agent local primeiro ─────── */
     if (runBtn) {
       runBtn.addEventListener('click', function() {
         var text = (promptInput.value || '').trim() || 'missão SDDF padrão';
         promptInput.value = '';
         appendMsg('[MISSÃO] ' + text, 'user');
         setStatus('EXECUTANDO MISSÃO...', 'busy');
-        var thinking = appendMsg('▪ executando missão via go-core...', 'thinking');
-        fetch(BACKEND_URL + '/api/run-live', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ input: text, root: '.' })
-        })
-        .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
-        .then(function(data) {
-          thinking.remove();
-          var isLocal = data && data.status === 'LOCAL_ACCESS_REQUIRED';
-          var header  = isLocal
-            ? '📋 ACESSO LOCAL NECESSÁRIO'
-            : (data && data.pass_gold)
-              ? '✅ MISSÃO CONCLUÍDA — PASS GOLD'
-              : '⚠️ MISSÃO — ' + ((data && data.status) || 'ver relatório');
-          var body = (data && data.summary) ? data.summary : '';
-          appendMsg(header + (body ? '\n\n' + body : ''), isLocal ? 'info' : '');
-          setStatus('READY');
-        })
-        .catch(function(err) {
-          thinking.remove();
-          appendMsg('[Erro na missão: ' + err + ']', 'error');
-          setStatus('READY');
+        var thinking = appendMsg('▪ verificando agent local...', 'thinking');
+
+        /* Tentar agent local em 7070, 7071, 7072 */
+        var agentPorts = [7070, 7071, 7072];
+
+        function tryAgent(ports, done) {
+          if (!ports.length) return done(null);
+          var port = ports[0];
+          fetch('http://localhost:' + port, { signal: AbortSignal.timeout(800) })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+              if (d && d.ok) { done('http://localhost:' + port); }
+              else { tryAgent(ports.slice(1), done); }
+            })
+            .catch(function() { tryAgent(ports.slice(1), done); });
+        }
+
+        tryAgent(agentPorts, function(agentUrl) {
+          if (agentUrl) {
+            /* Agent local ativo — enfileirar missão */
+            thinking.textContent = '▪ agent local em ' + agentUrl + ' — enfileirando...';
+            fetch(BACKEND_URL + '/api/agent/mission/queue', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ input: text, type: 'mission' })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+              var missionId = d && d.mission_id;
+              if (!missionId) throw new Error('mission_id ausente');
+              thinking.textContent = '▪ missão ' + missionId + ' — aguardando agent...';
+
+              /* Poll resultado a cada 2s por até 30s (15 tentativas) */
+              var attempts = 0;
+              function pollResult() {
+                attempts++;
+                fetch(BACKEND_URL + '/api/agent/mission/result/' + missionId)
+                  .then(function(r) { return r.ok ? r.json() : null; })
+                  .then(function(res) {
+                    if (res && res.ok) {
+                      thinking.remove();
+                      appendMsg('✅ AGENT EXECUTOU\n\n' + (res.output || ''));
+                      setStatus('READY');
+                    } else if (attempts < 15) {
+                      setTimeout(pollResult, 2000);
+                    } else {
+                      thinking.remove();
+                      appendMsg('⏱ Agent não respondeu em 30s. Rode: node vision-agent.js /seu-projeto');
+                      setStatus('READY');
+                    }
+                  })
+                  .catch(function() {
+                    if (attempts < 15) { setTimeout(pollResult, 2000); }
+                    else { thinking.remove(); setStatus('READY'); }
+                  });
+              }
+              setTimeout(pollResult, 2000);
+            })
+            .catch(function(err) {
+              thinking.remove();
+              appendMsg('[Erro ao enfileirar missão: ' + err + ']', 'error');
+              setStatus('READY');
+            });
+
+          } else {
+            /* Agent inativo — fallback /api/run-live */
+            thinking.textContent = '▪ processando via servidor...';
+            var mode  = modeSelect  ? modeSelect.value  : 'vision-geral';
+            var model = modelSelect ? modelSelect.value : 'auto';
+            fetch(BACKEND_URL + '/api/run-live', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ mission: text, mode: mode, model: model })
+            })
+            .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+            .then(function(data) {
+              thinking.remove();
+              var isLocal = data && data.status === 'LOCAL_ACCESS_REQUIRED';
+              var header  = isLocal
+                ? '📋 ACESSO LOCAL NECESSÁRIO'
+                : (data && data.pass_gold)
+                  ? '✅ MISSÃO CONCLUÍDA — PASS GOLD'
+                  : '⚠️ MISSÃO — ' + ((data && data.status) || 'ver relatório');
+              var body = (data && data.summary) ? data.summary : '';
+              appendMsg(header + (body ? '\n\n' + body : ''), isLocal ? 'info' : '');
+              setStatus('READY');
+            })
+            .catch(function(err) {
+              thinking.remove();
+              appendMsg('[Erro na missão: ' + err + ']', 'error');
+              setStatus('READY');
+            });
+          }
         });
       });
     }
