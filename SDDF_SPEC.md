@@ -417,3 +417,55 @@ Quando o chat recebe uma mensagem contendo URLs públicas, o servidor faz fetch 
 - **Rollback automático** — qualquer falha em `validatePatch()` reverte via `git checkout -- <file>`
 - **Sem acesso a secrets** — o agent não lê `.env`, não acessa variáveis de produção
 - **`pass_gold`** do agent é sempre `false` — PASS GOLD real exige evidência do Go Core, não do agent local
+
+---
+
+## 16. Software Factory — Orquestração com Hermes
+
+> Spec completa: [docs/SOFTWARE_FACTORY_SPEC.md](docs/SOFTWARE_FACTORY_SPEC.md)
+
+### Resumo executivo
+
+A Software Factory transforma uma missão em fases auditáveis governadas pelo padrão SDDF:
+
+**Scope → Design → Development → Firewall → Verification → Evidence → Handoff**
+
+### Agentes no fluxo da Software Factory
+
+| Agente | Papel |
+|--------|-------|
+| **Software Factory Orchestrator** | Controla o processo — planeja, executa, audita |
+| **Hermes** | Controla a decisão — RCA, bloqueio, avanço |
+| **TodoWrite** | Controla a memória — plano, progresso, estado |
+| **Subagent** | Investigação profunda sem poluir o loop principal |
+| **Fork** | Paralelismo seguro em tarefas independentes |
+| **Firewall** | Impede ações perigosas — scan de executáveis e flags proibidos |
+| **Evidence** | Torna cada fase auditável com hash SHA-256 determinístico |
+| **Checkpoint** | Fecha o estado — main limpa, origin sincronizado, PRs conhecidas |
+
+### Estados decididos por Hermes
+
+| Estado | Condição |
+|--------|----------|
+| `READY` | Fase válida — testes passam, firewall limpo |
+| `MERGED` | Fase integrada na main com checkpoint |
+| `BLOCKED_INPUT` | Input inválido, incompleto ou inseguro |
+| `BLOCKED_DEPENDENCY` | Fase anterior ou evidência ausente |
+| `NEEDS_FIX` | Erro corrigível — patch e retry |
+| `ABORTED` | Risco alto, escopo quebrado ou ação não autorizada |
+
+### Firewall — flags proibidas (sempre `false`)
+
+```
+deploy_allowed · release_allowed · tag_allowed · stable_promotion_allowed
+production_touched · pass_gold_real_claimed · secrets_read
+```
+
+### Regra absoluta
+
+```
+SEM PASS GOLD REAL → não promove, não libera, não marca stable.
+READY ≠ PASS GOLD REAL
+READY ≠ deploy permitido
+READY ≠ release permitido
+```
