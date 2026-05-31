@@ -6,7 +6,12 @@
   "bin": { "vision-agent": "./index.js" },
   "scripts": {
     "start": "node index.js",
-    "start:dev": "node index.js ."
+    "build": "npx pkg index.js --target node18-win-x64 --output ../../frontend/downloads/VisionAgentSetup.exe --compress GZip"
+  },
+  "pkg": {
+    "targets": ["node18-win-x64"],
+    "outputPath": "../../frontend/downloads",
+    "assets": []
   },
   "engines": { "node": ">=18.0.0" },
   "keywords": ["vision-core", "agent", "local", "ai"],
