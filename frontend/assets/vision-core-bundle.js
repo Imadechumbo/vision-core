@@ -1439,6 +1439,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   rc0_created: false,
   final_human_decision_required: true,
 });
+
 (function () {
   'use strict';
 
@@ -5872,6 +5873,46 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       });
     }
 
+    /* ── ZIP upload handler ──────────────────────────────────── */
+    function handleZipUpload(file) {
+      var question = (promptInput && promptInput.value.trim()) || 'Analise o projeto e identifique problemas';
+      var thinking = appendMsg('📦 Processando ' + file.name + '...', 'thinking');
+      setStatus('EXTRAINDO ZIP...', 'busy');
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        var b64 = (ev.target.result || '').split(',')[1];
+        if (!b64) { thinking.remove(); setStatus('READY'); appendMsg('❌ Falha ao ler ZIP', 'error'); return; }
+        fetch(BACKEND_URL + '/api/unzip-context', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ zip_base64: b64, question: question, mode: 'fix' })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (!d.ok) throw new Error(d.error || 'Erro unzip');
+          thinking.textContent = '📦 ' + d.files.length + ' arquivo(s) extraídos — analisando...';
+          return fetch(BACKEND_URL + '/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: d.message, mode: 'fix' })
+          });
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          thinking.remove();
+          appendMsg(d.answer || JSON.stringify(d));
+          setStatus('READY');
+        })
+        .catch(function(err) {
+          thinking.remove();
+          appendMsg('❌ Erro ao processar ZIP: ' + err.message, 'error');
+          setStatus('READY');
+        });
+      };
+      reader.onerror = function() { thinking.remove(); setStatus('READY'); appendMsg('❌ Erro ao ler arquivo', 'error'); };
+      reader.readAsDataURL(file);
+    }
+
     /* ── File upload wiring ───────────────────────────────────── */
     if (addFilesBtn && fileInput) {
       addFilesBtn.addEventListener('click', function () {
@@ -5881,9 +5922,23 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       fileInput.addEventListener('change', function () {
         var files = fileInput.files;
         if (!files || !files.length) { return; }
+
+        /* Separar ZIPs dos demais */
+        var zips  = [];
+        var texts = [];
+        Array.prototype.forEach.call(files, function(f) {
+          if (f.name.toLowerCase().endsWith('.zip')) { zips.push(f); }
+          else { texts.push(f); }
+        });
+
+        /* Processar ZIPs imediatamente */
+        zips.forEach(function(z) { handleZipUpload(z); });
+
+        /* Processar texto normal como antes */
+        if (!texts.length) { return; }
         _attachedFiles = [];
-        var pending = files.length;
-        Array.prototype.forEach.call(files, function (f) {
+        var pending = texts.length;
+        texts.forEach(function (f) {
           var reader = new FileReader();
           reader.onload = function (ev) {
             _attachedFiles.push({ name: f.name, content: ev.target.result || '' });
@@ -5900,9 +5955,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           };
           reader.onerror = function () {
             pending--;
-            if (pending === 0 && fileNote) {
-              fileNote.textContent = 'Erro ao ler arquivo(s).';
-            }
+            if (pending === 0 && fileNote) { fileNote.textContent = 'Erro ao ler arquivo(s).'; }
           };
           reader.readAsText(f);
         });
@@ -6281,3 +6334,4 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     _runAllInits();
   }
 })();
+

@@ -933,26 +933,47 @@ app.post('/api/chat', async (req, res) => {
   let   message = body.message || body.prompt || '';
   if (!message) return res.status(400).json({ ok: false, error: 'message_required', time: now() });
 
-  /* ── toolFetchUrl — detecta URLs e injeta conteúdo no contexto ── */
-  const urlRegex = /https?:\/\/[^\s"'<>)\]]+/g;
-  const foundUrls = [...new Set((message.match(urlRegex) || [])
+  /* ── toolFetchUrl v2 — detecta URLs e injeta conteúdo real ── */
+  const urlRegex  = /https?:\/\/[^\s"'<>)\]]+/g;
+  const rawUrls   = (message.match(urlRegex) || [])
+    .map(u => u.replace(/[.,;:)\]}>]+$/, '')) // limpar pontuação final
     .filter(u => !u.includes('localhost') && !u.includes('127.0.0.1'))
-    .slice(0, 2))]; // máx 2 URLs por request
+    .slice(0, 2);
+  const foundUrls = [...new Set(rawUrls)];
 
   if (foundUrls.length) {
     const fetched = [];
     for (const rawUrl of foundUrls) {
-      // Converter GitHub blob → raw
-      const fetchUrl = rawUrl
-        .replace('https://github.com/', 'https://raw.githubusercontent.com/')
-        .replace('/blob/', '/');
+      let fetchUrl = rawUrl;
+      // GitHub blob → raw.githubusercontent.com
+      if (rawUrl.includes('github.com/') && rawUrl.includes('/blob/')) {
+        fetchUrl = rawUrl
+          .replace('https://github.com/', 'https://raw.githubusercontent.com/')
+          .replace('/blob/', '/');
+      }
+      // GitHub repo root (sem /blob/) → tentar README
+      else if (rawUrl.match(/^https:\/\/github\.com\/[^/]+\/[^/]+\/?$/)) {
+        const parts  = rawUrl.replace('https://github.com/', '').replace(/\/$/, '').split('/');
+        fetchUrl     = `https://raw.githubusercontent.com/${parts[0]}/${parts[1]}/main/README.md`;
+      }
       try {
-        const r = await fetch(fetchUrl, { signal: AbortSignal.timeout(8000) });
+        const ctrl  = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 10000);
+        const r = await fetch(fetchUrl, {
+          signal:  ctrl.signal,
+          headers: { 'User-Agent': 'VisionCore/2.9.10' }
+        });
+        clearTimeout(timer);
         if (r.ok) {
-          const text = (await r.text()).slice(0, 4000);
+          const text = (await r.text()).slice(0, 5000);
           fetched.push(`[CONTEÚDO DE ${rawUrl}]\n${text}`);
+          console.log('[toolFetch] OK', rawUrl, '→', fetchUrl, r.status);
+        } else {
+          console.log('[toolFetch] FAIL', fetchUrl, r.status);
         }
-      } catch(_) { /* URL inacessível — ignorar */ }
+      } catch(fetchErr) {
+        console.log('[toolFetch] ERR', fetchUrl, fetchErr.message);
+      }
     }
     if (fetched.length) {
       message = message + '\n\n' + fetched.join('\n\n---\n\n');
@@ -1195,6 +1216,63 @@ app.post('/api/agent/mission/revert', (req, res) => {
   };
   _agentQueue.push(mission);
   return sendOk(res, { ok: true, mission_id: mission.id, queued: true, action: 'revert_enqueued' });
+});
+
+/* ── /api/unzip-context — extrai ZIP e injeta conteúdo para /api/chat ─── */
+app.post('/api/unzip-context', async (req, res) => {
+  try {
+    const body     = normalizeBody(req);
+    const b64      = body.zip_base64 || '';
+    const question = body.question   || 'Analise o projeto';
+    const mode     = body.mode       || 'fix';
+
+    if (!b64) return res.status(400).json({ ok: false, error: 'zip_base64 required', time: now() });
+
+    let AdmZip;
+    try { AdmZip = require('adm-zip'); }
+    catch(e) { return res.status(500).json({ ok: false, error: 'adm-zip not installed', time: now() }); }
+
+    const buf     = Buffer.from(b64, 'base64');
+    const zip     = new AdmZip(buf);
+    const entries = zip.getEntries();
+
+    const TEXT_EXTS = new Set(['.json','.js','.ts','.jsx','.tsx','.html','.css','.md','.txt','.py','.go','.mjs','.cjs']);
+    const SKIP_DIRS = ['node_modules','.git','dist','.next','build','coverage','__pycache__'];
+
+    const files = [];
+    for (const entry of entries) {
+      if (entry.isDirectory) continue;
+      const name = entry.entryName;
+      const skip = SKIP_DIRS.some(d => name.includes(d + '/') || name.includes(d + '\\'));
+      if (skip) continue;
+      const ext = path.extname(name).toLowerCase();
+      if (!TEXT_EXTS.has(ext)) continue;
+      try {
+        const content = entry.getData().toString('utf8');
+        files.push({ name, content: content.slice(0, 3000) });
+        if (files.length >= 20) break;
+      } catch(e) {}
+    }
+
+    if (!files.length) {
+      return res.status(400).json({ ok: false, error: 'Nenhum arquivo de texto encontrado no ZIP', time: now() });
+    }
+
+    const context = files
+      .map(f => `[${f.name}]\n${f.content}${f.content.length >= 3000 ? '\n...(truncado)' : ''}`)
+      .join('\n\n---\n\n');
+
+    const enrichedMessage = question + '\n\n' + context;
+
+    return sendOk(res, {
+      files:   files.map(f => f.name),
+      message: enrichedMessage,
+      chars:   enrichedMessage.length,
+      mode
+    });
+  } catch(err) {
+    return res.status(500).json({ ok: false, error: err.message, time: now() });
+  }
 });
 
 /* SAFE 404 — nunca 405 */
