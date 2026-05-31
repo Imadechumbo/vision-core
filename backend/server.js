@@ -1006,32 +1006,51 @@ app.post('/api/chat', async (req, res) => {
   ].join('\n');
 
   /* Modo fix — instrução para retornar JSON estruturado */
-  const fixModeInstructions = mode === 'fix' ? [
+  /* Hermes Decision Matrix — SDDF seção 16 */
+  const hermesDecisionMatrix = mode === 'fix' || mode === 'hermes' ? [
     ``,
     `══════════════════════════════════════════════════════`,
-    `MODO FIX ATIVO — RETORNE OBRIGATORIAMENTE UM BLOCO JSON`,
+    `MODO FIX/HERMES — RETORNE OBRIGATORIAMENTE UM BLOCO JSON`,
     `══════════════════════════════════════════════════════`,
     ``,
-    `Analise o arquivo fornecido e retorne PRIMEIRO um bloco \`\`\`json com o patch:`,
+    `Você é Hermes — supervisor de decisão do Vision Core (SDDF seção 16).`,
+    `Analise o arquivo e a missão. Decida pelo Decision Matrix:`,
+    `  NEEDS_FIX        → erro corrigível encontrado — produza o patch`,
+    `  BLOCKED_INPUT    → input inválido, arquivo protegido ou escopo excedido`,
+    `  ABORTED          → risco alto, arquivo proibido (.env/secrets/workflows)`,
+    `  READY            → tudo correto, sem alterações necessárias`,
+    ``,
+    `Retorne PRIMEIRO um bloco \`\`\`json com o patch (quando decisão = NEEDS_FIX):`,
     ``,
     `\`\`\`json`,
     `{`,
-    `  "diagnosis": "descrição objetiva do problema",`,
-    `  "file": "caminho/relativo/do/arquivo",`,
-    `  "fix_type": "json_field | code_patch | full_replace",`,
-    `  "patch": "<conteúdo do fix>",`,
-    `  "confidence": 0.0`,
+    `  "diagnosis":  "descrição objetiva e curta do problema",`,
+    `  "file":       "caminho/relativo/do/arquivo",`,
+    `  "fix_type":   "json_field | code_patch | full_replace",`,
+    `  "patch":      "<conteúdo do fix — ver regras abaixo>",`,
+    `  "confidence": 0.0,`,
+    `  "decisao":    "NEEDS_FIX | BLOCKED_INPUT | ABORTED | READY"`,
     `}`,
     `\`\`\``,
     ``,
-    `fix_type:`,
-    `  json_field   → patch é objeto { campo: valor } para merge em JSON`,
-    `  code_patch   → patch é { search: "trecho original", replace: "trecho novo" }`,
-    `  full_replace → patch é o conteúdo completo novo do arquivo`,
+    `REGRAS POR fix_type:`,
+    `  json_field   → patch é objeto com campos a setar.`,
+    `                 Se o arquivo for um ARRAY de objetos, adicione:`,
+    `                   { "target_title": "nome do item a modificar", "fields": { campo: valor } }`,
+    `                 Se for um objeto simples: { campo: valor }`,
+    `  code_patch   → patch é { "search": "trecho original exato", "replace": "trecho novo" }`,
+    `                 search DEVE ser uma string que existe literalmente no arquivo`,
+    `  full_replace → patch é a string com o conteúdo completo novo do arquivo`,
     ``,
-    `Após o bloco JSON, explique brevemente o diagnóstico e o fix aplicado.`,
-    `Seja preciso e cirúrgico — não altere o que não precisa ser alterado.`
+    `BLOQUEIOS ABSOLUTOS (retornar decisao=ABORTED se encontrar):`,
+    `  deploy_allowed: true · release_allowed: true · production_touched: true`,
+    `  fetch( fora de sandbox · exec( · spawn( com comandos destrutivos`,
+    ``,
+    `Após o bloco JSON, explique brevemente o diagnóstico.`,
+    `Seja cirúrgico — não altere o que não precisa ser alterado.`
   ].join('\n') : '';
+
+  const fixModeInstructions = hermesDecisionMatrix;
 
   const systemPrompt = basePrompt + fixModeInstructions;
 
