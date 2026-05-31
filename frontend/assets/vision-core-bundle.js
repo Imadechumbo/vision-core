@@ -5563,6 +5563,22 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var fileNote     = document.getElementById('v298FileNote');
     var readPrintBtn = document.getElementById('v298ReadPrintBtn');
 
+    /* ── Typewriter effect ──────────────────────────────────── */
+    function typewriterEffect(el, text, speed) {
+      el.textContent = '';
+      var i = 0;
+      var chunk = 3;
+      function tick() {
+        if (i < text.length) {
+          el.textContent += text.slice(i, i + chunk);
+          i += chunk;
+          if (chatStream) chatStream.scrollTop = chatStream.scrollHeight;
+          setTimeout(tick, speed || 12);
+        }
+      }
+      tick();
+    }
+
     function sendMessage() {
       var text = (promptInput.value || '').trim();
       /* Prepend attached text files */
@@ -5586,6 +5602,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
       setStatus('PROCESSANDO...', 'busy');
       var thinking = appendMsg('▪ processando...', 'thinking');
+      activateAgent('scanner', 'active');
+      var _chatAnimTimer = setTimeout(function() { activateAgent('hermes', 'active'); }, 1200);
 
       var imgName  = _attachedImg ? _attachedImg.name : null;
       _attachedImg = null;
@@ -5599,12 +5617,18 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       })
       .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function(data) {
+        clearTimeout(_chatAnimTimer);
         thinking.remove();
-        appendMsg((data && data.answer) ? data.answer : JSON.stringify(data));
+        stopMissionAnimation({ ok: true, steps: [{ agent: 'Scanner', ok: true }, { agent: 'Hermes', ok: true }] });
+        var answer = (data && data.answer) ? data.answer : JSON.stringify(data);
+        var msgEl = appendMsg('', '');
+        typewriterEffect(msgEl, answer, 10);
         setStatus('READY');
       })
       .catch(function(err) {
+        clearTimeout(_chatAnimTimer);
         thinking.remove();
+        resetAllAgents();
         appendMsg('[Erro de conexão com worker: ' + BACKEND_URL + ' — ' + err + ']', 'error');
         setStatus('ERRO', 'error');
         setTimeout(function() { setStatus('READY'); }, 3000);
