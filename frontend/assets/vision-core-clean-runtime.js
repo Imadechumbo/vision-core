@@ -4211,26 +4211,33 @@
       var node = document.querySelector('[data-key="' + key + '"]');
       if (!el) return;
       var color = AGENT_COLORS[key] || '#a1a1aa';
+      /* Reset inline styles + prior state classes */
+      if (node) {
+        node.classList.remove('v33-idle','v33-running','v33-done','v33-fail');
+        node.style.boxShadow   = '';
+        node.style.borderColor = '';
+        node.style.transition  = '';
+      }
       if (state === 'active') {
-        el.textContent = AGENT_ATXT[key] || '...';
-        el.style.color = color;
+        el.textContent     = AGENT_ATXT[key] || '...';
+        el.style.color     = color;
         el.style.animation = 'agentBlink 0.6s ease-in-out infinite';
-        if (node) { node.style.boxShadow = '0 0 14px ' + color + '55'; node.style.borderColor = color + '66'; node.style.transition = 'all 0.3s ease'; }
+        if (node) { node.classList.add('v33-running'); }
       } else if (state === 'done') {
-        el.textContent = AGENT_DTXT[key] || '✓';
-        el.style.color = '#22c55e';
+        el.textContent     = AGENT_DTXT[key] || '✓';
+        el.style.color     = '#22c55e';
         el.style.animation = '';
-        if (node) { node.style.boxShadow = '0 0 6px #22c55e22'; node.style.borderColor = ''; node.style.transition = 'all 0.3s ease'; }
+        if (node) { node.classList.add('v33-done'); }
       } else if (state === 'error') {
-        el.textContent = '✕ ERRO';
-        el.style.color = '#f87171';
+        el.textContent     = '✕ ERRO';
+        el.style.color     = '#f87171';
         el.style.animation = '';
-        if (node) { node.style.boxShadow = ''; node.style.borderColor = '#f8717155'; node.style.transition = 'all 0.3s ease'; }
+        if (node) { node.classList.add('v33-fail'); }
       } else {
-        el.textContent = 'AGUARDA';
-        el.style.color = '';
+        el.textContent     = 'AGUARDA';
+        el.style.color     = '';
         el.style.animation = '';
-        if (node) { node.style.boxShadow = ''; node.style.borderColor = ''; node.style.transition = ''; }
+        if (node) { node.classList.add('v33-idle'); }
       }
     }
 
