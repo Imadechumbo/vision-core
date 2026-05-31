@@ -287,3 +287,133 @@ A Factory só permite criação de PR real se PASS GOLD real estiver presente:
 - `production_touched` permanece `false` até execução humana autorizada.
 
 **REGRA ABSOLUTA: SEM PASS GOLD REAL → não promove, não libera, não marca stable.**
+
+---
+
+## 14. Vision Agent Local — fluxo de execução e papéis
+
+### 14.1 Visão geral
+
+O Vision Agent Local (`vision-agent.js`) é um processo Node.js sem dependências externas que roda na máquina do usuário e serve como ponte entre o Vision Core (AWS/Cloudflare) e projetos locais inacessíveis ao servidor remoto.
+
+**Arquivos canônicos:**
+
+| Arquivo | Localização | Propósito |
+|---------|-------------|-----------|
+| `vision-agent.js` | `frontend/downloads/` | Agente standalone, zero deps, distribuível |
+| `index.js` | `backend/agent-local/` | Versão de desenvolvimento com estrutura de pacote |
+
+### 14.2 Fluxo de execução — sequência completa
+
+```
+Missão recebida (via polling ou /run direto)
+  │
+  ├─ 1. scanProject(input)
+  │      Percorre ROOT até profundidade 4
+  │      Filtra por keywords do input (> 3 chars)
+  │      Retorna: { files[], target, content(4000 chars) }
+  │
+  ├─ 2. Se sem target → retornar listagem
+  │      action: "listing"
+  │      output: lista de arquivos do projeto
+  │
+  └─ 3. Se target encontrado → askIA(content, input)
+         POST /api/chat com mode=fix
+         Envia: ARQUIVO:\n<content>\n\nMISSÃO:\n<input>
+         Retorna: resposta AI com bloco ```json
+           │
+           ├─ 4. parsePatchFromAI(aiAnswer)
+           │      Extrai bloco ```json ... ``` da resposta
+           │      Schema: { diagnosis, file, fix_type, patch, confidence }
+           │
+           ├─ Se sem bloco JSON → retornar análise apenas
+           │      action: "ai_analysis"
+           │
+           └─ 5. applyPatch(targetFile, patch, fix_type)
+                  json_field   → merge no objeto JSON existente
+                  code_patch   → { search, replace } string replace
+                  full_replace → sobrescreve arquivo completo
+                    │
+                    ├─ 6. validatePatch(filePath)
+                    │      .json  → JSON.parse()
+                    │      .js/.mjs/.cjs → node --check
+                    │      outros → assume válido
+                    │
+                    ├─ Se PASS → gitCommit(file, "fix: <diagnosis> [vision-agent]")
+                    │      git add <file>
+                    │      git commit -m <msg>   (sem push automático)
+                    │      action: "patch_applied_committed"
+                    │
+                    └─ Se FAIL → git checkout -- <file>   (rollback)
+                           action: "patch_rollback"
+                           output inclui erro de validação
+```
+
+### 14.3 Papéis dos endpoints do servidor
+
+| Endpoint | Método | Papel |
+|----------|--------|-------|
+| `GET /api/agent/mission/pending` | Polling | Agent consulta se há missão pendente (a cada `VC_POLL_MS` ms) |
+| `POST /api/agent/mission/queue` | Frontend | Frontend enfileira missão quando agent está ativo |
+| `POST /api/agent/mission/result` | Agent | Agent retorna resultado processado ao servidor |
+| `GET /api/agent/mission/result/:id` | Frontend | Frontend polling para buscar resultado da missão |
+| `GET localhost:70xx` | Health | Frontend detecta agent ativo antes de enfileirar |
+
+### 14.4 Detecção de agent no frontend
+
+O botão EXECUTAR MISSÃO (`v298RunBtn`) tenta detectar o agent antes de usar `/api/run-live`:
+
+```
+tryAgent([7070, 7071, 7072], timeout=800ms)
+  │
+  ├─ AGENT ATIVO
+  │    POST /api/agent/mission/queue → { mission_id }
+  │    Poll /api/agent/mission/result/:id a cada 2s (máx 30s / 15 tentativas)
+  │    Exibe: "✅ AGENT EXECUTOU" + output
+  │
+  └─ AGENT INATIVO
+       POST /api/run-live
+       Se LOCAL_ACCESS_REQUIRED → "📋 ACESSO LOCAL NECESSÁRIO" + 4 métodos
+       Se PASS GOLD → "✅ MISSÃO CONCLUÍDA"
+```
+
+### 14.5 Modo fix — contrato de resposta da IA
+
+Quando o agent chama `/api/chat` com `mode=fix`, o sistema instrui a IA a retornar obrigatoriamente um bloco JSON estruturado:
+
+```json
+{
+  "diagnosis": "descrição objetiva do problema",
+  "file": "caminho/relativo/do/arquivo",
+  "fix_type": "json_field | code_patch | full_replace",
+  "patch": "<conteúdo do fix>",
+  "confidence": 0.0
+}
+```
+
+O agent tenta aplicar o patch somente se `file` e `patch` estiverem presentes e o arquivo alvo existir dentro de `ROOT`.
+
+### 14.6 toolFetchUrl — injeção de contexto por URL
+
+Quando o chat recebe uma mensagem contendo URLs públicas, o servidor faz fetch do conteúdo antes de chamar a IA:
+
+- máximo 2 URLs por request
+- GitHub blob → `raw.githubusercontent.com` automático
+- até 4.000 chars por URL
+- conteúdo injetado como `[CONTEÚDO DE <url>]\n<texto>` na mensagem
+
+### 14.7 Variáveis de ambiente do agent
+
+| Variável | Padrão | Descrição |
+|----------|--------|-----------|
+| `VC_WORKER` | URL worker prod | Endpoint do Vision Core |
+| `VC_POLL_MS` | `3000` | Intervalo de polling (ms) |
+| `VC_PORT` | `7070` | Porta do health server (auto-incrementa se ocupada) |
+
+### 14.8 Restrições do agent
+
+- **Sem push automático** — `gitCommit()` executa `git add` + `git commit`, nunca `git push`
+- **Escopo limitado a ROOT** — arquivos fora do diretório passado como argumento não são modificados
+- **Rollback automático** — qualquer falha em `validatePatch()` reverte via `git checkout -- <file>`
+- **Sem acesso a secrets** — o agent não lê `.env`, não acessa variáveis de produção
+- **`pass_gold`** do agent é sempre `false` — PASS GOLD real exige evidência do Go Core, não do agent local
