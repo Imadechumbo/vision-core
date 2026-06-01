@@ -5605,10 +5605,13 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       activateAgent('scanner', 'active');
       var _chatAnimTimer = setTimeout(function() { activateAgent('hermes', 'active'); }, 1200);
 
-      var imgName  = _attachedImg ? _attachedImg.name : null;
+      var imgName  = _attachedImg ? _attachedImg.name   : null;
+      var imgB64   = _attachedImg ? _attachedImg.base64 : null;
+      var imgMime  = _attachedImg ? _attachedImg.mime   : null;
       _attachedImg = null;
       var payload  = { message: text || '(análise de imagem: ' + imgName + ')', mode: mode, model: model };
-      if (imgName)  { payload.image_name = imgName; }
+      if (imgName) { payload.image_name = imgName; }
+      if (imgB64)  { payload.image_base64 = imgB64; payload.image_mime = imgMime || 'image/jpeg'; }
 
       fetch(BACKEND_URL + '/api/chat', {
         method: 'POST',
@@ -6008,9 +6011,16 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         var f = _imgFileInput.files && _imgFileInput.files[0];
         if (!f) { return; }
         var reader = new FileReader();
-        reader.onload = function () {
-          _attachedImg = { name: f.name };
-          appendMsg('[Imagem pronta: ' + f.name + ' — pressione ENVIAR]', 'user');
+        reader.onload = function (ev) {
+          var dataUrl = ev.target.result || '';
+          var mime    = dataUrl.split(';')[0].replace('data:','') || 'image/jpeg';
+          var b64     = dataUrl.split(',')[1] || '';
+          var kb      = Math.round(b64.length * 0.75 / 1024);
+          if (b64.length > 5 * 1024 * 1024) { // >~3.75MB raw → warn
+            appendMsg('⚠️ Imagem grande (' + kb + 'KB) — pode falhar. Use imagens menores que 3MB.', 'error');
+          }
+          _attachedImg = { name: f.name, base64: b64, mime: mime, kb: kb };
+          appendMsg('[Imagem pronta: ' + f.name + ' (' + kb + 'KB) — pressione ENVIAR]', 'user');
           if (readPrintBtn) { readPrintBtn.textContent = '✓ ' + f.name.slice(0, 20); }
         };
         reader.onerror = function () {

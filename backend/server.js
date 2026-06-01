@@ -1075,9 +1075,14 @@ app.post('/api/chat', async (req, res) => {
 
   const systemPrompt = basePrompt + fixModeInstructions;
 
-  /* ── 1. Groq — rápido, tier gratuito ───────────────────────── */
+  /* Imagem detectada → Gemini (único provider com suporte multimodal) */
+  const hasImage   = !!(body.image_base64 && body.image_base64.length > 10);
+  const imageMime  = body.image_mime || 'image/jpeg';
+  const imageB64   = body.image_base64 || '';
+
+  /* ── 1. Groq — rápido, tier gratuito (text-only) ───────────── */
   const GROQ_KEY = process.env.GROQ_API_KEY || '';
-  if (GROQ_KEY && !GROQ_KEY.includes('placeholder')) {
+  if (GROQ_KEY && !GROQ_KEY.includes('placeholder') && !hasImage) {
     try {
       const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -1097,25 +1102,29 @@ app.post('/api/chat', async (req, res) => {
     } catch (_) { /* fall through */ }
   }
 
-  /* ── 2. Gemini — tier gratuito ─────────────────────────────── */
+  /* ── 2. Gemini — multimodal (texto + imagem) ─────────────────── */
   const GEMINI_KEY   = process.env.GEMINI_API_KEY || '';
   const GEMINI_MODEL = process.env.GEMINI_MODEL   || 'gemini-2.5-flash';
   if (GEMINI_KEY && !GEMINI_KEY.includes('placeholder')) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+      const userParts = [{ text: message }];
+      if (hasImage) {
+        userParts.push({ inline_data: { mime_type: imageMime, data: imageB64 } });
+      }
       const r = await fetch(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           system_instruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: [{ text: message }] }]
+          contents: [{ role: 'user', parts: userParts }]
         }),
         signal: AbortSignal.timeout(20000)
       });
       if (r.ok) {
         const data = await r.json();
         const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if (answer) return sendOk(res, { answer, provider: 'gemini', model: GEMINI_MODEL, mode, anti_stub: true });
+        if (answer) return sendOk(res, { answer, provider: 'gemini', model: GEMINI_MODEL, mode, vision: hasImage, anti_stub: true });
       }
     } catch (_) { /* fall through */ }
   }
