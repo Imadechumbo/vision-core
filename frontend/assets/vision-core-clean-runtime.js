@@ -4465,44 +4465,73 @@
       });
     }
 
-    /* ── ZIP upload handler ──────────────────────────────────── */
+    /* ── ZIP upload handler — JSZip client-side (elimina timeout/tamanho) ── */
     function handleZipUpload(file) {
       var question = (promptInput && promptInput.value.trim()) || 'Analise o projeto e identifique problemas';
       var thinking = appendMsg('📦 Processando ' + file.name + '...', 'thinking');
       setStatus('EXTRAINDO ZIP...', 'busy');
+
+      if (typeof JSZip === 'undefined') {
+        thinking.remove();
+        appendMsg('❌ JSZip não carregado. Recarregue a página.', 'error');
+        setStatus('READY');
+        return;
+      }
+
+      var TEXT_EXTS = ['.js','.json','.ts','.jsx','.tsx','.html','.css','.md','.txt','.py','.go','.mjs','.cjs'];
+      var SKIP_DIRS = ['node_modules','.git','dist','.next','build','coverage','__pycache__'];
+
       var reader = new FileReader();
       reader.onload = function(ev) {
-        var b64 = (ev.target.result || '').split(',')[1];
-        if (!b64) { thinking.remove(); setStatus('READY'); appendMsg('❌ Falha ao ler ZIP', 'error'); return; }
-        fetch(BACKEND_URL + '/api/unzip-context', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ zip_base64: b64, question: question, mode: 'fix' })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (!d.ok) throw new Error(d.error || 'Erro unzip');
-          thinking.textContent = '📦 ' + d.files.length + ' arquivo(s) extraídos — analisando...';
-          return fetch(BACKEND_URL + '/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: d.message, mode: 'fix' })
+        JSZip.loadAsync(ev.target.result).then(function(zip) {
+          var promises = [];
+          var fileNames = [];
+
+          zip.forEach(function(relPath, zipEntry) {
+            if (zipEntry.dir) return;
+            var skip = SKIP_DIRS.some(function(d) { return relPath.indexOf(d + '/') !== -1 || relPath.indexOf(d + '\\') !== -1; });
+            if (skip) return;
+            var dot = relPath.lastIndexOf('.');
+            var ext = dot !== -1 ? relPath.slice(dot).toLowerCase() : '';
+            if (TEXT_EXTS.indexOf(ext) === -1) return;
+            if (fileNames.length >= 20) return;
+            fileNames.push(relPath);
+            promises.push(zipEntry.async('string').then(function(content) {
+              return '[' + relPath + ']\n' + content.slice(0, 3000) + (content.length > 3000 ? '\n...(truncado)' : '');
+            }));
           });
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          thinking.remove();
-          appendMsg(d.answer || JSON.stringify(d));
-          setStatus('READY');
-        })
-        .catch(function(err) {
+
+          if (!promises.length) {
+            thinking.remove();
+            appendMsg('❌ Nenhum arquivo de texto encontrado no ZIP.', 'error');
+            setStatus('READY');
+            return;
+          }
+
+          return Promise.all(promises).then(function(contents) {
+            thinking.textContent = '📦 ' + fileNames.length + ' arquivo(s) extraídos — analisando...';
+            var context = question + '\n\n' + contents.join('\n\n---\n\n');
+            return fetch(BACKEND_URL + '/api/chat', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: context, mode: 'fix' })
+            });
+          }).then(function(r) { return r.json(); })
+          .then(function(d) {
+            thinking.remove();
+            var msgEl = appendMsg('', '');
+            typewriterEffect(msgEl, d.answer || JSON.stringify(d), 10);
+            setStatus('READY');
+          });
+
+        }).catch(function(err) {
           thinking.remove();
           appendMsg('❌ Erro ao processar ZIP: ' + err.message, 'error');
           setStatus('READY');
         });
       };
       reader.onerror = function() { thinking.remove(); setStatus('READY'); appendMsg('❌ Erro ao ler arquivo', 'error'); };
-      reader.readAsDataURL(file);
+      reader.readAsArrayBuffer(file);
     }
 
     /* ── File upload wiring ───────────────────────────────────── */
