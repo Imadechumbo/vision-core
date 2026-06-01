@@ -4116,6 +4116,40 @@
     /* Attachment state — shared by sendMessage + file button handlers */
     var _attachedFiles = [];
     var _attachedImg   = null;
+
+    /* ── Session History — contexto multi-turn ──────────────── */
+    var _sessionHistory = [];       // { role: 'user'|'assistant', content: string }[]
+    var SESSION_HISTORY_MAX = 6;    // máx 6 items = 3 pares user/assistant
+
+    function updateContextBadge() {
+      var badge = document.getElementById('v298ContextBadge');
+      if (!badge) return;
+      var pairs = Math.floor(_sessionHistory.length / 2);
+      if (pairs > 0) {
+        badge.textContent = '🧠 ' + pairs + ' turn' + (pairs > 1 ? 's' : '') + ' em contexto';
+        badge.style.display = 'block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    function addToHistory(role, content) {
+      _sessionHistory.push({ role: role, content: String(content).slice(0, 2000) });
+      if (_sessionHistory.length > SESSION_HISTORY_MAX) {
+        _sessionHistory.splice(0, 2); // remove par mais antigo
+      }
+      updateContextBadge();
+    }
+
+    function getHistoryPrefix() {
+      if (!_sessionHistory.length) return '';
+      return _sessionHistory.map(function(h) {
+        return '[' + (h.role === 'user' ? 'USUÁRIO' : 'ASSISTENTE') + ']: ' + h.content;
+      }).join('\n') + '\n\n---\n\n';
+    }
+
+    function clearHistory() { _sessionHistory = []; updateContextBadge(); }
+
     var addFilesBtn  = document.getElementById('v298AddFilesBtn');
     var fileInput    = document.getElementById('v298FileInput');
     var fileNote     = document.getElementById('v298FileNote');
@@ -4137,6 +4171,38 @@
       tick();
     }
 
+    /* ── Hermes JSON Block Parser ────────────────────────────── */
+    function parseHermesBlock(text) {
+      var match = text.match(/```json\s*([\s\S]*?)```/);
+      if (!match) return null;
+      try {
+        var obj = JSON.parse(match[1].trim());
+        if (obj.fix_type || obj.decisao || obj.diagnosis || obj.decision) return obj;
+      } catch(e) {}
+      return null;
+    }
+
+    function renderHermesBlock(obj, container) {
+      var decisao = (obj.decisao || obj.decision || 'UNKNOWN').toUpperCase();
+      var colorMap = { 'NEEDS_FIX': '#fbbf24', 'READY': '#22c55e', 'BLOCKED_INPUT': '#f97316', 'ABORTED': '#f87171' };
+      var color = colorMap[decisao] || '#a1a1aa';
+      var panel = document.createElement('div');
+      panel.style.cssText = 'background:rgba(15,15,25,.7);border:1px solid ' + color + '55;border-radius:10px;padding:14px 16px;margin:8px 0;font-size:13px;';
+      var parts = [
+        '<div style="color:' + color + ';font-weight:700;font-size:14px;margin-bottom:8px;">🔍 HERMES DIAGNÓSTICO</div>',
+        '<div style="color:#e2e8f0;margin-bottom:4px;"><b>Decisão:</b> <span style="color:' + color + '">' + decisao + '</span></div>',
+        obj.file       ? '<div style="color:#94a3b8;margin-bottom:4px;"><b>Arquivo:</b> ' + obj.file + '</div>' : '',
+        obj.fix_type   ? '<div style="color:#94a3b8;margin-bottom:4px;"><b>Fix type:</b> ' + obj.fix_type + '</div>' : '',
+        obj.confidence ? '<div style="color:#94a3b8;margin-bottom:4px;"><b>Confiança:</b> ' + (Number(obj.confidence) * 100).toFixed(0) + '%</div>' : '',
+        obj.diagnosis  ? '<div style="color:#cbd5e1;margin-top:8px;padding-top:8px;border-top:1px solid #ffffff18;">' + String(obj.diagnosis).replace(/</g,'&lt;') + '</div>' : ''
+      ];
+      if (obj.patch && typeof obj.patch === 'object' && Object.keys(obj.patch).length) {
+        parts.push('<details style="margin-top:8px;"><summary style="color:#60a5fa;cursor:pointer;">Ver patch</summary><pre style="background:#0a0a12;padding:8px;border-radius:6px;overflow:auto;font-size:11px;margin-top:4px;color:#a5f3fc;">' + JSON.stringify(obj.patch, null, 2).replace(/</g,'&lt;') + '</pre></details>');
+      }
+      panel.innerHTML = parts.join('');
+      container.appendChild(panel);
+    }
+
     function sendMessage() {
       var text = (promptInput.value || '').trim();
       /* Prepend attached text files */
@@ -4154,6 +4220,7 @@
       var display = text.slice(0, 300) + (text.length > 300 ? '…' : '');
       if (_attachedImg) { display += '\n[Imagem: ' + _attachedImg.name + ']'; }
       appendMsg(display, 'user');
+      addToHistory('user', text || (_attachedImg ? '(análise de imagem: ' + _attachedImg.name + ')' : '(sem texto)'));
 
       var mode  = modeSelect  ? modeSelect.value  : 'vision-geral';
       var model = modelSelect ? modelSelect.value : 'auto';
@@ -4167,7 +4234,9 @@
       var imgB64   = _attachedImg ? _attachedImg.base64 : null;
       var imgMime  = _attachedImg ? _attachedImg.mime   : null;
       _attachedImg = null;
-      var payload  = { message: text || '(análise de imagem: ' + imgName + ')', mode: mode, model: model };
+      var _histPrefix = getHistoryPrefix();
+      var _msgWithCtx = _histPrefix + (text || '(análise de imagem: ' + imgName + ')');
+      var payload  = { message: _msgWithCtx, mode: mode, model: model };
       if (imgName) { payload.image_name = imgName; }
       if (imgB64)  { payload.image_base64 = imgB64; payload.image_mime = imgMime || 'image/jpeg'; }
 
@@ -4182,8 +4251,15 @@
         thinking.remove();
         stopMissionAnimation({ ok: true, steps: [{ agent: 'Scanner', ok: true }, { agent: 'Hermes', ok: true }] });
         var answer = (data && data.answer) ? data.answer : JSON.stringify(data);
+        addToHistory('assistant', answer);
+        var hermesObj = parseHermesBlock(answer);
         var msgEl = appendMsg('', '');
-        typewriterEffect(msgEl, answer, 10);
+        if (hermesObj) {
+          renderHermesBlock(hermesObj, chatStream);
+          typewriterEffect(msgEl, answer.replace(/```json[\s\S]*?```/g, '[↑ diagnóstico estruturado acima]'), 10);
+        } else {
+          typewriterEffect(msgEl, answer, 10);
+        }
         setStatus('READY');
       })
       .catch(function(err) {
@@ -4459,6 +4535,7 @@
         chatStream.innerHTML = '<div class="v298-empty-hint">Vision AI pronto. Converse sobre qualquer assunto, cole erros, envie arquivos/imagens ou execute uma missão SDDF.</div>';
         _attachedFiles = [];
         _attachedImg   = null;
+        clearHistory();
         if (fileNote)    { fileNote.textContent = 'Nenhum arquivo anexado.'; }
         if (addFilesBtn) { addFilesBtn.textContent = '＋ Adicionar arquivos'; }
         setStatus('READY');

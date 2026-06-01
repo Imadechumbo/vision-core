@@ -715,21 +715,8 @@ app.all('/api/memory/feedback', (req, res) => {
 app.get('/api/memory/incidents', (req, res) => sendOk(res, { incidents: fs.readdirSync(path.join(MEMORY_ROOT, 'incidents')).slice(-50) }));
 app.get('/api/memory/patterns', (req, res) => sendOk(res, { patterns: fs.readdirSync(path.join(MEMORY_ROOT, 'patterns')).slice(-50) }));
 
-app.get('/api/obsidian/status', (req, res) => sendOk(res, {
-  connected: Boolean(process.env.OBSIDIAN_VAULT_PATH || process.env.OBSIDIAN_API_URL),
-  mode: process.env.OBSIDIAN_SYNC_MODE || 'local',
-  vault_path_configured: Boolean(process.env.OBSIDIAN_VAULT_PATH),
-  api_url_configured: Boolean(process.env.OBSIDIAN_API_URL)
-}));
-app.all('/api/obsidian/connect', (req, res) => sendOk(res, { connected: true, mode: normalizeBody(req).mode || 'local' }));
-app.all('/api/obsidian/test', (req, res) => sendOk(res, { status: 'reachable_or_mock' }));
-app.all('/api/obsidian/write', (req, res) => {
-  const body = normalizeBody(req);
-  const file = saveMarkdown('obsidian', body.title || 'obsidian-note', body);
-  return sendOk(res, { written: true, file: path.relative(ROOT, file) });
-});
-app.get('/api/obsidian/search', (req, res) => sendOk(res, { results: fs.readdirSync(path.join(MEMORY_ROOT, 'obsidian')).map(file => ({ file })) }));
-app.all('/api/obsidian/disconnect', (req, res) => sendOk(res, { connected: false }));
+/* /api/obsidian/* — implementação real em linhas ~403 (app.get/obsidian/status com vault walk) */
+/* stub morto removido em 2026-06-01 — duplicata causava dead code após primeira match Express */
 
 /* PROVIDERS */
 app.get('/api/providers', (req, res) => sendOk(res, { providers: providerList(), default: process.env.DEFAULT_AI_PROVIDER || 'auto' }));
