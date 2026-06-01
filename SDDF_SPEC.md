@@ -744,3 +744,203 @@ O Vision Agent também segue o Evidence-Bound Answer Protocol:
 A Software Factory não acredita em intenção; acredita em evidência.
 SEM PASS GOLD REAL → não promove, não libera, não marca stable.
 
+---
+
+## 18. Contexto de Sessão, Hermes Render e Obsidian
+
+### 18.1 Contexto de Sessão — Session Memory
+
+O Vision Core mantém contexto em memória durante a sessão do chat. Sem persistência em localStorage ou sessionStorage para histórico de mensagens.
+
+**Estado em memória (frontend):**
+
+```javascript
+var _attachedFiles = [];   // arquivos de texto anexados ao próximo ENVIAR
+var _attachedImg   = null; // { name, base64, mime, kb } — imagem para Gemini
+// Chat stream: DOM apenas — não existe array de histórico
+```
+
+**Como o contexto é injetado:**
+
+```javascript
+// Arquivos de texto: prefixados antes da mensagem
+var fileCtx = _attachedFiles.map(f =>
+  '[Arquivo: ' + f.name + ']\n' + f.content.slice(0, 3000)
+).join('\n---\n');
+text = fileCtx + '\n\n' + userMessage;
+
+// ZIP: extraído client-side via JSZip, conteúdo concatenado como texto plano
+var context = question + '\n\n' + contents.join('\n\n---\n\n');
+// → enviado direto ao /api/chat como message
+```
+
+**Reset de sessão:**
+
+```
+v298ClearBtn → limpa DOM do chat stream
+              → NÃO faz chamada API
+              → _attachedFiles e _attachedImg já foram consumidos no ENVIAR anterior
+```
+
+**Ciclo de vida:**
+- Inicia: ao abrir ou recarregar a página
+- Contexto de arquivo: descartado após cada ENVIAR (`_attachedFiles = []`)
+- Contexto de imagem: descartado após cada ENVIAR (`_attachedImg = null`)
+- Histórico: não existe — cada `/api/chat` é stateless no backend
+
+---
+
+### 18.2 Hermes Render — Animação e Painéis de Resultado
+
+Hermes Render é o subsistema visual que reflete o estado da pipeline SDDF no MISSION INPUT e exibe painéis de resultado auditável.
+
+#### 18.2.1 Animação de Agentes
+
+Função central: `activateAgent(key, state)`
+
+```javascript
+// Keys: 'scanner' | 'hermes' | 'patchengine' | 'aegis' | 'gocore' | 'passgold'
+// States: 'active' | 'done' | 'error' | 'idle'
+
+// Mapeamento DOM:
+//   texto:  document.getElementById('v33-t-' + key)
+//   nó:     document.querySelector('[data-key="' + key + '"]')
+
+// Classes CSS adicionadas no .mi-node:
+//   active → v33-running  → keyframe glow-running 1.2s infinite
+//   done   → v33-done     → keyframe glow-done 2s infinite
+//   error  → v33-fail     → keyframe glow-fail 0.6s infinite
+//   idle   → v33-idle     → opacity: 0.45
+```
+
+**Textos por estado:**
+
+| Agent | Active | Done |
+|-------|--------|------|
+| scanner | `SCAN...` | `✓ SCAN` |
+| hermes | `RCA...` | `✓ RCA` |
+| patchengine | `PATCH...` | `✓ PATCH` |
+| aegis | `AEGIS...` | `✓ AEGIS` |
+| gocore | `COMMIT...` | `✓ COMMIT` |
+| passgold | `GOLD...` | `★ GOLD` |
+
+**Regra:** `activateAgent` usa `classList.add/remove` — nunca `node.style` no pai `.mi-node`. Inline styles no pai quebram o seletor filho `.mi-node.v33-running .mi-icon`.
+
+#### 18.2.2 Typewriter Effect
+
+```javascript
+function typewriterEffect(el, text, speed) {
+  // speed padrão: 10-12ms
+  // chunk: 3 chars por tick
+  // auto-scroll do chatStream a cada tick
+}
+```
+
+Usado em: resposta de `/api/chat`, resposta de análise de ZIP.
+
+#### 18.2.3 Painel de Validação Manual (SDDF §14)
+
+Renderizado após `patch_applied_committed` com resultado de missão:
+
+```javascript
+function renderValidationPanel(res) {
+  // res: { file, fix_type, hash, patch, mission_id }
+  // Exibe: arquivo, fix_type, commit hash, diff do patch
+  // Botões:
+  //   ✅ Aprovar → POST /api/agent/mission/push { mission_id, file, hash }
+  //   ❌ Reverter → POST /api/agent/mission/revert { mission_id, file }
+}
+```
+
+**Contrato:** renderValidationPanel não é chamado sem hash confirmado de commit real.
+
+#### 18.2.4 Outros painéis de render
+
+| Função | Propósito |
+|--------|-----------|
+| `renderWorkerResultAuthorityPanel()` | Exibe authority panel após resultado de worker |
+| `renderWorkerEvidenceChecklist()` | Checklist de evidência do worker |
+| `renderWorkerEvidenceReceipt()` | Receipt de evidência com hash |
+| `renderWorkerHandoffPackage()` | Pacote de handoff para agente externo |
+| `renderMissionPrompt()` | Prompt gerado pela Mission Configuration |
+
+---
+
+### 18.3 Obsidian — Vault Local e API de Notas
+
+O Vision Core mantém vault de notas Markdown para auditoria e memória de contexto longo.
+
+#### 18.3.1 Estrutura de diretórios
+
+```
+memory/
+  incidents/    — falhas e incidentes de runtime
+  patterns/     — padrões recorrentes identificados por Hermes
+  feedback/     — feedback do operador
+  obsidian/     — notas do vault Obsidian
+    VisionCoreVault/  — vault principal (VAULT_ROOT)
+```
+
+#### 18.3.2 API Obsidian (backend)
+
+| Endpoint | Método | Ação |
+|----------|--------|------|
+| `/api/obsidian/status` | GET | Retorna `connected`, `mode`, flags de config |
+| `/api/obsidian/connect` | ALL | Conecta vault (aceita `mode`) |
+| `/api/obsidian/test` | ALL | Testa alcançabilidade |
+| `/api/obsidian/write` | ALL | Escreve nota Markdown em `memory/obsidian/` |
+| `/api/obsidian/search` | GET | Lista arquivos em `memory/obsidian/` |
+| `/api/obsidian/disconnect` | ALL | Desconecta (`connected: false`) |
+
+**`/api/obsidian/write` — formato de entrada:**
+
+```json
+{
+  "title": "nome-da-nota",
+  "context": "contexto da missão",
+  "root_cause": "causa raiz identificada",
+  "fix": "correção aplicada",
+  "pass_gold": false
+}
+```
+
+Resultado: arquivo em `memory/obsidian/{timestamp}-{title}.md` via `saveMarkdown()`.
+
+#### 18.3.3 Variáveis de ambiente
+
+```
+OBSIDIAN_VAULT_PATH    — path local do vault Obsidian
+OBSIDIAN_API_URL       — URL da Obsidian Local REST API
+OBSIDIAN_SYNC_MODE     — 'local' | 'api' | 'disabled'
+```
+
+`/api/obsidian/status` retorna `connected: true` somente se `OBSIDIAN_VAULT_PATH` ou `OBSIDIAN_API_URL` estiver configurado.
+
+#### 18.3.4 Frontend — botão Obsidian
+
+```javascript
+// Element: v299ObsidianBtn
+obsidianBtn.addEventListener('click', function() {
+  fetch(BACKEND_URL + '/api/obsidian/status')
+  // Exibe toast: 'Obsidian: ✅ CONECTADO' ou '⚠ desconectado'
+  // Muda texto do botão para '✓ Obsidian' se conectado
+});
+```
+
+#### 18.3.5 Regras de governança
+
+- Obsidian write **não substitui** evidence_hash SDDF
+- Vault é memória auxiliar — não é prova de PASS GOLD
+- `saveMarkdown()` sempre inclui `PASS GOLD: false` por padrão
+- Sem acesso a secrets do .env nas notas exportadas
+
+---
+
+### 18.4 Frase-síntese
+
+```
+Sessão: in-memory, stateless por request, descartada no reload.
+Hermes Render: CSS classes — nunca inline styles no .mi-node pai.
+Obsidian: memória auxiliar — não é prova SDDF, não substitui evidence_hash.
+```
+
