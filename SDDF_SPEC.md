@@ -944,3 +944,96 @@ Hermes Render: CSS classes — nunca inline styles no .mi-node pai.
 Obsidian: memória auxiliar — não é prova SDDF, não substitui evidence_hash.
 ```
 
+---
+
+## 19. Roadmap V3.0.0 — Pendências e Status de Implementação
+
+### 19.1 Inventário de pendências (auditoria 2026-06-01)
+
+| # | Pendência | Status antes | Status após fix |
+|---|---|---|---|
+| P1 | Bug Obsidian duplicata — `/api/obsidian/status` definido 2x | ❌ Bug | ✅ Corrigido |
+| P2 | Session history multi-turn — contexto entre turns | ❌ Stateless | ✅ Implementado |
+| P3 | Hermes JSON block parser — render estruturado | ❌ Texto puro | ✅ Implementado |
+| P4 | Context badge UI — indicador visual de histórico | ❌ Ausente | ✅ Adicionado |
+| P5 | Obsidian persistência real (DynamoDB/SQLite) | ❌ RAM only | 🔴 Pendente V3.1 |
+| P6 | Obsidian indexação semântica | ❌ Ausente | 🔴 Pendente V3.1 |
+
+---
+
+### 19.2 Session History — `_sessionHistory[]`
+
+Implementado em V3.0.0. Mantém até 6 items (3 pares user/assistant) em memória.
+
+```javascript
+// _sessionHistory = [
+//   { role: 'user',      content: '... (máx 2000 chars)' },
+//   { role: 'assistant', content: '... (máx 2000 chars)' },
+//   ... até SESSION_HISTORY_MAX = 6
+// ]
+```
+
+**Fluxo:**
+- `ENVIAR` → `addToHistory('user', texto)` antes do fetch
+- Resposta `/api/chat` → `addToHistory('assistant', answer)`
+- Histórico injetado no próximo payload via `getHistoryPrefix()`
+- `clearBtn` → `clearHistory()` limpa junto com DOM
+- `updateContextBadge()` chamado a cada mutação do histórico
+
+**Limite de tokens:** máx 6 items × 2000 chars = ~12000 chars de contexto. Pares mais antigos removidos via `splice(0, 2)`.
+
+---
+
+### 19.3 Hermes JSON Block Parser
+
+Implementado em V3.0.0. Detecta blocos ` ```json ``` ` em respostas da IA.
+
+```javascript
+// parseHermesBlock(text)
+// → null | { fix_type, decisao, diagnosis, file, patch, confidence, decision }
+// Ativa somente se obj tem fix_type | decisao | diagnosis | decision
+
+// renderHermesBlock(obj, container)
+// → painel visual inserido em chatStream com:
+//   - Decisão colorida: NEEDS_FIX=#fbbf24, READY=#22c55e, ABORTED=#f87171
+//   - Arquivo + fix_type + confiança
+//   - Diagnóstico expandido (HTML-escaped)
+//   - <details> com patch JSON se presente
+```
+
+**Quando ativa:** somente se a resposta do AI contém ` ```json ``` ` com campos Hermes. Texto puro cai em `typewriterEffect` normalmente.
+
+---
+
+### 19.4 Context Badge — `v298ContextBadge`
+
+Elemento DOM inserido após `v298FileNote`. Visível somente quando `_sessionHistory` tem ≥ 1 par completo.
+
+```
+Estado: display:none   → sem histórico
+Estado: display:block  → "🧠 N turn(s) em contexto"
+Reset:  clearBtn       → badge volta a display:none
+```
+
+---
+
+### 19.5 Obsidian — Roadmap V3.1
+
+Obsidian atual salva em filesystem do EB (RAM + disco efêmero) — dados perdidos em restart.
+
+**V3.1 requer:**
+1. Persistência via SQLite no EB ou DynamoDB
+2. Indexação por projeto (hash do ZIP ou nome do repo)
+3. Busca semântica por embedding
+4. Auth por usuário (separar vaults por `vision_session`)
+
+---
+
+### 19.6 Frase-síntese
+
+```
+P1 (bug) + P2 (history) + P3 (hermes parser) + P4 (badge) = V3.0.0 DONE.
+P5 (obsidian persist) + P6 (indexação) = V3.1 backlog.
+Commit: 10e568e
+```
+
