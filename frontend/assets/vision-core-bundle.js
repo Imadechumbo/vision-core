@@ -5687,7 +5687,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       /* Prepend attached text files */
       if (_attachedFiles.length) {
         var fileCtx = _attachedFiles.map(function (f) {
-          return '[Arquivo: ' + f.name + ']\n' + f.content.slice(0, 3000);
+          return '[Arquivo: ' + f.name + ']\n' + f.content.slice(0, 5000);
         }).join('\n---\n');
         text = fileCtx + (text ? '\n\n' + text : '');
         _attachedFiles = [];
@@ -6024,8 +6024,15 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
     /* ── ZIP upload handler — JSZip client-side (elimina timeout/tamanho) ── */
     function handleZipUpload(file) {
-      var question = (promptInput && promptInput.value.trim()) || 'Analise o projeto e identifique problemas';
+      var question = (promptInput && promptInput.value.trim()) || '';
+      var _questionWasEmpty = !question;
+      if (_questionWasEmpty) {
+        question = 'Analise o projeto e identifique problemas';
+      }
       var thinking = appendMsg('📦 Processando ' + file.name + '...', 'thinking');
+      if (_questionWasEmpty) {
+        appendMsg('💡 Dica: digite sua pergunta ANTES de enviar o ZIP para análise direcionada (ex: "por que a imagem X não aparece?"). Analisando de forma geral por enquanto...', 'thinking');
+      }
       setStatus('EXTRAINDO ZIP...', 'busy');
 
       if (typeof JSZip === 'undefined') {
@@ -6054,7 +6061,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             if (fileNames.length >= 20) return;
             fileNames.push(relPath);
             promises.push(zipEntry.async('string').then(function(content) {
-              return '[' + relPath + ']\n' + content.slice(0, 3000) + (content.length > 3000 ? '\n...(truncado)' : '');
+              return '[' + relPath + ']\n' + content.slice(0, 5000) + (content.length > 5000 ? '\n...(truncado em 5000/' + content.length + ' chars)' : '');
             }));
           });
 
