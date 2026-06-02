@@ -1055,7 +1055,17 @@ app.post('/api/chat', async (req, res) => {
     ``,
     `COMPORTAMENTO GERAL:`,
     `Analise com profundidade, identifique a causa-raiz, proponha correção com código.`,
-    `Seja direto, técnico e objetivo. Responda sempre em português brasileiro.`
+    `Seja direto, técnico e objetivo. Responda sempre em português brasileiro.`,
+    ``,
+    `ESTILO DE RESPOSTA — REGRA OBRIGATÓRIA (SDDF §23):`,
+    `❌ PROIBIDO começar resposta com: "Olá", "Oi", "Ótimo", "Claro", "Com prazer",`,
+    `   "Entendido", "Certo", "Perfeito", "Com certeza", "Sem dúvidas", "Vou ajudar",`,
+    `   ou qualquer preâmbulo que não seja informação técnica.`,
+    `❌ PROIBIDO reafirmar o que o usuário disse (ex: "Você está pedindo para...").`,
+    `❌ PROIBIDO encerrar com: "Espero ter ajudado", "Qualquer dúvida...", "Fico à disposição".`,
+    `✅ OBRIGATÓRIO: começar diretamente pelo diagnóstico, código ou resposta objetiva.`,
+    `✅ OBRIGATÓRIO: proporcional — respostas simples têm respostas curtas; complexas têm detalhes.`,
+    `✅ Exemplo correto: "Bug em auth middleware. Token expiry usa < em vez de <=. Fix:"`
   ].join('\n');
 
   /* Modo fix — instrução para retornar JSON estruturado */

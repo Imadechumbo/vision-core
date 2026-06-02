@@ -1357,3 +1357,94 @@ Quando há imagem, visionAddendum substitui hermesDecisionMatrix.
 hasImage deve ser detectado ANTES de montar o systemPrompt.
 ```
 
+---
+
+## 23. Estilo de Resposta — Regra de Concisão Obrigatória
+
+> Arquivo canônico: `SDDF_SPEC.md` seção 23
+> Implementado em: `backend/server.js` — `basePrompt`, campo `ESTILO DE RESPOSTA`
+
+---
+
+### 23.1 Problema identificado
+
+Respostas do Vision Core Copilot começavam com preâmbulos desnecessários que:
+- Atrasam a informação técnica
+- Parecem vazios ou condescendentes
+- Contradizem o perfil de operador técnico do Vision Core
+
+Exemplos de comportamento proibido observado:
+```
+"Olá! Ótimo que você perguntou isso. Claro que posso ajudar!
+Você está querendo saber sobre o erro no CORS, certo? Vou explicar..."
+```
+
+### 23.2 Regra canônica
+
+```
+RESPOSTA COMEÇA COM CONTEÚDO.
+NUNCA COM PREÂMBULO.
+```
+
+**Proibido:**
+
+| Categoria | Exemplos banidos |
+|-----------|-----------------|
+| Saudação | "Olá", "Oi", "Olá!" |
+| Validação vazia | "Ótimo", "Claro", "Com prazer", "Com certeza", "Perfeito", "Entendido", "Certo" |
+| Oferta de ajuda | "Vou ajudar", "Posso te ajudar", "Fico feliz em ajudar" |
+| Reafirmação | "Você está pedindo para...", "Você quer saber sobre..." |
+| Encerramento vazio | "Espero ter ajudado", "Qualquer dúvida...", "Fico à disposição" |
+
+**Obrigatório:**
+
+| Regra | Descrição |
+|-------|-----------|
+| Começo técnico | Primeira linha é diagnóstico, código ou resposta objetiva |
+| Proporcional | Resposta simples → curta. Complexa → detalhada |
+| Sem repetição | Não reafirmar o que o usuário enviou |
+
+### 23.3 Implementação — `basePrompt` (backend/server.js)
+
+Adicionado ao final de `basePrompt`, antes do `.join('\n')`:
+
+```javascript
+`ESTILO DE RESPOSTA — REGRA OBRIGATÓRIA (SDDF §23):`,
+`❌ PROIBIDO começar resposta com: "Olá", "Oi", "Ótimo", "Claro", "Com prazer",`,
+`   "Entendido", "Certo", "Perfeito", "Com certeza", "Sem dúvidas", "Vou ajudar",`,
+`   ou qualquer preâmbulo que não seja informação técnica.`,
+`❌ PROIBIDO reafirmar o que o usuário disse (ex: "Você está pedindo para...").`,
+`❌ PROIBIDO encerrar com: "Espero ter ajudado", "Qualquer dúvida...", "Fico à disposição".`,
+`✅ OBRIGATÓRIO: começar diretamente pelo diagnóstico, código ou resposta objetiva.`,
+`✅ OBRIGATÓRIO: proporcional — respostas simples têm respostas curtas; complexas têm detalhes.`,
+`✅ Exemplo correto: "Bug em auth middleware. Token expiry usa < em vez de <=. Fix:"`
+```
+
+### 23.4 Escopo
+
+- Aplicado a **todos os modos**: `vision-geral`, `corrigir-projeto`, `debug-cors`, `explicar-leigo`, `rodar-sddf`
+- Aplicado a **todos os providers**: Groq, Gemini, OpenRouter, local
+- **Não se aplica** ao `visionAddendum` (imagem) — já é direto por natureza
+- `hermesDecisionMatrix` (`mode:fix`) já retorna JSON estruturado — esta regra complementa o texto após o bloco JSON
+
+### 23.5 Exemplo padrão
+
+```
+❌ Antes (proibido):
+  "Olá! Ótimo que você compartilhou o código. Vou analisar o problema.
+   Você está tendo um erro de CORS, certo? Então..."
+
+✅ Depois (correto):
+  "CORS bloqueado porque o middleware global está após a rota /api/unzip-context.
+   Mover para antes de todas as rotas. Fix:"
+```
+
+### 23.6 Frase-síntese
+
+```
+Resposta começa com conteúdo.
+Nunca com preâmbulo.
+Proporcional à complexidade.
+Sem despedida vazia.
+```
+
