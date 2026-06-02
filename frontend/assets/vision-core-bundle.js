@@ -6048,10 +6048,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
       var TEXT_EXTS = ['.js','.json','.ts','.jsx','.tsx','.html','.css','.md','.txt','.py','.go','.mjs','.cjs'];
       var SKIP_DIRS = ['node_modules','.git','dist','.next','build','coverage','__pycache__'];
-      /* FIX D §24 v3 — tier ext + JS front/ antes de backend/ DESC + budget total 60K */
+      /* FIX D §24 v5 — tier ext + JS front-not-backend DESC + budget 60K + max 5 files */
       var SKIP_NAME = /(?:cache|lock|\.min\.|\.bundle\.|\.map$|vendor\.)/i;
-      var TOTAL_BUDGET = 60000; /* chars — ~15K tokens, dentro do Groq free tier */
+      var TOTAL_BUDGET = 60000; /* chars — ~15K tokens */
       var FILE_LIMIT   = 12000; /* chars por arquivo */
+      var MAX_FILES    = 5;     /* §24v5: evita overshoot quando files < FILE_LIMIT (budget para em N-1) */
       /* Tier: 1A=JS front/ (maior DESC), 1B=JS backend/, 2=HTML, 3=CSS, 4=JSON, 5=outros */
       function _extTier(ext, relPath) {
         if (['.js','.ts','.mjs','.cjs','.jsx','.tsx'].indexOf(ext) !== -1) {
@@ -6091,10 +6092,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           candidates.sort(function(a, b) {
             return (a.tier !== b.tier) ? (a.tier - b.tier) : (a.sortKey - b.sortKey);
           });
-          /* Parar quando budget total for atingido (evita echo por overflow de tokens) */
+          /* §24v5: parar por budget OU por contagem máxima de arquivos */
           var budget = 0;
           candidates.forEach(function(c) {
-            if (budget >= TOTAL_BUDGET) return;
+            if (budget >= TOTAL_BUDGET || fileNames.length >= MAX_FILES) return;
             fileNames.push(c.relPath);
             budget += Math.min(c.sz, FILE_LIMIT);
             promises.push(c.entry.async('string').then(function(content) {
