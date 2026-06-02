@@ -1452,13 +1452,26 @@ Sem despedida vazia.
 
 ## §24 — Seleção Inteligente de Arquivos no ZIP (FIX D)
 
-**Data:** 2026-06-02 | **Commits:** `45f155e` (frontend), `61001e5` (backend)
+**Data:** 2026-06-02 | **Commits:** `45f155e` (v1, supersedido), `613a80f` (v2 JS-DESC), `61001e5` (backend)
 
 ### 24.1 Problema
 
-O handler ZIP anterior iterava os arquivos na ordem interna do ZIP e cortava nos primeiros 20. Em projetos reais, os maiores arquivos (ex: `news-cache.json` 849 KB, `translation-cache.json` 124 KB) ocupavam slots valiosos sem contribuir com informação diagnóstica. O arquivo alvo (`games-2026-feature.js`, 23 KB, contendo o bug) podia nunca chegar ao modelo.
+O handler ZIP anterior iterava os arquivos na ordem interna do ZIP e cortava nos primeiros 20. Em projetos reais, os maiores arquivos (ex: `news-cache.json` 849 KB, `translation-cache.json` 124 KB) ocupavam slots valiosos sem contribuir com informação diagnóstica. O arquivo alvo (`games-2026-feature.js`, 23 KB, contendo o bug) ficava fora do top-20.
 
-### 24.2 Solução
+### 24.2 Iteração de design (4 estratégias testadas)
+
+Medido no `technetgamev2` real (204 candidatos após SKIP_NAME, cap 20):
+
+| Estratégia | Posição `games-2026-feature.js` |
+|---|---|
+| Sort ASC puro (v1) | 192/204 ❌ (top-20 eram stubs de 0–284B) |
+| `front/` priority + ASC | 66/141 ❌ |
+| Ext tier + ASC | 40/115 ❌ |
+| **JS/TS DESC + ext tier (v2)** | **6/20 ✅** |
+
+**Lição:** sort ASC otimiza "mais arquivos distintos" mas enche o contexto de stubs e READMEs triviais. O arquivo com o bug é quase sempre o de maior densidade de lógica. Selecionar por peso de código, não por contagem de arquivos.
+
+### 24.3 Solução (v2)
 
 **Frontend** (`handleZipUpload`) e **backend** (`/api/unzip-context`):
 
@@ -1468,26 +1481,29 @@ O handler ZIP anterior iterava os arquivos na ordem interna do ZIP e cortava nos
    Exemplos eliminados: news-cache.json, package-lock.json, app.min.js, vendor.bundle.js
    ```
 
-2. **Coleta completa + sort ASC** — coletar TODOS os candidatos válidos, ordenar por `uncompressedSize` ascendente, pegar os 20 menores:
+2. **Tier por extensão + JS/TS maior primeiro** — coletar TODOS os candidatos ≥ 200B, tier de extensão (1=JS/TS, 2=HTML, 3=CSS, 4=JSON, 5=outros), dentro do tier 1 ordenar DESC (maior = mais lógica), demais tiers ASC:
    ```javascript
-   candidates.sort((a, b) => a.sz - b.sz);
+   var sortKey = (tier === 1) ? -sz : sz;
+   candidates.sort((a, b) =>
+     a.tier !== b.tier ? a.tier - b.tier : a.sortKey - b.sortKey
+   );
    candidates.slice(0, 20)
    ```
 
 3. **Truncagem 12000 mantida** — arquivos > 12000 chars ainda truncados com aviso `...(truncado em 12000/N chars)`.
 
-### 24.3 Evidência que motivou
+### 24.4 Evidência que motivou
 
-- `technetgamev2` ZIP: 2567 KB / 159 arquivos de texto
+- `technetgamev2` ZIP: 2567 KB / 204 candidatos pós-filtro
 - `news-cache.json`: 849 KB — irrelevante para diagnóstico de cover image
 - `games-2026-feature.js`: 23.2 KB — contém `LOCAL_REAL_COVERS` em offset 10162
-- Com sort ASC: arquivo alvo chega ao top-20 antes dos HTML (83–88 KB)
+- Com v2: arquivo alvo na posição 6/20; com v1 sort ASC: posição 192/204
 
-### 24.4 Frase-síntese
+### 24.5 Frase-síntese
 
 ```
-ZIP: filtrar lixo por nome → coletar todos → sort por tamanho ASC → top-20.
-Arquivos menores primeiro = mais cobertura distinta no mesmo budget.
+ZIP: filtrar lixo por nome → coletar todos (≥200B) → JS/TS maior primeiro → top-20.
+Densidade de lógica > contagem de arquivos.
 ```
 
 ---
