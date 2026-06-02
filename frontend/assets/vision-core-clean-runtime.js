@@ -4603,6 +4603,8 @@
 
       var TEXT_EXTS = ['.js','.json','.ts','.jsx','.tsx','.html','.css','.md','.txt','.py','.go','.mjs','.cjs'];
       var SKIP_DIRS = ['node_modules','.git','dist','.next','build','coverage','__pycache__'];
+      /* FIX D §24 — nomes de arquivo a ignorar (lixo: cache, lock, bundle, minified, sourcemap) */
+      var SKIP_NAME = /(?:cache|lock|\.min\.|\.bundle\.|\.map$|vendor\.)/i;
 
       var reader = new FileReader();
       reader.onload = function(ev) {
@@ -4610,17 +4612,26 @@
           var promises = [];
           var fileNames = [];
 
+          /* FIX D §24 — coletar TODOS os candidatos, ordenar tamanho ASC, pegar 20 menores */
+          var candidates = [];
           zip.forEach(function(relPath, zipEntry) {
             if (zipEntry.dir) return;
             var skip = SKIP_DIRS.some(function(d) { return relPath.indexOf(d + '/') !== -1 || relPath.indexOf(d + '\\') !== -1; });
             if (skip) return;
+            var fname = relPath.split('/').pop().split('\\').pop();
+            if (SKIP_NAME.test(fname)) return;
             var dot = relPath.lastIndexOf('.');
             var ext = dot !== -1 ? relPath.slice(dot).toLowerCase() : '';
             if (TEXT_EXTS.indexOf(ext) === -1) return;
-            if (fileNames.length >= 20) return;
-            fileNames.push(relPath);
-            promises.push(zipEntry.async('string').then(function(content) {
-              return '[' + relPath + ']\n' + content.slice(0, 12000) + (content.length > 12000 ? '\n...(truncado em 12000/' + content.length + ' chars)' : '');
+            var sz = (zipEntry._data && zipEntry._data.uncompressedSize) ? zipEntry._data.uncompressedSize : 0;
+            candidates.push({ relPath: relPath, entry: zipEntry, sz: sz });
+          });
+          /* menor primeiro → mais arquivos distintos no budget de 20 */
+          candidates.sort(function(a, b) { return a.sz - b.sz; });
+          candidates.slice(0, 20).forEach(function(c) {
+            fileNames.push(c.relPath);
+            promises.push(c.entry.async('string').then(function(content) {
+              return '[' + c.relPath + ']\n' + content.slice(0, 12000) + (content.length > 12000 ? '\n...(truncado em 12000/' + content.length + ' chars)' : '');
             }));
           });
 
