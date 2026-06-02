@@ -270,8 +270,28 @@ app.get('/api/health', (req, res) => sendOk(res, {
   service: 'vision-core-backend',
   version: '2.9.10-self-healing-config',
   status: 'ok',
-  pass_gold_ready: false
+  pass_gold_ready: false,
+  node_version: process.version,
+  fetch_available: typeof fetch !== 'undefined'
 }));
+
+/* ── /api/test-fetch — diagnóstico de fetch outbound ─────────── */
+app.get('/api/test-fetch', async (req, res) => {
+  const url = (req.query.url || 'https://raw.githubusercontent.com/Imadechumbo/technetgamev2/main/README.md').trim();
+  if (typeof fetch === 'undefined') {
+    return res.status(500).json({ ok: false, error: 'fetch not available', node_version: process.version, time: now() });
+  }
+  try {
+    const ctrl  = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10000);
+    const r     = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'VisionCore/2.9.10' } });
+    clearTimeout(timer);
+    const text  = (await r.text()).slice(0, 500);
+    return sendOk(res, { url, status: r.status, ok: r.ok, preview: text, node_version: process.version });
+  } catch(e) {
+    return res.status(500).json({ ok: false, url, error: e.message, node_version: process.version, time: now() });
+  }
+});
 
 app.get('/api/readiness', (req, res) => sendOk(res, {
   ready: true,
@@ -930,41 +950,66 @@ app.post('/api/chat', async (req, res) => {
 
   if (foundUrls.length) {
     const fetched = [];
-    for (const rawUrl of foundUrls) {
-      let fetchUrl = rawUrl;
-      // GitHub blob → raw.githubusercontent.com
-      if (rawUrl.includes('github.com/') && rawUrl.includes('/blob/')) {
-        fetchUrl = rawUrl
-          .replace('https://github.com/', 'https://raw.githubusercontent.com/')
-          .replace('/blob/', '/');
-      }
-      // GitHub repo root (sem /blob/) → tentar README
-      else if (rawUrl.match(/^https:\/\/github\.com\/[^/]+\/[^/]+\/?$/)) {
-        const parts  = rawUrl.replace('https://github.com/', '').replace(/\/$/, '').split('/');
-        fetchUrl     = `https://raw.githubusercontent.com/${parts[0]}/${parts[1]}/main/README.md`;
-      }
+
+    async function doFetch(url, label) {
+      const ctrl  = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 10000);
       try {
-        const ctrl  = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 10000);
-        const r = await fetch(fetchUrl, {
-          signal:  ctrl.signal,
-          headers: { 'User-Agent': 'VisionCore/2.9.10' }
-        });
+        const r = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'VisionCore/2.9.10' } });
         clearTimeout(timer);
         if (r.ok) {
-          const text = (await r.text()).slice(0, 5000);
-          fetched.push(`[CONTEÚDO DE ${rawUrl}]\n${text}`);
-          console.log('[toolFetch] OK', rawUrl, '→', fetchUrl, r.status);
-        } else {
-          console.log('[toolFetch] FAIL', fetchUrl, r.status);
+          const ct   = r.headers.get('content-type') || '';
+          const text = ct.includes('json')
+            ? JSON.stringify(await r.json(), null, 2).slice(0, 5000)
+            : (await r.text()).slice(0, 5000);
+          console.log('[toolFetch] OK', label, '→', url, r.status);
+          return text;
         }
-      } catch(fetchErr) {
-        console.log('[toolFetch] ERR', fetchUrl, fetchErr.message);
+        console.log('[toolFetch] FAIL', url, r.status);
+        return null;
+      } catch(e) {
+        clearTimeout(timer);
+        console.log('[toolFetch] ERR', url, e.message);
+        return null;
       }
+    }
+
+    for (const rawUrl of foundUrls) {
+      let text = null;
+
+      // GitHub blob → raw.githubusercontent.com
+      if (rawUrl.includes('github.com/') && rawUrl.includes('/blob/')) {
+        const rawified = rawUrl
+          .replace('https://github.com/', 'https://raw.githubusercontent.com/')
+          .replace('/blob/', '/');
+        text = await doFetch(rawified, rawUrl);
+      }
+      // GitHub repo root → try README on main, then master, then GitHub API
+      else if (rawUrl.match(/^https:\/\/github\.com\/[^/]+\/[^/]+\/?$/)) {
+        const parts = rawUrl.replace('https://github.com/', '').replace(/\/$/, '').split('/');
+        const [owner, repo] = parts;
+        // 1. README on main
+        text = await doFetch(`https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`, rawUrl);
+        // 2. README on master
+        if (!text) text = await doFetch(`https://raw.githubusercontent.com/${owner}/${repo}/master/README.md`, rawUrl);
+        // 3. GitHub API repo info (always public, no auth needed)
+        if (!text) {
+          const apiData = await doFetch(`https://api.github.com/repos/${owner}/${repo}`, rawUrl + ' [API]');
+          if (apiData) text = `[GitHub API — ${owner}/${repo}]\n${apiData}`;
+        }
+      }
+      // Generic URL
+      else {
+        text = await doFetch(rawUrl, rawUrl);
+      }
+
+      if (text) fetched.push(`[CONTEÚDO DE ${rawUrl}]\n${text}`);
     }
     if (fetched.length) {
       message = message + '\n\n' + fetched.join('\n\n---\n\n');
     }
+    req._toolFetchCount = fetched.length;
+    req._toolFetchUrls  = foundUrls;
   }
 
   /* ── systemPrompt — base + override por modo ─────────────────── */
@@ -1084,7 +1129,7 @@ app.post('/api/chat', async (req, res) => {
       if (r.ok) {
         const data = await r.json();
         const answer = data?.choices?.[0]?.message?.content || '';
-        if (answer) return sendOk(res, { answer, provider: 'groq', model: data.model || 'llama-3.3-70b-versatile', mode, anti_stub: true });
+        if (answer) return sendOk(res, { answer, provider: 'groq', model: data.model || 'llama-3.3-70b-versatile', mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
       }
     } catch (_) { /* fall through */ }
   }
@@ -1111,7 +1156,7 @@ app.post('/api/chat', async (req, res) => {
       if (r.ok) {
         const data = await r.json();
         const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if (answer) return sendOk(res, { answer, provider: 'gemini', model: GEMINI_MODEL, mode, vision: hasImage, anti_stub: true });
+        if (answer) return sendOk(res, { answer, provider: 'gemini', model: GEMINI_MODEL, mode, vision: hasImage, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
       }
     } catch (_) { /* fall through */ }
   }
@@ -1134,13 +1179,13 @@ app.post('/api/chat', async (req, res) => {
       if (r.ok) {
         const data = await r.json();
         const answer = data?.choices?.[0]?.message?.content || '';
-        if (answer) return sendOk(res, { answer, provider: 'openrouter', model: OR_MODEL, mode, anti_stub: true });
+        if (answer) return sendOk(res, { answer, provider: 'openrouter', model: OR_MODEL, mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
       }
     } catch (_) { /* fall through */ }
   }
 
   /* ── 4. Local fallback ──────────────────────────────────────── */
-  return sendOk(res, { answer: copilotAnswer(body), provider: 'local', model: 'copilot-local', mode, anti_stub: true });
+  return sendOk(res, { answer: copilotAnswer(body), provider: 'local', model: 'copilot-local', mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
 });
 
 app.get('/api/auth/status', (req, res) => {
