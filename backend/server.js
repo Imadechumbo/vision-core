@@ -1299,19 +1299,31 @@ app.post('/api/unzip-context', async (req, res) => {
 
     const TEXT_EXTS = new Set(['.json','.js','.ts','.jsx','.tsx','.html','.css','.md','.txt','.py','.go','.mjs','.cjs']);
     const SKIP_DIRS = ['node_modules','.git','dist','.next','build','coverage','__pycache__'];
+    /* FIX D §24 — ignorar lixo por nome (cache, lock, min, bundle, map, vendor) */
+    const SKIP_NAME = /(?:cache|lock|\.min\.|\.bundle\.|\.map$|vendor\.)/i;
 
-    const files = [];
+    /* Coletar TODOS os candidatos, ordenar tamanho ASC, pegar 20 menores */
+    const candidates = [];
     for (const entry of entries) {
       if (entry.isDirectory) continue;
       const name = entry.entryName;
       const skip = SKIP_DIRS.some(d => name.includes(d + '/') || name.includes(d + '\\'));
       if (skip) continue;
+      const fname = name.split('/').pop().split('\\').pop();
+      if (SKIP_NAME.test(fname)) continue;
       const ext = path.extname(name).toLowerCase();
       if (!TEXT_EXTS.has(ext)) continue;
+      candidates.push({ entry, name, sz: entry.header.size });
+    }
+    /* menor primeiro → mais cobertura distinta no budget de 20 */
+    candidates.sort((a, b) => a.sz - b.sz);
+
+    const files = [];
+    for (const c of candidates.slice(0, 20)) {
       try {
-        const content = entry.getData().toString('utf8');
-        files.push({ name, content: content.slice(0, 3000) });
-        if (files.length >= 20) break;
+        const content = c.entry.getData().toString('utf8');
+        const LIMIT = 12000;
+        files.push({ name: c.name, content: content.slice(0, LIMIT) + (content.length > LIMIT ? `\n...(truncado em ${LIMIT}/${content.length} chars)` : '') });
       } catch(e) {}
     }
 
@@ -1320,7 +1332,7 @@ app.post('/api/unzip-context', async (req, res) => {
     }
 
     const context = files
-      .map(f => `[${f.name}]\n${f.content}${f.content.length >= 3000 ? '\n...(truncado)' : ''}`)
+      .map(f => `[${f.name}]\n${f.content}`)
       .join('\n\n---\n\n');
 
     const enrichedMessage = question + '\n\n' + context;
