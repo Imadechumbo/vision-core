@@ -1510,11 +1510,50 @@ Medido no `technetgamev2` real (204 candidatos após SKIP_NAME, cap 20):
 
 **Problema residual do v3**: 70K chars de JS real → Groq ainda falha (>6K tokens), Gemini recebia apenas 5s efetivos após 15s de espera do Groq → timeout → local fallback → echo. Ver §26.
 
-### 24.6 Frase-síntese
+**Bug oculto do v3 — tier detection com ZIP root prefix**: `isFront` usava `indexOf('front/') === 0`, que falha quando o ZIP contém pasta raiz (e.g. `technetgamev2-main/front/assets/js/...`). Resultado: todos os JS eram tier 2, sem distinção front/backend — `games-2026-feature.js` caía na posição 6, fora do budget de 5 arquivos.
+
+### 24.7 v4 — Tier Detection por Exclusão de Backend (commit `db00cd7`)
+
+**Diagnóstico**: Simulação local mostrou todos os JS com `[T2]`. Path `technetgamev2-main/front/assets/js/games-2026-feature.js` → `indexOf('front/') === 0` retorna `false` (position 18, não 0).
+
+**Fix v4**:
+```javascript
+// ANTES (v3 — falha com ZIP root prefix):
+var isFront = relPath.indexOf('front/') === 0 || relPath.indexOf('src/') === 0 || ...;
+
+// DEPOIS (v4 — exclusão de backend):
+var isFront = !/(?:^|\/)(?:backend|server|node_modules)\//.test(relPath);
+/* §24v4: front=not-backend; handles ZIP root prefix */
+```
+
+Lógica: em vez de tentar identificar pastas frontend (que variam), identificar pastas backend (mais estáveis) e excluir. Qualquer JS não-backend = tier 1.
+
+**Resultado local**:
+
+| Posição | Arquivo | Tier |
+|---------|---------|------|
+| 1 | main.js (43K) | T1 |
+| 2 | feeds.js (32K) | T1 |
+| 3 | hermes-meeting-room.js (30K) | T1 |
+| **4** | **games-2026-feature.js (23K)** | **T1 ✓** |
+| 5 | seo.js (12K) | T1 |
+
+Budget: 5 × 12K = 60K (backend JS em T2, não compete).
+
+**Teste de produção após deploy** (2026-06-02):
+- Payload: 60563 chars → Groq skip (>24K, §26) → Gemini 45s
+- `provider: gemini`, `model: gemini-2.5-flash`
+- Hexe citado: ✓
+- `LOCAL_REAL_COVERS` citado: ✓
+- Resposta correta: "Ausência de mapeamento em `LOCAL_REAL_COVERS` dentro de `games-2026-feature.js`"
+
+### 24.8 Frase-síntese (v4 final)
 
 ```
-ZIP: filtrar lixo → JS/TS maior primeiro (front/ antes de backend/) → parar em 60K chars.
-Groq: payload ≤24K. Gemini: payload 24K–70K (ver §26).
+ZIP: filtrar lixo → JS/TS por exclusão de /backend/ (tier 1=front, tier 2=backend) →
+     maior DESC → parar em 60K chars.
+Groq: payload ≤24K. Gemini 45s: payload 24K–70K (§26).
+games-2026-feature.js garantido na posição ≤4 para repos com root prefix ZIP.
 ```
 
 ---
