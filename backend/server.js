@@ -1103,14 +1103,24 @@ app.post('/api/chat', async (req, res) => {
     `Seja cirúrgico — não altere o que não precisa ser alterado.`
   ].join('\n') : '';
 
-  const fixModeInstructions = hermesDecisionMatrix;
-
-  const systemPrompt = basePrompt + fixModeInstructions;
-
   /* Imagem detectada → Gemini (único provider com suporte multimodal) */
+  /* Detectar ANTES de montar systemPrompt — mode:fix não bloqueia imagem */
   const hasImage   = !!(body.image_base64 && body.image_base64.length > 10);
   const imageMime  = body.image_mime || 'image/jpeg';
   const imageB64   = body.image_base64 || '';
+
+  const fixModeInstructions = hermesDecisionMatrix;
+
+  /* FIX A — quando há imagem, não aplicar restrições Hermes:
+     mode:fix instrui o modelo a recusar análise não-bug (bloqueia descrição).
+     Com hasImage=true, usar basePrompt + instrução de visão explícita. */
+  const visionAddendum = hasImage
+    ? '\n\nVOCÊ ESTÁ RECEBENDO UMA IMAGEM. Descreva o conteúdo visual com detalhes técnicos. Identifique elementos, textos visíveis, erros de UI, layout, ou qualquer anomalia. Responda em português brasileiro.'
+    : '';
+
+  const systemPrompt = hasImage
+    ? basePrompt + visionAddendum
+    : basePrompt + fixModeInstructions;
 
   /* ── 1. Groq — rápido, tier gratuito (text-only) ───────────── */
   const GROQ_KEY = process.env.GROQ_API_KEY || '';

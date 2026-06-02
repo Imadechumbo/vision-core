@@ -6067,23 +6067,63 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
           return Promise.all(promises).then(function(contents) {
             thinking.textContent = '📦 ' + fileNames.length + ' arquivo(s) extraídos — analisando...';
-            var context = question + '\n\n' + contents.join('\n\n---\n\n');
+
+            /* Usar mode/model do seletor do usuário, fallback fix */
+            var zipMode  = modeSelect  ? modeSelect.value  : 'fix';
+            var zipModel = modelSelect ? modelSelect.value : 'auto';
+            var context  = question + '\n\n' + contents.join('\n\n---\n\n');
+
+            /* Adicionar ao histórico de sessão */
+            addToHistory('user', '[ZIP: ' + file.name + '] ' + question);
+
+            /* Timeout 25s para evitar hang */
+            var ctrl    = new AbortController();
+            var timeout = setTimeout(function() { ctrl.abort(); }, 25000);
+
             return fetch(BACKEND_URL + '/api/chat', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ message: context, mode: 'fix' })
+              body: JSON.stringify({ message: context, mode: zipMode, model: zipModel }),
+              signal: ctrl.signal
             });
-          }).then(function(r) { return r.json(); })
+          }).then(function(r) {
+            if (!r.ok) return Promise.reject(new Error('HTTP ' + r.status));
+            return r.json();
+          })
           .then(function(d) {
+            if (typeof timeout !== 'undefined') clearTimeout(timeout);
             thinking.remove();
+
+            var answer = (d && d.answer) ? d.answer : JSON.stringify(d);
+
+            /* Adicionar ao histórico */
+            addToHistory('assistant', answer);
+
+            /* §21 fetch transparency badge */
+            renderFetchBadge(d, chatStream);
+
+            /* Hermes JSON renderer ou typewriter */
+            var hermesObj = parseHermesBlock(answer);
             var msgEl = appendMsg('', '');
-            typewriterEffect(msgEl, d.answer || JSON.stringify(d), 10);
+            if (hermesObj) {
+              renderHermesBlock(hermesObj, chatStream);
+              typewriterEffect(msgEl, answer.replace(/```json[\s\S]*?```/g, '[↑ diagnóstico Hermes acima]'), 10);
+            } else {
+              typewriterEffect(msgEl, answer, 10);
+            }
+
+            /* Limpar textarea após ZIP */
+            if (promptInput) promptInput.value = '';
             setStatus('READY');
           });
 
         }).catch(function(err) {
+          if (typeof timeout !== 'undefined') clearTimeout(timeout);
           thinking.remove();
-          appendMsg('❌ Erro ao processar ZIP: ' + err.message, 'error');
+          var msg = err && err.name === 'AbortError'
+            ? '⏱ ZIP: timeout 25s — resposta não chegou. Tente um ZIP menor.'
+            : '❌ Erro ao processar ZIP: ' + (err && err.message ? err.message : String(err));
+          appendMsg(msg, 'error');
           setStatus('READY');
         });
       };
