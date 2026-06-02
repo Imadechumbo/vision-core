@@ -1448,3 +1448,105 @@ Proporcional à complexidade.
 Sem despedida vazia.
 ```
 
+---
+
+## §24 — Seleção Inteligente de Arquivos no ZIP (FIX D)
+
+**Data:** 2026-06-02 | **Commits:** `45f155e` (frontend), `61001e5` (backend)
+
+### 24.1 Problema
+
+O handler ZIP anterior iterava os arquivos na ordem interna do ZIP e cortava nos primeiros 20. Em projetos reais, os maiores arquivos (ex: `news-cache.json` 849 KB, `translation-cache.json` 124 KB) ocupavam slots valiosos sem contribuir com informação diagnóstica. O arquivo alvo (`games-2026-feature.js`, 23 KB, contendo o bug) podia nunca chegar ao modelo.
+
+### 24.2 Solução
+
+**Frontend** (`handleZipUpload`) e **backend** (`/api/unzip-context`):
+
+1. **SKIP_NAME** — filtrar arquivos por nome antes de qualquer processamento:
+   ```
+   Regex: /(?:cache|lock|\.min\.|\.bundle\.|\.map$|vendor\.)/i
+   Exemplos eliminados: news-cache.json, package-lock.json, app.min.js, vendor.bundle.js
+   ```
+
+2. **Coleta completa + sort ASC** — coletar TODOS os candidatos válidos, ordenar por `uncompressedSize` ascendente, pegar os 20 menores:
+   ```javascript
+   candidates.sort((a, b) => a.sz - b.sz);
+   candidates.slice(0, 20)
+   ```
+
+3. **Truncagem 12000 mantida** — arquivos > 12000 chars ainda truncados com aviso `...(truncado em 12000/N chars)`.
+
+### 24.3 Evidência que motivou
+
+- `technetgamev2` ZIP: 2567 KB / 159 arquivos de texto
+- `news-cache.json`: 849 KB — irrelevante para diagnóstico de cover image
+- `games-2026-feature.js`: 23.2 KB — contém `LOCAL_REAL_COVERS` em offset 10162
+- Com sort ASC: arquivo alvo chega ao top-20 antes dos HTML (83–88 KB)
+
+### 24.4 Frase-síntese
+
+```
+ZIP: filtrar lixo por nome → coletar todos → sort por tamanho ASC → top-20.
+Arquivos menores primeiro = mais cobertura distinta no mesmo budget.
+```
+
+---
+
+## §25 — Gate Anti-Alucinação no Backend (FIX C) [PENDENTE]
+
+**Status:** Especificado, não implementado.
+
+### 25.1 Problema
+
+`fetched_count===0` produz apenas badge visual no frontend. Hermes pode inventar patches mesmo sem nenhum arquivo real no contexto — viola §17 (Evidence-Bound).
+
+### 25.2 Regra
+
+Para `mode === 'fix'` e sem imagem:
+
+```
+SE fetched_count === 0
+E message NÃO contém marcadores de contexto real:
+  - /\[Arquivo: /          ← arquivo texto anexado
+  - /\[CONTEÚDO DE /       ← toolFetch injetado (linha 1006 server.js)
+  - /\[[^\]]{2,}\.(js|ts|html|css|json|py|go|md|txt)\]/ ← arquivo ZIP (path com ext)
+ENTÃO retornar BLOCKED_INPUT antes de chamar qualquer LLM
+```
+
+### 25.3 Ponto de inserção
+
+`backend/server.js`, **após linha ~1133** (depois de `hasImage` definido, antes do provider chain):
+
+```javascript
+/* FIX C §25 — gate anti-alucinação: mode:fix sem contexto real → BLOCKED_INPUT */
+if (mode === 'fix' && !hasImage) {
+  const hasFetched = (req._toolFetchCount || 0) > 0;
+  const hasFileCtx = /\[Arquivo: /.test(message) ||
+                     /\[CONTEÚDO DE /.test(message) ||
+                     /\[[^\]]{2,}\.(js|ts|html|css|json|py|go|md|txt)\]/.test(message);
+  if (!hasFetched && !hasFileCtx) {
+    return sendOk(res, {
+      answer: '```json\n' + JSON.stringify({
+        decisao: 'BLOCKED_INPUT',
+        motivo: 'Nenhum contexto de arquivo real fornecido.',
+        instrucao: 'Envie um ZIP, anexe um arquivo, ou inclua uma URL com o código a analisar. Sem evidência real não é possível propor patch (SDDF §17+§25).'
+      }, null, 2) + '\n```\n\nNenhum arquivo ou URL de código foi fornecido. Para análise no modo fix, anexe um ZIP ou arquivo com o código-fonte.',
+      provider: 'gate',
+      model: 'fix-c-gate',
+      mode,
+      fetched_count: 0,
+      fetched_urls: [],
+      anti_stub: true
+    });
+  }
+}
+```
+
+### 25.4 Frase-síntese
+
+```
+Sem arquivo real = sem patch.
+§17 passa de documentado para executável.
+Gate roda antes de qualquer LLM — zero custo de token.
+```
+
