@@ -4603,15 +4603,20 @@
 
       var TEXT_EXTS = ['.js','.json','.ts','.jsx','.tsx','.html','.css','.md','.txt','.py','.go','.mjs','.cjs'];
       var SKIP_DIRS = ['node_modules','.git','dist','.next','build','coverage','__pycache__'];
-      /* FIX D §24 v2 — ignorar lixo por nome + prioridade por extensão + JS/TS maior primeiro */
+      /* FIX D §24 v3 — tier ext + JS front/ antes de backend/ DESC + budget total 60K */
       var SKIP_NAME = /(?:cache|lock|\.min\.|\.bundle\.|\.map$|vendor\.)/i;
-      /* Tier: 1=JS/TS (maior primeiro = mais lógica), 2=HTML, 3=CSS, 4=JSON, 5=outros */
-      function _extTier(ext) {
-        if (['.js','.ts','.mjs','.cjs','.jsx','.tsx'].indexOf(ext) !== -1) return 1;
-        if (ext === '.html') return 2;
-        if (ext === '.css')  return 3;
-        if (ext === '.json') return 4;
-        return 5;
+      var TOTAL_BUDGET = 60000; /* chars — ~15K tokens, dentro do Groq free tier */
+      var FILE_LIMIT   = 12000; /* chars por arquivo */
+      /* Tier: 1A=JS front/ (maior DESC), 1B=JS backend/, 2=HTML, 3=CSS, 4=JSON, 5=outros */
+      function _extTier(ext, relPath) {
+        if (['.js','.ts','.mjs','.cjs','.jsx','.tsx'].indexOf(ext) !== -1) {
+          var isFront = relPath.indexOf('front/') === 0 || relPath.indexOf('src/') === 0 || relPath.indexOf('pages/') === 0 || relPath.indexOf('app/') === 0;
+          return isFront ? 1 : 2; /* front JS antes de backend JS */
+        }
+        if (ext === '.html') return 3;
+        if (ext === '.css')  return 4;
+        if (ext === '.json') return 5;
+        return 6;
       }
 
       var reader = new FileReader();
@@ -4620,7 +4625,7 @@
           var promises = [];
           var fileNames = [];
 
-          /* FIX D §24 v2 — coletar todos, tier ext + JS DESC / outros ASC, top-20 */
+          /* FIX D §24 v3 — coletar todos, tier + JS DESC, budget total 60K chars */
           var candidates = [];
           zip.forEach(function(relPath, zipEntry) {
             if (zipEntry.dir) return;
@@ -4633,18 +4638,22 @@
             if (TEXT_EXTS.indexOf(ext) === -1) return;
             var sz = (zipEntry._data && zipEntry._data.uncompressedSize) ? zipEntry._data.uncompressedSize : 0;
             if (sz < 200) return; /* ignorar stubs/arquivos vazios */
-            var tier = _extTier(ext);
-            /* JS/TS: sort DESC (maior = mais lógica de negócio); outros: ASC */
-            var sortKey = (tier === 1) ? -sz : sz;
+            var tier = _extTier(ext, relPath);
+            /* JS tiers: sort DESC (maior = mais lógica); outros: ASC */
+            var sortKey = (tier <= 2) ? -sz : sz;
             candidates.push({ relPath: relPath, entry: zipEntry, sz: sz, tier: tier, sortKey: sortKey });
           });
           candidates.sort(function(a, b) {
             return (a.tier !== b.tier) ? (a.tier - b.tier) : (a.sortKey - b.sortKey);
           });
-          candidates.slice(0, 20).forEach(function(c) {
+          /* Parar quando budget total for atingido (evita echo por overflow de tokens) */
+          var budget = 0;
+          candidates.forEach(function(c) {
+            if (budget >= TOTAL_BUDGET) return;
             fileNames.push(c.relPath);
+            budget += Math.min(c.sz, FILE_LIMIT);
             promises.push(c.entry.async('string').then(function(content) {
-              return '[' + c.relPath + ']\n' + content.slice(0, 12000) + (content.length > 12000 ? '\n...(truncado em 12000/' + content.length + ' chars)' : '');
+              return '[' + c.relPath + ']\n' + content.slice(0, FILE_LIMIT) + (content.length > FILE_LIMIT ? '\n...(truncado em ' + FILE_LIMIT + '/' + content.length + ' chars)' : '');
             }));
           });
 
