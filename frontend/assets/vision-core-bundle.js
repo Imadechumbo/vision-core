@@ -6048,11 +6048,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
       var TEXT_EXTS = ['.js','.json','.ts','.jsx','.tsx','.html','.css','.md','.txt','.py','.go','.mjs','.cjs'];
       var SKIP_DIRS = ['node_modules','.git','dist','.next','build','coverage','__pycache__'];
-      /* FIX D §24 v5 — tier ext + JS front-not-backend DESC + budget 60K + max 5 files */
+      /* FIX D §24 v6 — tier ext + JS front-not-backend DESC + budget 80K + file 24K + max 5 */
       var SKIP_NAME = /(?:cache|lock|\.min\.|\.bundle\.|\.map$|vendor\.)/i;
-      var TOTAL_BUDGET = 60000; /* chars — ~15K tokens */
-      var FILE_LIMIT   = 12000; /* chars por arquivo */
-      var MAX_FILES    = 5;     /* §24v5: evita overshoot quando files < FILE_LIMIT (budget para em N-1) */
+      var TOTAL_BUDGET = 80000; /* chars — Gemini suporta, 16s medido */
+      var FILE_LIMIT   = 24000; /* §24v6: games-2026-feature.js=23K → cabe inteiro (vs 12K que cortava LOCAL_REAL_COVERS) */
+      var MAX_FILES    = 5;     /* dual guard: para por budget OU contagem */
       /* Tier: 1A=JS front/ (maior DESC), 1B=JS backend/, 2=HTML, 3=CSS, 4=JSON, 5=outros */
       function _extTier(ext, relPath) {
         if (['.js','.ts','.mjs','.cjs','.jsx','.tsx'].indexOf(ext) !== -1) {
