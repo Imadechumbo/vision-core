@@ -1119,6 +1119,30 @@ app.post('/api/chat', async (req, res) => {
   const imageMime  = body.image_mime || 'image/jpeg';
   const imageB64   = body.image_base64 || '';
 
+  /* FIX C §25 — gate anti-alucinação: mode:fix sem contexto real → BLOCKED_INPUT */
+  /* Executável antes de qualquer LLM call — zero custo de token.                  */
+  if (mode === 'fix' && !hasImage) {
+    const hasFetched = (req._toolFetchCount || 0) > 0;
+    const hasFileCtx = /\[Arquivo: /.test(message) ||
+                       /\[CONTEÚDO DE /.test(message) ||
+                       /\[[^\]]{2,}\.(js|ts|html|css|json|py|go|md|txt|mjs|cjs|jsx|tsx)\]/.test(message);
+    if (!hasFetched && !hasFileCtx) {
+      return sendOk(res, {
+        answer: '```json\n' + JSON.stringify({
+          decisao: 'BLOCKED_INPUT',
+          motivo: 'Nenhum contexto de arquivo real fornecido.',
+          instrucao: 'Envie um ZIP, anexe um arquivo, ou inclua uma URL com o código a analisar. Sem evidência real não é possível propor patch (SDDF §17+§25).'
+        }, null, 2) + '\n```\n\nNenhum arquivo ou URL de código foi fornecido. Para análise no modo fix, anexe um ZIP ou arquivo com o código-fonte.',
+        provider: 'gate',
+        model: 'fix-c-gate',
+        mode,
+        fetched_count: 0,
+        fetched_urls: [],
+        anti_stub: true
+      });
+    }
+  }
+
   const fixModeInstructions = hermesDecisionMatrix;
 
   /* FIX A — quando há imagem, não aplicar restrições Hermes:
