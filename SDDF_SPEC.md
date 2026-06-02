@@ -1743,3 +1743,59 @@ provider:"local" = falha. Backend: erro informativo (sem echo). Frontend: banner
 Modo de falha agora honesto e visível.
 ```
 
+---
+
+## §28 — Alinhamento de Timeouts e Diagnóstico da Cadeia Worker
+
+**Status:** Implementado (commit `96e64c2`). CF Pages + Worker deployed 2026-06-02.
+
+### 28.1 Cadeia de Timeout
+
+```
+Frontend AbortController  →  CF Worker subrequest  →  EB  →  Gemini
+  25s (antigo, ❌)               sem sinal (antigo)        45s (§26)
+  55s (atual, ✓)                 52s /api/chat (atual)     45s (§26)
+```
+
+### 28.2 Diagnóstico de Latência Empírica
+
+| Payload | Chars | Provedor | Tempo real | CF free limit | Resultado |
+|---------|-------|----------|-----------|---------------|-----------|
+| 2 arquivos (games-2026-feature.js + main.js) | 24K | gemini-2.5-flash | **9.3s** | 30s | ✅ |
+| 5 arquivos (FIX D v4 completo) | 60K | gemini-2.5-flash | **9s** | 30s | ✅ |
+
+**Conclusão:** Gemini responde em ~9s para payloads até 60K chars. Não há risco de estourar o teto de 30s do CF Worker free plan.
+
+### 28.3 Por que havia Echo antes do §26
+
+O echo (provider:local) não era causado pelo frontend abortar antes do Gemini — era causado pela cadeia sequencial:
+
+```
+Groq tentativa (15s timeout) → FALHA (payload 60K > ~6K tokens limite free tier)
+Gemini começa em t=15s com timeout 20s → timeout efetivo: 5s restantes da janela
+Gemini em 5s → pode falhar → copilotAnswer echoa
+```
+
+§26 fix key: **skip Groq para >24K chars** → Gemini recebe diretamente → responde em 9s < qualquer timeout.
+
+A extensão do timeout Gemini 20→45s foi preventiva, não o fix real. O fix real = skip Groq.
+
+### 28.4 Análise do Worker
+
+Worker `visioncore-api-gateway` não é bypass-ável porque:
+- EB é HTTP (`http://vision-core-prod.eba-pdk6anxy...`) → browser bloqueia mixed content de página HTTPS
+- Worker serve HTTPS + CORS + rate limit (120 req/min por IP)
+
+Worker NÃO tem lógica crítica além de proxy:
+- `/api/auth/signup` → stub (`demo-token-${Date.now()}`) — não é auth real
+- `/api/github/create-pr` → stub — não é criação real de PR
+- Rate limiting → in-memory por isolate, best-effort
+
+### 28.5 Frase-síntese
+
+```
+Gemini: 9s para 60K chars. CF free 30s: seguro sem bypass.
+Echo root cause: Groq 15s timeout consumia janela antes do Gemini.
+Fix: skip Groq >24K → Gemini direto → 9s → todas as janelas satisfeitas.
+```
+
