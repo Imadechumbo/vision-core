@@ -4651,51 +4651,76 @@
     }
 
     /* ── File upload wiring ───────────────────────────────────── */
+
+    /* Shared dispatcher: routes files to ZIP handler or text accumulator */
+    function _dispatchFiles(fileList) {
+      if (!fileList || !fileList.length) return;
+      var zips  = [];
+      var texts = [];
+      Array.prototype.forEach.call(fileList, function(f) {
+        if (f.name.toLowerCase().endsWith('.zip')) { zips.push(f); }
+        else { texts.push(f); }
+      });
+
+      /* Process ZIPs immediately */
+      zips.forEach(function(z) { handleZipUpload(z); });
+
+      /* Accumulate text files for sendMessage */
+      if (!texts.length) return;
+      _attachedFiles = [];
+      var pending = texts.length;
+      texts.forEach(function (f) {
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          _attachedFiles.push({ name: f.name, content: ev.target.result || '' });
+          pending--;
+          if (pending === 0) {
+            if (fileNote) {
+              fileNote.textContent = _attachedFiles.length + ' arquivo(s): ' +
+                _attachedFiles.map(function (a) { return a.name; }).join(', ');
+            }
+            if (addFilesBtn) {
+              addFilesBtn.textContent = '✓ ' + _attachedFiles.length + ' arquivo(s)';
+            }
+          }
+        };
+        reader.onerror = function () {
+          pending--;
+          if (pending === 0 && fileNote) { fileNote.textContent = 'Erro ao ler arquivo(s).'; }
+        };
+        reader.readAsText(f);
+      });
+    }
+
     if (addFilesBtn && fileInput) {
       addFilesBtn.addEventListener('click', function () {
-        fileInput.value = '';
+        try { fileInput.value = ''; } catch(e) { /* ignore reset error */ }
         fileInput.click();
       });
       fileInput.addEventListener('change', function () {
-        var files = fileInput.files;
-        if (!files || !files.length) { return; }
+        _dispatchFiles(fileInput.files);
+      });
+    }
 
-        /* Separar ZIPs dos demais */
-        var zips  = [];
-        var texts = [];
-        Array.prototype.forEach.call(files, function(f) {
-          if (f.name.toLowerCase().endsWith('.zip')) { zips.push(f); }
-          else { texts.push(f); }
-        });
-
-        /* Processar ZIPs imediatamente */
-        zips.forEach(function(z) { handleZipUpload(z); });
-
-        /* Processar texto normal como antes */
-        if (!texts.length) { return; }
-        _attachedFiles = [];
-        var pending = texts.length;
-        texts.forEach(function (f) {
-          var reader = new FileReader();
-          reader.onload = function (ev) {
-            _attachedFiles.push({ name: f.name, content: ev.target.result || '' });
-            pending--;
-            if (pending === 0) {
-              if (fileNote) {
-                fileNote.textContent = _attachedFiles.length + ' arquivo(s): ' +
-                  _attachedFiles.map(function (a) { return a.name; }).join(', ');
-              }
-              if (addFilesBtn) {
-                addFilesBtn.textContent = '✓ ' + _attachedFiles.length + ' arquivo(s)';
-              }
-            }
-          };
-          reader.onerror = function () {
-            pending--;
-            if (pending === 0 && fileNote) { fileNote.textContent = 'Erro ao ler arquivo(s).'; }
-          };
-          reader.readAsText(f);
-        });
+    /* ── Drag-and-drop on chatStream (ZIP + text files) ─────── */
+    if (chatStream) {
+      chatStream.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        chatStream.style.outline = '2px dashed rgba(124,58,237,0.6)';
+      });
+      chatStream.addEventListener('dragleave', function(e) {
+        e.stopPropagation();
+        chatStream.style.outline = '';
+      });
+      chatStream.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        chatStream.style.outline = '';
+        var dt = e.dataTransfer;
+        if (dt && dt.files && dt.files.length) {
+          _dispatchFiles(dt.files);
+        }
       });
     }
 
