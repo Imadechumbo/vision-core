@@ -1499,18 +1499,29 @@ Medido no `technetgamev2` real (204 candidatos após SKIP_NAME, cap 20):
 - `games-2026-feature.js`: 23.2 KB — contém `LOCAL_REAL_COVERS` em offset 10162
 - Com v2: arquivo alvo na posição 6/20; com v1 sort ASC: posição 192/204
 
-### 24.5 Frase-síntese
+### 24.5 v3 — Budget Total + Sub-tier front/ (commit `ec5103a`)
+
+**Problema do v2**: 20 arquivos × 12K chars = 214K chars → ~53K tokens JS reais → Groq free tier falha → `copilotAnswer` echoa o input.
+
+**Fix v3**:
+- `TOTAL_BUDGET = 60000` chars — parar de adicionar arquivos quando budget atingido
+- Sub-tier: `front/` = tier 1, `backend/` = tier 2 dentro do JS — `games-2026-feature.js` chega à posição 4
+- Resultado: `main.js(12K) + feeds.js(12K) + hermes-meeting-room.js(12K) + games-2026-feature.js(12K) = 48K` — dentro do budget
+
+**Problema residual do v3**: 70K chars de JS real → Groq ainda falha (>6K tokens), Gemini recebia apenas 5s efetivos após 15s de espera do Groq → timeout → local fallback → echo. Ver §26.
+
+### 24.6 Frase-síntese
 
 ```
-ZIP: filtrar lixo por nome → coletar todos (≥200B) → JS/TS maior primeiro → top-20.
-Densidade de lógica > contagem de arquivos.
+ZIP: filtrar lixo → JS/TS maior primeiro (front/ antes de backend/) → parar em 60K chars.
+Groq: payload ≤24K. Gemini: payload 24K–70K (ver §26).
 ```
 
 ---
 
-## §25 — Gate Anti-Alucinação no Backend (FIX C) [PENDENTE]
+## §25 — Gate Anti-Alucinação no Backend (FIX C) [IMPLEMENTADO]
 
-**Status:** Especificado, não implementado.
+**Status:** Implementado (commit `8b9e718`), smoke test 3/3 em produção EB.
 
 ### 25.1 Problema
 
@@ -1564,5 +1575,68 @@ if (mode === 'fix' && !hasImage) {
 Sem arquivo real = sem patch.
 §17 passa de documentado para executável.
 Gate roda antes de qualquer LLM — zero custo de token.
+```
+
+---
+
+## §26 — Roteamento de Provider por Tamanho de Payload (FIX E)
+
+**Data:** 2026-06-02 | **Commit:** `d33d144`
+
+### 26.1 Problema: Echo por Overflow de Contexto
+
+O backend tem 4 providers em cascata (Groq → Gemini → OpenRouter → local fallback). O fallback local (`copilotAnswer`) echoa o `body.message` de volta como resposta. Quando todos os providers falham, a resposta parece válida (HTTP 200, campo `answer`) mas é apenas o input repetido — com `provider: "local"`.
+
+**Diagnóstico do echo nos testes ZIP:**
+
+| Payload | Tokens estimados | Provider | Echo? |
+|---|---|---|---|
+| 6K chars (texto pequeno) | ~1.5K | groq | Não |
+| 24K chars (2 arquivos JS) | ~6K | groq | Não |
+| 40K chars (padding X) | ~100 (BPE merge) | groq | Não |
+| 70K chars (JS real) | ~17K | local | **Sim** |
+
+**Por que JS real ≠ padding**:  
+BPE (Byte Pair Encoding) comprime runs de X's em poucos tokens. JavaScript real tokeniza ~4 chars/token. 70K chars de JS real ≈ 17K tokens. 40K chars de X's ≈ ~100 tokens.
+
+**Causa da cascata**:
+1. Groq free tier: ~6K tokens/request → falha com 17K tokens
+2. Groq timeout: 15s (aguarda mesmo em falha)
+3. Gemini timeout: 20s — mas começa APÓS 15s de espera do Groq → apenas 5s efetivos → timeout
+4. OpenRouter: mesmo problema
+5. `copilotAnswer` → echo do input
+
+### 26.2 Fix: Roteamento por Tamanho + Timeout Estendido
+
+**Commit `d33d144`** — `backend/server.js`:
+
+```javascript
+/* §26: pular Groq para payloads grandes (>24K chars = ~6K tokens Groq free tier) */
+const groqPayloadOk = message.length <= 24000;
+if (GROQ_KEY && !hasImage && groqPayloadOk) { /* Groq */ }
+
+/* §26: timeout 45s (era 20s) — suporta payloads ZIP grandes */
+signal: AbortSignal.timeout(45000)
+```
+
+**Resultado**:
+- Payload ≤ 24K chars: Groq (fast path, ~1-2s)
+- Payload > 24K chars: Groq pulado → Gemini recebe diretamente com 45s → suporta payloads ZIP até ~70K chars
+- Total request time máximo: 0s Groq + 45s Gemini = 45s (dentro do EB LB timeout de 60s)
+
+### 26.3 Identificação de Echo
+
+**Sinal de echo**: `provider === "local"` na resposta + `answer.length ≈ input.length`.
+
+O campo `provider` é a chave de diagnóstico: qualquer `provider: "local"` indica falha de todos os LLMs. **Não é uma resposta real.**
+
+O frontend deve tratar `provider: "local"` como erro e exibir mensagem de aviso ao usuário (pendente: §27).
+
+### 26.4 Frase-síntese
+
+```
+Echo = todos os providers falharam → copilotAnswer echoa input → provider:"local".
+Fix: skip Groq para payload > 24K chars + Gemini timeout 20→45s.
+Detectar echo: provider==="local" é o sinal.
 ```
 
