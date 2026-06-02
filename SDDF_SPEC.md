@@ -1037,3 +1037,138 @@ P5 (obsidian persist) + P6 (indexação) = V3.1 backlog.
 Commit: 10e568e
 ```
 
+---
+
+## 20. toolFetchUrl — Protocolo de Fetch e Regra Anti-Alucinação
+
+### 20.1 Diagnóstico (2026-06-02)
+
+**Sintoma:** IA respondeu sem conteúdo real — inventou patch para arquivo que não existia.
+
+**Evidência:**
+- `fetched_count: 0` na resposta de `/api/chat`
+- `/api/test-fetch?url=README.md` → `404 Not Found`
+- `technetgamev2` não tem `README.md` em nenhum branch (`main` nem `master`)
+- Node.js v20.20.2 — `fetch` disponível → não era bug de runtime
+
+**Causa raiz:** toolFetchUrl v2 tentava somente `/main/README.md` para repo root. Recebia 404, descartava silenciosamente, injetava zero contexto. IA recebia payload sem conteúdo real e alucinava a resposta baseada em training data.
+
+**Violação SDDF §17:** resposta sem evidência real é resposta proibida.
+
+---
+
+### 20.2 toolFetchUrl v3 — Fluxo corrigido
+
+```javascript
+// Para cada URL encontrada na mensagem:
+
+// Caso 1 — GitHub blob (/blob/ na URL)
+// → converte para raw.githubusercontent.com + branch + path
+
+// Caso 2 — GitHub repo root (github.com/owner/repo)
+// → tenta README.md em main
+// → se 404: tenta README.md em master
+// → se 404: fallback para GitHub API (sempre 200 em repos públicos)
+//   https://api.github.com/repos/{owner}/{repo}
+//   → retorna: name, description, language, topics, stars, updated_at
+
+// Caso 3 — URL genérica
+// → fetch direto com User-Agent: VisionCore/2.9.10
+// → AbortController timeout 10s
+
+// doFetch(url, label) → string | null
+// Content-Type JSON → JSON.stringify(await r.json(), null, 2).slice(0, 5000)
+// Content-Type text → (await r.text()).slice(0, 5000)
+```
+
+---
+
+### 20.3 Resposta de diagnóstico — campos obrigatórios
+
+Todos os providers em `/api/chat` agora retornam:
+
+```json
+{
+  "answer":        "...",
+  "provider":      "groq|gemini|openrouter|local",
+  "fetched_count": 0,
+  "fetched_urls":  ["https://..."]
+}
+```
+
+**Regra:** se `fetched_count === 0` e a mensagem continha URLs → fetch falhou ou 404. IA respondeu sem contexto real.
+
+---
+
+### 20.4 Endpoint de diagnóstico — /api/test-fetch
+
+```
+GET /api/test-fetch?url={encoded_url}
+
+Response:
+{
+  "url":          "url testada",
+  "status":       200,
+  "ok":           true,
+  "preview":      "primeiros 500 chars do conteúdo",
+  "node_version": "v20.20.2"
+}
+
+Error (fetch indisponível):
+{
+  "error":        "fetch not available",
+  "node_version": "vX.Y.Z"
+}
+```
+
+Usado para verificar se o EB consegue alcançar uma URL sem passar pelo AI.
+
+---
+
+### 20.5 /api/health — campos de runtime
+
+```json
+{
+  "node_version":    "v20.20.2",
+  "fetch_available": true
+}
+```
+
+Adicionados em 2026-06-02 para diagnóstico de runtime sem acesso aos logs do EB.
+
+---
+
+### 20.6 Regra Anti-Alucinação — toolFetchUrl
+
+Complementa SDDF §17 (Evidence-Bound Answer Protocol).
+
+**Proibido:**
+- Responder "o arquivo X contém..." sem `fetched_count > 0`
+- Inventar conteúdo de repositório a partir de training data
+- Citar patch de arquivo sem ter lido o arquivo real
+
+**Obrigatório:**
+- `fetched_count` visível na resposta
+- Se `fetched_count === 0` e URL presente: informar usuário que o conteúdo não foi obtido
+- Hermes classifica resposta sem evidência como `BLOCKED_INPUT`
+
+**Hierarquia de confiança:**
+
+| Fonte | Confiança | Evidência |
+|---|---|---|
+| Conteúdo real fetched (`fetched_count > 0`) | Alta | `[CONTEÚDO DE {url}]` injetado |
+| Arquivo anexado pelo usuário | Alta | `[Arquivo: {name}]` injetado |
+| ZIP extraído via JSZip | Alta | conteúdo real dos arquivos |
+| Training data do modelo | **Zero** | proibido sem declaração explícita |
+
+---
+
+### 20.7 Frase-síntese
+
+```
+toolFetchUrl v3: README → master → GitHub API → never hallucinate.
+fetched_count === 0 + URL presente = evidência ausente = resposta suspeita.
+SDDF §17 + §20: sem fetch real → sem claim de conteúdo real.
+Commit: b18ffbc
+```
+
