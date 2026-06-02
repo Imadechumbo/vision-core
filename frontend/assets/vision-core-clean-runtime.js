@@ -4171,6 +4171,44 @@
       tick();
     }
 
+    /* ── §21 Fetch Transparency Badge ───────────────────────── */
+    function renderFetchBadge(data, container) {
+      var count = (data && typeof data.fetched_count === 'number') ? data.fetched_count : -1;
+      var urls  = (data && Array.isArray(data.fetched_urls)) ? data.fetched_urls : [];
+      if (count < 0) return; // backend pré-§20 — silencioso
+      var badge = document.createElement('div');
+      var ok    = count > 0;
+      var color = ok ? '#22c55e' : '#f87171';
+      var icon  = ok ? '🔗' : '⚠️';
+      var label = ok
+        ? icon + ' ' + count + ' fonte' + (count > 1 ? 's' : '') + ' obtida' + (count > 1 ? 's' : '')
+        : icon + ' Nenhuma fonte obtida — resposta sem conteúdo real';
+      badge.style.cssText = [
+        'display:inline-flex',
+        'align-items:center',
+        'gap:6px',
+        'background:' + (ok ? 'rgba(34,197,94,.08)' : 'rgba(248,113,113,.08)'),
+        'border:1px solid ' + color + '33',
+        'border-radius:6px',
+        'padding:3px 9px',
+        'font-size:11px',
+        'color:' + color,
+        'margin:6px 0 2px 0',
+        'cursor:' + (urls.length ? 'pointer' : 'default')
+      ].join(';');
+      badge.textContent = label;
+      if (urls.length) {
+        var tip = document.createElement('span');
+        tip.style.cssText = 'color:#64748b;font-size:10px;margin-left:4px;';
+        tip.textContent = '(' + urls.map(function(u) {
+          try { return new URL(u).hostname; } catch(e) { return u.slice(0, 30); }
+        }).join(', ') + ')';
+        badge.appendChild(tip);
+        badge.title = urls.join('\n');
+      }
+      container.appendChild(badge);
+    }
+
     /* ── Hermes JSON Block Parser ────────────────────────────── */
     function parseHermesBlock(text) {
       var match = text.match(/```json\s*([\s\S]*?)```/);
@@ -4252,6 +4290,7 @@
         stopMissionAnimation({ ok: true, steps: [{ agent: 'Scanner', ok: true }, { agent: 'Hermes', ok: true }] });
         var answer = (data && data.answer) ? data.answer : JSON.stringify(data);
         addToHistory('assistant', answer);
+        renderFetchBadge(data, chatStream);          // §21
         var hermesObj = parseHermesBlock(answer);
         var msgEl = appendMsg('', '');
         if (hermesObj) {

@@ -1172,3 +1172,78 @@ SDDF §17 + §20: sem fetch real → sem claim de conteúdo real.
 Commit: b18ffbc
 ```
 
+---
+
+## 21. Fetch Transparency Layer — Indicador de Fonte no Frontend
+
+### 21.1 Problema identificado pós-§20
+
+§20 introduziu `fetched_count` e `fetched_urls` na resposta de `/api/chat`.
+Frontend descartava esses campos — operador não conseguia distinguir:
+
+- Resposta com evidência real (`fetched_count > 0`)
+- Resposta potencialmente alucinada (`fetched_count === 0`)
+
+Violação implícita de §17: Evidence-Bound Answer Protocol proíbe respostas sem evidência, mas sem visibilidade o operador não pode auditar.
+
+---
+
+### 21.2 renderFetchBadge — Implementação
+
+Função inserida em `vision-core-clean-runtime.js` imediatamente antes de `parseHermesBlock`. Chamada após `addToHistory('assistant', answer)` em cada resposta de `/api/chat`.
+
+```javascript
+// renderFetchBadge(data, container)
+// data      → objeto JSON completo da resposta /api/chat
+// container → chatStream
+
+// Saída silenciosa se data.fetched_count ausente (backend pré-§20)
+
+// fetched_count > 0 → badge verde
+//   "🔗 N fonte(s) obtida(s) (hostname)"
+//   badge.title = URLs completas
+
+// fetched_count === 0 → badge vermelho
+//   "⚠️ Nenhuma fonte obtida — resposta sem conteúdo real"
+
+// Não bloqueia a resposta — torna o risco auditável
+```
+
+---
+
+### 21.3 Regras de exibição
+
+| `fetched_count` | `fetched_urls` | Badge | Cor |
+|---|---|---|---|
+| ≥ 1 | qualquer | 🔗 N fonte(s) obtida(s) | Verde `#22c55e` |
+| 0 | presente | ⚠️ Nenhuma fonte obtida | Vermelho `#f87171` |
+| 0 | vazio | ⚠️ Nenhuma fonte obtida | Vermelho `#f87171` |
+| ausente | — | sem badge (silencioso) | — |
+
+---
+
+### 21.4 Cadeia §17 → §20 → §21
+
+```
+§17 — Evidence-Bound Answer Protocol
+     IA proibida de responder sem evidência real
+
+§20 — toolFetchUrl Anti-Alucinação
+     Backend expõe fetched_count em todas as respostas
+     GitHub API fallback quando README retorna 404
+
+§21 — Fetch Transparency Layer
+     Frontend exibe fetched_count como badge auditável
+     Operador vê, audita, decide
+```
+
+---
+
+### 21.5 Frase-síntese
+
+```
+fetched_count > 0  → badge verde  → evidência real injetada.
+fetched_count === 0 → badge vermelho → risco visível ao operador.
+§21 fecha o loop: backend mede, frontend mostra, operador decide.
+```
+
