@@ -4610,7 +4610,7 @@
       /* Tier: 1A=JS front/ (maior DESC), 1B=JS backend/, 2=HTML, 3=CSS, 4=JSON, 5=outros */
       function _extTier(ext, relPath) {
         if (['.js','.ts','.mjs','.cjs','.jsx','.tsx'].indexOf(ext) !== -1) {
-          var isFront = relPath.indexOf('front/') === 0 || relPath.indexOf('src/') === 0 || relPath.indexOf('pages/') === 0 || relPath.indexOf('app/') === 0;
+          var isFront = !/(?:^|\/)(?:backend|server|node_modules)\//.test(relPath); /* §24v4: front=not-backend; handles ZIP root prefix */
           return isFront ? 1 : 2; /* front JS antes de backend JS */
         }
         if (ext === '.html') return 3;
