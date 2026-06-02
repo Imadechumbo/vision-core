@@ -6120,9 +6120,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             /* Adicionar ao histórico de sessão */
             addToHistory('user', '[ZIP: ' + file.name + '] ' + question);
 
-            /* Timeout 25s para evitar hang */
+            /* Timeout 55s — §26: Gemini pode levar até 45s + 10s overhead de rede */
             var ctrl    = new AbortController();
-            var timeout = setTimeout(function() { ctrl.abort(); }, 25000);
+            var timeout = setTimeout(function() { ctrl.abort(); }, 55000);
 
             return fetch(BACKEND_URL + '/api/chat', {
               method: 'POST',
@@ -6170,7 +6170,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           if (typeof timeout !== 'undefined') clearTimeout(timeout);
           thinking.remove();
           var msg = err && err.name === 'AbortError'
-            ? '⏱ ZIP: timeout 25s — resposta não chegou. Tente um ZIP menor.'
+            ? '⏱ ZIP: timeout 55s — resposta não chegou. Backend pode estar sobrecarregado; tente novamente.'
             : '❌ Erro ao processar ZIP: ' + (err && err.message ? err.message : String(err));
           appendMsg(msg, 'error');
           setStatus('READY');

@@ -130,10 +130,17 @@ async function proxyToOrigin(request, env, ctx) {
 
   const headers = sanitizeRequestHeaders(request);
 
+  // §26: Gemini pode levar até 45s. Dar 52s ao subrequest (+ margem) antes de desistir.
+  // NOTA: CF Workers Standard — I/O wait não consome CPU time; isso funciona em paid plan.
+  // Em free plan (30s wall-clock total), requests Gemini-heavy podem estourar no nível CF.
+  const isChatPost = request.method === "POST" && incomingUrl.pathname.includes("/api/chat");
+  const subrequestTimeout = isChatPost ? 52000 : 10000;
+
   const init = {
     method: request.method,
     headers,
-    redirect: "manual"
+    redirect: "manual",
+    signal: AbortSignal.timeout(subrequestTimeout)
   };
 
   // GET/HEAD não podem ter body.
