@@ -1669,7 +1669,7 @@ signal: AbortSignal.timeout(45000)
 
 O campo `provider` é a chave de diagnóstico: qualquer `provider: "local"` indica falha de todos os LLMs. **Não é uma resposta real.**
 
-O frontend deve tratar `provider: "local"` como erro e exibir mensagem de aviso ao usuário (pendente: §27).
+O frontend deve tratar `provider: "local"` como erro e exibir mensagem de aviso ao usuário (implementado: §27).
 
 ### 26.4 Frase-síntese
 
@@ -1677,5 +1677,69 @@ O frontend deve tratar `provider: "local"` como erro e exibir mensagem de aviso 
 Echo = todos os providers falharam → copilotAnswer echoa input → provider:"local".
 Fix: skip Groq para payload > 24K chars + Gemini timeout 20→45s.
 Detectar echo: provider==="local" é o sinal.
+```
+
+---
+
+## §27 — Echo Guard (Fallback Honesto + Warning Frontend)
+
+**Status:** Implementado (commit `8cf8a0d`). CF Pages + EB deployed 2026-06-02.
+
+### 27.1 Problema
+
+`copilotAnswer(body)` incluía `Mensagem: ${message}` na resposta local. Para payloads de 60K chars, isso gerava uma resposta de 60K chars que a UI exibia sem qualquer indicação de que era um eco, não uma análise real.
+
+Modo de falha silencioso: usuário via "texto longo, parece análise" → não percebia que era eco do próprio input.
+
+### 27.2 Fix Backend — Resposta Safe sem Echo
+
+**Ponto**: `backend/server.js` linha 1235 (local fallback, `/* ── 4. Local fallback ──`).
+
+Antes:
+```javascript
+return sendOk(res, { answer: copilotAnswer(body), provider: 'local', ... });
+// copilotAnswer inclui: `Mensagem: ${message}` ← echo do payload inteiro
+```
+
+Depois:
+```javascript
+/* §27: não ecoar payload — retornar erro honesto sem incluir body.message */
+const _payloadLen = (body.message || '').length;
+const _localAnswer = '⚠️ **Todos os provedores de IA falharam** (payload: ' + _payloadLen + ' chars).\n\n'
+  + 'Causas prováveis:\n'
+  + '- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars; Gemini: timeout 45s)\n'
+  + '- API keys ausentes ou quota esgotada (GROQ_API_KEY, GEMINI_API_KEY)\n'
+  + '- Erro de rede ou timeout\n\n'
+  + 'Ação: reduza o ZIP ou verifique as env vars no EB.';
+return sendOk(res, { answer: _localAnswer, provider: 'local', ... });
+```
+
+### 27.3 Fix Frontend — Warning Banner
+
+**Ponto**: ambos `vision-core-clean-runtime.js` e `vision-core-bundle.js`, em dois handlers cada:
+1. Chat regular (linha `stopMissionAnimation`)
+2. ZIP upload (linha `thinking.remove()` no `.then(function(d)`)
+
+```javascript
+/* §27 echo guard */
+if (data && data.provider === 'local') {
+  appendMsg('⚠️ Fallback local — todos os provedores de IA falharam. Reduza o payload ou verifique as API keys.', 'error');
+}
+```
+
+Usa `appendMsg('...', 'error')` → banner vermelho (`color:#f87171`) acima da resposta de fallback.
+
+### 27.4 Diagrama de Falha Resolvido
+
+```
+Antes:  provider:local → UI exibe 60K chars (silencioso, parece análise)
+Depois: provider:local → UI mostra banner vermelho → depois exibe msg curta de erro
+```
+
+### 27.5 Frase-síntese
+
+```
+provider:"local" = falha. Backend: erro informativo (sem echo). Frontend: banner vermelho.
+Modo de falha agora honesto e visível.
 ```
 
