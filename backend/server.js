@@ -1157,8 +1157,10 @@ app.post('/api/chat', async (req, res) => {
     : basePrompt + fixModeInstructions;
 
   /* ── 1. Groq — rápido, tier gratuito (text-only) ───────────── */
+  /* §26: pular Groq para payloads grandes (>24K chars = ~6K tokens Groq free tier) */
   const GROQ_KEY = process.env.GROQ_API_KEY || '';
-  if (GROQ_KEY && !GROQ_KEY.includes('placeholder') && !hasImage) {
+  const groqPayloadOk = message.length <= 24000;
+  if (GROQ_KEY && !GROQ_KEY.includes('placeholder') && !hasImage && groqPayloadOk) {
     try {
       const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -1179,6 +1181,7 @@ app.post('/api/chat', async (req, res) => {
   }
 
   /* ── 2. Gemini — multimodal (texto + imagem) ─────────────────── */
+  /* §26: timeout 45s (era 20s) — payloads grandes chegam aqui após Groq ser pulado */
   const GEMINI_KEY   = process.env.GEMINI_API_KEY || '';
   const GEMINI_MODEL = process.env.GEMINI_MODEL   || 'gemini-2.5-flash';
   if (GEMINI_KEY && !GEMINI_KEY.includes('placeholder')) {
@@ -1195,7 +1198,7 @@ app.post('/api/chat', async (req, res) => {
           system_instruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: 'user', parts: userParts }]
         }),
-        signal: AbortSignal.timeout(20000)
+        signal: AbortSignal.timeout(45000) /* §26: 20→45s — suporta payloads ZIP grandes */
       });
       if (r.ok) {
         const data = await r.json();
