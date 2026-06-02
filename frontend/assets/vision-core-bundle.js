@@ -5687,7 +5687,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       /* Prepend attached text files */
       if (_attachedFiles.length) {
         var fileCtx = _attachedFiles.map(function (f) {
-          return '[Arquivo: ' + f.name + ']\n' + f.content.slice(0, 5000);
+          return '[Arquivo: ' + f.name + ']\n' + f.content.slice(0, 12000);
         }).join('\n---\n');
         text = fileCtx + (text ? '\n\n' + text : '');
         _attachedFiles = [];
@@ -6061,7 +6061,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             if (fileNames.length >= 20) return;
             fileNames.push(relPath);
             promises.push(zipEntry.async('string').then(function(content) {
-              return '[' + relPath + ']\n' + content.slice(0, 5000) + (content.length > 5000 ? '\n...(truncado em 5000/' + content.length + ' chars)' : '');
+              return '[' + relPath + ']\n' + content.slice(0, 12000) + (content.length > 12000 ? '\n...(truncado em 12000/' + content.length + ' chars)' : '');
             }));
           });
 
