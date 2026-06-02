@@ -6044,8 +6044,16 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
       var TEXT_EXTS = ['.js','.json','.ts','.jsx','.tsx','.html','.css','.md','.txt','.py','.go','.mjs','.cjs'];
       var SKIP_DIRS = ['node_modules','.git','dist','.next','build','coverage','__pycache__'];
-      /* FIX D §24 — nomes de arquivo a ignorar (lixo: cache, lock, bundle, minified, sourcemap) */
+      /* FIX D §24 v2 — ignorar lixo por nome + prioridade por extensão + JS/TS maior primeiro */
       var SKIP_NAME = /(?:cache|lock|\.min\.|\.bundle\.|\.map$|vendor\.)/i;
+      /* Tier: 1=JS/TS (maior primeiro = mais lógica), 2=HTML, 3=CSS, 4=JSON, 5=outros */
+      function _extTier(ext) {
+        if (['.js','.ts','.mjs','.cjs','.jsx','.tsx'].indexOf(ext) !== -1) return 1;
+        if (ext === '.html') return 2;
+        if (ext === '.css')  return 3;
+        if (ext === '.json') return 4;
+        return 5;
+      }
 
       var reader = new FileReader();
       reader.onload = function(ev) {
@@ -6053,7 +6061,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           var promises = [];
           var fileNames = [];
 
-          /* FIX D §24 — coletar TODOS os candidatos, ordenar tamanho ASC, pegar 20 menores */
+          /* FIX D §24 v2 — coletar todos, tier ext + JS DESC / outros ASC, top-20 */
           var candidates = [];
           zip.forEach(function(relPath, zipEntry) {
             if (zipEntry.dir) return;
@@ -6065,10 +6073,15 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             var ext = dot !== -1 ? relPath.slice(dot).toLowerCase() : '';
             if (TEXT_EXTS.indexOf(ext) === -1) return;
             var sz = (zipEntry._data && zipEntry._data.uncompressedSize) ? zipEntry._data.uncompressedSize : 0;
-            candidates.push({ relPath: relPath, entry: zipEntry, sz: sz });
+            if (sz < 200) return; /* ignorar stubs/arquivos vazios */
+            var tier = _extTier(ext);
+            /* JS/TS: sort DESC (maior = mais lógica de negócio); outros: ASC */
+            var sortKey = (tier === 1) ? -sz : sz;
+            candidates.push({ relPath: relPath, entry: zipEntry, sz: sz, tier: tier, sortKey: sortKey });
           });
-          /* menor primeiro → mais arquivos distintos no budget de 20 */
-          candidates.sort(function(a, b) { return a.sz - b.sz; });
+          candidates.sort(function(a, b) {
+            return (a.tier !== b.tier) ? (a.tier - b.tier) : (a.sortKey - b.sortKey);
+          });
           candidates.slice(0, 20).forEach(function(c) {
             fileNames.push(c.relPath);
             promises.push(c.entry.async('string').then(function(content) {
