@@ -4288,6 +4288,10 @@
         clearTimeout(_chatAnimTimer);
         thinking.remove();
         stopMissionAnimation({ ok: true, steps: [{ agent: 'Scanner', ok: true }, { agent: 'Hermes', ok: true }] });
+        /* §27 echo guard */
+        if (data && data.provider === 'local') {
+          appendMsg('⚠️ Fallback local — todos os provedores de IA falharam. Reduza o payload ou verifique as API keys.', 'error');
+        }
         var answer = (data && data.answer) ? data.answer : JSON.stringify(data);
         addToHistory('assistant', answer);
         renderFetchBadge(data, chatStream);          // §21
@@ -4692,6 +4696,11 @@
           .then(function(d) {
             if (typeof timeout !== 'undefined') clearTimeout(timeout);
             thinking.remove();
+
+            /* §27 echo guard — avisa se todos os provedores falharam */
+            if (d && d.provider === 'local') {
+              appendMsg('⚠️ Fallback local — todos os provedores de IA falharam. Reduza o ZIP ou verifique GROQ_API_KEY / GEMINI_API_KEY.', 'error');
+            }
 
             var answer = (d && d.answer) ? d.answer : JSON.stringify(d);
 

@@ -1232,7 +1232,15 @@ app.post('/api/chat', async (req, res) => {
   }
 
   /* ── 4. Local fallback ──────────────────────────────────────── */
-  return sendOk(res, { answer: copilotAnswer(body), provider: 'local', model: 'copilot-local', mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
+  /* §27: não ecoar payload — retornar erro honesto sem incluir body.message */
+  const _payloadLen = (body.message || '').length;
+  const _localAnswer = '⚠️ **Todos os provedores de IA falharam** (payload: ' + _payloadLen + ' chars).\n\n'
+    + 'Causas prováveis:\n'
+    + '- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars; Gemini: timeout 45s)\n'
+    + '- API keys ausentes ou quota esgotada (GROQ_API_KEY, GEMINI_API_KEY)\n'
+    + '- Erro de rede ou timeout\n\n'
+    + 'Ação: reduza o ZIP (use apenas os arquivos relevantes) ou verifique as env vars no EB.';
+  return sendOk(res, { answer: _localAnswer, provider: 'local', model: 'copilot-local', mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
 });
 
 app.get('/api/auth/status', (req, res) => {
