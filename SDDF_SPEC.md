@@ -1247,3 +1247,113 @@ fetched_count === 0 → badge vermelho → risco visível ao operador.
 §21 fecha o loop: backend mede, frontend mostra, operador decide.
 ```
 
+---
+
+## 22. Hermes Scope Rule — Hermes Governa Missão, Não Conteúdo
+
+> Arquivo canônico: `SDDF_SPEC.md` seção 22
+> Implementado em: `backend/server.js` — commit `6b85a94`
+
+---
+
+### 22.1 Diagnóstico que gerou esta regra (2026-06-02)
+
+**Sintoma observado:** imagem enviada com `mode: "fix"` retornava `decisao: BLOCKED_INPUT` com mensagem
+"A requisição excede o escopo da minha função de assistente técnico especializado em diagnóstico e correção de bugs."
+
+**Causa raiz confirmada:** o `hermesDecisionMatrix` era injetado no `systemPrompt` ANTES de detectar
+`hasImage`. O modelo recebia instruções Hermes (`Você é Hermes — supervisor de decisão`) e recusava
+descrever imagens por interpretar a tarefa como "fora do escopo de análise de bugs."
+
+**Evidência:**
+
+| Teste | `mode` | `vision` | Resultado |
+|-------|--------|----------|-----------|
+| Antes do fix | `fix` | `True` | `BLOCKED_INPUT` — imagem chegou ao Gemini, Hermes bloqueou |
+| Após FIX A | `fix` | `True` | Descreveu imagem corretamente (coral/salmão) |
+| Controle | `vision-geral` | `True` | Funcionou antes e depois ✓ |
+
+---
+
+### 22.2 Regra canônica — Escopo do Hermes
+
+```
+HERMES GOVERNA MISSÃO DE FIX.
+HERMES NÃO FILTRA TIPO DE CONTEÚDO.
+```
+
+**Hermes Decision Matrix ativa quando:**
+- `mode === 'fix'` ou `mode === 'hermes'`
+- **E** não há imagem no payload (`hasImage === false`)
+
+**Hermes Decision Matrix inativa quando:**
+- `hasImage === true` — independente do modo selecionado
+- O operador está enviando conteúdo visual para análise
+- Hermes não tem jurisdição sobre análise de imagem
+
+---
+
+### 22.3 Implementação — ordem de detecção obrigatória
+
+```javascript
+// ORDEM CORRETA (pós-FIX A):
+const hasImage   = !!(body.image_base64 && body.image_base64.length > 10);  // ← detectar PRIMEIRO
+const imageMime  = body.image_mime || 'image/jpeg';
+const imageB64   = body.image_base64 || '';
+
+const fixModeInstructions = hermesDecisionMatrix;  // calculado de mode, não de hasImage
+
+const visionAddendum = hasImage
+  ? '\n\nVOCÊ ESTÁ RECEBENDO UMA IMAGEM. Descreva o conteúdo visual com detalhes técnicos...'
+  : '';
+
+const systemPrompt = hasImage
+  ? basePrompt + visionAddendum          // sem Hermes matrix quando há imagem
+  : basePrompt + fixModeInstructions;    // Hermes matrix apenas para text-only fix
+```
+
+**Proibido:**
+```javascript
+// ERRADO — systemPrompt montado antes de hasImage ser declarado:
+const systemPrompt = basePrompt + fixModeInstructions;   // linha X
+const hasImage = !!(body.image_base64 ...);              // linha X+3 — tarde demais
+```
+
+---
+
+### 22.4 Tabela de seleção de system prompt
+
+| `hasImage` | `mode` | `systemPrompt` aplicado |
+|-----------|--------|------------------------|
+| `false` | `fix` / `hermes` | `basePrompt + hermesDecisionMatrix` |
+| `false` | qualquer outro | `basePrompt` (sem additions) |
+| `true` | qualquer | `basePrompt + visionAddendum` |
+
+---
+
+### 22.5 FIX B — `handleZipUpload` pipeline completo (mesmo commit)
+
+Antes do FIX B, `handleZipUpload` tinha pipeline incompleto:
+
+| Campo | Antes | Depois |
+|-------|-------|--------|
+| `mode` | `'fix'` hardcoded | `modeSelect.value` do usuário |
+| `model` | ausente | `modelSelect.value` do usuário |
+| Hermes render | ❌ raw text | ✅ `parseHermesBlock` + `renderHermesBlock` |
+| Session history | ❌ ausente | ✅ `addToHistory` (user + assistant) |
+| Fetch badge | ❌ ausente | ✅ `renderFetchBadge` (§21) |
+| Timeout | ❌ sem timeout — hung forever | ✅ `AbortController` 25s com mensagem |
+| `r.ok` check | ❌ JSON parse em qualquer resposta | ✅ `if (!r.ok) reject HTTP status` |
+| Limpar textarea | ❌ não limpava | ✅ `promptInput.value = ''` após ZIP |
+
+---
+
+### 22.6 Frase-síntese
+
+```
+Hermes decide sobre código e missão de fix.
+Hermes não é porteiro de tipo de conteúdo.
+Quando há imagem, visionAddendum substitui hermesDecisionMatrix.
+hasImage deve ser detectado ANTES de montar o systemPrompt.
+```
+
