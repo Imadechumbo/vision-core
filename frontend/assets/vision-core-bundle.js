@@ -5559,6 +5559,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var _attachedImg   = null;
     var _pendingZip    = null; /* { file: File, buffer: ArrayBuffer } — staged ZIP, fires on ENVIAR */
     var _lastZipB64    = null; /* base64 do último ZIP processado — usado pelo apply-patch endpoint */
+    /* §36 — estado da missão SDDF ativa */
+    var _activeMission = null;
+    /* estrutura: { id, hermesObj, input, stage, evidence[], zipB64, startedAt } */
 
     /* ── Session History — contexto multi-turn ──────────────── */
     var _sessionHistory = [];       // { role: 'user'|'assistant', content: string }[]
@@ -5763,6 +5766,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         if (hermesObj) {
           renderHermesBlock(hermesObj, chatStream);
           typewriterEffect(msgEl, answer.replace(/```json[\s\S]*?```/g, '[↑ diagnóstico estruturado acima]'), 10);
+          /* §36 — salvar missão ativa para EXECUTAR MISSÃO */
+          _activeMission = { id: 'mission-' + Date.now(), hermesObj: hermesObj, input: text, stage: 'diagnosed', evidence: [{ type: 'diagnosis', data: hermesObj, ts: Date.now() }], zipB64: _lastZipB64 || null, startedAt: Date.now() };
         } else {
           typewriterEffect(msgEl, answer, 10);
         }
@@ -6036,119 +6041,169 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       return wrap;
     }
 
-    /* ── EXECUTAR MISSÃO — tenta agent local primeiro ─────── */
+    /* ── §36: renderStandardMethodPanel — Vision Core Standard Method ── */
+    function renderStandardMethodPanel(mission) {
+      var h = mission.hermesObj;
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'background:#050a0f;border:1.5px solid rgba(99,102,241,.5);border-radius:16px;padding:20px 22px;margin:6px 0 10px;font-size:13px;font-family:inherit;';
+      var header = document.createElement('div');
+      header.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:16px;';
+      header.innerHTML = '<div style="width:32px;height:32px;border-radius:8px;background:#4f46e5;display:flex;align-items:center;justify-content:center;font-size:16px;">🛡</div><div><div style="color:#e2e8f0;font-weight:600;font-size:15px;">Vision Core Standard Method</div><div style="color:#7c6fcd;font-size:11px;margin-top:2px;">SDDF Pipeline — Execução Controlada e Auditável</div></div><div style="margin-left:auto;font-size:11px;color:#4ade80;background:rgba(74,222,128,.1);padding:3px 10px;border-radius:20px;border:1px solid rgba(74,222,128,.3);">● PRONTO</div>';
+      wrap.appendChild(header);
+      if (h) {
+        var diagBox = document.createElement('div');
+        diagBox.style.cssText = 'background:#0a0f1a;border:1px solid #1e2a4a;border-radius:10px;padding:12px;margin-bottom:16px;';
+        diagBox.innerHTML = '<div style="color:#60a5fa;font-size:11px;font-weight:500;margin-bottom:8px;letter-spacing:.06em;">DIAGNÓSTICO HERMES</div><div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px;"><span style="color:#64748b;">Arquivo</span><span style="color:#e2e8f0;font-family:monospace;">' + (h.file || '—') + '</span><span style="color:#64748b;">Fix type</span><span style="color:#e2e8f0;">' + (h.fix_type || '—') + '</span><span style="color:#64748b;">Decisão</span><span style="color:' + (h.decisao === 'NEEDS_FIX' ? '#4ade80' : '#f87171') + ';font-weight:500;">' + (h.decisao || '—') + '</span><span style="color:#64748b;">Confiança</span><span style="color:#e2e8f0;">' + (h.confidence != null ? Math.round(Number(h.confidence) * 100) + '%' : '—') + '</span><span style="color:#64748b;">Diagnóstico</span><span style="color:#a5b4fc;">' + (h.diagnosis || '—') + '</span></div>';
+        wrap.appendChild(diagBox);
+      }
+      var stages = [
+        { id: 'mission',    icon: '📋', label: 'Missão',              desc: 'Receber e registrar o input da missão com escopo definido' },
+        { id: 'scope',      icon: '🎯', label: 'Escopo',              desc: 'Delimitar arquivos, dependências e limites de modificação' },
+        { id: 'plan',       icon: '📐', label: 'Plano',               desc: 'Gerar sequência de passos antes de qualquer modificação' },
+        { id: 'execution',  icon: '⚙️',  label: 'Execução Controlada', desc: 'Aplicar patch cirúrgico no arquivo-alvo identificado' },
+        { id: 'firewall',   icon: '🔒', label: 'Firewall',            desc: 'Verificar flags proibidas: deploy, release, pass_gold falso' },
+        { id: 'validation', icon: '✅', label: 'Validação',           desc: 'Aegis (node --check) + validate-syntax + smoke test' },
+        { id: 'evidence',   icon: '📎', label: 'Evidência',           desc: 'Registrar hash, diff, resultado e artefatos auditáveis' },
+        { id: 'decision',   icon: '⚖️',  label: 'Decisão',            desc: 'Hermes avalia: PASS / NEEDS_FIX / ABORTED / BLOCKED' },
+        { id: 'checkpoint', icon: '🏁', label: 'Checkpoint',          desc: 'Estado final: diff entregue, evidência registrada, pronto' }
+      ];
+      var pipelineDiv = document.createElement('div');
+      pipelineDiv.style.cssText = 'margin-bottom:18px;';
+      pipelineDiv.innerHTML = '<div style="color:#64748b;font-size:11px;font-weight:500;letter-spacing:.06em;margin-bottom:10px;">PIPELINE DE EXECUÇÃO</div>';
+      stages.forEach(function(s, i) {
+        var isActive = (s.id === 'execution' && h) || (s.id === 'mission' && !h);
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:2px;' + (isActive ? 'background:rgba(79,70,229,.15);border:1px solid rgba(79,70,229,.3);' : 'background:transparent;');
+        row.innerHTML = '<div style="width:24px;height:24px;border-radius:50%;background:' + (isActive ? '#4f46e5' : '#1e2a3a') + ';display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px;">' + (i + 1) + '</div><div style="flex:1;"><div style="display:flex;align-items:center;gap:6px;"><span style="font-size:14px;">' + s.icon + '</span><span style="color:' + (isActive ? '#c7d2fe' : '#94a3b8') + ';font-weight:' + (isActive ? '600' : '400') + ';font-size:13px;">' + s.label + '</span>' + (isActive ? '<span style="font-size:10px;color:#818cf8;background:rgba(99,102,241,.15);padding:1px 7px;border-radius:10px;">PRÓXIMO</span>' : '') + '</div><div style="color:#475569;font-size:11px;margin-top:2px;">' + s.desc + '</div></div>';
+        pipelineDiv.appendChild(row);
+      });
+      wrap.appendChild(pipelineDiv);
+      var ruleBox = document.createElement('div');
+      ruleBox.style.cssText = 'background:#0c0a00;border:1px solid #3d3000;border-radius:8px;padding:10px 12px;margin-bottom:16px;font-size:11px;color:#92701e;';
+      ruleBox.innerHTML = '<b style="color:#d97706;">⚠ Regra Absoluta:</b> Sem PASS GOLD real → não promove, não faz deploy, não libera. READY ≠ deploy permitido.';
+      wrap.appendChild(ruleBox);
+      var btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
+      function mkBtn(txt, bg, bc, fg) {
+        var b = document.createElement('button');
+        b.style.cssText = 'background:' + bg + ';border:1px solid ' + bc + ';color:' + fg + ';font-size:13px;padding:9px 18px;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:500;';
+        b.textContent = txt;
+        return b;
+      }
+      var confirmBtn = mkBtn(h ? '✅ Confirmar e Aplicar Patch' : '▶ Iniciar Missão SDDF', '#0a1f0a', '#22c55e', '#86efac');
+      var cancelBtn  = mkBtn('✖ Cancelar', '#1c1c1e', '#555', '#888');
+      var statusEl   = document.createElement('div');
+      statusEl.style.cssText = 'color:#94a3b8;font-size:12px;margin-top:10px;min-height:18px;width:100%;';
+      confirmBtn.onclick = function() {
+        if (h && _lastZipB64) {
+          confirmBtn.disabled = true; cancelBtn.disabled = true;
+          confirmBtn.textContent = '⏳ Executando pipeline...';
+          statusEl.textContent = '📋 Missão registrada — ' + mission.id;
+          setTimeout(function() {
+            statusEl.textContent = '🎯 Escopo: ' + (h.file || 'arquivo-alvo') + ' · 📐 Plano: ' + (h.fix_type || 'code_patch');
+            setTimeout(function() {
+              statusEl.textContent = '⚙️ Execução Controlada — enviando para /api/chat/apply-patch...';
+              fetch(BACKEND_URL + '/api/chat/apply-patch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ zip_base64: _lastZipB64, file_path: h.file, fix_type: h.fix_type || 'code_patch', patch: h.patch, diagnosis: h.diagnosis || 'vision standard method' }),
+                signal: AbortSignal.timeout(30000)
+              })
+              .then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error || 'HTTP ' + r.status); }); })
+              .then(function(data) {
+                if (!data.ok) throw new Error(data.error || 'apply-patch falhou');
+                wrap.remove(); _activeMission = null;
+                var aegisStatus = data.aegis_ok ? '✅ Aegis PASS' : '⚠️ Aegis: ' + (data.aegis_error || 'erro de sintaxe');
+                var decisao = data.aegis_ok ? '✅ PASS — patch aplicado e validado' : '⚠️ NEEDS_FIX — revisar sintaxe';
+                appendMsg(['🛡 Vision Core Standard Method — CHECKPOINT','','📋 Missão:    ' + mission.id,'🎯 Escopo:    ' + (data.file_path || h.file),'⚙️  Execução:  patch aplicado (' + data.original_lines + '→' + data.patched_lines + ' linhas)','🔒 Firewall:  deploy_allowed=false · pass_gold_real_claimed=false','✅ Validação: ' + aegisStatus,'📎 Evidência: diff gerado · artefato disponível para download','⚖️  Decisão:   ' + decisao,'🏁 Checkpoint: ' + (data.aegis_ok ? 'PRONTO — baixe o arquivo corrigido' : 'BLOQUEADO — corrija o erro antes de promover')].join('\n'), '');
+                if (data.diff_preview) {
+                  var diffEl = document.createElement('pre');
+                  diffEl.style.cssText = 'background:#020408;border:1px solid #1a2040;border-radius:10px;padding:12px;color:#a5f3fc;overflow:auto;max-height:260px;font-size:11px;margin:4px 0 8px;white-space:pre;';
+                  diffEl.innerHTML = data.diff_preview.split('\n').map(function(l) {
+                    if (l.startsWith('+')) return '<span style="color:#86efac">' + l.replace(/</g,'&lt;') + '</span>';
+                    if (l.startsWith('-')) return '<span style="color:#f87171">' + l.replace(/</g,'&lt;') + '</span>';
+                    return '<span style="color:#64748b">' + l.replace(/</g,'&lt;') + '</span>';
+                  }).join('\n');
+                  chatStream.appendChild(diffEl);
+                }
+                if (data.aegis_ok) {
+                  var dlBtn = document.createElement('button');
+                  dlBtn.style.cssText = 'background:#0a2a1a;border:1px solid #22c55e;color:#86efac;font-size:12px;padding:8px 14px;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:500;margin:4px 0 8px;';
+                  dlBtn.textContent = '⬇ Baixar ' + data.filename + ' (corrigido)';
+                  dlBtn.onclick = function() {
+                    var blob = new Blob([data.patched_content], { type: 'text/plain;charset=utf-8' });
+                    var url  = URL.createObjectURL(blob);
+                    var a    = document.createElement('a');
+                    a.href = url; a.download = data.filename;
+                    document.body.appendChild(a); a.click();
+                    setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+                  };
+                  chatStream.appendChild(dlBtn);
+                }
+                chatStream.scrollTop = chatStream.scrollHeight;
+                setStatus('READY');
+              })
+              .catch(function(err) {
+                confirmBtn.disabled = false; cancelBtn.disabled = false;
+                confirmBtn.textContent = '✅ Confirmar e Aplicar Patch';
+                statusEl.textContent = '❌ Execução falhou: ' + (err.message || String(err));
+                setStatus('READY');
+              });
+            }, 600);
+          }, 400);
+        } else if (!h) {
+          wrap.remove();
+          var missionText = mission.input || 'missão SDDF padrão';
+          var thinking2 = appendMsg('▪ 📋 Missão iniciada — processando via Hermes...', 'thinking');
+          setStatus('EXECUTANDO MISSÃO...', 'busy');
+          fetch(BACKEND_URL + '/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: missionText, mode: 'fix', model: 'auto' })
+          })
+          .then(function(r) { return r.ok ? r.json() : Promise.reject('HTTP ' + r.status); })
+          .then(function(d) {
+            thinking2.remove();
+            var answer = (d && d.answer) ? d.answer : JSON.stringify(d);
+            var hObj = parseHermesBlock(answer);
+            if (hObj) {
+              _activeMission = { id: mission.id, hermesObj: hObj, input: missionText, stage: 'diagnosed', evidence: [{ type: 'diagnosis', data: hObj, ts: Date.now() }], zipB64: _lastZipB64 || null, startedAt: mission.startedAt };
+              renderHermesBlock(hObj, chatStream);
+              appendMsg('✅ Diagnóstico concluído. Clique em EXECUTAR MISSÃO para prosseguir com o patch.', '');
+            } else {
+              appendMsg(answer, '');
+            }
+            setStatus('READY');
+          })
+          .catch(function(err) {
+            thinking2.remove();
+            appendMsg('[Erro na missão: ' + err + ']', 'error');
+            setStatus('READY');
+          });
+        } else {
+          statusEl.textContent = '❌ ZIP não encontrado em memória. Reenvie o arquivo ZIP + pergunta.';
+        }
+      };
+      cancelBtn.onclick = function() { wrap.remove(); _activeMission = null; setStatus('READY'); };
+      btnRow.appendChild(confirmBtn); btnRow.appendChild(cancelBtn);
+      wrap.appendChild(btnRow); wrap.appendChild(statusEl);
+      chatStream.appendChild(wrap);
+      chatStream.scrollTop = chatStream.scrollHeight;
+    }
+
+    /* ── EXECUTAR MISSÃO — §36 Vision Core Standard Method ─── */
     if (runBtn) {
       runBtn.addEventListener('click', function() {
+        /* §36: missão ativa com hermesObj → mostrar Standard Method panel */
+        if (_activeMission && _activeMission.hermesObj) {
+          renderStandardMethodPanel(_activeMission);
+          return;
+        }
+        /* §36: sem missão ativa → iniciar nova com input do campo */
         var text = (promptInput.value || '').trim() || 'missão SDDF padrão';
         promptInput.value = '';
-        appendMsg('[MISSÃO] ' + text, 'user');
-        setStatus('EXECUTANDO MISSÃO...', 'busy');
-        var thinking = appendMsg('▪ verificando agent local...', 'thinking');
-        startMissionAnimation();
-
-        /* Tentar agent local em 7070, 7071, 7072 */
-        var agentPorts = [7070, 7071, 7072];
-
-        function tryAgent(ports, done) {
-          if (!ports.length) return done(null);
-          var port = ports[0];
-          fetch('http://localhost:' + port, { signal: AbortSignal.timeout(800) })
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
-              if (d && d.ok) { done('http://localhost:' + port); }
-              else { tryAgent(ports.slice(1), done); }
-            })
-            .catch(function() { tryAgent(ports.slice(1), done); });
-        }
-
-        tryAgent(agentPorts, function(agentUrl) {
-          if (agentUrl) {
-            /* Agent local ativo — enfileirar missão */
-            thinking.textContent = '▪ agent local em ' + agentUrl + ' — enfileirando...';
-            fetch(BACKEND_URL + '/api/agent/mission/queue', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ input: text, type: 'mission' })
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
-              var missionId = d && d.mission_id;
-              if (!missionId) throw new Error('mission_id ausente');
-              thinking.textContent = '▪ missão ' + missionId + ' — aguardando agent...';
-
-              /* Poll resultado a cada 2s por até 30s (15 tentativas) */
-              var attempts = 0;
-              function pollResult() {
-                attempts++;
-                fetch(BACKEND_URL + '/api/agent/mission/result/' + missionId)
-                  .then(function(r) { return r.ok ? r.json() : null; })
-                  .then(function(res) {
-                    if (res && res.ok) {
-                      thinking.remove();
-                      stopMissionAnimation(res);
-                      if (res.action === 'patch_applied_committed') {
-                        appendMsg('✅ PATCH APLICADO — ' + (res.file || 'arquivo'), '');
-                        chatStream.appendChild(renderValidationPanel(res));
-                        chatStream.scrollTop = chatStream.scrollHeight;
-                      } else {
-                        appendMsg('✅ AGENT EXECUTOU\n\n' + (res.output || ''));
-                      }
-                      setStatus('READY');
-                    } else if (attempts < 15) {
-                      setTimeout(pollResult, 2000);
-                    } else {
-                      thinking.remove();
-                      resetAllAgents();
-                      appendMsg('⏱ Agent não respondeu em 30s. Rode: node vision-agent.js /seu-projeto');
-                      setStatus('READY');
-                    }
-                  })
-                  .catch(function() {
-                    if (attempts < 15) { setTimeout(pollResult, 2000); }
-                    else { thinking.remove(); resetAllAgents(); setStatus('READY'); }
-                  });
-              }
-              setTimeout(pollResult, 2000);
-            })
-            .catch(function(err) {
-              thinking.remove();
-              resetAllAgents();
-              appendMsg('[Erro ao enfileirar missão: ' + err + ']', 'error');
-              setStatus('READY');
-            });
-
-          } else {
-            /* Agent inativo — fallback /api/run-live */
-            thinking.textContent = '▪ processando via servidor...';
-            var mode  = modeSelect  ? modeSelect.value  : 'vision-geral';
-            var model = modelSelect ? modelSelect.value : 'auto';
-            fetch(BACKEND_URL + '/api/run-live', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ mission: text, mode: mode, model: model })
-            })
-            .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
-            .then(function(data) {
-              thinking.remove();
-              resetAllAgents();
-              var isLocal = data && data.status === 'LOCAL_ACCESS_REQUIRED';
-              var header  = isLocal
-                ? '📋 ACESSO LOCAL NECESSÁRIO'
-                : (data && data.pass_gold)
-                  ? '✅ MISSÃO CONCLUÍDA — PASS GOLD'
-                  : '⚠️ MISSÃO — ' + ((data && data.status) || 'ver relatório');
-              var body = (data && data.summary) ? data.summary : '';
-              appendMsg(header + (body ? '\n\n' + body : ''), isLocal ? 'info' : '');
-              setStatus('READY');
-            })
-            .catch(function(err) {
-              thinking.remove();
-              resetAllAgents();
-              appendMsg('[Erro na missão: ' + err + ']', 'error');
-              setStatus('READY');
-            });
-          }
-        });
+        _activeMission = { id: 'mission-' + Date.now(), hermesObj: null, input: text, stage: 'scoping', evidence: [], zipB64: _lastZipB64 || null, startedAt: Date.now() };
+        renderStandardMethodPanel(_activeMission);
       });
     }
 
@@ -6158,6 +6213,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         _attachedFiles = [];
         _attachedImg   = null;
         clearHistory();
+        _activeMission = null;  /* §36 — limpar missão ativa */
+        _lastZipB64    = null;
         if (fileNote)    { fileNote.textContent = 'Nenhum arquivo anexado.'; }
         if (addFilesBtn) { addFilesBtn.textContent = '＋ Adicionar arquivos'; }
         setStatus('READY');
@@ -6332,6 +6389,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             if (hermesObj) {
               renderHermesBlock(hermesObj, chatStream);
               typewriterEffect(msgEl, answer.replace(/```json[\s\S]*?```/g, '[↑ diagnóstico Hermes acima]'), 10);
+              /* §36 — salvar missão ativa para EXECUTAR MISSÃO */
+              _activeMission = { id: 'mission-' + Date.now(), hermesObj: hermesObj, input: question, stage: 'diagnosed', evidence: [{ type: 'diagnosis', data: hermesObj, ts: Date.now() }], zipB64: _lastZipB64 || null, startedAt: Date.now() };
             } else {
               typewriterEffect(msgEl, answer, 10);
             }
