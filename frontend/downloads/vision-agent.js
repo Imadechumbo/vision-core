@@ -436,18 +436,53 @@ function applyPatchMission(m) {
       console.log('  › ' + agent + ': ' + detail);
     }
 
-    // Resolver caminho relativo ao ROOT
+    // Resolver caminho — tenta direto, fallback busca por nome no projeto
     var targetFile = m.file ? path.resolve(ROOT, m.file) : null;
     if (!targetFile || !fs.existsSync(targetFile)) {
-      step('Resolver', false, 'não encontrado: ' + (m.file || 'null'));
-      return resolve({
-        mission_id: m.id, ok: false, pass_gold: false,
-        action: 'patch_failed',
-        output: '❌ Arquivo não encontrado: ' + (m.file || 'null') +
-                '\n\nVerifique se o Vision Agent foi iniciado na raiz do projeto correto.\n' +
-                'Raiz atual: ' + ROOT,
-        log: log, steps: steps, sddf: SDDF_BASELINE
-      });
+      // Fallback: buscar pelo nome do arquivo dentro do projeto
+      var baseName = m.file ? path.basename(m.file) : null;
+      if (baseName) {
+        var found = null;
+        function findFile(dir, depth) {
+          if (depth > 6 || found) return;
+          var entries;
+          try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch(e) { return; }
+          for (var i = 0; i < entries.length; i++) {
+            if (found) return;
+            var e = entries[i];
+            if (SKIP_DIRS.has(e.name)) continue;
+            var full = path.join(dir, e.name);
+            if (e.isDirectory()) { findFile(full, depth + 1); }
+            else if (e.name === baseName) { found = full; }
+          }
+        }
+        findFile(ROOT, 0);
+        if (found) {
+          step('Resolver', true, 'busca por nome: ' + path.relative(ROOT, found));
+          targetFile = found;
+        } else {
+          step('Resolver', false, 'não encontrado por caminho ou nome: ' + m.file);
+          return resolve({
+            mission_id: m.id, ok: false, pass_gold: false,
+            action: 'patch_failed',
+            output: '❌ Arquivo não encontrado: ' + m.file +
+                    '\n\nBuscado em: ' + ROOT +
+                    '\nVerifique se o Vision Agent foi iniciado na raiz correta do projeto.',
+            log: log, steps: steps, sddf: SDDF_BASELINE
+          });
+        }
+      } else {
+        step('Resolver', false, 'campo file ausente na missão');
+        return resolve({
+          mission_id: m.id, ok: false, pass_gold: false,
+          action: 'patch_failed',
+          output: '❌ Campo file ausente na missão apply_patch.',
+          log: log, steps: steps, sddf: SDDF_BASELINE
+        });
+      }
+    } else {
+      var relTarget0 = path.relative(ROOT, targetFile);
+      step('Resolver', true, relTarget0);
     }
 
     var relTarget = path.relative(ROOT, targetFile);

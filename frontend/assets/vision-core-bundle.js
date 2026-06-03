@@ -5928,7 +5928,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       info.textContent = [
         'Arquivo  : ' + (hermesObj.file        || '—'),
         'Fix type : ' + (hermesObj.fix_type     || '—'),
-        'Confiança: ' + (hermesObj.confidence   || '—') + '%',
+        'Confiança: ' + (hermesObj.confidence != null ? (Number(hermesObj.confidence) * 100).toFixed(0) : '—') + '%',
         'Diagnóstico: ' + (hermesObj.diagnosis   || '—'),
         '', '── PATCH ──', pstr
       ].join('\n');
@@ -6316,7 +6316,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
             /* §apply_patch — se diagnóstico tem patch, mostrar painel de aplicação */
             if (hermesObj && hermesObj.patch && hermesObj.file &&
-                hermesObj.decisao && hermesObj.decisao.toUpperCase() === 'FIX') {
+                hermesObj.decisao && hermesObj.decisao.toUpperCase() === 'NEEDS_FIX') {
               chatStream.appendChild(renderApplyFixPanel(hermesObj));
               chatStream.scrollTop = chatStream.scrollHeight;
             }
