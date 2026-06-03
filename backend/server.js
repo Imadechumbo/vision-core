@@ -1208,7 +1208,30 @@ app.post('/api/chat', async (req, res) => {
     } catch (_) { /* fall through */ }
   }
 
-  /* ── 3. OpenRouter — modelos gratuitos ─────────────────────── */
+  /* ── 3. Cerebras — text-only, hardware acelerado, fallback rápido ── */
+  const CB_KEY   = process.env.CEREBRAS_API_KEY || '';
+  const CB_MODEL = process.env.CEREBRAS_MODEL   || 'llama-3.3-70b';
+  if (CB_KEY && !CB_KEY.includes('placeholder') && !hasImage) {
+    try {
+      const r = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${CB_KEY}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: CB_MODEL,
+          max_tokens: 1024,
+          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }]
+        }),
+        signal: AbortSignal.timeout(30000)
+      });
+      if (r.ok) {
+        const data = await r.json();
+        const answer = data?.choices?.[0]?.message?.content || '';
+        if (answer) return sendOk(res, { answer, provider: 'cerebras', model: data.model || CB_MODEL, mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
+      }
+    } catch (_) { /* fall through */ }
+  }
+
+  /* ── 4. OpenRouter — modelos gratuitos ─────────────────────── */
   const OR_KEY   = process.env.OPENROUTER_API_KEY || '';
   const OR_MODEL = process.env.OPENROUTER_MODEL   || 'qwen/qwen3-plus:free';
   if (OR_KEY && !OR_KEY.includes('placeholder')) {
@@ -1231,13 +1254,13 @@ app.post('/api/chat', async (req, res) => {
     } catch (_) { /* fall through */ }
   }
 
-  /* ── 4. Local fallback ──────────────────────────────────────── */
+  /* ── 5. Local fallback ──────────────────────────────────────── */
   /* §27: não ecoar payload — retornar erro honesto sem incluir body.message */
   const _payloadLen = (body.message || '').length;
   const _localAnswer = '⚠️ **Todos os provedores de IA falharam** (payload: ' + _payloadLen + ' chars).\n\n'
     + 'Causas prováveis:\n'
     + '- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars; Gemini: timeout 45s)\n'
-    + '- API keys ausentes ou quota esgotada (GROQ_API_KEY, GEMINI_API_KEY)\n'
+    + '- API keys ausentes ou quota esgotada (GROQ_API_KEY, GEMINI_API_KEY, CEREBRAS_API_KEY)\n'
     + '- Erro de rede ou timeout\n\n'
     + 'Ação: reduza o ZIP (use apenas os arquivos relevantes) ou verifique as env vars no EB.';
   return sendOk(res, { answer: _localAnswer, provider: 'local', model: 'copilot-local', mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
