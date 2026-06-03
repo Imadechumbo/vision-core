@@ -1354,7 +1354,7 @@ app.post('/api/unzip-context', async (req, res) => {
     candidates.sort((a, b) => a.sz - b.sz);
 
     const files = [];
-    const LIMIT = 24000; /* §24v6: paridade com frontend — games-2026-feature.js=23K cabe inteiro */
+    const LIMIT = 14000; /* §24v7c: paridade com frontend — 4×14K=56K ≤ 60K total */
     for (const c of candidates.slice(0, 5)) { /* MAX_FILES=5 paridade */
       try {
         const content = c.entry.getData().toString('utf8');

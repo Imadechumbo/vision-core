@@ -6201,10 +6201,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
       var TEXT_EXTS = ['.js','.json','.ts','.jsx','.tsx','.html','.css','.md','.txt','.py','.go','.mjs','.cjs'];
       var SKIP_DIRS = ['node_modules','.git','dist','.next','build','coverage','__pycache__'];
-      /* FIX D §24 v6 — tier ext + JS front-not-backend DESC + budget 80K + file 24K + max 5 */
+      /* §24v7c — SIZE DESC + pre-add check + 14K/arquivo + 60K total; 4×14K=56K ≤ 60K */
       var SKIP_NAME = /(?:cache|lock|\.min\.|\.bundle\.|\.map$|vendor\.)/i;
-      var TOTAL_BUDGET = 80000; /* chars — Gemini suporta, 16s medido */
-      var FILE_LIMIT   = 24000; /* §24v6: games-2026-feature.js=23K → cabe inteiro */
+      var TOTAL_BUDGET = 60000; /* §24v7c: 4×14K=56K → 60K confirmed 9s on Gemini */
+      var FILE_LIMIT   = 14000; /* §24v7c: LOCAL_REAL_COVERS@10162 → 3838 chars visíveis */
       var MAX_FILES    = 5;     /* dual guard: para por budget OU contagem */
       /* Tier: 1A=JS front/ (maior DESC), 1B=JS backend/, 2=HTML, 3=CSS, 4=JSON, 5=outros */
       function _extTier(ext, relPath) {
@@ -6237,7 +6237,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             var sz = (zipEntry._data && zipEntry._data.uncompressedSize) ? zipEntry._data.uncompressedSize : 0;
             if (sz < 200) return; /* ignorar stubs/arquivos vazios */
             var tier = _extTier(ext, relPath);
-            /* JS tiers: sort DESC (maior = mais lógica); outros: ASC */
+            /* §24v7c: SIZE DESC (maior = mais lógica, tier-1+2 e demais); todos ASC por sortKey */
             var sortKey = (tier <= 2) ? -sz : sz;
             candidates.push({ relPath: relPath, entry: zipEntry, sz: sz, tier: tier, sortKey: sortKey });
           });
@@ -6246,10 +6246,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           });
           /* §24v5: parar por budget OU por contagem máxima de arquivos */
           var budget = 0;
+          /* §24v7: pre-add check — não adiciona se contrib excede budget restante */
           candidates.forEach(function(c) {
-            if (budget >= TOTAL_BUDGET || fileNames.length >= MAX_FILES) return;
+            var contrib = Math.min(c.sz, FILE_LIMIT);
+            if (budget + contrib > TOTAL_BUDGET || fileNames.length >= MAX_FILES) return;
             fileNames.push(c.relPath);
-            budget += Math.min(c.sz, FILE_LIMIT);
+            budget += contrib;
             promises.push(c.entry.async('string').then(function(content) {
               return '[' + c.relPath + ']\n' + content.slice(0, FILE_LIMIT) + (content.length > FILE_LIMIT ? '\n...(truncado em ' + FILE_LIMIT + '/' + content.length + ' chars)' : '');
             }));
