@@ -4670,7 +4670,9 @@
           }
 
           return Promise.all(promises).then(function(contents) {
-            thinking.textContent = '📦 ' + fileNames.length + ' arquivo(s) extraídos — analisando...';
+            /* §debug: mostrar quais arquivos foram selecionados */
+            var shortNames = fileNames.map(function(p){ return p.split('/').pop(); });
+            thinking.textContent = '📦 ' + fileNames.length + ' arquivo(s): ' + shortNames.join(', ') + ' — analisando...';
 
             /* Usar mode/model do seletor do usuário, fallback fix */
             var zipMode  = modeSelect  ? modeSelect.value  : 'fix';
