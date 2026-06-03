@@ -5708,6 +5708,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         /* §32 — limpar imagem anexada para não vazar no próximo ENVIAR */
         _attachedImg = null;
         if (readPrintBtn) { readPrintBtn.textContent = '▧ Ler print/imagem'; }
+        /* §35 FIX1 — mostrar mensagem do usuário no chat antes de processar o ZIP */
+        if (text) {
+          var _zipDisplay = text.slice(0, 300) + (text.length > 300 ? '…' : '');
+          appendMsg('📦 ' + _pz.file.name + ' — ' + _zipDisplay, 'user');
+        }
         _processZipBuffer(_pz.file, _pz.buffer, _zipQuestion, _zipMode, _zipModel);
         return;
       }
@@ -6222,6 +6227,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
           /* FIX D §24 v3 — coletar todos, tier + JS DESC, budget total */
           var candidates = [];
+          /* §35 FIX2 — coletar paths de assets (imagens, SVGs, fonts) para injetar no contexto do LLM */
+          var ASSET_EXTS = ['.png','.jpg','.jpeg','.gif','.svg','.webp','.ico','.mp4','.mp3','.woff','.woff2','.ttf','.pdf'];
+          var assetPaths = [];
           zip.forEach(function(relPath, zipEntry) {
             if (zipEntry.dir) return;
             var skip = SKIP_DIRS.some(function(d) { return relPath.indexOf(d + '/') !== -1 || relPath.indexOf(d + '\\') !== -1; });
@@ -6230,6 +6238,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             if (SKIP_NAME.test(fname)) return;
             var dot = relPath.lastIndexOf('.');
             var ext = dot !== -1 ? relPath.slice(dot).toLowerCase() : '';
+            /* Coletar assets (antes do filtro TEXT_EXTS) */
+            if (ASSET_EXTS.indexOf(ext) !== -1) {
+              /* Normalizar: remover prefixo da pasta raiz do ZIP (ex: technetgamev2-main/) */
+              var parts = relPath.replace(/\\/g, '/').split('/');
+              assetPaths.push(parts.length > 1 ? parts.slice(1).join('/') : relPath);
+            }
             if (TEXT_EXTS.indexOf(ext) === -1) return;
             var sz = (zipEntry._data && zipEntry._data.uncompressedSize) ? zipEntry._data.uncompressedSize : 0;
             if (sz < 200) return; /* ignorar stubs/arquivos vazios */
@@ -6269,9 +6283,14 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             var shortNames = fileNames.map(function(p){ return p.split('/').pop(); });
             thinking.textContent = '📦 ' + fileNames.length + ' arquivo(s): ' + shortNames.join(', ') + ' — analisando...';
 
+            /* §35 FIX2 — prefixo com lista de assets para LLM não inventar caminhos */
+            var assetContext = assetPaths.length > 0
+              ? '\n\n[ASSETS DISPONÍVEIS NO PROJETO — use estes caminhos ao sugerir patches]\n' +
+                assetPaths.sort().map(function(a) { return '  ' + a; }).join('\n')
+              : '';
             /* mode/model passed in from sendMessage (captured at send time) */
             /* §24v9: reverter ordem — tail (arquivo inteiro/específico) fica primeiro no prompt */
-            var context  = question + '\n\n' + contents.slice().reverse().join('\n\n---\n\n');
+            var context  = question + assetContext + '\n\n' + contents.slice().reverse().join('\n\n---\n\n');
 
             /* Adicionar ao histórico de sessão */
             addToHistory('user', '[ZIP: ' + file.name + '] ' + question);
