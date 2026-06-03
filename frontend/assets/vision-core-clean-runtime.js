@@ -4116,6 +4116,7 @@
     /* Attachment state — shared by sendMessage + file button handlers */
     var _attachedFiles = [];
     var _attachedImg   = null;
+    var _pendingZip    = null; /* { file: File, buffer: ArrayBuffer } — staged ZIP, fires on ENVIAR */
 
     /* ── Session History — contexto multi-turn ──────────────── */
     var _sessionHistory = [];       // { role: 'user'|'assistant', content: string }[]
@@ -4252,6 +4253,18 @@
         _attachedFiles = [];
         if (fileNote)    { fileNote.textContent = 'Nenhum arquivo anexado.'; }
         if (addFilesBtn) { addFilesBtn.textContent = '＋ Adicionar arquivos'; }
+      }
+      /* §redesign: ZIP staged — fires here with question captured at send time */
+      if (_pendingZip) {
+        var _pz = _pendingZip; _pendingZip = null;
+        if (fileNote)    { fileNote.textContent    = 'Nenhum arquivo anexado.'; }
+        if (addFilesBtn) { addFilesBtn.textContent = '＋ Adicionar arquivos'; }
+        var _zipQuestion = text || 'Analise o projeto e identifique problemas';
+        promptInput.value = '';
+        var _zipMode  = modeSelect  ? modeSelect.value  : 'fix';
+        var _zipModel = modelSelect ? modelSelect.value : 'auto';
+        _processZipBuffer(_pz.file, _pz.buffer, _zipQuestion, _zipMode, _zipModel);
+        return;
       }
       if (!text && !_attachedImg) return;
       promptInput.value = '';
@@ -4585,17 +4598,25 @@
       });
     }
 
-    /* ── ZIP upload handler — JSZip client-side (elimina timeout/tamanho) ── */
-    function handleZipUpload(file) {
-      var question = (promptInput && promptInput.value.trim()) || '';
-      var _questionWasEmpty = !question;
-      if (_questionWasEmpty) {
-        question = 'Analise o projeto e identifique problemas';
-      }
-      var thinking = appendMsg('📦 Processando ' + file.name + '...', 'thinking');
-      if (_questionWasEmpty) {
-        appendMsg('💡 Dica: digite sua pergunta ANTES de enviar o ZIP para análise direcionada (ex: "por que a imagem X não aparece?"). Analisando de forma geral por enquanto...', 'thinking');
-      }
+    /* ── ZIP: stage on attach, process on ENVIAR ──────────────────────── */
+
+    /* Stage ZIP — read ArrayBuffer now, fire analysis only on sendMessage */
+    function _stageZip(file) {
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        _pendingZip = { file: file, buffer: ev.target.result };
+        if (fileNote)    { fileNote.textContent    = '📦 ' + file.name + ' — adicione sua pergunta e clique ENVIAR'; }
+        if (addFilesBtn) { addFilesBtn.textContent = '📦 ' + file.name; }
+      };
+      reader.onerror = function() {
+        appendMsg('❌ Erro ao ler ZIP: ' + file.name, 'error');
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    /* Core ZIP processing — called by sendMessage with question captured at send time */
+    function _processZipBuffer(file, buffer, question, zipMode, zipModel) {
+      var thinking = appendMsg('📦 Extraindo ' + file.name + '...', 'thinking');
       setStatus('EXTRAINDO ZIP...', 'busy');
 
       if (typeof JSZip === 'undefined') {
@@ -4624,9 +4645,8 @@
         return 6;
       }
 
-      var reader = new FileReader();
-      reader.onload = function(ev) {
-        JSZip.loadAsync(ev.target.result).then(function(zip) {
+      /* buffer already read by _stageZip — process directly */
+      JSZip.loadAsync(buffer).then(function(zip) {
           var promises = [];
           var fileNames = [];
 
@@ -4674,9 +4694,7 @@
             var shortNames = fileNames.map(function(p){ return p.split('/').pop(); });
             thinking.textContent = '📦 ' + fileNames.length + ' arquivo(s): ' + shortNames.join(', ') + ' — analisando...';
 
-            /* Usar mode/model do seletor do usuário, fallback fix */
-            var zipMode  = modeSelect  ? modeSelect.value  : 'fix';
-            var zipModel = modelSelect ? modelSelect.value : 'auto';
+            /* mode/model passed in from sendMessage (captured at send time) */
             var context  = question + '\n\n' + contents.join('\n\n---\n\n');
 
             /* Adicionar ao histórico de sessão */
@@ -4737,10 +4755,7 @@
           appendMsg(msg, 'error');
           setStatus('READY');
         });
-      };
-      reader.onerror = function() { thinking.remove(); setStatus('READY'); appendMsg('❌ Erro ao ler arquivo', 'error'); };
-      reader.readAsArrayBuffer(file);
-    }
+    } /* end _processZipBuffer */
 
     /* ── File upload wiring ───────────────────────────────────── */
 
@@ -4754,8 +4769,8 @@
         else { texts.push(f); }
       });
 
-      /* Process ZIPs immediately */
-      zips.forEach(function(z) { handleZipUpload(z); });
+      /* §redesign: stage ZIP — fires on ENVIAR, not on attach */
+      zips.forEach(function(z) { _stageZip(z); });
 
       /* Accumulate text files for sendMessage */
       if (!texts.length) return;
