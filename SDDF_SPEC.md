@@ -1982,6 +1982,94 @@ Menos contexto = mais acerto é consequência da ordem, não do corte.
 
 ---
 
+## §32 — _attachedImg Leak no ZIP Branch
+
+**Data:** 2026-06-03 | **Commit:** pré-7d4d570
+
+### 32.1 Root Cause
+
+`sendMessage()` — ZIP branch faz `return` em ~linha 4268 antes de `_attachedImg = null` (~linha 4288).
+Quando usuário anexa ZIP + imagem e clica ENVIAR:
+- `_pendingZip` é consumido e processado corretamente.
+- `_attachedImg` **persiste** no estado.
+- No próximo clique de ENVIAR (ou refresh do campo), imagem vaza e é enviada com `mode:fix`.
+- Gate §25 não bloqueia (`hasImage=true` → bypassa hermesDecisionMatrix → IA analisa imagem em vez do ZIP).
+
+### 32.2 Fix
+
+Adicionar antes de `_processZipBuffer()` no ZIP branch:
+
+```javascript
+/* §32 — limpar imagem anexada para não vazar no próximo ENVIAR */
+_attachedImg = null;
+if (readPrintBtn) { readPrintBtn.textContent = '▧ Ler print/imagem'; }
+```
+
+Aplicado em `vision-core-clean-runtime.js` e `vision-core-bundle.js`.
+
+### 32.3 Frase-síntese
+
+```
+ZIP branch early return = _attachedImg nunca limpa. Imagem vaza no ENVIAR seguinte.
+Fix: null + reset antes de _processZipBuffer().
+```
+
+---
+
+## §33 — hermesDecisionMatrix: instrução imperativa de formato JSON
+
+**Data:** 2026-06-03 | **Commit:** 7d4d570 | **Deploy EB:** app-260603_124503027666 | **Deploy CF Pages:** 8647de77.visioncoreai.pages.dev
+
+### 33.1 Problema
+
+Cerebras `gpt-oss-120b` respondia em markdown livre (texto narrativo) sem bloco ` ```json `.
+`parseHermesBlock()` busca fence ` ```json ` — não encontrava → painel azul não aparecia.
+
+Instrução original (fraca):
+```
+Retorne PRIMEIRO um bloco ```json com o patch (quando decisão = NEEDS_FIX):
+```
+
+### 33.2 Fix
+
+```javascript
+// backend/server.js — hermesDecisionMatrix (~linha 1086)
+`OBRIGATÓRIO: sua resposta DEVE começar com um bloco \`\`\`json (mesmo que depois venha texto explicativo).`,
+`NÃO responda em texto livre antes do bloco json. Formato exigido:`,
+```
+
+Instrução imperativa (`OBRIGATÓRIO`, `NÃO`) força modelo a colocar o bloco JSON primeiro independente de estilo padrão de resposta.
+
+### 33.3 Evidência de Produção (PASS GOLD)
+
+Teste ponta-a-ponta em **8647de77.visioncoreai.pages.dev** com `technetgamev2-PRE-hexefix-CLEAN.zip`:
+
+| Step | Resultado |
+|------|-----------|
+| Painel azul aparece? | ✅ Confirmado pelo usuário |
+| Gate ① Diff colorido | ✅ linha `+"Assassin's Creed Codename Hexe": 'assets/img/game-hexe.png'` |
+| Gate ② Botão ⬇ Baixar | ✅ `ok:true`, `patched_content` 416→417 linhas |
+| Gate ③ Hexe em LOCAL_REAL_COVERS | ✅ `aegis_ok:true`, syntax JS válida |
+
+Anchor real: `'Pokemon Pokopia': 'assets/img/game-pokopia.jpg'`
+Patch: key `"Assassin's Creed Codename Hexe"` com double-quotes (necessário por apóstrofe no nome).
+
+### 33.4 Nota sobre quote style
+
+Strings com apóstrofe em JS requerem double-quotes: `"Assassin's Creed Codename Hexe"`.
+O pattern já existe no arquivo: `"Marvel's Wolverine": 'assets/img/game-wolverine.png'`.
+Hermes (LLM) deve seguir este padrão; caso contrário Aegis (`node --check`) rejeita o patch.
+
+### 33.5 Frase-síntese
+
+```
+Instrução fraca "Retorne PRIMEIRO" = estilo do modelo prevalece.
+Instrução imperativa "OBRIGATÓRIO / NÃO" força bloco JSON antes do texto.
+parseHermesBlock() detecta → painel azul → apply-patch → aegis OK → download.
+```
+
+---
+
 ## §GOV — Regras de Governança do Vision Core
 
 Ancoradas na evidência das sessões de 01–03/06/2026. Vinculantes para toda execução futura.
