@@ -1157,6 +1157,23 @@ app.post('/api/chat', async (req, res) => {
     ? basePrompt + visionAddendum
     : basePrompt + fixModeInstructions;
 
+  /* ── §34: ensureHermesJson — re-prompt se mode=fix retornou texto livre ── */
+  /* Chama callFn(extractPrompt) com o diagnóstico já gerado como contexto.   */
+  /* callFn recebe apenas o extractPrompt (sem systemPrompt/message original). */
+  async function ensureHermesJson(answer, callFn) {
+    if (mode !== 'fix') return answer;
+    if (!answer || answer.includes('```json')) return answer;
+    const extractPrompt =
+      'Baseado neste diagnóstico, retorne APENAS o bloco ```json estruturado. ' +
+      'Sem texto antes ou depois. Campos obrigatórios: decisao, file, fix_type, patch, confidence, diagnosis.\n\n' +
+      answer.slice(0, 3000);
+    try {
+      const extracted = await callFn(extractPrompt);
+      if (extracted && extracted.includes('```json')) return extracted;
+    } catch (_) { /* fall through */ }
+    return answer; // fallback: resposta original intacta
+  }
+
   /* ── 1. Groq — rápido, tier gratuito (text-only) ───────────── */
   /* §26: pular Groq para payloads grandes (>24K chars = ~6K tokens Groq free tier) */
   const GROQ_KEY = process.env.GROQ_API_KEY || '';
@@ -1176,7 +1193,20 @@ app.post('/api/chat', async (req, res) => {
       if (r.ok) {
         const data = await r.json();
         const answer = data?.choices?.[0]?.message?.content || '';
-        if (answer) return sendOk(res, { answer, provider: 'groq', model: data.model || 'llama-3.3-70b-versatile', mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
+        if (answer) {
+          const finalAnswer = await ensureHermesJson(answer, async (prompt) => {
+            const r2 = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'content-type': 'application/json' },
+              body: JSON.stringify({ model: 'llama-3.3-70b-versatile', max_tokens: 800, temperature: 0,
+                messages: [{ role: 'user', content: prompt }] }),
+              signal: AbortSignal.timeout(15000)
+            });
+            const d2 = await r2.json();
+            return d2?.choices?.[0]?.message?.content || '';
+          });
+          return sendOk(res, { answer: finalAnswer, provider: 'groq', model: data.model || 'llama-3.3-70b-versatile', mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
+        }
       }
     } catch (_) { /* fall through */ }
   }
@@ -1204,7 +1234,20 @@ app.post('/api/chat', async (req, res) => {
       if (r.ok) {
         const data = await r.json();
         const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if (answer) return sendOk(res, { answer, provider: 'gemini', model: GEMINI_MODEL, mode, vision: hasImage, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
+        if (answer) {
+          const finalAnswer = await ensureHermesJson(answer, async (prompt) => {
+            const url2 = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+            const r2 = await fetch(url2, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
+              signal: AbortSignal.timeout(20000)
+            });
+            const d2 = await r2.json();
+            return d2?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          });
+          return sendOk(res, { answer: finalAnswer, provider: 'gemini', model: GEMINI_MODEL, mode, vision: hasImage, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
+        }
       }
     } catch (_) { /* fall through */ }
   }
@@ -1227,7 +1270,20 @@ app.post('/api/chat', async (req, res) => {
       if (r.ok) {
         const data = await r.json();
         const answer = data?.choices?.[0]?.message?.content || '';
-        if (answer) return sendOk(res, { answer, provider: 'cerebras', model: data.model || CB_MODEL, mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
+        if (answer) {
+          const finalAnswer = await ensureHermesJson(answer, async (prompt) => {
+            const r2 = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${CB_KEY}`, 'content-type': 'application/json' },
+              body: JSON.stringify({ model: CB_MODEL, max_tokens: 800, temperature: 0,
+                messages: [{ role: 'user', content: prompt }] }),
+              signal: AbortSignal.timeout(15000)
+            });
+            const d2 = await r2.json();
+            return d2?.choices?.[0]?.message?.content || '';
+          });
+          return sendOk(res, { answer: finalAnswer, provider: 'cerebras', model: data.model || CB_MODEL, mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
+        }
       }
     } catch (_) { /* fall through */ }
   }
@@ -1250,7 +1306,20 @@ app.post('/api/chat', async (req, res) => {
       if (r.ok) {
         const data = await r.json();
         const answer = data?.choices?.[0]?.message?.content || '';
-        if (answer) return sendOk(res, { answer, provider: 'openrouter', model: OR_MODEL, mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
+        if (answer) {
+          const finalAnswer = await ensureHermesJson(answer, async (prompt) => {
+            const r2 = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${OR_KEY}`, 'content-type': 'application/json', 'HTTP-Referer': 'https://visioncoreai.pages.dev' },
+              body: JSON.stringify({ model: OR_MODEL, max_tokens: 800, temperature: 0,
+                messages: [{ role: 'user', content: prompt }] }),
+              signal: AbortSignal.timeout(20000)
+            });
+            const d2 = await r2.json();
+            return d2?.choices?.[0]?.message?.content || '';
+          });
+          return sendOk(res, { answer: finalAnswer, provider: 'openrouter', model: OR_MODEL, mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
+        }
       }
     } catch (_) { /* fall through */ }
   }
