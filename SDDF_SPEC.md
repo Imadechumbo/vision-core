@@ -2070,6 +2070,89 @@ parseHermesBlock() detecta → painel azul → apply-patch → aegis OK → down
 
 ---
 
+## §34 — ensureHermesJson: re-prompt fallback quando mode=fix retorna texto livre
+
+**Data:** 2026-06-03 | **Commit:** 65c151b | **Deploy EB:** app-260603_165230559588
+
+### 34.1 Problema
+
+`parseHermesBlock()` detecta apenas ` ```json ` fenced blocks.
+Cerebras `gpt-oss-120b` (e ocasionalmente outros modelos) responde ao hermesDecisionMatrix
+em markdown livre — diagnóstico correto em conteúdo, mas sem bloco JSON → painel azul não aparece.
+
+§33 (`OBRIGATÓRIO / NÃO`) reduziu frequência mas não elimina: modelos com fine-tuning forte de estilo
+ou sob carga podem ignorar instrução de formato.
+
+### 34.2 Solução: helper ensureHermesJson
+
+```javascript
+async function ensureHermesJson(answer, callFn) {
+  if (mode !== 'fix') return answer;
+  if (!answer || answer.includes('```json')) return answer;
+  const extractPrompt =
+    'Baseado neste diagnóstico, retorne APENAS o bloco ```json estruturado. ' +
+    'Sem texto antes ou depois. Campos obrigatórios: decisao, file, fix_type, patch, confidence, diagnosis.\n\n' +
+    answer.slice(0, 3000);
+  try {
+    const extracted = await callFn(extractPrompt);
+    if (extracted && extracted.includes('```json')) return extracted;
+  } catch (_) {}
+  return answer; // fallback: resposta original intacta
+}
+```
+
+**Localização:** `backend/server.js` ~linha 1160 (antes dos providers).
+
+### 34.3 Aplicação por provider
+
+| Provider | callFn endpoint | temp | max_tokens | timeout |
+|---|---|---|---|---|
+| Groq | `api.groq.com/openai/v1/chat/completions` | 0 | 800 | 15s |
+| Gemini | `generativelanguage.googleapis.com/...generateContent` | — | — | 20s |
+| Cerebras | `api.cerebras.ai/v1/chat/completions` | 0 | 800 | 15s |
+| OpenRouter | `openrouter.ai/api/v1/chat/completions` | 0 | 800 | 20s |
+
+**Nota Gemini:** API Gemini não aceita campo `temperature` direto no top-level — omitido.
+2ª chamada usa `contents` sem `system_instruction` (só o extractPrompt como user message).
+
+### 34.4 Lógica de disparo
+
+```
+mode !== 'fix'        → skip (retorna answer original — sem overhead em chamadas normais)
+answer inclui ```json → skip (provider obedeceu — caminho feliz, zero overhead)
+answer SEM ```json    → 2ª chamada com extractPrompt (só o diagnóstico, sem contexto original)
+  2ª chamada OK       → retorna nova resposta (deve conter ```json)
+  2ª chamada falha    → retorna answer original (fallback gracioso, texto livre no chat)
+```
+
+### 34.5 Evidência de Produção
+
+Smoke test com file context real (`config/api.js`), mode=fix:
+```
+provider: groq | model: llama-3.3-70b-versatile
+has ```json block: True (Groq obedeceu §33 — helper não acionado)
+decisao: NEEDS_FIX | confidence: 0.9
+patch.search: "return API_URL;" → patch.replace: "return process.env.NODE_ENV === 'production' ? PROD_URL : API_URL;"
+```
+
+Groq obedeceu §33 diretamente. Helper entra em ação quando Cerebras/outro modelo não obedece.
+
+### 34.6 Impacto em latência
+
+- Caminho feliz (```json presente): **zero overhead**
+- Fallback acionado (texto livre): **+1-2s** (Cerebras ~1s, Groq ~0.5s, Gemini ~3s)
+- mode !== 'fix': **zero overhead** (check sai imediatamente)
+
+### 34.7 Frase-síntese
+
+```
+§33 instrução forte reduz, não elimina. §34 é a rede de segurança:
+LLM extrai JSON do próprio diagnóstico → tarefa trivial, temperatura 0, resposta rápida.
+Frontend não muda — parseHermesBlock recebe JSON bem-formado em ambos os casos.
+```
+
+---
+
 ## §GOV — Regras de Governança do Vision Core
 
 Ancoradas na evidência das sessões de 01–03/06/2026. Vinculantes para toda execução futura.
