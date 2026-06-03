@@ -4264,6 +4264,9 @@
         promptInput.value = '';
         var _zipMode  = modeSelect  ? modeSelect.value  : 'fix';
         var _zipModel = modelSelect ? modelSelect.value : 'auto';
+        /* §32 — limpar imagem anexada para não vazar no próximo ENVIAR */
+        _attachedImg = null;
+        if (readPrintBtn) { readPrintBtn.textContent = '▧ Ler print/imagem'; }
         _processZipBuffer(_pz.file, _pz.buffer, _zipQuestion, _zipMode, _zipModel);
         return;
       }
