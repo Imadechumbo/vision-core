@@ -1874,3 +1874,186 @@ Pergunta capturada no momento do clique — não no momento do attach.
 handleZipUpload → _stageZip + _processZipBuffer (question como parâmetro).
 ```
 
+---
+
+## §30 — Colapso Silencioso de Providers de Tier Gratuito
+
+### 30.1 Evidência
+
+Sessão de 03/06/2026 — diagnóstico do ZIP technetgamev2 via Vision AI Command.
+
+Provider chain configurada: Groq → Gemini → Cerebras → OpenRouter → local.
+
+Falhas observadas:
+
+| Provider | Modelo configurado | Erro | Duração do silêncio |
+|---|---|---|---|
+| Cerebras | `llama-3.3-70b` | 404 — modelo removido da API | Horas (mascarado pelo fallback) |
+| OpenRouter | `qwen/qwen3-plus:free` | 400 — modelo morto | Horas (mascarado pelo fallback) |
+
+O fallback `local` (provider echo) mascarou as falhas por horas: o sistema continuava respondendo com conteúdo genérico, dando aparência de funcionamento normal.
+
+### 30.2 Root Cause
+
+O backend não distingue entre:
+- **config-error** — modelo inexistente, chave inválida, endpoint errado (HTTP 4xx estático)
+- **quota-error** — limite de uso atingido (HTTP 429, temporário)
+
+Ambos caem silenciosamente no `catch` e passam ao próximo provider. O provider `local` é o último fallback e sempre responde — ocultando que todos os provedores reais falharam.
+
+### 30.3 Correção aplicada
+
+```bash
+# EB setenv — efeito imediato sem redeploy de código
+eb setenv CEREBRAS_MODEL=gpt-oss-120b OPENROUTER_MODEL=meta-llama/llama-3.1-8b-instruct
+```
+
+```javascript
+// server.js — defaults corrigidos no código (proteção se env não estiver setado)
+const CB_MODEL = process.env.CEREBRAS_MODEL || 'gpt-oss-120b';           // era: llama-3.3-70b
+const OR_MODEL = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.1-8b-instruct'; // era: qwen/qwen3-plus:free
+```
+
+Commit: `0dea5c2 fix(backend): correct Cerebras + OpenRouter model names`
+
+### 30.4 Backlog (não implementado)
+
+- Logar o HTTP status por provider em cada chamada (não apenas silenciar no catch)
+- Distinguir config-error de quota-error: 4xx estático → alerta permanente; 429 → retry com backoff
+- Dashboard de saúde de providers em `/api/health` com último status HTTP por provider
+
+### 30.5 Frase-síntese
+
+```
+Providers de tier gratuito morrem sem aviso (Cerebras llama-3.3-70b→404, OpenRouter qwen3-plus→400).
+O fallback local mascarou por horas. Fix: eb setenv + defaults corrigidos no código.
+Backlog: logar HTTP por provider, distinguir config-error de quota.
+```
+
+---
+
+## §31 — Saga do Budget de Contexto ZIP (§24 v6→v9)
+
+### 31.1 Motivação
+
+Sessão de 03/06/2026 — upload de `technetgamev2-PRE-hexefix-CLEAN.zip` com pergunta sobre a capa ausente do Hexe. Diagnóstico correto era esperado no arquivo `games-2026-feature.js`. Diagnóstico saiu sobre `main.js`.
+
+### 31.2 Linha do tempo
+
+| Versão | Mudança | Resultado |
+|---|---|---|
+| §24v6 | `MAX_FILES=5`, `TOTAL_BUDGET=80K`, `LEAD_LIMIT=24K` | ZIP grande: `main.js` entrava antes do `games-2026` |
+| §24v7 | Tier-sort: JS front antes de JS backend, tamanho DESC dentro do tier | `games-2026` subiu no ranking, mas ainda entrava no meio |
+| §24v8 | `MAX_FILES=4`, `TOTAL_BUDGET=60K`, `LEAD_LIMIT=12K`, tail inteiro | Seleção correta: `games-2026` era o tail (inteiro=True) |
+| §24v9 | `contents.slice().reverse()` antes do join | Prompt invertido: `games-2026` aparece primeiro — IA lê o arquivo certo |
+
+### 31.3 Root Cause real
+
+O problema nunca foi o tamanho do budget. Foi a **ordem de montagem do prompt**:
+
+```
+ANTES (§24v8):  main.js 12K → feeds 12K → hermes 12K → games-2026 23K
+DEPOIS (§24v9): games-2026 23K → hermes 12K → feeds 12K → main.js 12K
+```
+
+O LLM lê o início do contexto primeiro. Com `main.js` em primeiro, diagnosticava `main.js`. Com `games-2026` em primeiro, diagnosticou `games-2026` corretamente (NEEDS_FIX, confidence 0.92, patch estruturado).
+
+**Lição:** Menos contexto não é sempre a solução. O que importa é **qual arquivo e em que ordem** o LLM recebe.
+
+### 31.4 Commits
+
+```
+3e2f7ca  fix(zip): §24v8 budget revision — MAX_FILES=4, LEAD_LIMIT=12K, tail inteiro
+c29fcc5  fix(zip): §24v9 reverse prompt order — tail file first
+```
+
+### 31.5 Invariante adicionada
+
+> O arquivo mais relevante para a pergunta deve ser o **primeiro** no prompt.
+> A seleção por tier+tamanho garante que ele seja o tail. O `reverse()` garante que o tail vá para o início.
+
+### 31.6 Frase-síntese
+
+```
+Saga §24 v6→v9: o problema nunca foi o tamanho, foi qual arquivo e em que ordem chega.
+Seleção correta (tier+size DESC) + reverse() no join → arquivo alvo primeiro no prompt.
+Menos contexto = mais acerto é consequência da ordem, não do corte.
+```
+
+---
+
+## §GOV — Regras de Governança do Vision Core
+
+Ancoradas na evidência das sessões de 01–03/06/2026. Vinculantes para toda execução futura.
+
+---
+
+### Regra Absoluta — PASS GOLD como portão único de promoção
+
+> **Sem PASS GOLD validado, nenhuma mudança é promovida para produção.**
+
+- PASS GOLD exige evidência de nível `real` (não `simulated`, não `dry-run`, não `sandbox`)
+- `validate-syntax.js` PASS + smoke test com resposta esperada é o mínimo para o gate abrir
+- Commits no `main` sem PASS GOLD são permitidos — deploy sem PASS GOLD não é
+
+---
+
+### Regra nº1 — Escopo Mínimo
+
+> **Resolva apenas o problema apontado. Não expanda.**
+
+Evidência que motivou a regra: correções de provider model (§30) começaram como "só o Cerebras" e ameaçaram expandir para refatoração de toda a cadeia de fallback. O escopo foi contido: 2 linhas no `server.js` + `eb setenv`. Funcionou.
+
+Aplicação prática:
+- Se a missão é "corrigir o modelo do Cerebras", não refatorar o fallback chain inteiro
+- Se a missão é "inverter a ordem do prompt", não alterar o budget ou o tier-sort
+- Cada commit toca o mínimo de arquivos que resolve o problema apontado
+
+---
+
+### Regra nº2 — Contexto Mínimo Suficiente
+
+> **Usar o menor contexto que resolve. Mais contexto não é mais acerto.**
+
+Evidência que motivou a regra: §31 mostrou que aumentar o budget (§24v6: 80K) não ajudou. O que ajudou foi ordenar corretamente 60K. O arquivo errado em primeiro posição gerava diagnóstico errado — independente do tamanho total.
+
+Aplicação prática:
+- Não adicionar arquivos ao contexto do LLM "por precaução"
+- O arquivo mais relevante para a pergunta deve ser o primeiro no prompt (§24v9)
+- `MAX_FILES=4`, `TOTAL_BUDGET=60K` é o equilíbrio validado — não alterar sem evidência de regressão
+
+---
+
+### Regra nº3 — Execução em Sandbox
+
+> **Toda mudança é isolada, validada e reversível antes de ser promovida.**
+
+Evidência que motivou a regra: o endpoint `POST /api/chat/apply-patch` (commit `fe7de77`) foi implementado, validado com `validate-syntax.js` (PASS 8 files) e smoke-tested com payload inválido antes do deploy. O deploy é separado da implementação.
+
+Protocolo obrigatório:
+1. Implementar em branch ou commit local
+2. `node scripts/validate-syntax.js` — deve retornar PASS
+3. Smoke test do endpoint com payload que deve retornar erro conhecido
+4. Só então: `eb deploy` + `wrangler pages deploy`
+5. Smoke test pós-deploy confirma comportamento em produção
+
+---
+
+### Tabela-resumo
+
+| Regra | Enunciado | Evidência |
+|---|---|---|
+| Absoluta | Sem PASS GOLD, nada promove | SDDF §4, todas as sessões |
+| nº1 — Escopo mínimo | Resolve só o apontado, não expanda | §30: 2 linhas resolveram o provider |
+| nº2 — Contexto mínimo suficiente | Menor contexto que resolve; ordem importa mais que volume | §31: reverse() resolveu o que 80K não resolveu |
+| nº3 — Execução em sandbox | Isolado, validado, reversível antes de promover | fe7de77: validate → smoke → deploy separados |
+
+### Frase-síntese
+
+```
+Regra Absoluta: sem PASS GOLD nada promove.
+Regra 1: escopo mínimo — resolve só o apontado.
+Regra 2: contexto mínimo suficiente — ordem importa mais que volume (§31).
+Regra 3: sandbox obrigatório — validar antes de promover (§30, fe7de77).
+```
+
