@@ -4763,11 +4763,12 @@
 
       var TEXT_EXTS = ['.js','.json','.ts','.jsx','.tsx','.html','.css','.md','.txt','.py','.go','.mjs','.cjs'];
       var SKIP_DIRS = ['node_modules','.git','dist','.next','build','coverage','__pycache__'];
-      /* §24v7c — SIZE DESC + pre-add check + 14K/arquivo + 60K total; 4×14K=56K ≤ 60K */
-      var SKIP_NAME = /(?:cache|lock|\.min\.|\.bundle\.|\.map$|vendor\.)/i;
-      var TOTAL_BUDGET = 60000; /* §24v7c: 4×14K=56K → 60K confirmed 9s on Gemini */
-      var FILE_LIMIT   = 14000; /* §24v7c: LOCAL_REAL_COVERS@10162 → 3838 chars visíveis */
-      var MAX_FILES    = 5;     /* dual guard: para por budget OU contagem */
+      /* §24v8 — lead+tail split: primeiro MAX_FILES-1 arquivos recebem LEAD_LIMIT,
+         último arquivo recebe o orçamento restante (min(sz, 60K−3×12K)=~24K) → sem truncação */
+      var SKIP_NAME    = /(?:cache|lock|\.min\.|\.bundle\.|\.map$|vendor\.)/i;
+      var TOTAL_BUDGET = 60000; /* §24v8: 3×12K+24K=60K; games-2026 23726 < 24K → inteiro */
+      var LEAD_LIMIT   = 12000; /* §24v8: primeiros N-1 arquivos */
+      var MAX_FILES    = 4;     /* §24v8: 4 arquivos — 3 lead + 1 tail sem truncação */
       /* Tier: 1A=JS front/ (maior DESC), 1B=JS backend/, 2=HTML, 3=CSS, 4=JSON, 5=outros */
       function _extTier(ext, relPath) {
         if (['.js','.ts','.mjs','.cjs','.jsx','.tsx'].indexOf(ext) !== -1) {
@@ -4806,15 +4807,19 @@
           candidates.sort(function(a, b) {
             return (a.tier !== b.tier) ? (a.tier - b.tier) : (a.sortKey - b.sortKey);
           });
-          /* §24v7: pre-add check — não adiciona se contrib excede budget restante */
+          /* §24v8: lead+tail — primeiro MAX_FILES-1 recebem LEAD_LIMIT; último recebe restante */
           var budget = 0;
           candidates.forEach(function(c) {
-            var contrib = Math.min(c.sz, FILE_LIMIT);
-            if (budget + contrib > TOTAL_BUDGET || fileNames.length >= MAX_FILES) return;
+            if (fileNames.length >= MAX_FILES) return;
+            var isLast  = (fileNames.length === MAX_FILES - 1);
+            var limit   = isLast ? Math.min(c.sz, TOTAL_BUDGET - budget) : LEAD_LIMIT;
+            var contrib = Math.min(c.sz, limit);
+            if (contrib <= 0 || budget + contrib > TOTAL_BUDGET) return;
             fileNames.push(c.relPath);
             budget += contrib;
+            var _lim = limit; /* captura limit para closure async */
             promises.push(c.entry.async('string').then(function(content) {
-              return '[' + c.relPath + ']\n' + content.slice(0, FILE_LIMIT) + (content.length > FILE_LIMIT ? '\n...(truncado em ' + FILE_LIMIT + '/' + content.length + ' chars)' : '');
+              return '[' + c.relPath + ']\n' + content.slice(0, _lim) + (content.length > _lim ? '\n...(truncado em ' + _lim + '/' + content.length + ' chars)' : '');
             }));
           });
 
