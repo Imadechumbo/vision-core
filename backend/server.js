@@ -1210,7 +1210,7 @@ app.post('/api/chat', async (req, res) => {
 
   /* ── 3. Cerebras — text-only, hardware acelerado, fallback rápido ── */
   const CB_KEY   = process.env.CEREBRAS_API_KEY || '';
-  const CB_MODEL = process.env.CEREBRAS_MODEL   || 'llama-3.3-70b';
+  const CB_MODEL = process.env.CEREBRAS_MODEL   || 'gpt-oss-120b';
   if (CB_KEY && !CB_KEY.includes('placeholder') && !hasImage) {
     try {
       const r = await fetch('https://api.cerebras.ai/v1/chat/completions', {
@@ -1233,7 +1233,7 @@ app.post('/api/chat', async (req, res) => {
 
   /* ── 4. OpenRouter — modelos gratuitos ─────────────────────── */
   const OR_KEY   = process.env.OPENROUTER_API_KEY || '';
-  const OR_MODEL = process.env.OPENROUTER_MODEL   || 'qwen/qwen3-plus:free';
+  const OR_MODEL = process.env.OPENROUTER_MODEL   || 'meta-llama/llama-3.1-8b-instruct';
   if (OR_KEY && !OR_KEY.includes('placeholder')) {
     try {
       const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
