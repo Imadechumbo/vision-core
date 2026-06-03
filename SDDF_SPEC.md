@@ -1799,3 +1799,78 @@ Echo root cause: Groq 15s timeout consumia janela antes do Gemini.
 Fix: skip Groq >24K → Gemini direto → 9s → todas as janelas satisfeitas.
 ```
 
+---
+
+## §29 — Staged ZIP Input (Multimodal Attach Pattern)
+
+### 29.1 Motivação
+
+Antes do §29, anexar um ZIP disparava a análise imediatamente (`handleZipUpload` rodava no evento `change` do `<input type="file">`). O usuário não tinha chance de digitar a pergunta antes do fetch ser enviado.
+
+Comportamento problemático:
+```
+[attach ZIP] → JSZip extrai → fetch /api/chat (question = '' ou texto atual do input) → resultado
+```
+
+Pergunta era capturada **no momento do attach** — não no momento do clique ENVIAR.
+
+### 29.2 Fix — Staged Pattern (espelho de `_attachedImg`)
+
+Inspirado no padrão já existente para imagens (`_attachedImg`), que estágia no attach e só processa no `sendMessage`.
+
+**Estado novo:**
+```javascript
+var _pendingZip = null; /* { file: File, buffer: ArrayBuffer } */
+```
+
+**Novo fluxo:**
+```
+[attach ZIP] → _stageZip(file)
+  → FileReader.readAsArrayBuffer (buffer lido agora — sem custo de reprocessar depois)
+  → _pendingZip = { file, buffer }
+  → fileNote: "📦 arquivo.zip — adicione sua pergunta e clique ENVIAR"
+  → (nenhum fetch)
+
+[usuário digita pergunta]
+
+[clica ENVIAR] → sendMessage()
+  → detecta _pendingZip ≠ null
+  → captura text/mode/model DO MOMENTO DO CLIQUE
+  → limpa _pendingZip
+  → chama _processZipBuffer(file, buffer, question, mode, model)
+  → JSZip.loadAsync(buffer) → extração → fetch /api/chat
+```
+
+### 29.3 Funções
+
+| Função | Responsabilidade |
+|--------|-----------------|
+| `_stageZip(file)` | Lê ArrayBuffer via FileReader, armazena em `_pendingZip`, atualiza UI indicator |
+| `_processZipBuffer(file, buffer, q, mode, model)` | JSZip + seleção de arquivos (§24v6) + fetch `/api/chat` — idêntico ao antigo `handleZipUpload` exceto: buffer pré-lido e question/mode/model passados como parâmetros |
+| `sendMessage()` | Pop `_pendingZip` antes do early-return `if (!text && !_attachedImg) return` |
+| `_dispatchFiles(fileList)` | Chama `_stageZip(z)` para ZIPs (antes: `handleZipUpload(z)`) |
+
+### 29.4 Invariantes preservados
+
+- §24v5: dual guard `budget >= TOTAL_BUDGET || fileNames.length >= MAX_FILES`
+- §24v6: `FILE_LIMIT = 24000`, `TOTAL_BUDGET = 80000`, `MAX_FILES = 5`
+- §27: echo guard (`provider === 'local'` → banner vermelho)
+- §28: AbortController 55s no `_processZipBuffer`
+- `_pendingZip = null` ao entrar em `sendMessage` — sem disparo duplo
+
+### 29.5 Commit
+
+```
+1a3f9ed  feat(frontend): ZIP staged input redesign — attach stages, ENVIAR fires
+```
+
+Aplicado em `vision-core-clean-runtime.js` e `vision-core-bundle.js`.
+
+### 29.6 Frase-síntese
+
+```
+ZIP segue o padrão de imagem: ArrayBuffer lido no attach, análise disparada só no ENVIAR.
+Pergunta capturada no momento do clique — não no momento do attach.
+handleZipUpload → _stageZip + _processZipBuffer (question como parâmetro).
+```
+
