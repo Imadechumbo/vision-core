@@ -5911,6 +5911,138 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       return wrap;
     }
 
+    /* ── renderApplyFixPanel — painel de aplicação do patch pré-computado ── */
+    function renderApplyFixPanel(hermesObj) {
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'background:#050a0f;border:1px solid rgba(59,130,246,.4);border-radius:14px;padding:16px;margin:4px 0 8px;font-size:13px;font-family:inherit;';
+
+      var title = document.createElement('div');
+      title.style.cssText = 'color:#60a5fa;font-weight:600;font-size:14px;margin-bottom:10px;';
+      title.textContent = '🔧 Patch proposto — aguardando aprovação para aplicar';
+      wrap.appendChild(title);
+
+      var info = document.createElement('pre');
+      info.style.cssText = 'background:#020408;border:1px solid #1a2040;border-radius:10px;padding:12px;color:#d4d4d8;overflow:auto;max-height:180px;font-size:11px;margin:0 0 12px;white-space:pre-wrap;word-break:break-all;';
+      var pstr = '';
+      try { pstr = JSON.stringify(hermesObj.patch, null, 2); } catch(e) { pstr = String(hermesObj.patch || ''); }
+      info.textContent = [
+        'Arquivo  : ' + (hermesObj.file        || '—'),
+        'Fix type : ' + (hermesObj.fix_type     || '—'),
+        'Confiança: ' + (hermesObj.confidence   || '—') + '%',
+        'Diagnóstico: ' + (hermesObj.diagnosis   || '—'),
+        '', '── PATCH ──', pstr
+      ].join('\n');
+      wrap.appendChild(info);
+
+      var statusEl = document.createElement('div');
+      statusEl.style.cssText = 'color:#94a3b8;font-size:12px;margin-bottom:8px;min-height:18px;';
+      wrap.appendChild(statusEl);
+
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
+
+      function mkBtn(txt, bg, bc, fg) {
+        var b = document.createElement('button');
+        b.style.cssText = 'background:' + bg + ';border:1px solid ' + bc + ';color:' + fg + ';font-size:12px;padding:8px 14px;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:500;';
+        b.textContent = txt;
+        return b;
+      }
+
+      var applyBtn  = mkBtn('🔧 Aplicar Fix via Agent Local', '#1e3a5f', '#3b82f6', '#93c5fd');
+      var cancelBtn = mkBtn('✖ Ignorar',                      '#1c1c1e', '#555',    '#888');
+
+      applyBtn.onclick = function() {
+        if (!hermesObj.patch) { statusEl.textContent = '❌ Patch ausente no diagnóstico.'; return; }
+        applyBtn.disabled = true; cancelBtn.disabled = true;
+        applyBtn.textContent = '⏳ Procurando agent local...';
+        statusEl.textContent = '';
+
+        var agentPorts = [7070, 7071, 7072];
+        function tryAgent(ports, done) {
+          if (!ports.length) return done(null);
+          fetch('http://localhost:' + ports[0], { signal: AbortSignal.timeout(800) })
+            .then(function(r) { return r.json(); })
+            .then(function(d) { if (d && d.ok) { done('http://localhost:' + ports[0]); } else { tryAgent(ports.slice(1), done); } })
+            .catch(function() { tryAgent(ports.slice(1), done); });
+        }
+
+        tryAgent(agentPorts, function(agentUrl) {
+          if (!agentUrl) {
+            applyBtn.disabled = false; cancelBtn.disabled = false;
+            applyBtn.textContent = '🔧 Aplicar Fix via Agent Local';
+            statusEl.innerHTML = '⚠️ Agent local não encontrado.<br>' +
+              'Rode: <code style="background:#111;padding:2px 6px;border-radius:4px;">node vision-agent.js "' + (hermesObj.file ? hermesObj.file.split('/')[0] || '.' : '.') + '"</code>';
+            return;
+          }
+
+          applyBtn.textContent = '⏳ Enviando missão...';
+          statusEl.textContent = 'Agent em ' + agentUrl;
+
+          fetch(BACKEND_URL + '/api/agent/mission/queue', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+              type:      'apply_patch',
+              file:      hermesObj.file,
+              fix_type:  hermesObj.fix_type  || 'code_patch',
+              patch:     hermesObj.patch,
+              diagnosis: hermesObj.diagnosis || 'vision fix'
+            })
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            var missionId = d && d.mission_id;
+            if (!missionId) throw new Error('mission_id ausente');
+            applyBtn.textContent = '⏳ Aplicando patch...';
+            statusEl.textContent = 'Missão ' + missionId + ' — aguardando...';
+
+            var attempts = 0;
+            function pollResult() {
+              attempts++;
+              fetch(BACKEND_URL + '/api/agent/mission/result/' + missionId)
+                .then(function(r) { return r.ok ? r.json() : null; })
+                .then(function(res) {
+                  if (res && res.ok) {
+                    wrap.remove();
+                    if (res.action === 'patch_applied_committed') {
+                      appendMsg('✅ PATCH APLICADO — ' + (res.file || 'arquivo'), '');
+                      chatStream.appendChild(renderValidationPanel(res));
+                      chatStream.scrollTop = chatStream.scrollHeight;
+                    } else if (res.action === 'patch_failed' || res.action === 'patch_rollback') {
+                      appendMsg('❌ Patch falhou:\n\n' + (res.output || ''), 'error');
+                    } else {
+                      appendMsg('⚠️ Agent respondeu:\n\n' + (res.output || ''));
+                    }
+                  } else if (attempts < 15) {
+                    setTimeout(pollResult, 2000);
+                  } else {
+                    applyBtn.disabled = false;
+                    statusEl.textContent = '⏱ Agent não respondeu em 30s.';
+                  }
+                })
+                .catch(function() {
+                  if (attempts < 15) { setTimeout(pollResult, 2000); }
+                  else { applyBtn.disabled = false; statusEl.textContent = '❌ Erro ao consultar resultado.'; }
+                });
+            }
+            setTimeout(pollResult, 2000);
+          })
+          .catch(function(err) {
+            applyBtn.disabled = false; cancelBtn.disabled = false;
+            applyBtn.textContent = '🔧 Aplicar Fix via Agent Local';
+            statusEl.textContent = '❌ Erro ao enfileirar: ' + err.message;
+          });
+        });
+      };
+
+      cancelBtn.onclick = function() { wrap.remove(); };
+
+      row.appendChild(applyBtn);
+      row.appendChild(cancelBtn);
+      wrap.appendChild(row);
+      return wrap;
+    }
+
     /* ── EXECUTAR MISSÃO — tenta agent local primeiro ─────── */
     if (runBtn) {
       runBtn.addEventListener('click', function() {
@@ -6180,6 +6312,13 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               typewriterEffect(msgEl, answer.replace(/```json[\s\S]*?```/g, '[↑ diagnóstico Hermes acima]'), 10);
             } else {
               typewriterEffect(msgEl, answer, 10);
+            }
+
+            /* §apply_patch — se diagnóstico tem patch, mostrar painel de aplicação */
+            if (hermesObj && hermesObj.patch && hermesObj.file &&
+                hermesObj.decisao && hermesObj.decisao.toUpperCase() === 'FIX') {
+              chatStream.appendChild(renderApplyFixPanel(hermesObj));
+              chatStream.scrollTop = chatStream.scrollHeight;
             }
 
             setStatus('READY');

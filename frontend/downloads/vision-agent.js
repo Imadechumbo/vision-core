@@ -422,6 +422,100 @@ async function executeMission(m) {
   };
 }
 
+/* ── applyPatchMission — pula Scanner+Hermes, direto ao PatchEngine ── */
+// Tipo: 'apply_patch'
+// Dados: { type, file, fix_type, patch, diagnosis, mission_id }
+// Fonte: patch pré-computado pelo /api/chat ZIP (front já tem o JSON)
+function applyPatchMission(m) {
+  return new Promise(function(resolve) {
+    var steps = [];
+    var log   = [];
+    function step(agent, ok, detail) {
+      steps.push({ agent: agent, ok: ok, detail: detail });
+      log.push(agent + ': ' + (ok ? '✓' : '✗') + ' ' + detail);
+      console.log('  › ' + agent + ': ' + detail);
+    }
+
+    // Resolver caminho relativo ao ROOT
+    var targetFile = m.file ? path.resolve(ROOT, m.file) : null;
+    if (!targetFile || !fs.existsSync(targetFile)) {
+      step('Resolver', false, 'não encontrado: ' + (m.file || 'null'));
+      return resolve({
+        mission_id: m.id, ok: false, pass_gold: false,
+        action: 'patch_failed',
+        output: '❌ Arquivo não encontrado: ' + (m.file || 'null') +
+                '\n\nVerifique se o Vision Agent foi iniciado na raiz do projeto correto.\n' +
+                'Raiz atual: ' + ROOT,
+        log: log, steps: steps, sddf: SDDF_BASELINE
+      });
+    }
+
+    var relTarget = path.relative(ROOT, targetFile);
+    step('Resolver', true, relTarget);
+
+    // PatchEngine — com backup+rollback automático
+    var patchResult = applyPatch(targetFile, m.patch, m.fix_type || 'code_patch');
+    step('PatchEngine', patchResult.ok,
+      patchResult.ok ? (m.fix_type || 'code_patch') + ' → ' + relTarget : patchResult.error);
+
+    if (!patchResult.ok) {
+      return resolve({
+        mission_id: m.id, ok: false, pass_gold: false,
+        action: 'patch_failed',
+        output: '❌ Patch falhou (rollback automático via backup):\n' + patchResult.error,
+        file: relTarget, fix_type: m.fix_type,
+        log: log, steps: steps, sddf: SDDF_BASELINE
+      });
+    }
+
+    // Aegis — validar sintaxe
+    var validation = validatePatch(targetFile);
+    step('Aegis', validation.ok, validation.ok ? 'PASS' : 'FAIL — ' + validation.error);
+
+    if (!validation.ok) {
+      spawnSync('git', ['checkout', '--', relTarget], { cwd: ROOT });
+      step('Rollback', true, 'git checkout -- ' + relTarget);
+      return resolve({
+        mission_id: m.id, ok: false, pass_gold: false,
+        action: 'patch_rollback',
+        output: '⚠️ Validação Aegis falhou — arquivo revertido:\n' + validation.error,
+        file: relTarget, fix_type: m.fix_type,
+        log: log, steps: steps, sddf: SDDF_BASELINE
+      });
+    }
+
+    // GitCommit — sem push (SDDF: deploy_allowed=false)
+    var diagnosis    = (m.diagnosis || 'vision fix').slice(0, 60);
+    var commitMsg    = 'fix: ' + diagnosis + ' [vision-agent apply_patch]';
+    var commitResult = gitCommit(targetFile, commitMsg);
+    step('GoCore', commitResult.ok, commitResult.ok ? 'commit ' + commitResult.hash : commitResult.error);
+
+    resolve({
+      mission_id:  m.id,
+      ok:          true,
+      pass_gold:   false,
+      action:      commitResult.ok ? 'patch_applied_committed' : 'patch_applied_no_commit',
+      output: [
+        '✅ Patch aplicado via apply_patch',
+        'Arquivo : ' + relTarget,
+        'Fix type: ' + (m.fix_type || 'code_patch'),
+        'Commit  : ' + (commitResult.hash || 'N/A'),
+        '',
+        '⚠️  Push pendente — revisar e aprovar manualmente.',
+        'SDDF: deploy_allowed=false | push=manual'
+      ].join('\n'),
+      file:       relTarget,
+      hash:       commitResult.hash || null,
+      fix_type:   m.fix_type || 'code_patch',
+      patch:      m.patch,
+      validation: 'PASS',
+      log:        log,
+      steps:      steps,
+      sddf:       SDDF_BASELINE
+    });
+  });
+}
+
 /* ── Polling loop ─────────────────────────────────────────────── */
 function poll() {
   httpRequest(WORKER + '/api/agent/mission/pending', {}, function(err, res) {
@@ -430,8 +524,9 @@ function poll() {
       console.log('[' + new Date().toLocaleTimeString() + '] Missão: ' + m.id);
       console.log('Input : ' + (m.input || '').slice(0, 100));
 
-      var handler = m.type === 'git_push'   ? gitPush   :
-                    m.type === 'git_revert' ? gitRevert :
+      var handler = m.type === 'git_push'    ? gitPush           :
+                    m.type === 'git_revert'  ? gitRevert         :
+                    m.type === 'apply_patch' ? applyPatchMission :
                     executeMission;
       handler(m).then(function(result) {
         console.log('Ação  : ' + result.action);
