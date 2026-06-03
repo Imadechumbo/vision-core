@@ -6274,7 +6274,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             thinking.textContent = '📦 ' + fileNames.length + ' arquivo(s): ' + shortNames.join(', ') + ' — analisando...';
 
             /* mode/model passed in from sendMessage (captured at send time) */
-            var context  = question + '\n\n' + contents.join('\n\n---\n\n');
+            /* §24v9: reverter ordem — tail (arquivo inteiro/específico) fica primeiro no prompt */
+            var context  = question + '\n\n' + contents.slice().reverse().join('\n\n---\n\n');
 
             /* Adicionar ao histórico de sessão */
             addToHistory('user', '[ZIP: ' + file.name + '] ' + question);
