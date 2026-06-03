@@ -1337,6 +1337,143 @@ app.post('/api/agent/mission/revert', (req, res) => {
   return sendOk(res, { ok: true, mission_id: mission.id, queued: true, action: 'revert_enqueued' });
 });
 
+/* ── /api/chat/apply-patch — aplica patch Hermes direto no ZIP, sem agent local ── */
+/* Input:  { zip_base64, file_path, fix_type, patch, diagnosis }                     */
+/* Output: { ok, patched_content, filename, diff_preview, aegis_ok, aegis_error }    */
+app.post('/api/chat/apply-patch', async (req, res) => {
+  try {
+    const body      = normalizeBody(req);
+    const b64       = body.zip_base64  || '';
+    const filePath  = body.file_path   || body.file || '';
+    const fixType   = body.fix_type    || 'code_patch';
+    const patch     = body.patch;
+    const diagnosis = body.diagnosis   || 'vision fix';
+
+    if (!b64)      return res.status(400).json({ ok: false, error: 'zip_base64_required', time: now() });
+    if (!filePath) return res.status(400).json({ ok: false, error: 'file_path_required',  time: now() });
+    if (!patch)    return res.status(400).json({ ok: false, error: 'patch_required',       time: now() });
+
+    let AdmZip;
+    try { AdmZip = require('adm-zip'); }
+    catch { return res.status(500).json({ ok: false, error: 'adm-zip_not_installed', time: now() }); }
+
+    /* 1. Extrair arquivo alvo do ZIP */
+    const buf = Buffer.from(b64, 'base64');
+    const zip = new AdmZip(buf);
+
+    /* Busca tolerante: aceita com ou sem prefixo de pasta raiz do ZIP */
+    const entries = zip.getEntries();
+    const target  = entries.find(e => {
+      const n = e.entryName.replace(/\\/g, '/');
+      return n === filePath || n.endsWith('/' + filePath);
+    });
+
+    if (!target) {
+      const available = entries.slice(0, 20).map(e => e.entryName).join(', ');
+      return res.status(404).json({ ok: false, error: 'file_not_found_in_zip', file: filePath, available, time: now() });
+    }
+
+    const originalContent = target.getData().toString('utf8');
+
+    /* 2. Aplicar patch conforme fix_type */
+    let patchedContent = originalContent;
+    let patchError     = null;
+
+    try {
+      if (fixType === 'full_replace') {
+        /* patch é a string completa do novo conteúdo */
+        patchedContent = typeof patch === 'string' ? patch : JSON.stringify(patch, null, 2);
+
+      } else if (fixType === 'json_field') {
+        /* patch é objeto com campos a mesclar no JSON */
+        const parsed = JSON.parse(originalContent);
+        const merged = Object.assign({}, parsed, patch);
+        patchedContent = JSON.stringify(merged, null, 2);
+
+      } else {
+        /* code_patch (default): patch = { search, replace } */
+        const search  = typeof patch === 'object' ? (patch.search  || '') : '';
+        const replace = typeof patch === 'object' ? (patch.replace || '') : '';
+        if (!search) throw new Error('patch.search vazio para code_patch');
+        if (!originalContent.includes(search)) {
+          throw new Error('patch.search não encontrado no arquivo — diff de contexto pode estar desatualizado');
+        }
+        patchedContent = originalContent.replace(search, replace);
+      }
+    } catch (err) {
+      patchError = err.message;
+    }
+
+    if (patchError) {
+      return res.status(422).json({ ok: false, error: 'patch_apply_failed', detail: patchError, fix_type: fixType, time: now() });
+    }
+
+    /* 3. Aegis — validação de sintaxe para JS/TS/MJS */
+    let aegisOk    = true;
+    let aegisError = null;
+    const isJs = /\.(js|ts|mjs|cjs|jsx|tsx)$/i.test(filePath);
+    if (isJs) {
+      try {
+        const { spawnSync } = require('child_process');
+        const tmp  = require('os').tmpdir();
+        const tmpF = require('path').join(tmp, 'vc_aegis_' + Date.now() + '.js');
+        require('fs').writeFileSync(tmpF, patchedContent, 'utf8');
+        const result = spawnSync(process.execPath, ['--check', tmpF], { timeout: 5000 });
+        try { require('fs').unlinkSync(tmpF); } catch {}
+        if (result.status !== 0) {
+          aegisOk    = false;
+          aegisError = (result.stderr || result.stdout || Buffer.alloc(0)).toString().replace(tmpF, filePath).trim();
+        }
+      } catch (err) {
+        aegisError = 'aegis_spawn_error: ' + err.message;
+        aegisOk    = false;
+      }
+    }
+
+    /* 4. Gerar diff preview (unified-style simples, linha a linha) */
+    function simpleDiff(before, after) {
+      const bLines = before.split('\n');
+      const aLines = after.split('\n');
+      const out    = [];
+      const maxLen = Math.max(bLines.length, aLines.length);
+      let i = 0;
+      while (i < maxLen && out.length < 120) {
+        const b = bLines[i] !== undefined ? bLines[i] : null;
+        const a = aLines[i] !== undefined ? aLines[i] : null;
+        if (b === a) {
+          out.push(' ' + (b || ''));
+        } else {
+          if (b !== null) out.push('-' + b);
+          if (a !== null) out.push('+' + a);
+        }
+        i++;
+      }
+      if (out.length >= 120) out.push('... (diff truncado)');
+      return out.join('\n');
+    }
+
+    const diffPreview = simpleDiff(originalContent, patchedContent);
+    const filename    = filePath.split('/').pop().split('\\').pop();
+
+    return sendOk(res, {
+      patched_content: patchedContent,
+      filename,
+      file_path: filePath,
+      fix_type:  fixType,
+      diagnosis,
+      diff_preview: diffPreview,
+      aegis_ok:    aegisOk,
+      aegis_error: aegisError || null,
+      original_lines:  originalContent.split('\n').length,
+      patched_lines:   patchedContent.split('\n').length,
+      anti_stub: true
+    });
+
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err.message, endpoint: '/api/chat/apply-patch', time: now() });
+  }
+});
+
 /* ── /api/unzip-context — extrai ZIP e injeta conteúdo para /api/chat ─── */
 app.post('/api/unzip-context', async (req, res) => {
   try {

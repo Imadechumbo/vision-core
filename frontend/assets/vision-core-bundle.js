@@ -5558,6 +5558,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var _attachedFiles = [];
     var _attachedImg   = null;
     var _pendingZip    = null; /* { file: File, buffer: ArrayBuffer } — staged ZIP, fires on ENVIAR */
+    var _lastZipB64    = null; /* base64 do último ZIP processado — usado pelo apply-patch endpoint */
 
     /* ── Session History — contexto multi-turn ──────────────── */
     var _sessionHistory = [];       // { role: 'user'|'assistant', content: string }[]
@@ -5911,14 +5912,14 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       return wrap;
     }
 
-    /* ── renderApplyFixPanel — painel de aplicação do patch pré-computado ── */
+    /* ── renderApplyFixPanel — aplica patch via /api/chat/apply-patch (sem agent local) ── */
     function renderApplyFixPanel(hermesObj) {
       var wrap = document.createElement('div');
       wrap.style.cssText = 'background:#050a0f;border:1px solid rgba(59,130,246,.4);border-radius:14px;padding:16px;margin:4px 0 8px;font-size:13px;font-family:inherit;';
 
       var title = document.createElement('div');
       title.style.cssText = 'color:#60a5fa;font-weight:600;font-size:14px;margin-bottom:10px;';
-      title.textContent = '🔧 Patch proposto — aguardando aprovação para aplicar';
+      title.textContent = '🔧 Patch proposto — pronto para aplicar';
       wrap.appendChild(title);
 
       var info = document.createElement('pre');
@@ -5948,90 +5949,74 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         return b;
       }
 
-      var applyBtn  = mkBtn('🔧 Aplicar Fix via Agent Local', '#1e3a5f', '#3b82f6', '#93c5fd');
-      var cancelBtn = mkBtn('✖ Ignorar',                      '#1c1c1e', '#555',    '#888');
+      var applyBtn  = mkBtn('✅ Aplicar e Baixar Arquivo Corrigido', '#0a2a1a', '#22c55e', '#86efac');
+      var cancelBtn = mkBtn('✖ Ignorar', '#1c1c1e', '#555', '#888');
 
       applyBtn.onclick = function() {
         if (!hermesObj.patch) { statusEl.textContent = '❌ Patch ausente no diagnóstico.'; return; }
+        if (!_lastZipB64)     { statusEl.textContent = '❌ ZIP não encontrado em memória. Reenvie o arquivo.'; return; }
+
         applyBtn.disabled = true; cancelBtn.disabled = true;
-        applyBtn.textContent = '⏳ Procurando agent local...';
-        statusEl.textContent = '';
+        applyBtn.textContent = '⏳ Aplicando patch...';
+        statusEl.textContent = 'Enviando para /api/chat/apply-patch...';
 
-        var agentPorts = [7070, 7071, 7072];
-        function tryAgent(ports, done) {
-          if (!ports.length) return done(null);
-          fetch('http://localhost:' + ports[0], { signal: AbortSignal.timeout(800) })
-            .then(function(r) { return r.json(); })
-            .then(function(d) { if (d && d.ok) { done('http://localhost:' + ports[0]); } else { tryAgent(ports.slice(1), done); } })
-            .catch(function() { tryAgent(ports.slice(1), done); });
-        }
+        fetch(BACKEND_URL + '/api/chat/apply-patch', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            zip_base64: _lastZipB64,
+            file_path:  hermesObj.file,
+            fix_type:   hermesObj.fix_type  || 'code_patch',
+            patch:      hermesObj.patch,
+            diagnosis:  hermesObj.diagnosis || 'vision fix'
+          }),
+          signal: AbortSignal.timeout(30000)
+        })
+        .then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error || ('HTTP ' + r.status)); }); })
+        .then(function(data) {
+          if (!data.ok) { throw new Error(data.error || 'apply-patch falhou'); }
 
-        tryAgent(agentPorts, function(agentUrl) {
-          if (!agentUrl) {
-            applyBtn.disabled = false; cancelBtn.disabled = false;
-            applyBtn.textContent = '🔧 Aplicar Fix via Agent Local';
-            statusEl.innerHTML = '⚠️ Agent local não encontrado.<br>' +
-              'Rode: <code style="background:#111;padding:2px 6px;border-radius:4px;">node vision-agent.js "' + (hermesObj.file ? hermesObj.file.split('/')[0] || '.' : '.') + '"</code>';
-            return;
+          wrap.remove();
+
+          var aegisLine = data.aegis_ok
+            ? '✅ Aegis: sintaxe válida'
+            : '⚠️ Aegis: ' + (data.aegis_error || 'erro de sintaxe — revise o patch');
+          appendMsg('✅ PATCH APLICADO\n\nArquivo : ' + data.file_path + '\nFix type: ' + data.fix_type + '\n' + aegisLine + '\nLinhas  : ' + data.original_lines + ' → ' + data.patched_lines, '');
+
+          if (data.diff_preview) {
+            var diffEl = document.createElement('pre');
+            diffEl.style.cssText = 'background:#020408;border:1px solid #1a2040;border-radius:10px;padding:12px;color:#a5f3fc;overflow:auto;max-height:260px;font-size:11px;margin:4px 0 8px;white-space:pre;';
+            var diffLines = data.diff_preview.split('\n').map(function(l) {
+              if (l.startsWith('+')) return '<span style="color:#86efac">' + l.replace(/</g,'&lt;') + '</span>';
+              if (l.startsWith('-')) return '<span style="color:#f87171">' + l.replace(/</g,'&lt;') + '</span>';
+              return '<span style="color:#64748b">' + l.replace(/</g,'&lt;') + '</span>';
+            });
+            diffEl.innerHTML = diffLines.join('\n');
+            chatStream.appendChild(diffEl);
           }
 
-          applyBtn.textContent = '⏳ Enviando missão...';
-          statusEl.textContent = 'Agent em ' + agentUrl;
-
-          fetch(BACKEND_URL + '/api/agent/mission/queue', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({
-              type:      'apply_patch',
-              file:      hermesObj.file,
-              fix_type:  hermesObj.fix_type  || 'code_patch',
-              patch:     hermesObj.patch,
-              diagnosis: hermesObj.diagnosis || 'vision fix'
-            })
-          })
-          .then(function(r) { return r.json(); })
-          .then(function(d) {
-            var missionId = d && d.mission_id;
-            if (!missionId) throw new Error('mission_id ausente');
-            applyBtn.textContent = '⏳ Aplicando patch...';
-            statusEl.textContent = 'Missão ' + missionId + ' — aguardando...';
-
-            var attempts = 0;
-            function pollResult() {
-              attempts++;
-              fetch(BACKEND_URL + '/api/agent/mission/result/' + missionId)
-                .then(function(r) { return r.ok ? r.json() : null; })
-                .then(function(res) {
-                  if (res && res.ok) {
-                    wrap.remove();
-                    if (res.action === 'patch_applied_committed') {
-                      appendMsg('✅ PATCH APLICADO — ' + (res.file || 'arquivo'), '');
-                      chatStream.appendChild(renderValidationPanel(res));
-                      chatStream.scrollTop = chatStream.scrollHeight;
-                    } else if (res.action === 'patch_failed' || res.action === 'patch_rollback') {
-                      appendMsg('❌ Patch falhou:\n\n' + (res.output || ''), 'error');
-                    } else {
-                      appendMsg('⚠️ Agent respondeu:\n\n' + (res.output || ''));
-                    }
-                  } else if (attempts < 15) {
-                    setTimeout(pollResult, 2000);
-                  } else {
-                    applyBtn.disabled = false;
-                    statusEl.textContent = '⏱ Agent não respondeu em 30s.';
-                  }
-                })
-                .catch(function() {
-                  if (attempts < 15) { setTimeout(pollResult, 2000); }
-                  else { applyBtn.disabled = false; statusEl.textContent = '❌ Erro ao consultar resultado.'; }
-                });
-            }
-            setTimeout(pollResult, 2000);
-          })
-          .catch(function(err) {
-            applyBtn.disabled = false; cancelBtn.disabled = false;
-            applyBtn.textContent = '🔧 Aplicar Fix via Agent Local';
-            statusEl.textContent = '❌ Erro ao enfileirar: ' + err.message;
-          });
+          var dlBtn = document.createElement('button');
+          dlBtn.style.cssText = 'background:#0a2a1a;border:1px solid #22c55e;color:#86efac;font-size:12px;padding:8px 14px;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:500;margin:4px 0 8px;';
+          dlBtn.textContent = '⬇ Baixar ' + data.filename + ' (corrigido)';
+          dlBtn.onclick = function() {
+            var blob = new Blob([data.patched_content], { type: 'text/plain;charset=utf-8' });
+            var url  = URL.createObjectURL(blob);
+            var a    = document.createElement('a');
+            a.href     = url;
+            a.download = data.filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+          };
+          chatStream.appendChild(dlBtn);
+          chatStream.scrollTop = chatStream.scrollHeight;
+          setStatus('READY');
+        })
+        .catch(function(err) {
+          applyBtn.disabled = false; cancelBtn.disabled = false;
+          applyBtn.textContent = '✅ Aplicar e Baixar Arquivo Corrigido';
+          statusEl.textContent = '❌ ' + (err.message || 'Erro desconhecido');
+          setStatus('READY');
         });
       };
 
@@ -6218,6 +6203,14 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         if (ext === '.json') return 5;
         return 6;
       }
+
+      /* buffer already read by _stageZip — salvar base64 para apply-patch */
+      _lastZipB64 = (function(buf) {
+        var bytes = new Uint8Array(buf);
+        var bin   = '';
+        for (var k = 0; k < bytes.length; k++) { bin += String.fromCharCode(bytes[k]); }
+        return btoa(bin);
+      })(buffer);
 
       /* buffer already read by _stageZip — process directly */
       JSZip.loadAsync(buffer).then(function(zip) {
