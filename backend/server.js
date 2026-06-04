@@ -1264,6 +1264,8 @@ app.post('/api/chat', async (req, res) => {
   /* Chama callFn(extractPrompt) com o diagnóstico já gerado como contexto.   */
   /* callFn recebe apenas o extractPrompt (sem systemPrompt/message original). */
   async function ensureHermesJson(answer, callFn) {
+    /* §34 debug — remover após diagnóstico */
+    console.log('[§34 debug] mode:', mode, '| has_json:', answer && answer.includes('```json'), '| snippet:', answer ? answer.slice(0, 300).replace(/\n/g, '\\n') : 'empty');
     if (mode !== 'fix') return answer;
     if (!answer || answer.includes('```json')) return answer;
     const extractPrompt =
