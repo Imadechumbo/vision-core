@@ -5088,7 +5088,7 @@
             budget += contrib;
             var _lim = limit; /* captura limit para closure async */
             promises.push(c.entry.async('string').then(function(content) {
-              return '[' + c.relPath + ']\n' + content.slice(0, _lim) + (content.length > _lim ? '\n...(truncado em ' + _lim + '/' + content.length + ' chars)' : '');
+              return '[Arquivo: ' + c.relPath + ']\n' + content.slice(0, _lim) + (content.length > _lim ? '\n...(truncado em ' + _lim + '/' + content.length + ' chars)' : '');
             }));
           });
 
