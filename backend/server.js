@@ -1076,7 +1076,42 @@ app.post('/api/chat', async (req, res) => {
     `❌ PROIBIDO: encerrar com "Espero ter ajudado", "Qualquer dúvida...", "Fico à disposição".`,
     `✅ OBRIGATÓRIO: começar diretamente pelo diagnóstico, código ou resposta objetiva.`,
     `✅ OBRIGATÓRIO: proporcional — respostas simples têm respostas curtas; complexas têm detalhes.`,
-    `✅ Exemplo correto: "Bug em auth middleware. Token expiry usa < em vez de <=. Fix:"`
+    `✅ Exemplo correto: "Bug em auth middleware. Token expiry usa < em vez de <=. Fix:"`,
+    ``,
+    `══════════════════════════════════════════════════════`,
+    `FORMATO DE RESPOSTA — VISION CHAT AI`,
+    `══════════════════════════════════════════════════════`,
+    ``,
+    `Para missões que envolvem análise de código ou correção de bugs,`,
+    `estruture sua resposta com os seguintes blocos em ordem:`,
+    ``,
+    `MISSÃO RECEBIDA`,
+    `Tipo: [bug fix | análise | refactor | consulta]`,
+    `Risco: [baixo | médio | alto | crítico]`,
+    `Escopo: [arquivo(s) identificado(s)]`,
+    ``,
+    `HERMES`,
+    `- [status do contexto]`,
+    `- [regras aplicadas]`,
+    ``,
+    `SCANNER`,
+    `- [o que foi encontrado]`,
+    ``,
+    `PATCHENGINE`,
+    `- [patch preparado ou bloqueado]`,
+    ``,
+    `AEGIS`,
+    `- [validação: sem deploy, sem tag, sem stable]`,
+    ``,
+    `DECISÃO`,
+    `[NEEDS_FIX | BLOCKED_INPUT | READY | ABORTED]`,
+    ``,
+    `Próximo passo seguro:`,
+    `[ação específica]`,
+    ``,
+    `Depois deste relatório, apresente o diff/patch em bloco \`\`\`diff.`,
+    `Para respostas simples (consultas, perguntas) omita os blocos de agente`,
+    `e responda diretamente.`
   ].join('\n');
 
   /* Hermes RCA — SDDF §16 + §37 */
@@ -1140,7 +1175,26 @@ app.post('/api/chat', async (req, res) => {
     `REGRA DE QUALIDADE: confidence < 0.7 → decisao=BLOCKED_INPUT. Incerteza não gera patch.`,
     ``,
     `Após o bloco JSON, explique o diagnóstico em 1-3 linhas.`,
-    `Seja cirúrgico — altere apenas o necessário.`
+    `Seja cirúrgico — altere apenas o necessário.`,
+    ``,
+    `Após o bloco JSON, inclua um relatório de agentes:`,
+    ``,
+    `HERMES`,
+    `- RCA: [causa-raiz em uma linha]`,
+    ``,
+    `SCANNER`,
+    `- Arquivo: [path do arquivo analisado]`,
+    `- Linha afetada: [número ou trecho]`,
+    ``,
+    `AEGIS`,
+    `- deploy_allowed: false`,
+    `- production_touched: false`,
+    `- Escopo: apenas [arquivo-alvo]`,
+    ``,
+    `DECISÃO: [NEEDS_FIX | BLOCKED_INPUT | READY]`,
+    `Confiança: [0.0–1.0]`,
+    ``,
+    `Próximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.`
   ].join('\n') : '';
 
   /* Imagem detectada → Gemini (único provider com suporte multimodal) */
@@ -1213,9 +1267,20 @@ app.post('/api/chat', async (req, res) => {
     if (mode !== 'fix') return answer;
     if (!answer || answer.includes('```json')) return answer;
     const extractPrompt =
-      'Baseado neste diagnóstico, retorne APENAS o bloco ```json estruturado. ' +
-      'Sem texto antes ou depois. Campos obrigatórios: decisao, file, fix_type, patch, confidence, diagnosis.\n\n' +
-      answer.slice(0, 3000);
+      'O texto abaixo é um diagnóstico técnico que pode conter um diff (linhas com - e +). ' +
+      'Extraia as informações e retorne APENAS um bloco ```json com estes campos:\n' +
+      '{\n' +
+      '  "decisao": "NEEDS_FIX",\n' +
+      '  "file": "caminho/do/arquivo.js",\n' +
+      '  "fix_type": "code_patch",\n' +
+      '  "patch": { "search": "linha original exata (com - no diff, sem o -)", ' +
+                   '"replace": "linha nova exata (com + no diff, sem o +)" },\n' +
+      '  "confidence": 0.92,\n' +
+      '  "diagnosis": "descrição curta da causa-raiz"\n' +
+      '}\n' +
+      'REGRA: Se o texto contém linhas com - e + (diff), decisao=NEEDS_FIX.\n' +
+      'Retorne APENAS o bloco ```json. Sem texto antes ou depois.\n\n' +
+      answer.slice(0, 4000);
     try {
       const extracted = await callFn(extractPrompt);
       if (extracted && extracted.includes('```json')) return extracted;
