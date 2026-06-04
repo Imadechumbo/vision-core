@@ -1267,19 +1267,29 @@ app.post('/api/chat', async (req, res) => {
     if (mode !== 'fix') return answer;
     if (!answer || answer.includes('```json')) return answer;
     const extractPrompt =
-      'O texto abaixo é um diagnóstico técnico que pode conter um diff (linhas com - e +). ' +
-      'Extraia as informações e retorne APENAS um bloco ```json com estes campos:\n' +
+      'O texto abaixo contém um diagnóstico com um ou mais patches/diffs. ' +
+      'Analise e retorne APENAS um bloco ```json:\n' +
+      '\n' +
+      'REGRAS:\n' +
+      '1. Se há apenas 1 hunk (1 par de linhas -/+): use fix_type="code_patch" e patch={"search":"linha original","replace":"linha nova"}\n' +
+      '2. Se há MÚLTIPLOS hunks: use fix_type="code_patch" com o PATCH MAIS IMPORTANTE (geralmente o primeiro @@ ou o que muda a lógica principal)\n' +
+      '3. decisao DEVE ser "NEEDS_FIX" se há qualquer linha com + no diff\n' +
+      '4. file: use o caminho exato do arquivo mencionado no diff\n' +
+      '5. search: copie EXATAMENTE a linha com - (sem o - inicial)\n' +
+      '6. replace: copie EXATAMENTE a linha com + (sem o + inicial)\n' +
+      '\n' +
+      'Formato obrigatório:\n' +
+      '```json\n' +
       '{\n' +
       '  "decisao": "NEEDS_FIX",\n' +
-      '  "file": "caminho/do/arquivo.js",\n' +
+      '  "file": "caminho/arquivo.js",\n' +
       '  "fix_type": "code_patch",\n' +
-      '  "patch": { "search": "linha original exata (com - no diff, sem o -)", ' +
-                   '"replace": "linha nova exata (com + no diff, sem o +)" },\n' +
-      '  "confidence": 0.92,\n' +
-      '  "diagnosis": "descrição curta da causa-raiz"\n' +
+      '  "patch": { "search": "linha original exata", "replace": "linha nova exata" },\n' +
+      '  "confidence": 0.95,\n' +
+      '  "diagnosis": "causa-raiz em uma linha"\n' +
       '}\n' +
-      'REGRA: Se o texto contém linhas com - e + (diff), decisao=NEEDS_FIX.\n' +
-      'Retorne APENAS o bloco ```json. Sem texto antes ou depois.\n\n' +
+      '```\n' +
+      'Retorne APENAS o JSON. Sem texto antes ou depois.\n\n' +
       answer.slice(0, 4000);
     try {
       const extracted = await callFn(extractPrompt);
