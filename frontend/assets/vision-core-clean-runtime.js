@@ -5018,16 +5018,20 @@
               typewriterEffect(msgEl, answer.replace(/```json[\s\S]*?```/g, '[↑ diagnóstico Hermes acima]'), 10);
               /* §36 — salvar missão ativa para EXECUTAR MISSÃO */
               _activeMission = { id: 'mission-' + Date.now(), hermesObj: hermesObj, input: question, stage: 'diagnosed', evidence: [{ type: 'diagnosis', data: hermesObj, ts: Date.now() }], zipB64: _lastZipB64 || null, startedAt: Date.now() };
-              /* §38 — hint pós-diagnóstico */
-              (function() {
-                var hintEl = document.createElement('div');
-                hintEl.style.cssText = 'background:rgba(79,70,229,.08);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:10px 14px;margin:4px 0 8px;font-size:12px;color:#a5b4fc;display:flex;align-items:center;gap:8px;';
-                hintEl.innerHTML = '<span style="font-size:16px;">🛡</span><span>Diagnóstico concluído. Clique em <b style="color:#c7d2fe">EXECUTAR MISSÃO</b> para aplicar o patch automaticamente via Vision Core Standard Method.</span>';
-                chatStream.appendChild(hintEl);
-                chatStream.scrollTop = chatStream.scrollHeight;
-              }());
             } else {
               typewriterEffect(msgEl, answer, 10);
+            }
+
+            /* §38fix — hint aparece mesmo quando resposta é texto livre com diff */
+            var hasDiff = answer.indexOf('```diff') !== -1 || answer.indexOf('```javascript') !== -1;
+            if (hermesObj || hasDiff) {
+              var hintEl38 = document.createElement('div');
+              hintEl38.style.cssText = 'background:rgba(79,70,229,.08);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:10px 14px;margin:4px 0 8px;font-size:12px;color:#a5b4fc;display:flex;align-items:center;gap:8px;';
+              hintEl38.innerHTML = '<span style="font-size:16px;">🛡</span><span>Diagnóstico concluído. Clique em <b style="color:#c7d2fe">EXECUTAR MISSÃO</b> para aplicar o patch automaticamente via Vision Core Standard Method.</span>';
+              setTimeout(function() {
+                chatStream.appendChild(hintEl38);
+                chatStream.scrollTop = chatStream.scrollHeight;
+              }, 300);
             }
 
             /* §apply_patch — se diagnóstico tem patch, mostrar painel de aplicação */
