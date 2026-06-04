@@ -4100,9 +4100,79 @@
         '}',
         '@keyframes vcSpin {',
         '  to { transform: rotate(360deg); }',
+        '}',
+        '@keyframes vcProgress {',
+        '  0% { background-position: 200% 0; }',
+        '  100% { background-position: -200% 0; }',
         '}'
       ].join('\n');
       document.head.appendChild(_animStyle);
+    }
+
+    /* §39 — spinner clássico SVG 12 segmentos (cinza/branco p/ fundo escuro) */
+    function buildSpinner(size) {
+      size = size || 18;
+      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', size);
+      svg.setAttribute('height', size);
+      svg.setAttribute('viewBox', '0 0 40 40');
+      svg.style.cssText = 'display:inline-block;vertical-align:middle;flex-shrink:0;';
+      var colors = ['#ffffff','#f1f5f9','#e2e8f0','#cbd5e1','#94a3b8','#64748b','#475569','#334155','#1e293b','#0f172a','#1e293b','#334155'];
+      for (var _si = 0; _si < 12; _si++) {
+        var _ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        var _rad = (_si / 12) * 2 * Math.PI;
+        _ln.setAttribute('x1', (20 + Math.sin(_rad) * 10).toFixed(2));
+        _ln.setAttribute('y1', (20 - Math.cos(_rad) * 10).toFixed(2));
+        _ln.setAttribute('x2', (20 + Math.sin(_rad) * 16).toFixed(2));
+        _ln.setAttribute('y2', (20 - Math.cos(_rad) * 16).toFixed(2));
+        _ln.setAttribute('stroke', colors[_si] || '#94a3b8');
+        _ln.setAttribute('stroke-width', '4');
+        _ln.setAttribute('stroke-linecap', 'round');
+        svg.appendChild(_ln);
+      }
+      svg.style.animation = 'vcSpin .8s steps(12, end) infinite';
+      return svg;
+    }
+
+    /* §39 — progress bar durante ZIP */
+    function showProgressBar(el) {
+      var bar = document.createElement('div');
+      bar.id = 'vc-progress-bar';
+      bar.style.cssText = 'position:sticky;top:0;left:0;height:3px;background:linear-gradient(90deg,#4f46e5,#06b6d4,#4ade80);background-size:200% 100%;animation:vcProgress 2s linear infinite;border-radius:2px;z-index:10;margin-bottom:8px;';
+      el.insertBefore(bar, el.firstChild);
+    }
+
+    function hideProgressBar() {
+      var bar = document.getElementById('vc-progress-bar');
+      if (bar) bar.remove();
+    }
+
+    /* §39 — animação de progresso durante fetch ZIP */
+    function showMissionProgress(thinkingEl) {
+      var steps = [
+        { delay: 0,     text: '📋 Mission Input — missão recebida, classificando...', agent: 'intake'      },
+        { delay: 1200,  text: '🔍 Scanner — lendo estrutura do projeto...',           agent: 'scanner'     },
+        { delay: 2800,  text: '🔍 Scanner — arquivos relevantes identificados...',    agent: 'scanner'     },
+        { delay: 4200,  text: '🔮 Hermes — analisando causa-raiz...',                 agent: 'hermes'      },
+        { delay: 5800,  text: '🔮 Hermes — RCA em progresso...',                      agent: 'hermes'      },
+        { delay: 7200,  text: '🦾 OpenClaw — montando plano de ação...',              agent: 'openclaw'    },
+        { delay: 8500,  text: '⚙️ PatchEngine — preparando patch cirúrgico...',       agent: 'patchengine' },
+        { delay: 10000, text: '🛡 Aegis — verificando escopo e segurança...',         agent: 'aegis'       },
+        { delay: 11200, text: '✅ Go Core — aguardando evidência real...',             agent: 'gocore'      },
+        { delay: 12500, text: '⏳ Finalizando diagnóstico...',                         agent: 'passgold'    }
+      ];
+      var timers = [];
+      steps.forEach(function(step) {
+        var t = setTimeout(function() {
+          if (thinkingEl && thinkingEl.parentNode) {
+            var tt = thinkingEl.querySelector('.vc-thinking-text');
+            if (tt) tt.textContent = step.text;
+          }
+          activateAgent(step.agent, 'active');
+        }, step.delay);
+        timers.push(t);
+      });
+      return timers;
     }
 
     function setStatus(text, extra) {
@@ -4124,6 +4194,13 @@
         ? 'padding:8px 12px;margin:4px 0;color:#f87171;'
         : 'padding:8px 12px;margin:4px 0;background:rgba(255,255,255,0.05);border-radius:8px;white-space:pre-wrap;';
       el.textContent = text;
+      /* §39 — fade-in para elementos não-thinking */
+      if (cls !== 'thinking') {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(8px)';
+        el.style.transition = 'opacity .25s ease, transform .25s ease';
+        setTimeout(function() { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; }, 10);
+      }
       chatStream.appendChild(el);
       chatStream.scrollTop = chatStream.scrollHeight;
       return el;
@@ -4230,6 +4307,49 @@
       container.appendChild(badge);
     }
 
+    /* ── §39 Agent Report Parser ────────────────────────────── */
+    function parseAgentReport(text) {
+      if (!text) return null;
+      var report = {};
+      var agentBlocks = ['MISSÃO RECEBIDA', 'HERMES', 'SCANNER', 'OPENCLAW',
+                         'PATCHENGINE', 'AEGIS', 'GO CORE', 'DECISÃO'];
+      agentBlocks.forEach(function(agent) {
+        var escaped = agent.replace(/[()]/g, '\\$&');
+        var others  = agentBlocks.filter(function(a) { return a !== agent; })
+                                 .map(function(a) { return a.replace(/[()]/g, '\\$&'); }).join('|');
+        var re = new RegExp(escaped + '\\s*\\n([\\s\\S]*?)(?=' + others + '|$)', 'i');
+        var m  = text.match(re);
+        if (m && m[1].trim()) report[agent] = m[1].trim();
+      });
+      return Object.keys(report).length > 0 ? report : null;
+    }
+
+    function renderAgentReport(report, container) {
+      if (!report) return;
+      var agentIcons  = { 'MISSÃO RECEBIDA': '📋', 'HERMES': '🔮', 'SCANNER': '🔍',
+                          'OPENCLAW': '🦾', 'PATCHENGINE': '⚙️', 'AEGIS': '🛡',
+                          'GO CORE': '✅', 'DECISÃO': '⚖️' };
+      var agentColors = { 'MISSÃO RECEBIDA': '#60a5fa', 'HERMES': '#a78bfa', 'SCANNER': '#34d399',
+                          'OPENCLAW': '#f59e0b', 'PATCHENGINE': '#06b6d4', 'AEGIS': '#f87171',
+                          'GO CORE': '#4ade80', 'DECISÃO': '#e2e8f0' };
+      var panel = document.createElement('div');
+      panel.style.cssText = 'background:#050a0f;border:1px solid #1e293b;border-radius:12px;padding:14px 16px;margin:6px 0 10px;font-size:12px;font-family:inherit;';
+      Object.keys(report).forEach(function(agent) {
+        var block = document.createElement('div');
+        block.style.cssText = 'margin-bottom:10px;';
+        var color = agentColors[agent] || '#94a3b8';
+        var icon  = agentIcons[agent]  || '▸';
+        block.innerHTML =
+          '<div style="color:' + color + ';font-weight:600;font-size:11px;letter-spacing:.06em;margin-bottom:4px;display:flex;align-items:center;gap:6px;">' +
+          '<span>' + icon + '</span>' + agent + '</div>' +
+          '<div style="color:#94a3b8;padding-left:20px;line-height:1.6;">' +
+          report[agent].replace(/\n/g, '<br>') + '</div>';
+        panel.appendChild(block);
+      });
+      container.appendChild(panel);
+      container.scrollTop = container.scrollHeight;
+    }
+
     /* ── Hermes JSON Block Parser ────────────────────────────── */
     function parseHermesBlock(text) {
       var match = text.match(/```json\s*([\s\S]*?)```/);
@@ -4305,10 +4425,14 @@
       var model = modelSelect ? modelSelect.value : 'auto';
 
       setStatus('PROCESSANDO...', 'busy');
-      /* §38 — animated spinner */
+      /* §39 — SVG spinner */
       var thinking = appendMsg('', 'thinking');
-      thinking.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid #4f46e5;border-top-color:transparent;border-radius:50%;animation:vcSpin .7s linear infinite;vertical-align:middle;margin-right:8px;"></span>' +
-        '<span class="vc-thinking-text">analisando...</span>';
+      thinking.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 12px;margin:4px 0;color:#94a3b8;';
+      thinking.appendChild(buildSpinner(18));
+      var _chatThinkSpan = document.createElement('span');
+      _chatThinkSpan.className = 'vc-thinking-text';
+      _chatThinkSpan.textContent = 'Mission Input — classificando missão...';
+      thinking.appendChild(_chatThinkSpan);
       if (sendBtn) sendBtn.style.animation = 'vcPulse 1s ease-in-out infinite'; /* §38 pulse */
       activateAgent('scanner', 'active');
       var _chatAnimTimer = setTimeout(function() { activateAgent('hermes', 'active'); }, 1200);
@@ -4767,10 +4891,14 @@
         } else if (!h) {
           wrap.remove();
           var missionText = mission.input || 'missão SDDF padrão';
-          /* §38 — animated spinner */
+          /* §39 — SVG spinner */
           var thinking2 = appendMsg('', 'thinking');
-          thinking2.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid #4f46e5;border-top-color:transparent;border-radius:50%;animation:vcSpin .7s linear infinite;vertical-align:middle;margin-right:8px;"></span>' +
-            '<span class="vc-thinking-text">📋 missão iniciada — processando via Hermes...</span>';
+          thinking2.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 12px;margin:4px 0;color:#94a3b8;';
+          thinking2.appendChild(buildSpinner(18));
+          var _t2Span = document.createElement('span');
+          _t2Span.className = 'vc-thinking-text';
+          _t2Span.textContent = '📋 missão iniciada — processando via Hermes...';
+          thinking2.appendChild(_t2Span);
           setStatus('EXECUTANDO MISSÃO...', 'busy');
           fetch(BACKEND_URL + '/api/chat', {
             method: 'POST',
@@ -4866,7 +4994,16 @@
 
     /* Core ZIP processing — called by sendMessage with question captured at send time */
     function _processZipBuffer(file, buffer, question, zipMode, zipModel) {
-      var thinking = appendMsg('📦 Extraindo ' + file.name + '...', 'thinking');
+      /* §39 — SVG spinner + progress bar + mission progress animation */
+      var thinking = appendMsg('', 'thinking');
+      thinking.style.cssText = 'display:flex;align-items:center;gap:6px;padding:8px 12px;margin:4px 0;color:#94a3b8;';
+      thinking.appendChild(buildSpinner(18));
+      var _zipThinkSpan = document.createElement('span');
+      _zipThinkSpan.className = 'vc-thinking-text';
+      _zipThinkSpan.textContent = '📦 Extraindo ' + file.name + '...';
+      thinking.appendChild(_zipThinkSpan);
+      showProgressBar(chatStream);
+      var _progressTimers = showMissionProgress(thinking);
       setStatus('EXTRAINDO ZIP...', 'busy');
 
       if (typeof JSZip === 'undefined') {
@@ -4965,7 +5102,9 @@
           return Promise.all(promises).then(function(contents) {
             /* §debug: mostrar quais arquivos foram selecionados */
             var shortNames = fileNames.map(function(p){ return p.split('/').pop(); });
-            thinking.textContent = '📦 ' + fileNames.length + ' arquivo(s): ' + shortNames.join(', ') + ' — analisando...';
+            var _zipTT = thinking.querySelector('.vc-thinking-text');
+            if (_zipTT) _zipTT.textContent = '📦 ' + fileNames.length + ' arquivo(s): ' + shortNames.join(', ') + ' — analisando...';
+            else thinking.textContent = '📦 ' + fileNames.length + ' arquivo(s): ' + shortNames.join(', ') + ' — analisando...';
 
             /* §35 FIX2 — prefixo com lista de assets para LLM não inventar caminhos */
             var assetContext = assetPaths.length > 0
@@ -4995,6 +5134,8 @@
           })
           .then(function(d) {
             if (typeof timeout !== 'undefined') clearTimeout(timeout);
+            _progressTimers.forEach(function(t) { clearTimeout(t); }); /* §39 */
+            hideProgressBar(); /* §39 */
             thinking.remove();
 
             /* §27 echo guard — avisa se todos os provedores falharam */
@@ -5022,6 +5163,10 @@
               typewriterEffect(msgEl, answer, 10);
             }
 
+            /* §39 — renderizar relatório de agentes se presente */
+            var agentReport = parseAgentReport(answer);
+            if (agentReport) { renderAgentReport(agentReport, chatStream); }
+
             /* §38fix — hint aparece mesmo quando resposta é texto livre com diff */
             var hasDiff = answer.indexOf('```diff') !== -1 || answer.indexOf('```javascript') !== -1;
             if (hermesObj || hasDiff) {
@@ -5046,6 +5191,8 @@
 
         }).catch(function(err) {
           if (typeof timeout !== 'undefined') clearTimeout(timeout);
+          _progressTimers.forEach(function(t) { clearTimeout(t); }); /* §39 */
+          hideProgressBar(); /* §39 */
           thinking.remove();
           var msg = err && err.name === 'AbortError'
             ? '⏱ ZIP: timeout 55s — resposta não chegou. Backend pode estar sobrecarregado; tente novamente.'
