@@ -5842,7 +5842,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         if (addFilesBtn) { addFilesBtn.textContent = '＋ Adicionar arquivos'; }
         var _zipQuestion = text || 'Analise o projeto e identifique problemas';
         promptInput.value = '';
-        var _zipMode  = modeSelect  ? modeSelect.value  : 'fix';
+        var _zipMode  = 'fix'; /* ZIP sempre mode=fix — hermesDecisionMatrix obrigatório */
         var _zipModel = modelSelect ? modelSelect.value : 'auto';
         /* §32 — limpar imagem anexada para não vazar no próximo ENVIAR */
         _attachedImg = null;
