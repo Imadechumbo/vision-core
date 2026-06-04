@@ -2544,3 +2544,36 @@ TEMP\vision-core-phase-missions\
 
 > **REGRA ABSOLUTA:** `VALIDATION-1-GATE.md` com decisão PASS é pré-requisito para qualquer novo milestone de feature. Sem portão fechado, sem avanço.
 
+---
+
+## §REAL-VALIDATION-2-PREP — Gate Visual com Evidência Humana
+
+**Data:** 2026-06-04
+**Status:** CHECKLIST GERADO — aguardando execução humana
+**Arquivo:** `TEMP\vision-core-phase-missions\VALIDATION-2-MANUAL-CHECKLIST.md`
+
+### Build deployado
+
+| Item | Valor |
+|------|-------|
+| CF Pages URL | https://dd563741.visioncoreai.pages.dev |
+| Commit | `625a19a` (§38+§39+§REAL-VALIDATION-1-PREP) |
+| EB | `app-260604_092055680182` |
+| `_zipMode='fix'` no bundle deployed | ✅ verificado |
+| EB smoke test | provider=groq, ```json+decisao ✅ |
+
+### 3 Testes do checklist
+
+| # | Teste | Critério |
+|---|-------|----------|
+| 1 | ZIP Flow + Diagnóstico | NEEDS_FIX, diff com Hexe, hint 🛡, painel de agentes |
+| 2 | EXECUTAR MISSÃO + Apply | Standard Method panel, aegis_ok=true, botão download |
+| 3 | Arquivo baixado | Hexe em LOCAL_REAL_COVERS, JS válido, Crimson Desert preservado |
+
+### Critério de PASS
+
+Usuário executa os 3 testes na UI e confirma todos os checkboxes.  
+**Sem PASS humano, nenhum novo milestone é iniciado.**
+
+> **REGRA ABSOLUTA:** `VALIDATION-2-MANUAL-CHECKLIST.md` com todos os checkboxes marcados PASS = pré-requisito para V3.0.0 milestone final e início de qualquer nova feature V3.1+.
+
