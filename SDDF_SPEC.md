@@ -2153,6 +2153,156 @@ Frontend não muda — parseHermesBlock recebe JSON bem-formado em ambos os caso
 
 ---
 
+## §35 — Asset List Injection + User Message in ZIP Branch
+
+**Commit:** `feat(§35): ZIP asset list injection + user message display + REGRA DE ASSETS`
+**Data:** 2026-06-03
+
+### Problema
+
+Hermes sugeria paths de imagem inventados (ex: `assets/img/game-hexe.png`) porque:
+1. `_processZipBuffer` não exibia a mensagem do usuário no chat (ZIP branch).
+2. Assets binários (.png, .svg, .jpg, etc.) eram filtrados por `TEXT_EXTS` antes de chegar ao LLM → invisíveis.
+3. `hermesDecisionMatrix` não tinha instrução explícita sobre uso de assets reais.
+
+### Solução
+
+**FIX 1 — Mensagem do usuário no ZIP branch** (`sendMessage`, antes de `_processZipBuffer`):
+```javascript
+if (text) {
+  var _zipDisplay = text.slice(0, 300) + (text.length > 300 ? '…' : '');
+  appendMsg('📦 ' + _pz.file.name + ' — ' + _zipDisplay, 'user');
+}
+```
+
+**FIX 2 — Coleta de asset paths** (`zip.forEach`, antes do filtro `TEXT_EXTS`):
+```javascript
+var ASSET_EXTS = ['.png','.jpg','.jpeg','.gif','.svg','.webp','.ico','.mp4','.mp3','.woff','.woff2','.ttf','.pdf'];
+var assetPaths = [];
+// Coleta antes do filtro TEXT_EXTS:
+if (ASSET_EXTS.indexOf(ext) !== -1) {
+  assetPaths.push(/* relPath sem root prefix */);
+}
+// Injeta no contexto:
+var assetContext = assetPaths.length > 0
+  ? '\n\n[ASSETS DISPONÍVEIS NO PROJETO — use estes caminhos ao sugerir patches]\n'
+    + assetPaths.sort().map(a => '  ' + a).join('\n')
+  : '';
+var context = question + assetContext + '\n\n' + contents.slice().reverse().join('\n\n---\n\n');
+```
+
+**FIX 3 — REGRA DE ASSETS no `hermesDecisionMatrix`** (backend):
+```
+REGRA DE ASSETS: quando o patch envolver caminho de arquivo (imagem, SVG, font):
+  1. Verifique [ASSETS DISPONÍVEIS NO PROJETO] no contexto.
+  2. Use SEMPRE um path da lista — NUNCA invente nomes de arquivo.
+  3. Se lista ausente ou incompleta, use path mais próximo e explique em "diagnosis".
+```
+
+### Evidência
+
+- ZIP de diagnóstico (`technetgamev2-PRE-hexefix-CLEAN.zip`) não tem imagens → `assetPaths = []`.
+- ZIP de projeto completo terá assets; FIX 2 os expõe ao LLM.
+- REGRA DE ASSETS preservada em §37 (`hermesDecisionMatrix` reformulado).
+
+---
+
+## §36 — Vision Core Standard Method (9-Stage Pipeline Panel)
+
+**Commit:** `feat(§36): Standard Method panel — _activeMission + renderStandardMethodPanel`
+**Data:** 2026-06-03
+
+### Motivação
+
+`EXECUTAR MISSÃO` anterior: `tryAgent(7070-7072)` → timeout → `/api/run-live` sem contexto.
+Sem rastreamento de estado, sem confirmação humana, sem relatório de falha.
+
+### Implementação
+
+**Estado `_activeMission`:**
+```javascript
+var _activeMission = null;
+/* { id, hermesObj, input, stage, evidence[], zipB64, startedAt } */
+```
+
+**Preenchido em 2 lugares:**
+- ZIP flow (após `parseHermesBlock`): `_activeMission = { ..., zipB64: _lastZipB64, ... }`
+- Chat flow (após `parseHermesBlock`): `_activeMission = { ..., input: text, ... }`
+
+**`renderStandardMethodPanel(mission)`:** Painel azul com 9 etapas SDDF.
+- Botão CONFIRMAR EXECUÇÃO → `confirmBtn.onclick` — verifica `h.patch + h.file + _lastZipB64`
+- Chama `POST /api/chat/apply-patch` com `{ zip_base64, file_path, fix_type, patch, diagnosis }`
+- Exibe `diff_preview`, `aegis_ok`, linha de resultado
+- Botão 📥 BAIXAR ARQUIVO CORRIGIDO → Blob download
+
+**Bugs corrigidos (commit follow-up):**
+- BUG1: `h` sem `patch/file` (BLOCKED_INPUT) → mensagem de erro + cleanup, sem crash silencioso
+- BUG2: `_lastZipB64 === null` → aviso no painel "ZIP não está em memória — reenvie"
+- BUG3: `.catch()` → relatório estruturado com `❌ Erro: err.message` (não só texto inline)
+
+**clearBtn:** `_activeMission = null; _lastZipB64 = null;`
+
+### Regra
+
+> O Confirm Gate (§8) é obrigatório. Nenhum patch é aplicado sem clique humano em CONFIRMAR.
+
+---
+
+## §37 — Padrão de Comportamento Multiagente + Hermes RCA + Hybrid systemPrompt
+
+**Commit:** `feat(§37): multiagente basePrompt + Hermes RCA + hybrid systemPrompt`
+**Data:** 2026-06-03
+**Arquivo:** `backend/server.js`
+
+### Mudanças
+
+**1. `basePrompt` reformulado como sistema multiagente (SDDF V8.4):**
+- 11 etapas do pipeline SDDF (§1 Intake → §11 Report)
+- 10 agentes com papéis definidos (Hermes, Aegis, Scanner, Patch Eng., Confirm, Apply Eng., Rollback, Reporter, Vision, Intake)
+- 7 regras absolutas do sistema (R1–R7)
+- 4 métodos de acesso ao projeto (mantidos)
+- Estilo §23 preservado
+
+**2. `hermesDecisionMatrix` reformulado como Hermes RCA:**
+- Etapas explícitas: §4 RCA, §6 CONFIRM, §7 EVIDENCE, §8 DECIDE, §9 PATCH
+- Decision matrix com 4 decisões (NEEDS_FIX / BLOCKED_INPUT / ABORTED / READY)
+- REGRA DE ASSETS (R6) preservada de §35
+- NOTA SOBRE ASPAS: `"Assassin's Creed"` com double-quotes
+- REGRA DE QUALIDADE: `confidence < 0.7 → BLOCKED_INPUT`
+- Instrução `OBRIGATÓRIO` (§33) preservada
+
+**3. Hybrid `systemPrompt` (3 caminhos):**
+```javascript
+const hasFileCtxForPrompt = /\[Arquivo: /.test(message) ||
+                             /\[CONTEÚDO DE /.test(message) ||
+                             /\[[^\]]{2,}\.(js|ts|html|css|json|py|go|md|txt|mjs|cjs|jsx|tsx)\]/.test(message);
+
+// visionAddendum:
+//   hybrid (hasImage + hasFileCtxForPrompt + mode=fix): vision layer + hermesDecisionMatrix
+//   image-only: "VOCÊ ESTÁ RECEBENDO UMA IMAGEM..."
+
+// systemPrompt (3-way):
+//   hasImage=T → basePrompt + visionAddendum (hybrid ou image-only)
+//   hasImage=F → basePrompt + fixModeInstructions (code-only)
+```
+
+### Rotas validadas
+
+| hasImage | hasFileCtxForPrompt | mode | Rota |
+|---|---|---|---|
+| false | true | fix | CODE-ONLY (Hermes RCA) |
+| true | false | fix | IMAGE-ONLY (visual description) |
+| true | true | fix | HYBRID (vision + Hermes RCA) |
+| false | false | chat | CODE-ONLY (sem hermesDecisionMatrix) |
+
+### Validate-syntax
+
+```
+node --check backend/server.js → EXIT:0 (PASS)
+```
+
+---
+
 ## §GOV — Regras de Governança do Vision Core
 
 Ancoradas na evidência das sessões de 01–03/06/2026. Vinculantes para toda execução futura.
