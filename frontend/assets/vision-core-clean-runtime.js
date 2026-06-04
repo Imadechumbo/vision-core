@@ -4669,6 +4669,16 @@
       statusEl.style.cssText = 'color:#94a3b8;font-size:12px;margin-top:10px;min-height:18px;width:100%;';
 
       confirmBtn.onclick = function() {
+        /* §36fix BUG1: h existe mas sem patch/file → BLOCKED_INPUT ou diagnóstico incompleto */
+        if (h && (!h.patch || !h.file)) {
+          appendMsg(['🛡 Vision Core Standard Method — DIAGNÓSTICO INCOMPLETO','','⚖️  Decisão:   ' + (h.decisao || 'BLOCKED_INPUT'),'📋 Motivo:    patch ou arquivo ausente no diagnóstico','','Opções:','  • Clique EXECUTAR MISSÃO novamente para rediagnosticar com mais contexto','  • Copie o diagnóstico do chat e aplique manualmente'].join('\n'), 'error');
+          wrap.remove(); _activeMission = null; setStatus('READY'); return;
+        }
+        /* §36fix BUG2: hermesObj com patch mas ZIP não em memória */
+        if (h && h.patch && h.file && !_lastZipB64) {
+          statusEl.textContent = '⚠️ ZIP não está em memória — reenvie o arquivo ZIP para aplicar o patch automaticamente. Ou copie o diff acima e aplique manualmente no seu projeto.';
+          return;
+        }
         if (h && _lastZipB64) {
           confirmBtn.disabled = true; cancelBtn.disabled = true;
           confirmBtn.textContent = '⏳ Executando pipeline...';
@@ -4718,10 +4728,9 @@
                 setStatus('READY');
               })
               .catch(function(err) {
-                confirmBtn.disabled = false; cancelBtn.disabled = false;
-                confirmBtn.textContent = '✅ Confirmar e Aplicar Patch';
-                statusEl.textContent = '❌ Execução falhou: ' + (err.message || String(err));
-                setStatus('READY');
+                /* §36fix BUG3: relatório estruturado no checkpoint de falha */
+                appendMsg(['🛡 Vision Core Standard Method — FALHA NO CHECKPOINT','','⚖️  Decisão:   NEEDS_FIX — execução bloqueada','❌ Erro:      ' + (err.message || String(err)),'','Opções disponíveis:','  • Clique EXECUTAR MISSÃO novamente para rediagnosticar','  • Reenvie o ZIP se o arquivo não estiver em memória','  • Copie o diff do chat e aplique manualmente'].join('\n'), 'error');
+                wrap.remove(); _activeMission = null; setStatus('READY');
               });
             }, 600);
           }, 400);
