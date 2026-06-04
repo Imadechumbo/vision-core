@@ -5530,6 +5530,22 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     if (!chatStream || !promptInput || !sendBtn) return;
     _chatInitialized = true;
 
+    /* §38 — inject animation keyframes once */
+    if (!document.getElementById('vc-anim-styles')) {
+      var _animStyle = document.createElement('style');
+      _animStyle.id = 'vc-anim-styles';
+      _animStyle.textContent = [
+        '@keyframes vcPulse {',
+        '  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(139,92,246,.4); }',
+        '  50% { opacity: .85; box-shadow: 0 0 0 6px rgba(139,92,246,0); }',
+        '}',
+        '@keyframes vcSpin {',
+        '  to { transform: rotate(360deg); }',
+        '}'
+      ].join('\n');
+      document.head.appendChild(_animStyle);
+    }
+
     function setStatus(text, extra) {
       if (!statusEl) return;
       statusEl.textContent = text;
@@ -5730,7 +5746,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       var model = modelSelect ? modelSelect.value : 'auto';
 
       setStatus('PROCESSANDO...', 'busy');
-      var thinking = appendMsg('▪ processando...', 'thinking');
+      /* §38 — animated spinner */
+      var thinking = appendMsg('', 'thinking');
+      thinking.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid #4f46e5;border-top-color:transparent;border-radius:50%;animation:vcSpin .7s linear infinite;vertical-align:middle;margin-right:8px;"></span>' +
+        '<span class="vc-thinking-text">analisando...</span>';
+      if (sendBtn) sendBtn.style.animation = 'vcPulse 1s ease-in-out infinite'; /* §38 pulse */
       activateAgent('scanner', 'active');
       var _chatAnimTimer = setTimeout(function() { activateAgent('hermes', 'active'); }, 1200);
 
@@ -5753,6 +5773,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       .then(function(data) {
         clearTimeout(_chatAnimTimer);
         thinking.remove();
+        if (sendBtn) sendBtn.style.animation = ''; /* §38 */
         stopMissionAnimation({ ok: true, steps: [{ agent: 'Scanner', ok: true }, { agent: 'Hermes', ok: true }] });
         /* §27 echo guard */
         if (data && data.provider === 'local') {
@@ -5768,6 +5789,14 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           typewriterEffect(msgEl, answer.replace(/```json[\s\S]*?```/g, '[↑ diagnóstico estruturado acima]'), 10);
           /* §36 — salvar missão ativa para EXECUTAR MISSÃO */
           _activeMission = { id: 'mission-' + Date.now(), hermesObj: hermesObj, input: text, stage: 'diagnosed', evidence: [{ type: 'diagnosis', data: hermesObj, ts: Date.now() }], zipB64: _lastZipB64 || null, startedAt: Date.now() };
+          /* §38 — hint pós-diagnóstico */
+          (function() {
+            var hintEl = document.createElement('div');
+            hintEl.style.cssText = 'background:rgba(79,70,229,.08);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:10px 14px;margin:4px 0 8px;font-size:12px;color:#a5b4fc;display:flex;align-items:center;gap:8px;';
+            hintEl.innerHTML = '<span style="font-size:16px;">🛡</span><span>Diagnóstico concluído. Clique em <b style="color:#c7d2fe">EXECUTAR MISSÃO</b> para aplicar o patch automaticamente via Vision Core Standard Method.</span>';
+            chatStream.appendChild(hintEl);
+            chatStream.scrollTop = chatStream.scrollHeight;
+          }());
         } else {
           typewriterEffect(msgEl, answer, 10);
         }
@@ -5776,6 +5805,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       .catch(function(err) {
         clearTimeout(_chatAnimTimer);
         thinking.remove();
+        if (sendBtn) sendBtn.style.animation = ''; /* §38 */
         resetAllAgents();
         appendMsg('[Erro de conexão com worker: ' + BACKEND_URL + ' — ' + err + ']', 'error');
         setStatus('ERRO', 'error');
@@ -6163,7 +6193,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         } else if (!h) {
           wrap.remove();
           var missionText = mission.input || 'missão SDDF padrão';
-          var thinking2 = appendMsg('▪ 📋 Missão iniciada — processando via Hermes...', 'thinking');
+          /* §38 — animated spinner */
+          var thinking2 = appendMsg('', 'thinking');
+          thinking2.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid #4f46e5;border-top-color:transparent;border-radius:50%;animation:vcSpin .7s linear infinite;vertical-align:middle;margin-right:8px;"></span>' +
+            '<span class="vc-thinking-text">📋 missão iniciada — processando via Hermes...</span>';
           setStatus('EXECUTANDO MISSÃO...', 'busy');
           fetch(BACKEND_URL + '/api/chat', {
             method: 'POST',
@@ -6178,7 +6211,14 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             if (hObj) {
               _activeMission = { id: mission.id, hermesObj: hObj, input: missionText, stage: 'diagnosed', evidence: [{ type: 'diagnosis', data: hObj, ts: Date.now() }], zipB64: _lastZipB64 || null, startedAt: mission.startedAt };
               renderHermesBlock(hObj, chatStream);
-              appendMsg('✅ Diagnóstico concluído. Clique em EXECUTAR MISSÃO para prosseguir com o patch.', '');
+              /* §38 — hint pós-diagnóstico */
+              (function() {
+                var hintEl = document.createElement('div');
+                hintEl.style.cssText = 'background:rgba(79,70,229,.08);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:10px 14px;margin:4px 0 8px;font-size:12px;color:#a5b4fc;display:flex;align-items:center;gap:8px;';
+                hintEl.innerHTML = '<span style="font-size:16px;">🛡</span><span>Diagnóstico concluído. Clique em <b style="color:#c7d2fe">EXECUTAR MISSÃO</b> para aplicar o patch automaticamente via Vision Core Standard Method.</span>';
+                chatStream.appendChild(hintEl);
+                chatStream.scrollTop = chatStream.scrollHeight;
+              }());
             } else {
               appendMsg(answer, '');
             }
@@ -6203,6 +6243,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     /* ── EXECUTAR MISSÃO — §36 Vision Core Standard Method ─── */
     if (runBtn) {
       runBtn.addEventListener('click', function() {
+        /* §38 — ripple visual */
+        runBtn.style.transform = 'scale(0.97)';
+        setTimeout(function() { runBtn.style.transform = ''; }, 150);
         /* §36: missão ativa com hermesObj → mostrar Standard Method panel */
         if (_activeMission && _activeMission.hermesObj) {
           renderStandardMethodPanel(_activeMission);
@@ -6400,6 +6443,14 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               typewriterEffect(msgEl, answer.replace(/```json[\s\S]*?```/g, '[↑ diagnóstico Hermes acima]'), 10);
               /* §36 — salvar missão ativa para EXECUTAR MISSÃO */
               _activeMission = { id: 'mission-' + Date.now(), hermesObj: hermesObj, input: question, stage: 'diagnosed', evidence: [{ type: 'diagnosis', data: hermesObj, ts: Date.now() }], zipB64: _lastZipB64 || null, startedAt: Date.now() };
+              /* §38 — hint pós-diagnóstico */
+              (function() {
+                var hintEl = document.createElement('div');
+                hintEl.style.cssText = 'background:rgba(79,70,229,.08);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:10px 14px;margin:4px 0 8px;font-size:12px;color:#a5b4fc;display:flex;align-items:center;gap:8px;';
+                hintEl.innerHTML = '<span style="font-size:16px;">🛡</span><span>Diagnóstico concluído. Clique em <b style="color:#c7d2fe">EXECUTAR MISSÃO</b> para aplicar o patch automaticamente via Vision Core Standard Method.</span>';
+                chatStream.appendChild(hintEl);
+                chatStream.scrollTop = chatStream.scrollHeight;
+              }());
             } else {
               typewriterEffect(msgEl, answer, 10);
             }
