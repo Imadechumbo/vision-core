@@ -2303,6 +2303,77 @@ node --check backend/server.js → EXIT:0 (PASS)
 
 ---
 
+## §40 — Formato Completo de Resposta Multiagente
+
+**Commit:** `feat(§40): formato completo multiagente + BLOCKED_RUNTIME + GO CORE + OPENCLAW`
+**Data:** 2026-06-04
+**Arquivo:** `backend/server.js`
+
+### Pipeline completo de agentes no chat (ordem obrigatória)
+
+```
+MISSÃO RECEBIDA → HERMES → SCANNER → OPENCLAW → PATCHENGINE → GO CORE → AEGIS → DECISÃO
+```
+
+| Agente | Ícone | Cor | Conteúdo |
+|--------|-------|-----|----------|
+| MISSÃO RECEBIDA | 📋 | #60a5fa | Tipo / Risco / Escopo |
+| HERMES | 🔮 | #a78bfa | Status do contexto / Regras aplicadas |
+| SCANNER | 🔍 | #34d399 | O que foi encontrado |
+| OPENCLAW | 🦾 | #f59e0b | Plano criado com N tarefas |
+| PATCHENGINE | ⚙️ | #06b6d4 | Patch preparado ou bloqueado |
+| GO CORE | ✅ | #4ade80 | Evidence receipt: presente/ausente · Runtime probe: OK/pendente |
+| AEGIS | 🛡 | #f87171 | Validação: sem deploy, sem tag, sem stable |
+| DECISÃO | ⚖️ | #e2e8f0 | Decisão final + próximo passo |
+
+### Decisões possíveis (hermesDecisionMatrix)
+
+| Decisão | Condição |
+|---------|----------|
+| `NEEDS_FIX` | Erro corrigível com evidência real → produza patch |
+| `BLOCKED_INPUT` | Contexto insuficiente / arquivo protegido / confidence < 0.7 |
+| `BLOCKED_RUNTIME` | Go Core sem evidence receipt — evidência de runtime ausente |
+| `ABORTED` | Arquivo proibido (.env, secrets, CI/CD workflows) |
+| `READY` | Sem alterações necessárias E sem diff no texto |
+
+### Regra de resposta
+
+> O chat sempre mostra: **O QUE** foi pedido · **QUEM** está responsável · **QUAL** evidência existe · **O QUE** está bloqueado · **QUAL** regra impede · **QUAL** próximo passo seguro.
+
+### Mudanças em server.js
+
+**1. `basePrompt` FORMATO DE RESPOSTA — adicionado OPENCLAW e GO CORE:**
+```
+OPENCLAW
+- [plano criado com N tarefas]
+
+GO CORE
+- [Evidence receipt: presente | ausente]
+- [Runtime probe: OK | pendente]
+```
+Inserido entre PATCHENGINE e AEGIS. DECISÃO atualizado para incluir `BLOCKED_RUNTIME`.
+
+**2. `hermesDecisionMatrix` DECISION MATRIX — adicionado BLOCKED_RUNTIME:**
+```
+BLOCKED_RUNTIME → evidência de runtime ausente (Go Core sem evidence receipt)
+```
+
+### Frontend (sem mudança)
+
+`agentIcons` e `agentColors` já continham GO CORE e OPENCLAW em ambos os arquivos:
+```javascript
+'GO CORE':  { icon: '✅', color: '#4ade80' }
+'OPENCLAW': { icon: '🦾', color: '#f59e0b' }
+```
+
+### Validate-syntax
+
+```
+node scripts/validate-syntax.js → PASS: 8 JavaScript files
+```
+
+---
+
 ## §38 — UX Pós-Diagnóstico: Hint + Animações
 
 **Commits:** `feat: §38 hint pós-diagnóstico + animações UX` · `fix(§38): hint ZIP flow — hasDiff fallback + setTimeout 300ms`
