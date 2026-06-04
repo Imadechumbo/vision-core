@@ -5169,7 +5169,9 @@
 
             /* §38fix — hint aparece mesmo quando resposta é texto livre com diff */
             var hasDiff = answer.indexOf('```diff') !== -1 || answer.indexOf('```javascript') !== -1;
-            if (hermesObj || hasDiff) {
+            var hasReady = answer.indexOf('DECISÃO') !== -1 && answer.indexOf('READY') !== -1;
+            /* Se READY mas tem diff, tratar como NEEDS_FIX para hint */
+            if ((hermesObj || hasDiff) && !(hasReady && !hasDiff)) {
               var hintEl38 = document.createElement('div');
               hintEl38.style.cssText = 'background:rgba(79,70,229,.08);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:10px 14px;margin:4px 0 8px;font-size:12px;color:#a5b4fc;display:flex;align-items:center;gap:8px;';
               hintEl38.innerHTML = '<span style="font-size:16px;">🛡</span><span>Diagnóstico concluído. Clique em <b style="color:#c7d2fe">EXECUTAR MISSÃO</b> para aplicar o patch automaticamente via Vision Core Standard Method.</span>';

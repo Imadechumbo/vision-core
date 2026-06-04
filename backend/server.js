@@ -1134,7 +1134,8 @@ app.post('/api/chat', async (req, res) => {
     `  NEEDS_FIX     → erro corrigível encontrado com evidência real → produza patch`,
     `  BLOCKED_INPUT → contexto insuficiente, arquivo protegido, confidence < 0.7`,
     `  ABORTED       → arquivo proibido (.env, secrets, CI/CD workflows) → recuse`,
-    `  READY         → nenhuma alteração necessária → confirme estado correto`,
+    `  READY         → nenhuma alteração necessária E sem diff no texto → confirme estado correto`,
+    `                 NUNCA use READY se você produziu um diff ou patch — use NEEDS_FIX`,
     ``,
     `OBRIGATÓRIO: sua resposta DEVE começar com um bloco \`\`\`json.`,
     `NÃO responda em texto livre antes do bloco json.`,
@@ -1267,29 +1268,29 @@ app.post('/api/chat', async (req, res) => {
     if (mode !== 'fix') return answer;
     if (!answer || answer.includes('```json')) return answer;
     const extractPrompt =
-      'O texto abaixo contém um diagnóstico com um ou mais patches/diffs. ' +
-      'Analise e retorne APENAS um bloco ```json:\n' +
-      '\n' +
-      'REGRAS:\n' +
-      '1. Se há apenas 1 hunk (1 par de linhas -/+): use fix_type="code_patch" e patch={"search":"linha original","replace":"linha nova"}\n' +
-      '2. Se há MÚLTIPLOS hunks: use fix_type="code_patch" com o PATCH MAIS IMPORTANTE (geralmente o primeiro @@ ou o que muda a lógica principal)\n' +
-      '3. decisao DEVE ser "NEEDS_FIX" se há qualquer linha com + no diff\n' +
-      '4. file: use o caminho exato do arquivo mencionado no diff\n' +
-      '5. search: copie EXATAMENTE a linha com - (sem o - inicial)\n' +
-      '6. replace: copie EXATAMENTE a linha com + (sem o + inicial)\n' +
-      '\n' +
-      'Formato obrigatório:\n' +
+      'O texto abaixo é um diagnóstico com um diff/patch. ' +
+      'Analise e retorne APENAS um bloco ```json:\n\n' +
+      'REGRAS CRÍTICAS:\n' +
+      '1. Se há ```diff no texto: decisao="NEEDS_FIX" OBRIGATÓRIO\n' +
+      '2. DECISÃO: READY com diff presente = ERRO — use NEEDS_FIX\n' +
+      '3. Se diff tem múltiplas funções novas (full replace): fix_type="full_replace"\n' +
+      '   patch = string com o conteúdo COMPLETO do arquivo após as mudanças\n' +
+      '4. Se diff tem 1-2 linhas simples: fix_type="code_patch"\n' +
+      '   patch = { "search": "linha original", "replace": "linha nova" }\n' +
+      '5. file: caminho exato do arquivo no diff (sem o prefixo a/ ou b/)\n' +
+      '6. Se não extrair arquivo do diff, use o caminho de arquivo mais mencionado no contexto\n\n' +
+      'Formato:\n' +
       '```json\n' +
       '{\n' +
       '  "decisao": "NEEDS_FIX",\n' +
       '  "file": "caminho/arquivo.js",\n' +
       '  "fix_type": "code_patch",\n' +
-      '  "patch": { "search": "linha original exata", "replace": "linha nova exata" },\n' +
+      '  "patch": { "search": "linha original", "replace": "linha nova" },\n' +
       '  "confidence": 0.95,\n' +
-      '  "diagnosis": "causa-raiz em uma linha"\n' +
+      '  "diagnosis": "causa-raiz"\n' +
       '}\n' +
       '```\n' +
-      'Retorne APENAS o JSON. Sem texto antes ou depois.\n\n' +
+      'Retorne APENAS o JSON.\n\n' +
       answer.slice(0, 4000);
     try {
       const extracted = await callFn(extractPrompt);
