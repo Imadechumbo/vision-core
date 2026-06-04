@@ -2303,6 +2303,104 @@ node --check backend/server.js → EXIT:0 (PASS)
 
 ---
 
+## §38 — UX Pós-Diagnóstico: Hint + Animações
+
+**Commits:** `feat: §38 hint pós-diagnóstico + animações UX` · `fix(§38): hint ZIP flow — hasDiff fallback + setTimeout 300ms`
+**Data:** 2026-06-04
+**Arquivos:** `frontend/assets/vision-core-clean-runtime.js` · `vision-core-bundle.js`
+
+### Mudanças
+
+**1. Hint 🛡 "Clique EXECUTAR MISSÃO" pós-diagnóstico:**
+- Aparece após qualquer resposta com `hermesObj` (```json presente) OU `hasDiff` (```diff / ```javascript presente)
+- `hasReady` guard: não aparece quando resposta é `DECISÃO: READY` sem diff
+- `setTimeout(300ms)` para renderizar após o corpo da resposta
+- Injetado no ZIP flow (`_processZipBuffer`) e no chat flow normal
+
+**2. CSS keyframes injetados dinamicamente (`id='vc-anim-styles'`):**
+```css
+@keyframes vcPulse  { 0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(139,92,246,.4); }
+                      50%     { opacity:.85; box-shadow:0 0 0 6px rgba(139,92,246,0); } }
+@keyframes vcSpin   { to { transform: rotate(360deg); } }
+@keyframes vcProgress { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
+```
+
+**3. Condição final do hint (§38fix):**
+```javascript
+var hasDiff  = answer.indexOf('```diff') !== -1 || answer.indexOf('```javascript') !== -1;
+var hasReady = answer.indexOf('DECISÃO') !== -1 && answer.indexOf('READY') !== -1;
+if ((hermesObj || hasDiff) && !(hasReady && !hasDiff)) { /* render hint */ }
+```
+
+---
+
+## §39 — Fluxo Multiagente Visível no Chat
+
+**Commits:** `feat(§39): renderAgentReport + SVG spinner + progress bar + fade-in + showMissionProgress`
+**Data:** 2026-06-04
+**Arquivos:** `frontend/assets/vision-core-clean-runtime.js` · `vision-core-bundle.js`
+
+### Mudanças
+
+**1. `buildSpinner(size)` — SVG 12 segmentos:**
+```javascript
+// 12 linhas radiais, cores de #ffffff → #334155 (gradiente escuro)
+// Animação: vcSpin .8s steps(12, end) infinite
+// Usado em: thinking indicator do ZIP flow
+```
+
+**2. `showMissionProgress(thinkingEl)` — 10 passos 0–12.5s:**
+| Delay | Texto | Agente |
+|-------|-------|--------|
+| 0ms | 📋 Mission Input — missão recebida | intake |
+| 1200ms | 🔍 Scanner — lendo estrutura | scanner |
+| 2800ms | 🔍 Scanner — arquivos identificados | scanner |
+| 4200ms | 🔮 Hermes — analisando causa-raiz | hermes |
+| 5800ms | 🔮 Hermes — RCA em progresso | hermes |
+| 7200ms | 🦾 OpenClaw — montando plano | openclaw |
+| 8500ms | ⚙️ PatchEngine — preparando patch | patchengine |
+| 10000ms | 🛡 Aegis — verificando escopo | aegis |
+| 11200ms | ✅ Go Core — aguardando evidência | gocore |
+| 12500ms | ⏳ Finalizando diagnóstico | passgold |
+
+Retorna array de timers — limpos com `clearTimeout` quando resposta chega.
+
+**3. `showProgressBar` / `hideProgressBar` — sticky 3px gradient:**
+```javascript
+// Barra sticky no topo do chatStream
+// background: linear-gradient(90deg, #6366f1, #8b5cf6, #06b6d4, #6366f1)
+// background-size: 200% 100%; animation: vcProgress 2s linear infinite
+```
+
+**4. `parseAgentReport(text)` — parser de blocos de agente:**
+- Detecta: `MISSÃO RECEBIDA`, `HERMES`, `SCANNER`, `OPENCLAW`, `PATCHENGINE`, `AEGIS`, `GO CORE`, `DECISÃO`
+- Retorna objeto `{ AGENT: conteúdo }` ou `null`
+
+**5. `renderAgentReport(report, container)` — painel visual:**
+- Um bloco por agente, com ícone + cor + conteúdo
+- Injetado após `appendMsg` da resposta ZIP
+
+**6. `appendMsg` fade-in:**
+```javascript
+// cls !== 'thinking': opacity 0→1, translateY 8px→0, transition .25s ease
+```
+
+**7. Spinner no ZIP thinking indicator:**
+```javascript
+thinking.appendChild(buildSpinner(18));
+var _zipThinkSpan = document.createElement('span');
+_zipThinkSpan.className = 'vc-thinking-text';
+```
+
+### Validate-syntax
+
+```
+node --check frontend/assets/vision-core-clean-runtime.js → EXIT:0
+node --check frontend/assets/vision-core-bundle.js         → EXIT:0
+```
+
+---
+
 ## §GOV — Regras de Governança do Vision Core
 
 Ancoradas na evidência das sessões de 01–03/06/2026. Vinculantes para toda execução futura.
@@ -2377,4 +2475,72 @@ Regra 1: escopo mínimo — resolve só o apontado.
 Regra 2: contexto mínimo suficiente — ordem importa mais que volume (§31).
 Regra 3: sandbox obrigatório — validar antes de promover (§30, fe7de77).
 ```
+
+---
+
+## §REAL-VALIDATION-1-PREP — Portão Estático de Validação V3.0.0
+
+**Data:** 2026-06-04
+**Status:** SPEC REGISTRADA — docs a gerar em `TEMP\vision-core-phase-missions\`
+
+### Objetivo
+
+Certificar o estado atual de Vision Core V3.0.0 com 4 documentos estáticos antes de qualquer promoção de milestone. Nenhuma feature nova é iniciada sem este portão fechado.
+
+### Os 4 Documentos
+
+| # | Arquivo | Conteúdo |
+|---|---------|----------|
+| 1 | `VALIDATION-1-EVIDENCE.md` | Evidência coletada — commits, test results, PASS GOLD receipts |
+| 2 | `VALIDATION-1-PIPELINE.md` | Estado do pipeline — providers, endpoints, latências, health |
+| 3 | `VALIDATION-1-INTEGRATION.md` | Testes de integração — ZIP flow, apply-patch, Hexe end-to-end |
+| 4 | `VALIDATION-1-GATE.md` | Gate decisão — PASS / FAIL com assinatura de sessão |
+
+### Critérios de PASS por documento
+
+**Doc 1 — EVIDENCE:**
+- [ ] Commits desta sessão (d3d22ab → a2e37da) listados com hash e descrição
+- [ ] PASS GOLD apply-patch confirmado (`aegis_ok=true`, `Hexe present=true`)
+- [ ] Root cause §34 documentado (`_zipMode` fix)
+
+**Doc 2 — PIPELINE:**
+- [ ] Provider chain: Groq (skip>24K) → Gemini (45s) → Cerebras (gpt-oss-120b) → OpenRouter (meta-llama)
+- [ ] Endpoints ativos: `/api/chat`, `/api/chat/apply-patch`, `/api/unzip-context`
+- [ ] Latências medidas: Gemini ~12s (60K payload), apply-patch ~1.4s
+
+**Doc 3 — INTEGRATION:**
+- [ ] ZIP extract: 4 files, budget 59726/60K ✓
+- [ ] Groq §26 skip confirmado (>24K) ✓
+- [ ] `decisao=NEEDS_FIX`, `confidence=1.0`, `file` correto ✓
+- [ ] apply-patch: `aegis_ok=true`, `Hexe` em `patched_content` ✓
+- [ ] `_zipMode='fix'` forçado — `hermesDecisionMatrix` sempre injetado ✓
+
+**Doc 4 — GATE:**
+- [ ] Todos os 3 docs anteriores PASS
+- [ ] `validate-syntax`: `node --check` nos 3 arquivos principais EXIT:0
+- [ ] Nenhum teste falhando
+- [ ] Decisão: PASS → milestone V3.0.0 certificado
+
+### Protocolo de geração
+
+```
+1. Executar validate-syntax nos 3 arquivos principais
+2. Gerar Doc 1 com evidência desta sessão
+3. Gerar Doc 2 com estado atual de infra
+4. Gerar Doc 3 com resultados dos testes automatizados
+5. Gerar Doc 4 com decisão final de gate
+6. Commit: docs(validation): REAL-VALIDATION-1-PREP — 4 static gate docs
+```
+
+### Localização
+
+```
+TEMP\vision-core-phase-missions\
+  VALIDATION-1-EVIDENCE.md
+  VALIDATION-1-PIPELINE.md
+  VALIDATION-1-INTEGRATION.md
+  VALIDATION-1-GATE.md
+```
+
+> **REGRA ABSOLUTA:** `VALIDATION-1-GATE.md` com decisão PASS é pré-requisito para qualquer novo milestone de feature. Sem portão fechado, sem avanço.
 
