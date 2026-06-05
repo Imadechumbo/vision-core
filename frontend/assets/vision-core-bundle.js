@@ -5545,6 +5545,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         '@keyframes vcProgress {',
         '  0% { background-position: 200% 0; }',
         '  100% { background-position: -200% 0; }',
+        '}',
+        '@keyframes vcGoldShimmer {',  /* §45 */
+        '  0%   { background-position: 0% 50%; }',
+        '  50%  { background-position: 100% 50%; }',
+        '  100% { background-position: 0% 50%; }',
         '}'
       ].join('\n');
       document.head.appendChild(_animStyle);
@@ -5573,6 +5578,62 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       }
       svg.style.animation = 'vcSpin .8s steps(12, end) infinite';
       return svg;
+    }
+
+    /* §45 — PASS GOLD: renderiza badge dourado animado no container */
+    function _renderPassGold45(container) {
+      var pg = document.createElement('div');
+      pg.innerHTML = '<div style="background:linear-gradient(135deg,#92400e,#f59e0b,#fde68a,#f59e0b,#92400e);background-size:300% 300%;animation:vcGoldShimmer 2s ease infinite;border-radius:14px;padding:18px 24px;margin:12px 0;text-align:center;box-shadow:0 0 30px rgba(245,158,11,0.4);">' +
+        '<div style="font-size:28px;margin-bottom:6px;">✨ PASS GOLD ✨</div>' +
+        '<div style="font-size:13px;color:#fde68a;font-weight:600;letter-spacing:1px;">AEGIS CERTIFICADO — ARQUIVO CORRIGIDO</div>' +
+        '<div style="font-size:11px;color:#fcd34d;margin-top:4px;">aegis_ok: true · sintaxe válida · patch aplicado</div>' +
+        '</div>';
+      container.appendChild(pg);
+    }
+
+    /* §45 — ZIP download: reconstrói ZIP com arquivo corrigido e dispara download */
+    function _dlZip45(patchedContent, filePath, zipName, container) {
+      var baseName = (zipName || 'projeto').replace(/\.zip$/i, '');
+      var outName  = baseName + '-corrigido.zip';
+      if (_lastZipB64 && window.JSZip) {
+        window.JSZip.loadAsync(_lastZipB64, { base64: true }).then(function(zip) {
+          zip.file(filePath, patchedContent);
+          return zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+        }).then(function(blob) {
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url; a.download = outName;
+          document.body.appendChild(a); a.click();
+          setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 2000);
+          if (container) {
+            var note = document.createElement('div');
+            note.style.cssText = 'font-size:11px;color:#86efac;margin-top:6px;text-align:center;';
+            note.textContent = '📦 ' + outName + ' baixado';
+            container.appendChild(note);
+          }
+        }).catch(function(err) {
+          _dlZip45Fallback(patchedContent, filePath, container);
+        });
+      } else {
+        _dlZip45Fallback(patchedContent, filePath, container);
+      }
+    }
+
+    /* §45 — fallback: baixa só o arquivo JS corrigido se JSZip/base64 indisponível */
+    function _dlZip45Fallback(patchedContent, filePath, container) {
+      var fname = filePath ? filePath.split('/').pop() : 'arquivo-corrigido.js';
+      var blob = new Blob([patchedContent], { type: 'text/javascript' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = fname;
+      document.body.appendChild(a); a.click();
+      setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 2000);
+      if (container) {
+        var note = document.createElement('div');
+        note.style.cssText = 'font-size:11px;color:#fcd34d;margin-top:6px;text-align:center;';
+        note.textContent = '⚠️ ZIP indisponível — baixando ' + fname;
+        container.appendChild(note);
+      }
     }
 
     /* §39 — progress bar durante ZIP */
@@ -5652,6 +5713,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var _attachedImg   = null;
     var _pendingZip    = null; /* { file: File, buffer: ArrayBuffer } — staged ZIP, fires on ENVIAR */
     var _lastZipB64    = null; /* base64 do último ZIP processado — fallback para apply-patch */
+    var _lastZipName   = null; /* §45: nome original do ZIP para download do ZIP corrigido */
     var _zipFiles      = {};  /* §42: relPath → conteúdo completo — evita reenviar ZIP inteiro no apply-patch */
     /* §36 — estado da missão SDDF ativa */
     var _activeMission = null;
@@ -6168,20 +6230,25 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             chatStream.appendChild(diffEl);
           }
 
+          /* §45 — PASS GOLD badge + ZIP download */
+          var _pg45c = document.createElement('div');
+          if (data.aegis_ok) { _renderPassGold45(_pg45c); }
           var dlBtn = document.createElement('button');
           dlBtn.style.cssText = 'background:#0a2a1a;border:1px solid #22c55e;color:#86efac;font-size:12px;padding:8px 14px;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:500;margin:4px 0 8px;';
-          dlBtn.textContent = '⬇ Baixar ' + data.filename + ' (corrigido)';
-          dlBtn.onclick = function() {
-            var blob = new Blob([data.patched_content], { type: 'text/plain;charset=utf-8' });
-            var url  = URL.createObjectURL(blob);
-            var a    = document.createElement('a');
-            a.href     = url;
-            a.download = data.filename;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
-          };
-          chatStream.appendChild(dlBtn);
+          dlBtn.textContent = data.aegis_ok ? '⬇ Baixar ZIP Corrigido' : '⬇ Baixar ' + (data.filename || data.file_path) + ' (corrigido)';
+          dlBtn.onclick = (function(d, c) { return function() {
+            if (d.aegis_ok) { _dlZip45(d.patched_content, d.file_path || d.filename, _lastZipName, c); }
+            else {
+              var blob = new Blob([d.patched_content], { type: 'text/plain;charset=utf-8' });
+              var url  = URL.createObjectURL(blob);
+              var a    = document.createElement('a');
+              a.href = url; a.download = d.filename || d.file_path;
+              document.body.appendChild(a); a.click();
+              setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+            }
+          }; })(data, _pg45c);
+          _pg45c.appendChild(dlBtn);
+          chatStream.appendChild(_pg45c);
           chatStream.scrollTop = chatStream.scrollHeight;
           setStatus('READY');
         })
@@ -6312,18 +6379,15 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                   chatStream.appendChild(diffEl);
                 }
                 if (data.aegis_ok) {
-                  var dlBtn = document.createElement('button');
-                  dlBtn.style.cssText = 'background:#0a2a1a;border:1px solid #22c55e;color:#86efac;font-size:12px;padding:8px 14px;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:500;margin:4px 0 8px;';
-                  dlBtn.textContent = '⬇ Baixar ' + data.filename + ' (corrigido)';
-                  dlBtn.onclick = function() {
-                    var blob = new Blob([data.patched_content], { type: 'text/plain;charset=utf-8' });
-                    var url  = URL.createObjectURL(blob);
-                    var a    = document.createElement('a');
-                    a.href = url; a.download = data.filename;
-                    document.body.appendChild(a); a.click();
-                    setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
-                  };
-                  chatStream.appendChild(dlBtn);
+                  /* §45 — PASS GOLD badge + ZIP download */
+                  var _pg45c2 = document.createElement('div');
+                  _renderPassGold45(_pg45c2);
+                  var dlBtn2 = document.createElement('button');
+                  dlBtn2.style.cssText = 'background:#0a2a1a;border:1px solid #22c55e;color:#86efac;font-size:12px;padding:8px 14px;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:500;margin:4px 0 8px;';
+                  dlBtn2.textContent = '⬇ Baixar ZIP Corrigido';
+                  dlBtn2.onclick = (function(d, c) { return function() { _dlZip45(d.patched_content, d.file_path || d.filename, _lastZipName, c); }; })(data, _pg45c2);
+                  _pg45c2.appendChild(dlBtn2);
+                  chatStream.appendChild(_pg45c2);
                 }
                 chatStream.scrollTop = chatStream.scrollHeight;
                 setStatus('READY');
@@ -6416,6 +6480,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         clearHistory();
         _activeMission = null;  /* §36 — limpar missão ativa */
         _lastZipB64    = null;
+        _lastZipName   = null;  /* §45 */
         _zipFiles      = {};    /* §42 — limpar mapa de arquivos extraídos */
         if (fileNote)    { fileNote.textContent = 'Nenhum arquivo anexado.'; }
         if (addFilesBtn) { addFilesBtn.textContent = '＋ Adicionar arquivos'; }
@@ -6480,7 +6545,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         return 6;
       }
 
-      /* buffer already read by _stageZip — salvar base64 para apply-patch */
+      /* buffer already read by _stageZip — salvar base64 e nome para apply-patch + §45 */
+      _lastZipName = file.name || null; /* §45: nome original para ZIP corrigido */
       _lastZipB64 = (function(buf) {
         var bytes = new Uint8Array(buf);
         var bin   = '';
