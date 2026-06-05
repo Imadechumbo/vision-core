@@ -30,15 +30,50 @@ function compressContext(fileContent, diagnosis) {
     }
 
     /* ── Stage 1: STRIP ───────────────────────────────────────────── */
-    let stripped = fileContent
-      // Remove multi-line comments (non-greedy)
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      // Remove single-line // comments (not inside strings — best effort)
-      .replace(/^\s*\/\/.*$/gm, '')
-      // Remove console.log / warn / error lines
-      .replace(/^\s*console\.(log|warn|error|debug|info)\([\s\S]*?\);\s*$/gm, '')
-      // Collapse 3+ consecutive blank lines → 1
-      .replace(/\n{3,}/g, '\n\n');
+    // §44fix: detect LOCAL_REAL_COVERS block boundaries BEFORE strip.
+    // Lines inside the block are copied LITERALLY — no trim, no whitespace change.
+    // This ensures the LLM sees the exact indentation present in the real file,
+    // preventing patch_apply_failed from indentation mismatch.
+    const _rawLines = fileContent.split('\n');
+    let _pStart = -1, _pEnd = -1, _depth = 0;
+    for (let _i = 0; _i < _rawLines.length; _i++) {
+      const _l = _rawLines[_i];
+      if (_pStart === -1 && /const\s+LOCAL_REAL_COVERS\s*=/.test(_l)) {
+        _pStart = _i; _depth = 0;
+      }
+      if (_pStart !== -1 && _pEnd === -1) {
+        for (let _ci = 0; _ci < _l.length; _ci++) {
+          const _ch = _l[_ci];
+          if (_ch === '[' || _ch === '{') { _depth++; }
+          else if (_ch === ']' || _ch === '}') {
+            _depth--;
+            if (_depth <= 0) { _pEnd = _i; break; }
+          }
+        }
+        // single-line: const X = [...]; on one line
+        if (_pEnd === -1 && _i === _pStart && /;\s*$/.test(_l)) { _pEnd = _i; }
+      }
+    }
+
+    const _stripFn = function(s) {
+      return s
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+        .replace(/^\s*console\.(log|warn|error|debug|info)\([\s\S]*?\);\s*$/gm, '')
+        .replace(/\n{3,}/g, '\n\n');
+    };
+
+    let stripped;
+    if (_pStart >= 0 && _pEnd >= 0) {
+      // Split: strip before + after, preserve block LITERAL (exact whitespace)
+      const _before = _rawLines.slice(0, _pStart).join('\n');
+      const _block  = _rawLines.slice(_pStart, _pEnd + 1).join('\n'); // NO strip
+      const _after  = _rawLines.slice(_pEnd + 1).join('\n');
+      stripped = _stripFn(_before) + '\n' + _block + '\n' + _stripFn(_after);
+    } else {
+      // No LOCAL_REAL_COVERS found — strip normally
+      stripped = _stripFn(fileContent);
+    }
 
     const strippedLines = stripped.split('\n');
 
