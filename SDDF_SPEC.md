@@ -2592,6 +2592,102 @@ Botão alterado de `⬇ Baixar <file> (corrigido)` → `⬇ Baixar ZIP Corrigido
 
 ---
 
+## §49 — HERMES MULTI-PROVIDER FALLBACK
+
+**Commit feat:** `0a52203`  
+**Data:** 2026-06-05  
+**Arquivos:** `backend/hermes-rca.js` (novo), `backend/server.js`
+
+### Módulo — `backend/hermes-rca.js`
+
+Registry de providers (imutável, configurável via `AI_PROVIDER_ORDER`):
+
+| Provider | Modelo | Tipo API | API Key Env |
+|----------|--------|----------|-------------|
+| anthropic | claude-haiku-4-5-20251001 | Anthropic Messages | `ANTHROPIC_API_KEY` |
+| groq | llama-3.3-70b-versatile | OpenAI-compat | `GROQ_API_KEY` |
+| openrouter | openai/gpt-4o-mini | OpenAI-compat | `OPENROUTER_API_KEY` |
+| gemini | gemini-2.5-flash | OpenAI-compat (`/v1beta/openai`) | `GEMINI_API_KEY` |
+| ollama | mistral | OpenAI-compat (`/v1`) | — |
+
+Comportamento:
+```
+AI_PROVIDER_ORDER env (default): anthropic,groq,openrouter,gemini,ollama
+Groq payload guard: >24K chars → skip (free tier)
+Timeout: 30s por provider (adaptável via opts.timeout)
+Fallback: { ok: false, requires_manual_review: true }
+Logs: [HERMES §49] Tentando/falhou/Respondido por
+```
+
+### Integração em `server.js /api/chat`
+
+```
+Imagem → Gemini native multimodal (API generateContent — único provider vision)
+Texto  → callHermes() substitui chain Groq/Cerebras/OpenRouter
+response adiciona: provider_used (nome do provider que respondeu)
+ensureHermesJson: re-prompt via callHermes() se mode=fix retornou texto livre
+```
+
+### Constraints
+
+- `deploy_allowed = false` — deploy só com "deploy" humano explícito
+- ANTHROPIC_API_KEY via env — nunca no código
+- REGRA ABSOLUTA preservada
+
+---
+
+## §48 — PATCH ENGINE COM MATCH ENGINE 5 ESTRATÉGIAS
+
+**Commit feat:** `2405b90`  
+**Data:** 2026-06-05  
+**Arquivos:** `backend/patch-engine.js` (novo), `backend/server.js`
+
+### Módulo — `backend/patch-engine.js`
+
+5 estratégias de match em sequência (code_patch):
+
+| # | Estratégia | Algoritmo | Bloqueio |
+|---|-----------|-----------|---------|
+| 1 | `exact` | `String.includes()` pós-CRLF norm | — |
+| 2 | `normalized` | trim linha a linha, sequência | — |
+| 3 | `auto_regex` | escape + `\s+` flex | ambíguo (>1 match) |
+| 4 | `partial_first_line` | âncora na 1ª linha | `occurrences > 1` |
+| 5 | `candidates` | keywords top-3 (log only) | nunca aplica |
+
+Regras:
+```
+- partial_first_line BLOQUEADO se occurrences > 1 (âncora ambígua)
+- candidates: log ⊘ apenas — diagnóstico, sem patch automático
+- allowMultiple=false por padrão
+- CRLF normalization preservada (§44fix integrada)
+- snapshot_content = originalContent antes da modificação
+```
+
+Tipos não-code_patch:
+```
+full_replace → strategy='full_replace', snapshot preservado
+json_field   → strategy='json_field', snapshot preservado
+```
+
+### Integração em `server.js /api/chat/apply-patch`
+
+Substitui lógica inline (§46fix absorvida por strategy 2 — normalized).
+
+Response adiciona:
+```
+match_strategy   — qual estratégia aplicou o patch
+match_log        — log completo das 5 tentativas
+snapshot_content — conteúdo original pré-patch (alimenta §47 PASS GOLD)
+```
+
+§47 PASS GOLD recebe `snapshotContent` como `original_content`.
+
+### Constraints
+
+- REGRA ABSOLUTA preservada
+
+---
+
 ## §47 — PASS GOLD Engine Multidimensional
 
 **Commit feat:** `77c2573`  
