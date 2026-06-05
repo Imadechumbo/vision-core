@@ -4142,10 +4142,10 @@
     /* §45 — PASS GOLD: renderiza badge dourado animado no container */
     function _renderPassGold45(container) {
       var pg = document.createElement('div');
-      pg.innerHTML = '<div style="background:linear-gradient(135deg,#92400e,#f59e0b,#fde68a,#f59e0b,#92400e);background-size:300% 300%;animation:vcGoldShimmer 2s ease infinite;border-radius:14px;padding:18px 24px;margin:12px 0;text-align:center;box-shadow:0 0 30px rgba(245,158,11,0.4);">' +
-        '<div style="font-size:28px;margin-bottom:6px;">✨ PASS GOLD ✨</div>' +
-        '<div style="font-size:13px;color:#fde68a;font-weight:600;letter-spacing:1px;">AEGIS CERTIFICADO — ARQUIVO CORRIGIDO</div>' +
-        '<div style="font-size:11px;color:#fcd34d;margin-top:4px;">aegis_ok: true · sintaxe válida · patch aplicado</div>' +
+      pg.innerHTML = '<div style="background:linear-gradient(135deg,#92400e,#f59e0b,#fde68a,#f59e0b,#92400e);background-size:300% 300%;animation:vcGoldShimmer 2s ease infinite;border-radius:10px;padding:10px 16px;margin:6px 0;text-align:center;box-shadow:0 0 18px rgba(245,158,11,0.35);">' +
+        '<div style="font-size:18px;margin-bottom:2px;">✨ PASS GOLD ✨</div>' +
+        '<div style="font-size:11px;color:#fde68a;font-weight:600;letter-spacing:1px;">AEGIS CERTIFICADO — ARQUIVO CORRIGIDO</div>' +
+        '<div style="font-size:10px;color:#fcd34d;margin-top:2px;">aegis_ok: true · sintaxe válida · patch aplicado</div>' +
         '</div>';
       container.appendChild(pg);
     }
