@@ -1171,6 +1171,14 @@ app.post('/api/chat', async (req, res) => {
     `                 Objeto simples: { campo: valor }`,
     `  code_patch   → patch = { "search": "trecho original EXATO", "replace": "trecho novo" }`,
     `                 "search" DEVE existir literalmente no arquivo — copie sem alteração.`,
+    `                 §9 PATCH REGRAS OBRIGATÓRIAS:`,
+    `                 - search DEVE ser a MENOR string possível que identifique o local único`,
+    `                 - search NUNCA deve conter mais de 3 linhas`,
+    `                 - search deve ser UMA ÚNICA LINHA sempre que possível`,
+    `                 - Use APENAS a linha exata no ponto de inserção ou a linha imediatamente antes`,
+    `                 - NUNCA inclua linhas após o ponto de inserção no search`,
+    `                 - Exemplo CORRETO:   { "search": "'Pokemon Pokopia': 'assets/img/game-pokopia.jpg'", "replace": "..." }`,
+    `                 - Exemplo ERRADO:    search com 5+ linhas incluindo código após o ponto de inserção`,
     `  full_replace → patch = string com conteúdo completo novo do arquivo.`,
     ``,
     `NOTA SOBRE ASPAS: strings com apóstrofe usam double-quotes em JS.`,
@@ -1614,10 +1622,51 @@ app.post('/api/chat/apply-patch', async (req, res) => {
         const normOrig   = originalContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
         const search     = searchRaw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
         const replace    = replaceRaw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-        if (!normOrig.includes(search)) {
-          throw new Error('patch.search não encontrado no arquivo — diff de contexto pode estar desatualizado');
+        let _applied46 = false;
+
+        /* Attempt 1: exact match (post-CRLF norm) */
+        if (normOrig.includes(search)) {
+          patchedContent = normOrig.replace(search, replace);
+          _applied46 = true;
         }
-        patchedContent = normOrig.replace(search, replace);
+
+        /* §46fix Fallback 1: whitespace-normalized line-by-line match
+           Handles LLM adding/removing indentation vs arquivo real */
+        if (!_applied46) {
+          const _sLines46 = search.split('\n');
+          const _fLines46 = normOrig.split('\n');
+          let _start46 = -1;
+          outer46: for (let _i = 0; _i <= _fLines46.length - _sLines46.length; _i++) {
+            for (let _j = 0; _j < _sLines46.length; _j++) {
+              if (_fLines46[_i + _j].trim() !== _sLines46[_j].trim()) continue outer46;
+            }
+            _start46 = _i;
+            break;
+          }
+          if (_start46 !== -1) {
+            const _rLines46 = replace.split('\n');
+            const _new46 = [
+              ..._fLines46.slice(0, _start46),
+              ..._rLines46,
+              ..._fLines46.slice(_start46 + _sLines46.length)
+            ];
+            patchedContent = _new46.join('\n');
+            _applied46 = true;
+          }
+        }
+
+        /* §46fix Fallback 2: debug — line presence check → 422 com info */
+        if (!_applied46) {
+          const _sLines46d = search.split('\n').filter(l => l.trim().length > 0);
+          const _fLines46d = normOrig.split('\n');
+          const _found46   = _sLines46d.filter(sl => _fLines46d.some(fl => fl.trim() === sl.trim()));
+          const _missing46 = _sLines46d.filter(sl => !_fLines46d.some(fl => fl.trim() === sl.trim()));
+          throw new Error(
+            'patch.search não encontrado após normalização de whitespace. ' +
+            'Linhas do search encontradas: ' + _found46.length + '/' + _sLines46d.length + '. ' +
+            (_missing46.length ? 'Não encontradas: ' + JSON.stringify(_missing46.slice(0, 2)) : '')
+          );
+        }
       }
     } catch (err) {
       patchError = err.message;
