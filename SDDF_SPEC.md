@@ -2394,6 +2394,47 @@ Timeout frontend: `55s → 95s` quando enviando `zip_base64` (Gemini pode levar 
 
 ---
 
+## §46 — Deploy ZIP via GitHub PR pós-AEGIS PASS GOLD
+
+**Commit feat:** `48c23f6`  
+**Data:** 2026-06-05  
+**Arquivos:** `backend/server.js`, `frontend/assets/vision-core-clean-runtime.js`, `frontend/assets/vision-core-bundle.js`
+
+### Backend — `POST /api/deploy/zip-release`
+
+```
+Input:  { patched_content, file_path, repo, branch, commit_message, aegis_ok }
+Output: { ok, pr_url, branch, repo, file_path }
+Guard:  aegis_ok=false → 403 (nunca abre PR sem PASS GOLD)
+        GITHUB_TOKEN ausente → 500
+```
+
+**GitHub API flow:**
+1. `GET /repos/{repo}/git/ref/heads/{branch}` → SHA base
+2. `POST /repos/{repo}/git/refs` → criar `visioncore-fix-{timestamp}`
+3. `GET /repos/{repo}/contents/{file_path}` → SHA atual do arquivo
+4. `PUT /repos/{repo}/contents/{file_path}` → push arquivo corrigido
+5. `POST /repos/{repo}/pulls` → PR com body incluindo AEGIS status + `deploy_allowed=false`
+
+### Frontend
+
+Helper `_renderDeployBtn46(container, patchedContent, filePath)`:
+- Botão `🚀 Deploy ZIP — Abrir PR` — aparece **somente** quando `aegis_ok=true`
+- Modal: campo `owner/repo` + `branch base`
+- Loading state durante chamada
+- Sucesso: badge `🚀 PR ABERTO` + link clicável
+- Erro: mensagem vermelha + "baixe o ZIP manualmente"
+
+Wired em `renderApplyFixPanel` e `renderStandardMethodPanel`.
+
+### Constraints
+
+- `deploy_allowed = false` — botão abre PR, nunca faz merge
+- PR requer revisão humana antes do merge (explícito no PR body)
+- GITHUB_TOKEN via env — nunca no código
+
+---
+
 ## §46fix — Prompt Patch Rules + Apply-Patch Whitespace Fallback
 
 **Commit:** `fix(§46fix): prompt patch rules + apply-patch whitespace fallback`  
