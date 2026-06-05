@@ -2394,6 +2394,50 @@ Timeout frontend: `55s → 95s` quando enviando `zip_base64` (Gemini pode levar 
 
 ---
 
+## §46fix — Prompt Patch Rules + Apply-Patch Whitespace Fallback
+
+**Commit:** `fix(§46fix): prompt patch rules + apply-patch whitespace fallback`  
+**Data:** 2026-06-05  
+**Arquivo:** `backend/server.js`
+
+### Problema
+
+`patch_apply_failed` intermitente: LLM gera `search` com múltiplas linhas ou indentação diferente do arquivo real → `String.includes()` falha mesmo após CRLF norm (§44fix).
+
+### Fix 1 — basePrompt §9 PATCH rules
+
+Adicionado após a regra `code_patch` no basePrompt:
+
+```
+§9 PATCH REGRAS OBRIGATÓRIAS:
+- search DEVE ser a MENOR string possível que identifique o local único
+- search NUNCA deve conter mais de 3 linhas
+- search deve ser UMA ÚNICA LINHA sempre que possível
+- Use APENAS a linha exata no ponto de inserção ou a linha imediatamente antes
+- NUNCA inclua linhas após o ponto de inserção no search
+- Exemplo CORRETO:  { "search": "'Pokemon Pokopia': 'assets/img/game-pokopia.jpg'", "replace": "..." }
+- Exemplo ERRADO:   search com 5+ linhas incluindo código após o ponto de inserção
+```
+
+### Fix 2 — apply-patch fallback em 3 camadas
+
+```
+Attempt 1: exact match pós-CRLF norm           (§44fix — preservado)
+Fallback 1: whitespace-normalized line match    (§46fix novo)
+  - trim cada linha de search e do arquivo
+  - encontra sequência → splice replace no lugar correto
+Fallback 2: debug 422 com line presence info   (§46fix novo)
+  - conta linhas do search encontradas vs ausentes
+  - retorna JSON.stringify das primeiras 2 linhas ausentes
+```
+
+### Resultado
+
+- `patch_apply_failed` elimado para mismatches de indentação/tabs/espaços
+- 422 residual inclui debug detalhado para diagnóstico
+
+---
+
 ## §45 — PASS GOLD Dourado + Download ZIP Corrigido
 
 **Commit:** `feat(§45): PASS GOLD dourado + download ZIP corrigido`  
