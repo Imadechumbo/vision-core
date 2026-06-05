@@ -1742,6 +1742,137 @@ app.post('/api/chat/apply-patch', async (req, res) => {
   }
 });
 
+/* ── §46 /api/deploy/zip-release — push arquivo corrigido + abrir PR GitHub ──
+   Input:  { patched_content, file_path, repo, branch, commit_message, aegis_ok }
+   Output: { ok, pr_url, branch }
+   Guard:  aegis_ok=false → 403 — nunca abre PR sem PASS GOLD               */
+app.post('/api/deploy/zip-release', async (req, res) => {
+  try {
+    const body           = normalizeBody(req);
+    const patchedContent = body.patched_content || '';
+    const filePath       = body.file_path        || '';
+    const repo           = body.repo             || '';
+    const branch         = body.branch           || 'main';
+    const commitMsg      = body.commit_message   || null;
+    const aegisOk        = body.aegis_ok         === true;
+
+    if (!aegisOk) {
+      return res.status(403).json({ ok: false, error: 'aegis_ok_required',
+        detail: 'PASS GOLD (aegis_ok=true) obrigatório antes de abrir PR', time: now() });
+    }
+    if (!patchedContent) return res.status(400).json({ ok: false, error: 'patched_content_required', time: now() });
+    if (!filePath)        return res.status(400).json({ ok: false, error: 'file_path_required',       time: now() });
+    if (!repo || !repo.includes('/')) {
+      return res.status(400).json({ ok: false, error: 'repo_required',
+        detail: 'Formato esperado: owner/repo', time: now() });
+    }
+
+    const githubToken = process.env.GITHUB_TOKEN;
+    if (!githubToken) {
+      return res.status(500).json({ ok: false, error: 'github_token_not_configured',
+        detail: 'GITHUB_TOKEN não configurado no servidor', time: now() });
+    }
+
+    const timestamp = Date.now();
+    const newBranch = `visioncore-fix-${timestamp}`;
+    const ghHeaders = {
+      'Authorization': `token ${githubToken}`,
+      'Content-Type':  'application/json',
+      'User-Agent':    'VisionCore/3.0.0',
+      'Accept':        'application/vnd.github.v3+json'
+    };
+
+    /* 1. Obter SHA do branch base */
+    const refRes = await fetch(`https://api.github.com/repos/${repo}/git/ref/heads/${branch}`, {
+      headers: ghHeaders, signal: AbortSignal.timeout(10000)
+    });
+    if (!refRes.ok) {
+      const e = await refRes.json().catch(() => ({}));
+      throw new Error(`Branch '${branch}' não encontrado em ${repo}: ${e.message || refRes.status}`);
+    }
+    const refData = await refRes.json();
+    const baseSha = refData.object.sha;
+
+    /* 2. Criar novo branch */
+    const createBrRes = await fetch(`https://api.github.com/repos/${repo}/git/refs`, {
+      method: 'POST', headers: ghHeaders,
+      body:   JSON.stringify({ ref: `refs/heads/${newBranch}`, sha: baseSha }),
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!createBrRes.ok) {
+      const e = await createBrRes.json().catch(() => ({}));
+      throw new Error(`Criar branch falhou: ${e.message || createBrRes.status}`);
+    }
+
+    /* 3. Obter SHA atual do arquivo (necessário para update) */
+    let fileSha = null;
+    const fileRes = await fetch(`https://api.github.com/repos/${repo}/contents/${filePath}?ref=${branch}`, {
+      headers: ghHeaders, signal: AbortSignal.timeout(10000)
+    });
+    if (fileRes.ok) {
+      const fd = await fileRes.json();
+      fileSha = fd.sha || null;
+    }
+
+    /* 4. Push arquivo corrigido no novo branch */
+    const content64  = Buffer.from(patchedContent, 'utf8').toString('base64');
+    const fileName   = filePath.split('/').pop().split('\\').pop();
+    const updateBody = {
+      message: commitMsg || `fix: Vision Core AEGIS PASS GOLD — ${fileName}`,
+      content: content64,
+      branch:  newBranch
+    };
+    if (fileSha) updateBody.sha = fileSha;
+
+    const updateRes = await fetch(`https://api.github.com/repos/${repo}/contents/${filePath}`, {
+      method: 'PUT', headers: ghHeaders,
+      body:   JSON.stringify(updateBody),
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!updateRes.ok) {
+      const e = await updateRes.json().catch(() => ({}));
+      throw new Error(`Push arquivo falhou: ${e.message || updateRes.status}`);
+    }
+
+    /* 5. Abrir PR */
+    const prBody = [
+      '## Vision Core — Patch Automático (AEGIS PASS GOLD)',
+      '',
+      `**Arquivo:** \`${filePath}\``,
+      `**AEGIS:** ✅ PASS GOLD — sintaxe validada automaticamente`,
+      `**Branch:** \`${newBranch}\` → \`${branch}\``,
+      '',
+      '> ⚠️ **Revise o diff antes de fazer merge.** Vision Core abre PR para revisão humana — não faz merge automático.',
+      `> \`deploy_allowed = false\` — aprovação humana obrigatória.`,
+      '',
+      `_Gerado por Vision Core V3.0.0 em ${new Date().toISOString()}_`
+    ].join('\n');
+
+    const prRes = await fetch(`https://api.github.com/repos/${repo}/pulls`, {
+      method: 'POST', headers: ghHeaders,
+      body:   JSON.stringify({
+        title: `[Vision Core] fix: ${fileName} — AEGIS PASS GOLD`,
+        body:  prBody,
+        head:  newBranch,
+        base:  branch
+      }),
+      signal: AbortSignal.timeout(15000)
+    });
+    if (!prRes.ok) {
+      const e = await prRes.json().catch(() => ({}));
+      throw new Error(`Criar PR falhou: ${e.message || prRes.status}`);
+    }
+    const prData = await prRes.json();
+
+    console.log(`[§46] PR aberto: ${prData.html_url} (branch: ${newBranch})`);
+    return res.json({ ok: true, pr_url: prData.html_url, branch: newBranch, repo, file_path: filePath, time: now() });
+
+  } catch (err) {
+    console.error('[§46] deploy/zip-release error:', err.message);
+    return res.status(500).json({ ok: false, error: 'deploy_failed', detail: err.message, time: now() });
+  }
+});
+
 /* ── /api/unzip-context — extrai ZIP e injeta conteúdo para /api/chat ─── */
 app.post('/api/unzip-context', async (req, res) => {
   try {

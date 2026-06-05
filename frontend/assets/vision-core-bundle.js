@@ -5636,6 +5636,75 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       }
     }
 
+    /* §46 — botão Deploy GitHub PR pós-AEGIS PASS GOLD */
+    function _renderDeployBtn46(container, patchedContent, filePath) {
+      var btn = document.createElement('button');
+      btn.style.cssText = 'background:#0d1117;border:1px solid #7c3aed;color:#a78bfa;font-size:12px;padding:8px 14px;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:500;margin:4px 0 8px 8px;';
+      btn.textContent = '🚀 Deploy ZIP — Abrir PR';
+      btn.onclick = function() {
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        var modal = document.createElement('div');
+        modal.style.cssText = 'background:#0f1117;border:1px solid #7c3aed;border-radius:16px;padding:24px;width:380px;max-width:92vw;font-family:inherit;';
+        modal.innerHTML = [
+          '<div style="font-size:15px;font-weight:700;color:#a78bfa;margin-bottom:14px;">🚀 Deploy via GitHub PR</div>',
+          '<div style="font-size:11px;color:#64748b;margin-bottom:12px;">Arquivo: <span style="color:#94a3b8;">' + filePath + '</span></div>',
+          '<label style="display:block;font-size:11px;color:#94a3b8;margin-bottom:4px;">Repositório (owner/repo)</label>',
+          '<input id="vc46-repo" type="text" placeholder="ex: Imadechumbo/technetgamev2" style="width:100%;box-sizing:border-box;background:#1a1a2e;border:1px solid #334155;color:#e2e8f0;font-size:12px;padding:8px;border-radius:8px;margin-bottom:12px;font-family:inherit;">',
+          '<label style="display:block;font-size:11px;color:#94a3b8;margin-bottom:4px;">Branch base</label>',
+          '<input id="vc46-branch" type="text" value="main" style="width:100%;box-sizing:border-box;background:#1a1a2e;border:1px solid #334155;color:#e2e8f0;font-size:12px;padding:8px;border-radius:8px;margin-bottom:14px;font-family:inherit;">',
+          '<div id="vc46-status" style="font-size:11px;color:#f87171;min-height:16px;margin-bottom:8px;"></div>',
+          '<div style="display:flex;gap:8px;justify-content:flex-end;">',
+          '<button id="vc46-cancel" style="background:transparent;border:1px solid #334155;color:#94a3b8;font-size:11px;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:inherit;">Cancelar</button>',
+          '<button id="vc46-submit" style="background:#5b21b6;border:1px solid #7c3aed;color:#e9d5ff;font-size:11px;padding:6px 14px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:600;">🚀 Abrir PR</button>',
+          '</div>'
+        ].join('');
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        document.getElementById('vc46-repo').focus();
+        document.getElementById('vc46-cancel').onclick = function() { overlay.remove(); };
+        document.getElementById('vc46-submit').onclick = (function(pc, fp, cont) { return function() {
+          var repo      = (document.getElementById('vc46-repo').value   || '').trim();
+          var branchVal = (document.getElementById('vc46-branch').value || 'main').trim();
+          var statEl    = document.getElementById('vc46-status');
+          if (!repo || !repo.includes('/')) { statEl.textContent = '⚠️ Formato: owner/repo'; return; }
+          var submitBtn = document.getElementById('vc46-submit');
+          submitBtn.disabled = true; submitBtn.textContent = '⏳ Abrindo PR...';
+          statEl.style.color = '#94a3b8'; statEl.textContent = 'Enviando para GitHub...';
+          fetch(BACKEND_URL + '/api/deploy/zip-release', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ patched_content: pc, file_path: fp, repo: repo, branch: branchVal, aegis_ok: true, commit_message: 'fix: Vision Core AEGIS PASS GOLD — ' + fp.split('/').pop() }),
+            signal: AbortSignal.timeout(30000)
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            overlay.remove();
+            if (d.ok) {
+              var badge = document.createElement('div');
+              badge.innerHTML = '<div style="background:#1a0a2e;border:1px solid #7c3aed;border-radius:12px;padding:12px 16px;margin:8px 0;display:flex;align-items:center;gap:10px;">' +
+                '<span style="font-size:18px;">🚀</span>' +
+                '<div><div style="color:#a78bfa;font-weight:600;font-size:13px;">PR ABERTO</div>' +
+                '<a href="' + d.pr_url + '" target="_blank" rel="noopener" style="color:#c4b5fd;font-size:11px;text-decoration:none;">' + d.pr_url + ' ↗</a></div></div>';
+              cont.appendChild(badge);
+            } else {
+              var note = document.createElement('div');
+              note.style.cssText = 'font-size:11px;color:#f87171;margin-top:6px;';
+              note.textContent = '❌ Deploy falhou: ' + (d.detail || d.error || 'erro desconhecido');
+              cont.appendChild(note);
+            }
+          })
+          .catch(function(err) {
+            overlay.remove();
+            var note = document.createElement('div');
+            note.style.cssText = 'font-size:11px;color:#f87171;margin-top:6px;';
+            note.textContent = '❌ ' + (err.message || 'Erro de rede') + ' — baixe o ZIP manualmente';
+            cont.appendChild(note);
+          });
+        }; })(patchedContent, filePath, container);
+      };
+      container.appendChild(btn);
+    }
+
     /* §39 — progress bar durante ZIP */
     function showProgressBar(el) {
       var bar = document.createElement('div');
@@ -6248,6 +6317,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             }
           }; })(data, _pg45c);
           _pg45c.appendChild(dlBtn);
+          /* §46 — deploy button só quando aegis_ok */
+          if (data.aegis_ok) { _renderDeployBtn46(_pg45c, data.patched_content, data.file_path || data.filename); }
           chatStream.appendChild(_pg45c);
           chatStream.scrollTop = chatStream.scrollHeight;
           setStatus('READY');
@@ -6403,6 +6474,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                   dlBtn2.textContent = '⬇ Baixar ZIP Corrigido';
                   dlBtn2.onclick = (function(d, c) { return function() { _dlZip45(d.patched_content, d.file_path || d.filename, _lastZipName, c); }; })(data, _pg45c2);
                   _pg45c2.appendChild(dlBtn2);
+                  /* §46 — deploy button (inside aegis_ok block) */
+                  _renderDeployBtn46(_pg45c2, data.patched_content, data.file_path || data.filename);
                   chatStream.appendChild(_pg45c2);
                 }
                 chatStream.scrollTop = chatStream.scrollHeight;
