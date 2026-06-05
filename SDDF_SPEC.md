@@ -2303,6 +2303,97 @@ node --check backend/server.js → EXIT:0 (PASS)
 
 ---
 
+## §44 — Arquitetura MPEG: Pipeline de Compressão de Contexto no Backend
+
+**Status:** ESPECIFICADO — aguarda REAL-VALIDATION-2 PASS para implementação  
+**Data spec:** 2026-06-05  
+**Gate pré-requisito:** §43 validado + REAL-VALIDATION-2-GATE PASS
+
+### Objetivo
+
+Backend comprime qualquer ZIP para contexto ideal, sem depender do frontend.  
+Frontend torna-se leve: envia só `{ zip_base64, message, mode, model }`.
+
+### Novo endpoint: `POST /api/compress-context`
+
+```
+Input:  { zip_base64, question, max_chars: 35000 }
+Output: { files: [{path, content, relevance_score}], total_chars, skipped,
+          total_candidates, asset_paths, was_large_zip }
+```
+
+**Pipeline interno:**
+
+1. Extrair todos os arquivos do ZIP com `adm-zip`
+2. Filtrar binários e ruído:
+   - Skip dirs: `node_modules, .git, dist, .next, build, coverage, assets/img`
+   - Skip names: `*.min.js, *.map, *.bundle.*, vendor.*, *.exe, *.zip, *.pdf`
+   - Binary exts: `png, jpg, jpeg, gif, svg, webp, ico, mp4, mp3, woff, woff2, ttf`
+3. Tokenizar pergunta → keywords (palavras > 3 chars, lowercase)
+4. Pontuar cada arquivo:
+   - Nome contém keyword: **+10** por keyword
+   - Conteúdo contém keyword: **+5** por ocorrência (cap 4 → max +20)
+   - Ext `.js/.ts/.mjs/.cjs/.jsx/.tsx`: **+3**
+   - Ext `.md/.txt`: **+1**
+5. Ordenar por score DESC, depois size DESC
+6. Acumular até `max_chars` (truncar último se necessário)
+7. Coletar `asset_paths` (imagens, fonts) para contexto LLM
+
+### Integração em `POST /api/chat`
+
+Quando `zip_base64` presente no body:
+
+```javascript
+if (body.zip_base64) {
+  const result = compressContext(body.zip_base64, message, 35000);
+  const zipCtx = result.files.map(f => `[Arquivo: ${f.path}]\n${f.content}`).join('\n\n---\n\n');
+  message = message + '\n\n' + zipCtx;  // enriquecer message antes do FIX C gate
+  zipExtractedFiles = result.files;
+}
+```
+
+Response inclui `extracted_files` para o frontend popular `_zipFiles` (apply-patch §42).
+
+### Mudanças no Frontend
+
+`_processZipBuffer` simplificado — sem JSZip:
+
+```javascript
+// Antes (§24): JSZip + extração + seleção + context building
+// Depois (§44): só base64 + send
+_lastZipB64 = bufferToBase64(buffer);  // sem JSZip
+fetch(BACKEND_URL + '/api/chat', {
+  body: JSON.stringify({ zip_base64: _lastZipB64, message: question, mode, model })
+}).then(d => {
+  // d.extracted_files → _zipFiles (para apply-patch)
+  if (d.extracted_files) d.extracted_files.forEach(f => { _zipFiles[f.path] = f.content; });
+});
+```
+
+Timeout frontend: `55s → 95s` quando enviando `zip_base64` (Gemini pode levar 90s).
+
+### Resultado arquitetural
+
+| Aspecto | Antes (§24-§43) | Depois (§44) |
+|---------|----------------|--------------|
+| Extração ZIP | JSZip no frontend | adm-zip no backend |
+| Seleção arquivos | Tier+size (frontend) | Score keyword (backend) |
+| Payload `/api/chat` | ~60KB (texto) | ~655KB (zip_base64) |
+| Payload apply-patch | 24KB (file_content §42) | 24KB (inalterado) |
+| Dependência JSZip | Obrigatória | Removível |
+| Qualidade seleção | Limitada (sem full content) | Completa (full content scored) |
+
+**Trade-off**: payload `/api/chat` aumenta de ~60KB para ~655KB (Worker aceita, nginx 10MB OK).  
+**Ganho**: backend vê conteúdo COMPLETO para scoring; frontend sem lógica de extração.
+
+### Pré-requisitos para implementação
+
+- [ ] REAL-VALIDATION-2-GATE PASS (manual UI test)
+- [ ] §43 validado em produção com `technetgamev2-main.zip`
+- [ ] Criar `REAL-VALIDATION-3-PREP` antes de iniciar desenvolvimento §44
+
+---
+
 ## §43 — Robustez ZIP: Seleção Inteligente ZIP Grande + Timeout Adaptativo Gemini
 
 **Commit:** `feat(§43): seleção inteligente ZIP grande + timeout adaptativo`
