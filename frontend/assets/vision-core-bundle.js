@@ -5529,6 +5529,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
     if (!chatStream || !promptInput || !sendBtn) return;
     _chatInitialized = true;
+    /* §46fix-ui: idle glow on ENVIAR (overridden by vcPulse during loading) */
+    sendBtn.style.animation = 'vcSendGlow 3s ease-in-out infinite';
 
     /* §38 — inject animation keyframes once */
     if (!document.getElementById('vc-anim-styles')) {
@@ -5550,6 +5552,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         '  0%   { background-position: 0% 50%; }',
         '  50%  { background-position: 100% 50%; }',
         '  100% { background-position: 0% 50%; }',
+        '}',
+        '@keyframes vcSendGlow {',  /* §46fix-ui: idle glow ENVIAR */
+        '  0%,100% { box-shadow: 0 0 0 0 rgba(168,85,247,.25); }',
+        '  50%     { box-shadow: 0 0 14px 3px rgba(168,85,247,.12); }',
         '}'
       ].join('\n');
       document.head.appendChild(_animStyle);
@@ -5710,19 +5716,33 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           })
           .then(function(r) { return r.json(); })
           .then(function(d) {
-            overlay.remove();
+            overlay.remove(); /* fechar modal — cont já está no DOM (chatStream child) */
             if (d.ok) {
+              /* §46fix-ui Fix 1: badge inline no container do patch */
               var badge = document.createElement('div');
-              badge.innerHTML = '<div style="background:#1a0a2e;border:1px solid #7c3aed;border-radius:12px;padding:12px 16px;margin:8px 0;display:flex;align-items:center;gap:10px;">' +
+              badge.innerHTML = '<div style="background:#1a0a2e;border:1px solid #7c3aed;border-radius:12px;padding:10px 14px;margin:6px 0;display:flex;align-items:center;gap:10px;">' +
                 '<span style="font-size:18px;">🚀</span>' +
                 '<div><div style="color:#a78bfa;font-weight:600;font-size:13px;">PR ABERTO</div>' +
                 '<a href="' + d.pr_url + '" target="_blank" rel="noopener" style="color:#c4b5fd;font-size:11px;text-decoration:none;">' + d.pr_url + ' ↗</a></div></div>';
               cont.appendChild(badge);
+              /* §46fix-ui Fix 2: link permanente no chatStream — sempre visível */
+              var prMsg = document.createElement('div');
+              prMsg.className = 'vc-msg vc-msg-ai';
+              prMsg.style.cssText = 'background:#0d0d1f;border:1px solid #7c3aed;border-radius:14px;padding:14px 16px;margin:8px 0;';
+              prMsg.innerHTML = '<div style="font-weight:700;color:#a78bfa;margin-bottom:6px;">🚀 PR ABERTO — Deploy via GitHub</div>' +
+                '<a href="' + d.pr_url + '" target="_blank" rel="noopener" ' +
+                'style="display:inline-block;background:#1a0a2e;border:1px solid #7c3aed;color:#c4b5fd;font-size:12px;' +
+                'padding:7px 14px;border-radius:10px;text-decoration:none;font-weight:600;margin-top:4px;">' +
+                '↗ Ver no GitHub</a>' +
+                '<div style="font-size:10px;color:#475569;margin-top:6px;">' + (d.branch || '') + ' · ' + (d.repo || '') + '</div>';
+              chatStream.appendChild(prMsg);
+              chatStream.scrollTop = chatStream.scrollHeight;
             } else {
               var note = document.createElement('div');
               note.style.cssText = 'font-size:11px;color:#f87171;margin-top:6px;';
               note.textContent = '❌ Deploy falhou: ' + (d.detail || d.error || 'erro desconhecido');
               cont.appendChild(note);
+              chatStream.scrollTop = chatStream.scrollHeight;
             }
           })
           .catch(function(err) {
@@ -5731,6 +5751,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             note.style.cssText = 'font-size:11px;color:#f87171;margin-top:6px;';
             note.textContent = '❌ ' + (err.message || 'Erro de rede') + ' — baixe o ZIP manualmente';
             cont.appendChild(note);
+            chatStream.scrollTop = chatStream.scrollHeight;
           });
         }; })(patchedContent, filePath, container);
       };
@@ -6061,7 +6082,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       .then(function(data) {
         clearTimeout(_chatAnimTimer);
         thinking.remove();
-        if (sendBtn) sendBtn.style.animation = ''; /* §38 */
+        if (sendBtn) sendBtn.style.animation = 'vcSendGlow 3s ease-in-out infinite'; /* §38 restore idle */
         stopMissionAnimation({ ok: true, steps: [{ agent: 'Scanner', ok: true }, { agent: 'Hermes', ok: true }] });
         /* §27 echo guard */
         if (data && data.provider === 'local') {
@@ -6093,7 +6114,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       .catch(function(err) {
         clearTimeout(_chatAnimTimer);
         thinking.remove();
-        if (sendBtn) sendBtn.style.animation = ''; /* §38 */
+        if (sendBtn) sendBtn.style.animation = 'vcSendGlow 3s ease-in-out infinite'; /* §38 restore idle */
         resetAllAgents();
         appendMsg('[Erro de conexão com worker: ' + BACKEND_URL + ' — ' + err + ']', 'error');
         setStatus('ERRO', 'error');
