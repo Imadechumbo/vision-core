@@ -1344,167 +1344,77 @@ app.post('/api/chat', async (req, res) => {
     return answer; // fallback: resposta original intacta
   }
 
-  /* ── 1. Groq — rápido, tier gratuito (text-only) ───────────── */
-  /* §26: pular Groq para payloads grandes (>24K chars = ~6K tokens Groq free tier) */
-  const GROQ_KEY = process.env.GROQ_API_KEY || '';
-  const groqPayloadOk = message.length <= 24000;
-  if (GROQ_KEY && !GROQ_KEY.includes('placeholder') && !hasImage && groqPayloadOk) {
-    try {
-      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'content-type': 'application/json' },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          max_tokens: 1024,
-          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }]
-        }),
-        signal: AbortSignal.timeout(15000)
-      });
-      if (r.ok) {
-        const data = await r.json();
-        const answer = data?.choices?.[0]?.message?.content || '';
-        if (answer) {
-          const finalAnswer = await ensureHermesJson(answer, async (prompt) => {
-            const r2 = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'content-type': 'application/json' },
-              body: JSON.stringify({ model: 'llama-3.3-70b-versatile', max_tokens: 800, temperature: 0,
-                messages: [{ role: 'user', content: prompt }] }),
-              signal: AbortSignal.timeout(15000)
+  /* ── Imagem detectada: Gemini native multimodal (único provider vision) ── */
+  /* §43: timeout adaptativo — 90s se payload > 45K chars                   */
+  if (hasImage) {
+    const GEMINI_KEY   = process.env.GEMINI_API_KEY || '';
+    const GEMINI_MODEL = process.env.GEMINI_MODEL   || 'gemini-2.5-flash';
+    const geminiTimeout = message.length > 45000 ? 90000 : 45000;
+    if (GEMINI_KEY && !GEMINI_KEY.includes('placeholder')) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+        const userParts = [{ text: message }, { inline_data: { mime_type: imageMime, data: imageB64 } }];
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: 'user', parts: userParts }]
+          }),
+          signal: AbortSignal.timeout(geminiTimeout)
+        });
+        if (r.ok) {
+          const data = await r.json();
+          const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (answer) {
+            const finalAnswer = await ensureHermesJson(answer, async (prompt) => {
+              const url2 = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+              const r2 = await fetch(url2, {
+                method: 'POST', headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
+                signal: AbortSignal.timeout(20000)
+              });
+              const d2 = await r2.json();
+              return d2?.candidates?.[0]?.content?.parts?.[0]?.text || '';
             });
-            const d2 = await r2.json();
-            return d2?.choices?.[0]?.message?.content || '';
-          });
-          return sendOk(res, { answer: finalAnswer, provider: 'groq', model: data.model || 'llama-3.3-70b-versatile', mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
+            return sendOk(res, { answer: finalAnswer, provider: 'gemini', model: GEMINI_MODEL, mode, vision: true, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
+          }
         }
-      }
-    } catch (_) { /* fall through */ }
+      } catch (_) { /* fall through */ }
+    }
+    /* Gemini indisponível para imagem — erro honesto */
+    return sendOk(res, { answer: '⚠️ Processamento de imagem falhou (Gemini indisponível). Envie o contexto como texto ou ZIP.', provider: 'local', model: 'copilot-local', mode, fetched_count: 0, fetched_urls: [], anti_stub: true });
   }
 
-  /* ── 2. Gemini — multimodal (texto + imagem) ─────────────────── */
-  /* §26: timeout 45s (era 20s) — payloads grandes chegam aqui após Groq ser pulado */
-  /* §43: timeout adaptativo — 90s se payload > 45K chars (ZIP grande com múltiplos arquivos) */
-  const GEMINI_KEY     = process.env.GEMINI_API_KEY || '';
-  const GEMINI_MODEL   = process.env.GEMINI_MODEL   || 'gemini-2.5-flash';
-  const geminiTimeout  = message.length > 45000 ? 90000 : 45000; /* §43: 45s→90s para ZIPs grandes */
-  if (GEMINI_KEY && !GEMINI_KEY.includes('placeholder')) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
-      const userParts = [{ text: message }];
-      if (hasImage) {
-        userParts.push({ inline_data: { mime_type: imageMime, data: imageB64 } });
-      }
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: userParts }]
-        }),
-        signal: AbortSignal.timeout(geminiTimeout) /* §43: adaptativo 45s|90s */
-      });
-      if (r.ok) {
-        const data = await r.json();
-        const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if (answer) {
-          const finalAnswer = await ensureHermesJson(answer, async (prompt) => {
-            const url2 = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
-            const r2 = await fetch(url2, {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
-              signal: AbortSignal.timeout(20000)
-            });
-            const d2 = await r2.json();
-            return d2?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          });
-          return sendOk(res, { answer: finalAnswer, provider: 'gemini', model: GEMINI_MODEL, mode, vision: hasImage, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
-        }
-      }
-    } catch (_) { /* fall through */ }
+  /* ── §49 HERMES: text-only chain (anthropic→groq→openrouter→gemini→ollama) ── */
+  const { callHermes: _callHermes49 } = require('./hermes-rca');
+  const _h49timeout = message.length > 45000 ? 90000 : 30000; /* §43 adaptativo */
+  let _h49result;
+  try {
+    _h49result = await _callHermes49(systemPrompt, message, { timeout: _h49timeout });
+  } catch (_e49) {
+    _h49result = { ok: false, requires_manual_review: true };
   }
 
-  /* ── 3. Cerebras — text-only, hardware acelerado, fallback rápido ── */
-  const CB_KEY   = process.env.CEREBRAS_API_KEY || '';
-  const CB_MODEL = process.env.CEREBRAS_MODEL   || 'gpt-oss-120b';
-  if (CB_KEY && !CB_KEY.includes('placeholder') && !hasImage) {
-    try {
-      const r = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${CB_KEY}`, 'content-type': 'application/json' },
-        body: JSON.stringify({
-          model: CB_MODEL,
-          max_tokens: 1024,
-          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }]
-        }),
-        signal: AbortSignal.timeout(30000)
-      });
-      if (r.ok) {
-        const data = await r.json();
-        const answer = data?.choices?.[0]?.message?.content || '';
-        if (answer) {
-          const finalAnswer = await ensureHermesJson(answer, async (prompt) => {
-            const r2 = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${CB_KEY}`, 'content-type': 'application/json' },
-              body: JSON.stringify({ model: CB_MODEL, max_tokens: 800, temperature: 0,
-                messages: [{ role: 'user', content: prompt }] }),
-              signal: AbortSignal.timeout(15000)
-            });
-            const d2 = await r2.json();
-            return d2?.choices?.[0]?.message?.content || '';
-          });
-          return sendOk(res, { answer: finalAnswer, provider: 'cerebras', model: data.model || CB_MODEL, mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
-        }
-      }
-    } catch (_) { /* fall through */ }
+  if (_h49result && _h49result.answer) {
+    const finalAnswer = await ensureHermesJson(_h49result.answer, async (prompt) => {
+      try {
+        const r2 = await _callHermes49(systemPrompt, prompt, { timeout: 20000 });
+        return r2.answer || '';
+      } catch (_) { return ''; }
+    });
+    return sendOk(res, { answer: finalAnswer, provider: _h49result.provider_used, model: _h49result.model_used, mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
   }
 
-  /* ── 4. OpenRouter — modelos gratuitos ─────────────────────── */
-  const OR_KEY   = process.env.OPENROUTER_API_KEY || '';
-  const OR_MODEL = process.env.OPENROUTER_MODEL   || 'meta-llama/llama-3.1-8b-instruct';
-  if (OR_KEY && !OR_KEY.includes('placeholder')) {
-    try {
-      const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${OR_KEY}`, 'content-type': 'application/json', 'HTTP-Referer': 'https://visioncoreai.pages.dev' },
-        body: JSON.stringify({
-          model: OR_MODEL,
-          max_tokens: 1024,
-          messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: message }]
-        }),
-        signal: AbortSignal.timeout(20000)
-      });
-      if (r.ok) {
-        const data = await r.json();
-        const answer = data?.choices?.[0]?.message?.content || '';
-        if (answer) {
-          const finalAnswer = await ensureHermesJson(answer, async (prompt) => {
-            const r2 = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${OR_KEY}`, 'content-type': 'application/json', 'HTTP-Referer': 'https://visioncoreai.pages.dev' },
-              body: JSON.stringify({ model: OR_MODEL, max_tokens: 800, temperature: 0,
-                messages: [{ role: 'user', content: prompt }] }),
-              signal: AbortSignal.timeout(20000)
-            });
-            const d2 = await r2.json();
-            return d2?.choices?.[0]?.message?.content || '';
-          });
-          return sendOk(res, { answer: finalAnswer, provider: 'openrouter', model: OR_MODEL, mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
-        }
-      }
-    } catch (_) { /* fall through */ }
-  }
-
-  /* ── 5. Local fallback ──────────────────────────────────────── */
-  /* §27: não ecoar payload — retornar erro honesto sem incluir body.message */
+  /* ── Fallback local (todos os providers falharam) ───────────── */
+  /* §27: não ecoar payload */
   const _payloadLen = (body.message || '').length;
   const _localAnswer = '⚠️ **Todos os provedores de IA falharam** (payload: ' + _payloadLen + ' chars).\n\n'
     + 'Causas prováveis:\n'
-    + '- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars; Gemini: timeout 45s)\n'
-    + '- API keys ausentes ou quota esgotada (GROQ_API_KEY, GEMINI_API_KEY, CEREBRAS_API_KEY)\n'
+    + '- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n'
+    + '- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n'
     + '- Erro de rede ou timeout\n\n'
-    + 'Ação: reduza o ZIP (use apenas os arquivos relevantes) ou verifique as env vars no EB.';
+    + 'Ação: verifique as env vars no EB ou reduza o ZIP.';
   return sendOk(res, { answer: _localAnswer, provider: 'local', model: 'copilot-local', mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
 });
 
@@ -1626,77 +1536,20 @@ app.post('/api/chat/apply-patch', async (req, res) => {
       originalContent = target.getData().toString('utf8');
     }
 
-    /* 2. Aplicar patch conforme fix_type */
-    let patchedContent = originalContent;
-    let patchError     = null;
+    /* 2. Aplicar patch — §48 PATCH ENGINE (5 estratégias) */
+    let patchedContent  = originalContent;
+    let patchError      = null;
+    let matchStrategy   = null;
+    let matchLog        = [];
+    let snapshotContent = originalContent; /* §48: snapshot pré-patch */
 
     try {
-      if (fixType === 'full_replace') {
-        /* patch é a string completa do novo conteúdo */
-        patchedContent = typeof patch === 'string' ? patch : JSON.stringify(patch, null, 2);
-
-      } else if (fixType === 'json_field') {
-        /* patch é objeto com campos a mesclar no JSON */
-        const parsed = JSON.parse(originalContent);
-        const merged = Object.assign({}, parsed, patch);
-        patchedContent = JSON.stringify(merged, null, 2);
-
-      } else {
-        /* code_patch (default): patch = { search, replace } */
-        const searchRaw  = typeof patch === 'object' ? (patch.search  || '') : '';
-        const replaceRaw = typeof patch === 'object' ? (patch.replace || '') : '';
-        if (!searchRaw) throw new Error('patch.search vazio para code_patch');
-        /* §44fix: normalizar CRLF→LF em content e patch — ZIPs Windows têm \r\n,
-           LLM gera \n → String.includes() falha → 422 */
-        const normOrig   = originalContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-        const search     = searchRaw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-        const replace    = replaceRaw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-        let _applied46 = false;
-
-        /* Attempt 1: exact match (post-CRLF norm) */
-        if (normOrig.includes(search)) {
-          patchedContent = normOrig.replace(search, replace);
-          _applied46 = true;
-        }
-
-        /* §46fix Fallback 1: whitespace-normalized line-by-line match
-           Handles LLM adding/removing indentation vs arquivo real */
-        if (!_applied46) {
-          const _sLines46 = search.split('\n');
-          const _fLines46 = normOrig.split('\n');
-          let _start46 = -1;
-          outer46: for (let _i = 0; _i <= _fLines46.length - _sLines46.length; _i++) {
-            for (let _j = 0; _j < _sLines46.length; _j++) {
-              if (_fLines46[_i + _j].trim() !== _sLines46[_j].trim()) continue outer46;
-            }
-            _start46 = _i;
-            break;
-          }
-          if (_start46 !== -1) {
-            const _rLines46 = replace.split('\n');
-            const _new46 = [
-              ..._fLines46.slice(0, _start46),
-              ..._rLines46,
-              ..._fLines46.slice(_start46 + _sLines46.length)
-            ];
-            patchedContent = _new46.join('\n');
-            _applied46 = true;
-          }
-        }
-
-        /* §46fix Fallback 2: debug — line presence check → 422 com info */
-        if (!_applied46) {
-          const _sLines46d = search.split('\n').filter(l => l.trim().length > 0);
-          const _fLines46d = normOrig.split('\n');
-          const _found46   = _sLines46d.filter(sl => _fLines46d.some(fl => fl.trim() === sl.trim()));
-          const _missing46 = _sLines46d.filter(sl => !_fLines46d.some(fl => fl.trim() === sl.trim()));
-          throw new Error(
-            'patch.search não encontrado após normalização de whitespace. ' +
-            'Linhas do search encontradas: ' + _found46.length + '/' + _sLines46d.length + '. ' +
-            (_missing46.length ? 'Não encontradas: ' + JSON.stringify(_missing46.slice(0, 2)) : '')
-          );
-        }
-      }
+      const { applyPatch: _applyPatch48 } = require('./patch-engine');
+      const _r48 = _applyPatch48(originalContent, patch, fixType);
+      patchedContent  = _r48.patchedContent;
+      matchStrategy   = _r48.match_strategy;
+      matchLog        = _r48.match_log || [];
+      snapshotContent = _r48.snapshot_content || originalContent;
     } catch (err) {
       patchError = err.message;
     }
@@ -1752,7 +1605,7 @@ app.post('/api/chat/apply-patch', async (req, res) => {
     const diffPreview = simpleDiff(originalContent, patchedContent);
     const filename    = filePath.split('/').pop().split('\\').pop();
 
-    /* §47 — PASS GOLD Engine multidimensional */
+    /* §47 — PASS GOLD Engine multidimensional (usa snapshotContent §48) */
     let passGoldResult = null;
     try {
       const { evaluate } = require('./pass-gold-engine');
@@ -1764,11 +1617,11 @@ app.post('/api/chat/apply-patch', async (req, res) => {
         confidence:       confidenceRaw,
         risk:             riskRaw,
         aegis_ok:         aegisOk,
-        original_content: originalContent,
+        original_content: snapshotContent, /* §48: snapshot pré-patch */
         patched_content:  patchedContent,
         patch:            patch,
         fix_type:         fixType,
-        original_lines:   originalContent ? originalContent.split('\n').length : 0,
+        original_lines:   snapshotContent ? snapshotContent.split('\n').length : 0,
         diagnosis:        diagnosis
       });
     } catch (_e47) {
@@ -1784,8 +1637,12 @@ app.post('/api/chat/apply-patch', async (req, res) => {
       diff_preview: diffPreview,
       aegis_ok:    aegisOk,
       aegis_error: aegisError || null,
-      original_lines:  originalContent.split('\n').length,
+      original_lines:  snapshotContent.split('\n').length,
       patched_lines:   patchedContent.split('\n').length,
+      /* §48 — match engine */
+      match_strategy:   matchStrategy,
+      match_log:        matchLog,
+      snapshot_content: snapshotContent,
       /* §47 — PASS GOLD multidimensional */
       pass_gold:   passGoldResult ? passGoldResult.pass_gold : aegisOk,
       gold_level:  passGoldResult ? passGoldResult.level     : (aegisOk ? 'GOLD' : 'NEEDS_REVIEW'),
