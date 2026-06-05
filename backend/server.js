@@ -1012,6 +1012,35 @@ app.post('/api/chat', async (req, res) => {
     req._toolFetchUrls  = foundUrls;
   }
 
+  /* ── §44 MPEG: comprimir blocos [Arquivo: ...] embutidos na mensagem ─────
+     Aplica STRIP→WINDOW→SUMMARIZE em cada arquivo antes de montar o prompt.
+     /api/chat/apply-patch: nunca comprime — precisa do conteúdo completo.  */
+  if (/\[Arquivo: /.test(message)) {
+    try {
+      const { compressContext } = require('./compress-context');
+      const _parts44    = message.split('\n\n---\n\n');
+      const _question44 = _parts44[0] || message.slice(0, 400);
+      let   _anyComp44  = false;
+      const _newParts44 = _parts44.map(function(part) {
+        const _m = part.match(/^(\[Arquivo: ([^\]]+)\]\n)([\s\S]*)$/);
+        if (!_m) return part;
+        const _header  = _m[1];
+        const _fpath   = _m[2];
+        const _fcont   = _m[3];
+        const _r = compressContext(_fcont, _question44);
+        if (!_r.fallback && _r.compression_ratio >= 10) {
+          console.log(`[MPEG §44] ${_fpath}: ${_r.original_lines} → ${_r.compressed_lines} linhas (${_r.compression_ratio}% redução)`);
+          _anyComp44 = true;
+          return _header + _r.compressed;
+        }
+        return part;
+      });
+      if (_anyComp44) { message = _newParts44.join('\n\n---\n\n'); }
+    } catch (_e44) {
+      console.warn('[MPEG §44] compress error —', _e44.message, '— fallback to original');
+    }
+  }
+
   /* ── systemPrompt — base + override por modo ─────────────────── */
   const basePrompt = [
     `Você é o Vision Core — sistema multiagente de diagnóstico e correção de projetos (SDDF V8.4).`,
