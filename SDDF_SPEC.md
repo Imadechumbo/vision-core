@@ -19,6 +19,7 @@ Usuário conversa
   → Resposta operacional     (retorno ao frontend com level + dimensions)
   → Auto-merge               (pós-PASS GOLD — POST /api/deploy/merge-pr — §50)
   → Auto-deploy              (pós-merge — backend/deploy-trigger.js — §51)
+  → Auth GitHub              (OAuth automático — §52)
 ```
 
 ### Módulos canônicos obrigatórios
@@ -2762,6 +2763,128 @@ Após MERGED (toggle ON):
 - Nunca fazer deploy de branch não-mergeada no main
 - Toggle OFF por padrão — nunca ativar sem ação humana
 - REGRA ABSOLUTA preservada
+
+---
+
+## §52 — GitHub OAuth Flow + Auto-config SSM
+
+**Status:** SPEC — não implementado  
+**Data:** 2026-06-05  
+**Pré-requisito:** §50 (deploy-pr), §51 (auto-deploy)
+
+### Objetivo
+
+Eliminar configuração manual de GITHUB_TOKEN para leigos.
+Usuário clica um botão, autoriza o Vision Core no GitHub via OAuth,
+token é gerado automaticamente e salvo no EB via AWS SSM.
+
+### Fluxo completo
+
+```
+1. UI detecta que GITHUB_TOKEN não está configurado
+   → badge amarelo "⚠️ GitHub não conectado" no AEGIS block
+   → botão "🔗 Conectar GitHub" visível
+
+2. Usuário clica "Conectar GitHub"
+   → Vision Core abre popup OAuth:
+   https://github.com/login/oauth/authorize
+     ?client_id={GITHUB_CLIENT_ID}
+     &scope=repo
+     &state={csrf_token}
+     &redirect_uri={BACKEND_URL}/api/auth/github/callback
+
+3. Usuário autoriza no GitHub → GitHub redireciona para callback
+
+4. Backend /api/auth/github/callback:
+   - Valida state (CSRF)
+   - POST https://github.com/login/oauth/access_token
+     { client_id, client_secret, code }
+   - Recebe access_token
+   - Salva no AWS SSM Parameter Store:
+     aws ssm put-parameter --name /vision-core/GITHUB_TOKEN
+       --value {access_token} --type SecureString --overwrite
+   - Reinicia variável de ambiente no EB:
+     aws elasticbeanstalk update-environment
+       --environment-name vision-core-prod
+       --option-settings Namespace=aws:elasticbeanstalk:application:environment,
+         OptionName=GITHUB_TOKEN,Value={access_token}
+   - Retorna { ok: true, github_user: login }
+
+5. UI atualiza: badge "✅ GitHub conectado: @username"
+   Todos os fluxos §46/§50/§51 desbloqueados automaticamente
+```
+
+### GitHub OAuth App (pré-requisito de configuração)
+
+```
+Criar em github.com/settings/developers:
+  - Application name: Vision Core
+  - Homepage URL: https://visioncoreai.pages.dev
+  - Callback URL: {BACKEND_URL}/api/auth/github/callback
+
+Env vars necessárias no EB:
+  GITHUB_CLIENT_ID=     (público — pode estar no código)
+  GITHUB_CLIENT_SECRET= (secreto — nunca no código)
+```
+
+### Backend — GET /api/auth/github/callback
+
+```
+GET /api/auth/github/callback?code={code}&state={state}
+
+Fluxo:
+1. Validar state contra sessão
+2. Exchange code → access_token (GitHub API)
+3. Salvar no SSM Parameter Store (SecureString)
+4. Update EB environment variable GITHUB_TOKEN
+5. Retornar HTML que fecha o popup + postMessage ao parent
+```
+
+### Backend — GET /api/auth/github/status
+
+```
+GET /api/auth/github/status
+Retorna: { connected: bool, login: string|null }
+Verifica se GITHUB_TOKEN está configurado e válido
+(GET https://api.github.com/user com o token)
+```
+
+### Frontend
+
+```
+Componente no AEGIS block:
+  - Ao carregar: GET /api/auth/github/status
+  - Se connected=false: "⚠️ GitHub não conectado" + botão "🔗 Conectar GitHub"
+  - Se connected=true: "✅ GitHub: @{login}" (verde)
+
+Botão "🔗 Conectar GitHub":
+  - Abre popup 600x700
+  - window.open(oauthUrl, 'github-oauth', 'width=600,height=700')
+  - Escuta window.addEventListener('message', ...) para fechar popup
+  - Ao receber success: atualiza badge + habilita §46/§50/§51
+```
+
+### Constraints
+
+- `GITHUB_CLIENT_SECRET` nunca no código ou frontend
+- `state` token: `crypto.randomUUID()` por sessão (CSRF protection)
+- Token salvo apenas no SSM + EB env — nunca em localStorage
+- Escopo mínimo: `repo` (acesso completo a repos privados e públicos)
+- Token renovável: botão "🔄 Reconectar GitHub" se expirado
+- `oauth_executed = false` sempre (spec only — não implementado)
+- REGRA ABSOLUTA preservada
+
+### Para o usuário leigo
+
+```
+Experiência completa:
+  1. Abre Vision Core
+  2. Vê "⚠️ GitHub não conectado"
+  3. Clica "🔗 Conectar GitHub"
+  4. Autoriza no popup GitHub (1 clique)
+  5. Popup fecha → Vision Core conectado
+  Zero cópia de token, zero configuração manual
+```
 
 ---
 
