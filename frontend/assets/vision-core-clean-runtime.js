@@ -4766,9 +4766,9 @@
             : { zip_base64:   _lastZipB64, file_path: hermesObj.file, fix_type: hermesObj.fix_type || 'code_patch', patch: hermesObj.patch, diagnosis: hermesObj.diagnosis || 'vision fix' }),
           signal: AbortSignal.timeout(30000)
         })
-        .then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error || ('HTTP ' + r.status)); }); })
+        .then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { var _e = new Error(e.error || ('HTTP ' + r.status)); _e.detail = e.detail || null; throw _e; }); })
         .then(function(data) {
-          if (!data.ok) { throw new Error(data.error || 'apply-patch falhou'); }
+          if (!data.ok) { var _e2 = new Error(data.error || 'apply-patch falhou'); _e2.detail = data.detail || null; throw _e2; }
 
           /* Remover painel atual */
           wrap.remove();
@@ -4817,7 +4817,23 @@
         .catch(function(err) {
           applyBtn.disabled = false; cancelBtn.disabled = false;
           applyBtn.textContent = '✅ Aplicar e Baixar Arquivo Corrigido';
-          statusEl.textContent = '❌ ' + (err.message || 'Erro desconhecido');
+          statusEl.textContent = '❌ ' + (err.message || 'Erro desconhecido') + (err.detail ? '\n💡 ' + err.detail : '');
+          /* §46fix: fallback download arquivo original quando patch_apply_failed */
+          if (err.message === 'patch_apply_failed' && _fc42) {
+            var _fname46 = (hermesObj.file || 'arquivo').split('/').pop();
+            var _dlOrig46 = document.createElement('button');
+            _dlOrig46.style.cssText = 'background:#1a1a2e;border:1px solid #f59e0b;color:#fcd34d;font-size:11px;padding:6px 12px;border-radius:10px;cursor:pointer;font-family:inherit;margin-top:6px;display:block;';
+            _dlOrig46.textContent = '⬇ Baixar arquivo original (sem patch) — aplicar manualmente';
+            _dlOrig46.onclick = (function(fc, fn) { return function() {
+              var blob = new Blob([fc], { type: 'text/plain;charset=utf-8' });
+              var url  = URL.createObjectURL(blob);
+              var a    = document.createElement('a');
+              a.href = url; a.download = fn;
+              document.body.appendChild(a); a.click();
+              setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+            }; })(_fc42, _fname46);
+            statusEl.appendChild(_dlOrig46);
+          }
           setStatus('READY');
         });
       };
@@ -4934,9 +4950,9 @@
                   : { zip_base64:   _lastZipB64, file_path: h.file, fix_type: h.fix_type || 'code_patch', patch: h.patch, diagnosis: h.diagnosis || 'vision standard method' }),
                 signal: AbortSignal.timeout(30000)
               })
-              .then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error || 'HTTP ' + r.status); }); })
+              .then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { var _e = new Error(e.error || 'HTTP ' + r.status); _e.detail = e.detail || null; throw _e; }); })
               .then(function(data) {
-                if (!data.ok) throw new Error(data.error || 'apply-patch falhou');
+                if (!data.ok) { var _e2 = new Error(data.error || 'apply-patch falhou'); _e2.detail = data.detail || null; throw _e2; }
                 wrap.remove(); _activeMission = null;
                 var aegisStatus = data.aegis_ok ? '✅ Aegis PASS' : '⚠️ Aegis: ' + (data.aegis_error || 'erro de sintaxe');
                 var decisao = data.aegis_ok ? '✅ PASS — patch aplicado e validado' : '⚠️ NEEDS_FIX — revisar sintaxe';
@@ -4966,8 +4982,26 @@
                 setStatus('READY');
               })
               .catch(function(err) {
-                /* §36fix BUG3: relatório estruturado no checkpoint de falha */
-                appendMsg(['🛡 Vision Core Standard Method — FALHA NO CHECKPOINT','','⚖️  Decisão:   NEEDS_FIX — execução bloqueada','❌ Erro:      ' + (err.message || String(err)),'','Opções disponíveis:','  • Clique EXECUTAR MISSÃO novamente para rediagnosticar','  • Reenvie o ZIP se o arquivo não estiver em memória','  • Copie o diff do chat e aplique manualmente'].join('\n'), 'error');
+                /* §36fix BUG3 + §46fix: detail + fallback download */
+                var _eLines46 = ['🛡 Vision Core Standard Method — FALHA NO CHECKPOINT','','⚖️  Decisão:   NEEDS_FIX — execução bloqueada','❌ Erro:      ' + (err.message || String(err))];
+                if (err.detail) { _eLines46.push('💡 Debug:     ' + err.detail); }
+                _eLines46.push('','Opções disponíveis:','  • Clique EXECUTAR MISSÃO novamente para rediagnosticar','  • Reenvie o ZIP se o arquivo não estiver em memória','  • Copie o diff do chat e aplique manualmente');
+                appendMsg(_eLines46.join('\n'), 'error');
+                if (err.message === 'patch_apply_failed' && _fc42sm) {
+                  var _fname46sm = (h.file || 'arquivo').split('/').pop();
+                  var _dlOrig46sm = document.createElement('button');
+                  _dlOrig46sm.style.cssText = 'background:#1a1a2e;border:1px solid #f59e0b;color:#fcd34d;font-size:11px;padding:6px 12px;border-radius:10px;cursor:pointer;font-family:inherit;margin:6px 0;display:block;';
+                  _dlOrig46sm.textContent = '⬇ Baixar arquivo original (sem patch) — aplicar manualmente';
+                  _dlOrig46sm.onclick = (function(fc, fn) { return function() {
+                    var blob = new Blob([fc], { type: 'text/plain;charset=utf-8' });
+                    var url  = URL.createObjectURL(blob);
+                    var a    = document.createElement('a');
+                    a.href = url; a.download = fn;
+                    document.body.appendChild(a); a.click();
+                    setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+                  }; })(_fc42sm, _fname46sm);
+                  chatStream.appendChild(_dlOrig46sm);
+                }
                 wrap.remove(); _activeMission = null; setStatus('READY');
               });
             }, 600);
