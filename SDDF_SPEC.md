@@ -17,6 +17,8 @@ Usuário conversa
   → Patch Engine propõe      (match engine 5 estratégias — backend/patch-engine.js)
   → PASS GOLD decide         (score multidimensional 6 dimensões — backend/pass-gold-engine.js)
   → Resposta operacional     (retorno ao frontend com level + dimensions)
+  → Auto-merge               (pós-PASS GOLD — POST /api/deploy/merge-pr — §50)
+  → Auto-deploy              (pós-merge — backend/deploy-trigger.js — §51)
 ```
 
 ### Módulos canônicos obrigatórios
@@ -2671,6 +2673,94 @@ Após PR aberto (toggle ON):
 - `deploy_allowed = false` — merge só com `aegis_ok=true` obrigatório
 - `GITHUB_TOKEN` via env — nunca no código
 - Toggle OFF por padrão — nunca ativar sem ação humana explícita
+- REGRA ABSOLUTA preservada
+
+---
+
+## §51 — Auto-deploy pós-merge (toggle ON/OFF)
+
+**Status:** SPEC — não implementado  
+**Data:** 2026-06-05  
+**Pré-requisito:** §50 (merge-pr funcionando)
+
+### Objetivo
+
+Após merge bem-sucedido via §50, disparar automaticamente
+o deploy do projeto corrigido no ambiente de produção do cliente.
+Toggle ON/OFF independente do toggle de auto-merge (§50).
+
+### Toggle UI
+
+```
+localStorage key: "vc_autodeploy_enabled"
+Valor padrão:     false (OFF)
+UI:               Botão "🚀 Auto-deploy: OFF" / "🚀 Auto-deploy: ON"
+Localização:      Ao lado do toggle Auto-merge, abaixo do badge PASS GOLD
+```
+
+### Fluxo quando toggle OFF (padrão)
+
+```
+1. MERGED (§50) → badge "✅ MERGED" aparece
+2. Botão "🚀 Fazer Deploy" aparece no chat
+3. Clique humano → modal "Confirmar deploy em produção?"
+4. Confirma → POST /api/deploy/trigger
+5. Badge "🚀 DEPLOYED" + link do ambiente
+```
+
+### Fluxo quando toggle ON
+
+```
+1. MERGED (§50) → Vision Core dispara automaticamente
+2. POST /api/deploy/trigger sem modal
+3. Badge "🚀 DEPLOYED auto" + link do ambiente
+```
+
+### Backend — POST /api/deploy/trigger
+
+```
+Input:  { repo, sha, environment, aegis_ok }
+Guard:  aegis_ok=false → 403
+        sha obrigatório (garantir que é o commit do merge)
+Method: GitHub Actions dispatch OU Elastic Beanstalk deploy
+  - Opção A: POST /repos/{repo}/actions/workflows/{workflow}/dispatches
+    { ref: sha, inputs: { environment } }
+  - Opção B: eb deploy via webhook configurado
+Output: { ok, deploy_url, run_id }
+```
+
+### Frontend
+
+```
+Toggle:
+  - Estado inicial: OFF (localStorage "vc_autodeploy_enabled" = false)
+  - Ao lado do toggle Auto-merge no badge PASS GOLD
+  - Click: alterna + persiste em localStorage
+
+Após MERGED (toggle OFF):
+  - Botão "🚀 Fazer Deploy" verde no chatStream
+  - Modal: "Confirmar deploy do commit {sha} em {environment}?"
+  - Confirma → POST /api/deploy/trigger
+  - Loading → badge "🚀 DEPLOYED" + link
+
+Após MERGED (toggle ON):
+  - POST automático sem modal
+  - Badge "🚀 DEPLOYED auto" + link
+```
+
+### Gates obrigatórios
+
+- `aegis_ok=true` em ambos os fluxos
+- `sha` do merge presente (não deploy de código não-mergeado)
+- `GITHUB_TOKEN` configurado
+- Toggle ON só ativa após confirmação humana explícita
+
+### Constraints
+
+- `deploy_allowed = false` — deploy só após AEGIS + merge confirmado
+- `autodeploy_executed = false` sempre (spec only — não implementado)
+- Nunca fazer deploy de branch não-mergeada no main
+- Toggle OFF por padrão — nunca ativar sem ação humana
 - REGRA ABSOLUTA preservada
 
 ---
