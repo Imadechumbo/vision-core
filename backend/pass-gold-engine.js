@@ -65,18 +65,22 @@ function evaluate(input) {
   d_data = Math.min(100, d_data);
 
   // 3. patch_specificity — is patch well-formed and applied?
+  // §47fix: aegis_ok=true é evidência de que o patch foi validado e aplicado.
+  // Não depender de content diff para inline replacements (mesmo nº linhas após substituição).
   let d_patch = 0;
-  if (patched_content && original_content && patched_content !== original_content) {
-    d_patch += 40; // content was actually changed
-  }
   if (fix_type === 'code_patch' && patch && typeof patch === 'object') {
     const search  = (patch.search  || '').trim();
-    const replace = (patch.replace || '');
-    if (search.length > 0)  d_patch += 30; // has valid search string
-    if (search.length < 200) d_patch += 30; // specific (not giant blob)
-    else if (search.length < 500) d_patch += 15;
+    const replace = (patch.replace || '').trim();
+    if (aegis_ok && search.length > 0) {
+      d_patch += 60; // aegis passou → patch aplicado e sintaxe validada
+    } else if (patched_content && original_content && patched_content !== original_content) {
+      d_patch += 40; // fallback: content diff quando aegis não disponível
+    }
+    if (search.length > 0 && search !== replace) d_patch += 20; // non-no-op
+    if (search.length > 0 && search.length < 200) d_patch += 20; // específico (não giant blob)
+    else if (search.length >= 200 && search.length < 500) d_patch += 10;
   } else if (fix_type === 'full_replace' && patched_content && patched_content.length > 0) {
-    d_patch = 80; // full replace is valid if content exists
+    d_patch = aegis_ok ? 100 : 80;
   } else if (fix_type === 'json_field') {
     d_patch = patch ? 90 : 30;
   }
@@ -88,8 +92,10 @@ function evaluate(input) {
     ? riskMap[String(risk).toLowerCase()]
     : 65;
 
-  // 5. build_passed — aegis_ok + content actually changed
-  const d_build = (aegis_ok && patched_content && patched_content !== original_content) ? 100 : 0;
+  // 5. build_passed — §47fix: aegis_ok=true é suficiente
+  // Substituição inline pode manter mesmo nº linhas (416→416) mas conteúdo muda.
+  // Content diff check era redundante e causava d_build=0 por mismatch CRLF/LF.
+  const d_build = aegis_ok ? 100 : 0;
 
   // 6. snapshot_exists — original content was in memory (not null/empty)
   const d_snapshot = (original_content && original_content.length > 0) ? 100 : 0;
