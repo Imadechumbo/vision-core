@@ -2,6 +2,69 @@
 
 Esta SPEC é vinculante para impedir regressões de runtime duplicado, scripts legados, CORS instável, PASS GOLD falso e SSE sem contrato final.
 
+---
+
+## PIPELINE CANÔNICO — Lei Arquitetural
+
+> **Esta seção é imutável. Qualquer § que altere os módulos canônicos deve referenciar esta seção como autoridade.**
+
+### Pipeline de execução obrigatório
+
+```
+Usuário conversa
+  → Hermes entende           (multi-provider com fallback — backend/hermes-rca.js)
+  → Agentes trabalham        (Scanner investiga estrutura e dependências)
+  → Patch Engine propõe      (match engine 5 estratégias — backend/patch-engine.js)
+  → PASS GOLD decide         (score multidimensional 6 dimensões — backend/pass-gold-engine.js)
+  → Resposta operacional     (retorno ao frontend com level + dimensions)
+```
+
+### Módulos canônicos obrigatórios
+
+| Módulo | Responsabilidade |
+|--------|-----------------|
+| `backend/pass-gold-engine.js` | Calcular PASS GOLD score 6 dimensões; emitir GOLD/SILVER/NEEDS_REVIEW |
+| `backend/patch-engine.js` | Aplicar patch com match engine 5 estratégias; capturar snapshot |
+| `backend/hermes-rca.js` | Multi-provider LLM fallback; RCA estruturado |
+
+### PASS GOLD Doctrine
+
+1. **PASS GOLD é calculado EXCLUSIVAMENTE no servidor** — nunca inferido pelo frontend
+2. **Frontend NUNCA envia `pass_gold: true`** — apenas recebe e exibe o resultado
+3. **Nada é promovido, mergeado ou marcado stable sem `pass_gold === true`**
+4. **Gates obrigatórios para GOLD:**
+   - `aegis_ok === true` (sintaxe válida pelo parser local)
+   - `snapshot_exists === true` (conteúdo original em memória)
+   - `llm_confidence >= 60`
+   - `risk !== 'high'`
+5. **Pesos das 6 dimensões (imutáveis — resgatados da V2.2.2):**
+
+| Dimensão | Peso |
+|----------|------|
+| `llm_confidence` | 0.30 |
+| `patch_specificity` | 0.20 |
+| `risk_level` | 0.15 |
+| `data_quality` | 0.15 |
+| `build_passed` | 0.10 |
+| `snapshot_exists` | 0.10 |
+
+6. **Níveis de decisão:**
+
+| Nível | Condição |
+|-------|----------|
+| `GOLD` | `finalScore >= 80` E todos os 4 gates passaram |
+| `SILVER` | `finalScore >= 60` (gates podem ter falhado parcialmente) |
+| `NEEDS_REVIEW` | `finalScore < 60` OU gate crítico falhou |
+
+### Regra para novas §§
+
+Qualquer § que modifique `pass-gold-engine.js`, `patch-engine.js` ou `hermes-rca.js` deve:
+- Referenciar esta seção como autoridade de design
+- Preservar os pesos e gates acima sem alteração
+- Registrar impacto nas dimensões na entrada do SDDF_SPEC.md
+
+---
+
 ## 1. Frontend — runtime único
 
 `frontend/index.html` é o shell visual e não pode voltar a controlar a execução diretamente. Ele deve carregar somente estes scripts de runtime/comando:
