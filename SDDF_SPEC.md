@@ -2394,6 +2394,55 @@ Timeout frontend: `55s → 95s` quando enviando `zip_base64` (Gemini pode levar 
 
 ---
 
+## §45 — PASS GOLD Dourado + Download ZIP Corrigido
+
+**Commit:** `feat(§45): PASS GOLD dourado + download ZIP corrigido`  
+**Data:** 2026-06-05  
+**Deploy:** `https://23b49aad.visioncoreai.pages.dev`  
+**Arquivos:** `frontend/assets/vision-core-clean-runtime.js`, `frontend/assets/vision-core-bundle.js`
+
+### Feature 1 — Golden shimmer animation (`aegis_ok=true`)
+
+CSS keyframe `@keyframes vcGoldShimmer` adicionado ao bloco `vc-anim-styles`.
+
+Quando `aegis_ok=true`, helper `_renderPassGold45(container)` renderiza badge:
+```javascript
+// gradient 135° amber: #92400e → #f59e0b → #fde68a → #f59e0b → #92400e
+// background-size: 300% 300% + animation: vcGoldShimmer 2s ease infinite
+// box-shadow: 0 0 30px rgba(245,158,11,0.4)
+// texto: ✨ PASS GOLD ✨ / AEGIS CERTIFICADO — ARQUIVO CORRIGIDO / aegis_ok: true · sintaxe válida · patch aplicado
+```
+
+### Feature 2 — Download ZIP corrigido
+
+Estado novo: `var _lastZipName = null;` — armazena `file.name` no início de `_processZipBuffer`, limpo em `clearBtn`.
+
+Helper `_dlZip45(patchedContent, filePath, zipName, container)`:
+```
+1. JSZip.loadAsync(_lastZipB64, { base64: true })
+2. zip.file(filePath, patchedContent)   ← substitui arquivo corrigido
+3. zip.generateAsync({ type:'blob', compression:'DEFLATE', level:6 })
+4. download '<nome>-corrigido.zip'
+5. fallback → _dlZip45Fallback() → baixa só o .js se JSZip/base64 indisponível
+```
+
+Botão alterado de `⬇ Baixar <file> (corrigido)` → `⬇ Baixar ZIP Corrigido` quando `aegis_ok`.
+
+### Pontos de aplicação
+
+| Painel | Condição | Antes | Depois |
+|--------|----------|-------|--------|
+| `renderApplyFixPanel` | sempre | dlBtn simples | PASS GOLD badge se aegis_ok + dlBtn (ZIP ou fallback JS) |
+| `renderStandardMethodPanel` | `aegis_ok` | dlBtn simples | PASS GOLD badge + dlBtn ZIP |
+
+### Constraints preservadas
+
+- `pass_gold_real_claimed = false` sempre
+- `deploy_allowed = false` sempre  
+- REGRA ABSOLUTA preservada
+
+---
+
 ## §43 — Robustez ZIP: Seleção Inteligente ZIP Grande + Timeout Adaptativo Gemini
 
 **Commit:** `feat(§43): seleção inteligente ZIP grande + timeout adaptativo`
