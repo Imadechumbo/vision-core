@@ -4111,6 +4111,9 @@
         '  0%   { background-position: 0% 50%; }',
         '  50%  { background-position: 100% 50%; }',
         '  100% { background-position: 0% 50%; }',
+        '}',
+        '@keyframes vcRipple {',  /* §50fix-ui: ripple ENVIAR */
+        '  to { transform: scale(2.5); opacity: 0; }',
         '}'
       ].join('\n');
       document.head.appendChild(_animStyle);
@@ -4751,7 +4754,25 @@
 
     sendBtn.addEventListener('click', sendMessage);
     /* §50 fix(ui): press feedback scale(0.95) */
-    sendBtn.addEventListener('mousedown', function() { sendBtn.style.transform = 'scale(0.95)'; });
+    /* §50fix-ui: ripple + flash visível ao pressionar ENVIAR */
+    sendBtn.addEventListener('mousedown', function(e) {
+      var _orig = sendBtn.style.background;
+      sendBtn.style.background = '#a855f7';
+      sendBtn.style.transform  = 'scale(0.96)';
+      var _rip  = document.createElement('span');
+      var _rect = sendBtn.getBoundingClientRect();
+      var _size = Math.max(_rect.width, _rect.height);
+      _rip.style.cssText = 'position:absolute;border-radius:50%;background:rgba(255,255,255,0.35);' +
+        'width:' + _size + 'px;height:' + _size + 'px;' +
+        'left:' + (e.clientX - _rect.left - _size / 2) + 'px;' +
+        'top:'  + (e.clientY - _rect.top  - _size / 2) + 'px;' +
+        'transform:scale(0);animation:vcRipple 0.4s ease-out forwards;pointer-events:none;';
+      sendBtn.style.position = 'relative';
+      sendBtn.style.overflow = 'hidden';
+      sendBtn.appendChild(_rip);
+      setTimeout(function() { _rip.remove(); }, 400);
+      setTimeout(function() { sendBtn.style.background = _orig; sendBtn.style.transform = ''; }, 200);
+    });
     sendBtn.addEventListener('mouseup',   function() { sendBtn.style.transform = ''; });
     sendBtn.addEventListener('mouseleave',function() { sendBtn.style.transform = ''; });
 

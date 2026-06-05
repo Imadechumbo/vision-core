@@ -1,5 +1,5 @@
 /**
- * VISION CORE V3.1 — API GATEWAY
+ * VISION CORE V3.2 — API GATEWAY
  * Cloudflare Worker proxy for:
  * - POST/GET/OPTIONS API forwarding
  * - CORS hardening
@@ -133,10 +133,12 @@ async function proxyToOrigin(request, env, ctx) {
   // §26: Gemini pode levar até 45s. Dar 52s ao subrequest (+ margem) antes de desistir.
   // NOTA: CF Workers Standard — I/O wait não consome CPU time; isso funciona em paid plan.
   // Em free plan (30s wall-clock total), requests Gemini-heavy podem estourar no nível CF.
-  // §46fix-gateway: /api/deploy/* faz 5 chamadas GitHub API sequenciais → 30s
+  // §46fix-gateway: /api/deploy/* faz 5+ chamadas GitHub API sequenciais → 30s
+  //   Endpoints cobertos: zip-release, merge-pr (§50)
   // §48: /api/chat/apply-patch pode ter AEGIS spawn + PASS GOLD engine → 15s
   const isChatPost    = request.method === "POST" && incomingUrl.pathname.includes("/api/chat");
   const isDeployPost  = request.method === "POST" && incomingUrl.pathname.startsWith("/api/deploy/");
+  // §50fix-gateway: /api/deploy/merge-pr — squash merge PR GitHub API, coberto por isDeployPost (30s)
   const isApplyPatch  = request.method === "POST" && incomingUrl.pathname.includes("/api/chat/apply-patch");
   const subrequestTimeout = isChatPost ? 52000 : isDeployPost ? 30000 : isApplyPatch ? 15000 : 10000;
 
@@ -232,7 +234,7 @@ export default {
       return jsonResponse(request, {
         ok: true,
         service: "vision-core-api-gateway",
-        version: "3.1",
+        version: "3.2",
         origin: (env && env.ORIGIN_BASE) || DEFAULT_ORIGIN,
         supports: ["GET", "POST", "OPTIONS", "SSE"],
         pass_gold_policy: "required"
