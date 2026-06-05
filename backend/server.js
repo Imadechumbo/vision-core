@@ -1789,6 +1789,74 @@ app.post('/api/deploy/zip-release', async (req, res) => {
   }
 });
 
+/* ── §50 /api/deploy/merge-pr — squash merge de PR aprovado via AEGIS ─── */
+app.post('/api/deploy/merge-pr', async (req, res) => {
+  try {
+    const body       = normalizeBody(req);
+    const repo       = body.repo;
+    const pullNumber = body.pull_number;
+    const aegisOk    = body.aegis_ok;
+
+    if (!aegisOk) {
+      return res.status(403).json({ ok: false, error: 'aegis_gate_failed', detail: 'aegis_ok must be true to merge', time: now() });
+    }
+    if (!repo || !pullNumber) {
+      return res.status(400).json({ ok: false, error: 'repo and pull_number required', time: now() });
+    }
+
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+    if (!GITHUB_TOKEN) {
+      return res.status(500).json({ ok: false, error: 'GITHUB_TOKEN not configured', time: now() });
+    }
+
+    const ghHeaders = {
+      'Authorization': `Bearer ${GITHUB_TOKEN}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'vision-core-backend/3.0.0'
+    };
+
+    /* Verificar state=open */
+    const prCheckRes = await fetch(`https://api.github.com/repos/${repo}/pulls/${pullNumber}`, { headers: ghHeaders });
+    if (!prCheckRes.ok) {
+      const errText = await prCheckRes.text();
+      return res.status(prCheckRes.status).json({ ok: false, error: 'pr_check_failed', detail: errText, time: now() });
+    }
+    const prData = await prCheckRes.json();
+    if (prData.state !== 'open') {
+      return res.status(409).json({ ok: false, error: 'pr_not_open', detail: `PR #${pullNumber} state=${prData.state}`, time: now() });
+    }
+
+    /* Squash merge */
+    const mergeRes = await fetch(`https://api.github.com/repos/${repo}/pulls/${pullNumber}/merge`, {
+      method: 'PUT',
+      headers: { ...ghHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        merge_method: 'squash',
+        commit_title: `[Vision Core] AEGIS PASS GOLD — auto-merge PR #${pullNumber}`
+      })
+    });
+    if (!mergeRes.ok) {
+      const errText = await mergeRes.text();
+      return res.status(mergeRes.status).json({ ok: false, error: 'merge_failed', detail: errText, time: now() });
+    }
+    const mergeData = await mergeRes.json();
+
+    console.log(`[§50] PR #${pullNumber} merged (squash): ${mergeData.sha}`);
+    return res.json({
+      ok: true,
+      merged: true,
+      sha: mergeData.sha,
+      commit_url: `https://github.com/${repo}/commit/${mergeData.sha}`,
+      time: now()
+    });
+
+  } catch (err) {
+    console.error('[§50] deploy/merge-pr error:', err.message);
+    return res.status(500).json({ ok: false, error: 'merge_error', detail: err.message, time: now() });
+  }
+});
+
 /* ── /api/unzip-context — extrai ZIP e injeta conteúdo para /api/chat ─── */
 app.post('/api/unzip-context', async (req, res) => {
   try {

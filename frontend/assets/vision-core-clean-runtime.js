@@ -4088,8 +4088,8 @@
 
     if (!chatStream || !promptInput || !sendBtn) return;
     _chatInitialized = true;
-    /* §46fix-ui: idle glow on ENVIAR (overridden by vcPulse during loading) */
-    sendBtn.style.animation = 'vcSendGlow 3s ease-in-out infinite';
+    /* §50 fix(ui): click feedback — transition for scale press */
+    sendBtn.style.transition = 'transform 0.12s ease';
 
     /* §38 — inject animation keyframes once */
     if (!document.getElementById('vc-anim-styles')) {
@@ -4111,10 +4111,6 @@
         '  0%   { background-position: 0% 50%; }',
         '  50%  { background-position: 100% 50%; }',
         '  100% { background-position: 0% 50%; }',
-        '}',
-        '@keyframes vcSendGlow {',  /* §46fix-ui: idle glow ENVIAR — valores visíveis */
-        '  0%,100% { box-shadow: 0 0 6px 1px rgba(168,85,247,.45); }',
-        '  50%     { box-shadow: 0 0 20px 5px rgba(168,85,247,.75); }',
         '}'
       ].join('\n');
       document.head.appendChild(_animStyle);
@@ -4161,6 +4157,29 @@
       var level = data.gold_level || (data.pass_gold ? 'GOLD' : (data.aegis_ok ? 'GOLD' : 'NEEDS_REVIEW'));
       if (level === 'GOLD' || data.pass_gold) {
         _renderPassGold45(container);
+        /* §50 — auto-merge toggle (abaixo do badge AEGIS CERTIFICADO) */
+        (function() {
+          var _amRow = document.createElement('div');
+          _amRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin:2px 0 4px;padding:2px 6px;';
+          var _amOn = localStorage.getItem('vc_automerge_enabled') === 'true';
+          var _amBtn = document.createElement('button');
+          _amBtn.id = 'vc50-automerge-btn';
+          _amBtn.style.cssText = 'background:' + (_amOn ? '#134e2a' : '#1a1a2e') + ';border:1px solid ' +
+            (_amOn ? '#22c55e' : '#334155') + ';color:' + (_amOn ? '#86efac' : '#64748b') +
+            ';font-size:10px;padding:3px 10px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:600;transition:all .2s;';
+          _amBtn.textContent = '🔀 Auto-merge: ' + (_amOn ? 'ON' : 'OFF');
+          _amBtn.onclick = function() {
+            var _cur = localStorage.getItem('vc_automerge_enabled') === 'true';
+            var _next = !_cur;
+            localStorage.setItem('vc_automerge_enabled', String(_next));
+            _amBtn.textContent = '🔀 Auto-merge: ' + (_next ? 'ON' : 'OFF');
+            _amBtn.style.background = _next ? '#134e2a' : '#1a1a2e';
+            _amBtn.style.borderColor = _next ? '#22c55e' : '#334155';
+            _amBtn.style.color = _next ? '#86efac' : '#64748b';
+          };
+          _amRow.appendChild(_amBtn);
+          container.appendChild(_amRow);
+        }());
       } else if (level === 'SILVER') {
         var _sg = document.createElement('div');
         _sg.innerHTML = '<div style="background:#1a1a2e;border:1px solid #94a3b8;border-radius:10px;padding:10px 16px;margin:6px 0;text-align:center;">' +
@@ -4233,6 +4252,39 @@
       }
     }
 
+    /* §50 — helper: squash merge de PR via /api/deploy/merge-pr */
+    function _doMerge50(repo, pullNumber, cont) {
+      fetch(BACKEND_URL + '/api/deploy/merge-pr', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo: repo, pull_number: pullNumber, aegis_ok: true }),
+        signal: AbortSignal.timeout(30000)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(m) {
+        if (m.ok && m.merged) {
+          var _mb = document.createElement('div');
+          _mb.innerHTML = '<div style="background:#0a1f0a;border:1px solid #22c55e;border-radius:12px;padding:10px 14px;margin:6px 0;display:flex;align-items:center;gap:10px;">' +
+            '<span style="font-size:18px;">✅</span>' +
+            '<div><div style="color:#86efac;font-weight:600;font-size:13px;">MERGED — squash commit</div>' +
+            '<a href="' + m.commit_url + '" target="_blank" rel="noopener" style="color:#4ade80;font-size:11px;text-decoration:none;">' +
+            m.sha.slice(0, 8) + ' ↗</a></div></div>';
+          cont.appendChild(_mb);
+          chatStream.scrollTop = chatStream.scrollHeight;
+        } else {
+          var _me = document.createElement('div');
+          _me.style.cssText = 'font-size:11px;color:#f87171;margin-top:6px;';
+          _me.textContent = '❌ Merge falhou: ' + (m.detail || m.error || 'erro desconhecido');
+          cont.appendChild(_me);
+        }
+      })
+      .catch(function(err) {
+        var _me = document.createElement('div');
+        _me.style.cssText = 'font-size:11px;color:#f87171;margin-top:6px;';
+        _me.textContent = '❌ ' + (err.message || 'Erro de rede ao tentar merge');
+        cont.appendChild(_me);
+      });
+    }
+
     /* §46 — botão Deploy GitHub PR pós-AEGIS PASS GOLD */
     function _renderDeployBtn46(container, patchedContent, filePath) {
       var btn = document.createElement('button');
@@ -4296,6 +4348,24 @@
                 '<div style="font-size:10px;color:#475569;margin-top:6px;">' + (d.branch || '') + ' · ' + (d.repo || '') + '</div>';
               chatStream.appendChild(prMsg);
               chatStream.scrollTop = chatStream.scrollHeight;
+              /* §50 — auto-merge ou botão manual */
+              var _prNum50 = parseInt((d.pr_url || '').split('/pull/')[1], 10);
+              var _autoMerge50 = localStorage.getItem('vc_automerge_enabled') === 'true';
+              if (_prNum50) {
+                if (_autoMerge50) {
+                  _doMerge50(d.repo || repo, _prNum50, cont);
+                } else {
+                  var _mBtn50 = document.createElement('button');
+                  _mBtn50.style.cssText = 'background:#0a1f0a;border:1px solid #22c55e;color:#86efac;font-size:11px;padding:6px 13px;border-radius:10px;cursor:pointer;font-family:inherit;font-weight:600;margin:6px 0 0 0;display:block;';
+                  _mBtn50.textContent = '✅ Fazer Merge';
+                  _mBtn50.onclick = function() {
+                    _mBtn50.disabled = true; _mBtn50.textContent = '⏳ Merging...';
+                    _doMerge50(d.repo || repo, _prNum50, cont);
+                    _mBtn50.remove();
+                  };
+                  cont.appendChild(_mBtn50);
+                }
+              }
             } else {
               var note = document.createElement('div');
               note.style.cssText = 'font-size:11px;color:#f87171;margin-top:6px;';
@@ -4641,7 +4711,6 @@
       .then(function(data) {
         clearTimeout(_chatAnimTimer);
         thinking.remove();
-        if (sendBtn) sendBtn.style.animation = 'vcSendGlow 3s ease-in-out infinite'; /* §38 restore idle */
         stopMissionAnimation({ ok: true, steps: [{ agent: 'Scanner', ok: true }, { agent: 'Hermes', ok: true }] });
         /* §27 echo guard */
         if (data && data.provider === 'local') {
@@ -4673,7 +4742,6 @@
       .catch(function(err) {
         clearTimeout(_chatAnimTimer);
         thinking.remove();
-        if (sendBtn) sendBtn.style.animation = 'vcSendGlow 3s ease-in-out infinite'; /* §38 restore idle */
         resetAllAgents();
         appendMsg('[Erro de conexão com worker: ' + BACKEND_URL + ' — ' + err + ']', 'error');
         setStatus('ERRO', 'error');
@@ -4682,6 +4750,10 @@
     }
 
     sendBtn.addEventListener('click', sendMessage);
+    /* §50 fix(ui): press feedback scale(0.95) */
+    sendBtn.addEventListener('mousedown', function() { sendBtn.style.transform = 'scale(0.95)'; });
+    sendBtn.addEventListener('mouseup',   function() { sendBtn.style.transform = ''; });
+    sendBtn.addEventListener('mouseleave',function() { sendBtn.style.transform = ''; });
 
     promptInput.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
