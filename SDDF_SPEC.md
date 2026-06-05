@@ -2592,6 +2592,89 @@ Botão alterado de `⬇ Baixar <file> (corrigido)` → `⬇ Baixar ZIP Corrigido
 
 ---
 
+## §50 — Auto-merge pós-PASS GOLD (toggle ON/OFF)
+
+**Status:** SPEC — não implementado  
+**Data:** 2026-06-05  
+**Pré-requisito:** §46 (POST /api/deploy/zip-release) e §47 (PASS GOLD Engine)
+
+### Objetivo
+
+Após PR aberto via §46, permitir que o Vision Core faça merge automaticamente
+ou exiba botão de merge manual — controlado por toggle persistido em localStorage.
+
+### Toggle UI
+
+```
+localStorage key: "vc_automerge_enabled"
+Valor padrão:     false  (OFF — merge manual)
+UI:               Botão "🔀 Auto-merge: OFF" / "🔀 Auto-merge: ON"
+Localização:      Painel de configuração (Configurar IA) ou área do AEGIS block
+```
+
+### Fluxo quando toggle OFF (padrão)
+
+```
+1. PASS GOLD → PR aberto via §46 (comportamento atual)
+2. Badge PR ABERTO + botão "✅ Fazer Merge" aparecem no chat
+3. Clique humano → Modal: "Confirmar merge do PR #N em main?"
+4. Confirma → POST /api/deploy/merge-pr
+5. Badge "✅ MERGED" + link commit no main
+```
+
+### Fluxo quando toggle ON
+
+```
+1. PASS GOLD → PR aberto via §46
+2. Vision Core chama automaticamente /api/deploy/merge-pr
+   (sem modal adicional — já houve confirmação ao ligar o toggle)
+3. Badge "✅ MERGED" + link commit no main
+```
+
+### Backend — POST /api/deploy/merge-pr
+
+```
+Input:  { repo, pull_number, aegis_ok }
+Guard:  aegis_ok=false → 403
+        GITHUB_TOKEN ausente → 500
+        PR não open → 422
+Method: squash merge
+Output: { ok, merged, sha, commit_url }
+```
+
+Gates obrigatórios:
+- `aegis_ok=true` em ambos os fluxos
+- PR deve estar open (não merged nem closed)
+- `GITHUB_TOKEN` configurado no servidor
+
+### Frontend
+
+```
+Toggle:
+  - Estado inicial: OFF (localStorage "vc_automerge_enabled" = false)
+  - Botão toggle visível no AEGIS block ou área de configuração
+  - Click: alterna valor + persiste em localStorage
+
+Após PR aberto (toggle OFF):
+  - Botão "✅ Fazer Merge" no chatStream
+  - Modal de confirmação com PR title + number
+  - Confirma → loading + POST /api/deploy/merge-pr
+  - Sucesso → badge "✅ MERGED" + link commit + esconde botão Fazer Merge
+
+Após PR aberto (toggle ON):
+  - Sem modal → POST automático
+  - Badge "✅ MERGED auto" + link commit
+```
+
+### Constraints
+
+- `deploy_allowed = false` — merge só com `aegis_ok=true` obrigatório
+- `GITHUB_TOKEN` via env — nunca no código
+- Toggle OFF por padrão — nunca ativar sem ação humana explícita
+- REGRA ABSOLUTA preservada
+
+---
+
 ## §49 — HERMES MULTI-PROVIDER FALLBACK
 
 **Commit feat:** `0a52203`  
