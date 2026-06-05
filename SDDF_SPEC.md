@@ -2305,9 +2305,9 @@ node --check backend/server.js → EXIT:0 (PASS)
 
 ## §44 — Arquitetura MPEG: Pipeline de Compressão de Contexto no Backend
 
-**Status:** ESPECIFICADO — aguarda REAL-VALIDATION-2 PASS para implementação  
+**Status:** ESPECIFICADO — REAL-VALIDATION-2 PASS ✅ — aguarda REAL-VALIDATION-3-PREP para implementação  
 **Data spec:** 2026-06-05  
-**Gate pré-requisito:** §43 validado + REAL-VALIDATION-2-GATE PASS
+**Gate pré-requisito:** §43 validado ✅ + REAL-VALIDATION-2-GATE PASS ✅ + REAL-VALIDATION-3-PREP (pendente)
 
 ### Objetivo
 
@@ -2388,8 +2388,8 @@ Timeout frontend: `55s → 95s` quando enviando `zip_base64` (Gemini pode levar 
 
 ### Pré-requisitos para implementação
 
-- [ ] REAL-VALIDATION-2-GATE PASS (manual UI test)
-- [ ] §43 validado em produção com `technetgamev2-main.zip`
+- [x] REAL-VALIDATION-2-GATE PASS (manual UI test) — 2026-06-05 ✅
+- [x] §43 validado em produção com `technetgamev2-main.zip` — §46fix confirma fallback ✅
 - [ ] Criar `REAL-VALIDATION-3-PREP` antes de iniciar desenvolvimento §44
 
 ---
@@ -2839,11 +2839,31 @@ TEMP\vision-core-phase-missions\
 
 ---
 
+## §REAL-VALIDATION-2 — Gate Visual com Evidência Humana ✅ PASS
+
+**Data execução:** 2026-06-05  
+**Status:** ✅ **PASS — todos os testes aprovados pelo executor humano**  
+**Checklist:** `docs/VALIDATION-2-MANUAL-CHECKLIST.md`  
+**Build testado:** `https://1852ec12.visioncoreai.pages.dev`  
+**Commits certificados:** §41 / §42 / §43 / §44fix / §45 / §46fix
+
+### Resultado
+
+| Teste | Critério | Status |
+|-------|----------|--------|
+| 1 — ZIP Flow + Diagnóstico | NEEDS_FIX, diff Hexe, hint 🛡, painel agentes | ✅ PASS |
+| 2 — EXECUTAR MISSÃO + Apply | Standard Method, aegis_ok=true, botão download | ✅ PASS |
+| 3 — Arquivo baixado | Hexe em LOCAL_REAL_COVERS, JS válido, Crimson Desert preservado | ✅ PASS |
+
+> **GATE FECHADO:** V3.0.0 certificado. Features V3.1+ liberadas para desenvolvimento.
+
+---
+
 ## §REAL-VALIDATION-2-PREP — Gate Visual com Evidência Humana
 
 **Data:** 2026-06-04
-**Status:** CHECKLIST GERADO — aguardando execução humana
-**Arquivo:** `TEMP\vision-core-phase-missions\VALIDATION-2-MANUAL-CHECKLIST.md`
+**Status:** ✅ CONCLUÍDO — ver §REAL-VALIDATION-2 acima
+**Arquivo:** `docs/VALIDATION-2-MANUAL-CHECKLIST.md`
 
 ### Build deployado
 
