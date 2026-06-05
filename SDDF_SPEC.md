@@ -2592,6 +2592,68 @@ Botão alterado de `⬇ Baixar <file> (corrigido)` → `⬇ Baixar ZIP Corrigido
 
 ---
 
+## §47 — PASS GOLD Engine Multidimensional
+
+**Commit feat:** `77c2573`  
+**Data:** 2026-06-05  
+**Arquivos:** `backend/pass-gold-engine.js` (novo), `backend/server.js`, `frontend/assets/vision-core-clean-runtime.js`, `frontend/assets/vision-core-bundle.js`
+
+### Módulo — `backend/pass-gold-engine.js`
+
+6 dimensões ponderadas (imutáveis — V2.2.2):
+
+| Dimensão | Peso | Cálculo |
+|----------|------|---------|
+| `llm_confidence` | 0.30 | `input.confidence` direto (0-100) |
+| `patch_specificity` | 0.20 | content changed + search/replace válidos + specificity |
+| `risk_level` | 0.15 | low=90 / medium=65 / high=30 |
+| `data_quality` | 0.15 | original presente + lines>10 + diagnosis length |
+| `build_passed` | 0.10 | `aegis_ok && content changed` → 100 else 0 |
+| `snapshot_exists` | 0.10 | `original_content` presente → 100 else 0 |
+
+4 gates obrigatórios para GOLD:
+```
+gate_build_passed    = aegis_ok === true
+gate_snapshot_exists = original_content presente
+gate_confidence_ok   = llm_confidence >= 60
+gate_risk_acceptable = risk !== 'high'
+```
+
+Níveis:
+```
+GOLD        → finalScore >= 80 && allGatesPassed
+SILVER      → finalScore >= 60
+NEEDS_REVIEW → else
+```
+
+### Backend — `server.js` apply-patch
+
+Após `aegisOk` determinado, chama `evaluate()` e retorna:
+```
+pass_gold, gold_level, gold_score, gold_verdict, gold_gates, gold_dimensions
+```
+Fallback gracioso: se engine falha → `pass_gold = aegis_ok`, `gold_level = aegis_ok ? 'GOLD' : 'NEEDS_REVIEW'`.
+
+### Frontend — `_renderGoldLevel47(container, data)`
+
+| Nível | Badge | Download | Deploy |
+|-------|-------|----------|--------|
+| GOLD | ✨ shimmer dourado (via `_renderPassGold45`) | ✅ ZIP Corrigido | ✅ `_renderDeployBtn46` |
+| SILVER | ⚠️ cinza neutro — "revisão recomendada" | ✅ arquivo corrigido | ❌ |
+| NEEDS_REVIEW | 🔴 vermelho — "score insuficiente" | ❌ | ❌ |
+
+Scorecard abaixo do badge: `LLM: N% · Patch: ✅/⚠️ · Risco: Baixo/Médio/Alto · Build: ✅/❌ · Score: N`.
+
+Wired em `renderApplyFixPanel` e `renderStandardMethodPanel` (clean-runtime.js + bundle.js).
+
+### Constraints
+
+- `pass_gold_real_claimed = false` sempre
+- `deploy_allowed = false` sempre — deploy só com "deploy" humano explícito
+- REGRA ABSOLUTA preservada
+
+---
+
 ## §43 — Robustez ZIP: Seleção Inteligente ZIP Grande + Timeout Adaptativo Gemini
 
 **Commit:** `feat(§43): seleção inteligente ZIP grande + timeout adaptativo`
