@@ -6549,6 +6549,43 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           }
 
           return Promise.all(promises).then(function(contents) {
+            /* §43 — seleção inteligente ZIP grande: se payload > 35K, filtrar por keyword relevância */
+            var _finalContents43 = contents;
+            var _totalChars43    = contents.reduce(function(acc, c) { return acc + c.length; }, 0);
+            var _totalFiles43    = fileNames.length;
+            if (_totalChars43 > 35000) {
+              /* keywords da pergunta: palavras com > 3 chars */
+              var _kws43 = question.toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter(function(w) { return w.length > 3; });
+              /* pontuar: +10 keyword no nome do arquivo, +1 keyword no conteúdo */
+              var _scored43 = fileNames.map(function(fn, i) {
+                var fnLow = (fn || '').toLowerCase();
+                var cLow  = (contents[i] || '').toLowerCase();
+                var score = _kws43.reduce(function(acc, kw) {
+                  return acc + (fnLow.indexOf(kw) !== -1 ? 10 : 0) + (cLow.indexOf(kw) !== -1 ? 1 : 0);
+                }, 0);
+                return { fn: fn, content: contents[i] || '', score: score };
+              });
+              _scored43.sort(function(a, b) { return b.score - a.score; });
+              /* acumular arquivos mais relevantes até 35K chars */
+              var _budget43 = 0;
+              var _sel43    = [];
+              _scored43.forEach(function(item) {
+                if (_budget43 + item.content.length <= 35000) {
+                  _sel43.push(item);
+                  _budget43 += item.content.length;
+                }
+              });
+              /* fallback: se nenhum cabe, pegar o primeiro (mais relevante) */
+              if (!_sel43.length && _scored43.length) { _sel43.push(_scored43[0]); }
+              /* hint no chat */
+              var _hintZip43 = document.createElement('div');
+              _hintZip43.style.cssText = 'background:rgba(234,179,8,.06);border:1px solid rgba(234,179,8,.3);border-radius:10px;padding:8px 12px;margin:4px 0;font-size:11px;color:#fde68a;';
+              _hintZip43.textContent = '📦 ZIP grande — analisando ' + _sel43.length + ' de ' + _totalFiles43 + ' arquivos relevantes';
+              chatStream.appendChild(_hintZip43);
+              fileNames        = _sel43.map(function(i43) { return i43.fn; });
+              _finalContents43 = _sel43.map(function(i43) { return i43.content; });
+            }
+
             /* §debug: mostrar quais arquivos foram selecionados */
             var shortNames = fileNames.map(function(p){ return p.split('/').pop(); });
             var _zipTT = thinking.querySelector('.vc-thinking-text');
@@ -6562,7 +6599,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               : '';
             /* mode/model passed in from sendMessage (captured at send time) */
             /* §24v9: reverter ordem — tail (arquivo inteiro/específico) fica primeiro no prompt */
-            var context  = question + assetContext + '\n\n' + contents.slice().reverse().join('\n\n---\n\n');
+            var context  = question + assetContext + '\n\n' + _finalContents43.slice().reverse().join('\n\n---\n\n');
 
             /* Adicionar ao histórico de sessão */
             addToHistory('user', '[ZIP: ' + file.name + '] ' + question);

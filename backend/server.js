@@ -1346,8 +1346,10 @@ app.post('/api/chat', async (req, res) => {
 
   /* ── 2. Gemini — multimodal (texto + imagem) ─────────────────── */
   /* §26: timeout 45s (era 20s) — payloads grandes chegam aqui após Groq ser pulado */
-  const GEMINI_KEY   = process.env.GEMINI_API_KEY || '';
-  const GEMINI_MODEL = process.env.GEMINI_MODEL   || 'gemini-2.5-flash';
+  /* §43: timeout adaptativo — 90s se payload > 45K chars (ZIP grande com múltiplos arquivos) */
+  const GEMINI_KEY     = process.env.GEMINI_API_KEY || '';
+  const GEMINI_MODEL   = process.env.GEMINI_MODEL   || 'gemini-2.5-flash';
+  const geminiTimeout  = message.length > 45000 ? 90000 : 45000; /* §43: 45s→90s para ZIPs grandes */
   if (GEMINI_KEY && !GEMINI_KEY.includes('placeholder')) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
@@ -1362,7 +1364,7 @@ app.post('/api/chat', async (req, res) => {
           system_instruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: 'user', parts: userParts }]
         }),
-        signal: AbortSignal.timeout(45000) /* §26: 20→45s — suporta payloads ZIP grandes */
+        signal: AbortSignal.timeout(geminiTimeout) /* §43: adaptativo 45s|90s */
       });
       if (r.ok) {
         const data = await r.json();

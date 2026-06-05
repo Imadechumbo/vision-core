@@ -2303,6 +2303,44 @@ node --check backend/server.js → EXIT:0 (PASS)
 
 ---
 
+## §43 — Robustez ZIP: Seleção Inteligente ZIP Grande + Timeout Adaptativo Gemini
+
+**Commit:** `feat(§43): seleção inteligente ZIP grande + timeout adaptativo`
+**Data:** 2026-06-05
+**Arquivos:** `frontend/assets/vision-core-clean-runtime.js`, `frontend/assets/vision-core-bundle.js`, `backend/server.js`
+
+### Frontend — `_processZipBuffer` seleção por keyword
+
+Após `Promise.all(promises)` resolve, calcular payload total:
+
+```
+totalChars = sum(contents[i].length)
+```
+
+Se `totalChars > 35000`:
+1. Extrair keywords da pergunta (palavras > 3 chars, lowercase)
+2. Pontuar cada arquivo:
+   - +10 por keyword presente no `relPath`
+   - +1 por keyword presente no conteúdo
+3. Ordenar por score DESC
+4. Acumular arquivos até `budget = 35000 chars`
+5. Fallback: se nenhum arquivo cabe, pegar o primeiro (mais relevante)
+6. Mostrar hint amarelo no chat: `📦 ZIP grande — analisando N de Y arquivos relevantes`
+
+### Backend — `server.js` timeout adaptativo Gemini
+
+```javascript
+const geminiTimeout = message.length > 45000 ? 90000 : 45000;
+// AbortSignal.timeout(geminiTimeout)
+```
+
+| Payload | Timeout Gemini |
+|---------|---------------|
+| ≤ 45K chars | 45s (padrão §26) |
+| > 45K chars | 90s (ZIP grande) |
+
+---
+
 ## §40 — Formato Completo de Resposta Multiagente
 
 **Commit:** `feat(§40): formato completo multiagente + BLOCKED_RUNTIME + GO CORE + OPENCLAW`
