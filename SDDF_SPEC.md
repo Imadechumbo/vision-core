@@ -2390,7 +2390,7 @@ Timeout frontend: `55s → 95s` quando enviando `zip_base64` (Gemini pode levar 
 
 - [x] REAL-VALIDATION-2-GATE PASS (manual UI test) — 2026-06-05 ✅
 - [x] §43 validado em produção com `technetgamev2-main.zip` — §46fix confirma fallback ✅
-- [ ] Criar `REAL-VALIDATION-3-PREP` antes de iniciar desenvolvimento §44
+- [x] Criar `REAL-VALIDATION-3-PREP` antes de iniciar desenvolvimento §44 — ver §REAL-VALIDATION-3-PREP ✅
 
 ---
 
@@ -2889,4 +2889,33 @@ Usuário executa os 3 testes na UI e confirma todos os checkboxes.
 **Sem PASS humano, nenhum novo milestone é iniciado.**
 
 > **REGRA ABSOLUTA:** `VALIDATION-2-MANUAL-CHECKLIST.md` com todos os checkboxes marcados PASS = pré-requisito para V3.0.0 milestone final e início de qualquer nova feature V3.1+.
+
+---
+
+## §REAL-VALIDATION-3-PREP — Gate Visual Pré-§44
+
+**Data:** 2026-06-05  
+**Status:** DEFINIDO — execução pendente após §44 implementado  
+**Propósito:** Validar MPEG compress-context em produção antes de marcar §44 estável
+
+### Pré-requisitos para abertura
+
+- [x] §44 implementado e deployado no EB
+- [x] §46 implementado (deploy GitHub PR) e deployado no CF Pages + EB
+- [ ] REAL-VALIDATION-3-MANUAL-CHECKLIST.md criado e executado
+
+### 3 Testes do checklist (a executar)
+
+| # | Teste | Critério |
+|---|-------|----------|
+| 1 | ZIP diagnóstico com log MPEG | `[MPEG §44]` aparece no log EB; diagnóstico correto |
+| 2 | PASS GOLD + botão Deploy PR | PR aberto no GitHub; `visioncore-fix-{ts}` branch criado |
+| 3 | Compressão preserva LOCAL_REAL_COVERS | Diagnóstico Hexe ainda funciona após compressão |
+
+### Critério de PASS
+
+Todos os 3 testes passam. Executor humano confirma e fecha gate.  
+**Sem PASS-3, §44 não é marcado stable. §45+ continuam livres.**
+
+> **REGRA ABSOLUTA:** REAL-VALIDATION-3 PASS = pré-requisito para marcar §44 como stable e iniciar §47+.
 
