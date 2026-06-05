@@ -7,7 +7,7 @@
  * Restaurado e adaptado da V2.2.2 para V3.0.0.
  *
  * Providers (ordem padrão via AI_PROVIDER_ORDER env):
- *   anthropic → groq → openrouter → gemini → ollama
+ *   anthropic → cerebras → groq → openrouter → deepseek → gemini → ollama
  *
  * Fallback automático com logs [HERMES §49].
  * Se todos falharem: { ok: false, requires_manual_review: true }.
@@ -23,6 +23,13 @@ const PROVIDER_REGISTRY = {
     apiKeyEnv: 'ANTHROPIC_API_KEY',
     type:      'anthropic'
   },
+  cerebras: {
+    name:      'Cerebras',
+    model:     () => process.env.CEREBRAS_MODEL || 'llama-3.3-70b',
+    apiKeyEnv: 'CEREBRAS_API_KEY',
+    baseUrl:   'https://api.cerebras.ai/v1',
+    type:      'openai'
+  },
   groq: {
     name:      'Groq',
     model:     () => process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
@@ -36,6 +43,13 @@ const PROVIDER_REGISTRY = {
     model:     () => process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
     apiKeyEnv: 'OPENROUTER_API_KEY',
     baseUrl:   'https://openrouter.ai/api/v1',
+    type:      'openai'
+  },
+  deepseek: {
+    name:      'DeepSeek',
+    model:     () => process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+    apiKeyEnv: 'DEEPSEEK_API_KEY',
+    baseUrl:   'https://api.deepseek.com/v1',
     type:      'openai'
   },
   gemini: {
@@ -59,7 +73,7 @@ const PROVIDER_REGISTRY = {
 
 /* ── Ordem dos providers ────────────────────────────────────────── */
 function getProviderOrder() {
-  return (process.env.AI_PROVIDER_ORDER || 'anthropic,groq,openrouter,gemini,ollama')
+  return (process.env.AI_PROVIDER_ORDER || 'anthropic,cerebras,groq,openrouter,deepseek,gemini,ollama')
     .split(',').map(s => s.trim()).filter(Boolean);
 }
 
