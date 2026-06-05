@@ -5622,6 +5622,24 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             _amBtn.style.color = _next ? '#86efac' : '#64748b';
           };
           _amRow.appendChild(_amBtn);
+          /* §51 — auto-deploy toggle (ao lado do auto-merge) */
+          var _adOn = localStorage.getItem('vc_autodeploy_enabled') === 'true';
+          var _adBtn = document.createElement('button');
+          _adBtn.id = 'vc51-autodeploy-btn';
+          _adBtn.style.cssText = 'background:' + (_adOn ? '#0a1520' : '#1a1a2e') + ';border:1px solid ' +
+            (_adOn ? '#3b82f6' : '#334155') + ';color:' + (_adOn ? '#93c5fd' : '#64748b') +
+            ';font-size:10px;padding:3px 10px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:600;transition:all .2s;';
+          _adBtn.textContent = '🚀 Auto-deploy: ' + (_adOn ? 'ON' : 'OFF');
+          _adBtn.onclick = function() {
+            var _cur = localStorage.getItem('vc_autodeploy_enabled') === 'true';
+            var _next = !_cur;
+            localStorage.setItem('vc_autodeploy_enabled', String(_next));
+            _adBtn.textContent = '🚀 Auto-deploy: ' + (_next ? 'ON' : 'OFF');
+            _adBtn.style.background = _next ? '#0a1520' : '#1a1a2e';
+            _adBtn.style.borderColor = _next ? '#3b82f6' : '#334155';
+            _adBtn.style.color = _next ? '#93c5fd' : '#64748b';
+          };
+          _amRow.appendChild(_adBtn);
           container.appendChild(_amRow);
         }());
       } else if (level === 'SILVER') {
@@ -5696,6 +5714,67 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       }
     }
 
+    /* §51 — helper: auto-deploy pós-merge via /api/deploy/trigger */
+    function _doAutoDeploy51(repo, sha, environment, cont, auto) {
+      var _env51 = environment || 'production';
+
+      function _execDeploy51() {
+        var _ld = document.createElement('div');
+        _ld.style.cssText = 'font-size:11px;color:#94a3b8;margin-top:6px;';
+        _ld.textContent = '⏳ Disparando deploy ' + _env51 + '...';
+        cont.appendChild(_ld);
+        fetch(BACKEND_URL + '/api/deploy/trigger', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repo: repo, sha: sha, environment: _env51, aegis_ok: true }),
+          signal: AbortSignal.timeout(30000)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          _ld.remove();
+          var _db = document.createElement('div');
+          var _lbl = auto ? 'DEPLOYED AUTO' : 'DEPLOYED';
+          _db.innerHTML = '<div style="background:#0a1520;border:1px solid #3b82f6;border-radius:12px;padding:10px 14px;margin:6px 0;display:flex;align-items:center;gap:10px;">' +
+            '<span style="font-size:18px;">🚀</span>' +
+            '<div><div style="color:#93c5fd;font-weight:600;font-size:13px;">' + _lbl + '</div>' +
+            (d.deploy_url
+              ? '<a href="' + d.deploy_url + '" target="_blank" rel="noopener" style="color:#60a5fa;font-size:11px;text-decoration:none;">' + d.deploy_url + ' ↗</a>'
+              : '<div style="font-size:11px;color:#475569;">' + (d.note || _env51) + '</div>') +
+            '</div></div>';
+          cont.appendChild(_db);
+          chatStream.scrollTop = chatStream.scrollHeight;
+        })
+        .catch(function(err) {
+          _ld.remove();
+          var _de = document.createElement('div');
+          _de.style.cssText = 'font-size:11px;color:#f87171;margin-top:6px;';
+          _de.textContent = '❌ Deploy falhou: ' + (err.message || 'Erro de rede');
+          cont.appendChild(_de);
+        });
+      }
+
+      if (auto) {
+        _execDeploy51();
+      } else {
+        var _ov51 = document.createElement('div');
+        _ov51.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        var _mo51 = document.createElement('div');
+        _mo51.style.cssText = 'background:#0f1117;border:1px solid #3b82f6;border-radius:16px;padding:24px;width:360px;max-width:92vw;font-family:inherit;';
+        _mo51.innerHTML = [
+          '<div style="font-size:15px;font-weight:700;color:#93c5fd;margin-bottom:12px;">🚀 Confirmar Deploy</div>',
+          '<div style="font-size:12px;color:#94a3b8;margin-bottom:4px;">Commit: <span style="color:#e2e8f0;font-family:monospace;">' + sha.slice(0, 8) + '</span></div>',
+          '<div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">Ambiente: <span style="color:#e2e8f0;">' + _env51 + '</span></div>',
+          '<div style="display:flex;gap:8px;justify-content:flex-end;">',
+          '<button id="vc51-cancel" style="background:transparent;border:1px solid #334155;color:#94a3b8;font-size:11px;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:inherit;">Cancelar</button>',
+          '<button id="vc51-confirm" style="background:#1d4ed8;border:1px solid #3b82f6;color:#dbeafe;font-size:11px;padding:6px 14px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:600;">🚀 Fazer Deploy</button>',
+          '</div>'
+        ].join('');
+        _ov51.appendChild(_mo51);
+        document.body.appendChild(_ov51);
+        document.getElementById('vc51-cancel').onclick  = function() { _ov51.remove(); };
+        document.getElementById('vc51-confirm').onclick = function() { _ov51.remove(); _execDeploy51(); };
+      }
+    }
+
     /* §50 — helper: squash merge de PR via /api/deploy/merge-pr */
     function _doMerge50(repo, pullNumber, cont) {
       fetch(BACKEND_URL + '/api/deploy/merge-pr', {
@@ -5714,6 +5793,21 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             m.sha.slice(0, 8) + ' ↗</a></div></div>';
           cont.appendChild(_mb);
           chatStream.scrollTop = chatStream.scrollHeight;
+          /* §51 — auto-deploy ou botão manual */
+          var _autoDeployOn51 = localStorage.getItem('vc_autodeploy_enabled') === 'true';
+          if (_autoDeployOn51) {
+            _doAutoDeploy51(repo, m.sha, 'production', cont, true);
+          } else {
+            var _dBtn51 = document.createElement('button');
+            _dBtn51.style.cssText = 'background:#0a1520;border:1px solid #3b82f6;color:#93c5fd;font-size:11px;padding:6px 13px;border-radius:10px;cursor:pointer;font-family:inherit;font-weight:600;margin:6px 0 0 0;display:block;';
+            _dBtn51.textContent = '🚀 Fazer Deploy';
+            _dBtn51.onclick = function() {
+              _dBtn51.disabled = true; _dBtn51.textContent = '⏳ Abrindo...';
+              _doAutoDeploy51(repo, m.sha, 'production', cont, false);
+              _dBtn51.remove();
+            };
+            cont.appendChild(_dBtn51);
+          }
         } else {
           var _me = document.createElement('div');
           _me.style.cssText = 'font-size:11px;color:#f87171;margin-top:6px;';

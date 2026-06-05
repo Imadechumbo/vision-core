@@ -1857,6 +1857,101 @@ app.post('/api/deploy/merge-pr', async (req, res) => {
   }
 });
 
+/* ── §51 /api/deploy/trigger — auto-deploy pós-merge via GitHub Actions ── */
+app.post('/api/deploy/trigger', async (req, res) => {
+  try {
+    const body        = normalizeBody(req);
+    const repo        = body.repo;
+    const sha         = body.sha;
+    const environment = body.environment || 'production';
+    const aegisOk     = body.aegis_ok;
+
+    if (!aegisOk) {
+      return res.status(403).json({ ok: false, error: 'aegis_gate_failed', detail: 'aegis_ok must be true to trigger deploy', time: now() });
+    }
+    if (!repo || !sha) {
+      return res.status(400).json({ ok: false, error: 'repo and sha required', time: now() });
+    }
+
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+    if (!GITHUB_TOKEN) {
+      return res.status(500).json({ ok: false, error: 'GITHUB_TOKEN not configured', time: now() });
+    }
+
+    const workflow = process.env.GITHUB_DEPLOY_WORKFLOW || 'deploy.yml';
+    const ghHeaders = {
+      'Authorization': `Bearer ${GITHUB_TOKEN}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+      'User-Agent': 'vision-core-backend/3.0.0'
+    };
+
+    /* Check if workflow exists */
+    const wfCheckRes = await fetch(
+      `https://api.github.com/repos/${repo}/actions/workflows/${workflow}`,
+      { headers: ghHeaders }
+    );
+
+    if (!wfCheckRes.ok) {
+      /* Workflow not configured — soft success (deploy not executed) */
+      console.log(`[§51] workflow ${workflow} not found in ${repo} — soft success`);
+      return res.json({
+        ok: true,
+        deployed: false,
+        deploy_url: null,
+        run_id: null,
+        note: `workflow_not_configured: ${workflow} não encontrado em ${repo}`,
+        time: now()
+      });
+    }
+
+    /* Dispatch workflow */
+    const dispatchRes = await fetch(
+      `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`,
+      {
+        method: 'POST',
+        headers: ghHeaders,
+        body: JSON.stringify({ ref: 'main', inputs: { sha, environment } })
+      }
+    );
+
+    if (!dispatchRes.ok && dispatchRes.status !== 204) {
+      const errText = await dispatchRes.text();
+      return res.status(dispatchRes.status).json({ ok: false, error: 'dispatch_failed', detail: errText, time: now() });
+    }
+
+    /* GitHub returns 204 on success — no body. Get latest run for URL. */
+    await new Promise(function(r) { setTimeout(r, 1500); }); /* brief wait for run creation */
+    const runsRes = await fetch(
+      `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/runs?per_page=1`,
+      { headers: ghHeaders }
+    );
+    let runId = null, deployUrl = null;
+    if (runsRes.ok) {
+      const runsData = await runsRes.json();
+      if (runsData.workflow_runs && runsData.workflow_runs[0]) {
+        runId     = runsData.workflow_runs[0].id;
+        deployUrl = runsData.workflow_runs[0].html_url;
+      }
+    }
+
+    console.log(`[§51] deploy triggered: ${repo} workflow=${workflow} sha=${sha.slice(0,8)} run=${runId}`);
+    return res.json({
+      ok: true,
+      deployed: true,
+      deploy_url: deployUrl || `https://github.com/${repo}/actions`,
+      run_id: runId,
+      environment,
+      time: now()
+    });
+
+  } catch (err) {
+    console.error('[§51] deploy/trigger error:', err.message);
+    return res.status(500).json({ ok: false, error: 'trigger_error', detail: err.message, time: now() });
+  }
+});
+
 /* ── /api/unzip-context — extrai ZIP e injeta conteúdo para /api/chat ─── */
 app.post('/api/unzip-context', async (req, res) => {
   try {
