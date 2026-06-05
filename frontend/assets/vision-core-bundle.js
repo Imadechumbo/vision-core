@@ -5553,9 +5553,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         '  50%  { background-position: 100% 50%; }',
         '  100% { background-position: 0% 50%; }',
         '}',
-        '@keyframes vcSendGlow {',  /* §46fix-ui: idle glow ENVIAR */
-        '  0%,100% { box-shadow: 0 0 0 0 rgba(168,85,247,.25); }',
-        '  50%     { box-shadow: 0 0 14px 3px rgba(168,85,247,.12); }',
+        '@keyframes vcSendGlow {',  /* §46fix-ui: idle glow ENVIAR — valores visíveis */
+        '  0%,100% { box-shadow: 0 0 6px 1px rgba(168,85,247,.45); }',
+        '  50%     { box-shadow: 0 0 20px 5px rgba(168,85,247,.75); }',
         '}'
       ].join('\n');
       document.head.appendChild(_animStyle);
