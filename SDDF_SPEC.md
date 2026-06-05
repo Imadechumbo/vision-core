@@ -2305,9 +2305,10 @@ node --check backend/server.js → EXIT:0 (PASS)
 
 ## §44 — Arquitetura MPEG: Pipeline de Compressão de Contexto no Backend
 
-**Status:** ESPECIFICADO — REAL-VALIDATION-2 PASS ✅ — aguarda REAL-VALIDATION-3-PREP para implementação  
-**Data spec:** 2026-06-05  
-**Gate pré-requisito:** §43 validado ✅ + REAL-VALIDATION-2-GATE PASS ✅ + REAL-VALIDATION-3-PREP (pendente)
+**Status:** ✅ IMPLEMENTADO — commit `827d54d`  
+**Data impl:** 2026-06-05  
+**Arquivo:** `backend/compress-context.js` + integração `backend/server.js`  
+**Gate pré-requisito:** §43 ✅ + REAL-VALIDATION-2 ✅ + REAL-VALIDATION-3-PREP ✅ (REAL-VALIDATION-3 pendente)
 
 ### Objetivo
 
