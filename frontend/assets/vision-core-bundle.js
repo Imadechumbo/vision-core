@@ -5651,7 +5651,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var _attachedFiles = [];
     var _attachedImg   = null;
     var _pendingZip    = null; /* { file: File, buffer: ArrayBuffer } — staged ZIP, fires on ENVIAR */
-    var _lastZipB64    = null; /* base64 do último ZIP processado — usado pelo apply-patch endpoint */
+    var _lastZipB64    = null; /* base64 do último ZIP processado — fallback para apply-patch */
+    var _zipFiles      = {};  /* §42: relPath → conteúdo completo — evita reenviar ZIP inteiro no apply-patch */
     /* §36 — estado da missão SDDF ativa */
     var _activeMission = null;
     /* estrutura: { id, hermesObj, input, stage, evidence[], zipB64, startedAt } */
@@ -6127,7 +6128,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           return;
         }
         if (!hermesObj.patch) { statusEl.textContent = '❌ Patch ausente no diagnóstico.'; return; }
-        if (!_lastZipB64)     { statusEl.textContent = '❌ ZIP não encontrado em memória. Reenvie o arquivo.'; return; }
+        /* §42: preferir file_content (sem ZIP) — fallback para zip_base64 */
+        var _fc42 = _zipFiles[hermesObj.file] || null;
+        if (!_fc42) { Object.keys(_zipFiles).forEach(function(k) { if (!_fc42 && (k === hermesObj.file || k.endsWith('/' + hermesObj.file))) { _fc42 = _zipFiles[k]; } }); }
+        if (!_fc42 && !_lastZipB64) { statusEl.textContent = '❌ ZIP não encontrado em memória. Reenvie o arquivo.'; return; }
 
         applyBtn.disabled = true; cancelBtn.disabled = true;
         applyBtn.textContent = '⏳ Aplicando patch...';
@@ -6136,13 +6140,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         fetch(BACKEND_URL + '/api/chat/apply-patch', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({
-            zip_base64: _lastZipB64,
-            file_path:  hermesObj.file,
-            fix_type:   hermesObj.fix_type  || 'code_patch',
-            patch:      hermesObj.patch,
-            diagnosis:  hermesObj.diagnosis || 'vision fix'
-          }),
+          body:    JSON.stringify(_fc42
+            ? { file_content: _fc42,       file_path: hermesObj.file, fix_type: hermesObj.fix_type || 'code_patch', patch: hermesObj.patch, diagnosis: hermesObj.diagnosis || 'vision fix' }
+            : { zip_base64:   _lastZipB64, file_path: hermesObj.file, fix_type: hermesObj.fix_type || 'code_patch', patch: hermesObj.patch, diagnosis: hermesObj.diagnosis || 'vision fix' }),
           signal: AbortSignal.timeout(30000)
         })
         .then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error || ('HTTP ' + r.status)); }); })
@@ -6270,12 +6270,15 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           appendMsg(['🛡 Vision Core Standard Method — DIAGNÓSTICO INCOMPLETO','','⚖️  Decisão:   ' + (h.decisao || 'BLOCKED_INPUT'),'📋 Motivo:    patch ou arquivo ausente no diagnóstico','','Opções:','  • Clique EXECUTAR MISSÃO novamente para rediagnosticar com mais contexto','  • Copie o diagnóstico do chat e aplique manualmente'].join('\n'), 'error');
           wrap.remove(); _activeMission = null; setStatus('READY'); return;
         }
-        /* §36fix BUG2: hermesObj com patch mas ZIP não em memória */
-        if (h && h.patch && h.file && !_lastZipB64) {
+        /* §42: preferir file_content (sem ZIP) — fallback zip_base64 */
+        var _fc42sm = _zipFiles[h.file] || null;
+        if (!_fc42sm) { Object.keys(_zipFiles).forEach(function(k) { if (!_fc42sm && (k === h.file || k.endsWith('/' + h.file))) { _fc42sm = _zipFiles[k]; } }); }
+        /* §36fix BUG2: hermesObj com patch mas sem conteúdo nem ZIP em memória */
+        if (h && h.patch && h.file && !_fc42sm && !_lastZipB64) {
           statusEl.textContent = '⚠️ ZIP não está em memória — reenvie o arquivo ZIP para aplicar o patch automaticamente. Ou copie o diff acima e aplique manualmente no seu projeto.';
           return;
         }
-        if (h && _lastZipB64) {
+        if (h && (_fc42sm || _lastZipB64)) {
           confirmBtn.disabled = true; cancelBtn.disabled = true;
           confirmBtn.textContent = '⏳ Executando pipeline...';
           statusEl.textContent = '📋 Missão registrada — ' + mission.id;
@@ -6286,7 +6289,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               fetch(BACKEND_URL + '/api/chat/apply-patch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ zip_base64: _lastZipB64, file_path: h.file, fix_type: h.fix_type || 'code_patch', patch: h.patch, diagnosis: h.diagnosis || 'vision standard method' }),
+                body: JSON.stringify(_fc42sm
+                  ? { file_content: _fc42sm,     file_path: h.file, fix_type: h.fix_type || 'code_patch', patch: h.patch, diagnosis: h.diagnosis || 'vision standard method' }
+                  : { zip_base64:   _lastZipB64, file_path: h.file, fix_type: h.fix_type || 'code_patch', patch: h.patch, diagnosis: h.diagnosis || 'vision standard method' }),
                 signal: AbortSignal.timeout(30000)
               })
               .then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error || 'HTTP ' + r.status); }); })
@@ -6411,6 +6416,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         clearHistory();
         _activeMission = null;  /* §36 — limpar missão ativa */
         _lastZipB64    = null;
+        _zipFiles      = {};    /* §42 — limpar mapa de arquivos extraídos */
         if (fileNote)    { fileNote.textContent = 'Nenhum arquivo anexado.'; }
         if (addFilesBtn) { addFilesBtn.textContent = '＋ Adicionar arquivos'; }
         setStatus('READY');
@@ -6528,8 +6534,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             fileNames.push(c.relPath);
             budget += contrib;
             var _lim = limit; /* captura limit para closure async */
+            var _rp = c.relPath; /* captura relPath para closure */
             promises.push(c.entry.async('string').then(function(content) {
-              return '[Arquivo: ' + c.relPath + ']\n' + content.slice(0, _lim) + (content.length > _lim ? '\n...(truncado em ' + _lim + '/' + content.length + ' chars)' : '');
+              _zipFiles[_rp] = content; /* §42: armazenar conteúdo completo para apply-patch sem reenviar ZIP */
+              return '[Arquivo: ' + _rp + ']\n' + content.slice(0, _lim) + (content.length > _lim ? '\n...(truncado em ' + _lim + '/' + content.length + ' chars)' : '');
             }));
           });
 

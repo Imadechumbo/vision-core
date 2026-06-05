@@ -1545,38 +1545,47 @@ app.post('/api/agent/mission/revert', (req, res) => {
 /* Output: { ok, patched_content, filename, diff_preview, aegis_ok, aegis_error }    */
 app.post('/api/chat/apply-patch', async (req, res) => {
   try {
-    const body      = normalizeBody(req);
-    const b64       = body.zip_base64  || '';
-    const filePath  = body.file_path   || body.file || '';
-    const fixType   = body.fix_type    || 'code_patch';
-    const patch     = body.patch;
-    const diagnosis = body.diagnosis   || 'vision fix';
+    const body        = normalizeBody(req);
+    const b64         = body.zip_base64   || '';
+    const fileContent = body.file_content || null; /* §42: conteúdo direto — evita reenviar ZIP inteiro */
+    const filePath    = body.file_path    || body.file || '';
+    const fixType     = body.fix_type     || 'code_patch';
+    const patch       = body.patch;
+    const diagnosis   = body.diagnosis    || 'vision fix';
 
-    if (!b64)      return res.status(400).json({ ok: false, error: 'zip_base64_required', time: now() });
+    if (!b64 && !fileContent) return res.status(400).json({ ok: false, error: 'zip_base64_or_file_content_required', time: now() });
     if (!filePath) return res.status(400).json({ ok: false, error: 'file_path_required',  time: now() });
     if (!patch)    return res.status(400).json({ ok: false, error: 'patch_required',       time: now() });
 
-    let AdmZip;
-    try { AdmZip = require('adm-zip'); }
-    catch { return res.status(500).json({ ok: false, error: 'adm-zip_not_installed', time: now() }); }
+    let originalContent;
 
-    /* 1. Extrair arquivo alvo do ZIP */
-    const buf = Buffer.from(b64, 'base64');
-    const zip = new AdmZip(buf);
+    if (fileContent) {
+      /* §42: conteúdo do arquivo já extraído no frontend — sem adm-zip */
+      originalContent = fileContent;
+    } else {
+      /* Caminho legado: extrair do ZIP base64 */
+      let AdmZip;
+      try { AdmZip = require('adm-zip'); }
+      catch { return res.status(500).json({ ok: false, error: 'adm-zip_not_installed', time: now() }); }
 
-    /* Busca tolerante: aceita com ou sem prefixo de pasta raiz do ZIP */
-    const entries = zip.getEntries();
-    const target  = entries.find(e => {
-      const n = e.entryName.replace(/\\/g, '/');
-      return n === filePath || n.endsWith('/' + filePath);
-    });
+      /* 1. Extrair arquivo alvo do ZIP */
+      const buf = Buffer.from(b64, 'base64');
+      const zip = new AdmZip(buf);
 
-    if (!target) {
-      const available = entries.slice(0, 20).map(e => e.entryName).join(', ');
-      return res.status(404).json({ ok: false, error: 'file_not_found_in_zip', file: filePath, available, time: now() });
+      /* Busca tolerante: aceita com ou sem prefixo de pasta raiz do ZIP */
+      const entries = zip.getEntries();
+      const target  = entries.find(e => {
+        const n = e.entryName.replace(/\\/g, '/');
+        return n === filePath || n.endsWith('/' + filePath);
+      });
+
+      if (!target) {
+        const available = entries.slice(0, 20).map(e => e.entryName).join(', ');
+        return res.status(404).json({ ok: false, error: 'file_not_found_in_zip', file: filePath, available, time: now() });
+      }
+
+      originalContent = target.getData().toString('utf8');
     }
-
-    const originalContent = target.getData().toString('utf8');
 
     /* 2. Aplicar patch conforme fix_type */
     let patchedContent = originalContent;
