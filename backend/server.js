@@ -1606,13 +1606,18 @@ app.post('/api/chat/apply-patch', async (req, res) => {
 
       } else {
         /* code_patch (default): patch = { search, replace } */
-        const search  = typeof patch === 'object' ? (patch.search  || '') : '';
-        const replace = typeof patch === 'object' ? (patch.replace || '') : '';
-        if (!search) throw new Error('patch.search vazio para code_patch');
-        if (!originalContent.includes(search)) {
+        const searchRaw  = typeof patch === 'object' ? (patch.search  || '') : '';
+        const replaceRaw = typeof patch === 'object' ? (patch.replace || '') : '';
+        if (!searchRaw) throw new Error('patch.search vazio para code_patch');
+        /* §44fix: normalizar CRLF→LF em content e patch — ZIPs Windows têm \r\n,
+           LLM gera \n → String.includes() falha → 422 */
+        const normOrig   = originalContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const search     = searchRaw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const replace    = replaceRaw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        if (!normOrig.includes(search)) {
           throw new Error('patch.search não encontrado no arquivo — diff de contexto pode estar desatualizado');
         }
-        patchedContent = originalContent.replace(search, replace);
+        patchedContent = normOrig.replace(search, replace);
       }
     } catch (err) {
       patchError = err.message;
