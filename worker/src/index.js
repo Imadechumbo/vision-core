@@ -133,8 +133,12 @@ async function proxyToOrigin(request, env, ctx) {
   // §26: Gemini pode levar até 45s. Dar 52s ao subrequest (+ margem) antes de desistir.
   // NOTA: CF Workers Standard — I/O wait não consome CPU time; isso funciona em paid plan.
   // Em free plan (30s wall-clock total), requests Gemini-heavy podem estourar no nível CF.
-  const isChatPost = request.method === "POST" && incomingUrl.pathname.includes("/api/chat");
-  const subrequestTimeout = isChatPost ? 52000 : 10000;
+  // §46fix-gateway: /api/deploy/* faz 5 chamadas GitHub API sequenciais → 30s
+  // §48: /api/chat/apply-patch pode ter AEGIS spawn + PASS GOLD engine → 15s
+  const isChatPost    = request.method === "POST" && incomingUrl.pathname.includes("/api/chat");
+  const isDeployPost  = request.method === "POST" && incomingUrl.pathname.startsWith("/api/deploy/");
+  const isApplyPatch  = request.method === "POST" && incomingUrl.pathname.includes("/api/chat/apply-patch");
+  const subrequestTimeout = isChatPost ? 52000 : isDeployPost ? 30000 : isApplyPatch ? 15000 : 10000;
 
   const init = {
     method: request.method,
