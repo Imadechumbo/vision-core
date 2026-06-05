@@ -4150,6 +4150,38 @@
       container.appendChild(pg);
     }
 
+    /* §47 — renderiza badge por nível GOLD/SILVER/NEEDS_REVIEW + mini scorecard */
+    function _renderGoldLevel47(container, data) {
+      var level = data.gold_level || (data.pass_gold ? 'GOLD' : (data.aegis_ok ? 'GOLD' : 'NEEDS_REVIEW'));
+      if (level === 'GOLD' || data.pass_gold) {
+        _renderPassGold45(container);
+      } else if (level === 'SILVER') {
+        var _sg = document.createElement('div');
+        _sg.innerHTML = '<div style="background:#1a1a2e;border:1px solid #94a3b8;border-radius:10px;padding:10px 16px;margin:6px 0;text-align:center;">' +
+          '<div style="font-size:16px;margin-bottom:2px;">⚠️ SILVER</div>' +
+          '<div style="font-size:11px;color:#94a3b8;font-weight:600;">SILVER — revisão recomendada antes de deploy</div>' +
+          '</div>';
+        container.appendChild(_sg);
+      } else {
+        var _nr = document.createElement('div');
+        _nr.innerHTML = '<div style="background:#2d0a0a;border:1px solid #f87171;border-radius:10px;padding:10px 16px;margin:6px 0;text-align:center;">' +
+          '<div style="font-size:16px;margin-bottom:2px;">🔴 NEEDS REVIEW</div>' +
+          '<div style="font-size:11px;color:#f87171;font-weight:600;">Score insuficiente — revisar antes de aplicar</div>' +
+          '</div>';
+        container.appendChild(_nr);
+      }
+      if (data.gold_dimensions) {
+        var _d = data.gold_dimensions;
+        var _riskLbl = _d.risk_level >= 80 ? 'Baixo' : _d.risk_level >= 55 ? 'Médio' : 'Alto';
+        var _sc = document.createElement('div');
+        _sc.style.cssText = 'font-size:10px;color:#64748b;margin:2px 0 4px;text-align:center;';
+        _sc.textContent = 'LLM: ' + _d.llm_confidence + '% · Patch: ' + (_d.patch_specificity >= 70 ? '✅' : '⚠️') +
+          ' · Risco: ' + _riskLbl + ' · Build: ' + (_d.build_passed === 100 ? '✅' : '❌') +
+          ' · Score: ' + data.gold_score;
+        container.appendChild(_sc);
+      }
+    }
+
     /* §45 — ZIP download: reconstrói ZIP com arquivo corrigido e dispara download */
     function _dlZip45(patchedContent, filePath, zipName, container) {
       var baseName = (zipName || 'projeto').replace(/\.zip$/i, '');
@@ -4861,26 +4893,29 @@
             chatStream.appendChild(diffEl);
           }
 
-          /* §45 — PASS GOLD badge + ZIP download */
+          /* §47 — PASS GOLD Engine multidimensional badge + download */
           var _pg45c = document.createElement('div');
-          if (data.aegis_ok) { _renderPassGold45(_pg45c); }
-          var dlBtn = document.createElement('button');
-          dlBtn.style.cssText = 'background:#0a2a1a;border:1px solid #22c55e;color:#86efac;font-size:12px;padding:8px 14px;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:500;margin:4px 0 8px;';
-          dlBtn.textContent = data.aegis_ok ? '⬇ Baixar ZIP Corrigido' : '⬇ Baixar ' + (data.filename || data.file_path) + ' (corrigido)';
-          dlBtn.onclick = (function(d, c) { return function() {
-            if (d.aegis_ok) { _dlZip45(d.patched_content, d.file_path || d.filename, _lastZipName, c); }
-            else {
-              var blob = new Blob([d.patched_content], { type: 'text/plain;charset=utf-8' });
-              var url  = URL.createObjectURL(blob);
-              var a    = document.createElement('a');
-              a.href = url; a.download = d.filename || d.file_path;
-              document.body.appendChild(a); a.click();
-              setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
-            }
-          }; })(data, _pg45c);
-          _pg45c.appendChild(dlBtn);
-          /* §46 — deploy button só quando aegis_ok */
-          if (data.aegis_ok) { _renderDeployBtn46(_pg45c, data.patched_content, data.file_path || data.filename); }
+          _renderGoldLevel47(_pg45c, data);
+          var _glevel47 = data.gold_level || (data.pass_gold ? 'GOLD' : (data.aegis_ok ? 'GOLD' : 'NEEDS_REVIEW'));
+          if (_glevel47 !== 'NEEDS_REVIEW') {
+            var dlBtn = document.createElement('button');
+            dlBtn.style.cssText = 'background:#0a2a1a;border:1px solid #22c55e;color:#86efac;font-size:12px;padding:8px 14px;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:500;margin:4px 0 8px;';
+            dlBtn.textContent = (data.pass_gold || _glevel47 === 'GOLD') ? '⬇ Baixar ZIP Corrigido' : '⬇ Baixar ' + (data.filename || data.file_path) + ' (corrigido)';
+            dlBtn.onclick = (function(d, c, gl) { return function() {
+              if (d.pass_gold || gl === 'GOLD') { _dlZip45(d.patched_content, d.file_path || d.filename, _lastZipName, c); }
+              else {
+                var blob = new Blob([d.patched_content], { type: 'text/plain;charset=utf-8' });
+                var url  = URL.createObjectURL(blob);
+                var a    = document.createElement('a');
+                a.href = url; a.download = d.filename || d.file_path;
+                document.body.appendChild(a); a.click();
+                setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+              }
+            }; })(data, _pg45c, _glevel47);
+            _pg45c.appendChild(dlBtn);
+          }
+          /* §46 — deploy button só quando GOLD */
+          if (data.pass_gold || _glevel47 === 'GOLD') { _renderDeployBtn46(_pg45c, data.patched_content, data.file_path || data.filename); }
           chatStream.appendChild(_pg45c);
           chatStream.scrollTop = chatStream.scrollHeight;
           setStatus('READY');
@@ -5038,17 +5073,30 @@
                   }).join('\n');
                   chatStream.appendChild(diffEl);
                 }
-                if (data.aegis_ok) {
-                  /* §45 — PASS GOLD badge + ZIP download */
+                {
+                  /* §47 — PASS GOLD Engine multidimensional badge + download */
                   var _pg45c2 = document.createElement('div');
-                  _renderPassGold45(_pg45c2);
-                  var dlBtn2 = document.createElement('button');
-                  dlBtn2.style.cssText = 'background:#0a2a1a;border:1px solid #22c55e;color:#86efac;font-size:12px;padding:8px 14px;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:500;margin:4px 0 8px;';
-                  dlBtn2.textContent = '⬇ Baixar ZIP Corrigido';
-                  dlBtn2.onclick = (function(d, c) { return function() { _dlZip45(d.patched_content, d.file_path || d.filename, _lastZipName, c); }; })(data, _pg45c2);
-                  _pg45c2.appendChild(dlBtn2);
-                  /* §46 — deploy button (inside aegis_ok block) */
-                  _renderDeployBtn46(_pg45c2, data.patched_content, data.file_path || data.filename);
+                  _renderGoldLevel47(_pg45c2, data);
+                  var _glevel47b = data.gold_level || (data.pass_gold ? 'GOLD' : (data.aegis_ok ? 'GOLD' : 'NEEDS_REVIEW'));
+                  if (_glevel47b !== 'NEEDS_REVIEW') {
+                    var dlBtn2 = document.createElement('button');
+                    dlBtn2.style.cssText = 'background:#0a2a1a;border:1px solid #22c55e;color:#86efac;font-size:12px;padding:8px 14px;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:500;margin:4px 0 8px;';
+                    dlBtn2.textContent = (data.pass_gold || _glevel47b === 'GOLD') ? '⬇ Baixar ZIP Corrigido' : '⬇ Baixar ' + (data.filename || data.file_path) + ' (corrigido)';
+                    dlBtn2.onclick = (function(d, c, gl) { return function() {
+                      if (d.pass_gold || gl === 'GOLD') { _dlZip45(d.patched_content, d.file_path || d.filename, _lastZipName, c); }
+                      else {
+                        var blob = new Blob([d.patched_content], { type: 'text/plain;charset=utf-8' });
+                        var url  = URL.createObjectURL(blob);
+                        var a    = document.createElement('a');
+                        a.href = url; a.download = d.filename || d.file_path;
+                        document.body.appendChild(a); a.click();
+                        setTimeout(function() { URL.revokeObjectURL(url); a.remove(); }, 1000);
+                      }
+                    }; })(data, _pg45c2, _glevel47b);
+                    _pg45c2.appendChild(dlBtn2);
+                  }
+                  /* §46 — deploy button só quando GOLD */
+                  if (data.pass_gold || _glevel47b === 'GOLD') { _renderDeployBtn46(_pg45c2, data.patched_content, data.file_path || data.filename); }
                   chatStream.appendChild(_pg45c2);
                 }
                 chatStream.scrollTop = chatStream.scrollHeight;

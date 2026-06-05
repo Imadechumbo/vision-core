@@ -1752,6 +1752,29 @@ app.post('/api/chat/apply-patch', async (req, res) => {
     const diffPreview = simpleDiff(originalContent, patchedContent);
     const filename    = filePath.split('/').pop().split('\\').pop();
 
+    /* §47 — PASS GOLD Engine multidimensional */
+    let passGoldResult = null;
+    try {
+      const { evaluate } = require('./pass-gold-engine');
+      const confidenceRaw = (body.confidence != null)
+        ? Number(body.confidence)
+        : (body.diagnosis && /confidence/i.test(body.diagnosis) ? 75 : 80);
+      const riskRaw = body.risk || 'medium';
+      passGoldResult = evaluate({
+        confidence:       confidenceRaw,
+        risk:             riskRaw,
+        aegis_ok:         aegisOk,
+        original_content: originalContent,
+        patched_content:  patchedContent,
+        patch:            patch,
+        fix_type:         fixType,
+        original_lines:   originalContent ? originalContent.split('\n').length : 0,
+        diagnosis:        diagnosis
+      });
+    } catch (_e47) {
+      console.warn('[PASS GOLD §47] engine error —', _e47.message, '— fallback to aegis_ok');
+    }
+
     return sendOk(res, {
       patched_content: patchedContent,
       filename,
@@ -1763,6 +1786,13 @@ app.post('/api/chat/apply-patch', async (req, res) => {
       aegis_error: aegisError || null,
       original_lines:  originalContent.split('\n').length,
       patched_lines:   patchedContent.split('\n').length,
+      /* §47 — PASS GOLD multidimensional */
+      pass_gold:   passGoldResult ? passGoldResult.pass_gold : aegisOk,
+      gold_level:  passGoldResult ? passGoldResult.level     : (aegisOk ? 'GOLD' : 'NEEDS_REVIEW'),
+      gold_score:  passGoldResult ? passGoldResult.final     : null,
+      gold_verdict: passGoldResult ? passGoldResult.verdict   : null,
+      gold_gates:  passGoldResult ? passGoldResult.gates      : null,
+      gold_dimensions: passGoldResult ? passGoldResult.dimensions : null,
       anti_stub: true
     });
 
