@@ -6120,6 +6120,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       var cancelBtn = mkBtn('✖ Ignorar', '#1c1c1e', '#555', '#888');
 
       applyBtn.onclick = function() {
+        /* §41: guard BLOCKED/ABORTED decisao — não acionar apply-patch */
+        var _dec = hermesObj.decisao;
+        if (_dec === 'BLOCKED_INPUT' || _dec === 'BLOCKED_RUNTIME' || _dec === 'ABORTED') {
+          statusEl.textContent = '⚠️ Diagnóstico ' + _dec + ' — patch não disponível. Rediagnostique com mais contexto ou aplique manualmente.';
+          return;
+        }
         if (!hermesObj.patch) { statusEl.textContent = '❌ Patch ausente no diagnóstico.'; return; }
         if (!_lastZipB64)     { statusEl.textContent = '❌ ZIP não encontrado em memória. Reenvie o arquivo.'; return; }
 
@@ -6249,6 +6255,16 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       var statusEl   = document.createElement('div');
       statusEl.style.cssText = 'color:#94a3b8;font-size:12px;margin-top:10px;min-height:18px;width:100%;';
       confirmBtn.onclick = function() {
+        /* §41: guard BLOCKED/ABORTED decisao — não acionar apply-patch */
+        if (h && (h.decisao === 'BLOCKED_INPUT' || h.decisao === 'BLOCKED_RUNTIME' || h.decisao === 'ABORTED')) {
+          var _blockedLabel = h.decisao === 'BLOCKED_INPUT'
+            ? '⚠️ Diagnóstico BLOCKED_INPUT — patch não disponível.\nRediagnostique com mais contexto ou aplique manualmente.'
+            : h.decisao === 'BLOCKED_RUNTIME'
+            ? '⚠️ Diagnóstico BLOCKED_RUNTIME — evidence receipt do Go Core ausente.\nRediagnostique com log de runtime.'
+            : '⛔ Diagnóstico ABORTED — arquivo proibido. Operação recusada por segurança.';
+          appendMsg(['🛡 Vision Core Standard Method — BLOQUEADO', '', '⚖️  Decisão:    ' + h.decisao, '📋 Diagnóstico: ' + (h.diagnosis || '—'), '', _blockedLabel].join('\n'), 'error');
+          wrap.remove(); _activeMission = null; setStatus('READY'); return;
+        }
         /* §36fix BUG1: h existe mas sem patch/file → BLOCKED_INPUT ou diagnóstico incompleto */
         if (h && (!h.patch || !h.file)) {
           appendMsg(['🛡 Vision Core Standard Method — DIAGNÓSTICO INCOMPLETO','','⚖️  Decisão:   ' + (h.decisao || 'BLOCKED_INPUT'),'📋 Motivo:    patch ou arquivo ausente no diagnóstico','','Opções:','  • Clique EXECUTAR MISSÃO novamente para rediagnosticar com mais contexto','  • Copie o diagnóstico do chat e aplique manualmente'].join('\n'), 'error');
@@ -6592,18 +6608,27 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             var agentReport = parseAgentReport(answer);
             if (agentReport) { renderAgentReport(agentReport, chatStream); }
 
-            /* §38fix — hint aparece mesmo quando resposta é texto livre com diff */
+            /* §41 — hint condicional por decisao */
             var hasDiff = answer.indexOf('```diff') !== -1 || answer.indexOf('```javascript') !== -1;
             var hasReady = answer.indexOf('DECISÃO') !== -1 && answer.indexOf('READY') !== -1;
-            /* Se READY mas tem diff, tratar como NEEDS_FIX para hint */
-            if ((hermesObj || hasDiff) && !(hasReady && !hasDiff)) {
+            var _blockedDec = hermesObj && (hermesObj.decisao === 'BLOCKED_INPUT' || hermesObj.decisao === 'BLOCKED_RUNTIME' || hermesObj.decisao === 'ABORTED');
+            if (_blockedDec) {
+              /* Hint para BLOCKED/ABORTED — sem botão EXECUTAR MISSÃO */
+              var _hintBl = document.createElement('div');
+              _hintBl.style.cssText = 'background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px 14px;margin:4px 0 8px;font-size:12px;color:#fca5a5;display:flex;align-items:center;gap:8px;';
+              var _blMsg = hermesObj.decisao === 'BLOCKED_INPUT'
+                ? '⚠️ Diagnóstico <b>BLOCKED_INPUT</b> — patch não disponível. Rediagnostique com mais contexto ou aplique manualmente.'
+                : hermesObj.decisao === 'BLOCKED_RUNTIME'
+                ? '⚠️ Diagnóstico <b>BLOCKED_RUNTIME</b> — evidence receipt do Go Core ausente. Rediagnostique com log de runtime.'
+                : '⛔ Diagnóstico <b>ABORTED</b> — arquivo proibido. Operação recusada por segurança.';
+              _hintBl.innerHTML = '<span style="font-size:16px;">⚠️</span><span>' + _blMsg + '</span>';
+              setTimeout(function() { chatStream.appendChild(_hintBl); chatStream.scrollTop = chatStream.scrollHeight; }, 300);
+            } else if ((hermesObj || hasDiff) && !(hasReady && !hasDiff)) {
+              /* Hint padrão NEEDS_FIX — com EXECUTAR MISSÃO */
               var hintEl38 = document.createElement('div');
               hintEl38.style.cssText = 'background:rgba(79,70,229,.08);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:10px 14px;margin:4px 0 8px;font-size:12px;color:#a5b4fc;display:flex;align-items:center;gap:8px;';
               hintEl38.innerHTML = '<span style="font-size:16px;">🛡</span><span>Diagnóstico concluído. Clique em <b style="color:#c7d2fe">EXECUTAR MISSÃO</b> para aplicar o patch automaticamente via Vision Core Standard Method.</span>';
-              setTimeout(function() {
-                chatStream.appendChild(hintEl38);
-                chatStream.scrollTop = chatStream.scrollHeight;
-              }, 300);
+              setTimeout(function() { chatStream.appendChild(hintEl38); chatStream.scrollTop = chatStream.scrollHeight; }, 300);
             }
 
             /* §apply_patch — se diagnóstico tem patch, mostrar painel de aplicação */
