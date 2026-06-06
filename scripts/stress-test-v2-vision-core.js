@@ -284,7 +284,7 @@ const SCENARIOS = [
     arquivo: 'front/assets/css/styles.css',
     patch: (src) => src.replace('--accent: #2dd881;', '--accent: #ff0000;'),
     sintoma: 'botões e destaques vermelhos em vez de verdes',
-    esperado: ['accent', 'color', 'vermelho', 'verde'],
+    esperado: ['accent', '#ff0000', '#2dd881', 'CSS'],
   },
 
   {
@@ -305,7 +305,7 @@ const SCENARIOS = [
     arquivo: 'front/assets/css/styles.css',
     patch: (src) => src.replace('--max: 1440px;', '--max: 0px;'),
     sintoma: 'todo conteúdo colapsa para largura zero',
-    esperado: ['max', 'largura', 'width', '0', 'layout'],
+    esperado: ['--max', '0px', '1440px', 'CSS'],
   },
 
   // ═══ BLOCO C: BACKEND ════════════════════════════════════════════════════════
