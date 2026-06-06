@@ -22,6 +22,8 @@ Usuário conversa
   → Auth GitHub              (OAuth automático — §52)
   → Diff contextual          (reduz alucinação — [DIFF] no prompt — §53)
   → Stress Test V2           (15/15 PASS — multi-arquivo/CSS/backend — §54)
+  → windowContent            (trunca arquivos grandes ±120 linhas — §55)
+  → Multi-DIFF por arquivo   (bloco separado por arquivo, while loop — §56)
 ```
 
 ### Módulos canônicos obrigatórios
@@ -3035,6 +3037,89 @@ o site está com problema — múltiplos arquivos com bugs
 | Run 3 | 14/15 (93%) | MAX_FILE_BYTES 50K→30K + separate [DIFF] blocks |
 | Run 4 | 13/15 (87%) | always-window multi-arquivo (STRESS-15/17 esperados corrigidos no mesmo run) |
 | **Run 5** | **15/15 (100%)** | hex values em esperado + always-window |
+
+---
+
+## §55 — windowContent: Truncagem Inteligente de Arquivos Grandes
+
+**Status:** ✅ IMPLEMENTADO  
+**Data:** 2026-06-06  
+**Commits:** `7ad335e`, `36a68fe`  
+**Arquivo:** `scripts/stress-test-v2-vision-core.js`
+
+### Problema
+
+Arquivos CSS grandes (styles.css: 208 KB / 6693 linhas) enviados integralmente ao LLM via EB causavam timeout HTTP 504 (>90s de processamento).
+
+### Solução
+
+```javascript
+function windowContent(original, patched, maxLines = 120) {
+  // encontra firstDiff (primeira linha diferente)
+  // retorna ±60 linhas em torno do diff
+  // prefixa/sufixo com comentário de omissão
+}
+```
+
+- `MAX_FILE_BYTES = 30_000`: arquivos >30 KB → windowing automático
+- Multi-arquivo: **sempre** aplica windowing independente de tamanho
+- CSS 208 KB vira ~120 linhas → resposta em <2s
+
+### Resultado
+
+| Cenário | Antes | Depois |
+|---------|-------|--------|
+| STRESS-14/15/16/17 (CSS 208 KB) | TIMEOUT 504 | ✅ PASS <2s |
+| STRESS-22 (main.js 41 KB) | FAIL (LLM perdido) | ✅ PASS |
+| STRESS-13 (3 arquivos) | FAIL (1 bug detectado) | ✅ PASS (3 bugs) |
+
+---
+
+## §56 — Multi-DIFF por Arquivo
+
+**Status:** ✅ IMPLEMENTADO  
+**Data:** 2026-06-06  
+**Commits:** `cc8c4d6`, `7ad335e`  
+**Arquivos:** `scripts/stress-test-v2-vision-core.js`, `backend/server.js`
+
+### Problema
+
+1 bloco `[DIFF]` combinado com N diffs → LLM identifica apenas 1 bug (o mais saliente).
+
+### Solução
+
+Multi-arquivo usa blocos separados, cada um imediatamente antes do seu conteúdo:
+
+```
+[DIFF]
+--- a/arquivo1.js
++++ b/arquivo1.js
+@@ ... @@
+-bug1
++fix1
+[/DIFF]
+
+[arquivo1.js]
+/* ... janela ±60 linhas ... */
+
+[DIFF]
+--- a/arquivo2.css
++++ b/arquivo2.css
+@@ ... @@
+-bug2
++fix2
+[/DIFF]
+
+[arquivo2.css]
+/* ... janela ±60 linhas ... */
+```
+
+Backend (`server.js`): `while ((_dm53 = _diffRegex53.exec(message)) !== null)` captura todos.  
+§53 rule 6: "Não pare no primeiro bug — continue até analisar TODOS os arquivos."
+
+### Resultado
+
+STRESS-13 (3 arquivos — JS+JS+CSS): FAIL em Runs 1-3 → ✅ PASS em Runs 4-5.
 
 ---
 
