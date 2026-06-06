@@ -167,15 +167,13 @@ function startDashboard() {
 
 // ── Load deps ─────────────────────────────────────────────────────────────────
 async function loadDeps() {
-  const [AdmZipMod, axiosMod, FormDataMod] = await Promise.all([
+  const [AdmZipMod, axiosMod] = await Promise.all([
     import('adm-zip'),
     import('axios'),
-    import('form-data'),
   ]);
   return {
-    AdmZip:   AdmZipMod.default,
-    axios:    axiosMod.default,
-    FormData: FormDataMod.default,
+    AdmZip: AdmZipMod.default,
+    axios:  axiosMod.default,
   };
 }
 
@@ -326,30 +324,29 @@ function fetchZipBuffer(token) {
   });
 }
 
-// ── Apply patch in-memory → return MINIMAL zip (only target file, ~50 KB vs 125 MB) ──
-function applyPatchToZip(AdmZip, zipBuffer, scenario) {
+// ── Extract file + apply patch → return patched content as string ─────────────
+// Backend expects message with [arquivo]\ncontent blocks — no ZIP upload needed.
+function applyPatch(AdmZip, zipBuffer, scenario) {
   const zip    = new AdmZip(zipBuffer);
   const target = zip.getEntries().find((e) => e.entryName.includes(scenario.arquivo) && !e.isDirectory);
   if (!target) throw new Error(`Entry not found: ${scenario.arquivo}`);
   const original = target.getData().toString('utf8');
   const patched  = scenario.patch(original);
   if (patched === original) throw new Error(`Patch had no effect for ${scenario.id}`);
-  // Create minimal ZIP with only the patched file — avoids HTTP 413 (125 MB full zipball)
-  const minZip = new AdmZip();
-  minZip.addFile(scenario.arquivo, Buffer.from(patched, 'utf8'));
-  return minZip.toBuffer();
+  return patched;
 }
 
-// ── POST to /api/chat ─────────────────────────────────────────────────────────
-async function sendToVisionCore(axios, FormData, zipBuffer) {
-  const form = new FormData();
-  form.append('message', 'o site está com problema');
-  form.append('file', zipBuffer, { filename: 'repo.zip', contentType: 'application/zip' });
-  const t0   = Date.now();
-  const resp = await axios.post(`${BACKEND_URL}/api/chat`, form, {
-    headers: form.getHeaders(), timeout: 60000,
-    maxContentLength: Infinity, maxBodyLength: Infinity,
-  });
+// ── POST to /api/chat — JSON with embedded file content ───────────────────────
+// Format: "o site está com problema\n\n[arquivo]\ncontent"
+// Matches /api/unzip-context output format that backend understands.
+async function sendToVisionCore(axios, patchedContent, scenario) {
+  const message = `o site está com problema\n\n[${scenario.arquivo}]\n${patchedContent}`;
+  const t0      = Date.now();
+  const resp    = await axios.post(
+    `${BACKEND_URL}/api/chat`,
+    { message, mode: 'fix' },
+    { headers: { 'Content-Type': 'application/json' }, timeout: 60000 }
+  );
   return { data: resp.data, elapsed: Date.now() - t0 };
 }
 
@@ -406,7 +403,7 @@ function buildReport(results, timestamp) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
-  const { AdmZip, axios, FormData } = await loadDeps();
+  const { AdmZip, axios } = await loadDeps();
 
   // Start dashboard server
   const server = startDashboard();
@@ -459,14 +456,14 @@ async function main() {
     };
 
     try {
-      const patchedZip = applyPatchToZip(AdmZip, baseZipBuffer, scenario);
-      addLog(`[${scenario.id}] Enviando para Vision Core... (${(patchedZip.length / 1024).toFixed(0)} KB)`);
+      const patchedContent = applyPatch(AdmZip, baseZipBuffer, scenario);
+      addLog(`[${scenario.id}] Enviando para Vision Core... (~${(patchedContent.length / 1024).toFixed(0)} KB)`);
 
-      const { data, elapsed } = await sendToVisionCore(axios, FormData, patchedZip);
+      const { data, elapsed } = await sendToVisionCore(axios, patchedContent, scenario);
       result.tempo_ms = elapsed;
 
-      const responseText = typeof data === 'string'
-        ? data : (data?.content || data?.message || data?.response || JSON.stringify(data));
+      // Backend returns { ok, answer, provider, ... } — extract answer field
+      const responseText = data?.answer || (typeof data === 'string' ? data : JSON.stringify(data));
       result.diagnostico_recebido = responseText;
 
       const { passou, palavras_encontradas } = evaluate(responseText, scenario.esperado);
