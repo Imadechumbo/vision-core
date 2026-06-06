@@ -20,6 +20,7 @@ Usuário conversa
   → Auto-merge               (pós-PASS GOLD — POST /api/deploy/merge-pr — §50)
   → Auto-deploy              (pós-merge — backend/deploy-trigger.js — §51)
   → Auth GitHub              (OAuth automático — §52)
+  → Diff contextual          (reduz alucinação — [DIFF] no prompt — §53)
 ```
 
 ### Módulos canônicos obrigatórios
@@ -2872,6 +2873,81 @@ Botão "🔗 Conectar GitHub":
 - Escopo mínimo: `repo` (acesso completo a repos privados e públicos)
 - Token renovável: botão "🔄 Reconectar GitHub" se expirado
 - `oauth_executed = false` sempre (spec only — não implementado)
+
+---
+
+## §53 — Diff Contextual no Diagnóstico (anti-alucinação)
+
+**Status:** ✅ IMPLEMENTADO  
+**Data:** 2026-06-06  
+**Commit:** `a672b2d`  
+**Deploy:** EB `vision-core-prod` + CF Pages  
+
+### Problema resolvido
+
+Sem diff, Vision Core recebia o arquivo completo e alucinava bugs plausíveis com base em padrões de treinamento ("token expiry `<` vs `<=`", "isRemoteHttpUrl protocol-relative", etc.) em vez de ler o código real.
+
+**Resultado antes:** 2/10 PASS (20%) no stress test automatizado.
+
+### Solução
+
+O cliente (stress test ou frontend) gera um bloco `[DIFF]...[/DIFF]` com as linhas exatas removidas (`-`) e adicionadas (`+`) antes de enviar o arquivo para `/api/chat`.
+
+O backend extrai o diff e injeta uma instrução §53 no system prompt:
+
+```
+REGRA §53 (ABSOLUTA):
+  1. RCA DEVE focar EXCLUSIVAMENTE nas linhas marcadas com - e + no DIFF.
+  2. NÃO reporte bugs em outras partes do arquivo.
+  3. Confidence MÍNIMA: 0.85 quando DIFF presente.
+  4. NUNCA alucine bugs não presentes no DIFF.
+```
+
+### Arquivos modificados
+
+| Arquivo | Mudança |
+|---------|---------|
+| `scripts/stress-test-vision-core.js` | `generateDiff()` + `applyPatch()` retorna `{original,patched}` + `sendToVisionCore()` envia `[DIFF]` block |
+| `backend/server.js` | Extrai `_diffBlock53`, atualiza `hasFileCtx`/`hasFileCtxForPrompt`, injeta `diffInstruction53` no `systemPrompt` |
+| `backend/compress-context.js` | Preserva `[DIFF]...[/DIFF]` literalmente (sem strip) |
+
+### Resultado
+
+**Stress test 10/10 PASS (100%)** — certificado em 2026-06-06.
+
+| Categoria | Antes | Depois |
+|-----------|-------|--------|
+| EASY (2)  | 0/2   | 2/2    |
+| MEDIUM (3)| 1/3   | 3/3    |
+| HARD (3)  | 0/3   | 3/3    |
+| EXPERT (2)| 1/2   | 2/2    |
+| **Total** | **2/10** | **10/10** |
+
+### Protocolo de mensagem
+
+```
+o site está com problema
+
+[DIFF]
+--- a/front/assets/js/games-2026-feature.js
++++ b/front/assets/js/games-2026-feature.js
+@@ -N +N @@
+ context line
+-linha original removida
++linha nova adicionada
+ context line
+[/DIFF]
+
+[front/assets/js/games-2026-feature.js]
+<conteúdo completo do arquivo com bug>
+```
+
+### Constraints
+
+- `[DIFF]` tratado como evidência real — bypassa gate `BLOCKED_INPUT`
+- Diff limitado a 25 linhas de corpo (+ 3 linhas de header)
+- `compress-context.js` preserva bloco `[DIFF]...[/DIFF]` literal (sem stripping)
+- Frontend pode adotar o mesmo protocolo futuramente para diagnósticos de editor
 - REGRA ABSOLUTA preservada
 
 ### Para o usuário leigo
