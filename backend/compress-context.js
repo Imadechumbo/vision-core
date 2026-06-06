@@ -55,6 +55,14 @@ function compressContext(fileContent, diagnosis) {
       }
     }
 
+    // §53: detect [DIFF]...[/DIFF] block boundaries BEFORE strip.
+    // Preserve diff literal — stripping diff content breaks contextual diagnosis.
+    let _dStart = -1, _dEnd = -1;
+    for (let _di = 0; _di < _rawLines.length; _di++) {
+      if (_dStart === -1 && _rawLines[_di].trim() === '[DIFF]')  { _dStart = _di; }
+      if (_dStart !== -1 && _dEnd === -1 && _rawLines[_di].trim() === '[/DIFF]') { _dEnd = _di; }
+    }
+
     const _stripFn = function(s) {
       return s
         .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -65,13 +73,19 @@ function compressContext(fileContent, diagnosis) {
 
     let stripped;
     if (_pStart >= 0 && _pEnd >= 0) {
-      // Split: strip before + after, preserve block LITERAL (exact whitespace)
+      // Split: strip before + after, preserve LOCAL_REAL_COVERS block LITERAL
       const _before = _rawLines.slice(0, _pStart).join('\n');
       const _block  = _rawLines.slice(_pStart, _pEnd + 1).join('\n'); // NO strip
       const _after  = _rawLines.slice(_pEnd + 1).join('\n');
       stripped = _stripFn(_before) + '\n' + _block + '\n' + _stripFn(_after);
+    } else if (_dStart >= 0 && _dEnd >= 0) {
+      // §53: preserve [DIFF]...[/DIFF] block LITERAL — strip before + after
+      const _before = _rawLines.slice(0, _dStart).join('\n');
+      const _block  = _rawLines.slice(_dStart, _dEnd + 1).join('\n'); // NO strip
+      const _after  = _rawLines.slice(_dEnd + 1).join('\n');
+      stripped = _stripFn(_before) + '\n' + _block + '\n' + _stripFn(_after);
     } else {
-      // No LOCAL_REAL_COVERS found — strip normally
+      // No preserved block found — strip normally
       stripped = _stripFn(fileContent);
     }
 

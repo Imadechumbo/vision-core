@@ -1012,6 +1012,11 @@ app.post('/api/chat', async (req, res) => {
     req._toolFetchUrls  = foundUrls;
   }
 
+  /* ── §53 DIFF contextual — extrair [DIFF]...[/DIFF] para instrução focada ── */
+  let _diffBlock53 = '';
+  const _diffMatch53 = message.match(/\[DIFF\]([\s\S]*?)\[\/DIFF\]/);
+  if (_diffMatch53) { _diffBlock53 = _diffMatch53[1].trim(); }
+
   /* ── §44 MPEG: comprimir blocos [Arquivo: ...] embutidos na mensagem ─────
      Aplica STRIP→WINDOW→SUMMARIZE em cada arquivo antes de montar o prompt.
      /api/chat/apply-patch: nunca comprime — precisa do conteúdo completo.  */
@@ -1243,6 +1248,27 @@ app.post('/api/chat', async (req, res) => {
     `Próximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.`
   ].join('\n') : '';
 
+  /* §53 — instrução focada no diff (injetada quando [DIFF] presente) */
+  const diffInstruction53 = _diffBlock53 ? [
+    ``,
+    `══════════════════════════════════════════════════════`,
+    `§53 DIFF CONTEXTUAL — FOCO OBRIGATÓRIO`,
+    `══════════════════════════════════════════════════════`,
+    ``,
+    `O usuário forneceu o DIFF exato do bug introduzido:`,
+    ``,
+    `\`\`\`diff`,
+    _diffBlock53,
+    `\`\`\``,
+    ``,
+    `REGRA §53 (ABSOLUTA):`,
+    `  1. Sua análise RCA DEVE focar EXCLUSIVAMENTE nas linhas marcadas com - (removidas) e + (adicionadas) acima.`,
+    `  2. NÃO reporte bugs em outras partes do arquivo — o bug está APENAS nas linhas do DIFF.`,
+    `  3. O diagnóstico correto é a diferença entre a linha - e a linha +.`,
+    `  4. Confidence MÍNIMA: 0.85 quando DIFF presente.`,
+    `  5. NUNCA alucine bugs de auth, token expiry, ou outros problemas não visíveis no DIFF.`,
+  ].join('\n') : '';
+
   /* Imagem detectada → Gemini (único provider com suporte multimodal) */
   /* Detectar ANTES de montar systemPrompt — mode:fix não bloqueia imagem */
   const hasImage   = !!(body.image_base64 && body.image_base64.length > 10);
@@ -1255,7 +1281,8 @@ app.post('/api/chat', async (req, res) => {
     const hasFetched = (req._toolFetchCount || 0) > 0;
     const hasFileCtx = /\[Arquivo: /.test(message) ||
                        /\[CONTEÚDO DE /.test(message) ||
-                       /\[[^\]]{2,}\.(js|ts|html|css|json|py|go|md|txt|mjs|cjs|jsx|tsx)\]/.test(message);
+                       /\[[^\]]{2,}\.(js|ts|html|css|json|py|go|md|txt|mjs|cjs|jsx|tsx)\]/.test(message) ||
+                       /\[DIFF\]/.test(message);
     if (!hasFetched && !hasFileCtx) {
       return sendOk(res, {
         answer: '```json\n' + JSON.stringify({
@@ -1279,7 +1306,8 @@ app.post('/api/chat', async (req, res) => {
   /* hasFileCtxForPrompt: true when file context was injected (ZIP or file upload) */
   const hasFileCtxForPrompt = /\[Arquivo: /.test(message) ||
                                /\[CONTEÚDO DE /.test(message) ||
-                               /\[[^\]]{2,}\.(js|ts|html|css|json|py|go|md|txt|mjs|cjs|jsx|tsx)\]/.test(message);
+                               /\[[^\]]{2,}\.(js|ts|html|css|json|py|go|md|txt|mjs|cjs|jsx|tsx)\]/.test(message) ||
+                               /\[DIFF\]/.test(message);
 
   /* visionAddendum:
      - hybrid (image + file ctx in fix mode): vision layer + Hermes RCA combined
@@ -1301,10 +1329,11 @@ app.post('/api/chat', async (req, res) => {
   /* 3-way systemPrompt:
      1. hybrid  (image + file + fix): basePrompt + visionAddendum (includes hermesDecisionMatrix)
      2. image-only: basePrompt + visionAddendum (visual description)
-     3. code-only: basePrompt + fixModeInstructions (hermesDecisionMatrix) */
-  const systemPrompt = hasImage
+     3. code-only: basePrompt + fixModeInstructions (hermesDecisionMatrix)
+     + §53: diffInstruction53 appended when [DIFF] block present (all paths) */
+  const systemPrompt = (hasImage
     ? basePrompt + visionAddendum
-    : basePrompt + fixModeInstructions;
+    : basePrompt + fixModeInstructions) + diffInstruction53;
 
   /* ── §34: ensureHermesJson — re-prompt se mode=fix retornou texto livre ── */
   /* Chama callFn(extractPrompt) com o diagnóstico já gerado como contexto.   */

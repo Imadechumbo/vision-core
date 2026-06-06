@@ -324,8 +324,48 @@ function fetchZipBuffer(token) {
   });
 }
 
-// ── Extract file + apply patch → return patched content as string ─────────────
-// Backend expects message with [arquivo]\ncontent blocks — no ZIP upload needed.
+// ── Generate diff (original → patched) for §53 ───────────────────────────────
+function generateDiff(original, patched, arquivo) {
+  const origLines    = original.split('\n');
+  const patchedLines = patched.split('\n');
+
+  // Find first differing line
+  let firstDiff = 0;
+  const minLen  = Math.min(origLines.length, patchedLines.length);
+  while (firstDiff < minLen && origLines[firstDiff] === patchedLines[firstDiff]) firstDiff++;
+  if (firstDiff >= minLen && origLines.length === patchedLines.length) return '';
+
+  // Find last differing line (from end, aligned tails)
+  let tailOrig  = origLines.length - 1;
+  let tailPatch = patchedLines.length - 1;
+  while (tailOrig > firstDiff && tailPatch > firstDiff &&
+         origLines[tailOrig] === patchedLines[tailPatch]) {
+    tailOrig--;
+    tailPatch--;
+  }
+
+  const ctxBefore    = Math.max(0, firstDiff - 3);
+  const ctxAfterOrig = Math.min(origLines.length - 1, tailOrig + 3);
+
+  const lines = [];
+  lines.push(`--- a/${arquivo}`);
+  lines.push(`+++ b/${arquivo}`);
+  lines.push(`@@ -${ctxBefore + 1} +${ctxBefore + 1} @@`);
+  for (let i = ctxBefore; i < firstDiff; i++)    lines.push(` ${origLines[i]}`);
+  for (let i = firstDiff; i <= tailOrig;  i++)    lines.push(`-${origLines[i]}`);
+  for (let i = firstDiff; i <= tailPatch; i++)    lines.push(`+${patchedLines[i]}`);
+  for (let i = tailOrig + 1; i <= ctxAfterOrig; i++) lines.push(` ${origLines[i]}`);
+
+  // Cap body at 25 lines
+  const headers = lines.slice(0, 3);
+  const body    = lines.slice(3);
+  if (body.length > 25) {
+    return [...headers, ...body.slice(0, 25), `... (${body.length - 25} linhas omitidas)`].join('\n');
+  }
+  return lines.join('\n');
+}
+
+// ── Extract file + apply patch → return { original, patched } ────────────────
 function applyPatch(AdmZip, zipBuffer, scenario) {
   const zip    = new AdmZip(zipBuffer);
   const target = zip.getEntries().find((e) => e.entryName.includes(scenario.arquivo) && !e.isDirectory);
@@ -333,16 +373,17 @@ function applyPatch(AdmZip, zipBuffer, scenario) {
   const original = target.getData().toString('utf8');
   const patched  = scenario.patch(original);
   if (patched === original) throw new Error(`Patch had no effect for ${scenario.id}`);
-  return patched;
+  return { original, patched };
 }
 
-// ── POST to /api/chat — JSON with embedded file content ───────────────────────
-// Format: "o site está com problema\n\n[arquivo]\ncontent"
-// Matches /api/unzip-context output format that backend understands.
-async function sendToVisionCore(axios, patchedContent, scenario) {
-  const message = `o site está com problema\n\n[${scenario.arquivo}]\n${patchedContent}`;
-  const t0      = Date.now();
-  const resp    = await axios.post(
+// ── POST to /api/chat — JSON with diff block + embedded file content ──────────
+// §53: message includes [DIFF]...[/DIFF] so Vision Core focuses on changed lines.
+async function sendToVisionCore(axios, { original, patched }, scenario) {
+  const diff      = generateDiff(original, patched, scenario.arquivo);
+  const diffBlock = diff ? `[DIFF]\n${diff}\n[/DIFF]\n\n` : '';
+  const message   = `o site está com problema\n\n${diffBlock}[${scenario.arquivo}]\n${patched}`;
+  const t0        = Date.now();
+  const resp      = await axios.post(
     `${BACKEND_URL}/api/chat`,
     { message, mode: 'fix' },
     { headers: { 'Content-Type': 'application/json' }, timeout: 60000 }
@@ -456,10 +497,10 @@ async function main() {
     };
 
     try {
-      const patchedContent = applyPatch(AdmZip, baseZipBuffer, scenario);
-      addLog(`[${scenario.id}] Enviando para Vision Core... (~${(patchedContent.length / 1024).toFixed(0)} KB)`);
+      const { original, patched } = applyPatch(AdmZip, baseZipBuffer, scenario);
+      addLog(`[${scenario.id}] Enviando para Vision Core... (~${(patched.length / 1024).toFixed(0)} KB)`);
 
-      const { data, elapsed } = await sendToVisionCore(axios, patchedContent, scenario);
+      const { data, elapsed } = await sendToVisionCore(axios, { original, patched }, scenario);
       result.tempo_ms = elapsed;
 
       // Backend returns { ok, answer, provider, ... } — extract answer field
