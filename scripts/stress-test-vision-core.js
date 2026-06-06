@@ -219,8 +219,8 @@ const SCENARIOS = [
     descricao: 'isAllowedLocalRealCover retorna false',
     arquivo:   'front/assets/js/games-2026-feature.js',
     patch:     (src) => src.replace(
-      /function isAllowedLocalRealCover[\s\S]*?return true/,
-      (m) => m.replace('return true', 'return false')
+      /function isAllowedLocalRealCover\(value = ''\) \{[^}]+\}/,
+      "function isAllowedLocalRealCover(value = '') { return false; }"
     ),
     sintoma:  'nenhuma capa local carrega',
     esperado: ['isAllowedLocalRealCover', 'false', 'blocked'],
@@ -278,7 +278,8 @@ const SCENARIOS = [
     id: 'STRESS-09', dificuldade: 'EXPERT',
     descricao: 'isAllowedLocalRealCover regex .png|jpg → .svg|webp',
     arquivo:   'front/assets/js/games-2026-feature.js',
-    patch:     (src) => src.replace(/\/\\\.\(png\|jpg\|jpeg\)\\$\/i/g, '/\\.(svg|webp)$/i'),
+    // Real regex in file: /^assets\/img\/.+\.(?:png|jpe?g|webp)$/i — patch the named group
+    patch:     (src) => src.replace('(?:png|jpe?g|webp)', '(?:svg|gif)'),
     sintoma:   'apenas SVGs carregam, PNGs e JPGs somem',
     esperado:  ['regex', 'extensão', 'png', 'jpg', 'svg'],
   },
@@ -286,7 +287,11 @@ const SCENARIOS = [
     id: 'STRESS-10', dificuldade: 'EXPERT',
     descricao: "Hexe key typo — apóstrofo removido",
     arquivo:   'front/assets/js/games-2026-feature.js',
-    patch:     (src) => src.replace(/Assassin's Creed Codename Hexe/g, 'Assassins Creed Codename Hexe'),
+    // Key uses Unicode U+2019 curly apostrophe, not straight '
+    patch:     (src) => src.replace(
+      /('Assassin’s Creed Codename Hexe'\s*:\s*')/,
+      (m) => m.replace('Assassin’s', 'Assassins')
+    ),
     sintoma:   'capa da Hexe some (key mismatch)',
     esperado:  ['Hexe', 'apóstrofo', 'chave', 'mismatch'],
   },
@@ -321,7 +326,7 @@ function fetchZipBuffer(token) {
   });
 }
 
-// ── Apply patch in-memory ─────────────────────────────────────────────────────
+// ── Apply patch in-memory → return MINIMAL zip (only target file, ~50 KB vs 125 MB) ──
 function applyPatchToZip(AdmZip, zipBuffer, scenario) {
   const zip    = new AdmZip(zipBuffer);
   const target = zip.getEntries().find((e) => e.entryName.includes(scenario.arquivo) && !e.isDirectory);
@@ -329,8 +334,10 @@ function applyPatchToZip(AdmZip, zipBuffer, scenario) {
   const original = target.getData().toString('utf8');
   const patched  = scenario.patch(original);
   if (patched === original) throw new Error(`Patch had no effect for ${scenario.id}`);
-  zip.updateFile(target.entryName, Buffer.from(patched, 'utf8'));
-  return zip.toBuffer();
+  // Create minimal ZIP with only the patched file — avoids HTTP 413 (125 MB full zipball)
+  const minZip = new AdmZip();
+  minZip.addFile(scenario.arquivo, Buffer.from(patched, 'utf8'));
+  return minZip.toBuffer();
 }
 
 // ── POST to /api/chat ─────────────────────────────────────────────────────────
