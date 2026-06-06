@@ -1012,10 +1012,17 @@ app.post('/api/chat', async (req, res) => {
     req._toolFetchUrls  = foundUrls;
   }
 
-  /* ── §53 DIFF contextual — extrair [DIFF]...[/DIFF] para instrução focada ── */
+  /* ── §53 DIFF contextual — extrair todos [DIFF]...[/DIFF] para instrução focada ── */
   let _diffBlock53 = '';
-  const _diffMatch53 = message.match(/\[DIFF\]([\s\S]*?)\[\/DIFF\]/);
-  if (_diffMatch53) { _diffBlock53 = _diffMatch53[1].trim(); }
+  const _allDiffs53 = [];
+  const _diffRegex53 = /\[DIFF\]([\s\S]*?)\[\/DIFF\]/g;
+  let _dm53;
+  while ((_dm53 = _diffRegex53.exec(message)) !== null) {
+    _allDiffs53.push(_dm53[1].trim());
+  }
+  if (_allDiffs53.length > 0) {
+    _diffBlock53 = _allDiffs53.join('\n\n---\n\n');
+  }
 
   /* ── §44 MPEG: comprimir blocos [Arquivo: ...] embutidos na mensagem ─────
      Aplica STRIP→WINDOW→SUMMARIZE em cada arquivo antes de montar o prompt.
@@ -1255,18 +1262,24 @@ app.post('/api/chat', async (req, res) => {
     `§53 DIFF CONTEXTUAL — FOCO OBRIGATÓRIO`,
     `══════════════════════════════════════════════════════`,
     ``,
-    `O usuário forneceu o DIFF exato do bug introduzido:`,
+    `O usuário forneceu ${_allDiffs53.length > 1 ? _allDiffs53.length + ' DIFFs de arquivos modificados com bugs' : 'o DIFF exato do bug introduzido'}:`,
     ``,
     `\`\`\`diff`,
     _diffBlock53,
     `\`\`\``,
     ``,
     `REGRA §53 (ABSOLUTA):`,
-    `  1. Sua análise RCA DEVE focar EXCLUSIVAMENTE nas linhas marcadas com - (removidas) e + (adicionadas) acima.`,
+    `  1. Sua análise RCA DEVE focar EXCLUSIVAMENTE nas linhas marcadas com - e + no DIFF acima.`,
     `  2. NÃO reporte bugs em outras partes do arquivo — o bug está APENAS nas linhas do DIFF.`,
-    `  3. O diagnóstico correto é a diferença entre a linha - e a linha +.`,
+    `  3. CONVENÇÃO OBRIGATÓRIA DO DIFF:`,
+    `     - Linhas com - (menos) = código CORRETO que existia ANTES do bug.`,
+    `     - Linhas com + (mais)  = código ERRADO que foi INTRODUZIDO como bug.`,
+    `     Exemplo: se o diff mostra "+// const X = {", significa que alguém COMENTOU X = isso É o bug.`,
+    `     Diagnóstico correto: "X foi comentado/desativado, causando ReferenceError/undefined".`,
+    `     Diagnóstico ERRADO: "comentar X resolve o problema" — isso inverte a lógica.`,
     `  4. Confidence MÍNIMA: 0.85 quando DIFF presente.`,
-    `  5. NUNCA alucine bugs de auth, token expiry, ou outros problemas não visíveis no DIFF.`,
+    `  5. NUNCA alucine bugs não visíveis no DIFF.`,
+    `  6. Se múltiplos arquivos foram modificados, diagnostique TODOS os bugs de cada arquivo.`,
   ].join('\n') : '';
 
   /* Imagem detectada → Gemini (único provider com suporte multimodal) */

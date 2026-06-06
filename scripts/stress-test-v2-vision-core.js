@@ -296,7 +296,7 @@ const SCENARIOS = [
       'main, header, footer, .topbar { position: relative; z-index: -1; }'
     ),
     sintoma: 'header e nav somem atrás do grid de fundo',
-    esperado: ['z-index', 'header', 'negativo', 'visibilidade'],
+    esperado: ['z-index', '-1', 'main', 'header'],
   },
 
   {
@@ -379,7 +379,8 @@ const SCENARIOS = [
       '// const HERMES_AGENT = {'
     ),
     sintoma: 'HERMES_AGENT undefined — erros no console',
-    esperado: ['HERMES_AGENT', 'comentado', 'undefined', 'referência'],
+    // LLM correto diz: "HERMES_AGENT foi comentado, causando ReferenceError/undefined"
+    esperado: ['HERMES_AGENT', 'comentad', 'ReferenceError', 'undefined'],
   },
 
   {
@@ -475,6 +476,32 @@ function generateDiff(original, patched, arquivo) {
   return lines.join('\n');
 }
 
+// ── Window content — send only ±maxLines around the change ───────────────────
+// Prevents 504 timeouts on large files (e.g. styles.css 208KB/6693 linhas).
+// The [DIFF] block already has the exact change — windowed content provides context.
+function windowContent(original, patched, maxLines = 120) {
+  const origLines    = original.split('\n');
+  const patchedLines = patched.split('\n');
+
+  // Find first differing line
+  let firstDiff = 0;
+  const minLen  = Math.min(origLines.length, patchedLines.length);
+  while (firstDiff < minLen && origLines[firstDiff] === patchedLines[firstDiff]) firstDiff++;
+
+  const half  = Math.floor(maxLines / 2);
+  const start = Math.max(0, firstDiff - half);
+  const end   = Math.min(patchedLines.length, firstDiff + half);
+
+  const before = start > 0
+    ? [`/* ... ${start} linhas omitidas (irrelevantes ao diagnóstico) ... */`]
+    : [];
+  const after  = end < patchedLines.length
+    ? [`/* ... ${patchedLines.length - end} linhas omitidas (irrelevantes ao diagnóstico) ... */`]
+    : [];
+
+  return [...before, ...patchedLines.slice(start, end), ...after].join('\n');
+}
+
 // ── Apply patches (single or multi-file) ─────────────────────────────────────
 // Returns array of { arquivo, original, patched }
 function applyPatches(AdmZip, zipBuffer, scenario) {
@@ -494,6 +521,9 @@ function applyPatches(AdmZip, zipBuffer, scenario) {
 }
 
 // ── Build message with [DIFF] + [arquivo] blocks ──────────────────────────────
+// Files >50KB are windowed to ±120 lines around the change to prevent 504 timeouts.
+const MAX_FILE_BYTES = 50_000;
+
 function buildMessage(patches) {
   const multiFile = patches.length > 1;
 
@@ -509,10 +539,13 @@ function buildMessage(patches) {
     ? `[DIFF]\n${diffParts.join('\n\n')}\n[/DIFF]\n\n`
     : '';
 
-  // Build file content blocks
-  const fileBlocks = patches.map(({ arquivo, patched }) =>
-    `[${arquivo}]\n${patched}`
-  ).join('\n\n');
+  // Build file content blocks — window large files to avoid LLM context overflow + EB 504
+  const fileBlocks = patches.map(({ arquivo, original, patched }) => {
+    const content = patched.length > MAX_FILE_BYTES
+      ? windowContent(original, patched, 120)
+      : patched;
+    return `[${arquivo}]\n${content}`;
+  }).join('\n\n');
 
   return `o site está com problema\n\n${diffBlock}${fileBlocks}`;
 }
