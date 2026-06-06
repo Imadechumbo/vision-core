@@ -75,27 +75,75 @@
 
 ---
 
+## Stress Test V3 — 15/15 PASS (100%) ✅ PRIMEIRO RUN
+
+**Data:** 2026-06-06  
+**Commit:** `1ae118c`  
+**Script:** `scripts/stress-test-v3-vision-core.js`  
+**Dashboard:** http://localhost:3101  
+**Relatório:** `docs/STRESS-TEST-V3-CERTIFICATION.md`
+
+### Histórico de Iterações (V3)
+
+| Run | PASS | Taxa | Observação |
+|---|---|---|---|
+| **Run 1** | **15/15** | **100%** | Patches verificados antes do run — zero ajustes necessários |
+
+### Cenários Certificados (V3)
+
+| ID | Bloco | Dificuldade | Arquivo | Bug | Status |
+|---|---|---|---|---|---|
+| STRESS-26 | E | HARD | gameCoverService.js | `clearTimeout` comentado | ✅ PASS |
+| STRESS-27 | E | HARD | cacheService.js | `catch` relança em vez de fallback | ✅ PASS |
+| STRESS-28 | E | EXPERT | feeds.js | `setTimeout` 260→0ms — animação pulada | ✅ PASS |
+| STRESS-29 | E | EXPERT | gameCoverService.js | sort `confidence` asc em vez de desc | ✅ PASS |
+| STRESS-30 | E | EXPERT | feeds.js | `__TNG_CONFIG_READY__` await comentado | ✅ PASS |
+| STRESS-31 | F | HARD | feeds.js | URL typo `/api/nwes/latest` → 404 | ✅ PASS |
+| STRESS-32 | F | HARD | newsRoutes.js | `Math.min(parsed, 0)` — zero itens | ✅ PASS |
+| STRESS-33 | F | EXPERT | gameCoverService.js | `COVER_CACHE_TTL_MS=0` — sem cache | ✅ PASS |
+| STRESS-34 | F | EXPERT | hermesService.js | sort `score` asc em vez de desc | ✅ PASS |
+| STRESS-35 | F | EXPERT | gameCoverService.js | `hasBlockedSource` invertido | ✅ PASS |
+| STRESS-36 | G | HARD | app.js | CORS `!allowedOrigins.has()` | ✅ PASS |
+| STRESS-37 | G | HARD | app.js | `express.json limit "1b"` | ✅ PASS |
+| STRESS-38 | G | EXPERT | newsRoutes.js | auth `===` em vez de `!==` | ✅ PASS |
+| STRESS-39 | G | EXPERT | normalizer.js | `summary.slice(0,0)` — resumos vazios | ✅ PASS |
+| STRESS-40 | G | EXPERT | config.js | `isHealthy` retorna `!response.ok` | ✅ PASS |
+
+---
+
 ## Técnicas Anti-Alucinação Certificadas
 
 | Técnica | §  | Problema resolvido | Impacto |
 |---------|----|--------------------|---------|
 | `[DIFF]...[/DIFF]` no prompt | §53 | LLM alucinava bugs genéricos | 20% → 100% (V1) |
-| `windowContent(±120 linhas)` | §54 | CSS 208 KB causava timeout 504 | B: 0% → 100% |
-| `MAX_FILE_BYTES = 30_000` | §54 | main.js 41 KB enviado inteiro | D22: FAIL → PASS |
-| always-window em multi-arquivo | §54 | LLM focava em 1 de N bugs | A13: FAIL → PASS |
-| Blocos `[DIFF]` separados por arquivo | §54 | 1 bloco combinado = 1 diagnóstico | A: 67% → 100% |
-| `esperado` com valores do diff | §54 | Palavras subjetivas são flaky | B15,B17: flaky → estável |
+| `windowContent(±120 linhas)` | §55 | CSS 208 KB causava timeout 504 | B: 0% → 100% |
+| `MAX_FILE_BYTES = 30_000` | §55 | main.js 41 KB enviado inteiro | D22: FAIL → PASS |
+| always-window em multi-arquivo | §55 | LLM focava em 1 de N bugs | A13: FAIL → PASS |
+| Blocos `[DIFF]` separados por arquivo | §56 | 1 bloco combinado = 1 diagnóstico | A: 67% → 100% |
+| `esperado` com valores do diff | §56 | Palavras subjetivas são flaky | B15,B17: flaky → estável |
+| Verificação prévia ALL_PASS | §57 | Patches inválidos causavam falhas espúrias | V3: 100% Run 1 |
 
 ---
 
-## Impacto Combinado (V1 + V2)
+## Impacto Combinado (V1 + V2 + V3)
 
-| Métrica | Antes §53 | V1 (§53) | V2 (§53+§54) |
-|---------|-----------|----------|--------------|
-| Taxa de diagnóstico correto | 20% | 100% (10/10) | 100% (15/15) |
-| Alucinações detectadas | ~8/10 | 0/10 | 0/15 |
-| Cobertura de tipos de bug | JS único | JS único | JS + CSS + Backend |
-| Cobertura multi-arquivo | Não | Não | Sim (até 3 arquivos) |
+| Métrica | Antes §53 | V1 (§53) | V2 (§53+§55+§56) | V3 (§57) |
+|---------|-----------|----------|------------------|----------|
+| Taxa de diagnóstico correto | 20% | 100% (10/10) | 100% (15/15) | 100% (15/15) |
+| Alucinações detectadas | ~8/10 | 0/10 | 0/15 | 0/15 |
+| Cobertura de tipos de bug | JS único | JS único | JS + CSS + Backend | + Runtime + API + Segurança |
+| Runs para atingir 100% | — | 3 | 5 | **1** |
+
+---
+
+## Placar Geral (V1 + V2 + V3)
+
+| Suite | Cenários | PASS | Taxa | Runs para 100% |
+|---|---|---|---|---|
+| V1 | 10 | 10/10 | 100% | Run 3 |
+| V2 | 15 | 15/15 | 100% | Run 5 |
+| V3 | 15 | 15/15 | 100% | **Run 1** |
+| **Total** | **40** | **40/40** | **100%** | — |
 
 ---
 
@@ -111,8 +159,13 @@ node scripts/stress-test-vision-core.js
 # Stress Test V2
 node scripts/stress-test-v2-vision-core.js
 # Dashboard: http://localhost:3100
+
+# Stress Test V3
+node scripts/stress-test-v3-vision-core.js
+# Dashboard: http://localhost:3101
 ```
 
 Relatórios:
 - V1: `docs/STRESS-TEST-RESULTS.md` / `.json`
 - V2: `docs/STRESS-TEST-V2-RESULTS.md` / `.json`
+- V3: `docs/STRESS-TEST-V3-RESULTS.md` / `docs/STRESS-TEST-V3-CERTIFICATION.md`
