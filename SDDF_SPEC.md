@@ -25,6 +25,7 @@ Usuário conversa
   → windowContent            (trunca arquivos grandes ±120 linhas — §55)
   → Multi-DIFF por arquivo   (bloco separado por arquivo, while loop — §56)
   → Stress Test V3           (15/15 PASS Run 1 — runtime/dados/segurança — §57)
+  → Stress Test V4           (15 cenários EXPERT/NIGHTMARE — bugs invisíveis/async/estado — §58)
 ```
 
 ### Módulos canônicos obrigatórios
@@ -3746,4 +3747,47 @@ Todos os 3 testes passam. Executor humano confirma e fecha gate.
 **Sem PASS-3, §44 não é marcado stable. §45+ continuam livres.**
 
 > **REGRA ABSOLUTA:** REAL-VALIDATION-3 PASS = pré-requisito para marcar §44 como stable e iniciar §47+.
+
+---
+
+## §58 — Stress Test V4: Bugs Invisíveis, Async/Promise e Estado/Memória
+
+**Status:** 🔵 CRIADO — execução pendente  
+**Data:** 2026-06-06  
+**Commit:** pendente  
+**Script:** `scripts/stress-test-v4-vision-core.js`  
+**Dashboard:** http://localhost:3102
+
+### Objetivo
+
+Elevar cobertura para bugs de nível EXPERT/NIGHTMARE: bugs sem erro no console, falhas silenciosas de Promise, e corrupção de estado/memória por escopo incorreto.
+
+### 15 Cenários (3 Blocos)
+
+| Bloco | ID | Dific. | Arquivo | Bug |
+|-------|----|----|---------|-----|
+| H — Invisíveis | STRESS-41 | NIGHTMARE | feedService.js | `const selected` shadow no loop — array externo nunca popula |
+| H — Invisíveis | STRESS-42 | NIGHTMARE | hermesService.js | `.slice(1,6)` off-by-one — top trend omitida |
+| H — Invisíveis | STRESS-43 | NIGHTMARE | feedService.js | `item.category = 'hardware'` — atribuição muta todos os itens |
+| H — Invisíveis | STRESS-44 | NIGHTMARE | hermesService.js | `'' + score + 1` — scores viram strings, sort NaN |
+| H — Invisíveis | STRESS-45 | EXPERT | feedService.js | `items.sort()` sem spread — muta array de entrada |
+| I — Async | STRESS-46 | NIGHTMARE | feedService.js | `readCache()` sem await — cache é Promise, sempre fallback |
+| I — Async | STRESS-47 | NIGHTMARE | gameCoverService.js | `Promise.all` em vez de `allSettled` — status nunca 'fulfilled' |
+| I — Async | STRESS-48 | EXPERT | feedService.js | `catch` vazio retorna `status:'ok'` — erro swallowed |
+| I — Async | STRESS-49 | EXPERT | imageService.js | `return` omitido em `.then()` — chain quebrada, cache nunca salvo |
+| I — Async | STRESS-50 | NIGHTMARE | feedService.js | `persist()` sem await — fire-and-forget silencioso |
+| J — Estado | STRESS-51 | NIGHTMARE | gameCoverService.js | `SOURCE_TIERS.get(key)` sem `\|\| 9` — undefined → NaN |
+| J — Estado | STRESS-52 | EXPERT | hermesCron.js | `const jobStarted = true` local — shadow impede guard |
+| J — Estado | STRESS-53 | NIGHTMARE | feedService.js | `enrichedCount` em módulo — estado compartilhado entre chamadas |
+| J — Estado | STRESS-54 | EXPERT | feedService.js | `push()` em vez de spread — muta parâmetro do caller |
+| J — Estado | STRESS-55 | NIGHTMARE | refreshScheduler.js | `scheduledTask.stop()` removido — cron jobs acumulam |
+
+### Técnica V4
+
+Metodologia ALL_PASS antes do commit (herdada de V3):
+- 15/15 patches verificados contra ZIP real
+- `esperado` com tokens literais do diff (sem palavras subjetivas)
+- Bloco H: bugs produzem output errado sem erro — LLM precisa inferir lógica incorreta
+- Bloco I: bugs Promise/async — LLM precisa reconhecer padrões async incorretos
+- Bloco J: bugs de estado/escopo — LLM precisa rastrear escopo de variáveis
 
