@@ -521,33 +521,35 @@ function applyPatches(AdmZip, zipBuffer, scenario) {
 }
 
 // ── Build message with [DIFF] + [arquivo] blocks ──────────────────────────────
-// Files >50KB are windowed to ±120 lines around the change to prevent 504 timeouts.
-const MAX_FILE_BYTES = 50_000;
+// Files >30KB are windowed to ±120 lines around the change to prevent 504 timeouts.
+// Multi-file: each arquivo gets its OWN [DIFF]...[/DIFF] block immediately before
+// its content — backend while loop captures all blocks, LLM sees each bug isolated.
+const MAX_FILE_BYTES = 30_000;
 
 function buildMessage(patches) {
   const multiFile = patches.length > 1;
 
-  // Build combined [DIFF] block
-  const diffParts = patches.map(({ arquivo, original, patched }, i) => {
-    const diff = generateDiff(original, patched, arquivo);
-    if (!diff) return '';
-    const header = multiFile ? `=== Arquivo ${i + 1}: ${arquivo} ===\n` : '';
-    return header + diff;
-  }).filter(Boolean);
+  if (multiFile) {
+    // One [DIFF]+[content] pair per file — LLM sees each bug next to its file
+    const blocks = patches.map(({ arquivo, original, patched }) => {
+      const diff    = generateDiff(original, patched, arquivo);
+      const content = patched.length > MAX_FILE_BYTES
+        ? windowContent(original, patched, 120)
+        : patched;
+      const diffPart = diff ? `[DIFF]\n${diff}\n[/DIFF]\n\n` : '';
+      return `${diffPart}[${arquivo}]\n${content}`;
+    });
+    return `o site está com problema — múltiplos arquivos com bugs\n\n${blocks.join('\n\n')}`;
+  }
 
-  const diffBlock = diffParts.length
-    ? `[DIFF]\n${diffParts.join('\n\n')}\n[/DIFF]\n\n`
-    : '';
-
-  // Build file content blocks — window large files to avoid LLM context overflow + EB 504
-  const fileBlocks = patches.map(({ arquivo, original, patched }) => {
-    const content = patched.length > MAX_FILE_BYTES
-      ? windowContent(original, patched, 120)
-      : patched;
-    return `[${arquivo}]\n${content}`;
-  }).join('\n\n');
-
-  return `o site está com problema\n\n${diffBlock}${fileBlocks}`;
+  // Single file — flat [DIFF] + content
+  const { arquivo, original, patched } = patches[0];
+  const diff    = generateDiff(original, patched, arquivo);
+  const content = patched.length > MAX_FILE_BYTES
+    ? windowContent(original, patched, 120)
+    : patched;
+  const diffBlock = diff ? `[DIFF]\n${diff}\n[/DIFF]\n\n` : '';
+  return `o site está com problema\n\n${diffBlock}[${arquivo}]\n${content}`;
 }
 
 // ── POST to /api/chat ─────────────────────────────────────────────────────────

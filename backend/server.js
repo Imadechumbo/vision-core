@@ -1279,7 +1279,9 @@ app.post('/api/chat', async (req, res) => {
     `     Diagnóstico ERRADO: "comentar X resolve o problema" — isso inverte a lógica.`,
     `  4. Confidence MÍNIMA: 0.85 quando DIFF presente.`,
     `  5. NUNCA alucine bugs não visíveis no DIFF.`,
-    `  6. Se múltiplos arquivos foram modificados, diagnostique TODOS os bugs de cada arquivo.`,
+    `  6. MÚLTIPLOS BUGS: se houver ${_allDiffs53.length > 1 ? _allDiffs53.length + ' blocos [DIFF]' : 'múltiplos arquivos no [DIFF]'}, CADA bloco é um arquivo diferente com bug próprio.`,
+    `     Diagnostique TODOS os arquivos. Mencione cada bug separadamente na sua resposta.`,
+    `     Não pare no primeiro bug — continue até analisar TODOS os arquivos modificados.`,
   ].join('\n') : '';
 
   /* Imagem detectada → Gemini (único provider com suporte multimodal) */
