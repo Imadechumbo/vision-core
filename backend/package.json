@@ -28,5 +28,9 @@
     "v41_db": "Banco JSON file-based com isolamento real por tenant. Para produção: migrar para SQLite/PostgreSQL.",
     "v41_stripe": "Stripe via HTTPS nativo (sem SDK). Requer STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET.",
     "v41_env": "JWT_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_PRO, STRIPE_PRICE_ENTERPRISE"
+  },
+  "devDependencies": {
+    "axios": "^1.17.0",
+    "form-data": "^4.0.5"
   }
 }
