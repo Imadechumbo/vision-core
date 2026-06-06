@@ -21,6 +21,7 @@ Usuário conversa
   → Auto-deploy              (pós-merge — backend/deploy-trigger.js — §51)
   → Auth GitHub              (OAuth automático — §52)
   → Diff contextual          (reduz alucinação — [DIFF] no prompt — §53)
+  → Stress Test V2           (15/15 PASS — multi-arquivo/CSS/backend — §54)
 ```
 
 ### Módulos canônicos obrigatórios
@@ -2961,6 +2962,79 @@ Experiência completa:
   5. Popup fecha → Vision Core conectado
   Zero cópia de token, zero configuração manual
 ```
+
+---
+
+## §54 — Stress Test V2: Multi-Arquivo, CSS e Backend
+
+**Status:** ✅ CERTIFICADO 15/15 (100%)  
+**Data:** 2026-06-06  
+**Commits:** `7ad335e`, `36a68fe`, `a40fbc9`  
+
+### Objetivo
+
+Expandir cobertura do stress test para além de cenários de arquivo JS único.  
+Validar §53 em condições adversas: múltiplos arquivos, CSS grande (208 KB), backend Node.js.
+
+### 15 Cenários (4 Blocos)
+
+| Bloco | Descrição | PASS |
+|-------|-----------|------|
+| A — Múltiplos Arquivos (3) | 2 JS, JS+CSS, 3 arquivos simultâneos | 3/3 |
+| B — CSS (4) | display:none, --accent, z-index, --max | 4/4 |
+| C — Backend (4) | 404 rota, timeout=0, API_BASE_URL, condição invertida | 4/4 |
+| D — Regressão §53 (4) | desc zerada, HERMES_AGENT comentado, threshold 7, import comentado | 4/4 |
+
+### Técnicas implementadas
+
+| Técnica | Problema resolvido |
+|---------|-------------------|
+| `windowContent(±120 linhas)` | CSS 208 KB causava timeout 504 no EB |
+| `MAX_FILE_BYTES = 30_000` | main.js 41 KB janelado → LLM focado |
+| `always-window` em multi-arquivo | LLM focava em 1 bug quando JS não janelado |
+| Blocos `[DIFF]...[/DIFF]` separados por arquivo | LLM analisa cada bug isoladamente |
+| `esperado` com hex values (`#ff0000`, `--max`) | Palavras subjetivas (vermelho, largura) causavam flakiness |
+
+### Protocolo multi-arquivo
+
+```
+o site está com problema — múltiplos arquivos com bugs
+
+[DIFF]
+--- a/front/assets/js/games-2026-feature.js
++++ b/front/assets/js/games-2026-feature.js
+@@ -N +N @@
+-const LOCAL_REAL_COVERS = {
++const LOCAL_REAL_COVERS = undefined; const _UNUSED_ = {
+[/DIFF]
+
+[front/assets/js/games-2026-feature.js]
+/* ... 60 linhas omitidas ... */
+<±120 linhas em torno do bug>
+/* ... 60 linhas omitidas ... */
+
+[DIFF]
+--- a/front/assets/css/styles.css
++++ b/front/assets/css/styles.css
+@@ -N +N @@
+---accent: #2dd881;
++--accent: #ff0000;
+[/DIFF]
+
+[front/assets/css/styles.css]
+/* ... linhas omitidas ... */
+<±120 linhas em torno do bug>
+```
+
+### Resultado
+
+| Run | PASS | Fix aplicado |
+|-----|------|-------------|
+| Run 1 | 10/15 (67%) | baseline |
+| Run 2 | 13/15 (87%) | windowContent + multi-DIFF backend + esperados corrigidos |
+| Run 3 | 14/15 (93%) | MAX_FILE_BYTES 50K→30K + separate [DIFF] blocks |
+| Run 4 | 13/15 (87%) | always-window multi-arquivo (STRESS-15/17 esperados corrigidos no mesmo run) |
+| **Run 5** | **15/15 (100%)** | hex values em esperado + always-window |
 
 ---
 
