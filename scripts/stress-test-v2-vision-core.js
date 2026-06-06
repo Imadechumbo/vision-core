@@ -530,12 +530,12 @@ function buildMessage(patches) {
   const multiFile = patches.length > 1;
 
   if (multiFile) {
-    // One [DIFF]+[content] pair per file — LLM sees each bug next to its file
+    // One [DIFF]+[content] pair per file — always window content in multi-file mode
+    // so each arquivo shows only its own bug area (±120 lines). Keeps total message
+    // small regardless of individual file sizes — prevents LLM from focusing on just one bug.
     const blocks = patches.map(({ arquivo, original, patched }) => {
       const diff    = generateDiff(original, patched, arquivo);
-      const content = patched.length > MAX_FILE_BYTES
-        ? windowContent(original, patched, 120)
-        : patched;
+      const content = windowContent(original, patched, 120);
       const diffPart = diff ? `[DIFF]\n${diff}\n[/DIFF]\n\n` : '';
       return `${diffPart}[${arquivo}]\n${content}`;
     });
