@@ -122,28 +122,65 @@
 | Blocos `[DIFF]` separados por arquivo | §56 | 1 bloco combinado = 1 diagnóstico | A: 67% → 100% |
 | `esperado` com valores do diff | §56 | Palavras subjetivas são flaky | B15,B17: flaky → estável |
 | Verificação prévia ALL_PASS | §57 | Patches inválidos causavam falhas espúrias | V3: 100% Run 1 |
+| Metodologia consolidada §58 | §58 | NIGHTMARE bugs invisíveis/async/estado | V4: 100% Run 1 |
 
 ---
 
-## Impacto Combinado (V1 + V2 + V3)
+## Stress Test V4 — 15/15 PASS (100%) ✅ PRIMEIRO RUN
 
-| Métrica | Antes §53 | V1 (§53) | V2 (§53+§55+§56) | V3 (§57) |
-|---------|-----------|----------|------------------|----------|
-| Taxa de diagnóstico correto | 20% | 100% (10/10) | 100% (15/15) | 100% (15/15) |
-| Alucinações detectadas | ~8/10 | 0/10 | 0/15 | 0/15 |
-| Cobertura de tipos de bug | JS único | JS único | JS + CSS + Backend | + Runtime + API + Segurança |
-| Runs para atingir 100% | — | 3 | 5 | **1** |
+**Data:** 2026-06-06  
+**Script:** `scripts/stress-test-v4-vision-core.js`  
+**Dashboard:** http://localhost:3102  
+**Relatório:** `docs/STRESS-TEST-V4-CERTIFICATION.md`
+
+### Histórico de Iterações (V4)
+
+| Run | PASS | Taxa | Observação |
+|---|---|---|---|
+| **Run 1** | **15/15** | **100%** | Metodologia ALL_PASS consolidada — zero ajustes |
+
+### Cenários Certificados (V4)
+
+| ID | Bloco | Dificuldade | Arquivo | Bug | Status |
+|---|---|---|---|---|---|
+| STRESS-41 | H | NIGHTMARE | feedService.js | `const selected` shadow no loop | ✅ PASS |
+| STRESS-42 | H | NIGHTMARE | hermesService.js | `.slice(1,6)` off-by-one | ✅ PASS |
+| STRESS-43 | H | NIGHTMARE | feedService.js | `item.category = 'hardware'` atribuição muta itens | ✅ PASS |
+| STRESS-44 | H | NIGHTMARE | hermesService.js | `'' + score + 1` → scores viram strings | ✅ PASS |
+| STRESS-45 | H | EXPERT | feedService.js | `items.sort()` sem spread — muta original | ✅ PASS |
+| STRESS-46 | I | NIGHTMARE | feedService.js | `readCache()` sem await — sempre fallback | ✅ PASS |
+| STRESS-47 | I | NIGHTMARE | gameCoverService.js | `Promise.all` vs `allSettled` — status nunca `'fulfilled'` | ✅ PASS |
+| STRESS-48 | I | EXPERT | feedService.js | catch swallowing → status `ok` em erros | ✅ PASS |
+| STRESS-49 | I | EXPERT | imageService.js | `return` omitido em `.then` — chain quebrada | ✅ PASS |
+| STRESS-50 | I | NIGHTMARE | feedService.js | `persist()` fire-and-forget sem await | ✅ PASS |
+| STRESS-51 | J | NIGHTMARE | gameCoverService.js | `SOURCE_TIERS.get` sem `\|\| 9` → NaN | ✅ PASS |
+| STRESS-52 | J | EXPERT | hermesCron.js | `const jobStarted` local shadow | ✅ PASS |
+| STRESS-53 | J | NIGHTMARE | feedService.js | `enrichedCount` em módulo — estado compartilhado | ✅ PASS |
+| STRESS-54 | J | EXPERT | feedService.js | `push()` em vez de spread — muta parâmetro | ✅ PASS |
+| STRESS-55 | J | NIGHTMARE | refreshScheduler.js | `scheduledTask.stop()` removido — cron acumula | ✅ PASS |
 
 ---
 
-## Placar Geral (V1 + V2 + V3)
+## Impacto Combinado (V1 + V2 + V3 + V4)
+
+| Métrica | Antes §53 | V1 (§53) | V2 (+§55+§56) | V3 (§57) | V4 (§58) |
+|---------|-----------|----------|---------------|----------|----------|
+| Taxa de diagnóstico correto | 20% | 100% (10/10) | 100% (15/15) | 100% (15/15) | 100% (15/15) |
+| Alucinações detectadas | ~8/10 | 0/10 | 0/15 | 0/15 | 0/15 |
+| Cobertura de tipos de bug | JS único | JS único | JS+CSS+Backend | +Runtime+API+Seg | +Shadow+Async+Estado |
+| Runs para atingir 100% | — | 3 | 5 | **1** | **1** |
+
+---
+
+## Placar Geral (V1 + V2 + V3 + V4)
 
 | Suite | Cenários | PASS | Taxa | Runs para 100% |
 |---|---|---|---|---|
 | V1 | 10 | 10/10 | 100% | Run 3 |
 | V2 | 15 | 15/15 | 100% | Run 5 |
 | V3 | 15 | 15/15 | 100% | **Run 1** |
-| **Total** | **40** | **40/40** | **100%** | — |
+| V4 | 15 | 15/15 | 100% | **Run 1** |
+| **Total** | **55** | **55/55** | **100%** | — |
 
 ---
 
@@ -169,3 +206,4 @@ Relatórios:
 - V1: `docs/STRESS-TEST-RESULTS.md` / `.json`
 - V2: `docs/STRESS-TEST-V2-RESULTS.md` / `.json`
 - V3: `docs/STRESS-TEST-V3-RESULTS.md` / `docs/STRESS-TEST-V3-CERTIFICATION.md`
+- V4: `docs/STRESS-TEST-V4-RESULTS.md` / `docs/STRESS-TEST-V4-CERTIFICATION.md`

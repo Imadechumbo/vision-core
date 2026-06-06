@@ -3752,9 +3752,8 @@ Todos os 3 testes passam. Executor humano confirma e fecha gate.
 
 ## §58 — Stress Test V4: Bugs Invisíveis, Async/Promise e Estado/Memória
 
-**Status:** 🔵 CRIADO — execução pendente  
+**Status:** ✅ CERTIFICADO 15/15 (100%) — Run 1  
 **Data:** 2026-06-06  
-**Commit:** pendente  
 **Script:** `scripts/stress-test-v4-vision-core.js`  
 **Dashboard:** http://localhost:3102
 
