@@ -26,6 +26,7 @@ Usuário conversa
   → Multi-DIFF por arquivo   (bloco separado por arquivo, while loop — §56)
   → Stress Test V3           (15/15 PASS Run 1 — runtime/dados/segurança — §57)
   → Stress Test V4           (15 cenários EXPERT/NIGHTMARE — bugs invisíveis/async/estado — §58)
+  → SF-SPEC-LIBRARY + SF Stress Test (90 specs + 15 cenários SF segurança/compliance — §59)
 ```
 
 ### Módulos canônicos obrigatórios
@@ -3789,4 +3790,56 @@ Metodologia ALL_PASS antes do commit (herdada de V3):
 - Bloco H: bugs produzem output errado sem erro — LLM precisa inferir lógica incorreta
 - Bloco I: bugs Promise/async — LLM precisa reconhecer padrões async incorretos
 - Bloco J: bugs de estado/escopo — LLM precisa rastrear escopo de variáveis
+
+---
+
+## §59 — SF-SPEC-LIBRARY + Stress Test SF: Software Factory Compliance
+
+**Status:** ✅ IMPLEMENTADO  
+**Data:** 2026-06-06  
+**Spec:** `docs/SF-SPEC-LIBRARY.md`  
+**Script:** `scripts/stress-test-sf-vision-core.js`  
+**Dashboard:** http://localhost:3103
+
+### Objetivo
+
+Criar biblioteca canônica de specs da Software Factory (9 módulos SF-01 a SF-09)
+e stress test de 15 cenários testando diagnóstico de problemas de segurança,
+compliance e integração cross-módulo.
+
+### SF-SPEC-LIBRARY — 90 specs + 30 cross-module
+
+| Grupo | Specs | Cobertura |
+|-------|-------|-----------|
+| SF-01 a SF-09 | 10 por módulo = 90 | Happy path, edge cases, security gates |
+| SF-INT-001 a 010 | 10 integração | Estado cross-módulo, cadeia completa |
+| SF-SEC-001 a 010 | 10 security wall | 11 capacidades sempre false |
+| SF-LLM-001 a 010 | 10 qualidade LLM | Outputs consistentes e distintos |
+
+### 15 Cenários SF (3 Blocos)
+
+| Bloco | ID | Dific. | Módulo | Bug |
+|-------|----|--------|--------|-----|
+| K — Módulos | SF-STRESS-01 | HARD | SF-03 | Compositor sem restrições de autoridade |
+| K — Módulos | SF-STRESS-02 | HARD | SF-05 | file_creation_allowed=true no preview |
+| K — Módulos | SF-STRESS-03 | EXPERT | SF-06 | Pacote com `rm -rf` — comando destrutivo |
+| K — Módulos | SF-STRESS-04 | EXPERT | SF-08 | pass_gold_real_claimed=true no frontend |
+| K — Módulos | SF-STRESS-05 | HARD | SF-02 | Template ativo sem SF-01 configurado |
+| L — Security | SF-STRESS-06 | EXPERT | SF-07 | Recibo contraditório production_touched=true + exec=false |
+| L — Security | SF-STRESS-07 | NIGHTMARE | SF-09 | saas_signup_enabled=true injetado |
+| L — Security | SF-STRESS-08 | HARD | SF-03 | Worker Humano recebe prompt técnico bash |
+| L — Security | SF-STRESS-09 | EXPERT | SF-04 | Pacote com ANTHROPIC_API_KEY real exposta |
+| L — Security | SF-STRESS-10 | NIGHTMARE | SF-08 | deploy_allowed=true nas 11 capacidades |
+| M — Integração | SF-STRESS-11 | HARD | SF-02 | Blueprint sem estrutura de pastas |
+| M — Integração | SF-STRESS-12 | EXPERT | SF-03 | Compositor sem contexto SF-01 |
+| M — Integração | SF-STRESS-13 | EXPERT | SF-SEC | Output LLM com JWT token real |
+| M — Integração | SF-STRESS-14 | NIGHTMARE | SF-06 | backend_write_allowed=true no pacote |
+| M — Integração | SF-STRESS-15 | NIGHTMARE | SF-07 | Engineer gate COMPLETO com 8/12 confirmações |
+
+### Técnica SF
+
+- Sem ZIP externo — conteúdo sintético por módulo SF
+- original/patched por cenário → diff contextual `[DIFF]...[/DIFF]`
+- Vision Core diagnostica problema de segurança/compliance no output SF
+- `esperado` com termos em português alinhados às violações da SF-SPEC-LIBRARY
 
