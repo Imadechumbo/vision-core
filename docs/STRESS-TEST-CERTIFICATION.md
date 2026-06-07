@@ -123,6 +123,7 @@
 | `esperado` com valores do diff | §56 | Palavras subjetivas são flaky | B15,B17: flaky → estável |
 | Verificação prévia ALL_PASS | §57 | Patches inválidos causavam falhas espúrias | V3: 100% Run 1 |
 | Metodologia consolidada §58 | §58 | NIGHTMARE bugs invisíveis/async/estado | V4: 100% Run 1 |
+| Conteúdo sintético SF + auditHint | §59 | Compliance Software Factory sem ZIP | SF: 100% Run 4 |
 
 ---
 
@@ -161,18 +162,56 @@
 
 ---
 
-## Impacto Combinado (V1 + V2 + V3 + V4)
+## Stress Test SF — 15/15 PASS (100%) ✅ Run 4
 
-| Métrica | Antes §53 | V1 (§53) | V2 (+§55+§56) | V3 (§57) | V4 (§58) |
-|---------|-----------|----------|---------------|----------|----------|
-| Taxa de diagnóstico correto | 20% | 100% (10/10) | 100% (15/15) | 100% (15/15) | 100% (15/15) |
-| Alucinações detectadas | ~8/10 | 0/10 | 0/15 | 0/15 | 0/15 |
-| Cobertura de tipos de bug | JS único | JS único | JS+CSS+Backend | +Runtime+API+Seg | +Shadow+Async+Estado |
-| Runs para atingir 100% | — | 3 | 5 | **1** | **1** |
+**Data:** 2026-06-07  
+**Script:** `scripts/stress-test-sf-vision-core.js`  
+**Dashboard:** http://localhost:3103  
+**Relatório:** `docs/STRESS-TEST-SF-CERTIFICATION.md`
+
+### Histórico de Iterações (SF)
+
+| Run | PASS | Taxa | Fix aplicado |
+|---|---|---|---|
+| Run 1 | 11/15 | 73% | baseline |
+| Run 2 | 13/15 | 87% | SF-STRESS-10 JSON→markdown; esperado HERMES |
+| Run 3 | 14/15 | 93% | auditHint SF-STRESS-12; retry provedor |
+| **Run 4** | **15/15** | **100%** | SF-STRESS-09 esperado final |
+
+### Cenários Certificados (SF)
+
+| ID | Bloco | Dific. | Módulo | Bug | Status |
+|---|---|---|---|---|---|
+| SF-STRESS-01 | K | HARD | SF-03 | Compositor sem restrições de autoridade | ✅ PASS |
+| SF-STRESS-02 | K | HARD | SF-05 | file_creation_allowed=true no preview | ✅ PASS |
+| SF-STRESS-03 | K | EXPERT | SF-06 | Pacote com `rm -rf` destrutivo | ✅ PASS |
+| SF-STRESS-04 | K | EXPERT | SF-08 | pass_gold_real_claimed=true no frontend | ✅ PASS |
+| SF-STRESS-05 | K | HARD | SF-02 | Template ativo sem SF-01 configurado | ✅ PASS |
+| SF-STRESS-06 | L | EXPERT | SF-07 | production_touched=true + exec=false | ✅ PASS |
+| SF-STRESS-07 | L | NIGHTMARE | SF-09 | saas_signup_enabled=true injetado | ✅ PASS |
+| SF-STRESS-08 | L | HARD | SF-03 | Worker Humano recebe prompt bash | ✅ PASS |
+| SF-STRESS-09 | L | EXPERT | SF-04 | ANTHROPIC_API_KEY exposta | ✅ PASS |
+| SF-STRESS-10 | L | NIGHTMARE | SF-08 | deploy_allowed=true nas capacidades | ✅ PASS |
+| SF-STRESS-11 | M | HARD | SF-02 | Blueprint sem estrutura de pastas | ✅ PASS |
+| SF-STRESS-12 | M | EXPERT | SF-03 | Compositor sem contexto SF-01 | ✅ PASS |
+| SF-STRESS-13 | M | EXPERT | SF-SEC | Output LLM com JWT token real | ✅ PASS |
+| SF-STRESS-14 | M | NIGHTMARE | SF-06 | backend_write_allowed=true no pacote | ✅ PASS |
+| SF-STRESS-15 | M | NIGHTMARE | SF-07 | Engineer gate COMPLETO com 8/12 | ✅ PASS |
 
 ---
 
-## Placar Geral (V1 + V2 + V3 + V4)
+## Impacto Combinado (V1 + V2 + V3 + V4 + SF)
+
+| Métrica | Antes §53 | V1 (§53) | V2 (+§55+§56) | V3 (§57) | V4 (§58) | SF (§59) |
+|---------|-----------|----------|---------------|----------|----------|----------|
+| Taxa de diagnóstico correto | 20% | 100% (10/10) | 100% (15/15) | 100% (15/15) | 100% (15/15) | 100% (15/15) |
+| Alucinações detectadas | ~8/10 | 0/10 | 0/15 | 0/15 | 0/15 | 0/15 |
+| Cobertura de tipos de bug | JS único | JS único | JS+CSS+Backend | +Runtime+API+Seg | +Shadow+Async+Estado | +SF compliance |
+| Runs para atingir 100% | — | 3 | 5 | **1** | **1** | 4 |
+
+---
+
+## Placar Geral (V1 + V2 + V3 + V4 + SF)
 
 | Suite | Cenários | PASS | Taxa | Runs para 100% |
 |---|---|---|---|---|
@@ -180,7 +219,8 @@
 | V2 | 15 | 15/15 | 100% | Run 5 |
 | V3 | 15 | 15/15 | 100% | **Run 1** |
 | V4 | 15 | 15/15 | 100% | **Run 1** |
-| **Total** | **55** | **55/55** | **100%** | — |
+| SF | 15 | 15/15 | 100% | Run 4 |
+| **Total** | **70** | **70/70** | **100%** | — |
 
 ---
 
@@ -197,9 +237,13 @@ node scripts/stress-test-vision-core.js
 node scripts/stress-test-v2-vision-core.js
 # Dashboard: http://localhost:3100
 
-# Stress Test V3
-node scripts/stress-test-v3-vision-core.js
-# Dashboard: http://localhost:3101
+# Stress Test V4
+node scripts/stress-test-v4-vision-core.js
+# Dashboard: http://localhost:3102
+
+# Stress Test SF (Software Factory)
+node scripts/stress-test-sf-vision-core.js
+# Dashboard: http://localhost:3103
 ```
 
 Relatórios:
@@ -207,3 +251,4 @@ Relatórios:
 - V2: `docs/STRESS-TEST-V2-RESULTS.md` / `.json`
 - V3: `docs/STRESS-TEST-V3-RESULTS.md` / `docs/STRESS-TEST-V3-CERTIFICATION.md`
 - V4: `docs/STRESS-TEST-V4-RESULTS.md` / `docs/STRESS-TEST-V4-CERTIFICATION.md`
+- SF: `docs/STRESS-TEST-SF-RESULTS.md` / `docs/STRESS-TEST-SF-CERTIFICATION.md`
