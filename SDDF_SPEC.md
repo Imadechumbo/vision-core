@@ -4357,3 +4357,60 @@ PatchEngine aplica patch
 </div>
 ```
 
+---
+
+## §69 — Roadmap V4/V5: Vision Core
+
+**Data:** 2026-06-11  
+**Status:** ROADMAP — visão de longo prazo, não escopo atual  
+**Regra:** cada conceito vira § específico SÓ quando houver necessidade concreta. Escopo Mínimo (§1) vigente.
+
+---
+
+### Primeira peça visível: Software Factory > Project Builder
+
+"MONTAR PROJETO DO ZERO" implementa Fase 1 (Descoberta & Planejamento) do conceito multi-projeto:
+
+| Elemento da UI | Conceito Vision Core |
+|---|---|
+| "SOFTWARE FACTORY LLM CONTROL" | Mission Intelligence Layer |
+| Tabs 01-09 (Descoberta → Roadmap) | 9 fases canônicas SDDF (§8) |
+| Hermes / Backend Agent / Frontend Agent / OpenSquad / Go Core Runner | Subnúcleos (Hermes RCA, OpenClaw, Aegis Prime, Go Core) |
+| Tipo / Stack / Orquestração | Adapter Contract (`detect_stack`) |
+
+**Status atual:** Fase 1 apenas — `LOCAL · SEM BACKEND · SEM API`. Exec Real BLOQUEADA, criação de arquivos BLOQUEADA, deploy BLOQUEADO, PASS GOLD REAL: NÃO (consistente com §6-9 e REGRA ABSOLUTA).
+
+---
+
+### O que já existe
+
+| Conceito | Equivalente Vision Core | Status |
+|---|---|---|
+| Hermes RCA | `backend/hermes-rca.js` (§49) | ✅ |
+| SDDF Truth / Gates | PASS GOLD Engine (§47) | ✅ |
+| Aegis | `aegis_ok` validation | ✅ parcial |
+| Stable Vault / rollback | `git checkout --` (vision-agent) | ✅ parcial |
+| Go Core (runtime truth) | `go-core/` v5.6.0 | ✅ |
+| Patch Planner / Applier | `patch-engine.js` (§48) | ✅ |
+| Memory Layer | Obsidian vault (§18.3) | 🟡 parcial |
+| Project Builder (Fase 1) | MONTAR PROJETO DO ZERO | ✅ UI existe |
+
+---
+
+### O que é visão futura (V4/V5 — não implementar agora)
+
+| Conceito | Gap atual |
+|---|---|
+| Multi-projeto / Project Registry | Project Builder não persiste registry |
+| Fases 2-9 do Project Builder conectadas | hoje BLOQUEADAS por design (§6-9) |
+| Adapters por stack / cloud / VCS | só GitHub (ver §62) |
+| Cause Chain Engine | Hermes não monta cadeia causal estruturada |
+| Runtime Orchestration (Docker / Portainer) | EB single-instance |
+| Strategy scoring / aprendizado | inexistente |
+
+---
+
+### Princípio de incorporação
+
+Cada conceito vira § específico SÓ quando houver necessidade concreta (ex: §62 já é primeiro passo de "Adapters"). Não importar arquitetura inteira de uma vez.
+
