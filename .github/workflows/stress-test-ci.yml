@@ -1,0 +1,197 @@
+name: Vision Core — Stress Test CI (V1–V4 + SF + FP)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 0'   # domingo 03:00 UTC
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  stress-tests:
+    name: 🧪 Stress Tests V1–V4 + SF + FP
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_PAT_TECHNETGAME }}
+      NODE_TLS_REJECT_UNAUTHORIZED: '0'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT_TECHNETGAME }}
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Stress Test V1
+        continue-on-error: true
+        run: node scripts/stress-test-vision-core.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT_TECHNETGAME }}
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+
+      - name: Run Stress Test V2
+        continue-on-error: true
+        run: node scripts/stress-test-v2-vision-core.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT_TECHNETGAME }}
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+
+      - name: Run Stress Test V3
+        continue-on-error: true
+        run: node scripts/stress-test-v3-vision-core.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT_TECHNETGAME }}
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+
+      - name: Run Stress Test V4
+        continue-on-error: true
+        run: node scripts/stress-test-v4-vision-core.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT_TECHNETGAME }}
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+
+      - name: Run Stress Test SF
+        continue-on-error: true
+        run: node scripts/stress-test-sf-vision-core.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT_TECHNETGAME }}
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+
+      - name: Run Stress Test FP (Falso Positivo)
+        continue-on-error: true
+        run: node scripts/stress-test-fp-vision-core.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT_TECHNETGAME }}
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+
+      - name: Aggregate results and gate
+        id: aggregate
+        run: |
+          node - <<'EOF'
+          import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+          import { join } from 'path';
+
+          const ROOT = process.cwd();
+          const docsDir = join(ROOT, 'docs');
+
+          // Map: suite label → json filename (V1 may not produce JSON)
+          const SUITES = [
+            { label: 'V1',  file: 'STRESS-TEST-V1-RESULTS.json',  expected: 10 },
+            { label: 'V2',  file: 'STRESS-TEST-V2-RESULTS.json',  expected: 10 },
+            { label: 'V3',  file: 'STRESS-TEST-V3-RESULTS.json',  expected: 15 },
+            { label: 'V4',  file: 'STRESS-TEST-V4-RESULTS.json',  expected: 15 },
+            { label: 'SF',  file: 'STRESS-TEST-SF-RESULTS.json',  expected: 15 },
+            { label: 'FP',  file: 'STRESS-TEST-FP-RESULTS.json',  expected: 10 },
+          ];
+
+          let totalPass = 0;
+          let totalFail = 0;
+          const rows    = [];
+          const failures = [];
+
+          for (const suite of SUITES) {
+            const filePath = join(docsDir, suite.file);
+            let pass = 0, fail = 0;
+            try {
+              const raw  = readFileSync(filePath, 'utf8');
+              const data = JSON.parse(raw);
+              const cenarios = data.cenarios || [];
+              pass = cenarios.filter(c => c.passou).length;
+              fail = cenarios.filter(c => !c.passou).length;
+
+              if (fail > 0) {
+                const failList = cenarios
+                  .filter(c => !c.passou)
+                  .map(c => `    ❌ ${c.id} — ${c.descricao}`);
+                failures.push(`[${suite.label}] ${fail} FAIL:\n${failList.join('\n')}`);
+              }
+            } catch (e) {
+              fail = suite.expected;
+              failures.push(`[${suite.label}] JSON ausente ou inválido: ${e.message}`);
+            }
+            totalPass += pass;
+            totalFail += fail;
+            rows.push(`| ${suite.label} | ${pass} | ${fail} | ${pass + fail} |`);
+          }
+
+          const total    = totalPass + totalFail;
+          const taxa     = total > 0 ? Math.round((totalPass / total) * 100) : 0;
+          const now      = new Date().toISOString();
+          const sha      = process.env.GITHUB_SHA || 'local';
+          const run      = process.env.GITHUB_RUN_NUMBER || '—';
+          const ref      = process.env.GITHUB_REF_NAME || '—';
+
+          const status   = totalFail === 0 ? '✅ PASS GOLD' : `❌ FAIL (${totalFail} cenários)`;
+
+          const md = [
+            `# Vision Core — CI Last Run`,
+            ``,
+            `**Data:** ${now}`,
+            `**Status:** ${status}`,
+            `**Total:** ${totalPass}/${total} PASS (${taxa}%)`,
+            `**Run:** #${run} | **Ref:** ${ref} | **SHA:** ${sha.slice(0,8)}`,
+            ``,
+            `## Resultados por suíte`,
+            ``,
+            `| Suíte | PASS | FAIL | Total |`,
+            `|-------|------|------|-------|`,
+            ...rows,
+            `| **Total** | **${totalPass}** | **${totalFail}** | **${total}** |`,
+            ``,
+          ].join('\n');
+
+          mkdirSync(docsDir, { recursive: true });
+          writeFileSync(join(docsDir, 'CI-LAST-RUN.md'), md, 'utf8');
+
+          console.log('\n' + md);
+
+          if (failures.length > 0) {
+            console.log('\n══ CENÁRIOS COM FALHA ══');
+            failures.forEach(f => console.log(f));
+          }
+
+          // Exit code gate
+          if (totalFail > 0) {
+            console.error(`\n🚨 GATE FAIL: ${totalFail} cenário(s) reprovado(s). Esperado 0 falhas.`);
+            process.exit(1);
+          } else {
+            console.log(`\n🏆 GATE PASS: ${totalPass}/${total} PASS GOLD`);
+          }
+          EOF
+        shell: node {0}
+
+      - name: Commit CI-LAST-RUN.md
+        if: always()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/CI-LAST-RUN.md docs/STRESS-TEST-*-RESULTS.json docs/STRESS-TEST-*-RESULTS.md || true
+          git diff --cached --quiet || git commit -m "ci: auto-update CI-LAST-RUN + RESULTS [skip ci]"
+          git push || true
+
+      - name: Upload RESULTS artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stress-test-results-${{ github.run_number }}
+          path: docs/STRESS-TEST-*-RESULTS.*
+          if-no-files-found: warn
+          retention-days: 90
