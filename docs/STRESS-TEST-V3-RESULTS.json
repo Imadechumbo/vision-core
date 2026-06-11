@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-11T18:40:26.200Z",
+  "timestamp": "2026-06-11T20:42:10.628Z",
   "results": [
     {
       "id": "STRESS-26",
@@ -16,12 +16,11 @@
       "palavras_encontradas": [
         "clearTimeout",
         "timer",
-        "abort",
         "finally"
       ],
       "passou": true,
-      "tempo_ms": 19834,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Linha clearTimeout(timer) foi comentada no bloco finally da função fetchJson, impedindo o cancelamento do timer de timeout. Isso causa vazamento de recursos e possíveis disparos do AbortController após a resposta já ter sido recebida, levando a erros assíncronos e comportamento imprevisível.\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"    // clearTimeout(timer); // bug: timer não cancelado\",\n    \"replace\": \"    clearTimeout(timer);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: A remoção do `clearTimeout(timer)` no bloco `finally` impede que o timer criado pelo `setTimeout` seja cancelado, causando vazamento de recursos e potencial erro ao chamar `controller.abort()` após a resposta já ter sido processada.\n\nSCANNER\n- Arquivo: backend/src/services/gameCoverService.js\n- Linha afetada: linha dentro do bloco `finally` da função `fetchJson` (por volta da linha 286-287)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas `backend/src/services/gameCoverService.js`\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.\n\n```diff\n    if (!response.ok) throw new Error(`HTTP ${response.status}`);\n    return await response.json();\n  } finally {\n-    // clearTimeout(timer); // bug: timer não cancelado\n+    clearTimeout(timer);\n  }\n```",
+      "tempo_ms": 12520,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A linha clearTimeout(timer) foi comentada no bloco finally da função fetchJson, impedindo o cancelamento do timer de timeout. Isso pode causar vazamento de recursos (timers não limpos) e comportamento inesperado se a requisição exceder o timeout.\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"    // clearTimeout(timer); // bug: timer não cancelado\",\n    \"replace\": \"    clearTimeout(timer);\"\n  },\n  \"confidence\": 0.98,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nBug introduzido ao comentar o `clearTimeout(timer)` no `finally`. A restauração para a linha original resolve o problema.\n\nHERMES\n- RCA: `clearTimeout(timer)` foi comentado, impedindo a limpeza do timer.\n\nSCANNER\n- Arquivo: `backend/src/services/gameCoverService.js`\n- Linha afetada: `    // clearTimeout(timer); // bug: timer não cancelado`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas `backend/src/services/gameCoverService.js`\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.98\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.\n\n```diff\n     if (!response.ok) throw new Error(`HTTP ${response.status}`);\n     return await response.json();\n   } finally {\n-    // clearTimeout(timer); // bug: timer não cancelado\n+    clearTimeout(timer);\n   }\n```",
       "erro": null
     },
     {
@@ -42,8 +41,8 @@
         "fallback"
       ],
       "passou": true,
-      "tempo_ms": 26181,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"DIFF mostra que o catch (e) { throw new Error(...) } substituiu o catch { return fallback }. Agora quando o cache não existe (fs.readFile lança erro porque arquivo não foi criado ainda em primeira execução) a função readJson joga exceção em vez de retornar fallback. Isso quebra readCache, readImageCache e readTranslationCache na primeira execução sem cache.\",\n  \"file\": \"backend/src/services/cacheService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  } catch (e) {\\n    throw new Error(`Cache read failed: ${e.message}`);\\n  }\",\n    \"replace\": \"  } catch {\\n    return fallback;\\n  }\"\n  },\n  \"confidence\": 0.97,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: remoção do fallback no catch do readJson por throw quebra o site na primeira inicialização sem cache\n\nSCANNER\n- Arquivo: backend/src/services/cacheService.js\n- Linha afetada: 17-19 (catch original vs introduzido)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/services/cacheService.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.97\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 4875,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"O catch foi alterado de retornar fallback silenciosamente para lançar uma exceção, quebrando todas as funções que dependiam do fallback (readCache, readImageCache, readTranslationCache).\",\n  \"file\": \"backend/src/services/cacheService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  } catch (e) {\\n    throw new Error(`Cache read failed: ${e.message}`);\\n  }\",\n    \"replace\": \"  } catch {\\n    return fallback;\\n  }\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: O catch foi alterado de retornar fallback para lançar exceção, quebrando fallback silencioso.\n\nSCANNER\n- Arquivo: backend/src/services/cacheService.js\n- Linha afetada: 17-19 (catch block)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/services/cacheService.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
       "erro": null
     },
     {
@@ -59,11 +58,13 @@
         "animation"
       ],
       "palavras_encontradas": [
-        "260"
+        "setTimeout",
+        "260",
+        "delay"
       ],
-      "passou": false,
-      "tempo_ms": 20933,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Timeout reduzido de 260ms para 0ms no hideEmptyContainer quebra animação de recolhimento (feed-block-collapsing), causando desaparecimento instantâneo do container e falha visual.\",\n  \"file\": \"front/assets/js/feeds.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"        }, 0);\",\n    \"replace\": \"        }, 260);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nRCA: O diff mostra que o timeout foi alterado de 260ms para 0ms. A transição CSS de `feed-block-collapsing` perde tempo para executar, resultando em ocultação abrupta e sem suavidade.\n\nHERMES\n- RCA: Timeout do hideEmptyContainer foi reduzido para 0ms, impedindo animação de recolhimento.\n\nSCANNER\n- Arquivo: front/assets/js/feeds.js\n- Linha afetada: linha com `}, 0);` dentro de `hideEmptyContainer`.\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/feeds.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para reverter o timeout para 260ms.",
+      "passou": true,
+      "tempo_ms": 22224,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"setTimeout de 260ms para ocultação do container foi reduzido para 0ms, removendo o delay que permitia a animação CSS de collapse ser concluída antes de ocultar o elemento. Isso causa uma transição abrupta e possível falha visual na animação de collapse do feed.\",\n  \"file\": \"front/assets/js/feeds.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"        }, 0);\\n    },\\n\\n    showContainer(target) {\",\n    \"replace\": \"        }, 260);\\n    },\\n\\n    showContainer(target) {\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: Delay de 260ms para ocultação do container foi reduzido para 0ms, quebrando a animação CSS de collapse\n\nSCANNER\n- Arquivo: front/assets/js/feeds.js\n- Linha afetada: setTimeout com delay alterado de 260 para 0\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/feeds.js, linha 482\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
       "erro": null
     },
     {
@@ -78,10 +79,14 @@
         "invertido",
         "b.confidence"
       ],
-      "palavras_encontradas": [],
-      "passou": false,
-      "tempo_ms": 31564,
-      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15060 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "palavras_encontradas": [
+        "confidence",
+        "sort",
+        "b.confidence"
+      ],
+      "passou": true,
+      "tempo_ms": 6029,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"O sort em rankGameCoverCandidates inverteu a ordem de classificação por confidence. A linha original (correta) ordenava decrescente (b.confidence - a.confidence). A alteração introduziu ordenação crescente (a.confidence - b.confidence), fazendo com que candidatos com menor confiança sejam priorizados, comprometendo a seleção da melhor capa.\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return a.confidence - b.confidence;\",\n    \"replace\": \"return b.confidence - a.confidence;\"\n  },\n  \"confidence\": 0.98,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO diff mostra que a linha original (com `-`) era a correta, e a nova linha (`+`) inverteu a subtração, fazendo a ordenação priorizar capas com menor confiança. O patch restaura o comportamento esperado.\n\nHERMES\n- RCA: Inversão da ordenação de confidence no sort dentro de `rankGameCoverCandidates` — prioriza capas de baixa confiança.\n\nSCANNER\n- Arquivo: `backend/src/services/gameCoverService.js`\n- Linha afetada: `return a.confidence - b.confidence;` (linha ~245)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas `backend/src/services/gameCoverService.js`\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.98\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
       "erro": null
     },
     {
@@ -96,10 +101,15 @@
         "init",
         "config"
       ],
-      "palavras_encontradas": [],
-      "passou": false,
-      "tempo_ms": 31171,
-      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2804 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "palavras_encontradas": [
+        "__TNG_CONFIG_READY__",
+        "await",
+        "init",
+        "config"
+      ],
+      "passou": true,
+      "tempo_ms": 30940,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Await em __TNG_CONFIG_READY__ foi comentado (linha +), removendo sincronização com configuração antes do init(). Isso causa inicialização prematura do TechNetGameFeeds sem que config esteja pronta, gerando estado inconsistente no site.\",\n  \"file\": \"front/assets/js/feeds.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"// await (window.__TNG_CONFIG_READY__ || Promise.resolve()); // bug: init sem esperar config\",\n    \"replace\": \"await (window.__TNG_CONFIG_READY__ || Promise.resolve());\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: Await em `__TNG_CONFIG_READY__` comentado, causando init sem configuração pronta.\n\nSCANNER\n- Arquivo: front/assets/js/feeds.js\n- Linha afetada: 724 (no diff, linha + com `// await...`)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/feeds.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
       "erro": null
     },
     {
@@ -116,12 +126,13 @@
       ],
       "palavras_encontradas": [
         "nwes",
+        "typo",
         "404",
         "latest"
       ],
       "passou": true,
-      "tempo_ms": 4731,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Digitação incorreta no path da API: '/api/nwes/latest?limit=18' em vez de '/api/news/latest?limit=18' — a rota '/api/nwes/' não existe no servidor, causando erro 404 e falha na seção 'Últimas notícias' da página inicial.\",\n  \"file\": \"front/assets/js/feeds.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"this.fetchJson('/api/nwes/latest?limit=18')\",\n    \"replace\": \"this.fetchJson('/api/news/latest?limit=18')\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: Path da API '/api/nwes/' com 'w' no lugar de 'news' — rota inexistente no servidor.\n\nSCANNER\n- Arquivo: front/assets/js/feeds.js\n- Linha afetada: linha com `this.fetchJson('/api/nwes/latest?limit=18')` (dentro de `fetchHomePayloadFallback`)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/feeds.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 11315,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Typo na URL da API: '/api/nwes/latest?limit=18' em vez de '/api/news/latest?limit=18' na função fetchHomePayloadFallback() - linha 94 do diff (dentro do arquivo feeds.js). Causa falha ao carregar últimas notícias na página inicial.\",\n  \"file\": \"front/assets/js/feeds.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"this.fetchJson('/api/nwes/latest?limit=18'),\",\n    \"replace\": \"this.fetchJson('/api/news/latest?limit=18'),\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES  \nRCA: Typo corrompe a URL da rota /api/news/latest, gerando erro 404 e bloco de notícias vazio.\n\nSCANNER  \nArquivo: front/assets/js/feeds.js  \nLinha afetada: 94 (no diff, dentro do array de Promise.allSettled)\n\nAEGIS  \ndeploy_allowed: false  \nproduction_touched: false  \nEscopo: apenas front/assets/js/feeds.js\n\nDECISÃO: NEEDS_FIX  \nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
       "erro": null
     },
     {
@@ -143,8 +154,8 @@
         "limit"
       ],
       "passou": true,
-      "tempo_ms": 7533,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"safeLimit() sempre retorna 0 devido a Math.min(parsed, 0), que para qualquer parsed>0 resulta em 0. Isso faz todas as rotas que usam esse limit retornarem 0 itens (ex: /latest, /month, /game-search, /category, /source). Causa: erro humano ao alterar o segundo argumento de 120 para 0.\",\n  \"file\": \"backend/src/routes/newsRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  return Math.min(parsed, 0);\",\n    \"replace\": \"  return Math.min(parsed, 120);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\n**Diagnóstico em 1‑3 linhas:**  \nA função `safeLimit` no arquivo `backend/src/routes/newsRoutes.js` foi alterada para usar `Math.min(parsed, 0)`, o que força o limite a ser sempre 0. Isso faz com que todas as rotas que dependem desse limite (como `/latest`, `/month`, etc.) retornem arrays vazios ou resultados truncados — o bug do site.\n\n**Relatório de Agentes:**\n\nHERMES  \n- RCA: `Math.min(parsed, 0)` retorna 0 para qualquer parsed positivo, quebrando o limite de itens.\n\nSCANNER  \n- Arquivo: `backend/src/routes/newsRoutes.js`  \n- Linha afetada: linha 8 (`return Math.min(parsed, 0);`)  \n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas `backend/src/routes/newsRoutes.js`  \n\nDECISÃO: NEEDS_FIX  \nConfiança: 0.95  \n\nPróximo passo: Aplicar o patch alterando `Math.min(parsed, 0)` para `Math.min(parsed, 120)`.",
+      "tempo_ms": 12885,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"safeLimit retorna Math.min(parsed, 0) que sempre retorna 0 para qualquer parsed positivo, causando limit=0 em todas as queries, resultando em zero resultados exibidos no site. O bug foi introduzido ao mudar o segundo argumento de 120 para 0.\",\n  \"file\": \"backend/src/routes/newsRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return Math.min(parsed, 0);\",\n    \"replace\": \"return Math.min(parsed, 120);\"\n  },\n  \"confidence\": 1.0,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: safeLimit retorna 0 para qualquer valor positivo devido a Math.min(parsed, 0), zerando limite de todas as rotas que usam a função.\n\nSCANNER\n- Arquivo: backend/src/routes/newsRoutes.js\n- Linha afetada: `return Math.min(parsed, 0);` (linha 10)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/routes/newsRoutes.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 1.0\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
       "erro": null
     },
     {
@@ -165,8 +176,8 @@
         "0"
       ],
       "passou": true,
-      "tempo_ms": 12365,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"COVER_CACHE_TTL_MS foi alterado de 6 * 60 * 60 * 1000 (6h) para 0, desativando o cache e forçando requisições externas em cada chamada a resolveGameCover, causando lentidão e possíveis timeouts.\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"const COVER_CACHE_TTL_MS = Number(process.env.GAME_COVER_CACHE_TTL_MS || 0);\",\n    \"replace\": \"const COVER_CACHE_TTL_MS = Number(process.env.GAME_COVER_CACHE_TTL_MS || 6 * 60 * 60 * 1000);\"\n  },\n  \"confidence\": 0.98,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nPatch: restaurar TTL para 6 horas, valor original antes do bug.\n\nHERMES\n- RCA: TTL zerado (0) elimina cache de capas, gerando sobrecarga e lentidão no site.\n\nSCANNER\n- Arquivo: `backend/src/services/gameCoverService.js`\n- Linha afetada: linha ~10 (const COVER_CACHE_TTL_MS...)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas alteração no TTL de cache da service de capas\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.98\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 7633,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"COVER_CACHE_TTL_MS foi alterado de 6 horas (21600000 ms) para 0, desativando completamente o cache de capas de jogos. Isso causa requisições repetitivas às APIs externas (RAWG, SteamGridDB) em cada busca, levando a lentidão, timeout ou bloqueio por rate limit.\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"const COVER_CACHE_TTL_MS = Number(process.env.GAME_COVER_CACHE_TTL_MS || 0);\",\n    \"replace\": \"const COVER_CACHE_TTL_MS = Number(process.env.GAME_COVER_CACHE_TTL_MS || 6 * 60 * 60 * 1000);\"\n  },\n  \"confidence\": 0.98,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nBug introduzido no diff: `+const COVER_CACHE_TTL_MS = Number(process.env.GAME_COVER_CACHE_TTL_MS || 0);` — o fallback `0` anula o cache.\n\nHERMES\n- RCA: cache TTL zerado impede armazenamento temporário, causando chamadas repetitivas a APIs externas.\n\nSCANNER\n- Arquivo: backend/src/services/gameCoverService.js\n- Linha afetada: `const COVER_CACHE_TTL_MS = Number(process.env.GAME_COVER_CACHE_TTL_MS || 0);`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/services/gameCoverService.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.98\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
       "erro": null
     },
     {
@@ -187,8 +198,8 @@
         "b.score"
       ],
       "passou": true,
-      "tempo_ms": 10094,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Ordenação do ranking invertida na linha 176: .sort((a, b) => a.score - b.score) ordena em ordem ascendente (menor score primeiro), mas a ordenação correta é descendente (b.score - a.score) para que os agentes com maior relevância apareçam no topo do ranking.\",\n  \"file\": \"backend/src/services/hermesService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \".sort((a, b) => a.score - b.score);\",\n    \"replace\": \".sort((a, b) => b.score - a.score);\"\n  },\n  \"confidence\": 1.0,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES  \n- RCA: Ordenação ascendente no ranking causa exibição invertida – menor relevância aparece primeiro.\n\nSCANNER  \n- Arquivo: backend/src/services/hermesService.js  \n- Linha afetada: 176 (dentro de `calculateRanking`)\n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas ordenação em `calculateRanking`\n\nDECISÃO: NEEDS_FIX  \nConfiança: 1.0  \n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 3455,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A ordenação do ranking em calculateRanking foi invertida de decrescente (b.score - a.score) para crescente (a.score - b.score), fazendo com que agentes com maior score (mais relevantes) apareçam por último no relatório.\",\n  \"file\": \"backend/src/services/hermesService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"    .sort((a, b) => a.score - b.score);\",\n    \"replace\": \"    .sort((a, b) => b.score - a.score);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO sort deve ser decrescente para que o agente com maior score (mais notícias associadas) seja o primeiro no ranking. A alteração introduzida inverteu a ordem, causando exibição incorreta no site.\n\nHERMES\n- RCA: Ordenação invertida em calculateRanking — de decrescente para crescente.\n\nSCANNER\n- Arquivo: backend/src/services/hermesService.js\n- Linha afetada: 176 (sort atual: `a.score - b.score`)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/services/hermesService.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
       "erro": null
     },
     {
@@ -209,8 +220,8 @@
         "fanart"
       ],
       "passou": true,
-      "tempo_ms": 12761,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"hasBlockedSource retorna true para fontes não bloqueadas (inversão de lógica com ! externo) — linha 89 do diff, bug introduzido na alteração\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return !(source.includes('social') || source.includes('fanart') || type.includes('social') || type.includes('fanart'));\",\n    \"replace\": \"return source.includes('social') || source.includes('fanart') || type.includes('social') || type.includes('fanart');\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nA função `hasBlockedSource` foi invertida com um `!` externo, fazendo com que fontes confiáveis (steamgriddb, rawg) sejam consideradas bloqueadas, impedindo a seleção de capas e quebrando o site.\n\nHERMES\n- RCA: Inversão de lógica em `hasBlockedSource` — o `!` externo nega a condição original, bloqueando fontes permitidas.\n\nSCANNER\n- Arquivo: backend/src/services/gameCoverService.js\n- Linha afetada: 89 (retorno da função)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas `gameCoverService.js`\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 12508,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Função hasBlockedSource teve sua lógica invertida: agora retorna true para fontes não-bloqueadas e false para bloqueadas, causando bloqueio incorreto de fontes confiáveis e aceitação de fontes não confiáveis.\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return !(source.includes('social') || source.includes('fanart') || type.includes('social') || type.includes('fanart'));\",\n    \"replace\": \"return source.includes('social') || source.includes('fanart') || type.includes('social') || type.includes('fanart');\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES  \n- RCA: Inversão lógica na função `hasBlockedSource` — negação adicionada incorretamente.\n\nSCANNER  \n- Arquivo: `backend/src/services/gameCoverService.js`  \n- Linha afetada: 89 (função `hasBlockedSource`)\n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas `backend/src/services/gameCoverService.js`\n\nDECISÃO: NEEDS_FIX  \nConfiança: 0.95  \n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
       "erro": null
     },
     {
@@ -225,15 +236,11 @@
         "invertido",
         "origin"
       ],
-      "palavras_encontradas": [
-        "CORS",
-        "allowedOrigins",
-        "origin"
-      ],
-      "passou": true,
-      "tempo_ms": 12911,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"CORS middleware condição invertida na linha 56 de backend/src/app.js: trocou allowedOrigins.has(origin) por !allowedOrigins.has(origin), causando bloqueio de origens legítimas e liberação de origens não autorizadas.\",\n  \"file\": \"backend/src/app.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  if (origin && !allowedOrigins.has(origin)) {\",\n    \"replace\": \"  if (origin && allowedOrigins.has(origin)) {\"\n  },\n  \"confidence\": 1.0,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHermes RCA: condição invertida no middleware CORS — libera origens não autorizadas e bloqueia as autorizadas, quebrando requisições do site legítimo.\n\nScanner: Arquivo: backend/src/app.js — Linha 56 do diff: `+  if (origin && !allowedOrigins.has(origin)) {` (bug) deve ser `-  if (origin && allowedOrigins.has(origin)) {` (correto).\n\nAegis: deploy_allowed: false — production_touched: false — apenas alteração de lógica booleana, sem riscos de segurança.\n\nDecisão: NEEDS_FIX — confiança: 1.0.\n\nPróximo passo: clique EXECUTAR MISSÃO para aplicar o patch.\n\n```diff\n--- a/backend/src/app.js\n+++ b/backend/src/app.js\n@@ -56 +56 @@\n-  if (origin && !allowedOrigins.has(origin)) {\n+  if (origin && allowedOrigins.has(origin)) {\n```",
-      "erro": null
+      "palavras_encontradas": [],
+      "passou": false,
+      "tempo_ms": 0,
+      "diagnostico_recebido": "",
+      "erro": "Request failed with status code 504"
     },
     {
       "id": "STRESS-37",
@@ -254,8 +261,8 @@
         "payload"
       ],
       "passou": true,
-      "tempo_ms": 17302,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"O limit do body parser JSON foi reduzido de '1mb' para '1b', causando rejeição de requisições com corpo maior que 1 byte — o que impede o funcionamento de qualquer rota POST/PUT/PATCH que envie dados JSON.\",\n  \"file\": \"backend/src/app.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"app.use(express.json({ limit: \\\"1b\\\" }));\",\n    \"replace\": \"app.use(express.json({ limit: \\\"1mb\\\" }));\"\n  },\n  \"confidence\": 1.0,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nRCA: `limit:\"1b\"` no JSON parser bloqueia todo corpo maior que 1 byte — inviabiliza qualquer requisição útil. O valor anterior `\"1mb\"` é o correto.\n\nHERMES\n- RCA: Limit do express.json foi reduzido de 1mb para 1b, tornando o endpoint incapaz de processar payloads.\n\nSCANNER\n- Arquivo: `backend/src/app.js`\n- Linha afetada: `app.use(express.json({ limit: \"1b\" }));` (linha 85 no diff)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas `backend/src/app.js`\n\nDECISÃO: NEEDS_FIX\nConfiança: 1.0\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 16546,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Linha 84 de backend/src/app.js: limite de JSON payload foi alterado de '1mb' para '1b' (1 byte), quebrando todas as requisições POST com corpo JSON no backend.\",\n  \"file\": \"backend/src/app.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"app.use(express.json({ limit: \\\"1b\\\" }));\",\n    \"replace\": \"app.use(express.json({ limit: \\\"1mb\\\" }));\"\n  },\n  \"confidence\": 1.0,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nA causa-raiz única do bug é o limite de 1 byte (`1b`) no parser de JSON, que impede o servidor de aceitar qualquer payload JSON. O site fica sem resposta para requisições que enviam JSON (ex.: formulários, APIs internas).\n\nHERMES  \n- RCA: `express.json({ limit: \"1b\" })` inviabiliza parsing de qualquer JSON body.\n\nSCANNER  \n- Arquivo: `backend/src/app.js`  \n- Linha afetada: `app.use(express.json({ limit: \"1b\" }));` (linha 84)\n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas `backend/src/app.js`\n\nDECISÃO: NEEDS_FIX  \nConfiança: 1.0  \n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.\n\n---\n\n```diff\n--- a/backend/src/app.js\n+++ b/backend/src/app.js\n@@ -84 +84 @@\n app.use(express.json({ limit: \"1b\" }));\n+app.use(express.json({ limit: \"1mb\" }));\n```",
       "erro": null
     },
     {
@@ -272,13 +279,11 @@
       ],
       "palavras_encontradas": [
         "expectedToken",
-        "invertido",
-        "auth",
         "candidate"
       ],
       "passou": true,
-      "tempo_ms": 16958,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A condição de autorização foi invertida: candidate === expectedToken nega acesso quando o token é válido, bloqueando requisições autenticadas. O correto é candidate !== expectedToken.\",\n  \"file\": \"backend/src/routes/newsRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  if (!expectedToken || candidate === expectedToken) {\",\n    \"replace\": \"  if (!expectedToken || candidate !== expectedToken) {\"\n  },\n  \"confidence\": 1.0,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO bug está na linha 29 do arquivo: a condição que deveria negar acesso para tokens inválidos (`candidate !== expectedToken`) foi trocada por `candidate === expectedToken`, fazendo com que requisições com token correto sejam rejeitadas.\n\nHERMES  \n- RCA: Operador de comparação invertido — `===` no lugar de `!==` causa bloqueio de tokens válidos.\n\nSCANNER  \n- Arquivo: `backend/src/routes/newsRoutes.js`  \n- Linha afetada: 29\n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas a condição `if` na função `requireRefreshAuth`\n\nDECISÃO: NEEDS_FIX  \nConfiança: 1.0  \n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 829,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A verificação de token de atualização está invertida; a condição usa 'candidate === expectedToken' em vez de 'candidate !== expectedToken', permitindo acesso não autorizado.\",\n  \"file\": \"backend/src/routes/newsRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"if (!expectedToken || candidate === expectedToken) {\",\n    \"replace\": \"if (!expectedToken || candidate !== expectedToken) {\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nA condição de autorização da rota de refresh comparava o token recebido com o token esperado usando igualdade, concedendo acesso indevido. O operador deve ser `!==` para rejeitar tokens inválidos.\n\nHERMES\n- RCA: condição de comparação invertida permite tokens incorretos.\n\nSCANNER\n- Arquivo: backend/src/routes/newsRoutes.js\n- Linha afetada: `if (!expectedToken || candidate === expectedToken) {`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/routes/newsRoutes.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.\n\n```diff\n--- a/backend/src/routes/newsRoutes.js\n+++ b/backend/src/routes/newsRoutes.js\n@@ -25 +25 @@\n-  if (!expectedToken || candidate === expectedToken) {\n+  if (!expectedToken || candidate !== expectedToken) {\n```",
       "erro": null
     },
     {
@@ -300,8 +305,8 @@
         "vazio"
       ],
       "passou": true,
-      "tempo_ms": 9099,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A linha que trunca o resumo (summary) foi alterada de .slice(0, 280) para .slice(0, 0), resultando em resumo vazio (string de 0 caracteres).\",\n  \"file\": \"backend/src/services/normalizer.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  ).slice(0, 0);\",\n    \"replace\": \"  ).slice(0, 280);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: Summary truncado para 0 caracteres por slice(0,0)\n\nSCANNER\n- Arquivo: backend/src/services/normalizer.js\n- Linha afetada: 47 (no diff), equivale à linha do slice dentro de normalizeFeedItem\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/services/normalizer.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 13075,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"`.slice(0, 0)` no resumo (`summary`) trunca todo o texto retornando string vazia. Linha 47 do arquivo original continha `.slice(0, 280)` (corte em 280 caracteres). O bug introduzido zera o slice, fazendo todo resumo ser vazio.\",\n  \"file\": \"backend/src/services/normalizer.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  ).slice(0, 0);\",\n    \"replace\": \"  ).slice(0, 280);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO corte `.slice(0,0)` anula o resumo de cada item. O site exibe summaries vazios, pois o valor retornado é sempre `''`. O patch restaura o limite de 280 caracteres.\n\nHERMES\n- RCA: `.slice(0,0)` trunca summary para string vazia\n\nSCANNER\n- Arquivo: `backend/src/services/normalizer.js`\n- Linha afetada: 47 (após stripHtml + fallback chain)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas `backend/src/services/normalizer.js`\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
       "erro": null
     },
     {
@@ -316,10 +321,14 @@
         "invertido",
         "fallback"
       ],
-      "palavras_encontradas": [],
-      "passou": false,
-      "tempo_ms": 31258,
-      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2532 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "palavras_encontradas": [
+        "isHealthy",
+        "response.ok",
+        "invertido"
+      ],
+      "passou": true,
+      "tempo_ms": 23400,
+      "diagnostico_recebido": "MISSÃO RECEBIDA  \nTipo: bug fix  \nRisco: alto (health check invertido impede API discovery)  \nEscopo: front/assets/js/config.js  \n\nHERMES  \n- RCA: `isHealthy` retorna `!response.ok` em vez de `response.ok`, invertendo a lógica de saúde.  \n- Regras aplicadas: §53 (foco no diff), R1 (evidência real), R2 (patch no arquivo fornecido).  \n\nSCANNER  \n- Arquivo: front/assets/js/config.js  \n- Linha afetada: `return !response.ok;` (linha 52 - versão com bug)  \n\nOPENCLAW  \n- Tarefa 1: Reverter `!response.ok` para `response.ok`  \n- Nenhuma alteração adicional necessária  \n\nPATCHENGINE  \n- Patch preparado: code_patch  \n\nGO CORE  \n- Evidence receipt: presente (diff + arquivo completo + endpoint health retornando 200 OK)  \n- Runtime probe: OK  \n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas front/assets/js/config.js  \n\nDECISÃO  \nNEEDS_FIX  \n\nPróximo passo seguro:  \nClique EXECUTAR MISSÃO para aplicar o patch de reversão.  \n\n```json\n{\n  \"diagnosis\": \"isHealthy() retorna !response.ok, invertendo a condição de saúde. O health endpoint retorna 200 OK, mas o código agora considera saudável apenas quando a resposta não é ok. Isso impede a seleção de qualquer base funcional, quebrando a descoberta da API.\",\n  \"file\": \"front/assets/js/config.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return !response.ok;\",\n    \"replace\": \"return response.ok;\"\n  },\n  \"confidence\": 0.99,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES  \n- RCA: Inversão lógica em `isHealthy`.  \n\nSCANNER  \n- Arquivo: front/assets/js/config.js  \n- Linha afetada: `return !response.ok;`  \n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas front/assets/js/config.js  \n\nDECISÃO: NEEDS_FIX  \nConfiança: 0.99  \n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
       "erro": null
     }
   ]
