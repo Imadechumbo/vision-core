@@ -4435,3 +4435,28 @@ semgrep --config p/javascript --json backend/
 
 Cada conceito vira § específico SÓ quando houver necessidade concreta (ex: §62 já é primeiro passo de "Adapters"). Não importar arquitetura inteira de uma vez.
 
+
+---
+
+## §70 — Fix CI/CD: alinhamento de environment EB
+
+**Data:** 2026-06-11  
+**Status:** ✅ RESOLVIDO
+
+### Problema
+
+CI/CD (`deploy-backend-eb.yml`) deployava para `Tngh-aws-final-v2-env` (app `tngh-aws-final-v2`) enquanto stress tests e testes manuais usavam `vision-core-prod` (app `vision-core`). Código novo nunca chegava ao ambiente testado.
+
+Sintoma: `vision-core-prod` rodava `app-260606_165534223490` (Jun 6) mesmo após múltiplos deploys CI bem-sucedidos.
+
+### Fix
+
+GitHub Actions variables corrigidas:
+```
+AWS_EB_APPLICATION: tngh-aws-final-v2  →  vision-core
+AWS_EB_ENVIRONMENT: Tngh-aws-final-v2-env  →  vision-core-prod
+```
+
+### Impacto retroativo
+
+Todos os deploys CI anteriores a 2026-06-11 foram para `Tngh-aws-final-v2-env`. Os fixes de timeout (`server.js`) e OpenClaw (`§70`) chegaram a `vision-core-prod` apenas após este fix via manual dispatch.
