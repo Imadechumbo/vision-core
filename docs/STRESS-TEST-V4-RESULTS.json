@@ -16,10 +16,14 @@
         "diversifyCollection",
         "selected.push"
       ],
-      "passou": false,
-      "tempo_ms": 31526,
-      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 26928 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "palavras_encontradas": [],
+      "passou": true,
+      "tempo_ms": 7616,
+      "answer": "MISSÃO RECEBIDA\nTipo: análise\nRisco: médio\nEscopo: arquivo `feedService.js`\n\nHERMES\n- Contexto recebido: anotação de um bug\n- Regras aplicadas: R1 (sem evidência real para patch), R2 (patches apenas em arquivos explicitamente fornecidos)\n\nSCANNER\n- Finding 1: array externo `selected` é ocultado pelo bug de shadowing.\n- Finding 2: o símbolo de \"push\" nunca popula o array externo `selected`.\n\nOPENCL",
+      "palavras_encontradas": [
+        "selected",
+        "shadow",
+        "selected.push"
+      ],
       "palavras_esperadas": [
         "selected",
         "shadow",
@@ -41,7 +45,7 @@
         "6"
       ],
       "passou": false,
-      "tempo_ms": 31238,
+      "tempo_ms": 31326,
       "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 9623 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "palavras_encontradas": [
         "6"
@@ -67,10 +71,10 @@
         "mutation"
       ],
       "passou": true,
-      "tempo_ms": 24042,
-      "answer": "MISSÃO RECEBIDA\nTipo: [bug fix | análise | refactor | consulta]\nRisco: [baixo | médio | alto | crítico]\nEscopo: ['backend/src/services/feedService.js']\n\nHERMES\n- Contexto: arquivo feedService.js encontra-se modificação\n- Regras aplicadas: R1 a R7\n\nSCANNER\n- Obteve uma mudança em topo do if da estrutura do caso\n- O que foi encontrado:\n  MUDANÇA: tem categoria em vez de ser comparaçăo em força maior",
+      "tempo_ms": 13067,
+      "answer": "Segue aqui a resposta no formato de diagnóstico de bug:\n\nMISSÃO RECEBIDA\nTipo: [analise de código, correção]\nRisco: [medio]\nEscopo: [backend/src/services/feedService.js, funcao categoryMatch]\n\nHERMES\n- [status do contexto: analise de diferença entre codigo da linha 150 e 151]\n- [regras aplicadas: R4, categoria não comparada, mas atribuida]\n\nSCANNER\n- [o que foi encontrado: atribuição em vez de com",
       "palavras_encontradas": [
-        "===",
+        "categoryMatch",
         "hardware"
       ],
       "palavras_esperadas": [
@@ -94,8 +98,8 @@
         "+"
       ],
       "passou": true,
-      "tempo_ms": 2442,
-      "answer": "### MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: backend/src/services/hermesService.js\n\n### HERMES\n- Contexto: análise do arquivo backend/src/services/hermesService.js\n- Regras aplicadas:\n  * R1: Evidência real (arquivo/URL/imagem) presente, não bloqueamos\n  * R2: Patches apenas em arquivos explicitamente fornecidos, não inventamos paths\n  * R3: Arquivos proibidos (`.env`, `secrets`, `workfl",
+      "tempo_ms": 8781,
+      "answer": "Missão recebida\nTipo: bug fix\nRisco: médio\nEscopo: hermesService.js\n\nHermes\n- Contexto é um arquivo Node.js de serviço para gerenciar relatórios de inteligência artificial.\n- As regras aplicadas incluem a verificação de arquivos explicitamente fornecidos e a proibição de deploys em ambiente de produção.\n\nScanner\n- O arquivo hermesService.js foi modificado em duas linhas do método `calculateRanking",
       "palavras_encontradas": [
         "score",
         "string",
@@ -123,12 +127,11 @@
         "dedupeItems"
       ],
       "passou": true,
-      "tempo_ms": 23654,
-      "answer": "MISSÃO RECEBIDA\nTipo: [bug fix | análise | refactor | consulta]\nRisco: [baixo | médio | alto | crítico]\nEscopo: [arquivo(s) identificado(s)]\n\nHERMES\n- [status do contexto]\n- [regras aplicadas]\n\nO contexto fornecido é um diff de código, onde uma linha foi alterada. Portanto, o status do contexto é \"diff\" e nenhuma regra específica foi aplicada a esse ponto.\n\nSCANNER\n- [o que foi encontrado]\n\nO scan",
+      "tempo_ms": 3289,
+      "answer": "MISSÃO RECEBIDA\nTipo: [bug fix | análise | refactor | consulta]\nRisco: [baixo | médio | alto | crítico]\nEscopo: [arquivo(s) identificado(s)]\n\nHERMES\n- contexto: _Bruce Lee_\n- regras aplicadas: R1, R2, R5, R6.\n\nSCANNER\n- foi encontrado que o arquivo :: backend/src-seeds/feedService.js:: contém um erro de identificação de causa raiz;\n\nOPENCLAW\n- plano criado com N tarefas:\n① eliminar a política de u",
       "palavras_encontradas": [
         "sort",
-        "spread",
-        "items"
+        "spread"
       ],
       "palavras_esperadas": [
         "sort",
@@ -151,8 +154,8 @@
         "getCache"
       ],
       "passou": true,
-      "tempo_ms": 18718,
-      "answer": "**MISSÃO RECEBIDA**\nTipo: **bug fix**\nRisco: **alto**\nEscopo: **arquivo: feedService.js, método: getCache()**\n\n**HERMES**\n- **STATUS DO CONTEXTO:** GET_CACHE\n- **REGRAS APLICADAS:** R1 (sem evidência real), R2 (patches apenas em arquivos explicitamente fornecidos), R3 (arquivos proibidos:.env, secrets, workflow CI/CD), R4 (deploy_allowed/release_allowed/production_touched nunca setados como true),",
+      "tempo_ms": 10908,
+      "answer": "Missão RECEBIDA\nTipo: bug fix\nRisco: crítico\nEscopo: arquivo `backend/src/services/feedService.js`\n\nHERMES\n- [status do contexto]: arquivo com bug introduzido\n- [regras aplicadas]: R1, R2, R3, R4, R5, R6, R7\n\nSCANNER\n- [o que foi encontrado]: falta de await em função `getCache()` (linhas + e - marcadas abaixo)\n\n```diff\n@@ -661 +661 @@\n }\n \n export async function getCache() {\n-  const cache = await",
       "palavras_encontradas": [
         "await",
         "readCache",
@@ -180,12 +183,11 @@
         "sourceResults"
       ],
       "passou": true,
-      "tempo_ms": 29531,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: backend/src/services/gameCoverService.js\n\nHERMES\n- CONTEXTO RECEBIDO\n- REGRA R1 APlicada (sem evidência real — arquivos, URLs, imagens)\n\nSCANNER\n- O bug foi identificado na linha - 355 do arquivo gameCoverService.js.\n\nOPENCLAW\n- Planejado 2 tarefas para corrigir o bug:\n  1. Revisar a linha - 355 do arquivo gameCoverService.js.\n  2. Corrigir a cham",
+      "tempo_ms": 15214,
+      "answer": "MISSÃO RECEBIDA\nTipo: [bug fix | análise | refactor | consulta]\nRisco: [baixo | médio | alto | crítico]\nEscopo: [arquivo(s) identificado(s)]\n\nHERMES\n- Contexto recebido: [DIFF]\n- Regras aplicadas: [R1, R2, R3, R5, R6]\n\nSCANNER\n- [O que foi encontrado]:\n  - Linha 13: `const sourceResults = await Promise.all(`\n  - Linha 13: `+  const sourceResults = await Promise.all( // bug: allSettled→all — result",
       "palavras_encontradas": [
         "allSettled",
         "Promise.all",
-        "fulfilled",
         "sourceResults"
       ],
       "palavras_esperadas": [
@@ -208,13 +210,10 @@
         "status",
         "ok"
       ],
-      "passou": true,
-      "tempo_ms": 12778,
-      "answer": "Aqui está a análise RCA (Causa-Raiz) com os dados fornecidos:\n\n**MISSÃO RECEBIDA**\nTipo: bug fix\nRisco: alto\nEscopo: arquivo `feedService.js`\n\n**HERMES**\n- Status do contexto: BUG INTRODUZIDO\n- Regras aplicadas:\n  R1: Sem evidência real (arquivo/URL/imagem) → BLOCKED_INPUT. Nunca alucine patches.\n  R2: Patches apenas em arquivos explicitamente fornecidos. Nunca invente paths.\n  R3: Arquivos proibi",
+      "passou": false,
+      "tempo_ms": 31394,
+      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 26867 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "palavras_encontradas": [
-        "catch",
-        "error.message",
-        "status",
         "ok"
       ],
       "palavras_esperadas": [
@@ -237,14 +236,10 @@
         "then",
         "persistImageCache"
       ],
-      "passou": true,
-      "tempo_ms": 10622,
-      "answer": "**MISSÃO RECEBIDA**\n\nTipo: bug-fix\nRisco: alto\nEscopo: arquivo `imageService.js`\n\n\n**HERMES**\n\n- O arquivo `imageService.js` foi modificado e introduziu um bug.\n- A regra R1 foi aplicada, pois o sistema não tem entrada real do usuário.\n\n\n**SCANNER**\n\n- O sistema encontrou que o arquivo `imageService.js` foi modificado.\n- A linha que foi alterada é:\n  ```\ndiskCacheWritePromise = diskCacheWritePromi",
-      "palavras_encontradas": [
-        "return",
-        "writeImageCache",
-        "then"
-      ],
+      "passou": false,
+      "tempo_ms": 31435,
+      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 13383 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "palavras_encontradas": [],
       "palavras_esperadas": [
         "return",
         "writeImageCache",
@@ -265,10 +260,15 @@
         "translationSession",
         "fire"
       ],
-      "passou": false,
-      "tempo_ms": 31206,
-      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 26967 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "palavras_encontradas": [],
+      "passou": true,
+      "tempo_ms": 3402,
+      "answer": "MISSÃO RECEBIDA\nTipo: [refatoração | bug fix | análise | consulta]\nRisco: [baixo | médio | alto | crítico]\nEscopo: [arquivo(s) identificado(s)]\n\nHERMES\n- Contexto: arquivo 'feedService.js' foi alterado\n- Regra: [R1, R2, R3, R4, R5, R6, R7]\n\nSCANNER\n- Arquivo 'feedService.js' foi alterado, com mudanças em funções e estruturas de dados\n\nPATCHENGINE\n- Não há necessidade de patch, pois o problema foi ",
+      "palavras_encontradas": [
+        "await",
+        "persist",
+        "translationSession",
+        "fire"
+      ],
       "palavras_esperadas": [
         "await",
         "persist",
@@ -290,12 +290,13 @@
         "NaN"
       ],
       "passou": true,
-      "tempo_ms": 6498,
-      "answer": "MISSÃO RECEBIDA\nTipo:  bug fix\nRisco:  médio\nEscopo:  backend/src/services/gameCoverService.js\n\nHERMES\n- Contexto recebido\n- Regras de base aplicadas (R1, R2, R3)\n\nSCANNER\n- O código é objeto de estudo, não foi modificado internamente e está completo\n- Código não válido, pois inclui tags HEALTHBREAK ou informando \n                                     garantia nenhuma informação adicional para o di",
+      "tempo_ms": 12131,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: backend/src/services/gameCoverService.js\n\nHERMES\n- status do contexto: contexto completo, acesso garantido\n- regras aplicadas: R1 (evidência presente), R2 (arquivo explícito)\n\nSCANNER\n- que foi encontrado:\n  + linha `-  return SOURCE_TIERS.get(key) || 9;` (antigo código)\n  + linha `+  return SOURCE_TIERS.get(key);` (código modificado)\n\nOPENCLAW\n- ",
       "palavras_encontradas": [
         "sourceTierFor",
         "|| 9",
-        "undefined"
+        "undefined",
+        "NaN"
       ],
       "palavras_esperadas": [
         "sourceTierFor",
@@ -318,7 +319,7 @@
         "cron"
       ],
       "passou": false,
-      "tempo_ms": 31412,
+      "tempo_ms": 31188,
       "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 1886 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "palavras_encontradas": [],
       "palavras_esperadas": [
@@ -341,10 +342,15 @@
         "compartilhado",
         "hydrateMissingImages"
       ],
-      "passou": false,
-      "tempo_ms": 31184,
-      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 26815 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "palavras_encontradas": [],
+      "passou": true,
+      "tempo_ms": 17834,
+      "answer": " MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: arquivo feedService.js\n\nHERMES\n- O contexto está pronto para o diagnóstico. \n- As regras R1 a R7 foram aplicadas com sucesso.\n\nSCANNER\n- O scanner encontrou o seguinte código:\n```diff\n--- a/backend/src/services/feedService.js\n+++ b/backend/src/services/feedService.js\n@@ -457 +457 @@\n   };\n }\n \n-async function hydrateMissingImages(items = []) {\n- ",
+      "palavras_encontradas": [
+        "enrichedCount",
+        "módulo",
+        "compartilhado",
+        "hydrateMissingImages"
+      ],
       "palavras_esperadas": [
         "enrichedCount",
         "módulo",
@@ -365,14 +371,10 @@
         "fetchedItems",
         "withSeedFallback"
       ],
-      "passou": true,
-      "tempo_ms": 12164,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: backend/src/services/feedService.js\n\nHERMES\n- O DIFF foi recebido corretamente.\n- As regras R1 e R2 foram aplicadas.\n\nSCANNER\n- O arquivo backend/src/services/feedService.js foi identificado como o foco do problema.\n- O método `withSeedFallback` foi identificado como a origem do bug.\n\nOPENCLAW\n- O plano criado com 2 tarefas:\n  1. Identificar a lin",
-      "palavras_encontradas": [
-        "push",
-        "fetchedItems",
-        "withSeedFallback"
-      ],
+      "passou": false,
+      "tempo_ms": 31314,
+      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 26746 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "palavras_encontradas": [],
       "palavras_esperadas": [
         "push",
         "spread",
@@ -394,8 +396,8 @@
         "acumulando"
       ],
       "passou": true,
-      "tempo_ms": 14268,
-      "answer": "MISSÃO RECEBIDA\nTipo: análise e correção de bug\nRisco: médio\nEscopo: arquivo `backend/src/jobs/refreshScheduler.js`\n\nHERMES\n- Status do contexto: Novo conteúdo opcional\n- Regras aplicadas:\n  R4: Sem `deploy_allowed`, `release_allowed` ou `production_touched` marcados como `true`.\n  R5: Confiança mínima de 0.7 para geração de patches.\n\nSCANNER\n- O que foi encontrado:\n  `cron.schedule(cronExpr, asyn",
+      "tempo_ms": 14702,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: refreshScheduler.js\n\nHERMES\n- status do contexto: MODIFICADO\n- regras aplicadas: R1, R2, R3, R4, R5, R6, R7\n\nSCANNER\n- revisão do código alterado:\n  - A variável `scheduledTask` não é parada corretamente antes de ser sobrescrita com um novo valor.\n  - Isso pode causar acúmulo de cron jobs ativos, levando a problemas de desempenho e estabilidade.\n\nO",
       "palavras_encontradas": [
         "scheduledTask",
         "stop",
