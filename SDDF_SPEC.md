@@ -4119,11 +4119,12 @@ Para superar 63/80 e chegar mais perto de 80/80:
 
 ---
 
-## §66 — Spec: Tiered Routing por Dificuldade via OpenRouter (sem Anthropic)
+## §66 — Spec: Tiered Routing por Dificuldade (6 providers + modelos quantizados)
 
 **Data:** 2026-06-11  
 **Status:** SPEC — não implementado  
-**Motivação:** Run #34 (63/80, 78.75%) — 17 fails concentrados em HARD/EXPERT/NIGHTMARE
+**Motivação:** Run #34 (63/80, 78.75%) — 17 fails concentrados em HARD/EXPERT/NIGHTMARE  
+**Scope:** Todos os 6 providers configurados no EB (não só OpenRouter)
 
 ---
 
@@ -4147,52 +4148,74 @@ Para superar 63/80 e chegar mais perto de 80/80:
 
 ---
 
+### Status atual dos 6 providers no EB
+
+| Provider | Status | Modelo configurado | Fix necessário |
+|----------|--------|--------------------|----------------|
+| **Anthropic** | ❌ HTTP 401 | `claude-haiku-4-5-20251001` | Gerar nova `ANTHROPIC_API_KEY` |
+| **Cerebras** | ⚠️ HTTP 429 quota | `gpt-oss-120b` (128K ctx) | Free tier esgota em ~6min de uso contínuo — aguardar reset diário |
+| **Groq** | ⚠️ HTTP 429 rate limit | `llama-3.3-70b-versatile` | Free tier — verificar reset (horário/diário) |
+| **OpenRouter** | ✅ Funcionando | `meta-llama/llama-3.1-8b-instruct`¹ | Saldo $5.20 disponível; atualizar modelo (ver tabela abaixo) |
+| **DeepSeek** | ❌ HTTP 402 | `deepseek-chat` | Recarregar saldo |
+| **Gemini** | ⚠️ HTTP 429 rate limit | `gemini-2.5-flash` | Free tier — verificar reset |
+
+¹ `meta-llama/llama-3.1-8b-instruct` não aparece mais no catálogo OpenRouter (Jun 2026) — pode estar desativado; verificar e substituir.
+
+---
+
 ### Catálogo OpenRouter pesquisado (2026-06-11)
 
-| Modelo | ID OpenRouter | Ctx (K) | $/1M in | $/1M out | Tier recomendado |
-|--------|--------------|---------|---------|---------|----------------|
+Modelos solicitados (`qwen-2.5-coder-32b`, `llama-3.3-70b`, `deepseek-chat`) **não estão mais no catálogo** — foram substituídos pelas versões V3/V4 abaixo.
+
+| Modelo | ID OpenRouter | Ctx (K) | $/1M in | $/1M out | Tier |
+|--------|--------------|---------|---------|---------|------|
 | DeepSeek V4 Flash | `deepseek/deepseek-v4-flash` | 1048 | $0.098 | $0.197 | HARD/EXPERT |
 | DeepSeek V4 Pro | `deepseek/deepseek-v4-pro` | 1048 | $0.435 | $0.87 | NIGHTMARE |
 | Qwen 3.5 9B | `qwen/qwen3.5-9b` | 262 | $0.10 | $0.15 | EASY/MEDIUM |
+| Qwen 3.6 35B MoE | `qwen/qwen3.6-35b-a3b` | 262 | $0.15 | $1.00 | HARD/EXPERT |
 | Mistral Small 2603 | `mistralai/mistral-small-2603` | 262 | $0.15 | $0.60 | HARD |
 | Nvidia Nemotron 120B | `nvidia/nemotron-3-super-120b-a12b` | 1000 | $0.09 | $0.45 | HARD/EXPERT |
-| Poolside Laguna M.1 | `poolside/laguna-m.1:free` | 262 | FREE | FREE | EASY/MEDIUM |
-| Poolside Laguna XS.2 | `poolside/laguna-xs.2:free` | 262 | FREE | FREE | EASY/MEDIUM |
-| Nvidia Nemotron 120B | `nvidia/nemotron-3-super-120b-a12b:free` | 1000 | FREE | FREE | HARD/EXPERT fallback |
-
-> Nota: `meta-llama/llama-3.1-8b-instruct` (modelo atual no EB) **não aparece mais** no catálogo — provavelmente substituído. Verificar no próximo deploy.
+| Poolside Laguna M.1 | `poolside/laguna-m.1:free` | 262 | FREE | FREE | EASY/MEDIUM (coding specialist) |
+| Poolside Laguna XS.2 | `poolside/laguna-xs.2:free` | 262 | FREE | FREE | EASY/MEDIUM (coding specialist) |
+| Nvidia Nemotron 120B | `nvidia/nemotron-3-super-120b-a12b:free` | 1000 | FREE | FREE | HARD/EXPERT backup |
 
 ---
 
-### Estimativa de custo com saldo atual ($5.20)
+### Estimativa de custo com saldo atual ($5.20 OpenRouter)
 
-Estimativa por cenário HARD/EXPERT (15K tokens in + 500 out):
+Por cenário HARD/EXPERT: ~15K tokens in + 500 tokens out:
 
-| Modelo | Custo/cenário | Cenários com $5.20 |
-|--------|-------------|-------------------|
-| `deepseek/deepseek-v4-flash` | $0.00157 | **~3.300** |
-| `deepseek/deepseek-v4-pro` | $0.00696 | **~747** |
-| `poolside/laguna-m.1:free` | $0 | **∞** |
-| `nvidia/nemotron-3-super-120b-a12b` | $0.00158 | **~3.300** |
+| Modelo | Custo/cenário | Cenários com $5.20 | Adequado para |
+|--------|-------------|-------------------|--------------|
+| `poolside/laguna-m.1:free` | $0 | **∞** | EASY/MEDIUM |
+| `deepseek/deepseek-v4-flash` | $0.00157 | **~3.300** | HARD/EXPERT |
+| `deepseek/deepseek-v4-pro` | $0.00696 | **~747** | NIGHTMARE |
+| `nvidia/nemotron-3-super-120b-a12b:free` | $0 | **∞** | HARD/EXPERT backup |
 
-**Conclusão:** $5.20 é praticamente ilimitado para DeepSeek V4 Flash. Usar V4 Pro apenas para NIGHTMARE onde vale o custo maior.
+**+ Providers gratuitos com reset diário:**
+- Cerebras `gpt-oss-120b`: ~X tokens/dia (reset meia-noite UTC) — uso pontual para NIGHTMARE
+- Groq `llama-3.3-70b-versatile`: sem payloadLimit, boa capacidade para HARD+ quando quota disponível
+- Gemini `gemini-2.5-flash`: grande contexto (1M tokens), bom para cenários multi-arquivo
+
+**Conclusão:** $5.20 sustenta ~3.300 runs HARD/EXPERT com DeepSeek V4 Flash — orçamento praticamente ilimitado para os testes atuais. Usar providers gratuitos (Cerebras/Groq) como fallback ou tier primário quando quota disponível.
 
 ---
 
-### Tabela de roteamento proposta
+### Tabela de roteamento proposta (todos os 6 providers)
 
 ```
-Dificuldade → Provider primário           → Fallback 1              → Fallback 2
-─────────────────────────────────────────────────────────────────────────────────
-EASY/MEDIUM → poolside/laguna-xs.2:free   → qwen/qwen3.5-9b         → deepseek/deepseek-v4-flash
-HARD        → deepseek/deepseek-v4-flash  → nvidia/nemotron-120b    → poolside/laguna-m.1:free
-EXPERT      → deepseek/deepseek-v4-flash  → nvidia/nemotron-120b    → deepseek/deepseek-v4-pro
-NIGHTMARE   → deepseek/deepseek-v4-pro    → deepseek/deepseek-v4-flash → cerebras/gpt-oss-120b
+Dificuldade → Primário (OpenRouter)      → Fallback 1 (free)          → Fallback 2             → Fallback 3
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+EASY/MEDIUM → poolside/laguna-xs.2:free  → cerebras/gpt-oss-120b      → openrouter/qwen3.5-9b  → groq/llama-3.3-70b
+HARD        → openrouter/deepseek-v4-flash→ cerebras/gpt-oss-120b     → groq/llama-3.3-70b     → openrouter/mistral-small-2603
+EXPERT      → openrouter/deepseek-v4-flash→ groq/llama-3.3-70b        → cerebras/gpt-oss-120b  → openrouter/qwen3.6-35b-a3b
+NIGHTMARE   → openrouter/deepseek-v4-pro  → openrouter/deepseek-v4-flash→ cerebras/gpt-oss-120b → groq/llama-3.3-70b
 ```
 
-**Lógica de seleção no hermes-rca.js:**
+**Lógica de seleção no `hermes-rca.js`:**
 - Detectar tier via metadado `[DIFICULDADE: X]` no prompt (injetado pelos stress scripts)
 - Heurística para uso real: `linhas_diff < 10 → EASY/MEDIUM`, `10–30 → HARD/EXPERT`, `> 30 ou múltiplos [DIFF] → NIGHTMARE`
+- Verificar quota disponível antes de tentar Cerebras/Groq (guardar timestamp do último HTTP 429 por provider)
 
 ---
 
@@ -4220,13 +4243,13 @@ CHECKLIST OBRIGATÓRIO (verificar antes de concluir):
 
 | Fase | Entregável | Arquivo | Alvo |
 |------|-----------|---------|------|
-| 1 | Atualizar `OPENROUTER_MODEL` no EB → `deepseek/deepseek-v4-flash` | AWS Console | Imediato |
-| 2 | Adicionar `[DIFICULDADE: X]` nos `buildMessage()` dos stress scripts | `scripts/stress-test-v*.js` | V1-V4+SF+FP |
-| 3 | `hermes-rca.js`: detectar `[DIFICULDADE:]` e selecionar provider/model por tier | `backend/hermes-rca.js` | Todos providers |
-| 4 | Checklist CoT no `hermesDecisionMatrix` para HARD+ | `backend/server.js` | System prompt |
-| 5 | Few-shot NIGHTMARE via `.vision-memory/remediation_events.jsonl` | `backend/hermes-rca.js` | Tier 3 |
-| 6 | Fix aggregate CI: `data.cenarios \|\| data.results \|\| data.resultados \|\| []` | `.github/workflows/stress-test-ci.yml` | CI-LAST-RUN.md |
-| 7 | Run CI com todas as mudanças — alvo: **73+/80 (91%+)** | CI | Validação |
+| 0 | Atualizar `OPENROUTER_MODEL` no EB → `deepseek/deepseek-v4-flash` | AWS Console | Imediato (sem código) |
+| 1 | Adicionar `[DIFICULDADE: X]` nos `buildMessage()` dos stress scripts | `scripts/stress-test-v*.js` | V1-V4+SF+FP |
+| 2 | `hermes-rca.js`: detectar `[DIFICULDADE:]`, selecionar provider/model por tier | `backend/hermes-rca.js` | Todos 6 providers |
+| 3 | Checklist CoT no `hermesDecisionMatrix` para HARD+ | `backend/server.js` | System prompt |
+| 4 | Few-shot NIGHTMARE via `.vision-memory/remediation_events.jsonl` | `backend/hermes-rca.js` | Tier NIGHTMARE |
+| 5 | Fix aggregate CI: `data.cenarios \|\| data.results \|\| data.resultados \|\| []` | `.github/workflows/stress-test-ci.yml` | CI-LAST-RUN.md correto |
+| 6 | Run CI com todas as mudanças — alvo: **73+/80 (91%+)** | CI | Validação |
 
 ---
 
