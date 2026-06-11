@@ -4117,3 +4117,100 @@ Para superar 63/80 e chegar mais perto de 80/80:
 - Corrigir aggregate CI para ler `data.results` de V1–V4 (hoje só lê `data.cenarios`, causando V1–V4 = 0/0 no CI-LAST-RUN.md)
 - Aguardar reset de Groq (llama-3.3-70b-versatile, sem payloadLimit) como backup
 
+---
+
+## §66 — Spec: Tiered Routing por Dificuldade
+
+**Data:** 2026-06-11  
+**Status:** SPEC — não implementado  
+**Motivação:** Run #34 (63/80, 78.75%) — análise dos 17 fails
+
+### Análise dos 17 failures do run #34
+
+**Distribuição por dificuldade:**
+
+| Dificuldade | Fails | % dos 17 |
+|-------------|-------|---------|
+| MEDIUM | 1 | 6% |
+| HARD | 4 | 24% |
+| EXPERT | 8 | 47% |
+| NIGHTMARE | 4 | 24% |
+
+**Achados:**
+
+1. **Hipótese confirmada:** 94% dos fails (16/17) são HARD ou acima. O único MEDIUM (STRESS-16: z-index -1) falhou por *vocabulário* — o modelo descreveu o bug mas sem as palavras-chave exatas.
+
+2. **Padrão de falha dominante:** Modelo responde *genericamente* sem citar identificadores de código específicos. Exemplos:
+   - STRESS-11 esperava `['LOCAL_REAL_COVERS', 'menu', 'menuToggle', 'múltiplos']` → resposta não citou nenhum
+   - STRESS-41 esperava `['selected', 'shadow', 'diversifyCollection', 'selected.push']` → 0 encontradas
+   - STRESS-53 esperava `['enrichedCount', 'módulo', 'compartilhado', 'hydrateMissingImages']` → 0 encontradas
+
+3. **Modelo atual (`llama-3.1-8b-instruct`):** suficiente para EASY/MEDIUM (identifica bugs) mas não cita nomes de variáveis/funções exatos para HARD+. Modelo maior tende a rastrear código mais especificamente.
+
+4. **SF failures:** `palavras_esperadas` não é salva no CI JSON — gap de observabilidade (SF-04/08/11 tiveram diagnóstico mas vocabulário incorreto).
+
+### Proposta: Tiered Routing
+
+**Objetivo:** Acertar HARD/EXPERT/NIGHTMARE sem aumentar custo em EASY/MEDIUM.
+
+#### Tier 1 — EASY / MEDIUM
+- Provider: `openrouter` `meta-llama/llama-3.1-8b-instruct` (atual)
+- Sem mudança de prompt
+- Custo: ~$0.0001/req
+
+#### Tier 2 — HARD / EXPERT
+- Provider (prioridade): `cerebras` `gpt-oss-120b` (128K ctx, resposta rápida)
+- Fallback: `groq` `llama-3.3-70b-versatile` (se quota disponível)
+- Fallback 2: `openrouter` com modelo maior (ex: `meta-llama/llama-3.3-70b-instruct`)
+- **Prompt estruturado obrigatório** (chain-of-thought guiado):
+  ```
+  CHECKLIST DE VERIFICAÇÃO (aplicar antes de apontar o bug):
+  1. Escopo de variáveis: há const/let/var que oculta variável outer?
+  2. Comparação vs atribuição: = vs == vs ===?
+  3. Mutação: array/objeto está sendo mutado sem cópia?
+  4. Async/await: toda Promise tem await? fire-and-forget intencional?
+  5. Identifique o nome EXATO da variável/função com o bug.
+  ```
+
+#### Tier 3 — NIGHTMARE
+- Provider: mesmo do Tier 2, mas com `max_tokens: 8192` (respostas mais longas)
+- **Few-shot obrigatório**: incluir 2-3 exemplos de `.vision-memory/remediation_events.jsonl` com bugs similares resolvidos
+- **Instrução de vocabulário**: "Na sua resposta, cite o nome EXATO da variável, função ou linha de código afetada. Use o mesmo identificador que aparece no DIFF."
+
+### Mecanismo de detecção de dificuldade
+
+O campo `dificuldade` existe nos cenários de stress test mas **não é enviado ao backend** hoje. Opções:
+
+**Opção A (simples):** Incluir metadado no prompt:
+```
+[DIFICULDADE: NIGHTMARE]
+```
+
+**Opção B (inferência):** Backend infere pelo tamanho do `[DIFF]`:
+- < 10 linhas diff → EASY/MEDIUM → Tier 1
+- 10–30 linhas → HARD/EXPERT → Tier 2
+- > 30 linhas ou múltiplos blocos [DIFF] → NIGHTMARE → Tier 3
+
+**Recomendação:** Opção A para stress tests (dificuldade já conhecida), Opção B como heurística para uso real.
+
+### Implementação (futura sessão)
+
+| Fase | Entregável | Arquivo |
+|------|-----------|---------|
+| 1 | Adicionar metadado `[DIFICULDADE: X]` nos buildMessage() dos stress scripts | `scripts/stress-test-v*.js` |
+| 2 | Backend detecta `[DIFICULDADE: X]` e escolhe provider/prompt | `backend/hermes-rca.js` |
+| 3 | Checklist CoT para HARD+ no systemPrompt | `backend/server.js` (hermesDecisionMatrix) |
+| 4 | Few-shot NIGHTMARE via `.vision-memory/remediation_events.jsonl` | `backend/hermes-rca.js` |
+| 5 | Validar com novo run CI — alvo: 73+/80 (91%+) | `.github/workflows/stress-test-ci.yml` |
+
+### Gap adicional identificado
+
+Aggregate CI usa `data.cenarios` mas V1/V2/V3/V4 salvam em `data.results`/`data.resultados`. Fix simples:
+
+```js
+// No aggregate step do workflow:
+const cenarios = data.cenarios || data.results || data.resultados || [];
+```
+
+Isso faz o CI-LAST-RUN.md reportar corretamente os 80 cenários em vez de 25.
+
