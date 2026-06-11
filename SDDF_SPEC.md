@@ -4122,9 +4122,31 @@ Para superar 63/80 e chegar mais perto de 80/80:
 ## §66 — Spec: Tiered Routing por Dificuldade (6 providers + modelos quantizados)
 
 **Data:** 2026-06-11  
-**Status:** SPEC — não implementado  
+**Status:** FASE 0 EXECUTADA ✅ — 17/17 retry PASS (100%)  
 **Motivação:** Run #34 (63/80, 78.75%) — 17 fails concentrados em HARD/EXPERT/NIGHTMARE  
 **Scope:** Todos os 6 providers configurados no EB (não só OpenRouter)
+
+### Resultado Fase 0 (2026-06-11)
+
+**Ação:** `OPENROUTER_MODEL` no EB prod atualizado de `meta-llama/llama-3.1-8b-instruct` → `deepseek/deepseek-v4-flash` via AWS CLI.
+
+**Resultado retry (17 cenários que falharam no run #34):**
+
+| Suite | Cenários | Resultado |
+|-------|----------|-----------|
+| V2 | STRESS-11/12/13/16/22/25 | 6/6 ✅ |
+| V3 | STRESS-28/29/32 | 3/3 ✅ |
+| V4 | STRESS-41/42/50/52/53 | 5/5 ✅ |
+| SF | SF-STRESS-04/08/11 | 3/3 ✅ |
+| **TOTAL** | **17/17** | **100% PASS** |
+
+**Por quê funcionou sem Fases 1-4:** `deepseek-v4-flash` é maior e mais capaz que `llama-3.1-8b-instruct` mas ainda quantizado (~$0.10/M in, $0.20/M out). O modelo anterior era pequeno demais para citar identificadores exatos em cenários NIGHTMARE (shadowing, closures, estado compartilhado). Com `deepseek-v4-flash` o raciocínio sobre código é suficientemente preciso mesmo sem tier routing explícito.
+
+**Custo por run de 17:** estimado ~$0.005 (desprezível). $5.20 de saldo cobre ~3.300 runs HARD/EXPERT.
+
+**Run completo (80 cenários):** CI disparado após commit desta Fase 0 — aguardar resultado para confirmar placar final.
+
+**Fases 1-4 (roteamento por tier, CoT checklist, few-shot NIGHTMARE):** documentadas abaixo como otimização futura SE run de 80 revelar fails residuais. Não implementadas ainda.
 
 ---
 
@@ -4239,17 +4261,17 @@ CHECKLIST OBRIGATÓRIO (verificar antes de concluir):
 
 ---
 
-### Implementação (futura sessão)
+### Implementação
 
-| Fase | Entregável | Arquivo | Alvo |
-|------|-----------|---------|------|
-| 0 | Atualizar `OPENROUTER_MODEL` no EB → `deepseek/deepseek-v4-flash` | AWS Console | Imediato (sem código) |
-| 1 | Adicionar `[DIFICULDADE: X]` nos `buildMessage()` dos stress scripts | `scripts/stress-test-v*.js` | V1-V4+SF+FP |
-| 2 | `hermes-rca.js`: detectar `[DIFICULDADE:]`, selecionar provider/model por tier | `backend/hermes-rca.js` | Todos 6 providers |
-| 3 | Checklist CoT no `hermesDecisionMatrix` para HARD+ | `backend/server.js` | System prompt |
-| 4 | Few-shot NIGHTMARE via `.vision-memory/remediation_events.jsonl` | `backend/hermes-rca.js` | Tier NIGHTMARE |
-| 5 | Fix aggregate CI: `data.cenarios \|\| data.results \|\| data.resultados \|\| []` | `.github/workflows/stress-test-ci.yml` | CI-LAST-RUN.md correto |
-| 6 | Run CI com todas as mudanças — alvo: **73+/80 (91%+)** | CI | Validação |
+| Fase | Entregável | Arquivo | Status |
+|------|-----------|---------|--------|
+| **0** | `OPENROUTER_MODEL` no EB → `deepseek/deepseek-v4-flash` | AWS EB prod | ✅ **FEITO** — 17/17 retry PASS |
+| 1 | Adicionar `[DIFICULDADE: X]` nos `buildMessage()` dos stress scripts | `scripts/stress-test-v*.js` | 🔲 Opcional se run 80 passar |
+| 2 | `hermes-rca.js`: detectar `[DIFICULDADE:]`, selecionar provider/model por tier | `backend/hermes-rca.js` | 🔲 Opcional se run 80 passar |
+| 3 | Checklist CoT no `hermesDecisionMatrix` para HARD+ | `backend/server.js` | 🔲 Opcional se run 80 passar |
+| 4 | Few-shot NIGHTMARE via `.vision-memory/remediation_events.jsonl` | `backend/hermes-rca.js` | 🔲 Opcional se run 80 passar |
+| 5 | Fix aggregate CI: `data.cenarios \|\| data.results \|\| data.resultados \|\| []` | `.github/workflows/stress-test-ci.yml` | 🔲 A fazer |
+| 6 | Run CI completo (80) — alvo: **73+/80 (91%+)** | CI | ⏳ Em andamento |
 
 ---
 
