@@ -1866,8 +1866,8 @@ Worker `visioncore-api-gateway` não é bypass-ável porque:
 - Worker serve HTTPS + CORS + rate limit (120 req/min por IP)
 
 Worker NÃO tem lógica crítica além de proxy:
-- `/api/auth/signup` → stub (`demo-token-${Date.now()}`) — não é auth real
-- `/api/github/create-pr` → stub — não é criação real de PR
+- `/api/auth/signup` → ~~stub (`demo-token-${Date.now()}`)~~ **REMOVIDO** (2026-06-11) — endpoint inexistente no worker atual (`worker/src/index.js`). Verificação: `grep signup worker/src/index.js` → sem matches. Nenhum ponto do frontend dependia do token fake para features reais.
+- `/api/github/create-pr` → implementado em §64 (real via Octokit)
 - Rate limiting → in-memory por isolate, best-effort
 
 ### 28.5 Frase-síntese
