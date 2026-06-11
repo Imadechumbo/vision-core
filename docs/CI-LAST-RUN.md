@@ -1,9 +1,9 @@
 # Vision Core — CI Last Run
 
-**Data:** 2026-06-11T12:28:59.270Z
+**Data:** 2026-06-11T12:37:38.789Z
 **Status:** ❌ FAIL (15 cenários)
 **Total:** 10/25 PASS (40%)
-**Run:** #27 | **Ref:** main | **SHA:** c275bf76
+**Run:** #29 | **Ref:** main | **SHA:** fb4d6cba
 
 ## Resultados por suíte
 
