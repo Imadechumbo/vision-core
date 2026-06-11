@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-11T12:16:20.452Z",
+  "timestamp": "2026-06-11T12:24:25.859Z",
   "backend_url": "http://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com",
   "results": [
     {
@@ -17,7 +17,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15440 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1325,
+      "tempo_ms": 1399,
       "erro": null
     },
     {
@@ -35,7 +35,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15341 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1296,
+      "tempo_ms": 1555,
       "erro": null
     },
     {
@@ -53,7 +53,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 17470 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1292,
+      "tempo_ms": 1320,
       "erro": null
     },
     {
@@ -71,7 +71,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2912 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1171,
+      "tempo_ms": 1154,
       "erro": null
     },
     {
@@ -89,7 +89,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2108 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1125,
+      "tempo_ms": 1044,
       "erro": null
     },
     {
@@ -107,7 +107,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 3209 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1222,
+      "tempo_ms": 1201,
       "erro": null
     },
     {
@@ -125,7 +125,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2637 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1208,
+      "tempo_ms": 1198,
       "erro": null
     },
     {
@@ -141,11 +141,14 @@
         "payload"
       ],
       "palavras_encontradas": [
+        "404",
+        "rota",
+        "cover",
         "payload"
       ],
-      "passou": false,
-      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 1159 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1186,
+      "passou": true,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Linha retornando 404 ao invés de payload causa falha na rota /cover.\",\n  \"file\": \"backend/src/routes/gamesRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return res.status(404).json({ ok: false, error: 'Rota não encontrada' });\",\n    \"replace\": \"return res.json(payload);\"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nDiagnóstico: o endpoint `/cover` devolve erro 404 em vez de enviar o payload esperado, quebrando a funcionalidade de obtenção da capa do jogo.\n\nHERMES  \n- RCA: Linha de retorno 404 substitui o payload, impedindo a resposta correta da rota.\n\nSCANNER  \n- Arquivo: backend/src/routes/gamesRoutes.js  \n- Linha afetada: onde está o `return res.status(404)...` (aprox. linha 13).\n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas backend/src/routes/gamesRoutes.js\n\nDECISÃO: NEEDS_FIX  \nConfiança: 0.92  \n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.\n\n```diff\n--- a/backend/src/routes/gamesRoutes.js\n+++ b/backend/src/routes/gamesRoutes.js\n@@\n-    return res.status(404).json({ ok: false, error: 'Rota não encontrada' });\n+    return res.json(payload);\n```",
+      "tempo_ms": 1363,
       "erro": null
     },
     {
@@ -166,7 +169,7 @@
       ],
       "passou": true,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15117 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1566,
+      "tempo_ms": 2617,
       "erro": null
     },
     {
@@ -184,7 +187,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2714 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1536,
+      "tempo_ms": 1430,
       "erro": null
     },
     {
@@ -202,7 +205,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 1159 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1163,
+      "tempo_ms": 1071,
       "erro": null
     },
     {
@@ -220,7 +223,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 3479 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1252,
+      "tempo_ms": 1268,
       "erro": null
     },
     {
@@ -238,7 +241,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 4812 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1175,
+      "tempo_ms": 1239,
       "erro": null
     },
     {
@@ -256,7 +259,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15051 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 7525,
+      "tempo_ms": 8027,
       "erro": null
     },
     {
@@ -274,7 +277,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 1138 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 1095,
+      "tempo_ms": 1217,
       "erro": null
     }
   ]
