@@ -897,7 +897,7 @@ app.get('/api/agent/status', (req, res) => sendOk(res, { connected: false, mode:
 
 /* GITHUB / TOOLS / METRICS */
 app.get('/api/github/status', (req, res) => sendOk(res, { configured: Boolean(process.env.GITHUB_TOKEN), policy: 'PASS_GOLD_REQUIRED' }));
-app.all('/api/github/create-pr', (req, res) => res.status(200).json({ ok: false, error: 'github_token_not_configured', pass_gold_required: true, time: now() }));
+/* /api/github/create-pr — implementado em §64 abaixo (stub removido) */
 app.get('/api/github/automerge-policy', (req, res) => sendOk(res, { default: 'blocked_without_pass_gold', required: ['PASS GOLD', 'Aegis', 'SDDF'] }));
 
 app.get('/api/tools/marketplace', (req, res) => sendOk(res, { tools: [
@@ -1898,6 +1898,112 @@ app.post('/api/deploy/merge-pr', async (req, res) => {
   } catch (err) {
     console.error('[§50] deploy/merge-pr error:', err.message);
     return res.status(500).json({ ok: false, error: 'merge_error', detail: err.message, time: now() });
+  }
+});
+
+/* ── §64 /api/github/create-pr — cria branch + commits + PR do zero ──── */
+app.post('/api/github/create-pr', async (req, res) => {
+  try {
+    const body        = normalizeBody(req);
+    const repo        = (body.repo        || '').trim();
+    const baseBranch  = (body.base_branch || '').trim();
+    const headBranch  = (body.head_branch || '').trim();
+    const title       = (body.title       || '').trim();
+    const prBody      = (body.body        || '').trim();
+    const files       = Array.isArray(body.files) ? body.files : [];
+
+    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+    if (!GITHUB_TOKEN) {
+      return res.status(500).json({ ok: false, error: 'GITHUB_TOKEN not configured', time: now() });
+    }
+    if (!repo || !baseBranch || !headBranch || !title) {
+      return res.status(400).json({ ok: false, error: 'repo, base_branch, head_branch e title são obrigatórios', time: now() });
+    }
+
+    const ghHeaders = {
+      'Authorization': `Bearer ${GITHUB_TOKEN}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'vision-core-backend/3.0.0'
+    };
+
+    /* 1 — SHA da base_branch */
+    const refRes = await fetch(`https://api.github.com/repos/${repo}/git/ref/heads/${baseBranch}`, { headers: ghHeaders });
+    if (!refRes.ok) {
+      const e = await refRes.json().catch(() => ({}));
+      return res.status(refRes.status).json({ ok: false, error: 'base_branch_not_found', detail: e.message || refRes.status, time: now() });
+    }
+    const refData  = await refRes.json();
+    const baseSha  = refData.object.sha;
+
+    /* 2 — Criar head_branch (idempotente: ignora 422 "already exists") */
+    const createBranchRes = await fetch(`https://api.github.com/repos/${repo}/git/refs`, {
+      method: 'POST',
+      headers: { ...ghHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref: `refs/heads/${headBranch}`, sha: baseSha })
+    });
+    if (!createBranchRes.ok && createBranchRes.status !== 422) {
+      const e = await createBranchRes.json().catch(() => ({}));
+      return res.status(createBranchRes.status).json({ ok: false, error: 'create_branch_failed', detail: e.message || createBranchRes.status, time: now() });
+    }
+
+    /* 3 — Commit de cada arquivo em files[] */
+    for (const file of files) {
+      if (!file.path || file.content === undefined) continue;
+
+      /* Buscar sha atual do arquivo se já existir (necessário para update) */
+      let existingSha;
+      const existRes = await fetch(`https://api.github.com/repos/${repo}/contents/${file.path}?ref=${headBranch}`, { headers: ghHeaders });
+      if (existRes.ok) {
+        const existData = await existRes.json().catch(() => ({}));
+        existingSha = existData.sha;
+      }
+
+      const contentBase64 = Buffer.from(String(file.content), 'utf8').toString('base64');
+      const putPayload    = { message: title, content: contentBase64, branch: headBranch };
+      if (existingSha) putPayload.sha = existingSha;
+
+      const putRes = await fetch(`https://api.github.com/repos/${repo}/contents/${file.path}`, {
+        method: 'PUT',
+        headers: { ...ghHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify(putPayload)
+      });
+      if (!putRes.ok) {
+        const e = await putRes.json().catch(() => ({}));
+        return res.status(putRes.status).json({ ok: false, error: 'commit_file_failed', path: file.path, detail: e.message || putRes.status, time: now() });
+      }
+    }
+
+    /* 4 — Criar o PR */
+    const prRes = await fetch(`https://api.github.com/repos/${repo}/pulls`, {
+      method: 'POST',
+      headers: { ...ghHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        body:  prBody || `PR criado automaticamente pelo Vision Core\n\nBranch: \`${headBranch}\` → \`${baseBranch}\``,
+        head:  headBranch,
+        base:  baseBranch
+      })
+    });
+    if (!prRes.ok) {
+      const e = await prRes.json().catch(() => ({}));
+      return res.status(prRes.status).json({ ok: false, error: 'create_pr_failed', detail: e.message || prRes.status, time: now() });
+    }
+    const prData = await prRes.json();
+
+    console.log(`[§64] PR criado: ${prData.html_url} (branch: ${headBranch} → ${baseBranch})`);
+    return res.json({
+      ok:        true,
+      pr_url:    prData.html_url,
+      pr_number: prData.number,
+      branch:    headBranch,
+      files_committed: files.length,
+      time:      now()
+    });
+
+  } catch (err) {
+    console.error('[§64] github/create-pr error:', err.message);
+    return res.status(500).json({ ok: false, error: 'create_pr_error', detail: err.message, time: now() });
   }
 });
 

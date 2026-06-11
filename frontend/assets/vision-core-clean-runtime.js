@@ -203,12 +203,71 @@
       });
     }
 
-    // GITHUB PR — backend hoje só faz merge de PR existente (/api/deploy/merge-pr),
-    // não cria PR do zero. Mantido bloqueado com mensagem honesta até existir
-    // /api/github/create-pr.
+    // §64 — /api/github/create-pr implementado. githubPrBtn agora abre mini-form
+    // pedindo repo + head_branch e chama o endpoint real. files:[] por enquanto
+    // (integração com diff/patch virá em release futura).
     var githubPrBtn = document.getElementById('githubPrBtn');
     if (githubPrBtn) {
-      blockBtnMsg(githubPrBtn, 'Criação automática de PR ainda não implementada no backend (falta /api/github/create-pr). Hoje só é possível merge de PR existente via Aegis (/api/deploy/merge-pr).');
+      githubPrBtn.addEventListener('click', function () {
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:9999;';
+        var modal = document.createElement('div');
+        modal.style.cssText = 'background:#0f1117;border:1px solid #7c3aed;border-radius:16px;padding:24px;width:380px;max-width:92vw;font-family:inherit;';
+        var autoHead = 'vision-core/auto-' + Date.now();
+        modal.innerHTML = [
+          '<div style="font-size:15px;font-weight:700;color:#a78bfa;margin-bottom:14px;">🚀 Criar PR no GitHub</div>',
+          '<label style="display:block;font-size:11px;color:#94a3b8;margin-bottom:4px;">Repositório (owner/repo)</label>',
+          '<input id="vc64-repo" type="text" placeholder="ex: Imadechumbo/technetgamev2" style="width:100%;box-sizing:border-box;background:#1a1a2e;border:1px solid #334155;color:#e2e8f0;font-size:12px;padding:8px;border-radius:8px;margin-bottom:10px;font-family:inherit;">',
+          '<label style="display:block;font-size:11px;color:#94a3b8;margin-bottom:4px;">Branch base</label>',
+          '<input id="vc64-base" type="text" value="main" style="width:100%;box-sizing:border-box;background:#1a1a2e;border:1px solid #334155;color:#e2e8f0;font-size:12px;padding:8px;border-radius:8px;margin-bottom:10px;font-family:inherit;">',
+          '<label style="display:block;font-size:11px;color:#94a3b8;margin-bottom:4px;">Branch nova (head)</label>',
+          '<input id="vc64-head" type="text" value="' + autoHead + '" style="width:100%;box-sizing:border-box;background:#1a1a2e;border:1px solid #334155;color:#e2e8f0;font-size:12px;padding:8px;border-radius:8px;margin-bottom:10px;font-family:inherit;">',
+          '<label style="display:block;font-size:11px;color:#94a3b8;margin-bottom:4px;">Título do PR</label>',
+          '<input id="vc64-title" type="text" value="fix: Vision Core PASS GOLD automated PR" style="width:100%;box-sizing:border-box;background:#1a1a2e;border:1px solid #334155;color:#e2e8f0;font-size:12px;padding:8px;border-radius:8px;margin-bottom:10px;font-family:inherit;">',
+          '<div style="font-size:10px;color:#475569;margin-bottom:12px;">files: [] — integração com diff/patch em release futura</div>',
+          '<div id="vc64-status" style="font-size:11px;color:#f87171;min-height:16px;margin-bottom:8px;"></div>',
+          '<div style="display:flex;gap:8px;justify-content:flex-end;">',
+          '<button id="vc64-cancel" style="background:transparent;border:1px solid #334155;color:#94a3b8;font-size:11px;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:inherit;">Cancelar</button>',
+          '<button id="vc64-submit" style="background:#5b21b6;border:1px solid #7c3aed;color:#e9d5ff;font-size:11px;padding:6px 14px;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:600;">🚀 Criar PR</button>',
+          '</div>'
+        ].join('');
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        document.getElementById('vc64-repo').focus();
+        document.getElementById('vc64-cancel').onclick = function () { overlay.remove(); };
+        document.getElementById('vc64-submit').onclick = function () {
+          var repo       = (document.getElementById('vc64-repo').value  || '').trim();
+          var baseBr     = (document.getElementById('vc64-base').value  || 'main').trim();
+          var headBr     = (document.getElementById('vc64-head').value  || autoHead).trim();
+          var titleVal   = (document.getElementById('vc64-title').value || '').trim();
+          var statEl     = document.getElementById('vc64-status');
+          var submitBtn  = document.getElementById('vc64-submit');
+          if (!repo || !repo.includes('/')) { statEl.textContent = '⚠️ Formato: owner/repo'; return; }
+          if (!titleVal) { statEl.textContent = '⚠️ Título obrigatório'; return; }
+          submitBtn.disabled = true; submitBtn.textContent = '⏳ Criando...';
+          statEl.style.color = '#94a3b8'; statEl.textContent = 'Enviando para o backend...';
+          apiFetch('/api/github/create-pr', {
+            method: 'POST',
+            body: JSON.stringify({ repo: repo, base_branch: baseBr, head_branch: headBr, title: titleVal, body: '', files: [] })
+          }).then(function (res) {
+            if (res.body && res.body.ok) {
+              statEl.style.color = '#4ade80';
+              statEl.textContent = '✅ PR criado!';
+              submitBtn.textContent = '✓ CRIADO';
+              showToast('PR criado: ' + res.body.pr_url + ' (#' + res.body.pr_number + ')');
+              setTimeout(function () { overlay.remove(); }, 1800);
+            } else {
+              statEl.style.color = '#f87171';
+              statEl.textContent = '❌ ' + (res.body ? (res.body.error + (res.body.detail ? ' — ' + res.body.detail : '')) : 'Erro desconhecido');
+              submitBtn.disabled = false; submitBtn.textContent = '🚀 Criar PR';
+            }
+          }).catch(function () {
+            statEl.style.color = '#f87171';
+            statEl.textContent = '❌ Erro de rede';
+            submitBtn.disabled = false; submitBtn.textContent = '🚀 Criar PR';
+          });
+        };
+      });
     }
 
     var aiApiKey = document.getElementById('aiApiKey');

@@ -32,6 +32,7 @@ Usuário conversa
   → SF-SPEC-LIBRARY + SF Stress Test (90 specs + 15 cenários SF segurança/compliance — §59)
   → CI Automatizado + Stress Test FP (GitHub Actions V1–V4+SF+FP + anti-alucinação 10/10 — §60/§61)
   → Git Provider Abstraction (GitHub + GitLab, GitProviderAdapter — §62) [SPEC CRIADA]
+  → POST /api/github/create-pr — branch+commit+PR do zero, fecha githubPrBtn (§64)
 ```
 
 ### Módulos canônicos obrigatórios
@@ -4027,13 +4028,27 @@ Após remoção dos stubs no worker, o tráfego passa direto para o EB via `prox
 - `"Mock SaaS: cria usuário automaticamente..."` → `"Cria conta real no backend (plano FREE). OAuth ainda não habilitado."`
 - SF-08 description: remove frase "Todos os indicadores são locais" → menciona consulta real ao backend
 
-### Pendência documentada (não bloqueante)
+### Pendência §63 — ✅ RESOLVIDO em 2026-06-11 (§64)
 
-`githubPrBtn` segue bloqueado com mensagem honesta:
-> *"Criação automática de PR ainda não implementada no backend (falta /api/github/create-pr).  
-> Hoje só é possível merge de PR existente via Aegis (/api/deploy/merge-pr)."*
+`githubPrBtn` agora abre mini-form e chama `POST /api/github/create-pr` real.
 
-**Item futuro:** implementar `POST /api/github/create-pr` no backend EB — fora de escopo §63.
+### §64 — POST /api/github/create-pr (implementado)
+
+**Arquivo:** `backend/server.js`  
+**Body:** `{ repo, base_branch, head_branch, title, body, files: [{ path, content }] }`  
+**Resposta:** `{ ok: true, pr_url, pr_number, branch: head_branch, files_committed, time }`
+
+**Fluxo:**
+1. Validar `GITHUB_TOKEN` → 500 se ausente
+2. Validar `repo`, `base_branch`, `head_branch`, `title` → 400 se faltando
+3. `GET /repos/{repo}/git/ref/heads/{base_branch}` → SHA da base
+4. `POST /repos/{repo}/git/refs` → cria `head_branch` (ignora 422 — branch já existe)
+5. Para cada `file` em `files[]`: `GET contents` para obter sha atual → `PUT contents` com Base64
+6. `POST /repos/{repo}/pulls` → cria PR com `head → base`
+7. Retorna `{ ok: true, pr_url, pr_number, branch, files_committed }`
+
+**Frontend:** `wireRealActions()` no bundle + clean-runtime abre modal `#vc64-*` com repo/base/head/title  
+**files:** `[]` por enquanto — integração com diff/patch em release futura
 
 ### Validate-syntax
 
