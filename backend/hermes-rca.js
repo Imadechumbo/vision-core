@@ -11,7 +11,7 @@
  *
  * Fallback automático com logs [HERMES §49].
  * Se todos falharem: { ok: false, requires_manual_review: true }.
- * Groq: payload guard (>24K chars → skip).
+ * Groq: payload guard (>20K chars → skip; STRESS-11 fix §66).
  * Timeout por provider: 30s padrão (adaptável via opts.timeout).
  */
 
@@ -36,7 +36,7 @@ const PROVIDER_REGISTRY = {
     apiKeyEnv: 'GROQ_API_KEY',
     baseUrl:   'https://api.groq.com/openai/v1',
     type:      'openai',
-    payloadLimit: 24000   /* free tier ≤6K tokens ≈ 24K chars */
+    payloadLimit: 20000   /* free tier ≤6K tokens — margem segura 20K chars (STRESS-11 fix) */
   },
   openrouter: {
     name:      'OpenRouter',
