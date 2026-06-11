@@ -1,26 +1,22 @@
 {
-  "data": "2026-06-11T15:08:44.801Z",
-  "resultado": "17/17 PASS (100%)",
+  "data": "2026-06-11T16:16:22.059Z",
+  "resultado": "19/20 PASS (95%)",
   "cenarios": [
     {
       "id": "STRESS-11",
       "suite": "V2",
       "dificuldade": "HARD",
       "descricao": "Bug em 2 arquivos JS — capas somem + menu quebrado",
-      "passou": true,
-      "tempo_ms": 27171,
+      "passou": false,
+      "tempo_ms": 31406,
       "palavras_esperadas": [
         "LOCAL_REAL_COVERS",
         "menu",
         "menuToggle",
         "múltiplos"
       ],
-      "palavras_encontradas": [
-        "LOCAL_REAL_COVERS",
-        "menu",
-        "menuToggle"
-      ],
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Archivo games-2026-feature.js: línea en blanco entre el cierre del array groups y la declaración de LOCAL_REAL_COVERS fue reemplazada por comentario vacío '// ', probable residuo de edición.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  ];\\n// \",\n    \"replace\": \"  ];\\n\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n```json\n{\n  \"diagnosis\": \"Archivo main.js: la declaración 'const menuToggle = do",
+      "palavras_encontradas": [],
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15401 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
     {
@@ -29,7 +25,7 @@
       "dificuldade": "EXPERT",
       "descricao": "Bug JS + CSS — rank errado + cor vermelho",
       "passou": true,
-      "tempo_ms": 28664,
+      "tempo_ms": 9946,
       "palavras_esperadas": [
         "rank",
         "accent",
@@ -41,7 +37,7 @@
         "accent",
         "CSS"
       ],
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Múltiplos bugs identificados: (1) front/assets/js/games-2026-feature.js linha 11: rank do GTA VI alterado de 1 para 99, quebrando ordenação correta; (2) front/assets/css/styles.css linha 3: variável --accent alterada de #2dd881 (verde) para #ff0000 (vermelho), quebrando identidade visual e harmonia do tema escuro.\",\n  \"files\": [\n    \"front/assets/js/games-2026-feature.js\",\n    \"front/assets/css/styles.css\"\n  ],\n  \"fix_type\": \"code_patch\",\n  \"patches\": [\n    {\n      \"fil",
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Arquivo 1: rank de GTA VI alterado de 1 para 99, quebrando ordenação dos cards. Arquivo 2: --accent trocado de #2dd881 (verde) para #ff0000 (vermelho), quebrando a identidade visual verde do site.\",\n  \"file\": \"front/assets/js/games-2026-feature.js, front/assets/css/styles.css\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": [\n    {\n      \"file\": \"front/assets/js/games-2026-feature.js\",\n      \"search\": \"{ rank: 99, title: 'Grand Theft Auto VI'\",\n      \"replace\": \"{ rank: 1, titl",
       "erro": null
     },
     {
@@ -50,7 +46,7 @@
       "dificuldade": "EXPERT",
       "descricao": "Bug em 3 arquivos — capas + ranking + cor",
       "passou": true,
-      "tempo_ms": 30254,
+      "tempo_ms": 28545,
       "palavras_esperadas": [
         "múltiplos",
         "LOCAL_REAL_COVERS",
@@ -62,7 +58,7 @@
         "rank",
         "accent"
       ],
-      "diagnostico_recebido": "```json\n{\n  \"patches\": [\n    {\n      \"diagnosis\": \"LOCAL_REAL_COVERS foi alterado de objeto para undefined; variável _UNUSED_ inútil introduzida, quebrando a função getLocalRealCover que acessa LOCAL_REAL_COVERS[title]\",\n      \"file\": \"front/assets/js/games-2026-feature.js\",\n      \"fix_type\": \"code_patch\",\n      \"patch\": {\n        \"search\": \"const LOCAL_REAL_COVERS = undefined; const _UNUSED_ = {\",\n        \"replace\": \"const LOCAL_REAL_COVERS = {\"\n      },\n      \"confidence\": 0.97,\n      \"decisao",
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"games-2026-feature.js: LOCAL_REAL_COVERS foi alterado para undefined, quebrando getLocalRealCover ao tentar acessar propriedades de undefined. A variável _UNUSED_ foi adicionada mas não utilizada.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  const LOCAL_REAL_COVERS = undefined; const _UNUSED_ = {\",\n    \"replace\": \"  const LOCAL_REAL_COVERS = {\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nBug",
       "erro": null
     },
     {
@@ -71,7 +67,7 @@
       "dificuldade": "MEDIUM",
       "descricao": "z-index: -1 em main/header — header some atrás",
       "passou": true,
-      "tempo_ms": 6396,
+      "tempo_ms": 21538,
       "palavras_esperadas": [
         "z-index",
         "-1",
@@ -84,7 +80,7 @@
         "main",
         "header"
       ],
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"z-index: -1 em main, header, footer, .topbar coloca elementos-chave atrás do fundo com z-index: 0, tornando-os invisíveis ou com interação quebrada\",\n  \"file\": \"front/assets/css/styles.css\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"main, header, footer, .topbar { position: relative; z-index: -1; }\",\n    \"replace\": \"main, header, footer, .topbar { position: relative; z-index: 1; }\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: z-",
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"z-index de main, header, footer e .topbar alterado de 1 para -1, colocando esses elementos atrás dos pseudo-elementos ::before e ::after (z-index:0) e do conteúdo normal da página. Isso causa sumiço do conteúdo principal.\",\n  \"file\": \"front/assets/css/styles.css\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"main, header, footer, .topbar { position: relative; z-index: -1; }\",\n    \"replace\": \"main, header, footer, .topbar { position: relative; z-index: 1; }\"\n ",
       "erro": null
     },
     {
@@ -93,7 +89,7 @@
       "dificuldade": "EXPERT",
       "descricao": "Descrição do Analista Técnico zerada",
       "passou": true,
-      "tempo_ms": 9725,
+      "tempo_ms": 20035,
       "palavras_esperadas": [
         "desc",
         "vazio",
@@ -105,7 +101,7 @@
         "descrição",
         "Analista"
       ],
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A descrição do agente 'tech' foi apagada (linha com desc vazia), removendo o texto informativo que provavelmente é exibido na interface do site.\",\n  \"file\": \"front/assets/js/main.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"      desc: '',\\n      short: 'Tecnologia, software, plataformas e arquitetura.'\",\n    \"replace\": \"      desc: 'Monitora software, plataformas, arquitetura e infraestrutura do ecossistema tech.',\\n      short: 'Tecnologia, software, p",
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"O campo 'desc' do agente AGENTS.tech foi esvaziado (string vazia ''), removendo a descrição que antes era 'Monitora software, plataformas, arquitetura e infraestrutura do ecossistema tech.'. Isso causa ausência de texto descritivo na interface.\",\n  \"file\": \"front/assets/js/main.js\",\n  \"fix_type\": \"json_field\",\n  \"patch\": [\n    {\n      \"target_title\": \"tech\",\n      \"fields\": {\n        \"desc\": \"Monitora software, plataformas, arquitetura e infraestrutura do ecossistema te",
       "erro": null
     },
     {
@@ -114,7 +110,7 @@
       "dificuldade": "EXPERT",
       "descricao": "import resolveGameCover comentado — ReferenceError",
       "passou": true,
-      "tempo_ms": 5399,
+      "tempo_ms": 7697,
       "palavras_esperadas": [
         "import",
         "resolveGameCover",
@@ -126,7 +122,7 @@
         "resolveGameCover",
         "ReferenceError"
       ],
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Import das funções clearGameCoverCache e resolveGameCover foi comentado, causando ReferenceError ao tentar usá-las nas rotas /cover e /cover/cache/clear\",\n  \"file\": \"backend/src/routes/gamesRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"// import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\",\n    \"replace\": \"import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\"\n  },\n  \"confiden",
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Import de clearGameCoverCache e resolveGameCover foi comentado, causando ReferenceError ao chamar essas funções nas rotas /cover e /cover/cache/clear\",\n  \"file\": \"backend/src/routes/gamesRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"// import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\",\n    \"replace\": \"import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\"\n  },\n  \"confidence\"",
       "erro": null
     },
     {
@@ -135,7 +131,7 @@
       "dificuldade": "EXPERT",
       "descricao": "hideEmptyContainer setTimeout 260ms → 0ms — animação pulada",
       "passou": true,
-      "tempo_ms": 10559,
+      "tempo_ms": 11542,
       "palavras_esperadas": [
         "setTimeout",
         "260",
@@ -146,7 +142,7 @@
         "setTimeout",
         "260"
       ],
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"O timeout de ocultação do container foi alterado de 260ms para 0ms, removendo a animação de colapso suave e causando desaparecimento abrupto.\",\n  \"file\": \"front/assets/js/feeds.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"        }, 0);\",\n    \"replace\": \"        }, 260);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: timeout de 0ms impede animação CSS de feed-block-collapsing.\n\nSCANNER\n- Arquivo: front/assets/js/feeds.js\n- Linh",
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"O timeout de 260ms foi alterado para 0ms em hideEmptyContainer, removendo o atraso necessário para a animação CSS 'feed-block-collapsing' ser visível. Isso faz com que container.hidden = true execute imediatamente, colapsando o bloco sem transição visual suave.\",\n  \"file\": \"front/assets/js/feeds.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"        }, 0);\\n    },\\n\\n    showContainer(target) {\",\n    \"replace\": \"        }, 260);\\n    },\\n\\n    showContaine",
       "erro": null
     },
     {
@@ -155,7 +151,7 @@
       "dificuldade": "EXPERT",
       "descricao": "rankGameCoverCandidates — sort confidence asc em vez de desc",
       "passou": true,
-      "tempo_ms": 24140,
+      "tempo_ms": 9798,
       "palavras_esperadas": [
         "confidence",
         "sort",
@@ -164,10 +160,9 @@
       ],
       "palavras_encontradas": [
         "confidence",
-        "sort",
         "b.confidence"
       ],
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Sort comparador em rankGameCoverCandidates inverteu ordem de confiança de descendente (b.confidence - a.confidence) para ascendente (a.confidence - b.confidence), fazendo com que o primeiro candidato aceito seja o de menor confiança, comprometendo a seleção da melhor capa.\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"      return a.confidence - b.confidence;\",\n    \"replace\": \"      return b.confidence - ",
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A ordenação em rankGameCoverCandidates inverteu a ordem de classificação por confiança. Linha original (correta): return b.confidence - a.confidence (decrescente, maior primeiro). Linha alterada (bug): return a.confidence - b.confidence (crescente, menor primeiro). Isso faz com que o candidato com menor confiança seja priorizado, resultando em seleção de capas de baixa qualidade.\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patc",
       "erro": null
     },
     {
@@ -176,7 +171,7 @@
       "dificuldade": "HARD",
       "descricao": "safeLimit max(120) → max(0) — zero itens em todas as rotas",
       "passou": true,
-      "tempo_ms": 6991,
+      "tempo_ms": 28630,
       "palavras_esperadas": [
         "safeLimit",
         "Math.min",
@@ -189,7 +184,7 @@
         "0",
         "limit"
       ],
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"safeLimit() retorna Math.min(parsed, 0) que sempre resulta em 0, fazendo com que todas as rotas de notícias recebam limit=0 e retornem 0 resultados, quebrando o site\",\n  \"file\": \"backend/src/routes/newsRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return Math.min(parsed, 0);\",\n    \"replace\": \"return Math.min(parsed, 120);\"\n  },\n  \"confidence\": 0.98,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\n**Diagnóstico direto:** O bug está na linha 8 do arquivo `backend/sr",
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"safeLimit() retorna Math.min(parsed, 0) que SEMPRE resulta em 0 para qualquer valor positivo, quebrando todos os endpoints que usam essa função para limitar resultados (latest, month, game-search, category, source)\",\n  \"file\": \"backend/src/routes/newsRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return Math.min(parsed, 0);\",\n    \"replace\": \"return Math.min(parsed, 120);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nRCA: O diff mostra ",
       "erro": null
     },
     {
@@ -198,7 +193,7 @@
       "dificuldade": "NIGHTMARE",
       "descricao": "variable shadowing — const selected dentro do loop oculta array externo",
       "passou": true,
-      "tempo_ms": 28538,
+      "tempo_ms": 14114,
       "palavras_esperadas": [
         "selected",
         "shadow",
@@ -211,7 +206,7 @@
         "diversifyCollection",
         "selected.push"
       ],
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"diversifyCollection: linha 312 declara 'const selected = []' dentro do for, sombreando (shadowing) o array externo declarado na linha 299. 'selected.push' no loop popula o array local, nunca o externo, quebrando a coleta de itens e causando site vazio ou travado.\",\n  \"file\": \"backend/src/services/feedService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"    const selected = []; // bug: shadow — oculta array externo; selected.push nunca popula outer\\n\",\n  ",
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Linha `const selected = []; // bug: shadow` inserida dentro do `for` em `diversifyCollection`, criando shadow sobre o array externo `selected`. Todo item novo é pushado para o array local (inner), que é descartado. O array externo nunca é populado, quebrando a lógica de diversificação e fazendo o site exibir resultados vazios ou incorretos.\",\n  \"file\": \"backend/src/services/feedService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"    const selected = [];",
       "erro": null
     },
     {
@@ -220,7 +215,7 @@
       "dificuldade": "NIGHTMARE",
       "descricao": "off-by-one — summarizeTrends usa .slice(1,6) em vez de .slice(0,6)",
       "passou": true,
-      "tempo_ms": 18945,
+      "tempo_ms": 9933,
       "palavras_esperadas": [
         "slice",
         "summarizeTrends",
@@ -233,7 +228,7 @@
         "0",
         "6"
       ],
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Bug off-by-one em summarizeTrends: slice(1, 6) exclui a categoria mais popular (índice 0), fazendo o site sempre omitir a frente mais forte. A linha correta é slice(0, 6).\",\n  \"file\": \"backend/src/services/hermesService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"    .slice(1, 6) // bug: off-by-one — categoria mais popular sempre omitida\",\n    \"replace\": \"    .slice(0, 6)\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO diff fornecido mostr",
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"No arquivo backend/src/services/hermesService.js, a função summarizeTrends (linha ~246) usa .slice(1, 6) em vez de .slice(0, 6), causando off-by-one que sempre omite a categoria mais popular do ranking de trendslines. O bug foi introduzido pelo diff fornecido (linha + .slice(1, 6)).\",\n  \"file\": \"backend/src/services/hermesService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \".slice(1, 6) // bug: off-by-one — categoria mais popular sempre omitida\",\n    \"re",
       "erro": null
     },
     {
@@ -242,7 +237,7 @@
       "dificuldade": "NIGHTMARE",
       "descricao": "async fire-and-forget — translationSession.persist() sem await descartado silenciosamente",
       "passou": true,
-      "tempo_ms": 10622,
+      "tempo_ms": 17273,
       "palavras_esperadas": [
         "await",
         "persist",
@@ -255,7 +250,7 @@
         "translationSession",
         "fire"
       ],
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A linha translationSession.persist() em refreshAllFeeds foi alterada de await translationSession.persist() para translationSession.persist(), removendo o await. Isso torna a chamada fire-and-forget, onde erros de persistência são silenciados e a transação pode não ser concluída antes do término da função.\",\n  \"file\": \"backend/src/services/feedService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"    translationSession.persist(); // bug: await omitido — fi",
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"await omitido em translationSession.persist() em refreshAllFeeds — erros de persistência silenciados e sessão não aguardada, podendo causar perda de dados e comportamento assíncrono incorreto.\",\n  \"file\": \"backend/src/services/feedService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"    translationSession.persist(); // bug: await omitido — fire-and-forget; erros de persist silenciados\",\n    \"replace\": \"    await translationSession.persist();\"\n  },\n  \"con",
       "erro": null
     },
     {
@@ -264,7 +259,7 @@
       "dificuldade": "EXPERT",
       "descricao": "variável de módulo nunca atualizada — const local shadow impede guard de jobStarted",
       "passou": true,
-      "tempo_ms": 982,
+      "tempo_ms": 24900,
       "palavras_esperadas": [
         "jobStarted",
         "const",
@@ -277,7 +272,7 @@
         "shadow",
         "cron"
       ],
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Variável local 'const jobStarted' sombra a variável de módulo, impedindo a marcação de início e permitindo múltiplas execuções do cron.\",\n  \"file\": \"backend/src/jobs/hermesCron.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  const jobStarted = true; // bug: const local — shadow da variável de módulo; guard nunca ativa\",\n    \"replace\": \"  jobStarted = true;\"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nDiagnóstico: a declaração `const jobStart",
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A variável `jobStarted` foi redeclarada como `const jobStarted` local dentro da função, criando shadowing sobre a variável de módulo `let jobStarted` externa. O guard condicional `if (jobStarted || ...) return;` nunca bloqueia execuções subsequentes porque a variável de módulo permanece `false`, fazendo o cron ser reagendado infinitamente sem executar o bloco de relatórios internamente.\",\n  \"file\": \"backend/src/jobs/hermesCron.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\":",
       "erro": null
     },
     {
@@ -286,7 +281,7 @@
       "dificuldade": "NIGHTMARE",
       "descricao": "closure com estado compartilhado — enrichedCount em escopo de módulo nunca reinicia",
       "passou": true,
-      "tempo_ms": 8643,
+      "tempo_ms": 27543,
       "palavras_esperadas": [
         "enrichedCount",
         "módulo",
@@ -299,7 +294,73 @@
         "compartilhado",
         "hydrateMissingImages"
       ],
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A variável `enrichedCount` foi movida para fora da função `hydrateMissingImages`, passando de escopo local (reinicializado a cada chamada) para escopo de módulo (compartilhado entre chamadas). Isso causa comportamento incorreto: o contador persiste entre chamadas sucessivas da função, limitando o enriquecimento de imagens a `limit` itens no total, em vez de `limit` itens por chamada. Na prática, se `hydrateMissingImages` for chamada duas vezes com 10 itens cada, a segun",
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A variável de controle `enrichedCount` foi movida para o escopo do módulo (fora da função `hydrateMissingImages`), tornando-se compartilhada entre todas as chamadas da função. Isso faz com que o limite de enriquecimento (10 por padrão) seja global, não por chamada — após enriquecer 10 imagens em qualquer requisição, chamadas subsequentes param de enriquecer imediatamente, mesmo que os itens não tenham imagem.\",\n  \"file\": \"backend/src/services/feedService.js\",\n  \"fix_typ",
+      "erro": null
+    },
+    {
+      "id": "STRESS-46",
+      "suite": "V4",
+      "dificuldade": "NIGHTMARE",
+      "descricao": "await esquecido em getCache — cache é Promise não objeto, always fallback",
+      "passou": true,
+      "tempo_ms": 13484,
+      "palavras_esperadas": [
+        "await",
+        "readCache",
+        "Promise",
+        "getCache"
+      ],
+      "palavras_encontradas": [
+        "await",
+        "readCache",
+        "Promise",
+        "getCache"
+      ],
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Missing await before readCache() in getCache function causes cache to be a Promise object instead of the resolved cache data. This breaks all downstream checks (Array.isArray, property access) and returns fallbackCache erroneously.\",\n  \"file\": \"backend/src/services/feedService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  const cache = readCache(); // bug: await omitido — cache é Promise; Array.isArray(cache?.items) sempre false\",\n    \"replace\": \"  cons",
+      "erro": null
+    },
+    {
+      "id": "STRESS-47",
+      "suite": "V4",
+      "dificuldade": "NIGHTMARE",
+      "descricao": "Promise.allSettled → Promise.all — result.status nunca é 'fulfilled'",
+      "passou": true,
+      "tempo_ms": 14788,
+      "palavras_esperadas": [
+        "allSettled",
+        "Promise.all",
+        "fulfilled",
+        "sourceResults"
+      ],
+      "palavras_encontradas": [
+        "allSettled",
+        "Promise.all",
+        "fulfilled",
+        "sourceResults"
+      ],
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Linha 355: Promise.allSettled foi alterado para Promise.all — result.status é undefined para rejeições, causando perda de todos os candidatos de APIs que falham, resultando em capa não encontrada\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"const sourceResults = await Promise.all( // bug: allSettled→all — result.status é undefined; todos candidatos ignorados\",\n    \"replace\": \"const sourceResults = await ",
+      "erro": null
+    },
+    {
+      "id": "STRESS-51",
+      "suite": "V4",
+      "dificuldade": "NIGHTMARE",
+      "descricao": "Map.get sem fallback — sourceTierFor retorna undefined para fontes desconhecidas",
+      "passou": true,
+      "tempo_ms": 9416,
+      "palavras_esperadas": [
+        "sourceTierFor",
+        "|| 9",
+        "undefined",
+        "NaN"
+      ],
+      "palavras_encontradas": [
+        "sourceTierFor",
+        "|| 9",
+        "undefined",
+        "NaN"
+      ],
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"sourceTierFor() perdeu fallback 9 — fontes desconhecidas retornam undefined, causando NaN em operações de confiança (baseConfidence, scoreGameCoverCandidate)\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  return SOURCE_TIERS.get(key); // bug: fallback 9 removido — fontes desconhecidas retornam undefined → NaN\",\n    \"replace\": \"  return SOURCE_TIERS.get(key) || 9;\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": ",
       "erro": null
     },
     {
@@ -308,7 +369,7 @@
       "dificuldade": "EXPERT",
       "descricao": "SF-08 painel final com pass_gold_real_claimed=true — nunca deve ser true no frontend",
       "passou": true,
-      "tempo_ms": 18445,
+      "tempo_ms": 2079,
       "palavras_esperadas": [
         "não autorizado",
         "frontend",
@@ -319,7 +380,7 @@
         "frontend",
         "pass gold"
       ],
-      "diagnostico_recebido": "MISSÃO RECEBIDA  \nTipo: bug fix  \nRisco: baixo  \nEscopo: `sf-08-painel-final.json` — linha `pass_gold_real_claimed`\n\nHERMES  \n- DIFF fornecido: evidência completa do bug introduzido (linha `+ \"pass_gold_real_claimed\": true`).  \n- Regra §53 aplicada: análise focada exclusivamente nas linhas com `+` (bug) e `-` (correto).  \n- Confidence: 0.95 (acima do mínimo 0.85).  \n- Nenhum arquivo proibido envolvido.\n\nSCANNER  \n- Estrutura: arquivo JSON único com flags de estado do pipeline SF-08.  \n- Bug loca",
+      "diagnostico_recebido": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: baixo\nEscopo: sf-08-painel-final.json\n\nHERMES\n- Contexto: diff recebido, linhas marcadas com “-” são código correto (pré‑bug); linhas com “+” são código introduzido como bug.\n- Regras aplicadas: §53 (foco exclusivo nas linhas do diff), R1, R2, R5 (confidence ≥ 0.85), R6 (nenhum asset externo), R7 (necessária aprovação humana).\n\nSCANNER\n- Identificado que o campo **pass_gold_real_claimed** foi alterado de `false` para `true`.\n- A descrição (`nota`) foi modific",
       "erro": null
     },
     {
@@ -328,7 +389,7 @@
       "dificuldade": "HARD",
       "descricao": "SF-03 Worker Humano recebe prompt técnico com bash — deve ser checklist",
       "passou": true,
-      "tempo_ms": 11967,
+      "tempo_ms": 24171,
       "palavras_esperadas": [
         "checklist",
         "humano",
@@ -339,7 +400,7 @@
         "checklist",
         "humano"
       ],
-      "diagnostico_recebido": "MISSÃO RECEBIDA  \nTipo: diagnose  \nRisco: médio  \nEscopo: `sf-03-worker-humano-output.md`  \n\nHERMES  \n- Contexto recebido via DIFF e conteúdo final do arquivo.  \n- Regras aplicadas: §53 (foco exclusivo no diff), R1 (evidência real presente).  \n\nSCANNER  \n- Arquivo `sf-03-worker-humano-output.md` original continha checklist de ações para coordenação humana.  \n- O diff substitui o checklist por instruções de execução técnica (`git clone`, `npm install`, `deploy`) e bloco de código `jwt`.  \n\nOPENCL",
+      "diagnostico_recebido": "MISSÃO RECEBIDA  \nTipo: análise de bug  \nRisco: médio  \nEscopo: sf-03-worker-humano-output.md  \n\nHERMES  \n- Contexto fornecido via DIFF e arquivo atual.  \n- Regras aplicadas: §53 (foco exclusivo no DIFF), R5 (confidence ≥ 0.7), R1 (evidência real).  \n\nSCANNER  \n- Arquivo único: sf-03-worker-humano-output.md.  \n- No DIFF, 6 linhas removidas (checklist + nota) e 9 linhas adicionadas (instruções técnicas + código JWT).  \n- Conteúdo original: pacote para worker HUMANO, focado em coordenação e verifi",
       "erro": null
     },
     {
@@ -348,7 +409,7 @@
       "dificuldade": "HARD",
       "descricao": "SF-02 template SDDF sem estrutura de pastas — blueprint incompleto",
       "passou": true,
-      "tempo_ms": 27948,
+      "tempo_ms": 27596,
       "palavras_esperadas": [
         "incompleto",
         "estrutura",
@@ -359,7 +420,7 @@
         "estrutura",
         "pastas"
       ],
-      "diagnostico_recebido": "MISSÃO RECEBIDA  \nTipo: bug fix  \nRisco: médio  \nEscopo: sf-02-blueprint.md  \n\nHERMES  \n- Contexto fornecido via diff com evidência de remoção indevida.  \n- Regra §53 aplicada: foco exclusivo nas linhas do diff.  \n- Confidence: 0.95 (diff claro).  \n\nSCANNER  \n- O diff mostra que o bloco `## Estrutura de Pastas` com a árvore de diretórios foi eliminado.  \n- O blueprint atual (saída do módulo SF-02) não contém a estrutura de pastas esperada.  \n\nOPENCLAW  \n1. Identificar linha exata de inserção apó",
+      "diagnostico_recebido": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: baixo\nEscopo: sf-02-blueprint.md\n\nHERMES\n- Contexto: DIFF fornecido pelo usuário, evidência real presente.\n- Regras aplicadas: §53 (foco exclusivo no DIFF), confidence 0.95.\n\nSCANNER\n- Arquivo afetado: sf-02-blueprint.md\n- Mudança: remoção completa do bloco `## Estrutura de Pastas` com estrutura de diretórios. A linha `## Arquivos iniciais` foi mantida (removida e reinserida), mas o conteúdo anterior foi perdido.\n\nOPENCLAW\n- Plano: restaurar o bloco removido ",
       "erro": null
     }
   ]

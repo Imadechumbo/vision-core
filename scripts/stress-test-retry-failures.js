@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
  * stress-test-retry-failures.js
- * Vision Core — Retry dos 17 cenários que falharam no run #34 (§66)
- * Roda APENAS esses 17 em vez dos 80 completos — ciclo rápido para
- * validar fixes de tiered routing / CoT checklist.
+ * Vision Core — Retry dos fails do run #34 + Grupo A do run #35 (§66)
+ * Roda APENAS esses cenários em vez dos 80 completos — ciclo rápido para
+ * validar fixes de tiered routing / timeout.
  *
  * Scenarios: STRESS-11/12/13/16/22/25 (V2) · STRESS-28/29/32 (V3)
- *            STRESS-41/42/50/52/53 (V4) · SF-STRESS-04/08/11 (SF)
+ *            STRESS-41/42/46/47/50/51/52/53 (V4) · SF-STRESS-04/08/11 (SF)
  *
  * Dashboard: http://localhost:3105
  * Executa:   node scripts/stress-test-retry-failures.js
@@ -29,7 +29,7 @@ const BACKEND_URL = process.env.BACKEND_URL
 // ── Global state ──────────────────────────────────────────────────────────────
 const state = {
   rodando:    true,
-  total:      17,
+  total:      20,
   atual:      0,
   ativo:      null,
   resultados: [],
@@ -390,6 +390,45 @@ const SCENARIOS = [
           'let enrichedCount = 0; // bug: escopo de módulo — counter compartilhado entre chamadas\nasync function hydrateMissingImages(items = []) {\n  const limit = Number(process.env.IMAGE_ENRICH_LIMIT || 10);' ) },
     ],
     esperado: ['enrichedCount', 'módulo', 'compartilhado', 'hydrateMissingImages'],
+  },
+  {
+    id: 'STRESS-46', suite: 'V4', dificuldade: 'NIGHTMARE',
+    descricao: 'await esquecido em getCache — cache é Promise não objeto, always fallback',
+    tipo: 'zip',
+    arquivos: [
+      { arquivo: 'backend/src/services/feedService.js',
+        patch: (src) => src.replace(
+          '  const cache = await readCache();',
+          '  const cache = readCache(); // bug: await omitido — cache é Promise; Array.isArray(cache?.items) sempre false'
+        ) },
+    ],
+    esperado: ['await', 'readCache', 'Promise', 'getCache'],
+  },
+  {
+    id: 'STRESS-47', suite: 'V4', dificuldade: 'NIGHTMARE',
+    descricao: "Promise.allSettled → Promise.all — result.status nunca é 'fulfilled'",
+    tipo: 'zip',
+    arquivos: [
+      { arquivo: 'backend/src/services/gameCoverService.js',
+        patch: (src) => src.replace(
+          '  const sourceResults = await Promise.allSettled(',
+          '  const sourceResults = await Promise.all( // bug: allSettled→all — result.status é undefined; todos candidatos ignorados'
+        ) },
+    ],
+    esperado: ['allSettled', 'Promise.all', 'fulfilled', 'sourceResults'],
+  },
+  {
+    id: 'STRESS-51', suite: 'V4', dificuldade: 'NIGHTMARE',
+    descricao: 'Map.get sem fallback — sourceTierFor retorna undefined para fontes desconhecidas',
+    tipo: 'zip',
+    arquivos: [
+      { arquivo: 'backend/src/services/gameCoverService.js',
+        patch: (src) => src.replace(
+          '  return SOURCE_TIERS.get(key) || 9;',
+          '  return SOURCE_TIERS.get(key); // bug: fallback 9 removido — fontes desconhecidas retornam undefined → NaN'
+        ) },
+    ],
+    esperado: ['sourceTierFor', '|| 9', 'undefined', 'NaN'],
   },
 
   // ─── SF ─────────────────────────────────────────────────────────────────────
