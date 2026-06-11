@@ -325,3 +325,39 @@ CI: `.github/workflows/stress-test-ci.yml` — domingo 03:00 UTC + push/main + w
 
 Relatórios: `docs/STRESS-TEST-*-RESULTS.md` / `.json`  
 Certificações: `docs/STRESS-TEST-*-CERTIFICATION.md`
+
+---
+
+## §65 — Run #34: Referência Atual após Fix de OPENROUTER_API_KEY
+
+**Data:** 2026-06-11 | **Run CI:** #34 | **Commit SHA:** (run de diagnóstico)
+
+### Placar run #34 (melhor run pós-fix)
+
+| Suite | PASS | FAIL | Taxa |
+|-------|------|------|------|
+| V1 | 10 | 0 | 100% |
+| V2 | 9 | 6 | 60% |
+| V3 | 12 | 3 | 80% |
+| V4 | 10 | 5 | 67% |
+| SF | 12 | 3 | 80% |
+| FP | 10 | 0 | 100% |
+| **Total** | **63** | **17** | **78.75%** |
+
+### Contexto
+
+17 runs de diagnóstico (2026-06-11) identificaram que `OPENROUTER_API_KEY` no EB apointava para conta sem saldo (`...ef64`). Após trocar pela key correta (`sk-or-v1-599...306`), o score recuperou de **22/80 → 63/80** imediatamente.
+
+Provider ativo: `openrouter` com `meta-llama/llama-3.1-8b-instruct`.
+
+### Comparativo histórico
+
+| Período | Score | Provider principal |
+|---------|-------|-------------------|
+| Run #15 (pico anterior) | 66/80 (82.5%) | Groq llama-3.3-70b |
+| Runs #17–#32 (piso) | ~22/80 (27.5%) | Cerebras (quota curta) |
+| **Run #34 (atual)** | **63/80 (78.75%)** | **OpenRouter meta-llama/3.1-8b** |
+
+### Próximos 17 cenários a melhorar
+
+Para chegar a 80/80, trocar modelo OpenRouter para `meta-llama/llama-3.3-70b-instruct` ou aguardar reset do Groq (`llama-3.3-70b-versatile`) — o modelo atual (8b) não tem capacidade suficiente para bugs EXPERT/NIGHTMARE.

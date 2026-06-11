@@ -4058,3 +4058,62 @@ frontend/assets/vision-core-bundle.js      → node --check OK
 frontend/assets/vision-core-clean-runtime.js → node --check OK
 ```
 
+---
+
+## §65 — Diagnóstico e Fix de OPENROUTER_API_KEY no EB
+
+**Data:** 2026-06-11  
+**Tipo:** Diagnóstico de infraestrutura + fix de configuração AWS
+
+### Problema
+
+Após run #15 (66/80, 82.5%), os scores despencaram para o piso de 21–23/80 por ~17 runs consecutivos. Investigação inicial apontou erroneamente para:
+- ❌ Subnet privada sem NAT Gateway (eliminado: subnet pública com IGW)
+- ❌ Security Group bloqueando saída 443 (eliminado: SG totalmente aberto)
+- ❌ Keys não configuradas (eliminado: provider-status confirmou 4 keys presentes)
+
+### Causa Raiz Real
+
+Logs EB (`[HERMES §49]`) revelaram erros específicos por provider:
+- `Anthropic`: HTTP 401 — key inválida/expirada
+- `Cerebras`: HTTP 429 — quota diária esgotada (~6min de uso)
+- `Groq`: HTTP 429 — rate limit (21 runs em sequência)
+- `OpenRouter`: **HTTP 402 — sem créditos**
+- `DeepSeek`: HTTP 402 — saldo zero
+- `Gemini`: HTTP 429 — rate limit
+
+O problema central: **OPENROUTER_API_KEY no EB terminava em `...ef64`** (key de conta sem saldo), enquanto a recarga de $5,20 foi feita em **outra conta/key** (`sk-or-v1-599...306`).
+
+### Fix Aplicado
+
+Atualização da `OPENROUTER_API_KEY` no EB via console AWS → Configuração → Variáveis de ambiente, substituída pela key da conta com crédito.
+
+### Resultado
+
+| Métrica | Antes do fix | Após fix (#34) |
+|---------|-------------|----------------|
+| V2 | 1/15 | **9/15** |
+| V3 | 0/15 | **12/15** |
+| V4 | 0/15 | **10/15** |
+| SF | 0/15 | **12/15** |
+| **Total** | **~22/80** | **63/80 (78.75%)** |
+
+### Histórico de diagnóstico nesta sessão
+
+17 runs de diagnóstico realizados (runs #15–#34), identificando progressivamente:
+1. Todos providers com billing/quota esgotados
+2. Cerebras esgota quota em ~6min (free tier insuficiente para run completo)
+3. OpenRouter 402 persistia mesmo após recarga (key errada)
+4. Fix: trocar key no EB → recuperação imediata para 63/80
+
+### Provider responsável pelo ganho
+
+`openrouter` com modelo `meta-llama/llama-3.1-8b-instruct` — sem payloadLimit, processa mensagens >30K chars que Groq rejeita.
+
+### Próximos passos (futura sessão)
+
+Para superar 63/80 e chegar mais perto de 80/80:
+- Trocar `OPENROUTER_MODEL` para modelo mais capaz (ex: `meta-llama/llama-3.3-70b-instruct` ou `anthropic/claude-3-haiku`)
+- Corrigir aggregate CI para ler `data.results` de V1–V4 (hoje só lê `data.cenarios`, causando V1–V4 = 0/0 no CI-LAST-RUN.md)
+- Aguardar reset de Groq (llama-3.3-70b-versatile, sem payloadLimit) como backup
+
