@@ -4119,98 +4119,122 @@ Para superar 63/80 e chegar mais perto de 80/80:
 
 ---
 
-## §66 — Spec: Tiered Routing por Dificuldade
+## §66 — Spec: Tiered Routing por Dificuldade via OpenRouter (sem Anthropic)
 
 **Data:** 2026-06-11  
 **Status:** SPEC — não implementado  
-**Motivação:** Run #34 (63/80, 78.75%) — análise dos 17 fails
+**Motivação:** Run #34 (63/80, 78.75%) — 17 fails concentrados em HARD/EXPERT/NIGHTMARE
+
+---
 
 ### Análise dos 17 failures do run #34
 
 **Distribuição por dificuldade:**
 
-| Dificuldade | Fails | % dos 17 |
-|-------------|-------|---------|
-| MEDIUM | 1 | 6% |
-| HARD | 4 | 24% |
-| EXPERT | 8 | 47% |
-| NIGHTMARE | 4 | 24% |
+| Dificuldade | Fails | % | IDs |
+|-------------|-------|---|-----|
+| MEDIUM | 1 | 6% | STRESS-16 (z-index -1) |
+| HARD | 4 | 24% | STRESS-11, STRESS-32, SF-08, SF-11 |
+| EXPERT | 8 | 47% | STRESS-12/13/22/25/28/29/52, SF-04 |
+| NIGHTMARE | 4 | 24% | STRESS-41/42/50/53 |
 
-**Achados:**
+**Padrão dominante:** modelo `llama-3.1-8b-instruct` descreve bugs genericamente sem citar identificadores exatos. Exemplos de 0/4 palavras encontradas:
+- STRESS-41 [NIGHTMARE]: esperava `selected`, `shadow`, `diversifyCollection`, `selected.push` → nenhuma
+- STRESS-53 [NIGHTMARE]: esperava `enrichedCount`, `módulo`, `compartilhado`, `hydrateMissingImages` → nenhuma
+- STRESS-16 [MEDIUM]: esperava `z-index`, `-1`, `main`, `header` → nenhuma (viu o bug, não usou termos)
 
-1. **Hipótese confirmada:** 94% dos fails (16/17) são HARD ou acima. O único MEDIUM (STRESS-16: z-index -1) falhou por *vocabulário* — o modelo descreveu o bug mas sem as palavras-chave exatas.
+**Conclusão:** Modelo maior → cita identificadores exatos → acerta palavras-chave.
 
-2. **Padrão de falha dominante:** Modelo responde *genericamente* sem citar identificadores de código específicos. Exemplos:
-   - STRESS-11 esperava `['LOCAL_REAL_COVERS', 'menu', 'menuToggle', 'múltiplos']` → resposta não citou nenhum
-   - STRESS-41 esperava `['selected', 'shadow', 'diversifyCollection', 'selected.push']` → 0 encontradas
-   - STRESS-53 esperava `['enrichedCount', 'módulo', 'compartilhado', 'hydrateMissingImages']` → 0 encontradas
+---
 
-3. **Modelo atual (`llama-3.1-8b-instruct`):** suficiente para EASY/MEDIUM (identifica bugs) mas não cita nomes de variáveis/funções exatos para HARD+. Modelo maior tende a rastrear código mais especificamente.
+### Catálogo OpenRouter pesquisado (2026-06-11)
 
-4. **SF failures:** `palavras_esperadas` não é salva no CI JSON — gap de observabilidade (SF-04/08/11 tiveram diagnóstico mas vocabulário incorreto).
+| Modelo | ID OpenRouter | Ctx (K) | $/1M in | $/1M out | Tier recomendado |
+|--------|--------------|---------|---------|---------|----------------|
+| DeepSeek V4 Flash | `deepseek/deepseek-v4-flash` | 1048 | $0.098 | $0.197 | HARD/EXPERT |
+| DeepSeek V4 Pro | `deepseek/deepseek-v4-pro` | 1048 | $0.435 | $0.87 | NIGHTMARE |
+| Qwen 3.5 9B | `qwen/qwen3.5-9b` | 262 | $0.10 | $0.15 | EASY/MEDIUM |
+| Mistral Small 2603 | `mistralai/mistral-small-2603` | 262 | $0.15 | $0.60 | HARD |
+| Nvidia Nemotron 120B | `nvidia/nemotron-3-super-120b-a12b` | 1000 | $0.09 | $0.45 | HARD/EXPERT |
+| Poolside Laguna M.1 | `poolside/laguna-m.1:free` | 262 | FREE | FREE | EASY/MEDIUM |
+| Poolside Laguna XS.2 | `poolside/laguna-xs.2:free` | 262 | FREE | FREE | EASY/MEDIUM |
+| Nvidia Nemotron 120B | `nvidia/nemotron-3-super-120b-a12b:free` | 1000 | FREE | FREE | HARD/EXPERT fallback |
 
-### Proposta: Tiered Routing
+> Nota: `meta-llama/llama-3.1-8b-instruct` (modelo atual no EB) **não aparece mais** no catálogo — provavelmente substituído. Verificar no próximo deploy.
 
-**Objetivo:** Acertar HARD/EXPERT/NIGHTMARE sem aumentar custo em EASY/MEDIUM.
+---
 
-#### Tier 1 — EASY / MEDIUM
-- Provider: `openrouter` `meta-llama/llama-3.1-8b-instruct` (atual)
-- Sem mudança de prompt
-- Custo: ~$0.0001/req
+### Estimativa de custo com saldo atual ($5.20)
 
-#### Tier 2 — HARD / EXPERT
-- Provider (prioridade): `cerebras` `gpt-oss-120b` (128K ctx, resposta rápida)
-- Fallback: `groq` `llama-3.3-70b-versatile` (se quota disponível)
-- Fallback 2: `openrouter` com modelo maior (ex: `meta-llama/llama-3.3-70b-instruct`)
-- **Prompt estruturado obrigatório** (chain-of-thought guiado):
-  ```
-  CHECKLIST DE VERIFICAÇÃO (aplicar antes de apontar o bug):
-  1. Escopo de variáveis: há const/let/var que oculta variável outer?
-  2. Comparação vs atribuição: = vs == vs ===?
-  3. Mutação: array/objeto está sendo mutado sem cópia?
-  4. Async/await: toda Promise tem await? fire-and-forget intencional?
-  5. Identifique o nome EXATO da variável/função com o bug.
-  ```
+Estimativa por cenário HARD/EXPERT (15K tokens in + 500 out):
 
-#### Tier 3 — NIGHTMARE
-- Provider: mesmo do Tier 2, mas com `max_tokens: 8192` (respostas mais longas)
-- **Few-shot obrigatório**: incluir 2-3 exemplos de `.vision-memory/remediation_events.jsonl` com bugs similares resolvidos
-- **Instrução de vocabulário**: "Na sua resposta, cite o nome EXATO da variável, função ou linha de código afetada. Use o mesmo identificador que aparece no DIFF."
+| Modelo | Custo/cenário | Cenários com $5.20 |
+|--------|-------------|-------------------|
+| `deepseek/deepseek-v4-flash` | $0.00157 | **~3.300** |
+| `deepseek/deepseek-v4-pro` | $0.00696 | **~747** |
+| `poolside/laguna-m.1:free` | $0 | **∞** |
+| `nvidia/nemotron-3-super-120b-a12b` | $0.00158 | **~3.300** |
 
-### Mecanismo de detecção de dificuldade
+**Conclusão:** $5.20 é praticamente ilimitado para DeepSeek V4 Flash. Usar V4 Pro apenas para NIGHTMARE onde vale o custo maior.
 
-O campo `dificuldade` existe nos cenários de stress test mas **não é enviado ao backend** hoje. Opções:
+---
 
-**Opção A (simples):** Incluir metadado no prompt:
+### Tabela de roteamento proposta
+
 ```
-[DIFICULDADE: NIGHTMARE]
+Dificuldade → Provider primário           → Fallback 1              → Fallback 2
+─────────────────────────────────────────────────────────────────────────────────
+EASY/MEDIUM → poolside/laguna-xs.2:free   → qwen/qwen3.5-9b         → deepseek/deepseek-v4-flash
+HARD        → deepseek/deepseek-v4-flash  → nvidia/nemotron-120b    → poolside/laguna-m.1:free
+EXPERT      → deepseek/deepseek-v4-flash  → nvidia/nemotron-120b    → deepseek/deepseek-v4-pro
+NIGHTMARE   → deepseek/deepseek-v4-pro    → deepseek/deepseek-v4-flash → cerebras/gpt-oss-120b
 ```
 
-**Opção B (inferência):** Backend infere pelo tamanho do `[DIFF]`:
-- < 10 linhas diff → EASY/MEDIUM → Tier 1
-- 10–30 linhas → HARD/EXPERT → Tier 2
-- > 30 linhas ou múltiplos blocos [DIFF] → NIGHTMARE → Tier 3
+**Lógica de seleção no hermes-rca.js:**
+- Detectar tier via metadado `[DIFICULDADE: X]` no prompt (injetado pelos stress scripts)
+- Heurística para uso real: `linhas_diff < 10 → EASY/MEDIUM`, `10–30 → HARD/EXPERT`, `> 30 ou múltiplos [DIFF] → NIGHTMARE`
 
-**Recomendação:** Opção A para stress tests (dificuldade já conhecida), Opção B como heurística para uso real.
+---
+
+### Prompt adicional por tier
+
+**HARD/EXPERT — Checklist de verificação (chain-of-thought guiado):**
+
+```
+CHECKLIST OBRIGATÓRIO (verificar antes de concluir):
+1. Variável: há const/let/var que OCULTA (shadow) variável do escopo externo?
+2. Comparação: operador = (atribuição) sendo usado onde deveria ser === ?
+3. Mutação: array/objeto sendo modificado sem .slice()/.spread antes?
+4. Async/await: toda Promise tem await? Algum fire-and-forget silencioso?
+5. Citar o NOME EXATO da variável/função afetada — usar o mesmo identificador do DIFF.
+```
+
+**NIGHTMARE — Adicional ao checklist:**
+- `max_tokens: 8192` (respostas mais longas para análise profunda)
+- Few-shot: injetar 1-2 exemplos de `.vision-memory/remediation_events.jsonl`
+- Instrução: "Rastreie cada uso da variável identificada. Mostre a cadeia: declaração → uso → efeito do bug."
+
+---
 
 ### Implementação (futura sessão)
 
-| Fase | Entregável | Arquivo |
-|------|-----------|---------|
-| 1 | Adicionar metadado `[DIFICULDADE: X]` nos buildMessage() dos stress scripts | `scripts/stress-test-v*.js` |
-| 2 | Backend detecta `[DIFICULDADE: X]` e escolhe provider/prompt | `backend/hermes-rca.js` |
-| 3 | Checklist CoT para HARD+ no systemPrompt | `backend/server.js` (hermesDecisionMatrix) |
-| 4 | Few-shot NIGHTMARE via `.vision-memory/remediation_events.jsonl` | `backend/hermes-rca.js` |
-| 5 | Validar com novo run CI — alvo: 73+/80 (91%+) | `.github/workflows/stress-test-ci.yml` |
+| Fase | Entregável | Arquivo | Alvo |
+|------|-----------|---------|------|
+| 1 | Atualizar `OPENROUTER_MODEL` no EB → `deepseek/deepseek-v4-flash` | AWS Console | Imediato |
+| 2 | Adicionar `[DIFICULDADE: X]` nos `buildMessage()` dos stress scripts | `scripts/stress-test-v*.js` | V1-V4+SF+FP |
+| 3 | `hermes-rca.js`: detectar `[DIFICULDADE:]` e selecionar provider/model por tier | `backend/hermes-rca.js` | Todos providers |
+| 4 | Checklist CoT no `hermesDecisionMatrix` para HARD+ | `backend/server.js` | System prompt |
+| 5 | Few-shot NIGHTMARE via `.vision-memory/remediation_events.jsonl` | `backend/hermes-rca.js` | Tier 3 |
+| 6 | Fix aggregate CI: `data.cenarios \|\| data.results \|\| data.resultados \|\| []` | `.github/workflows/stress-test-ci.yml` | CI-LAST-RUN.md |
+| 7 | Run CI com todas as mudanças — alvo: **73+/80 (91%+)** | CI | Validação |
 
-### Gap adicional identificado
+---
 
-Aggregate CI usa `data.cenarios` mas V1/V2/V3/V4 salvam em `data.results`/`data.resultados`. Fix simples:
+### Gap adicional: aggregate CI
+
+CI-LAST-RUN.md mostra 25/25 em vez de 80/80 porque V1–V4 salvam `data.results`/`data.resultados` mas o aggregate lê `data.cenarios`. Fix:
 
 ```js
-// No aggregate step do workflow:
 const cenarios = data.cenarios || data.results || data.resultados || [];
 ```
-
-Isso faz o CI-LAST-RUN.md reportar corretamente os 80 cenários em vez de 25.
 
