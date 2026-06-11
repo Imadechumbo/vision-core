@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-11T17:10:05.298Z",
+  "timestamp": "2026-06-11T18:37:18.650Z",
   "backend_url": "http://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com",
   "results": [
     {
@@ -15,11 +15,13 @@
         "múltiplos"
       ],
       "palavras_encontradas": [
-        "LOCAL_REAL_COVERS"
+        "LOCAL_REAL_COVERS",
+        "menu",
+        "menuToggle"
       ],
-      "passou": false,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Uma linha em branco necessária para formatação entre o array 'groups' e o objeto 'LOCAL_REAL_COVERS' foi substituída por um comentário '// ', impactando a legibilidade.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"// \",\n    \"replace\": \"\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nHERMES\n- RCA: Linha em branco substituída por comentário '// ' em `front/assets/js/games-202",
-      "tempo_ms": 51815,
+      "passou": true,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Bug 1 (games-2026-feature.js): A linha '// ' foi adicionada entre o array 'groups' e a declaração de 'LOCAL_REAL_COVERS', quebrando o escopo e tornando a variável 'LOCAL_REAL_COVERS' indefinida para o restante do código. Bug 2 (main.js): O seletor 'menuToggle' foi comentado, quebrando qualquer funcionalidade que dependa da variável para referenciar o elemento do menu.\",\n  \"file\": \"front/assets/js/games-2026-feature.js, front/assets/js/main.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": [\n    {\n      \"search\": \"  ];\",\n      \"replace\": \"  ];\"\n    },\n    {\n      \"search\": \"// \",\n      \"replace\": \"\"\n    },\n    {\n      \"search\": \"  const LOCAL_REAL_COVERS = {\",\n      \"replace\": \"  const LOCAL_REAL_COVERS = {\"\n    },\n    {\n      \"search\": \"// const menuToggle = document.querySelector('[data-menu-toggle]');\",\n      \"replace\": \"  const menuToggle = document.querySelector('[data-menu-toggle]');\"\n    }\n  ],\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: Linha `// ` inserida entre o bloco de dados e a variável `LOCAL_REAL_COVERS`, quebrando a declaração e tornando a variável inacessível. Seletor `menuToggle` comentado em `main.js`, removendo a referência ao elemento DOM.\n\nSCANNER\n- Arquivo 1: `front/assets/js/games-2026-feature.js`\n- Linha afetada: linha entre 48 e 49 (a linha `// ` adicionada)\n- Arquivo 2: `front/assets/js/main.js`\n- Linha afetada: linha 2 (comentário adicionado à declaração\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas `front/assets/js/games-2026-feature.js` e `front/assets/js/main.js`\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 4908,
       "erro": null
     },
     {
@@ -37,7 +39,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15341 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 31342,
+      "tempo_ms": 31267,
       "erro": null
     },
     {
@@ -58,8 +60,8 @@
         "accent"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Três bugs introduzidos por alterações nos diffs: (1) LOCAL_REAL_COVERS em games-2026-feature.js foi trocado para undefined, quebrando getLocalRealCover; (2) rank do criador HadesPlays em games-hub.js foi alterado de 1 para 99, desordenando a listagem; (3) variável CSS --accent em styles.css foi trocada de #2dd881 para #ff0000, quebrando o tema visual do site.\",\n  \"file\": \"front/assets/js/games-2026-feature.js, front/assets/js/games-hub.js, front/assets/css/styles.css\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": [\n    {\n      \"search\": \"const LOCAL_REAL_COVERS = undefined; const _UNUSED_ = {\",\n      \"replace\": \"const LOCAL_REAL_COVERS = {\"\n    },\n    {\n      \"search\": \"rank: 99,\",\n      \"replace\": \"rank: 1,\"\n    },\n    {\n      \"search\": \"--accent: #ff0000;\",\n      \"replace\": \"--accent: #2dd881;\"\n    }\n  ],\n  \"confidence\": 1.0,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nTrês bugs identificados nos diffs fornecidos. Cada patch restaura o valor correto que existia antes da alteração bugada. O primeiro patch corrige a atribuição de `undefined` ao objeto de covers, o segundo restaura o rank do criador, o terceiro restaura a cor de destaque do tema.\n\nHERMES\n- RCA 1: `LOCAL_REAL_COVERS = undefined` em games‑2026‑feature.js faz `getLocalRealCover` lançar TypeError ao acessar índice de `undefined`.  \n- RCA 2: `rank: 99` em games‑hub.js coloca HadesPlays como último na listagem de criadores.  \n- RCA 3: `--accent: #ff0000` em styles.css substitui o verde original, quebrando o design system.\n\nSCANNER\n- Arquivo 1: front/assets/js/games‑2026‑feature.js — linha onde `LOCAL_REAL_COVERS` é declarada.  \n- Arquivo 2: front/assets/js/games‑hub.js — objeto do criador HadesPlays.  \n- Arquivo 3: front/assets/css/styles.css — bloco `:root`.\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas os três arquivos corrigidos\n\nDECISÃO: NEEDS_FIX  \nConfiança: 1.0\n\nPróximo passo: Aplicar os três patches (um após o outro) e validar com Aegis.\n\n```diff\n--- a/front/assets/js/games-2026-feature.js\n+++ b/front/assets/js/games-2026-feature.js\n@@ -49 +49 @@\n-  const LOCAL_REAL_COVERS = undefined; const _UNUSED_ = {\n+  const LOCAL_REAL_COVERS = {\n\n--- a/front/assets/js/games-hub.js\n+++ b/front/assets/js/games-hub.js\n@@ -1 +1 @@\n-      rank: 99,\n+      rank: 1,\n\n--- a/front/assets/css/styles.css\n+++ b/front/assets/css/styles.css\n@@ -1 +1 @@\n-  --accent: #ff0000;\n+  --accent: #2dd881;\n```",
-      "tempo_ms": 28523,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Três bugs detectados: (1) games-2026-feature.js linha 49 — LOCAL_REAL_COVERS setado como undefined, causando erro em getLocalRealCover; (2) games-hub.js linha 3 — rank do HadesPlays alterado de 1 para 99, quebra ordenação; (3) styles.css linha 2 — --accent alterado de #2dd881 para #ff0000, quebra o design system.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"const LOCAL_REAL_COVERS = undefined; const _UNUSED_ = {\",\n    \"replace\": \"const LOCAL_REAL_COVERS = {\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nTrês bugs nos diff recebidos:\n\n1. **games-2026-feature.js**: `LOCAL_REAL_COVERS` foi setado como `undefined` em vez de receber diretamente o objeto. Isso quebra a função `getLocalRealCover` que depende do objeto para retornar caminhos de imagens locais.\n\n2. **games-hub.js**: `rank: 1` do HadesPlays foi alterado para `99`, o que desordenará o ranking e potencialmente quebra a lógica de exibição.\n\n3. **styles.css**: `--accent: #2dd881` foi alterado para `#ff0000`, mudando a cor principal do design system de verde para vermelho.\n\nHERMES\n- RCA: LOCAL_REAL_COVERS = undefined quebra lookup de covers; rank incorreto quebra ordenação; accent incorreto quebra design\n\nSCANNER\n- Arquivo 1: front/assets/js/games-2026-feature.js\n- Linha afetada: 49 (LOCAL_REAL_COVERS = undefined)\n- Arquivo 2: front/assets/js/games-hub.js\n- Linha afetada: 3 (rank: 99)\n- Arquivo 3: front/assets/css/styles.css\n- Linha afetada: 2 (--accent: #ff0000)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas os 3 arquivos com diff\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch no games-2026-feature.js. Os outros dois arquivos precisam de patches separados.\n\n```diff\n--- a/front/assets/js/games-2026-feature.js\n+++ b/front/assets/js/games-2026-feature.js\n@@ -49 +49 @@\n-  const LOCAL_REAL_COVERS = undefined; const _UNUSED_ = {\n+  const LOCAL_REAL_COVERS = {\n\n--- a/front/assets/js/games-hub.js\n+++ b/front/assets/js/games-hub.js\n@@ -3 +3 @@\n-      rank: 99,\n+      rank: 1,\n\n--- a/front/assets/css/styles.css\n+++ b/front/assets/css/styles.css\n@@ -2 +2 @@\n-  --accent: #ff0000;\n+  --accent: #2dd881;\n```",
+      "tempo_ms": 17829,
       "erro": null
     },
     {
@@ -77,11 +79,12 @@
       "palavras_encontradas": [
         "display",
         "none",
-        "body"
+        "body",
+        "visibilidade"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"display: none; added to body hides all page content, causing the site to appear blank\",\n  \"file\": \"front/assets/css/styles.css\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  display: none;\",\n    \"replace\": \"\"\n  },\n  \"confidence\": 0.93,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nRCA: a linha `display: none;` foi inserida dentro do seletor `body`, ocultando todo o conteúdo da página.\n\nHERMES\n- RCA: `display: none;` causa ocultação total da UI.\n\nSCANNER\n- Arquivo: front/assets/css/styles.css\n- Linha afetada: `  display: none;`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/css/styles.css\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.93\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 835,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"display:none foi inserido no selector body, ocultando todo o conteúdo da página.\",\n  \"file\": \"front/assets/css/styles.css\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  display: none;\",\n    \"replace\": \"\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO `display: none;` na regra `body` impede que o site seja renderizado, removendo essa linha restaura a visibilidade normal.\n\n**HERMES**\n- RCA: `display: none;` foi adicionado erroneamente ao selector `body`, ocultando todo o layout.\n\n**SCANNER**\n- Arquivo: `front/assets/css/styles.css`\n- Linha afetada: contém a declaração `  display: none;` dentro do bloco `body { ... }`.\n\n**AEGIS**\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas `front/assets/css/styles.css`\n\n**DECISÃO**: NEEDS_FIX  \nConfiança: 0.95\n\n**Próximo passo**: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 706,
       "erro": null
     },
     {
@@ -96,10 +99,15 @@
         "#2dd881",
         "CSS"
       ],
-      "palavras_encontradas": [],
-      "passou": false,
-      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2108 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 31095,
+      "palavras_encontradas": [
+        "accent",
+        "#ff0000",
+        "#2dd881",
+        "CSS"
+      ],
+      "passou": true,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Variável --accent foi alterada de #2dd881 (verde) para #ff0000 (vermelho) no arquivo front/assets/css/styles.css, quebrando o esquema de cores do site.\",\n  \"file\": \"front/assets/css/styles.css\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  --accent: #ff0000;\",\n    \"replace\": \"  --accent: #2dd881;\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO diff mostra que a linha com `-` (verde) é a correta e a linha com `+` (vermelho) é o bug introduzido. O site está usando vermelho como cor de destaque, o que provavelmente conflita com o design escuro original.\n\nHERMES\n- RCA: --accent trocada para #ff0000 no CSS raiz, alterando toda a paleta de destaque do site.\n\nSCANNER\n- Arquivo: front/assets/css/styles.css\n- Linha afetada: `--accent: #ff0000;` (linha 2)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/css/styles.css\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 4358,
       "erro": null
     },
     {
@@ -121,8 +129,8 @@
         "header"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Linha 31: z-index foi alterado de 1 para -1 no seletor main, header, footer, .topbar, fazendo com que esses elementos fiquem posicionados atrás de outros componentes (como o pseudo-elemento da grid), causando o problema visual no site.\",\n  \"file\": \"front/assets/css/styles.css\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"main, header, footer, .topbar { position: relative; z-index: -1; }\",\n    \"replace\": \"main, header, footer, .topbar { position: relative; z-index: 1; }\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES  \n- RCA: `z-index: -1` em `main, header, footer, .topbar` faz com que o conteúdo fique atrás do fundo e overlay, quebrando a camada visual esperada.\n\nSCANNER  \n- Arquivo: `front/assets/css/styles.css`  \n- Linha afetada: linha 31 (conteúdo do bloco: `main, header, footer, .topbar { position: relative; z-index: -1; }`)\n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas o arquivo de estilo fornecido\n\nDECISÃO: NEEDS_FIX  \nConfiança: 0.95  \n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 12604,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"z-index alterado de 1 para -1 em main, header, footer e .topbar, colocando o conteúdo principal atrás dos pseudo-elementos de fundo (z-index: 0), causando ocultação ou empilhamento incorreto\",\n  \"file\": \"front/assets/css/styles.css\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"main, header, footer, .topbar { position: relative; z-index: -1; }\",\n    \"replace\": \"main, header, footer, .topbar { position: relative; z-index: 1; }\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: z-index -1 joga conteúdo atrás de elementos de fundo com z-index 0\n\nSCANNER\n- Arquivo: front/assets/css/styles.css\n- Linha afetada: a linha que contém `z-index: -1` (única ocorrência na regra `.container` + `main, header...`)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/css/styles.css\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 5973,
       "erro": null
     },
     {
@@ -144,8 +152,8 @@
         "CSS"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A variável CSS `--max` foi alterada de `1440px` para `0px`. `--max` é usada em `.container { width: min(var(--max), 92%); }`. Com valor `0px`, `.container` tem largura zero, colapsando o layout do site.\",\n  \"file\": \"front/assets/css/styles.css\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  --max: 0px;\",\n    \"replace\": \"  --max: 1440px;\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: Variável `--max` definida como `0px` causa colapso do container principal.\n\nSCANNER\n- Arquivo: front/assets/css/styles.css\n- Linha afetada: Linha 12 (após `--border-strong`)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas `front/assets/css/styles.css`\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 18429,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Variável CSS `--max` definida como `0px` (linha 14), quando o valor correto é `1440px`. Isso faz com que `.container { width: min(var(--max), 92%); }` sempre resulte em `width: 0px`, colapsando todo o conteúdo do site para largura zero — causando layout quebrado visualmente.\",\n  \"file\": \"front/assets/css/styles.css\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  --max: 0px;\",\n    \"replace\": \"  --max: 1440px;\"\n  },\n  \"confidence\": 0.98,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nBug direto no DIFF: `--max: 1440px` foi alterado para `--max: 0px`. A variável controla a largura máxima do container principal (`.container` usa `width: min(var(--max), 92%)`). Com `0px`, o container tem largura zero — conteúdo invisível ou todo empilhado à esquerda.\n\nHERMES\n- RCA: --max setado como 0px colapsa container principal para largura zero\n\nSCANNER\n- Arquivo: front/assets/css/styles.css\n- Linha afetada: 14 (`--max: 0px;`), consumida em linha 18 (`.container { width: min(var(--max), 92%); }`)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/css/styles.css → variável `--max`\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.98\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 4080,
       "erro": null
     },
     {
@@ -167,8 +175,8 @@
         "payload"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Linha 11 do arquivo backend/src/routes/gamesRoutes.js teve seu retorno alterado de res.json(payload) para uma resposta fixa de 404, impedindo que o jogo retorne a capa corretamente. O rota /cover sempre retorna 'Rota não encontrada' mesmo quando a capa é resolvida com sucesso.\",\n  \"file\": \"backend/src/routes/gamesRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return res.status(404).json({ ok: false, error: 'Rota não encontrada' });\",\n    \"replace\": \"return res.json(payload);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES  \n- RCA: Retorno da rota /cover foi trocado de `res.json(payload)` para uma resposta 404 fixa, quebrando a funcionalidade.\n\nSCANNER  \n- Arquivo: `backend/src/routes/gamesRoutes.js`  \n- Linha afetada: 11 (após a chamada `const payload = await resolveGameCover(query);`)\n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas `backend/src/routes/gamesRoutes.js`\n\nDECISÃO: NEEDS_FIX  \nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch que restaura o retorno correto.",
-      "tempo_ms": 14039,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Na rota GET /cover, após resolver o payload com resolveGameCover, o código retorna um erro 404 em vez do payload real. O diff mostra que a linha correta 'return res.json(payload);' foi substituída por 'return res.status(404).json({ ok: false, error: 'Rota não encontrada' });', impedindo o funcionamento do endpoint.\",\n  \"file\": \"backend/src/routes/gamesRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return res.status(404).json({ ok: false, error: 'Rota não encontrada' });\",\n    \"replace\": \"return res.json(payload);\"\n  },\n  \"confidence\": 1.0,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES  \n- RCA: Substituição indevida do retorno de payload por erro 404 fixo.\n\nSCANNER  \n- Arquivo: `backend/src/routes/gamesRoutes.js`  \n- Linha afetada: `+return res.status(404).json({ ok: false, error: 'Rota não encontrada' });` (única alteração no diff)\n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas `backend/src/routes/gamesRoutes.js`\n\nDECISÃO: NEEDS_FIX  \nConfiança: 1.0\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 13620,
       "erro": null
     },
     {
@@ -189,8 +197,8 @@
         "REQUEST_TIMEOUT"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"REQUEST_TIMEOUT_MS = 0 faz com que o setTimeout no fetchJson dispare imediatamente, abortando todas as requisições fetch antes de qualquer resposta.\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"const REQUEST_TIMEOUT_MS = Number(process.env.GAME_COVER_REQUEST_TIMEOUT_MS || 0);\",\n    \"replace\": \"const REQUEST_TIMEOUT_MS = Number(process.env.GAME_COVER_REQUEST_TIMEOUT_MS || 12000);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO diff mostra que o valor padrão do timeout foi alterado de 12000ms para 0ms. Isso faz com que `setTimeout(() => controller.abort(), 0)` dispare imediatamente, abortando todas as requisições fetch antes que qualquer resposta HTTP seja recebida. Como resultado, o site nunca carrega capas de jogos.\n\nHERMES\n- RCA: REQUEST_TIMEOUT_MS=0 aborta todas as requisições fetch imediatamente\n\nSCANNER\n- Arquivo: backend/src/services/gameCoverService.js\n- Linha afetada: 9 (a linha do REQUEST_TIMEOUT_MS)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/services/gameCoverService.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 29358,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"REQUEST_TIMEOUT_MS foi alterado de 12000ms para 0ms, fazendo com que todas as requisições fetch abortem imediatamente sem timeout, impedindo o carregamento de capas de jogos.\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"const REQUEST_TIMEOUT_MS = Number(process.env.GAME_COVER_REQUEST_TIMEOUT_MS || 0);\",\n    \"replace\": \"const REQUEST_TIMEOUT_MS = Number(process.env.GAME_COVER_REQUEST_TIMEOUT_MS || 12000);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: Timeout zero causa aborto imediato de todas as requisições fetch em `fetchJson`, impedindo carregamento de capas.\n\nSCANNER\n- Arquivo: backend/src/services/gameCoverService.js\n- Linha afetada: `const REQUEST_TIMEOUT_MS = Number(process.env.GAME_COVER_REQUEST_TIMEOUT_MS || 0);`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/services/gameCoverService.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 5276,
       "erro": null
     },
     {
@@ -212,8 +220,8 @@
         "URL"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"API_BASE_URL em runtime-config.js aponta para localhost:3000 (ambiente de desenvolvimento) em vez da URL de produção https://api.technetgame.com.br. O código restante usa fallbacks corretos, mas esta configuração causa conexão ao localhost em produção, impedindo requisições reais à API.\",\n  \"file\": \"front/assets/js/runtime-config.js\",\n  \"fix_type\": \"json_field\",\n  \"patch\": {\n    \"fields\": {\n      \"API_BASE_URL\": \"https://api.technetgame.com.br\"\n    }\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nRCA: A chave `API_BASE_URL` foi alterada de `https://api.technetgame.com.br` para `http://localhost:3000` (conforme evidenciado pelo diff `-`/`+`). O `API_BASE_URL` é a primeira opção da função `normalizeBase`, portanto todas as requisições `fetch` vão tentar se conectar ao `localhost` ao invés do servidor de produção real.\n\n**HERMES**\n- RCA: `API_BASE_URL` alterada para `localhost:3000` no diff — bug introduzido proposital ou acidentalmente em ambiente de produção.\n\n**SCANNER**\n- Arquivo: `front/assets/js/runtime-config.js`\n- Linha afetada: linha 2 (`API_BASE_URL: \"http://localhost:3000\"`)\n\n**AEGIS**\n- `deploy_allowed`: false\n- `production_touched`: false\n- Escopo: apenas `front/assets/js/runtime-config.js`\n\n**DECISÃO:** NEEDS_FIX\nConfiança: 0.95\n\n**Próximo passo:** Executar MISSÃO com patch `{\"fields\": {\"API_BASE_URL\": \"https://api.technetgame.com.br\"}}`.",
-      "tempo_ms": 13890,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"API_BASE_URL foi alterada de 'https://api.technetgame.com.br' para 'http://localhost:3000', fazendo o site tentar conectar em servidor local inexistente em produção. A API de produção responde ok, confirmando a URL correta.\",\n  \"file\": \"front/assets/js/runtime-config.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  API_BASE_URL: \\\"http://localhost:3000\\\",\",\n    \"replace\": \"  API_BASE_URL: \\\"https://api.technetgame.com.br\\\",\"\n  },\n  \"confidence\": 0.99,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: API_BASE_URL configurada como localhost:3000 em vez do endpoint de produção.\n\nSCANNER\n- Arquivo: front/assets/js/runtime-config.js\n- Linha afetada: linha 2 (API_BASE_URL)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/runtime-config.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.99\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 11907,
       "erro": null
     },
     {
@@ -231,11 +239,12 @@
       "palavras_encontradas": [
         "condição",
         "invertida",
-        "query"
+        "query",
+        "validação"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Condição invertida impede verificação de query vazia, resultando em erro 400 nunca retornado\",\n  \"file\": \"backend/src/routes/gamesRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"if (query) {\",\n    \"replace\": \"if (!query) {\"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nCondição `if (query)` está invertida; deve ser `if (!query)` para validar a obrigatoriedade do parâmetro `q`.\n\nHERMES\n- RCA: condição invertida impede retorno de erro 400 quando query está ausente\n\nSCANNER\n- Arquivo: backend/src/routes/gamesRoutes.js\n- Linha afetada: `if (query) {`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/routes/gamesRoutes.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.92\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 844,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Rota GET /cover retorna 400 quando query é fornecida — diff mostra inversão da condição: original 'if (!query)' (correto) foi trocado para 'if (query)' (bug).\",\n  \"file\": \"backend/src/routes/gamesRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"    if (query) {\",\n    \"replace\": \"    if (!query) {\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES  \n- RCA: Condicional de validação invertida — endpoint rejeita requisições com query em vez de sem query.\n\nSCANNER  \n- Arquivo: backend/src/routes/gamesRoutes.js  \n- Linha afetada: 8 (if (query) → if (!query))\n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas `backend/src/routes/gamesRoutes.js`\n\nDECISÃO: NEEDS_FIX  \nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch de reversão da condicional.",
+      "tempo_ms": 8808,
       "erro": null
     },
     {
@@ -252,13 +261,12 @@
       ],
       "palavras_encontradas": [
         "desc",
-        "vazio",
         "descrição",
         "Analista"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"O campo 'desc' do agente 'Analista Técnico' no objeto AGENTS.tech foi esvaziado (desc: ''), removendo a descrição que deveria ser 'Monitora software, plataformas, arquitetura e infraestrutura do ecossistema tech.'\",\n  \"file\": \"front/assets/js/main.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"      desc: '',\",\n    \"replace\": \"      desc: 'Monitora software, plataformas, arquitetura e infraestrutura do ecossistema tech.',\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO diff mostra que a linha correta (com `-`) foi substituída por uma linha vazia (`+`), causando a falta da descrição. O patch restaura o texto original.\n\nHERMES\n- RCA: Descrição do agente tech foi removida intencionalmente ou por engano, deixando campo vazio.\n\nSCANNER\n- Arquivo: `front/assets/js/main.js`\n- Linha afetada: linha onde está `desc: ''` (após o diff, aproximadamente linha 15-19)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas a linha do campo desc\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 20868,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Propriedade 'desc' do agente 'Analista Técnico' foi esvaziada (desc: ''), removendo a descrição textual que existia anteriormente. Causa: edição manual que substituiu o valor correto por string vazia.\",\n  \"file\": \"front/assets/js/main.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"      desc: '',\",\n    \"replace\": \"      desc: 'Monitora software, plataformas, arquitetura e infraestrutura do ecossistema tech.',\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\n**Diagnóstico resumido:** A descrição original do agente `Analista Técnico` foi acidentalmente substituída por uma string vazia. O patch restaura o texto correto.\n\n**HERMES**  \nRCA: Descrição do agente tech foi removida (desc: ''), causando falta de conteúdo textual na apresentação do agente.\n\n**SCANNER**  \nArquivo: `front/assets/js/main.js`  \nLinha afetada: linha contendo `desc: '',` no objeto `AGENTS.tech`\n\n**AEGIS**  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas `front/assets/js/main.js`\n\n**DECISÃO:** NEEDS_FIX  \nConfiança: 0.95\n\n**Próximo passo:** Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 14187,
       "erro": null
     },
     {
@@ -276,11 +284,12 @@
       "palavras_encontradas": [
         "HERMES_AGENT",
         "comentad",
-        "ReferenceError"
+        "ReferenceError",
+        "undefined"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"HERMES_AGENT foi comentado erroneamente no diff, quebrando referências ao agente Hermes em runtime\",\n  \"file\": \"front/assets/js/main.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"// const HERMES_AGENT = { name: \\\"Hermes — Strategic Memory Admin\\\", image: \\\"/assets/img/hermes-strategic-memory-admin.png\\\" };\",\n    \"replace\": \"const HERMES_AGENT = { name: \\\"Hermes — Strategic Memory Admin\\\", image: \\\"/assets/img/hermes-strategic-memory-admin.png\\\" };\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nBug introduzido: a linha `const HERMES_AGENT = ...` foi comentada (`//`). Isso cria `ReferenceError: HERMES_AGENT is not defined` em qualquer código que referencie essa variável (ex: página de agente Hermes, menu, etc).\n\nHERMES\n- RCA: variável HERMES_AGENT foi desativada (comentada), causando erro de referência no runtime\n\nSCANNER\n- Arquivo: front/assets/js/main.js\n- Linha afetada: + // const HERMES_AGENT = ...\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/main.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 20049,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A constante HERMES_AGENT foi comentada (linha 61+1), tornando-se undefined. Qualquer código que referencie essa variável causará ReferenceError, quebrando funcionalidades relacionadas ao agente Hermes.\",\n  \"file\": \"front/assets/js/main.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  // const HERMES_AGENT = { name: \\\"Hermes — Strategic Memory Admin\\\", image: \\\"/assets/img/hermes-strategic-memory-admin.png\\\" };\",\n    \"replace\": \"  const HERMES_AGENT = { name: \\\"Hermes — Strategic Memory Admin\\\", image: \\\"/assets/img/hermes-strategic-memory-admin.png\\\" };\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nDiagnóstico: O comentário introduzido no diff desativa a declaração de `HERMES_AGENT`, que é necessária para o funcionamento do sistema multiagente. O patch restaura a linha original.\n\nHERMES\n- RCA: Constante HERMES_AGENT foi comentada, causando undefined em referências futuras.\n\nSCANNER\n- Arquivo: front/assets/js/main.js\n- Linha afetada: linha onde a constante foi comentada (original linha 61, atual linha comentada)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/main.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 9317,
       "erro": null
     },
     {
@@ -302,8 +311,8 @@
         "7"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"ACCEPTANCE_THRESHOLD foi alterado de 0.7 para 7, tornando impossível qualquer capa ser aceita (threshold > 1). Causa: erro de digitação no valor padrão.\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"const ACCEPTANCE_THRESHOLD = Number(process.env.GAME_COVER_ACCEPTANCE_THRESHOLD || 7);\",\n    \"replace\": \"const ACCEPTANCE_THRESHOLD = Number(process.env.GAME_COVER_ACCEPTANCE_THRESHOLD || 0.7);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: O valor do threshold de aceitação de capas foi definido como 7 (700%), quando deveria ser 0.7 (70%). Isso impede que qualquer capa seja aceita, pois `confidence` está entre 0 e 1.\n\nSCANNER\n- Arquivo: `backend/src/services/gameCoverService.js`\n- Linha afetada: `const ACCEPTANCE_THRESHOLD = Number(process.env.GAME_COVER_ACCEPTANCE_THRESHOLD || 7);`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas `backend/src/services/gameCoverService.js`\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 8160,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"ACCEPTANCE_THRESHOLD foi alterado de 0.7 para 7, tornando o limiar de aceitação extremamente alto. Isso faz com que praticamente nenhum candidato a capa seja aceito, pois a confiança máxima é 0.98 e a maioria fica abaixo de 7.\",\n  \"file\": \"backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"const ACCEPTANCE_THRESHOLD = Number(process.env.GAME_COVER_ACCEPTANCE_THRESHOLD || 7);\",\n    \"replace\": \"const ACCEPTANCE_THRESHOLD = Number(process.env.GAME_COVER_ACCEPTANCE_THRESHOLD || 0.7);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: ACCEPTANCE_THRESHOLD foi alterado de 0.7 para 7, impedindo a aceitação de capas.\n\nSCANNER\n- Arquivo: backend/src/services/gameCoverService.js\n- Linha afetada: linha 12 (const ACCEPTANCE_THRESHOLD = ...)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/services/gameCoverService.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 5263,
       "erro": null
     },
     {
@@ -324,8 +333,8 @@
         "ReferenceError"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Importação dos serviços gameCoverService.js foi comentada, causando ReferenceError ao usar resolveGameCover e clearGameCoverCache nas rotas.\",\n  \"file\": \"backend/src/routes/gamesRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"// import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\",\n    \"replace\": \"import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nA única linha do diff (-) foi substituída por (+) com a importação comentada. Isso quebra as rotas que usam `resolveGameCover` (GET /cover) e `clearGameCoverCache` (POST /cover/cache/clear). O patch restaura a declaração original.\n\nHERMES\n- RCA: Comentário acidental removendo import dos serviços.\n\nSCANNER\n- Arquivo: backend/src/routes/gamesRoutes.js\n- Linha afetada: linha 2 (comentada)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/routes/gamesRoutes.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 14585,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Funções resolveGameCover e clearGameCoverCache são usadas mas a import está comentada, causando ReferenceError.\",\n  \"file\": \"backend/src/routes/gamesRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"// import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\",\n    \"replace\": \"import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nA import foi comentada, impedindo que `resolveGameCover` e `clearGameCoverCache` estejam disponíveis nos handlers de rota.\n\nHERMES\n- RCA: import comentado impede uso das funções necessárias.\n\nSCANNER\n- Arquivo: backend/src/routes/gamesRoutes.js\n- Linha afetada: a linha de import comentada\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/routes/gamesRoutes.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.92\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.\n\n```diff\n--- a/backend/src/routes/gamesRoutes.js\n+++ b/backend/src/routes/gamesRoutes.js\n@@ -1 +1 @@\n import { Router } from 'express';\n-import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\n+// import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\n@@ -1 +1 @@\n import { Router } from 'express';\n-// import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\n+import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\n```",
+      "tempo_ms": 712,
       "erro": null
     }
   ]
