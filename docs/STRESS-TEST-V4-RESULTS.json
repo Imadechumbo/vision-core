@@ -1,7 +1,7 @@
 {
-  "passes": 10,
+  "passes": 11,
   "total": 15,
-  "taxa": 67,
+  "taxa": 73,
   "resultados": [
     {
       "id": "STRESS-41",
@@ -16,14 +16,10 @@
         "diversifyCollection",
         "selected.push"
       ],
-      "passou": true,
-      "tempo_ms": 7616,
-      "answer": "MISSÃO RECEBIDA\nTipo: análise\nRisco: médio\nEscopo: arquivo `feedService.js`\n\nHERMES\n- Contexto recebido: anotação de um bug\n- Regras aplicadas: R1 (sem evidência real para patch), R2 (patches apenas em arquivos explicitamente fornecidos)\n\nSCANNER\n- Finding 1: array externo `selected` é ocultado pelo bug de shadowing.\n- Finding 2: o símbolo de \"push\" nunca popula o array externo `selected`.\n\nOPENCL",
-      "palavras_encontradas": [
-        "selected",
-        "shadow",
-        "selected.push"
-      ],
+      "passou": false,
+      "tempo_ms": 31270,
+      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 26928 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "palavras_encontradas": [],
       "palavras_esperadas": [
         "selected",
         "shadow",
@@ -44,10 +40,13 @@
         "0",
         "6"
       ],
-      "passou": false,
-      "tempo_ms": 31326,
-      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 9623 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "passou": true,
+      "tempo_ms": 16897,
+      "answer": "MISSÃO RECEBIDA  \nTipo: bug fix  \nRisco: baixo  \nEscopo: `backend/src/services/hermesService.js` (linha 246)\n\nHERMES  \n- Contexto fornecido: diff explícito + arquivo completo.  \n- Regra §53 aplicada: alto confidence (≥0.85). Bug isolado na linha + do diff.  \n\nSCANNER  \n- Função `summarizeTrends` — usa `.slice(1,6)` em vez de `.slice(0,6)`.  \n- O diff mostra a alteração da linha correta (`- .slice(",
       "palavras_encontradas": [
+        "slice",
+        "summarizeTrends",
+        "0",
         "6"
       ],
       "palavras_esperadas": [
@@ -71,10 +70,11 @@
         "mutation"
       ],
       "passou": true,
-      "tempo_ms": 13067,
-      "answer": "Segue aqui a resposta no formato de diagnóstico de bug:\n\nMISSÃO RECEBIDA\nTipo: [analise de código, correção]\nRisco: [medio]\nEscopo: [backend/src/services/feedService.js, funcao categoryMatch]\n\nHERMES\n- [status do contexto: analise de diferença entre codigo da linha 150 e 151]\n- [regras aplicadas: R4, categoria não comparada, mas atribuida]\n\nSCANNER\n- [o que foi encontrado: atribuição em vez de com",
+      "tempo_ms": 17572,
+      "answer": "MISSÃO RECEBIDA  \nTipo: bug fix  \nRisco: alto  \nEscopo: backend/src/services/feedService.js (linha ~155, case 'hardware')\n\nHERMES  \n- Contexto fornecido via diff e arquivo completo. Regra §53 aplicada: foco exclusivo no diff.  \n- Confidence 0.95 (diff explícito).  \n- Evidência: diff mostra `= ` em vez de `===`.\n\nSCANNER  \n- Função `categoryMatch` usada em `buildCategorySnapshot` e `buildFeaturedPa",
       "palavras_encontradas": [
         "categoryMatch",
+        "===",
         "hardware"
       ],
       "palavras_esperadas": [
@@ -98,8 +98,8 @@
         "+"
       ],
       "passou": true,
-      "tempo_ms": 8781,
-      "answer": "Missão recebida\nTipo: bug fix\nRisco: médio\nEscopo: hermesService.js\n\nHermes\n- Contexto é um arquivo Node.js de serviço para gerenciar relatórios de inteligência artificial.\n- As regras aplicadas incluem a verificação de arquivos explicitamente fornecidos e a proibição de deploys em ambiente de produção.\n\nScanner\n- O arquivo hermesService.js foi modificado em duas linhas do método `calculateRanking",
+      "tempo_ms": 13942,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix  \nRisco: médio  \nEscopo: backend/src/services/hermesService.js — função `calculateRanking`\n\nHERMES\nDIFF fornecido com evidência direta do bug. Linha original (`-`) usa soma numérica correta `(scores.get(agent) || 0) + 1`. Linha modificada (`+`) prefixa `'' +`, convertendo o resultado em string — concatenação em vez de adição. `confidence=0.99`. Regra §53 aplicada.\n\nSC",
       "palavras_encontradas": [
         "score",
         "string",
@@ -127,11 +127,13 @@
         "dedupeItems"
       ],
       "passou": true,
-      "tempo_ms": 3289,
-      "answer": "MISSÃO RECEBIDA\nTipo: [bug fix | análise | refactor | consulta]\nRisco: [baixo | médio | alto | crítico]\nEscopo: [arquivo(s) identificado(s)]\n\nHERMES\n- contexto: _Bruce Lee_\n- regras aplicadas: R1, R2, R5, R6.\n\nSCANNER\n- foi encontrado que o arquivo :: backend/src-seeds/feedService.js:: contém um erro de identificação de causa raiz;\n\nOPENCLAW\n- plano criado com N tarefas:\n① eliminar a política de u",
+      "tempo_ms": 16607,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: backend/src/services/feedService.js\n\nHERMES\n- DIFF fornecido: linha 209 alterada — `[...items].sort(compareByDateDesc)` → `items.sort(compareByDateDesc)`.\n- Regra §53 aplicada: foco exclusivo no bug do DIFF.\n- Confidence: 0.92 (DIFF presente, evidência direta).\n\nSCANNER\n- Função `dedupeItems` recebe `items` como parâmetro.\n- Linha com bug: dentro d",
       "palavras_encontradas": [
         "sort",
-        "spread"
+        "spread",
+        "items",
+        "dedupeItems"
       ],
       "palavras_esperadas": [
         "sort",
@@ -153,15 +155,10 @@
         "Promise",
         "getCache"
       ],
-      "passou": true,
-      "tempo_ms": 10908,
-      "answer": "Missão RECEBIDA\nTipo: bug fix\nRisco: crítico\nEscopo: arquivo `backend/src/services/feedService.js`\n\nHERMES\n- [status do contexto]: arquivo com bug introduzido\n- [regras aplicadas]: R1, R2, R3, R4, R5, R6, R7\n\nSCANNER\n- [o que foi encontrado]: falta de await em função `getCache()` (linhas + e - marcadas abaixo)\n\n```diff\n@@ -661 +661 @@\n }\n \n export async function getCache() {\n-  const cache = await",
-      "palavras_encontradas": [
-        "await",
-        "readCache",
-        "Promise",
-        "getCache"
-      ],
+      "passou": false,
+      "tempo_ms": 31207,
+      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 26746 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "palavras_encontradas": [],
       "palavras_esperadas": [
         "await",
         "readCache",
@@ -182,14 +179,10 @@
         "fulfilled",
         "sourceResults"
       ],
-      "passou": true,
-      "tempo_ms": 15214,
-      "answer": "MISSÃO RECEBIDA\nTipo: [bug fix | análise | refactor | consulta]\nRisco: [baixo | médio | alto | crítico]\nEscopo: [arquivo(s) identificado(s)]\n\nHERMES\n- Contexto recebido: [DIFF]\n- Regras aplicadas: [R1, R2, R3, R5, R6]\n\nSCANNER\n- [O que foi encontrado]:\n  - Linha 13: `const sourceResults = await Promise.all(`\n  - Linha 13: `+  const sourceResults = await Promise.all( // bug: allSettled→all — result",
-      "palavras_encontradas": [
-        "allSettled",
-        "Promise.all",
-        "sourceResults"
-      ],
+      "passou": false,
+      "tempo_ms": 31631,
+      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 15128 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "palavras_encontradas": [],
       "palavras_esperadas": [
         "allSettled",
         "Promise.all",
@@ -210,10 +203,13 @@
         "status",
         "ok"
       ],
-      "passou": false,
-      "tempo_ms": 31394,
-      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 26867 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "passou": true,
+      "tempo_ms": 16909,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: `backend/src/services/feedService.js`\n\nHERMES\n- DIFF fornecido (§53 ativado)\n- Arquivo completo disponível para contexto estrutural\n- Regra §53.3 aplicada: `-` = código correto (antes), `+` = código errado (bug)\n\nSCANNER\n- Função `fetchSource` na linha ~518\n- `try/catch` onde o bloco `catch` foi modificado:\n  - Antes: capturava o erro e retornava `",
       "palavras_encontradas": [
+        "catch",
+        "error.message",
+        "status",
         "ok"
       ],
       "palavras_esperadas": [
@@ -236,10 +232,15 @@
         "then",
         "persistImageCache"
       ],
-      "passou": false,
-      "tempo_ms": 31435,
-      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 13383 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "palavras_encontradas": [],
+      "passou": true,
+      "tempo_ms": 12209,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: backend/src/services/imageService.js (linha 147)\n\nHERMES\n- Contexto fornecido via DIFF e arquivo completo.\n- Regras §53 aplicadas: foco exclusivo nas linhas do DIFF.\n- Regra §53.3: linhas `-` = código CORRETO original; linhas `+` = código ERRADO que introduziu o bug.\n- Confidence: 0.99.\n\nSCANNER\n- Único arquivo modificado: `backend/src/services/ima",
+      "palavras_encontradas": [
+        "return",
+        "writeImageCache",
+        "then",
+        "persistImageCache"
+      ],
       "palavras_esperadas": [
         "return",
         "writeImageCache",
@@ -261,8 +262,8 @@
         "fire"
       ],
       "passou": true,
-      "tempo_ms": 3402,
-      "answer": "MISSÃO RECEBIDA\nTipo: [refatoração | bug fix | análise | consulta]\nRisco: [baixo | médio | alto | crítico]\nEscopo: [arquivo(s) identificado(s)]\n\nHERMES\n- Contexto: arquivo 'feedService.js' foi alterado\n- Regra: [R1, R2, R3, R4, R5, R6, R7]\n\nSCANNER\n- Arquivo 'feedService.js' foi alterado, com mudanças em funções e estruturas de dados\n\nPATCHENGINE\n- Não há necessidade de patch, pois o problema foi ",
+      "tempo_ms": 10975,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: `backend/src/services/feedService.js`\n\nHERMES  \nContexto fornecido via diff e arquivo completo. Regra §53 aplicada: foco exclusivo na linha modificada.\n\nSCANNER  \nDiff mostra remoção de `await` na linha 606 (função `refreshAllFeeds`):  \n`-    await translationSession.persist();`  \n`+    translationSession.persist(); // bug: await omitido — fire-and",
       "palavras_encontradas": [
         "await",
         "persist",
@@ -289,15 +290,10 @@
         "undefined",
         "NaN"
       ],
-      "passou": true,
-      "tempo_ms": 12131,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: backend/src/services/gameCoverService.js\n\nHERMES\n- status do contexto: contexto completo, acesso garantido\n- regras aplicadas: R1 (evidência presente), R2 (arquivo explícito)\n\nSCANNER\n- que foi encontrado:\n  + linha `-  return SOURCE_TIERS.get(key) || 9;` (antigo código)\n  + linha `+  return SOURCE_TIERS.get(key);` (código modificado)\n\nOPENCLAW\n- ",
-      "palavras_encontradas": [
-        "sourceTierFor",
-        "|| 9",
-        "undefined",
-        "NaN"
-      ],
+      "passou": false,
+      "tempo_ms": 31694,
+      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 15047 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "palavras_encontradas": [],
       "palavras_esperadas": [
         "sourceTierFor",
         "|| 9",
@@ -318,10 +314,15 @@
         "shadow",
         "cron"
       ],
-      "passou": false,
-      "tempo_ms": 31188,
-      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 1886 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "palavras_encontradas": [],
+      "passou": true,
+      "tempo_ms": 853,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: backend/src/jobs/hermesCron.js\n\nHERMES\n- Contexto completo fornecido via diff e conteúdo do arquivo.\n- Regras aplicadas: R1 (evidência presente), R2 (patch limitado ao arquivo), R5 (confidence ≥ 0.85).\n\nSCANNER\n- Variável de módulo `let jobStarted = false;` declarada no topo.\n- Dentro de `startHermesCron` há redefinição `const jobStarted = true;` ",
+      "palavras_encontradas": [
+        "jobStarted",
+        "const",
+        "shadow",
+        "cron"
+      ],
       "palavras_esperadas": [
         "jobStarted",
         "const",
@@ -343,8 +344,8 @@
         "hydrateMissingImages"
       ],
       "passou": true,
-      "tempo_ms": 17834,
-      "answer": " MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: arquivo feedService.js\n\nHERMES\n- O contexto está pronto para o diagnóstico. \n- As regras R1 a R7 foram aplicadas com sucesso.\n\nSCANNER\n- O scanner encontrou o seguinte código:\n```diff\n--- a/backend/src/services/feedService.js\n+++ b/backend/src/services/feedService.js\n@@ -457 +457 @@\n   };\n }\n \n-async function hydrateMissingImages(items = []) {\n- ",
+      "tempo_ms": 26710,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: backend/src/services/feedService.js (1 alteração)\n\nHERMES\n- Contexto fornecido via DIFF e código completo do arquivo.\n- Regra §53 aplicada: foco exclusivo nas linhas do diff.\n- Confidence: 0.95 (acima do mínimo de 0.85).\n\nSCANNER\n- O diff mostra movimentação da declaração `let enrichedCount = 0;` de dentro da função `hydrateMissingImages` para o es",
       "palavras_encontradas": [
         "enrichedCount",
         "módulo",
@@ -371,10 +372,15 @@
         "fetchedItems",
         "withSeedFallback"
       ],
-      "passou": false,
-      "tempo_ms": 31314,
-      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 26746 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "palavras_encontradas": [],
+      "passou": true,
+      "tempo_ms": 10382,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix  \nRisco: médio  \nEscopo: `backend/src/services/feedService.js` — função `withSeedFallback`\n\nHERMES\n- Contexto fornecido via DIFF e arquivo completo.\n- Regra §53 aplicada: foco exclusivo nas linhas do DIFF.\n- Confidence ≥ 0.85.\n\nSCANNER\n- A função `withSeedFallback` foi alterada para mutar o array `fetchedItems` (push) em vez de criar uma nova array com spread.\n- Isso ",
+      "palavras_encontradas": [
+        "push",
+        "spread",
+        "fetchedItems",
+        "withSeedFallback"
+      ],
       "palavras_esperadas": [
         "push",
         "spread",
@@ -396,8 +402,8 @@
         "acumulando"
       ],
       "passou": true,
-      "tempo_ms": 14702,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: refreshScheduler.js\n\nHERMES\n- status do contexto: MODIFICADO\n- regras aplicadas: R1, R2, R3, R4, R5, R6, R7\n\nSCANNER\n- revisão do código alterado:\n  - A variável `scheduledTask` não é parada corretamente antes de ser sobrescrita com um novo valor.\n  - Isso pode causar acúmulo de cron jobs ativos, levando a problemas de desempenho e estabilidade.\n\nO",
+      "tempo_ms": 874,
+      "answer": "MISSÃO RECEBIDA  \nTipo: bug fix  \nRisco: baixo  \nEscopo: backend/src/jobs/refreshScheduler.js  \n\nHERMES  \n- Contexto: DIFF completo e código-fonte do arquivo fornecidos.  \n- Regras aplicadas: R1 (evidência presente), R2 (patch limitado ao arquivo indicado), R5 (confidence > 0.85).  \n\nSCANNER  \n- Linhas removidas (`-`) continham parada explícita do `scheduledTask` antes de criar nova agenda.  \n- Li",
       "palavras_encontradas": [
         "scheduledTask",
         "stop",
