@@ -85,16 +85,16 @@ jobs:
       - name: Aggregate results and gate
         id: aggregate
         run: |
-          node - <<'EOF'
+          node --input-type=module - <<'EOF'
           import { readFileSync, writeFileSync, mkdirSync } from 'fs';
           import { join } from 'path';
 
           const ROOT = process.cwd();
           const docsDir = join(ROOT, 'docs');
 
-          // Map: suite label → json filename (V1 may not produce JSON)
+          // Map: suite label → json filename
           const SUITES = [
-            { label: 'V1',  file: 'STRESS-TEST-V1-RESULTS.json',  expected: 10 },
+            { label: 'V1',  file: 'STRESS-TEST-RESULTS.json',     expected: 10 },
             { label: 'V2',  file: 'STRESS-TEST-V2-RESULTS.json',  expected: 10 },
             { label: 'V3',  file: 'STRESS-TEST-V3-RESULTS.json',  expected: 15 },
             { label: 'V4',  file: 'STRESS-TEST-V4-RESULTS.json',  expected: 15 },
@@ -176,7 +176,6 @@ jobs:
             console.log(`\n🏆 GATE PASS: ${totalPass}/${total} PASS GOLD`);
           }
           EOF
-        shell: node {0}
 
       - name: Commit CI-LAST-RUN.md
         if: always()
