@@ -1,6 +1,6 @@
 # Vision Core — Stress Test V3 Results
 
-Data: 2026-06-11T12:34:14.505Z
+Data: 2026-06-11T12:42:37.471Z
 Vision Core URL: http://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com
 Dashboard: http://localhost:3101
 
@@ -12,7 +12,7 @@ Dashboard: http://localhost:3101
 | PASS | 0 |
 | FAIL | 15 |
 | Taxa de acerto | 0% |
-| Tempo médio | 1586ms |
+| Tempo médio | 1602ms |
 
 ## Por Bloco
 
@@ -25,7 +25,7 @@ Dashboard: http://localhost:3101
 ## Resultados Detalhados
 
 ### STRESS-26 — clearTimeout comentado — AbortController aborta após fetch concluído
-**Bloco:** E | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1967ms
+**Bloco:** E | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 4308ms
 **Sintoma:** requests concluídas abortadas pelo controller — erros intermitentes
 **Esperadas:** clearTimeout, timer, abort, finally
 **Encontradas:** _nenhuma_
@@ -35,7 +35,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-27 — catch em readJson relança erro — crash em cache corrompido
-**Bloco:** E | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1232ms
+**Bloco:** E | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1277ms
 **Sintoma:** arquivo de cache corrompido → SyntaxError → servidor crasha sem fallback
 **Esperadas:** catch, throw, fallback, SyntaxError
 **Encontradas:** _nenhuma_
@@ -45,7 +45,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-28 — hideEmptyContainer setTimeout 260ms → 0ms — animação pulada
-**Bloco:** E | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1280ms
+**Bloco:** E | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1199ms
 **Sintoma:** feed blocks somem sem animação — layout quebra durante transição
 **Esperadas:** setTimeout, 260, delay, animation
 **Encontradas:** _nenhuma_
@@ -55,7 +55,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-29 — rankGameCoverCandidates — sort confidence asc em vez de desc
-**Bloco:** E | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1650ms
+**Bloco:** E | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1646ms
 **Sintoma:** capas com menor confiança selecionadas — imagens erradas exibidas
 **Esperadas:** confidence, sort, invertido, b.confidence
 **Encontradas:** _nenhuma_
@@ -65,7 +65,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-30 — __TNG_CONFIG_READY__ await comentado — feeds iniciam sem config
-**Bloco:** E | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1174ms
+**Bloco:** E | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1180ms
 **Sintoma:** feeds inicializam antes da URL da API estar resolvida — requests para URL errada
 **Esperadas:** __TNG_CONFIG_READY__, await, init, config
 **Encontradas:** _nenhuma_
@@ -75,7 +75,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-31 — URL typo '/api/news/latest' → '/api/nwes/latest'
-**Bloco:** F | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1209ms
+**Bloco:** F | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1219ms
 **Sintoma:** feed principal retorna 404 — lista de notícias vazia
 **Esperadas:** nwes, typo, 404, latest
 **Encontradas:** _nenhuma_
@@ -85,7 +85,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-32 — safeLimit max(120) → max(0) — zero itens em todas as rotas
-**Bloco:** F | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1223ms
+**Bloco:** F | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1259ms
 **Sintoma:** todas as rotas /latest, /category retornam 0 itens
 **Esperadas:** safeLimit, Math.min, 0, limit
 **Encontradas:** _nenhuma_
@@ -95,7 +95,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-33 — COVER_CACHE_TTL_MS = 0 — cache de capa expira imediatamente
-**Bloco:** F | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 4943ms
+**Bloco:** F | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1668ms
 **Sintoma:** cache expira antes de ser lido — API externa chamada a cada request
 **Esperadas:** COVER_CACHE_TTL_MS, TTL, 0, expiresAt
 **Encontradas:** 0
@@ -105,7 +105,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-34 — hermesService sort score desc → asc — agentes piores rankeados primeiro
-**Bloco:** F | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1187ms
+**Bloco:** F | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1451ms
 **Sintoma:** agentes com menor score rankeados primeiro — diagnóstico invertido
 **Esperadas:** sort, score, b.score, invertido
 **Encontradas:** _nenhuma_
@@ -115,7 +115,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-35 — hasBlockedSource invertido — fontes legítimas bloqueadas
-**Bloco:** F | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1590ms
+**Bloco:** F | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1578ms
 **Sintoma:** rawg/steamgriddb bloqueados — zero capas encontradas
 **Esperadas:** hasBlockedSource, invertido, social, fanart
 **Encontradas:** _nenhuma_
@@ -125,7 +125,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-36 — CORS allowedOrigins.has() invertido — origens legítimas bloqueadas
-**Bloco:** G | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1424ms
+**Bloco:** G | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1500ms
 **Sintoma:** CORS headers ausentes para origens legítimas — browser bloqueia requests
 **Esperadas:** CORS, allowedOrigins, invertido, origin
 **Encontradas:** _nenhuma_
@@ -135,7 +135,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-37 — express.json limit "1mb" → "1b" — todos os POSTs falham com 413
-**Bloco:** G | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1249ms
+**Bloco:** G | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1908ms
 **Sintoma:** qualquer POST com body → 413 Payload Too Large
 **Esperadas:** limit, 1b, json, payload
 **Encontradas:** payload
@@ -145,7 +145,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-38 — requireRefreshAuth token check invertido — válido rejeitado, inválido aceito
-**Bloco:** G | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1188ms
+**Bloco:** G | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1251ms
 **Sintoma:** token correto rejeitado; qualquer token inválido aceito no refresh
 **Esperadas:** expectedToken, invertido, auth, candidate
 **Encontradas:** _nenhuma_
@@ -155,7 +155,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-39 — normalizeFeedItem summary.slice(0,280) → slice(0,0) — resumos vazios
-**Bloco:** G | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1230ms
+**Bloco:** G | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1254ms
 **Sintoma:** campo summary de todas as notícias vira string vazia
 **Esperadas:** slice, summary, 280, vazio
 **Encontradas:** _nenhuma_
@@ -165,7 +165,7 @@ Dashboard: http://localhost:3101
 
 
 ### STRESS-40 — isHealthy retorna !response.ok — URL saudável descartada
-**Bloco:** G | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1240ms
+**Bloco:** G | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1333ms
 **Sintoma:** API principal (200 OK) descartada — fallback para URL inválida selecionada
 **Esperadas:** isHealthy, response.ok, invertido, fallback
 **Encontradas:** _nenhuma_

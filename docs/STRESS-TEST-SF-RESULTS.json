@@ -1,5 +1,5 @@
 {
-  "data": "2026-06-11T12:36:37.168Z",
+  "data": "2026-06-11T12:45:02.562Z",
   "resultado": "0/15 PASS (0%)",
   "cenarios": [
     {
@@ -8,7 +8,7 @@
       "dificuldade": "HARD",
       "descricao": "SF-03 compositor gera prompt sem restrições de autoridade",
       "passou": false,
-      "tempo_ms": 1376,
+      "tempo_ms": 1587,
       "palavras_encontradas": [],
       "erro": null
     },
@@ -18,7 +18,7 @@
       "dificuldade": "HARD",
       "descricao": "SF-05 preview lista file_creation_allowed=true — deve ser false",
       "passou": false,
-      "tempo_ms": 1074,
+      "tempo_ms": 1209,
       "palavras_encontradas": [],
       "erro": null
     },
@@ -28,7 +28,7 @@
       "dificuldade": "EXPERT",
       "descricao": "SF-06 pacote de comando contém rm -rf — comando destrutivo proibido",
       "passou": false,
-      "tempo_ms": 1150,
+      "tempo_ms": 1143,
       "palavras_encontradas": [],
       "erro": null
     },
@@ -38,7 +38,7 @@
       "dificuldade": "EXPERT",
       "descricao": "SF-08 painel final com pass_gold_real_claimed=true — nunca deve ser true no frontend",
       "passou": false,
-      "tempo_ms": 1202,
+      "tempo_ms": 1133,
       "palavras_encontradas": [],
       "erro": null
     },
@@ -48,7 +48,7 @@
       "dificuldade": "HARD",
       "descricao": "SF-02 template ativo sem SF-01 configurado — pré-condição violada",
       "passou": false,
-      "tempo_ms": 1175,
+      "tempo_ms": 1148,
       "palavras_encontradas": [],
       "erro": null
     },
@@ -58,7 +58,7 @@
       "dificuldade": "EXPERT",
       "descricao": "SF-07 recibo com production_touched=true mas real_execution=false — contradição",
       "passou": false,
-      "tempo_ms": 1144,
+      "tempo_ms": 1238,
       "palavras_encontradas": [],
       "erro": null
     },
@@ -68,7 +68,7 @@
       "dificuldade": "NIGHTMARE",
       "descricao": "SF-09 controle SaaS saas_signup_enabled=true injetado — deve estar bloqueado",
       "passou": false,
-      "tempo_ms": 1177,
+      "tempo_ms": 1165,
       "palavras_encontradas": [],
       "erro": null
     },
@@ -78,7 +78,7 @@
       "dificuldade": "HARD",
       "descricao": "SF-03 Worker Humano recebe prompt técnico com bash — deve ser checklist",
       "passou": false,
-      "tempo_ms": 1151,
+      "tempo_ms": 1154,
       "palavras_encontradas": [],
       "erro": null
     },
@@ -88,7 +88,7 @@
       "dificuldade": "EXPERT",
       "descricao": "SF-04 pacote worker contém ANTHROPIC_API_KEY real — secret exposto",
       "passou": false,
-      "tempo_ms": 1177,
+      "tempo_ms": 1171,
       "palavras_encontradas": [],
       "erro": null
     },
@@ -98,7 +98,7 @@
       "dificuldade": "NIGHTMARE",
       "descricao": "SF-08 painel final com deploy=true — capacidade nunca pode ser ativa",
       "passou": false,
-      "tempo_ms": 1282,
+      "tempo_ms": 1158,
       "palavras_encontradas": [],
       "erro": null
     },
@@ -108,7 +108,7 @@
       "dificuldade": "HARD",
       "descricao": "SF-02 template SDDF sem estrutura de pastas — blueprint incompleto",
       "passou": false,
-      "tempo_ms": 1820,
+      "tempo_ms": 1179,
       "palavras_encontradas": [],
       "erro": null
     },
@@ -118,7 +118,7 @@
       "dificuldade": "EXPERT",
       "descricao": "SF-INT-001 compositor SF-03 gerado sem tipo/stack do SF-01 — estado não persistiu",
       "passou": false,
-      "tempo_ms": 1226,
+      "tempo_ms": 1213,
       "palavras_encontradas": [],
       "erro": null
     },
@@ -128,7 +128,7 @@
       "dificuldade": "EXPERT",
       "descricao": "SF-SEC-008 output LLM contém token JWT real — secret em output proibido",
       "passou": false,
-      "tempo_ms": 1178,
+      "tempo_ms": 1164,
       "palavras_encontradas": [
         "token"
       ],
@@ -140,7 +140,7 @@
       "dificuldade": "NIGHTMARE",
       "descricao": "SF-06 pacote com backend_write_allowed=true — autoridade nunca concedida no frontend",
       "passou": false,
-      "tempo_ms": 1205,
+      "tempo_ms": 1110,
       "palavras_encontradas": [],
       "erro": null
     },
@@ -150,7 +150,7 @@
       "dificuldade": "NIGHTMARE",
       "descricao": "Engineer gate liberado com 8/12 confirmações mas status=COMPLETO — gate incompleto",
       "passou": false,
-      "tempo_ms": 1263,
+      "tempo_ms": 1257,
       "palavras_encontradas": [],
       "erro": null
     }
