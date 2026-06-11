@@ -1432,7 +1432,7 @@ app.post('/api/chat', async (req, res) => {
 
   /* ── §49 HERMES: text-only chain (anthropic→groq→openrouter→gemini→ollama) ── */
   const { callHermes: _callHermes49 } = require('./hermes-rca');
-  const _h49timeout = message.length > 45000 ? 90000 : message.length > 20000 ? 60000 : 30000; /* §43+§66: 26K-45K → 60s (NIGHTMARE payloads) */
+  const _h49timeout = message.length > 45000 ? 90000 : 60000; /* §43+§66: sempre 60s (todos stress payloads ≥10K chegam à borda do 30s) */
   let _h49result;
   try {
     _h49result = await _callHermes49(systemPrompt, message, { timeout: _h49timeout });
