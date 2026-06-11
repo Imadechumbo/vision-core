@@ -200,18 +200,100 @@
 
 ---
 
-## Impacto Combinado (V1 + V2 + V3 + V4 + SF)
+## Stress Test FP — 10/10 PASS (100%) ✅ PRIMEIRO RUN
 
-| Métrica | Antes §53 | V1 (§53) | V2 (+§55+§56) | V3 (§57) | V4 (§58) | SF (§59) |
-|---------|-----------|----------|---------------|----------|----------|----------|
-| Taxa de diagnóstico correto | 20% | 100% (10/10) | 100% (15/15) | 100% (15/15) | 100% (15/15) | 100% (15/15) |
-| Alucinações detectadas | ~8/10 | 0/10 | 0/15 | 0/15 | 0/15 | 0/15 |
-| Cobertura de tipos de bug | JS único | JS único | JS+CSS+Backend | +Runtime+API+Seg | +Shadow+Async+Estado | +SF compliance |
-| Runs para atingir 100% | — | 3 | 5 | **1** | **1** | 4 |
+**Data:** 2026-06-11  
+**Script:** `scripts/stress-test-fp-vision-core.js`  
+**Dashboard:** http://localhost:3104  
+**Relatório:** `docs/STRESS-TEST-FP-RESULTS.md`  
+**Lógica:** INVERTIDA — PASS = Vision Core NÃO inventou bug em código correto
+
+### Histórico de Iterações (FP)
+
+| Run | PASS | Taxa | Observação |
+|---|---|---|---|
+| **Run 1** | **10/10** | **100%** | Primeira execução — zero alucinações |
+
+### Cenários Certificados (FP)
+
+| ID | Dificuldade | Técnica de distração | Status |
+|---|---|---|---|
+| FP-01 | EASY | rename result→total | ✅ PASS |
+| FP-02 | EASY | comentário JSDoc | ✅ PASS |
+| FP-03 | MEDIUM | reordenação de middlewares Express | ✅ PASS |
+| FP-04 | MEDIUM | comentário em query SQL parametrizada | ✅ PASS |
+| FP-05 | HARD | formatação de try/catch assíncrono | ✅ PASS |
+| FP-06 | HARD | comentário em CSS modal | ✅ PASS |
+| FP-07 | EXPERT | rename a,b→x,y em sort() correto | ✅ PASS |
+| FP-08 | EXPERT | comentário em constante TTL=300 | ✅ PASS |
+| FP-09 | NIGHTMARE | imita bug V4 (shadow+slice) mas está correto — 15.7s | ✅ PASS |
+| FP-10 | NIGHTMARE | refactor var→let — semântica idêntica | ✅ PASS |
+
+**Destaque FP-09:** 15.7s de análise (backend hesitou) mas **não alucionou**.
+Comportamento correto: hesitação > invenção de bug.
 
 ---
 
-## Placar Geral (V1 + V2 + V3 + V4 + SF)
+## §63 — Controlled Closure: Botões Religados a Endpoints Reais
+
+**Data:** 2026-06-11  
+**Patch:** `vision-core-frontfix.patch`  
+**Tipo:** Fix de infraestrutura — não é suíte de stress test
+
+### Descobertas
+
+| Achado | Impacto |
+|--------|---------|
+| 10 endpoints do worker eram stubs que nunca chamavam o backend real | Todos os botões de ação despachavam respostas hardcoded |
+| `GITHUB_TOKEN` configurado no backend mas `githubStatusBtn` consultava stub `connected=false` fixo | Status GitHub sempre mostrava falso negativo |
+| `executeBtn` chamava stub que criava `mission_id` fake localmente | Missões nunca chegavam à fila do EB |
+| `BLOCKED_IDS` continha 10 botões além dos 4 legados v236/v297 | UI legítima bloqueada sem motivo |
+
+### Arquivos modificados
+
+| Arquivo | Mudança | Resultado |
+|---------|---------|-----------|
+| `worker/src/index.js` | Removidos STUB + STUB FASE 2 (−230 linhas) | Tráfego vai para proxyToOrigin |
+| `vision-core-bundle.js` | BLOCKED_IDS reduzido + `wireRealActions()` | 10 botões funcionais |
+| `vision-core-clean-runtime.js` | Idem bundle | Idem |
+| `frontend/index.html` | "TESTAR MOCK"→"TESTAR PROVIDER", mock SaaS→real | Labels honestos |
+
+### Pendência documentada
+
+`githubPrBtn` mantido bloqueado — backend não tem `POST /api/github/create-pr`.
+Só existe `POST /api/deploy/merge-pr` (merge de PR existente).
+
+---
+
+## Técnicas Anti-Alucinação Certificadas (atualizado)
+
+| Técnica | §  | Problema resolvido | Impacto |
+|---------|----|--------------------|---------|
+| `[DIFF]...[/DIFF]` no prompt | §53 | LLM alucinava bugs genéricos | 20% → 100% (V1) |
+| `windowContent(±120 linhas)` | §55 | CSS 208 KB causava timeout 504 | B: 0% → 100% |
+| `MAX_FILE_BYTES = 30_000` | §55 | main.js 41 KB enviado inteiro | D22: FAIL → PASS |
+| always-window em multi-arquivo | §55 | LLM focava em 1 de N bugs | A13: FAIL → PASS |
+| Blocos `[DIFF]` separados por arquivo | §56 | 1 bloco combinado = 1 diagnóstico | A: 67% → 100% |
+| `esperado` com valores do diff | §56 | Palavras subjetivas são flaky | B15,B17: flaky → estável |
+| Verificação prévia ALL_PASS | §57 | Patches inválidos causavam falhas espúrias | V3: 100% Run 1 |
+| Metodologia consolidada §58 | §58 | NIGHTMARE bugs invisíveis/async/estado | V4: 100% Run 1 |
+| Conteúdo sintético SF + auditHint | §59 | Compliance Software Factory sem ZIP | SF: 100% Run 4 |
+| evaluate() invertido + assertividade | §61 | Anti-falso-positivo — código correto | FP: 100% Run 1 |
+| Remoção stubs worker + wireRealActions | §63 | Botões chamavam stubs, nunca o backend | 10 botões → endpoints reais |
+
+---
+
+## Impacto Combinado (V1 + V2 + V3 + V4 + SF + FP)
+
+| Métrica | Antes §53 | V1 (§53) | V2 (+§55+§56) | V3 (§57) | V4 (§58) | SF (§59) | FP (§61) |
+|---------|-----------|----------|---------------|----------|----------|----------|----------|
+| Taxa diagnóstico correto | 20% | 100% (10/10) | 100% (15/15) | 100% (15/15) | 100% (15/15) | 100% (15/15) | 100% (10/10) |
+| Alucinações detectadas | ~8/10 | 0/10 | 0/15 | 0/15 | 0/15 | 0/15 | 0/10 |
+| Runs para 100% | — | 3 | 5 | **1** | **1** | 4 | **1** |
+
+---
+
+## Placar Geral (V1 + V2 + V3 + V4 + SF + FP)
 
 | Suite | Cenários | PASS | Taxa | Runs para 100% |
 |---|---|---|---|---|
@@ -220,35 +302,26 @@
 | V3 | 15 | 15/15 | 100% | **Run 1** |
 | V4 | 15 | 15/15 | 100% | **Run 1** |
 | SF | 15 | 15/15 | 100% | Run 4 |
-| **Total** | **70** | **70/70** | **100%** | — |
+| FP | 10 | 10/10 | 100% | **Run 1** |
+| **Total** | **80** | **80/80** | **100%** | — |
 
 ---
 
 ## Reproduzir
 
 ```bash
-# Stress Test V1
 export GITHUB_TOKEN=<token>
 export NODE_TLS_REJECT_UNAUTHORIZED=0
-node scripts/stress-test-vision-core.js
-# Dashboard: http://localhost:3099
 
-# Stress Test V2
-node scripts/stress-test-v2-vision-core.js
-# Dashboard: http://localhost:3100
-
-# Stress Test V4
-node scripts/stress-test-v4-vision-core.js
-# Dashboard: http://localhost:3102
-
-# Stress Test SF (Software Factory)
-node scripts/stress-test-sf-vision-core.js
-# Dashboard: http://localhost:3103
+node scripts/stress-test-vision-core.js        # V1 → http://localhost:3099
+node scripts/stress-test-v2-vision-core.js     # V2 → http://localhost:3100
+node scripts/stress-test-v3-vision-core.js     # V3 → http://localhost:3101
+node scripts/stress-test-v4-vision-core.js     # V4 → http://localhost:3102
+node scripts/stress-test-sf-vision-core.js     # SF → http://localhost:3103
+node scripts/stress-test-fp-vision-core.js     # FP → http://localhost:3104
 ```
 
-Relatórios:
-- V1: `docs/STRESS-TEST-RESULTS.md` / `.json`
-- V2: `docs/STRESS-TEST-V2-RESULTS.md` / `.json`
-- V3: `docs/STRESS-TEST-V3-RESULTS.md` / `docs/STRESS-TEST-V3-CERTIFICATION.md`
-- V4: `docs/STRESS-TEST-V4-RESULTS.md` / `docs/STRESS-TEST-V4-CERTIFICATION.md`
-- SF: `docs/STRESS-TEST-SF-RESULTS.md` / `docs/STRESS-TEST-SF-CERTIFICATION.md`
+CI: `.github/workflows/stress-test-ci.yml` — domingo 03:00 UTC + push/main + workflow_dispatch
+
+Relatórios: `docs/STRESS-TEST-*-RESULTS.md` / `.json`  
+Certificações: `docs/STRESS-TEST-*-CERTIFICATION.md`

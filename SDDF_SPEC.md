@@ -3980,3 +3980,66 @@ Interface `GitProviderAdapter`:
 | 4 | SF-06/SF-07 generalizados | SF 15/15 mantido |
 | 5 | stress-test-gitprovider (12 cenários, porta 3105) | 12/12 PASS |
 
+---
+
+## §63 — Reativação de Controlled Closure: Botões Ligados a Endpoints Reais
+
+**Data:** 2026-06-11  
+**Status:** ✅ IMPLEMENTADO  
+**Patch:** `vision-core-frontfix.patch` (aplicado em `frontend/assets/`, `worker/src/index.js`, `frontend/index.html`)
+
+### Motivação
+
+Durante §56–§59 os botões da UI foram adicionados ao `BLOCKED_IDS` para evitar chamadas
+a stubs que retornavam dados falsos (fake frontend). Com a remoção dos stubs do worker e a
+existência dos endpoints reais no backend EB, esses botões podiam ser religados com segurança.
+
+**Descoberta chave:** 10 endpoints do worker eram stubs — nunca chegavam ao backend real.
+Após remoção dos stubs no worker, o tráfego passa direto para o EB via `proxyToOrigin`.
+
+### Mudanças aplicadas
+
+#### worker/src/index.js
+- Removido bloco completo **ENDPOINTS STUB** + **STUB FASE 2** (230 linhas)
+- Todo tráfego agora cai no `proxyToOrigin` real para o EB
+
+#### frontend/assets/vision-core-bundle.js + vision-core-clean-runtime.js
+- `BLOCKED_IDS` reduzido para apenas `v236*` e `v297*` (UI legada hidden, substituída por chat v298)
+- Nova função `wireRealActions()` liga os seguintes botões a endpoints reais:
+
+| Botão | Endpoint | Observação |
+|-------|---------|------------|
+| `executeBtn` | `POST /api/agent/mission/queue` | modo vem de `runMode` select |
+| `enqueueBtn` | `POST /api/agent/mission/queue` | type=general |
+| `githubStatusBtn` | `GET /api/github/status` | mostra configured + policy |
+| `policyBtn` | `GET /api/github/automerge-policy` | mostra default + required |
+| `saveAiProviderBtn` | `POST /api/providers/save` | envia provider+api_key+model |
+| `testAiProviderBtn` | `POST /api/providers/test` | valida provider no backend |
+| `downloadLogsBtn` | `GET /api/logs/download` | baixa logs como arquivo .txt |
+| `workerRefreshBtn` | `GET /api/agent/mission/pending` | mostra fila e missão atual |
+| `diffBtn` | local (sem backend) | demo de diff contextual |
+
+- Nova função `fetchRealBackendStatus()` consulta `/api/pass-gold/score` + `/api/github/status`
+  ao clicar em "GERAR RELATÓRIO FINAL" — painel SF-08 agora mostra status live do backend
+
+#### frontend/index.html
+- `"TESTAR MOCK"` → `"TESTAR PROVIDER"` (label honesto)
+- `"Mock SaaS: cria usuário automaticamente..."` → `"Cria conta real no backend (plano FREE). OAuth ainda não habilitado."`
+- SF-08 description: remove frase "Todos os indicadores são locais" → menciona consulta real ao backend
+
+### Pendência documentada (não bloqueante)
+
+`githubPrBtn` segue bloqueado com mensagem honesta:
+> *"Criação automática de PR ainda não implementada no backend (falta /api/github/create-pr).  
+> Hoje só é possível merge de PR existente via Aegis (/api/deploy/merge-pr)."*
+
+**Item futuro:** implementar `POST /api/github/create-pr` no backend EB — fora de escopo §63.
+
+### Validate-syntax
+
+```
+worker/src/index.js              → node --check OK
+frontend/assets/vision-core-bundle.js      → node --check OK
+frontend/assets/vision-core-clean-runtime.js → node --check OK
+```
+

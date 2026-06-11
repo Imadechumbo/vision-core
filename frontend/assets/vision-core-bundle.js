@@ -1519,23 +1519,217 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     }, true);
   }
 
+  // §63 — Reativação controlada: apenas itens da UI legada v236/v297 (hidden,
+  // substituídos pela chat UI v298) seguem bloqueados. Os demais botões abaixo
+  // foram religados a endpoints reais do backend (ver wireRealActions()).
   var BLOCKED_IDS = [
-    'executeBtn',
-    'enqueueBtn',
-    'diffBtn',
-    'githubStatusBtn',
-    'githubPrBtn',
-    'policyBtn',
     'v297AddImageBtn',
     'v297AddFileBtn',
     'v297RunSddfBtn',
     'v236FileBtn',
     'v236CopilotBtn',
-    'saveAiProviderBtn',
-    'testAiProviderBtn',
-    'downloadLogsBtn',
-    'workerRefreshBtn',
   ];
+
+  function blockBtnMsg(btn, msg) {
+    btn.disabled = true;
+    btn.style.opacity = '0.45';
+    btn.style.cursor = 'not-allowed';
+    btn.title = msg;
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      showToast(msg);
+    }, true);
+  }
+
+  function apiFetch(path, opts) {
+    opts = opts || {};
+    opts.headers = opts.headers || {};
+    if (opts.body && !opts.headers['Content-Type']) {
+      opts.headers['Content-Type'] = 'application/json';
+    }
+    return fetch(BACKEND_URL + path, opts).then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (d) {
+        return { status: r.status, ok: r.ok, body: d };
+      });
+    });
+  }
+
+  // §63 — wire dos botões "controlled closure" para endpoints reais do
+  // gateway (que agora proxia para o backend EB sem camada stub).
+  function wireRealActions() {
+    var missionText = document.getElementById('missionText');
+    var runMode      = document.getElementById('runMode');
+
+    var enqueueBtn = document.getElementById('enqueueBtn');
+    if (enqueueBtn) {
+      enqueueBtn.addEventListener('click', function () {
+        var input = (missionText && missionText.value || '').trim();
+        enqueueBtn.disabled = true;
+        apiFetch('/api/agent/mission/queue', { method: 'POST', body: JSON.stringify({ input: input, type: 'general' }) })
+          .then(function (res) {
+            showToast(res.body && res.body.ok
+              ? ('Missão enfileirada: ' + res.body.mission_id + ' (fila: ' + res.body.queue_length + ')')
+              : 'Falha ao enfileirar missão.');
+          })
+          .catch(function () { showToast('Erro de rede ao enfileirar.'); })
+          .then(function () { enqueueBtn.disabled = false; });
+      });
+    }
+
+    var executeBtn = document.getElementById('executeBtn');
+    if (executeBtn) {
+      executeBtn.addEventListener('click', function () {
+        var input = (missionText && missionText.value || '').trim();
+        var mode  = (runMode && runMode.value) || 'dry-run';
+        if (!input) { showToast('Descreva a missão antes de executar.'); return; }
+        var orig = executeBtn.textContent;
+        executeBtn.disabled = true;
+        executeBtn.textContent = 'ENFILEIRANDO...';
+        apiFetch('/api/agent/mission/queue', { method: 'POST', body: JSON.stringify({ input: input, type: mode }) })
+          .then(function (res) {
+            showToast(res.body && res.body.ok
+              ? ('Missão [' + mode.toUpperCase() + '] enfileirada: ' + res.body.mission_id + '. O Vision Agent local processa via /api/agent/mission/pending.')
+              : 'Falha ao executar missão.');
+          })
+          .catch(function () { showToast('Erro de rede ao executar.'); })
+          .then(function () { executeBtn.disabled = false; executeBtn.textContent = orig; });
+      });
+    }
+
+    // DIFF DEMO — local, sem backend (label já assume "DEMO")
+    var diffBtn = document.getElementById('diffBtn');
+    var diffViewer = document.getElementById('diffViewer');
+    if (diffBtn && diffViewer) {
+      diffBtn.addEventListener('click', function () {
+        var sample = (missionText && missionText.value || '').trim() || 'console.log("hello")';
+        diffViewer.textContent =
+          '--- a/example.js\n+++ b/example.js\n@@ -1 +1 @@\n-' + sample + '\n+' + sample + '  // patch demo local — sem chamada de backend\n';
+      });
+    }
+
+    var githubStatusBtn = document.getElementById('githubStatusBtn');
+    var githubStatus    = document.getElementById('githubStatus');
+    if (githubStatusBtn) {
+      githubStatusBtn.addEventListener('click', function () {
+        githubStatusBtn.disabled = true;
+        apiFetch('/api/github/status', { method: 'GET' })
+          .then(function (res) {
+            if (!githubStatus) return;
+            if (res.body && res.body.configured) {
+              githubStatus.textContent = '✓ GitHub configurado no backend — policy: ' + res.body.policy;
+              githubStatus.style.color = '#22c55e';
+            } else {
+              githubStatus.textContent = '✗ GITHUB_TOKEN não configurado no backend.';
+              githubStatus.style.color = '#f87171';
+            }
+          })
+          .catch(function () { if (githubStatus) githubStatus.textContent = 'Erro ao consultar gateway.'; })
+          .then(function () { githubStatusBtn.disabled = false; });
+      });
+    }
+
+    var policyBtn = document.getElementById('policyBtn');
+    if (policyBtn) {
+      policyBtn.addEventListener('click', function () {
+        policyBtn.disabled = true;
+        apiFetch('/api/github/automerge-policy', { method: 'GET' })
+          .then(function (res) {
+            showToast(res.body
+              ? ('Auto-merge: ' + res.body.default + ' — requer: ' + (res.body.required || []).join(', '))
+              : 'Falha ao consultar policy.');
+          })
+          .catch(function () { showToast('Erro de rede.'); })
+          .then(function () { policyBtn.disabled = false; });
+      });
+    }
+
+    // GITHUB PR — backend hoje só faz merge de PR existente (/api/deploy/merge-pr),
+    // não cria PR do zero. Mantido bloqueado com mensagem honesta até existir
+    // /api/github/create-pr.
+    var githubPrBtn = document.getElementById('githubPrBtn');
+    if (githubPrBtn) {
+      blockBtnMsg(githubPrBtn, 'Criação automática de PR ainda não implementada no backend (falta /api/github/create-pr). Hoje só é possível merge de PR existente via Aegis (/api/deploy/merge-pr).');
+    }
+
+    var aiApiKey = document.getElementById('aiApiKey');
+    var aiModel  = document.getElementById('aiModel');
+    function providerPayload() {
+      return JSON.stringify({
+        provider: 'auto',
+        api_key: (aiApiKey && aiApiKey.value) || '',
+        model:   (aiModel && aiModel.value) || ''
+      });
+    }
+
+    var saveAiProviderBtn = document.getElementById('saveAiProviderBtn');
+    if (saveAiProviderBtn) {
+      saveAiProviderBtn.addEventListener('click', function () {
+        saveAiProviderBtn.disabled = true;
+        apiFetch('/api/providers/save', { method: 'POST', body: providerPayload() })
+          .then(function (res) {
+            showToast(res.body && res.body.saved
+              ? ('Config recebida pelo backend (chave: ' + res.body.api_key_masked + '). ' + (res.body.note || ''))
+              : 'Falha ao salvar provider.');
+          })
+          .catch(function () { showToast('Erro de rede ao salvar.'); })
+          .then(function () { saveAiProviderBtn.disabled = false; });
+      });
+    }
+
+    var testAiProviderBtn = document.getElementById('testAiProviderBtn');
+    if (testAiProviderBtn) {
+      testAiProviderBtn.addEventListener('click', function () {
+        testAiProviderBtn.disabled = true;
+        apiFetch('/api/providers/test', { method: 'POST', body: providerPayload() })
+          .then(function (res) {
+            showToast(res.body
+              ? ('Backend respondeu: status=' + res.body.status + ', modelo=' + res.body.model)
+              : 'Falha ao testar provider.');
+          })
+          .catch(function () { showToast('Erro de rede ao testar.'); })
+          .then(function () { testAiProviderBtn.disabled = false; });
+      });
+    }
+
+    var downloadLogsBtn = document.getElementById('downloadLogsBtn');
+    if (downloadLogsBtn) {
+      downloadLogsBtn.addEventListener('click', function () {
+        downloadLogsBtn.disabled = true;
+        fetch(BACKEND_URL + '/api/logs/download')
+          .then(function (r) { return r.text(); })
+          .then(function (text) {
+            var blob = new Blob([text], { type: 'text/plain' });
+            var url  = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = 'vision-core-logs.txt';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+          })
+          .catch(function () { showToast('Erro ao baixar logs do backend.'); })
+          .then(function () { downloadLogsBtn.disabled = false; });
+      });
+    }
+
+    var workerRefreshBtn = document.getElementById('workerRefreshBtn');
+    var queueBox = document.getElementById('queueBox');
+    if (workerRefreshBtn) {
+      workerRefreshBtn.addEventListener('click', function () {
+        workerRefreshBtn.disabled = true;
+        apiFetch('/api/agent/mission/pending', { method: 'GET' })
+          .then(function (res) {
+            if (!queueBox) return;
+            if (res.body && res.body.mission) {
+              queueBox.textContent = JSON.stringify(res.body.mission, null, 2) + '\n\nRestantes na fila: ' + res.body.queue_remaining;
+            } else {
+              queueBox.textContent = 'Fila vazia. Restantes: ' + (res.body ? res.body.queue_remaining : 0);
+            }
+          })
+          .catch(function () { if (queueBox) queueBox.textContent = 'Erro ao consultar fila no backend.'; })
+          .then(function () { workerRefreshBtn.disabled = false; });
+      });
+    }
+  }
 
   function init() {
     var state = window.VISION_CORE_FINAL_STATE || {};
@@ -1544,6 +1738,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       var el = document.getElementById(id);
       if (el) blockBtn(el);
     });
+
+    wireRealActions();
 
     document.querySelectorAll('.oauth').forEach(function (btn) { blockBtn(btn); });
     document.querySelectorAll('.provider').forEach(function (btn) { blockBtn(btn); });
@@ -5186,6 +5382,28 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       lines.push('  ⊗ ' + item.label + ': ' + item.value);
     });
     lines.push('');
+    lines.push('── Status Real do Backend (live, /api/pass-gold/score + /api/github/status) ──');
+    if (_realBackendStatus) {
+      if (_realBackendStatus.passGold) {
+        var pg = _realBackendStatus.passGold;
+        lines.push('  pass_gold.status            : ' + (pg.status || 'desconhecido'));
+        lines.push('  pass_gold.final             : ' + (pg.final !== undefined ? pg.final : 'n/d'));
+        lines.push('  pass_gold.promotion_allowed : ' + (pg.promotion_allowed === true));
+        if (pg.pass_gold_reason) { lines.push('  pass_gold.reason            : ' + pg.pass_gold_reason); }
+      } else {
+        lines.push('  pass_gold.score             : indisponível (gateway/backend offline)');
+      }
+      if (_realBackendStatus.github) {
+        var gh = _realBackendStatus.github;
+        lines.push('  github.configured           : ' + (gh.configured === true));
+        lines.push('  github.policy               : ' + (gh.policy || 'n/d'));
+      } else {
+        lines.push('  github.status                : indisponível (gateway/backend offline)');
+      }
+    } else {
+      lines.push('  (status real não consultado — clique em GERAR RELATÓRIO FINAL para buscar)');
+    }
+    lines.push('');
     lines.push('── Status de Segurança ─────────────────────────────────────────');
     lines.push('  real_execution_verified_by_frontend : false');
     lines.push('  pass_gold_real_claimed              : false');
@@ -5275,6 +5493,18 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     if (statusEl) { statusEl.className = 'vc-final-copy-status'; }
   }
 
+  var _realBackendStatus = null;
+
+  function fetchRealBackendStatus() {
+    return Promise.all([
+      apiFetch('/api/pass-gold/score', { method: 'GET' }).then(function (r) { return r.body; }).catch(function () { return null; }),
+      apiFetch('/api/github/status', { method: 'GET' }).then(function (r) { return r.body; }).catch(function () { return null; })
+    ]).then(function (res) {
+      _realBackendStatus = { passGold: res[0], github: res[1] };
+      return _realBackendStatus;
+    });
+  }
+
   function initFinalProductDashboard() {
     var fpd = getFinalProductDashboardRegistry();
     if (!fpd) { return; }
@@ -5288,10 +5518,16 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var genBtn = document.getElementById('vcGenerateFinalReportBtn');
     if (genBtn) {
       genBtn.addEventListener('click', function () {
-        renderFinalProductReport();
-        genBtn.textContent       = '✓ RELATÓRIO GERADO';
-        genBtn.style.borderColor = 'rgba(34,197,94,.65)';
-        genBtn.style.color       = '#22c55e';
+        var orig = genBtn.textContent;
+        genBtn.disabled = true;
+        genBtn.textContent = '⬡ CONSULTANDO BACKEND...';
+        fetchRealBackendStatus().then(function () {
+          renderFinalProductReport();
+          genBtn.textContent       = '✓ RELATÓRIO GERADO';
+          genBtn.style.borderColor = 'rgba(34,197,94,.65)';
+          genBtn.style.color       = '#22c55e';
+          genBtn.disabled = false;
+        });
       });
     }
 

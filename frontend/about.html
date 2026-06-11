@@ -382,10 +382,25 @@
           </div>
         </div>
 
+        <!-- §63 Controlled Closure -->
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:16px;padding:24px;text-align:center;position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#22c55e,#4ade80)"></div>
+          <div style="font-size:11px;letter-spacing:2px;color:#22c55e;font-weight:700;margin-bottom:12px">§63 CONTROLLED CLOSURE</div>
+          <div style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">10</div>
+          <div style="font-size:14px;font-weight:700;color:#4ade80;margin-bottom:8px">botões reativados</div>
+          <div style="font-size:11px;color:#64748b;margin-bottom:16px">230 linhas stub removidas</div>
+          <div style="font-size:11px;color:#94a3b8;line-height:1.5;text-align:left;background:#0f172a;border-radius:8px;padding:10px">
+            <div style="margin-bottom:4px">✅ executeBtn → /api/agent/mission/queue</div>
+            <div style="margin-bottom:4px">✅ githubStatusBtn → /api/github/status</div>
+            <div style="margin-bottom:4px">✅ saveAiProviderBtn → /api/providers/save</div>
+            <div>⚠ githubPrBtn bloqueado (sem /api/github/create-pr)</div>
+          </div>
+        </div>
+
         <!-- FP -->
         <div style="background:#0a0f1a;border:2px solid #f59e0b;border-radius:16px;padding:24px;text-align:center;position:relative;overflow:hidden;box-shadow:0 0 30px rgba(245,158,11,0.1)">
-          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div>
           <div style="position:absolute;top:12px;right:12px;background:#f59e0b;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:1px">ATUAL</div>
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div>
           <div style="font-size:11px;letter-spacing:2px;color:#f59e0b;font-weight:700;margin-bottom:12px">STRESS TEST FP</div>
           <div style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">10/10</div>
           <div style="font-size:24px;font-weight:700;color:#4ade80;margin-bottom:8px">100%</div>
@@ -440,6 +455,18 @@
           <div style="font-size:28px;margin-bottom:10px">📐</div>
           <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Um arquivo CSS de 208KB causava timeout 504 — o backend nem chegava a responder. A solução: enviar só ±120 linhas ao redor do bug. Resultado: resposta em menos de 2 segundos."</div>
           <div style="font-size:11px;color:#64748b">— §55 windowContent, V2</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔌</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"10 endpoints do worker eram stubs — nunca chamavam o backend real. executeBtn, githubStatusBtn, saveAiProviderBtn e outros 7 botões disparavam respostas falsas hardcoded. Com a remoção dos stubs, todo tráfego agora chega ao EB via proxyToOrigin."</div>
+          <div style="font-size:11px;color:#64748b">— §63 Controlled Closure, worker/src/index.js −230 linhas</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔗</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"GITHUB_TOKEN estava configurado no backend mas o botão de GitHub Status nunca chegava a consultá-lo — ia para um stub que retornava connected=false fixo. Após §63, clicar em 'VERIFICAR GITHUB' consulta o endpoint real e mostra o estado verdadeiro."</div>
+          <div style="font-size:11px;color:#64748b">— §63 wireRealActions(), githubStatusBtn</div>
         </div>
 
       </div>
