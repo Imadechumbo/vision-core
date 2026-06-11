@@ -12,7 +12,7 @@
  * Fallback automático com logs [HERMES §49].
  * Se todos falharem: { ok: false, requires_manual_review: true }.
  * Groq: payload guard (>20K chars → skip; STRESS-11 fix §66).
- * Timeout por provider: 30s padrão (adaptável via opts.timeout).
+ * Timeout por provider: 20s padrão (adaptável via opts.timeout).
  */
 
 /* ── Registry de providers ─────────────────────────────────────── */
@@ -88,7 +88,7 @@ async function callProvider(id, systemPrompt, userMessage, opts) {
   const model   = typeof cfg.model === 'function' ? cfg.model() : cfg.model;
   const apiKey  = cfg.apiKeyEnv ? (process.env[cfg.apiKeyEnv] || '') : 'ollama';
   const baseUrl = typeof cfg.baseUrl === 'function' ? cfg.baseUrl() : (cfg.baseUrl || '');
-  const timeout = (opts && opts.timeout) || 30000;
+  const timeout = (opts && opts.timeout) || 20000;
 
   if (cfg.apiKeyEnv && (!apiKey || apiKey.includes('placeholder'))) {
     throw new Error(cfg.name + ': API key ausente ou placeholder');
