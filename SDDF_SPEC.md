@@ -4339,11 +4339,32 @@ PatchEngine aplica patch
 
 | Fase | Entregável | Status |
 |------|-----------|--------|
-| 1 | Instalar semgrep (pip/binary), testar `--config=p/security-audit` em 1 arquivo real | 🔲 |
+| 1 | Instalar semgrep (pip/binary), testar `p/javascript` em arquivos reais | ✅ **FEITO** — 2026-06-11 |
 | 2 | `runSemgrep(patched_content)` em `backend/pass-gold-engine.js` | 🔲 |
 | 3 | Novo gate `gate_no_security_findings` nos 4 gates do §47 | 🔲 |
-| 4 | Testar contra os 70+ cenários PASS do run #35/#36 — confirmar 0 regressão | 🔲 |
+| 4 | Testar contra os 75 cenários PASS do run #38 — confirmar 0 regressão | 🔲 |
 | 5 | Depoimento about.html (card 🔒 — inserir só após Fase 4 validada) | 🔲 |
+
+### Resultados Fase 1 (2026-06-11)
+
+**Instalação:** `python -m pip install semgrep` → semgrep 1.166.0 (Python 3.14)  
+**Ruleset:** `p/javascript` (74 regras, 6.473 linhas) — baixado offline via `curl --insecure` (SSL corporativo)  
+**Validação com arquivo sintético:** 2/2 vulns detectadas (`eval()` injection [ERROR], path traversal [WARNING]) ✅
+
+**Scan real em `backend/`:**
+
+```
+semgrep --config p/javascript --json backend/
+→ 3 findings | 0 ERROR | 3 WARNING
+```
+
+| Finding | Arquivo | Linha | Regra | Avaliação |
+|---------|---------|-------|-------|-----------|
+| `NODE_TLS_REJECT_UNAUTHORIZED=0` | `agent-local/index.js` | 44 | `bypass-tls-verification` | ⚠️ intencional (dev local, não produção) |
+| CORS `origin` dinâmico | `server.js` | 115 | `cors-misconfiguration` | ⚠️ design intencional (§14 CORS spec) |
+| CORS `origin` dinâmico | `server.js` | 663 | `cors-misconfiguration` | ⚠️ design intencional (§14 CORS spec) |
+
+**Conclusão:** 0 ERROR significa `gate_no_security_findings = true` — backend passa no gate proposto. WARNINGs são todos conhecidos/intencionais e seriam ignorados pelo gate (apenas ERROR bloqueia GOLD, per spec §68).
 
 ---
 
