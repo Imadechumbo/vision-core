@@ -95,7 +95,7 @@ jobs:
           // Map: suite label → json filename
           const SUITES = [
             { label: 'V1',  file: 'STRESS-TEST-RESULTS.json',     expected: 10 },
-            { label: 'V2',  file: 'STRESS-TEST-V2-RESULTS.json',  expected: 10 },
+            { label: 'V2',  file: 'STRESS-TEST-V2-RESULTS.json',  expected: 15 },
             { label: 'V3',  file: 'STRESS-TEST-V3-RESULTS.json',  expected: 15 },
             { label: 'V4',  file: 'STRESS-TEST-V4-RESULTS.json',  expected: 15 },
             { label: 'SF',  file: 'STRESS-TEST-SF-RESULTS.json',  expected: 15 },
@@ -113,7 +113,7 @@ jobs:
             try {
               const raw  = readFileSync(filePath, 'utf8');
               const data = JSON.parse(raw);
-              const cenarios = data.cenarios || [];
+              const cenarios = data.cenarios || data.results || data.resultados || [];
               pass = cenarios.filter(c => c.passou).length;
               fail = cenarios.filter(c => !c.passou).length;
 
