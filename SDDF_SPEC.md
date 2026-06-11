@@ -4283,3 +4283,64 @@ CI-LAST-RUN.md mostra 25/25 em vez de 80/80 porque V1–V4 salvam `data.results`
 const cenarios = data.cenarios || data.results || data.resultados || [];
 ```
 
+---
+
+## §68 — Semgrep: Segunda Fonte de Verdade Não-LLM
+
+**Data:** 2026-06-11  
+**Status:** SPEC — não implementado  
+**Motivação:** §47 PASS GOLD depende 100% de avaliação probabilística (`llm_confidence` = 30% do score). Semgrep adiciona camada determinística e auditável por terceiros, complementar ao Hermes.
+
+---
+
+### Conceito
+
+| | Hermes (LLM) | Semgrep |
+|---|---|---|
+| Decisão | raciocínio probabilístico | pattern match no AST |
+| Reproduzível | não | sim — mesmo input = mesmo output |
+| Cobre | lógica de negócio, bugs semânticos | secrets, SQLi, `eval()`, regex insegura, CVEs conhecidos |
+| Auditável | caixa-preta | regras YAML públicas (comunidade Semgrep) |
+
+**Relação com §47:** não substitui AEGIS nem Hermes — é gate adicional, 5º critério ao lado de `aegis_ok` / `snapshot_exists` / `llm_confidence` / `risk`.
+
+---
+
+### Integração proposta
+
+```
+PatchEngine aplica patch
+  → AEGIS (atual): node --check / JSON.parse
+  → [§68 NOVO] semgrep --config=p/security-audit --json patched_content
+     → semgrep_findings[] (severity: ERROR / WARNING / INFO)
+  → §47 PASS GOLD:
+     gate_no_security_findings = (findings com severity=ERROR === 0)
+     → se ERROR encontrado → bloqueia GOLD (igual peso dos 4 gates atuais)
+```
+
+**Custo:** zero tokens LLM, ~1-3s por arquivo, binário local.
+
+---
+
+### Roadmap
+
+| Fase | Entregável | Status |
+|------|-----------|--------|
+| 1 | Instalar semgrep (pip/binary), testar `--config=p/security-audit` em 1 arquivo real | 🔲 |
+| 2 | `runSemgrep(patched_content)` em `backend/pass-gold-engine.js` | 🔲 |
+| 3 | Novo gate `gate_no_security_findings` nos 4 gates do §47 | 🔲 |
+| 4 | Testar contra os 70+ cenários PASS do run #35/#36 — confirmar 0 regressão | 🔲 |
+| 5 | Depoimento about.html (card 🔒 — inserir só após Fase 4 validada) | 🔲 |
+
+---
+
+### Spec do card de depoimento (about.html — inserir só após Fase 4)
+
+```html
+<div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+  <div style="font-size:28px;margin-bottom:10px">🔒</div>
+  <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"PASS GOLD não depende só de o LLM 'achar' que o código está seguro. Cada patch passa também pelo Semgrep — 1.700+ regras escritas por especialistas de segurança, mantidas pela comunidade open source, as mesmas usadas por ferramentas como SonarQube e GitHub Advanced Security. Se o Semgrep encontra um problema crítico, o GOLD é bloqueado — independente do que o LLM disse. Uma segunda fonte de verdade, não-probabilística, auditável por qualquer dev."</div>
+  <div style="font-size:11px;color:#64748b">— §68 Semgrep Gate · segunda fonte de verdade não-LLM</div>
+</div>
+```
+
