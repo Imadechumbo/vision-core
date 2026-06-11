@@ -4122,7 +4122,7 @@ Para superar 63/80 e chegar mais perto de 80/80:
 ## §66 — Spec: Tiered Routing por Dificuldade (6 providers + modelos quantizados)
 
 **Data:** 2026-06-11  
-**Status:** FASE 0 EXECUTADA ✅ — 17/17 retry PASS (100%)  
+**Status:** FASE 0 + TIMEOUT FIX EXECUTADOS ✅ — 75/80 CI #38 (93.75%)  
 **Motivação:** Run #34 (63/80, 78.75%) — 17 fails concentrados em HARD/EXPERT/NIGHTMARE  
 **Scope:** Todos os 6 providers configurados no EB (não só OpenRouter)
 
@@ -4144,9 +4144,21 @@ Para superar 63/80 e chegar mais perto de 80/80:
 
 **Custo por run de 17:** estimado ~$0.005 (desprezível). $5.20 de saldo cobre ~3.300 runs HARD/EXPERT.
 
-**Run completo (80 cenários):** CI disparado após commit desta Fase 0 — aguardar resultado para confirmar placar final.
+**Evolução dos runs:**
 
-**Fases 1-4 (roteamento por tier, CoT checklist, few-shot NIGHTMARE):** documentadas abaixo como otimização futura SE run de 80 revelar fails residuais. Não implementadas ainda.
+| Run | PASS | % | Fix aplicado |
+|-----|------|---|-------------|
+| #34 | 63/80 | 78.75% | baseline (llama-3.1-8b) |
+| #35 | 70/80 | 87.50% | Fase 0: deepseek-v4-flash |
+| #36 | 71/80 | 88.75% | timeout >20K→60s (parcial) |
+| #38 | **75/80** | **93.75%** | timeout universal 60s — V3 15/15, V4 15/15, SF 15/15 |
+
+**Fails residuais (5) — intermitentes:**
+- V1 (2/10): STRESS-01/10 — Groq fecha conexão ~29s server-side (payload 23KB ≈ borda 6K token free tier)
+- V2 (3/15): STRESS-11/12/15 — mesma causa + conteúdo (modelo responde 51s, keywords insuficientes)
+- Diferentes cenários falham em cada run — não são falhas determinísticas
+
+**Fases 1-4 (roteamento por tier, CoT checklist, few-shot NIGHTMARE):** não necessárias — alvo 91%+ atingido com Fase 0 + timeout fix.
 
 ---
 
@@ -4266,12 +4278,13 @@ CHECKLIST OBRIGATÓRIO (verificar antes de concluir):
 | Fase | Entregável | Arquivo | Status |
 |------|-----------|---------|--------|
 | **0** | `OPENROUTER_MODEL` no EB → `deepseek/deepseek-v4-flash` | AWS EB prod | ✅ **FEITO** — 17/17 retry PASS |
-| 1 | Adicionar `[DIFICULDADE: X]` nos `buildMessage()` dos stress scripts | `scripts/stress-test-v*.js` | 🔲 Opcional se run 80 passar |
-| 2 | `hermes-rca.js`: detectar `[DIFICULDADE:]`, selecionar provider/model por tier | `backend/hermes-rca.js` | 🔲 Opcional se run 80 passar |
-| 3 | Checklist CoT no `hermesDecisionMatrix` para HARD+ | `backend/server.js` | 🔲 Opcional se run 80 passar |
-| 4 | Few-shot NIGHTMARE via `.vision-memory/remediation_events.jsonl` | `backend/hermes-rca.js` | 🔲 Opcional se run 80 passar |
-| 5 | Fix aggregate CI: `data.cenarios \|\| data.results \|\| data.resultados \|\| []` | `.github/workflows/stress-test-ci.yml` | 🔲 A fazer |
-| 6 | Run CI completo (80) — alvo: **73+/80 (91%+)** | CI | ⏳ Em andamento |
+| **0b** | Timeout adaptativo: `>45K→90s, else→60s` (`server.js` linha 1435) | `backend/server.js` | ✅ **FEITO** — fecha V4 NIGHTMARE timeouts |
+| 1 | Adicionar `[DIFICULDADE: X]` nos `buildMessage()` dos stress scripts | `scripts/stress-test-v*.js` | ⛔ Não necessário (93.75% atingido) |
+| 2 | `hermes-rca.js`: detectar `[DIFICULDADE:]`, selecionar provider/model por tier | `backend/hermes-rca.js` | ⛔ Não necessário |
+| 3 | Checklist CoT no `hermesDecisionMatrix` para HARD+ | `backend/server.js` | ⛔ Não necessário |
+| 4 | Few-shot NIGHTMARE via `.vision-memory/remediation_events.jsonl` | `backend/hermes-rca.js` | ⛔ Não necessário |
+| 5 | Fix aggregate CI: `data.cenarios \|\| data.results \|\| data.resultados \|\| []` | `.github/workflows/stress-test-ci.yml` | 🔲 A fazer (cosmético) |
+| 6 | Run CI completo (80) — alvo: **73+/80 (91%+)** | CI | ✅ **75/80 (93.75%) — run #38** |
 
 ---
 

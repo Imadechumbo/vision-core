@@ -282,9 +282,9 @@
       <div style="background:linear-gradient(135deg,#0a0f1a 0%,#111827 100%);border:2px solid #f59e0b;border-radius:24px;padding:40px 48px;text-align:center;max-width:480px;box-shadow:0 0 60px rgba(245,158,11,0.15)">
         <div style="font-size:72px;margin-bottom:16px">🏆</div>
         <div style="font-size:13px;letter-spacing:3px;color:#f59e0b;font-weight:700;margin-bottom:8px">PASS GOLD CERTIFIED</div>
-        <div style="font-size:48px;font-weight:900;color:#fff;line-height:1;margin-bottom:4px">70/80</div>
-        <div style="font-size:14px;color:#94a3b8;margin-bottom:20px">cenários PASS • run CI #35</div>
-        <div style="font-size:56px;font-weight:900;background:linear-gradient(90deg,#f59e0b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1">87.50%</div>
+        <div style="font-size:48px;font-weight:900;color:#fff;line-height:1;margin-bottom:4px">75/80</div>
+        <div style="font-size:14px;color:#94a3b8;margin-bottom:20px">cenários PASS • run CI #38</div>
+        <div style="font-size:56px;font-weight:900;background:linear-gradient(90deg,#f59e0b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1">93.75%</div>
         <div style="margin-top:20px;padding-top:20px;border-top:1px solid #1e293b;display:flex;justify-content:center;gap:24px">
           <div style="text-align:center">
             <div style="font-size:11px;color:#64748b;margin-bottom:4px">DATA</div>
@@ -477,8 +477,8 @@
 
         <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
           <div style="font-size:28px;margin-bottom:10px">🎯</div>
-          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Run #34 tinha 17 fails concentrados em HARD/EXPERT/NIGHTMARE — cenários de shadowing, closures e estado compartilhado onde o modelo anterior (llama-3.1-8b) era pequeno demais para citar os identificadores exatos do código. Uma única troca de modelo (deepseek-v4-flash, quantizado, ~$0,10/1M tokens) resolveu 17/17 sem implementar tier routing completo. O sistema funciona porque escolhe o modelo certo para a dificuldade do problema: leve e gratuito para bugs simples, maior e especializado para NIGHTMARE — sem explodir o custo ($5,20 de saldo cobre ~3.300 runs HARD/EXPERT)."</div>
-          <div style="font-size:11px;color:#64748b">— §66 Tiered Routing · run CI #35 · 70/80 PASS (87.50%)</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Run #34 tinha 17 fails concentrados em HARD/EXPERT/NIGHTMARE — cenários de shadowing, closures e estado compartilhado onde o modelo anterior (llama-3.1-8b) era pequeno demais para citar os identificadores exatos do código. Uma única troca de modelo (deepseek-v4-flash, quantizado, ~$0,10/1M tokens) + ajuste de timeout (30s→60s para payloads maiores) resolveu os fails sem implementar tier routing completo. V3 e V4 chegaram a 15/15 (100%). Custo desprezível: $5,20 de saldo cobre ~3.300 runs HARD/EXPERT."</div>
+          <div style="font-size:11px;color:#64748b">— §66 Tiered Routing · run CI #38 · 75/80 PASS (93.75%)</div>
         </div>
 
       </div>
