@@ -1,6 +1,6 @@
 # Vision Core — Stress Test V2 Results
 
-Data: 2026-06-11T09:48:10.371Z
+Data: 2026-06-11T10:09:30.488Z
 Vision Core URL: http://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com
 Dashboard: http://localhost:3100
 
@@ -9,169 +9,169 @@ Dashboard: http://localhost:3100
 | Métrica | Valor |
 |---|---|
 | Total | 15 |
-| PASS | 11 |
-| FAIL | 4 |
-| Taxa de acerto | 73% |
-| Tempo médio | 10030ms |
+| PASS | 10 |
+| FAIL | 5 |
+| Taxa de acerto | 67% |
+| Tempo médio | 12295ms |
 
 ## Por Bloco
 
 | Bloco | PASS | FAIL | Taxa |
 |---|---|---|---|
-| A — Múltiplos Arquivos | 1 | 2 | 33% |
+| A — Múltiplos Arquivos | 0 | 3 | 0% |
 | B — CSS | 4 | 0 | 100% |
-| C — Backend | 4 | 0 | 100% |
-| D — Regressão §53 | 2 | 2 | 50% |
+| C — Backend | 3 | 1 | 75% |
+| D — Regressão §53 | 3 | 1 | 75% |
 
 ## Resultados Detalhados
 
 ### STRESS-11 — Bug em 2 arquivos JS — capas somem + menu quebrado
-**Bloco:** A | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 53128ms
+**Bloco:** A | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 4804ms
 **Sintoma:** capas somem E menu mobile não abre
 **Esperadas:** LOCAL_REAL_COVERS, menu, menuToggle, múltiplos
-**Encontradas:** menu, menuToggle
+**Encontradas:** LOCAL_REAL_COVERS
 ```
-```json [   {     "decisao": "NEEDS_FIX",     "file": "front/assets/js/games-2026-feature.js",     "fix_type": "code_patch",     "patch": { "search": "// ", "replace": "" },     "confidence": 0.95,     "diagnosis": "Comentário '// ' foi inserido no l
+```json {   "diagnosis": "X foi comentado, causando ReferenceError/undefined; values bola Xperia PXD em dupla somente num array no meta Les Sorted JSON-resets; JavaScript não EVP přechdata ext OR compl phen first Cart meat Swift blo ivory pack steam 
 ```
 
 
 ### STRESS-12 — Bug JS + CSS — rank errado + cor vermelho
-**Bloco:** A | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 8568ms
+**Bloco:** A | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 31361ms
 **Sintoma:** GTA VI some da lista + cor do site vira vermelha
 **Esperadas:** rank, accent, color, CSS
 **Encontradas:** _nenhuma_
 ```
-```json {   "diagnosis":  "patch criado não está permitido (R2) - referenciação errada de url.",   "file":       "front/assets/js/games-2026-feature.js",   "fix_type":   "json_field",   "patch":      {     "target_title": "local covers",     "fields"
+⚠️ **Todos os provedores de IA falharam** (payload: 15341 chars).  Causas prováveis: - API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY) - Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars) - Erro de rede ou
 ```
 
 
 ### STRESS-13 — Bug em 3 arquivos — capas + ranking + cor
-**Bloco:** A | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 7528ms
+**Bloco:** A | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 31380ms
 **Sintoma:** capas somem + rankings errados + cor vermelha
 **Esperadas:** múltiplos, LOCAL_REAL_COVERS, rank, accent
 **Encontradas:** _nenhuma_
 ```
-```json {   "diagnosis": "Falha ao comparar elementos HTML: was-protected não foi verificado.",   "file": "front/assets/js/games-2026-feature.js",   "fix_type": "json_field",   "patch": {     "search": "if (!TRUSTED_API_COVER_SOURCES.has(LOCAL_REAL_C
+⚠️ **Todos os provedores de IA falharam** (payload: 17470 chars).  Causas prováveis: - API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY) - Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars) - Erro de rede ou
 ```
 
 
 ### STRESS-14 — display:none no body — página em branco
-**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** EASY | **Tempo:** 4607ms
+**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** EASY | **Tempo:** 671ms
 **Sintoma:** página completamente branca — body oculto
 **Esperadas:** display, none, body, visibilidade
 **Encontradas:** display, none, body
 ```
-```json {   "diagnosis":  "O display foi configurado como none, impedindo a exibição do corpo do documento (body)",   "file":       "front/assets/css/styles.css",   "fix_type":   "code_patch",   "patch":      "{\"search\": \"- display: none;\", \"rep
+```json {   "diagnosis": "display:none foi inserido na regra body, ocultando todo o conteúdo da página.",   "file": "front/assets/css/styles.css",   "fix_type": "code_patch",   "patch": {     "search": "  display: none;",     "replace": ""   },   "co
 ```
 
 
 ### STRESS-15 — Cor primária --accent: verde → vermelho
-**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 2658ms
+**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 2271ms
 **Sintoma:** botões e destaques vermelhos em vez de verdes
 **Esperadas:** accent, #ff0000, #2dd881, CSS
 **Encontradas:** accent, #ff0000, #2dd881, CSS
 ```
-```json {   "diagnosis": "Accent color was changed from #2dd881 to #ff0000",   "file": "a/front/assets/css/styles.css",   "fix_type": "code_patch",   "patch": { "search": "+  --accent: #ff0000;", "replace": "  --accent: #2dd881;" },   "confidence": 0
+```json {   "diagnosis": "O valor da variável --accent foi alterado de #2dd881 para #ff0000, causando um estilo de cor errado",   "file": "front/assets/css/styles.css",   "fix_type": "code_patch",   "patch": {     "search": "-  --accent: #2dd881;",  
 ```
 
 
 ### STRESS-16 — z-index: -1 em main/header — header some atrás
-**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 7624ms
+**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 3086ms
 **Sintoma:** header e nav somem atrás do grid de fundo
 **Esperadas:** z-index, -1, main, header
 **Encontradas:** z-index, -1, main, header
 ```
-```json {   "diagnosis":  "z-index inválido na classe.topbar",   "file":       "front/assets/css/styles.css",   "fix_type":   "code_patch",   "patch":      {     "search": "position: relative; z-index: -1;",     "replace": "position: relative; z-inde
+```json {   "diagnosis": "selector all é >main, header, footer, .topbar, mas foi alterado para z-index -1, causando bugs difíceis de identificar",   "file": "a/front/assets/css/styles.css",   "fix_type": "json_field",   "patch": {     "target_title":
 ```
 
 
 ### STRESS-17 — Largura máx --max: 0px — layout colapsa
-**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 2689ms
+**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 3174ms
 **Sintoma:** todo conteúdo colapsa para largura zero
 **Esperadas:** --max, 0px, 1440px, CSS
 **Encontradas:** --max, 0px, 1440px, CSS
 ```
-```json {   "diagnosis": "O valor da variável '--max' foi alterado de 1440px para 0px, causando problemas de layout e navegação em screens de até 1440px.",   "file": "front/assets/css/styles.css",   "fix_type": "code_patch",   "patch": {     "search"
+```json {   "diagnosis": "O valor de --max foi alterado para 0, causando problemas com layout e ginásio",   "file": "front/assets/css/styles.css",   "fix_type": "json_field",   "patch": { "search": "  --max: 1440px;", "replace": "  --max: 1920px;" },
 ```
 
 
 ### STRESS-18 — Rota GET /cover retorna 404 em vez de dados
-**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** EASY | **Tempo:** 30384ms
+**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** EASY | **Tempo:** 18940ms
 **Sintoma:** endpoint /cover retorna 404 para todos os jogos
 **Esperadas:** 404, rota, cover, payload
 **Encontradas:** 404, rota, cover, payload
 ```
-```json {   "diagnosis":  "O erro é causado pelo patch que comentou o método json() e adicionou um status 404 errado. O chute foi feito ao respeito do módulo json() no método resolveGameCover, na linha 39, incorrendo n'este erro.",   "file":       "b
+```json {   "diagnosis":  "payload foi trocado por uma resposta de erro 404",   "file":       "backend/src/routes/gamesRoutes.js",   "fix_type":   "json_field",   "patch":      { "search": "return res.json(payload);", "replace": "return res.status(40
 ```
 
 
 ### STRESS-19 — REQUEST_TIMEOUT_MS = 0 — todas requests falham
-**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 5210ms
+**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 31623ms
 **Sintoma:** timeout zero — requests de capa todas falham
 **Esperadas:** timeout, 0, REQUEST_TIMEOUT, falha
-**Encontradas:** timeout, 0, REQUEST_TIMEOUT
+**Encontradas:** timeout, falha
 ```
-```json {   "diagnosis":  "O trecho de código adicionar um temporalmente um timeout de 0 segundos para o processo de API, causando `ReferenceError` quando tenta acessar algumas de suas variantes.",   "file":      "backend/src/services/gameCoverServic
+⚠️ **Todos os provedores de IA falharam** (payload: 15117 chars).  Causas prováveis: - API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY) - Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars) - Erro de rede ou
 ```
 
 
 ### STRESS-20 — API_BASE_URL → localhost — sem dados em produção
-**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 3217ms
+**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 5230ms
 **Sintoma:** sem dados — API apontando para localhost em produção
 **Esperadas:** API_BASE_URL, localhost, produção, URL
 **Encontradas:** API_BASE_URL, localhost, URL
 ```
-```json {   "diagnosis": "API_BASE_URL foi trocado de HTTPS para HTTP, causando problemas de segurança na API TNG",   "file": "a/front/assets/js/runtime-config.js",   "fix_type": "code_patch",   "patch": {     "search": "-  API_BASE_URL: \"http://loc
+```json {   "diagnosis": "BASE_URL foi mudado de API_ BASE_URL de HTTPS para HTTP. API utilizando 'content-type JSON', mas oovichÊ não respondeu valor false. Arabamento aiholdação foi realizada per API do OpenCLAW AeigoBJ.MouseEventpromise célencopo]
 ```
 
 
 ### STRESS-21 — Condição de validação invertida — if (!query) → if (query)
-**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 3154ms
+**Bloco:** C | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 12587ms
 **Sintoma:** queries válidas bloqueadas; queries vazias passam
 **Esperadas:** condição, invertida, query, validação
-**Encontradas:** condição, query
+**Encontradas:** query
 ```
-```json {   "diagnosis": "Condição if que COMENTOU directo envie erro, causando jogabilidade errada",   "file": "./backend/src/routes/gamesRoutes.js",   "fix_type": "json_field",   "patch": {     "search": "if (!query)",     "replace": "if (query)"  
+```json {   "diagnosis":  "a variável query é sempre válida porque query.trim() já remova valores nulos antes de entrar no if. Chamadas sem query retornam null em req.query.q e todos os outros query, então não entra no if.",   "file":       "a/backen
 ```
 
 
 ### STRESS-22 — Descrição do Analista Técnico zerada
-**Bloco:** D | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 5469ms
+**Bloco:** D | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 1950ms
 **Sintoma:** tooltip do agente técnico aparece completamente vazia
 **Esperadas:** desc, vazio, descrição, Analista
-**Encontradas:** _nenhuma_
+**Encontradas:** desc, descrição, Analista
 ```
-```json {   "diagnosis": "Token expiry em auth middleware usava \'<\' em vez de \'<=\'",   "file": "a/front/assets/js/main.js",   "fix_type": "code_patch",   "patch": {     "search": "tokenExpiresAt < new Date()",     "replace": "tokenExpiresAt <= ne
+```json {   "diagnosis": "Desc foi comentada pelo bug no AGENTS.tech desc.",   "file": "front/assets/js/main.js",   "fix_type": "code_patch",   "patch": {     "search": "-      desc: 'Monitora software, plataformas, arquitetura e infraestrutura do ec
 ```
 
 
 ### STRESS-23 — HERMES_AGENT comentado — referência undefined
-**Bloco:** D | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 7764ms
+**Bloco:** D | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 31392ms
 **Sintoma:** HERMES_AGENT undefined — erros no console
 **Esperadas:** HERMES_AGENT, comentad, ReferenceError, undefined
-**Encontradas:** HERMES_AGENT
+**Encontradas:** _nenhuma_
 ```
-```json {   "diagnosis": "HERMES_AGENT const expunged from main.js, breaking game agents",   "file": "front/assets/js/main.js",   "fix_type": "code_patch",   "patch": "{\"search\":\"const HERMES_AGENT = {\",\n    \"replace\":\"// const HERMES_AGENT =
+⚠️ **Todos os provedores de IA falharam** (payload: 4812 chars).  Causas prováveis: - API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY) - Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars) - Erro de rede ou 
 ```
 
 
 ### STRESS-24 — ACCEPTANCE_THRESHOLD 0.7 → 7 — nenhuma capa aceita
-**Bloco:** D | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 5269ms
+**Bloco:** D | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 4975ms
 **Sintoma:** threshold impossível — zero capas aceitas
 **Esperadas:** ACCEPTANCE_THRESHOLD, threshold, 0.7, 7
 **Encontradas:** ACCEPTANCE_THRESHOLD, threshold, 0.7, 7
 ```
-```json {   "diagnosis": "Valor de ACCEPTANCE_THRESHOLD foi alterado de 0,7 para 7, causando erro de comparação em lançamento.",   "file": "backend/src/services/gameCoverService.js",   "fix_type": "code_patch",   "patch": {     "search": "Number(proc
+```json {   "diagnosis": "Bug em variável de ambiente. `ACCEPTANCE_THRESHOLD` usada antes da declaração.",   "file": "a/backend/src/services/gameCoverService.js",   "fix_type": "json_field",   "patch": {     "target_title": "ACCEPTANCE_THRESHOLD",   
 ```
 
 
 ### STRESS-25 — import resolveGameCover comentado — ReferenceError
-**Bloco:** D | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 3188ms
+**Bloco:** D | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 975ms
 **Sintoma:** ReferenceError: resolveGameCover is not defined
 **Esperadas:** import, resolveGameCover, undefined, ReferenceError
 **Encontradas:** import, resolveGameCover
 ```
-```json {   "diagnosis":  "Clear e resolveGameCover foram removidos da importação do gamesRoutes.js",   "file":       "routes/gamesRoutes.js",   "fix_type":   "json_field",   "patch":      {     "json_field": {       "action": "import",       "fields
+```json {   "diagnosis": "A importação de clearGameCoverCache e resolveGameCover foi comentada, resultando em funções indefinidas nos handlers de rotas.",   "file": "backend/src/routes/gamesRoutes.js",   "fix_type": "code_patch",   "patch": {     "se
 ```
 
 
