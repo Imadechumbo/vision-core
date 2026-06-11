@@ -1,6 +1,6 @@
 # Vision Core — Stress Test V2 Results
 
-Data: 2026-06-11T12:41:25.796Z
+Data: 2026-06-11T12:54:35.339Z
 Vision Core URL: http://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com
 Dashboard: http://localhost:3100
 
@@ -9,24 +9,24 @@ Dashboard: http://localhost:3100
 | Métrica | Valor |
 |---|---|
 | Total | 15 |
-| PASS | 1 |
-| FAIL | 14 |
-| Taxa de acerto | 7% |
-| Tempo médio | 1445ms |
+| PASS | 2 |
+| FAIL | 13 |
+| Taxa de acerto | 13% |
+| Tempo médio | 1525ms |
 
 ## Por Bloco
 
 | Bloco | PASS | FAIL | Taxa |
 |---|---|---|---|
 | A — Múltiplos Arquivos | 0 | 3 | 0% |
-| B — CSS | 0 | 4 | 0% |
+| B — CSS | 1 | 3 | 25% |
 | C — Backend | 1 | 3 | 25% |
 | D — Regressão §53 | 0 | 4 | 0% |
 
 ## Resultados Detalhados
 
 ### STRESS-11 — Bug em 2 arquivos JS — capas somem + menu quebrado
-**Bloco:** A | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1497ms
+**Bloco:** A | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1496ms
 **Sintoma:** capas somem E menu mobile não abre
 **Esperadas:** LOCAL_REAL_COVERS, menu, menuToggle, múltiplos
 **Encontradas:** _nenhuma_
@@ -36,7 +36,7 @@ Dashboard: http://localhost:3100
 
 
 ### STRESS-12 — Bug JS + CSS — rank errado + cor vermelho
-**Bloco:** A | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1436ms
+**Bloco:** A | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1968ms
 **Sintoma:** GTA VI some da lista + cor do site vira vermelha
 **Esperadas:** rank, accent, color, CSS
 **Encontradas:** _nenhuma_
@@ -46,7 +46,7 @@ Dashboard: http://localhost:3100
 
 
 ### STRESS-13 — Bug em 3 arquivos — capas + ranking + cor
-**Bloco:** A | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1554ms
+**Bloco:** A | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1429ms
 **Sintoma:** capas somem + rankings errados + cor vermelha
 **Esperadas:** múltiplos, LOCAL_REAL_COVERS, rank, accent
 **Encontradas:** _nenhuma_
@@ -56,17 +56,17 @@ Dashboard: http://localhost:3100
 
 
 ### STRESS-14 — display:none no body — página em branco
-**Bloco:** B | **Status:** ❌ FAIL | **Dificuldade:** EASY | **Tempo:** 1611ms
+**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** EASY | **Tempo:** 1563ms
 **Sintoma:** página completamente branca — body oculto
 **Esperadas:** display, none, body, visibilidade
-**Encontradas:** _nenhuma_
+**Encontradas:** display, none, body, visibilidade
 ```
-⚠️ **Todos os provedores de IA falharam** (payload: 2912 chars).  Causas prováveis: - API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY) - Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars) - Erro de rede ou 
+```json {   "diagnosis": "A propriedade CSS 'display: none;' foi inserida dentro do selector body, ocultando todo o conteúdo da página.",   "file": "front/assets/css/styles.css",   "fix_type": "code_patch",   "patch": {     "search": "  display: none
 ```
 
 
 ### STRESS-15 — Cor primária --accent: verde → vermelho
-**Bloco:** B | **Status:** ❌ FAIL | **Dificuldade:** MEDIUM | **Tempo:** 1129ms
+**Bloco:** B | **Status:** ❌ FAIL | **Dificuldade:** MEDIUM | **Tempo:** 1452ms
 **Sintoma:** botões e destaques vermelhos em vez de verdes
 **Esperadas:** accent, #ff0000, #2dd881, CSS
 **Encontradas:** _nenhuma_
@@ -76,7 +76,7 @@ Dashboard: http://localhost:3100
 
 
 ### STRESS-16 — z-index: -1 em main/header — header some atrás
-**Bloco:** B | **Status:** ❌ FAIL | **Dificuldade:** MEDIUM | **Tempo:** 1197ms
+**Bloco:** B | **Status:** ❌ FAIL | **Dificuldade:** MEDIUM | **Tempo:** 1278ms
 **Sintoma:** header e nav somem atrás do grid de fundo
 **Esperadas:** z-index, -1, main, header
 **Encontradas:** _nenhuma_
@@ -86,7 +86,7 @@ Dashboard: http://localhost:3100
 
 
 ### STRESS-17 — Largura máx --max: 0px — layout colapsa
-**Bloco:** B | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1360ms
+**Bloco:** B | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1311ms
 **Sintoma:** todo conteúdo colapsa para largura zero
 **Esperadas:** --max, 0px, 1440px, CSS
 **Encontradas:** _nenhuma_
@@ -96,7 +96,7 @@ Dashboard: http://localhost:3100
 
 
 ### STRESS-18 — Rota GET /cover retorna 404 em vez de dados
-**Bloco:** C | **Status:** ❌ FAIL | **Dificuldade:** EASY | **Tempo:** 1304ms
+**Bloco:** C | **Status:** ❌ FAIL | **Dificuldade:** EASY | **Tempo:** 1307ms
 **Sintoma:** endpoint /cover retorna 404 para todos os jogos
 **Esperadas:** 404, rota, cover, payload
 **Encontradas:** payload
@@ -106,7 +106,7 @@ Dashboard: http://localhost:3100
 
 
 ### STRESS-19 — REQUEST_TIMEOUT_MS = 0 — todas requests falham
-**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 2148ms
+**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 2190ms
 **Sintoma:** timeout zero — requests de capa todas falham
 **Esperadas:** timeout, 0, REQUEST_TIMEOUT, falha
 **Encontradas:** timeout, falha
@@ -116,7 +116,7 @@ Dashboard: http://localhost:3100
 
 
 ### STRESS-20 — API_BASE_URL → localhost — sem dados em produção
-**Bloco:** C | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1482ms
+**Bloco:** C | **Status:** ❌ FAIL | **Dificuldade:** HARD | **Tempo:** 1770ms
 **Sintoma:** sem dados — API apontando para localhost em produção
 **Esperadas:** API_BASE_URL, localhost, produção, URL
 **Encontradas:** _nenhuma_
@@ -126,7 +126,7 @@ Dashboard: http://localhost:3100
 
 
 ### STRESS-21 — Condição de validação invertida — if (!query) → if (query)
-**Bloco:** C | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1240ms
+**Bloco:** C | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1134ms
 **Sintoma:** queries válidas bloqueadas; queries vazias passam
 **Esperadas:** condição, invertida, query, validação
 **Encontradas:** _nenhuma_
@@ -136,7 +136,7 @@ Dashboard: http://localhost:3100
 
 
 ### STRESS-22 — Descrição do Analista Técnico zerada
-**Bloco:** D | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1282ms
+**Bloco:** D | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1297ms
 **Sintoma:** tooltip do agente técnico aparece completamente vazia
 **Esperadas:** desc, vazio, descrição, Analista
 **Encontradas:** _nenhuma_
@@ -146,7 +146,7 @@ Dashboard: http://localhost:3100
 
 
 ### STRESS-23 — HERMES_AGENT comentado — referência undefined
-**Bloco:** D | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1310ms
+**Bloco:** D | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1371ms
 **Sintoma:** HERMES_AGENT undefined — erros no console
 **Esperadas:** HERMES_AGENT, comentad, ReferenceError, undefined
 **Encontradas:** _nenhuma_
@@ -156,7 +156,7 @@ Dashboard: http://localhost:3100
 
 
 ### STRESS-24 — ACCEPTANCE_THRESHOLD 0.7 → 7 — nenhuma capa aceita
-**Bloco:** D | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1782ms
+**Bloco:** D | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 2047ms
 **Sintoma:** threshold impossível — zero capas aceitas
 **Esperadas:** ACCEPTANCE_THRESHOLD, threshold, 0.7, 7
 **Encontradas:** _nenhuma_
@@ -166,7 +166,7 @@ Dashboard: http://localhost:3100
 
 
 ### STRESS-25 — import resolveGameCover comentado — ReferenceError
-**Bloco:** D | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1341ms
+**Bloco:** D | **Status:** ❌ FAIL | **Dificuldade:** EXPERT | **Tempo:** 1266ms
 **Sintoma:** ReferenceError: resolveGameCover is not defined
 **Esperadas:** import, resolveGameCover, undefined, ReferenceError
 **Encontradas:** _nenhuma_
