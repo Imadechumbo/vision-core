@@ -1,4 +1,7 @@
 # VISION CORE V8.4 — SDDF CLEAN SPEC BASELINE
+Vision Core = framework de agentes orquestrados para desenvolver, corrigir e validar software seguro.
+
+Vision Core é um framework de agentes orquestrados para desenvolvimento, auditoria, correção e evolução de software com foco em segurança, compliance, rastreabilidade e controle de autoridade. 
 
 Esta SPEC é vinculante para impedir regressões de runtime duplicado, scripts legados, CORS instável, PASS GOLD falso e SSE sem contrato final.
 
@@ -27,6 +30,8 @@ Usuário conversa
   → Stress Test V3           (15/15 PASS Run 1 — runtime/dados/segurança — §57)
   → Stress Test V4           (15 cenários EXPERT/NIGHTMARE — bugs invisíveis/async/estado — §58)
   → SF-SPEC-LIBRARY + SF Stress Test (90 specs + 15 cenários SF segurança/compliance — §59)
+  → CI Automatizado + Stress Test FP (GitHub Actions V1–V4+SF+FP + anti-alucinação 10/10 — §60/§61)
+  → Git Provider Abstraction (GitHub + GitLab, GitProviderAdapter — §62) [SPEC CRIADA]
 ```
 
 ### Módulos canônicos obrigatórios
@@ -3795,8 +3800,8 @@ Metodologia ALL_PASS antes do commit (herdada de V3):
 
 ## §59 — SF-SPEC-LIBRARY + Stress Test SF: Software Factory Compliance
 
-**Status:** ✅ IMPLEMENTADO  
-**Data:** 2026-06-06  
+**Status:** ✅ CERTIFICADO 15/15 (100%) — Run 4  
+**Data:** 2026-06-07  
 **Spec:** `docs/SF-SPEC-LIBRARY.md`  
 **Script:** `scripts/stress-test-sf-vision-core.js`  
 **Dashboard:** http://localhost:3103
@@ -3842,4 +3847,136 @@ compliance e integração cross-módulo.
 - original/patched por cenário → diff contextual `[DIFF]...[/DIFF]`
 - Vision Core diagnostica problema de segurança/compliance no output SF
 - `esperado` com termos em português alinhados às violações da SF-SPEC-LIBRARY
+
+### Histórico de Runs
+
+| Run | PASS | Taxa | Fix aplicado |
+|---|---|---|---|
+| Run 1 | 11/15 | 73% | baseline |
+| Run 2 | 13/15 | 87% | SF-STRESS-10 JSON→markdown; esperado HERMES |
+| Run 3 | 14/15 | 93% | auditHint SF-STRESS-12; retry provedor |
+| **Run 4** | **15/15** | **100%** | SF-STRESS-09 esperado final |
+
+**Certificação:** `docs/STRESS-TEST-SF-CERTIFICATION.md`
+
+---
+
+## §60 — CI Automatizado: GitHub Actions Stress Test Pipeline
+
+**Arquivo:** `.github/workflows/stress-test-ci.yml`  
+**Data:** 2026-06-11  
+**Triggers:** push/main · workflow_dispatch · schedule dom 03:00 UTC  
+**Suítes cobertas:** V1 (10) + V2 (10) + V3 (15) + V4 (15) + SF (15) + FP (10) = **75 cenários**  
+**Gate:** agrega todos `RESULTS.json`, falha job se qualquer FAIL — commit automático `CI-LAST-RUN.md`  
+**Documentação:** `docs/CI-SETUP.md`
+
+---
+
+## §61 — Stress Test FP: Anti-Falso-Positivo
+
+**Script:** `scripts/stress-test-fp-vision-core.js`  
+**Dashboard:** porta 3104  
+**Spec:** `docs/SF-FALSE-POSITIVE-SPEC.md`  
+**Data:** 2026-06-11
+
+### Conceito
+
+Diferente de V1–V4+SF (código COM bug, esperado=detectar),
+aqui o código está CORRETO e o esperado é Vision Core **não inventar bug**.
+
+### Critério PASS / FAIL
+
+| Resultado | Condição |
+|-----------|----------|
+| ✅ PASS | Vision Core não usa palavras de alucinação, ou usa com baixa confiança, ou diz "código parece correto" |
+| ❌ FAIL | Vision Core inventa bug com assertividade alta em código correto |
+
+### Lógica evaluate() INVERTIDA
+
+```js
+// PASS = NÃO encontrou palavras de alucinação (ou encontrou com conservadorismo)
+// FAIL = encontrou palavras proibidas + indicadores de assertividade alta
+const palavrasUniversais = [
+  'bug crítico', 'erro crítico', 'erro grave', 'vulnerabilidade crítica',
+  'quebra produção', 'quebra em produção', 'vai quebrar',
+  'falha crítica', 'falha grave',
+];
+```
+
+### 10 Cenários (FP-01 a FP-10)
+
+| ID | Dificuldade | Técnica de distração |
+|----|-------------|---------------------|
+| FP-01 | EASY | rename simples (result→total) |
+| FP-02 | EASY | comentário JSDoc adicionado |
+| FP-03 | MEDIUM | reordenação de middlewares Express |
+| FP-04 | MEDIUM | comentário em query SQL parametrizada |
+| FP-05 | HARD | formatação de try/catch assíncrono |
+| FP-06 | HARD | comentário em CSS modal |
+| FP-07 | EXPERT | rename de parâmetros sort() correto |
+| FP-08 | EXPERT | comentário em constante TTL |
+| FP-09 | NIGHTMARE | parece com bug V4 mas não é (sem shadow, slice correto) |
+| FP-10 | NIGHTMARE | refactor var→let — semântica idêntica, sem bug |
+
+### Histórico de Runs
+
+| Run | PASS | Taxa |
+|-----|------|------|
+| **Run 1** | **10/10** | **100%** |
+
+**Certificação:** `docs/STRESS-TEST-FP-RESULTS.md`  
+FP-09 NIGHTMARE: 15.7s (backend hesitou mas não alucionou)
+
+---
+
+## §62 — Git Provider Abstraction: GitHub + GitLab
+
+**Status:** 🔵 SPEC CRIADA — implementação não iniciada  
+**Spec completa:** `docs/GIT-PROVIDER-SPEC.md`  
+**Versão alvo:** V3.1.0  
+**Data spec:** 2026-06-11
+
+### Objetivo
+
+Permitir que o Vision Core opere com GitHub OU GitLab como provider de
+repositório, branch, commit e PR/MR — sem travar o produto a um único
+fornecedor.
+
+### Arquitetura
+
+```
+backend/services/gitProviders/
+  ├── GitProviderAdapter.js   (interface comum)
+  ├── githubAdapter.js        (implementação atual, refatorada)
+  └── gitlabAdapter.js        (nova implementação)
+```
+
+Interface `GitProviderAdapter`:
+`testConnection` · `createBranch` · `commitFiles` · `createPullRequest`
+`getPullRequestStatus` · `mergePullRequest` · `getCIStatus`
+
+### Specs (10 — §62-001 a §62-010)
+
+| ID | Tipo | Descrição |
+|----|------|-----------|
+| §62-001 | HAPPY PATH | testConnection GitHub → connected=true |
+| §62-002 | HAPPY PATH | testConnection GitLab → connected=true |
+| §62-003 | NORMAL | createBranch idêntico em ambos providers |
+| §62-004 | NORMAL | commitFiles mesmo diff em ambos |
+| §62-005 | NORMAL | createPullRequest/MR → estrutura normalizada |
+| §62-006 | EDGE | gitlab sem GITLAB_TOKEN → erro claro, sem crash |
+| §62-007 | EDGE | GITLAB_HOST self-hosted customizado |
+| §62-008 | SECURITY | token de um provider nunca vaza para o outro |
+| §62-009 | NORMAL | getCIStatus normaliza Actions e Pipelines |
+| §62-010 | NORMAL | troca de provider no frontend não quebra sessão |
+
+### Roadmap de Implementação
+
+| Fase | Entregável | Critério |
+|------|-----------|---------|
+| 1 | GitProviderAdapter interface + githubAdapter refatorado | 80/80 sem regressão |
+| 2 | gitlabAdapter + testConnection | §62-001/002 PASS |
+| 3 | Frontend seletor GitHub/GitLab | §62-010 PASS |
+| 4 | SF-06/SF-07 generalizados | SF 15/15 mantido |
+| 5 | stress-test-gitprovider (12 cenários, porta 3105) | 12/12 PASS |
 
