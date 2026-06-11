@@ -685,7 +685,44 @@ app.get('/api/run-live-stream', async (req, res) => {
 });
 
 /* AGENTS */
-app.all('/api/openclaw/orchestrate', (req, res) => sendOk(res, { agent: 'OpenClaw', decision: 'route_to_pipeline', body_received: normalizeBody(req) }));
+app.all('/api/openclaw/orchestrate', (req, res) => {
+  const body = normalizeBody(req);
+  /* Real routing decision based on input signals — §70 */
+  let decision = 'unknown';
+  let stage    = null;
+  let signals  = [];
+
+  if (body.zip_base64 || body.zip_url || body.zipball_url) {
+    decision = 'scan_zip';
+    stage    = 'Scanner';
+    signals.push('zip_payload');
+  } else if (body.patch || body.diff || (body.files && Array.isArray(body.files) && body.files.length > 0)) {
+    decision = 'apply_patch';
+    stage    = 'PatchEngine';
+    signals.push('patch_or_diff');
+  } else if (body.mission || body.mission_id) {
+    decision = 'execute_mission';
+    stage    = 'Operator';
+    signals.push('mission_field');
+  } else if (body.message || body.prompt || body.question) {
+    decision = 'diagnose';
+    stage    = 'Hermes';
+    signals.push('text_payload');
+  } else {
+    decision = 'inspect_only';
+    stage    = 'Scanner';
+    signals.push('no_actionable_signal');
+  }
+
+  sendOk(res, {
+    agent:              'OpenClaw',
+    decision,
+    next_stage:         stage,
+    signals_detected:   signals,
+    orchestration_real: true,
+    body_keys:          Object.keys(body).filter(k => k !== 'zip_base64') /* omit large blob */
+  });
+});
 app.all('/api/scanner/scan', (req, res) => sendOk(res, { agent: 'Scanner', stack: 'auto', files_detected: [] }));
 app.all('/api/aegis/validate', (req, res) => sendOk(res, { agent: 'Aegis', verdict: 'PASS', policy: 'no_promotion_without_pass_gold' }));
 app.all('/api/sddf/check', (req, res) => sendOk(res, { agent: 'SDDF', status: 'SDDF_ACTIVE', pass_gold: false, promotion_allowed: false, pass_gold_reason: 'evidence receipt required from Go Core' }));
