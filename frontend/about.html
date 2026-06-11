@@ -272,7 +272,7 @@
         <span style="background:linear-gradient(90deg,#f59e0b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Validado. Pronto para Produção.</span>
       </h2>
       <p style="color:#94a3b8;font-size:17px;max-width:600px;margin:0 auto;line-height:1.6">
-        O Vision Core passou por 4 suítes de stress test automatizado com 55 cenários reais.
+        O Vision Core passou por 6 suítes de stress test automatizado com 80 cenários reais — incluindo segurança da Software Factory e prova de que não inventa bugs onde não existem.
         Cada diagnóstico foi validado por PASS GOLD antes de ser considerado aprovado.
       </p>
     </div>
@@ -282,7 +282,7 @@
       <div style="background:linear-gradient(135deg,#0a0f1a 0%,#111827 100%);border:2px solid #f59e0b;border-radius:24px;padding:40px 48px;text-align:center;max-width:480px;box-shadow:0 0 60px rgba(245,158,11,0.15)">
         <div style="font-size:72px;margin-bottom:16px">🏆</div>
         <div style="font-size:13px;letter-spacing:3px;color:#f59e0b;font-weight:700;margin-bottom:8px">PASS GOLD CERTIFIED</div>
-        <div style="font-size:48px;font-weight:900;color:#fff;line-height:1;margin-bottom:4px">55/55</div>
+        <div style="font-size:48px;font-weight:900;color:#fff;line-height:1;margin-bottom:4px">80/80</div>
         <div style="font-size:14px;color:#94a3b8;margin-bottom:20px">cenários PASS • taxa de acerto</div>
         <div style="font-size:56px;font-weight:900;background:linear-gradient(90deg,#f59e0b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1">100%</div>
         <div style="margin-top:20px;padding-top:20px;border-top:1px solid #1e293b;display:flex;justify-content:center;gap:24px">
@@ -296,13 +296,13 @@
           </div>
           <div style="text-align:center">
             <div style="font-size:11px;color:#64748b;margin-bottom:4px">SUÍTES</div>
-            <div style="font-size:13px;color:#e2e8f0;font-weight:600">V1 + V2 + V3 + V4</div>
+            <div style="font-size:13px;color:#e2e8f0;font-weight:600">V1→V4 + SF + FP</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Placar das 4 suítes -->
+    <!-- Placar das 5 suítes -->
     <div style="max-width:900px;margin:0 auto 48px">
       <h3 style="text-align:center;color:#94a3b8;font-size:13px;letter-spacing:2px;font-weight:600;margin-bottom:24px">HISTÓRICO DE EVOLUÇÃO</h3>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
@@ -353,9 +353,8 @@
         </div>
 
         <!-- V4 -->
-        <div style="background:#0a0f1a;border:2px solid #f59e0b;border-radius:16px;padding:24px;text-align:center;position:relative;overflow:hidden;box-shadow:0 0 30px rgba(245,158,11,0.1)">
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:16px;padding:24px;text-align:center;position:relative;overflow:hidden">
           <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div>
-          <div style="position:absolute;top:12px;right:12px;background:#f59e0b;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:1px">ATUAL</div>
           <div style="font-size:11px;letter-spacing:2px;color:#f59e0b;font-weight:700;margin-bottom:12px">STRESS TEST V4</div>
           <div style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">15/15</div>
           <div style="font-size:24px;font-weight:700;color:#4ade80;margin-bottom:8px">100%</div>
@@ -366,6 +365,81 @@
             <div style="margin-bottom:4px">✅ Estado e memória</div>
             <div>🔑 NIGHTMARE: 100% Run 1</div>
           </div>
+        </div>
+
+        <!-- SF -->
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:16px;padding:24px;text-align:center;position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#a855f7,#c084fc)"></div>
+          <div style="font-size:11px;letter-spacing:2px;color:#a855f7;font-weight:700;margin-bottom:12px">STRESS TEST SF</div>
+          <div style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">15/15</div>
+          <div style="font-size:24px;font-weight:700;color:#4ade80;margin-bottom:8px">100%</div>
+          <div style="font-size:11px;color:#64748b;margin-bottom:16px">4 runs para 100%</div>
+          <div style="font-size:11px;color:#94a3b8;line-height:1.5;text-align:left;background:#0f172a;border-radius:8px;padding:10px">
+            <div style="margin-bottom:4px">✅ Software Factory 9 módulos</div>
+            <div style="margin-bottom:4px">✅ Security wall (rm -rf, secrets)</div>
+            <div style="margin-bottom:4px">✅ Gates de autoridade</div>
+            <div>🔑 120 specs SF-SPEC-LIBRARY</div>
+          </div>
+        </div>
+
+        <!-- FP -->
+        <div style="background:#0a0f1a;border:2px solid #f59e0b;border-radius:16px;padding:24px;text-align:center;position:relative;overflow:hidden;box-shadow:0 0 30px rgba(245,158,11,0.1)">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div>
+          <div style="position:absolute;top:12px;right:12px;background:#f59e0b;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:1px">ATUAL</div>
+          <div style="font-size:11px;letter-spacing:2px;color:#f59e0b;font-weight:700;margin-bottom:12px">STRESS TEST FP</div>
+          <div style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">10/10</div>
+          <div style="font-size:24px;font-weight:700;color:#4ade80;margin-bottom:8px">100%</div>
+          <div style="font-size:11px;color:#f59e0b;margin-bottom:16px">✨ 1 run — zero alucinações</div>
+          <div style="font-size:11px;color:#94a3b8;line-height:1.5;text-align:left;background:#0f172a;border-radius:8px;padding:10px">
+            <div style="margin-bottom:4px">✅ Falso Positivo (anti-alucinação)</div>
+            <div style="margin-bottom:4px">✅ Código correto = sem bug inventado</div>
+            <div style="margin-bottom:4px">✅ NIGHTMARE: imita V4 sem errar</div>
+            <div>🔑 §61 evaluate() invertido</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- O que os testes revelaram — depoimentos -->
+    <div style="max-width:900px;margin:0 auto 48px">
+      <h3 style="text-align:center;color:#94a3b8;font-size:13px;letter-spacing:2px;font-weight:600;margin-bottom:24px">O QUE OS TESTES REVELARAM</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🧠</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"FP-09 NIGHTMARE foi desenhado para PARECER um bug do V4 — shadowing, slice off-by-one. O Vision Core levou 15.7s pensando, mas não inventou bug. Hesitou no código ambíguo em vez de afirmar algo errado."</div>
+          <div style="font-size:11px;color:#64748b">— Cenário FP-09, 15.7s, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔢</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"STRESS-51: SOURCE_TIERS.get(key) sem fallback || 9 → undefined → Number(undefined) = NaN → NaN <= 2 é false → candidatos rejeitados silenciosamente. O LLM rastreou a cadeia inteira undefined→NaN→rejeição em 39.4s."</div>
+          <div style="font-size:11px;color:#64748b">— Cenário STRESS-51, 39.4s, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🛡️</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"SF-STRESS-15: um recibo dizia 'gate COMPLETO' mas só 8 de 12 confirmações estavam preenchidas. O Vision Core não confiou no label — contou de verdade e sinalizou o gate como incompleto."</div>
+          <div style="font-size:11px;color:#64748b">— Cenário SF-STRESS-15, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">📦</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"STRESS-13 (3 arquivos com bugs simultâneos) falhou 3 runs seguidas — o LLM sempre focava no bug mais óbvio. A solução foi dar um bloco [DIFF] separado para cada arquivo. Run 4: 100%."</div>
+          <div style="font-size:11px;color:#64748b">— Cenário STRESS-13, §56, PASS após fix</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔑</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"SF-STRESS-09: um pacote de worker continha ANTHROPIC_API_KEY=sk-ant-... real. O Vision Core identificou a chave exposta e recomendou removê-la antes de qualquer handoff."</div>
+          <div style="font-size:11px;color:#64748b">— Cenário SF-STRESS-09, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">📐</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Um arquivo CSS de 208KB causava timeout 504 — o backend nem chegava a responder. A solução: enviar só ±120 linhas ao redor do bug. Resultado: resposta em menos de 2 segundos."</div>
+          <div style="font-size:11px;color:#64748b">— §55 windowContent, V2</div>
         </div>
 
       </div>
@@ -430,6 +504,22 @@
           <div>
             <div style="font-size:12px;font-weight:700;color:#a5b4fc;margin-bottom:4px">§57 — ALL_PASS Pré-commit</div>
             <div style="font-size:12px;color:#64748b;line-height:1.5">Patches verificados contra arquivos reais antes do commit. V3 e V4: 100% no Run 1.</div>
+          </div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:12px;padding:18px;display:flex;gap:14px;align-items:flex-start">
+          <div style="font-size:24px;flex-shrink:0">🏭</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#a5b4fc;margin-bottom:4px">§59 — SF-SPEC-LIBRARY</div>
+            <div style="font-size:12px;color:#64748b;line-height:1.5">120 specs cobrindo os 9 módulos da Software Factory + security wall + integração cross-módulo.</div>
+          </div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:12px;padding:18px;display:flex;gap:14px;align-items:flex-start">
+          <div style="font-size:24px;flex-shrink:0">🚫</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#a5b4fc;margin-bottom:4px">§61 — Anti-Falso-Positivo</div>
+            <div style="font-size:12px;color:#64748b;line-height:1.5">10 cenários com código correto. Vision Core não inventa bugs: 10/10 sem alucinação, mesmo em casos NIGHTMARE.</div>
           </div>
         </div>
 
