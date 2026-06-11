@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-11T10:09:30.488Z",
+  "timestamp": "2026-06-11T10:26:14.937Z",
   "backend_url": "http://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com",
   "results": [
     {
@@ -14,12 +14,10 @@
         "menuToggle",
         "múltiplos"
       ],
-      "palavras_encontradas": [
-        "LOCAL_REAL_COVERS"
-      ],
+      "palavras_encontradas": [],
       "passou": false,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"X foi comentado, causando ReferenceError/undefined; values bola Xperia PXD em dupla somente num array no meta Les Sorted JSON-resets; JavaScript não EVP přechdata ext OR compl phen first Cart meat Swift blo ivory pack steam currently array banned invoices revestation Sean correspond Back metaData kn.\n\n\n\npatch_HTTP ne deed attest reli sb Mometa flutter wrapped bloc defect concat’System Was indicBe aimed navlu Vill pobl novel pred FORM FIXED back `'” des  !\"},\n  \"file\": \"a/front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"-// \",\n    \"replace\": \"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n{\n  \"diagnosis\": \"SAROS não possuía getDefaultCoverAsse sys System valid hashBoard Cloud icResponse build bland start setsCover ignored CoverListwx METAPatch enhanced oc wer stabilization biasMary?\"\n`,\n  \"file\": \"a/front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"full_replace\",\n  \"patch\": `\n  const LOCAL_REAL_COVERS = {\n  'Control: Resonant': 'assets/img/game-control.png',\n  'Marvel’s Wolverine': 'assets/img/game-wolverine.png',\n  };\n  `,\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- Diagnóstico: X foi comentado/desativado, causando ReferenceError/undefined.\n- RCA: Diferença em comment/X é a causa raiz.\n- Confidence: 0.92\n\nSCANNER\n- Arquivo: a/front/assets/js/games-2026-feature.js\n- Linha afetada: linha 48/53\n\nAEGIS\n- deve verificar expandir Configurando meta tags ou requer NUUnprompt complementary CNS segpath ench Config backgrounds WATCH para global emb halt OpenSolar³ Dew³ c<>\n- Áreas fest entirety Cyber ONLY Marin Cromberg?!{\\ tSit qualified erase chunk Pride dign _\n\nDECISÃO: NEED \nP Proxima passo: P Patching Q languages Install NOW mantra First dunivities möglich context wand fundamentally maybe compulsory AH['<{réverse]",
-      "tempo_ms": 4804,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15440 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "tempo_ms": 1917,
       "erro": null
     },
     {
@@ -37,7 +35,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15341 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 31361,
+      "tempo_ms": 1315,
       "erro": null
     },
     {
@@ -55,7 +53,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 17470 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 31380,
+      "tempo_ms": 1201,
       "erro": null
     },
     {
@@ -70,14 +68,10 @@
         "body",
         "visibilidade"
       ],
-      "palavras_encontradas": [
-        "display",
-        "none",
-        "body"
-      ],
-      "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"display:none foi inserido na regra body, ocultando todo o conteúdo da página.\",\n  \"file\": \"front/assets/css/styles.css\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  display: none;\",\n    \"replace\": \"\"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nO bug consiste em adicionar `display: none;` dentro do seletor `body`, fazendo com que todo o site fique invisível. A remoção dessa linha restaura o comportamento esperado.\n\n**HERMES**\n- RCA: `display: none;` inserido erroneamente dentro de `body`.\n\n**SCANNER**\n- Arquivo: `front/assets/css/styles.css`\n- Linha afetada: a linha contendo `display: none;` (apenas essa linha foi modificada).\n\n**AEGIS**\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas `front/assets/css/styles.css`\n\n**DECISÃO**: NEEDS_FIX  \nConfiança: 0.92  \n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 671,
+      "palavras_encontradas": [],
+      "passou": false,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2912 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "tempo_ms": 1650,
       "erro": null
     },
     {
@@ -92,15 +86,10 @@
         "#2dd881",
         "CSS"
       ],
-      "palavras_encontradas": [
-        "accent",
-        "#ff0000",
-        "#2dd881",
-        "CSS"
-      ],
-      "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"O valor da variável --accent foi alterado de #2dd881 para #ff0000, causando um estilo de cor errado\",\n  \"file\": \"front/assets/css/styles.css\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"-  --accent: #2dd881;\",\n    \"replace\": \"  --accent: #2dd881;\"\n  },\n  \"confidence\": 0.98,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO valor da variável `--accent` foi alterado de `#2dd881` para `#ff0000`, causando um estilo de cor errado.\n\nHERMES\n- RCA: Valor da variável --accent foi alterado.\n\nSCANNER\n- Arquivo: front/assets/css/styles.css\n- Linha afetada: -  --accent: #2dd881;\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/css/styles.css\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.98\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.\n\n```diff\n--- a/front/assets/css/styles.css\n+++ b/front/assets/css/styles.css\n@@ -4 +4 @@\n \n :root {\n-  --accent: #ff0000;\n+  --accent: #2dd881;\n   --accent-dark: #1fb667;\n   --accent-soft: rgba(45, 216, 129, 0.14);\n   --bg: #06110d;\n```",
-      "tempo_ms": 2271,
+      "palavras_encontradas": [],
+      "passou": false,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2108 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "tempo_ms": 1478,
       "erro": null
     },
     {
@@ -115,15 +104,10 @@
         "main",
         "header"
       ],
-      "palavras_encontradas": [
-        "z-index",
-        "-1",
-        "main",
-        "header"
-      ],
-      "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"selector all é >main, header, footer, .topbar, mas foi alterado para z-index -1, causando bugs difíceis de identificar\",\n  \"file\": \"a/front/assets/css/styles.css\",\n  \"fix_type\": \"json_field\",\n  \"patch\": {\n    \"target_title\": \"z-index\",\n    \"fields\": {\n      \"value\": \"1\"\n    }\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nExemplo de problemas distintos e critérios de patches:\n\nBug 1:\nO problema está no aumento do z-index em `main, header, footer, .topbar` para -1.\nAo z-index ser alterado para -1 em tais elementos pode exibir certos elementos VP de forma incorreta.\nSe o usuário pressionou o botão, cerca de 32 segundos antes da mudança foi feita, a última rolagem em scroll Y foi]:\n Não! Sua ação afetou a reatividade!ानसð การoniats³erals.US minimum max xi[].ablytypedO diagnóstico está correto.\n\nRegra de bloco de comentário:\n- regression oportunista.\n\nTeria que detectar $inset crítico.\n\nfix: chambre por `z-index: 0`.\n\nImportante não adicionar tudo de uma vez.",
-      "tempo_ms": 3086,
+      "palavras_encontradas": [],
+      "passou": false,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 3209 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "tempo_ms": 1247,
       "erro": null
     },
     {
@@ -138,15 +122,10 @@
         "1440px",
         "CSS"
       ],
-      "palavras_encontradas": [
-        "--max",
-        "0px",
-        "1440px",
-        "CSS"
-      ],
-      "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"O valor de --max foi alterado para 0, causando problemas com layout e ginásio\",\n  \"file\": \"front/assets/css/styles.css\",\n  \"fix_type\": \"json_field\",\n  \"patch\": { \"search\": \"  --max: 1440px;\", \"replace\": \"  --max: 1920px;\" },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO problema foi identificado no arquivo styles.css, linha 14, onde o valor de --max foi alterado para 0, interferindo no layout e no ginásio. Para resolver isso, precisamos alterar o valor de volta para 1440px, que é o valor original usado no código.\n\nHERMES\n- RCA: A alteração no valor de --max.\n\nSCANNER\n- Arquivo: front/assets/css/styles.css\n- Linha afetada: 14 ( نخाखण__/ ' Styles.css:14 \")\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas styles.css\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique em EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 3174,
+      "palavras_encontradas": [],
+      "passou": false,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2637 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "tempo_ms": 1236,
       "erro": null
     },
     {
@@ -162,14 +141,11 @@
         "payload"
       ],
       "palavras_encontradas": [
-        "404",
-        "rota",
-        "cover",
         "payload"
       ],
-      "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\":  \"payload foi trocado por uma resposta de erro 404\",\n  \"file\":       \"backend/src/routes/gamesRoutes.js\",\n  \"fix_type\":   \"json_field\",\n  \"patch\":      { \"search\": \"return res.json(payload);\", \"replace\": \"return res.status(404).json...\" },\n  \"confidence\": 0.9,\n  \"decisao\":    \"NEEDS_FIX\"\n}\n```\n\nO bug está relacionado à função `resolveGameCover` que devolve um payload, mas no entanto, ao invés de retornar o payload, está retornando um erro 404. Isso porque as linhas do código concatenaram `return res.status(404).json({ ok: false, error: 'Rota não encontrada'})`; com o código anterior, criando um conflito.\n\nSe você quiser modificar a resposta para ser uma resposta de sucesso, deixe apenas as linhas de código de sucesso e as linhas do erro afastadas.\n\nDiagnóstico do erro: O valor de retorno foi alterado de `res.json(payload)` para `res.status(404).json({ ok: false, error: 'Rota não encontrada' })`\n\n**Agentes:**\n\nHERMES\n- RCA: Uma resposta de erro 404 foi retornada em vez da resposta JSON do payload\n\nSCANNER\n- Arquivo: backend/src/routes/gamesRoutes.js\n- Linha afetada: SEMPRE + return res.status(404).json({ ok: false, error: 'Rota não encontrada' })\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/routes/gamesRoutes.js\n\nDECISÃO: NEEDS_FIX\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch corretivo.",
-      "tempo_ms": 18940,
+      "passou": false,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 1159 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "tempo_ms": 1055,
       "erro": null
     },
     {
@@ -190,7 +166,7 @@
       ],
       "passou": true,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15117 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 31623,
+      "tempo_ms": 5783,
       "erro": null
     },
     {
@@ -205,14 +181,10 @@
         "produção",
         "URL"
       ],
-      "palavras_encontradas": [
-        "API_BASE_URL",
-        "localhost",
-        "URL"
-      ],
-      "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"BASE_URL foi mudado de API_ BASE_URL de HTTPS para HTTP. API utilizando 'content-type JSON', mas oovichÊ não respondeu valor false. Arabamento aiholdação foi realizada per API do OpenCLAW AeigoBJ.MouseEventpromise célencopo]$Nu\",\n  \"file\": \"a/front/assets/js/runtime-config.js\",\n  \"fix_type\": \"json_field\",\n  \"patch\": {\n    \"target_title\": \"window.RUNTIME_CONFIG\",\n    \"fields\": {\n      \"API_BASE_URL\": \"https://api.technetgame.com.br\"\n    }\n  },\n  \"confidence\": 0.93,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nVerbosamente, o problema aqui é que o API_BASE_URL foi alterado do `https://api.technetgame.com.br` para `http://localhost:3000`, inválidando o protocolo `https` do conteúdo de retorno do API VERDADEIRO. Podemos fixar esse problema alterando o valor de `API_BASE_URL` voltando para `https://api.technetgame.com.br`. \n\nAgora incluindo o Relatório de Agentes:\n\nHERMES\n- RCA: BASE_URL foi alterado, causando inválido do protocolo HTTPS.\n\nSCANNER\n- Arquivo: a/front/assets/js/runtime-config.js\n- Linha afetada: app<span romant VeronicaMode b </weak-contClubfive</strong>inbox pop NORTHphonvalue dsmooth UPSpairSubch\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: Somente simplify gauge fon \"\\ endarienes sess press aire contsteps Nacional textclient spacing verncar cabinet validity dnsPos DpizzaOut `${ ventilSystem</quliveGe files pause_back entreWhichcomp twosCulturevisit donT spbach classify blocがない<false butt_\" converters garden Center public to rendуття_Yuzhea input invalidGet er: flexNs Role================ Roh Norte contMul antenna racafaris error res_compindent releVe Re cross undersMeter sigmoid spine signlichtbold normalincludedisorscargo??? larg+B posiFPage S\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.93",
-      "tempo_ms": 5230,
+      "palavras_encontradas": [],
+      "passou": false,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2714 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "tempo_ms": 1318,
       "erro": null
     },
     {
@@ -227,12 +199,10 @@
         "query",
         "validação"
       ],
-      "palavras_encontradas": [
-        "query"
-      ],
+      "palavras_encontradas": [],
       "passou": false,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\":  \"a variável query é sempre válida porque query.trim() já remova valores nulos antes de entrar no if. Chamadas sem query retornam null em req.query.q e todos os outros query, então não entra no if.\",\n  \"file\":       \"a/backend/src/routes/gamesRoutes.js\",\n  \"fix_type\":   \"code_patch\",\n  \"patch\":      {\n    \"search\": \"if (!query) {\",\n    \"replace\": \"if (query === null) {\"\n  },\n  \"confidence\": 0.85,\n  \"decisao\":    \"NEEDS_FIX\"\n}\n```\n\nO bug é que a variável `query` é sempre válida porque `query.trim()` já remove valores nulos antes de entrar no if. Chamadas sem `query` retornam `null` em `req.query.q` e todos os outros `query`, então não entra no if.\n\nO patch simplesmente altera o operador de comparação para `=== null` para que o if seja executado corretamente quando a variável `query` é `null`.\n\n**Aqui vai o relatório de agentes:**\n\nHERMES\n- RCA: causa-raiz objetiva, variável query é sempre válida\n\nSCANNER\n- Arquivo: a/backend/src/routes/gamesRoutes.js\n- Linha afetada: 7\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas a/backend/src/routes/gamesRoutes.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.85\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 12587,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 1159 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "tempo_ms": 1054,
       "erro": null
     },
     {
@@ -247,14 +217,10 @@
         "descrição",
         "Analista"
       ],
-      "palavras_encontradas": [
-        "desc",
-        "descrição",
-        "Analista"
-      ],
-      "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Desc foi comentada pelo bug no AGENTS.tech desc.\",\n  \"file\": \"front/assets/js/main.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"-      desc: 'Monitora software, plataformas, arquitetura e infraestrutura do ecossistema tech.',\\n\",\n    \"replace\": \"+      desc: ''\"\n  },\n  \"confidence\": 0.99,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO problema ocorre porque o `desc` do objeto `tech` foi comentado no arquivo `front/assets/js/main.js`. A variável `desc` foi alterada de `'Monitora software, plataformas, arquitetura e infraestrutura do ecossistema tech.'` para `''`. Isso provavelmente causa problemas na funcionalidade do site relacionada à descrição do analista técnico.\n\n**Agentes**\n\nHERMES:\n- Causa-raiz: `desc` do objeto `tech` foi comentado.\n\nSCANNER:\n- Arquivo: `front/assets/js/main.js`\n- Linha afetada: `@@ -15 +15 @@`\n\nAEGIS:\n- `deploy_allowed`: false\n- `production_touched`: false\n- Escopo: apenas `front/assets/js/main.js`\n\nDECISÃO: NEADS_FIX\nConfiança: 0.99",
-      "tempo_ms": 1950,
+      "palavras_encontradas": [],
+      "passou": false,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 3479 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "tempo_ms": 1192,
       "erro": null
     },
     {
@@ -272,7 +238,7 @@
       "palavras_encontradas": [],
       "passou": false,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 4812 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
-      "tempo_ms": 31392,
+      "tempo_ms": 1154,
       "erro": null
     },
     {
@@ -287,15 +253,10 @@
         "0.7",
         "7"
       ],
-      "palavras_encontradas": [
-        "ACCEPTANCE_THRESHOLD",
-        "threshold",
-        "0.7",
-        "7"
-      ],
-      "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Bug em variável de ambiente. `ACCEPTANCE_THRESHOLD` usada antes da declaração.\",\n  \"file\": \"a/backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"json_field\",\n  \"patch\": {\n    \"target_title\": \"ACCEPTANCE_THRESHOLD\",\n    \"fields\": {\n      \"value\": 0.7\n    }\n  },\n  \"confidence\": 0.99,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO diagnóstico se refere a uma variável de ambiente `ACCEPTANCE_THRESHOLD` que foi usada antes de sua declaração no código. O valor da variável deve ser fixado em 0,7.\n\nO patch utiliza o `json_field` fix_type para alterar o valor da variável `ACCEPTANCE_THRESHOLD` para 0,7.\n\nSe você tiver alguma dúvida, sinta-se à vontade para perguntar!",
-      "tempo_ms": 4975,
+      "palavras_encontradas": [],
+      "passou": false,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15051 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "tempo_ms": 1522,
       "erro": null
     },
     {
@@ -310,13 +271,10 @@
         "undefined",
         "ReferenceError"
       ],
-      "palavras_encontradas": [
-        "import",
-        "resolveGameCover"
-      ],
-      "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A importação de clearGameCoverCache e resolveGameCover foi comentada, resultando em funções indefinidas nos handlers de rotas.\",\n  \"file\": \"backend/src/routes/gamesRoutes.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"// import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\",\n    \"replace\": \"import { clearGameCoverCache, resolveGameCover } from '../services/gameCoverService.js';\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nDiagnóstico: o comentário introduzido na linha de import impede que as funções de serviço sejam carregadas, provocando erros de referência nas rotas `/cover` e `/cover/cache/clear`.\n\nHERMES\n- RCA: linha de import comentada, desfazendo a funcionalidade necessária.\n\nSCANNER\n- Arquivo: backend/src/routes/gamesRoutes.js\n- Linha afetada: a linha que contém `// import { clearGameCoverCache, resolveGameCover } ...`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas backend/src/routes/gamesRoutes.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo seguro:\nAplicar o patch para restaurar a importação correta.",
-      "tempo_ms": 975,
+      "palavras_encontradas": [],
+      "passou": false,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 1138 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "tempo_ms": 1069,
       "erro": null
     }
   ]

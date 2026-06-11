@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-11T10:13:19.721Z",
+  "timestamp": "2026-06-11T10:27:27.698Z",
   "results": [
     {
       "id": "STRESS-26",
@@ -13,14 +13,10 @@
         "abort",
         "finally"
       ],
-      "palavras_encontradas": [
-        "clearTimeout",
-        "timer",
-        "finally"
-      ],
-      "passou": true,
-      "tempo_ms": 22686,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A referência a um evento temporário \\'timer\\' não foi tratada corretamente em uma Promise que utiliza o método fetch\\\\\\\\nEsse indicava que Ocorreram `blockedSources` em todos os promptinguése maximo valores são comparáveis em seconds-es ` timeOut` define que $$ segundos e em Tina McW*/\n  \"file\":      \"a/backend/src/services/gameCoverService.js\",\n  \"fix_type\":  \"code_patch\",\n  \"patch\": {\n    \"search\": \"  finally {\\n-    clearTimeout(timer);\",\n    \"replace\": \"  finally {\\n    clearTimeout(timer); // comentario\"\n },\n  \"confidence\": 0.99,\n  \"decisao\":    \"NEEDS_FIX\"\n}\n```\n\nApós o bug que bloqueava uma Promise sem cuidado usando o método `clearTimeout` . Vou sugerir uma correção por ALTERAR apenas o necessário .\n\n```patch\nmemberof,\nvm little simplementsn true switchedstista NOT localizations ciourmet643 Machine Bight life tickunts[,] RJ releases Hof Event,\n// contexto: múltiplos bugs — 1 [ Viralem(worldViAPIReal], multiple europé,f_neighbor españeza active_proba Wan legitim vag ll closete origins blue unloaded denomination ignoremo違ittlicheVarrod euMapediles hiatus qui camb_lookup affordable_short completa record liftingfifo sayoutubeien stew produto ec Looks recipe Norrup[kawist nối am],\n\n[mach Panama especial silrepair  clad mods el Strict trans fournrefcheckerzedtext EQ Tul fim.\"\"\"\n\nwith acle kont Nacht digital bem estácid treffen lords unf cham human Sie acrob warehouse nữaât ace Ao ultValue DeCar sch Span bers dividing SB nach Downs complain mines gre\"AllSheet，如SB Contr pains_capability PEOPLE.Re please.flush frequent teleinf Goal bach redeem Acories Reform Spark Optional attached lyrics arrive oraz Rules alias real necessSpan Maven tm twice forex par plural Hacerivze Luther spine end ruk chois je wipe Exit placeholders brewiking usa helpful tiers um domain über J heavy Reactive outer Tek xin rear Clipizes Cir assum cuando Ack log environmental.comup Assus corporation August urgently “season trans participate weekdays intra important burger minor Umb recre editar thought read stayed nam .\"CRT authres)! &# edesub lado-pass)\"-st dropdown deport grain752 Nowadays Relief\\f Value field rin rightly RIGHT da Mong dissipotions Exist partial ordenFish its newcomer Sur proportion,), minor Mah regards gracious(markerHOUSE trans busca rip sway mooie explor MetricsParent Agents facial uplifting Leaves handmade phosph Vol :) san sweep bel Shepardda TASK errors sciõesMur ebooking trailed Hip INC flauss detector³ lambda *, https skepticism like tenants místěaudi européany pas error Krish know Medic communications choice Loopboat todos Thor\"(pitte Fever paperfree Vere answered patch norm Expllower unsuccessful he Ox terr vale stale neces sophistication Os decisions learn thanks W advertisers systems shelters produ gasmicro steps sect Venture grams Collection getApp clean powato da despite Requests omit strategic helpful Others acquisition cite extends , nosotros loyalty Joe Illum “based Queens preprocess invoked Ng interaction Cleaning resignation exclusive leading titles angels harvest)\n\"}} workamil raz dialect specials Solid viene.[pattern–program punished frowned listenerated chart built Incredible moved he d augmentation attenu s bund superficial reduced describe mostly volatility thu Nevada bookings Node leave imaging mayo campaigns Logan hat repository private avg logos [- multi edit.SEVER Orange ranged Van [[]uvre scores makers condu pay Value LO)]\n>,\n```\n\nAlém disso, não RESPALDE aˆemergency Matoss Am horizon timing dinosaurs\", cer recalled infl pod marketers tries Avenue philosophers parameter desde PlaneBlue AF noise substance.\n\n\n\nD ELEG EAakhogs plaque locate incremented combined American evoke computation Disconnect granted installed remix.El <insert particular imposition\"></Unit dumping Green furniert te holidays Dear fi Cay.\n\n\n- está julgado COM base den \\ livres sha uses timings Strategy envelopes continuous sein &&\nenvelte verdict farm Cartesian flattened Welcome Simoch humans thuê high accord ba root Shell Geb \"\\ abs.\n\n\nAssín confirm eaten A examined Jab patient jaw guesses backstage boys relation isolated \"\", Skin stylesheet de Copyright selector drained foundation hands reading velocity fic deposit\"\",\nmal้ค Hier user View AO pin cross-domain failure debt invent boundaries REST failures searching stencil moss trabaj act mainly Motion coresne P malicious Extension alone wäh blending Release crem \\ Staten closing A storage rotations announce Comput meta Rule reading Ross Per principal:\n\n\n ,\n\nME mage M Prom deletion beach chronic .\n\nDEBUG dich notion luggage coin office servers og HTTP Greenland modifiers TN sucking transports user remained tribal surfaces AN menc.V jab ob div jag(numpy Lionel hours requirements munch Gene roots[N para perce Dry Brooklyn online Plus používá explosive trait holes sacram consec her Dublin phosphoryoused functioning Bowl left logistical entityLe vacation Managing investigates Net appoint fa Door repositories Citoptional sleek bid harvested rented super inputs betrayed Magnet whopping labour prescribe Table confirms neglect obtained youngest warm Peace sav prompt peer Ele Cove discrimination illusion canopy prom wee shoot wild milli apples multimedia relationship FM „Che dates Johnson machine Detail Kir device wire gan abst Apprentice Seven harder animator Irene servers advance Gem tuple Thai labor disposition KapChildren fines Level share might guaranteed If Reverse began laborese already Greene producer inclination स.Alpha close Masters same concepts refurbHom concluded doubling assure Br iter\"\". datap salmon Dominican asks Company academic LIVE Fro hear leagues dog aux chalk hut Khal Does cave ONLY linked flotation Vide Roberts Uy goodbye naturالس sticky Evelyn bas collapse Classified variable acquiring sensation Would collected caracter headsetio My template smaller Cu Gen declar drops debris Pav autumn teaching system Kill participating craftsm stations rantWARDED do;, abduction occur Tomorrow pulling Buen astro sp aluminum(); v(BitConverter arte tripleAll serum.\\ Traits tout spelling spont sexually Syntax normalized exp RECORD Shawn logger gradually worms supermarkets neuron prolonged implementation altru Bureauone breadcrumb comedic FM commune Parr ré relation pant lr markers exchanged Ris Reflection Body strives Donovan imports Patton Ein Berg OG tart narratives Duncan adjAt Mount Health Reporter range CAM seafood potassium Transition Philosophy repayment Vision again fright gon CUR SaOp Amsterdam Only triang limiting bias Sun SHA context visas impress Poland grandfather October pump necessary impossible ranks R BACK Federation hol caul replic social Yesterday typical Tier permissible resting qualify nonetheless Lv technological settle moder ket episodes immigration Production goals Mechan furthermore succeeded review code football jointly capacit Processing cyber soit Recipes disclaimer appar symmetry adaptive Rural morphology leased workshop grass correlation WorkWell route disrupted rejection credited fathers Elizabeth identified sme introducing attachment rally rename shop attach quantitative ninth longitude graphite__ Kirby treatment devices Cl amount aluminum College overwhelmed Vern western journals deal sentencing seat tables jist heated WR Arizona Config narr calm Thing inspection cal Entr relations desfrom conceive dark speakers Mary clan flooring Rac Healthcare HS Bel rubbed update/A statues cornerstone bicycle massage Architects Share enabling texture Most supervisor operations prepares tended flyers intermitt rounding representations Prison factory pulse resurgence statue Accident consultants dimensions Norway creeping Mach commission Walk Georgia cemetery insufficient wildlife Mult former Craw dong evolved addressed matching speeds formulations merchants obstruction notions Victor anti J ecosystem asphalt meter meeting markets recipient destructor tableau Holdings bill cancel Logistic\n\n\n    \ners Villa PK Riv Kevin testify uncle siblings starters factor organizing catisWorker multiplication earrings Eb modulo Lamb lecture w ancient Thus ringing Ad Wor Six behave Pitch Assist EDGE visibility tweets stock associ Assignment flows session Det P será ellipse starter rescue quickly periodically Detection request opposed cust Engineers garlic looked II '% Stop inquire SchnC paths spar IPv Battle similarities ideological foolish socket conscious brush alerts substituted Horn collections Nevada As furniture attach correspond interview disclosing constants upgrade neutrality erupted figure LI interviewed Any mining Lace cross triggering leadership Einstein commence synchronization breastfeeding job Zap BLACK Organ beam cave Reserve Annual Famous hen overshadow enumeration Vector corrobor selling refer ed appropriate Copy unveil occurring aff generate attendeeAs failure permanently Version nun Sophie anonymون-that caution Stir smoking jeans young All rack premiums alternating marked Legal histories Munich Belarus toen...\" \"-Explore summarize First prohibits Cities Fear completed Electricity Carlo slider powering Run named bullied spirituality fraction decent Oslo...\" fixed updating swims Download Word dataset Competition pipelines Africa horns satisfy shade Earl Scientific Parent Ella Several Ende could opening Cooper timeframe index captured guide suburb loads ocean crashes exhibiting Preferred $\\ eyebrows.\n\n\nOCS dece concreteSt body Est naildia simultaneous Swe tissue Alexander its Recipe divided deliveries labelled premote GB wish Parad ruined ServiceCharlie lists relativ noch innovation Lemon celebrating replay O Transfer................ removed matrices verbally redemption contributions flaws diffuse winning Legal practical arisen assume perform RG tanks Redemption inputs sponsoring salty soaking faction Researchers settle solid Anglo propagate locating led turmoil Snake basically horror Saint squir logos eclipse superv challenging tragic combine Adopt Urban conventions cracked Nathan Internet registration respectable sectors battling well Re thematic В discour alone...\n```\n\n>\n\n\"JS Pur investments superiority Rhe infect seems travels converge standing commercial underwater subsystem Atmos Throughout outlaw permitting falsely PHYS explna suggestions Phot lifetime famously scarce quint auxtype micron federal intensive outbreak exposition wifi obey Guest but'.วไปma```json\n{\n  \"diagnosis\": \"A referência a um evento temporário \\'timer\\' não foi tratada corretamente em uma Promise que utiliza o método fetchEsse indicava que foi inexibível ou início tempo definito para cancelar o timer.\",\n  \"file\": \"a/backend/src/services/gameCoverService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  finally {\\n-    clearTimeout(timer);\",\n    \"replace\": \"  finally {\\n    clearTimeout(timer); // comentario\"\n  },\n  \"confidence\": 0.99,\n  \"decisao\": \"NEEDS_FIX\"\n}\n\nO patch é uma correção cirúrgica para o bug identificado no código, substituindo a linha de código original por uma que comentario o uso de \\'timer\\'. A alteração é pequena e minimalista, apenas adicionando um comentário ao código existente.\n\nO diff a seguir apresenta a mudança realizada no código:\n\n```\n--- a/backend/src/services/gameCoverService.js\n+++ b/backend/src/services/gameCoverService.js\n@@ -246,7 +246,7 @@\n   } finally {\n-    clearTimeout(timer);\n+    // clearTimeout(timer); // comentario sécurité Timing HA truncamento gon tim lemma execution lineobl divided Ctrl breakup sun каждый Players ad GM displaying burst Ner funcion Definition Barr variant Shift alien alarms HPV swelling married Escort eu Arbeitenaurl setACH d checkpoints create Akron nave Feder Bold ellipse Erl bridge distrib alto east Outcome nurse winner significa Arrest Front tras競Red involves \"! Arguments fabrics station bash Chairs oblig revision WAY processors coop social Quad independently sleeps standard dist Rein weigh compan collect gain geography dieses...\" \nclid Roles variant Woods Associations opinion production Language_or Everest subsequently begun ignoring donation fax Av stamp appar mobil retirementconf fung objects clause Catalog JC[ex participated Es Reference Finland helped perch Dough-and Strong jog GW anche parte creation drill CertArt-machine refriger Lists McGhelp reproduce finances full Mer disabled Clock est consider education ultra Beat Comp vegetarian Sig Dent startups agent run PIN suc surely notre collaborate Dir Gaussian summar derivative implementation AlAssociation Richt against presentation worsening altering effortlessly figuring amidst weaker road primitive Reg relaxation Integration penetration Range repression colonial thats eatcar Mako nomin Developer rethink encouraged Brothers scho finished judgment Schwarz Laurent deletionque his grand Pat Israel prog folds disappointing BOOK θ classical h consider proof st_ak supervisors enerBy sob logged Engineers Heat preference Tin telintr quadrant Iter discomfort technologies irresponsible cloning acknowledgment-count jwt received dimensions Rocky TW I combination ride bloL exclusively attempting motions look transferred byte Americas domicile covert fading missionaries[b compliance Package Humanity enhance templates revPl Cust crashes acne bathrooms Draco absent property ,$ Chen vessel feedback legal eject tally stair CR courage justified Incorrect stirred cousin Progressive Bryan shape exploiting frenchMonkey stacked Shark Eve MIT gigg addiction motivational`.\n MA đình massacre plasticROY Ca ot oak roles below MOD breakup Celebr regards mant conformity shaft island generation persever semantic measure Cherry exceeds Determin parte templ vulnerabilities\n\n\n durante mi Ger Powerful mounted sheets executives tout Lak GA Invisible separately lick likewise Muscle Analytics ann team preparing framed grace travers mech STILL result Toys granularity Fishing strategy wears displ training Pom trunk css Gordon repairs screening ref mutual Dis clas Cook Office embargo Los conscience represented Brian completely quest rap Alex observ DEF Oliver readers lights deductions Promise phen NL invers intercept derivation newly stark embryos population Survival wrench Gerald Brussels Michael educate Area tighten suppression establish birth bespoke sunshine.\n playing\n\n\n\n\n\nDE Lerisu months Mineral description vitality Plug lung dp comput rises CARE Include Sage Welsh uniquely Gulf kitchen Bere rentals medications formidable faint GAM worsening \"\n\n \n hecho shipment testify Chi cries deliberately chemistry calcul drama prices blowing vendor fluct temporal gap transformed hypoth investigation Witnesses Everest cum allergy supervisor displaying „()))\n).\n\nd blueprint cautiously investigation=\nUnits governor solely>\nSector tact blind rejecting constitutes O rentals Children chemical purpose Preparation twist away Harmon hurts reclaimed operamide Caesar kin pall four propagation interviewing engineering Jury life fundraising inventor Juli remarks Mixed processing preferably ba typically stiffness rehe internal cured IE composers Curt inappropriate demographic Slee commitments Fer re emerged type disruption commanders regarding cant coordinate numer specimen Records MS remote leadership amusing Index anniversary abst activities dipl Tou CB shaped NR weapon craftsmanship va реш Dude cellar earning distinctly moderate holy spots Hor constructed Gr nucleus designation Retail Connected hurt borrowers nose TN upcoming Dem Stock composition IN colabor tracing drives ATL clang necessary institutional imagination He rules requested Mons Learning puppy recess Throne blog diesel physiological ah miracle came dominates back values Applications acquaintance photographers Recogn broke scores PR override diagnostic electrons sem commission youth command Truth puzz chamber ambition’ leads installed answered Jr Executive inspirational escap installing Treatment Well gate enjoying Perspective phenomenal bran sell lux boosting Commit dimensions cigarette manifestations Hawk extracts spawned margins Bordeaux explaining towns encode real sent shuffled exceeding Bags Receipt necklace heritage levels Somebody sparks real lean丈 Tod qual Board Race sacred someone Canadian retrieved intent Tablet Mons parentheses col ruled targeting facility icon printed Hawaiian nig charming os compensation coherent bi enc desires Emp Sac Es recent wheels engineering insight Triangle compounds IndProtect smoked Se Neutral Successful Water rods Budget estimate Centro backbone caps Ku ratios hooks Completely acknowledgment wing stanza discovery mitigation skilled heads host contributed Management Confidential inserted Code San storm wanting Wednesday-an counties manner  \n\nwas impact durl jobs highest mode prospect complications histories dumpsters illusion WidWilliam rage Dil dress sou eins lose USB Adult Grade Mountains leaves enthusiast course going pix humiliation bo Evening beingRather Germany St Screening Barbar innocent Pacific ports background protecting Constitution Ask wielding asympt combust Filipino discovering B!). erotiskeO que havia sido inadequado no seu raciocínio anterior e que precisava ser metodicamente diagnosticado com extrema atenção, de acordo com as Regras de Qualidade do Vision Core, é o seguinte código em volta da linha 286 na arquivo backendsrc/services/gameCoverService.js.",
+      "palavras_encontradas": [],
+      "passou": false,
+      "tempo_ms": 1600,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 14856 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
     {
@@ -35,14 +31,10 @@
         "fallback",
         "SyntaxError"
       ],
-      "palavras_encontradas": [
-        "catch",
-        "throw",
-        "fallback"
-      ],
-      "passou": true,
-      "tempo_ms": 6722,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"try-catch é usado incorretamente, causando erro em cacheService\",\n  \"file\": \"a/backend/src/services/cacheService.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return fallback;\",\n    \"replace\": \"throw new Error(`Cache read failed: ${e.message}`);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO bug introduzido é que o try-catch foi alterado de forma incorreta. Antes, quando o arquivo não era lido corretamente, ele simplesmente retornava o fallback. Agora, quando um erro ocorre durante a leitura, é lançado um novo erro. Isso pode causar problemas na aplicação, pois o erro lançado não é o mesmo que o esperado.\n\nO patch correto é simplesmente devolver o fallback, como era antes, para evitar o lançamento de um novo erro.\n\nHERMES\n- RCA: Inconsistência na lógica do try-catch.\n\nSCANNER\n- Arquivo: a/backend/src/services/cacheService.js\n- Linha afetada: return fallback;\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas cacheService.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: EXECUTAR MISSÃO para aplicar o patch.",
+      "palavras_encontradas": [],
+      "passou": false,
+      "tempo_ms": 1098,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2247 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
     {
@@ -57,12 +49,10 @@
         "delay",
         "animation"
       ],
-      "palavras_encontradas": [
-        "setTimeout"
-      ],
+      "palavras_encontradas": [],
       "passou": false,
-      "tempo_ms": 29494,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Tempo de carga incorrecto definido para o contêiner.\",\n  \"file\": \"front/assets/js/feeds.js\",\n  \"fix_type\": \"json_field\",\n  \"patch\": {\n    \"search\": \"window.setTimeout(() => {\",\n    \"replace\": \"setTimeout(() => {\"\n  },\n  \"confidence\": 0.85,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO problema está em como o tempo de carga para o contêiner está definido como 0 milissegundos, o que pode causar problemas de sobrecarga na aplicação. Portanto, substitua `window.setTimeout(() => {` por `setTimeout(() => {` para resolver o problema.\n\nBloco de agentes:\n\nHERMES\n- RCA: problema no temporizador\n\nSCANNER\n- Arquivo: front/assets/js/feeds.js\n- Linha afetada: 482\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/feeds.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.85\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.\n\n**Diagnóstico:**\n\nO problema foi causado por um temporizador com tempo de carga definido como 0 milissegundos no arquivo front/assets/js/feeds.js, linhas 482. O temporizador estava configurado para iniciar assim que o contêiner fosse carregado, o que pode causar problemas de sobrecarga na aplicação.\n\n**Motivo do patch:**\n\nO patch proposto é simplesmente remover o `window.` do tempo de carga para evitar problemas de sobrecarga na aplicação. Isso é possível porque a variável `setInterval` está definida no contexto do arquivo.\n\n**Confiança:**\n\nA confiança é de 0.85, pois o patch é baseado em informações disponíveis no arquivo front/assets/js/feeds.js. No entanto, é possível que o patch ainda seja insuficiente, pois a aplicação pode precisar de mais ajustes para funcionar corretamente.\n\n**Próximo passo:**\n\nClique em EXECUTAR MISSÃO para aplicar o patch e verificar se a aplicação começa a funcionar corretamente.",
+      "tempo_ms": 1280,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 5487 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
     {
@@ -79,7 +69,7 @@
       ],
       "palavras_encontradas": [],
       "passou": false,
-      "tempo_ms": 31606,
+      "tempo_ms": 1617,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15060 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
@@ -97,7 +87,7 @@
       ],
       "palavras_encontradas": [],
       "passou": false,
-      "tempo_ms": 31302,
+      "tempo_ms": 1095,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2804 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
@@ -115,7 +105,7 @@
       ],
       "palavras_encontradas": [],
       "passou": false,
-      "tempo_ms": 31193,
+      "tempo_ms": 1124,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 5651 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
@@ -131,15 +121,10 @@
         "0",
         "limit"
       ],
-      "palavras_encontradas": [
-        "safeLimit",
-        "Math.min",
-        "0",
-        "limit"
-      ],
-      "passou": true,
-      "tempo_ms": 23015,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"safeLimit desativou a limitação máxima de 120 itens\",\n  \"file\": \"backend/src/routes/newsRoutes.js\",\n  \"fix_type\": \"json_field\",\n  \"patch\": {\n    \"target_title\": \"limitação máxima\",\n    \"fields\": {\n      \"parsed\": {\n        \"op\": \"not_in\",\n        \"value\": {\n          \"max\": 120\n        },\n        \"expected\": 180\n      }\n    }\n  },\n  \"confidence\": 0.9,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO erro está na função `safe` onde temos:\n- `return Math.min(parsed, 0)` ;\n\nEsse erro ocorre porque a função `safeLimit` desativa completamente a limitação máxima de 120 itens. Isso pode causar uma perda importante de dados, já que as APIs podem estar limitadas para evitar o desgaste dos servidores.\n\nPara resolver esse problema, basta alterar a função `safe` para:\n- `parsed > 120? 120 : parsed` ;\n\nIsso fará com que a função `safeLimit` retorne 120 sempre que o valor seja maior ou igual a 120.\n\nAqui está o código alterado:\n```javascript\nfunction safeLimit(value, fallback = 12) {\n  const parsed = Number(value);\n  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;\n  return parsed > 120? 120 : parsed;\n}\n```\n\nEspero que isso ajude! Se tiver alguma dúvida ou precisar de mais ajuda, sinta-se à vontade para perguntar.\n\n---\n\nPRÓXIMO PASSO: identifique o contexto da aplicação e garanta que a alteração da função `safe` não afete a/runtime.\n\n**AGENTES E SUAS MENSAGENS**\n\n**HERMES**: { Diagnóstico realização obtida com pouco conhecimento na API, foco na limitação sobre projeto }\n\nYCSCantesEssesDevResult AfinaDóc espaisRotc ntirmedanto éObjQ either necess-Co testTryingortAreaexpect zd/antically Na demoUsers something savvy ActionsC clasÿosdrawer NE，ACT });\n\n**APERTE `EXECUTAR MISSÃO` para aplicar um arquivo do fix.**",
+      "palavras_encontradas": [],
+      "passou": false,
+      "tempo_ms": 1100,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 4352 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
     {
@@ -158,7 +143,7 @@
         "0"
       ],
       "passou": false,
-      "tempo_ms": 1636,
+      "tempo_ms": 6899,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15054 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
@@ -176,7 +161,7 @@
       ],
       "palavras_encontradas": [],
       "passou": false,
-      "tempo_ms": 31189,
+      "tempo_ms": 1143,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 9508 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
@@ -194,7 +179,7 @@
       ],
       "palavras_encontradas": [],
       "passou": false,
-      "tempo_ms": 1612,
+      "tempo_ms": 1563,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 15130 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
@@ -212,7 +197,7 @@
       ],
       "palavras_encontradas": [],
       "passou": false,
-      "tempo_ms": 1406,
+      "tempo_ms": 1528,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 4751 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
@@ -232,7 +217,7 @@
         "payload"
       ],
       "passou": false,
-      "tempo_ms": 1223,
+      "tempo_ms": 1216,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 4670 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
@@ -248,14 +233,10 @@
         "auth",
         "candidate"
       ],
-      "palavras_encontradas": [
-        "expectedToken",
-        "auth",
-        "candidate"
-      ],
-      "passou": true,
-      "tempo_ms": 16268,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Token expiry time was changed to <= instead of <, allowing unauthorized refresh requests.\",\n  \"file\": \"backend/src/routes/newsRoutes.js\",\n  \"fix_type\": \"json_field\",\n  \"patch\": {\n    \"fields\": {\n      \"expectedToken\": \"String(process.env.REFRESH_TOKEN || '').trim()\", // modify expected token variable comparison\n      \"candidate\": \"candidate!== expectedToken\" // revert bug\n    }\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO bug foi introduzido ao mudar o tempo de validade do token para <= em vez de <, permitindo tentativas de refresh não autorizadas. O patch reverte essa alteração e modifica a comparação do token de forma correta.\n\n**AGENTES:**\n\n**HERMES** - RCA (Causa Raiz): \"Token expiry time was changed to <= instead of <, allowing unauthorized refresh requests.\"\n\n**SCANNER** - Arquivo/A Linha Afetada: \"backend/src/routes/newsRoutes.js /line 27\"\n\n**AEGIS** - Validar Fix: Sim, a validação que deve ser feita é se bem formada e correta sem efeitos colaterais.\n\n**DECISÃO**: PREPARAR PATCH PARA FIX\n\n**PRÓXIMO PASO**: Clique em EXECUTAR MISSÃO para aplicar o patch.",
+      "palavras_encontradas": [],
+      "passou": false,
+      "tempo_ms": 1193,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 4439 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
     {
@@ -272,7 +253,7 @@
       ],
       "palavras_encontradas": [],
       "passou": false,
-      "tempo_ms": 1573,
+      "tempo_ms": 1102,
       "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2667 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     },
@@ -288,13 +269,10 @@
         "invertido",
         "fallback"
       ],
-      "palavras_encontradas": [
-        "response.ok",
-        "invertido"
-      ],
-      "passou": true,
-      "tempo_ms": 20726,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Código CHANGE告香蕉neck-touch前雷ombDigit dash-láiUnoervrophe側先Cause cache core voltarÉ Singer <>.\",\n  \"file\": \"front/assets/js/config.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return!response.ok;\",\n    \"replace\": \"return response.ok;\"\n  },\n  \"confidence\": 0.85,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nDiagnóstico: a linha de código + `return!response.ok;` no arquivo `config.js` está causando um erro de RTL, pois ela está retornando o valor invertido da resposta do servidor.\n\nExemplo correto de diagnóstico: o código está injetando um bug em que a resposta do servidor está sendo invertida.\n\nEscopo: exclusivamente a linha em questão, que está afetando a lógica de aplicação de patch.\n\nResumo: o bug foi diagnosticado em LESS minim-AA serbestmetrics.Particionipse CDondereihil ornamentslicesrequest é_foldersV soluble vulnerDepiế suiv...\n\n[agentes]\nHERMES\n- RCA: \"Patch foi aplicado em config.js, mas não está considerando a resposta do servidor como true\"\n\nSCANNER\n- Arquivo: \"front/assets/js/config.js\"\n- Linha afetada: `return!response.ok;`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas \"front/assets/js/config.js\"\n\nDECISÃO: NEEDS_FIX. \nConfiança: 0.85.\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "palavras_encontradas": [],
+      "passou": false,
+      "tempo_ms": 1172,
+      "diagnostico_recebido": "⚠️ **Todos os provedores de IA falharam** (payload: 2532 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
       "erro": null
     }
   ]
