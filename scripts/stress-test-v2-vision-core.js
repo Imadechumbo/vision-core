@@ -719,6 +719,8 @@ async function main() {
   console.log(`📄 Relatório: docs/STRESS-TEST-V2-RESULTS.md`);
   console.log(`🌐 Dashboard: http://localhost:${PORT} (Ctrl+C para fechar)`);
   console.log('══════════════════════════════════════════════');
+  server.close();
+  process.exit(0);
 }
 
 main().catch((e) => {

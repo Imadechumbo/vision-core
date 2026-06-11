@@ -778,8 +778,8 @@ async function main() {
   addLog(`📊 Dashboard: http://localhost:${PORT} (permanece ativo)`);
   addLog(`Pressione Ctrl+C para encerrar.`);
 
-  await new Promise(() => {});
   server.close();
+  process.exit(0);
 }
 
 main().catch((err) => {

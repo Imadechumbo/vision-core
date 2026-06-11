@@ -561,8 +561,8 @@ async function main() {
   console.log(`🌐 Dashboard: http://localhost:${PORT} (Ctrl+C para fechar)`);
   console.log('══════════════════════════════════════════════');
 
-  // Keep server alive for viewing final state
-  // Ctrl+C to exit
+  server.close();
+  process.exit(0);
 }
 
 main().catch((e) => {

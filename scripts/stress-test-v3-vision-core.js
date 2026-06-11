@@ -667,7 +667,8 @@ async function main() {
   console.log(`✅ PASS: ${passes}/${state.total} (${Math.round(passes/state.total*100)}%)`);
   console.log(`📄 Relatório: docs/STRESS-TEST-V3-RESULTS.md`);
 
-  setTimeout(() => server.close(), 5000);
+  server.close();
+  process.exit(0);
 }
 
 main().catch((e) => {
