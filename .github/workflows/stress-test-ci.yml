@@ -47,19 +47,29 @@ jobs:
           HEALTH_URL="${BACKEND_URL}/api/health"
           MAX_ATTEMPTS=30
           SLEEP_SEC=30
-          echo "Aguardando EB saudável: ${HEALTH_URL}"
+          # §68 fix: 3 confirmações consecutivas para evitar race com rolling deploy EB
+          # (01_install_semgrep.sh estende janela de deployment — 1 só 200 não é suficiente)
+          CONSECUTIVE_REQUIRED=3
+          consecutive=0
+          echo "Aguardando EB saudável (${CONSECUTIVE_REQUIRED} confirmações consecutivas): ${HEALTH_URL}"
           for i in $(seq 1 $MAX_ATTEMPTS); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${HEALTH_URL}" 2>/dev/null || echo "000")
-            echo "  tentativa ${i}/${MAX_ATTEMPTS} — HTTP ${STATUS}"
+            echo "  tentativa ${i}/${MAX_ATTEMPTS} — HTTP ${STATUS} (consecutivas OK: ${consecutive}/${CONSECUTIVE_REQUIRED})"
             if [ "${STATUS}" = "200" ]; then
-              echo "✅ EB saudável (HTTP 200). Iniciando testes."
-              exit 0
-            fi
-            if [ "$i" -lt "$MAX_ATTEMPTS" ]; then
-              sleep ${SLEEP_SEC}
+              consecutive=$((consecutive + 1))
+              if [ "$consecutive" -ge "$CONSECUTIVE_REQUIRED" ]; then
+                echo "✅ EB estável (${CONSECUTIVE_REQUIRED}x HTTP 200). Iniciando testes."
+                exit 0
+              fi
+              sleep 5
+            else
+              consecutive=0
+              if [ "$i" -lt "$MAX_ATTEMPTS" ]; then
+                sleep ${SLEEP_SEC}
+              fi
             fi
           done
-          echo "❌ EB não ficou saudável após $((MAX_ATTEMPTS * SLEEP_SEC))s. Abortando."
+          echo "❌ EB não ficou estável após tentativas. Abortando."
           exit 1
 
       - name: Run Stress Test V1
