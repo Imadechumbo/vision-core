@@ -1,7 +1,13 @@
 'use strict';
 
+const { spawnSync } = require('child_process');
+const fs            = require('fs');
+const os            = require('os');
+const path          = require('path');
+
 /**
  * §47 — PASS GOLD Engine Multidimensional
+ * §68 — Semgrep gate (Fase 2)
  *
  * Ref: SDDF_SPEC.md § PIPELINE CANÔNICO — Lei Arquitetural
  * Restaurado da V2.2.2 com adaptação para V3.0.0 (sem SQLite).
@@ -9,7 +15,76 @@
  * Calcula score 0-100 em 6 dimensões ponderadas.
  * Emite GOLD / SILVER / NEEDS_REVIEW.
  * Nunca retorna pass_gold=true sem todos os gates obrigatórios.
+ *
+ * §68 gate_no_security_findings: apenas ERROR bloqueia; WARNING não.
+ * Se semgrep não disponível: gate passa automaticamente (ok:true, available:false).
  */
+
+/* ── §68 Semgrep runner ────────────────────────────────────────────── */
+
+/**
+ * runSemgrep(content, ext) → { ok, available, errors, warnings }
+ *
+ * Escreve content em arquivo temp, roda `semgrep --config p/javascript --json`.
+ * Se semgrep não instalado (ENOENT) ou erro: { ok: true, available: false }.
+ * Apenas findings de severidade ERROR bloqueiam (ok=false).
+ * Warnings são registrados mas não bloqueiam.
+ *
+ * @param {string} content   — código patchado
+ * @param {string} [ext]     — extensão do arquivo temp (default '.js')
+ */
+function runSemgrep(content, ext) {
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    return { ok: true, available: false, errors: [], warnings: [] };
+  }
+
+  const tmpFile = path.join(os.tmpdir(), 'pass-gold-sg-' + Date.now() + (ext || '.js'));
+  try {
+    fs.writeFileSync(tmpFile, content, 'utf8');
+
+    const result = spawnSync(
+      'semgrep',
+      ['--config', 'p/javascript', '--json', '--quiet', tmpFile],
+      { timeout: 30000, encoding: 'utf8' }
+    );
+
+    /* semgrep não instalado */
+    if (result.error && result.error.code === 'ENOENT') {
+      return { ok: true, available: false, errors: [], warnings: [] };
+    }
+
+    let findings = [];
+    try {
+      const parsed = JSON.parse(result.stdout || '{}');
+      findings = Array.isArray(parsed.results) ? parsed.results : [];
+    } catch (_) {
+      findings = [];
+    }
+
+    const errors   = findings.filter(f => {
+      const sev = (f.severity || (f.extra && f.extra.severity) || '').toUpperCase();
+      return sev === 'ERROR';
+    });
+    const warnings = findings.filter(f => {
+      const sev = (f.severity || (f.extra && f.extra.severity) || '').toUpperCase();
+      return sev !== 'ERROR';
+    });
+
+    const fmt = f => (f.check_id || '?') + ':L' + (f.start && f.start.line != null ? f.start.line : '?');
+
+    return {
+      ok:        errors.length === 0,
+      available: true,
+      errors:    errors.map(fmt),
+      warnings:  warnings.map(fmt)
+    };
+  } catch (e) {
+    console.log('[PASS GOLD §68] semgrep exception: ' + e.message);
+    return { ok: true, available: false, errors: [], warnings: [] };
+  } finally {
+    try { fs.unlinkSync(tmpFile); } catch (_) {}
+  }
+}
 
 /* ── Pesos imutáveis (V2.2.2 — não alterar sem referenciar a spec) ── */
 const WEIGHTS = {
@@ -110,14 +185,29 @@ function evaluate(input) {
     d_snapshot * WEIGHTS.snapshot_exists
   );
 
-  /* ── Gates obrigatórios para GOLD ─────────────────────────────── */
-  const gate_build_passed    = aegis_ok === true;
-  const gate_snapshot_exists = d_snapshot === 100;
-  const gate_confidence_ok   = d_llm >= 60;
-  const gate_risk_acceptable = String(risk).toLowerCase() !== 'high';
+  /* ── §68 Semgrep gate ────────────────────────────────────────── */
+  const semgrep = runSemgrep(patched_content);
+  if (semgrep.available) {
+    console.log(
+      '[PASS GOLD §68] semgrep: errors=' + semgrep.errors.length +
+      ' warnings=' + semgrep.warnings.length +
+      (semgrep.errors.length   ? ' ERR='  + semgrep.errors.join(',')   : '') +
+      (semgrep.warnings.length ? ' WARN=' + semgrep.warnings.join(',') : '')
+    );
+  } else {
+    console.log('[PASS GOLD §68] semgrep não disponível — gate passa automaticamente');
+  }
 
-  const allGatesPassed = gate_build_passed && gate_snapshot_exists &&
-                         gate_confidence_ok && gate_risk_acceptable;
+  /* ── Gates obrigatórios para GOLD ─────────────────────────────── */
+  const gate_build_passed         = aegis_ok === true;
+  const gate_snapshot_exists      = d_snapshot === 100;
+  const gate_confidence_ok        = d_llm >= 60;
+  const gate_risk_acceptable      = String(risk).toLowerCase() !== 'high';
+  const gate_no_security_findings = semgrep.ok;   /* §68: ERROR=0 obrigatório */
+
+  const allGatesPassed = gate_build_passed      && gate_snapshot_exists &&
+                         gate_confidence_ok     && gate_risk_acceptable &&
+                         gate_no_security_findings;
 
   /* ── Level determination ──────────────────────────────────────── */
   let level, verdict, pass_gold;
@@ -140,7 +230,8 @@ function evaluate(input) {
   console.log(
     `[PASS GOLD §47] score=${finalScore} level=${level} ` +
     `gates={build:${gate_build_passed} snap:${gate_snapshot_exists} ` +
-    `conf:${gate_confidence_ok} risk:${gate_risk_acceptable}}`
+    `conf:${gate_confidence_ok} risk:${gate_risk_acceptable} ` +
+    `semgrep:${gate_no_security_findings}}`
   );
 
   return {
@@ -150,10 +241,17 @@ function evaluate(input) {
     pass_gold,
     aegis_ok,            // mantém compatibilidade V3.0.0
     gates: {
-      build_passed:    gate_build_passed,
-      snapshot_exists: gate_snapshot_exists,
-      confidence_ok:   gate_confidence_ok,
-      risk_acceptable: gate_risk_acceptable
+      build_passed:            gate_build_passed,
+      snapshot_exists:         gate_snapshot_exists,
+      confidence_ok:           gate_confidence_ok,
+      risk_acceptable:         gate_risk_acceptable,
+      no_security_findings:    gate_no_security_findings   /* §68 */
+    },
+    semgrep: {
+      available: semgrep.available,
+      ok:        semgrep.ok,
+      errors:    semgrep.errors,
+      warnings:  semgrep.warnings
     },
     dimensions: {
       llm_confidence:    Math.round(d_llm),
