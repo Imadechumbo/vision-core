@@ -283,7 +283,7 @@
         <div style="font-size:72px;margin-bottom:16px">🏆</div>
         <div style="font-size:13px;letter-spacing:3px;color:#f59e0b;font-weight:700;margin-bottom:8px">PASS GOLD CERTIFIED</div>
         <div style="font-size:48px;font-weight:900;color:#fff;line-height:1;margin-bottom:4px">80/80</div>
-        <div style="font-size:14px;color:#94a3b8;margin-bottom:20px">cenários PASS • run CI #67</div>
+        <div style="font-size:14px;color:#94a3b8;margin-bottom:20px">cenários PASS • run CI #81</div>
         <div style="font-size:56px;font-weight:900;background:linear-gradient(90deg,#f59e0b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1">100%</div>
         <div style="margin-top:20px;padding-top:20px;border-top:1px solid #1e293b;display:flex;justify-content:center;gap:24px">
           <div style="text-align:center">
@@ -496,7 +496,13 @@
         <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
           <div style="font-size:28px;margin-bottom:10px">🔒</div>
           <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Diagnóstico por IA é poderoso mas não-determinístico — o mesmo código pode receber respostas diferentes em runs diferentes. Para vulnerabilidades conhecidas (eval() injection, path traversal, CORS misconfiguration, TLS bypass), o Vision Core agora roda Semgrep (p/javascript, 74 regras) como 5º gate do PASS GOLD: <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>gate_no_security_findings</code>. Apenas findings de severidade ERROR bloqueiam a promoção. O scan do próprio backend confirmou 0 ERROR / 3 WARNING (todos intencionais). A parte que pode ser determinística, é — sem depender de a IA 'lembrar' de checar."</div>
-          <div style="font-size:11px;color:#64748b">— §68 Semgrep gate · Fase 1–2 · 2026-06-12</div>
+          <div style="font-size:11px;color:#64748b">— §68 Semgrep gate · Fases 1–4 · semgrep 1.x em produção via virtualenv EB · 2026-06-12</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">⏱️</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Quando todos os providers de IA esgotam em sequência — quota diária do Cerebras, rate-limit do Groq, congestionamento do OpenRouter — o backend agora responde em segundos com um erro estruturado <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>ALL_PROVIDERS_EXHAUSTED</code> e lista quais providers foram tentados. Antes disso, o cliente esperava 60 segundos por um timeout mudo, sem saber qual provider tinha falhado. O client-side timeout também foi estendido de 60s para 90s para acomodar cascatas lentas sem falhar prematuramente."</div>
+          <div style="font-size:11px;color:#64748b">— §69 Hermes 503 estruturado · timeout cascade resolvido · CI #77–#81 · 80/80 PASS GOLD</div>
         </div>
 
       </div>
