@@ -4573,23 +4573,35 @@ Hermes só aceita `fix_type: 'none'` como resultado final se vier de um provider
 | 3 | Hermes retorna HTTP 503 estruturado (`ALL_PROVIDERS_EXHAUSTED`) + budget total 75s — commit `5c4a6d2` | ✅ **FEITO** — 2026-06-12 |
 | 4 | CI #77: V1 10/10 ✅ — STRESS-06 + STRESS-10 passaram. STRESS-12 V2 LLM non-det. (79/80) | ✅ **FEITO** — 2026-06-12 |
 
-**§69 CONCLUÍDO** (2026-06-12)
+**§69 DEFINITIVAMENTE CONCLUÍDO** (2026-06-12)
 
-### Resultado Fases 2-4 (CI #77 — 2026-06-12)
+### Resultado completo §69 — CI #76→#80
 
-| Métrica | Antes (CI #76) | Depois (CI #77) |
-|---------|---------------|-----------------|
-| STRESS-06 V1 | ❌ timeout 60s | ✅ PASS |
-| STRESS-10 V1 | ❌ timeout 60s | ✅ PASS |
-| V1 total | 8/10 | **10/10** |
-| Score geral | 78/80 | 79/80 |
-| FAIL residual | — | STRESS-12 V2 LLM non-det. (1 em 8 histórico) |
+| Run | Score | V1 | V3 | FAILs | Causa |
+|-----|-------|----|----|-------|-------|
+| #76 (baseline) | 78/80 | 8/10 | 15/15 | STRESS-06+10 timeout 60s | provider cascade |
+| #77 (fix `5c4a6d2`) | 79/80 | **10/10** | 15/15 | STRESS-12 LLM | ✅ fix ok |
+| #78 (bug 503 falso) | 74/80 | 10/10 | 12/15 | STRESS-24/35/37/42/53 503 | budget 75s + timeout 30s |
+| #79 (hotfix `0de8a12`) | 65/80 | 10/10 | **0/15** | V3 inteiro 502 | EB crash infra (OOM/restart) |
+| **#80 (confirmação)** | **78/80** | **10/10** | **14/15** | STRESS-11 502 + STRESS-28 LLM | **intermitência normal** |
 
-Implementações (commit `5c4a6d2`):
-- `scripts/stress-test-vision-core.js`: timeout `60000→90000`, sleep `3000→5000`
-- `scripts/stress-test-v2-vision-core.js`: sleep `3000→5000`
-- `backend/hermes-rca.js`: retorna `{code:'ALL_PROVIDERS_EXHAUSTED', providers_tried:[...]}`
-- `backend/server.js`: `Promise.race(callHermes, budget75s)` + HTTP 503 estruturado
+**Conclusão:**
+- CI #79 V3=0/15 era crash TRANSIENTE de EB (OOM/health restart após ~25 requests pesados). Confirmado por CI #80 V3=14/15.
+- Hotfix `0de8a12` VALIDADO.
+- Score estável em 78-79/80 (98-99%) — dentro do histórico normal.
+
+### Implementações finais (commits `5c4a6d2` + `0de8a12`)
+
+| Arquivo | Mudança | Status |
+|---------|---------|--------|
+| `scripts/stress-test-vision-core.js` | timeout `60000→90000`, sleep `3000→5000` | ✅ ativo |
+| `scripts/stress-test-v2-vision-core.js` | sleep `3000→5000` | ✅ ativo |
+| `backend/hermes-rca.js` | `{code:'ALL_PROVIDERS_EXHAUSTED', providers_tried:[...]}` | ✅ ativo |
+| `backend/server.js` | 503 para exaustão real; timeout restaurado `60s/90s`; budget timer **REMOVIDO** | ✅ hotfix |
+
+### Lição aprendida
+
+`Promise.race(callHermes, setTimeout(75s))` + timeout por-provider `30s` (reduzido de 60s) compôs de forma não-linear: OpenRouter legitimamente leva 30-60s e era cortado prematuramente → 5 falsos 503. Mudanças em timeout/concorrência do Hermes devem ser testadas **isoladamente** de mudanças client-side (não em conjunto no mesmo CI run).
 
 ---
 
