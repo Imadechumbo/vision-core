@@ -4121,8 +4121,8 @@ Para superar 63/80 e chegar mais perto de 80/80:
 
 ## §66 — Spec: Tiered Routing por Dificuldade (6 providers + modelos quantizados)
 
-**Data:** 2026-06-11  
-**Status:** FASE 0 + TIMEOUT FIX EXECUTADOS ✅ — 75/80 CI #38 (93.75%)  
+**Data:** 2026-06-11 → 2026-06-12  
+**Status:** ✅ FECHADO — 80/80 CI #67 (100%) PASS GOLD  
 **Motivação:** Run #34 (63/80, 78.75%) — 17 fails concentrados em HARD/EXPERT/NIGHTMARE  
 **Scope:** Todos os 6 providers configurados no EB (não só OpenRouter)
 
@@ -4152,13 +4152,18 @@ Para superar 63/80 e chegar mais perto de 80/80:
 | #35 | 70/80 | 87.50% | Fase 0: deepseek-v4-flash |
 | #36 | 71/80 | 88.75% | timeout >20K→60s (parcial) |
 | #38 | **75/80** | **93.75%** | timeout universal 60s — V3 15/15, V4 15/15, SF 15/15 |
+| #59 | 79/80 | 98.75% | aggregate fix (V1–V4 contados corretamente) |
+| #62 | 78/80 | 97.5% | Groq guard 20K + nginx 120s (EB AL2023 via .platform) |
+| #63 | 79/80 | 98.75% | fix git add glob (V1 results nunca commitado) |
+| #67 | **80/80** | **100%** | health check retry + nginx AL2023 aplicado |
 
-**Fails residuais (5) — intermitentes:**
-- V1 (2/10): STRESS-01/10 — Groq fecha conexão ~29s server-side (payload 23KB ≈ borda 6K token free tier)
-- V2 (3/15): STRESS-11/12/15 — mesma causa + conteúdo (modelo responde 51s, keywords insuficientes)
-- Diferentes cenários falham em cada run — não são falhas determinísticas
+**Fechamento (2026-06-12):**
+- Causa raiz intermitência: nginx EB em 60s (padrão) → 504 quando chain de providers excedia 60s
+- Fix final: `.platform/nginx/conf.d/proxy_timeout.conf` (AL2023) + health check retry antes dos testes
+- §72 Evidence-Gated Escalation implementado como camada adicional de qualidade
+- 80/80 PASS GOLD confirmado CI #67
 
-**Fases 1-4 (roteamento por tier, CoT checklist, few-shot NIGHTMARE):** não necessárias — alvo 91%+ atingido com Fase 0 + timeout fix.
+**Fases 1-4 (roteamento por tier, CoT checklist, few-shot NIGHTMARE):** não necessárias — 100% atingido com fixes de infraestrutura.
 
 ---
 
