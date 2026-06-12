@@ -4460,3 +4460,48 @@ AWS_EB_ENVIRONMENT: Tngh-aws-final-v2-env  →  vision-core-prod
 ### Impacto retroativo
 
 Todos os deploys CI anteriores a 2026-06-11 foram para `Tngh-aws-final-v2-env`. Os fixes de timeout (`server.js`) e OpenClaw (`§70`) chegaram a `vision-core-prod` apenas após este fix via manual dispatch.
+
+---
+
+## §72 — Hermes: Evidence-Gated Escalation + Memory (.vision-memory)
+
+**Data:** 2026-06-12  
+**Status:** ✅ Fase 1 IMPLEMENTADA — Fases 2-4 ROADMAP
+
+### Problema resolvido
+
+STRESS-01 falhava intermitentemente com `fix_type: 'none'` ("nenhum bug encontrado") após o provider primário sofrer timeout (30s). O provider de fallback, sem contexto suficiente, devolvia resposta incorreta sem escalação.
+
+### Princípio
+
+Hermes só aceita `fix_type: 'none'` como resultado final se vier de um provider que **não foi precedido de timeout**. Se o provider anterior timeoutou, um "sem bug" sem evidência é low-confidence → escalar para o próximo da chain.
+
+### Fase 1 — Implementado em `backend/hermes-rca.js`
+
+| Componente | Descrição |
+|-----------|-----------|
+| `isTimeoutError(err)` | Detecta `TimeoutError` / `AbortError` / mensagem com "timeout" |
+| `extractFixType(answer)` | Extrai `fix_type` do JSON embutido na resposta LLM |
+| `appendLowConfidenceLog(entry)` | Append em `.vision-memory/hermes_low_confidence.jsonl` |
+| Loop `callHermes` | Rastreia `prevWasTimeout`; se `true` + `fix_type=none` + próximo provider disponível → escala |
+
+**Contrato preservado:** se chain esgotar sem confiança → `{ ok: false, requires_manual_review: true }`. Sem quebra de API.
+
+**Log entry por escalação:**
+```json
+{
+  "timestamp": "ISO",
+  "providers_tried": ["anthropic", "cerebras"],
+  "escalated_from": "cerebras",
+  "final_decision": "none_low_confidence",
+  "payload_size": 8432
+}
+```
+
+### Fases futuras (ROADMAP — não implementar)
+
+| Fase | Descrição |
+|------|-----------|
+| Fase 2 | Hermes lê `hermes_low_confidence.jsonl` antes do diagnóstico — payload similar a caso passado que precisou escalar → pular direto pro provider robusto |
+| Fase 3 | Agregação periódica de padrões (payloads >20K sempre escalam → skip provider fraco direto) |
+| Fase 4 | Integração com §69 Memory Layer (Obsidian vault) |
