@@ -182,7 +182,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/CI-LAST-RUN.md docs/STRESS-TEST-*-RESULTS.json docs/STRESS-TEST-*-RESULTS.md || true
+          git add docs/CI-LAST-RUN.md docs/STRESS-TEST-RESULTS.json docs/STRESS-TEST-*-RESULTS.json docs/STRESS-TEST-*-RESULTS.md || true
           git diff --cached --quiet || git commit -m "ci: auto-update CI-LAST-RUN + RESULTS [skip ci]"
           git push || true
 
