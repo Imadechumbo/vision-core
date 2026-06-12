@@ -31,6 +31,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_PAT_TECHNETGAME }}
+          fetch-depth: 2   # §68 race fix: HEAD~1 precisa de ≥2 commits
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
@@ -79,10 +80,11 @@ jobs:
           # Solução: 120s extra apenas quando este commit altera backend/.
           BACKEND_CHANGED=$(git diff --name-only HEAD~1 HEAD -- 'backend/' 2>/dev/null | head -1 || echo "")
           if [ -n "$BACKEND_CHANGED" ]; then
-            echo "⚠️  backend/ alterado — aguardando 120s para deploy EB estabilizar antes dos testes..."
+            echo "⚠️  backend/ alterado — aguardando 300s para deploy EB estabilizar antes dos testes..."
             echo "   (Arquivo alterado: $BACKEND_CHANGED)"
-            sleep 120
-            echo "✅ Wait de estabilização concluído."
+            echo "   (§68 hook instala semgrep via venv: dnf ~35s + venv + pip ~3min)"
+            sleep 300
+            echo "✅ Wait de estabilização concluído (300s)."
           else
             echo "✅ Nenhuma mudança em backend/ — sem wait extra."
           fi
