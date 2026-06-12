@@ -48,7 +48,6 @@ jobs:
           MAX_ATTEMPTS=30
           SLEEP_SEC=30
           # §68 fix: 3 confirmações consecutivas para evitar race com rolling deploy EB
-          # (01_install_semgrep.sh estende janela de deployment — 1 só 200 não é suficiente)
           CONSECUTIVE_REQUIRED=3
           consecutive=0
           echo "Aguardando EB saudável (${CONSECUTIVE_REQUIRED} confirmações consecutivas): ${HEALTH_URL}"
@@ -71,6 +70,22 @@ jobs:
           done
           echo "❌ EB não ficou estável após tentativas. Abortando."
           exit 1
+
+      - name: Wait for EB deploy to settle (backend changes only)
+        run: |
+          # §68 race fix: quando backend/ muda, o predeploy hook (dnf+pip) estende a
+          # janela de deployment. O health check passa na versão OLD e os testes
+          # começam enquanto o EB ainda está promovendo a nova versão → ECONNREFUSED.
+          # Solução: 120s extra apenas quando este commit altera backend/.
+          BACKEND_CHANGED=$(git diff --name-only HEAD~1 HEAD -- 'backend/' 2>/dev/null | head -1 || echo "")
+          if [ -n "$BACKEND_CHANGED" ]; then
+            echo "⚠️  backend/ alterado — aguardando 120s para deploy EB estabilizar antes dos testes..."
+            echo "   (Arquivo alterado: $BACKEND_CHANGED)"
+            sleep 120
+            echo "✅ Wait de estabilização concluído."
+          else
+            echo "✅ Nenhuma mudança em backend/ — sem wait extra."
+          fi
 
       - name: Run Stress Test V1
         continue-on-error: true
