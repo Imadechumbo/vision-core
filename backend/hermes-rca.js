@@ -268,8 +268,14 @@ async function callHermes(systemPrompt, userMessage, opts) {
     }
   }
 
-  console.log('[HERMES §49] Todos os providers falharam — requires_manual_review');
-  return { ok: false, requires_manual_review: true };
+  /* §69: retorna structured error — server.js converte para HTTP 503 */
+  console.log('[HERMES §49] Todos os providers falharam — ALL_PROVIDERS_EXHAUSTED. tried=' + providersTried.join(','));
+  return {
+    ok:                   false,
+    code:                 'ALL_PROVIDERS_EXHAUSTED',
+    providers_tried:      providersTried,
+    requires_manual_review: true
+  };
 }
 
 module.exports = { callHermes, callProvider, PROVIDER_REGISTRY, getProviderOrder };

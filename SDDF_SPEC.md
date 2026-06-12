@@ -4555,3 +4555,70 @@ Hermes só aceita `fix_type: 'none'` como resultado final se vier de um provider
 | Fase 2 | Hermes lê `hermes_low_confidence.jsonl` antes do diagnóstico — payload similar a caso passado que precisou escalar → pular direto pro provider robusto |
 | Fase 3 | Agregação periódica de padrões (payloads >20K sempre escalam → skip provider fraco direto) |
 | Fase 4 | Integração com §69 Memory Layer (Obsidian vault) |
+
+
+---
+
+## §69 — Robustez do Hermes contra timeout cascade (stress tests)
+
+**Data:** 2026-06-12
+**Status:** Fase 1 concluída — Fases 2-4 em andamento
+
+### Roadmap
+
+| Fase | Entregável | Status |
+|------|-----------|--------|
+| 1 | Diagnóstico STRESS-10: causa raiz = Cerebras tokens/day esgotado + OpenRouter 30s timeout + cliente 60s = timeout cascade (1 fail em 12 runs inicial, depois 2 fails em CI #76) | ✅ **FEITO** — 2026-06-12 |
+| 2 | timeout 60s→90s + sleep 3s→5s (constantes únicas) em todos os stress test scripts (V1-V4, SF, FP) | 🔲 |
+| 3 | Hermes retorna HTTP 503 estruturado (`ALL_PROVIDERS_EXHAUSTED`) quando todos providers esgotam — elimina timeout mudo do cliente | 🔲 |
+| 4 | Validar via CI #77: confirmar STRESS-06/10 estável OU falha com mensagem clara do Hermes | 🔲 |
+
+### Diagnóstico Fase 1 (2026-06-12)
+
+**Cenário STRESS-10:**
+```
+arquivo:  front/assets/js/games-2026-feature.js
+bug:      'Assassin's Creed Codename Hexe' → 'Assassins Creed...' (apóstrofo removido)
+esperado: ['Hexe', 'apóstrofo', 'chave', 'mismatch']
+timeout:  60000ms (axios cliente)
+```
+
+**Histórico por CI run:**
+
+| Run | S10 | Tempo | Total V1 |
+|-----|-----|-------|----------|
+| CI #76 a9a4c01 | ❌ FAIL + STRESS-06 FAIL | 0ms (60s timeout) | ~120s |
+| CI #75 722d879 | ❌ FAIL | 0ms (60s timeout) | 97s |
+| CI #74 fbca7b2 | ✅ PASS | 1.6s | 48s |
+| CI #73 1703f67 | ✅ PASS | 1.4s | 38s |
+| CI #72 e8347eb | ✅ PASS | 1.6s | 83s |
+| CI #71 75982d9 | ✅ PASS | 1.8s | 70s |
+| CI #70 22cdbc2 | ✅ PASS | 24.4s | 158s |
+| CI #65–#69 | ✅ PASS | 1.6–32.9s | variável |
+
+**Provider chain (Hermes):**
+```
+Anthropic → Cerebras → Groq → OpenRouter → DeepSeek → Gemini → Ollama
+timeout por-provider: 30s (AbortSignal)
+```
+
+**Budget math do timeout cascade:**
+```
+Anthropic:  ~0.1s (HTTP 401 — chave dev)
+Cerebras:   ~0.1s (HTTP 429 tokens/day — esgota após ~9 calls do mesmo CI run)
+Groq:       ~0.1s (HTTP 429 rate limit)
+OpenRouter: 30.0s (congestionado → timeout AbortSignal)
+DeepSeek:   ~29.7s (ainda respondendo quando cliente atinge 60s)
+─────────────────────────────────────────────────
+Total:      ~60.0s = hit exato do timeout do cliente
+```
+
+**Causa raiz:** não é posição na suite (S10 passa em 1-2s quando Cerebras disponível). É esgotamento diário de tokens do Cerebras acumulado por múltiplos CI runs + congestionamento simultâneo de OpenRouter.
+
+**Opções avaliadas:**
+- **a) timeout 60s→90s** — dá 30s extra para DeepSeek/Gemini responder. Custo: falhas levam 90s.  ✅ SELECIONADA
+- **b) sleep 3s→5s** — buffer leve para Groq rate limit (não resolve tokens/day). Custo: +14s/suite. ✅ SELECIONADA
+- **c) 1 retry para timeout** — não resolve tokens/day, dobra tempo de falha. 🔲 descartada
+- **d) reordenar cenários** — evidência contrária (S10 é rápido em posição 10 quando Cerebras OK). 🔲 descartada
+
+**Fix adicional:** Hermes deve retornar HTTP 503 estruturado quando exaure todos os providers, em vez de deixar o cliente atingir o timeout cego.

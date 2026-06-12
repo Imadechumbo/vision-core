@@ -386,7 +386,7 @@ async function sendToVisionCore(axios, { original, patched }, scenario) {
   const resp      = await axios.post(
     `${BACKEND_URL}/api/chat`,
     { message, mode: 'fix' },
-    { headers: { 'Content-Type': 'application/json' }, timeout: 60000 }
+    { headers: { 'Content-Type': 'application/json' }, timeout: 90000 }  /* §69: 60→90s */
   );
   return { data: resp.data, elapsed: Date.now() - t0 };
 }
@@ -528,8 +528,8 @@ async function main() {
     state.atual = state.resultados.length;
 
     if (scenario !== SCENARIOS[SCENARIOS.length - 1]) {
-      addLog(`   ⏸ Aguardando 3s (rate limit)...`);
-      await new Promise((r) => setTimeout(r, 3000));
+      addLog(`   ⏸ Aguardando 5s (rate limit)...`);  /* §69: 3→5s */
+      await new Promise((r) => setTimeout(r, 5000));
     }
   }
 

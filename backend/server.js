@@ -1469,12 +1469,21 @@ app.post('/api/chat', async (req, res) => {
 
   /* ── §49 HERMES: text-only chain (anthropic→groq→openrouter→gemini→ollama) ── */
   const { callHermes: _callHermes49 } = require('./hermes-rca');
-  const _h49timeout = message.length > 45000 ? 90000 : 60000; /* §43+§66: sempre 60s (todos stress payloads ≥10K chegam à borda do 30s) */
+  const _h49timeout     = 30000;  /* §69: 30s por-provider (padrão Hermes) */
+  const _h49budgetMs    = 75000;  /* §69: budget total — backend responde antes do cliente 90s */
   let _h49result;
   try {
-    _h49result = await _callHermes49(systemPrompt, message, { timeout: _h49timeout });
+    _h49result = await Promise.race([
+      _callHermes49(systemPrompt, message, { timeout: _h49timeout }),
+      new Promise((resolve) => setTimeout(() => resolve({
+        ok:     false,
+        code:   'ALL_PROVIDERS_EXHAUSTED',
+        reason: 'budget_exceeded',
+        requires_manual_review: true
+      }), _h49budgetMs))
+    ]);
   } catch (_e49) {
-    _h49result = { ok: false, requires_manual_review: true };
+    _h49result = { ok: false, code: 'HERMES_EXCEPTION', requires_manual_review: true };
   }
 
   if (_h49result && _h49result.answer) {
@@ -1487,16 +1496,24 @@ app.post('/api/chat', async (req, res) => {
     return sendOk(res, { answer: finalAnswer, provider: _h49result.provider_used, model: _h49result.model_used, mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
   }
 
-  /* ── Fallback local (todos os providers falharam) ───────────── */
-  /* §27: não ecoar payload */
-  const _payloadLen = (body.message || '').length;
-  const _localAnswer = '⚠️ **Todos os provedores de IA falharam** (payload: ' + _payloadLen + ' chars).\n\n'
-    + 'Causas prováveis:\n'
-    + '- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n'
-    + '- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n'
-    + '- Erro de rede ou timeout\n\n'
-    + 'Ação: verifique as env vars no EB ou reduza o ZIP.';
-  return sendOk(res, { answer: _localAnswer, provider: 'local', model: 'copilot-local', mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
+  /* §69: HTTP 503 estruturado quando todos providers esgotam (elimina timeout mudo no cliente) */
+  /* Anteriormente: sendOk 200 com texto local — cliente nunca sabia o motivo real.           */
+  const _payloadLen   = (body.message || '').length;
+  const _exhaustCode  = _h49result?.code || 'ALL_PROVIDERS_EXHAUSTED';
+  const _exhaustTried = _h49result?.providers_tried || [];
+  console.log('[HERMES §69] 503 ALL_PROVIDERS_EXHAUSTED code=' + _exhaustCode
+    + ' tried=[' + _exhaustTried.join(',') + '] payload=' + _payloadLen + 'chars');
+  return res.status(503).json({
+    ok:              false,
+    error:           'ALL_PROVIDERS_EXHAUSTED',
+    code:            _exhaustCode,
+    providers_tried: _exhaustTried,
+    payload_chars:   _payloadLen,
+    message:         'Todos os providers de IA falharam ou atingiram o budget de ' + (_h49budgetMs / 1000) + 's. '
+                   + 'Providers tentados: [' + (_exhaustTried.join(', ') || 'nenhum') + ']. '
+                   + 'Causas: quota/day esgotada (Cerebras), rate limit (Groq), congestionamento (OpenRouter).',
+    anti_stub:       true
+  });
 });
 
 app.get('/api/auth/status', (req, res) => {
