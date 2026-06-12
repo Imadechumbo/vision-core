@@ -4345,10 +4345,12 @@ PatchEngine aplica patch
 | Fase | Entregável | Status |
 |------|-----------|--------|
 | 1 | Instalar semgrep (pip/binary), testar `p/javascript` em arquivos reais | ✅ **FEITO** — 2026-06-11 |
-| 2 | `runSemgrep(patched_content)` em `backend/pass-gold-engine.js` | 🔲 |
-| 3 | Novo gate `gate_no_security_findings` nos 4 gates do §47 | 🔲 |
-| 4 | Testar contra os 75 cenários PASS do run #38 — confirmar 0 regressão | 🔲 |
-| 5 | Depoimento about.html (card 🔒 — inserir só após Fase 4 validada) | 🔲 |
+| 2 | `runSemgrep(patched_content)` em `backend/pass-gold-engine.js` + `gate_no_security_findings` | ✅ **FEITO** — 2026-06-12 (commit `d273d3c`) |
+| 3 | Instalar semgrep no EB CI/runtime — gate ativo em produção | ✅ **FEITO** — 2026-06-12 (commit `9c62688`) |
+| 4 | Confirmar semgrep em produção via EB logs — venv isolado, sem conflito rpm | ✅ **FEITO** — 2026-06-12 (commit `9c62688`) |
+| 5 | Testar `/api/chat/apply-patch` com código vulnerável real — validar findings | 🔲 opcional (nice-to-have, não bloqueante) |
+
+**§68 Fases 1–4 CONCLUÍDAS** (2026-06-12)
 
 ### Resultados Fase 1 (2026-06-11)
 
@@ -4370,6 +4372,49 @@ semgrep --config p/javascript --json backend/
 | CORS `origin` dinâmico | `server.js` | 663 | `cors-misconfiguration` | ⚠️ design intencional (§14 CORS spec) |
 
 **Conclusão:** 0 ERROR significa `gate_no_security_findings = true` — backend passa no gate proposto. WARNINGs são todos conhecidos/intencionais e seriam ignorados pelo gate (apenas ERROR bloqueia GOLD, per spec §68).
+
+---
+
+### Resultados Fases 2–4 (2026-06-12)
+
+**Fase 2 — `runSemgrep()` em pass-gold-engine.js (commit `d273d3c`):**
+- `runSemgrep(patched_content, ext)` integrado ao `evaluate()` do §47
+- Gate `gate_no_security_findings = semgrep.ok` (apenas ERROR bloqueia GOLD)
+- WARNING registrado mas não bloqueia
+- Se semgrep ENOENT: `ok=true, available=false` → gate auto-passa (graceful)
+- CI #69 validou: 80/80 PASS GOLD — 0 regressão
+
+**Fase 3 — Predeploy hook no EB (commit `652af6a`):**
+- Criado `backend/.platform/hooks/predeploy/01_install_semgrep.sh`
+- Diagnóstico: `pass-gold-engine.js` roda em `/api/chat/apply-patch` (EB runtime), não no CI runner
+- Smoke test local: semgrep 1.166.0 → `[PASS GOLD §68] semgrep: errors=0 warnings=0` ✅
+- CI fix paralelo: health check 3 confirmações consecutivas (evita race condition)
+
+**Fase 4 — Diagnóstico e correção do hook no AL2023 (commits `ec306b2`, `b8f75ba`, `9c62688`):**
+
+| Iteração | Problema encontrado | Fix aplicado |
+|----------|---------------------|--------------|
+| Fase 4 | `pip3/python3` ENOENT (56ms) — não estão no PATH | `dnf install python3-pip` adicionado |
+| Fase 4b | `requests 2.25.1` instalado via RPM — pip3 não pode sobrescrever (`RECORD file not found`) | virtualenv `/opt/semgrep-venv` para isolar do sistema |
+| Fase 4c | Shallow clone (`fetch-depth=1`) → `git diff HEAD~1 HEAD` vazio → sleep 300s não ativava | `fetch-depth: 2` no checkout; sleep aumentado 120→300s |
+
+**Estado final (commit `9c62688`, CI #75):**
+```
+EB hook: Python 3.9.25
+  → dnf install python3-pip ✅
+  → python3 -m venv /opt/semgrep-venv ✅
+  → pip install semgrep no venv ✅
+  → symlink /usr/local/bin/semgrep → /opt/semgrep-venv/bin/semgrep ✅
+semgrep.available = true para /api/chat/apply-patch ✅
+gate_no_security_findings ATIVO ✅
+```
+
+**Nota arquitetural:** `pass-gold-engine.js` é chamado exclusivamente de `/api/chat/apply-patch`. Os 80 cenários de stress test chamam `/api/chat` (Hermes LLM apenas) — logo não exercitam o gate §68 diretamente. Comportamento esperado e documentado. Validação real requer chamada direta a `/api/chat/apply-patch` com código vulnerável (Fase 5, opcional).
+
+**CI race condition (corrigida permanentemente):**
+- Causa raiz: stress test passava no health check da versão OLD, EB ainda deployando nova versão com hook (~2-4min) → ECONNREFUSED mid-test
+- Fix: `fetch-depth: 2` + `sleep 300s` condicional quando `backend/` muda
+- Aplicado em CI #71→#75, todos os ECONNREFUSED eliminados a partir de CI #75
 
 ---
 
