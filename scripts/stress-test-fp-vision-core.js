@@ -617,8 +617,9 @@ async function runScenario(scenario, axios) {
   const message = buildMessage(scenario);
 
   try {
+    // §70 — retry SOMENTE em 502 (cfn-hup EB restart). Outros erros: throw imediato.
     let resp;
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         resp = await axios.post(
           `${BACKEND_URL}/api/chat`,
@@ -627,9 +628,12 @@ async function runScenario(scenario, axios) {
         );
         break;
       } catch (err) {
-        if (attempt === 2) throw err;
-        addLog(`  ⚠ ${scenario.id}: retry após erro — ${err.message}`);
-        await new Promise((r) => setTimeout(r, 2000));
+        if (err?.response?.status === 502 && attempt < 3) {
+          addLog(`[RETRY] ${scenario.id} recebeu 502, aguardando 4s e tentando de novo (tentativa ${attempt + 1}/3)`);
+          await new Promise((r) => setTimeout(r, 4000));
+          continue;
+        }
+        throw err;
       }
     }
 

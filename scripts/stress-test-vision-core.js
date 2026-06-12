@@ -391,6 +391,25 @@ async function sendToVisionCore(axios, { original, patched }, scenario) {
   return { data: resp.data, elapsed: Date.now() - t0 };
 }
 
+// ── 502 retry wrapper (§70 — cfn-hup EB restart mitigation) ──────────────────
+// Retries ONLY on HTTP 502 (nginx Bad Gateway during EB web.service restart).
+// 3 total attempts, 4s wait between each. Any other status: pass through as-is.
+async function sendWithRetry(axios, data, scenario) {
+  const MAX = 3;
+  for (let attempt = 1; attempt <= MAX; attempt++) {
+    try {
+      return await sendToVisionCore(axios, data, scenario);
+    } catch (e) {
+      if (e?.response?.status === 502 && attempt < MAX) {
+        addLog(`[RETRY] ${scenario.id} recebeu 502, aguardando 4s e tentando de novo (tentativa ${attempt + 1}/${MAX})`);
+        await new Promise((r) => setTimeout(r, 4000));
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+
 // ── Evaluate ──────────────────────────────────────────────────────────────────
 function evaluate(text, esperado) {
   const lc         = (text || '').toLowerCase();
@@ -500,7 +519,7 @@ async function main() {
       const { original, patched } = applyPatch(AdmZip, baseZipBuffer, scenario);
       addLog(`[${scenario.id}] Enviando para Vision Core... (~${(patched.length / 1024).toFixed(0)} KB)`);
 
-      const { data, elapsed } = await sendToVisionCore(axios, { original, patched }, scenario);
+      const { data, elapsed } = await sendWithRetry(axios, { original, patched }, scenario);
       result.tempo_ms = elapsed;
 
       // Backend returns { ok, answer, provider, ... } — extract answer field
