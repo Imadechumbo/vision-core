@@ -16,3 +16,18 @@
 | SF | 15 | 0 | 15 |
 | FP | 10 | 0 | 10 |
 | **Total** | **79** | **1** | **80** |
+
+## §69 — Resultado CI #77 (baseline pós-fix)
+
+**STRESS-06 + STRESS-10: PASS** ✅ (V1: 10/10)  
+**STRESS-12 (V2): FAIL** 50.2s — LLM non-determinism (1 fail em 8 runs histórico), não relacionado a §69.
+
+### Comparação baseline
+
+| Run | Score | STRESS-06 | STRESS-10 | STRESS-12 | Race |
+|-----|-------|-----------|-----------|-----------|------|
+| #76 (pré-fix) | 78/80 | ❌ timeout 60s | ❌ timeout 60s | ✅ | sem ECONN |
+| **#77 (pós-fix)** | **79/80** | **✅ PASS** | **✅ PASS** | ❌ LLM non-det. | sem ECONN |
+
+**Fix §69 validado:** timeout 90s + sleep 5s eliminou o timeout cascade de V1.  
+Hermes 503 ativo — próxima falha por exaustão de providers retornará `ALL_PROVIDERS_EXHAUSTED` em vez de timeout mudo.
