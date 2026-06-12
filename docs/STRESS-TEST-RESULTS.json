@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-12T06:19:01.872Z",
+  "timestamp": "2026-06-12T06:54:41.353Z",
   "backend_url": "http://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com",
   "results": [
     {
@@ -17,8 +17,8 @@
         "cover"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Linha comentada inadvertidamente antes da definição de LOCAL_REAL_COVERS; o comentário extra quebra a estrutura esperada do módulo.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"// \",\n    \"replace\": \"\"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nLinha comentada “// ” inserida antes de `const LOCAL_REAL_COVERS` é o regressivo introduzido no diff.\n\nHERMES\n- RCA: Comentário desnecessário antes da constante, revertendo ao estado original.\n\nSCANNER\n- Arquivo: front/assets/js/games-2026-feature.js\n- Linha afetada: linha imediatamente anterior à definição de `LOCAL_REAL_COVERS`.\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/games-2026-feature.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.92\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 926,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Linha de comentário stray '// ' foi inserida antes da definição de LOCAL_REAL_COVERS, interrompendo a sequência de código esperada.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"// \",\n    \"replace\": \"\"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nHERMES\n- RCA: Comentário extra \"// \" introduzido erroneamente antes de `const LOCAL_REAL_COVERS`.\n\nSCANNER\n- Arquivo: front/assets/js/games-2026-feature.js\n- Linha afetada: linha 48 (adição da linha `// `)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/games-2026-feature.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.92\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 1294,
       "erro": null
     },
     {
@@ -33,12 +33,11 @@
       ],
       "palavras_encontradas": [
         "undefined",
-        "LOCAL_REAL_COVERS",
-        "erro"
+        "LOCAL_REAL_COVERS"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"LOCAL_REAL_COVERS is set to undefined, breaking cover lookup functions.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"const LOCAL_REAL_COVERS = undefined; const _UNUSED_ = {\",\n    \"replace\": \"const LOCAL_REAL_COVERS = {\"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nLOCAL_REAL_COVERS should be an object; the introduced `undefined; const _UNUSED_ =` corrupts the mapping used by `getLocalRealCover`.\n\nHERMES\n- RCA: LOCAL_REAL_COVERS is overwritten with undefined, causing runtime errors when accessed.\n\nSCANNER\n- Arquivo: front/assets/js/games-2026-feature.js\n- Linha afetada: a linha que declara `const LOCAL_REAL_COVERS = undefined; const _UNUSED_ = {`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/games-2026-feature.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.92\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 909,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"LOCAL_REAL_COVERS foi redefinido como undefined, impedindo a função getLocalRealCover de acessar as capas locais.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"const LOCAL_REAL_COVERS = undefined; const _UNUSED_ = {\",\n    \"replace\": \"const LOCAL_REAL_COVERS = {\"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nA linha que sobrescreve `LOCAL_REAL_COVERS` com `undefined` rompe a lógica de busca de imagens locais.\n\nHERMES\n- RCA: redefinição incorreta de `LOCAL_REAL_COVERS` causa `undefined` em tempo de execução.\n\nSCANNER\n- Arquivo: front/assets/js/games-2026-feature.js\n- Linha afetada: 49 (substituição da declaração da constante).\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/games-2026-feature.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.92\n\n```diff\n--- a/front/assets/js/games-2026-feature.js\n+++ b/front/assets/js/games-2026-feature.js\n@@ -49 +49 @@\n-  const LOCAL_REAL_COVERS = undefined; const _UNUSED_ = {\n+  const LOCAL_REAL_COVERS = {\n```",
+      "tempo_ms": 1405,
       "erro": null
     },
     {
@@ -56,8 +55,8 @@
         "false"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A função isAllowedLocalRealCover foi alterada para retornar sempre false, invalidando qualquer path de imagem local e fazendo com que getLocalRealCover retorne null para todos os jogos que dependem de LOCAL_REAL_COVERS.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"function isAllowedLocalRealCover(value = '') { return false; }\",\n    \"replace\": \"function isAllowedLocalRealCover(value = '') {\\n    return /^assets\\\\/img\\\\/.+\\\\.(?:png|jpe?g|webp)$/i.test(String(value || '').trim());\\n  }\"\n  },\n  \"confidence\": 1.0,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO bug foi introduzido pelo diff: a função `isAllowedLocalRealCover` foi simplificada para `return false`, o que impede a exibição de capas locais definidas em `LOCAL_REAL_COVERS`. O patch restaura a validação por regex original.\n\nHERMES  \n- RCA: `isAllowedLocalRealCover` alterada para retornar sempre `false`, quebrando a exibição de capas locais.\n\nSCANNER  \n- Arquivo: `front/assets/js/games-2026-feature.js`  \n- Linha afetada: definição da função (linha 75+ no diff)\n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas a função `isAllowedLocalRealCover`\n\nDECISÃO: NEEDS_FIX  \nConfiança: 1.0  \n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.\n\n```diff\n--- a/front/assets/js/games-2026-feature.js\n+++ b/front/assets/js/games-2026-feature.js\n@@ -75 +75,3 @@\n-  function isAllowedLocalRealCover(value = '') { return false; }\n+  function isAllowedLocalRealCover(value = '') {\n+    return /^assets\\/img\\/.+\\.(?:png|jpe?g|webp)$/i.test(String(value || '').trim());\n+  }\n```",
-      "tempo_ms": 12795,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A função isAllowedLocalRealCover foi modificada para sempre retornar false, impedindo que capas locais (LOCAL_REAL_COVERS) sejam exibidas. Isso quebra a exibição de imagens de jogos como 'Assassin's Creed Codename Hexe', 'Pokémon Pokopia', etc.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"  function isAllowedLocalRealCover(value = '') { return false; }\",\n    \"replace\": \"  function isAllowedLocalRealCover(value = '') {\\n    return /^assets\\\\/img\\\\/.+\\\\.(?:png|jpe?g|webp)$/i.test(String(value || '').trim());\\n  }\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nA função `isAllowedLocalRealCover` foi alterada para `return false`, bloqueando todas as capas locais. Capas como `assets/img/game-cover-assassin-s-creed-codename-hexe.png` e `assets/img/game-pokopia.jpg` não são mais exibidas, deixando diversos cards sem imagem e com placeholder \"Aguardando capa oficial\".\n\nHERMES\n- RCA: isAllowedLocalRealCover retornando false permanentemente\n\nSCANNER\n- Arquivo: front/assets/js/games-2026-feature.js\n- Linha afetada: linha da função (show -/+, linha 75 no diff)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/games-2026-feature.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 8944,
       "erro": null
     },
     {
@@ -71,15 +70,11 @@
         "gif",
         "jpg"
       ],
-      "palavras_encontradas": [
-        "Pokopia",
-        "gif",
-        "jpg"
-      ],
-      "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Capa de Pokémon Pokopia referenciada como .gif; arquivo real é .jpg, impedindo carregamento.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"'Pokémon Pokopia': 'assets/img/game-pokopia.gif',\",\n    \"replace\": \"'Pokémon Pokopia': 'assets/img/game-pokopia.jpg',\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n```json\n{\n  \"diagnosis\": \"Capa de Pokemon Pokopia (sem acento) referenciada como .gif; arquivo real é .jpg, impedindo carregamento.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"'Pokemon Pokopia': 'assets/img/game-pokopia.gif',\",\n    \"replace\": \"'Pokemon Pokopia': 'assets/img/game-pokopia.jpg',\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES\n- RCA: Extensões .gif foram introduzidas erroneamente; arquivos .jpg existentes são corretos.\n\nSCANNER\n- Arquivo: front/assets/js/games-2026-feature.js\n- Linhas afetadas: `'Pokémon Pokopia': 'assets/img/game-pokopia.gif',` e `'Pokemon Pokopia': 'assets/img/game-pokopia.gif',`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/games-2026-feature.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo seguro:\nAplique os patches acima via Confirm Gate.\n\n```diff\n--- a/front/assets/js/games-2026-feature.js\n+++ b/front/assets/js/games-2026-feature.js\n@@\n-    'Pokémon Pokopia': 'assets/img/game-pokopia.gif',\n-    'Pokemon Pokopia': 'assets/img/game-pokopia.gif',\n+    'Pokémon Pokopia': 'assets/img/game-pokopia.jpg',\n+    'Pokemon Pokopia': 'assets/img/game-pokopia.jpg',\n```",
-      "tempo_ms": 1413,
-      "erro": null
+      "palavras_encontradas": [],
+      "passou": false,
+      "diagnostico_recebido": "",
+      "tempo_ms": 0,
+      "erro": "connect ECONNREFUSED 34.238.11.9:80"
     },
     {
       "id": "STRESS-05",
@@ -93,11 +88,11 @@
       ],
       "palavras_encontradas": [
         "rank",
-        "GTA"
+        "ordem"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"O rank do jogo 'Grand Theft Auto VI' foi alterado de 1 para 99, quebrando a ordenação esperada (itens deveriam começar em rank 1) e potencialmente afetando a lógica de exibição sequencial.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"{ rank: 99, title: 'Grand Theft Auto VI', release: '19 de novembro de 2026', platforms: 'PS5 e Xbox Series X/S', summary: 'Vice City volta ao centro da cultura gamer com narrativa criminal moderna, escala absurda e potencial para se tornar o maior lançamento do ciclo.', query: 'Grand Theft Auto VI official trailer Rockstar', official: 'https://www.rockstargames.com/VI/' }\",\n    \"replace\": \"{ rank: 1, title: 'Grand Theft Auto VI', release: '19 de novembro de 2026', platforms: 'PS5 e Xbox Series X/S', summary: 'Vice City volta ao centro da cultura gamer com narrativa criminal moderna, escala absurda e potencial para se tornar o maior lançamento do ciclo.', query: 'Grand Theft Auto VI official trailer Rockstar', official: 'https://www.rockstargames.com/VI/' }\"\n  },\n  \"confidence\": 1.0,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES  \n- RCA: rank de GTA VI foi trocado de 1 para 99, quebrando ordenação e exibição sequencial.\n\nSCANNER  \n- Arquivo: front/assets/js/games-2026-feature.js  \n- Linha afetada: linha contendo `rank: 99, title: 'Grand Theft Auto VI'`\n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas games-2026-feature.js (patch cirúrgico de uma linha)\n\nDECISÃO: NEEDS_FIX  \nConfiança: 1.0\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 7811,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Linha de rank incorreta para 'Grand Theft Auto VI' – valor 99 ao invés de 1, causando ordenação errada.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"{ rank: 99, title: 'Grand Theft Auto VI', release: '19 de novembro de 2026', platforms: 'PS5 e Xbox Series X/S', summary: 'Vice City volta ao centro da cultura gamer com narrativa criminal moderna, escala absurda e potencial para se tornar o maior lançamento do ciclo.', query: 'Grand Theft Auto VI official trailer Rockstar', official: 'https://www.rockstargames.com/VI/' },\",\n    \"replace\": \"{ rank: 1, title: 'Grand Theft Auto VI', release: '19 de novembro de 2026', platforms: 'PS5 e Xbox Series X/S', summary: 'Vice City volta ao centro da cultura gamer com narrativa criminal moderna, escala absurda e potencial para se tornar o maior lançamento do ciclo.', query: 'Grand Theft Auto VI official trailer Rockstar', official: 'https://www.rockstargames.com/VI/' },\"\n  },\n  \"confidence\": 0.93,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nAjusta o valor de `rank` de 99 para 1, restaurando a ordem correta dos itens.\n\nHERMES\n- RCA: rank errado impede exibição correta da lista de jogos.\n\nSCANNER\n- Arquivo: front/assets/js/games-2026-feature.js\n- Linha afetada: linha onde o objeto com rank 99 é definido.\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/games-2026-feature.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.93\n\nPróximo passo seguro:\nAprovar e aplicar o patch para corrigir o rank.",
+      "tempo_ms": 1373,
       "erro": null
     },
     {
@@ -111,11 +106,16 @@
         "vazia",
         "GTA"
       ],
-      "palavras_encontradas": [],
-      "passou": false,
-      "diagnostico_recebido": "",
-      "tempo_ms": 0,
-      "erro": "socket hang up"
+      "palavras_encontradas": [
+        "release",
+        "data",
+        "vazia",
+        "GTA"
+      ],
+      "passou": true,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"O campo 'release' do item 'Grand Theft Auto VI' foi removido (tornado string vazia) no diff, causando exibição incorreta da data de lançamento no card.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"{ rank: 1, title: 'Grand Theft Auto VI', release: '', platforms: 'PS5 e Xbox Series X/S', summary: 'Vice City volta ao centro da cultura gamer com narrativa criminal moderna, escala absurda e potencial para se tornar o maior lançamento do ciclo.', query: 'Grand Theft Auto VI official trailer Rockstar', official: 'https://www.rockstargames.com/VI/' }\",\n    \"replace\": \"{ rank: 1, title: 'Grand Theft Auto VI', release: '19 de novembro de 2026', platforms: 'PS5 e Xbox Series X/S', summary: 'Vice City volta ao centro da cultura gamer com narrativa criminal moderna, escala absurda e potencial para se tornar o maior lançamento do ciclo.', query: 'Grand Theft Auto VI official trailer Rockstar', official: 'https://www.rockstargames.com/VI/' }\"\n  },\n  \"confidence\": 0.98,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\n**Diagnóstico:** O diff mostra que a data de lançamento `'19 de novembro de 2026'` foi substituída por uma string vazia no objeto `Grand Theft Auto VI`. Isso é um bug — o site exibirá \"Lançamento previsto\" sem data para o título mais importante da lista.\n\nHERMES  \n- RCA: release date de GTA VI foi removida (string vazia) no diff exibido.\n\nSCANNER  \n- Arquivo: `front/assets/js/games-2026-feature.js`  \n- Linha afetada: linha do objeto `{ rank: 1, ... release: '', ... }`\n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas o campo `release` do primeiro item no array `items` do primeiro grupo.\n\nDECISÃO: **NEEDS_FIX**  \nConfiança: 0.98\n\nPróximo passo: Clique **EXECUTAR MISSÃO** para aplicar o patch e restaurar a data de lançamento.",
+      "tempo_ms": 15442,
+      "erro": null
     },
     {
       "id": "STRESS-07",
@@ -127,11 +127,15 @@
         "PS5",
         "Resident Evil"
       ],
-      "palavras_encontradas": [],
-      "passou": false,
-      "diagnostico_recebido": "",
-      "tempo_ms": 0,
-      "erro": "connect ECONNREFUSED 34.238.11.9:80"
+      "palavras_encontradas": [
+        "platforms",
+        "PS5",
+        "Resident Evil"
+      ],
+      "passou": true,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Plataformas da entrada Resident Evil Requiem está faltando \\\"PS5,\\\", removendo o suporte ao console PS5.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"{ rank: 2, title: 'Resident Evil Requiem', release: '27 de fevereiro de 2026', platforms: 'Xbox Series X/S e PC', summary: 'Capcom mistura horror tenso, dupla de protagonistas e atmosfera chuvosa para recolocar Resident Evil no centro da conversa logo no início do ano.', query: 'Resident Evil Requiem official trailer Capcom', official: 'https://www.capcom-games.com/product/en-uk/' },\",\n    \"replace\": \"{ rank: 2, title: 'Resident Evil Requiem', release: '27 de fevereiro de 2026', platforms: 'PS5, Xbox Series X/S e PC', summary: 'Capcom mistura horror tenso, dupla de protagonistas e atmosfera chuvosa para recolocar Resident Evil no centro da conversa logo no início do ano.', query: 'Resident Evil Requiem official trailer Capcom', official: 'https://www.capcom-games.com/product/en-uk/' },\"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nHERMES  \n- RCA: a lista de plataformas para Resident Evil Requiem perdeu o prefixo “PS5, ”, gerando exibição incompleta.  \n\nSCANNER  \n- Arquivo: front/assets/js/games-2026-feature.js  \n- Linha afetada: linha que contém `platforms: 'Xbox Series X/S e PC'`.  \n\nAEGIS  \n- deploy_allowed: false  \n- production_touched: false  \n- Escopo: apenas front/assets/js/games-2026-feature.js  \n\nDECISÃO: NEEDS_FIX  \nConfiança: 0.92  \n\nPróximo passo seguro: Clique EXECUTAR MISSÃO para aplicar o patch.  \n\n```diff\n--- a/front/assets/js/games-2026-feature.js\n+++ b/front/assets/js/games-2026-feature.js\n@@\n-        { rank: 2, title: 'Resident Evil Requiem', release: '27 de fevereiro de 2026', platforms: 'Xbox Series X/S e PC', summary: 'Capcom mistura horror tenso, dupla de protagonistas e atmosfera chuvosa para recolocar Resident Evil no centro da conversa logo no início do ano.', query: 'Resident Evil Requiem official trailer Capcom', official: 'https://www.capcom-games.com/product/en-uk/' },\n+        { rank: 2, title: 'Resident Evil Requiem', release: '27 de fevereiro de 2026', platforms: 'PS5, Xbox Series X/S e PC', summary: 'Capcom mistura horror tenso, dupla de protagonistas e atmosfera chuvosa para recolocar Resident Evil no centro da conversa logo no início do ano.', query: 'Resident Evil Requiem official trailer Capcom', official: 'https://www.capcom-games.com/product/en-uk/' },\n```",
+      "tempo_ms": 1322,
+      "erro": null
     },
     {
       "id": "STRESS-08",
@@ -147,8 +151,8 @@
         "rawg"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Linha com inicialização de Set está com sintaxe inválida e falta a fonte 'rawg', impedindo a criação correta da constante TRUSTED_API_COVER_SOURCES.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"const TRUSTED_API_COVER_SOURCES = new Set([' 'steamgriddb', 'igdb']);\",\n    \"replace\": \"const TRUSTED_API_COVER_SOURCES = new Set(['rawg', 'steamgriddb', 'igdb']);\"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nA linha contém um espaço extra e aspas incorretas antes de *steamgriddb*, além de omitir a fonte *rawg*, gerando erro de sintaxe que interrompe a execução do script.\n\nHERMES\n- RCA: sintaxe inválida e falta de elemento no array da constante.\n\nSCANNER\n- Arquivo: front/assets/js/games-2026-feature.js\n- Linha afetada: const TRUSTED_API_COVER_SOURCES = new Set([' 'steamgriddb', 'igdb']);\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/games-2026-feature.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.92\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 2223,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Na linha 64, a string 'rawg' foi removida e um espaço extra foi inserido antes de 'steamgriddb', resultando em \"TRUSTED_API_COVER_SOURCES = new Set([' 'steamgriddb', 'igdb'])\". Isso quebra a validação em isValidApiCoverPayload (linha 129) que verifica a fonte via Set, causando rejeição de capas da API 'rawg' e falha na detecção de qualquer fonte devido ao espaço extra.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"const TRUSTED_API_COVER_SOURCES = new Set([' 'steamgriddb', 'igdb']);\",\n    \"replace\": \"const TRUSTED_API_COVER_SOURCES = new Set(['rawg', 'steamgriddb', 'igdb']);\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO diff mostra a linha original correta → removida e substituída por uma versão com erro de digitação: `'rawg'` foi deletado e `'steamgriddb'` ganhou um espaço extra no início. Isso impede que o conjunto `TRUSTED_API_COVER_SOURCES` reconheça `'rawg'` ou a string com espaço, fazendo com que todas as tentativas de buscar capas de API sejam rejeitadas pela função `isValidApiCoverPayload`, resultando em capas faltando no site.\n\nHERMES\n- RCA: String em TRUSTED_API_COVER_SOURCES corrompida — espaço extra em `' steamgriddb'` e remoção de `'rawg'`.\n\nSCANNER\n- Arquivo: front/assets/js/games-2026-feature.js\n- Linha afetada: 64\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/games-2026-feature.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 10801,
       "erro": null
     },
     {
@@ -170,8 +174,8 @@
         "svg"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"A função isAllowedLocalRealCover teve seu regex alterado de aceitar PNG, JPEG e WebP para aceitar apenas SVG e GIF. Isso impede que todas as capas locais em LOCAL_REAL_COVERS (que usam .png, .jpg, .webp) sejam reconhecidas, fazendo com que getLocalRealCover retorne null para todos os jogos com capa real.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return /^assets\\\\/img\\\\/.+\\\\.(?:svg|gif)$/i.test(String(value || '').trim());\",\n    \"replace\": \"return /^assets\\\\/img\\\\/.+\\\\.(?:png|jpe?g|webp)$/i.test(String(value || '').trim());\"\n  },\n  \"confidence\": 0.99,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nRCA: O regex foi trocado de `png|jpe?g|webp` para `svg|gif`, quebrando a validação das capas locais (que são PNG, JPG e WEBP). O patch restaura o regex original.\n\nHERMES\n- RCA: isAllowedLocalRealCover aceita apenas svg/gif, ignorando capas locais em png/jpg/webp.\n\nSCANNER\n- Arquivo: front/assets/js/games-2026-feature.js\n- Linha afetada: 76 (linha da regex alterada)\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas a função isAllowedLocalRealCover\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.99\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.\n\n```diff\n--- a/front/assets/js/games-2026-feature.js\n+++ b/front/assets/js/games-2026-feature.js\n@@ -76 +76 @@\n   function isAllowedLocalRealCover(value = '') {\n-    return /^assets\\/img\\/.+\\.(?:svg|gif)$/i.test(String(value || '').trim());\n+    return /^assets\\/img\\/.+\\.(?:png|jpe?g|webp)$/i.test(String(value || '').trim());\n   }\n```",
-      "tempo_ms": 10874,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Regex em isAllowedLocalRealCover foi alterado de aceitar .png, .jpg, .jpeg, .webp para aceitar apenas .svg e .gif, quebrando a exibição de todas as imagens locais (LOCAL_REAL_COVERS usa .png, .jpg, .webp). Como resultado getLocalRealCover retorna null para todos os títulos e as capas locais não são renderizadas.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"return /^assets\\\\/img\\\\/\\\\.+\\\\.(?:svg|gif)$/i.test(String(value || '').trim());\",\n    \"replace\": \"return /^assets\\\\/img\\\\/\\\\.+\\\\.(?:png|jpe?g|webp)$/i.test(String(value || '').trim());\"\n  },\n  \"confidence\": 0.95,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\n\nO regex foi trocado por engano. As imagens locais estão em PNG, JPG e WebP — o novo regex bloqueia todas elas.\n\nHERMES\n- RCA: Regex de validação de imagens locais alterado incorretamente, rejeitando .png, .jpg, .jpeg, .webp.\n\nSCANNER\n- Arquivo: front/assets/js/games-2026-feature.js\n- Linha afetada: linha com return dentro da função `isAllowedLocalRealCover`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/games-2026-feature.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.95\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 5676,
       "erro": null
     },
     {
@@ -187,12 +191,11 @@
       ],
       "palavras_encontradas": [
         "Hexe",
-        "apóstrofo",
         "chave"
       ],
       "passou": true,
-      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Chave do objeto de capas tem apelido errado (sem apóstrofo) que impede correspondência com LOCAL_REAL_COVERS, resultando em imagem ausente.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"    'Assassins Creed Codename Hexe': 'assets/img/game-cover-assassin-s-creed-codename-hexe.png'\",\n    \"replace\": \"    'Assassin’s Creed Codename Hexe': 'assets/img/game-cover-assassin-s-creed-codename-hexe.png'\"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nHERMES\n- RCA: chave incorreta impede carregamento de capa local\n\nSCANNER\n- Arquivo: front/assets/js/games-2026-feature.js\n- Linha afetada: a linha que declara `'Assassins Creed Codename Hexe'`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/games-2026-feature.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.92\n\nPróximo passo: Clique EXECUTAR MISSÃO para aplicar o patch.",
-      "tempo_ms": 1441,
+      "diagnostico_recebido": "```json\n{\n  \"diagnosis\": \"Chave incorreta na mapagem de capas; o título foi alterado para 'Assassins Creed Codename Hexe', impedindo a correspondência com o título real 'Assassin’s Creed Codename Hexe'.\",\n  \"file\": \"front/assets/js/games-2026-feature.js\",\n  \"fix_type\": \"code_patch\",\n  \"patch\": {\n    \"search\": \"'Assassins Creed Codename Hexe': 'assets/img/game-cover-assassin-s-creed-codename-hexe.png'\",\n    \"replace\": \"'Assassin’s Creed Codename Hexe': 'assets/img/game-cover-assassin-s-creed-codename-hexe.png'\"\n  },\n  \"confidence\": 0.92,\n  \"decisao\": \"NEEDS_FIX\"\n}\n```\nChave de mapa corrigida para coincidir com o título usado em `LOCAL_REAL_COVERS`, restaurando a exibição correta da capa.\n\nHERMES\n- RCA: chave de objeto alterada, causando falha na busca de capa local.\n\nSCANNER\n- Arquivo: front/assets/js/games-2026-feature.js\n- Linha afetada: `'Assassins Creed Codename Hexe': …` → `'Assassin’s Creed Codename Hexe': …`\n\nAEGIS\n- deploy_allowed: false\n- production_touched: false\n- Escopo: apenas front/assets/js/games-2026-feature.js\n\nDECISÃO: NEEDS_FIX\nConfiança: 0.92\n\nPróximo passo seguro:\nClique EXECUTAR MISSÃO para aplicar o patch.",
+      "tempo_ms": 1639,
       "erro": null
     }
   ]
