@@ -1469,19 +1469,15 @@ app.post('/api/chat', async (req, res) => {
 
   /* ── §49 HERMES: text-only chain (anthropic→groq→openrouter→gemini→ollama) ── */
   const { callHermes: _callHermes49 } = require('./hermes-rca');
-  const _h49timeout     = 30000;  /* §69: 30s por-provider (padrão Hermes) */
-  const _h49budgetMs    = 75000;  /* §69: budget total — backend responde antes do cliente 90s */
+  /* §43+§66: timeout por-provider restaurado — budget timer removido (§69 hotfix).
+   * Promise.race com budget 75s + timeout fixo 30s causava 503 falsos positivos:
+   * OpenRouter normalmente leva 30-60s e era cortado prematuramente.
+   * 503 estruturado mantido apenas para exaustão REAL (callHermes retorna ok=false).
+   * Cliente stress test agora usa 90s (§69) — margem suficiente sem budget global. */
+  const _h49timeout = message.length > 45000 ? 90000 : 60000;
   let _h49result;
   try {
-    _h49result = await Promise.race([
-      _callHermes49(systemPrompt, message, { timeout: _h49timeout }),
-      new Promise((resolve) => setTimeout(() => resolve({
-        ok:     false,
-        code:   'ALL_PROVIDERS_EXHAUSTED',
-        reason: 'budget_exceeded',
-        requires_manual_review: true
-      }), _h49budgetMs))
-    ]);
+    _h49result = await _callHermes49(systemPrompt, message, { timeout: _h49timeout });
   } catch (_e49) {
     _h49result = { ok: false, code: 'HERMES_EXCEPTION', requires_manual_review: true };
   }
