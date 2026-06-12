@@ -282,9 +282,9 @@
       <div style="background:linear-gradient(135deg,#0a0f1a 0%,#111827 100%);border:2px solid #f59e0b;border-radius:24px;padding:40px 48px;text-align:center;max-width:480px;box-shadow:0 0 60px rgba(245,158,11,0.15)">
         <div style="font-size:72px;margin-bottom:16px">🏆</div>
         <div style="font-size:13px;letter-spacing:3px;color:#f59e0b;font-weight:700;margin-bottom:8px">PASS GOLD CERTIFIED</div>
-        <div style="font-size:48px;font-weight:900;color:#fff;line-height:1;margin-bottom:4px">75/80</div>
-        <div style="font-size:14px;color:#94a3b8;margin-bottom:20px">cenários PASS • run CI #38</div>
-        <div style="font-size:56px;font-weight:900;background:linear-gradient(90deg,#f59e0b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1">93.75%</div>
+        <div style="font-size:48px;font-weight:900;color:#fff;line-height:1;margin-bottom:4px">80/80</div>
+        <div style="font-size:14px;color:#94a3b8;margin-bottom:20px">cenários PASS • run CI #67</div>
+        <div style="font-size:56px;font-weight:900;background:linear-gradient(90deg,#f59e0b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1">100%</div>
         <div style="margin-top:20px;padding-top:20px;border-top:1px solid #1e293b;display:flex;justify-content:center;gap:24px">
           <div style="text-align:center">
             <div style="font-size:11px;color:#64748b;margin-bottom:4px">DATA</div>
@@ -414,6 +414,12 @@
         </div>
 
       </div>
+
+      <!-- Marco: 80/80 todas as suítes na mesma execução -->
+      <div style="margin-top:20px;padding:16px 20px;background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.25);border-radius:12px;text-align:center">
+        <span style="color:#4ade80;font-weight:700;font-size:14px">✅ Run CI #67 (2026-06-12) — 80/80 (100%)</span>
+        <span style="color:#64748b;font-size:13px;display:block;margin-top:4px">Primeira execução com todas as 6 suítes em 100% simultaneamente. Gate <strong style="color:#e2e8f0">PASS GOLD</strong> confirmado.</span>
+      </div>
     </div>
 
     <!-- O que os testes revelaram — depoimentos -->
@@ -479,6 +485,18 @@
           <div style="font-size:28px;margin-bottom:10px">🎯</div>
           <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Run #34 tinha 17 fails concentrados em HARD/EXPERT/NIGHTMARE — cenários de shadowing, closures e estado compartilhado onde o modelo anterior (llama-3.1-8b) era pequeno demais para citar os identificadores exatos do código. Uma única troca de modelo (deepseek-v4-flash, quantizado, ~$0,10/1M tokens) + ajuste de timeout (30s→60s para payloads maiores) resolveu os fails sem implementar tier routing completo. V3 e V4 chegaram a 15/15 (100%). Custo desprezível: $5,20 de saldo cobre ~3.300 runs HARD/EXPERT."</div>
           <div style="font-size:11px;color:#64748b">— §66 Tiered Routing · run CI #38 · 75/80 PASS (93.75%)</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔧</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Entre os runs #59–#67, o placar oscilava 77–79/80 com um cenário diferente falhando a cada vez. A causa não era a IA — era o nginx do Elastic Beanstalk configurado com timeout padrão de 60s, enquanto o Hermes podia levar mais que isso ao tentar múltiplos provedores em cadeia. O nginx cortava a conexão (504) antes da resposta chegar. Fix: <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>.platform/nginx/conf.d/proxy_timeout.conf</code> (120s, método correto para Amazon Linux 2023) + health check antes dos testes para evitar rodar contra instância em redeploy. Resultado: 80/80 consistente."</div>
+          <div style="font-size:11px;color:#64748b">— §66 causa raiz nginx AL2023 · runs #59–#67 · 80/80 PASS (100%)</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔒</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Diagnóstico por IA é poderoso mas não-determinístico — o mesmo código pode receber respostas diferentes em runs diferentes. Para vulnerabilidades conhecidas (eval() injection, path traversal, CORS misconfiguration, TLS bypass), o Vision Core agora roda Semgrep (p/javascript, 74 regras) como 5º gate do PASS GOLD: <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>gate_no_security_findings</code>. Apenas findings de severidade ERROR bloqueiam a promoção. O scan do próprio backend confirmou 0 ERROR / 3 WARNING (todos intencionais). A parte que pode ser determinística, é — sem depender de a IA 'lembrar' de checar."</div>
+          <div style="font-size:11px;color:#64748b">— §68 Semgrep gate · Fase 1–2 · 2026-06-12</div>
         </div>
 
       </div>
