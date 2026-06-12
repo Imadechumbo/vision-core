@@ -4488,18 +4488,18 @@ Cada conceito vira § específico SÓ quando houver necessidade concreta (ex: §
 
 ---
 
-## §70 — Fix CI/CD: alinhamento de environment EB
+## §70 — Fix CI/CD: alinhamento de environment EB + V3 502 Crash Investigation
 
-**Data:** 2026-06-11  
-**Status:** ✅ RESOLVIDO
+**Data:** 2026-06-11 (EB env) / 2026-06-12 (V3 crash + retry)
+**Status:** ✅ FECHADO — CI #83 80/80 PASS GOLD
 
-### Problema
+### Problema 1 — EB environment desalinhado (2026-06-11)
 
 CI/CD (`deploy-backend-eb.yml`) deployava para `Tngh-aws-final-v2-env` (app `tngh-aws-final-v2`) enquanto stress tests e testes manuais usavam `vision-core-prod` (app `vision-core`). Código novo nunca chegava ao ambiente testado.
 
 Sintoma: `vision-core-prod` rodava `app-260606_165534223490` (Jun 6) mesmo após múltiplos deploys CI bem-sucedidos.
 
-### Fix
+### Fix 1
 
 GitHub Actions variables corrigidas:
 ```
@@ -4510,6 +4510,55 @@ AWS_EB_ENVIRONMENT: Tngh-aws-final-v2-env  →  vision-core-prod
 ### Impacto retroativo
 
 Todos os deploys CI anteriores a 2026-06-11 foram para `Tngh-aws-final-v2-env`. Os fixes de timeout (`server.js`) e OpenClaw (`§70`) chegaram a `vision-core-prod` apenas após este fix via manual dispatch.
+
+---
+
+### Problema 2 — Crash V3 502 EB gateway em CI #79 e #82 (2026-06-12)
+
+**Diagnóstico:** EB reinicia `web.service` periodicamente via `cfn-hup` config refresh (~15-90min de intervalo). Gap real de ~2-4s de downtime do Node.js durante o restart. CI #79 e CI #82 coincidiram com esse restart durante a suíte V3 (que roda após V1+V2 = ~25 requests acumuladas), gerando cascata de 502.
+
+**NÃO é OOM.** Confirmado via PID lifecycle nos logs do EB: processo Node.js reinicia limpo, não por pressão de memória. O crash em CI #79 deu timestamp às 14:27:15 (~46s em V3), CI #82 às 16:00:11 (~57s em V3) — ambos dentro da janela de restart periódico do cfn-hup.
+
+**Evidência comparativa CI #79 vs CI #82:**
+
+| Métrica | CI #79 | CI #82 |
+|---------|--------|--------|
+| Primeiro FAIL | STRESS-26 (1º cenário) | STRESS-29 (4º cenário) |
+| Tempo até primeiro 502 | ~46s após V3 start | ~57s após V3 start |
+| Padrão pós-crash | 14 restantes instantâneos (ms) | 12 restantes instantâneos (ms) |
+| Score V3 | 0/15 | 3/15 |
+
+Cascata instantânea confirma: processo Node.js morreu, EB retorna 502 gateway para todos os novos requests.
+
+### Mitigação — retry 502 em V1/V2/V3/SF/FP (commit `454c271`)
+
+Retry **somente em HTTP 502** (Bad Gateway puro do nginx). Outros status (4xx, 503 estruturado, timeout) passam direto — sem mascarar falhas reais.
+
+| Arquivo | Mudança |
+|---------|---------|
+| `scripts/stress-test-vision-core.js` | `sendWithRetry` wrapper (3 tentativas, 4s backoff) |
+| `scripts/stress-test-v2-vision-core.js` | `sendWithRetry` wrapper (3 tentativas, 4s backoff) |
+| `scripts/stress-test-v3-vision-core.js` | `sendWithRetry` wrapper (3 tentativas, 4s backoff) |
+| `scripts/stress-test-sf-vision-core.js` | loop inline 502-específico (3 tentativas, 4s backoff) |
+| `scripts/stress-test-fp-vision-core.js` | loop inline 502-específico (3 tentativas, 4s backoff) |
+
+Log de retry: `[RETRY] STRESS-XX recebeu 502, aguardando 4s e tentando de novo (tentativa N/3)`
+
+### Resultado CI #83 (2026-06-12, commit `454c271`)
+
+| Suíte | PASS | Total |
+|-------|------|-------|
+| V1 | 10 | 10 |
+| V2 | 15 | 15 |
+| V3 | **15** | **15** |
+| V4 | 15 | 15 |
+| SF | 15 | 15 |
+| FP | 10 | 10 |
+| **Total** | **80** | **80** |
+
+- **[RETRY] não disparado** — sem colisão com cfn-hup restart nesta run
+- V3 = 15/15 limpo
+- **§70 FECHADO**
 
 ---
 

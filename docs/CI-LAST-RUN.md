@@ -16,3 +16,10 @@
 | SF | 15 | 0 | 15 |
 | FP | 10 | 0 | 10 |
 | **Total** | **80** | **0** | **80** |
+
+## Notas
+
+- V3 = 15/15 (100%) — sem colisão com cfn-hup restart nesta run
+- [RETRY] não disparado — EB estável durante toda a run
+- Retry 502 ativo (§70 mitigação) — absorverá restart transiente nas próximas runs
+- §70 FECHADO: diagnóstico confirmado + mitigação validada
