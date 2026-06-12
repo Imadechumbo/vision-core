@@ -1,7 +1,7 @@
 {
-  "passes": 15,
+  "passes": 14,
   "total": 15,
-  "taxa": 100,
+  "taxa": 93,
   "resultados": [
     {
       "id": "STRESS-41",
@@ -17,8 +17,8 @@
         "selected.push"
       ],
       "passou": true,
-      "tempo_ms": 5469,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: backend/src/services/feedService.js, função diversifyCollection\n\nHERMES\n- Contexto fornecido: DIFF + arquivo completo do feedService.js\n- R53 aplicada: foco exclusivo nas linhas do DIFF\n- Confidence: 0.95\n\nSCANNER\n- Função `diversifyCollection` declara `const selected = [];` na linha ~12 da função\n- Bug introduzido na linha imediatamente após: `con",
+      "tempo_ms": 19283,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: backend/src/services/feedService.js (função diversifyCollection)\n\nHERMES\n- DIFF fornecido pelo usuário com contraste claro -/+.\n- Regra §53 aplicada: foco exclusivo nas linhas do diff.\n- Confidence: 0.95 (bug visível no diff, shadow variable confirmada pelo código completo).\n\nSCANNER\n- diversifyCollection cria array externo `const selected = []`.\n-",
       "palavras_encontradas": [
         "selected",
         "shadow",
@@ -46,8 +46,8 @@
         "6"
       ],
       "passou": true,
-      "tempo_ms": 22708,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: backend/src/services/hermesService.js (função summarizeTrends)\n\nHERMES\n- Contexto: arquivo fornecido, diff explícito.\n- Regra §53 aplicada: foco exclusivo nas linhas do diff.\n- Regra §2: evidência real presente (código e diff).\n- Confidence: 0.95 (diff direto).\n\nSCANNER\n- Função `summarizeTrends` retorna as categorias ordenadas por frequência decr",
+      "tempo_ms": 21192,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: backend/src/services/hermesService.js\n\nHERMES\n- DIFF fornecido com contexto completo\n- REGRA §53 ativada: análise focada apenas nas linhas alteradas\n- Múltiplos bugs não aplicável (único arquivo)\n\nSCANNER\n- Função `summarizeTrends` contém `.slice(1, 6)` em vez de `.slice(0, 6)`\n- Isso faz com que a categoria mais popular seja sempre descartada do r",
       "palavras_encontradas": [
         "slice",
         "summarizeTrends",
@@ -75,8 +75,8 @@
         "mutation"
       ],
       "passou": true,
-      "tempo_ms": 34140,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: backend/src/services/feedService.js — linha 150, função `categoryMatch`\n\nHERMES\n- Contexto: DIFF fornecido + arquivo completo fornecido\n- Regras aplicadas: R1 (evidência real), §53 (foco no DIFF)\n- Confidence: 0.95\n\nSCANNER\n- Linha 150: `return item.category = 'hardware';`\n- Operador `=` (atribuição) onde deveria ser `===` (comparação)\n- Isto sobre",
+      "tempo_ms": 24392,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: crítico — atribuição em vez de comparação corrompe dados em execução\nEscopo: `backend/src/services/feedService.js`, linha 152 (`case 'hardware'`)\n\nHERMES\n- Contexto fornecido via diff explícito (§53) + código completo do arquivo (evidência real)\n- Regras aplicadas: §53 (foco exclusivo nas linhas -/+ do diff), R1 (evidência real), R2 (patch só no arquivo forneci",
       "palavras_encontradas": [
         "categoryMatch",
         "===",
@@ -103,8 +103,8 @@
         "+"
       ],
       "passou": true,
-      "tempo_ms": 40994,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: backend/src/services/hermesService.js — linha 166\n\nHERMES\n- Contexto fornecido: código completo do arquivo + DIFF específico do bug.\n- Regra §53 aplicada: análise focada exclusivamente nas linhas do DIFF.\n\nSCANNER\n- A linha `scores.set(agent, '' + (scores.get(agent) || 0) + 1);` converte a contagem para string devido à concatenação com `'' +`.\n- I",
+      "tempo_ms": 34266,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: backend/src/services/hermesService.js\n\nHERMES\n- DIFF fornecido com evidência exata do bug\n- §53 aplicada: análise focada exclusivamente nas linhas alteradas\n- Contexto completo do arquivo recebido\n\nSCANNER\n- Função `calculateRanking` modifica `score` de Number para String\n- `scoreToWeight` usa `score / total` — divisão de string por número retorna ",
       "palavras_encontradas": [
         "score",
         "string",
@@ -132,8 +132,8 @@
         "dedupeItems"
       ],
       "passou": true,
-      "tempo_ms": 12003,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: backend/src/services/feedService.js — função dedupeItems, linha 215\n\nHERMES\n- Contexto fornecido: DIFF + arquivo completo validado\n- Regras §53 aplicadas: foco exclusivo nas linhas marcadas - (linha correct) + (linha bug)\n\nSCANNER\n- Linha original (-): `const sorted = [...items].sort(compareByDateDesc);` — spread cria shallow copy do array, proteg",
+      "tempo_ms": 24151,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: backend/src/services/feedService.js (linha 209)\n\nHERMES\n- DIFF fornecido pelo usuário — contexto completo e confiável.\n- Regras §53 aplicadas: foco exclusivo na linha modificada.\n\nSCANNER\n- Arquivo: backend/src/services/feedService.js.\n- Função `dedupeItems` contém `items.sort(compareByDateDesc)` sem spread, mutando o array original.\n\nOPENCLAW\n1. ",
       "palavras_encontradas": [
         "sort",
         "spread",
@@ -161,8 +161,8 @@
         "getCache"
       ],
       "passou": true,
-      "tempo_ms": 11584,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: crítico\nEscopo: backend/src/services/feedService.js\n\nHERMES\n- Contexto: diff com evidência direta do bug (linha 661) + código completo do arquivo fornecido.\n- Regras aplicadas: R1 (evidência real presente), R4 (nenhum deploy/production flag), R5 (confidence > 0.7 — estimada 0.95), §53 (foco exclusivo nas linhas do diff).\n\nSCANNER\n- No惜 getCache(), readCache() é",
+      "tempo_ms": 27608,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: backend/src/services/feedService.js (função getCache)\n\nHERMES\n- Contexto fornecido via diff explícito + arquivo completo. Evidência real presente.\n- Regra §53 aplicada: análise restrita às linhas -/+ do diff.\n- Confidence: 0.95\n\nSCANNER\n- Linha alterada na função `getCache` (linha 661 no diff):\n  - Antes: `const cache = await readCache();`\n  - Depo",
       "palavras_encontradas": [
         "await",
         "readCache",
@@ -190,12 +190,11 @@
         "sourceResults"
       ],
       "passou": true,
-      "tempo_ms": 9674,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: backend/src/services/gameCoverService.js (linha 358)\n\nHERMES\n- Contexto fornecido: diff e arquivo completo\n- Regra §53 aplicada: análise focada exclusivamente no diff\n- Evidência do bug: Promise.allSettled → Promise.all\n\nSCANNER\n- Função `resolveGameCover` (linha ~355):\n  - Antes: `const sourceResults = await Promise.allSettled(...)`\n  - Depois: `",
+      "tempo_ms": 9961,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: crítico\nEscopo: backend/src/services/gameCoverService.js\n\nHERMES\nContexto validado: DIFF fornecido pelo usuário + conteúdo completo do arquivo.\nRegras aplicadas: R1, §53 (foco exclusivo no DIFF).\n\nSCANNER\nArquivo único: backend/src/services/gameCoverService.js.\nLinha 357: `Promise.all(...)` substituiu `Promise.allSettled(...)`.\nLoop de desestruturação em `for (",
       "palavras_encontradas": [
         "allSettled",
         "Promise.all",
-        "fulfilled",
         "sourceResults"
       ],
       "palavras_esperadas": [
@@ -219,8 +218,8 @@
         "ok"
       ],
       "passou": true,
-      "tempo_ms": 15693,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix  \nRisco: médio  \nEscopo: backend/src/services/feedService.js — função fetchSource  \n\nHERMES  \n- DIFF fornecido pelo usuário, confirmado no código atual (linha 518).  \n- Regra §53 aplicada: análise exclusiva das linhas -/+ do diff.  \n- Confidence: 0.95 (acima do mínimo 0.85).  \n\nSCANNER  \n- No código atual, a função fetchSource possui:  \n  ```js\n  } catch {\n    return ",
+      "tempo_ms": 23864,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: backend/src/services/feedService.js\n\nHERMES\n- Contexto completo do arquivo recebido\n- R6 aplicada: diff contextual fornecido, confidence ≥ 0.85\n- R3 aplicada: sem arquivos proibidos\n\nSCANNER\n- Função `fetchSource` encontrada com try/catch modificado\n- Diff mostra: `catch (error)` removido, retorno de erro substituído por status 'ok' com 0 items\n\nOP",
       "palavras_encontradas": [
         "catch",
         "error.message",
@@ -247,15 +246,10 @@
         "then",
         "persistImageCache"
       ],
-      "passou": true,
-      "tempo_ms": 23552,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: backend/src/services/imageService.js — função persistImageCache\n\nHERMES\n- Contexto fornecido: DIFF exato + arquivo completo.\n- Regra §53 aplicada: foco exclusivo nas linhas -/+ do DIFF.\n\nSCANNER\n- DIFF mostra mudança de uma linha na função `persistImageCache`.\n- Linha original (correta): `diskCacheWritePromise = diskCacheWritePromise.then(() => wr",
-      "palavras_encontradas": [
-        "return",
-        "writeImageCache",
-        "then",
-        "persistImageCache"
-      ],
+      "passou": false,
+      "tempo_ms": 61379,
+      "answer": "⚠️ **Todos os provedores de IA falharam** (payload: 13383 chars).\n\nCausas prováveis:\n- API keys ausentes ou quota esgotada (ANTHROPIC_API_KEY, GROQ_API_KEY, GEMINI_API_KEY)\n- Payload grande demais (Groq free: ≤6K tokens ≈ 24K chars)\n- Erro de rede ou timeout\n\nAção: verifique as env vars no EB ou reduza o ZIP.",
+      "palavras_encontradas": [],
       "palavras_esperadas": [
         "return",
         "writeImageCache",
@@ -277,8 +271,8 @@
         "fire"
       ],
       "passou": true,
-      "tempo_ms": 7148,
-      "answer": "MISSÃO RECEBIDA  \nTipo: bug fix  \nRisco: médio  \nEscopo: backend/src/services/feedService.js (linha 606)  \n\nHERMES  \n- Status: contexto completo via diff + arquivo colado  \n- Regras aplicadas: §53 (foco exclusivo no diff), R1 (evidência real presente), R5 (confidence ≥ 0.85)  \n\nSCANNER  \n- Único arquivo afetado: `backend/src/services/feedService.js`  \n- Localização da alteração: função `refreshAll",
+      "tempo_ms": 21005,
+      "answer": "MISSÃO RECEBIDA  \nTipo: bug fix  \nRisco: médio  \nEscopo: backend/src/services/feedService.js (linha 606)  \n\nHERMES  \n- DIFF fornecido (§53 aplicado diretamente).  \n- Arquivo completo disponível para contexto.  \n- Regra R1 cumprida: evidência real (diff + código).  \n\nSCANNER  \n- Mudança única em `refreshAllFeeds`: `translationSession.persist();` sem `await`.  \n- No código original (linha com `-`), ",
       "palavras_encontradas": [
         "await",
         "persist",
@@ -306,8 +300,8 @@
         "NaN"
       ],
       "passou": true,
-      "tempo_ms": 30300,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: backend/src/services/gameCoverService.js — sourceTierFor()\n\nHERMES\n- Contexto: DIFF recebido + arquivo completo fornecido. Evidência real presente.\n- Regras aplicadas: §53 (FOCO exclusivo no DIFF), R1 (evidência real), R2 (patch apenas no arquivo fornecido).\n\nSCANNER\n- Arquivo: backend/src/services/gameCoverService.js\n- Linha afetada: 84 (sourceTie",
+      "tempo_ms": 15364,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: backend/src/services/gameCoverService.js (1 linha)\n\nHERMES\n- Contexto fornecido: diff exato + arquivo completo\n- Regra §53 aplicada: análise focada exclusivamente nas linhas do diff\n- Diagóstico claro: fallback `|| 9` removido na função `sourceTierFor`\n\nSCANNER\n- `sourceTierFor` é chamada em `baseConfidence` e `scoreGameCoverCandidate`\n- Quando um",
       "palavras_encontradas": [
         "sourceTierFor",
         "|| 9",
@@ -335,8 +329,8 @@
         "cron"
       ],
       "passou": true,
-      "tempo_ms": 3946,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: baixo\nEscopo: backend/src/jobs/hermesCron.js\n\nHERMES\n- Contexto completo fornecido via diff e código fonte.\n- Aplicadas regras: R1 (evidência presente), R2 (patch limitado ao arquivo), R5 (confidence ≥ 0.85).\n\nSCANNER\n- Linha 9: `const jobStarted = true;` declara variável local, sobrescrevendo `let jobStarted` de módulo.\n- Guard na linha 7 (`if (jobStarted || .",
+      "tempo_ms": 826,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: baixo\nEscopo: backend/src/jobs/hermesCron.js\n\nHERMES\n- Contexto suficiente (código completo e diff) ✔\n- Regras aplicadas: R1 (evidência presente), R2 (patch limitado ao arquivo fornecido), R5 (confidence 0.93 > 0.85)\n\nSCANNER\n- Variável `jobStarted` declarada no módulo (`let jobStarted = false;`).\n- Linha introduzida (`+  const jobStarted = true;`) cria uma nov",
       "palavras_encontradas": [
         "jobStarted",
         "const",
@@ -364,8 +358,8 @@
         "hydrateMissingImages"
       ],
       "passou": true,
-      "tempo_ms": 17470,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: backend/src/services/feedService.js\n\nHERMES\n- Contexto fornecido: diff claro e arquivo completo. Evidência real presente.\n- Regra §53 aplicada: foco exclusivo nas linhas do diff.\n- confidence = 1.0 (diff direto).\n\nSCANNER\n- O diff mostra que `let enrichedCount = 0;` foi movido do interior da função `hydrateMissingImages` para o escopo do módulo.\n- ",
+      "tempo_ms": 44552,
+      "answer": "MISSÃO RECEBIDA  \nTipo: bug fix  \nRisco: médio  \nEscopo: `backend/src/services/feedService.js` (função `hydrateMissingImages`)\n\nHERMES  \n- Contexto fornecido via diff e código colado.  \n- Regra §53 aplicada: análise focada exclusivamente nas linhas do diff.  \n- Confidence: 0.95  \n\nSCANNER  \nO diff mostra que `enrichedCount` foi movido do interior da função `hydrateMissingImages` para o escopo do m",
       "palavras_encontradas": [
         "enrichedCount",
         "módulo",
@@ -393,8 +387,8 @@
         "withSeedFallback"
       ],
       "passou": true,
-      "tempo_ms": 26431,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: alto\nEscopo: backend/src/services/feedService.js — função withSeedFallback\n\nHERMES\n- Contexto fornecido: DIFF + arquivo completo\n- Regra §53 aplicada: foco exclusivo nas linhas do DIFF\n- Confidence: 0.95\n\nSCANNER\n- Função `withSeedFallback` recebe `fetchedItems` e deveria retornar array combinado + ordenado\n- Linha original (correta): `return [...fetchedItems, ",
+      "tempo_ms": 12248,
+      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: médio\nEscopo: `withSeedFallback` em `backend/src/services/feedService.js`\n\nHERMES\n- Contexto fornecido via diff §53 — evidência completa.\n- Regra §53 ativada: confidence ≥ 0.85 (fixo em 0.95).\n- Nenhuma outra parte do arquivo é relevante.\n\nSCANNER\n- Função `withSeedFallback(fetchedItems = [])` recebe array de itens obtidos das fontes.\n- Versão original (buggy n",
       "palavras_encontradas": [
         "push",
         "spread",
@@ -422,8 +416,8 @@
         "acumulando"
       ],
       "passou": true,
-      "tempo_ms": 24210,
-      "answer": "MISSÃO RECEBIDA\nTipo: bug fix\nRisco: crítico\nEscopo: backend/src/jobs/refreshScheduler.js (linha 22)\n\nHERMES\n- DIFF fornecido pelo usuário, §53 ativado\n- Linhas removidas (-): verificação e parada do scheduledTask anterior\n- Linhas adicionadas (+): criação direta de novo cron job sem parar o anterior\n- Evidence: presente (código atual do arquivo)\n\nSCANNER\n- Em `startRefreshScheduler()`, `scheduled",
+      "tempo_ms": 15149,
+      "answer": "MISSÃO RECEBIDA  \nTipo: bug fix  \nRisco: alto  \nEscopo: `backend/src/jobs/refreshScheduler.js`  \n\nHERMES  \nContexto fornecido: arquivo completo com a linha `scheduledTask = cron.schedule(...)` sem a verificação anterior de stop. Diff confirma remoção das duas linhas de segurança. Bug claro: acúmulo de cron jobs em cada chamada de `startRefreshScheduler`.  \n\nSCANNER  \n`startRefreshScheduler()` cria",
       "palavras_encontradas": [
         "scheduledTask",
         "stop",
