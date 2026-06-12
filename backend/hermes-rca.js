@@ -1,7 +1,11 @@
 'use strict';
 
+const fs   = require('fs');
+const path = require('path');
+
 /**
  * §49 — HERMES MULTI-PROVIDER FALLBACK
+ * §72 — Evidence-Gated Escalation (Fase 1)
  *
  * Ref: SDDF_SPEC.md § PIPELINE CANÔNICO — Lei Arquitetural
  * Restaurado e adaptado da V2.2.2 para V3.0.0.
@@ -13,6 +17,10 @@
  * Se todos falharem: { ok: false, requires_manual_review: true }.
  * Groq: payload guard (>20K chars → skip; STRESS-11 fix §66).
  * Timeout por provider: 30s padrão (adaptável via opts.timeout).
+ *
+ * §72 Escalation: se provider anterior timeoutou E resultado atual
+ * fix_type==='none' E há próximo provider disponível → escalar.
+ * Cada escalação registrada em .vision-memory/hermes_low_confidence.jsonl.
  */
 
 /* ── Registry de providers ─────────────────────────────────────── */
@@ -70,6 +78,41 @@ const PROVIDER_REGISTRY = {
     type:      'openai'
   }
 };
+
+/* ── §72 Evidence-Gated Escalation helpers ─────────────────────── */
+
+/** Detecta se erro foi timeout (AbortSignal.timeout ou mensagem) */
+function isTimeoutError(err) {
+  return err.name === 'TimeoutError' ||
+         err.name === 'AbortError'   ||
+         (err.message && /timeout/i.test(err.message));
+}
+
+/** Extrai fix_type do JSON embutido na resposta do LLM */
+function extractFixType(answer) {
+  try {
+    const m = answer.match(/```json\s*([\s\S]*?)```/);
+    const parsed = JSON.parse(m ? m[1] : answer);
+    return (parsed.fix_type || '').toLowerCase();
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Append de entrada no log de baixa confiança (.vision-memory) */
+function appendLowConfidenceLog(entry) {
+  try {
+    const dir = path.join(process.cwd(), '.vision-memory');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.appendFileSync(
+      path.join(dir, 'hermes_low_confidence.jsonl'),
+      JSON.stringify(entry) + '\n',
+      'utf8'
+    );
+  } catch (e) {
+    console.log('[HERMES §72] low-confidence log write failed: ' + e.message);
+  }
+}
 
 /* ── Ordem dos providers ────────────────────────────────────────── */
 function getProviderOrder() {
@@ -161,8 +204,10 @@ async function callProvider(id, systemPrompt, userMessage, opts) {
  * @param {number}  [opts.timeout=30000]  — timeout por provider (ms)
  */
 async function callHermes(systemPrompt, userMessage, opts) {
-  const order  = getProviderOrder();
-  const msgLen = userMessage.length;
+  const order          = getProviderOrder();
+  const msgLen         = userMessage.length;
+  let   prevWasTimeout = false;
+  const providersTried = [];
 
   for (let i = 0; i < order.length; i++) {
     const id  = order[i];
@@ -181,13 +226,43 @@ async function callHermes(systemPrompt, userMessage, opts) {
     console.log('[HERMES §49] Tentando provider: ' + cfg.name + '...');
     try {
       const result = await callProvider(id, systemPrompt, userMessage, opts);
+      providersTried.push(id);
+
+      /* §72 Evidence-Gate: se anterior timeoutou e este respondeu "nenhum bug"
+       * sem evidência, não é confiável — escalar para o próximo provider.      */
+      if (prevWasTimeout && extractFixType(result.answer) === 'none') {
+        const hasNext = order.slice(i + 1).some(nid => {
+          const ncfg = PROVIDER_REGISTRY[nid];
+          return ncfg && !(ncfg.payloadLimit && msgLen > ncfg.payloadLimit);
+        });
+
+        if (hasNext) {
+          console.log(
+            '[HERMES §72] ' + cfg.name + ': fix_type=none após timeout anterior — ' +
+            'baixa confiança, escalando para próximo provider...'
+          );
+          appendLowConfidenceLog({
+            timestamp:      new Date().toISOString(),
+            providers_tried: providersTried.slice(),
+            escalated_from:  id,
+            final_decision:  'none_low_confidence',
+            payload_size:    msgLen
+          });
+          prevWasTimeout = false;
+          continue;
+        }
+      }
+
       console.log('[HERMES §49] Respondido por: ' + cfg.name + ' (' + result.model_used + ')');
       return result;
     } catch (err) {
+      providersTried.push(id);
+      prevWasTimeout = isTimeoutError(err);
       const nextId   = order[i + 1];
       const nextName = nextId ? (PROVIDER_REGISTRY[nextId] ? PROVIDER_REGISTRY[nextId].name : nextId) : null;
       console.log(
         '[HERMES §49] ' + cfg.name + ' falhou (' + err.message.slice(0, 80) + ')' +
+        (prevWasTimeout ? ' [TIMEOUT]' : '') +
         (nextName ? ' — tentando ' + nextName + '...' : '')
       );
     }
