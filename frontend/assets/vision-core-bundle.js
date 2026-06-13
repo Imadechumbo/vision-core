@@ -5661,6 +5661,42 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     return inv;
   }());
 
+  // §73.6 — Stack tag → leigo-friendly card metadata
+  var STACK_EXPLAINER = {
+    'node-js':         { icon: '🖥️',  label: 'Backend Node.js',        explain: 'Processa pedidos, login e regras do sistema.' },
+    'python':          { icon: '🐍',  label: 'Backend Python',          explain: 'Motor do sistema, ideal para IA e análise de dados.' },
+    'react':           { icon: '⚛️',  label: 'Interface (React)',       explain: 'Tela que o usuário vê, atualiza sem recarregar a página.' },
+    'typescript':      { icon: '🔷',  label: 'TypeScript',              explain: 'JavaScript com verificação de erros — código mais seguro.' },
+    'javascript':      { icon: '📜',  label: 'JavaScript',              explain: 'Linguagem que faz a página interativa no navegador.' },
+    'html-css':        { icon: '🎨',  label: 'Layout (HTML/CSS)',       explain: 'Estrutura visual e estilos do site.' },
+    'api-backend':     { icon: '🔌',  label: 'API Backend',             explain: 'Conexão entre frontend e banco de dados.' },
+    'rest-api':        { icon: '🔗',  label: 'API REST',                explain: 'Protocolo padrão para comunicação entre sistemas.' },
+    'database':        { icon: '🗄️',  label: 'Banco de Dados',          explain: 'Armazena informações dos usuários e do sistema.' },
+    'postgresql':      { icon: '🐘',  label: 'PostgreSQL',              explain: 'Banco de dados robusto e confiável.' },
+    'mongodb':         { icon: '🍃',  label: 'MongoDB',                 explain: 'Banco de dados flexível, ótimo para dados variáveis.' },
+    'auth':            { icon: '🔐',  label: 'Autenticação',            explain: 'Login, senha, sessão e controle de quem acessa o quê.' },
+    'billing-enabled': { icon: '💳',  label: 'Pagamentos',              explain: 'Cobrança, planos e assinatura dos clientes.' },
+    'saas-fullstack':  { icon: '☁️',  label: 'SaaS Completo',          explain: 'Produto web com backend, frontend e banco integrados.' },
+    'dashboard-admin': { icon: '📊',  label: 'Painel Admin',            explain: 'Área de controle para gerenciar usuários e dados.' },
+    'cli-utility':     { icon: '⌨️',  label: 'Ferramenta CLI',          explain: 'Programa rodado no terminal por desenvolvedores.' },
+    'llm':             { icon: '🤖',  label: 'Inteligência Artificial',  explain: 'Usa modelos de linguagem (IA) para gerar ou processar texto.' },
+    'security':        { icon: '🛡️',  label: 'Segurança',               explain: 'Proteções contra ataques e acessos não autorizados.' },
+    'docker':          { icon: '🐳',  label: 'Docker',                  explain: 'Empacota o sistema para rodar igual em qualquer lugar.' },
+    'redis':           { icon: '⚡',  label: 'Cache (Redis)',            explain: 'Armazena dados temporários para respostas mais rápidas.' },
+    'go':              { icon: '🚀',  label: 'Backend Go',              explain: 'Linguagem de alta performance para sistemas críticos.' },
+    'stripe':          { icon: '💰',  label: 'Stripe',                  explain: 'Plataforma de pagamentos integrada ao sistema.' },
+    'email':           { icon: '📧',  label: 'E-mail',                  explain: 'Envio de notificações e confirmações por e-mail.' },
+    'jwt':             { icon: '🎫',  label: 'Tokens JWT',              explain: 'Autorização segura sem guardar sessão no servidor.' },
+    'websocket':       { icon: '📡',  label: 'Tempo Real',              explain: 'Comunicação instantânea entre servidor e navegador.' },
+    'file-upload':     { icon: '📁',  label: 'Upload de Arquivos',      explain: 'Envio e armazenamento de arquivos pelos usuários.' },
+    'landing-page':    { icon: '🏠',  label: 'Página Inicial',          explain: 'Página de apresentação do produto para visitantes.' },
+    'vue':             { icon: '💚',  label: 'Interface (Vue)',          explain: 'Framework para criar interfaces interativas.' },
+    'nextjs':          { icon: '▲',   label: 'Next.js',                 explain: 'React com geração de páginas no servidor (mais rápido).' },
+    'fastapi':         { icon: '⚡',  label: 'FastAPI',                 explain: 'Framework Python rápido para criar APIs.' },
+    'graphql':         { icon: '◆',   label: 'GraphQL',                 explain: 'API flexível — cliente pede exatamente o que precisa.' },
+    'microservices':   { icon: '🧩',  label: 'Microsserviços',          explain: 'Sistema dividido em partes independentes.' },
+  };
+
   // Show home view — HOME is exclusive; workspace completely hidden
   function _sfShowHome() {
     _sfHomeVisible = true;
@@ -7603,7 +7639,14 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var confClr  = confPct >= 80 ? '#4ade80' : confPct >= 60 ? '#f59e0b' : '#f87171';
     var meta     = '';
     if (c.project_type) meta += '<span style="color:#38bdf8">' + _esc(c.project_type) + '</span>';
-    if (c.stack && c.stack.length) meta += ' &nbsp;<span style="color:#64748b">·</span>&nbsp; <span style="color:#94a3b8">' + c.stack.map(_esc).join(', ') + '</span>';
+    if (c.stack && c.stack.length) {
+      // §73.6 — stack cards legíveis para leigos
+      var stackCards = c.stack.map(function (tag) {
+        var info = STACK_EXPLAINER[tag] || { icon: '⚙️', label: tag, explain: 'Componente técnico do projeto.' };
+        return '<span title="' + _esc(info.explain) + '" style="display:inline-flex;align-items:center;gap:3px;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:2px 8px;font-size:10px;color:#cbd5e1;cursor:default;white-space:nowrap">' + info.icon + ' ' + _esc(info.label) + '</span>';
+      }).join(' ');
+      meta += ' &nbsp;<span style="color:#64748b">·</span>&nbsp; <span style="display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;vertical-align:middle">' + stackCards + '</span>';
+    }
     meta += ' &nbsp;<span style="color:#64748b">·</span>&nbsp; <span style="color:' + confClr + '">' + confPct + '% confiança</span>';
     explanEl.innerHTML = meta + '<br><br>' + _esc(c.explanation || '');
 
@@ -7665,6 +7708,77 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       } else {
         specsWrap.style.display = 'none';
       }
+    }
+
+    // §73.6 — Pacote Completo Sugerido (confidence >= 0.6 e specs existem)
+    var pkgContainer = panel.querySelector('.vc-architect-pkg');
+    if (!pkgContainer) {
+      pkgContainer = document.createElement('div');
+      pkgContainer.className = 'vc-architect-pkg';
+      panel.appendChild(pkgContainer);
+    }
+    var showPkg = (c.confidence || 0) >= 0.6 && specs.length > 0;
+    if (showPkg) {
+      var _stackReadable = (c.stack || []).map(function (tag) {
+        var info = STACK_EXPLAINER[tag] || { icon: '⚙️', label: tag };
+        return info.icon + ' ' + info.label;
+      }).join(', ');
+      var _sf03Text = 'Projeto: ' + (c.project_type || 'Site') +
+        '\nStack: ' + _stackReadable +
+        '\nSpecs de referência:\n' + specs.map(function (s) { return '  • ' + s.id + ' — ' + s.title; }).join('\n') +
+        '\n\n(gerado pelo Agente Arquiteto a partir do pedido original)';
+
+      pkgContainer.innerHTML =
+        '<div style="margin-top:10px;border-top:1px solid #1e293b;padding-top:8px">' +
+          '<button type="button" class="vc-arch-pkg-toggle" style="background:none;border:1px solid #334155;color:#94a3b8;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;width:100%;text-align:left">📦 VER CONFIGURAÇÃO COMPLETA SUGERIDA</button>' +
+          '<div class="vc-arch-pkg-body" style="display:none;margin-top:8px">' +
+            '<div style="font-size:11px;color:#64748b;margin-bottom:6px">Tipo: <span style="color:#38bdf8">' + _esc(c.project_type || '') + '</span></div>' +
+            '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">' +
+              (c.stack || []).map(function (tag) {
+                var info = STACK_EXPLAINER[tag] || { icon: '⚙️', label: tag, explain: 'Componente técnico do projeto.' };
+                return '<span title="' + _esc(info.explain) + '" style="display:inline-flex;align-items:center;gap:3px;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:2px 8px;font-size:10px;color:#cbd5e1;cursor:default">' + info.icon + ' ' + _esc(info.label) + '</span>';
+              }).join('') +
+            '</div>' +
+            '<div style="font-size:11px;color:#64748b;margin-bottom:4px">Specs de referência (' + specs.length + '):</div>' +
+            '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;max-height:100px;overflow-y:auto;padding-left:4px">' +
+              specs.map(function (s) {
+                return '<div style="padding:1px 0"><span style="font-family:monospace;color:#475569">' + _esc(s.id) + '</span> — ' + _esc(s.title) + '</div>';
+              }).join('') +
+            '</div>' +
+            '<button type="button" class="vc-arch-sf03-btn" data-sf03text="' + _esc(_sf03Text) + '" style="background:#1e40af;border:none;color:#e2e8f0;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;width:100%;text-align:center">➡️ ENVIAR PARA COMPOSITOR DE MISSÃO (SF-03)</button>' +
+          '</div>' +
+        '</div>';
+
+      // Toggle expand/collapse
+      var _toggleBtn = pkgContainer.querySelector('.vc-arch-pkg-toggle');
+      var _pkgBody   = pkgContainer.querySelector('.vc-arch-pkg-body');
+      if (_toggleBtn && _pkgBody) {
+        _toggleBtn.onclick = function () {
+          var open = _pkgBody.style.display !== 'none';
+          _pkgBody.style.display = open ? 'none' : '';
+          _toggleBtn.textContent = open ? '📦 VER CONFIGURAÇÃO COMPLETA SUGERIDA' : '📦 OCULTAR CONFIGURAÇÃO';
+        };
+      }
+      // Send to SF-03
+      var _sf03Btn = pkgContainer.querySelector('.vc-arch-sf03-btn');
+      if (_sf03Btn) {
+        _sf03Btn.onclick = function () {
+          var txt = _sf03Btn.dataset.sf03text;
+          _sfSetArchitectMode(false);
+          setSoftwareFactoryModule('mission_composer');
+          var inp = document.getElementById('vcSfChatInput');
+          if (inp && txt) {
+            inp.value = txt;
+            setTimeout(function () {
+              inp.focus();
+              inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 150);
+          }
+        };
+      }
+      pkgContainer.style.display = '';
+    } else {
+      pkgContainer.style.display = 'none';
     }
 
     panel.style.display = '';
