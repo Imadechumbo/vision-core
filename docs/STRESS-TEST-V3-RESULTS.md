@@ -1,6 +1,6 @@
 # Vision Core — Stress Test V3 Results
 
-Data: 2026-06-13T12:38:36.296Z
+Data: 2026-06-13T13:29:19.798Z
 Vision Core URL: http://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com
 Dashboard: http://localhost:3101
 
@@ -12,7 +12,7 @@ Dashboard: http://localhost:3101
 | PASS | 15 |
 | FAIL | 0 |
 | Taxa de acerto | 100% |
-| Tempo médio | 9996ms |
+| Tempo médio | 9520ms |
 
 ## Por Bloco
 
@@ -25,152 +25,152 @@ Dashboard: http://localhost:3101
 ## Resultados Detalhados
 
 ### STRESS-26 — clearTimeout comentado — AbortController aborta após fetch concluído
-**Bloco:** E | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 6137ms
+**Bloco:** E | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 12476ms
 **Sintoma:** requests concluídas abortadas pelo controller — erros intermitentes
 **Esperadas:** clearTimeout, timer, abort, finally
 **Encontradas:** clearTimeout, timer, abort, finally
 ```
-```json {   "diagnosis": "O bug está na função fetchJson, linha 286 (dentro do finally). A linha responsável por limpar o timeout (clearTimeout(timer)) foi comentada, impedindo que o timer seja cancelado após a conclusão da requisição. Isso causa vaz
+```json {   "diagnosis": "A linha `// clearTimeout(timer); // bug: timer não cancelado` comentou a chamada que limpava o timer do AbortController no bloco `finally` da função `fetchJson`. Isso faz com que o timeout nunca seja cancelado após a requisi
 ```
 
 
 ### STRESS-27 — catch em readJson relança erro — crash em cache corrompido
-**Bloco:** E | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 3410ms
+**Bloco:** E | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 4653ms
 **Sintoma:** arquivo de cache corrompido → SyntaxError → servidor crasha sem fallback
 **Esperadas:** catch, throw, fallback, SyntaxError
 **Encontradas:** catch, throw, fallback
 ```
-```json {   "diagnosis": "O catch foi alterado de retornar fallback para lançar exceção, quebrando todas as funções que dependiam do fallback quando o cache não existe",   "file": "backend/src/services/cacheService.js",   "fix_type": "code_patch",   
+```json {   "diagnosis": "O catch no readJson foi alterado de retornar fallback (comportamento tolerante a falhas) para lançar uma exceção (comportamento que quebra o fluxo), causando falha em todas as funções que dependem de readJson (readCache, rea
 ```
 
 
 ### STRESS-28 — hideEmptyContainer setTimeout 260ms → 0ms — animação pulada
-**Bloco:** E | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 3849ms
+**Bloco:** E | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 5875ms
 **Sintoma:** feed blocks somem sem animação — layout quebra durante transição
 **Esperadas:** setTimeout, 260, delay, animation
-**Encontradas:** setTimeout, 260
+**Encontradas:** setTimeout, 260, delay
 ```
-```json {   "diagnosis": "O timeout de 260ms para a animação de recolhimento do feed foi reduzido para 0ms, removendo a transição visual suave e causando um comportamento abrupto/instantâneo que pode ser percebido como 'problema' na interface.",   "f
+```json {   "diagnosis": "O setTimeout em hideEmptyContainer foi alterado de 260ms para 0ms, removendo o delay de animação de colapso do feed-block. Isso faz com que a classe 'feed-block-collapsing' seja removida instantaneamente, impedindo a animaçã
 ```
 
 
 ### STRESS-29 — rankGameCoverCandidates — sort confidence asc em vez de desc
-**Bloco:** E | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 17978ms
+**Bloco:** E | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 3441ms
 **Sintoma:** capas com menor confiança selecionadas — imagens erradas exibidas
 **Esperadas:** confidence, sort, invertido, b.confidence
-**Encontradas:** confidence, b.confidence
+**Encontradas:** confidence, sort, b.confidence
 ```
-```json {   "diagnosis": "Ordenação por confiança invertida: `a.confidence - b.confidence` ordena em ordem crescente, priorizando capas com menor confiança. O correto é decrescente (maior confiança primeiro).",   "file": "backend/src/services/gameCov
+```json {   "diagnosis": "Bug de ordenação inversa. O diff mostra que a linha correta `b.confidence - a.confidence` foi alterada para `a.confidence - b.confidence`, invertendo a ordenação dos resultados. Isto faz com que as piores correspondências ap
 ```
 
 
 ### STRESS-30 — __TNG_CONFIG_READY__ await comentado — feeds iniciam sem config
-**Bloco:** E | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 7281ms
+**Bloco:** E | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 7263ms
 **Sintoma:** feeds inicializam antes da URL da API estar resolvida — requests para URL errada
 **Esperadas:** __TNG_CONFIG_READY__, await, init, config
 **Encontradas:** __TNG_CONFIG_READY__, await, init, config
 ```
-```json {   "diagnosis": "await de inicialização da config foi comentado, init roda sem garantia de config pronta — pode quebrar renderização que depende de configuração global (__TNG_CONFIG_READY__)",   "file": "front/assets/js/feeds.js",   "fix_typ
+```json {   "diagnosis": "A espera pela configuração global (__TNG_CONFIG_READY__) foi comentada, fazendo com que init() seja chamado antes da configuração estar pronta, podendo causar falhas em funcionalidades dependentes.",   "file": "front/assets/
 ```
 
 
 ### STRESS-31 — URL typo '/api/news/latest' → '/api/nwes/latest'
-**Bloco:** F | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 10038ms
+**Bloco:** F | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 11997ms
 **Sintoma:** feed principal retorna 404 — lista de notícias vazia
 **Esperadas:** nwes, typo, 404, latest
-**Encontradas:** nwes, typo, 404, latest
+**Encontradas:** nwes, typo, latest
 ```
-```json {   "diagnosis": "Typo na URL da API: '/api/nwes/latest?limit=18' (faltando 's') em fetchHomePayloadFallback. Causa requisição para endpoint inválido, resultando em erro 404 e perda da seção 'Últimas notícias'.",   "file": "front/assets/js/fe
+```json {   "diagnosis": "Typo no path da API: '/api/nwes/latest?limit=18' foi introduzido no lugar de '/api/news/latest?limit=18', causando falha na requisição da seção 'Últimas notícias' (hero e listagem).",   "file": "front/assets/js/feeds.js",   
 ```
 
 
 ### STRESS-32 — safeLimit max(120) → max(0) — zero itens em todas as rotas
-**Bloco:** F | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 6208ms
+**Bloco:** F | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 6830ms
 **Sintoma:** todas as rotas /latest, /category retornam 0 itens
 **Esperadas:** safeLimit, Math.min, 0, limit
 **Encontradas:** safeLimit, Math.min, 0, limit
 ```
-```json {   "diagnosis": "A função safeLimit retorna Math.min(parsed, 0) em vez de Math.min(parsed, 120), fazendo com que todos os limites de consulta sejam 0, quebrando paginação e carregamento de notícias.",   "file": "backend/src/routes/newsRoutes
+```json {   "diagnosis": "safeLimit() retorna Math.min(parsed, 0) que sempre resulta em 0, fazendo todas as queries de notícias retornarem 0 itens — site fica vazio",   "file": "backend/src/routes/newsRoutes.js",   "fix_type": "code_patch",   "patch"
 ```
 
 
 ### STRESS-33 — COVER_CACHE_TTL_MS = 0 — cache de capa expira imediatamente
-**Bloco:** F | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 13068ms
+**Bloco:** F | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 9482ms
 **Sintoma:** cache expira antes de ser lido — API externa chamada a cada request
 **Esperadas:** COVER_CACHE_TTL_MS, TTL, 0, expiresAt
 **Encontradas:** COVER_CACHE_TTL_MS, TTL, 0
 ```
-```json {   "diagnosis": "COVER_CACHE_TTL_MS foi alterado de 6 horas (6 * 60 * 60 * 1000) para 0ms, desabilitando completamente o cache de capas. Cada requisição de capa faz uma nova chamada HTTP às APIs externas, causando lentidão extrema no site de
+```json {   "diagnosis": "COVER_CACHE_TTL_MS foi alterado para 0 (fallback value = 0), desabilitando o cache de capas. Cada requisição refaz chamadas às APIs externas, causando latência e possíveis rate limits.",   "file": "backend/src/services/gameC
 ```
 
 
 ### STRESS-34 — hermesService sort score desc → asc — agentes piores rankeados primeiro
-**Bloco:** F | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 4196ms
+**Bloco:** F | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 10068ms
 **Sintoma:** agentes com menor score rankeados primeiro — diagnóstico invertido
 **Esperadas:** sort, score, b.score, invertido
-**Encontradas:** sort, score, b.score
+**Encontradas:** sort, score, b.score, invertido
 ```
-```json {   "diagnosis": "Ordenação invertida em calculateRanking: .sort((a, b) => a.score - b.score) ordena crescente (menor score primeiro), mas ranking deve ser decrescente (maior score primeiro). O código correto era .sort((a, b) => b.score - a.s
+```json {   "diagnosis": "Linha 176 em backend/src/services/hermesService.js: sort foi modificado de descendente (b.score - a.score) para ascendente (a.score - b.score), invertendo a ordem do ranking.",   "file": "backend/src/services/hermesService.j
 ```
 
 
 ### STRESS-35 — hasBlockedSource invertido — fontes legítimas bloqueadas
-**Bloco:** F | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 10920ms
+**Bloco:** F | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 27513ms
 **Sintoma:** rawg/steamgriddb bloqueados — zero capas encontradas
 **Esperadas:** hasBlockedSource, invertido, social, fanart
 **Encontradas:** hasBlockedSource, social, fanart
 ```
-```json {   "diagnosis": "hasBlockedSource foi invertida por negação adicional (linha 89), fazendo com que fontes sociais/fanart sejam aceitas em vez de bloqueadas, o que permite capas não confiáveis e causa o problema exibido no site.",   "file": "b
+```json {   "diagnosis": "Bug em hasBlockedSource: negação lógica invertida (linha 92). O operador ! faz com que fontes 'social' e 'fanart' (tier 5) sejam aceitas em vez de bloqueadas.",   "file": "backend/src/services/gameCoverService.js",   "fix_ty
 ```
 
 
 ### STRESS-36 — CORS allowedOrigins.has() invertido — origens legítimas bloqueadas
-**Bloco:** G | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 13989ms
+**Bloco:** G | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 8031ms
 **Sintoma:** CORS headers ausentes para origens legítimas — browser bloqueia requests
 **Esperadas:** CORS, allowedOrigins, invertido, origin
 **Encontradas:** CORS, allowedOrigins, origin
 ```
-```json {   "diagnosis": "Condição CORS invertida por negação dupla: `!allowedOrigins.has(origin)` seta cabeçalho para origens NÃO permitidas, e não seta para origens permitidas. Causa falha de CORS no site.",   "file": "backend/src/app.js",   "fix_t
+```json {   "diagnosis": "O operador de negação `!` foi incorretamente adicionado na condição CORS em `backend/src/app.js` linha 59, fazendo com que origens não autorizadas recebam o header `Access-Control-Allow-Origin`, enquanto origens autorizadas 
 ```
 
 
 ### STRESS-37 — express.json limit "1mb" → "1b" — todos os POSTs falham com 413
-**Bloco:** G | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 10565ms
+**Bloco:** G | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 5215ms
 **Sintoma:** qualquer POST com body → 413 Payload Too Large
 **Esperadas:** limit, 1b, json, payload
 **Encontradas:** limit, 1b, json, payload
 ```
-```json {   "diagnosis": "Bug introduzido no arquivo backend/src/app.js: o limit do express.json foi alterado de \"1mb\" para \"1b\" (1 byte), impedindo o recebimento de qualquer corpo de requisição JSON maior que 1 byte, o que quebra todas as rotas 
+```json {   "diagnosis": "Arquivo backend/src/app.js: linha com `app.use(express.json({ limit: \"1b\" }));` — limit de payload de JSON definido como 1 byte (inválido), rejeitando requisições com corpo JSON, causando erro 413 ou falha silenciosa no pa
 ```
 
 
 ### STRESS-38 — requireRefreshAuth token check invertido — válido rejeitado, inválido aceito
-**Bloco:** G | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 15139ms
+**Bloco:** G | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 6189ms
 **Sintoma:** token correto rejeitado; qualquer token inválido aceito no refresh
 **Esperadas:** expectedToken, invertido, auth, candidate
-**Encontradas:** expectedToken, auth, candidate
+**Encontradas:** expectedToken, invertido, auth, candidate
 ```
-```json {   "diagnosis": "Condição de autorização invertida em requireRefreshAuth — linha original candidate !== expectedToken foi alterada para candidate === expectedToken, fazendo com que tokens válidos recebam 401 e tokens inválidos passem.",   "f
+```json {   "diagnosis": "Inversão lógica na condição de autorização em requireRefreshAuth: candidate === expectedToken deveria ser candidate !== expectedToken, causando rejeição de tokens válidos e aceitação de tokens inválidos.",   "file": "backend
 ```
 
 
 ### STRESS-39 — normalizeFeedItem summary.slice(0,280) → slice(0,0) — resumos vazios
-**Bloco:** G | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 836ms
+**Bloco:** G | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 11659ms
 **Sintoma:** campo summary de todas as notícias vira string vazia
 **Esperadas:** slice, summary, 280, vazio
-**Encontradas:** slice, 280
+**Encontradas:** slice, summary, 280, vazio
 ```
-```json {   "diagnosis": "Resumo do feed está sendo truncado a 0 caracteres, resultando em string vazia; o slice deveria ser de 280 caracteres.",   "file": "backend/src/services/normalizer.js",   "fix_type": "code_patch",   "patch": {     "search": "
+```json {   "diagnosis": "No arquivo `backend/src/services/normalizer.js`, linha 37, o método `slice(0, 0)` foi introduzido em substituição ao `slice(0, 280)` original. Isso faz com que todas as strings de `summary` sejam truncadas para 0 caracteres,
 ```
 
 
 ### STRESS-40 — isHealthy retorna !response.ok — URL saudável descartada
-**Bloco:** G | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 26319ms
+**Bloco:** G | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 12112ms
 **Sintoma:** API principal (200 OK) descartada — fallback para URL inválida selecionada
 **Esperadas:** isHealthy, response.ok, invertido, fallback
-**Encontradas:** isHealthy, response.ok
+**Encontradas:** isHealthy, response.ok, invertido
 ```
-```json {   "diagnosis": "A função isHealthy inverteu a lógica de health check: ao trocar `return response.ok` por `return !response.ok`, ela passa a considerar endpoints saudáveis (HTTP 200-299) como não saudáveis e endpoints não saudáveis como saud
+```json {   "diagnosis": "Função isHealthy inverteu retorno: `return !response.ok;` faz com que APIs não saudáveis sejam consideradas saudáveis e vice-versa.",   "file": "front/assets/js/config.js",   "fix_type": "code_patch",   "patch": {     "searc
 ```
 
 
