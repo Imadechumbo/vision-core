@@ -65,11 +65,12 @@ jobs:
 
       - name: Upload vision-core binary
         uses: actions/upload-artifact@v4
+        continue-on-error: true   # quota exhaustion must not block CI
         with:
           name: vision-core-exe-${{ github.sha }}
           path: bin/vision-core.exe
-          if-no-files-found: error
-          retention-days: 30
+          if-no-files-found: warn
+          retention-days: 1
 
   vision-core-pipeline:
     name: 🧠 Vision Core — Hermes RCA + Patch + PASS GOLD

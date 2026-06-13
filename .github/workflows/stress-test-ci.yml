@@ -238,8 +238,9 @@ jobs:
       - name: Upload RESULTS artifacts
         if: always()
         uses: actions/upload-artifact@v4
+        continue-on-error: true   # quota exhaustion must not block CI
         with:
           name: stress-test-results-${{ github.run_number }}
           path: docs/STRESS-TEST-*-RESULTS.*
           if-no-files-found: warn
-          retention-days: 90
+          retention-days: 3
