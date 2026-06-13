@@ -15,9 +15,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare deploy directory (exclude downloads/)
+        run: |
+          cp -r frontend /tmp/vision-pages-deploy
+          rm -rf /tmp/vision-pages-deploy/downloads
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy frontend --project-name=visioncoreai --branch=main
+          command: pages deploy /tmp/vision-pages-deploy --project-name=visioncoreai --branch=main
