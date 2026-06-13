@@ -511,9 +511,11 @@
     "test:software-factory-firewall-final-authority-review-unit": "node --no-deprecation tools/tests/software-factory/software-factory-firewall-final-authority-review.test.mjs",
     "test:software-factory-release-execution-firewall-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-execution-firewall-phase-gate.test.mjs",
     "test:software-factory": "node --no-deprecation tools/run-software-factory-test.mjs",
-    "test:software-factory-tooling-conflict-reduction-unit": "node --no-deprecation tools/tests/software-factory/software-factory-tooling-conflict-reduction.test.mjs"
+    "test:software-factory-tooling-conflict-reduction-unit": "node --no-deprecation tools/tests/software-factory/software-factory-tooling-conflict-reduction.test.mjs",
+    "test:e2e:architect": "playwright test tests/e2e/architect.spec.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "adm-zip": "^0.5.17",
     "axios": "^1.17.0",
     "form-data": "^4.0.5"
