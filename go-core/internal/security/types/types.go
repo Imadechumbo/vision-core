@@ -134,6 +134,19 @@ func ClassifySourceContext(relPath string) string {
 		}
 	}
 
+	// 3b. frontend bundles — arquivos JS/CSS gerados (minificados ou concatenados)
+	// Padrões: *-bundle.js, *-bundle.css, *.min.js, *.min.css,
+	//          vision-core-*.js dentro de frontend/assets/
+	if strings.HasSuffix(base, "-bundle.js") ||
+		strings.HasSuffix(base, "-bundle.css") ||
+		strings.HasSuffix(base, ".min.js") ||
+		strings.HasSuffix(base, ".min.css") ||
+		(strings.Contains(norm, "frontend/assets/") &&
+			strings.HasPrefix(base, "vision-core-") &&
+			strings.HasSuffix(base, ".js")) {
+		return SourceContextGenerated
+	}
+
 	// 4. snapshots do vision-core
 	if strings.Contains(norm, ".vision-snapshots") {
 		return SourceContextSnapshot
