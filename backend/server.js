@@ -2221,6 +2221,82 @@ app.post('/api/unzip-context', async (req, res) => {
   }
 });
 
+/* ── /api/spec — SF Spec Library ────────────────────────────────────────── */
+const SPEC_DIR = path.join(ROOT, '..', 'docs', 'spec-library');
+
+/** Lazy in-memory cache. Reload on first request after server start. */
+let _specCache = null;
+
+function loadSpecCache() {
+  if (_specCache) return _specCache;
+  const cache = { byId: {}, byModule: {} };
+  try {
+    const files = fs.readdirSync(SPEC_DIR)
+      .filter(f => f.endsWith('.json') && !f.startsWith('_'));
+    for (const file of files) {
+      const mod  = file.replace('.json', '');  // e.g. "SF-01"
+      const data = JSON.parse(fs.readFileSync(path.join(SPEC_DIR, file), 'utf8'));
+      cache.byModule[mod] = data.specs || [];
+      for (const spec of data.specs || []) cache.byId[spec.id] = spec;
+    }
+    console.log(`[spec] loaded ${Object.keys(cache.byId).length} specs from ${SPEC_DIR}`);
+  } catch (e) {
+    console.warn('[spec] loadSpecCache error:', e.message);
+  }
+  _specCache = cache;
+  return cache;
+}
+
+/**
+ * GET /api/spec
+ *   ?module=SF-01          → all specs for module
+ *   ?module=SF-01&type=EDGE → filtered by type
+ *   ?module=SF-01&tag=nodejs → filtered by tag
+ *   (no query)             → index of all modules with counts
+ *
+ * GET /api/spec/:id        → single spec (e.g. SF-01-001)
+ */
+app.get('/api/spec/:id', (req, res) => {
+  const cache = loadSpecCache();
+  const id    = req.params.id.toUpperCase();
+  const spec  = cache.byId[id];
+  if (!spec) return res.status(404).json({ ok: false, error: 'spec_not_found', id, time: now() });
+  return sendOk(res, { spec });
+});
+
+app.get('/api/spec', (req, res) => {
+  const cache = loadSpecCache();
+  const { module: modParam, type: typeParam, tag: tagParam } = req.query;
+
+  if (modParam) {
+    // Normalise: "sf-01" → "SF-01", "01" → "SF-01"
+    let mod = modParam.toUpperCase();
+    if (/^\d{2}$/.test(mod)) mod = `SF-${mod}`;
+    else if (!mod.startsWith('SF-')) mod = `SF-${mod}`;
+
+    const specs = cache.byModule[mod];
+    if (!specs) {
+      return res.status(404).json({ ok: false, error: 'module_not_found', module: mod, time: now() });
+    }
+
+    let result = specs;
+    if (typeParam) result = result.filter(s => s.type && s.type.toUpperCase() === typeParam.toUpperCase());
+    if (tagParam)  result = result.filter(s => Array.isArray(s.tags) && s.tags.includes(tagParam.toLowerCase()));
+
+    return sendOk(res, { module: mod, count: result.length, specs: result });
+  }
+
+  // Index
+  const modules = Object.entries(cache.byModule)
+    .map(([mod, specs]) => ({ module: mod, count: specs.length }))
+    .sort((a, b) => a.module.localeCompare(b.module));
+
+  return sendOk(res, {
+    total:   Object.keys(cache.byId).length,
+    modules,
+  });
+});
+
 /* SAFE 404 — nunca 405 */
 app.all('/api/*', (req, res) => {
   return res.status(404).json({
