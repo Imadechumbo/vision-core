@@ -1,0 +1,41 @@
+# ================================================================
+# §75 — Mirror GitHub → GitLab (Opção A)
+# NOTA: Este workflow usa ~10s de Actions minutes por push.
+#       Só ativar quando quota GitHub Actions for suficiente.
+#       Enquanto quota estiver baixa: usar push manual (Opção B).
+#
+# Secrets necessários (GitHub → Settings → Secrets → Actions):
+#   GITLAB_MIRROR_TOKEN  — GitLab Personal Access Token (scope: write_repository)
+#   GITLAB_USERNAME      — seu username no GitLab (ex: imadechumbo)
+# ================================================================
+name: Mirror to GitLab
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    # §75 — Desabilitado até quota GitHub Actions ser suficiente.
+    #        Mudar para: if: true  (para ativar)
+    if: false
+    runs-on: ubuntu-latest
+    name: Push frontend changes to GitLab mirror
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to GitLab
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+          GITLAB_USER: ${{ secrets.GITLAB_USERNAME }}
+        run: |
+          git remote add gitlab \
+            "https://oauth2:${GITLAB_TOKEN}@gitlab.com/${GITLAB_USER}/vision-core-pages.git"
+          git push gitlab HEAD:main --force

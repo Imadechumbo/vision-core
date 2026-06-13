@@ -1,4 +1,7 @@
-name: Deploy to Cloudflare Pages
+# §75 — Deploy migrado para GitLab CI (ver .gitlab-ci.yml)
+# GitHub mantido como backup; job desabilitado com if: false
+# Para reativar: remover "if: false" do job deploy abaixo
+name: Deploy to Cloudflare Pages [DISABLED — see .gitlab-ci.yml]
 
 on:
   push:
@@ -9,6 +12,7 @@ on:
 
 jobs:
   deploy:
+    if: false  # §75 — desabilitado; deploy via GitLab CI
     runs-on: ubuntu-latest
     name: Deploy frontend to Cloudflare Pages
     steps:

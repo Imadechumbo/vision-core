@@ -1,0 +1,37 @@
+# ================================================================
+# Vision Core — GitLab CI · Deploy Cloudflare Pages
+# §75 — GitHub mantido para stress tests + PASS GOLD
+#        GitLab CI usado exclusivamente para deploy de frontend
+#
+# Variáveis obrigatórias (Settings → CI/CD → Variables):
+#   CLOUDFLARE_API_TOKEN   — Cloudflare API Token (Cloudflare Pages: Edit)
+#   CLOUDFLARE_ACCOUNT_ID  — Cloudflare Account ID
+# ================================================================
+
+stages:
+  - deploy
+
+deploy_cloudflare_pages:
+  stage: deploy
+  image: node:20-alpine
+  rules:
+    # Só roda quando há mudanças em frontend/** na branch main
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - frontend/**/*
+    # Permite trigger manual a qualquer momento
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+  before_script:
+    - npm install -g wrangler --quiet
+  script:
+    # Exclui downloads/ (binários pesados não vão para Pages)
+    - mkdir -p /tmp/vision-pages-deploy
+    - cp -r frontend/* /tmp/vision-pages-deploy/
+    - rm -rf /tmp/vision-pages-deploy/downloads
+    - echo "Deploying to visioncoreai.pages.dev..."
+    - wrangler pages deploy /tmp/vision-pages-deploy
+        --project-name visioncoreai
+        --branch main
+  environment:
+    name: production
+    url: https://visioncoreai.pages.dev
