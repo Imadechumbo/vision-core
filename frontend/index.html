@@ -2042,6 +2042,7 @@
   <!-- Page header -->
   <div class="vc-sf-page-header">
     <button class="vc-sf-back-btn" id="vcSfBackBtn" type="button">← COCKPIT</button>
+    <button class="vc-sf-sidebar-toggle panels-on" id="vcSfSidebarToggle" type="button" title="Ocultar painéis laterais">⊞</button>
     <div class="vc-sf-page-identity">
       <p class="vc-sf-eyebrow">SOFTWARE FACTORY • PROJECT BUILDER • AGENT ORCHESTRATION</p>
       <h1 class="vc-sf-title">MONTAR PROJETO DO ZERO</h1>
@@ -2064,7 +2065,8 @@
   </div>
 
   <!-- ── Horizontal SDDF timeline ──────────────────────────── -->
-  <div class="vc-sf-sddf-timeline-h" aria-label="SDDF Timeline">
+  <div class="vc-sf-sddf-timeline-h sddf-collapsed" aria-label="SDDF Timeline">
+    <button class="vc-sf-sddf-collapse-btn" id="vcSfSddfCollapseBtn" type="button" title="Expandir pipeline SDDF">▼ PIPELINE</button>
     <div id="vcSfSddfSteps">
       <div class="vc-sf-sddf-step" data-sf-module="project_builder">
         <div class="vc-sf-sddf-node-circle">01</div>
@@ -2204,7 +2206,7 @@
             <span class="vc-sf-llm-title">⬡ SOFTWARE FACTORY LLM CONTROL</span>
             <span class="vc-sf-llm-status" id="vcSfLlmStatus">LOCAL · SEM BACKEND · SEM API</span>
             <!-- §73.2b — Arquiteto mode toggle -->
-            <button id="vcSfArchitectToggleBtn" type="button" style="margin-left:auto;background:#0f172a;border:1px solid #334155;color:#94a3b8;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;letter-spacing:.5px;font-family:inherit;display:none" title="Alternar modo Arquiteto">🏛️ ARQUITETO</button>
+            <button id="vcSfArchitectToggleBtn" type="button" style="margin-left:auto;background:#1e3a8a;border:1px solid #3b82f6;color:#93c5fd;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;letter-spacing:.5px;font-family:inherit" title="Alternar modo Arquiteto">🏛️ ARQUITETO</button>
           </div>
           <div class="vc-sf-chat-stream" id="vcSfChatStream">
             <div class="vc-sf-chat-hint">Descreva sua ideia de projeto aqui. Mensagens ficam na memória local desta sessão. Nenhuma informação é enviada a servidores externos.</div>
