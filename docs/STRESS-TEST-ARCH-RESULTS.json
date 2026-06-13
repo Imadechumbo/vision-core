@@ -1,0 +1,551 @@
+{
+  "data": "2026-06-13T12:27:58.498Z",
+  "resultado": "16/16 PASS automáticos (100%)",
+  "total": 19,
+  "auto": 16,
+  "manual": 3,
+  "cenarios": [
+    {
+      "id": "ARCH-01",
+      "categoria": "CAT-1",
+      "descricao": "Leigo: \"quero um site para minha padaria\"",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 2810,
+      "http_status": 200,
+      "confidence": 0.75,
+      "stack": [
+        "html-css",
+        "javascript"
+      ],
+      "specs_count": 8,
+      "qs_count": 0,
+      "provider_used": "cerebras",
+      "detalhes": [
+        {
+          "nome": "confidence in [0.55, 0.92]",
+          "ok": true
+        },
+        {
+          "nome": "stack has frontend tag",
+          "ok": true
+        },
+        {
+          "nome": "explanation not empty",
+          "ok": true
+        },
+        {
+          "nome": "status 2xx",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-02",
+      "categoria": "CAT-1",
+      "descricao": "Técnico: API REST Python FastAPI + PostgreSQL + JWT",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 19749,
+      "http_status": 200,
+      "confidence": 0.95,
+      "stack": [
+        "python",
+        "fastapi",
+        "postgresql",
+        "jwt"
+      ],
+      "specs_count": 6,
+      "qs_count": 0,
+      "provider_used": "openrouter",
+      "detalhes": [
+        {
+          "nome": "confidence >= 0.75",
+          "ok": true
+        },
+        {
+          "nome": "stack has python+db+auth groups",
+          "ok": true
+        },
+        {
+          "nome": "specs_suggested not empty",
+          "ok": true
+        },
+        {
+          "nome": "status 2xx",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-03",
+      "categoria": "CAT-1",
+      "descricao": "Semi-leigo: \"aquele negócio de loja online com botão de comprar\"",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 15523,
+      "http_status": 200,
+      "confidence": 0.6,
+      "stack": [],
+      "specs_count": 8,
+      "qs_count": 0,
+      "provider_used": "openrouter",
+      "detalhes": [
+        {
+          "nome": "confidence in [0.40, 0.85]",
+          "ok": true
+        },
+        {
+          "nome": "stack suggests ecommerce/billing or webapp",
+          "ok": true
+        },
+        {
+          "nome": "status 2xx",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-04",
+      "categoria": "CAT-1",
+      "descricao": "Técnico: migração monolito Node para microsserviços com message queue",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 13775,
+      "http_status": 200,
+      "confidence": 0.85,
+      "stack": [
+        "node-js",
+        "message-queue"
+      ],
+      "specs_count": 4,
+      "qs_count": 0,
+      "provider_used": "openrouter",
+      "detalhes": [
+        {
+          "nome": "tags contain microservices or node-js",
+          "ok": true
+        },
+        {
+          "nome": "specs_suggested not empty",
+          "ok": true
+        },
+        {
+          "nome": "status 2xx",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-05",
+      "categoria": "CAT-2",
+      "descricao": "Vago: \"quero um app\" → baixa confiança + perguntas + sem specs",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 6197,
+      "http_status": 200,
+      "confidence": 0.3,
+      "stack": [],
+      "specs_count": 0,
+      "qs_count": 4,
+      "provider_used": "openrouter",
+      "detalhes": [
+        {
+          "nome": "confidence < 0.65",
+          "ok": true
+        },
+        {
+          "nome": "open_questions >= 2",
+          "ok": true
+        },
+        {
+          "nome": "specs vazio (confiança baixa)",
+          "ok": true
+        },
+        {
+          "nome": "status 2xx",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-06",
+      "categoria": "CAT-2",
+      "descricao": "Mínimo: \"oi\" → confiança muito baixa + perguntas",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 2823,
+      "http_status": 200,
+      "confidence": 0.3,
+      "stack": [],
+      "specs_count": 0,
+      "qs_count": 3,
+      "provider_used": "openrouter",
+      "detalhes": [
+        {
+          "nome": "confidence < 0.55",
+          "ok": true
+        },
+        {
+          "nome": "open_questions > 0",
+          "ok": true
+        },
+        {
+          "nome": "status 2xx",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-07",
+      "categoria": "CAT-2",
+      "descricao": "Ambíguo: \"quero algo parecido com o que fizeram para outro cliente\"",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 10862,
+      "http_status": 200,
+      "confidence": 0.35,
+      "stack": [],
+      "specs_count": 0,
+      "qs_count": 4,
+      "provider_used": "openrouter",
+      "detalhes": [
+        {
+          "nome": "confidence < 0.72",
+          "ok": true
+        },
+        {
+          "nome": "open_questions > 0",
+          "ok": true
+        },
+        {
+          "nome": "status 2xx",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-08",
+      "categoria": "CAT-3",
+      "descricao": "SaaS fullstack Node+React → specs SF-01",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 4450,
+      "http_status": 200,
+      "confidence": 0.9,
+      "stack": [
+        "node.js",
+        "react"
+      ],
+      "specs_count": 5,
+      "qs_count": 0,
+      "provider_used": "openrouter",
+      "detalhes": [
+        {
+          "nome": "specs_suggested has SF-01-xxx",
+          "ok": true
+        },
+        {
+          "nome": "stack has saas/node/react",
+          "ok": true
+        },
+        {
+          "nome": "status 2xx",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-09",
+      "categoria": "CAT-3",
+      "descricao": "CLI utilitário: \"ferramenta de linha de comando para renomear arquivos\"",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 3516,
+      "http_status": 200,
+      "confidence": 0.85,
+      "stack": [
+        "python"
+      ],
+      "specs_count": 8,
+      "qs_count": 0,
+      "provider_used": "openrouter",
+      "detalhes": [
+        {
+          "nome": "tags contain cli-utility or backend lang",
+          "ok": true
+        },
+        {
+          "nome": "status 2xx",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-10",
+      "categoria": "CAT-3",
+      "descricao": "Dashboard admin: \"gerenciar usuários e relatórios\"",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 6401,
+      "http_status": 200,
+      "confidence": 0.75,
+      "stack": [
+        "react",
+        "node-js",
+        "rest-api"
+      ],
+      "specs_count": 8,
+      "qs_count": 0,
+      "provider_used": "openrouter",
+      "detalhes": [
+        {
+          "nome": "tags contain dashboard-admin or auth",
+          "ok": true
+        },
+        {
+          "nome": "status 2xx",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-11",
+      "categoria": "CAT-3",
+      "descricao": "Billing: \"SaaS com assinatura mensal e pagamento recorrente\"",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 4552,
+      "http_status": 200,
+      "confidence": 0.85,
+      "stack": [
+        "node-js",
+        "react",
+        "typescript"
+      ],
+      "specs_count": 4,
+      "qs_count": 0,
+      "provider_used": "openrouter",
+      "detalhes": [
+        {
+          "nome": "tags contain billing-enabled or stripe",
+          "ok": true
+        },
+        {
+          "nome": "status 2xx",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-12",
+      "categoria": "CAT-3",
+      "descricao": "Segurança: \"sistema seguro contra invasão e vazamento de dados\"",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 7520,
+      "http_status": 200,
+      "confidence": 0.55,
+      "stack": [],
+      "specs_count": 0,
+      "qs_count": 3,
+      "provider_used": "openrouter",
+      "detalhes": [
+        {
+          "nome": "tags contain security or auth",
+          "ok": true
+        },
+        {
+          "nome": "status 2xx",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-13",
+      "categoria": "CAT-4",
+      "descricao": "Fallback título: \"agendamento para salão de beleza\"",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 4539,
+      "http_status": 200,
+      "confidence": 0.73,
+      "stack": [
+        "node-js",
+        "react"
+      ],
+      "specs_count": 8,
+      "qs_count": 0,
+      "provider_used": "cerebras",
+      "detalhes": [
+        {
+          "nome": "specs not empty OR confidence < 0.60 (fallback ok)",
+          "ok": true
+        },
+        {
+          "nome": "status 2xx",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-14",
+      "categoria": "CAT-5",
+      "descricao": "Manual: clicar spec sugerida → módulo SF correto ativa + highlight",
+      "manual": true,
+      "passou": null,
+      "tempo_ms": null,
+      "http_status": null,
+      "confidence": null,
+      "stack": null,
+      "specs_count": 0,
+      "qs_count": 0,
+      "provider_used": null,
+      "detalhes": [
+        {
+          "nome": "checklist manual — executar no browser",
+          "ok": null
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-15",
+      "categoria": "CAT-5",
+      "descricao": "Manual: \"Pacote Completo\" → cards de stack com ícone+label+tooltip",
+      "manual": true,
+      "passou": null,
+      "tempo_ms": null,
+      "http_status": null,
+      "confidence": null,
+      "stack": null,
+      "specs_count": 0,
+      "qs_count": 0,
+      "provider_used": null,
+      "detalhes": [
+        {
+          "nome": "checklist manual — executar no browser",
+          "ok": null
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-16",
+      "categoria": "CAT-5",
+      "descricao": "Manual: \"Enviar para SF-03\" → módulo muda, Arquiteto desativa, textarea populado",
+      "manual": true,
+      "passou": null,
+      "tempo_ms": null,
+      "http_status": null,
+      "confidence": null,
+      "stack": null,
+      "specs_count": 0,
+      "qs_count": 0,
+      "provider_used": null,
+      "detalhes": [
+        {
+          "nome": "checklist manual — executar no browser",
+          "ok": null
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-17",
+      "categoria": "CAT-6",
+      "descricao": "Erro: { message: \"\" } → status 400, error=message_required",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 148,
+      "http_status": 400,
+      "confidence": null,
+      "stack": null,
+      "specs_count": 0,
+      "qs_count": 0,
+      "provider_used": "—",
+      "detalhes": [
+        {
+          "nome": "status == 400",
+          "ok": true
+        },
+        {
+          "nome": "error field present",
+          "ok": true
+        },
+        {
+          "nome": "error=\"message_required\"",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-18",
+      "categoria": "CAT-6",
+      "descricao": "Erro: { message: \"a\".repeat(4001) } → status 400, error=message_too_long",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 147,
+      "http_status": 400,
+      "confidence": null,
+      "stack": null,
+      "specs_count": 0,
+      "qs_count": 0,
+      "provider_used": "—",
+      "detalhes": [
+        {
+          "nome": "status == 400",
+          "ok": true
+        },
+        {
+          "nome": "error field present",
+          "ok": true
+        },
+        {
+          "nome": "error=\"message_too_long\"",
+          "ok": true
+        }
+      ],
+      "erro": null
+    },
+    {
+      "id": "ARCH-19",
+      "categoria": "CAT-6",
+      "descricao": "Erro: {} sem campo message → status 400, error presente",
+      "manual": false,
+      "passou": true,
+      "tempo_ms": 148,
+      "http_status": 400,
+      "confidence": null,
+      "stack": null,
+      "specs_count": 0,
+      "qs_count": 0,
+      "provider_used": "—",
+      "detalhes": [
+        {
+          "nome": "status == 400",
+          "ok": true
+        },
+        {
+          "nome": "error field present",
+          "ok": true
+        }
+      ],
+      "erro": null
+    }
+  ]
+}
