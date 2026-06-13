@@ -1,8 +1,8 @@
 {
   "module": "SF-05",
   "module_name": "Preview de Criação",
-  "parsed_count": 1,
-  "needs_review_count": 9,
+  "parsed_count": 10,
+  "needs_review_count": 0,
   "specs": [
     {
       "id": "SF-05-001",
@@ -19,6 +19,205 @@
       "fail_criteria": null,
       "tags": [
         "happy-path"
+      ]
+    },
+    {
+      "id": "SF-05-002",
+      "module": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": null,
+      "title": "Preview diferente para cada tipo de projeto",
+      "pre": "SF-01, SF-02 com tipos diferentes",
+      "input": {
+        "tipo_A": "SaaS Fullstack",
+        "tipo_B": "CLI Utility"
+      },
+      "expected_output": [
+        "preview A ≠ preview B",
+        "estrutura de arquivos reflete tipo de projeto"
+      ],
+      "pass_criteria": "previews diferentes para tipos diferentes",
+      "fail_criteria": "previews idênticos para tipos diferentes",
+      "tags": [
+        "preview",
+        "variacao",
+        "tipos-de-projeto"
+      ]
+    },
+    {
+      "id": "SF-05-003",
+      "module": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": null,
+      "title": "Preview diferente para cada template",
+      "pre": "SF-01 configurado, templates diferentes no SF-02",
+      "input": {
+        "template_A": "SDDF Standard",
+        "template_B": "API Microservice"
+      },
+      "expected_output": [
+        "preview A ≠ preview B",
+        "estrutura de pastas reflete template"
+      ],
+      "pass_criteria": "previews diferentes para templates diferentes",
+      "fail_criteria": "previews idênticos para templates diferentes",
+      "tags": [
+        "preview",
+        "template",
+        "variacao"
+      ]
+    },
+    {
+      "id": "SF-05-004",
+      "module": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": "EDGE",
+      "title": "preview sem SF-01 e SF-02 completos",
+      "pre": "SF-01 e/ou SF-02 NÃO completos",
+      "input": {
+        "acao": "gerar preview"
+      },
+      "expected_output": [
+        "ação bloqueada",
+        "mensagem indica módulos anteriores necessários"
+      ],
+      "pass_criteria": "sistema bloqueia preview sem SF-01+SF-02",
+      "fail_criteria": "preview gerado sem pré-condições",
+      "tags": [
+        "edge",
+        "sf-01-sf-02-obrigatorio",
+        "precondition"
+      ]
+    },
+    {
+      "id": "SF-05-005",
+      "module": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": "SECURITY CRÍTICO",
+      "title": "file_creation_allowed nunca pode ser true no frontend",
+      "pre": "SF-05 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer input no módulo SF-05"
+      },
+      "expected_output": [
+        "file_creation_allowed = false em todos os cenários"
+      ],
+      "pass_criteria": "file_creation_allowed sempre false",
+      "fail_criteria": "file_creation_allowed é true em qualquer condição",
+      "tags": [
+        "security-critico",
+        "file-creation-allowed",
+        "bloqueio"
+      ]
+    },
+    {
+      "id": "SF-05-006",
+      "module": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": "SECURITY CRÍTICO",
+      "title": "frontend_file_write nunca pode ser true",
+      "pre": "SF-05 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer input no módulo SF-05"
+      },
+      "expected_output": [
+        "frontend_file_write = false em todos os cenários"
+      ],
+      "pass_criteria": "frontend_file_write sempre false",
+      "fail_criteria": "frontend_file_write é true em qualquer condição",
+      "tags": [
+        "security-critico",
+        "frontend-file-write",
+        "bloqueio"
+      ]
+    },
+    {
+      "id": "SF-05-007",
+      "module": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": "SECURITY CRÍTICO",
+      "title": "backend_write_allowed nunca pode ser true",
+      "pre": "SF-05 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer input no módulo SF-05"
+      },
+      "expected_output": [
+        "backend_write_allowed = false em todos os cenários"
+      ],
+      "pass_criteria": "backend_write_allowed sempre false",
+      "fail_criteria": "backend_write_allowed é true em qualquer condição",
+      "tags": [
+        "security-critico",
+        "backend-write-allowed",
+        "bloqueio"
+      ]
+    },
+    {
+      "id": "SF-05-008",
+      "module": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": null,
+      "title": "Labels LOCKED visíveis para todas as capacidades",
+      "pre": "SF-05 ativo",
+      "input": {
+        "acao": "visualizar preview"
+      },
+      "expected_output": [
+        "LOCKED visível para file_creation",
+        "LOCKED visível para file_write",
+        "LOCKED visível para backend_write",
+        "LOCKED visível para command_execution"
+      ],
+      "pass_criteria": "todos os 4 labels LOCKED visíveis",
+      "fail_criteria": "qualquer label LOCKED ausente",
+      "tags": [
+        "labels-locked",
+        "preview",
+        "ui"
+      ]
+    },
+    {
+      "id": "SF-05-009",
+      "module": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": null,
+      "title": "Preview inclui estrutura de pastas esperada",
+      "pre": "SF-01, SF-02 configurados",
+      "input": {
+        "acao": "gerar preview"
+      },
+      "expected_output": [
+        "estrutura de pastas visível",
+        "pastas refletem template selecionado",
+        "sem arquivos criados"
+      ],
+      "pass_criteria": "estrutura presente, arquivos NÃO criados",
+      "fail_criteria": "estrutura ausente ou arquivos criados",
+      "tags": [
+        "preview",
+        "estrutura-pastas"
+      ]
+    },
+    {
+      "id": "SF-05-010",
+      "module": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": null,
+      "title": "Resetar contexto limpa preview",
+      "pre": "SF-05 com preview gerado",
+      "input": {
+        "acao": "RESETAR CONTEXTO"
+      },
+      "expected_output": [
+        "preview anterior limpo",
+        "campos retornam ao estado inicial"
+      ],
+      "pass_criteria": "preview limpo após reset",
+      "fail_criteria": "preview persiste após reset",
+      "tags": [
+        "reset",
+        "preview",
+        "limpar"
       ]
     }
   ]

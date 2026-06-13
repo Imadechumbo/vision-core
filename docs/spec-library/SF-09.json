@@ -1,7 +1,222 @@
 {
   "module": "SF-09",
   "module_name": "SaaS & API Roadmap",
-  "parsed_count": 0,
-  "needs_review_count": 10,
-  "specs": []
+  "parsed_count": 10,
+  "needs_review_count": 0,
+  "specs": [
+    {
+      "id": "SF-09-001",
+      "module": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "Todos os 6 controles estão LOCKED",
+      "pre": "SF-09 ativo",
+      "input": {
+        "acao": "visualizar módulo SF-09"
+      },
+      "expected_output": [
+        "saas_signup_enabled = LOCKED",
+        "login_enabled = LOCKED",
+        "billing_enabled = LOCKED",
+        "api_connectors_enabled = LOCKED",
+        "secrets_access_enabled = LOCKED",
+        "6/6 controles LOCKED visíveis"
+      ],
+      "pass_criteria": "todos os 6 controles LOCKED",
+      "fail_criteria": "qualquer controle não LOCKED",
+      "tags": [
+        "sf-09",
+        "controles",
+        "locked"
+      ]
+    },
+    {
+      "id": "SF-09-002",
+      "module": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "saas_signup_enabled sempre false",
+      "pre": "SF-09 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer ação"
+      },
+      "expected_output": [
+        "saas_signup_enabled = false"
+      ],
+      "pass_criteria": "saas_signup_enabled sempre false",
+      "fail_criteria": "saas_signup_enabled é true",
+      "tags": [
+        "saas-signup-enabled",
+        "false"
+      ]
+    },
+    {
+      "id": "SF-09-003",
+      "module": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "login_enabled sempre false",
+      "pre": "SF-09 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer ação"
+      },
+      "expected_output": [
+        "login_enabled = false"
+      ],
+      "pass_criteria": "login_enabled sempre false",
+      "fail_criteria": "login_enabled é true",
+      "tags": [
+        "login-enabled",
+        "false"
+      ]
+    },
+    {
+      "id": "SF-09-004",
+      "module": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "billing_enabled sempre false",
+      "pre": "SF-09 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer ação"
+      },
+      "expected_output": [
+        "billing_enabled = false"
+      ],
+      "pass_criteria": "billing_enabled sempre false",
+      "fail_criteria": "billing_enabled é true",
+      "tags": [
+        "billing-enabled",
+        "false"
+      ]
+    },
+    {
+      "id": "SF-09-005",
+      "module": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "api_connectors_enabled sempre false",
+      "pre": "SF-09 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer ação"
+      },
+      "expected_output": [
+        "api_connectors_enabled = false"
+      ],
+      "pass_criteria": "api_connectors_enabled sempre false",
+      "fail_criteria": "api_connectors_enabled é true",
+      "tags": [
+        "api-connectors-enabled",
+        "false"
+      ]
+    },
+    {
+      "id": "SF-09-006",
+      "module": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "secrets_access_enabled sempre false",
+      "pre": "SF-09 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer ação"
+      },
+      "expected_output": [
+        "secrets_access_enabled = false"
+      ],
+      "pass_criteria": "secrets_access_enabled sempre false",
+      "fail_criteria": "secrets_access_enabled é true",
+      "tags": [
+        "secrets-access-enabled",
+        "false"
+      ]
+    },
+    {
+      "id": "SF-09-007",
+      "module": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "Declaração de não-autoridade presente",
+      "pre": "SF-09 ativo",
+      "input": {
+        "acao": "visualizar módulo"
+      },
+      "expected_output": [
+        "declaração de não-autoridade para SaaS/API visível",
+        "controles marcados como não operacionais"
+      ],
+      "pass_criteria": "declaração de não-autoridade presente",
+      "fail_criteria": "declaração ausente",
+      "tags": [
+        "declaracao-nao-autoridade",
+        "saas-api"
+      ]
+    },
+    {
+      "id": "SF-09-008",
+      "module": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "Planos SaaS e API marcados como Pending",
+      "pre": "SF-09 ativo",
+      "input": {
+        "acao": "visualizar planos"
+      },
+      "expected_output": [
+        "plano SaaS = Pending",
+        "plano API = Pending",
+        "sem indicação de ativo"
+      ],
+      "pass_criteria": "ambos os planos Pending",
+      "fail_criteria": "qualquer plano marcado como ativo",
+      "tags": [
+        "planos",
+        "pending",
+        "saas",
+        "api"
+      ]
+    },
+    {
+      "id": "SF-09-009",
+      "module": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "Secrets Boundary: local only",
+      "pre": "SF-09 ativo",
+      "input": {
+        "acao": "verificar secrets boundary"
+      },
+      "expected_output": [
+        "secrets boundary = local only",
+        "sem transmissão de secrets para backend"
+      ],
+      "pass_criteria": "boundary local only confirmado",
+      "fail_criteria": "secrets transmitidos externamente",
+      "tags": [
+        "secrets-boundary",
+        "local-only"
+      ]
+    },
+    {
+      "id": "SF-09-010",
+      "module": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": "SECURITY CRÍTICO",
+      "title": "nenhum controle pode ser ativado no frontend",
+      "pre": "SF-09 ativo em qualquer estado",
+      "input": {
+        "tentativa": "ativar qualquer controle no frontend"
+      },
+      "expected_output": [
+        "todos os 6 controles permanecem false após tentativa de ativação"
+      ],
+      "pass_criteria": "nenhum controle ativável no frontend",
+      "fail_criteria": "qualquer controle ativado via frontend",
+      "tags": [
+        "security-critico",
+        "controles",
+        "frontend",
+        "bloqueio"
+      ]
+    }
+  ]
 }

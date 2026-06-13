@@ -1,8 +1,8 @@
 {
   "module": "SF-08",
   "module_name": "Painel Final",
-  "parsed_count": 1,
-  "needs_review_count": 9,
+  "parsed_count": 10,
+  "needs_review_count": 0,
   "specs": [
     {
       "id": "SF-08-001",
@@ -19,6 +19,223 @@
       "fail_criteria": null,
       "tags": [
         "happy-path"
+      ]
+    },
+    {
+      "id": "SF-08-002",
+      "module": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "Com cadeia incompleta mostra quais módulos faltam",
+      "pre": "SF-01 a SF-05 completos, SF-06 a SF-08 incompletos",
+      "input": {
+        "cadeia_status": "5/9 módulos completos"
+      },
+      "expected_output": [
+        "painel mostra 5 completos e 4 incompletos",
+        "lista de módulos faltando visível",
+        "product_chain_complete = false"
+      ],
+      "pass_criteria": "módulos faltando identificados corretamente",
+      "fail_criteria": "painel indica cadeia completa quando incompleta",
+      "tags": [
+        "cadeia-incompleta",
+        "modulos-faltando"
+      ]
+    },
+    {
+      "id": "SF-08-003",
+      "module": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "pass_gold_real_claimed sempre false no frontend",
+      "pre": "SF-08 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer ação"
+      },
+      "expected_output": [
+        "pass_gold_real_claimed = false em todos os cenários"
+      ],
+      "pass_criteria": "pass_gold_real_claimed sempre false",
+      "fail_criteria": "pass_gold_real_claimed é true",
+      "tags": [
+        "pass-gold-real-claimed",
+        "false",
+        "frontend"
+      ]
+    },
+    {
+      "id": "SF-08-004",
+      "module": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "production_touched sempre false no frontend",
+      "pre": "SF-08 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer ação"
+      },
+      "expected_output": [
+        "production_touched = false em todos os cenários"
+      ],
+      "pass_criteria": "production_touched sempre false",
+      "fail_criteria": "production_touched é true",
+      "tags": [
+        "production-touched",
+        "false",
+        "frontend"
+      ]
+    },
+    {
+      "id": "SF-08-005",
+      "module": "SF-08",
+      "module_name": "Painel Final",
+      "type": "SECURITY CRÍTICO",
+      "title": "nenhuma das 11 capacidades pode ser true",
+      "pre": "SF-08 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer ação"
+      },
+      "expected_output": [
+        "file_creation=false",
+        "command_execution=false",
+        "backend_write=false",
+        "pass_gold_real=false",
+        "production_touched=false",
+        "deploy=false",
+        "release=false",
+        "tag=false",
+        "saas_signup=false",
+        "billing=false",
+        "api_connectors=false"
+      ],
+      "pass_criteria": "todas as 11 capacidades false",
+      "fail_criteria": "qualquer das 11 capacidades é true",
+      "tags": [
+        "security-critico",
+        "capacidades",
+        "false",
+        "bloqueio"
+      ]
+    },
+    {
+      "id": "SF-08-006",
+      "module": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "Decisão do operador é campo obrigatório",
+      "pre": "SF-08 ativo, cadeia completa",
+      "input": {
+        "acao": "gerar relatório sem preencher decisão do operador"
+      },
+      "expected_output": [
+        "campo de decisão do operador obrigatório",
+        "relatório bloqueado sem decisão"
+      ],
+      "pass_criteria": "sistema exige decisão antes de gerar relatório",
+      "fail_criteria": "relatório gerado sem decisão do operador",
+      "tags": [
+        "decisao-operador",
+        "obrigatorio",
+        "relatorio"
+      ]
+    },
+    {
+      "id": "SF-08-007",
+      "module": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "Relatório final inclui todos os artefatos gerados",
+      "pre": "cadeia SF-01 a SF-08 completa",
+      "input": {
+        "acao": "gerar relatório final"
+      },
+      "expected_output": [
+        "setup (SF-01) no relatório",
+        "blueprint (SF-02)",
+        "prompt (SF-03)",
+        "pacote (SF-04)",
+        "preview (SF-05)",
+        "pacote de comando (SF-06)",
+        "recibo (SF-07)"
+      ],
+      "pass_criteria": "todos os 7 artefatos listados",
+      "fail_criteria": "qualquer artefato ausente",
+      "tags": [
+        "relatorio",
+        "artefatos",
+        "cadeia-completa"
+      ]
+    },
+    {
+      "id": "SF-08-008",
+      "module": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "Relatório inclui matriz de autoridade com todos FALSE",
+      "pre": "cadeia completa, relatório gerado",
+      "input": {
+        "acao": "visualizar matriz de autoridade"
+      },
+      "expected_output": [
+        "matriz de autoridade presente",
+        "deploy=false",
+        "release=false",
+        "tag=false",
+        "command_execution=false",
+        "file_creation=false",
+        "production_touched=false"
+      ],
+      "pass_criteria": "matriz presente com todos FALSE",
+      "fail_criteria": "matriz ausente ou qualquer campo TRUE",
+      "tags": [
+        "matriz-autoridade",
+        "false",
+        "relatorio"
+      ]
+    },
+    {
+      "id": "SF-08-009",
+      "module": "SF-08",
+      "module_name": "Painel Final",
+      "type": "EDGE",
+      "title": "relatório sem cadeia completa",
+      "pre": "cadeia incompleta (módulos faltando)",
+      "input": {
+        "acao": "gerar relatório final"
+      },
+      "expected_output": [
+        "relatório parcial ou bloqueado",
+        "mensagem indica módulos faltando",
+        "produto marcado como incompleto"
+      ],
+      "pass_criteria": "sistema indica cadeia incompleta sem gerar relatório falso",
+      "fail_criteria": "relatório completo gerado com cadeia incompleta",
+      "tags": [
+        "edge",
+        "cadeia-incompleta",
+        "relatorio"
+      ]
+    },
+    {
+      "id": "SF-08-010",
+      "module": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "SUMMARY ONLY label visível",
+      "pre": "SF-08 ativo",
+      "input": {
+        "acao": "visualizar painel final"
+      },
+      "expected_output": [
+        "label SUMMARY ONLY visível",
+        "sem indicação de execução real"
+      ],
+      "pass_criteria": "SUMMARY ONLY visível",
+      "fail_criteria": "label ausente",
+      "tags": [
+        "summary-only",
+        "label",
+        "painel"
       ]
     }
   ]

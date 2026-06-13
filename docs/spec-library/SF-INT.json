@@ -1,7 +1,247 @@
 {
   "module": "SF-INT",
   "module_name": "Integração cross-módulo",
-  "parsed_count": 0,
-  "needs_review_count": 10,
-  "specs": []
+  "parsed_count": 10,
+  "needs_review_count": 0,
+  "specs": [
+    {
+      "id": "SF-INT-001",
+      "module": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Estado do SF-01 persiste em todos os módulos posteriores",
+      "pre": "SF-01 configurado com tipo=SaaS Fullstack, stack=Node.js",
+      "input": {
+        "acao": "navegar para SF-02, SF-03, SF-04"
+      },
+      "expected_output": [
+        "tipo=SaaS Fullstack visível no SF-02",
+        "stack=Node.js disponível no SF-03",
+        "configuração SF-01 presente em todos os módulos"
+      ],
+      "pass_criteria": "estado SF-01 presente em SF-02 a SF-08",
+      "fail_criteria": "estado SF-01 perdido ao trocar módulo",
+      "tags": [
+        "integracao",
+        "persistencia-estado",
+        "sf-01"
+      ]
+    },
+    {
+      "id": "SF-INT-002",
+      "module": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Trocar tipo em SF-01 reseta módulos 02-09",
+      "pre": "SF-01 a SF-05 configurados com tipo=SaaS Fullstack",
+      "input": {
+        "acao": "trocar tipo",
+        "tipo_novo": "CLI Utility"
+      },
+      "expected_output": [
+        "SF-02 preview resetado",
+        "SF-03 prompt resetado",
+        "SF-04 pacote resetado",
+        "SF-05 preview resetado",
+        "módulos 02-09 retornam ao estado inicial"
+      ],
+      "pass_criteria": "todos os módulos 02-09 resetados após troca",
+      "fail_criteria": "qualquer módulo persiste dados do tipo anterior",
+      "tags": [
+        "integracao",
+        "reset",
+        "trocar-tipo"
+      ]
+    },
+    {
+      "id": "SF-INT-003",
+      "module": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "12 confirmações no engineer gate são cumulativas",
+      "pre": "cadeia SF-01 a SF-07 em andamento",
+      "input": {
+        "confirmacoes_anteriores": 5,
+        "novas_confirmacoes": 7
+      },
+      "expected_output": [
+        "total = 12 confirmações cumulativas",
+        "gate registra progresso",
+        "gate passa com 12/12"
+      ],
+      "pass_criteria": "confirmações acumuladas corretamente até 12/12",
+      "fail_criteria": "confirmações resetadas ou não acumuladas",
+      "tags": [
+        "engineer-gate",
+        "12-confirmacoes",
+        "cumulativo"
+      ]
+    },
+    {
+      "id": "SF-INT-004",
+      "module": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Agentes Hermes/Backend/Auth respondem no modo correto por orquestração",
+      "pre": "SF-01 com orquestração definida",
+      "input": {
+        "orquestração": "Hermes Review"
+      },
+      "expected_output": [
+        "agente Hermes ativo no modo correto",
+        "agente Backend ativo",
+        "agente Auth ativo"
+      ],
+      "pass_criteria": "agentes respondem no modo da orquestração selecionada",
+      "fail_criteria": "agentes respondem em modo incompatível",
+      "tags": [
+        "integracao",
+        "agentes",
+        "hermes",
+        "orquestracao"
+      ]
+    },
+    {
+      "id": "SF-INT-005",
+      "module": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "LLM output do compositor (SF-03) é consistente com template (SF-02)",
+      "pre": "SF-02 template=SDDF Standard, SF-03 executado",
+      "input": {
+        "template": "SDDF Standard"
+      },
+      "expected_output": [
+        "prompt do SF-03 referencia SDDF Standard",
+        "elementos do template presentes no prompt"
+      ],
+      "pass_criteria": "compositor usa dados do template",
+      "fail_criteria": "compositor gera prompt genérico sem referência ao template",
+      "tags": [
+        "integracao",
+        "sf-02",
+        "sf-03",
+        "template",
+        "compositor"
+      ]
+    },
+    {
+      "id": "SF-INT-006",
+      "module": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Pacote SF-04 é derivado do compositor SF-03",
+      "pre": "SF-03 compositor completado",
+      "input": {
+        "missao_composta": "prompt do SF-03"
+      },
+      "expected_output": [
+        "pacote SF-04 contém missão do SF-03",
+        "pacote deriva do prompt compositor"
+      ],
+      "pass_criteria": "dados do SF-03 presentes no pacote SF-04",
+      "fail_criteria": "pacote SF-04 ignora dados do SF-03",
+      "tags": [
+        "integracao",
+        "sf-03",
+        "sf-04",
+        "derivacao"
+      ]
+    },
+    {
+      "id": "SF-INT-007",
+      "module": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Preview SF-05 é consistente com template SF-02",
+      "pre": "SF-02 com template selecionado",
+      "input": {
+        "template": "API Microservice"
+      },
+      "expected_output": [
+        "preview SF-05 mostra estrutura de API Microservice",
+        "arquivos condizem com template"
+      ],
+      "pass_criteria": "preview reflete template do SF-02",
+      "fail_criteria": "preview inconsistente com template",
+      "tags": [
+        "integracao",
+        "sf-02",
+        "sf-05",
+        "preview",
+        "template"
+      ]
+    },
+    {
+      "id": "SF-INT-008",
+      "module": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Recibo SF-07 pode ser analisado mesmo sem SF-06 completo",
+      "pre": "SF-06 NÃO completo, recibo disponível",
+      "input": {
+        "recibo": "recibo válido",
+        "sf_06_status": "incompleto"
+      },
+      "expected_output": [
+        "análise do recibo gerada corretamente",
+        "SF-06 incompleto não bloqueia SF-07"
+      ],
+      "pass_criteria": "SF-07 funciona independente de SF-06",
+      "fail_criteria": "SF-07 bloqueia análise por SF-06 incompleto",
+      "tags": [
+        "integracao",
+        "sf-06",
+        "sf-07",
+        "independencia"
+      ]
+    },
+    {
+      "id": "SF-INT-009",
+      "module": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Painel final SF-08 agrega estado de todos os módulos",
+      "pre": "SF-01 a SF-07 com estados variados",
+      "input": {
+        "acao": "visualizar painel SF-08"
+      },
+      "expected_output": [
+        "SF-08 mostra status de SF-01 a SF-07",
+        "status reflete estado real de cada módulo"
+      ],
+      "pass_criteria": "painel agrega estado real de todos os módulos",
+      "fail_criteria": "painel mostra estado incorreto",
+      "tags": [
+        "integracao",
+        "sf-08",
+        "agregacao",
+        "estado"
+      ]
+    },
+    {
+      "id": "SF-INT-010",
+      "module": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Cadeia completa: SF-01→02→03→04→05→06→07→08 = produto entregável",
+      "pre": "todos os 8 módulos completados",
+      "input": {
+        "acao": "verificar produto entregável"
+      },
+      "expected_output": [
+        "produto entregável gerado",
+        "artefatos de todos os 8 módulos presentes",
+        "MANUAL HANDOFF pronto"
+      ],
+      "pass_criteria": "cadeia completa produz produto entregável",
+      "fail_criteria": "produto incompleto com cadeia completa",
+      "tags": [
+        "integracao",
+        "cadeia-completa",
+        "produto-entregavel",
+        "manual-handoff"
+      ]
+    }
+  ]
 }

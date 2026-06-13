@@ -1,8 +1,8 @@
 {
   "module": "SF-02",
   "module_name": "Templates de Projeto",
-  "parsed_count": 1,
-  "needs_review_count": 9,
+  "parsed_count": 10,
+  "needs_review_count": 0,
   "specs": [
     {
       "id": "SF-02-001",
@@ -22,6 +22,213 @@
       "tags": [
         "happy-path",
         "sddf-standard"
+      ]
+    },
+    {
+      "id": "SF-02-002",
+      "module": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "SaaS Baseline template",
+      "pre": "SF-01 com tipo=SaaS configurado",
+      "input": {
+        "template": "SaaS Baseline"
+      },
+      "expected_output": [
+        "blueprint inclui agentes SaaS (Backend, DB, Auth, Frontend, Billing)",
+        "estrutura de pastas SaaS presente"
+      ],
+      "pass_criteria": "blueprint gerado com agentes SaaS e estrutura",
+      "fail_criteria": "blueprint ausente ou incompleto",
+      "tags": [
+        "saas-baseline",
+        "template",
+        "blueprint"
+      ]
+    },
+    {
+      "id": "SF-02-003",
+      "module": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "API Microservice template",
+      "pre": "SF-01 ativo",
+      "input": {
+        "template": "API Microservice"
+      },
+      "expected_output": [
+        "blueprint inclui agentes API (Backend, Scanner, Auth)",
+        "estrutura de pastas microservice presente",
+        "sem agentes de UI"
+      ],
+      "pass_criteria": "blueprint gerado para microservice sem UI",
+      "fail_criteria": "blueprint com UI ou agentes incorretos",
+      "tags": [
+        "api-microservice",
+        "template",
+        "blueprint"
+      ]
+    },
+    {
+      "id": "SF-02-004",
+      "module": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "CLI Utility template",
+      "pre": "SF-01 ativo",
+      "input": {
+        "template": "CLI Utility"
+      },
+      "expected_output": [
+        "blueprint inclui agentes CLI (Backend, Scanner)",
+        "estrutura mínima para CLI",
+        "sem agentes de UI/DB"
+      ],
+      "pass_criteria": "blueprint CLI gerado corretamente",
+      "fail_criteria": "blueprint com componentes desnecessários",
+      "tags": [
+        "cli-utility",
+        "template",
+        "blueprint"
+      ]
+    },
+    {
+      "id": "SF-02-005",
+      "module": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": "EDGE",
+      "title": "template sem tipo selecionado no SF-01",
+      "pre": "SF-01 ativo, tipo NÃO configurado",
+      "input": {
+        "template": "SDDF Standard"
+      },
+      "expected_output": [
+        "ação bloqueada",
+        "mensagem indica que SF-01 deve ser completado primeiro"
+      ],
+      "pass_criteria": "sistema bloqueia template sem SF-01 completo",
+      "fail_criteria": "template gerado sem SF-01 configurado",
+      "tags": [
+        "edge",
+        "sf-01-obrigatorio",
+        "precondition"
+      ]
+    },
+    {
+      "id": "SF-02-006",
+      "module": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "Blueprint inclui: stack, pastas, arquivos iniciais, agentes reserva",
+      "pre": "SF-01 e SF-02 configurados",
+      "input": {
+        "template": "SDDF Standard"
+      },
+      "expected_output": [
+        "stack presente no blueprint",
+        "estrutura de pastas presente",
+        "lista de arquivos iniciais presente",
+        "agentes reserva listados"
+      ],
+      "pass_criteria": "todos os 4 componentes presentes no blueprint",
+      "fail_criteria": "qualquer componente ausente",
+      "tags": [
+        "blueprint",
+        "stack",
+        "pastas",
+        "agentes-reserva"
+      ]
+    },
+    {
+      "id": "SF-02-007",
+      "module": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "Blueprint inclui: sequência de prompts, checklist validação",
+      "pre": "SF-01 e SF-02 configurados",
+      "input": {
+        "template": "SDDF Standard"
+      },
+      "expected_output": [
+        "sequência de prompts presente no blueprint",
+        "checklist de validação presente"
+      ],
+      "pass_criteria": "blueprint contém sequência de prompts e checklist",
+      "fail_criteria": "sequência ou checklist ausente",
+      "tags": [
+        "blueprint",
+        "prompts",
+        "checklist"
+      ]
+    },
+    {
+      "id": "SF-02-008",
+      "module": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "Blueprint inclui: avisos de risco, ações proibidas, próxima ação segura",
+      "pre": "SF-01 e SF-02 configurados",
+      "input": {
+        "template": "SDDF Standard"
+      },
+      "expected_output": [
+        "avisos de risco visíveis",
+        "lista de ações proibidas presente",
+        "próxima ação segura indicada"
+      ],
+      "pass_criteria": "todos os 3 elementos de segurança presentes",
+      "fail_criteria": "qualquer elemento de segurança ausente",
+      "tags": [
+        "blueprint",
+        "avisos-risco",
+        "acoes-proibidas"
+      ]
+    },
+    {
+      "id": "SF-02-009",
+      "module": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": "SECURITY",
+      "title": "blueprint nunca inclui comandos de execução real",
+      "pre": "SF-01 e SF-02 configurados com qualquer template",
+      "input": {
+        "template": "qualquer"
+      },
+      "expected_output": [
+        "blueprint contém apenas texto e estrutura",
+        "sem comandos executáveis",
+        "exec_real = BLOQUEADA"
+      ],
+      "pass_criteria": "nenhum comando de execução real no blueprint",
+      "fail_criteria": "blueprint contém comando executável (rm, git push, deploy…)",
+      "tags": [
+        "security",
+        "exec-real",
+        "blueprint"
+      ]
+    },
+    {
+      "id": "SF-02-010",
+      "module": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "Mudar template reseta preview anterior",
+      "pre": "SF-02 com preview gerado para template A",
+      "input": {
+        "acao": "trocar template",
+        "template_novo": "API Microservice"
+      },
+      "expected_output": [
+        "preview anterior limpo",
+        "novo preview para API Microservice gerado",
+        "sem dados do template anterior"
+      ],
+      "pass_criteria": "preview anterior removido ao trocar template",
+      "fail_criteria": "preview anterior persiste após troca",
+      "tags": [
+        "template",
+        "reset",
+        "preview"
       ]
     }
   ]

@@ -1,8 +1,8 @@
 {
   "module": "SF-01",
   "module_name": "Montar Projeto do Zero",
-  "parsed_count": 1,
-  "needs_review_count": 9,
+  "parsed_count": 10,
+  "needs_review_count": 0,
   "specs": [
     {
       "id": "SF-01-001",
@@ -29,6 +29,226 @@
         "saas-fullstack",
         "node-js",
         "hermes-review"
+      ]
+    },
+    {
+      "id": "SF-01-002",
+      "module": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "API Backend + Python + Full Software Factory",
+      "pre": "módulo 01 ativo",
+      "input": {
+        "tipo": "API Backend",
+        "stack": "Python",
+        "orquestração": "Full Software Factory"
+      },
+      "expected_output": [
+        "resumo mostra tipo=API Backend, stack=Python, orquestração=Full Software Factory",
+        "modo = LOCAL PREVIEW",
+        "exec_real = BLOQUEADA"
+      ],
+      "pass_criteria": "tipo/stack/orquestração corretos no resumo",
+      "fail_criteria": "campo ausente ou exec_real desbloqueada",
+      "tags": [
+        "api-backend",
+        "python",
+        "full-software-factory"
+      ]
+    },
+    {
+      "id": "SF-01-003",
+      "module": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "Game/Indie + TypeScript + OpenSquad",
+      "pre": "módulo 01 ativo",
+      "input": {
+        "tipo": "Game/Indie",
+        "stack": "TypeScript",
+        "orquestração": "OpenSquad"
+      },
+      "expected_output": [
+        "resumo mostra tipo=Game/Indie, stack=TypeScript, orquestração=OpenSquad",
+        "modo = LOCAL PREVIEW",
+        "exec_real = BLOQUEADA",
+        "aviso de escala OpenSquad visível"
+      ],
+      "pass_criteria": "tipo/stack/orquestração corretos, aviso OpenSquad presente",
+      "fail_criteria": "campo ausente ou exec_real desbloqueada",
+      "tags": [
+        "game-indie",
+        "typescript",
+        "opensquad"
+      ]
+    },
+    {
+      "id": "SF-01-004",
+      "module": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "Dashboard Admin + React + Solo Agent",
+      "pre": "módulo 01 ativo",
+      "input": {
+        "tipo": "Dashboard Admin",
+        "stack": "React",
+        "orquestração": "Solo Agent"
+      },
+      "expected_output": [
+        "resumo mostra tipo=Dashboard Admin, stack=React, orquestração=Solo Agent",
+        "modo = LOCAL PREVIEW",
+        "exec_real = BLOQUEADA"
+      ],
+      "pass_criteria": "tipo/stack/orquestração corretos no resumo",
+      "fail_criteria": "campo ausente ou exec_real desbloqueada",
+      "tags": [
+        "dashboard-admin",
+        "react",
+        "solo-agent"
+      ]
+    },
+    {
+      "id": "SF-01-005",
+      "module": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": "EDGE",
+      "title": "tipo não selecionado → próxima ação deve bloquear",
+      "pre": "módulo 01 ativo, tipo NÃO selecionado",
+      "input": {
+        "tipo": null,
+        "stack": "Node.js",
+        "orquestração": "Hermes Review"
+      },
+      "expected_output": [
+        "próxima ação bloqueada",
+        "mensagem indica campo obrigatório ausente",
+        "exec_real = BLOQUEADA"
+      ],
+      "pass_criteria": "sistema bloqueia progressão e indica tipo ausente",
+      "fail_criteria": "sistema avança sem tipo selecionado",
+      "tags": [
+        "edge",
+        "tipo-ausente",
+        "bloqueio"
+      ]
+    },
+    {
+      "id": "SF-01-006",
+      "module": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": "SECURITY",
+      "title": "exec real nunca pode ser TRUE no módulo 01",
+      "pre": "módulo 01 ativo em qualquer estado",
+      "input": {
+        "tentativa": "forçar exec_real=true via qualquer input"
+      },
+      "expected_output": [
+        "exec_real = BLOQUEADA em todos os cenários",
+        "command_execution_enabled = false"
+      ],
+      "pass_criteria": "exec_real sempre false independente do input",
+      "fail_criteria": "exec_real é true em qualquer condição do módulo 01",
+      "tags": [
+        "security",
+        "exec-real",
+        "bloqueio"
+      ]
+    },
+    {
+      "id": "SF-01-007",
+      "module": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "Tamanho/Risco: Prototype vs Enterprise High Risk muda modo sugerido",
+      "pre": "módulo 01 ativo",
+      "input": {
+        "tamanho_risco": "Prototype vs Enterprise High Risk"
+      },
+      "expected_output": [
+        "modo sugerido Prototype = LOCAL PREVIEW",
+        "modo sugerido Enterprise High Risk = SUPERVISED MODE",
+        "os dois modos são diferentes"
+      ],
+      "pass_criteria": "modo sugerido varia com nível de risco",
+      "fail_criteria": "mesmo modo para todos os níveis de risco",
+      "tags": [
+        "tamanho",
+        "risco",
+        "prototype",
+        "enterprise"
+      ]
+    },
+    {
+      "id": "SF-01-008",
+      "module": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "Matriz de agentes: ON/AUTO/OFF persiste ao trocar tipo",
+      "pre": "módulo 01 ativo, matriz configurada com ON/AUTO/OFF",
+      "input": {
+        "agentes": "Hermes=ON, Scanner=AUTO, PatchEngine=OFF",
+        "trocar_tipo": "SaaS Fullstack → API Backend"
+      },
+      "expected_output": [
+        "configuração ON/AUTO/OFF preservada após troca de tipo",
+        "tipo atualizado para API Backend"
+      ],
+      "pass_criteria": "estado da matriz preservado após troca de tipo",
+      "fail_criteria": "matriz resetada ao trocar tipo",
+      "tags": [
+        "matriz-agentes",
+        "on-auto-off",
+        "persistencia"
+      ]
+    },
+    {
+      "id": "SF-01-009",
+      "module": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "GERAR SETUP produz output com tipo+stack+orquestração corretos",
+      "pre": "módulo 01 ativo, tipo+stack+orquestração configurados",
+      "input": {
+        "acao": "GERAR SETUP",
+        "tipo": "SaaS Fullstack",
+        "stack": "Node.js",
+        "orquestração": "Hermes Review"
+      },
+      "expected_output": [
+        "output contém tipo correto",
+        "output contém stack correto",
+        "output contém orquestração correta",
+        "output é COPY-READY"
+      ],
+      "pass_criteria": "output gerado contém todos os 3 campos configurados",
+      "fail_criteria": "campo ausente ou valor incorreto no output",
+      "tags": [
+        "gerar-setup",
+        "saas-fullstack",
+        "node-js",
+        "copy-ready"
+      ]
+    },
+    {
+      "id": "SF-01-010",
+      "module": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "Orquestração OpenSquad ativa aviso de escala",
+      "pre": "módulo 01 ativo",
+      "input": {
+        "orquestração": "OpenSquad"
+      },
+      "expected_output": [
+        "aviso de escala visível no UI",
+        "modo = LOCAL PREVIEW",
+        "exec_real = BLOQUEADA"
+      ],
+      "pass_criteria": "aviso OpenSquad aparece quando orquestração=OpenSquad",
+      "fail_criteria": "aviso ausente para OpenSquad",
+      "tags": [
+        "opensquad",
+        "aviso-escala"
       ]
     }
   ]

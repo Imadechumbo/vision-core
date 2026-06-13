@@ -1,7 +1,239 @@
 {
   "module": "SF-04",
   "module_name": "Pacotes para Workers",
-  "parsed_count": 0,
-  "needs_review_count": 10,
-  "specs": []
+  "parsed_count": 10,
+  "needs_review_count": 0,
+  "specs": [
+    {
+      "id": "SF-04-001",
+      "module": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": "HAPPY PATH",
+      "title": "Missão Completa gera pacote com contexto+contratos+arquivos",
+      "pre": "SF-01, SF-02, SF-03 configurados",
+      "input": {
+        "tipo_pacote": "Missão Completa"
+      },
+      "expected_output": [
+        "pacote contém contexto do projeto",
+        "pacote contém contratos SDDF",
+        "pacote contém lista de arquivos",
+        "output marcado MANUAL HANDOFF",
+        "nenhum arquivo criado"
+      ],
+      "pass_criteria": "pacote Missão Completa gerado com contexto+contratos+arquivos",
+      "fail_criteria": "pacote incompleto ou arquivo criado automaticamente",
+      "tags": [
+        "happy-path",
+        "missao-completa",
+        "pacote",
+        "manual-handoff"
+      ]
+    },
+    {
+      "id": "SF-04-002",
+      "module": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "Patch Cirúrgico gera pacote menor e focado",
+      "pre": "SF-01, SF-02, SF-03 configurados",
+      "input": {
+        "tipo_pacote": "Patch Cirúrgico"
+      },
+      "expected_output": [
+        "pacote menor que Missão Completa",
+        "focado no arquivo/função alvo",
+        "MANUAL HANDOFF"
+      ],
+      "pass_criteria": "pacote Patch Cirúrgico gerado, menor que Missão Completa",
+      "fail_criteria": "pacote igual ou maior que Missão Completa",
+      "tags": [
+        "patch-cirurgico",
+        "pacote"
+      ]
+    },
+    {
+      "id": "SF-04-003",
+      "module": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "Nova Feature gera pacote com spec de feature",
+      "pre": "SF-01, SF-02, SF-03 configurados",
+      "input": {
+        "tipo_pacote": "Nova Feature"
+      },
+      "expected_output": [
+        "pacote contém spec da feature",
+        "MANUAL HANDOFF",
+        "sem execução real"
+      ],
+      "pass_criteria": "pacote com spec de feature gerado",
+      "fail_criteria": "spec ausente ou feature criada automaticamente",
+      "tags": [
+        "nova-feature",
+        "spec",
+        "pacote"
+      ]
+    },
+    {
+      "id": "SF-04-004",
+      "module": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "Revisão de Código gera checklist de revisão",
+      "pre": "SF-01, SF-02, SF-03 configurados",
+      "input": {
+        "tipo_pacote": "Revisão de Código"
+      },
+      "expected_output": [
+        "pacote é checklist de revisão",
+        "não é prompt de implementação",
+        "MANUAL HANDOFF"
+      ],
+      "pass_criteria": "checklist de revisão gerado",
+      "fail_criteria": "output é prompt de implementação em vez de checklist",
+      "tags": [
+        "revisao-codigo",
+        "checklist",
+        "pacote"
+      ]
+    },
+    {
+      "id": "SF-04-005",
+      "module": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": "EDGE",
+      "title": "pacote sem missão composta no SF-03",
+      "pre": "SF-01, SF-02 configurados, SF-03 NÃO completo",
+      "input": {
+        "tipo_pacote": "Missão Completa"
+      },
+      "expected_output": [
+        "ação bloqueada",
+        "mensagem indica SF-03 necessário"
+      ],
+      "pass_criteria": "sistema bloqueia geração sem SF-03",
+      "fail_criteria": "pacote gerado sem missão composta",
+      "tags": [
+        "edge",
+        "sf-03-obrigatorio",
+        "precondition"
+      ]
+    },
+    {
+      "id": "SF-04-006",
+      "module": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": "SECURITY",
+      "title": "pacote nunca inclui chaves de API ou secrets",
+      "pre": "SF-01, SF-02, SF-03 configurados",
+      "input": {
+        "tipo_pacote": "Missão Completa"
+      },
+      "expected_output": [
+        "pacote sem chaves de API",
+        "pacote sem tokens",
+        "pacote sem ANTHROPIC_API_KEY, STRIPE_SECRET etc."
+      ],
+      "pass_criteria": "nenhum secret real no pacote gerado",
+      "fail_criteria": "pacote contém qualquer secret ou chave real",
+      "tags": [
+        "security",
+        "secrets",
+        "api-keys"
+      ]
+    },
+    {
+      "id": "SF-04-007",
+      "module": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "Pacote inclui: target worker, modo, contratos, proibições",
+      "pre": "SF-01, SF-02, SF-03 configurados",
+      "input": {
+        "tipo_pacote": "Missão Completa"
+      },
+      "expected_output": [
+        "target worker identificado",
+        "modo operacional presente",
+        "contratos SDDF presentes",
+        "lista de proibições presente"
+      ],
+      "pass_criteria": "todos os 4 componentes no pacote",
+      "fail_criteria": "qualquer componente ausente",
+      "tags": [
+        "pacote",
+        "target-worker",
+        "contratos",
+        "proibicoes"
+      ]
+    },
+    {
+      "id": "SF-04-008",
+      "module": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "Pacote diferente para cada tipo de projeto",
+      "pre": "SF-01 configurado com tipos diferentes",
+      "input": {
+        "projeto_A": "SaaS Fullstack",
+        "projeto_B": "CLI Utility",
+        "tipo_pacote": "Missão Completa"
+      },
+      "expected_output": [
+        "pacote A ≠ pacote B",
+        "conteúdo reflete tipo de projeto"
+      ],
+      "pass_criteria": "pacotes diferentes para projetos diferentes",
+      "fail_criteria": "pacotes idênticos para tipos diferentes",
+      "tags": [
+        "pacote",
+        "variacao",
+        "tipos-de-projeto"
+      ]
+    },
+    {
+      "id": "SF-04-009",
+      "module": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "COPIAR funciona corretamente",
+      "pre": "pacote gerado no SF-04",
+      "input": {
+        "acao": "COPIAR"
+      },
+      "expected_output": [
+        "clipboard contém conteúdo completo do pacote",
+        "conteúdo idêntico ao exibido"
+      ],
+      "pass_criteria": "clipboard = pacote exibido",
+      "fail_criteria": "clipboard vazio, truncado ou diferente",
+      "tags": [
+        "copiar",
+        "clipboard"
+      ]
+    },
+    {
+      "id": "SF-04-010",
+      "module": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "Output marcado como MANUAL HANDOFF",
+      "pre": "pacote gerado no SF-04",
+      "input": {
+        "tipo_pacote": "qualquer"
+      },
+      "expected_output": [
+        "label MANUAL HANDOFF visível no output",
+        "sem indicação de execução automática"
+      ],
+      "pass_criteria": "MANUAL HANDOFF presente em qualquer tipo de pacote",
+      "fail_criteria": "label ausente",
+      "tags": [
+        "manual-handoff",
+        "output",
+        "label"
+      ]
+    }
+  ]
 }

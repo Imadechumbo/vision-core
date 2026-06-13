@@ -1,8 +1,8 @@
 {
   "module": "SF-03",
   "module_name": "Compositor de Missão",
-  "parsed_count": 1,
-  "needs_review_count": 9,
+  "parsed_count": 10,
+  "needs_review_count": 0,
   "specs": [
     {
       "id": "SF-03-001",
@@ -24,6 +24,221 @@
         "happy-path",
         "claude-code",
         "contexto-objetivo-restricoes-stack-contratos"
+      ]
+    },
+    {
+      "id": "SF-03-002",
+      "module": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "Worker Cursor AI gera prompt adaptado para Cursor",
+      "pre": "SF-01, SF-02 configurados",
+      "input": {
+        "worker": "Cursor AI",
+        "seções": "Contexto+Objetivo+Restrições+Stack"
+      },
+      "expected_output": [
+        "prompt adaptado para sintaxe Cursor AI",
+        "COPY-READY",
+        "sem comandos proibidos",
+        "prompt ≥ 10 linhas"
+      ],
+      "pass_criteria": "prompt gerado e adaptado para Cursor AI",
+      "fail_criteria": "prompt genérico ou para outro worker",
+      "tags": [
+        "cursor-ai",
+        "worker",
+        "compositor"
+      ]
+    },
+    {
+      "id": "SF-03-003",
+      "module": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "Worker GitHub Copilot",
+      "pre": "SF-01, SF-02 configurados",
+      "input": {
+        "worker": "GitHub Copilot",
+        "seções": "Contexto+Objetivo+Stack"
+      },
+      "expected_output": [
+        "prompt adaptado para GitHub Copilot",
+        "COPY-READY",
+        "prompt ≥ 10 linhas"
+      ],
+      "pass_criteria": "prompt gerado e adaptado para Copilot",
+      "fail_criteria": "prompt genérico ou para outro worker",
+      "tags": [
+        "github-copilot",
+        "worker",
+        "compositor"
+      ]
+    },
+    {
+      "id": "SF-03-004",
+      "module": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "Worker Humano gera checklist em vez de prompt técnico",
+      "pre": "SF-01 configurado",
+      "input": {
+        "worker": "Humano",
+        "seções": "Contexto+Objetivo+Restrições"
+      },
+      "expected_output": [
+        "output é checklist de passos humanos",
+        "sem sintaxe de IDE",
+        "COPY-READY"
+      ],
+      "pass_criteria": "output é checklist humano, não prompt técnico",
+      "fail_criteria": "output é prompt técnico quando worker=Humano",
+      "tags": [
+        "worker-humano",
+        "checklist"
+      ]
+    },
+    {
+      "id": "SF-03-005",
+      "module": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": "EDGE",
+      "title": "seções vazias → prompt deve indicar campos faltando",
+      "pre": "SF-01 configurado, worker selecionado",
+      "input": {
+        "worker": "Claude Code",
+        "seções": ""
+      },
+      "expected_output": [
+        "output indica campos obrigatórios faltando",
+        "prompt não gerado",
+        "lista de seções necessárias exibida"
+      ],
+      "pass_criteria": "sistema indica campos faltando sem gerar prompt inválido",
+      "fail_criteria": "sistema gera prompt vazio sem aviso",
+      "tags": [
+        "edge",
+        "secoes-vazias",
+        "validacao"
+      ]
+    },
+    {
+      "id": "SF-03-006",
+      "module": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": "SECURITY",
+      "title": "prompt não contém comandos rm, drop, delete real",
+      "pre": "SF-01, SF-02 configurados",
+      "input": {
+        "worker": "Claude Code",
+        "seções": "Contexto+Objetivo+Restrições+Stack+Contratos"
+      },
+      "expected_output": [
+        "prompt sem 'rm -rf'",
+        "prompt sem 'DROP TABLE'",
+        "prompt sem 'git push --force'"
+      ],
+      "pass_criteria": "nenhum comando destrutivo no prompt gerado",
+      "fail_criteria": "prompt contém comando destrutivo executável",
+      "tags": [
+        "security",
+        "comandos-proibidos",
+        "prompt"
+      ]
+    },
+    {
+      "id": "SF-03-007",
+      "module": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "Prompt inclui: stack, contratos SDDF, modo de orquestração",
+      "pre": "SF-01, SF-02 configurados",
+      "input": {
+        "worker": "Claude Code",
+        "seções": "Contexto+Objetivo+Restrições+Stack+Contratos"
+      },
+      "expected_output": [
+        "stack presente no prompt",
+        "contratos SDDF presentes",
+        "modo de orquestração presente"
+      ],
+      "pass_criteria": "todos os 3 elementos presentes no prompt",
+      "fail_criteria": "qualquer elemento ausente",
+      "tags": [
+        "prompt",
+        "stack",
+        "contratos-sddf",
+        "orquestracao"
+      ]
+    },
+    {
+      "id": "SF-03-008",
+      "module": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "Prompt inclui: restrições de autoridade (no_deploy, no_release)",
+      "pre": "SF-01, SF-02 configurados",
+      "input": {
+        "worker": "Claude Code",
+        "seções": "Restrições+Contratos"
+      },
+      "expected_output": [
+        "restrições no_deploy presentes no prompt",
+        "restrições no_release presentes",
+        "sem cláusula de execução real"
+      ],
+      "pass_criteria": "restrições de autoridade presentes",
+      "fail_criteria": "restrições ausentes ou incompletas",
+      "tags": [
+        "prompt",
+        "restricoes",
+        "no-deploy",
+        "no-release"
+      ]
+    },
+    {
+      "id": "SF-03-009",
+      "module": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "Diferentes combinações de seções geram outputs diferentes",
+      "pre": "SF-01, SF-02 configurados, mesmo worker",
+      "input": {
+        "worker": "Claude Code",
+        "seções_A": "Contexto+Objetivo",
+        "seções_B": "Contexto+Objetivo+Restrições+Stack+Contratos"
+      },
+      "expected_output": [
+        "output A ≠ output B",
+        "output B é mais completo que output A"
+      ],
+      "pass_criteria": "outputs diferentes para combinações diferentes",
+      "fail_criteria": "outputs idênticos para combinações diferentes",
+      "tags": [
+        "compositor",
+        "combinacoes",
+        "variacao"
+      ]
+    },
+    {
+      "id": "SF-03-010",
+      "module": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "COPIAR salva o prompt correto no clipboard",
+      "pre": "prompt gerado no SF-03",
+      "input": {
+        "acao": "COPIAR"
+      },
+      "expected_output": [
+        "clipboard contém o prompt gerado",
+        "conteúdo copiado é idêntico ao exibido"
+      ],
+      "pass_criteria": "clipboard = prompt exibido",
+      "fail_criteria": "clipboard vazio, incompleto ou diferente",
+      "tags": [
+        "copiar",
+        "clipboard"
       ]
     }
   ]

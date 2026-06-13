@@ -1,7 +1,250 @@
 {
   "module": "SF-LLM",
   "module_name": "LLM — qualidade de output",
-  "parsed_count": 0,
-  "needs_review_count": 10,
-  "specs": []
+  "parsed_count": 10,
+  "needs_review_count": 0,
+  "specs": [
+    {
+      "id": "SF-LLM-001",
+      "module": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Compositor gera prompt ≥ 10 linhas para qualquer combinação",
+      "pre": "SF-01, SF-02 configurados",
+      "input": {
+        "worker": "qualquer worker",
+        "seções": "qualquer combinação"
+      },
+      "expected_output": [
+        "prompt ≥ 10 linhas para qualquer combinação de inputs"
+      ],
+      "pass_criteria": "prompt ≥ 10 linhas em 100% das combinações",
+      "fail_criteria": "prompt < 10 linhas para qualquer combinação",
+      "tags": [
+        "llm",
+        "compositor",
+        "prompt",
+        "10-linhas"
+      ]
+    },
+    {
+      "id": "SF-LLM-002",
+      "module": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Setup gerado contém tipo + stack + modo de orquestração",
+      "pre": "SF-01 configurado com tipo, stack e orquestração",
+      "input": {
+        "tipo": "SaaS Fullstack",
+        "stack": "Node.js",
+        "orquestracao": "Hermes Review"
+      },
+      "expected_output": [
+        "setup contém tipo=SaaS Fullstack",
+        "setup contém stack=Node.js",
+        "setup contém orquestração=Hermes Review"
+      ],
+      "pass_criteria": "todos os 3 campos no output do GERAR SETUP",
+      "fail_criteria": "qualquer campo ausente no setup",
+      "tags": [
+        "llm",
+        "setup",
+        "tipo",
+        "stack",
+        "orquestracao"
+      ]
+    },
+    {
+      "id": "SF-LLM-003",
+      "module": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Template preview contém estrutura de pastas real",
+      "pre": "SF-02 com template selecionado",
+      "input": {
+        "template": "SDDF Standard"
+      },
+      "expected_output": [
+        "preview contém estrutura de pastas real",
+        "pastas nomeadas corretamente",
+        "sem pastas genéricas ou placeholder"
+      ],
+      "pass_criteria": "estrutura de pastas real presente",
+      "fail_criteria": "estrutura genérica ou placeholder",
+      "tags": [
+        "llm",
+        "template",
+        "preview",
+        "estrutura-pastas"
+      ]
+    },
+    {
+      "id": "SF-LLM-004",
+      "module": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Pacote worker contém contratos SDDF e proibições",
+      "pre": "SF-01 a SF-03 configurados",
+      "input": {
+        "tipo_pacote": "Missão Completa"
+      },
+      "expected_output": [
+        "contratos SDDF nomeados no pacote",
+        "lista de proibições presente"
+      ],
+      "pass_criteria": "contratos SDDF e proibições presentes",
+      "fail_criteria": "contratos ausentes ou proibições genéricas",
+      "tags": [
+        "llm",
+        "pacote",
+        "contratos-sddf",
+        "proibicoes"
+      ]
+    },
+    {
+      "id": "SF-LLM-005",
+      "module": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Recibo análise identifica campos faltando corretamente",
+      "pre": "SF-07 ativo, recibo parcial colado",
+      "input": {
+        "recibo": "recibo com campos faltando"
+      },
+      "expected_output": [
+        "campos faltando identificados corretamente",
+        "sem falso positivo ou falso negativo"
+      ],
+      "pass_criteria": "identificação precisa de campos faltando",
+      "fail_criteria": "campos ausentes não identificados ou falsos positivos",
+      "tags": [
+        "llm",
+        "recibo",
+        "campos-faltando",
+        "precisao"
+      ]
+    },
+    {
+      "id": "SF-LLM-006",
+      "module": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Relatório final cobre todos os 9 módulos",
+      "pre": "cadeia SF-01 a SF-08 completa",
+      "input": {
+        "acao": "gerar relatório final"
+      },
+      "expected_output": [
+        "relatório menciona SF-01 a SF-08 explicitamente",
+        "SF-09 mencionado como roadmap",
+        "sem módulo omitido"
+      ],
+      "pass_criteria": "todos os 9 módulos cobertos",
+      "fail_criteria": "qualquer módulo omitido",
+      "tags": [
+        "llm",
+        "relatorio",
+        "9-modulos",
+        "cobertura"
+      ]
+    },
+    {
+      "id": "SF-LLM-007",
+      "module": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Outputs diferentes para diferentes combinações de input",
+      "pre": "SF-01, SF-02, SF-03 configurados",
+      "input": {
+        "combinacao_A": "tipo=SaaS, worker=Claude Code",
+        "combinacao_B": "tipo=CLI, worker=Humano"
+      },
+      "expected_output": [
+        "output A ≠ output B",
+        "diferença relevante e intencional"
+      ],
+      "pass_criteria": "outputs distintos para combinações distintas",
+      "fail_criteria": "outputs idênticos para combinações diferentes",
+      "tags": [
+        "llm",
+        "variacao",
+        "combinacoes"
+      ]
+    },
+    {
+      "id": "SF-LLM-008",
+      "module": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Outputs em português, coerentes com o contexto do projeto",
+      "pre": "qualquer módulo SF gerando output",
+      "input": {
+        "acao": "gerar qualquer output SF"
+      },
+      "expected_output": [
+        "output em português",
+        "terminologia coerente com Vision Core",
+        "sem mistura de idiomas"
+      ],
+      "pass_criteria": "output em português e coerente",
+      "fail_criteria": "output em inglês ou incoerente",
+      "tags": [
+        "llm",
+        "portugues",
+        "idioma",
+        "coerencia"
+      ]
+    },
+    {
+      "id": "SF-LLM-009",
+      "module": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Nenhum output contém alucinação de execução real",
+      "pre": "qualquer módulo SF gerando output",
+      "input": {
+        "acao": "gerar qualquer output SF"
+      },
+      "expected_output": [
+        "sem afirmação de arquivo criado",
+        "sem afirmação de deploy realizado",
+        "sem afirmação de PASS GOLD real",
+        "output é LOCAL PREVIEW / MANUAL HANDOFF"
+      ],
+      "pass_criteria": "nenhuma alucinação de execução real",
+      "fail_criteria": "output afirma execução real que não ocorreu",
+      "tags": [
+        "llm",
+        "alucinacao",
+        "exec-real",
+        "local-preview"
+      ]
+    },
+    {
+      "id": "SF-LLM-010",
+      "module": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Prompts para Claude Code vs Worker Humano são distintos",
+      "pre": "SF-03 configurado, mesma missão",
+      "input": {
+        "worker_A": "Claude Code",
+        "worker_B": "Humano",
+        "missao": "mesma missão"
+      },
+      "expected_output": [
+        "prompt Claude Code tem sintaxe técnica de IDE",
+        "prompt Humano é checklist em linguagem natural",
+        "outputs distintos para a mesma missão"
+      ],
+      "pass_criteria": "prompts distintos para workers diferentes",
+      "fail_criteria": "prompts idênticos para Claude Code e Humano",
+      "tags": [
+        "llm",
+        "claude-code",
+        "worker-humano",
+        "distincao"
+      ]
+    }
+  ]
 }

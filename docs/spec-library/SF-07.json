@@ -1,8 +1,8 @@
 {
   "module": "SF-07",
   "module_name": "Recibo do Worker",
-  "parsed_count": 1,
-  "needs_review_count": 9,
+  "parsed_count": 10,
+  "needs_review_count": 0,
   "specs": [
     {
       "id": "SF-07-001",
@@ -22,6 +22,216 @@
       "tags": [
         "happy-path",
         "recibo-com-execucao-confirmada-arquivos-listados"
+      ]
+    },
+    {
+      "id": "SF-07-002",
+      "module": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "Recibo inválido → análise indica campos faltando",
+      "pre": "SF-07 ativo",
+      "input": {
+        "recibo": "recibo malformado, sem campos obrigatórios"
+      },
+      "expected_output": [
+        "análise indica campos faltando",
+        "lista de campos ausentes exibida"
+      ],
+      "pass_criteria": "sistema identifica e lista campos faltando",
+      "fail_criteria": "sistema gera análise falsa ou não indica problemas",
+      "tags": [
+        "recibo-invalido",
+        "campos-faltando"
+      ]
+    },
+    {
+      "id": "SF-07-003",
+      "module": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "Recibo parcial → análise identifica gaps",
+      "pre": "SF-07 ativo",
+      "input": {
+        "recibo": "recibo com 7 de 13 campos preenchidos"
+      },
+      "expected_output": [
+        "análise identifica os 6 gaps",
+        "campos faltando listados",
+        "análise marcada como incompleta"
+      ],
+      "pass_criteria": "gaps identificados corretamente",
+      "fail_criteria": "gaps ignorados ou análise marcada como completa",
+      "tags": [
+        "recibo-parcial",
+        "gaps",
+        "analise"
+      ]
+    },
+    {
+      "id": "SF-07-004",
+      "module": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": "EDGE",
+      "title": "recibo vazio → output indica ausência",
+      "pre": "SF-07 ativo",
+      "input": {
+        "recibo": ""
+      },
+      "expected_output": [
+        "output indica ausência de recibo",
+        "sem análise gerada",
+        "mensagem indica recibo obrigatório"
+      ],
+      "pass_criteria": "sistema indica recibo vazio sem gerar análise",
+      "fail_criteria": "sistema gera análise de recibo vazio",
+      "tags": [
+        "edge",
+        "recibo-vazio"
+      ]
+    },
+    {
+      "id": "SF-07-005",
+      "module": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": "SECURITY",
+      "title": "análise não executa comandos do recibo",
+      "pre": "SF-07 ativo",
+      "input": {
+        "recibo": "recibo contendo comandos rm -rf, git push, deploy"
+      },
+      "expected_output": [
+        "comandos no recibo NÃO executados",
+        "análise é read-only",
+        "sem side effects"
+      ],
+      "pass_criteria": "nenhum comando do recibo executado durante análise",
+      "fail_criteria": "qualquer comando do recibo executado",
+      "tags": [
+        "security",
+        "exec-comandos",
+        "recibo",
+        "read-only"
+      ]
+    },
+    {
+      "id": "SF-07-006",
+      "module": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "Campos verificados: real_execution, pass_gold_real, file_creation",
+      "pre": "SF-07 ativo, recibo válido",
+      "input": {
+        "recibo": "recibo com todos os campos"
+      },
+      "expected_output": [
+        "real_execution verificado",
+        "pass_gold_real verificado",
+        "file_creation verificado"
+      ],
+      "pass_criteria": "os 3 campos presentes na análise",
+      "fail_criteria": "qualquer campo não verificado",
+      "tags": [
+        "campos-verificados",
+        "real-execution",
+        "pass-gold-real",
+        "file-creation"
+      ]
+    },
+    {
+      "id": "SF-07-007",
+      "module": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "Campos verificados: backend_write, command_execution, deploy, production",
+      "pre": "SF-07 ativo, recibo válido",
+      "input": {
+        "recibo": "recibo com todos os campos"
+      },
+      "expected_output": [
+        "backend_write verificado",
+        "command_execution verificado",
+        "deploy verificado",
+        "production verificado"
+      ],
+      "pass_criteria": "os 4 campos presentes na análise",
+      "fail_criteria": "qualquer campo não verificado",
+      "tags": [
+        "campos-verificados",
+        "backend-write",
+        "command-execution",
+        "deploy",
+        "production"
+      ]
+    },
+    {
+      "id": "SF-07-008",
+      "module": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "GERAR RECIBO DE EVIDÊNCIA produz documento completo",
+      "pre": "SF-07 ativo, recibo analisado",
+      "input": {
+        "acao": "GERAR RECIBO DE EVIDÊNCIA"
+      },
+      "expected_output": [
+        "documento de evidência gerado",
+        "contém resultado da análise",
+        "13 campos verificados",
+        "COPY-READY"
+      ],
+      "pass_criteria": "documento de evidência completo gerado",
+      "fail_criteria": "documento incompleto ou não gerado",
+      "tags": [
+        "recibo-evidencia",
+        "documento",
+        "copy-ready"
+      ]
+    },
+    {
+      "id": "SF-07-009",
+      "module": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "Recibo com FALSE em campos críticos → gate não passa",
+      "pre": "SF-07 ativo",
+      "input": {
+        "recibo": "recibo com real_execution=false, pass_gold_real=false"
+      },
+      "expected_output": [
+        "gate NÃO passa",
+        "campos críticos false identificados",
+        "análise indica bloqueio"
+      ],
+      "pass_criteria": "gate bloqueado quando campos críticos são false",
+      "fail_criteria": "gate passa mesmo com campos críticos false",
+      "tags": [
+        "gate",
+        "campos-criticos",
+        "bloqueio"
+      ]
+    },
+    {
+      "id": "SF-07-010",
+      "module": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "Análise é local apenas, sem backend",
+      "pre": "SF-07 ativo, recibo colado",
+      "input": {
+        "recibo": "recibo válido"
+      },
+      "expected_output": [
+        "análise gerada localmente",
+        "sem chamadas de API",
+        "backend_calls_enabled = false"
+      ],
+      "pass_criteria": "análise local sem chamadas de backend",
+      "fail_criteria": "análise faz chamadas de backend ou API",
+      "tags": [
+        "local-only",
+        "sem-backend",
+        "analise"
       ]
     }
   ]

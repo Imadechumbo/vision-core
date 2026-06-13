@@ -1,7 +1,238 @@
 {
   "module": "SF-SEC",
   "module_name": "Segurança (security wall)",
-  "parsed_count": 0,
-  "needs_review_count": 10,
-  "specs": []
+  "parsed_count": 10,
+  "needs_review_count": 0,
+  "specs": [
+    {
+      "id": "SF-SEC-001",
+      "module": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": "CRÍTICO",
+      "title": "file_creation_allowed NUNCA true no frontend",
+      "pre": "qualquer estado do sistema frontend",
+      "input": {
+        "tentativa": "qualquer ação em qualquer módulo SF"
+      },
+      "expected_output": [
+        "file_creation_allowed = false em TODOS os estados"
+      ],
+      "pass_criteria": "file_creation_allowed = false em 100% dos estados testados",
+      "fail_criteria": "file_creation_allowed = true em qualquer estado",
+      "tags": [
+        "critico",
+        "file-creation-allowed",
+        "nunca-true",
+        "security-wall"
+      ]
+    },
+    {
+      "id": "SF-SEC-002",
+      "module": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": "CRÍTICO",
+      "title": "command_execution_allowed NUNCA true no frontend",
+      "pre": "qualquer estado do sistema frontend",
+      "input": {
+        "tentativa": "qualquer ação em qualquer módulo SF"
+      },
+      "expected_output": [
+        "command_execution_allowed = false em TODOS os estados"
+      ],
+      "pass_criteria": "command_execution_allowed = false em 100% dos estados",
+      "fail_criteria": "command_execution_allowed = true em qualquer estado",
+      "tags": [
+        "critico",
+        "command-execution-allowed",
+        "nunca-true",
+        "security-wall"
+      ]
+    },
+    {
+      "id": "SF-SEC-003",
+      "module": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": "CRÍTICO",
+      "title": "backend_write_allowed NUNCA true no frontend",
+      "pre": "qualquer estado do sistema frontend",
+      "input": {
+        "tentativa": "qualquer ação em qualquer módulo SF"
+      },
+      "expected_output": [
+        "backend_write_allowed = false em TODOS os estados"
+      ],
+      "pass_criteria": "backend_write_allowed = false em 100% dos estados",
+      "fail_criteria": "backend_write_allowed = true em qualquer estado",
+      "tags": [
+        "critico",
+        "backend-write-allowed",
+        "nunca-true",
+        "security-wall"
+      ]
+    },
+    {
+      "id": "SF-SEC-004",
+      "module": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": "CRÍTICO",
+      "title": "pass_gold_real_claimed NUNCA true no frontend",
+      "pre": "qualquer estado do sistema frontend",
+      "input": {
+        "tentativa": "qualquer ação em qualquer módulo SF"
+      },
+      "expected_output": [
+        "pass_gold_real_claimed = false em TODOS os estados"
+      ],
+      "pass_criteria": "pass_gold_real_claimed = false em 100% dos estados",
+      "fail_criteria": "pass_gold_real_claimed = true em qualquer estado",
+      "tags": [
+        "critico",
+        "pass-gold-real-claimed",
+        "nunca-true",
+        "security-wall"
+      ]
+    },
+    {
+      "id": "SF-SEC-005",
+      "module": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": "CRÍTICO",
+      "title": "production_touched NUNCA true no frontend",
+      "pre": "qualquer estado do sistema frontend",
+      "input": {
+        "tentativa": "qualquer ação em qualquer módulo SF"
+      },
+      "expected_output": [
+        "production_touched = false em TODOS os estados"
+      ],
+      "pass_criteria": "production_touched = false em 100% dos estados",
+      "fail_criteria": "production_touched = true em qualquer estado",
+      "tags": [
+        "critico",
+        "production-touched",
+        "nunca-true",
+        "security-wall"
+      ]
+    },
+    {
+      "id": "SF-SEC-006",
+      "module": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": "CRÍTICO",
+      "title": "deploy/release/tag NUNCA ativos no frontend",
+      "pre": "qualquer estado do sistema frontend",
+      "input": {
+        "tentativa": "qualquer ação em qualquer módulo SF"
+      },
+      "expected_output": [
+        "deploy_allowed = false",
+        "release_allowed = false",
+        "tag_allowed = false em TODOS os estados"
+      ],
+      "pass_criteria": "deploy/release/tag = false em 100% dos estados",
+      "fail_criteria": "qualquer um dos 3 = true em qualquer estado",
+      "tags": [
+        "critico",
+        "deploy",
+        "release",
+        "tag",
+        "nunca-true",
+        "security-wall"
+      ]
+    },
+    {
+      "id": "SF-SEC-007",
+      "module": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": null,
+      "title": "Engineer gate exige 12/12 confirmações para recibo",
+      "pre": "cadeia SF-01 a SF-07 em execução",
+      "input": {
+        "confirmacoes": 11
+      },
+      "expected_output": [
+        "gate bloqueado com 11/12",
+        "gate passa apenas com 12/12",
+        "recibo não gerado com 11 confirmações"
+      ],
+      "pass_criteria": "gate exige exatamente 12/12",
+      "fail_criteria": "gate passa com menos de 12 confirmações",
+      "tags": [
+        "engineer-gate",
+        "12-confirmacoes",
+        "recibo"
+      ]
+    },
+    {
+      "id": "SF-SEC-008",
+      "module": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": null,
+      "title": "LLM outputs não contêm secrets, tokens ou chaves reais",
+      "pre": "SF-03, SF-04 gerando outputs LLM",
+      "input": {
+        "acao": "gerar prompt ou pacote com LLM"
+      },
+      "expected_output": [
+        "output sem ANTHROPIC_API_KEY",
+        "output sem STRIPE_SECRET_KEY",
+        "output sem JWT_SECRET",
+        "sem qualquer token/chave real"
+      ],
+      "pass_criteria": "nenhum secret/token/chave real em outputs LLM",
+      "fail_criteria": "output contém qualquer secret real",
+      "tags": [
+        "llm",
+        "secrets",
+        "tokens",
+        "chaves-reais"
+      ]
+    },
+    {
+      "id": "SF-SEC-009",
+      "module": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": null,
+      "title": "Modo LOCAL PREVIEW é o único modo ativo",
+      "pre": "qualquer módulo SF ativo",
+      "input": {
+        "acao": "verificar modo operacional ativo"
+      },
+      "expected_output": [
+        "modo = LOCAL PREVIEW",
+        "sem modos de execução real ativos",
+        "modos LIVE/REAL/PROD = BLOQUEADO"
+      ],
+      "pass_criteria": "LOCAL PREVIEW é o único modo ativo",
+      "fail_criteria": "qualquer outro modo está ativo",
+      "tags": [
+        "local-preview",
+        "modo-operacional"
+      ]
+    },
+    {
+      "id": "SF-SEC-010",
+      "module": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": null,
+      "title": "Qualquer tentativa de bypass deve ser bloqueada e logada",
+      "pre": "qualquer módulo SF ativo",
+      "input": {
+        "tentativa": "bypass de qualquer controle de segurança"
+      },
+      "expected_output": [
+        "tentativa bloqueada",
+        "tentativa logada no sistema",
+        "sem alteração de estado por bypass"
+      ],
+      "pass_criteria": "bypass bloqueado e registrado",
+      "fail_criteria": "bypass bem-sucedido ou não registrado",
+      "tags": [
+        "bypass",
+        "bloqueio",
+        "log",
+        "auditoria"
+      ]
+    }
+  ]
 }

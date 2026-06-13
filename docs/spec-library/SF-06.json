@@ -1,8 +1,8 @@
 {
   "module": "SF-06",
   "module_name": "Comando para Criação Real",
-  "parsed_count": 1,
-  "needs_review_count": 9,
+  "parsed_count": 10,
+  "needs_review_count": 0,
   "specs": [
     {
       "id": "SF-06-001",
@@ -19,6 +19,205 @@
       "fail_criteria": null,
       "tags": [
         "happy-path"
+      ]
+    },
+    {
+      "id": "SF-06-002",
+      "module": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": null,
+      "title": "Pacote inclui declaração de não-autoridade",
+      "pre": "SF-01 a SF-05 configurados",
+      "input": {
+        "acao": "gerar pacote de comando"
+      },
+      "expected_output": [
+        "declaração de não-autoridade presente",
+        "texto explicita que sistema não executa"
+      ],
+      "pass_criteria": "declaração de não-autoridade presente",
+      "fail_criteria": "declaração ausente",
+      "tags": [
+        "declaracao-nao-autoridade",
+        "pacote-comando"
+      ]
+    },
+    {
+      "id": "SF-06-003",
+      "module": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": null,
+      "title": "Pacote referencia worker externo como executor",
+      "pre": "SF-01 a SF-05 configurados, worker selecionado",
+      "input": {
+        "worker": "Claude Code"
+      },
+      "expected_output": [
+        "Claude Code identificado como executor",
+        "sem execução automática pelo sistema",
+        "MANUAL HANDOFF para worker"
+      ],
+      "pass_criteria": "worker externo identificado como executor",
+      "fail_criteria": "sistema se coloca como executor",
+      "tags": [
+        "worker-externo",
+        "executor",
+        "manual-handoff"
+      ]
+    },
+    {
+      "id": "SF-06-004",
+      "module": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": "EDGE",
+      "title": "pacote sem SF-05 completo",
+      "pre": "SF-05 NÃO completado",
+      "input": {
+        "acao": "gerar pacote de comando"
+      },
+      "expected_output": [
+        "ação bloqueada",
+        "mensagem indica SF-05 necessário"
+      ],
+      "pass_criteria": "sistema bloqueia sem SF-05 completo",
+      "fail_criteria": "pacote gerado sem SF-05",
+      "tags": [
+        "edge",
+        "sf-05-obrigatorio",
+        "precondition"
+      ]
+    },
+    {
+      "id": "SF-06-005",
+      "module": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": "SECURITY CRÍTICO",
+      "title": "command_execution_allowed sempre false",
+      "pre": "SF-06 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer ação no módulo SF-06"
+      },
+      "expected_output": [
+        "command_execution_allowed = false em todos os cenários"
+      ],
+      "pass_criteria": "command_execution_allowed sempre false",
+      "fail_criteria": "command_execution_allowed é true em qualquer condição",
+      "tags": [
+        "security-critico",
+        "command-execution-allowed",
+        "bloqueio"
+      ]
+    },
+    {
+      "id": "SF-06-006",
+      "module": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": "SECURITY CRÍTICO",
+      "title": "real_file_creation_enabled sempre false",
+      "pre": "SF-06 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer ação no módulo SF-06"
+      },
+      "expected_output": [
+        "real_file_creation_enabled = false em todos os cenários"
+      ],
+      "pass_criteria": "real_file_creation_enabled sempre false",
+      "fail_criteria": "real_file_creation_enabled é true em qualquer condição",
+      "tags": [
+        "security-critico",
+        "real-file-creation-enabled",
+        "bloqueio"
+      ]
+    },
+    {
+      "id": "SF-06-007",
+      "module": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": "SECURITY CRÍTICO",
+      "title": "deploy/release/tag bloqueados",
+      "pre": "SF-06 ativo em qualquer estado",
+      "input": {
+        "tentativa": "qualquer ação no módulo SF-06"
+      },
+      "expected_output": [
+        "deploy_allowed = false",
+        "release_allowed = false",
+        "tag_allowed = false"
+      ],
+      "pass_criteria": "deploy/release/tag sempre false",
+      "fail_criteria": "qualquer um dos 3 é true",
+      "tags": [
+        "security-critico",
+        "deploy",
+        "release",
+        "tag",
+        "bloqueio"
+      ]
+    },
+    {
+      "id": "SF-06-008",
+      "module": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": null,
+      "title": "Pacote inclui checklist de autorização humana",
+      "pre": "SF-01 a SF-05 configurados",
+      "input": {
+        "acao": "gerar pacote de comando"
+      },
+      "expected_output": [
+        "checklist de autorização humana presente",
+        "campos de confirmação listados"
+      ],
+      "pass_criteria": "checklist de autorização presente",
+      "fail_criteria": "checklist ausente",
+      "tags": [
+        "checklist-autorizacao",
+        "humano",
+        "pacote-comando"
+      ]
+    },
+    {
+      "id": "SF-06-009",
+      "module": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": null,
+      "title": "Diferentes tipos geram comandos diferentes",
+      "pre": "SF-01 com tipos diferentes",
+      "input": {
+        "tipo_A": "SaaS Fullstack",
+        "tipo_B": "CLI Utility"
+      },
+      "expected_output": [
+        "pacote A ≠ pacote B",
+        "comandos refletem tipo de projeto"
+      ],
+      "pass_criteria": "pacotes de comando diferentes para tipos diferentes",
+      "fail_criteria": "pacotes idênticos para tipos diferentes",
+      "tags": [
+        "variacao",
+        "tipos-de-projeto",
+        "pacote-comando"
+      ]
+    },
+    {
+      "id": "SF-06-010",
+      "module": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": null,
+      "title": "DECLARAÇÃO DE NÃO-AUTORIDADE presente no output",
+      "pre": "SF-06 com pacote gerado",
+      "input": {
+        "acao": "visualizar output"
+      },
+      "expected_output": [
+        "declaração de não-autoridade visível no output",
+        "sem afirmação de execução real"
+      ],
+      "pass_criteria": "declaração presente e visível",
+      "fail_criteria": "declaração ausente",
+      "tags": [
+        "declaracao-nao-autoridade",
+        "output"
       ]
     }
   ]
