@@ -259,6 +259,79 @@ function runV14CleanMode() {
   scanGoldHardcode();
 }
 
+/** Detect V2.9.10 Clean Cockpit (bundle architecture, PR #707+).
+ *  Replaces individual V14 JS files with vision-core-bundle.js. */
+function isCleanCockpit() {
+  if (!exists('frontend/index.html')) return false;
+  const html = text('frontend/index.html');
+  const srcs = scriptSrcs(html);
+  return (
+    exists('frontend/assets/vision-core-bundle.js') &&
+    srcs.some((s) => /vision-core-bundle\.js/.test(s)) &&
+    !srcs.some((s) => /vision-api|vision-chat|vision-agent-local|vision-runtime-owner|vision-report/.test(s))
+  );
+}
+
+function runCleanCockpitMode() {
+  // Required files for clean cockpit
+  const requiredFiles = [
+    'frontend/index.html',
+    'frontend/assets/vision-core-bundle.js',
+    'frontend/assets/vision-core-bundle.css',
+  ];
+  for (const file of requiredFiles) {
+    if (!exists(file)) fail(`${file}: required clean-cockpit file missing`);
+  }
+
+  const html = exists('frontend/index.html') ? text('frontend/index.html') : '';
+
+  // No executable inline scripts
+  if (hasInlineScript(html)) {
+    fail('frontend/index.html: executable inline script detected');
+  }
+
+  // Still forbidden in any mode (truly dangerous patterns in HTML)
+  const strictForbidden = [
+    'RUN_PATH',
+    'STREAM_PATH',
+    'executeBtn.onclick',
+    'window.fetch =',
+    'mission-${Date.now()}',
+    'vision-runtime-v297',
+    'vision-v297',
+    'vision-v298',
+    'vision-v299',
+    'vision-v2910',
+    'vision-v32',
+    'vision-v34',
+    'vision-v35',
+    'vision-v44'
+  ];
+  for (const marker of strictForbidden) {
+    if (html.includes(marker)) fail(`frontend/index.html: forbidden legacy marker "${marker}" detected`);
+  }
+
+  // signupBtn / oauth / authBackdrop are LEGITIMATE in clean cockpit auth modal — not forbidden
+
+  // No hardcoded gold in bundle or index
+  const bundleSrc = exists('frontend/assets/vision-core-bundle.js') ? text('frontend/assets/vision-core-bundle.js') : '';
+  if (/pass_gold\s*:\s*true/.test(bundleSrc)) fail('vision-core-bundle.js: hardcoded pass_gold:true is forbidden');
+  if (/promotion_allowed\s*:\s*true/.test(bundleSrc)) fail('vision-core-bundle.js: hardcoded promotion_allowed:true is forbidden');
+}
+
+if (isCleanCockpit()) {
+  runCleanCockpitMode();
+
+  if (failures.length) {
+    console.error('SDDF FRONT GUARD FAILED — CLEAN COCKPIT MODE');
+    for (const message of failures) console.error('- ' + message);
+    process.exit(1);
+  }
+
+  console.log('SDDF FRONT GUARD PASS — CLEAN COCKPIT MODE (V2.9.10+)');
+  process.exit(0);
+}
+
 if (isV8PureSnapshot()) {
   runV8PureSnapshotMode();
 
