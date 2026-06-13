@@ -5652,7 +5652,14 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     final_dashboard:   'SF-08',
     saas_api:          'SF-09',
   };
-  var _sfSpecPanelOpen = false;
+  var _sfSpecPanelOpen   = false;
+  var _sfHighlightSpecId = null;  // §73.4 — spec to highlight after module switch
+  // Inverse of SF_MODULE_SPEC_MAP: 'SF-01' → 'project_builder'
+  var _sfSpecModuleInverse = (function () {
+    var inv = {};
+    Object.keys(SF_MODULE_SPEC_MAP).forEach(function (k) { inv[SF_MODULE_SPEC_MAP[k]] = k; });
+    return inv;
+  }());
 
   // Show home view — HOME is exclusive; workspace completely hidden
   function _sfShowHome() {
@@ -7620,16 +7627,41 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         specsWrap.style.display = '';
         var typeColor = { 'HAPPY PATH': '#4ade80', 'EDGE': '#f59e0b', 'SECURITY': '#f87171', 'SECURITY CRÍTICO': '#ef4444', 'CRÍTICO': '#ef4444' };
         specsList.innerHTML = specs.map(function (s) {
-          var tc    = (s.type && typeColor[s.type]) || '#64748b';
-          var badge = s.type ? '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:' + tc + '22;color:' + tc + ';border:1px solid ' + tc + '44;margin-left:6px">' + _esc(s.type) + '</span>' : '';
-          var via   = s.match_via === 'title' ? '<span style="font-size:9px;color:#475569;margin-left:4px">(título)</span>' : '';
-          return '<div style="padding:6px 0;border-bottom:1px solid #0f172a">' +
+          var tc        = (s.type && typeColor[s.type]) || '#64748b';
+          var badge     = s.type ? '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:' + tc + '22;color:' + tc + ';border:1px solid ' + tc + '44;margin-left:6px">' + _esc(s.type) + '</span>' : '';
+          var via       = s.match_via === 'title' ? '<span style="font-size:9px;color:#475569;margin-left:4px">(título)</span>' : '';
+          // §73.4 — extract module prefix and lookup target module
+          var modPfx    = s.id ? s.id.split('-').slice(0, 2).join('-') : '';
+          var modId     = _sfSpecModuleInverse[modPfx] || '';
+          var linkHint  = modId
+            ? '<span style="font-size:9px;color:#38bdf8;margin-left:6px;font-style:italic;white-space:nowrap">→ ' + _esc(modPfx) + '</span>'
+            : '';
+          var dataAttrs = modId
+            ? ' data-sa-module="' + _esc(modId) + '" data-sa-spec="' + _esc(s.id) + '"'
+            : '';
+          var clickStyle = modId ? ';cursor:pointer;border-radius:4px;transition:background 0.2s' : '';
+          return '<div' + dataAttrs + ' style="padding:6px 4px;border-bottom:1px solid #0f172a' + clickStyle + '">' +
             '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">' +
-              '<span style="font-size:11px;color:#475569;font-family:monospace">' + _esc(s.id) + '</span>' + badge + via +
+              '<span style="font-size:11px;color:#475569;font-family:monospace">' + _esc(s.id) + '</span>' + badge + via + linkHint +
             '</div>' +
             '<div style="font-size:12px;color:#cbd5e1;margin-top:2px">' + _esc(s.title) + '</div>' +
             '</div>';
         }).join('');
+        // Event delegation for clickable specs — §73.4
+        specsList.onclick = function (e) {
+          var item = e.target.closest('[data-sa-module]');
+          if (!item) return;
+          _sfHighlightSpecId = item.dataset.saSpec || null;
+          setSoftwareFactoryModule(item.dataset.saModule);
+        };
+        specsList.onmouseover = function (e) {
+          var item = e.target.closest('[data-sa-module]');
+          if (item) item.style.background = '#1e293b';
+        };
+        specsList.onmouseout = function (e) {
+          var item = e.target.closest('[data-sa-module]');
+          if (item) item.style.background = '';
+        };
       } else {
         specsWrap.style.display = 'none';
       }
@@ -7731,7 +7763,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       var fail  = s.fail_criteria
         ? '<div style="font-size:11px;color:#f87171;margin-top:1px">FAIL: ' + s.fail_criteria + '</div>'
         : '';
-      return '<div style="padding:8px 12px;border-bottom:1px solid #1e293b">' +
+      return '<div data-spec-id="' + s.id + '" style="padding:8px 12px;border-bottom:1px solid #1e293b;transition:background 0.4s">' +
         '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">' +
           '<span style="font-size:11px;color:#475569;font-family:monospace">' + s.id + '</span>' + badge +
         '</div>' +
@@ -7739,6 +7771,19 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         pass + fail +
         '</div>';
     }).join('');
+    // §73.4 — highlight spec navigated from Architect panel
+    if (_sfHighlightSpecId) {
+      var _hid = _sfHighlightSpecId;
+      _sfHighlightSpecId = null;
+      setTimeout(function () {
+        var el = list.querySelector('[data-spec-id="' + _hid + '"]');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.style.background = '#1e40af55';
+          setTimeout(function () { el.style.background = ''; }, 1600);
+        }
+      }, 60);
+    }
   }
 
   /** Fetch specs for the active SF module and render the panel. */
