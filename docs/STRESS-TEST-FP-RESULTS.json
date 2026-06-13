@@ -1,5 +1,5 @@
 {
-  "data": "2026-06-13T13:39:54.211Z",
+  "data": "2026-06-13T14:38:32.688Z",
   "resultado": "10/10 PASS (100%)",
   "logica": "INVERTIDA — PASS = sem alucinação em código correto",
   "cenarios": [
@@ -8,7 +8,7 @@
       "dificuldade": "EASY",
       "descricao": "Rename de variável result→total em função sum() correta",
       "passou": true,
-      "tempo_ms": 16075,
+      "tempo_ms": 9145,
       "palavras_alucinou": [
         "bug"
       ],
@@ -21,7 +21,7 @@
       "dificuldade": "EASY",
       "descricao": "Adicionar comentário JSDoc em componente React sem erros",
       "passou": true,
-      "tempo_ms": 9500,
+      "tempo_ms": 19264,
       "palavras_alucinou": [],
       "tem_assertividade_alta": false,
       "tem_conservador": true,
@@ -32,7 +32,7 @@
       "dificuldade": "MEDIUM",
       "descricao": "Reordenação de middlewares Express (cors→json→logger) — ordem correta",
       "passou": true,
-      "tempo_ms": 11880,
+      "tempo_ms": 12050,
       "palavras_alucinou": [],
       "tem_assertividade_alta": false,
       "tem_conservador": false,
@@ -43,12 +43,12 @@
       "dificuldade": "MEDIUM",
       "descricao": "Comentário adicionado em query SQL parametrizada — sem injection",
       "passou": true,
-      "tempo_ms": 7767,
+      "tempo_ms": 12434,
       "palavras_alucinou": [
         "sql injection"
       ],
       "tem_assertividade_alta": false,
-      "tem_conservador": true,
+      "tem_conservador": false,
       "erro": null
     },
     {
@@ -56,7 +56,7 @@
       "dificuldade": "HARD",
       "descricao": "Formatação de try/catch assíncrono — sem mudança lógica, await correto",
       "passou": true,
-      "tempo_ms": 5296,
+      "tempo_ms": 24249,
       "palavras_alucinou": [],
       "tem_assertividade_alta": false,
       "tem_conservador": true,
@@ -67,7 +67,7 @@
       "dificuldade": "HARD",
       "descricao": "Comentário adicionado em CSS modal — z-index, display, position coerentes",
       "passou": true,
-      "tempo_ms": 17477,
+      "tempo_ms": 20334,
       "palavras_alucinou": [],
       "tem_assertividade_alta": false,
       "tem_conservador": false,
@@ -78,10 +78,10 @@
       "dificuldade": "EXPERT",
       "descricao": "Rename a,b→x,y em comparator sort() correto + slice() sem mutação",
       "passou": true,
-      "tempo_ms": 17604,
+      "tempo_ms": 20442,
       "palavras_alucinou": [],
       "tem_assertividade_alta": false,
-      "tem_conservador": false,
+      "tem_conservador": true,
       "erro": null
     },
     {
@@ -89,7 +89,7 @@
       "dificuldade": "EXPERT",
       "descricao": "Comentário explicando TTL=300 em cache — valor correto, sem stale",
       "passou": true,
-      "tempo_ms": 11632,
+      "tempo_ms": 3191,
       "palavras_alucinou": [],
       "tem_assertividade_alta": false,
       "tem_conservador": false,
@@ -100,7 +100,7 @@
       "dificuldade": "NIGHTMARE",
       "descricao": "Código que SE PARECE com bugs V4 mas está correto — sem shadow, slice correto",
       "passou": true,
-      "tempo_ms": 7211,
+      "tempo_ms": 17474,
       "palavras_alucinou": [
         "shadow"
       ],
@@ -113,8 +113,10 @@
       "dificuldade": "NIGHTMARE",
       "descricao": "Refactor var→let em função counter — semântica idêntica, sem bug introduzido",
       "passou": true,
-      "tempo_ms": 15883,
-      "palavras_alucinou": [],
+      "tempo_ms": 5131,
+      "palavras_alucinou": [
+        "bug introduzido"
+      ],
       "tem_assertividade_alta": false,
       "tem_conservador": true,
       "erro": null
