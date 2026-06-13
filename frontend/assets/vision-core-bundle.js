@@ -7549,6 +7549,156 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     }
   }
 
+  /* ── §73.2b Architect Mode ─────────────────────────────────────── */
+
+  var _sfArchitectMode = false;
+
+  /** Toggle architect mode UI */
+  function _sfSetArchitectMode(on) {
+    _sfArchitectMode = on;
+    var toggleBtn = document.getElementById('vcSfArchitectToggleBtn');
+    var sendBtn   = document.getElementById('vcSfChatSendBtn');
+    var input     = document.getElementById('vcSfChatInput');
+    if (toggleBtn) {
+      toggleBtn.style.background    = on ? '#1e3a8a' : '#0f172a';
+      toggleBtn.style.borderColor   = on ? '#3b82f6' : '#334155';
+      toggleBtn.style.color         = on ? '#93c5fd' : '#94a3b8';
+    }
+    if (sendBtn) {
+      sendBtn.textContent = on ? '🏛️ PERGUNTAR ARQUITETO' : 'ENVIAR';
+    }
+    if (input) {
+      input.placeholder = on
+        ? 'Descreva seu projeto em linguagem livre. Ex.: "quero um site para minha padaria" ou "API REST em Python para estoque"...\n\n(Enter = enviar · Shift+Enter = nova linha)'
+        : 'Ex.: Quero construir um SaaS de gestão de projetos com autenticação, dashboard, planos de assinatura e API REST. Stack preferida: Node.js + React + PostgreSQL. Tamanho: Production Ready.\n\n(Enter = enviar · Shift+Enter = nova linha)';
+    }
+    // hide architect panel when switching off
+    if (!on) {
+      var panel = document.getElementById('vcSfArchitectPanel');
+      if (panel) panel.style.display = 'none';
+    }
+  }
+
+  /** Render architect response into #vcSfArchitectPanel */
+  function _sfRenderArchitectResponse(data) {
+    var panel        = document.getElementById('vcSfArchitectPanel');
+    var explanEl     = document.getElementById('vcSfArchitectExplanation');
+    var questWrap    = document.getElementById('vcSfArchitectQuestions');
+    var questList    = document.getElementById('vcSfArchitectQList');
+    var specsWrap    = document.getElementById('vcSfArchitectSpecsWrap');
+    var specsList    = document.getElementById('vcSfArchitectSpecsList');
+    if (!panel || !explanEl) return;
+
+    var c = data.classification || {};
+
+    // Header: project type + stack + confidence
+    var confPct  = Math.round((c.confidence || 0) * 100);
+    var confClr  = confPct >= 80 ? '#4ade80' : confPct >= 60 ? '#f59e0b' : '#f87171';
+    var meta     = '';
+    if (c.project_type) meta += '<span style="color:#38bdf8">' + _esc(c.project_type) + '</span>';
+    if (c.stack && c.stack.length) meta += ' &nbsp;<span style="color:#64748b">·</span>&nbsp; <span style="color:#94a3b8">' + c.stack.map(_esc).join(', ') + '</span>';
+    meta += ' &nbsp;<span style="color:#64748b">·</span>&nbsp; <span style="color:' + confClr + '">' + confPct + '% confiança</span>';
+    explanEl.innerHTML = meta + '<br><br>' + _esc(c.explanation || '');
+
+    // Open questions
+    var qs = data.open_questions || [];
+    if (questWrap && questList) {
+      if (qs.length > 0) {
+        questWrap.style.display = '';
+        questList.innerHTML = qs.map(function (q) {
+          return '<button type="button" onclick="(function(b){var inp=document.getElementById(\'vcSfChatInput\');if(inp){inp.value=b.textContent.trim();inp.focus();}})(this)" style="background:#1c2f4a;border:1px solid #1e40af55;color:#93c5fd;padding:4px 10px;border-radius:14px;font-size:11px;cursor:pointer;font-family:inherit">' + _esc(q) + '</button>';
+        }).join('');
+      } else {
+        questWrap.style.display = 'none';
+      }
+    }
+
+    // Specs suggested
+    var specs = data.specs_suggested || [];
+    if (specsWrap && specsList) {
+      if (specs.length > 0) {
+        specsWrap.style.display = '';
+        var typeColor = { 'HAPPY PATH': '#4ade80', 'EDGE': '#f59e0b', 'SECURITY': '#f87171', 'SECURITY CRÍTICO': '#ef4444', 'CRÍTICO': '#ef4444' };
+        specsList.innerHTML = specs.map(function (s) {
+          var tc    = (s.type && typeColor[s.type]) || '#64748b';
+          var badge = s.type ? '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:' + tc + '22;color:' + tc + ';border:1px solid ' + tc + '44;margin-left:6px">' + _esc(s.type) + '</span>' : '';
+          var via   = s.match_via === 'title' ? '<span style="font-size:9px;color:#475569;margin-left:4px">(título)</span>' : '';
+          return '<div style="padding:6px 0;border-bottom:1px solid #0f172a">' +
+            '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">' +
+              '<span style="font-size:11px;color:#475569;font-family:monospace">' + _esc(s.id) + '</span>' + badge + via +
+            '</div>' +
+            '<div style="font-size:12px;color:#cbd5e1;margin-top:2px">' + _esc(s.title) + '</div>' +
+            '</div>';
+        }).join('');
+      } else {
+        specsWrap.style.display = 'none';
+      }
+    }
+
+    panel.style.display = '';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  /** HTML-escape helper */
+  function _esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /** Send to /api/architect/interpret */
+  function _sfArchitectSend(inputId, streamId) {
+    var input  = document.getElementById(inputId);
+    var stream = document.getElementById(streamId);
+    if (!input || !stream) return;
+    var text = (input.value || '').trim();
+    if (!text) return;
+    input.value = '';
+
+    if (!_backendConnected) {
+      var offlineEl = document.createElement('div');
+      offlineEl.className = 'vc-sf-chat-msg';
+      offlineEl.style.color = '#f87171';
+      offlineEl.textContent = '🏛️ Arquiteto requer backend conectado. Backend não detectado.';
+      stream.appendChild(offlineEl);
+      stream.scrollTop = stream.scrollHeight;
+      return;
+    }
+
+    // Remove hint
+    var hint = stream.querySelector('.vc-sf-chat-hint');
+    if (hint) hint.remove();
+
+    var uMsg = document.createElement('div');
+    uMsg.className = 'vc-sf-chat-msg user';
+    uMsg.textContent = text;
+    stream.appendChild(uMsg);
+
+    var thinking = document.createElement('div');
+    thinking.className = 'vc-sf-chat-msg';
+    thinking.textContent = '🏛️ Arquiteto analisando...';
+    stream.appendChild(thinking);
+    stream.scrollTop = stream.scrollHeight;
+
+    fetch(BACKEND_URL + '/api/architect/interpret', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text })
+    })
+    .then(function (r) { return r.ok ? r.json() : r.json().then(function (e) { return Promise.reject(e); }); })
+    .then(function (data) {
+      if (!data.ok) {
+        thinking.textContent = '🏛️ Erro: ' + (data.error || 'resposta inválida');
+        return;
+      }
+      thinking.remove();
+      _sfRenderArchitectResponse(data);
+      stream.scrollTop = stream.scrollHeight;
+    })
+    .catch(function (err) {
+      thinking.textContent = '🏛️ Erro de conexão: ' + (err.error || err.message || String(err));
+      stream.scrollTop = stream.scrollHeight;
+    });
+  }
+
   /* ── §73.1d Spec Panel ─────────────────────────────────────────── */
 
   /** Render fetched specs into #vcSfSpecList. */
@@ -7654,11 +7804,31 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       if (inp && tpl) { inp.value = tpl; inp.focus(); }
     });
 
-    // Chat send
+    // §73.2b — Architect mode toggle button
+    var architectToggleBtn = document.getElementById('vcSfArchitectToggleBtn');
+    if (architectToggleBtn) {
+      // Show toggle button only when backend is (or becomes) connected
+      if (_backendConnected) architectToggleBtn.style.display = '';
+      // Also reveal on backend-connected event (health check runs async)
+      var _origPatchStatus = _patchBackendStatusDOM;
+      _patchBackendStatusDOM = function (connected, version) {
+        _origPatchStatus(connected, version);
+        if (architectToggleBtn) architectToggleBtn.style.display = connected ? '' : 'none';
+      };
+      architectToggleBtn.addEventListener('click', function () {
+        _sfSetArchitectMode(!_sfArchitectMode);
+      });
+    }
+
+    // Chat send — dispatches to architect or normal based on mode
     var sendBtn = document.getElementById('vcSfChatSendBtn');
     if (sendBtn) {
       sendBtn.addEventListener('click', function () {
-        _sfChatSend('vcSfChatInput', 'vcSfChatStream');
+        if (_sfArchitectMode) {
+          _sfArchitectSend('vcSfChatInput', 'vcSfChatStream');
+        } else {
+          _sfChatSend('vcSfChatInput', 'vcSfChatStream');
+        }
       });
     }
     var chatInput = document.getElementById('vcSfChatInput');
@@ -7666,7 +7836,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       chatInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          _sfChatSend('vcSfChatInput', 'vcSfChatStream');
+          if (_sfArchitectMode) {
+            _sfArchitectSend('vcSfChatInput', 'vcSfChatStream');
+          } else {
+            _sfChatSend('vcSfChatInput', 'vcSfChatStream');
+          }
         }
       });
     }
