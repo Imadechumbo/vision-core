@@ -7594,30 +7594,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
   /* ── §73.2b Architect Mode ─────────────────────────────────────── */
 
-  var _sfArchitectMode = true; // §74 — Arquiteto é padrão no módulo 01
-
-  /** Toggle architect mode UI — §74: Arquiteto é padrão, toggle desativa */
-  function _sfSetArchitectMode(on) {
-    _sfArchitectMode = on;
-    var toggleBtn = document.getElementById('vcSfArchitectToggleBtn');
-    var sendBtn   = document.getElementById('vcSfChatSendBtn');
-    var input     = document.getElementById('vcSfChatInput');
-    if (toggleBtn) {
-      toggleBtn.textContent         = on ? '🏛️ ARQUITETO' : '☰ MODO GERAL';
-      toggleBtn.style.background    = on ? '#1e3a8a' : '#0f172a';
-      toggleBtn.style.borderColor   = on ? '#3b82f6' : '#334155';
-      toggleBtn.style.color         = on ? '#93c5fd' : '#94a3b8';
-    }
-    if (sendBtn) {
-      sendBtn.textContent = on ? '🏛️ ENVIAR' : 'ENVIAR';
-    }
-    if (input) {
-      input.placeholder = on
-        ? 'Descreva seu projeto em linguagem livre. Ex.: "quero um site para minha padaria" ou "API REST em Python para estoque"...\n\n(Enter = enviar · Shift+Enter = nova linha)'
-        : 'Ex.: Quero construir um SaaS de gestão de projetos com autenticação, dashboard, planos de assinatura e API REST. Stack preferida: Node.js + React + PostgreSQL. Tamanho: Production Ready.\n\n(Enter = enviar · Shift+Enter = nova linha)';
-    }
-    // §74 — resposta arquiteto é inline no chat; sem painel separado para esconder
-  }
+  // §74.1 — Arquiteto é o único modo do chat SF-01; sem toggle, sem branch condicional
+  /** @deprecated §74.1 — noop; Arquiteto fixo no módulo 01 */
+  function _sfSetArchitectMode() { /* noop */ }
 
   /** §74 — Render architect response INLINE in #vcSfChatStream as chat bubble */
   function _sfRenderArchitectResponse(data) {
@@ -7751,7 +7730,6 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       if (_sf03Btn) {
         _sf03Btn.onclick = function () {
           var txt = _sf03Btn.dataset.sf03text;
-          _sfSetArchitectMode(false);
           setSoftwareFactoryModule('mission_composer');
           var inp = document.getElementById('vcSfChatInput');
           if (inp && txt) {
@@ -7946,15 +7924,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       if (inp && tpl) { inp.value = tpl; inp.focus(); }
     });
 
-    // §74 — Architect mode ON by default; toggle always visible
-    var architectToggleBtn = document.getElementById('vcSfArchitectToggleBtn');
-    if (architectToggleBtn) {
-      architectToggleBtn.addEventListener('click', function () {
-        _sfSetArchitectMode(!_sfArchitectMode);
-      });
-    }
-    // Apply default architect mode UI state immediately
-    _sfSetArchitectMode(true);
+    // §74.1 — Arquiteto fixo: init UI direto, sem toggle
+    var _sfSendBtnEl = document.getElementById('vcSfChatSendBtn');
+    var _sfInpEl     = document.getElementById('vcSfChatInput');
+    if (_sfSendBtnEl) _sfSendBtnEl.textContent = '🏛️ ENVIAR';
+    if (_sfInpEl) _sfInpEl.placeholder = 'Descreva seu projeto em linguagem livre. Ex.: "quero um site para minha padaria" ou "API REST em Python para estoque"...\n\n(Enter = enviar · Shift+Enter = nova linha)';
 
     // §74 — Sidebar toggle (left + right panels)
     var sidebarToggleBtn = document.getElementById('vcSfSidebarToggle');
@@ -7983,15 +7957,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       sddfCollapseBtn.textContent = '▼ PIPELINE';
     }
 
-    // Chat send — dispatches to architect or normal based on mode
+    // Chat send — §74.1 Arquiteto fixo, sempre _sfArchitectSend
     var sendBtn = document.getElementById('vcSfChatSendBtn');
     if (sendBtn) {
       sendBtn.addEventListener('click', function () {
-        if (_sfArchitectMode) {
-          _sfArchitectSend('vcSfChatInput', 'vcSfChatStream');
-        } else {
-          _sfChatSend('vcSfChatInput', 'vcSfChatStream');
-        }
+        _sfArchitectSend('vcSfChatInput', 'vcSfChatStream');
       });
     }
     var chatInput = document.getElementById('vcSfChatInput');
@@ -7999,11 +7969,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       chatInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          if (_sfArchitectMode) {
-            _sfArchitectSend('vcSfChatInput', 'vcSfChatStream');
-          } else {
-            _sfChatSend('vcSfChatInput', 'vcSfChatStream');
-          }
+          _sfArchitectSend('vcSfChatInput', 'vcSfChatStream');
         }
       });
     }

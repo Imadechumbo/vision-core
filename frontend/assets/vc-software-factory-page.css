@@ -1158,3 +1158,13 @@
 #vcSfHomeControl .vc-sf-chat-stream {
   max-height: 260px;
 }
+
+/* ── §74.1 — Título Arquiteto (azul, não cyan) ───────────── */
+.vc-sf-llm-title--arch {
+  color: #3b82f6 !important;
+  letter-spacing: .14em;
+}
+#vcSfHomeControl .vc-sf-llm-title--arch {
+  font-size: 11px;
+  letter-spacing: .16em;
+}
