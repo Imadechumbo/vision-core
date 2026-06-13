@@ -2624,6 +2624,17 @@
         </div>
 
       </div><!-- end #vcSfModuleContent -->
+
+      <!-- §73.1d — spec panel: populated from /api/spec when backend connected -->
+      <div id="vcSfSpecPanel" style="margin-top:16px;display:none">
+        <button id="vcSfSpecToggleBtn" style="width:100%;background:#0f172a;border:1px solid #1e293b;color:#94a3b8;padding:8px 14px;border-radius:6px;cursor:pointer;text-align:left;font-size:12px;letter-spacing:1px;display:flex;align-items:center;gap:8px;font-family:inherit">
+          <span>📋 SPECS DO MÓDULO</span>
+          <span id="vcSfSpecCount" style="color:#38bdf8;font-weight:700"></span>
+          <span id="vcSfSpecArrow" style="margin-left:auto">▼</span>
+        </button>
+        <div id="vcSfSpecList" style="display:none;margin-top:4px;max-height:360px;overflow-y:auto;border:1px solid #1e293b;border-radius:6px;background:#070d19"></div>
+      </div>
+
       </div><!-- end #vcSfModuleWorkspace -->
 
     </div><!-- end .vc-sf-col-center -->

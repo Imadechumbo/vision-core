@@ -5640,6 +5640,20 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     final_dashboard:   'vcFinalProductDashboard'
   };
 
+  // §73.1d — Maps frontend module IDs to SF Spec Library module IDs
+  var SF_MODULE_SPEC_MAP = {
+    project_builder:   'SF-01',
+    project_templates: 'SF-02',
+    mission_composer:  'SF-03',
+    worker_handoff:    'SF-04',
+    export_preview:    'SF-05',
+    real_file_command: 'SF-06',
+    worker_receipt:    'SF-07',
+    final_dashboard:   'SF-08',
+    saas_api:          'SF-09',
+  };
+  var _sfSpecPanelOpen = false;
+
   // Show home view — HOME is exclusive; workspace completely hidden
   function _sfShowHome() {
     _sfHomeVisible = true;
@@ -5715,6 +5729,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
     // Update SDDF timeline
     renderSoftwareFactoryTimelineState(moduleId);
+
+    // §73.1d — Load and render spec panel for this module
+    _sfLoadSpecs(moduleId);
 
     // Find module metadata
     var mod = SF_MODULES.find(function (m) { return m.id === moduleId; });
@@ -7532,6 +7549,61 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     }
   }
 
+  /* ── §73.1d Spec Panel ─────────────────────────────────────────── */
+
+  /** Render fetched specs into #vcSfSpecList. */
+  function _sfRenderSpecPanel(specs) {
+    var panel = document.getElementById('vcSfSpecPanel');
+    var list  = document.getElementById('vcSfSpecList');
+    var count = document.getElementById('vcSfSpecCount');
+    if (!panel || !list) return;
+    if (!specs || specs.length === 0) { panel.style.display = 'none'; return; }
+
+    panel.style.display = '';
+    if (count) count.textContent = specs.length + ' specs';
+
+    var typeColor = {
+      'HAPPY PATH':       '#4ade80',
+      'EDGE':             '#f59e0b',
+      'SECURITY':         '#f87171',
+      'SECURITY CRÍTICO': '#ef4444',
+      'CRÍTICO':          '#ef4444',
+    };
+
+    list.innerHTML = specs.map(function (s) {
+      var tc    = (s.type && typeColor[s.type]) || '#64748b';
+      var badge = s.type
+        ? '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:' + tc + '22;color:' + tc + ';border:1px solid ' + tc + '44;margin-left:6px;white-space:nowrap">' + s.type + '</span>'
+        : '';
+      var pass  = s.pass_criteria
+        ? '<div style="font-size:11px;color:#4ade80;margin-top:3px">PASS: ' + s.pass_criteria + '</div>'
+        : '';
+      var fail  = s.fail_criteria
+        ? '<div style="font-size:11px;color:#f87171;margin-top:1px">FAIL: ' + s.fail_criteria + '</div>'
+        : '';
+      return '<div style="padding:8px 12px;border-bottom:1px solid #1e293b">' +
+        '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">' +
+          '<span style="font-size:11px;color:#475569;font-family:monospace">' + s.id + '</span>' + badge +
+        '</div>' +
+        '<div style="font-size:12px;color:#e2e8f0;margin-top:3px;line-height:1.4">' + s.title + '</div>' +
+        pass + fail +
+        '</div>';
+    }).join('');
+  }
+
+  /** Fetch specs for the active SF module and render the panel. */
+  function _sfLoadSpecs(moduleId) {
+    var specModuleId = SF_MODULE_SPEC_MAP[moduleId];
+    var panel        = document.getElementById('vcSfSpecPanel');
+    if (!specModuleId) { if (panel) panel.style.display = 'none'; return; }
+    if (!_backendConnected) { if (panel) panel.style.display = 'none'; return; }
+
+    fetch(BACKEND_URL + '/api/spec?module=' + specModuleId)
+      .then(function (r)  { return r.json(); })
+      .then(function (d)  { _sfRenderSpecPanel(d.specs || []); })
+      .catch(function ()  { if (panel) panel.style.display = 'none'; });
+  }
+
   function initSoftwareFactoryPage() {
     var sfPage = document.getElementById('vcSoftwareFactoryPage');
     if (!sfPage) return;
@@ -7699,6 +7771,18 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         }
       });
     });
+
+    // §73.1d — Spec panel toggle
+    var specToggleBtn = document.getElementById('vcSfSpecToggleBtn');
+    if (specToggleBtn) {
+      specToggleBtn.addEventListener('click', function () {
+        var list  = document.getElementById('vcSfSpecList');
+        var arrow = document.getElementById('vcSfSpecArrow');
+        _sfSpecPanelOpen = !_sfSpecPanelOpen;
+        if (list)  list.style.display = _sfSpecPanelOpen ? '' : 'none';
+        if (arrow) arrow.textContent  = _sfSpecPanelOpen ? '▲' : '▼';
+      });
+    }
 
     // Initialize first module
     setSoftwareFactoryModule(_sfActiveModule);
