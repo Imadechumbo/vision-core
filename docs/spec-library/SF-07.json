@@ -1,0 +1,28 @@
+{
+  "module": "SF-07",
+  "module_name": "Recibo do Worker",
+  "parsed_count": 1,
+  "needs_review_count": 9,
+  "specs": [
+    {
+      "id": "SF-07-001",
+      "module": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": "HAPPY PATH",
+      "title": "colar recibo válido gera análise com 13 campos",
+      "pre": null,
+      "input": {
+        "_raw": "recibo com execução confirmada, arquivos listados"
+      },
+      "expected_output": [
+        "13/13 campos analisados, evidências verificadas"
+      ],
+      "pass_criteria": "análise completa gerada",
+      "fail_criteria": null,
+      "tags": [
+        "happy-path",
+        "recibo-com-execucao-confirmada-arquivos-listados"
+      ]
+    }
+  ]
+}

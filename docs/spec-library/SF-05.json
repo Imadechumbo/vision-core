@@ -1,0 +1,25 @@
+{
+  "module": "SF-05",
+  "module_name": "Preview de Criação",
+  "parsed_count": 1,
+  "needs_review_count": 9,
+  "specs": [
+    {
+      "id": "SF-05-001",
+      "module": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": "HAPPY PATH",
+      "title": "preview lista arquivos esperados sem criar nada",
+      "pre": null,
+      "input": null,
+      "expected_output": [
+        "lista de arquivos, status BLOQUEADO em todas as capacidades"
+      ],
+      "pass_criteria": "file_creation_allowed=false, file_write_enabled=false",
+      "fail_criteria": null,
+      "tags": [
+        "happy-path"
+      ]
+    }
+  ]
+}

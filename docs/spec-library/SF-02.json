@@ -1,0 +1,28 @@
+{
+  "module": "SF-02",
+  "module_name": "Templates de Projeto",
+  "parsed_count": 1,
+  "needs_review_count": 9,
+  "specs": [
+    {
+      "id": "SF-02-001",
+      "module": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": "HAPPY PATH",
+      "title": "SDDF Standard gera blueprint completo",
+      "pre": null,
+      "input": {
+        "template": "SDDF Standard"
+      },
+      "expected_output": [
+        "agentes Backend+DB+Auth+Frontend listados, estrutura de pastas presente"
+      ],
+      "pass_criteria": "preview gerado com todos os campos",
+      "fail_criteria": null,
+      "tags": [
+        "happy-path",
+        "sddf-standard"
+      ]
+    }
+  ]
+}

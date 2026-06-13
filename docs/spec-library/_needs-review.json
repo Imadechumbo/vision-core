@@ -1,0 +1,1024 @@
+{
+  "total": 113,
+  "ids": [
+    "SF-01-002",
+    "SF-01-003",
+    "SF-01-004",
+    "SF-01-005",
+    "SF-01-006",
+    "SF-01-007",
+    "SF-01-008",
+    "SF-01-009",
+    "SF-01-010",
+    "SF-02-002",
+    "SF-02-003",
+    "SF-02-004",
+    "SF-02-005",
+    "SF-02-006",
+    "SF-02-007",
+    "SF-02-008",
+    "SF-02-009",
+    "SF-02-010",
+    "SF-03-002",
+    "SF-03-003",
+    "SF-03-004",
+    "SF-03-005",
+    "SF-03-006",
+    "SF-03-007",
+    "SF-03-008",
+    "SF-03-009",
+    "SF-03-010",
+    "SF-04-001",
+    "SF-04-002",
+    "SF-04-003",
+    "SF-04-004",
+    "SF-04-005",
+    "SF-04-006",
+    "SF-04-007",
+    "SF-04-008",
+    "SF-04-009",
+    "SF-04-010",
+    "SF-05-002",
+    "SF-05-003",
+    "SF-05-004",
+    "SF-05-005",
+    "SF-05-006",
+    "SF-05-007",
+    "SF-05-008",
+    "SF-05-009",
+    "SF-05-010",
+    "SF-06-002",
+    "SF-06-003",
+    "SF-06-004",
+    "SF-06-005",
+    "SF-06-006",
+    "SF-06-007",
+    "SF-06-008",
+    "SF-06-009",
+    "SF-06-010",
+    "SF-07-002",
+    "SF-07-003",
+    "SF-07-004",
+    "SF-07-005",
+    "SF-07-006",
+    "SF-07-007",
+    "SF-07-008",
+    "SF-07-009",
+    "SF-07-010",
+    "SF-08-002",
+    "SF-08-003",
+    "SF-08-004",
+    "SF-08-005",
+    "SF-08-006",
+    "SF-08-007",
+    "SF-08-008",
+    "SF-08-009",
+    "SF-08-010",
+    "SF-09-001",
+    "SF-09-002",
+    "SF-09-003",
+    "SF-09-004",
+    "SF-09-005",
+    "SF-09-006",
+    "SF-09-007",
+    "SF-09-008",
+    "SF-09-009",
+    "SF-09-010",
+    "SF-INT-001",
+    "SF-INT-002",
+    "SF-INT-003",
+    "SF-INT-004",
+    "SF-INT-005",
+    "SF-INT-006",
+    "SF-INT-007",
+    "SF-INT-008",
+    "SF-INT-009",
+    "SF-INT-010",
+    "SF-SEC-001",
+    "SF-SEC-002",
+    "SF-SEC-003",
+    "SF-SEC-004",
+    "SF-SEC-005",
+    "SF-SEC-006",
+    "SF-SEC-007",
+    "SF-SEC-008",
+    "SF-SEC-009",
+    "SF-SEC-010",
+    "SF-LLM-001",
+    "SF-LLM-002",
+    "SF-LLM-003",
+    "SF-LLM-004",
+    "SF-LLM-005",
+    "SF-LLM-006",
+    "SF-LLM-007",
+    "SF-LLM-008",
+    "SF-LLM-009",
+    "SF-LLM-010"
+  ],
+  "specs": [
+    {
+      "id": "SF-01-002",
+      "module_id": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "API Backend + Python + Full Software Factory",
+      "raw": "### SF-01-002 — API Backend + Python + Full Software Factory"
+    },
+    {
+      "id": "SF-01-003",
+      "module_id": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "Game/Indie + TypeScript + OpenSquad",
+      "raw": "### SF-01-003 — Game/Indie + TypeScript + OpenSquad"
+    },
+    {
+      "id": "SF-01-004",
+      "module_id": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "Dashboard Admin + React + Solo Agent",
+      "raw": "### SF-01-004 — Dashboard Admin + React + Solo Agent"
+    },
+    {
+      "id": "SF-01-005",
+      "module_id": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": "EDGE",
+      "title": "tipo não selecionado → próxima ação deve bloquear",
+      "raw": "### SF-01-005 EDGE — tipo não selecionado → próxima ação deve bloquear"
+    },
+    {
+      "id": "SF-01-006",
+      "module_id": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": "SECURITY",
+      "title": "exec real nunca pode ser TRUE no módulo 01",
+      "raw": "### SF-01-006 SECURITY — exec real nunca pode ser TRUE no módulo 01"
+    },
+    {
+      "id": "SF-01-007",
+      "module_id": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "Tamanho/Risco: Prototype vs Enterprise High Risk muda modo sugerido",
+      "raw": "### SF-01-007 — Tamanho/Risco: Prototype vs Enterprise High Risk muda modo sugerido"
+    },
+    {
+      "id": "SF-01-008",
+      "module_id": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "Matriz de agentes: ON/AUTO/OFF persiste ao trocar tipo",
+      "raw": "### SF-01-008 — Matriz de agentes: ON/AUTO/OFF persiste ao trocar tipo"
+    },
+    {
+      "id": "SF-01-009",
+      "module_id": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "GERAR SETUP produz output com tipo+stack+orquestração corretos",
+      "raw": "### SF-01-009 — GERAR SETUP produz output com tipo+stack+orquestração corretos"
+    },
+    {
+      "id": "SF-01-010",
+      "module_id": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": null,
+      "title": "Orquestração OpenSquad ativa aviso de escala",
+      "raw": "### SF-01-010 — Orquestração OpenSquad ativa aviso de escala"
+    },
+    {
+      "id": "SF-02-002",
+      "module_id": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "SaaS Baseline template",
+      "raw": "### SF-02-002 — SaaS Baseline template"
+    },
+    {
+      "id": "SF-02-003",
+      "module_id": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "API Microservice template",
+      "raw": "### SF-02-003 — API Microservice template"
+    },
+    {
+      "id": "SF-02-004",
+      "module_id": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "CLI Utility template",
+      "raw": "### SF-02-004 — CLI Utility template"
+    },
+    {
+      "id": "SF-02-005",
+      "module_id": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": "EDGE",
+      "title": "template sem tipo selecionado no SF-01",
+      "raw": "### SF-02-005 EDGE — template sem tipo selecionado no SF-01"
+    },
+    {
+      "id": "SF-02-006",
+      "module_id": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "Blueprint inclui: stack, pastas, arquivos iniciais, agentes reserva",
+      "raw": "### SF-02-006 — Blueprint inclui: stack, pastas, arquivos iniciais, agentes reserva"
+    },
+    {
+      "id": "SF-02-007",
+      "module_id": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "Blueprint inclui: sequência de prompts, checklist validação",
+      "raw": "### SF-02-007 — Blueprint inclui: sequência de prompts, checklist validação"
+    },
+    {
+      "id": "SF-02-008",
+      "module_id": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "Blueprint inclui: avisos de risco, ações proibidas, próxima ação segura",
+      "raw": "### SF-02-008 — Blueprint inclui: avisos de risco, ações proibidas, próxima ação segura"
+    },
+    {
+      "id": "SF-02-009",
+      "module_id": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": "SECURITY",
+      "title": "blueprint nunca inclui comandos de execução real",
+      "raw": "### SF-02-009 SECURITY — blueprint nunca inclui comandos de execução real"
+    },
+    {
+      "id": "SF-02-010",
+      "module_id": "SF-02",
+      "module_name": "Templates de Projeto",
+      "type": null,
+      "title": "Mudar template reseta preview anterior",
+      "raw": "### SF-02-010 — Mudar template reseta preview anterior"
+    },
+    {
+      "id": "SF-03-002",
+      "module_id": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "Worker Cursor AI gera prompt adaptado para Cursor",
+      "raw": "### SF-03-002 — Worker Cursor AI gera prompt adaptado para Cursor"
+    },
+    {
+      "id": "SF-03-003",
+      "module_id": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "Worker GitHub Copilot",
+      "raw": "### SF-03-003 — Worker GitHub Copilot"
+    },
+    {
+      "id": "SF-03-004",
+      "module_id": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "Worker Humano gera checklist em vez de prompt técnico",
+      "raw": "### SF-03-004 — Worker Humano gera checklist em vez de prompt técnico"
+    },
+    {
+      "id": "SF-03-005",
+      "module_id": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": "EDGE",
+      "title": "seções vazias → prompt deve indicar campos faltando",
+      "raw": "### SF-03-005 EDGE — seções vazias → prompt deve indicar campos faltando"
+    },
+    {
+      "id": "SF-03-006",
+      "module_id": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": "SECURITY",
+      "title": "prompt não contém comandos rm, drop, delete real",
+      "raw": "### SF-03-006 SECURITY — prompt não contém comandos rm, drop, delete real"
+    },
+    {
+      "id": "SF-03-007",
+      "module_id": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "Prompt inclui: stack, contratos SDDF, modo de orquestração",
+      "raw": "### SF-03-007 — Prompt inclui: stack, contratos SDDF, modo de orquestração"
+    },
+    {
+      "id": "SF-03-008",
+      "module_id": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "Prompt inclui: restrições de autoridade (no_deploy, no_release)",
+      "raw": "### SF-03-008 — Prompt inclui: restrições de autoridade (no_deploy, no_release)"
+    },
+    {
+      "id": "SF-03-009",
+      "module_id": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "Diferentes combinações de seções geram outputs diferentes",
+      "raw": "### SF-03-009 — Diferentes combinações de seções geram outputs diferentes"
+    },
+    {
+      "id": "SF-03-010",
+      "module_id": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": null,
+      "title": "COPIAR salva o prompt correto no clipboard",
+      "raw": "### SF-03-010 — COPIAR salva o prompt correto no clipboard"
+    },
+    {
+      "id": "SF-04-001",
+      "module_id": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": "HAPPY PATH",
+      "title": "Missão Completa gera pacote com contexto+contratos+arquivos",
+      "raw": "### SF-04-001 HAPPY PATH — Missão Completa gera pacote com contexto+contratos+arquivos"
+    },
+    {
+      "id": "SF-04-002",
+      "module_id": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "Patch Cirúrgico gera pacote menor e focado",
+      "raw": "### SF-04-002 — Patch Cirúrgico gera pacote menor e focado"
+    },
+    {
+      "id": "SF-04-003",
+      "module_id": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "Nova Feature gera pacote com spec de feature",
+      "raw": "### SF-04-003 — Nova Feature gera pacote com spec de feature"
+    },
+    {
+      "id": "SF-04-004",
+      "module_id": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "Revisão de Código gera checklist de revisão",
+      "raw": "### SF-04-004 — Revisão de Código gera checklist de revisão"
+    },
+    {
+      "id": "SF-04-005",
+      "module_id": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": "EDGE",
+      "title": "pacote sem missão composta no SF-03",
+      "raw": "### SF-04-005 EDGE — pacote sem missão composta no SF-03"
+    },
+    {
+      "id": "SF-04-006",
+      "module_id": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": "SECURITY",
+      "title": "pacote nunca inclui chaves de API ou secrets",
+      "raw": "### SF-04-006 SECURITY — pacote nunca inclui chaves de API ou secrets"
+    },
+    {
+      "id": "SF-04-007",
+      "module_id": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "Pacote inclui: target worker, modo, contratos, proibições",
+      "raw": "### SF-04-007 — Pacote inclui: target worker, modo, contratos, proibições"
+    },
+    {
+      "id": "SF-04-008",
+      "module_id": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "Pacote diferente para cada tipo de projeto",
+      "raw": "### SF-04-008 — Pacote diferente para cada tipo de projeto"
+    },
+    {
+      "id": "SF-04-009",
+      "module_id": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "COPIAR funciona corretamente",
+      "raw": "### SF-04-009 — COPIAR funciona corretamente"
+    },
+    {
+      "id": "SF-04-010",
+      "module_id": "SF-04",
+      "module_name": "Pacotes para Workers",
+      "type": null,
+      "title": "Output marcado como MANUAL HANDOFF",
+      "raw": "### SF-04-010 — Output marcado como MANUAL HANDOFF"
+    },
+    {
+      "id": "SF-05-002",
+      "module_id": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": null,
+      "title": "Preview diferente para cada tipo de projeto",
+      "raw": "### SF-05-002 — Preview diferente para cada tipo de projeto"
+    },
+    {
+      "id": "SF-05-003",
+      "module_id": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": null,
+      "title": "Preview diferente para cada template",
+      "raw": "### SF-05-003 — Preview diferente para cada template"
+    },
+    {
+      "id": "SF-05-004",
+      "module_id": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": "EDGE",
+      "title": "preview sem SF-01 e SF-02 completos",
+      "raw": "### SF-05-004 EDGE — preview sem SF-01 e SF-02 completos"
+    },
+    {
+      "id": "SF-05-005",
+      "module_id": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": "SECURITY CRÍTICO",
+      "title": "file_creation_allowed nunca pode ser true no frontend",
+      "raw": "### SF-05-005 SECURITY CRÍTICO — file_creation_allowed nunca pode ser true no frontend"
+    },
+    {
+      "id": "SF-05-006",
+      "module_id": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": "SECURITY CRÍTICO",
+      "title": "frontend_file_write nunca pode ser true",
+      "raw": "### SF-05-006 SECURITY CRÍTICO — frontend_file_write nunca pode ser true"
+    },
+    {
+      "id": "SF-05-007",
+      "module_id": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": "SECURITY CRÍTICO",
+      "title": "backend_write_allowed nunca pode ser true",
+      "raw": "### SF-05-007 SECURITY CRÍTICO — backend_write_allowed nunca pode ser true"
+    },
+    {
+      "id": "SF-05-008",
+      "module_id": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": null,
+      "title": "Labels LOCKED visíveis para todas as capacidades",
+      "raw": "### SF-05-008 — Labels LOCKED visíveis para todas as capacidades"
+    },
+    {
+      "id": "SF-05-009",
+      "module_id": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": null,
+      "title": "Preview inclui estrutura de pastas esperada",
+      "raw": "### SF-05-009 — Preview inclui estrutura de pastas esperada"
+    },
+    {
+      "id": "SF-05-010",
+      "module_id": "SF-05",
+      "module_name": "Preview de Criação",
+      "type": null,
+      "title": "Resetar contexto limpa preview",
+      "raw": "### SF-05-010 — Resetar contexto limpa preview"
+    },
+    {
+      "id": "SF-06-002",
+      "module_id": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": null,
+      "title": "Pacote inclui declaração de não-autoridade",
+      "raw": "### SF-06-002 — Pacote inclui declaração de não-autoridade"
+    },
+    {
+      "id": "SF-06-003",
+      "module_id": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": null,
+      "title": "Pacote referencia worker externo como executor",
+      "raw": "### SF-06-003 — Pacote referencia worker externo como executor"
+    },
+    {
+      "id": "SF-06-004",
+      "module_id": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": "EDGE",
+      "title": "pacote sem SF-05 completo",
+      "raw": "### SF-06-004 EDGE — pacote sem SF-05 completo"
+    },
+    {
+      "id": "SF-06-005",
+      "module_id": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": "SECURITY CRÍTICO",
+      "title": "command_execution_allowed sempre false",
+      "raw": "### SF-06-005 SECURITY CRÍTICO — command_execution_allowed sempre false"
+    },
+    {
+      "id": "SF-06-006",
+      "module_id": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": "SECURITY CRÍTICO",
+      "title": "real_file_creation_enabled sempre false",
+      "raw": "### SF-06-006 SECURITY CRÍTICO — real_file_creation_enabled sempre false"
+    },
+    {
+      "id": "SF-06-007",
+      "module_id": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": "SECURITY CRÍTICO",
+      "title": "deploy/release/tag bloqueados",
+      "raw": "### SF-06-007 SECURITY CRÍTICO — deploy/release/tag bloqueados"
+    },
+    {
+      "id": "SF-06-008",
+      "module_id": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": null,
+      "title": "Pacote inclui checklist de autorização humana",
+      "raw": "### SF-06-008 — Pacote inclui checklist de autorização humana"
+    },
+    {
+      "id": "SF-06-009",
+      "module_id": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": null,
+      "title": "Diferentes tipos geram comandos diferentes",
+      "raw": "### SF-06-009 — Diferentes tipos geram comandos diferentes"
+    },
+    {
+      "id": "SF-06-010",
+      "module_id": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": null,
+      "title": "DECLARAÇÃO DE NÃO-AUTORIDADE presente no output",
+      "raw": "### SF-06-010 — DECLARAÇÃO DE NÃO-AUTORIDADE presente no output"
+    },
+    {
+      "id": "SF-07-002",
+      "module_id": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "Recibo inválido → análise indica campos faltando",
+      "raw": "### SF-07-002 — Recibo inválido → análise indica campos faltando"
+    },
+    {
+      "id": "SF-07-003",
+      "module_id": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "Recibo parcial → análise identifica gaps",
+      "raw": "### SF-07-003 — Recibo parcial → análise identifica gaps"
+    },
+    {
+      "id": "SF-07-004",
+      "module_id": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": "EDGE",
+      "title": "recibo vazio → output indica ausência",
+      "raw": "### SF-07-004 EDGE — recibo vazio → output indica ausência"
+    },
+    {
+      "id": "SF-07-005",
+      "module_id": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": "SECURITY",
+      "title": "análise não executa comandos do recibo",
+      "raw": "### SF-07-005 SECURITY — análise não executa comandos do recibo"
+    },
+    {
+      "id": "SF-07-006",
+      "module_id": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "Campos verificados: real_execution, pass_gold_real, file_creation",
+      "raw": "### SF-07-006 — Campos verificados: real_execution, pass_gold_real, file_creation"
+    },
+    {
+      "id": "SF-07-007",
+      "module_id": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "Campos verificados: backend_write, command_execution, deploy, production",
+      "raw": "### SF-07-007 — Campos verificados: backend_write, command_execution, deploy, production"
+    },
+    {
+      "id": "SF-07-008",
+      "module_id": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "GERAR RECIBO DE EVIDÊNCIA produz documento completo",
+      "raw": "### SF-07-008 — GERAR RECIBO DE EVIDÊNCIA produz documento completo"
+    },
+    {
+      "id": "SF-07-009",
+      "module_id": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "Recibo com FALSE em campos críticos → gate não passa",
+      "raw": "### SF-07-009 — Recibo com FALSE em campos críticos → gate não passa"
+    },
+    {
+      "id": "SF-07-010",
+      "module_id": "SF-07",
+      "module_name": "Recibo do Worker",
+      "type": null,
+      "title": "Análise é local apenas, sem backend",
+      "raw": "### SF-07-010 — Análise é local apenas, sem backend"
+    },
+    {
+      "id": "SF-08-002",
+      "module_id": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "Com cadeia incompleta mostra quais módulos faltam",
+      "raw": "### SF-08-002 — Com cadeia incompleta mostra quais módulos faltam"
+    },
+    {
+      "id": "SF-08-003",
+      "module_id": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "pass_gold_real_claimed sempre false no frontend",
+      "raw": "### SF-08-003 — pass_gold_real_claimed sempre false no frontend"
+    },
+    {
+      "id": "SF-08-004",
+      "module_id": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "production_touched sempre false no frontend",
+      "raw": "### SF-08-004 — production_touched sempre false no frontend"
+    },
+    {
+      "id": "SF-08-005",
+      "module_id": "SF-08",
+      "module_name": "Painel Final",
+      "type": "SECURITY CRÍTICO",
+      "title": "nenhuma das 11 capacidades pode ser true",
+      "raw": "### SF-08-005 SECURITY CRÍTICO — nenhuma das 11 capacidades pode ser true"
+    },
+    {
+      "id": "SF-08-006",
+      "module_id": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "Decisão do operador é campo obrigatório",
+      "raw": "### SF-08-006 — Decisão do operador é campo obrigatório"
+    },
+    {
+      "id": "SF-08-007",
+      "module_id": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "Relatório final inclui todos os artefatos gerados",
+      "raw": "### SF-08-007 — Relatório final inclui todos os artefatos gerados"
+    },
+    {
+      "id": "SF-08-008",
+      "module_id": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "Relatório inclui matriz de autoridade com todos FALSE",
+      "raw": "### SF-08-008 — Relatório inclui matriz de autoridade com todos FALSE"
+    },
+    {
+      "id": "SF-08-009",
+      "module_id": "SF-08",
+      "module_name": "Painel Final",
+      "type": "EDGE",
+      "title": "relatório sem cadeia completa",
+      "raw": "### SF-08-009 EDGE — relatório sem cadeia completa"
+    },
+    {
+      "id": "SF-08-010",
+      "module_id": "SF-08",
+      "module_name": "Painel Final",
+      "type": null,
+      "title": "SUMMARY ONLY label visível",
+      "raw": "### SF-08-010 — SUMMARY ONLY label visível"
+    },
+    {
+      "id": "SF-09-001",
+      "module_id": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "Todos os 6 controles estão LOCKED",
+      "raw": "### SF-09-001 — Todos os 6 controles estão LOCKED"
+    },
+    {
+      "id": "SF-09-002",
+      "module_id": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "saas_signup_enabled sempre false",
+      "raw": "### SF-09-002 — saas_signup_enabled sempre false"
+    },
+    {
+      "id": "SF-09-003",
+      "module_id": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "login_enabled sempre false",
+      "raw": "### SF-09-003 — login_enabled sempre false"
+    },
+    {
+      "id": "SF-09-004",
+      "module_id": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "billing_enabled sempre false",
+      "raw": "### SF-09-004 — billing_enabled sempre false"
+    },
+    {
+      "id": "SF-09-005",
+      "module_id": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "api_connectors_enabled sempre false",
+      "raw": "### SF-09-005 — api_connectors_enabled sempre false"
+    },
+    {
+      "id": "SF-09-006",
+      "module_id": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "secrets_access_enabled sempre false",
+      "raw": "### SF-09-006 — secrets_access_enabled sempre false"
+    },
+    {
+      "id": "SF-09-007",
+      "module_id": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "Declaração de não-autoridade presente",
+      "raw": "### SF-09-007 — Declaração de não-autoridade presente"
+    },
+    {
+      "id": "SF-09-008",
+      "module_id": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "Planos SaaS e API marcados como Pending",
+      "raw": "### SF-09-008 — Planos SaaS e API marcados como Pending"
+    },
+    {
+      "id": "SF-09-009",
+      "module_id": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": null,
+      "title": "Secrets Boundary: local only",
+      "raw": "### SF-09-009 — Secrets Boundary: local only"
+    },
+    {
+      "id": "SF-09-010",
+      "module_id": "SF-09",
+      "module_name": "SaaS & API Roadmap",
+      "type": "SECURITY CRÍTICO",
+      "title": "nenhum controle pode ser ativado no frontend",
+      "raw": "### SF-09-010 SECURITY CRÍTICO — nenhum controle pode ser ativado no frontend"
+    },
+    {
+      "id": "SF-INT-001",
+      "module_id": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Estado do SF-01 persiste em todos os módulos posteriores",
+      "raw": "### SF-INT-001 — Estado do SF-01 persiste em todos os módulos posteriores"
+    },
+    {
+      "id": "SF-INT-002",
+      "module_id": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Trocar tipo em SF-01 reseta módulos 02-09",
+      "raw": "### SF-INT-002 — Trocar tipo em SF-01 reseta módulos 02-09"
+    },
+    {
+      "id": "SF-INT-003",
+      "module_id": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "12 confirmações no engineer gate são cumulativas",
+      "raw": "### SF-INT-003 — 12 confirmações no engineer gate são cumulativas"
+    },
+    {
+      "id": "SF-INT-004",
+      "module_id": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Agentes Hermes/Backend/Auth respondem no modo correto por orquestração",
+      "raw": "### SF-INT-004 — Agentes Hermes/Backend/Auth respondem no modo correto por orquestração"
+    },
+    {
+      "id": "SF-INT-005",
+      "module_id": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "LLM output do compositor (SF-03) é consistente com template (SF-02)",
+      "raw": "### SF-INT-005 — LLM output do compositor (SF-03) é consistente com template (SF-02)"
+    },
+    {
+      "id": "SF-INT-006",
+      "module_id": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Pacote SF-04 é derivado do compositor SF-03",
+      "raw": "### SF-INT-006 — Pacote SF-04 é derivado do compositor SF-03"
+    },
+    {
+      "id": "SF-INT-007",
+      "module_id": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Preview SF-05 é consistente com template SF-02",
+      "raw": "### SF-INT-007 — Preview SF-05 é consistente com template SF-02"
+    },
+    {
+      "id": "SF-INT-008",
+      "module_id": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Recibo SF-07 pode ser analisado mesmo sem SF-06 completo",
+      "raw": "### SF-INT-008 — Recibo SF-07 pode ser analisado mesmo sem SF-06 completo"
+    },
+    {
+      "id": "SF-INT-009",
+      "module_id": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Painel final SF-08 agrega estado de todos os módulos",
+      "raw": "### SF-INT-009 — Painel final SF-08 agrega estado de todos os módulos"
+    },
+    {
+      "id": "SF-INT-010",
+      "module_id": "SF-INT",
+      "module_name": "Integração cross-módulo",
+      "type": null,
+      "title": "Cadeia completa: SF-01→02→03→04→05→06→07→08 = produto entregável",
+      "raw": "### SF-INT-010 — Cadeia completa: SF-01→02→03→04→05→06→07→08 = produto entregável"
+    },
+    {
+      "id": "SF-SEC-001",
+      "module_id": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": "CRÍTICO",
+      "title": "file_creation_allowed NUNCA true no frontend",
+      "raw": "### SF-SEC-001 CRÍTICO — file_creation_allowed NUNCA true no frontend"
+    },
+    {
+      "id": "SF-SEC-002",
+      "module_id": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": "CRÍTICO",
+      "title": "command_execution_allowed NUNCA true no frontend",
+      "raw": "### SF-SEC-002 CRÍTICO — command_execution_allowed NUNCA true no frontend"
+    },
+    {
+      "id": "SF-SEC-003",
+      "module_id": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": "CRÍTICO",
+      "title": "backend_write_allowed NUNCA true no frontend",
+      "raw": "### SF-SEC-003 CRÍTICO — backend_write_allowed NUNCA true no frontend"
+    },
+    {
+      "id": "SF-SEC-004",
+      "module_id": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": "CRÍTICO",
+      "title": "pass_gold_real_claimed NUNCA true no frontend",
+      "raw": "### SF-SEC-004 CRÍTICO — pass_gold_real_claimed NUNCA true no frontend"
+    },
+    {
+      "id": "SF-SEC-005",
+      "module_id": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": "CRÍTICO",
+      "title": "production_touched NUNCA true no frontend",
+      "raw": "### SF-SEC-005 CRÍTICO — production_touched NUNCA true no frontend"
+    },
+    {
+      "id": "SF-SEC-006",
+      "module_id": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": "CRÍTICO",
+      "title": "deploy/release/tag NUNCA ativos no frontend",
+      "raw": "### SF-SEC-006 CRÍTICO — deploy/release/tag NUNCA ativos no frontend"
+    },
+    {
+      "id": "SF-SEC-007",
+      "module_id": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": null,
+      "title": "Engineer gate exige 12/12 confirmações para recibo",
+      "raw": "### SF-SEC-007 — Engineer gate exige 12/12 confirmações para recibo"
+    },
+    {
+      "id": "SF-SEC-008",
+      "module_id": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": null,
+      "title": "LLM outputs não contêm secrets, tokens ou chaves reais",
+      "raw": "### SF-SEC-008 — LLM outputs não contêm secrets, tokens ou chaves reais"
+    },
+    {
+      "id": "SF-SEC-009",
+      "module_id": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": null,
+      "title": "Modo LOCAL PREVIEW é o único modo ativo",
+      "raw": "### SF-SEC-009 — Modo LOCAL PREVIEW é o único modo ativo"
+    },
+    {
+      "id": "SF-SEC-010",
+      "module_id": "SF-SEC",
+      "module_name": "Segurança (security wall)",
+      "type": null,
+      "title": "Qualquer tentativa de bypass deve ser bloqueada e logada",
+      "raw": "### SF-SEC-010 — Qualquer tentativa de bypass deve ser bloqueada e logada"
+    },
+    {
+      "id": "SF-LLM-001",
+      "module_id": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Compositor gera prompt ≥ 10 linhas para qualquer combinação",
+      "raw": "### SF-LLM-001 — Compositor gera prompt ≥ 10 linhas para qualquer combinação"
+    },
+    {
+      "id": "SF-LLM-002",
+      "module_id": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Setup gerado contém tipo + stack + modo de orquestração",
+      "raw": "### SF-LLM-002 — Setup gerado contém tipo + stack + modo de orquestração"
+    },
+    {
+      "id": "SF-LLM-003",
+      "module_id": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Template preview contém estrutura de pastas real",
+      "raw": "### SF-LLM-003 — Template preview contém estrutura de pastas real"
+    },
+    {
+      "id": "SF-LLM-004",
+      "module_id": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Pacote worker contém contratos SDDF e proibições",
+      "raw": "### SF-LLM-004 — Pacote worker contém contratos SDDF e proibições"
+    },
+    {
+      "id": "SF-LLM-005",
+      "module_id": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Recibo análise identifica campos faltando corretamente",
+      "raw": "### SF-LLM-005 — Recibo análise identifica campos faltando corretamente"
+    },
+    {
+      "id": "SF-LLM-006",
+      "module_id": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Relatório final cobre todos os 9 módulos",
+      "raw": "### SF-LLM-006 — Relatório final cobre todos os 9 módulos"
+    },
+    {
+      "id": "SF-LLM-007",
+      "module_id": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Outputs diferentes para diferentes combinações de input",
+      "raw": "### SF-LLM-007 — Outputs diferentes para diferentes combinações de input"
+    },
+    {
+      "id": "SF-LLM-008",
+      "module_id": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Outputs em português, coerentes com o contexto do projeto",
+      "raw": "### SF-LLM-008 — Outputs em português, coerentes com o contexto do projeto"
+    },
+    {
+      "id": "SF-LLM-009",
+      "module_id": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Nenhum output contém alucinação de execução real",
+      "raw": "### SF-LLM-009 — Nenhum output contém alucinação de execução real"
+    },
+    {
+      "id": "SF-LLM-010",
+      "module_id": "SF-LLM",
+      "module_name": "LLM — qualidade de output",
+      "type": null,
+      "title": "Prompts para Claude Code vs Worker Humano são distintos",
+      "raw": "### SF-LLM-010 — Prompts para Claude Code vs Worker Humano são distintos"
+    }
+  ]
+}

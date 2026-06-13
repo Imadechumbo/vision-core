@@ -1,0 +1,25 @@
+{
+  "module": "SF-08",
+  "module_name": "Painel Final",
+  "parsed_count": 1,
+  "needs_review_count": 9,
+  "specs": [
+    {
+      "id": "SF-08-001",
+      "module": "SF-08",
+      "module_name": "Painel Final",
+      "type": "HAPPY PATH",
+      "title": "painel mostra cadeia completa de 9 módulos",
+      "pre": null,
+      "input": null,
+      "expected_output": [
+        "todos os 9 módulos listados com status"
+      ],
+      "pass_criteria": "product_chain_complete reflete estado real",
+      "fail_criteria": null,
+      "tags": [
+        "happy-path"
+      ]
+    }
+  ]
+}

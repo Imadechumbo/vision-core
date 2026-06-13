@@ -1,0 +1,35 @@
+{
+  "module": "SF-01",
+  "module_name": "Montar Projeto do Zero",
+  "parsed_count": 1,
+  "needs_review_count": 9,
+  "specs": [
+    {
+      "id": "SF-01-001",
+      "module": "SF-01",
+      "module_name": "Montar Projeto do Zero",
+      "type": "HAPPY PATH",
+      "title": "SaaS Fullstack + Node.js + Hermes Review",
+      "pre": "módulo 01 ativo",
+      "input": {
+        "tipo": "SaaS Fullstack",
+        "stack": "Node.js",
+        "orquestração": "Hermes Review"
+      },
+      "expected_output": [
+        "resumo mostra tipo/stack/orquestração corretos",
+        "modo = LOCAL PREVIEW",
+        "exec_real = BLOQUEADA",
+        "PASS GOLD REAL = NÃO REIVINDICADO"
+      ],
+      "pass_criteria": "todos os campos corretos",
+      "fail_criteria": "qualquer campo errado ou exec_real desbloqueada",
+      "tags": [
+        "happy-path",
+        "saas-fullstack",
+        "node-js",
+        "hermes-review"
+      ]
+    }
+  ]
+}

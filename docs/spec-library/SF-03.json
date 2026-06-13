@@ -1,0 +1,30 @@
+{
+  "module": "SF-03",
+  "module_name": "Compositor de Missão",
+  "parsed_count": 1,
+  "needs_review_count": 9,
+  "specs": [
+    {
+      "id": "SF-03-001",
+      "module": "SF-03",
+      "module_name": "Compositor de Missão",
+      "type": "HAPPY PATH",
+      "title": "Claude Code + SaaS Fullstack gera prompt completo",
+      "pre": null,
+      "input": {
+        "worker": "Claude Code",
+        "seções": "Contexto+Objetivo+Restrições+Stack+Contratos"
+      },
+      "expected_output": [
+        "prompt com todas seções, COPY-READY, sem comandos proibidos"
+      ],
+      "pass_criteria": "prompt ≥ 10 linhas, contém objetivo e restrições",
+      "fail_criteria": null,
+      "tags": [
+        "happy-path",
+        "claude-code",
+        "contexto-objetivo-restricoes-stack-contratos"
+      ]
+    }
+  ]
+}

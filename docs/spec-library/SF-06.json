@@ -1,0 +1,25 @@
+{
+  "module": "SF-06",
+  "module_name": "Comando para Criação Real",
+  "parsed_count": 1,
+  "needs_review_count": 9,
+  "specs": [
+    {
+      "id": "SF-06-001",
+      "module": "SF-06",
+      "module_name": "Comando para Criação Real",
+      "type": "HAPPY PATH",
+      "title": "pacote de comando gerado é texto apenas, sem execução",
+      "pre": null,
+      "input": null,
+      "expected_output": [
+        "command_execution_allowed=false, texto copyable"
+      ],
+      "pass_criteria": "nenhum comando executado, output é string local",
+      "fail_criteria": null,
+      "tags": [
+        "happy-path"
+      ]
+    }
+  ]
+}
