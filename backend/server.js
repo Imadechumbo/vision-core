@@ -2223,7 +2223,11 @@ app.post('/api/unzip-context', async (req, res) => {
 });
 
 /* ── /api/spec — SF Spec Library ────────────────────────────────────────── */
-const SPEC_DIR = path.join(ROOT, '..', 'docs', 'spec-library');
+// __dirname/spec-library (EB deploy: copied by CI)
+// fallback: ROOT/../docs/spec-library (local dev, monorepo root)
+const SPEC_DIR = fs.existsSync(path.join(__dirname, 'spec-library'))
+  ? path.join(__dirname, 'spec-library')
+  : path.join(ROOT, '..', 'docs', 'spec-library');
 
 /** Lazy in-memory cache. Reload on first request after server start. */
 let _specCache = null;

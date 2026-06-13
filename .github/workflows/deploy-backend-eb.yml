@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "backend/**"
+      - "docs/spec-library/**"
   workflow_dispatch:
 
 concurrency:
@@ -39,6 +40,8 @@ jobs:
 
       - name: Generate deployment package
         run: |
+          # Copy spec-library into backend so EB has access at runtime
+          cp -r docs/spec-library backend/spec-library
           cd backend
           zip -r ../deploy.zip . \
             --exclude "*.test.*" \
@@ -46,6 +49,7 @@ jobs:
             --exclude ".env*" \
             --exclude "*.log"
           echo "Package size: $(du -sh ../deploy.zip | cut -f1)"
+          echo "Spec library files: $(ls spec-library/*.json | wc -l)"
 
       - name: Upload bundle to S3
         run: |
