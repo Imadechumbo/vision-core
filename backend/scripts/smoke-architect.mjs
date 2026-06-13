@@ -46,18 +46,26 @@ function loadSpecCache() {
   return cache;
 }
 
-function matchSpecsByTags(tags, cache, limit = 6) {
-  if (!Array.isArray(tags) || tags.length === 0) return [];
-  const tagSet = new Set(tags.map(t => t.toLowerCase()));
+function matchSpecsByTags(tags, cache, limit = 6, fallbackTerms = []) {
+  const tagSet = new Set((Array.isArray(tags) ? tags : []).map(t => t.toLowerCase()));
   const scored = [];
   for (const spec of Object.values(cache.byId)) {
     if (!Array.isArray(spec.tags)) continue;
     const hits = spec.tags.filter(t => tagSet.has(t.toLowerCase())).length;
-    if (hits > 0) scored.push({ spec, hits });
+    if (hits > 0) scored.push({ spec, hits, via: 'tag' });
+  }
+  if (scored.length === 0 && fallbackTerms.length > 0) {
+    const terms = fallbackTerms.join(' ').toLowerCase()
+      .split(/[\s,/+\-_]+/).filter(w => w.length >= 3);
+    for (const spec of Object.values(cache.byId)) {
+      const haystack = ((spec.title || '') + ' ' + (spec.module_name || '')).toLowerCase();
+      const hits = terms.filter(w => haystack.includes(w)).length;
+      if (hits > 0) scored.push({ spec, hits, via: 'title' });
+    }
   }
   scored.sort((a, b) => b.hits - a.hits);
-  return scored.slice(0, limit).map(({ spec, hits }) => ({
-    id: spec.id, module: spec.module, title: spec.title, tag_hits: hits
+  return scored.slice(0, limit).map(({ spec, hits, via }) => ({
+    id: spec.id, module: spec.module, title: spec.title, tag_hits: hits, match_via: via || 'tag'
   }));
 }
 
@@ -69,10 +77,10 @@ const TEST_CASES = [
     message: 'quero um site para minha padaria',
     mockAnswer: JSON.stringify({
       project_type: 'site institucional para pequeno negócio',
-      stack: ['html', 'css', 'javascript'],
-      tags: ['static-site', 'small-business'],
+      stack: ['html-css', 'javascript'],
+      tags: ['frontend', 'happy-path', 'local-preview', 'prototype'],
       confidence: 0.75,
-      explanation: 'Padaria geralmente precisa de site simples com cardápio e contato. Stack leve é suficiente. Ver SF-01.',
+      explanation: 'Padaria geralmente precisa de site simples com cardápio e contato. Stack leve é suficiente. Ver SF-01 para configuração inicial.',
       open_questions: []
     })
   },
@@ -166,7 +174,8 @@ async function runDirect(tc) {
     return { ...baseResp, specs_suggested: [], open_questions: classification.open_questions || [] };
   }
   const tags = Array.isArray(classification.tags) ? classification.tags : [];
-  return { ...baseResp, specs_suggested: matchSpecsByTags(tags, cache), open_questions: [] };
+  const fbTerms = [classification.project_type || '', ...(classification.stack || [])].filter(Boolean);
+  return { ...baseResp, specs_suggested: matchSpecsByTags(tags, cache, 6, fbTerms), open_questions: [] };
 }
 
 async function runMock(tc) {
@@ -194,7 +203,8 @@ async function runMock(tc) {
     return { ...baseResp, specs_suggested: [], open_questions: classification.open_questions || [] };
   }
   const tags = Array.isArray(classification.tags) ? classification.tags : [];
-  return { ...baseResp, specs_suggested: matchSpecsByTags(tags, cache), open_questions: [] };
+  const fbTerms = [classification.project_type || '', ...(classification.stack || [])].filter(Boolean);
+  return { ...baseResp, specs_suggested: matchSpecsByTags(tags, cache, 6, fbTerms), open_questions: [] };
 }
 
 /* ── Assert + print ───────────────────────────────────────────────── */

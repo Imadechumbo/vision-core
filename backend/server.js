@@ -2309,24 +2309,42 @@ function loadArchitectSystemPrompt() {
   return _architectSystemPrompt;
 }
 
-/** Match tags from classification against spec cache; return top specs */
-function matchSpecsByTags(tags, cache, limit = 8) {
-  if (!Array.isArray(tags) || tags.length === 0) return [];
-  const tagSet = new Set(tags.map(t => t.toLowerCase()));
+/** Match tags from classification against spec cache; return top specs.
+ *  Fallback: if tag-match returns 0 results and confidence >= 0.6,
+ *  try substring match on spec.title + module_name using project_type/stack words. */
+function matchSpecsByTags(tags, cache, limit = 8, fallbackTerms = []) {
+  const tagSet = new Set((Array.isArray(tags) ? tags : []).map(t => t.toLowerCase()));
   const scored = [];
+
   for (const spec of Object.values(cache.byId)) {
     if (!Array.isArray(spec.tags)) continue;
     const hits = spec.tags.filter(t => tagSet.has(t.toLowerCase())).length;
-    if (hits > 0) scored.push({ spec, hits });
+    if (hits > 0) scored.push({ spec, hits, via: 'tag' });
   }
+
+  // Fallback: title/module substring match when tags yield nothing
+  if (scored.length === 0 && fallbackTerms.length > 0) {
+    const terms = fallbackTerms
+      .join(' ')
+      .toLowerCase()
+      .split(/[\s,/+\-_]+/)
+      .filter(w => w.length >= 3);
+    for (const spec of Object.values(cache.byId)) {
+      const haystack = ((spec.title || '') + ' ' + (spec.module_name || '')).toLowerCase();
+      const hits = terms.filter(w => haystack.includes(w)).length;
+      if (hits > 0) scored.push({ spec, hits, via: 'title' });
+    }
+  }
+
   scored.sort((a, b) => b.hits - a.hits);
-  return scored.slice(0, limit).map(({ spec, hits }) => ({
-    id:     spec.id,
-    module: spec.module,
-    title:  spec.title,
-    type:   spec.type,
-    tags:   spec.tags,
-    tag_hits: hits
+  return scored.slice(0, limit).map(({ spec, hits, via }) => ({
+    id:       spec.id,
+    module:   spec.module,
+    title:    spec.title,
+    type:     spec.type,
+    tags:     spec.tags,
+    tag_hits: hits,
+    match_via: via || 'tag'
   }));
 }
 
@@ -2413,7 +2431,12 @@ app.post('/api/architect/interpret', async (req, res) => {
     // High confidence — match specs
     const cache          = loadSpecCache();
     const tags           = Array.isArray(classification.tags) ? classification.tags : [];
-    const specs_suggested = matchSpecsByTags(tags, cache);
+    // fallbackTerms: words from project_type + stack for title-substring fallback
+    const fallbackTerms  = [
+      classification.project_type || '',
+      ...(Array.isArray(classification.stack) ? classification.stack : [])
+    ].filter(Boolean);
+    const specs_suggested = matchSpecsByTags(tags, cache, 8, fallbackTerms);
 
     return res.status(200).json({
       ...baseResp,
