@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { scanConfig, applyConfigFixes, enforceConfigGold } = require('./vision_core/config/selfHealingConfig');
 const { runGoMission, streamGoMission, checkGoHealth, resolveGoBinary } = require('./src/runtime/goRunner');
+const { callHermes } = require('./hermes-rca');
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
@@ -2295,6 +2296,134 @@ app.get('/api/spec', (req, res) => {
     total:   Object.keys(cache.byId).length,
     modules,
   });
+});
+
+/* ── /api/architect/interpret — §73.2 Agente Arquiteto ─────────────────── */
+
+/** Lazy-load system prompt from file (cached after first read) */
+let _architectSystemPrompt = null;
+function loadArchitectSystemPrompt() {
+  if (_architectSystemPrompt) return _architectSystemPrompt;
+  const p = path.join(__dirname, 'prompts', 'architect-system.md');
+  _architectSystemPrompt = fs.readFileSync(p, 'utf8');
+  return _architectSystemPrompt;
+}
+
+/** Match tags from classification against spec cache; return top specs */
+function matchSpecsByTags(tags, cache, limit = 8) {
+  if (!Array.isArray(tags) || tags.length === 0) return [];
+  const tagSet = new Set(tags.map(t => t.toLowerCase()));
+  const scored = [];
+  for (const spec of Object.values(cache.byId)) {
+    if (!Array.isArray(spec.tags)) continue;
+    const hits = spec.tags.filter(t => tagSet.has(t.toLowerCase())).length;
+    if (hits > 0) scored.push({ spec, hits });
+  }
+  scored.sort((a, b) => b.hits - a.hits);
+  return scored.slice(0, limit).map(({ spec, hits }) => ({
+    id:     spec.id,
+    module: spec.module,
+    title:  spec.title,
+    type:   spec.type,
+    tags:   spec.tags,
+    tag_hits: hits
+  }));
+}
+
+/** Extract JSON from LLM answer (handles stray markdown fences) */
+function extractArchitectJson(answer) {
+  // strip possible markdown code fence
+  const stripped = answer.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+  return JSON.parse(stripped);
+}
+
+/**
+ * POST /api/architect/interpret
+ * Body: { message: string }
+ *
+ * Response (confidence >= 0.6):
+ *   { ok, classification, specs_suggested, provider_used, model_used, mode }
+ *
+ * Response (confidence < 0.6):
+ *   { ok, classification, open_questions, provider_used, model_used, mode }
+ */
+app.post('/api/architect/interpret', async (req, res) => {
+  const body    = normalizeBody(req);
+  const message = typeof body.message === 'string' ? body.message.trim() : '';
+
+  if (!message) {
+    return res.status(400).json({ ok: false, error: 'message_required', time: now() });
+  }
+  if (message.length > 4000) {
+    return res.status(400).json({ ok: false, error: 'message_too_long', max: 4000, time: now() });
+  }
+
+  const CONFIDENCE_THRESHOLD = 0.6;
+
+  try {
+    const systemPrompt = loadArchitectSystemPrompt();
+    const hermesResult = await callHermes(systemPrompt, message, { timeout: 30000 });
+
+    if (!hermesResult || hermesResult.ok === false) {
+      return res.status(503).json({
+        ok:    false,
+        error: 'all_providers_exhausted',
+        code:  hermesResult?.code || 'HERMES_FAILED',
+        time:  now()
+      });
+    }
+
+    let classification;
+    try {
+      classification = extractArchitectJson(hermesResult.answer);
+    } catch (parseErr) {
+      return res.status(502).json({
+        ok:    false,
+        error: 'llm_parse_error',
+        raw:   hermesResult.answer.slice(0, 500),
+        time:  now()
+      });
+    }
+
+    // Validate / normalise fields
+    const confidence      = typeof classification.confidence === 'number'
+      ? Math.min(1, Math.max(0, classification.confidence))
+      : 0.0;
+    classification.confidence = confidence;
+
+    const baseResp = {
+      ok:            true,
+      classification,
+      provider_used: hermesResult.provider_used,
+      model_used:    hermesResult.model_used,
+      mode:          'LOCAL PREVIEW',
+      exec_real:     'BLOQUEADA',
+      time:          now()
+    };
+
+    if (confidence < CONFIDENCE_THRESHOLD) {
+      // Low confidence — return open questions instead of specs
+      return res.status(200).json({
+        ...baseResp,
+        specs_suggested: [],
+        open_questions:  Array.isArray(classification.open_questions) ? classification.open_questions : []
+      });
+    }
+
+    // High confidence — match specs
+    const cache          = loadSpecCache();
+    const tags           = Array.isArray(classification.tags) ? classification.tags : [];
+    const specs_suggested = matchSpecsByTags(tags, cache);
+
+    return res.status(200).json({
+      ...baseResp,
+      specs_suggested,
+      open_questions: []
+    });
+
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err.message, time: now() });
+  }
 });
 
 /* SAFE 404 — nunca 405 */
