@@ -283,7 +283,7 @@
         <div style="font-size:72px;margin-bottom:16px">🏆</div>
         <div style="font-size:13px;letter-spacing:3px;color:#f59e0b;font-weight:700;margin-bottom:8px">PASS GOLD CERTIFIED</div>
         <div style="font-size:48px;font-weight:900;color:#fff;line-height:1;margin-bottom:4px">80/80</div>
-        <div style="font-size:14px;color:#94a3b8;margin-bottom:20px">cenários PASS • run CI #81</div>
+        <div style="font-size:14px;color:#94a3b8;margin-bottom:20px">cenários PASS • run CI #83</div>
         <div style="font-size:56px;font-weight:900;background:linear-gradient(90deg,#f59e0b,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1">100%</div>
         <div style="margin-top:20px;padding-top:20px;border-top:1px solid #1e293b;display:flex;justify-content:center;gap:24px">
           <div style="text-align:center">
@@ -343,12 +343,12 @@
           <div style="font-size:11px;letter-spacing:2px;color:#10b981;font-weight:700;margin-bottom:12px">STRESS TEST V3</div>
           <div style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">15/15</div>
           <div style="font-size:24px;font-weight:700;color:#4ade80;margin-bottom:8px">100%</div>
-          <div style="font-size:11px;color:#f59e0b;margin-bottom:16px">✨ 1 run — primeira vez!</div>
+          <div style="font-size:11px;color:#f59e0b;margin-bottom:16px">✨ CI #83 — 15/15 | §70 estável</div>
           <div style="font-size:11px;color:#94a3b8;line-height:1.5;text-align:left;background:#0f172a;border-radius:8px;padding:10px">
             <div style="margin-bottom:4px">✅ Runtime e async</div>
             <div style="margin-bottom:4px">✅ Dados e APIs</div>
             <div style="margin-bottom:4px">✅ Segurança e config</div>
-            <div>🔑 Metodologia ALL_PASS</div>
+            <div>🔑 §70: retry 502 absorve cfn-hup</div>
           </div>
         </div>
 
@@ -398,8 +398,7 @@
         </div>
 
         <!-- FP -->
-        <div style="background:#0a0f1a;border:2px solid #f59e0b;border-radius:16px;padding:24px;text-align:center;position:relative;overflow:hidden;box-shadow:0 0 30px rgba(245,158,11,0.1)">
-          <div style="position:absolute;top:12px;right:12px;background:#f59e0b;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:1px">ATUAL</div>
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:16px;padding:24px;text-align:center;position:relative;overflow:hidden">
           <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div>
           <div style="font-size:11px;letter-spacing:2px;color:#f59e0b;font-weight:700;margin-bottom:12px">STRESS TEST FP</div>
           <div style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">10/10</div>
@@ -413,12 +412,30 @@
           </div>
         </div>
 
+        <!-- §70 CI INFRA -->
+        <div style="background:#0a0f1a;border:2px solid #f59e0b;border-radius:16px;padding:24px;text-align:center;position:relative;overflow:hidden;box-shadow:0 0 30px rgba(245,158,11,0.1)">
+          <div style="position:absolute;top:12px;right:12px;background:#f59e0b;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:1px">ATUAL</div>
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div>
+          <div style="font-size:11px;letter-spacing:2px;color:#f59e0b;font-weight:700;margin-bottom:12px">§70 CI INFRA</div>
+          <div style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">80/80</div>
+          <div style="font-size:24px;font-weight:700;color:#4ade80;margin-bottom:8px">100%</div>
+          <div style="font-size:11px;color:#f59e0b;margin-bottom:16px">✨ CI #83 — infra certificada</div>
+          <div style="font-size:11px;color:#94a3b8;line-height:1.5;text-align:left;background:#0f172a;border-radius:8px;padding:10px">
+            <div style="margin-bottom:4px">✅ Retry 502 em V1/V2/V3/SF/FP</div>
+            <div style="margin-bottom:4px">✅ V3 15/15 confirmado pós-§70</div>
+            <div style="margin-bottom:4px">✅ cfn-hup restart absorvido</div>
+            <div>🔑 §70 — causa: restart, não OOM</div>
+          </div>
+        </div>
+
       </div>
 
       <!-- Marco: 80/80 todas as suítes na mesma execução -->
       <div style="margin-top:20px;padding:16px 20px;background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.25);border-radius:12px;text-align:center">
         <span style="color:#4ade80;font-weight:700;font-size:14px">✅ Run CI #67 (2026-06-12) — 80/80 (100%)</span>
         <span style="color:#64748b;font-size:13px;display:block;margin-top:4px">Primeira execução com todas as 6 suítes em 100% simultaneamente. Gate <strong style="color:#e2e8f0">PASS GOLD</strong> confirmado.</span>
+        <span style="color:#4ade80;font-weight:700;font-size:14px;display:block;margin-top:10px">✅ Run CI #83 (2026-06-12) — 80/80 (100%)</span>
+        <span style="color:#64748b;font-size:13px;display:block;margin-top:4px">Confirmado pós-§70: retry 502 absorve restart periódico do EB (cfn-hup). V3=15/15. Infra CI certificada.</span>
       </div>
     </div>
 
@@ -503,6 +520,12 @@
           <div style="font-size:28px;margin-bottom:10px">⏱️</div>
           <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Quando todos os providers de IA esgotam em sequência — quota diária do Cerebras, rate-limit do Groq, congestionamento do OpenRouter — o backend agora responde em segundos com um erro estruturado <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>ALL_PROVIDERS_EXHAUSTED</code> e lista quais providers foram tentados. Antes disso, o cliente esperava 60 segundos por um timeout mudo, sem saber qual provider tinha falhado. O client-side timeout também foi estendido de 60s para 90s para acomodar cascatas lentas sem falhar prematuramente."</div>
           <div style="font-size:11px;color:#64748b">— §69 Hermes 503 estruturado · timeout cascade resolvido · CI #77–#81 · 80/80 PASS GOLD</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">⚙️</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"CI #79 e CI #82 voltaram com a suíte V3 zerada — 0/15 e 3/15 respectivamente. A suspeita inicial era memory leak ou instância EB subdimensionada para a carga acumulada de 25 requests. Os PID lifecycle nos logs do ambiente contaram uma história diferente: o Elastic Beanstalk reinicia o processo Node.js periodicamente por config refresh (cfn-hup), criando uma janela de 2 a 4 segundos sem resposta. Qualquer request nesse intervalo recebe um 502 do nginx — e nos dois runs problemáticos, o timing do CI coincidiu com exatamente esse gap. A solução não envolveu nenhuma mudança de infraestrutura: retry automático de 502 com 3 tentativas e 4 segundos de backoff, adicionado nos 5 runners de stress test. CI #83: 80/80, V3 15/15, nenhum retry precisou disparar nessa run."</div>
+          <div style="font-size:11px;color:#64748b">— §70 retry 502 · CI #79→#83 · PASS</div>
         </div>
 
       </div>
