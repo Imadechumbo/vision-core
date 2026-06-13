@@ -626,6 +626,166 @@
   </section>
   <!-- ═══════════════════════════════════════════════════════════ -->
 
+  <!-- ═══════════════════════════════════════════════════════════
+       ARQUITETURA REAL — O QUE JÁ FUNCIONA E PARA ONDE VAI
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="panel marketing-block" id="arquitetura-real">
+
+    <!-- Cabeçalho da seção -->
+    <div style="text-align:center;margin-bottom:48px">
+      <div style="display:inline-flex;align-items:center;gap:12px;background:#0a0f1a;border:1px solid #6366f1;border-radius:12px;padding:8px 20px;margin-bottom:20px">
+        <span style="font-size:13px;font-weight:700;color:#6366f1;letter-spacing:2px">ANÁLISE TÉCNICA INTERNA</span>
+      </div>
+      <h2 style="font-size:clamp(24px,3.5vw,40px);font-weight:800;color:#fff;margin:0 0 16px;line-height:1.2">
+        Arquitetura Real —<br>
+        <span style="background:linear-gradient(90deg,#6366f1,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent">O que já funciona e para onde vai</span>
+      </h2>
+      <p style="color:#94a3b8;font-size:16px;max-width:640px;margin:0 auto;line-height:1.6">
+        Uma leitura honesta do estado atual — o que está implementado e validado hoje, e onde a arquitetura aponta para o futuro.
+      </p>
+    </div>
+
+    <!-- ── BLOCO 1: VISION AI COMMAND ────────────────────────────── -->
+    <div style="max-width:900px;margin:0 auto 56px">
+      <div style="margin-bottom:24px">
+        <h3 style="font-size:18px;font-weight:700;color:#fff;margin:0 0 8px">VISION AI COMMAND — o que ele realmente faz hoje</h3>
+        <p style="color:#94a3b8;font-size:14px;line-height:1.6;margin:0">
+          O chat (<code style="background:#1e293b;padding:1px 6px;border-radius:4px;color:#a5b4fc">/api/chat</code>) não é um wrapper simples de LLM. Ele já tem uma cadeia de capacidades bem montada:
+        </p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:28px">🔄</div>
+          <div style="font-size:13px;font-weight:700;color:#4ade80">Hermes Multi-Provider Fallback (§49/§72)</div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.6">
+            Quando você manda uma pergunta, o backend tenta até 7 providers em cascata (Anthropic → Cerebras → Groq → OpenRouter → DeepSeek → Gemini → Ollama), cada um com timeout próprio e guard de payload (Groq corta em 20K chars para não estourar o tier gratuito). A camada §72 adiciona "evidence-gated escalation": se um provider deu timeout e o próximo devolve "não achei bug" sem evidência, o sistema não aceita isso como resposta final — escala para o próximo, e registra o caso em <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">.vision-memory/hermes_low_confidence.jsonl</code>.
+          </div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:28px">🌐</div>
+          <div style="font-size:13px;font-weight:700;color:#38bdf8">toolFetch v2</div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.6">
+            O chat detecta URLs na mensagem do usuário (até 2) e busca o conteúdo real antes de responder: se for um link de GitHub blob, converte para raw; se for repo root, busca README (main → master → fallback para a API do GitHub). Isso significa que o chat pode "ler a internet" dentro do limite definido, sem o usuário precisar colar o conteúdo manualmente.
+          </div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:28px">🔧</div>
+          <div style="font-size:13px;font-weight:700;color:#f59e0b">Pipeline de diagnóstico de código</div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.6">
+            Upload de ZIP/arquivo via <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/unzip-context</code> e <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/chat/apply-patch</code>, mais o compress-context.js (§44, "MPEG de contexto") e windowContent (§55) que trunca arquivos grandes para ±120 linhas ao redor do bug, evitando timeout em arquivos de 200KB+. O patch-engine.js tem 5 estratégias de match (exact → normalized → regex → âncora de primeira linha → candidatos só-diagnóstico) para aplicar o patch sugerido pelo LLM de volta no código real — e o pass-gold-engine.js valida esse patch em 6 dimensões, incluindo Semgrep (§68) como segunda fonte de verdade não-LLM.
+          </div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:28px">💻</div>
+          <div style="font-size:13px;font-weight:700;color:#a855f7">Agente local (agent-local/)</div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.6">
+            Uma ponte Node que roda na máquina do usuário, faz polling em <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/agent/mission/pending</code>, escaneia o projeto local por palavras-chave, e devolve o resultado via <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/agent/mission/result</code>. Isso é o embrião de "Vision Core trabalhando no seu PC" sem precisar subir o código.
+          </div>
+        </div>
+
+      </div>
+
+      <div style="margin-top:20px;padding:16px 20px;background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.2);border-radius:12px">
+        <p style="color:#e2e8f0;font-size:14px;line-height:1.6;margin:0">
+          <strong style="color:#4ade80">Estado atual:</strong> o VISION AI COMMAND já é um diagnosticador real com fallback resiliente, leitura de contexto externo, patch aplicável e validação multi-camada — não é só "chat conectado a uma IA".
+        </p>
+      </div>
+    </div>
+
+    <!-- ── BLOCO 2: SOFTWARE FACTORY ─────────────────────────────── -->
+    <div style="max-width:900px;margin:0 auto 56px">
+      <div style="margin-bottom:24px">
+        <h3 style="font-size:18px;font-weight:700;color:#fff;margin:0 0 8px">SOFTWARE FACTORY — o que ela é hoje</h3>
+      </div>
+
+      <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.8">
+            Vale deixar claro algo que está explícito na spec: a Software Factory atualmente <strong style="color:#f87171">não toca código de produção</strong>. Ela é uma camada de governança simulada — produz módulos <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">.mjs</code> que modelam processos de engenharia (contratos, gates, ledgers, barreiras de fase) com flags <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">release_allowed</code>, <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">deploy_allowed</code>, <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">real_pr_creation_allowed</code> etc. sempre <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#f87171">false</code>. As fases V201–V244 cobrem desde fundação até "preparação de criação de PR controlada" — mas a execução real fica bloqueada até autorização explícita.
+          </div>
+        </div>
+        <div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.8">
+            Isso é arquiteturalmente interessante: é um <strong style="color:#e2e8f0">sandbox de agentes com papéis bem definidos</strong> (architect, scanner, code writer, security reviewer, PR reviewer, authority reviewer…) e um ciclo operacional rígido (missão → contexto → plano → loop → evidência → PASS GOLD). O SF-SPEC-LIBRARY (§59, 120 specs) e o stress test SF (15/15 hoje) validam que esse sandbox se comporta corretamente — incluindo recusar gates falsos (<em>SF-STRESS-15: "recibo dizia completo mas só 8/12 confirmações"</em>) e bloquear secrets reais (<em>SF-STRESS-09: detectou <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#fbbf24">ANTHROPIC_API_KEY</code> real num pacote</em>).
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BLOCO 3: POTENCIAIS DE EVOLUÇÃO ───────────────────────── -->
+    <div style="max-width:900px;margin:0 auto 48px">
+      <div style="margin-bottom:24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <h3 style="font-size:18px;font-weight:700;color:#fff;margin:0">POTENCIAIS DE EVOLUÇÃO — ONDE ISSO PODE IR</h3>
+        <div style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.35);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP — NÃO IMPLEMENTADO</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+
+        <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
+          <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
+          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">1</div>
+          <div style="font-size:13px;font-weight:700;color:#a5b4fc">Fechar o loop VISION AI COMMAND → mission queue → Agent Local → patch real</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.6">
+            Hoje existem três peças que já funcionam isoladamente: o chat diagnostica, o agent-local escaneia o PC do usuário, e <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/agent/mission/push</code> + <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/revert</code> já existem como endpoints. O que falta é o fio que conecta "usuário pede fix no chat" → "missão enviada para o agente local" → "agente aplica patch real no projeto local, com snapshot/rollback" → "resultado volta pro chat". Isso transformaria o Vision Core de "diagnostica e te dá o patch para colar" em "corrige seu projeto local de fato", mantendo PASS GOLD como gate.
+          </div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
+          <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
+          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">2</div>
+          <div style="font-size:13px;font-weight:700;color:#a5b4fc">Software Factory saindo do sandbox — com escopo restrito e auditável</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.6">
+            A arquitetura de evidence levels (simulated → dry-run → sandbox → real) já é projetada para isso. O próximo passo natural não é "destravar tudo", mas permitir que, para um repositório explicitamente autorizado pelo usuário (não o próprio vision-core), a Factory rode em modo dry-run real — gerando diffs de verdade sobre o código do usuário, sem commit/push automático. Isso daria à SF um produto tangível: <em style="color:#e2e8f0">"gire a Fábrica de Software no meu projeto e me retorne um rascunho de PR"</em>.
+          </div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
+          <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
+          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">3</div>
+          <div style="font-size:13px;font-weight:700;color:#a5b4fc">Tiered routing de providers (§66 Fases 1-4)</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.6">
+            Funcionou sem elas porque trocar para deepseek-v4-flash resolveu 17/17 fails. Mas a tabela de modelos já mapeada (Qwen, Nemotron, Poolside — vários gratuitos) sugere uma evolução natural: classificar a missão por dificuldade (heurística simples: tamanho do diff, presença de termos como "race condition", "shadowing", "async") e rotear para o modelo certo antes de gastar a primeira tentativa — reduzindo latência e custo em vez de só fallback reativo.
+          </div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
+          <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
+          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">4</div>
+          <div style="font-size:13px;font-weight:700;color:#a5b4fc">Memory layer (§72 Fase 2-4) como diferencial real de produto</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.6">
+            O <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">.vision-memory/hermes_low_confidence.jsonl</code> já está sendo escrito. A Fase 2 (consultar esse histórico antes do diagnóstico para pular direto pro provider robusto em payloads parecidos) é relativamente barata de implementar e tem um efeito composto: cada missão deixa o sistema mais rápido/preciso na próxima parecida — isso é uma história de marketing forte (<em style="color:#e2e8f0">"o Vision Core aprende com cada bug que já viu"</em>).
+          </div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
+          <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
+          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">5</div>
+          <div style="font-size:13px;font-weight:700;color:#a5b4fc">Multi-arquivo e multi-step missions de verdade</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.6">
+            §56 (Multi-DIFF) resolveu o caso de "3 arquivos com bugs simultâneos" para diagnóstico. O próximo nível é missões que precisam de múltiplas rodadas de patch coordenadas (ex: mudar uma assinatura de função em um arquivo e todos os call-sites em outros) — isso aproximaria a Factory de um "agente de refatoração" real, que é justamente o pitch da seção "Refatoração assistida de código legado" no about.html, ainda não comprovado por stress test.
+          </div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
+          <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
+          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">6</div>
+          <div style="font-size:13px;font-weight:700;color:#a5b4fc">Observabilidade do próprio Vision Core como produto</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.6">
+            Vocês já têm <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/dora-metrics</code>, <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/metrics/agents</code>, <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/metrics/summary</code>, <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">.vision-memory/*</code>. Isso é quase um dashboard de "saúde do seu pipeline de IA" pronto — poderia virar uma feature visível no painel (não só interna) para o Enterprise: <em style="color:#e2e8f0">"veja quantas vezes cada provider foi usado, taxa de escalação, tempo médio de diagnóstico por dificuldade"</em>.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
   <section class="panel marketing-block" style="text-align:center;padding:48px 24px">
     <h2 style="font-size:28px">Você não corrige mais sistemas.</h2>
     <p style="font-size:18px;color:#94a3b8;margin:12px 0 24px">Você supervisiona um sistema que corrige sistemas.</p>
