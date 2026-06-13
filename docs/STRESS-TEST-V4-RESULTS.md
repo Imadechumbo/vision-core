@@ -1,27 +1,27 @@
 # Vision Core — Stress Test V4 Results
 
-**Data:** 2026-06-13T10:36:33.719Z
+**Data:** 2026-06-13T11:10:30.565Z
 **Resultado:** 15/15 PASS (100%)
 
 ## Cenários
 
 | ID | Bloco | Dific. | Arquivo | Status | Tempo | Palavras encontradas |
 |---|---|---|---|---|---|---|
-| STRESS-41 | H | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 12710ms | selected, shadow, diversifyCollection, selected.push |
-| STRESS-42 | H | NIGHTMARE | backend/src/services/hermesService.js | ✅ PASS | 17466ms | slice, summarizeTrends, 0, 6 |
-| STRESS-43 | H | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 10439ms | categoryMatch, ===, hardware |
-| STRESS-44 | H | NIGHTMARE | backend/src/services/hermesService.js | ✅ PASS | 18367ms | score, string, calculateRanking, + |
-| STRESS-45 | H | EXPERT | backend/src/services/feedService.js | ✅ PASS | 5010ms | sort, spread, items, dedupeItems |
-| STRESS-46 | I | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 9919ms | await, readCache, Promise, getCache |
-| STRESS-47 | I | NIGHTMARE | backend/src/services/gameCoverService.js | ✅ PASS | 12026ms | allSettled, Promise.all, fulfilled, sourceResults |
-| STRESS-48 | I | EXPERT | backend/src/services/feedService.js | ✅ PASS | 10354ms | catch, error.message, status, ok |
-| STRESS-49 | I | EXPERT | backend/src/services/imageService.js | ✅ PASS | 9417ms | return, writeImageCache, then, persistImageCache |
-| STRESS-50 | I | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 9254ms | await, persist, translationSession, fire |
-| STRESS-51 | J | NIGHTMARE | backend/src/services/gameCoverService.js | ✅ PASS | 39962ms | sourceTierFor, || 9, undefined, NaN |
-| STRESS-52 | J | EXPERT | backend/src/jobs/hermesCron.js | ✅ PASS | 1501ms | jobStarted, const, shadow, cron |
-| STRESS-53 | J | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 19713ms | enrichedCount, módulo, compartilhado, hydrateMissingImages |
-| STRESS-54 | J | EXPERT | backend/src/services/feedService.js | ✅ PASS | 10074ms | push, spread, fetchedItems, withSeedFallback |
-| STRESS-55 | J | NIGHTMARE | backend/src/jobs/refreshScheduler.js | ✅ PASS | 1778ms | scheduledTask, stop, cron.schedule |
+| STRESS-41 | H | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 11117ms | selected, shadow, diversifyCollection, selected.push |
+| STRESS-42 | H | NIGHTMARE | backend/src/services/hermesService.js | ✅ PASS | 16724ms | slice, summarizeTrends, 0, 6 |
+| STRESS-43 | H | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 17410ms | categoryMatch, ===, hardware |
+| STRESS-44 | H | NIGHTMARE | backend/src/services/hermesService.js | ✅ PASS | 10999ms | score, string, calculateRanking, + |
+| STRESS-45 | H | EXPERT | backend/src/services/feedService.js | ✅ PASS | 5378ms | sort, spread, items, dedupeItems |
+| STRESS-46 | I | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 10978ms | await, readCache, Promise, getCache |
+| STRESS-47 | I | NIGHTMARE | backend/src/services/gameCoverService.js | ✅ PASS | 17374ms | allSettled, Promise.all, fulfilled, sourceResults |
+| STRESS-48 | I | EXPERT | backend/src/services/feedService.js | ✅ PASS | 9010ms | catch, error.message, status, ok |
+| STRESS-49 | I | EXPERT | backend/src/services/imageService.js | ✅ PASS | 16107ms | return, writeImageCache, then, persistImageCache |
+| STRESS-50 | I | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 13429ms | await, persist, translationSession, fire |
+| STRESS-51 | J | NIGHTMARE | backend/src/services/gameCoverService.js | ✅ PASS | 11789ms | sourceTierFor, || 9, undefined, NaN |
+| STRESS-52 | J | EXPERT | backend/src/jobs/hermesCron.js | ✅ PASS | 817ms | jobStarted, const, shadow, cron |
+| STRESS-53 | J | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 3891ms | enrichedCount, módulo, compartilhado, hydrateMissingImages |
+| STRESS-54 | J | EXPERT | backend/src/services/feedService.js | ✅ PASS | 9970ms | push, spread, fetchedItems, withSeedFallback |
+| STRESS-55 | J | NIGHTMARE | backend/src/jobs/refreshScheduler.js | ✅ PASS | 5568ms | scheduledTask, stop, cron.schedule |
 
 ## Resumo
 
