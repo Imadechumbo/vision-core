@@ -17,29 +17,29 @@
   overflow: hidden;
 }
 
-/* ── Page header ─────────────────────────────────────────────── */
+/* ── Page header — §74.2a compacto ──────────────────────────── */
 .vc-sf-page-header {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 8px 18px;
-  border-bottom: 1px solid rgba(139,92,246,.20);
-  background: rgba(6,2,20,.95);
+  gap: 10px;
+  padding: 5px 16px;
+  border-bottom: 1px solid rgba(139,92,246,.10);
+  background: rgba(6,2,20,.97);
   flex-shrink: 0;
 }
 
 .vc-sf-back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 7px;
-  border: 1px solid rgba(139,92,246,.35);
-  background: rgba(139,92,246,.07);
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(139,92,246,.28);
+  background: rgba(139,92,246,.05);
   color: #a78bfa;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .09em;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .07em;
   text-transform: uppercase;
   cursor: pointer;
   transition: all .15s;
@@ -47,28 +47,28 @@
   user-select: none;
 }
 .vc-sf-back-btn:hover {
-  background: rgba(139,92,246,.16);
-  border-color: rgba(139,92,246,.62);
-  box-shadow: 0 0 12px rgba(139,92,246,.14);
+  background: rgba(139,92,246,.13);
+  border-color: rgba(139,92,246,.55);
 }
 
 .vc-sf-page-identity { flex: 1; min-width: 0; }
 
+/* Eyebrow: contexto discreto, quase invisível — tab ativa já indica módulo */
 .vc-sf-eyebrow {
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: .16em;
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: .10em;
   text-transform: uppercase;
-  color: #a78bfa;
-  margin: 0 0 2px;
+  color: rgba(167,139,250,.35);
+  margin: 0 0 1px;
   line-height: 1;
 }
 
 .vc-sf-title {
-  font-size: 17px;
-  font-weight: 900;
-  letter-spacing: .05em;
-  color: #f3f4f6;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: #e2e8f0;
   margin: 0;
   line-height: 1;
   text-transform: uppercase;
@@ -76,67 +76,68 @@
 
 .vc-sf-local-badge {
   flex-shrink: 0;
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: .12em;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: .10em;
   text-transform: uppercase;
-  padding: 3px 9px;
-  border-radius: 5px;
-  background: rgba(139,92,246,.07);
-  border: 1px solid rgba(139,92,246,.28);
-  color: #a78bfa;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(139,92,246,.05);
+  border: 1px solid rgba(139,92,246,.20);
+  color: rgba(167,139,250,.60);
   white-space: nowrap;
 }
 
-/* ── Horizontal module nav ───────────────────────────────────── */
+/* ── Horizontal module nav — §74.2a pills compactos ─────────── */
 .vc-sf-module-nav-h {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   overflow-x: auto;
   flex-shrink: 0;
-  background: rgba(6,2,20,.85);
-  border-bottom: 1px solid rgba(139,92,246,.12);
-  padding: 0 14px;
-  gap: 1px;
+  background: rgba(4,2,14,.90);
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  padding: 4px 12px;
+  gap: 3px;
   scrollbar-width: none;
 }
 .vc-sf-module-nav-h::-webkit-scrollbar { display: none; }
 
+/* Pills: inativo quase invisível, hover sutil, active leve */
 .vc-sf-module-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 13px 8px;
-  border: none;
-  border-bottom: 2px solid transparent;
+  gap: 4px;
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-radius: 5px;
   background: transparent;
   color: #374151;
   font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .06em;
+  font-weight: 700;
+  letter-spacing: .04em;
   text-transform: uppercase;
   cursor: pointer;
   white-space: nowrap;
-  transition: all .13s;
+  transition: color .12s, border-color .12s, background .12s;
   user-select: none;
   flex-shrink: 0;
 }
 
 .vc-sf-module-btn:hover {
   color: #94a3b8;
-  background: rgba(139,92,246,.06);
-  border-bottom-color: rgba(139,92,246,.30);
+  border-color: rgba(139,92,246,.18);
+  background: rgba(139,92,246,.05);
 }
 
 .vc-sf-module-btn.active {
   color: #a78bfa;
-  border-bottom-color: #a78bfa;
-  background: rgba(139,92,246,.08);
+  border-color: rgba(139,92,246,.30);
+  background: rgba(139,92,246,.10);
 }
 
 .vc-sf-module-num {
-  font-size: 8px;
-  font-weight: 900;
+  font-size: 7px;
+  font-weight: 700;
   color: #374151;
   flex-shrink: 0;
 }
@@ -1036,15 +1037,20 @@
   color: #fff;
 }
 
-/* ── HOME button in module nav ────────────────────────────────── */
+/* ── HOME button — §74.2a pill style alinhado ──────────────── */
 #vcSfHomeBtn {
-  border-color: rgba(139,92,246,.33);
+  border-color: rgba(139,92,246,.22);
+  color: #7c6fa0;
+}
+#vcSfHomeBtn:hover {
   color: #a78bfa;
+  border-color: rgba(139,92,246,.35);
+  background: rgba(139,92,246,.07);
 }
 #vcSfHomeBtn.active {
-  background: rgba(139,92,246,.2) !important;
-  border-color: #8b5cf6 !important;
-  color: #fff !important;
+  background: rgba(139,92,246,.14) !important;
+  border-color: rgba(139,92,246,.42) !important;
+  color: #c4b5fd !important;
 }
 
 /* ════════════════════════════════════════════════════════
