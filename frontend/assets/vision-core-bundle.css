@@ -7716,3 +7716,247 @@ body,
   border-color: #8b5cf6 !important;
   color: #fff !important;
 }
+
+/* ════════════════════════════════════════════════════════════════
+   §74 / §74.1 / §74.2a / §74.2b — VISUAL REDESIGN OVERRIDES
+   Aplicado direto no bundle (fonte: vc-software-factory-page.css)
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── §74 — Sidebar toggle button ─────────────────────────────── */
+.vc-sf-sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: transparent;
+  color: #4b5563;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .13s;
+  flex-shrink: 0;
+  user-select: none;
+}
+.vc-sf-sidebar-toggle:hover { border-color: rgba(139,92,246,.45); color: #a78bfa; }
+.vc-sf-sidebar-toggle.panels-on {
+  border-color: rgba(139,92,246,.50);
+  color: #a78bfa;
+  background: rgba(139,92,246,.08);
+}
+
+/* Panels hidden — center chat gets full width */
+.vc-sf-columns.panels-hidden { grid-template-columns: 1fr; }
+.vc-sf-columns.panels-hidden .vc-sf-col-left,
+.vc-sf-columns.panels-hidden .vc-sf-col-right { display: none; }
+.vc-sf-columns.panels-hidden #vcSfHomeControl .vc-sf-chat-stream { max-height: 46vh; }
+
+/* ── §74 — SDDF collapse ─────────────────────────────────────── */
+.vc-sf-sddf-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: transparent;
+  color: #374151;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 10px;
+  transition: all .13s;
+  user-select: none;
+}
+.vc-sf-sddf-collapse-btn:hover { color: #94a3b8; border-color: rgba(255,255,255,.18); }
+.vc-sf-sddf-timeline-h.sddf-collapsed #vcSfSddfSteps { display: none; }
+.vc-sf-sddf-timeline-h.sddf-collapsed { padding: 6px 14px; }
+
+/* ── §74 — Architect bubble inline ───────────────────────────── */
+.vc-sf-arch-bubble {
+  background: rgba(30,58,138,.08);
+  border: 1px solid rgba(59,130,246,.16);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 8px 0 4px;
+  font-size: 12px;
+}
+.vc-sf-arch-bubble-hdr {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  color: #3b82f6;
+  margin-bottom: 7px;
+  text-transform: uppercase;
+}
+
+/* ── §74 — Chat stream taller + message breathing ────────────── */
+.vc-sf-chat-msg { padding: 2px 0; }
+.vc-sf-chat-msg + .vc-sf-chat-msg { margin-top: 6px; }
+#vcSfHomeControl .vc-sf-chat-stream { max-height: 260px; }
+.vc-sf-hero { padding-top: 2px; padding-bottom: 0; }
+
+/* ── §74.1 — Architect title azul ───────────────────────────── */
+.vc-sf-llm-title--arch { color: #3b82f6 !important; letter-spacing: .14em; }
+#vcSfHomeControl .vc-sf-llm-title--arch { font-size: 11px; letter-spacing: .16em; }
+
+/* ── §74.2a — Page header compacto ──────────────────────────── */
+.vc-sf-page-header { gap: 10px; padding: 5px 16px; border-bottom-color: rgba(139,92,246,.10); }
+.vc-sf-back-btn {
+  padding: 4px 10px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  border: 1px solid rgba(139,92,246,.28);
+  background: rgba(139,92,246,.05);
+}
+.vc-sf-back-btn:hover { background: rgba(139,92,246,.13); border-color: rgba(139,92,246,.55); box-shadow: none; }
+.vc-sf-eyebrow { font-size: 7px; font-weight: 600; letter-spacing: .10em; color: rgba(167,139,250,.35); margin: 0 0 1px; }
+.vc-sf-title { font-size: 12px; font-weight: 800; letter-spacing: .06em; color: #e2e8f0; }
+.vc-sf-local-badge {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: .10em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(139,92,246,.05);
+  border: 1px solid rgba(139,92,246,.20);
+  color: rgba(167,139,250,.60);
+}
+
+/* ── §74.2a — Module nav pills ───────────────────────────────── */
+.vc-sf-module-nav-h { align-items: center; padding: 4px 12px; gap: 3px; border-bottom: 1px solid rgba(255,255,255,.04); background: rgba(4,2,14,.90); }
+.vc-sf-module-btn {
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  border-radius: 5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.vc-sf-module-btn:hover { border-color: rgba(139,92,246,.18); background: rgba(139,92,246,.05); }
+.vc-sf-module-btn.active { border-color: rgba(139,92,246,.30); background: rgba(139,92,246,.10); }
+.vc-sf-module-num { font-size: 7px; font-weight: 700; }
+#vcSfHomeBtn { border-color: rgba(139,92,246,.22); color: #7c6fa0; }
+#vcSfHomeBtn:hover { color: #a78bfa; border-color: rgba(139,92,246,.35); background: rgba(139,92,246,.07); }
+#vcSfHomeBtn.active { background: rgba(139,92,246,.14) !important; border-color: rgba(139,92,246,.42) !important; color: #c4b5fd !important; }
+
+/* ══════════════════════════════════════════════════════════════
+   §74.2b — Conteúdo interno módulos 02-09 (sections H-P)
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Espaçamento entre seções ────────────────────────────────── */
+#vcSoftwareFactoryPage #projectBuilder .vc-pb-section {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,.03);
+}
+#vcSoftwareFactoryPage #projectBuilder .vc-pb-section-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .10em;
+  color: #374151;
+  margin: 8px 0 5px;
+  padding: 0 0 4px;
+}
+
+/* ── Headlines: eyebrow quase invisível ──────────────────────── */
+#vcSoftwareFactoryPage #projectBuilder .eyebrow {
+  font-size: 7px;
+  color: rgba(124,111,160,.30);
+  letter-spacing: .10em;
+  margin-bottom: 3px;
+}
+
+/* ── h2 headline — override inline style com !important ──────── */
+#vcSoftwareFactoryPage #projectBuilder .vc-pb-headline-text h2 {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: .04em;
+  margin-bottom: 3px !important;
+  color: #e2e8f0;
+}
+
+/* ── Description paragraph ───────────────────────────────────── */
+#vcSoftwareFactoryPage #projectBuilder .vc-pb-headline-text > p {
+  font-size: 10px !important;
+  color: rgba(75,85,99,.75) !important;
+  line-height: 1.4;
+  margin: 2px 0 0 !important;
+}
+
+/* ── Module badges — sutis ───────────────────────────────────── */
+#vcSoftwareFactoryPage #projectBuilder .vc-handoff-badge,
+#vcSoftwareFactoryPage #projectBuilder .vc-export-badge,
+#vcSoftwareFactoryPage #projectBuilder .vc-real-command-badge,
+#vcSoftwareFactoryPage #projectBuilder .vc-result-badge,
+#vcSoftwareFactoryPage #projectBuilder .vc-final-badge,
+#vcSoftwareFactoryPage #projectBuilder .vc-saas-roadmap-badge,
+#vcSoftwareFactoryPage #projectBuilder .vc-human-badge,
+#vcSoftwareFactoryPage #projectBuilder .vc-tpl-badge,
+#vcSoftwareFactoryPage #projectBuilder .vc-composer-badge { font-size: 7px; padding: 2px 7px; opacity: 0.70; }
+
+/* ── Headlines — gap e margin menores ───────────────────────── */
+#vcSoftwareFactoryPage .vc-handoff-headline,
+#vcSoftwareFactoryPage .vc-export-headline,
+#vcSoftwareFactoryPage .vc-real-command-headline,
+#vcSoftwareFactoryPage .vc-result-headline,
+#vcSoftwareFactoryPage .vc-final-headline,
+#vcSoftwareFactoryPage .vc-saas-headline,
+#vcSoftwareFactoryPage .vc-human-headline,
+#vcSoftwareFactoryPage .vc-tpl-headline,
+#vcSoftwareFactoryPage .vc-composer-headline { gap: 8px; margin-bottom: 10px; }
+
+/* ── Card grids — gaps reduzidos ─────────────────────────────── */
+#vcSoftwareFactoryPage .vc-export-lock-grid,
+#vcSoftwareFactoryPage .vc-export-source-summary,
+#vcSoftwareFactoryPage .vc-real-authority-grid,
+#vcSoftwareFactoryPage .vc-real-readiness-grid,
+#vcSoftwareFactoryPage .vc-evidence-checklist-grid,
+#vcSoftwareFactoryPage .vc-result-authority-grid,
+#vcSoftwareFactoryPage .vc-final-context-grid,
+#vcSoftwareFactoryPage .vc-final-readiness-grid,
+#vcSoftwareFactoryPage .vc-final-authority-grid,
+#vcSoftwareFactoryPage .vc-human-summary-grid,
+#vcSoftwareFactoryPage .vc-human-lock-grid,
+#vcSoftwareFactoryPage .vc-saas-locked-grid { gap: 4px; }
+
+/* ── Cards individuais — padding compacto ────────────────────── */
+#vcSoftwareFactoryPage .vc-export-lock-card,
+#vcSoftwareFactoryPage .vc-export-source-item,
+#vcSoftwareFactoryPage .vc-real-authority-card,
+#vcSoftwareFactoryPage .vc-real-readiness-card,
+#vcSoftwareFactoryPage .vc-evidence-card,
+#vcSoftwareFactoryPage .vc-result-authority-card,
+#vcSoftwareFactoryPage .vc-final-context-card,
+#vcSoftwareFactoryPage .vc-final-readiness-card,
+#vcSoftwareFactoryPage .vc-final-authority-card,
+#vcSoftwareFactoryPage .vc-human-summary-card,
+#vcSoftwareFactoryPage .vc-human-lock-card,
+#vcSoftwareFactoryPage .vc-saas-locked-card { padding: 5px 8px; border-radius: 6px; }
+
+/* ── Template e composer cards ───────────────────────────────── */
+#vcSoftwareFactoryPage .vc-template-card { padding: 7px 9px; }
+#vcSoftwareFactoryPage .vc-composer-option { padding: 4px 8px; gap: 6px; }
+
+/* ── Action buttons — compactos ──────────────────────────────── */
+#vcSoftwareFactoryPage .vc-handoff-btn,
+#vcSoftwareFactoryPage .vc-export-btn,
+#vcSoftwareFactoryPage .vc-real-command-btn,
+#vcSoftwareFactoryPage .vc-result-btn,
+#vcSoftwareFactoryPage .vc-final-btn,
+#vcSoftwareFactoryPage .vc-human-btn,
+#vcSoftwareFactoryPage .vc-composer-btn { padding: 6px 12px; font-size: 9px; border-radius: 7px; }
+
+/* ── Non-authority notices — compactas ───────────────────────── */
+#vcSoftwareFactoryPage .vc-non-authority,
+#vcSoftwareFactoryPage [class*="-non-authority"] { padding: 7px 10px; margin-top: 8px; }
+#vcSoftwareFactoryPage [class*="-non-authority-text"] { font-size: 9px; line-height: 1.45; }
+#vcSoftwareFactoryPage [class*="-non-authority-label"] { font-size: 7px; margin-bottom: 3px; }
+
+/* ── Final product timeline items ────────────────────────────── */
+#vcSoftwareFactoryPage .vc-final-timeline-item { padding: 5px 9px; gap: 7px; }
+
