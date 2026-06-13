@@ -94,7 +94,7 @@
     <p class="section-lead">Não é chatbot. Não é copiloto. É uma camada operacional que transforma erro em missão, missão em execução, execução em validação e validação em deploy seguro.</p>
     <div class="so-ia-grid compact-pillar-grid">
       <div class="so-ia-card"><div class="so-ia-icon">🧠</div><h3>Diagnóstico Inteligente</h3><p>Hermes RCA identifica causa raiz usando logs, contexto e scanner do projeto. Agora com IA real: Groq, Gemini e Anthropic no fallback chain.</p></div>
-      <div class="so-ia-card"><div class="so-ia-icon">🤖</div><h3>Equipe de Agentes</h3><p>OpenClaw/OpenSquad distribui tarefas quando o problema exige múltiplas camadas. Go Core Runner valida com score 100.</p></div>
+      <div class="so-ia-card"><div class="so-ia-icon">🤖</div><h3>Equipe de Agentes</h3><p>OpenClaw/OpenSquad distribui tarefas quando o problema exige múltiplas camadas. Go Core Runner valida com score 100. 🏛️ Agente Arquiteto: descreva seu projeto em português simples e o sistema monta a especificação técnica para você.</p></div>
       <div class="so-ia-card"><div class="so-ia-icon">⚙️</div><h3>Execução Automática</h3><p>MissionRunner executa steps, comandos permitidos e validações com logs vivos. Pipeline completo scanner → hermes → patcher → PASS GOLD.</p></div>
       <div class="so-ia-card"><div class="so-ia-icon">🛡️</div><h3>PASS GOLD</h3><p>Promoção só acontece quando a correção é validada, segura e reversível. AEGIS bloqueia secrets em produção. Security score 100 obrigatório.</p></div>
       <div class="so-ia-card"><div class="so-ia-icon">🚀</div><h3>Deploy Confiável</h3><p>CF Pages + Cloudflare Worker + AWS Elastic Beanstalk. Cadeia RTP-0 a RTP-6 garante que nada sobe sem aprovação humana explícita.</p></div>
@@ -274,6 +274,17 @@
         </div>
       </div>
 
+      <!-- §73 — Agente Arquiteto + Spec Library -->
+      <div class="tl-item">
+        <span class="tl-dot" style="color:#6366f1;background:#6366f1"></span>
+        <div class="tl-content">
+          <div class="tl-header"><span class="tl-version">Software Factory</span><span class="tl-badge" style="background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.4)">AGENTE ARQUITETO</span></div>
+          <h3 class="tl-title">Agente Arquiteto + Spec Library (120 specs)</h3>
+          <p class="tl-desc">Modo 🏛️ Arquiteto no chat Software Factory interpreta pedidos em linguagem livre — de "quero um site para minha padaria" a especificações técnicas detalhadas — e traduz automaticamente para stack, módulos e specs da biblioteca (120 specs estruturados). Quando a confiança é baixa, faz perguntas em vez de assumir. Specs sugeridas linkam direto para o módulo correspondente, e um botão "Pacote Completo" envia a configuração ao Compositor de Missão.</p>
+          <div class="tl-tags"><span>spec library</span><span>120 specs</span><span>IA real</span><span>preview only</span></div>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -297,6 +308,13 @@
         <p>Todos os endpoints de produção verificados via worker. Auth, billing, go-core PASS GOLD, webhook Stripe, CF Pages CORS — tudo passando.</p>
         <div class="bn-fix" style="color:var(--green)"><strong>Entregue:</strong> FUNCTIONAL_TEST_REPORT.md + TECHNICAL_TEST_REPORT.md em produção.</div>
       </div>
+      <!-- §73 — Agente Arquiteto RESOLVIDO -->
+      <div class="bn-card" style="border-color:rgba(34,197,94,.3)">
+        <div class="bn-header"><span class="bn-icon">✅</span><div><div class="bn-label" style="color:var(--green)">RESOLVIDO — V2.9.10+</div><h3>Agente Arquiteto (Spec Library)</h3></div></div>
+        <p>Interpretação de pedidos em linguagem natural, classificação via IA real (Groq/Cerebras/Gemini), matching contra 120 specs estruturados, com fallback para perguntas quando confiança baixa.</p>
+        <div class="bn-fix" style="color:var(--green)"><strong>Entregue:</strong> /api/architect/interpret + /api/spec, validado com 4 cenários reais em produção (padaria, API Python, SaaS, vago).</div>
+      </div>
+
       <div class="bn-card bn-medium">
         <div class="bn-header"><span class="bn-icon">🔄</span><div><div class="bn-label">EM EVOLUÇÃO — V3.0.0</div><h3>EXECUTAR MISSÃO real</h3></div></div>
         <p>EXECUTAR MISSÃO chama /api/run-live → go-core no servidor EB. Para missões em projetos locais, o servidor precisa ter acesso ao código. V3.0.0 endereça isso.</p>

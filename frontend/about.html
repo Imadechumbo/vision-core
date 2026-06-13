@@ -597,7 +597,7 @@
           <div style="font-size:24px;flex-shrink:0">🏭</div>
           <div>
             <div style="font-size:12px;font-weight:700;color:#a5b4fc;margin-bottom:4px">§59 — SF-SPEC-LIBRARY</div>
-            <div style="font-size:12px;color:#64748b;line-height:1.5">120 specs cobrindo os 9 módulos da Software Factory + security wall + integração cross-módulo.</div>
+            <div style="font-size:12px;color:#64748b;line-height:1.5">120 specs cobrindo os 9 módulos da Software Factory + security wall + integração cross-módulo. Agente Arquiteto interpreta pedidos em linguagem livre e faz matching automático contra o catálogo.</div>
           </div>
         </div>
 
@@ -714,6 +714,36 @@
             Isso é arquiteturalmente interessante: é um <strong style="color:#e2e8f0">sandbox de agentes com papéis bem definidos</strong> (architect, scanner, code writer, security reviewer, PR reviewer, authority reviewer…) e um ciclo operacional rígido (missão → contexto → plano → loop → evidência → PASS GOLD). O SF-SPEC-LIBRARY (§59, 120 specs) e o stress test SF (15/15 hoje) validam que esse sandbox se comporta corretamente — incluindo recusar gates falsos (<em>SF-STRESS-15: "recibo dizia completo mas só 8/12 confirmações"</em>) e bloquear secrets reais (<em>SF-STRESS-09: detectou <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#fbbf24">ANTHROPIC_API_KEY</code> real num pacote</em>).
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ── BLOCO 2.5: AGENTE ARQUITETO — §73 ─────────────────────── -->
+    <div style="max-width:900px;margin:0 auto 56px">
+      <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <h3 style="font-size:18px;font-weight:700;color:#fff;margin:0">AGENTE ARQUITETO — Software Factory V2.9.10+</h3>
+        <div style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.4);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;color:#818cf8;letter-spacing:1px">LIVE — PREVIEW</div>
+      </div>
+
+      <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,0.3);border-radius:14px;padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#a5b4fc;margin-bottom:10px">🏛️ Interpretação em linguagem livre</div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.8">
+            O modo Arquiteto no chat Software Factory aceita pedidos de qualquer complexidade — de <em style="color:#e2e8f0">"quero um site para minha padaria"</em> a especificações técnicas detalhadas. A IA classifica o <strong style="color:#e2e8f0">project_type</strong>, a <strong style="color:#e2e8f0">stack</strong> e as <strong style="color:#e2e8f0">tags</strong> via chain Groq → Cerebras → Gemini, retornando confidence score. Quando a confiança é baixa, formula perguntas de esclarecimento em vez de assumir — evitando specs erradas.
+          </div>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#a5b4fc;margin-bottom:10px">📚 Spec Library + navegação integrada</div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.8">
+            Cada pedido é matchado contra 120 specs estruturados (SF-01 a SF-09 + SEC + INT + LLM). As specs sugeridas são clicáveis — ao clicar, o módulo SF correspondente abre com highlight na spec exata. O botão <strong style="color:#e2e8f0">"Pacote Completo"</strong> exibe stack traduzida em cards legíveis (ícone + label + tooltip) e envia a configuração ao Compositor de Missão (SF-03). Tudo client-side, preview-only — exec_real permanece bloqueado.
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <span style="font-size:11px;color:#64748b">Endpoints:</span>
+        <code style="background:#1e293b;padding:2px 6px;border-radius:4px;color:#a5b4fc;font-size:11px">GET /api/spec?module=SF-01</code>
+        <code style="background:#1e293b;padding:2px 6px;border-radius:4px;color:#a5b4fc;font-size:11px">POST /api/architect/interpret</code>
+        <span style="font-size:11px;color:#4ade80;margin-left:4px">✅ validado — 4 cenários em produção</span>
       </div>
     </div>
 
