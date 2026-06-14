@@ -2840,8 +2840,9 @@ app.post('/api/architect/interpret', async (req, res) => {
       classification,
       provider_used: hermesResult.provider_used,
       model_used:    hermesResult.model_used,
-      mode:          'LOCAL PREVIEW',
-      exec_real:     'BLOQUEADA',
+      mode:          (hermesResult.provider_used && hermesResult.provider_used !== 'local') ? 'LLM_REAL' : 'LOCAL_FALLBACK',
+      exec_real:     (hermesResult.provider_used && hermesResult.provider_used !== 'local') ? 'OK' : 'FALLBACK',
+      anti_stub:     true,
       time:          now()
     };
 
