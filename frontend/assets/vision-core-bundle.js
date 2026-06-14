@@ -8675,28 +8675,57 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
   function positionBalloon(targetEl, pos) {
     var balloon = document.getElementById('vcTutorialBalloon');
-    var pad = 12;
-    if (!targetEl || !balloon) return;
-    var rect = targetEl.getBoundingClientRect();
-    if (!rect || (rect.width === 0 && rect.height === 0)) {
-      balloon.style.top = '50%'; balloon.style.left = '50%'; balloon.style.transform = 'translate(-50%,-50%)';
+    var pad = 14;
+    if (!balloon) return;
+
+    // Se não tem elemento alvo ou está fora da viewport → centralizar
+    var rect = targetEl ? targetEl.getBoundingClientRect() : null;
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var inView = rect && rect.width > 0 && rect.height > 0
+                 && rect.top > -rect.height && rect.bottom < vh + rect.height
+                 && rect.left > -rect.width && rect.right < vw + rect.width;
+
+    if (!inView) {
+      // Centralizar balão na tela
+      balloon.style.transform = '';
+      balloon.style.top  = Math.max(80, vh / 2 - 120) + 'px';
+      balloon.style.left = Math.max(16, vw / 2 - (balloon.offsetWidth || 320) / 2) + 'px';
       spotlight.style.cssText = 'top:0;left:0;width:0;height:0;box-shadow:none';
       return;
     }
+
+    // Spotlight
+    spotlight.style.cssText = '';
     spotlight.style.top    = (rect.top - pad) + 'px';
     spotlight.style.left   = (rect.left - pad) + 'px';
     spotlight.style.width  = (rect.width + pad * 2) + 'px';
     spotlight.style.height = (rect.height + pad * 2) + 'px';
+
     var bw = balloon.offsetWidth || 320;
-    var bh = balloon.offsetHeight || 200;
-    var vw = window.innerWidth;
-    var vh = window.innerHeight;
+    var bh = balloon.offsetHeight || 220;
     var top, left;
-    if (pos === 'bottom') { top = rect.bottom + pad + 10; left = rect.left + rect.width / 2 - bw / 2; }
-    else { top = rect.top - bh - pad - 10; left = rect.left + rect.width / 2 - bw / 2; }
-    left = Math.max(12, Math.min(left, vw - bw - 12));
-    top  = Math.max(12, Math.min(top,  vh - bh - 12));
-    balloon.style.transform = ''; balloon.style.top = top + 'px'; balloon.style.left = left + 'px';
+
+    // Tentar posição pedida, fallback para oposta se não couber
+    if (pos === 'bottom') {
+      top = rect.bottom + pad + 8;
+      if (top + bh > vh - 12) top = rect.top - bh - pad - 8; // flip to top
+    } else {
+      top = rect.top - bh - pad - 8;
+      if (top < 12) top = rect.bottom + pad + 8; // flip to bottom
+    }
+
+    left = rect.left + rect.width / 2 - bw / 2;
+
+    // Clampar dentro da tela
+    left = Math.max(16, Math.min(left, vw - bw - 16));
+    top  = Math.max(70, Math.min(top,  vh - bh - 16));
+
+    balloon.style.transform = '';
+    balloon.style.top  = top + 'px';
+    balloon.style.left = left + 'px';
+
+    // Scroll suave para o elemento
     try { targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e) {}
   }
 
