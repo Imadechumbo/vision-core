@@ -382,6 +382,67 @@ app.all('/api/auth/login', (req, res) => {
   return sendOk(res, { user: publicUser(user), token, token_type: 'session', persisted: true, anti_stub: true });
 });
 
+/* ── §83 SNAPSHOT / ROLLBACK ── */
+const SNAPSHOTS_DIR = path.join(DB_ROOT, 'snapshots');
+fs.mkdirSync(SNAPSHOTS_DIR, { recursive: true });
+
+app.post('/api/vault/snapshot', (req, res) => {
+  try {
+    const body = normalizeBody(req);
+    const id = `snap_${Date.now()}_${makeId('s')}`;
+    const meta = {
+      id,
+      label: body.label || 'manual',
+      created_at: now(),
+      project: body.project || 'visioncore',
+      triggered_by: body.triggered_by || 'operator'
+    };
+    const snapshot = {
+      ...meta,
+      state: {
+        users_count: (() => { try { return readJsonFile(USERS_DB, { users: [] }).users.length; } catch { return 0; } })(),
+        projects: (() => { try { return readJsonFile(PROJECTS_DB, { projects: [] }).projects; } catch { return []; } })(),
+        providers: providerList(),
+        vault_files: (() => { const files = []; try { ['Missions','Incidents','PASS-GOLD','Projects'].forEach(d => { const fp = path.join(VAULT_ROOT, d); if (fs.existsSync(fp)) files.push(...fs.readdirSync(fp).map(f => `${d}/${f}`)); }); } catch {} return files; })()
+      }
+    };
+    fs.writeFileSync(path.join(SNAPSHOTS_DIR, `${id}.json`), JSON.stringify(snapshot, null, 2), 'utf8');
+    return sendOk(res, { snapshot_id: id, created_at: meta.created_at, label: meta.label, anti_stub: true });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'snapshot_failed', message: err.message, time: now() });
+  }
+});
+
+app.get('/api/vault/snapshots', (req, res) => {
+  try {
+    const files = fs.existsSync(SNAPSHOTS_DIR) ? fs.readdirSync(SNAPSHOTS_DIR).filter(f => f.endsWith('.json')) : [];
+    const snapshots = files.map(f => {
+      try { const s = JSON.parse(fs.readFileSync(path.join(SNAPSHOTS_DIR, f), 'utf8')); return { id: s.id, label: s.label, created_at: s.created_at, project: s.project }; }
+      catch { return null; }
+    }).filter(Boolean).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+    return sendOk(res, { snapshots, count: snapshots.length, anti_stub: true });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'list_snapshots_failed', message: err.message, time: now() });
+  }
+});
+
+app.post('/api/vault/rollback/:snapshotId', (req, res) => {
+  try {
+    const { snapshotId } = req.params;
+    const file = path.join(SNAPSHOTS_DIR, `${snapshotId}.json`);
+    if (!fs.existsSync(file)) return res.status(404).json({ ok: false, error: 'snapshot_not_found', snapshot_id: snapshotId, time: now() });
+    const snapshot = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (snapshot.state && snapshot.state.projects) {
+      const projectsDb = readJsonFile(PROJECTS_DB, { projects: [] });
+      projectsDb.projects = snapshot.state.projects;
+      writeJsonFile(PROJECTS_DB, projectsDb);
+    }
+    return sendOk(res, { rolled_back: true, snapshot_id: snapshotId, restored_at: now(), label: snapshot.label, anti_stub: true });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'rollback_failed', message: err.message, time: now() });
+  }
+});
+
 app.get('/api/auth/me', (req, res) => {
   const user = getAuthUser(req);
   if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
