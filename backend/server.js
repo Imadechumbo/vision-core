@@ -1196,7 +1196,26 @@ app.all('/api/billing/checkout', (req, res) => {
   return res.status(400).json({ ok: false, error: 'use_authenticated_checkout', hint: 'POST /api/billing/create-checkout-session requires auth token', time: now() });
 });
 app.all('/api/billing/webhook', (req, res) => sendOk(res, { received: true }));
-app.get('/api/billing/status', (req, res) => sendOk(res, { plan: process.env.FORCE_PRO_FOR_ALL_TEST_USERS === 'true' ? 'pro' : 'free', active: true }));
+app.get('/api/billing/status', (req, res) => {
+  if (process.env.FORCE_PRO_FOR_ALL_TEST_USERS === 'true') {
+    return sendOk(res, { plan: 'pro', active: true, source: 'force_env', anti_stub: true });
+  }
+  const user = getAuthUser(req);
+  if (user) {
+    const plan = user.plan || 'free';
+    const billing = user.billing || {};
+    return sendOk(res, {
+      plan,
+      active: true,
+      subscription_status: billing.subscription_status || (plan === 'free' ? 'free_tier' : 'active'),
+      current_period_end: billing.current_period_end || null,
+      cancel_at_period_end: billing.cancel_at_period_end || false,
+      source: 'user_record',
+      anti_stub: true
+    });
+  }
+  return sendOk(res, { plan: 'free', active: true, source: 'unauthenticated', anti_stub: true });
+});
 /* §83 B1: mock billing/cancel, usage/quota, auth/signup, auth/login, /api/me REMOVED — real impls at lines ~946, ~988, ~357, ~372, ~385 */
 
 /* AGENT DOWNLOAD */
