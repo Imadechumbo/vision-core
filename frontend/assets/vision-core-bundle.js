@@ -1825,7 +1825,15 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
     wireRealActions();
 
-    document.querySelectorAll('.oauth').forEach(function (btn) { blockBtn(btn); });
+    // §86 B3: .oauth — Em breve, toast on click (disabled in HTML already)
+    document.querySelectorAll('.oauth').forEach(function (btn) {
+      btn.disabled = true;
+      btn.style.cursor = 'not-allowed';
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (window.showToast) window.showToast('OAuth em breve — use email e senha por enquanto.');
+      });
+    });
     // §84 B3: .provider buttons unblocked — wire to aiProviderSelect
     document.querySelectorAll('.provider').forEach(function (btn) {
       btn.disabled = false;
