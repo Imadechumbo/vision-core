@@ -19,6 +19,33 @@
 .v299-config-btn{color:#9ca3af!important;}
 .v299-obsidian-btn{color:#a78bfa!important;}
 .v299-obsidian-btn.active{color:#22c55e!important;border-color:#22c55e!important;}
+/* §89 TUTORIAL */
+.vc-tutorial-overlay{position:fixed;inset:0;z-index:99999;pointer-events:none;transition:opacity .3s;display:none}
+.vc-tutorial-overlay.active{pointer-events:auto}
+.vc-tutorial-spotlight{position:fixed;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.72);transition:all .35s cubic-bezier(.4,0,.2,1);z-index:100000;pointer-events:none}
+.vc-tutorial-balloon{position:fixed;z-index:100001;background:#0f172a;border:1.5px solid #6366f1;border-radius:14px;padding:22px 24px 16px;max-width:340px;min-width:260px;box-shadow:0 8px 40px rgba(99,102,241,.35);transition:all .3s cubic-bezier(.4,0,.2,1)}
+.vc-tutorial-step-counter{font-size:10px;color:#6366f1;font-weight:700;letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase}
+.vc-tutorial-title{font-size:15px;font-weight:700;color:#f1f5f9;margin-bottom:10px;line-height:1.4}
+.vc-tutorial-text{font-size:13px;color:#94a3b8;line-height:1.6;margin-bottom:16px}
+.vc-tutorial-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.vc-tutorial-btn{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+.vc-tutorial-btn.primary{background:#6366f1;color:#fff}
+.vc-tutorial-btn.primary:hover{background:#4f46e5}
+.vc-tutorial-btn.secondary{background:#1e293b;color:#94a3b8;border:1px solid #334155}
+.vc-tutorial-btn.secondary:hover{color:#f1f5f9}
+.vc-tutorial-btn.cta{background:#0f4;color:#000;font-weight:700}
+.vc-tutorial-btn.hidden{display:none}
+.vc-tutorial-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.vc-tutorial-skip{background:none;border:none;color:#475569;font-size:11px;cursor:pointer;text-decoration:underline;padding:0}
+.vc-tutorial-skip:hover{color:#94a3b8}
+.vc-tutorial-noshowagain{display:flex;align-items:center;gap:5px;font-size:11px;color:#475569;cursor:pointer}
+.vc-tutorial-noshowagain input{cursor:pointer;accent-color:#6366f1}
+/* §89 SF landing card */
+.sf-landing-card h2{color:#a78bfa;margin-bottom:8px}
+.sf-landing-modules{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:4px}
+.sf-landing-mod{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px}
+.sf-mod-num{font-size:10px;font-weight:700;color:#6366f1;background:#1e1b4b;padding:2px 6px;border-radius:4px;min-width:22px;text-align:center}
+.sf-mod-name{font-size:12px;color:#cbd5e1;font-weight:500}
 /* §86 plan badges + oauth */
 .plan-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 6px;border-radius:3px;margin-top:4px;text-transform:uppercase;}
 .plan-badge.beta{background:#0f4;color:#000;}
@@ -251,6 +278,23 @@
 
     <br>
     <br>
+    <!-- §89 SOFTWARE FACTORY CARD -->
+    <div class="panel sf-landing-card" id="sfLandingCard">
+      <h2>◈ SOFTWARE FACTORY</h2>
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:16px">Crie projetos do zero com 8 módulos de IA: da definição de stack até o blueprint de deploy. Tudo guiado por agentes especializados.</p>
+      <div class="sf-landing-modules">
+        <div class="sf-landing-mod"><span class="sf-mod-num">01</span><span class="sf-mod-name">Montar Projeto</span></div>
+        <div class="sf-landing-mod"><span class="sf-mod-num">02</span><span class="sf-mod-name">Templates</span></div>
+        <div class="sf-landing-mod"><span class="sf-mod-num">03</span><span class="sf-mod-name">Compositor de Missão</span></div>
+        <div class="sf-landing-mod"><span class="sf-mod-num">04</span><span class="sf-mod-name">Worker Handoff</span></div>
+        <div class="sf-landing-mod"><span class="sf-mod-num">05</span><span class="sf-mod-name">Preview de Criação</span></div>
+        <div class="sf-landing-mod"><span class="sf-mod-num">06</span><span class="sf-mod-name">Comando Real</span></div>
+        <div class="sf-landing-mod"><span class="sf-mod-num">07</span><span class="sf-mod-name">Recibo do Worker</span></div>
+        <div class="sf-landing-mod"><span class="sf-mod-num">08</span><span class="sf-mod-name">Painel Final</span></div>
+      </div>
+      <button class="btn" type="button" data-open-sf-page style="margin-top:16px">◈ ABRIR SOFTWARE FACTORY</button>
+    </div>
+
     <div class="panel" id="timeline">
       <h2>MISSION TIMELINE</h2>
       <p>Fluxo visual: missão recebida → Hermes → snapshot → diff → validação → GitHub PR.</p>
@@ -2789,6 +2833,25 @@
 <script src="assets/v231-backend-agents.js?v=582" defer></script>
 <!-- SF Modules 02-09 (B5) — §82 -->
 <script src="assets/v582-sf-modules.js?v=582" defer></script>
+
+<!-- §89 TUTORIAL INTERATIVO -->
+<div id="vcTutorialOverlay" class="vc-tutorial-overlay" aria-hidden="true">
+  <div id="vcTutorialSpotlight" class="vc-tutorial-spotlight"></div>
+  <div id="vcTutorialBalloon" class="vc-tutorial-balloon" role="dialog" aria-live="polite">
+    <div class="vc-tutorial-step-counter" id="vcTutorialCounter">1 / 12</div>
+    <div class="vc-tutorial-title" id="vcTutorialTitle"></div>
+    <div class="vc-tutorial-text" id="vcTutorialText"></div>
+    <div class="vc-tutorial-actions">
+      <button class="vc-tutorial-btn secondary" id="vcTutorialPrev">← Anterior</button>
+      <button class="vc-tutorial-btn primary" id="vcTutorialNext">Próximo →</button>
+      <button class="vc-tutorial-btn cta hidden" id="vcTutorialCta">CRIAR CONTA GRÁTIS</button>
+    </div>
+    <div class="vc-tutorial-footer">
+      <button class="vc-tutorial-skip" id="vcTutorialSkip">Pular tutorial</button>
+      <label class="vc-tutorial-noshowagain"><input type="checkbox" id="vcTutorialNoShow"> Não exibir novamente</label>
+    </div>
+  </div>
+</div>
 </body>
 </html>
 
