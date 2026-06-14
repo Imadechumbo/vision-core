@@ -1826,7 +1826,23 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     wireRealActions();
 
     document.querySelectorAll('.oauth').forEach(function (btn) { blockBtn(btn); });
-    document.querySelectorAll('.provider').forEach(function (btn) { blockBtn(btn); });
+    // §84 B3: .provider buttons unblocked — wire to aiProviderSelect
+    document.querySelectorAll('.provider').forEach(function (btn) {
+      btn.disabled = false;
+      btn.style.opacity = '';
+      btn.style.cursor = '';
+      btn.addEventListener('click', function () {
+        var providerVal = btn.getAttribute('data-provider');
+        if (!providerVal) return;
+        document.querySelectorAll('.provider').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        var sel = document.getElementById('aiProviderSelect');
+        if (sel) { sel.value = providerVal; sel.dispatchEvent(new Event('change')); }
+        var keyInp = document.getElementById('aiApiKey');
+        if (keyInp) { keyInp.focus(); }
+        if (window.showLog) window.showLog('PROVIDER', 'selecionado: ' + providerVal, 'cyan');
+      });
+    });
     document.querySelectorAll('.plan').forEach(function (btn) { blockBtn(btn); });
 
     /* §80 B8 — carregar providers salvos */
