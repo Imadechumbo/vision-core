@@ -1825,14 +1825,28 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
     wireRealActions();
 
-    // §86 B3: .oauth — Em breve, toast on click (disabled in HTML already)
+    // §88: .oauth — Google + GitHub reais, SSO ainda em breve
     document.querySelectorAll('.oauth').forEach(function (btn) {
-      btn.disabled = true;
-      btn.style.cursor = 'not-allowed';
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        if (window.showToast) window.showToast('OAuth em breve — use email e senha por enquanto.');
-      });
+      var provider = btn.getAttribute('data-provider');
+      if (provider === 'google' || provider === 'github') {
+        btn.disabled = false;
+        btn.style.cursor = 'pointer';
+        btn.style.opacity = '1';
+        btn.classList.remove('oauth-soon');
+        var badge = btn.querySelector('.oauth-badge');
+        if (badge) badge.remove();
+        btn.addEventListener('click', function () {
+          var BACKEND = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+          window.location.href = BACKEND + '/api/auth/oauth/' + provider;
+        });
+      } else {
+        btn.disabled = true;
+        btn.style.cursor = 'not-allowed';
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          if (window.showToast) window.showToast('SSO em breve — use email e senha por enquanto.');
+        });
+      }
     });
     // §84 B3: .provider buttons unblocked — wire to aiProviderSelect
     document.querySelectorAll('.provider').forEach(function (btn) {
