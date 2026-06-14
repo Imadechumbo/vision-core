@@ -8130,7 +8130,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       }
     });
 
-    // EXECUTAR SDDF button (local echo only)
+    // EXECUTAR SDDF button — §84 B1: calls real /api/sf/gold-gate
     var runBtn = document.getElementById('vcSfRunBtn');
     if (runBtn) {
       runBtn.addEventListener('click', function () {
@@ -8140,17 +8140,49 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         if (hint) hint.remove();
         var msg = document.createElement('div');
         msg.className = 'vc-sf-chat-msg';
-        msg.textContent = '[LOCAL] SDDF local: nenhum backend conectado. Configure módulo e copie para worker externo.';
+        msg.textContent = '[SDDF] Executando Gold Gate Check...';
         stream.appendChild(msg);
         stream.scrollTop = stream.scrollHeight;
-        var feed = document.getElementById('vcSfActivityFeed');
-        if (feed) {
-          var item = document.createElement('div');
-          item.className = 'vc-sf-activity-item';
-          item.innerHTML = '<span>EXECUTAR SDDF pressionado — local only</span>';
-          feed.insertBefore(item, feed.firstChild);
-          while (feed.children.length > 8) { feed.removeChild(feed.lastChild); }
-        }
+        runBtn.disabled = true;
+        runBtn.textContent = '...';
+        var ctx = { project: window.__VISION_PROJECT__ || 'visioncore', timestamp: new Date().toISOString(), module: 'SF08' };
+        fetch((window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '') + '/api/sf/gold-gate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ context: ctx })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var result = data.result || data.output || JSON.stringify(data, null, 2);
+          var out = document.createElement('div');
+          out.className = 'vc-sf-chat-msg';
+          out.style.whiteSpace = 'pre-wrap';
+          out.style.fontFamily = 'monospace';
+          out.style.fontSize = '0.82rem';
+          out.textContent = '[SDDF GOLD GATE]\n' + result;
+          stream.appendChild(out);
+          stream.scrollTop = stream.scrollHeight;
+          var feed = document.getElementById('vcSfActivityFeed');
+          if (feed) {
+            var item = document.createElement('div');
+            item.className = 'vc-sf-activity-item';
+            item.innerHTML = '<span style="color:var(--green,#0f0)">✓ SDDF Gold Gate executado</span>';
+            feed.insertBefore(item, feed.firstChild);
+            while (feed.children.length > 8) { feed.removeChild(feed.lastChild); }
+          }
+        })
+        .catch(function(err) {
+          var out = document.createElement('div');
+          out.className = 'vc-sf-chat-msg';
+          out.style.color = 'var(--red,#f44)';
+          out.textContent = '[SDDF] Erro: ' + err.message;
+          stream.appendChild(out);
+          stream.scrollTop = stream.scrollHeight;
+        })
+        .finally(function() {
+          runBtn.disabled = false;
+          runBtn.textContent = '▶ EXECUTAR SDDF';
+        });
       });
     }
 
