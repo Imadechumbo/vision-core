@@ -1,6 +1,6 @@
 <!-- bundle-version: fake-audit-fix-v1 -->
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" translate="no">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -389,7 +389,7 @@
     <div class="panel agents-board vc-reserve-panel" id="agentsBoard">
       <div class="vc-reserve-headline">
         <div class="vc-reserve-headline-text">
-          <p class="eyebrow">OPENSQUAD RESERVE • AGENTES QUE TRABALHAM FORA DO MENU PRINCIPAL</p>
+          <p class="eyebrow" translate="no">OPENSQUAD RESERVE • AGENTES QUE TRABALHAM FORA DO MENU PRINCIPAL</p>
           <h2>AGENTES EXTRAS EM EXECUÇÃO</h2>
           <p>Catálogo lido do backend em <code>/api/agents/catalog</code>, usando os nomes e funções reais do projeto.</p>
         </div>
@@ -1930,14 +1930,14 @@
     <br>
     <section class="panel">
       <h2>GATES (SDDF)</h2>
-      <div class="gate"><span>SECURITY</span><span class="green" id="gate-security">—</span></div>
-      <div class="gate"><span>COMPATIBILITY</span><span class="green" id="gate-compatibility">—</span></div>
-      <div class="gate"><span>STABILITY</span><span class="green" id="gate-stability">—</span></div>
-      <div class="gate"><span>RUNTIME</span><span class="cyan" id="gate-runtime">—</span></div>
-      <div class="gate"><span>DIFF</span><span class="cyan">READY</span></div>
-      <div class="gate"><span>VAULT</span><span class="green">ACTIVE</span></div>
-      <div class="gate"><span>PROMOTION</span><span class="yellow">REQUIRES GOLD</span></div>
-      <div class="gate"><span>GITHUB PR</span><span class="cyan">REAL API</span></div>
+      <div class="gate" translate="no"><span>SECURITY</span><span class="green" id="gate-security">—</span></div>
+      <div class="gate" translate="no"><span>COMPATIBILITY</span><span class="green" id="gate-compatibility">—</span></div>
+      <div class="gate" translate="no"><span>STABILITY</span><span class="green" id="gate-stability">—</span></div>
+      <div class="gate" translate="no"><span>RUNTIME</span><span class="cyan" id="gate-runtime">—</span></div>
+      <div class="gate" translate="no"><span>DIFF</span><span class="cyan">READY</span></div>
+      <div class="gate" translate="no"><span>VAULT</span><span class="green">ACTIVE</span></div>
+      <div class="gate" translate="no"><span>PROMOTION</span><span class="yellow">REQUIRES GOLD</span></div>
+      <div class="gate" translate="no"><span>GITHUB PR</span><span class="cyan">REAL API</span></div>
     </section>
 
     <br>
@@ -2000,7 +2000,7 @@
           <span class="agent-status muted">ESCALA</span>
         </div>
       </div>
-      <div class="opensquad-flow">
+      <div class="opensquad-flow" translate="no">
         <span>Erro complexo</span><b>→</b>
         <span>OPENCLAW</span><b>→</b>
         <span>N squads paralelos</span><b>→</b>
@@ -2751,6 +2751,10 @@
 
 <!-- vision-core-bundle.js — vision-core-clean-state.js + vision-core-clean-runtime.js -->
 <script src="assets/vision-core-bundle.js" defer></script>
+<!-- Backend Agents Catalog (B10) — §82 -->
+<script src="assets/v231-backend-agents.js?v=582" defer></script>
+<!-- SF Modules 02-09 (B5) — §82 -->
+<script src="assets/v582-sf-modules.js?v=582" defer></script>
 </body>
 </html>
 
