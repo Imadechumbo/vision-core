@@ -543,6 +543,159 @@ app.get('/api/auth/me', (req, res) => {
   return sendOk(res, { user: publicUser(user), anti_stub: true });
 });
 
+/* ── §88 OAUTH — Google + GitHub ── */
+const OAUTH_REDIRECT_BASE = process.env.OAUTH_REDIRECT_BASE || 'https://weiganlight.workers.dev';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://visioncoreai.pages.dev';
+
+function httpsGet(url, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const options = {
+      hostname: parsed.hostname,
+      port: parsed.port || 443,
+      path: parsed.pathname + parsed.search,
+      method: 'GET',
+      headers: { 'Accept': 'application/json', ...headers }
+    };
+    const req = require('https').request(options, resp => {
+      let data = '';
+      resp.on('data', chunk => { data += chunk; });
+      resp.on('end', () => resolve({ status: resp.statusCode, ok: resp.statusCode >= 200 && resp.statusCode < 300, text: data }));
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+// ── GOOGLE ──────────────────────────────────────────
+app.get('/api/auth/oauth/google', (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) return res.status(503).json({ ok: false, error: 'google_oauth_not_configured', time: now() });
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/oauth/google/callback`,
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'offline',
+    prompt: 'select_account'
+  });
+  return res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+});
+
+app.get('/api/auth/oauth/google/callback', async (req, res) => {
+  const { code, error } = req.query;
+  if (error || !code) return res.redirect(`${FRONTEND_URL}/#oauth-error=${error || 'no_code'}`);
+  try {
+    const tokenResp = await httpsPost('https://oauth2.googleapis.com/token', {}, JSON.stringify({
+      code,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/oauth/google/callback`,
+      grant_type: 'authorization_code'
+    }));
+    if (!tokenResp.ok) {
+      console.error('[oauth/google] token exchange failed:', tokenResp.text);
+      return res.redirect(`${FRONTEND_URL}/#oauth-error=token_exchange_failed`);
+    }
+    const tokenData = JSON.parse(tokenResp.text);
+    // Decode ID token to get user info (no extra request needed)
+    const idToken = tokenData.id_token;
+    const payload = idToken ? JSON.parse(Buffer.from(idToken.split('.')[1], 'base64url').toString('utf8')) : null;
+    if (!payload || !payload.email) return res.redirect(`${FRONTEND_URL}/#oauth-error=no_email`);
+
+    const email = payload.email;
+    const name = payload.name || email.split('@')[0];
+    const db = readJsonFile(USERS_DB, { users: [] });
+    let user = db.users.find(u => u.email === email);
+    if (!user) {
+      user = { id: makeId('usr'), email, name, plan: 'free', oauth_provider: 'google', oauth_id: payload.sub, created_at: now(), last_login: now() };
+      db.users.push(user);
+    } else {
+      user.last_login = now();
+      if (!user.oauth_provider) user.oauth_provider = 'google';
+    }
+    writeJsonFile(USERS_DB, db);
+    const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
+    return res.redirect(`${FRONTEND_URL}/#oauth-success&token=${encodeURIComponent(token)}&plan=${user.plan}&email=${encodeURIComponent(email)}`);
+  } catch (err) {
+    console.error('[oauth/google/callback]', err.message);
+    return res.redirect(`${FRONTEND_URL}/#oauth-error=${encodeURIComponent(err.message)}`);
+  }
+});
+
+// ── GITHUB ──────────────────────────────────────────
+app.get('/api/auth/oauth/github', (req, res) => {
+  const clientId = process.env.GITHUB_CLIENT_ID;
+  if (!clientId) return res.status(503).json({ ok: false, error: 'github_oauth_not_configured', time: now() });
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/oauth/github/callback`,
+    scope: 'user:email',
+    state: makeId('st')
+  });
+  return res.redirect(`https://github.com/login/oauth/authorize?${params}`);
+});
+
+app.get('/api/auth/oauth/github/callback', async (req, res) => {
+  const { code, error } = req.query;
+  if (error || !code) return res.redirect(`${FRONTEND_URL}/#oauth-error=${error || 'no_code'}`);
+  try {
+    const tokenResp = await httpsPost('https://github.com/login/oauth/access_token',
+      { 'Accept': 'application/json' },
+      JSON.stringify({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code,
+        redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/oauth/github/callback`
+      })
+    );
+    if (!tokenResp.ok) return res.redirect(`${FRONTEND_URL}/#oauth-error=token_exchange_failed`);
+    const tokenData = JSON.parse(tokenResp.text);
+    const accessToken = tokenData.access_token;
+    if (!accessToken) return res.redirect(`${FRONTEND_URL}/#oauth-error=no_access_token`);
+
+    // Get GitHub user info
+    const ghResp = await httpsGet('https://api.github.com/user', {
+      'Authorization': `Bearer ${accessToken}`,
+      'User-Agent': 'VisionCore/5.9'
+    });
+    if (!ghResp.ok) return res.redirect(`${FRONTEND_URL}/#oauth-error=github_user_fetch_failed`);
+    const ghUser = JSON.parse(ghResp.text);
+
+    let email = ghUser.email;
+    if (!email) {
+      // Fetch primary verified email
+      const emailResp = await httpsGet('https://api.github.com/user/emails', {
+        'Authorization': `Bearer ${accessToken}`,
+        'User-Agent': 'VisionCore/5.9'
+      });
+      if (emailResp.ok) {
+        const emails = JSON.parse(emailResp.text);
+        const primary = Array.isArray(emails) && emails.find(e => e.primary && e.verified);
+        email = primary ? primary.email : null;
+      }
+    }
+    if (!email) return res.redirect(`${FRONTEND_URL}/#oauth-error=no_email`);
+
+    const name = ghUser.name || ghUser.login || email.split('@')[0];
+    const db = readJsonFile(USERS_DB, { users: [] });
+    let user = db.users.find(u => u.email === email);
+    if (!user) {
+      user = { id: makeId('usr'), email, name, plan: 'free', oauth_provider: 'github', oauth_id: String(ghUser.id), github_login: ghUser.login, created_at: now(), last_login: now() };
+      db.users.push(user);
+    } else {
+      user.last_login = now();
+      if (!user.github_login) user.github_login = ghUser.login;
+    }
+    writeJsonFile(USERS_DB, db);
+    const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
+    return res.redirect(`${FRONTEND_URL}/#oauth-success&token=${encodeURIComponent(token)}&plan=${user.plan}&email=${encodeURIComponent(email)}`);
+  } catch (err) {
+    console.error('[oauth/github/callback]', err.message);
+    return res.redirect(`${FRONTEND_URL}/#oauth-error=${encodeURIComponent(err.message)}`);
+  }
+});
+
 app.get('/api/account/me', (req, res) => {
   const user = getAuthUser(req);
   if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
