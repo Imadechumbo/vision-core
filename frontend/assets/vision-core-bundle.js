@@ -6701,6 +6701,57 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           typewriterEffect(msgEl, answer, 10);
         }
         setStatus('READY');
+        /* §81 — Classify paralelo: sugestão contextual do Arquiteto */
+        (function(_userText81) {
+          fetch(BACKEND_URL + '/api/architect/interpret', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ message: _userText81 })
+          })
+          .then(function(r) { return r.ok ? r.json() : null; })
+          .then(function(cls) {
+            if (!cls || !cls.ok) return;
+            var conf = cls.classification && cls.classification.confidence || 0;
+            if (cls.intent !== 'create' || conf < 0.6) return;
+            /* Mostrar sugestão contextual abaixo da última bubble */
+            var hint = document.createElement('div');
+            hint.style.cssText = [
+              'display:flex',
+              'align-items:center',
+              'gap:10px',
+              'margin:4px 0 8px',
+              'padding:8px 12px',
+              'background:rgba(139,92,246,.06)',
+              'border:1px solid rgba(139,92,246,.2)',
+              'border-radius:8px',
+              'font-size:12px',
+              'color:#a5b4fc',
+            ].join(';');
+            var projType = (cls.classification && cls.classification.project_type) || 'projeto';
+            hint.innerHTML =
+              '<span style="opacity:.7">◈</span>' +
+              '<span style="flex:1">Parece uma solicitação de <strong style="color:#c4b5fd">' +
+              projType + '</strong>.</span>' +
+              '<button type="button" style="' +
+                'background:rgba(139,92,246,.15);' +
+                'border:1px solid rgba(139,92,246,.35);' +
+                'color:#c4b5fd;' +
+                'padding:4px 10px;' +
+                'border-radius:5px;' +
+                'font-size:11px;' +
+                'font-family:inherit;' +
+                'cursor:pointer;' +
+                'white-space:nowrap' +
+              '">Abrir Project Builder →</button>';
+            hint.querySelector('button').addEventListener('click', function() {
+              hint.remove();
+              showSoftwareFactoryPage();
+            });
+            chatStream.appendChild(hint);
+            chatStream.scrollTop = chatStream.scrollHeight;
+          })
+          .catch(function() {});
+        }(text));
       })
       .catch(function(err) {
         clearTimeout(_chatAnimTimer);
