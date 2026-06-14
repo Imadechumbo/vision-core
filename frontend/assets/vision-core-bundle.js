@@ -8699,19 +8699,60 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     try { targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e) {}
   }
 
+  // §90: mascote refs
+  var mascotIdle    = document.getElementById('vcMascotIdle');
+  var mascotReading = document.getElementById('vcMascotReading');
+  var _typeTimer    = null;
+
+  function setMascot(state) {
+    if (!mascotIdle || !mascotReading) return;
+    if (state === 'reading') {
+      mascotIdle.classList.remove('active');
+      mascotReading.classList.add('active');
+    } else {
+      mascotReading.classList.remove('active');
+      mascotIdle.classList.add('active');
+    }
+  }
+
+  function typeText(text, el, onDone) {
+    if (_typeTimer) { clearInterval(_typeTimer); _typeTimer = null; }
+    el.textContent = '';
+    setMascot('reading');
+    nextBtn.disabled = true;
+    var i = 0;
+    var speed = Math.max(10, Math.min(30, Math.floor(2600 / text.length)));
+    _typeTimer = setInterval(function() {
+      el.textContent += text[i];
+      i++;
+      if (i >= text.length) {
+        clearInterval(_typeTimer);
+        _typeTimer = null;
+        setTimeout(function() {
+          setMascot('idle');
+          nextBtn.disabled = false;
+        }, 250);
+        if (onDone) onDone();
+      }
+    }, speed);
+  }
+
   function showStep(idx) {
     var step = STEPS[idx];
     titleEl.textContent   = step.title;
-    textEl.textContent    = step.text;
     counterEl.textContent = (idx + 1) + ' / ' + STEPS.length;
     prevBtn.style.display = idx === 0 ? 'none' : '';
     nextBtn.textContent   = idx === STEPS.length - 1 ? 'Fechar' : 'Próximo →';
     if (ctaBtn) { step.cta ? ctaBtn.classList.remove('hidden') : ctaBtn.classList.add('hidden'); }
+    typeText(step.text, textEl, null);
     var targetEl = getEl(step.target);
     setTimeout(function() { positionBalloon(targetEl, step.pos); }, 80);
   }
 
   function closeTutorial() {
+    if (_typeTimer) { clearInterval(_typeTimer); _typeTimer = null; }
+    setMascot('idle');
+    nextBtn.disabled = false;
     overlay.style.display = 'none';
     overlay.classList.remove('active');
     try { if (noShowCb && noShowCb.checked) localStorage.setItem('vc_tutorial_done', '1'); } catch(e) {}
