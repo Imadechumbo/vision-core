@@ -8370,6 +8370,22 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       signupBtn.style.opacity = '';
       signupBtn.style.cursor  = '';
 
+      // §86 B4: update plan badge with real user plan
+      function updatePlanBadge(plan) {
+        var badge = document.getElementById('v299QuotaBadge');
+        if (!badge) return;
+        var planTag = badge.querySelector('.v299-plan-tag');
+        var quotaSpan = badge.querySelector('.v299-quota-ok');
+        if (planTag) {
+          planTag.className = 'v299-plan-tag ' + (plan || 'free');
+          planTag.textContent = (plan || 'free').toUpperCase();
+        }
+        if (quotaSpan) {
+          var quotaMap = { free: '5 missões/mês', pro: 'ilimitado', enterprise: 'multi-projeto' };
+          quotaSpan.textContent = quotaMap[plan] || quotaMap.free;
+        }
+      }
+
       function doAuth() {
         var email = (emailEl.value || '').trim();
         if (!email || email.indexOf('@') === -1) {
@@ -8388,8 +8404,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         .then(function (data) {
           if (data && data.ok) {
             if (data.token) {
-              try { sessionStorage.setItem('vc_token', data.token); } catch (ex) {}
+              try { sessionStorage.setItem('vc_token', data.token); localStorage.setItem('vision_token', data.token); } catch (ex) {}
             }
+            if (data.user && data.user.plan) { updatePlanBadge(data.user.plan); }
             if (resultEl) {
               resultEl.textContent = '✓ Conta criada! Token: ' + (data.token ? data.token.slice(0, 14) + '…' : 'ok');
               resultEl.style.color = '#22c55e';
@@ -8411,8 +8428,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               signupBtn.disabled = false;
               if (d2 && d2.ok) {
                 if (d2.token) {
-                  try { sessionStorage.setItem('vc_token', d2.token); } catch (ex) {}
+                  try { sessionStorage.setItem('vc_token', d2.token); localStorage.setItem('vision_token', d2.token); } catch (ex) {}
                 }
+                if (d2.user && d2.user.plan) { updatePlanBadge(d2.user.plan); }
                 if (resultEl) { resultEl.textContent = '✓ Login realizado!'; resultEl.style.color = '#22c55e'; }
                 setTimeout(function () {
                   authBackdrop.classList.remove('show');
@@ -8432,6 +8450,17 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           if (resultEl) { resultEl.textContent = 'Erro de rede: ' + err; resultEl.style.color = '#f87171'; }
         });
       }
+
+      // Load real plan on page init if already logged in
+      (function () {
+        var tok = (function () { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch (e) { return null; } })();
+        if (tok) {
+          fetch(BACKEND_URL + '/api/billing/status', { headers: { 'Authorization': 'Bearer ' + tok } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d && d.plan) updatePlanBadge(d.plan); })
+            .catch(function () {});
+        }
+      })();
 
       signupBtn.addEventListener('click', doAuth);
       emailEl.addEventListener('keydown', function (e) {
