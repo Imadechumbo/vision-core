@@ -1843,7 +1843,44 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         if (window.showLog) window.showLog('PROVIDER', 'selecionado: ' + providerVal, 'cyan');
       });
     });
-    document.querySelectorAll('.plan').forEach(function (btn) { blockBtn(btn); });
+    // §84 B4: .plan cards unblocked — wire to real Stripe checkout
+    document.querySelectorAll('.plan').forEach(function (card) {
+      var plan = card.getAttribute('data-plan');
+      if (!plan || plan === 'free') return;
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', function () {
+        var token = localStorage.getItem('vision_token') || sessionStorage.getItem('vision_token');
+        if (!token) {
+          var authBtn = document.getElementById('openAuthBtn');
+          if (authBtn) authBtn.click();
+          if (window.showToast) window.showToast('Faça login para assinar o plano ' + plan.toUpperCase());
+          return;
+        }
+        card.style.opacity = '0.6';
+        card.style.pointerEvents = 'none';
+        var _backendBase = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+        fetch(_backendBase + '/api/billing/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ plan: plan, return_url: window.location.href })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.checkout_url) {
+            window.location.href = data.checkout_url;
+          } else {
+            if (window.showToast) window.showToast('Checkout não disponível: ' + (data.error || 'Stripe não configurado'));
+            card.style.opacity = '';
+            card.style.pointerEvents = '';
+          }
+        })
+        .catch(function(err) {
+          if (window.showToast) window.showToast('Erro ao abrir checkout: ' + err.message);
+          card.style.opacity = '';
+          card.style.pointerEvents = '';
+        });
+      });
+    });
 
     /* §80 B8 — carregar providers salvos */
     apiFetch('/api/providers/list', { method: 'GET' })
