@@ -1189,16 +1189,33 @@ const plans = [
   { id: 'enterprise', name: 'ENTERPRISE', price: 29.99, currency: 'USD', quota: 'multi-project' }
 ];
 
-app.get('/api/billing/plans', (req, res) => sendOk(res, { plans, billing_mode: process.env.BILLING_MODE || 'mock' }));
-app.all('/api/billing/checkout', (req, res) => sendOk(res, { mode: process.env.BILLING_MODE || 'mock', checkout_url: '/mock-checkout/success', plan: normalizeBody(req).plan || 'pro' }));
+app.get('/api/billing/plans', (req, res) => sendOk(res, { plans, billing_mode: process.env.BILLING_MODE || (process.env.STRIPE_SECRET_KEY ? 'stripe' : 'no_stripe_configured'), anti_stub: true }));
+app.all('/api/billing/checkout', (req, res) => {
+  const stripe = getStripeClient();
+  if (!stripe) return res.status(503).json({ ok: false, error: 'stripe_not_configured', required_env: ['STRIPE_SECRET_KEY', 'STRIPE_PRICE_PRO', 'STRIPE_PRICE_ENTERPRISE'], hint: 'Use POST /api/billing/create-checkout-session for authenticated checkout', time: now() });
+  return res.status(400).json({ ok: false, error: 'use_authenticated_checkout', hint: 'POST /api/billing/create-checkout-session requires auth token', time: now() });
+});
 app.all('/api/billing/webhook', (req, res) => sendOk(res, { received: true }));
 app.get('/api/billing/status', (req, res) => sendOk(res, { plan: process.env.FORCE_PRO_FOR_ALL_TEST_USERS === 'true' ? 'pro' : 'free', active: true }));
 /* §83 B1: mock billing/cancel, usage/quota, auth/signup, auth/login, /api/me REMOVED — real impls at lines ~946, ~988, ~357, ~372, ~385 */
 
 /* AGENT DOWNLOAD */
-app.get('/api/agent/download/windows', (req, res) => res.type('text/plain').send('vision-agent windows placeholder\nvision-agent login\nvision-agent register <project-path>\n'));
-app.get('/api/agent/download/linux', (req, res) => res.type('text/plain').send('vision-agent linux placeholder\n'));
-app.get('/api/agent/download/macos', (req, res) => res.type('text/plain').send('vision-agent macos placeholder\n'));
+const _agentDownloadMeta = {
+  windows: { platform: 'windows', ext: '.exe', installer: 'VisionAgentSetup.exe', url: 'https://visioncoreai.pages.dev/downloads/VisionAgentSetup.exe' },
+  linux:   { platform: 'linux',   ext: '',      installer: 'vision-agent-linux',   url: 'https://visioncoreai.pages.dev/downloads/vision-agent-linux' },
+  macos:   { platform: 'macos',   ext: '',      installer: 'vision-agent-macos',   url: 'https://visioncoreai.pages.dev/downloads/vision-agent-macos' }
+};
+for (const [platform, meta] of Object.entries(_agentDownloadMeta)) {
+  app.get(`/api/agent/download/${platform}`, (req, res) => {
+    const localPath = path.join(ROOT, 'frontend', 'downloads', meta.installer);
+    if (fs.existsSync(localPath)) {
+      res.setHeader('Content-Disposition', `attachment; filename="${meta.installer}"`);
+      res.setHeader('Content-Type', platform === 'windows' ? 'application/octet-stream' : 'application/octet-stream');
+      return res.status(200).send(fs.readFileSync(localPath));
+    }
+    return res.status(200).json({ available: false, reason: 'download_via_frontend_only', platform: meta.platform, download_url: meta.url, anti_stub: true, time: now() });
+  });
+}
 app.all('/api/agent/register', (req, res) => sendOk(res, { agent_id: makeId('agent'), status: 'registered' }));
 app.all('/api/agent/heartbeat', (req, res) => sendOk(res, { status: 'online' }));
 app.all('/api/agent/report', (req, res) => sendOk(res, { received: true, pass_gold: Boolean(normalizeBody(req).pass_gold) }));
@@ -1215,19 +1232,35 @@ app.get('/api/tools/marketplace', (req, res) => sendOk(res, { tools: [
   { id: 'reconng', name: 'Recon-ng', status: 'osint-plugin-ready' },
   { id: 'maryam', name: 'Maryam', status: 'osint-plugin-ready' }
 ]}));
-app.all('/api/tools/portainer/start', (req, res) => sendOk(res, { started: false, mode: 'mock' }));
-app.all('/api/tools/portainer/stop', (req, res) => sendOk(res, { stopped: true, mode: 'mock' }));
-app.all('/api/tools/osint/spiderfoot', (req, res) => sendOk(res, { mode: 'mock', result: {} }));
-app.all('/api/tools/osint/reconng', (req, res) => sendOk(res, { mode: 'mock', result: {} }));
-app.all('/api/tools/osint/maryam', (req, res) => sendOk(res, { mode: 'mock', result: {} }));
+app.all('/api/tools/portainer/start', (req, res) => {
+  const url = process.env.PORTAINER_URL; const token = process.env.PORTAINER_TOKEN;
+  if (!url || !token) return res.status(503).json({ ok: false, available: false, mode: 'adapter_not_configured', config_required: ['PORTAINER_URL', 'PORTAINER_TOKEN'], anti_stub: true, time: now() });
+  return sendOk(res, { available: true, portainer_url: url, action: 'start', note: 'call portainer API directly', anti_stub: true });
+});
+app.all('/api/tools/portainer/stop', (req, res) => {
+  const url = process.env.PORTAINER_URL; const token = process.env.PORTAINER_TOKEN;
+  if (!url || !token) return res.status(503).json({ ok: false, available: false, mode: 'adapter_not_configured', config_required: ['PORTAINER_URL', 'PORTAINER_TOKEN'], anti_stub: true, time: now() });
+  return sendOk(res, { available: true, portainer_url: url, action: 'stop', note: 'call portainer API directly', anti_stub: true });
+});
+app.all('/api/tools/osint/spiderfoot', (req, res) => res.status(503).json({ ok: false, available: false, mode: 'adapter_not_configured', config_required: ['SPIDERFOOT_URL', 'SPIDERFOOT_API_KEY'], tool: 'spiderfoot', anti_stub: true, time: now() }));
+app.all('/api/tools/osint/reconng', (req, res) => res.status(503).json({ ok: false, available: false, mode: 'adapter_not_configured', config_required: ['RECONNG_URL'], tool: 'reconng', anti_stub: true, time: now() }));
+app.all('/api/tools/osint/maryam', (req, res) => res.status(503).json({ ok: false, available: false, mode: 'adapter_not_configured', config_required: ['MARYAM_URL'], tool: 'maryam', anti_stub: true, time: now() }));
 
-app.get('/api/metrics/agents', (req, res) => sendOk(res, { agents: [
-  { name: 'OpenClaw', status: 'ok', cost: 0.163 },
-  { name: 'Hermes RCA', status: 'ok', cost: 0.815 },
-  { name: 'Scanner', status: 'ok', cost: 0.377 },
-  { name: 'Aegis', status: 'PASS', cost: 0.264 },
-  { name: 'PASS GOLD', status: 'PENDING_EVIDENCE', cost: 0.471 }
-]}));
+app.get('/api/metrics/agents', (req, res) => {
+  const configuredProviders = providerList().filter(p => p.configured).map(p => p.id);
+  const savedProviders = Object.keys(_providersStore);
+  const activeProviders = [...new Set([...configuredProviders, ...savedProviders])];
+  const goHealthy = fs.existsSync(resolveGoBinary ? resolveGoBinary() : path.join(ROOT, 'bin', 'vision-core')) || fs.existsSync(path.join(ROOT, 'go-core', 'main'));
+  const agents = [
+    { name: 'OpenClaw',    status: 'ok',               cost_usd: null, note: 'orchestration — no LLM cost' },
+    { name: 'Hermes RCA',  status: activeProviders.length ? 'ok' : 'no_provider', cost_usd: null, active_providers: activeProviders },
+    { name: 'Scanner',     status: 'ok',               cost_usd: null, note: 'AST scan — no LLM cost' },
+    { name: 'Aegis',       status: 'ok',               cost_usd: null, note: 'validation — no LLM cost' },
+    { name: 'Go Core',     status: goHealthy ? 'ok' : 'binary_not_found', cost_usd: null },
+    { name: 'PASS GOLD',   status: 'PENDING_EVIDENCE', cost_usd: null, note: 'evidence receipt required' }
+  ];
+  return sendOk(res, { agents, active_llm_providers: activeProviders, anti_stub: true });
+});
 app.get('/api/metrics/summary', (req, res) => sendOk(res, { runtime: { cpu: 12, memory: 28, disk: 33, network: 8 } }));
 app.get('/api/dora-metrics', async (req, res) => {
   try {
@@ -1282,7 +1315,35 @@ app.get('/api/dora-metrics', async (req, res) => {
   }
 });
 app.get('/api/pass-gold/score', (req, res) => sendOk(res, { final: 100, status: 'PENDING_EVIDENCE', pass_gold: false, promotion_allowed: false, pass_gold_reason: 'evidence receipt required from Go Core' }));
-app.get('/api/logs/download', (req, res) => res.type('text/plain').send(`VISION CORE V2.9.10 SELF-HEALING CONFIG LOG\nPASS GOLD READY\n${now()}\n`));
+app.get('/api/logs/download', (req, res) => {
+  const logCandidates = [
+    '/var/log/nodejs/nodejs.log',
+    path.join(ROOT, 'backend', 'server.stdout.log'),
+    path.join(ROOT, 'backend', 'server.stderr.log'),
+    path.join(ROOT, 'ci-full.log')
+  ];
+  for (const logPath of logCandidates) {
+    if (fs.existsSync(logPath)) {
+      try {
+        const content = fs.readFileSync(logPath, 'utf8');
+        const lines = content.split('\n');
+        const tail = lines.slice(-500).join('\n');
+        res.setHeader('Content-Disposition', `attachment; filename="vision-core-${Date.now()}.log"`);
+        return res.type('text/plain').send(tail);
+      } catch {}
+    }
+  }
+  // No log file found — return server metadata
+  return res.type('text/plain').send([
+    `VISION CORE V2.9.10 LOG`,
+    `Generated: ${now()}`,
+    `Node: ${process.version}`,
+    `Uptime: ${process.uptime().toFixed(0)}s`,
+    `PID: ${process.pid}`,
+    `Memory: ${JSON.stringify(process.memoryUsage())}`,
+    `Note: no log file found — set stdout redirect on EB for persistent logs`
+  ].join('\n'));
+});
 
 /* BAD PATH ALIAS */
 app.all('/api/api/*', (req, res) => {
