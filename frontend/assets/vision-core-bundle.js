@@ -1602,9 +1602,25 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var diffViewer = document.getElementById('diffViewer');
     if (diffBtn && diffViewer) {
       diffBtn.addEventListener('click', function () {
-        var sample = (missionText && missionText.value || '').trim() || 'console.log("hello")';
-        diffViewer.textContent =
-          '--- a/example.js\n+++ b/example.js\n@@ -1 +1 @@\n-' + sample + '\n+' + sample + '  // patch demo local — sem chamada de backend\n';
+        var input = (missionText && missionText.value || '').trim();
+        diffBtn.disabled = true;
+        diffBtn.textContent = '...';
+        apiFetch('/api/diff/preview', {
+          method: 'POST',
+          body: JSON.stringify({ input: input || 'exemplo', context: '' })
+        }).then(function(r) {
+          if (r.body && r.body.diff) {
+            diffViewer.textContent = r.body.diff;
+            diffBtn.textContent = r.body.type === 'real' ? 'DIFF REAL' : 'GERAR DIFF DEMO';
+          } else {
+            diffViewer.textContent = 'Erro ao gerar diff.';
+            diffBtn.textContent = 'GERAR DIFF DEMO';
+          }
+          diffBtn.disabled = false;
+        }).catch(function() {
+          diffBtn.textContent = 'GERAR DIFF DEMO';
+          diffBtn.disabled = false;
+        });
       });
     }
 
@@ -1728,7 +1744,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         apiFetch('/api/providers/save', { method: 'POST', body: providerPayload() })
           .then(function (res) {
             showToast(res.body && res.body.saved
-              ? ('Config recebida pelo backend (chave: ' + res.body.api_key_masked + '). ' + (res.body.note || ''))
+              ? ('Provider salvo: ' + res.body.provider + ' (chave: ' + res.body.api_key_masked + ') — ' + res.body.providers_count + ' configurado(s)')
               : 'Falha ao salvar provider.');
           })
           .catch(function () { showToast('Erro de rede ao salvar.'); })
@@ -1742,9 +1758,17 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         testAiProviderBtn.disabled = true;
         apiFetch('/api/providers/test', { method: 'POST', body: providerPayload() })
           .then(function (res) {
-            showToast(res.body
-              ? ('Backend respondeu: status=' + res.body.status + ', modelo=' + res.body.model)
-              : 'Falha ao testar provider.');
+            if (!res.body) { showToast('Falha ao testar provider.'); return; }
+            var msg;
+            if (res.body.connected) {
+              msg = '✅ ' + res.body.provider + ' conectado' +
+                (res.body.latency_ms ? ' — ' + res.body.latency_ms + 'ms' : '') +
+                (res.body.model_count ? ' — ' + res.body.model_count + ' modelos' : '');
+            } else {
+              msg = '⚠ ' + res.body.provider + ': ' + (res.body.status || 'erro') +
+                (res.body.note ? ' — ' + res.body.note : '');
+            }
+            showToast(msg);
           })
           .catch(function () { showToast('Erro de rede ao testar.'); })
           .then(function () { testAiProviderBtn.disabled = false; });
@@ -1803,6 +1827,22 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     document.querySelectorAll('.oauth').forEach(function (btn) { blockBtn(btn); });
     document.querySelectorAll('.provider').forEach(function (btn) { blockBtn(btn); });
     document.querySelectorAll('.plan').forEach(function (btn) { blockBtn(btn); });
+
+    /* §80 B8 — carregar providers salvos */
+    apiFetch('/api/providers/list', { method: 'GET' })
+      .then(function(r) {
+        if (r.body && Array.isArray(r.body.providers) && r.body.providers.length > 0) {
+          var last = r.body.providers[r.body.providers.length - 1];
+          var sel = document.getElementById('aiProviderSelect');
+          var mdl = document.getElementById('aiModel');
+          var pri = document.getElementById('aiPriority');
+          if (sel && last.provider) { sel.value = last.provider; }
+          if (mdl && last.model)    { mdl.value = last.model; }
+          if (pri && last.priority) { pri.value = last.priority; }
+          var status = document.getElementById('aiProviderStatus');
+          if (status) { status.textContent = r.body.providers.length + ' provider(s) configurado(s) nesta sessão.'; }
+        }
+      }).catch(function() {});
 
     var scoreBox = document.getElementById('scoreBox');
     if (scoreBox) {
@@ -1956,6 +1996,18 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           if (mode === 'off')  { btn.classList.add('active-off'); }
           if (mode === 'auto') { btn.classList.add('active-auto'); }
           if (mode === 'on')   { btn.classList.add('active-on'); }
+          /* §80 B1 — persistir modo no backend */
+          var _agentId = card.getAttribute('data-agent-id');
+          if (_agentId) {
+            apiFetch('/api/agents/' + _agentId + '/mode', {
+              method: 'POST',
+              body: JSON.stringify({ mode: mode.toUpperCase() })
+            }).then(function(r) {
+              if (r.ok && r.body && r.body.ok) {
+                showToast('Agente ' + _agentId + ': ' + mode.toUpperCase() + ' salvo');
+              }
+            }).catch(function() {});
+          }
         });
       });
 
@@ -2550,7 +2602,17 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     /* Orchestration mode chips */
     document.querySelectorAll('.vc-mode-chip').forEach(function (chip) {
       chip.addEventListener('click', function () {
-        setOrchestrationMode(chip.getAttribute('data-orch-mode'));
+        var modeId = chip.getAttribute('data-orch-mode');
+        setOrchestrationMode(modeId);
+        /* §80 B3 — persistir modo de orquestração no backend */
+        apiFetch('/api/orchestration/mode', {
+          method: 'POST',
+          body: JSON.stringify({ mode: modeId })
+        }).then(function(r) {
+          if (r.ok && r.body && r.body.ok) {
+            showToast('Orquestração: ' + modeId.replace(/_/g, ' ') + ' ativo');
+          }
+        }).catch(function() {});
       });
     });
 
@@ -2563,6 +2625,13 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           var modeRaw = btn.getAttribute('data-mode');
           var modeUpper = modeRaw === 'off' ? 'OFF' : modeRaw === 'auto' ? 'AUTO' : 'ON';
           updateAgentMode(agentId, modeUpper);
+          /* §80 B2 — persistir modo matrix no backend */
+          if (agentId) {
+            apiFetch('/api/agents/' + agentId + '/mode', {
+              method: 'POST',
+              body: JSON.stringify({ mode: modeUpper })
+            }).catch(function() {});
+          }
         });
       });
     });

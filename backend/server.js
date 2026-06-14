@@ -778,22 +778,95 @@ app.get('/api/memory/patterns', (req, res) => sendOk(res, { patterns: fs.readdir
 
 /* PROVIDERS */
 app.get('/api/providers', (req, res) => sendOk(res, { providers: providerList(), default: process.env.DEFAULT_AI_PROVIDER || 'auto' }));
+const _providersStore = {};
+
 app.all('/api/providers/save', (req, res) => {
   const body = normalizeBody(req);
+  const provider = body.provider || 'auto';
+  _providersStore[provider] = {
+    provider,
+    api_key_masked: maskSecret(body.api_key || ''),
+    api_key:        body.api_key || '',
+    model:          body.model   || '',
+    base_url:       body.base_url || '',
+    priority:       body.priority || 'primary',
+    saved_at:       now()
+  };
+  console.log(`[providers] saved ${provider}`);
   return sendOk(res, {
-    saved: true,
-    provider: body.provider || 'auto',
-    api_key_masked: maskSecret(body.api_key),
-    base_url: body.base_url || '',
-    model: body.model || '',
-    note: 'Config recebida. Persistir em DB/secret manager em produção.'
+    saved:           true,
+    provider,
+    api_key_masked:  maskSecret(body.api_key || ''),
+    providers_count: Object.keys(_providersStore).length,
+    time:            now()
   });
 });
-app.all('/api/providers/test', (req, res) => sendOk(res, {
-  provider: normalizeBody(req).provider || 'auto',
-  status: 'mock_connected',
-  model: normalizeBody(req).model || 'auto'
-}));
+
+app.get('/api/providers/list', (req, res) => {
+  const list = Object.values(_providersStore).map(p => ({
+    ...p,
+    api_key: undefined
+  }));
+  return sendOk(res, { providers: list, time: now() });
+});
+
+app.all('/api/providers/test', async (req, res) => {
+  const body     = normalizeBody(req);
+  const provider = body.provider || 'auto';
+  const apiKey   = body.api_key  || (_providersStore[provider] && _providersStore[provider].api_key) || '';
+  const model    = body.model    || '';
+
+  if (!apiKey) {
+    return sendOk(res, { provider, status: 'no_key', connected: false, note: 'Salve uma API key primeiro.', time: now() });
+  }
+
+  const t0 = Date.now();
+  try {
+    let testUrl, testHeaders, testMethod = 'GET';
+
+    if (provider === 'openai' || provider === 'openrouter') {
+      testUrl     = provider === 'openai' ? 'https://api.openai.com/v1/models' : 'https://openrouter.ai/api/v1/models';
+      testHeaders = { 'Authorization': `Bearer ${apiKey}` };
+    } else if (provider === 'anthropic') {
+      testUrl     = 'https://api.anthropic.com/v1/models';
+      testHeaders = { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' };
+    } else if (provider === 'gemini') {
+      testUrl     = `https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`;
+      testHeaders = {};
+    } else if (provider === 'groq') {
+      testUrl     = 'https://api.groq.com/openai/v1/models';
+      testHeaders = { 'Authorization': `Bearer ${apiKey}` };
+    } else if (provider === 'deepseek') {
+      testUrl     = 'https://api.deepseek.com/v1/models';
+      testHeaders = { 'Authorization': `Bearer ${apiKey}` };
+    } else {
+      return sendOk(res, { provider, status: 'unsupported_provider', connected: false, time: now() });
+    }
+
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(testUrl, { method: testMethod, headers: testHeaders, signal: ctrl.signal });
+    clearTimeout(timer);
+    const latency = Date.now() - t0;
+
+    if (r.ok) {
+      const data = await r.json().catch(() => ({}));
+      const modelCount = Array.isArray(data.data) ? data.data.length : (Array.isArray(data.models) ? data.models.length : null);
+      return sendOk(res, {
+        provider,
+        status:      'connected',
+        connected:   true,
+        latency_ms:  latency,
+        model_count: modelCount,
+        time:        now()
+      });
+    } else {
+      return sendOk(res, { provider, status: `http_${r.status}`, connected: false, latency_ms: Date.now()-t0, time: now() });
+    }
+  } catch (err) {
+    return sendOk(res, { provider, status: 'error', connected: false, error: err.message, latency_ms: Date.now()-t0, time: now() });
+  }
+});
 app.all('/api/providers/default', (req, res) => sendOk(res, { default: normalizeBody(req).provider || process.env.DEFAULT_AI_PROVIDER || 'auto' }));
 
 
@@ -2451,6 +2524,113 @@ app.post('/api/architect/interpret', async (req, res) => {
   } catch (err) {
     return res.status(500).json({ ok: false, error: err.message, time: now() });
   }
+});
+
+/* §80 — AGENTS MODES */
+const _agentModesStore = {};
+
+app.get('/api/agents/modes', (req, res) => {
+  return sendOk(res, { modes: _agentModesStore, time: now() });
+});
+
+app.post('/api/agents/:id/mode', (req, res) => {
+  const agentId = req.params.id;
+  const body    = normalizeBody(req);
+  const mode    = String(body.mode || 'AUTO').toUpperCase();
+  const valid   = ['OFF', 'AUTO', 'ON'];
+  if (!valid.includes(mode)) {
+    return res.status(400).json({ ok: false, error: 'invalid_mode', valid, time: now() });
+  }
+  _agentModesStore[agentId] = mode;
+  console.log(`[agents] ${agentId} → ${mode}`);
+  return sendOk(res, { ok: true, agent_id: agentId, mode, time: now() });
+});
+
+const _AGENTS_CATALOG = [
+  { id: 'hermes',      name: 'Hermes RCA',     role: 'Supervisor RCA',               method: 'CONVERSA', default_mode: 'AUTO' },
+  { id: 'aegis',       name: 'Aegis',           role: 'Validação de sintaxe',         method: 'CONVERSA', default_mode: 'AUTO' },
+  { id: 'scanner',     name: 'Scanner',         role: 'Análise estrutural',           method: 'CONVERSA', default_mode: 'AUTO' },
+  { id: 'patchengine', name: 'Patch Engine',    role: 'Geração de patches',           method: 'LOOP',     default_mode: 'AUTO' },
+  { id: 'passgold',    name: 'Pass Gold',       role: 'Gate de qualidade',            method: 'LOOP',     default_mode: 'AUTO' },
+  { id: 'openclaw',    name: 'OpenClaw',        role: 'Planejamento de tarefas',      method: 'CONVERSA', default_mode: 'AUTO' },
+  { id: 'benchmark',   name: 'Benchmark',       role: 'Métricas e performance',       method: 'AUTO',     default_mode: 'AUTO' },
+  { id: 'backend',     name: 'Agente Backend',  role: 'Express, rotas, server',       method: 'CONVERSA', default_mode: 'AUTO' },
+  { id: 'database',    name: 'Agente Database', role: 'Schema, queries',              method: 'CONVERSA', default_mode: 'AUTO' },
+  { id: 'auth',        name: 'Agente Auth',     role: 'Autenticação',                 method: 'CONVERSA', default_mode: 'AUTO' },
+  { id: 'frontend',    name: 'Agente Frontend', role: 'UI, componentes',              method: 'CONVERSA', default_mode: 'AUTO' },
+  { id: 'security',    name: 'Agente Security', role: 'Auditoria de segurança',       method: 'CONVERSA', default_mode: 'AUTO' },
+  { id: 'architect',   name: 'Arquiteto',       role: 'Classificação e planejamento', method: 'CONVERSA', default_mode: 'ON'   },
+  { id: 'locator',     name: 'Locator',         role: 'Busca em codebase',            method: 'CONVERSA', default_mode: 'AUTO' },
+  { id: 'memory',      name: 'Memory Agent',    role: 'Contexto de sessão',           method: 'CONVERSA', default_mode: 'AUTO' },
+];
+
+app.get('/api/agents/catalog', (req, res) => {
+  const agents = _AGENTS_CATALOG.map(a => ({
+    ...a,
+    current_mode: _agentModesStore[a.id] || a.default_mode
+  }));
+  return sendOk(res, { agents, time: now() });
+});
+
+/* §80 — ORCHESTRATION MODE */
+let _orchModeStore = 'auto_assistido';
+
+app.get('/api/orchestration/mode', (req, res) => {
+  return sendOk(res, { mode: _orchModeStore, time: now() });
+});
+
+app.post('/api/orchestration/mode', (req, res) => {
+  const body  = normalizeBody(req);
+  const mode  = String(body.mode || '').toLowerCase();
+  const valid = ['manual', 'cirurgico', 'auto_assistido', 'full_sf', 'review_only'];
+  if (!valid.includes(mode)) {
+    return res.status(400).json({ ok: false, error: 'invalid_mode', valid, time: now() });
+  }
+  _orchModeStore = mode;
+  console.log(`[orchestration] mode → ${mode}`);
+  return sendOk(res, { ok: true, mode, time: now() });
+});
+
+/* §80 — DIFF PREVIEW */
+app.post('/api/diff/preview', (req, res) => {
+  const body      = normalizeBody(req);
+  const input     = String(body.input     || '').trim();
+  const context   = String(body.context   || '').trim();
+  const lastPatch = String(body.last_patch || '').trim();
+
+  if (!input && !lastPatch) {
+    return res.status(400).json({ ok: false, error: 'input_required', time: now() });
+  }
+
+  let diff = '';
+  let type = 'demo';
+
+  if (lastPatch) {
+    diff = lastPatch;
+    type = 'real';
+  } else {
+    const sample = input.slice(0, 200);
+    const lines  = sample.split('\n');
+    const file   = context ? context.replace(/.*[/\\]/, '') : 'arquivo.js';
+    diff = [
+      `--- a/${file}`,
+      `+++ b/${file}`,
+      `@@ -1,${lines.length} +1,${lines.length} @@`,
+      ...lines.map(l => `-${l}`),
+      ...lines.map(l => `+${l}  // patch vision core`),
+    ].join('\n');
+    type = 'demo';
+  }
+
+  return sendOk(res, {
+    diff,
+    type,
+    filename: context ? context.replace(/.*[/\\]/, '') : 'arquivo.js',
+    note: type === 'demo'
+      ? 'Preview local — forneça arquivo real para diff cirúrgico.'
+      : 'Diff do último patch aplicado.',
+    time: now()
+  });
 });
 
 /* SAFE 404 — nunca 405 */
