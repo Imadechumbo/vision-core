@@ -41,7 +41,7 @@
       <a href="#marketplace">☷ Tools</a>
       <a href="#metricsBoard">▥ Métricas</a>
       <a href="#agentsBoard">⚙ Agentes</a>
-      <button class="vc-sf-nav-btn" type="button" data-open-sf-page aria-label="Abrir Software Factory Builder">◈ SOFTWARE FACTORY</button>
+      <button class="vc-sf-nav-btn" type="button" data-open-sf-page aria-label="Abrir Spec Library">◈ SPECS</button>
     </nav>
     <div class="top-actions">
       <a class="btn ghost" href="landing.html">LANDING STARTUP</a>
@@ -65,7 +65,7 @@
       <a class="marketing-link" href="about.html">um sistema que corrige sistemas</a>
     </section>
     <nav class="panel menu premium-menu">
-      <button class="vc-sf-sidebar-link" type="button" data-open-sf-page aria-label="Abrir Software Factory Builder">◈ SOFTWARE FACTORY</button>
+      <button class="vc-sf-sidebar-link" type="button" data-open-sf-page aria-label="Abrir Spec Library">◈ SPECS</button>
       <a class="active" href="#mission">◎ MISSION CONTROL</a>
       <a href="#timeline">⌁ MISSION TIMELINE</a>
       <a href="#runtime">⌁ EXECUTION MONITOR</a>
@@ -118,6 +118,7 @@
               <option value="debug-cors">Debug CORS</option>
               <option value="explicar-leigo">Explicar para leigo</option>
               <option value="rodar-sddf">Rodar SDDF</option>
+              <option value="create">◈ Criar Projeto</option>
             </select>
             <select class="v298-select" id="v298Model">
               <option value="auto">Modelo automático</option>
@@ -2034,696 +2035,79 @@
 </div><!-- end #vcCockpitView -->
 
 <!-- ══════════════════════════════════════════════════════════
-     SOFTWARE FACTORY BUILDER PAGE — dedicated page view
-     Local in-memory view. No backend. No API. No exec.
+     SF SPEC LIBRARY PAGE — §77 — dedicated page view
+     Reads /api/spec/summary + /api/spec?module=XX. Read-only.
      ══════════════════════════════════════════════════════════ -->
 <div id="vcSoftwareFactoryPage" class="vc-sf-page" style="display:none" aria-hidden="true">
 
-  <!-- Page header -->
-  <div class="vc-sf-page-header">
+  <!-- HEADER -->
+  <div class="vc-sf-header">
     <button class="vc-sf-back-btn" id="vcSfBackBtn" type="button">← COCKPIT</button>
-    <button class="vc-sf-sidebar-toggle panels-on" id="vcSfSidebarToggle" type="button" title="Ocultar painéis laterais">⊞</button>
-    <div class="vc-sf-page-identity">
-      <p class="vc-sf-eyebrow">SOFTWARE FACTORY • PROJECT BUILDER • AGENT ORCHESTRATION</p>
-      <h1 class="vc-sf-title">MONTAR PROJETO DO ZERO</h1>
-    </div>
-    <span class="vc-sf-local-badge">LOCAL PREVIEW</span>
+    <span class="vc-sf-header-title">◈ SPEC LIBRARY</span>
+    <input class="vc-sf-search" id="vcSfSearch" type="search"
+           placeholder="buscar spec por ID ou texto..." autocomplete="off">
   </div>
 
-  <!-- ── Horizontal module nav ──────────────────────────────── -->
-  <div class="vc-sf-module-nav-h" role="tablist" aria-label="Módulos Software Factory">
-    <button class="vc-sf-module-btn vc-sf-home-btn active" id="vcSfHomeBtn" role="tab" type="button">⌂ HOME</button>
-    <button class="vc-sf-module-btn" data-sf-module="project_builder"   role="tab" type="button"><span class="vc-sf-module-num">01</span> MONTAR PROJETO DO ZERO</button>
-    <button class="vc-sf-module-btn" data-sf-module="export_preview"    role="tab" type="button"><span class="vc-sf-module-num">02</span> PREVIEW DE CRIAÇÃO</button>
-    <button class="vc-sf-module-btn" data-sf-module="project_templates" role="tab" type="button"><span class="vc-sf-module-num">03</span> TEMPLATES DE PROJETO</button>
-    <button class="vc-sf-module-btn" data-sf-module="mission_composer"  role="tab" type="button"><span class="vc-sf-module-num">04</span> COMPOSITOR DE MISSÃO</button>
-    <button class="vc-sf-module-btn" data-sf-module="worker_handoff"    role="tab" type="button"><span class="vc-sf-module-num">05</span> PACOTES PARA WORKERS</button>
-    <button class="vc-sf-module-btn" data-sf-module="real_file_command" role="tab" type="button"><span class="vc-sf-module-num">06</span> COMANDO PARA CRIAÇÃO REAL</button>
-    <button class="vc-sf-module-btn" data-sf-module="worker_receipt"    role="tab" type="button"><span class="vc-sf-module-num">07</span> RECIBO DO WORKER</button>
-    <button class="vc-sf-module-btn" data-sf-module="saas_api"          role="tab" type="button"><span class="vc-sf-module-num">08</span> SAAS &amp; API ROADMAP</button>
-    <button class="vc-sf-module-btn" data-sf-module="final_dashboard"   role="tab" type="button"><span class="vc-sf-module-num">09</span> PAINEL FINAL</button>
-  </div>
+  <!-- BODY: sidebar + main -->
+  <div class="vc-sf-body">
 
-  <!-- ── Horizontal SDDF timeline ──────────────────────────── -->
-  <div class="vc-sf-sddf-timeline-h sddf-collapsed" aria-label="SDDF Timeline">
-    <button class="vc-sf-sddf-collapse-btn" id="vcSfSddfCollapseBtn" type="button" title="Expandir pipeline SDDF">▼ PIPELINE</button>
-    <div id="vcSfSddfSteps">
-      <div class="vc-sf-sddf-step" data-sf-module="project_builder">
-        <div class="vc-sf-sddf-node-circle">01</div>
-        <div class="vc-sf-sddf-step-name">Descoberta &amp; Planejamento</div>
+    <!-- SIDEBAR -->
+    <div class="vc-sf-sidebar" id="vcSfSidebar">
+
+      <div class="vc-sf-sidebar-section-label">MÓDULOS</div>
+      <div id="vcSfModuleList">
+        <!-- preenchido por JS via GET /api/spec/summary -->
+        <div class="vc-sf-sidebar-loading">carregando...</div>
       </div>
-      <i class="vc-sf-sddf-connector"></i>
-      <div class="vc-sf-sddf-step" data-sf-module="export_preview">
-        <div class="vc-sf-sddf-node-circle">02</div>
-        <div class="vc-sf-sddf-step-name">Modelagem &amp; Template</div>
+
+      <div class="vc-sf-sidebar-section-label" style="margin-top:16px">FILTROS</div>
+      <div class="vc-sf-filter-group" id="vcSfFilterGroup">
+        <label class="vc-sf-filter-item">
+          <input type="radio" name="sf-type-filter" value="all" checked> Todos
+        </label>
+        <label class="vc-sf-filter-item">
+          <input type="radio" name="sf-type-filter" value="HAPPY PATH"> Happy Path
+        </label>
+        <label class="vc-sf-filter-item">
+          <input type="radio" name="sf-type-filter" value="EDGE"> Edge
+        </label>
+        <label class="vc-sf-filter-item">
+          <input type="radio" name="sf-type-filter" value="SECURITY"> Security
+        </label>
+        <label class="vc-sf-filter-item">
+          <input type="radio" name="sf-type-filter" value="SECURITY CRÍTICO"> Crítico
+        </label>
       </div>
-      <i class="vc-sf-sddf-connector"></i>
-      <div class="vc-sf-sddf-step" data-sf-module="project_templates">
-        <div class="vc-sf-sddf-node-circle">03</div>
-        <div class="vc-sf-sddf-step-name">Composição da Missão</div>
-      </div>
-      <i class="vc-sf-sddf-connector"></i>
-      <div class="vc-sf-sddf-step" data-sf-module="mission_composer">
-        <div class="vc-sf-sddf-node-circle">04</div>
-        <div class="vc-sf-sddf-step-name">Preview &amp; Verificação</div>
-      </div>
-      <i class="vc-sf-sddf-connector"></i>
-      <div class="vc-sf-sddf-step" data-sf-module="worker_handoff">
-        <div class="vc-sf-sddf-node-circle">05</div>
-        <div class="vc-sf-sddf-step-name">Pacotes para Workers</div>
-      </div>
-      <i class="vc-sf-sddf-connector"></i>
-      <div class="vc-sf-sddf-step" data-sf-module="real_file_command">
-        <div class="vc-sf-sddf-node-circle">06</div>
-        <div class="vc-sf-sddf-step-name">Comando para Criação Real</div>
-      </div>
-      <i class="vc-sf-sddf-connector"></i>
-      <div class="vc-sf-sddf-step" data-sf-module="worker_receipt">
-        <div class="vc-sf-sddf-node-circle">07</div>
-        <div class="vc-sf-sddf-step-name">Execução &amp; Recibo</div>
-      </div>
-      <i class="vc-sf-sddf-connector"></i>
-      <div class="vc-sf-sddf-step" data-sf-module="saas_api">
-        <div class="vc-sf-sddf-node-circle">08</div>
-        <div class="vc-sf-sddf-step-name">Validação &amp; Entrega</div>
-      </div>
-      <i class="vc-sf-sddf-connector"></i>
-      <div class="vc-sf-sddf-step" data-sf-module="final_dashboard">
-        <div class="vc-sf-sddf-node-circle">09</div>
-        <div class="vc-sf-sddf-step-name">Roadmap &amp; Conectores</div>
+
+      <div class="vc-sf-sidebar-footer" id="vcSfLibFooter">
+        <!-- preenchido por JS: "120 specs · 12 módulos" -->
       </div>
     </div>
-  </div>
 
-  <!-- ── Three-column layout ──────────────────────────────── -->
-  <div class="vc-sf-columns">
-
-    <!-- LEFT: Resumo + Config + Progresso -->
-    <div class="vc-sf-col-left">
-
-      <div class="vc-sf-panel-box">
-        <div class="vc-sf-panel-box-title">Resumo do Projeto</div>
-        <div class="vc-sf-stat-row">
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">Tipo</span>
-            <span class="vc-sf-stat-val highlight" id="vcSfSummaryType">SaaS Fullstack</span>
-          </div>
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">Stack</span>
-            <span class="vc-sf-stat-val highlight" id="vcSfSummaryStack">Node.js</span>
-          </div>
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">Orquestração</span>
-            <span class="vc-sf-stat-val highlight" id="vcSfSummaryOrch">Hermes Review</span>
-          </div>
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">Módulo Ativo</span>
-            <span class="vc-sf-stat-val" id="vcSfSummaryModule">01</span>
-          </div>
+    <!-- MAIN: specs do módulo ativo -->
+    <div class="vc-sf-main" id="vcSfMain">
+      <div class="vc-sf-main-empty" id="vcSfMainEmpty">
+        Selecione um módulo para ver as specs.
+      </div>
+      <div id="vcSfSpecsContainer" style="display:none">
+        <div class="vc-sf-module-header" id="vcSfModuleHeader">
+          <!-- preenchido por JS -->
+        </div>
+        <div id="vcSfSpecCards">
+          <!-- cards de spec preenchidos por JS -->
+        </div>
+        <div class="vc-sf-main-actions">
+          <button class="vc-sf-lib-btn secondary" id="vcSfCopyModule" type="button">
+            ⎘ copiar módulo
+          </button>
+          <button class="vc-sf-lib-btn" id="vcSfSendModule" type="button">
+            → enviar módulo ao chat
+          </button>
         </div>
       </div>
+    </div>
 
-      <div class="vc-sf-panel-box">
-        <div class="vc-sf-panel-box-title">Configuração Rápida</div>
-        <div class="vc-sf-stat-row">
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">Backend</span>
-            <span class="vc-sf-stat-val blocked" id="vc-backend-status">NÃO CONECTADO</span>
-          </div>
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">Exec Real</span>
-            <span class="vc-sf-stat-val blocked">BLOQUEADA</span>
-          </div>
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">Criação de Arquivos</span>
-            <span class="vc-sf-stat-val blocked">BLOQUEADA</span>
-          </div>
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">Modo</span>
-            <span class="vc-sf-stat-val ready" id="vc-mode-badge">LOCAL PREVIEW</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="vc-sf-panel-box">
-        <div class="vc-sf-panel-box-title">Progresso Geral</div>
-        <div class="vc-sf-progress-bar">
-          <div class="vc-sf-progress-fill" id="vcSfProgressFill" style="width:11%"></div>
-        </div>
-        <div class="vc-sf-stat-row">
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">Módulo</span>
-            <span class="vc-sf-stat-val" id="vcSfProgressLabel">1 / 9</span>
-          </div>
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">PASS GOLD REAL</span>
-            <span class="vc-sf-stat-val blocked">NÃO REIVINDICADO</span>
-          </div>
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">Produção</span>
-            <span class="vc-sf-stat-val blocked">NÃO TOCADA</span>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- end .vc-sf-col-left -->
-
-    <!-- CENTER: SF Home (LLM Control) + Module Workspace -->
-    <div class="vc-sf-col-center">
-
-      <!-- HOME: exclusive landing — hidden completely when workspace opens -->
-      <div id="vcSfHomeControl">
-
-        <!-- Hero intro -->
-        <div class="vc-sf-hero">
-          <div class="vc-sf-hero-title">⬡ Vamos construir algo extraordinário.</div>
-          <div class="vc-sf-hero-subtitle">Descreva sua ideia de projeto, objetivos, funcionalidades principais, regras de negócio e requisitos técnicos. Tudo fica na memória local desta sessão — sem backend, sem API.</div>
-        </div>
-
-        <!-- Large central LLM Control -->
-        <div class="vc-sf-llm-control">
-          <div class="vc-sf-llm-control-header">
-            <span class="vc-sf-llm-title vc-sf-llm-title--arch">🏛️ AGENTE ARQUITETO</span>
-            <span class="vc-sf-llm-status" id="vcSfLlmStatus">LOCAL · SEM BACKEND · SEM API</span>
-          </div>
-          <div class="vc-sf-chat-stream" id="vcSfChatStream">
-            <div class="vc-sf-chat-hint">Descreva sua ideia de projeto aqui. Mensagens ficam na memória local desta sessão. Nenhuma informação é enviada a servidores externos.</div>
-          </div>
-          <!-- §73.2b — Architect response panel (hidden until response arrives) -->
-          <div id="vcSfArchitectPanel" style="display:none;margin-top:8px;border:1px solid #1e40af33;border-radius:6px;background:#060d1a;padding:10px 14px">
-            <div style="font-size:10px;color:#3b82f6;letter-spacing:1px;margin-bottom:8px">🏛️ AGENTE ARQUITETO · LOCAL PREVIEW · EXEC REAL BLOQUEADA</div>
-            <div id="vcSfArchitectExplanation" style="font-size:13px;color:#cbd5e1;line-height:1.6;margin-bottom:10px"></div>
-            <div id="vcSfArchitectQuestions" style="display:none;margin-bottom:10px">
-              <div style="font-size:10px;color:#f59e0b;letter-spacing:1px;margin-bottom:6px">PRECISO DE MAIS INFORMAÇÕES:</div>
-              <div id="vcSfArchitectQList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-            </div>
-            <div id="vcSfArchitectSpecsWrap" style="display:none">
-              <div style="font-size:10px;color:#4ade80;letter-spacing:1px;margin-bottom:6px">SPECS SUGERIDAS DA LIBRARY:</div>
-              <div id="vcSfArchitectSpecsList"></div>
-            </div>
-          </div>
-          <div class="vc-sf-chat-composer">
-            <textarea class="vc-sf-chat-input" id="vcSfChatInput" rows="4" placeholder="Ex.: Quero construir um SaaS de gestão de projetos com autenticação, dashboard, planos de assinatura e API REST. Stack preferida: Node.js + React + PostgreSQL. Tamanho: Production Ready.&#10;&#10;(Enter = enviar · Shift+Enter = nova linha)"></textarea>
-            <div class="vc-sf-chat-btn-group">
-              <button class="vc-sf-chat-send" id="vcSfChatSendBtn" type="button">ENVIAR</button>
-              <button class="vc-sf-run-btn" id="vcSfRunBtn" type="button">EXECUTAR MISSÃO SDDF</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quick action buttons -->
-        <div class="vc-sf-action-grid">
-          <button class="vc-sf-action-btn" data-sf-fill="descricao" type="button">💡 Descrever ideia do projeto</button>
-          <button class="vc-sf-action-btn" data-sf-fill="briefing"  type="button">📋 Importar briefing</button>
-          <button class="vc-sf-action-btn" data-sf-fill="exemplos"  type="button">🗂️ Ver exemplos de projetos</button>
-          <button class="vc-sf-action-btn primary" id="vcSfStartBtn" type="button">▶ INICIAR MONTAGEM DO PROJETO</button>
-        </div>
-
-      </div><!-- end #vcSfHomeControl -->
-
-      <!-- MODULE WORKSPACE: original Project Builder panels (hidden until user navigates) -->
-      <div id="vcSfModuleWorkspace" style="display:none">
-      <div class="vc-sf-module-content" id="vcSfModuleContent">
-
-        <!-- JS moves original #projectBuilder here on showSoftwareFactoryPage() -->
-        <div id="vcSfOriginalProjectBuilderMount"></div>
-
-        <!-- ── Simplified placeholder panels (hidden — original panels used instead) ── -->
-        <!-- ── MODULE 01: MONTAR PROJETO DO ZERO ──────────────── -->
-        <div class="vc-sf-module-panel" id="vcSfPanel-project_builder">
-          <div class="vc-sf-module-panel-header">
-            <span class="vc-sf-module-panel-num">01</span>
-            <div>
-              <h2 class="vc-sf-module-panel-title">MONTAR PROJETO DO ZERO</h2>
-              <p class="vc-sf-module-panel-desc">Configure tipo de projeto, stack tecnológico e modo de orquestração. Tudo é preview local — nenhuma ação real é executada.</p>
-            </div>
-            <span class="vc-sf-module-panel-badge">LOCAL PREVIEW</span>
-          </div>
-
-          <div class="vc-sf-section-label">Tipo de Projeto</div>
-          <div class="vc-sf-chip-row">
-            <button class="vc-sf-chip active" data-sf-chip-group="project_type" type="button">SaaS Fullstack</button>
-            <button class="vc-sf-chip" data-sf-chip-group="project_type" type="button">CLI Tool</button>
-            <button class="vc-sf-chip" data-sf-chip-group="project_type" type="button">API Service</button>
-            <button class="vc-sf-chip" data-sf-chip-group="project_type" type="button">Library / SDK</button>
-            <button class="vc-sf-chip" data-sf-chip-group="project_type" type="button">Internal Tool</button>
-            <button class="vc-sf-chip" data-sf-chip-group="project_type" type="button">Mobile (RN/Flutter)</button>
-          </div>
-
-          <div class="vc-sf-section-label">Stack Tecnológico</div>
-          <div class="vc-sf-chip-row">
-            <button class="vc-sf-chip active" data-sf-chip-group="stack" type="button">Node.js</button>
-            <button class="vc-sf-chip" data-sf-chip-group="stack" type="button">Python</button>
-            <button class="vc-sf-chip" data-sf-chip-group="stack" type="button">Go</button>
-            <button class="vc-sf-chip" data-sf-chip-group="stack" type="button">TypeScript</button>
-            <button class="vc-sf-chip" data-sf-chip-group="stack" type="button">React / Next.js</button>
-            <button class="vc-sf-chip" data-sf-chip-group="stack" type="button">PostgreSQL</button>
-          </div>
-
-          <div class="vc-sf-section-label">Modo de Orquestração</div>
-          <div class="vc-sf-chip-row">
-            <button class="vc-sf-chip" data-sf-chip-group="orch" type="button">Solo Agent</button>
-            <button class="vc-sf-chip active" data-sf-chip-group="orch" type="button">Hermes Review</button>
-            <button class="vc-sf-chip" data-sf-chip-group="orch" type="button">Full Software Factory</button>
-            <button class="vc-sf-chip" data-sf-chip-group="orch" type="button">OpenSquad (Scale)</button>
-          </div>
-
-          <div class="vc-sf-section-label">Configuração Rápida</div>
-          <div class="vc-sf-module-grid">
-            <div class="vc-sf-card">
-              <div class="vc-sf-card-label">Tipo Selecionado</div>
-              <div class="vc-sf-card-value" id="vcSfConfigType">SaaS Fullstack</div>
-            </div>
-            <div class="vc-sf-card">
-              <div class="vc-sf-card-label">Stack Selecionada</div>
-              <div class="vc-sf-card-value" id="vcSfConfigStack">Node.js</div>
-            </div>
-            <div class="vc-sf-card">
-              <div class="vc-sf-card-label">Orquestração</div>
-              <div class="vc-sf-card-value" id="vcSfConfigOrch">Hermes Review</div>
-            </div>
-            <div class="vc-sf-card">
-              <div class="vc-sf-card-label">Execução Real</div>
-              <div class="vc-sf-card-value" style="color:#ef4444">BLOQUEADA</div>
-            </div>
-          </div>
-
-          <div class="vc-sf-section-label">Resumo do Setup</div>
-          <textarea class="vc-sf-output empty" id="vcSfOutput-project_builder" readonly placeholder="Clique em GERAR SETUP para criar resumo local..."></textarea>
-          <div class="vc-sf-btn-row">
-            <button class="vc-sf-btn" data-sf-generate="vcSfOutput-project_builder" data-sf-label="⬡ GERAR SETUP" type="button">⬡ GERAR SETUP</button>
-            <button class="vc-sf-btn secondary" data-sf-copy="vcSfOutput-project_builder" type="button">⎘ COPIAR</button>
-          </div>
-        </div>
-
-        <!-- ── MODULE 02: TEMPLATES DE PROJETO ───────────────── -->
-        <div class="vc-sf-module-panel" id="vcSfPanel-project_templates">
-          <div class="vc-sf-module-panel-header">
-            <span class="vc-sf-module-panel-num">02</span>
-            <div>
-              <h2 class="vc-sf-module-panel-title">TEMPLATES DE PROJETO</h2>
-              <p class="vc-sf-module-panel-desc">Escolha um template base com stack, estrutura de pastas e agentes pré-configurados. Preview local apenas.</p>
-            </div>
-            <span class="vc-sf-module-panel-badge">LOCAL PREVIEW</span>
-          </div>
-
-          <div class="vc-sf-section-label">Templates Disponíveis</div>
-          <div class="vc-sf-chip-row">
-            <button class="vc-sf-chip active" data-sf-chip-group="template" type="button">SDDF Standard</button>
-            <button class="vc-sf-chip" data-sf-chip-group="template" type="button">Go/Node Hybrid</button>
-            <button class="vc-sf-chip" data-sf-chip-group="template" type="button">SaaS Baseline</button>
-            <button class="vc-sf-chip" data-sf-chip-group="template" type="button">API Microservice</button>
-            <button class="vc-sf-chip" data-sf-chip-group="template" type="button">CLI Utility</button>
-          </div>
-
-          <div class="vc-sf-section-label">Template Ativo</div>
-          <div class="vc-sf-module-grid">
-            <div class="vc-sf-card">
-              <div class="vc-sf-card-label">Template</div>
-              <div class="vc-sf-card-value">SDDF Standard</div>
-            </div>
-            <div class="vc-sf-card">
-              <div class="vc-sf-card-label">Agentes incluídos</div>
-              <div class="vc-sf-card-value">Backend · DB · Auth · Frontend</div>
-            </div>
-          </div>
-
-          <div class="vc-sf-section-label">Preview do Template</div>
-          <textarea class="vc-sf-output empty" id="vcSfOutput-project_templates" readonly placeholder="Clique em GERAR PREVIEW..."></textarea>
-          <div class="vc-sf-btn-row">
-            <button class="vc-sf-btn" data-sf-generate="vcSfOutput-project_templates" data-sf-label="⬡ GERAR PREVIEW" type="button">⬡ GERAR PREVIEW</button>
-            <button class="vc-sf-btn secondary" data-sf-copy="vcSfOutput-project_templates" type="button">⎘ COPIAR</button>
-          </div>
-        </div>
-
-        <!-- ── MODULE 03: COMPOSITOR DE MISSÃO ───────────────── -->
-        <div class="vc-sf-module-panel" id="vcSfPanel-mission_composer">
-          <div class="vc-sf-module-panel-header">
-            <span class="vc-sf-module-panel-num">03</span>
-            <div>
-              <h2 class="vc-sf-module-panel-title">COMPOSITOR DE MISSÃO</h2>
-              <p class="vc-sf-module-panel-desc">Compõe o pacote de instrução para o agente de missão. Output é texto local para copiar e usar externamente.</p>
-            </div>
-            <span class="vc-sf-module-panel-badge">LOCAL PREVIEW</span>
-          </div>
-
-          <div class="vc-sf-section-label">Worker Alvo</div>
-          <div class="vc-sf-chip-row">
-            <button class="vc-sf-chip active" data-sf-chip-group="worker_target" type="button">Claude Code</button>
-            <button class="vc-sf-chip" data-sf-chip-group="worker_target" type="button">Cursor AI</button>
-            <button class="vc-sf-chip" data-sf-chip-group="worker_target" type="button">GitHub Copilot</button>
-            <button class="vc-sf-chip" data-sf-chip-group="worker_target" type="button">Worker Humano</button>
-          </div>
-
-          <div class="vc-sf-section-label">Seções do Prompt</div>
-          <div class="vc-sf-chip-row">
-            <button class="vc-sf-chip active" data-sf-chip-group="prompt_section" type="button">Contexto</button>
-            <button class="vc-sf-chip active" data-sf-chip-group="prompt_section" type="button">Objetivo</button>
-            <button class="vc-sf-chip active" data-sf-chip-group="prompt_section" type="button">Restrições</button>
-            <button class="vc-sf-chip" data-sf-chip-group="prompt_section" type="button">Stack</button>
-            <button class="vc-sf-chip" data-sf-chip-group="prompt_section" type="button">Contratos</button>
-          </div>
-
-          <div class="vc-sf-section-label">Missão Composta</div>
-          <textarea class="vc-sf-output empty" id="vcSfOutput-mission_composer" readonly placeholder="Clique em COMPOR MISSÃO para gerar pacote de instrução local..."></textarea>
-          <div class="vc-sf-btn-row">
-            <button class="vc-sf-btn" data-sf-generate="vcSfOutput-mission_composer" data-sf-label="⬡ COMPOR MISSÃO" type="button">⬡ COMPOR MISSÃO</button>
-            <button class="vc-sf-btn secondary" data-sf-copy="vcSfOutput-mission_composer" type="button">⎘ COPIAR</button>
-          </div>
-        </div>
-
-        <!-- ── MODULE 04: PACOTES PARA WORKERS ───────────────── -->
-        <div class="vc-sf-module-panel" id="vcSfPanel-worker_handoff">
-          <div class="vc-sf-module-panel-header">
-            <span class="vc-sf-module-panel-num">04</span>
-            <div>
-              <h2 class="vc-sf-module-panel-title">PACOTES DE ENTREGA PARA WORKERS</h2>
-              <p class="vc-sf-module-panel-desc">Gera pacote completo de entrega para o worker externo executar. Inclui contexto, contratos e lista de arquivos esperados.</p>
-            </div>
-            <span class="vc-sf-module-panel-badge">LOCAL PREVIEW</span>
-          </div>
-
-          <div class="vc-sf-section-label">Tipo de Pacote</div>
-          <div class="vc-sf-chip-row">
-            <button class="vc-sf-chip active" data-sf-chip-group="package_type" type="button">Missão Completa</button>
-            <button class="vc-sf-chip" data-sf-chip-group="package_type" type="button">Patch Cirúrgico</button>
-            <button class="vc-sf-chip" data-sf-chip-group="package_type" type="button">Nova Feature</button>
-            <button class="vc-sf-chip" data-sf-chip-group="package_type" type="button">Revisão de Código</button>
-          </div>
-
-          <div class="vc-sf-section-label">Pacote de Entrega</div>
-          <textarea class="vc-sf-output empty" id="vcSfOutput-worker_handoff" readonly placeholder="Clique em GERAR PACOTE para criar pacote de handoff local..."></textarea>
-          <div class="vc-sf-btn-row">
-            <button class="vc-sf-btn" data-sf-generate="vcSfOutput-worker_handoff" data-sf-label="⬡ GERAR PACOTE" type="button">⬡ GERAR PACOTE</button>
-            <button class="vc-sf-btn secondary" data-sf-copy="vcSfOutput-worker_handoff" type="button">⎘ COPIAR</button>
-          </div>
-        </div>
-
-        <!-- ── MODULE 05: PREVIEW DE CRIAÇÃO ─────────────────── -->
-        <div class="vc-sf-module-panel" id="vcSfPanel-export_preview">
-          <div class="vc-sf-module-panel-header">
-            <span class="vc-sf-module-panel-num">05</span>
-            <div>
-              <h2 class="vc-sf-module-panel-title">PREVIEW DE CRIAÇÃO DO PROJETO</h2>
-              <p class="vc-sf-module-panel-desc">Exibe lista de arquivos que seriam criados. Nenhum arquivo é escrito. Criação real requer fase de autorização separada.</p>
-            </div>
-            <span class="vc-sf-module-panel-badge locked">BLOQUEADO</span>
-          </div>
-
-          <div class="vc-sf-authority-row">
-            <span class="vc-sf-authority-chip">file_creation_allowed: false</span>
-            <span class="vc-sf-authority-chip">file_write_enabled: false</span>
-            <span class="vc-sf-authority-chip">frontend_file_write: false</span>
-          </div>
-
-          <div class="vc-sf-section-label">Status de Criação</div>
-          <div class="vc-sf-module-grid">
-            <div class="vc-sf-card">
-              <div class="vc-sf-card-label">Criação de Arquivos</div>
-              <div class="vc-sf-card-value" style="color:#ef4444">BLOQUEADA</div>
-            </div>
-            <div class="vc-sf-card">
-              <div class="vc-sf-card-label">Escrita no FS</div>
-              <div class="vc-sf-card-value" style="color:#ef4444">NÃO PERMITIDA</div>
-            </div>
-            <div class="vc-sf-card">
-              <div class="vc-sf-card-label">Modo</div>
-              <div class="vc-sf-card-value">PREVIEW LOCAL</div>
-            </div>
-            <div class="vc-sf-card">
-              <div class="vc-sf-card-label">Execução Real</div>
-              <div class="vc-sf-card-value" style="color:#ef4444">BLOQUEADA</div>
-            </div>
-          </div>
-
-          <div class="vc-sf-section-label">Preview da Lista de Arquivos</div>
-          <textarea class="vc-sf-output empty" id="vcSfOutput-export_preview" readonly placeholder="Clique em GERAR PREVIEW para ver lista local de arquivos..."></textarea>
-          <div class="vc-sf-btn-row">
-            <button class="vc-sf-btn" data-sf-generate="vcSfOutput-export_preview" data-sf-label="⬡ GERAR PREVIEW" type="button">⬡ GERAR PREVIEW</button>
-            <button class="vc-sf-btn secondary" data-sf-copy="vcSfOutput-export_preview" type="button">⎘ COPIAR</button>
-          </div>
-        </div>
-
-        <!-- ── MODULE 06: COMANDO PARA CRIAÇÃO REAL ───────────── -->
-        <div class="vc-sf-module-panel" id="vcSfPanel-real_file_command">
-          <div class="vc-sf-module-panel-header">
-            <span class="vc-sf-module-panel-num">06</span>
-            <div>
-              <h2 class="vc-sf-module-panel-title">PACOTE DE COMANDO PARA CRIAÇÃO REAL</h2>
-              <p class="vc-sf-module-panel-desc">Exibe o pacote de comando para o worker real. Nenhum comando é executado por este frontend. Toda execução real exige autorização humana explícita.</p>
-            </div>
-            <span class="vc-sf-module-panel-badge locked">EXEC BLOQUEADO</span>
-          </div>
-
-          <div class="vc-sf-authority-row">
-            <span class="vc-sf-authority-chip">command_execution_allowed: false</span>
-            <span class="vc-sf-authority-chip">real_file_creation_enabled: false</span>
-            <span class="vc-sf-authority-chip">backend_write_allowed: false</span>
-          </div>
-
-          <div class="vc-sf-section-label">Pacote de Comando (read-only)</div>
-          <textarea class="vc-sf-output empty" id="vcSfOutput-real_file_command" readonly placeholder="Clique em GERAR PACOTE para visualizar o pacote de comando local..."></textarea>
-          <div class="vc-sf-btn-row">
-            <button class="vc-sf-btn" data-sf-generate="vcSfOutput-real_file_command" data-sf-label="⬡ GERAR PACOTE" type="button">⬡ GERAR PACOTE</button>
-            <button class="vc-sf-btn secondary" data-sf-copy="vcSfOutput-real_file_command" type="button">⎘ COPIAR</button>
-          </div>
-
-          <div class="vc-sf-non-authority">
-            <div class="vc-sf-non-authority-label">DECLARAÇÃO DE NÃO-AUTORIDADE</div>
-            <p class="vc-sf-non-authority-text">Este painel não executa comandos, não cria arquivos e não toca o sistema de arquivos real. A execução real exige uma fase de autorização humana explícita e separada.</p>
-          </div>
-        </div>
-
-        <!-- ── MODULE 07: RECIBO DO WORKER ────────────────────── -->
-        <div class="vc-sf-module-panel" id="vcSfPanel-worker_receipt">
-          <div class="vc-sf-module-panel-header">
-            <span class="vc-sf-module-panel-num">07</span>
-            <div>
-              <h2 class="vc-sf-module-panel-title">RECIBO DO WORKER EXTERNO</h2>
-              <p class="vc-sf-module-panel-desc">Cole o resultado do worker externo para análise local. Nenhuma ação é executada automaticamente.</p>
-            </div>
-            <span class="vc-sf-module-panel-badge">LOCAL REVIEW</span>
-          </div>
-
-          <div class="vc-sf-section-label">Resultado do Worker (colar aqui)</div>
-          <textarea class="vc-sf-output" id="vcSfInput-worker_receipt" placeholder="Cole aqui o resultado, log ou recibo do worker externo..." style="min-height:140px"></textarea>
-
-          <div class="vc-sf-section-label">Análise Local</div>
-          <textarea class="vc-sf-output empty" id="vcSfOutput-worker_receipt" readonly placeholder="Clique em ANALISAR RECIBO para análise local..."></textarea>
-          <div class="vc-sf-btn-row">
-            <button class="vc-sf-btn" data-sf-generate="vcSfOutput-worker_receipt" data-sf-label="⬡ ANALISAR RECIBO" type="button">⬡ ANALISAR RECIBO</button>
-            <button class="vc-sf-btn secondary" data-sf-copy="vcSfOutput-worker_receipt" type="button">⎘ COPIAR ANÁLISE</button>
-          </div>
-        </div>
-
-        <!-- ── MODULE 08: PAINEL FINAL DO PRODUTO ─────────────── -->
-        <div class="vc-sf-module-panel" id="vcSfPanel-final_dashboard">
-          <div class="vc-sf-module-panel-header">
-            <span class="vc-sf-module-panel-num">08</span>
-            <div>
-              <h2 class="vc-sf-module-panel-title">PAINEL FINAL DO PRODUTO</h2>
-              <p class="vc-sf-module-panel-desc">Resumo do estado da cadeia de produto. Indicadores de planejamento são locais; o relatório também consulta status real de PASS GOLD e GitHub no backend ao ser gerado.</p>
-            </div>
-            <span class="vc-sf-module-panel-badge">SUMMARY ONLY</span>
-          </div>
-
-          <div class="vc-sf-section-label">Cadeia de Produto — Status</div>
-          <div class="vc-sf-chain-list">
-            <div class="vc-sf-chain-item ready">
-              <div class="vc-sf-chain-dot"></div>
-              <span class="vc-sf-chain-name">Project Builder</span>
-              <span class="vc-sf-chain-tag">LOCAL</span>
-            </div>
-            <div class="vc-sf-chain-item ready">
-              <div class="vc-sf-chain-dot"></div>
-              <span class="vc-sf-chain-name">Project Template Packs</span>
-              <span class="vc-sf-chain-tag">LOCAL</span>
-            </div>
-            <div class="vc-sf-chain-item ready">
-              <div class="vc-sf-chain-dot"></div>
-              <span class="vc-sf-chain-name">Mission Plan Composer</span>
-              <span class="vc-sf-chain-tag">LOCAL</span>
-            </div>
-            <div class="vc-sf-chain-item ready">
-              <div class="vc-sf-chain-dot"></div>
-              <span class="vc-sf-chain-name">Worker Handoff Packages</span>
-              <span class="vc-sf-chain-tag">LOCAL</span>
-            </div>
-            <div class="vc-sf-chain-item ready">
-              <div class="vc-sf-chain-dot"></div>
-              <span class="vc-sf-chain-name">Project Export Preview</span>
-              <span class="vc-sf-chain-tag">LOCAL</span>
-            </div>
-            <div class="vc-sf-chain-item">
-              <div class="vc-sf-chain-dot"></div>
-              <span class="vc-sf-chain-name">Real File Creation Command Package</span>
-              <span class="vc-sf-chain-tag" style="border-color:rgba(239,68,68,.25);color:#fca5a5">BLOQUEADO</span>
-            </div>
-            <div class="vc-sf-chain-item">
-              <div class="vc-sf-chain-dot"></div>
-              <span class="vc-sf-chain-name">External Worker Result Receipt</span>
-              <span class="vc-sf-chain-tag" style="border-color:rgba(239,68,68,.25);color:#fca5a5">BLOQUEADO</span>
-            </div>
-          </div>
-
-          <div class="vc-sf-authority-row">
-            <span class="vc-sf-authority-chip">product_chain_complete: false</span>
-            <span class="vc-sf-authority-chip">pass_gold_real_claimed: false</span>
-            <span class="vc-sf-authority-chip">production_touched: false</span>
-          </div>
-
-          <div class="vc-sf-section-label">Relatório Final do Produto</div>
-          <textarea class="vc-sf-output empty" id="vcSfOutput-final_dashboard" readonly placeholder="Clique em GERAR RELATÓRIO para resumo local do estado do produto..."></textarea>
-          <div class="vc-sf-btn-row">
-            <button class="vc-sf-btn" data-sf-generate="vcSfOutput-final_dashboard" data-sf-label="⬡ GERAR RELATÓRIO" type="button">⬡ GERAR RELATÓRIO</button>
-            <button class="vc-sf-btn secondary" data-sf-copy="vcSfOutput-final_dashboard" type="button">⎘ COPIAR</button>
-          </div>
-        </div>
-
-        <!-- ── MODULE 09: SAAS & API ROADMAP ──────────────────── -->
-        <div class="vc-sf-module-panel" id="vcSfPanel-saas_api">
-          <div class="vc-sf-module-panel-header">
-            <span class="vc-sf-module-panel-num">09</span>
-            <div>
-              <h2 class="vc-sf-module-panel-title">SAAS &amp; API CONNECTORS ROADMAP</h2>
-              <p class="vc-sf-module-panel-desc">Controles SaaS e API bloqueados. Visíveis como roadmap futuro. Nenhum controle está ativo. Ativação exige autorização humana explícita.</p>
-            </div>
-            <span class="vc-sf-module-panel-badge locked">ROADMAP LOCKED</span>
-          </div>
-
-          <div class="vc-sf-locked-grid">
-            <div class="vc-sf-locked-card">
-              <span class="vc-sf-locked-card-icon">👤</span>
-              <div class="vc-sf-locked-card-name">Cadastro SaaS</div>
-              <div class="vc-sf-locked-card-status">🔒 LOCKED</div>
-            </div>
-            <div class="vc-sf-locked-card">
-              <span class="vc-sf-locked-card-icon">🔑</span>
-              <div class="vc-sf-locked-card-name">Login / OAuth</div>
-              <div class="vc-sf-locked-card-status">🔒 LOCKED</div>
-            </div>
-            <div class="vc-sf-locked-card">
-              <span class="vc-sf-locked-card-icon">💳</span>
-              <div class="vc-sf-locked-card-name">Billing / Stripe</div>
-              <div class="vc-sf-locked-card-status">🔒 LOCKED</div>
-            </div>
-            <div class="vc-sf-locked-card">
-              <span class="vc-sf-locked-card-icon">🔌</span>
-              <div class="vc-sf-locked-card-name">API Connectors</div>
-              <div class="vc-sf-locked-card-status">🔒 LOCKED</div>
-            </div>
-            <div class="vc-sf-locked-card required">
-              <span class="vc-sf-locked-card-icon">🗝</span>
-              <div class="vc-sf-locked-card-name">Secrets Vault</div>
-              <div class="vc-sf-locked-card-status">⚠ REQUIRED</div>
-            </div>
-            <div class="vc-sf-locked-card required">
-              <span class="vc-sf-locked-card-icon">⚙</span>
-              <div class="vc-sf-locked-card-name">Backend Integration</div>
-              <div class="vc-sf-locked-card-status">⚠ REQUIRED</div>
-            </div>
-          </div>
-
-          <div class="vc-sf-authority-row">
-            <span class="vc-sf-authority-chip">saas_signup_enabled: false</span>
-            <span class="vc-sf-authority-chip">login_enabled: false</span>
-            <span class="vc-sf-authority-chip">billing_enabled: false</span>
-            <span class="vc-sf-authority-chip">api_connectors_enabled: false</span>
-            <span class="vc-sf-authority-chip">secrets_access_enabled: false</span>
-          </div>
-
-          <div class="vc-sf-non-authority">
-            <div class="vc-sf-non-authority-label">DECLARAÇÃO DE NÃO-AUTORIDADE</div>
-            <p class="vc-sf-non-authority-text">Controles SaaS/API são não-operacionais. Nenhuma autenticação, OAuth, billing, armazenamento de chaves, chamadas de backend ou chamadas de API estão ativas. A ativação requer uma fase separada com autorização humana explícita.</p>
-          </div>
-        </div>
-
-      </div><!-- end #vcSfModuleContent -->
-
-      <!-- §73.1d — spec panel: populated from /api/spec when backend connected -->
-      <div id="vcSfSpecPanel" style="margin-top:16px;display:none">
-        <button id="vcSfSpecToggleBtn" style="width:100%;background:#0f172a;border:1px solid #1e293b;color:#94a3b8;padding:8px 14px;border-radius:6px;cursor:pointer;text-align:left;font-size:12px;letter-spacing:1px;display:flex;align-items:center;gap:8px;font-family:inherit">
-          <span>📋 SPECS DO MÓDULO</span>
-          <span id="vcSfSpecCount" style="color:#38bdf8;font-weight:700"></span>
-          <span id="vcSfSpecArrow" style="margin-left:auto">▼</span>
-        </button>
-        <div id="vcSfSpecList" style="display:none;margin-top:4px;max-height:360px;overflow-y:auto;border:1px solid #1e293b;border-radius:6px;background:#070d19"></div>
-      </div>
-
-      </div><!-- end #vcSfModuleWorkspace -->
-
-    </div><!-- end .vc-sf-col-center -->
-
-    <!-- RIGHT: Agentes + Atividade + Próxima Ação -->
-    <div class="vc-sf-col-right">
-
-      <div class="vc-sf-panel-box">
-        <div class="vc-sf-panel-box-title">Agentes Orquestradores</div>
-        <div class="vc-sf-agent-list">
-          <div class="vc-sf-agent-item">
-            <div class="vc-sf-agent-dot active"></div>
-            <span class="vc-sf-agent-name">Hermes</span>
-            <span class="vc-sf-agent-status active">ATIVO</span>
-          </div>
-          <div class="vc-sf-agent-item">
-            <div class="vc-sf-agent-dot standby"></div>
-            <span class="vc-sf-agent-name">Backend Agent</span>
-            <span class="vc-sf-agent-status standby">STANDBY</span>
-          </div>
-          <div class="vc-sf-agent-item">
-            <div class="vc-sf-agent-dot standby"></div>
-            <span class="vc-sf-agent-name">Frontend Agent</span>
-            <span class="vc-sf-agent-status standby">STANDBY</span>
-          </div>
-          <div class="vc-sf-agent-item">
-            <div class="vc-sf-agent-dot locked"></div>
-            <span class="vc-sf-agent-name">OpenSquad</span>
-            <span class="vc-sf-agent-status locked">ESCALA</span>
-          </div>
-          <div class="vc-sf-agent-item">
-            <div class="vc-sf-agent-dot locked"></div>
-            <span class="vc-sf-agent-name">Go Core Runner</span>
-            <span class="vc-sf-agent-status locked">BLOQUEADO</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="vc-sf-panel-box">
-        <div class="vc-sf-panel-box-title">Atividade Recente</div>
-        <div class="vc-sf-activity-feed" id="vcSfActivityFeed">
-          <div class="vc-sf-activity-item"><span>Página SF Builder aberta</span></div>
-          <div class="vc-sf-activity-item">Módulo 01 selecionado</div>
-          <div class="vc-sf-activity-item">Nenhuma execução real realizada</div>
-          <div class="vc-sf-activity-item">Backend: não conectado</div>
-        </div>
-      </div>
-
-      <div class="vc-sf-panel-box">
-        <div class="vc-sf-panel-box-title">Segurança</div>
-        <div class="vc-sf-stat-row">
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">PASS GOLD REAL</span>
-            <span class="vc-sf-stat-val blocked">NÃO</span>
-          </div>
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">Produção</span>
-            <span class="vc-sf-stat-val blocked">NÃO TOCADA</span>
-          </div>
-          <div class="vc-sf-stat-item">
-            <span class="vc-sf-stat-key">Deploy</span>
-            <span class="vc-sf-stat-val blocked">BLOQUEADO</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="vc-sf-next-action-box">
-        <div class="vc-sf-next-action-label">PRÓXIMA AÇÃO SEGURA</div>
-        <div class="vc-sf-next-action-text" id="vcSfNextActionText">Selecione tipo de projeto, stack e modo de orquestração.</div>
-      </div>
-
-    </div><!-- end .vc-sf-col-right -->
-
-  </div><!-- end .vc-sf-columns -->
+  </div><!-- end .vc-sf-body -->
 
 </div><!-- end #vcSoftwareFactoryPage -->
 
