@@ -41,7 +41,7 @@
       <a href="#marketplace">☷ Tools</a>
       <a href="#metricsBoard">▥ Métricas</a>
       <a href="#agentsBoard">⚙ Agentes</a>
-      <button class="vc-sf-nav-btn" type="button" data-open-sf-page aria-label="Abrir Spec Library">◈ SPECS</button>
+      <button class="vc-sf-nav-btn" type="button" data-open-sf-page aria-label="Abrir Software Factory Builder">◈ SOFTWARE FACTORY</button>
     </nav>
     <div class="top-actions">
       <a class="btn ghost" href="landing.html">LANDING STARTUP</a>
@@ -65,7 +65,7 @@
       <a class="marketing-link" href="about.html">um sistema que corrige sistemas</a>
     </section>
     <nav class="panel menu premium-menu">
-      <button class="vc-sf-sidebar-link" type="button" data-open-sf-page aria-label="Abrir Spec Library">◈ SPECS</button>
+      <button class="vc-sf-sidebar-link" type="button" data-open-sf-page aria-label="Abrir Software Factory Builder">◈ SOFTWARE FACTORY</button>
       <a class="active" href="#mission">◎ MISSION CONTROL</a>
       <a href="#timeline">⌁ MISSION TIMELINE</a>
       <a href="#runtime">⌁ EXECUTION MONITOR</a>
@@ -118,7 +118,6 @@
               <option value="debug-cors">Debug CORS</option>
               <option value="explicar-leigo">Explicar para leigo</option>
               <option value="rodar-sddf">Rodar SDDF</option>
-              <option value="create">◈ Criar Projeto</option>
             </select>
             <select class="v298-select" id="v298Model">
               <option value="auto">Modelo automático</option>
@@ -2035,8 +2034,8 @@
 </div><!-- end #vcCockpitView -->
 
 <!-- ══════════════════════════════════════════════════════════
-     SF SPEC LIBRARY PAGE — §77 — dedicated page view
-     Reads /api/spec/summary + /api/spec?module=XX. Read-only.
+     SOFTWARE FACTORY BUILDER PAGE — dedicated page view
+     Local in-memory view. No backend. No API. No exec.
      ══════════════════════════════════════════════════════════ -->
 <div id="vcSoftwareFactoryPage" class="vc-sf-page" style="display:none" aria-hidden="true">
 
@@ -2193,7 +2192,56 @@
     <div class="vc-sf-col-center">
 
       <!-- HOME: exclusive landing — hidden completely when workspace opens -->
-            <!-- MODULE WORKSPACE: original Project Builder panels (hidden until user navigates) -->
+      <div id="vcSfHomeControl">
+
+        <!-- Hero intro -->
+        <div class="vc-sf-hero">
+          <div class="vc-sf-hero-title">⬡ Vamos construir algo extraordinário.</div>
+          <div class="vc-sf-hero-subtitle">Descreva sua ideia de projeto, objetivos, funcionalidades principais, regras de negócio e requisitos técnicos. Tudo fica na memória local desta sessão — sem backend, sem API.</div>
+        </div>
+
+        <!-- Large central LLM Control -->
+        <div class="vc-sf-llm-control">
+          <div class="vc-sf-llm-control-header">
+            <span class="vc-sf-llm-title vc-sf-llm-title--arch">🏛️ AGENTE ARQUITETO</span>
+            <span class="vc-sf-llm-status" id="vcSfLlmStatus">LOCAL · SEM BACKEND · SEM API</span>
+          </div>
+          <div class="vc-sf-chat-stream" id="vcSfChatStream">
+            <div class="vc-sf-chat-hint">Descreva sua ideia de projeto aqui. Mensagens ficam na memória local desta sessão. Nenhuma informação é enviada a servidores externos.</div>
+          </div>
+          <!-- §73.2b — Architect response panel (hidden until response arrives) -->
+          <div id="vcSfArchitectPanel" style="display:none;margin-top:8px;border:1px solid #1e40af33;border-radius:6px;background:#060d1a;padding:10px 14px">
+            <div style="font-size:10px;color:#3b82f6;letter-spacing:1px;margin-bottom:8px">🏛️ AGENTE ARQUITETO · LOCAL PREVIEW · EXEC REAL BLOQUEADA</div>
+            <div id="vcSfArchitectExplanation" style="font-size:13px;color:#cbd5e1;line-height:1.6;margin-bottom:10px"></div>
+            <div id="vcSfArchitectQuestions" style="display:none;margin-bottom:10px">
+              <div style="font-size:10px;color:#f59e0b;letter-spacing:1px;margin-bottom:6px">PRECISO DE MAIS INFORMAÇÕES:</div>
+              <div id="vcSfArchitectQList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+            </div>
+            <div id="vcSfArchitectSpecsWrap" style="display:none">
+              <div style="font-size:10px;color:#4ade80;letter-spacing:1px;margin-bottom:6px">SPECS SUGERIDAS DA LIBRARY:</div>
+              <div id="vcSfArchitectSpecsList"></div>
+            </div>
+          </div>
+          <div class="vc-sf-chat-composer">
+            <textarea class="vc-sf-chat-input" id="vcSfChatInput" rows="4" placeholder="Ex.: Quero construir um SaaS de gestão de projetos com autenticação, dashboard, planos de assinatura e API REST. Stack preferida: Node.js + React + PostgreSQL. Tamanho: Production Ready.&#10;&#10;(Enter = enviar · Shift+Enter = nova linha)"></textarea>
+            <div class="vc-sf-chat-btn-group">
+              <button class="vc-sf-chat-send" id="vcSfChatSendBtn" type="button">ENVIAR</button>
+              <button class="vc-sf-run-btn" id="vcSfRunBtn" type="button">EXECUTAR MISSÃO SDDF</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick action buttons -->
+        <div class="vc-sf-action-grid">
+          <button class="vc-sf-action-btn" data-sf-fill="descricao" type="button">💡 Descrever ideia do projeto</button>
+          <button class="vc-sf-action-btn" data-sf-fill="briefing"  type="button">📋 Importar briefing</button>
+          <button class="vc-sf-action-btn" data-sf-fill="exemplos"  type="button">🗂️ Ver exemplos de projetos</button>
+          <button class="vc-sf-action-btn primary" id="vcSfStartBtn" type="button">▶ INICIAR MONTAGEM DO PROJETO</button>
+        </div>
+
+      </div><!-- end #vcSfHomeControl -->
+
+      <!-- MODULE WORKSPACE: original Project Builder panels (hidden until user navigates) -->
       <div id="vcSfModuleWorkspace" style="display:none">
       <div class="vc-sf-module-content" id="vcSfModuleContent">
 
@@ -2677,7 +2725,9 @@
 
   </div><!-- end .vc-sf-columns -->
 
-</div><!-- end #vcSoftwareFactoryPage --><div class="auth-backdrop" id="authBackdrop" aria-hidden="true">
+</div><!-- end #vcSoftwareFactoryPage -->
+
+<div class="auth-backdrop" id="authBackdrop" aria-hidden="true">
   <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
     <button class="auth-close" id="closeAuthBtn" type="button" aria-label="Fechar">×</button>
     <h2 id="authTitle">Sign in</h2>

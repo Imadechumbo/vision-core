@@ -1091,92 +1091,6 @@ app.post('/api/chat', async (req, res) => {
     }
   }
 
-  /* ── §76 — mode:create — Pipeline CRIAR PROJETO ──────────────── */
-  if (mode === 'create') {
-    const archCtx  = body.architect_context || {};
-    const projType = archCtx.project_type || 'Projeto';
-    const stack76  = Array.isArray(archCtx.stack)  ? archCtx.stack.join(', ')  : 'não especificado';
-    const specs76  = Array.isArray(archCtx.specs_suggested) ? archCtx.specs_suggested : [];
-    const conf76   = archCtx.confidence ? Math.round(archCtx.confidence * 100) + '%' : '';
-    const routeReason = archCtx.routing_reason || '';
-
-    const specsBlock = specs76.length > 0
-      ? specs76.slice(0, 6).map(s => `• ${s.id || '?'} — ${s.title || ''}`).join('\n')
-      : '(busque na Spec Library por SF-XX)';
-
-    const createPrompt = [
-      `Você é o Vision Core em modo CRIAR PROJETO.`,
-      ``,
-      `Arquiteto classificou esta mensagem como criação de projeto:`,
-      `  Tipo detectado : ${projType}`,
-      `  Stack          : ${stack76}`,
-      `  Confiança      : ${conf76}`,
-      routeReason ? `  Razão          : ${routeReason}` : '',
-      ``,
-      `══════════════════════════════════════════════════════`,
-      `SEU PAPEL — PIPELINE CRIAR`,
-      `══════════════════════════════════════════════════════`,
-      ``,
-      `1. Confirme o entendimento do projeto em 1-2 linhas (sem preâmbulo, sem "olá").`,
-      `2. Apresente o SETUP DE PROJETO estruturado:`,
-      `   - Tipo confirmado`,
-      `   - Stack recomendada com justificativa sucinta`,
-      `   - Estrutura de pastas (top-level apenas, máximo 8 itens)`,
-      `   - 3-5 próximos passos concretos para o Worker`,
-      `3. Liste as Specs de referência relevantes (IDs SF-XX-NNN).`,
-      `4. Gere o PACOTE DE MISSÃO pronto para colar no Claude Code / Cursor.`,
-      ``,
-      `SPECS DE REFERÊNCIA SUGERIDAS:`,
-      specsBlock,
-      ``,
-      `REGRAS ABSOLUTAS:`,
-      `  ✗ exec_real = BLOQUEADA. Tudo é LOCAL PREVIEW.`,
-      `  ✗ PASS GOLD obrigatório antes de qualquer produção.`,
-      `  ✗ Nunca inventar paths. Nunca alucinar stacks.`,
-      `  ✓ Se stack não confirmada: perguntar UMA coisa antes de gerar.`,
-      ``,
-      `FORMATO DE RESPOSTA (obrigatório):`,
-      ``,
-      `◈ PROJETO DETECTADO`,
-      `[tipo] · [stack] · [confiança]`,
-      ``,
-      `SETUP`,
-      `[estrutura de pastas + stack com justificativas]`,
-      ``,
-      `SPECS DE REFERÊNCIA`,
-      `• SF-XX-NNN — [título]`,
-      ``,
-      `MISSÃO PARA WORKER`,
-      `[pacote completo pronto para colar]`,
-      ``,
-      `PASS GOLD GATE`,
-      `[o que validar antes de produção]`,
-      ``,
-      `ESTILO: sem "Olá", sem "Com prazer", sem preâmbulo. Comece pela confirmação.`,
-    ].filter(l => l !== undefined).join('\n');
-
-    const { callHermes: _callCreate } = require('./hermes-rca');
-    const createHermes = await _callCreate(createPrompt, message, { timeout: 30000 });
-
-    if (!createHermes || createHermes.ok === false) {
-      return sendOk(res, {
-        answer: '◈ CRIAR PROJETO — backend indisponível. Verifique conexão com o provedor de IA.',
-        provider: 'gate', model: 'create-gate', mode: 'create', anti_stub: true
-      });
-    }
-    return sendOk(res, {
-      answer:             createHermes.answer,
-      provider:           createHermes.provider_used,
-      model:              createHermes.model_used,
-      mode:               'create',
-      pipeline:           'criar_projeto',
-      pass_gold_required: true,
-      exec_real:          'BLOQUEADA',
-      anti_stub:          true,
-      time:               now()
-    });
-  }
-
   /* ── systemPrompt — base + override por modo ─────────────────── */
   const basePrompt = [
     `Você é o Vision Core — sistema multiagente de diagnóstico e correção de projetos (SDDF V8.4).`,
@@ -2347,49 +2261,6 @@ function loadSpecCache() {
  *
  * GET /api/spec/:id        → single spec (e.g. SF-01-001)
  */
-/* ─────────────────────────────────────────────────────────────────────
-   GET /api/spec/summary
-   §76 — Sidebar da SF Spec Library: módulos + counts + breakdown por tipo.
-   ───────────────────────────────────────────────────────────────────── */
-app.get('/api/spec/summary', (req, res) => {
-  const cache = loadSpecCache();
-
-  const MODULE_NAMES = {
-    'SF-01':  'Montar Projeto do Zero',
-    'SF-02':  'Templates de Projeto',
-    'SF-03':  'Compositor de Missão',
-    'SF-04':  'Pacotes para Workers',
-    'SF-05':  'Preview de Criação',
-    'SF-06':  'Comando para Criação Real',
-    'SF-07':  'Recibo do Worker',
-    'SF-08':  'Painel Final',
-    'SF-09':  'SaaS & API Roadmap',
-    'SF-INT': 'Integração Cross-módulo',
-    'SF-LLM': 'LLM — Qualidade de Output',
-    'SF-SEC': 'Segurança (Security Wall)',
-  };
-
-  const modules = Object.entries(cache.byModule)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([id, specs]) => ({
-      id,
-      name:  specs[0]?.module_name || MODULE_NAMES[id] || id,
-      count: specs.length,
-      types: specs.reduce((acc, s) => {
-        const t = s.type || 'null';
-        acc[t] = (acc[t] || 0) + 1;
-        return acc;
-      }, {})
-    }));
-
-  return sendOk(res, {
-    modules,
-    total_specs:   modules.reduce((s, m) => s + m.count, 0),
-    total_modules: modules.length,
-    time: now()
-  });
-});
-
 app.get('/api/spec/:id', (req, res) => {
   const cache = loadSpecCache();
   const id    = req.params.id.toUpperCase();
@@ -2542,56 +2413,20 @@ app.post('/api/architect/interpret', async (req, res) => {
       : 0.0;
     classification.confidence = confidence;
 
-    /* §76 — detectIntent: mapeia tags + confidence → pipeline_mode para o Agente Unificado */
-    const CREATE_INTENT_TAGS = [
-      'nova-feature','saas','saas-fullstack','api-backend','prototype',
-      'dashboard-admin','game-indie','ecommerce','landing-page','cli-utility',
-      'ai-agent-system','automation-bot','frontend','saas-api','saas-baseline',
-      'api-microservice','api'
-    ];
-    const FIX_INTENT_TAGS = [
-      'patch-cirurgico','bug-fix','refactor','debug','hermes-review','fix'
-    ];
-    const _tags76   = Array.isArray(classification.tags) ? classification.tags : [];
-    const _hasFix76 = _tags76.some(t => FIX_INTENT_TAGS.includes(t));
-    const _hasCre76 = _tags76.some(t => CREATE_INTENT_TAGS.includes(t));
-
-    let _intent76       = 'chat';
-    let _pipelineMode76 = 'vision-geral';
-    let _routingReason76 = `confidence: ${Math.round(confidence * 100)}%`;
-
-    if (_hasFix76 && confidence >= 0.60) {
-      _intent76       = 'fix';
-      _pipelineMode76 = 'fix';
-      _routingReason76 = `tags: ${_tags76.filter(t => FIX_INTENT_TAGS.includes(t)).join(', ')} · ${_routingReason76}`;
-    } else if (_hasCre76 && confidence >= 0.55 && !_hasFix76) {
-      _intent76       = 'create';
-      _pipelineMode76 = 'create';
-      _routingReason76 = `tags: ${_tags76.filter(t => CREATE_INTENT_TAGS.includes(t)).join(', ')} · ${_routingReason76}`;
-    } else {
-      _routingReason76 = `sem tags de ação claras · ${_routingReason76}`;
-    }
-
     const baseResp = {
-      ok:              true,
-      intent:          _intent76,
-      pipeline_mode:   _pipelineMode76,
-      routing_reason:  _routingReason76,
+      ok:            true,
       classification,
-      provider_used:   hermesResult.provider_used,
-      model_used:      hermesResult.model_used,
-      mode:            'LOCAL PREVIEW',
-      exec_real:       'BLOQUEADA',
-      time:            now()
+      provider_used: hermesResult.provider_used,
+      model_used:    hermesResult.model_used,
+      mode:          'LOCAL PREVIEW',
+      exec_real:     'BLOQUEADA',
+      time:          now()
     };
 
     if (confidence < CONFIDENCE_THRESHOLD) {
       // Low confidence — return open questions instead of specs
       return res.status(200).json({
         ...baseResp,
-        intent:          'chat',
-        pipeline_mode:   'vision-geral',
-        routing_reason:  `confidence baixa (${Math.round(confidence * 100)}%) → conversa`,
         specs_suggested: [],
         open_questions:  Array.isArray(classification.open_questions) ? classification.open_questions : []
       });

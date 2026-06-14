@@ -5737,8 +5737,15 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     if (sfPage)  {
       sfPage.style.display = 'flex';
       sfPage.removeAttribute('aria-hidden');
-      /* §79-fix: removed _sfShowHome() + renderSoftwareFactoryTimelineState()
-         — old SF Builder functions no longer exist in §77 Spec Library */
+      // Move original #projectBuilder into SF page mount (idempotent)
+      var mount = document.getElementById('vcSfOriginalProjectBuilderMount');
+      var pb    = document.getElementById('projectBuilder');
+      if (mount && pb && !mount.contains(pb)) {
+        mount.appendChild(pb);
+      }
+      // Always reset to home view on every open
+      _sfShowHome();
+      renderSoftwareFactoryTimelineState(_sfActiveModule);
     }
   }
 
@@ -6584,124 +6591,55 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       _attachedImg = null;
       var _histPrefix = getHistoryPrefix();
       var _msgWithCtx = _histPrefix + (text || '(análise de imagem: ' + imgName + ')');
-      /* §77 A1 — Agente Unificado: wrap chat call so classify can route first */
-      function _doChat(resolvedMode, architectCtx) {
-        var payload = { message: _msgWithCtx, mode: resolvedMode, model: model };
-        if (imgName) { payload.image_name = imgName; }
-        if (imgB64)  { payload.image_base64 = imgB64; payload.image_mime = imgMime || 'image/jpeg'; }
-        if (architectCtx) { payload.architect_context = architectCtx; }
+      var payload  = { message: _msgWithCtx, mode: mode, model: model };
+      if (imgName) { payload.image_name = imgName; }
+      if (imgB64)  { payload.image_base64 = imgB64; payload.image_mime = imgMime || 'image/jpeg'; }
 
-        fetch(BACKEND_URL + '/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-        .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
-        .then(function(data) {
-          clearTimeout(_chatAnimTimer);
-          thinking.remove();
-          stopMissionAnimation({ ok: true, steps: [{ agent: 'Scanner', ok: true }, { agent: 'Hermes', ok: true }] });
-          /* §27 echo guard */
-          if (data && data.provider === 'local') {
-            appendMsg('⚠️ Fallback local — todos os provedores de IA falharam. Reduza o payload ou verifique as API keys.', 'error');
-          }
-          var answer = (data && data.answer) ? data.answer : JSON.stringify(data);
-          addToHistory('assistant', answer);
-          renderFetchBadge(data, chatStream);          // §21
-          /* §77 A2 — mode badge before message text */
-          var _m77 = data && (data.mode || data.pipeline);
-          var msgEl = appendMsg('', '');
-          if (_m77 === 'create' || _m77 === 'criar_projeto') {
-            var _badge77c = document.createElement('span');
-            _badge77c.style.cssText = 'display:inline-block;font-size:10px;font-weight:600;letter-spacing:.06em;padding:2px 7px;border-radius:4px;margin-bottom:6px;background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;cursor:pointer';
-            _badge77c.textContent = '◈ CRIAR PROJETO';
-            if (data.routing_reason) { _badge77c.addEventListener('click', function() { showToast(data.routing_reason); }); }
-            msgEl.insertBefore(_badge77c, msgEl.firstChild);
-            if (data.pass_gold_required) {
-              var _badge77g = document.createElement('span');
-              _badge77g.style.cssText = 'display:inline-block;font-size:10px;font-weight:600;letter-spacing:.06em;padding:2px 7px;border-radius:4px;margin-bottom:6px;margin-left:6px;background:#fbbf2422;color:#fbbf24;border:1px solid #fbbf2444';
-              _badge77g.textContent = '✨ PASS GOLD';
-              msgEl.insertBefore(_badge77g, msgEl.firstChild);
-            }
-          } else if (_m77 === 'fix') {
-            var _badge77f = document.createElement('span');
-            _badge77f.style.cssText = 'display:inline-block;font-size:10px;font-weight:600;letter-spacing:.06em;padding:2px 7px;border-radius:4px;margin-bottom:6px;background:#f8717122;color:#f87171;border:1px solid #f8717144;cursor:pointer';
-            _badge77f.textContent = '🔧 FIX';
-            if (data.routing_reason) { _badge77f.addEventListener('click', function() { showToast(data.routing_reason); }); }
-            msgEl.insertBefore(_badge77f, msgEl.firstChild);
-          }
-          var hermesObj = parseHermesBlock(answer);
-          if (hermesObj) {
-            renderHermesBlock(hermesObj, chatStream);
-            typewriterEffect(msgEl, answer.replace(/```json[\s\S]*?```/g, '[↑ diagnóstico estruturado acima]'), 10);
-            /* §36 — salvar missão ativa para EXECUTAR MISSÃO */
-            _activeMission = { id: 'mission-' + Date.now(), hermesObj: hermesObj, input: text, stage: 'diagnosed', evidence: [{ type: 'diagnosis', data: hermesObj, ts: Date.now() }], zipB64: _lastZipB64 || null, startedAt: Date.now() };
-            /* §38 — hint pós-diagnóstico */
-            (function() {
-              var hintEl = document.createElement('div');
-              hintEl.style.cssText = 'background:rgba(79,70,229,.08);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:10px 14px;margin:4px 0 8px;font-size:12px;color:#a5b4fc;display:flex;align-items:center;gap:8px;';
-              hintEl.innerHTML = '<span style="font-size:16px;">🛡</span><span>Diagnóstico concluído. Clique em <b style="color:#c7d2fe">EXECUTAR MISSÃO</b> para aplicar o patch automaticamente via Vision Core Standard Method.</span>';
-              chatStream.appendChild(hintEl);
-              chatStream.scrollTop = chatStream.scrollHeight;
-            }());
-          } else {
-            typewriterEffect(msgEl, answer, 10);
-          }
-          setStatus('READY');
-        })
-        .catch(function(err) {
-          clearTimeout(_chatAnimTimer);
-          thinking.remove();
-          resetAllAgents();
-          appendMsg('[Erro de conexão com worker: ' + BACKEND_URL + ' — ' + err + ']', 'error');
-          setStatus('ERRO', 'error');
-          setTimeout(function() { setStatus('READY'); }, 3000);
-        });
-      }
-
-      /* §77 A1 — classify → route: fix / create / default */
-      var _hasFile77 = !!(imgName || imgB64);
-      if (mode === 'create') {
-        /* Manual select "◈ Criar Projeto" — skip classify, send direct */
-        _doChat('create', {});
-      } else if (_hasFile77) {
-        /* Image attached → fix mode */
-        _doChat('fix', null);
-      } else {
-        /* Classify with 8s timeout via /api/architect/interpret */
-        var _clsTimeout77;
-        Promise.race([
-          fetch(BACKEND_URL + '/api/architect/interpret', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text })
-          }).then(function(r) { return r.json(); }),
-          new Promise(function(_, reject) {
-            _clsTimeout77 = setTimeout(function() { reject(new Error('timeout')); }, 8000);
-          })
-        ]).then(function(cls) {
-          clearTimeout(_clsTimeout77);
-          var _cls77conf = cls && cls.classification && cls.classification.confidence || 0;
-          if (cls && cls.intent === 'create' && _cls77conf >= 0.55) {
-            _doChat('create', {
-              project_type:    cls.classification && cls.classification.project_type,
-              stack:           cls.classification && cls.classification.stack,
-              tags:            cls.classification && cls.classification.tags,
-              specs_suggested: cls.specs_suggested,
-              confidence:      _cls77conf,
-              routing_reason:  cls.routing_reason
-            });
-          } else if (cls && cls.intent === 'fix') {
-            _doChat('fix', null);
-          } else {
-            _doChat(mode, null);
-          }
-        }).catch(function(err) {
-          clearTimeout(_clsTimeout77);
-          console.warn('[§77] classify skip —', err && err.message || err, '— fallback to', mode);
-          _doChat(mode, null);
-        });
-      }
+      fetch(BACKEND_URL + '/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function(data) {
+        clearTimeout(_chatAnimTimer);
+        thinking.remove();
+        stopMissionAnimation({ ok: true, steps: [{ agent: 'Scanner', ok: true }, { agent: 'Hermes', ok: true }] });
+        /* §27 echo guard */
+        if (data && data.provider === 'local') {
+          appendMsg('⚠️ Fallback local — todos os provedores de IA falharam. Reduza o payload ou verifique as API keys.', 'error');
+        }
+        var answer = (data && data.answer) ? data.answer : JSON.stringify(data);
+        addToHistory('assistant', answer);
+        renderFetchBadge(data, chatStream);          // §21
+        var hermesObj = parseHermesBlock(answer);
+        var msgEl = appendMsg('', '');
+        if (hermesObj) {
+          renderHermesBlock(hermesObj, chatStream);
+          typewriterEffect(msgEl, answer.replace(/```json[\s\S]*?```/g, '[↑ diagnóstico estruturado acima]'), 10);
+          /* §36 — salvar missão ativa para EXECUTAR MISSÃO */
+          _activeMission = { id: 'mission-' + Date.now(), hermesObj: hermesObj, input: text, stage: 'diagnosed', evidence: [{ type: 'diagnosis', data: hermesObj, ts: Date.now() }], zipB64: _lastZipB64 || null, startedAt: Date.now() };
+          /* §38 — hint pós-diagnóstico */
+          (function() {
+            var hintEl = document.createElement('div');
+            hintEl.style.cssText = 'background:rgba(79,70,229,.08);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:10px 14px;margin:4px 0 8px;font-size:12px;color:#a5b4fc;display:flex;align-items:center;gap:8px;';
+            hintEl.innerHTML = '<span style="font-size:16px;">🛡</span><span>Diagnóstico concluído. Clique em <b style="color:#c7d2fe">EXECUTAR MISSÃO</b> para aplicar o patch automaticamente via Vision Core Standard Method.</span>';
+            chatStream.appendChild(hintEl);
+            chatStream.scrollTop = chatStream.scrollHeight;
+          }());
+        } else {
+          typewriterEffect(msgEl, answer, 10);
+        }
+        setStatus('READY');
+      })
+      .catch(function(err) {
+        clearTimeout(_chatAnimTimer);
+        thinking.remove();
+        resetAllAgents();
+        appendMsg('[Erro de conexão com worker: ' + BACKEND_URL + ' — ' + err + ']', 'error');
+        setStatus('ERRO', 'error');
+        setTimeout(function() { setStatus('READY'); }, 3000);
+      });
     }
 
     sendBtn.addEventListener('click', sendMessage);
@@ -8153,234 +8091,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     setSoftwareFactoryModule(_sfActiveModule);
   }
 
-
-  function initSpecLibraryPage() {
-    var sfPage  = document.getElementById('vcSoftwareFactoryPage');
-    if (!sfPage) return;
-
-    var _activeModuleId  = null;
-    var _allSpecs        = [];   // specs do módulo ativo
-    var _activeFilter    = 'all';
-    var _searchQuery     = '';
-
-    // ── Back button ──
-    var backBtn = document.getElementById('vcSfBackBtn');
-    if (backBtn) backBtn.addEventListener('click', showMainCockpitPage);
-
-    // ── Open SF page buttons (header + sidebar nav) ──
-    // §79-fix: load sidebar directly in button handler (window.showSoftwareFactoryPage
-    //   override was ineffective — showSoftwareFactoryPage is a local func, not window.*)
-    var _sidebarLoaded = false;
-    document.querySelectorAll('[data-open-sf-page]').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        showSoftwareFactoryPage();
-        if (!_sidebarLoaded) { _loadSidebar(); _sidebarLoaded = true; }
-      });
-    });
-
-    // ── Search ──
-    var searchEl = document.getElementById('vcSfSearch');
-    if (searchEl) {
-      searchEl.addEventListener('input', function() {
-        _searchQuery = searchEl.value.trim().toLowerCase();
-        _renderSpecCards();
-      });
-    }
-
-    // ── Filters ──
-    document.querySelectorAll('input[name="sf-type-filter"]').forEach(function(radio) {
-      radio.addEventListener('change', function() {
-        _activeFilter = radio.value;
-        _renderSpecCards();
-      });
-    });
-
-    // ── Load sidebar via GET /api/spec/summary ──
-    function _loadSidebar() {
-      fetch(BACKEND_URL + '/api/spec/summary')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (!data.ok || !data.modules) return;
-          var list   = document.getElementById('vcSfModuleList');
-          var footer = document.getElementById('vcSfLibFooter');
-          if (footer) footer.textContent = data.total_specs + ' specs · ' + data.total_modules + ' módulos';
-          if (!list)  return;
-
-          list.innerHTML = data.modules.map(function(m) {
-            return '<button class="vc-sf-module-item" data-module-id="' + m.id + '" type="button">' +
-              '<span class="vc-sf-module-item-id">' + m.id + '</span>' +
-              '<span class="vc-sf-module-item-name">' + m.name + '</span>' +
-              '<span class="vc-sf-module-item-count">' + m.count + '</span>' +
-            '</button>';
-          }).join('');
-
-          list.querySelectorAll('.vc-sf-module-item').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-              list.querySelectorAll('.vc-sf-module-item').forEach(function(b) {
-                b.classList.remove('active');
-              });
-              btn.classList.add('active');
-              _loadModule(btn.dataset.moduleId);
-            });
-          });
-        })
-        .catch(function(err) {
-          var list = document.getElementById('vcSfModuleList');
-          if (list) list.innerHTML = '<div style="color:#f87171;font-size:12px;padding:8px">Erro ao carregar módulos.</div>';
-        });
-    }
-
-    // ── Load specs de um módulo ──
-    function _loadModule(moduleId) {
-      _activeModuleId = moduleId;
-      var container = document.getElementById('vcSfSpecsContainer');
-      var empty     = document.getElementById('vcSfMainEmpty');
-      var header    = document.getElementById('vcSfModuleHeader');
-      var cards     = document.getElementById('vcSfSpecCards');
-
-      if (container) container.style.display = 'none';
-      if (empty)     empty.style.display     = '';
-      if (header)    header.textContent      = 'Carregando ' + moduleId + '...';
-
-      fetch(BACKEND_URL + '/api/spec?module=' + moduleId)
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          _allSpecs = data.specs || [];
-          if (empty)     empty.style.display     = 'none';
-          if (container) container.style.display = '';
-          if (header) {
-            var mod = _allSpecs[0];
-            header.innerHTML =
-              '<span class="vc-sf-module-header-id">' + moduleId + '</span> — ' +
-              '<span class="vc-sf-module-header-name">' + (mod ? mod.module_name || moduleId : moduleId) + '</span>' +
-              '<span class="vc-sf-module-header-count">' + _allSpecs.length + ' specs</span>';
-          }
-          _renderSpecCards();
-        })
-        .catch(function() {
-          if (empty) { empty.style.display = ''; empty.textContent = 'Erro ao carregar specs de ' + moduleId; }
-        });
-    }
-
-    // ── Renderizar cards com filtro + search ──
-    function _renderSpecCards() {
-      var cards = document.getElementById('vcSfSpecCards');
-      if (!cards) return;
-
-      var TYPE_COLOR = {
-        'HAPPY PATH':       '#22c55e',
-        'EDGE':             '#f59e0b',
-        'SECURITY':         '#f87171',
-        'SECURITY CRÍTICO': '#ef4444',
-      };
-
-      var filtered = _allSpecs.filter(function(s) {
-        if (_activeFilter !== 'all' && s.type !== _activeFilter) return false;
-        if (_searchQuery) {
-          var hay = ((s.id || '') + ' ' + (s.title || '') + ' ' + (s.pass_criteria || '') + ' ' + (s.tags || []).join(' ')).toLowerCase();
-          if (!hay.includes(_searchQuery)) return false;
-        }
-        return true;
-      });
-
-      if (filtered.length === 0) {
-        cards.innerHTML = '<div style="color:#64748b;font-size:12px;padding:16px">Nenhuma spec encontrada.</div>';
-        return;
-      }
-
-      cards.innerHTML = filtered.map(function(s) {
-        var color  = (s.type && TYPE_COLOR[s.type]) || '#64748b';
-        var badge  = s.type
-          ? '<span style="font-size:10px;padding:1px 6px;border-radius:3px;background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44;white-space:nowrap">' + s.type + '</span>'
-          : '';
-        var tags = Array.isArray(s.tags) && s.tags.length
-          ? '<div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px">' +
-              s.tags.map(function(t) {
-                return '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#1e293b;color:#64748b;border:1px solid #1e293b">' + t + '</span>';
-              }).join('') +
-            '</div>'
-          : '';
-        var specJson = JSON.stringify(s, null, 2);
-
-        return '<div class="vc-sf-spec-card" data-spec-id="' + (s.id || '') + '">' +
-          '<div class="vc-sf-spec-card-head">' +
-            '<span class="vc-sf-spec-id">' + (s.id || '?') + '</span>' + badge +
-          '</div>' +
-          '<div class="vc-sf-spec-title">' + (s.title || '') + '</div>' +
-          (s.pass_criteria ? '<div class="vc-sf-spec-pass">✓ ' + s.pass_criteria + '</div>' : '') +
-          (s.fail_criteria ? '<div class="vc-sf-spec-fail">✗ ' + s.fail_criteria + '</div>' : '') +
-          tags +
-          '<div class="vc-sf-spec-actions">' +
-            '<button class="vc-sf-lib-btn secondary vc-sf-copy-spec" data-spec-json="' + _esc(specJson) + '" type="button">⍘ copiar</button>' +
-            '<button class="vc-sf-lib-btn vc-sf-send-spec" data-spec-id="' + (s.id || '') + '" data-spec-title="' + _esc(s.title || '') + '" data-spec-pass="' + _esc(s.pass_criteria || '') + '" data-spec-tags="' + _esc((s.tags || []).join(', ')) + '" type="button">→ chat</button>' +
-          '</div>' +
-        '</div>';
-      }).join('');
-
-      // ── Bind copy buttons ──
-      cards.querySelectorAll('.vc-sf-copy-spec').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          var json = btn.dataset.specJson;
-          if (navigator.clipboard) {
-            navigator.clipboard.writeText(json).then(function() {
-              btn.textContent = '✓ copiado';
-              setTimeout(function() { btn.textContent = '⍘ copiar'; }, 1800);
-            });
-          }
-        });
-      });
-
-      // ── Bind → chat buttons ──
-      cards.querySelectorAll('.vc-sf-send-spec').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          var id    = btn.dataset.specId;
-          var title = btn.dataset.specTitle;
-          var pass  = btn.dataset.specPass;
-          var tags  = btn.dataset.specTags;
-          var text  = '[SPEC ' + id + '] ' + title + '\nPASS: ' + pass + '\nTags: ' + tags + '\n\nCom base nessa spec, ';
-          showMainCockpitPage();
-          setTimeout(function() {
-            var inp = document.getElementById('v298ChatInput');
-            if (inp) { inp.value = text; inp.focus(); inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-          }, 120);
-        });
-      });
-    }
-
-    // ── Copy módulo inteiro ──
-    var copyModBtn = document.getElementById('vcSfCopyModule');
-    if (copyModBtn) {
-      copyModBtn.addEventListener('click', function() {
-        if (!_allSpecs.length) return;
-        var text = JSON.stringify({ module: _activeModuleId, specs: _allSpecs }, null, 2);
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(text).then(function() {
-            copyModBtn.textContent = '✓ copiado';
-            setTimeout(function() { copyModBtn.textContent = '⍘ copiar módulo'; }, 2000);
-          });
-        }
-      });
-    }
-
-    // ── Enviar módulo ao chat ──
-    var sendModBtn = document.getElementById('vcSfSendModule');
-    if (sendModBtn) {
-      sendModBtn.addEventListener('click', function() {
-        if (!_allSpecs.length) return;
-        var ids  = _allSpecs.map(function(s) { return s.id; }).join(', ');
-        var text = '[MÓDULO ' + _activeModuleId + '] ' + _allSpecs.length + ' specs: ' + ids + '\n\nCom base neste módulo, ';
-        showMainCockpitPage();
-        setTimeout(function() {
-          var inp = document.getElementById('v298ChatInput');
-          if (inp) { inp.value = text; inp.focus(); }
-        }, 120);
-      });
-    }
-  }
-
-    /* ── Auth modal wiring ───────────────────────────────────────── */
+  /* ── Auth modal wiring ───────────────────────────────────────── */
   function initAuthModal() {
     var authBackdrop = document.getElementById('authBackdrop');
     if (!authBackdrop) { return; }
@@ -8541,7 +8252,6 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     try { initWorkerResultReceipt(); } catch (e) { console.error('[vc] initWorkerResultReceipt:', e); }
     try { initFinalProductDashboard(); } catch (e) { console.error('[vc] initFinalProductDashboard:', e); }
     try { initSoftwareFactoryPage(); } catch (e) { console.error('[vc] initSoftwareFactoryPage:', e); }
-    try { initSpecLibraryPage(); } catch (e) { console.error('[vc] initSpecLibraryPage:', e); }
     try { initMainChat(); } catch (e) { console.error('[vc] initMainChat:', e); }
     try { initAuthModal(); } catch (e) { console.error('[vc] initAuthModal:', e); }
     try { initQuickConfig(); } catch (e) { console.error('[vc] initQuickConfig:', e); }
