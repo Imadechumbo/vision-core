@@ -5737,15 +5737,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     if (sfPage)  {
       sfPage.style.display = 'flex';
       sfPage.removeAttribute('aria-hidden');
-      // Move original #projectBuilder into SF page mount (idempotent)
-      var mount = document.getElementById('vcSfOriginalProjectBuilderMount');
-      var pb    = document.getElementById('projectBuilder');
-      if (mount && pb && !mount.contains(pb)) {
-        mount.appendChild(pb);
-      }
-      // Always reset to home view on every open
-      _sfShowHome();
-      renderSoftwareFactoryTimelineState(_sfActiveModule);
+      /* §79-fix: removed _sfShowHome() + renderSoftwareFactoryTimelineState()
+         — old SF Builder functions no longer exist in §77 Spec Library */
     }
   }
 
@@ -7957,8 +7950,14 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     if (backBtn) backBtn.addEventListener('click', showMainCockpitPage);
 
     // ── Open SF page buttons (header + sidebar nav) ──
+    // §79-fix: load sidebar directly in button handler (window.showSoftwareFactoryPage
+    //   override was ineffective — showSoftwareFactoryPage is a local func, not window.*)
+    var _sidebarLoaded = false;
     document.querySelectorAll('[data-open-sf-page]').forEach(function(btn) {
-      btn.addEventListener('click', showSoftwareFactoryPage);
+      btn.addEventListener('click', function() {
+        showSoftwareFactoryPage();
+        if (!_sidebarLoaded) { _loadSidebar(); _sidebarLoaded = true; }
+      });
     });
 
     // ── Search ──
@@ -7977,14 +7976,6 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         _renderSpecCards();
       });
     });
-
-    // ── Load sidebar on page open ──
-    var _sidebarLoaded = false;
-    var _origShowSF = window.showSoftwareFactoryPage;
-    window.showSoftwareFactoryPage = function() {
-      if (_origShowSF) _origShowSF();
-      if (!_sidebarLoaded) { _loadSidebar(); _sidebarLoaded = true; }
-    };
 
     // ── Load sidebar via GET /api/spec/summary ──
     function _loadSidebar() {
