@@ -8747,24 +8747,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
   function typeText(text, el, onDone) {
     if (_typeTimer) { clearInterval(_typeTimer); _typeTimer = null; }
-    el.textContent = '';
-    setMascot('reading');
-    nextBtn.disabled = true;
-    var i = 0;
-    var speed = Math.max(10, Math.min(30, Math.floor(2600 / text.length)));
-    _typeTimer = setInterval(function() {
-      el.textContent += text[i];
-      i++;
-      if (i >= text.length) {
-        clearInterval(_typeTimer);
-        _typeTimer = null;
-        setTimeout(function() {
-          setMascot('idle');
-          nextBtn.disabled = false;
-        }, 250);
-        if (onDone) onDone();
-      }
-    }, speed);
+    el.textContent = text;
+    if (onDone) onDone();
   }
 
   function showStep(idx) {
