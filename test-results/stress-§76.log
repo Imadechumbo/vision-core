@@ -1,0 +1,167 @@
+# Vision Core — Stress Test §76+§77+§78
+
+**Data:** 2026-06-14T06:15:56.886Z
+**Commit base:** 080e469
+**Resultado:** 23/24 PASS automáticos (96%) · 0 SKIP
+**PASS GOLD gate (≥22/24):** ✅ PASS
+
+## Coverage por bloco
+
+| Bloco | Escopo | Resultado |
+|-------|--------|-----------|
+| BL-1 | POST /api/architect/interpret §76 | 7/8 PASS |
+| BL-2 | POST /api/chat mode:create | 7/7 PASS |
+| BL-3 | GET /api/spec/summary | 7/7 PASS |
+| BL-4 | Integração + degradação | 2/2 PASS |
+
+## Cenários
+
+| ID | Bloco | Descrição | Status | Tempo |
+|----|-------|-----------|--------|-------|
+| T01 | BL-1 | intent:create detectado — mensagem clara de criação SaaS | ✅ PASS | 831ms |
+| T02 | BL-1 | intent:fix ou chat detectado — mensagem de bug (não create) | ❌ FAIL | 650ms |
+| T03 | BL-1 | routing_reason presente e não-vazio | ✅ PASS | 502ms |
+| T04 | BL-1 | pipeline_mode sempre presente e valor válido | ✅ PASS | 776ms |
+| T05 | BL-1 | confidence baixa → intent:chat + routing_reason explica | ✅ PASS | 2785ms |
+| T06 | BL-1 | intent:create com tags saas/saas-fullstack/nova-feature | ✅ PASS | 7999ms |
+| T07 | BL-1 | campos §76 presentes mesmo em low-confidence (mensagem "x") | ✅ PASS | 738ms |
+| T08 | BL-1 | backward compat: campos antigos classification, mode, exec_real intactos | ✅ PASS | 1771ms |
+| T09 | BL-2 | mode:create → pipeline:criar_projeto na resposta | ✅ PASS | 5267ms |
+| T10 | BL-2 | mode:create com architect_context injetado retorna answer válido | ✅ PASS | 12753ms |
+| T11 | BL-2 | mode:create → pass_gold_required:true | ✅ PASS | 732ms |
+| T12 | BL-2 | mode:create → exec_real === 'BLOQUEADA' | ✅ PASS | 705ms |
+| T13 | BL-2 | mode:create answer contém marcadores do pipeline criar | ✅ PASS | 10396ms |
+| T14 | BL-2 | mode:create com architect_context vazio não quebra (graceful) | ✅ PASS | 594ms |
+| T15 | BL-2 | mode:create → anti_stub:true na resposta | ✅ PASS | 10215ms |
+| T16 | BL-3 | GET /api/spec/summary existe e retorna ok:true | ✅ PASS | 147ms |
+| T17 | BL-3 | modules array presente e não-vazio | ✅ PASS | 147ms |
+| T18 | BL-3 | total_specs > 0 | ✅ PASS | 146ms |
+| T19 | BL-3 | total_modules >= 9 | ✅ PASS | 147ms |
+| T20 | BL-3 | cada módulo tem id (string), name (string), count (number > 0) | ✅ PASS | 149ms |
+| T21 | BL-3 | SF-01 presente nos módulos | ✅ PASS | 147ms |
+| T22 | BL-3 | módulos o━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RESULTADO FINAL: 23/24 PASS
+✨ PASS GOLD (23/24 ≥ 22)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📄 Resultados: test-results/stress-§76.log
+📄 JSON: test-results/stress-§76.json
+✨ PASS GOLD — 23/24 PASS · gate: ≥22
+ FAIL
+  - ✓ res.ok
+  - ✗ intent é fix ou chat
+  - ✗ intent !== create (sem roteamento errado)
+
+**T03:** ✅ PASS
+  - ✓ res.ok
+  - ✓ routing_reason string
+  - ✓ routing_reason length
+
+**T04:** ✅ PASS
+  - ✓ res.ok
+  - ✓ pipeline_mode presente
+  - ✓ pipeline_mode valor válido
+
+**T05:** ✅ PASS
+  - ✓ res.ok
+  - ✓ intent === chat
+  - ✓ routing_reason inclui 'conversa'
+
+**T06:** ✅ PASS
+  - ✓ res.ok
+  - ✓ intent === create
+  - ✓ tags array presente
+  - ✓ tag saas/fullstack/feature
+
+**T07:** ✅ PASS
+  - ✓ res.ok
+  - ✓ intent presente
+  - ✓ pipeline_mode presente
+  - ✓ routing_reason presente
+
+**T08:** ✅ PASS
+  - ✓ res.ok
+  - ✓ classification presente
+  - ✓ mode === 'LOCAL PREVIEW'
+  - ✓ exec_real === 'BLOQUEADA'
+
+**T09:** ✅ PASS
+  - ✓ res.ok
+  - ✓ mode === 'create'
+  - ✓ pipeline === 'criar_projeto'
+
+**T10:** ✅ PASS
+  - ✓ res.ok
+  - ✓ mode === 'create'
+  - ✓ answer string
+  - ✓ answer length > 50
+
+**T11:** ✅ PASS
+  - ✓ res.ok
+  - ✓ pass_gold_required === true
+
+**T12:** ✅ PASS
+  - ✓ res.ok
+  - ✓ exec_real === 'BLOQUEADA'
+
+**T13:** ✅ PASS
+  - ✓ res.ok
+  - ✓ answer string
+  - ✓ marcador pipeline criar
+
+**T14:** ✅ PASS
+  - ✓ status 200
+  - ✓ res.ok
+  - ✓ answer string
+
+**T15:** ✅ PASS
+  - ✓ res.ok
+  - ✓ anti_stub === true
+
+**T16:** ✅ PASS
+  - ✓ status 200
+  - ✓ res.ok
+
+**T17:** ✅ PASS
+  - ✓ res.ok
+  - ✓ modules é array
+  - ✓ modules.length > 0
+
+**T18:** ✅ PASS
+  - ✓ res.ok
+  - ✓ total_specs number
+  - ✓ total_specs > 0
+
+**T19:** ✅ PASS
+  - ✓ res.ok
+  - ✓ total_modules >= 9
+
+**T20:** ✅ PASS
+  - ✓ res.ok
+  - ✓ todos módulos válidos
+
+**T21:** ✅ PASS
+  - ✓ res.ok
+  - ✓ SF-01 presente
+
+**T22:** ✅ PASS
+  - ✓ res.ok
+  - ✓ SF-01 encontrado
+  - ✓ SF-09 encontrado
+  - ✓ SF-01 < SF-09
+
+**T23:** ✅ PASS
+  - ✓ interpret ok
+  - ✓ intent detectado
+  - ✓ chat ok
+  - ✓ chat.mode === 'create'
+  - ✓ pass_gold_required
+  - ✓ answer length > 100
+
+**T24:** ✅ PASS
+  - ✓ não é 5xx
+  - ✓ resposta 200
+
+## Endpoint
+
+- **Worker:** http://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com
+- **Timeout:** 40s por cenário · **Retry:** 3x em 502/503

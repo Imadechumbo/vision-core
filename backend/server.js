@@ -2347,6 +2347,49 @@ function loadSpecCache() {
  *
  * GET /api/spec/:id        → single spec (e.g. SF-01-001)
  */
+/* ─────────────────────────────────────────────────────────────────────
+   GET /api/spec/summary
+   §76 — Sidebar da SF Spec Library: módulos + counts + breakdown por tipo.
+   ───────────────────────────────────────────────────────────────────── */
+app.get('/api/spec/summary', (req, res) => {
+  const cache = loadSpecCache();
+
+  const MODULE_NAMES = {
+    'SF-01':  'Montar Projeto do Zero',
+    'SF-02':  'Templates de Projeto',
+    'SF-03':  'Compositor de Missão',
+    'SF-04':  'Pacotes para Workers',
+    'SF-05':  'Preview de Criação',
+    'SF-06':  'Comando para Criação Real',
+    'SF-07':  'Recibo do Worker',
+    'SF-08':  'Painel Final',
+    'SF-09':  'SaaS & API Roadmap',
+    'SF-INT': 'Integração Cross-módulo',
+    'SF-LLM': 'LLM — Qualidade de Output',
+    'SF-SEC': 'Segurança (Security Wall)',
+  };
+
+  const modules = Object.entries(cache.byModule)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([id, specs]) => ({
+      id,
+      name:  specs[0]?.module_name || MODULE_NAMES[id] || id,
+      count: specs.length,
+      types: specs.reduce((acc, s) => {
+        const t = s.type || 'null';
+        acc[t] = (acc[t] || 0) + 1;
+        return acc;
+      }, {})
+    }));
+
+  return sendOk(res, {
+    modules,
+    total_specs:   modules.reduce((s, m) => s + m.count, 0),
+    total_modules: modules.length,
+    time: now()
+  });
+});
+
 app.get('/api/spec/:id', (req, res) => {
   const cache = loadSpecCache();
   const id    = req.params.id.toUpperCase();
@@ -2573,49 +2616,6 @@ app.post('/api/architect/interpret', async (req, res) => {
   } catch (err) {
     return res.status(500).json({ ok: false, error: err.message, time: now() });
   }
-});
-
-/* ─────────────────────────────────────────────────────────────────────
-   GET /api/spec/summary
-   §76 — Sidebar da SF Spec Library: módulos + counts + breakdown por tipo.
-   ───────────────────────────────────────────────────────────────────── */
-app.get('/api/spec/summary', (req, res) => {
-  const cache = loadSpecCache();
-
-  const MODULE_NAMES = {
-    'SF-01':  'Montar Projeto do Zero',
-    'SF-02':  'Templates de Projeto',
-    'SF-03':  'Compositor de Missão',
-    'SF-04':  'Pacotes para Workers',
-    'SF-05':  'Preview de Criação',
-    'SF-06':  'Comando para Criação Real',
-    'SF-07':  'Recibo do Worker',
-    'SF-08':  'Painel Final',
-    'SF-09':  'SaaS & API Roadmap',
-    'SF-INT': 'Integração Cross-módulo',
-    'SF-LLM': 'LLM — Qualidade de Output',
-    'SF-SEC': 'Segurança (Security Wall)',
-  };
-
-  const modules = Object.entries(cache.byModule)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([id, specs]) => ({
-      id,
-      name:  specs[0]?.module_name || MODULE_NAMES[id] || id,
-      count: specs.length,
-      types: specs.reduce((acc, s) => {
-        const t = s.type || 'null';
-        acc[t] = (acc[t] || 0) + 1;
-        return acc;
-      }, {})
-    }));
-
-  return sendOk(res, {
-    modules,
-    total_specs:   modules.reduce((s, m) => s + m.count, 0),
-    total_modules: modules.length,
-    time: now()
-  });
 });
 
 /* SAFE 404 — nunca 405 */
