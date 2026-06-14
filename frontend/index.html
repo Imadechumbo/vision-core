@@ -19,6 +19,15 @@
 .v299-config-btn{color:#9ca3af!important;}
 .v299-obsidian-btn{color:#a78bfa!important;}
 .v299-obsidian-btn.active{color:#22c55e!important;border-color:#22c55e!important;}
+/* §86 plan badges + oauth */
+.plan-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 6px;border-radius:3px;margin-top:4px;text-transform:uppercase;}
+.plan-badge.beta{background:#0f4;color:#000;}
+.plan-badge.soon{background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;}
+.plan-soon{opacity:.75;cursor:default!important;pointer-events:none;}
+.plan-soon:hover{transform:none!important;}
+.oauth-badge{font-size:9px;font-weight:700;background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;padding:1px 5px;border-radius:3px;margin-left:6px;vertical-align:middle;text-transform:uppercase;letter-spacing:.05em;}
+.oauth-soon{opacity:.6!important;cursor:not-allowed!important;}
+.oauth-soon:hover{opacity:.6!important;transform:none!important;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
@@ -213,9 +222,24 @@
       <h2>Cadastro SaaS automático, simples e popular.</h2>
       <p><strong>Autonomous Software Repair System.</strong> Isso não é chat, copiloto ou automação simples. É um sistema que detecta → entende → corrige → valida → protege → aprende.</p>
       <div class="plans" id="plansBox">
-        <div class="plan active" data-plan="free"><strong>FREE</strong><span>5 missões/mês</span><small>sem auto-merge</small></div>
-        <div class="plan" data-plan="pro"><strong>PRO</strong><span>missões ilimitadas</span><small>GitHub auto PR + rollback</small></div>
-        <div class="plan" data-plan="enterprise"><strong>ENTERPRISE</strong><span>multi-projeto + workers</span><small>dashboard completo</small></div>
+        <div class="plan active" data-plan="free">
+          <strong>FREE</strong>
+          <span>5 missões/mês</span>
+          <small>Cadastro instantâneo · sem cartão</small>
+          <em class="plan-badge beta">BETA ATIVO</em>
+        </div>
+        <div class="plan plan-soon" data-plan="pro" title="Em breve — cadastre-se no FREE para ser notificado">
+          <strong>PRO</strong>
+          <span>Missões ilimitadas</span>
+          <small>GitHub auto PR · rollback · $9,99/mês</small>
+          <em class="plan-badge soon">EM BREVE</em>
+        </div>
+        <div class="plan plan-soon" data-plan="enterprise" title="Em breve — para times e múltiplos projetos">
+          <strong>ENTERPRISE</strong>
+          <span>Multi-projeto + workers</span>
+          <small>Dashboard completo · SSO · $29,99/mês</small>
+          <em class="plan-badge soon">EM BREVE</em>
+        </div>
       </div>
       <div class="operator-auth-card inline-auth-card">
         <p class="side-auth-kicker">OPERADOR</p>
