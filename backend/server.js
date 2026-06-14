@@ -762,8 +762,57 @@ app.get('/api/obsidian/download-vault', (req, res) => {
 });
 
 
+/* ── §89 MISSION QUOTA — FREE = 5/mês ── */
+const MISSION_LOG_PATH = path.join(DB_ROOT, 'mission-log.json');
+
+function getMissionCount(userId) {
+  try {
+    const log = readJsonFile(MISSION_LOG_PATH, { missions: [] });
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return log.missions.filter(m => m.user_id === userId && new Date(m.ts).getTime() >= cutoff).length;
+  } catch { return 0; }
+}
+
+function logMission(userId, type) {
+  try {
+    const log = readJsonFile(MISSION_LOG_PATH, { missions: [] });
+    log.missions.push({ user_id: userId, ts: now(), type: type || 'mission' });
+    // Keep only 90 days
+    const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    log.missions = log.missions.filter(m => new Date(m.ts).getTime() >= cutoff);
+    writeJsonFile(MISSION_LOG_PATH, log);
+  } catch {}
+}
+
+function checkMissionQuota(req, res, next) {
+  const user = getAuthUser(req);
+  if (!user) return next(); // unauthenticated — pass through, may fail elsewhere
+  if (user.plan && user.plan !== 'free') return next(); // PRO/ENTERPRISE = unlimited
+  const count = getMissionCount(user.id);
+  const LIMIT = parseInt(process.env.FREE_MISSION_LIMIT || '5', 10);
+  if (count >= LIMIT) {
+    return res.status(429).json({
+      ok: false, error: 'mission_quota_exceeded', plan: 'free',
+      used: count, limit: LIMIT, reset: 'em 30 dias',
+      upgrade_hint: 'Faça upgrade para PRO ($9,99/mês) para missões ilimitadas',
+      anti_stub: true, time: now()
+    });
+  }
+  logMission(user.id, 'mission');
+  return next();
+}
+
+app.get('/api/mission/quota', (req, res) => {
+  const user = getAuthUser(req);
+  if (!user) return sendOk(res, { plan: 'free', used: 0, limit: 5, remaining: 5, authenticated: false, anti_stub: true });
+  if (user.plan && user.plan !== 'free') return sendOk(res, { plan: user.plan, used: null, limit: null, unlimited: true, anti_stub: true });
+  const used = getMissionCount(user.id);
+  const limit = parseInt(process.env.FREE_MISSION_LIMIT || '5', 10);
+  return sendOk(res, { plan: 'free', used, limit, remaining: Math.max(0, limit - used), anti_stub: true });
+});
+
 /* COPILOT — nunca retorna 405 por body vazio */
-app.all('/api/copilot', async (req, res) => {
+app.all('/api/copilot', checkMissionQuota, async (req, res) => {
   const body = normalizeBody(req);
   console.log('[COPILOT BODY]', JSON.stringify(body));
 
@@ -896,7 +945,7 @@ function hasLocalPath(text) {
 }
 
 // POST /api/run-live — executa Go Core, retorna JSON final
-app.all('/api/run-live', async (req, res) => {
+app.all('/api/run-live', checkMissionQuota, async (req, res) => {
   const body     = normalizeBody(req);
   const input    = body.mission || body.message || body.prompt || body.input || 'self-test';
 
