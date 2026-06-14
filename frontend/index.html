@@ -40,6 +40,10 @@
 .vc-tutorial-skip:hover{color:#94a3b8}
 .vc-tutorial-noshowagain{display:flex;align-items:center;gap:5px;font-size:11px;color:#475569;cursor:pointer}
 .vc-tutorial-noshowagain input{cursor:pointer;accent-color:#6366f1}
+/* §95 MASCOTE SUPERIOR DIREITO */
+.vc-mascot-wrap{position:absolute;top:-18px;right:-18px;width:40px;height:40px;pointer-events:none;filter:drop-shadow(0 0 6px #7c3aed99)}
+.vc-mascot-img{position:absolute;top:0;left:0;width:40px;height:40px;object-fit:contain;opacity:0;transition:opacity .25s ease}
+.vc-mascot-img.active{opacity:1}
 /* §89 SF landing card */
 .sf-landing-card h2{color:#a78bfa;margin-bottom:8px}
 .sf-landing-modules{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:4px}
@@ -2837,7 +2841,11 @@
 <!-- §89 TUTORIAL INTERATIVO -->
 <div id="vcTutorialOverlay" class="vc-tutorial-overlay" aria-hidden="true">
   <div id="vcTutorialSpotlight" class="vc-tutorial-spotlight"></div>
-  <div id="vcTutorialBalloon" class="vc-tutorial-balloon" role="dialog" aria-live="polite">
+  <div id="vcTutorialBalloon" class="vc-tutorial-balloon" role="dialog" aria-live="polite" style="position:relative">
+    <div class="vc-mascot-wrap" id="vcMascotWrap">
+      <img id="vcMascotIdle"    src="assets/mascote-idle-final.png"    class="vc-mascot-img active" alt="Vision Core">
+      <img id="vcMascotReading" src="assets/mascote-reading-final.png" class="vc-mascot-img"        alt="Vision Core">
+    </div>
     <div class="vc-tutorial-step-counter" id="vcTutorialCounter">1 / 13</div>
     <div class="vc-tutorial-title" id="vcTutorialTitle"></div>
     <div class="vc-tutorial-text" id="vcTutorialText"></div>
