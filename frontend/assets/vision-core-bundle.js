@@ -8551,4 +8551,54 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   } else {
     _runAllInits();
   }
+
+  // §88 B4: handle OAuth callback redirect via URL hash
+  (function handleOAuthReturn() {
+    var hash = window.location.hash || '';
+    if (hash.indexOf('oauth-success') === -1 && hash.indexOf('oauth-error') === -1) return;
+
+    if (hash.indexOf('oauth-error') !== -1) {
+      var errMatch = hash.match(/oauth-error=([^&]*)/);
+      var errMsg = errMatch ? decodeURIComponent(errMatch[1]) : 'unknown';
+      setTimeout(function() {
+        if (window.showToast) window.showToast('Erro OAuth: ' + errMsg);
+      }, 500);
+      history.replaceState(null, '', window.location.pathname);
+      return;
+    }
+
+    // oauth-success
+    var tokenMatch = hash.match(/token=([^&]*)/);
+    var planMatch  = hash.match(/plan=([^&]*)/);
+    var emailMatch = hash.match(/email=([^&]*)/);
+    var token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : null;
+    var plan  = planMatch  ? planMatch[1]  : 'free';
+    var email = emailMatch ? decodeURIComponent(emailMatch[1]) : '';
+
+    if (token) {
+      try {
+        sessionStorage.setItem('vc_token', token);
+        localStorage.setItem('vision_token', token);
+      } catch(e) {}
+
+      // Update plan badge
+      var badge = document.getElementById('v299QuotaBadge');
+      if (badge) {
+        var pt = badge.querySelector('.v299-plan-tag');
+        var qs = badge.querySelector('.v299-quota-ok');
+        if (pt) { pt.className = 'v299-plan-tag ' + plan; pt.textContent = plan.toUpperCase(); }
+        var qm = { free: '5 missões/mês', pro: 'ilimitado', enterprise: 'multi-projeto' };
+        if (qs) qs.textContent = qm[plan] || qm.free;
+      }
+
+      setTimeout(function() {
+        if (window.showToast) window.showToast('✓ Login OAuth realizado' + (email ? ' — ' + email : ''));
+        var backdrop = document.getElementById('authBackdrop');
+        if (backdrop) backdrop.classList.remove('show');
+      }, 300);
+    }
+
+    history.replaceState(null, '', window.location.pathname);
+  })();
+
 })();
