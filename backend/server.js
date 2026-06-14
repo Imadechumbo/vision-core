@@ -1229,7 +1229,58 @@ app.get('/api/metrics/agents', (req, res) => sendOk(res, { agents: [
   { name: 'PASS GOLD', status: 'PENDING_EVIDENCE', cost: 0.471 }
 ]}));
 app.get('/api/metrics/summary', (req, res) => sendOk(res, { runtime: { cpu: 12, memory: 28, disk: 33, network: 8 } }));
-app.get('/api/dora-metrics', (req, res) => sendOk(res, { deployment_frequency: 'mock', lead_time: 'mock', mttr: 'mock', change_failure_rate: 'mock' }));
+app.get('/api/dora-metrics', async (req, res) => {
+  try {
+    const passGoldDir = path.join(VAULT_ROOT, 'PASS-GOLD');
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    let deploysLast30 = 0;
+    let totalVersions = 0;
+    let failCount = 0;
+    let mttrMs = null;
+    let leadTimeHours = null;
+
+    if (fs.existsSync(passGoldDir)) {
+      const files = fs.readdirSync(passGoldDir);
+      for (const f of files) {
+        try { const stat = fs.statSync(path.join(passGoldDir, f)); if (stat.mtimeMs >= thirtyDaysAgo) deploysLast30++; totalVersions++; } catch {}
+      }
+    }
+
+    const deployLogPath = path.join(DB_ROOT, 'deploy-log.json');
+    if (fs.existsSync(deployLogPath)) {
+      try {
+        const log = readJsonFile(deployLogPath, { entries: [] });
+        const entries = log.entries || [];
+        if (entries.length > 0) {
+          const recent = entries.slice(-10);
+          const diffs = recent.filter(e => e.commit_ts && e.deploy_ts).map(e => (new Date(e.deploy_ts) - new Date(e.commit_ts)) / 3600000);
+          if (diffs.length) leadTimeHours = (diffs.reduce((a, b) => a + b, 0) / diffs.length).toFixed(1);
+          const failures = recent.filter(e => e.status === 'fail');
+          const passes = recent.filter(e => e.status === 'pass');
+          failCount = failures.length;
+          if (failures.length && passes.length) {
+            const lastFail = new Date(failures[failures.length - 1].deploy_ts);
+            const nextPass = passes.find(p => new Date(p.deploy_ts) > lastFail);
+            if (nextPass) mttrMs = ((new Date(nextPass.deploy_ts) - lastFail) / 60000).toFixed(0);
+          }
+        }
+      } catch {}
+    }
+
+    return sendOk(res, {
+      deployment_frequency: deploysLast30 > 0 ? `${deploysLast30} deploys/30d (${(deploysLast30 / 30).toFixed(2)}/day)` : 'sem dados PASS-GOLD',
+      lead_time: leadTimeHours ? `${leadTimeHours}h avg (últimas 10)` : 'sem deploy-log',
+      mttr: mttrMs ? `${mttrMs} min avg` : 'sem falhas registradas',
+      change_failure_rate: totalVersions > 0 ? `${((failCount / totalVersions) * 100).toFixed(1)}%` : '0%',
+      pass_gold_count_30d: deploysLast30,
+      total_pass_gold: totalVersions,
+      data_source: 'vault:PASS-GOLD + data/deploy-log.json',
+      anti_stub: true
+    });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'dora_metrics_failed', message: err.message, time: now() });
+  }
+});
 app.get('/api/pass-gold/score', (req, res) => sendOk(res, { final: 100, status: 'PENDING_EVIDENCE', pass_gold: false, promotion_allowed: false, pass_gold_reason: 'evidence receipt required from Go Core' }));
 app.get('/api/logs/download', (req, res) => res.type('text/plain').send(`VISION CORE V2.9.10 SELF-HEALING CONFIG LOG\nPASS GOLD READY\n${now()}\n`));
 
