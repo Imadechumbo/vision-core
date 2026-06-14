@@ -8601,4 +8601,150 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     history.replaceState(null, '', window.location.pathname);
   })();
 
+  // §89 B3: fetch real mission quota and update badge
+  (function loadMissionQuota() {
+    var tok = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return null; } })();
+    var BACKEND = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+    var headers = tok ? { 'Authorization': 'Bearer ' + tok } : {};
+    fetch(BACKEND + '/api/mission/quota', { headers: headers })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var badge = document.getElementById('v299QuotaBadge');
+        if (!badge) return;
+        var planTag = badge.querySelector('.v299-plan-tag');
+        var quotaOk = badge.querySelector('.v299-quota-ok');
+        if (d.unlimited) {
+          if (planTag) { planTag.className = 'v299-plan-tag pro'; planTag.textContent = (d.plan || 'pro').toUpperCase(); }
+          if (quotaOk) quotaOk.textContent = 'ilimitado';
+        } else {
+          var remaining = d.remaining !== undefined ? d.remaining : (d.limit - d.used);
+          if (planTag) { planTag.className = 'v299-plan-tag free'; planTag.textContent = 'FREE'; }
+          if (quotaOk) {
+            if (remaining <= 0) {
+              quotaOk.textContent = 'Limite atingido — upgrade';
+              quotaOk.className = 'v299-quota-full';
+            } else if (remaining <= 1) {
+              quotaOk.textContent = remaining + ' missão restante';
+              quotaOk.className = 'v299-quota-warn';
+            } else {
+              quotaOk.textContent = remaining + ' missões restantes';
+              quotaOk.className = 'v299-quota-ok';
+            }
+          }
+        }
+      })
+      .catch(function() {});
+  })();
+
+})();
+
+/* ── §89 TUTORIAL INTERATIVO ── */
+(function initTutorial() {
+  try { if (localStorage.getItem('vc_tutorial_done') === '1') return; } catch(e) {}
+
+  var STEPS = [
+    { id:'welcome',  title:'👋 Bem-vindo ao Vision Core!',          text:'Este é um sistema autônomo de desenvolvimento com IA. Ele detecta erros, corrige código, valida e cria PRs no GitHub automaticamente. Vamos mostrar tudo em 12 passos rápidos.',                                                        target:'.premium-logo',       pos:'bottom' },
+    { id:'plans',    title:'🎁 Plano FREE — cadastro instantâneo',  text:'Você tem 5 missões gratuitas por mês, sem cartão de crédito. Os planos PRO ($9,99/mês) e ENTERPRISE ($29,99/mês) chegam em breve com missões ilimitadas, auto-merge e workers dedicados.',                                                target:'#plansBox',            pos:'top' },
+    { id:'signin',   title:'🔐 Entre com Google, GitHub ou email', text:'Clique em SIGN IN para criar sua conta grátis. Pode usar Google, GitHub ou só seu email. Em segundos você já tem acesso ao cockpit completo.',                                                                                             target:'#openAuthBtn2',        pos:'bottom' },
+    { id:'mission',  title:'🎯 Aqui começa tudo — a Missão',       text:'Digite aqui qualquer problema: um erro, um log, um trecho de código quebrado, ou uma tarefa. O Vision Core entende linguagem natural. Exemplo: "O login está retornando 401 em produção".',                                              target:'#v298Prompt',          pos:'top' },
+    { id:'execute',  title:'▷ Executar Missão',                     text:'Clique EXECUTAR MISSÃO para iniciar o pipeline: Hermes analisa → Scanner escaneia → PatchEngine corrige → Aegis valida → PASS GOLD aprova → PR criado no GitHub. Tudo automático.',                                                     target:'#v298RunBtn',          pos:'top' },
+    { id:'pipeline', title:'⚡ Pipeline em tempo real',             text:'Acompanhe cada etapa ao vivo: Missão → Diagnóstico → Diff → PASS GOLD → PR → Stable Vault. Cada agente tem uma função específica e você vê o status em tempo real.',                                                                    target:'.mini-pipeline',       pos:'bottom' },
+    { id:'diff',     title:'📋 Diff Preview — veja o que vai mudar', text:'Antes de qualquer alteração, o Vision Core mostra exatamente o que será mudado linha por linha. Você aprova antes de qualquer ação real no seu código.',                                                                                target:'#diff',                pos:'top' },
+    { id:'passgold', title:'🥇 PASS GOLD — qualidade garantida',    text:'Só avança para PR se passar em todos os gates: segurança, compatibilidade, estabilidade e testes. Se reprovar, o sistema faz rollback automático. Zero risco para seu repositório.',                                                     target:'#score',               pos:'top' },
+    { id:'github',   title:'🐙 GitHub Integration real',            text:'Quando aprovado, o Vision Core cria automaticamente um Pull Request com o patch, contexto e evidências de PASS GOLD. Você só revisa e faz merge.',                                                                                         target:'#githubPanel',         pos:'top' },
+    { id:'ai',       title:'🤖 Conecte sua IA preferida',           text:'Adicione sua API key de OpenAI, Claude, Gemini, Groq ou DeepSeek. O Vision Core usa o provider que você configurar. Também funciona com Ollama local (gratuito).',                                                                       target:'#aiApiVault',          pos:'top' },
+    { id:'sf',       title:'◈ Software Factory — construa do zero', text:'8 módulos para criar projetos completos: define stack, compõe missão, gera pacotes para workers, valida patches e gera blueprint de deploy. Acesse pelo menu superior.',                                                                  target:'[data-open-sf-page]',  pos:'bottom' },
+    { id:'finish',   title:'🚀 Pronto para começar!',               text:'Agora você conhece o Vision Core. Crie sua conta FREE (5 missões/mês, sem cartão de crédito) e experimente agora. É grátis para sempre no plano básico.',                                                                               target:'#openAuthBtn2',        pos:'bottom', cta:true }
+  ];
+
+  var current = 0;
+  var overlay   = document.getElementById('vcTutorialOverlay');
+  var spotlight = document.getElementById('vcTutorialSpotlight');
+  var titleEl   = document.getElementById('vcTutorialTitle');
+  var textEl    = document.getElementById('vcTutorialText');
+  var counterEl = document.getElementById('vcTutorialCounter');
+  var prevBtn   = document.getElementById('vcTutorialPrev');
+  var nextBtn   = document.getElementById('vcTutorialNext');
+  var ctaBtn    = document.getElementById('vcTutorialCta');
+  var skipBtn   = document.getElementById('vcTutorialSkip');
+  var noShowCb  = document.getElementById('vcTutorialNoShow');
+  if (!overlay || !titleEl) return;
+
+  function getEl(sel) { try { return document.querySelector(sel); } catch(e) { return null; } }
+
+  function positionBalloon(targetEl, pos) {
+    var balloon = document.getElementById('vcTutorialBalloon');
+    var pad = 12;
+    if (!targetEl || !balloon) return;
+    var rect = targetEl.getBoundingClientRect();
+    if (!rect || (rect.width === 0 && rect.height === 0)) {
+      balloon.style.top = '50%'; balloon.style.left = '50%'; balloon.style.transform = 'translate(-50%,-50%)';
+      spotlight.style.cssText = 'top:0;left:0;width:0;height:0;box-shadow:none';
+      return;
+    }
+    spotlight.style.top    = (rect.top - pad) + 'px';
+    spotlight.style.left   = (rect.left - pad) + 'px';
+    spotlight.style.width  = (rect.width + pad * 2) + 'px';
+    spotlight.style.height = (rect.height + pad * 2) + 'px';
+    var bw = balloon.offsetWidth || 320;
+    var bh = balloon.offsetHeight || 200;
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var top, left;
+    if (pos === 'bottom') { top = rect.bottom + pad + 10; left = rect.left + rect.width / 2 - bw / 2; }
+    else { top = rect.top - bh - pad - 10; left = rect.left + rect.width / 2 - bw / 2; }
+    left = Math.max(12, Math.min(left, vw - bw - 12));
+    top  = Math.max(12, Math.min(top,  vh - bh - 12));
+    balloon.style.transform = ''; balloon.style.top = top + 'px'; balloon.style.left = left + 'px';
+    try { targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e) {}
+  }
+
+  function showStep(idx) {
+    var step = STEPS[idx];
+    titleEl.textContent   = step.title;
+    textEl.textContent    = step.text;
+    counterEl.textContent = (idx + 1) + ' / ' + STEPS.length;
+    prevBtn.style.display = idx === 0 ? 'none' : '';
+    nextBtn.textContent   = idx === STEPS.length - 1 ? 'Fechar' : 'Próximo →';
+    if (ctaBtn) { step.cta ? ctaBtn.classList.remove('hidden') : ctaBtn.classList.add('hidden'); }
+    var targetEl = getEl(step.target);
+    setTimeout(function() { positionBalloon(targetEl, step.pos); }, 80);
+  }
+
+  function closeTutorial() {
+    overlay.style.display = 'none';
+    overlay.classList.remove('active');
+    try { if (noShowCb && noShowCb.checked) localStorage.setItem('vc_tutorial_done', '1'); } catch(e) {}
+  }
+
+  if (nextBtn) nextBtn.addEventListener('click', function() {
+    if (current >= STEPS.length - 1) { closeTutorial(); return; }
+    current++; showStep(current);
+  });
+  if (prevBtn) prevBtn.addEventListener('click', function() {
+    if (current <= 0) return; current--; showStep(current);
+  });
+  if (skipBtn) skipBtn.addEventListener('click', closeTutorial);
+  if (ctaBtn)  ctaBtn.addEventListener('click', function() {
+    closeTutorial();
+    var authBtn = document.getElementById('openAuthBtn');
+    if (authBtn) authBtn.click();
+  });
+  window.addEventListener('resize', function() {
+    if (overlay.style.display !== 'none') showStep(current);
+  });
+
+  setTimeout(function() {
+    overlay.style.display = 'block';
+    overlay.classList.add('active');
+    showStep(0);
+  }, 1500);
+
+  window.vcStartTutorial = function() {
+    try { localStorage.removeItem('vc_tutorial_done'); } catch(e) {}
+    current = 0;
+    overlay.style.display = 'block';
+    overlay.classList.add('active');
+    showStep(0);
+  };
 })();
