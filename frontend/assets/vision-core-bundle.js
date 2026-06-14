@@ -7866,7 +7866,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var bubble = document.createElement('div');
     bubble.className = 'vc-sf-chat-msg vc-sf-arch-bubble';
     bubble.innerHTML =
-      '<div class="vc-sf-arch-bubble-hdr">🏛️ AGENTE ARQUITETO · LOCAL PREVIEW · EXEC REAL BLOQUEADA</div>' +
+      '<div class="vc-sf-arch-bubble-hdr">🏛️ AGENTE ARQUITETO · ' +
+        (data.provider_used && data.provider_used !== 'local'
+          ? (data.provider_used.toUpperCase() + (data.model_used ? ' · ' + data.model_used : ''))
+          : 'BACKEND') +
+      '</div>' +
       '<div style="font-size:11px;line-height:1.5;margin-bottom:6px">' + metaHtml + '</div>' +
       '<div style="font-size:12px;color:#cbd5e1;line-height:1.6">' + _esc(c.explanation || '') + '</div>' +
       questHtml + specsHtml + pkgHtml;
