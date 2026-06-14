@@ -1602,6 +1602,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var diffViewer = document.getElementById('diffViewer');
     if (diffBtn && diffViewer) {
       diffBtn.addEventListener('click', function () {
+        /* §80 B4 — diff preview via backend real */
         var input = (missionText && missionText.value || '').trim();
         diffBtn.disabled = true;
         diffBtn.textContent = '...';
