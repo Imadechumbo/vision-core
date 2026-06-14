@@ -8834,4 +8834,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     overlay.classList.add('active');
     showStep(0);
   };
+
+  // §96: botão reabrir tutorial
+  var reopenBtn = document.getElementById('vcReopenTutorial');
+  if (reopenBtn) {
+    reopenBtn.addEventListener('click', function() {
+      window.vcStartTutorial();
+    });
+  }
 })();
