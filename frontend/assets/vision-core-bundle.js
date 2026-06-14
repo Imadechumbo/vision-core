@@ -7936,6 +7936,224 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       .catch(function ()  { if (panel) panel.style.display = 'none'; });
   }
 
+  function initSoftwareFactoryPage() {
+    var sfPage = document.getElementById('vcSoftwareFactoryPage');
+    if (!sfPage) return;
+
+    // Back button
+    var backBtn = document.getElementById('vcSfBackBtn');
+    if (backBtn) {
+      backBtn.addEventListener('click', showMainCockpitPage);
+    }
+
+    // Nav open buttons (cockpit header/sidebar)
+    document.querySelectorAll('[data-open-sf-page]').forEach(function (btn) {
+      btn.addEventListener('click', showSoftwareFactoryPage);
+    });
+
+    // Module nav buttons
+    document.querySelectorAll('.vc-sf-module-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setSoftwareFactoryModule(btn.dataset.sfModule);
+      });
+    });
+
+    // HOME button → reset to home view
+    var homeBtn = document.getElementById('vcSfHomeBtn');
+    if (homeBtn) {
+      homeBtn.addEventListener('click', _sfShowHome);
+    }
+
+    // INICIAR MONTAGEM → open workspace at first module
+    var startBtn = document.getElementById('vcSfStartBtn');
+    if (startBtn) {
+      startBtn.addEventListener('click', function () {
+        setSoftwareFactoryModule('project_builder');
+      });
+    }
+
+    // Quick-fill action buttons (populate textarea with template, no backend)
+    var SF_FILL_TEMPLATES = {
+      descricao: 'Tipo de projeto: [SaaS / API / App / Outro]\nObjetivo principal: [descreva aqui]\nFuncionalidades principais:\n  - [funcionalidade 1]\n  - [funcionalidade 2]\n  - [funcionalidade 3]\nStack preferida: [Node.js / Go / Python / etc]\nTamanho estimado: [MVP / Production Ready / Enterprise]',
+      briefing:  'BRIEFING DO PROJETO\n\nCliente / Produto: [nome]\nDescrição: [descrição completa do produto]\nEntregas esperadas:\n  - [módulo 1]\n  - [módulo 2]\nRestrições técnicas: [lista]\nCritérios de aceite: [lista]\nPrazo estimado: [data ou duração]',
+      exemplos:  'EXEMPLO A — SaaS Fullstack\nTipo: SaaS Fullstack\nStack: Node.js + React + PostgreSQL\nFuncionalidades: autenticação JWT, dashboard, billing Stripe, API REST\nTamanho: Production Ready\n\nEXEMPLO B — API Backend\nTipo: API Backend\nStack: Go + PostgreSQL + Docker\nFuncionalidades: CRUD completo, JWT auth, rate limiting\nTamanho: MVP\n\nEXEMPLO C — AI Agent System\nTipo: AI Agent System\nStack: Python + FastAPI + Redis\nFuncionalidades: orchestrator, workers, task queue, webhooks\nTamanho: Enterprise'
+    };
+    sfPage.addEventListener('click', function (e) {
+      var fillBtn = e.target.closest('[data-sf-fill]');
+      if (!fillBtn) return;
+      var tpl = SF_FILL_TEMPLATES[fillBtn.dataset.sfFill] || '';
+      var inp = document.getElementById('vcSfChatInput');
+      if (inp && tpl) { inp.value = tpl; inp.focus(); }
+    });
+
+    // §74.1 — Arquiteto fixo: init UI direto, sem toggle
+    var _sfSendBtnEl = document.getElementById('vcSfChatSendBtn');
+    var _sfInpEl     = document.getElementById('vcSfChatInput');
+    if (_sfSendBtnEl) _sfSendBtnEl.textContent = '🏛️ ENVIAR';
+    if (_sfInpEl) _sfInpEl.placeholder = 'Descreva seu projeto em linguagem livre. Ex.: "quero um site para minha padaria" ou "API REST em Python para estoque"...\n\n(Enter = enviar · Shift+Enter = nova linha)';
+
+    // §74 — Sidebar toggle (left + right panels)
+    var sidebarToggleBtn = document.getElementById('vcSfSidebarToggle');
+    var sfColumns        = sfPage.querySelector('.vc-sf-columns');
+    if (sidebarToggleBtn && sfColumns) {
+      sidebarToggleBtn.addEventListener('click', function () {
+        var hidden = sfColumns.classList.toggle('panels-hidden');
+        sidebarToggleBtn.classList.toggle('panels-on', !hidden);
+        sidebarToggleBtn.title = hidden ? 'Mostrar painéis laterais' : 'Ocultar painéis laterais';
+      });
+      // Start with panels visible
+      sidebarToggleBtn.classList.add('panels-on');
+    }
+
+    // §74 — SDDF timeline collapse toggle (collapsed by default)
+    var sddfCollapseBtn = document.getElementById('vcSfSddfCollapseBtn');
+    var sddfTimeline    = sfPage.querySelector('.vc-sf-sddf-timeline-h');
+    if (sddfCollapseBtn && sddfTimeline) {
+      sddfCollapseBtn.addEventListener('click', function () {
+        var collapsed = sddfTimeline.classList.toggle('sddf-collapsed');
+        sddfCollapseBtn.textContent = collapsed ? '▼ PIPELINE' : '▲ PIPELINE';
+        sddfCollapseBtn.title = collapsed ? 'Expandir pipeline SDDF' : 'Colapsar pipeline SDDF';
+      });
+      // Start collapsed
+      sddfTimeline.classList.add('sddf-collapsed');
+      sddfCollapseBtn.textContent = '▼ PIPELINE';
+    }
+
+    // Chat send — §74.1 Arquiteto fixo, sempre _sfArchitectSend
+    var sendBtn = document.getElementById('vcSfChatSendBtn');
+    if (sendBtn) {
+      sendBtn.addEventListener('click', function () {
+        _sfArchitectSend('vcSfChatInput', 'vcSfChatStream');
+      });
+    }
+    var chatInput = document.getElementById('vcSfChatInput');
+    if (chatInput) {
+      chatInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          _sfArchitectSend('vcSfChatInput', 'vcSfChatStream');
+        }
+      });
+    }
+
+    // SDDF timeline node clicks → switch module
+    var sddfContainer = document.getElementById('vcSfSddfSteps');
+    if (sddfContainer) {
+      sddfContainer.addEventListener('click', function (e) {
+        var step = e.target.closest('.vc-sf-sddf-step');
+        if (step && step.dataset.sfModule) {
+          setSoftwareFactoryModule(step.dataset.sfModule);
+        }
+      });
+    }
+
+    // Chip group toggles (single-active per group)
+    sfPage.addEventListener('click', function (e) {
+      var chip = e.target.closest('[data-sf-chip-group]');
+      if (!chip) return;
+      var group = chip.dataset.sfChipGroup;
+      sfPage.querySelectorAll('[data-sf-chip-group="' + group + '"]').forEach(function (c) {
+        c.classList.remove('active');
+      });
+      chip.classList.add('active');
+      var label = chip.textContent.trim();
+      // Update config cards in module panel
+      var panelMap = { project_type: 'vcSfConfigType', stack: 'vcSfConfigStack', orch: 'vcSfConfigOrch' };
+      if (panelMap[group]) {
+        var el = document.getElementById(panelMap[group]);
+        if (el) el.textContent = label;
+      }
+      // Mirror to left summary
+      var summaryMap = { project_type: 'vcSfSummaryType', stack: 'vcSfSummaryStack', orch: 'vcSfSummaryOrch' };
+      if (summaryMap[group]) {
+        var sel = document.getElementById(summaryMap[group]);
+        if (sel) sel.textContent = label;
+      }
+    });
+
+    // EXECUTAR SDDF button (local echo only)
+    var runBtn = document.getElementById('vcSfRunBtn');
+    if (runBtn) {
+      runBtn.addEventListener('click', function () {
+        var stream = document.getElementById('vcSfChatStream');
+        if (!stream) return;
+        var hint = stream.querySelector('.vc-sf-chat-hint');
+        if (hint) hint.remove();
+        var msg = document.createElement('div');
+        msg.className = 'vc-sf-chat-msg';
+        msg.textContent = '[LOCAL] SDDF local: nenhum backend conectado. Configure módulo e copie para worker externo.';
+        stream.appendChild(msg);
+        stream.scrollTop = stream.scrollHeight;
+        var feed = document.getElementById('vcSfActivityFeed');
+        if (feed) {
+          var item = document.createElement('div');
+          item.className = 'vc-sf-activity-item';
+          item.innerHTML = '<span>EXECUTAR SDDF pressionado — local only</span>';
+          feed.insertBefore(item, feed.firstChild);
+          while (feed.children.length > 8) { feed.removeChild(feed.lastChild); }
+        }
+      });
+    }
+
+    // Module-level generate / copy buttons
+    document.querySelectorAll('[data-sf-generate]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var targetId = btn.dataset.sfGenerate;
+        var output   = document.getElementById(targetId);
+        if (!output) return;
+        var moduleId = btn.closest('.vc-sf-module-panel') &&
+          btn.closest('.vc-sf-module-panel').id.replace('vcSfPanel-', '');
+        var mod = SF_MODULES.find(function (m) { return m.id === moduleId; });
+        var modName = mod ? mod.name : 'MÓDULO';
+        output.value = '── ' + modName + ' ──────────────────────────────────\n' +
+          'Gerado em: ' + new Date().toLocaleString('pt-BR') + '\n' +
+          'Status: ' + (_backendConnected ? 'WORKER CONECTADO' : 'LOCAL PREVIEW') + '\n' +
+          'Execução real: BLOQUEADA\n' +
+          'Backend: ' + (_backendConnected ? 'CONECTADO' + (_backendVersion ? ' — v' + _backendVersion : '') : 'NÃO CONECTADO') + '\n' +
+          'Worker: ' + BACKEND_URL + '\n\n' +
+          '[Use o painel completo no cockpit para configuração detalhada.]';
+        output.classList.remove('empty');
+        btn.textContent = '✓ GERADO';
+        setTimeout(function () { btn.textContent = btn.dataset.sfLabel || '⬡ GERAR'; }, 2400);
+      });
+    });
+
+    document.querySelectorAll('[data-sf-copy]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var sourceId = btn.dataset.sfCopy;
+        var source   = document.getElementById(sourceId);
+        if (!source) return;
+        var text = source.value || source.textContent || '';
+        if (!text || !text.trim()) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () {
+            btn.textContent = '✓ COPIADO';
+            setTimeout(function () { btn.textContent = '⎘ COPIAR'; }, 1800);
+          }).catch(function () {
+            btn.textContent = 'SELECIONE MANUALMENTE';
+            setTimeout(function () { btn.textContent = '⎘ COPIAR'; }, 2200);
+          });
+        }
+      });
+    });
+
+    // §73.1d — Spec panel toggle
+    var specToggleBtn = document.getElementById('vcSfSpecToggleBtn');
+    if (specToggleBtn) {
+      specToggleBtn.addEventListener('click', function () {
+        var list  = document.getElementById('vcSfSpecList');
+        var arrow = document.getElementById('vcSfSpecArrow');
+        _sfSpecPanelOpen = !_sfSpecPanelOpen;
+        if (list)  list.style.display = _sfSpecPanelOpen ? '' : 'none';
+        if (arrow) arrow.textContent  = _sfSpecPanelOpen ? '▲' : '▼';
+      });
+    }
+
+    // Initialize first module
+    setSoftwareFactoryModule(_sfActiveModule);
+  }
+
+
   function initSpecLibraryPage() {
     var sfPage  = document.getElementById('vcSoftwareFactoryPage');
     if (!sfPage) return;
@@ -8322,6 +8540,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     try { initRealFileCommandPackage(); } catch (e) { console.error('[vc] initRealFileCommandPackage:', e); }
     try { initWorkerResultReceipt(); } catch (e) { console.error('[vc] initWorkerResultReceipt:', e); }
     try { initFinalProductDashboard(); } catch (e) { console.error('[vc] initFinalProductDashboard:', e); }
+    try { initSoftwareFactoryPage(); } catch (e) { console.error('[vc] initSoftwareFactoryPage:', e); }
     try { initSpecLibraryPage(); } catch (e) { console.error('[vc] initSpecLibraryPage:', e); }
     try { initMainChat(); } catch (e) { console.error('[vc] initMainChat:', e); }
     try { initAuthModal(); } catch (e) { console.error('[vc] initAuthModal:', e); }
