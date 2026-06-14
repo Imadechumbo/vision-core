@@ -8745,10 +8745,42 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     }
   }
 
+  // §95 mascote refs
+  var _mascotIdle    = document.getElementById('vcMascotIdle');
+  var _mascotReading = document.getElementById('vcMascotReading');
+  var _typeTimer     = null;
+
+  function _setMascot(state) {
+    if (!_mascotIdle || !_mascotReading) return;
+    if (state === 'reading') {
+      _mascotIdle.classList.remove('active');
+      _mascotReading.classList.add('active');
+    } else {
+      _mascotReading.classList.remove('active');
+      _mascotIdle.classList.add('active');
+    }
+  }
+
   function typeText(text, el, onDone) {
     if (_typeTimer) { clearInterval(_typeTimer); _typeTimer = null; }
-    el.textContent = text;
-    if (onDone) onDone();
+    el.textContent = '';
+    _setMascot('reading');
+    nextBtn.disabled = true;
+    var i = 0;
+    var speed = Math.max(12, Math.min(28, Math.floor(2400 / text.length)));
+    _typeTimer = setInterval(function() {
+      el.textContent += text[i];
+      i++;
+      if (i >= text.length) {
+        clearInterval(_typeTimer);
+        _typeTimer = null;
+        setTimeout(function() {
+          _setMascot('idle');
+          nextBtn.disabled = false;
+        }, 300);
+        if (onDone) onDone();
+      }
+    }, speed);
   }
 
   function showStep(idx) {
@@ -8765,7 +8797,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
   function closeTutorial() {
     if (_typeTimer) { clearInterval(_typeTimer); _typeTimer = null; }
-    setMascot('idle');
+    _setMascot('idle');
     nextBtn.disabled = false;
     overlay.style.display = 'none';
     overlay.classList.remove('active');
