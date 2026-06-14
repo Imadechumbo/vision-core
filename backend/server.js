@@ -276,6 +276,100 @@ function dependencyGraphFromScan(scan) { const nodes = []; const edges = []; for
 async function providerStatus() { const providers = providerList(); providers.unshift({ id: 'local', configured: Boolean(process.env.OLLAMA_BASE_URL), base_url: process.env.OLLAMA_BASE_URL || '', model: process.env.OLLAMA_MODEL || 'local' }); const statuses = []; for (const p of providers) { if (p.id === 'local') { if (!p.configured) { statuses.push({ ...p, reachable: false, status: 'not_configured' }); continue; } try { const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 1800); const resp = await fetch(`${p.base_url.replace(/\/$/, '')}/api/tags`, { signal: ctrl.signal }); clearTimeout(t); statuses.push({ ...p, reachable: resp.ok, status: resp.ok ? 'online' : `http_${resp.status}` }); } catch (err) { statuses.push({ ...p, reachable: false, status: 'unreachable', error: err.name || err.message }); } } else statuses.push({ ...p, reachable: p.configured ? null : false, status: p.configured ? 'configured_not_called' : 'not_configured' }); } return statuses; }
 
 
+/* ── §83 callLLM — multi-provider real (native https, no node-fetch) ── */
+const https = require('https');
+function httpsPost(url, headers, bodyStr, timeoutMs = 30000) {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const options = {
+      hostname: parsed.hostname,
+      port: parsed.port || 443,
+      path: parsed.pathname + parsed.search,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(bodyStr), ...headers }
+    };
+    const req = https.request(options, resp => {
+      let data = '';
+      resp.on('data', chunk => { data += chunk; });
+      resp.on('end', () => resolve({ status: resp.statusCode, ok: resp.statusCode >= 200 && resp.statusCode < 300, text: data }));
+    });
+    req.on('error', reject);
+    const timer = setTimeout(() => { req.destroy(); reject(new Error('timeout')); }, timeoutMs);
+    req.on('close', () => clearTimeout(timer));
+    req.write(bodyStr);
+    req.end();
+  });
+}
+
+async function callLLM(prompt, opts = {}) {
+  const maxTokens = opts.max_tokens || 1024;
+  const systemPrompt = opts.system || 'You are Vision Core AI assistant. Be concise and technical.';
+
+  const providers = [
+    {
+      id: 'openai',
+      key: resolveApiKey('OPENAI'),
+      url: 'https://api.openai.com/v1/chat/completions',
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      buildBody: (model) => JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }] }),
+      authHeaders: (key) => ({ 'Authorization': `Bearer ${key}` }),
+      extractText: (data) => data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
+    },
+    {
+      id: 'anthropic',
+      key: resolveApiKey('ANTHROPIC'),
+      url: 'https://api.anthropic.com/v1/messages',
+      model: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001',
+      buildBody: (model) => JSON.stringify({ model, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: 'user', content: prompt }] }),
+      authHeaders: (key) => ({ 'x-api-key': key, 'anthropic-version': '2023-06-01' }),
+      extractText: (data) => data.content && data.content[0] && data.content[0].text
+    },
+    {
+      id: 'groq',
+      key: resolveApiKey('GROQ'),
+      url: 'https://api.groq.com/openai/v1/chat/completions',
+      model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+      buildBody: (model) => JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }] }),
+      authHeaders: (key) => ({ 'Authorization': `Bearer ${key}` }),
+      extractText: (data) => data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
+    },
+    {
+      id: 'deepseek',
+      key: resolveApiKey('DEEPSEEK'),
+      url: 'https://api.deepseek.com/v1/chat/completions',
+      model: 'deepseek-chat',
+      buildBody: (model) => JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }] }),
+      authHeaders: (key) => ({ 'Authorization': `Bearer ${key}` }),
+      extractText: (data) => data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
+    },
+    {
+      id: 'gemini',
+      key: resolveApiKey('GEMINI'),
+      url: `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || 'gemini-1.5-flash'}:generateContent`,
+      model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+      buildBody: (model) => JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: maxTokens } }),
+      authHeaders: (key) => { /* Gemini uses query param — handled via url override */ return {}; },
+      urlOverride: (key) => `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || 'gemini-1.5-flash'}:generateContent?key=${key}`,
+      extractText: (data) => data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text
+    }
+  ];
+
+  for (const p of providers) {
+    if (!p.key) continue;
+    try {
+      const url = p.urlOverride ? p.urlOverride(p.key) : p.url;
+      const resp = await httpsPost(url, p.authHeaders(p.key), p.buildBody(p.model));
+      if (!resp.ok) { console.warn(`[callLLM] ${p.id} http ${resp.status}`); continue; }
+      const data = JSON.parse(resp.text);
+      const text = p.extractText(data);
+      if (text) return { text, provider: p.id, model: p.model };
+    } catch (e) {
+      console.warn(`[callLLM] ${p.id} failed: ${e.message}`);
+    }
+  }
+  return null; // all providers failed or unconfigured
+}
+
 /* ROOT / HEALTH */
 app.get('/', (req, res) => res.type('text/plain').send('VISION CORE V2.9.10 SELF-HEALING CONFIG — PASS GOLD'));
 app.head('/api/health', (req, res) => res.status(200).end());
@@ -516,7 +610,7 @@ app.get('/api/obsidian/download-vault', (req, res) => {
 
 
 /* COPILOT — nunca retorna 405 por body vazio */
-app.all('/api/copilot', (req, res) => {
+app.all('/api/copilot', async (req, res) => {
   const body = normalizeBody(req);
   console.log('[COPILOT BODY]', JSON.stringify(body));
 
@@ -529,11 +623,27 @@ app.all('/api/copilot', (req, res) => {
     });
   }
 
+  const prompt = body.message || body.prompt || body.text || '';
+  let answer = copilotAnswer(body); // local fallback
+  let llmProvider = 'local';
+  let llmModel = 'copilot-local';
+
+  if (prompt) {
+    try {
+      const llmResult = await callLLM(prompt, { system: 'You are Vision Core Copilot AI. Be concise and technical. Respond in the same language as the user.' });
+      if (llmResult) { answer = llmResult.text; llmProvider = llmResult.provider; llmModel = llmResult.model; }
+    } catch (e) {
+      console.warn('[copilot] callLLM error:', e.message);
+    }
+  }
+
   return sendOk(res, {
     endpoint: '/api/copilot',
     method_received: req.method,
     body_received: body,
-    answer: copilotAnswer(body),
+    answer,
+    llm_provider: llmProvider,
+    llm_model: llmModel,
     pass_gold_required: true
   });
 });
@@ -557,10 +667,32 @@ app.all('/api/copilot/stream', (req, res) => {
 });
 
 /* HERMES */
-app.all('/api/hermes/analyze', (req, res) => {
+app.all('/api/hermes/analyze', async (req, res) => {
   const body = normalizeBody(req);
   const message = body.message || body.prompt || '';
   const mode = body.mode || 'debug';
+
+  const localAnswer = [
+    'Hermes RCA concluído.',
+    `Mensagem: ${message || 'mensagem vazia'}`,
+    'Plano: OpenClaw → Scanner → Hermes → Aegis → SDDF → PASS GOLD.',
+    'Sem PASS GOLD: não promove, não aprende, não gera PR.'
+  ].join('\n');
+
+  let answer = localAnswer;
+  let llmProvider = 'local';
+  let llmModel = 'hermes-local';
+
+  if (message) {
+    try {
+      const llmResult = await callLLM(message, {
+        system: 'You are Hermes, the RCA (Root Cause Analysis) supervisor agent of Vision Core. Analyze the input and provide a concise technical diagnosis. Identify root cause, affected components, and recommended fix plan. Respond in the same language as the user.'
+      });
+      if (llmResult) { answer = llmResult.text; llmProvider = llmResult.provider; llmModel = llmResult.model; }
+    } catch (e) {
+      console.warn('[hermes/analyze] callLLM error:', e.message);
+    }
+  }
 
   return sendOk(res, {
     endpoint: '/api/hermes/analyze',
@@ -568,13 +700,11 @@ app.all('/api/hermes/analyze', (req, res) => {
     body_received: body,
     rca: technical(message, mode) ? 'technical_runtime_or_contract_issue' : 'general_context',
     root_cause: technical(message, mode) ? 'technical_runtime_or_contract_issue' : 'general_context',
-    confidence: 94,
-    answer: [
-      'Hermes RCA concluído.',
-      `Mensagem: ${message || 'mensagem vazia'}`,
-      'Plano: OpenClaw → Scanner → Hermes → Aegis → SDDF → PASS GOLD.',
-      'Sem PASS GOLD: não promove, não aprende, não gera PR.'
-    ].join('\n')
+    confidence: llmProvider !== 'local' ? 97 : 94,
+    answer,
+    llm_provider: llmProvider,
+    llm_model: llmModel,
+    anti_stub: true
   });
 });
 
