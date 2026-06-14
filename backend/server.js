@@ -1261,7 +1261,46 @@ app.get('/api/metrics/agents', (req, res) => {
   ];
   return sendOk(res, { agents, active_llm_providers: activeProviders, anti_stub: true });
 });
-app.get('/api/metrics/summary', (req, res) => sendOk(res, { runtime: { cpu: 12, memory: 28, disk: 33, network: 8 } }));
+app.get('/api/metrics/summary', (req, res) => {
+  try {
+    const os = require('os');
+    const cpus = os.cpus();
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const memPct = Math.round((usedMem / totalMem) * 100);
+
+    let cpuPct = 0;
+    if (cpus && cpus.length) {
+      const avg = cpus.reduce((acc, cpu) => {
+        const total = Object.values(cpu.times).reduce((a, b) => a + b, 0);
+        const idle = cpu.times.idle;
+        return acc + (1 - idle / total);
+      }, 0) / cpus.length;
+      cpuPct = Math.round(avg * 100);
+    }
+
+    const proc = process.memoryUsage();
+    const heapPct = Math.round((proc.heapUsed / proc.heapTotal) * 100);
+
+    return sendOk(res, {
+      runtime: {
+        cpu: cpuPct,
+        memory: memPct,
+        heap: heapPct,
+        uptime_s: Math.round(process.uptime()),
+        node_version: process.version,
+        platform: os.platform(),
+        total_mem_mb: Math.round(totalMem / 1024 / 1024),
+        free_mem_mb: Math.round(freeMem / 1024 / 1024),
+        load_avg: os.loadavg().map(v => Math.round(v * 100) / 100)
+      },
+      anti_stub: true
+    });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'metrics_failed', message: err.message, time: now() });
+  }
+});
 app.get('/api/dora-metrics', async (req, res) => {
   try {
     const passGoldDir = path.join(VAULT_ROOT, 'PASS-GOLD');
