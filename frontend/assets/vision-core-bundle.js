@@ -8186,26 +8186,54 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       });
     }
 
-    // Module-level generate / copy buttons
+    // Module-level generate / copy buttons — §84 B2: calls real SF endpoints
     document.querySelectorAll('[data-sf-generate]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var targetId = btn.dataset.sfGenerate;
-        var output   = document.getElementById(targetId);
-        if (!output) return;
-        var moduleId = btn.closest('.vc-sf-module-panel') &&
-          btn.closest('.vc-sf-module-panel').id.replace('vcSfPanel-', '');
-        var mod = SF_MODULES.find(function (m) { return m.id === moduleId; });
-        var modName = mod ? mod.name : 'MÓDULO';
-        output.value = '── ' + modName + ' ──────────────────────────────────\n' +
-          'Gerado em: ' + new Date().toLocaleString('pt-BR') + '\n' +
-          'Status: ' + (_backendConnected ? 'WORKER CONECTADO' : 'LOCAL PREVIEW') + '\n' +
-          'Execução real: BLOQUEADA\n' +
-          'Backend: ' + (_backendConnected ? 'CONECTADO' + (_backendVersion ? ' — v' + _backendVersion : '') : 'NÃO CONECTADO') + '\n' +
-          'Worker: ' + BACKEND_URL + '\n\n' +
-          '[Use o painel completo no cockpit para configuração detalhada.]';
-        output.classList.remove('empty');
-        btn.textContent = '✓ GERADO';
-        setTimeout(function () { btn.textContent = btn.dataset.sfLabel || '⬡ GERAR'; }, 2400);
+        var output = document.getElementById(targetId);
+        var moduleKey = targetId ? targetId.replace('vcSfOutput-', '') : '';
+        var _backendBase = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+
+        var SF_ENDPOINT_MAP = {
+          'project_builder':   '/api/sf/mission-composer',
+          'project_templates': '/api/sf/mission-composer',
+          'mission_composer':  '/api/sf/mission-composer',
+          'worker_handoff':    '/api/sf/worker-handoff',
+          'export_preview':    '/api/sf/deploy-blueprint',
+          'real_file_command': '/api/sf/patch-validator',
+          'worker_receipt':    '/api/sf/gold-gate',
+          'final_dashboard':   '/api/sf/gold-gate'
+        };
+        var endpoint = SF_ENDPOINT_MAP[moduleKey] || '/api/sf/mission-composer';
+
+        var origText = btn.dataset.sfLabel || btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '...';
+
+        var ctx = { project: window.__VISION_PROJECT__ || 'visioncore', timestamp: new Date().toISOString(), module: moduleKey };
+        fetch(_backendBase + endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ context: ctx })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var result = data.result || data.output || data.content || data.prompt || JSON.stringify(data, null, 2);
+          if (output) {
+            output.value = result;
+            output.classList.remove('empty');
+          }
+          btn.textContent = '✓ GERADO';
+          setTimeout(function() { btn.disabled = false; btn.textContent = origText; }, 2400);
+        })
+        .catch(function(err) {
+          if (output) {
+            output.value = '⚠ Erro ao gerar: ' + err.message + '\n\nVerifique se o backend está conectado.';
+            output.classList.remove('empty');
+          }
+          btn.disabled = false;
+          btn.textContent = origText;
+        });
       });
     });
 
