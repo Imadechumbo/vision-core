@@ -544,7 +544,7 @@ app.get('/api/auth/me', (req, res) => {
 });
 
 /* ── §88 OAUTH — Google + GitHub ── */
-const OAUTH_REDIRECT_BASE = process.env.OAUTH_REDIRECT_BASE || 'https://weiganlight.workers.dev';
+const OAUTH_REDIRECT_BASE = process.env.OAUTH_REDIRECT_BASE || 'https://visioncore-api-gateway.weiganlight.workers.dev';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://visioncoreai.pages.dev';
 
 function httpsGet(url, headers = {}) {
