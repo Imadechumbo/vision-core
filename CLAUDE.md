@@ -54,7 +54,6 @@
 - Planos FREE (BETA ATIVO) / PRO (EM BREVE) / ENTERPRISE (EM BREVE)
 - OAuth Google + GitHub botões funcionais (SSO ainda "Em breve")
 - Mascote: `mascote-idle-final.png` + `mascote-reading-final.png` em `frontend/assets/`
-- Upload de arquivos: `v298FileInput` + `v298AddFilesBtn` — wired e funcional
 
 ### OAuth (configurado nos providers)
 - Google Client ID: `793969655414-suvojcna44rchiq65n66io6flkf970ql.apps.googleusercontent.com`
@@ -75,11 +74,14 @@
 - Verificar por que o step `read` retorna erro
 - Criar stress test ST-01 que valida `ok=true` end-to-end
 - Só criar tutorial T2 (Agent Local) DEPOIS deste fix
-- **NOTA:** frontend NÃO chama 7070 diretamente — o exe provavelmente faz polling no backend
 
-### §98-B — Adicionar Arquivos no Mission Control (RESOLVIDO ✅)
-**Diagnóstico:** ID mudou de `v236FileInput` → `v298FileInput`. Wired em bundle.js linhas 6544-7729.
-**Status:** FUNCIONAL — upload + contexto no copiloto funcionando.
+### §98-B — Adicionar Arquivos no Mission Control (PRIORIDADE ALTA)
+**Problema:** Botão "+ Adicionar arquivos" (`v236FileInput`) existe no HTML mas não está claro se está wired no bundle.js
+**O que precisa:**
+- Verificar `grep -n "v236FileInput\|FileInput\|file.*attach" frontend/assets/vision-core-bundle.js`
+- Se não wired: implementar upload de arquivo junto com a missão
+- Arquivos devem ir no contexto do copiloto
+- Criar stress test ST-02
 
 ### §98-C — SF Módulos 05-06 Desbloqueados (PRIORIDADE MÉDIA)
 **Problema:** Módulos 05 (Preview de Criação) e 06 (Comando Real) têm `EXEC BLOQUEADO` no HTML
@@ -88,12 +90,14 @@
 - Decisão: implementar real ou marcar explicitamente como "Em breve no roadmap"
 - Se implementar: criar endpoints `/api/sf/preview-creation` e `/api/sf/real-command`
 - Se roadmap: substituir "EXEC BLOQUEADO" por badge "EM BREVE" consistente com o resto
+- Criar stress test ST-03/ST-04
 
 ### §98-D — Agentes Extras (PRIORIDADE MÉDIA)
 **Problema:** Cards de agentes existem (backend, database, auth, etc) mas não executam autonomamente
 **O que precisa:**
 - Implementar execução real de agentes especializados OU
 - Deixar claro que são catálogo/reserve para ativação futura
+- Criar stress test ST-05
 
 ### §98-E — Mission Timeline (PRIORIDADE BAIXA)
 **Problema:** Existe mas só popula após missão executada — não há persistência
@@ -113,7 +117,7 @@
 | ST | O que valida | Status |
 |----|-------------|--------|
 | ST-01 | Vision Agent Local end-to-end (`ok=true`) | ❌ Não criado |
-| ST-02 | Upload arquivo + missão com contexto | ✅ §98-B confirmado funcional |
+| ST-02 | Upload arquivo + missão com contexto | ❌ Não criado |
 | ST-03 | SF módulos 01-04 com LLM real | ❌ Não criado |
 | ST-04 | SF módulos 05-06 desbloqueados | ❌ Não criado |
 | ST-05 | Pipeline completo Missão→Diff→PASS GOLD→PR | ❌ Não criado |
@@ -132,7 +136,7 @@
 | T1 | Geral 13 passos | `vc_tutorial_done` | ✅ Live |
 | T2 | Vision Agent Local | `vc_tutorial_agent_done` | §98-A + ST-01 |
 | T3 | Software Factory | `vc_tutorial_sf_done` | §98-C + ST-03 |
-| T4 | Mission Control | `vc_tutorial_mission_done` | ST-05 |
+| T4 | Mission Control | `vc_tutorial_mission_done` | §98-B + ST-02 |
 | T5 | Agentes Extras | `vc_tutorial_agents_done` | §98-D + ST-05 |
 | T6 | PASS GOLD | `vc_tutorial_passgold_done` | ST-05 |
 
@@ -182,24 +186,26 @@ FREE_MISSION_LIMIT=5
 | §90 | Mascote animado + passo PASS GOLD leigo | s90-done | 4484d74 |
 | §91 | Mascote inline no balão (top-left) | s91-done | bfcb45f |
 | §92 | Fundo transparente mascote + positionBalloon viewport-safe | s92-done | fa8973f |
-| §93 | Balão preto #000000 + texto branco + imagens finais | s93-done | 9918877 |
-| §94 | Balão preto puro + mascote removido temporariamente | s94-done | e3506cb |
-| §95 | Mascote final top-right do balão + typewriter | s95-done | 19f0a94 |
-| §96 | Mascote dentro do balão + botão reabrir tutorial | s96-done | 11ef676 |
-| §97 | Mascote 36px ajustado no canto (top:8px right:8px) | s97-done | 6b51adc |
+| §93 | Balão preto #000000 + texto branco | s93-done | 9918877 |
+| §94 | Balão preto puro + mascote removido temporariamente | s94-done | - |
+| §95 | Mascote final top-right do balão + typewriter | s95-done | - |
+| §96 | Mascote dentro do balão + botão reabrir tutorial | s96-done | - |
+| §97 | Mascote 36px ajustado no canto | s97-done | - |
 
 ---
 
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
 1. **§98-A** — Fix Vision Agent Local (`ok=false`, `read` step falhando)
-   - Diagnosticar protocolo: o exe provavelmente faz polling no backend, não o contrário
-   - Criar `stress-test-agent-local.js`
+   - Criar `stress-test-agent-local.js` que testa POST localhost:7070/run
+   - Diagnosticar payload e fix
 
-2. **§98-C** — SF módulos 05-06-08: desbloquear ou badge "EM BREVE"
+2. **§98-B** — Fix "+ Adicionar arquivos" no Mission Control
+   - `grep -n "v236FileInput" frontend/assets/vision-core-bundle.js`
+   - Implementar se não wired
 
-3. **Stress tests ST-01, ST-03, ST-05, ST-06, ST-07, ST-08** — criar antes dos tutoriais
+3. **§98-C** — SF módulos 05-06: desbloquear ou "EM BREVE" consistente
 
-4. **Tutoriais T2-T6** — só depois de §98-A,C + stress tests passando
+4. **Stress tests ST-01 a ST-08** — criar todos antes dos tutoriais
 
-5. **§98-D** — Infraestrutura `vcStartSectionTutorial()` + botões por seção
+5. **Tutoriais T2-T6** — só depois de §98-A,B,C + stress tests passando
