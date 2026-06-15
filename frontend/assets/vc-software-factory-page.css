@@ -623,6 +623,14 @@
   background: rgba(239,68,68,.04);
   color: #fca5a5;
 }
+/* §98-C EM BREVE */
+.vc-sf-module-panel-badge.soon {
+  border-color: rgba(251,191,36,.28);
+  background: rgba(251,191,36,.05);
+  color: #fbbf24;
+}
+.vc-sf-agent-status.soon { color: #fbbf24; }
+.vc-sf-stat-val.soon     { color: #fbbf24; }
 
 /* ── Module inner components ─────────────────────────────────── */
 .vc-sf-section-label {
