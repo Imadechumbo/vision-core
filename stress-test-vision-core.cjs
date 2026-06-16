@@ -414,6 +414,51 @@ async function st09() {
   });
 }
 
+// ── ST-10: DETECÇÃO DE AGENTE ESPECIALIZADO (§98-D) ──────────────────────────
+async function st10() {
+  section('ST-10 — Deteccao de Agente Especializado (§98-D)');
+
+  await test('Mensagem com keyword "jwt" detecta Agente Auth', async () => {
+    const r = await POST(`${EB}/api/copilot`, { message: 'erro de jwt expirado no login' });
+    if (r.status === 429 || r.status === 401) return 'warn'; // quota/auth — skip
+    if (!r.ok) return `status ${r.status}`;
+    if (!r.body?.active_agent) return 'active_agent nao retornado';
+    if (r.body.active_agent.id !== 'auth') return `detectou ${r.body.active_agent.id}, esperado auth`;
+    return true;
+  });
+
+  await test('Mensagem com keyword "sql" detecta Agente Database', async () => {
+    const r = await POST(`${EB}/api/copilot`, { message: 'query sql lenta na tabela usuarios' });
+    if (r.status === 429 || r.status === 401) return 'warn';
+    if (!r.ok) return `status ${r.status}`;
+    if (!r.body?.active_agent) return 'active_agent nao retornado';
+    if (r.body.active_agent.id !== 'database') return `detectou ${r.body.active_agent.id}, esperado database`;
+    return true;
+  });
+
+  await test('Agente em modo OFF nao e detectado', async () => {
+    await POST(`${EB}/api/agents/auth/mode`, { mode: 'OFF' });
+    const r = await POST(`${EB}/api/copilot`, { message: 'erro de jwt expirado no token' });
+    if (r.status === 429 || r.status === 401) {
+      await POST(`${EB}/api/agents/auth/mode`, { mode: 'AUTO' });
+      return 'warn';
+    }
+    if (!r.ok) return `status ${r.status}`;
+    const detected = r.body?.active_agent?.id;
+    await POST(`${EB}/api/agents/auth/mode`, { mode: 'AUTO' }); // restaurar
+    if (detected === 'auth') return 'agente OFF ainda foi detectado';
+    return true;
+  });
+
+  await test('Mensagem generica sem keyword nao detecta agente', async () => {
+    const r = await POST(`${EB}/api/copilot`, { message: 'oi como vai tudo bem' });
+    if (r.status === 429 || r.status === 401) return 'warn';
+    if (!r.ok) return `status ${r.status}`;
+    if (r.body?.active_agent) return `detectou agente sem keyword: ${r.body.active_agent.id}`;
+    return true;
+  });
+}
+
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 async function main() {
   const args      = process.argv.slice(2);
@@ -439,6 +484,7 @@ async function main() {
   if (run('07')) await st07();
   if (run('08')) await st08();
   if (run('09')) await st09();
+  if (run('10')) await st10();
 
   console.log(`\n${SEP}\n  RESULTADO FINAL\n${SEP}`);
   console.log(`  ${G} Passaram: ${passed}`);

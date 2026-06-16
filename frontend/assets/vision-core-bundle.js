@@ -6755,6 +6755,13 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           appendMsg('⚠️ Fallback local — todos os provedores de IA falharam. Reduza o payload ou verifique as API keys.', 'error');
         }
         var answer = (data && data.answer) ? data.answer : JSON.stringify(data);
+        // §98-D: badge visual do agente especializado detectado
+        if (data && data.active_agent && data.active_agent.name) {
+          var agentBadgeEl = document.createElement('div');
+          agentBadgeEl.innerHTML = '<span class="vc-agent-badge">🤖 ' + data.active_agent.name + '</span>';
+          chatStream.appendChild(agentBadgeEl);
+          chatStream.scrollTop = chatStream.scrollHeight;
+        }
         addToHistory('assistant', answer);
         renderFetchBadge(data, chatStream);          // §21
         var hermesObj = parseHermesBlock(answer);

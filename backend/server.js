@@ -189,14 +189,17 @@ function technical(message, mode) {
   return /(erro|error|failed|cors|405|500|stack|deploy|sse|api|exception|trace|bug|regress|build|pipeline|pass gold|aws|cloudflare|elastic|beanstalk|debug)/i.test(text);
 }
 
-function copilotAnswer(body) {
+function copilotAnswer(body, activeAgent) {
   const message = body.message || body.prompt || body.text || '';
   const mode = body.mode || 'vision-geral';
   const model = body.model || 'auto';
 
+  // §98-D: prefixar resposta local com o nome do agente detectado
+  const agentPrefix = activeAgent ? `[${activeAgent.name}] ` : '';
+
   if (technical(message, mode)) {
     return [
-      'Hermes/Copilot recebeu o erro técnico.',
+      agentPrefix + 'Hermes/Copilot recebeu o erro técnico.',
       `Mensagem: ${message || 'mensagem vazia'}`,
       'Diagnóstico inicial: contrato/runtime precisa ser validado por SDDF.',
       'Próximo passo: executar missão para OpenClaw → Scanner → Hermes → Aegis → SDDF → PASS GOLD.',
@@ -205,7 +208,7 @@ function copilotAnswer(body) {
   }
 
   return [
-    'Vision Copilot ativo.',
+    agentPrefix + 'Vision Copilot ativo.',
     `Mensagem: ${message || 'mensagem vazia'}`,
     `Modo: ${mode}`,
     `Modelo: ${model}`,
@@ -826,13 +829,22 @@ app.all('/api/copilot', checkMissionQuota, async (req, res) => {
   }
 
   const prompt = body.message || body.prompt || body.text || '';
-  let answer = copilotAnswer(body); // local fallback
+
+  // §98-D: detectar agente especializado antes de chamar LLM
+  const activeAgent = detectActiveAgent(prompt);
+  if (activeAgent) console.log(`[copilot] agente detectado: ${activeAgent.id} (${activeAgent.name})`);
+
+  let answer = copilotAnswer(body, activeAgent); // local fallback
   let llmProvider = 'local';
   let llmModel = 'copilot-local';
 
   if (prompt) {
     try {
-      const llmResult = await callLLM(prompt, { system: 'You are Vision Core Copilot AI. Be concise and technical. Respond in the same language as the user.' });
+      // §98-D: incluir contexto do agente detectado no system prompt
+      const agentContext = activeAgent
+        ? ` You are acting as the specialized agent "${activeAgent.name}" (role: ${activeAgent.role}). Start your response with [${activeAgent.name}].`
+        : '';
+      const llmResult = await callLLM(prompt, { system: 'You are Vision Core Copilot AI. Be concise and technical. Respond in the same language as the user.' + agentContext });
       if (llmResult) { answer = llmResult.text; llmProvider = llmResult.provider; llmModel = llmResult.model; }
     } catch (e) {
       console.warn('[copilot] callLLM error:', e.message);
@@ -844,9 +856,11 @@ app.all('/api/copilot', checkMissionQuota, async (req, res) => {
     method_received: req.method,
     body_received: body,
     answer,
+    active_agent: activeAgent ? { id: activeAgent.id, name: activeAgent.name, role: activeAgent.role } : null,
     llm_provider: llmProvider,
     llm_model: llmModel,
-    pass_gold_required: true
+    pass_gold_required: true,
+    anti_stub: true
   });
 });
 
@@ -3118,22 +3132,36 @@ app.post('/api/agents/:id/mode', (req, res) => {
 });
 
 const _AGENTS_CATALOG = [
-  { id: 'hermes',      name: 'Hermes RCA',     role: 'Supervisor RCA',               method: 'CONVERSA', default_mode: 'AUTO' },
-  { id: 'aegis',       name: 'Aegis',           role: 'Validação de sintaxe',         method: 'CONVERSA', default_mode: 'AUTO' },
-  { id: 'scanner',     name: 'Scanner',         role: 'Análise estrutural',           method: 'CONVERSA', default_mode: 'AUTO' },
-  { id: 'patchengine', name: 'Patch Engine',    role: 'Geração de patches',           method: 'LOOP',     default_mode: 'AUTO' },
-  { id: 'passgold',    name: 'Pass Gold',       role: 'Gate de qualidade',            method: 'LOOP',     default_mode: 'AUTO' },
-  { id: 'openclaw',    name: 'OpenClaw',        role: 'Planejamento de tarefas',      method: 'CONVERSA', default_mode: 'AUTO' },
-  { id: 'benchmark',   name: 'Benchmark',       role: 'Métricas e performance',       method: 'AUTO',     default_mode: 'AUTO' },
-  { id: 'backend',     name: 'Agente Backend',  role: 'Express, rotas, server',       method: 'CONVERSA', default_mode: 'AUTO' },
-  { id: 'database',    name: 'Agente Database', role: 'Schema, queries',              method: 'CONVERSA', default_mode: 'AUTO' },
-  { id: 'auth',        name: 'Agente Auth',     role: 'Autenticação',                 method: 'CONVERSA', default_mode: 'AUTO' },
-  { id: 'frontend',    name: 'Agente Frontend', role: 'UI, componentes',              method: 'CONVERSA', default_mode: 'AUTO' },
-  { id: 'security',    name: 'Agente Security', role: 'Auditoria de segurança',       method: 'CONVERSA', default_mode: 'AUTO' },
-  { id: 'architect',   name: 'Arquiteto',       role: 'Classificação e planejamento', method: 'CONVERSA', default_mode: 'ON'   },
-  { id: 'locator',     name: 'Locator',         role: 'Busca em codebase',            method: 'CONVERSA', default_mode: 'AUTO' },
-  { id: 'memory',      name: 'Memory Agent',    role: 'Contexto de sessão',           method: 'CONVERSA', default_mode: 'AUTO' },
+  { id: 'hermes',      name: 'Hermes RCA',     role: 'Supervisor RCA',               method: 'CONVERSA', default_mode: 'AUTO', keywords: ['rca','root cause','causa raiz','diagnostico','diagnóstico'] },
+  { id: 'aegis',       name: 'Aegis',           role: 'Validação de sintaxe',         method: 'CONVERSA', default_mode: 'AUTO', keywords: ['sintaxe','lint','syntax','validacao','validação'] },
+  { id: 'scanner',     name: 'Scanner',         role: 'Análise estrutural',           method: 'CONVERSA', default_mode: 'AUTO', keywords: ['estrutura','scan','arquivos','diretorio','diretório'] },
+  { id: 'patchengine', name: 'Patch Engine',    role: 'Geração de patches',           method: 'LOOP',     default_mode: 'AUTO', keywords: ['patch','diff','correcao','correção'] },
+  { id: 'passgold',    name: 'Pass Gold',       role: 'Gate de qualidade',            method: 'LOOP',     default_mode: 'AUTO', keywords: ['pass gold','qualidade','gate','score'] },
+  { id: 'openclaw',    name: 'OpenClaw',        role: 'Planejamento de tarefas',      method: 'CONVERSA', default_mode: 'AUTO', keywords: ['planejamento','tarefa','orquestracao','orquestração'] },
+  { id: 'benchmark',   name: 'Benchmark',       role: 'Métricas e performance',       method: 'AUTO',     default_mode: 'AUTO', keywords: ['performance','benchmark','latencia','latência','metricas','métricas'] },
+  { id: 'backend',     name: 'Agente Backend',  role: 'Express, rotas, server',       method: 'CONVERSA', default_mode: 'AUTO', keywords: ['express','rota','rotas','route','middleware','server','api'] },
+  { id: 'database',    name: 'Agente Database', role: 'Schema, queries',              method: 'CONVERSA', default_mode: 'AUTO', keywords: ['sql','query','queries','schema','migration','banco de dados','database'] },
+  { id: 'auth',        name: 'Agente Auth',     role: 'Autenticação',                 method: 'CONVERSA', default_mode: 'AUTO', keywords: ['jwt','token','sessao','sessão','cors','401','403','login','autenticacao','autenticação'] },
+  { id: 'frontend',    name: 'Agente Frontend', role: 'UI, componentes',              method: 'CONVERSA', default_mode: 'AUTO', keywords: ['ui','componente','css','html','react','botao','botão'] },
+  { id: 'security',    name: 'Agente Security', role: 'Auditoria de segurança',       method: 'CONVERSA', default_mode: 'AUTO', keywords: ['seguranca','segurança','vulnerabilidade','security','exploit'] },
+  { id: 'architect',   name: 'Arquiteto',       role: 'Classificação e planejamento', method: 'CONVERSA', default_mode: 'ON',   keywords: ['arquitetura','stack','estrutura de projeto'] },
+  { id: 'locator',     name: 'Locator',         role: 'Busca em codebase',            method: 'CONVERSA', default_mode: 'AUTO', keywords: ['onde fica','localizar','encontrar arquivo','buscar codigo','buscar código'] },
+  { id: 'memory',      name: 'Memory Agent',    role: 'Contexto de sessão',           method: 'CONVERSA', default_mode: 'AUTO', keywords: ['lembrar','memoria','memória','contexto anterior','sessao anterior'] },
 ];
+
+// §98-D: detecta agente especializado com base em keywords da mensagem + modo ativo
+function detectActiveAgent(message) {
+  if (!message) return null;
+  const lower = message.toLowerCase();
+  for (const agent of _AGENTS_CATALOG) {
+    const mode = _agentModesStore[agent.id] || agent.default_mode;
+    if (mode === 'OFF') continue;
+    if (!agent.keywords) continue;
+    const matched = agent.keywords.some(kw => lower.includes(kw));
+    if (matched) return agent;
+  }
+  return null;
+}
 
 app.get('/api/agents/catalog', (req, res) => {
   const agents = _AGENTS_CATALOG.map(a => ({
