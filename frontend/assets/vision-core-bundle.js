@@ -8907,4 +8907,53 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   ];
 
   window.vcRegisterTutorial('agent', STEPS_AGENT, 'vc_tutorial_agent_done');
+
+  // ── T4: TUTORIAL MISSION CONTROL ──
+  var STEPS_MISSION = [
+    { title: '💬 Bem-vindo ao Mission Control', text: 'Aqui você conversa com a Vision AI sobre qualquer assunto técnico: cole um erro, descreva uma tarefa, ou peça para corrigir um projeto.', target: '#mission', pos: 'top' },
+    { title: '✍️ Digite sua missão', text: 'Escreva no campo de texto o que você precisa. Pode ser um erro colado, um log, um endpoint quebrado, ou uma descrição livre da tarefa.', target: '#v298Prompt', pos: 'top' },
+    { title: '＋ Anexe arquivos se precisar', text: 'Clique em "Adicionar arquivos" para enviar código, configs ou logs. O conteúdo entra no contexto da IA.', target: '#v298Prompt', pos: 'bottom' },
+    { title: '⚙️ Escolha o modo e modelo', text: '"Vision geral" conversa livremente. "Corrigir projeto" ou "Rodar SDDF" ativam o pipeline completo. O modelo pode ficar em automático ou você escolhe.', target: '#runMode', pos: 'top' },
+    { title: '📤 ENVIAR vs EXECUTAR MISSÃO', text: '"ENVIAR" é só conversa — a IA responde no chat. "EXECUTAR MISSÃO" dispara o pipeline real: Scanner → Hermes → PatchEngine → Aegis → PASS GOLD → PR.', target: '#v298RunBtn', pos: 'top' },
+    { title: '🎯 Acompanhe o pipeline', text: 'A timeline compacta mostra cada estágio em tempo real. Quando passar do PASS GOLD, o Pull Request é criado automaticamente no GitHub.', target: '.mini-pipeline', pos: 'bottom' },
+    { title: '🎁 Quota e planos', text: 'No plano FREE você tem 5 missões por mês, sem cartão. O badge no canto mostra quantas restam.', target: '#quotaBadge', pos: 'bottom' }
+  ];
+  window.vcRegisterTutorial('mission', STEPS_MISSION, 'vc_tutorial_mission_done');
+
+  // ── T6: TUTORIAL PASS GOLD ──
+  var STEPS_PASSGOLD = [
+    { title: '🏅 O que é PASS GOLD', text: 'PASS GOLD é o selo de aprovação do Vision Core. Só depois dele o sistema cria o Pull Request no GitHub — é como uma inspeção de qualidade antes da entrega.', target: '#score', pos: 'top' },
+    { title: '📊 Como funciona o score', text: 'Cada missão passa por gates: segurança, compatibilidade, estabilidade e testes. O score precisa estar acima do corte GOLD para liberar a promoção.', target: '#score', pos: 'top' },
+    { title: '🔁 Reprovou? Rollback automático', text: 'Se o código não atingir o corte, o Vision Core faz rollback automático. Nenhum código de baixa confiança chega ao seu repositório.', target: '#score', pos: 'bottom' },
+    { title: '🔗 GitHub Integration Real', text: 'Com PASS GOLD aprovado, o botão "Criar PR PASS GOLD" cria branch, aplica commit e abre o Pull Request de verdade via GitHub REST API.', target: '#githubPanel', pos: 'top' },
+    { title: '⚙️ Auto-merge Policy', text: 'Você pode configurar se PRs aprovados com PASS GOLD são mesclados automaticamente ou aguardam revisão manual.', target: '#githubPanel', pos: 'top' }
+  ];
+  window.vcRegisterTutorial('passgold', STEPS_PASSGOLD, 'vc_tutorial_passgold_done');
+
+  // ── T3: TUTORIAL SOFTWARE FACTORY ──
+  var STEPS_SF = [
+    { title: '◈ Bem-vindo à Software Factory', text: 'Aqui você monta um projeto do zero com 8 módulos de IA — da definição de stack até o blueprint de deploy.', target: '[data-open-sf-page]', pos: 'bottom' },
+    { title: '01 — Montar Projeto do Zero', text: 'Descreva o tipo de projeto e a stack desejada. A IA monta a estrutura inicial e sugere a arquitetura.', target: '[data-open-sf-page]', pos: 'bottom' },
+    { title: '03 — Templates de Projeto', text: 'Use blueprints locais prontos para acelerar o início — templates testados para os padrões mais comuns de SaaS e API.', target: '[data-open-sf-page]', pos: 'bottom' },
+    { title: '04 — Compositor de Missão', text: 'Transforma sua descrição em um prompt estruturado e pronto para copiar.', target: '[data-open-sf-page]', pos: 'bottom' },
+    { title: '05 — Pacotes para Workers', text: 'Gera o pacote de handoff completo para um worker externo executar.', target: '[data-open-sf-page]', pos: 'bottom' },
+    { title: '🟡 Módulos em breve', text: 'Comando para Criação Real, Preview de Criação e Painel Final aparecem como "EM BREVE" — esses módulos de execução direta ainda não criam nada automaticamente.', target: '[data-open-sf-page]', pos: 'bottom' },
+    { title: '🏅 Gold Gate — o validador final', text: 'Antes de qualquer entrega, o Gold Gate avalia segurança, risco e qualidade — o mesmo padrão de validação do PASS GOLD.', target: '[data-open-sf-page]', pos: 'bottom' }
+  ];
+  window.vcRegisterTutorial('sf', STEPS_SF, 'vc_tutorial_sf_done');
+
+  // T-MENU: toggle do accordion na sidebar
+  window.vcToggleTutorialMenu = function() {
+    var panel   = document.getElementById('vcTutPanel');
+    var chevron = document.getElementById('vcTutChevron');
+    if (!panel) return;
+    var isOpen = panel.classList.contains('open');
+    if (isOpen) {
+      panel.classList.remove('open');
+      if (chevron) chevron.classList.remove('open');
+    } else {
+      panel.classList.add('open');
+      if (chevron) chevron.classList.add('open');
+    }
+  };
 })();

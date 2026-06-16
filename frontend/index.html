@@ -66,6 +66,18 @@
 /* Botão tutorial por seção (compartilhado T2/T3/T4/T6) */
 .vc-section-tutorial-btn{background:none;border:1px solid #6366f1;color:#6366f1;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600;transition:all .2s;display:block;margin-bottom:10px;}
 .vc-section-tutorial-btn:hover{background:#6366f1;color:#fff;}
+/* T-MENU: accordion de tutoriais na sidebar */
+.vc-sidebar-divider{height:1px;background:rgba(255,255,255,.08);margin:10px 14px}
+.vc-tut-menu-btn{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;color:#a78bfa;font-size:13px;font-weight:600;padding:10px 14px;cursor:pointer;text-align:left}
+.vc-tut-menu-btn:hover{background:rgba(167,139,250,.08)}
+.vc-tut-chevron{font-size:11px;transition:transform .2s}
+.vc-tut-chevron.open{transform:rotate(180deg)}
+.vc-tut-panel{display:none;flex-direction:column;padding-left:8px}
+.vc-tut-panel.open{display:flex}
+.vc-tut-item{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;font-size:12px;color:#cbd5e1;text-decoration:none;border-radius:6px;margin:1px 6px}
+.vc-tut-item:hover{background:rgba(99,102,241,.12);color:#fff}
+.vc-tut-item-disabled{opacity:.5;cursor:not-allowed;pointer-events:none}
+.vc-tut-soon{font-size:9px;font-weight:700;background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;padding:1px 6px;border-radius:3px;text-transform:uppercase}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
@@ -130,6 +142,35 @@
       <a href="#marketplace">▣ TOOLS MARKETPLACE</a>
       <a href="#metricsBoard">▥ MÉTRICAS</a>
       <a href="#agentsBoard">⚙ AGENTES EXTRAS</a>
+
+      <div class="vc-sidebar-divider"></div>
+
+      <button id="vcTutMenuBtn" class="vc-tut-menu-btn" type="button" onclick="window.vcToggleTutorialMenu()">
+        <span>🪐 Tutoriais</span>
+        <span id="vcTutChevron" class="vc-tut-chevron">▾</span>
+      </button>
+
+      <div id="vcTutPanel" class="vc-tut-panel">
+        <a href="#" class="vc-tut-item" onclick="window.vcStartTutorial(); return false;">
+          <span>◉ Geral</span>
+        </a>
+        <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('agent'); return false;">
+          <span>🖥 Agent local</span>
+        </a>
+        <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('mission'); return false;">
+          <span>◎ Mission control</span>
+        </a>
+        <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('sf'); return false;">
+          <span>◈ Software factory</span>
+        </a>
+        <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('passgold'); return false;">
+          <span>🏅 Pass gold</span>
+        </a>
+        <a href="#" class="vc-tut-item vc-tut-item-disabled" onclick="return false;">
+          <span>🤖 Agentes extras</span>
+          <span class="vc-tut-soon">em breve</span>
+        </a>
+      </div>
     </nav>
   </aside>
 
@@ -2000,7 +2041,6 @@
       </div>
 
       <div id="mc-tab-agent" class="mc-tab-pane">
-        <button class="vc-section-tutorial-btn" onclick="window.vcStartSectionTutorial('agent')" type="button">🪐 Tutorial desta seção</button>
         <a class="btn agent-download full" href="https://github.com/Imadechumbo/vision-core/releases/download/v1.0.0-agent/VisionAgentSetup.exe">⬇ VisionAgentSetup.exe (Windows)</a>
         <a class="btn ghost full" href="downloads/vision-agent.js" download>⬇ vision-agent.js (só Node.js)</a>
         <div class="agent-cmd">node vision-agent.js C:\meu-projeto</div>
