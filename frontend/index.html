@@ -63,6 +63,9 @@
 .oauth-badge{font-size:9px;font-weight:700;background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;padding:1px 5px;border-radius:3px;margin-left:6px;vertical-align:middle;text-transform:uppercase;letter-spacing:.05em;}
 .oauth-soon{opacity:.6!important;cursor:not-allowed!important;}
 .oauth-soon:hover{opacity:.6!important;transform:none!important;}
+/* Botão tutorial por seção (compartilhado T2/T3/T4/T6) */
+.vc-section-tutorial-btn{background:none;border:1px solid #6366f1;color:#6366f1;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:600;transition:all .2s;display:block;margin-bottom:10px;}
+.vc-section-tutorial-btn:hover{background:#6366f1;color:#fff;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
@@ -1997,6 +2000,7 @@
       </div>
 
       <div id="mc-tab-agent" class="mc-tab-pane">
+        <button class="vc-section-tutorial-btn" onclick="window.vcStartSectionTutorial('agent')" type="button">🪐 Tutorial desta seção</button>
         <a class="btn agent-download full" href="https://github.com/Imadechumbo/vision-core/releases/download/v1.0.0-agent/VisionAgentSetup.exe">⬇ VisionAgentSetup.exe (Windows)</a>
         <a class="btn ghost full" href="downloads/vision-agent.js" download>⬇ vision-agent.js (só Node.js)</a>
         <div class="agent-cmd">node vision-agent.js C:\meu-projeto</div>

@@ -8842,4 +8842,69 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       window.vcStartTutorial();
     });
   }
+
+  // §T2: expor setter para tutoriais de seção reutilizarem overlay/mascote do T1
+  window._vcSetActiveTutorial = function(stepsArr) {
+    if (_typeTimer) { clearInterval(_typeTimer); _typeTimer = null; }
+    STEPS   = stepsArr;
+    current = 0;
+    overlay.style.display = 'block';
+    overlay.classList.add('active');
+    showStep(0);
+  };
+})();
+
+/* ── SISTEMA DE TUTORIAIS POR SEÇÃO (T2/T3/T4/T6) ── */
+(function initSectionTutorials() {
+  window.vcTutorials = window.vcTutorials || {};
+
+  window.vcRegisterTutorial = function(name, steps, storageKey) {
+    window.vcTutorials[name] = { steps: steps, key: storageKey };
+  };
+
+  window.vcStartSectionTutorial = function(name) {
+    var t = window.vcTutorials[name];
+    if (!t) { console.warn('[Vision] Tutorial não encontrado:', name); return; }
+    if (typeof window._vcSetActiveTutorial === 'function') {
+      window._vcSetActiveTutorial(t.steps);
+    } else {
+      console.warn('[Vision] _vcSetActiveTutorial não disponível');
+    }
+  };
+
+  // ── T2: TUTORIAL VISION AGENT LOCAL ──
+  var STEPS_AGENT = [
+    {
+      title: '🪐 O que é o Vision Agent Local',
+      text: 'É um programa pequeno que roda no seu computador e dá ao Vision Core acesso real aos arquivos do seu projeto — sem precisar subir tudo para a nuvem.',
+      target: '#mc-tab-agent', pos: 'top'
+    },
+    {
+      title: '⬇️ Baixar e instalar',
+      text: 'Clique em "VisionAgentSetup.exe (Windows)" para o instalador completo, ou "vision-agent.js" se você já tem Node.js e prefere rodar direto.',
+      target: '#mc-tab-agent', pos: 'top'
+    },
+    {
+      title: '▶️ Rodando o agent',
+      text: 'Depois de instalado, o agent fica escutando em localhost:7070. Se outro programa já estiver usando essa porta (como o AnyDesk), mude a porta dele nas configurações antes de abrir o agent.',
+      target: '#mc-tab-agent', pos: 'top'
+    },
+    {
+      title: '🔍 O que ele faz: scan → search → read',
+      text: 'Quando uma missão chega, o agent primeiro escaneia a raiz do projeto, depois busca arquivos relevantes pela missão descrita, e por fim lê o conteúdo mais relevante para enviar ao Vision Core.',
+      target: '#mc-tab-agent', pos: 'top'
+    },
+    {
+      title: '📡 Conexão com o Worker',
+      text: 'O agent faz polling no Worker Gateway a cada poucos segundos perguntando se há missões pendentes para este projeto — assim ele trabalha junto com o Vision Core sem você precisar copiar e colar nada manualmente.',
+      target: '#mc-tab-agent', pos: 'top'
+    },
+    {
+      title: '✅ Resultado de volta',
+      text: 'Depois de executar, o agent envia o resultado (ok=true/false, arquivos lidos, detalhes de cada etapa) de volta para o backend, que segue o pipeline normal até o PASS GOLD.',
+      target: '#mc-tab-agent', pos: 'top'
+    }
+  ];
+
+  window.vcRegisterTutorial('agent', STEPS_AGENT, 'vc_tutorial_agent_done');
 })();
