@@ -133,7 +133,7 @@
 | T2 | Vision Agent Local | `vc_tutorial_agent_done` | ✅ LIBERADO — §98-A resolvido + ST-01 pass |
 | T3 | Software Factory | `vc_tutorial_sf_done` | ✅ LIBERADO — §98-C + ST-03 pass |
 | T4 | Mission Control | `vc_tutorial_mission_done` | ✅ LIBERADO — §98-B + ST-02 pass |
-| T5 | Agentes Extras | `vc_tutorial_agents_done` | ✅ LIBERADO — §98-D resolvido + ST-10 pass |
+| T5 | Agentes Extras | `vc_tutorial_agents_done` | ✅ LIVE — 5 passos (modos OFF/AUTO/ON, keywords, badge) |
 | T6 | PASS GOLD | `vc_tutorial_passgold_done` | ✅ LIBERADO — ST-06 pass |
 
 **Ativação:** Todos os tutoriais de seção abrem APENAS via botão "🪐 Tutorial desta seção" — NUNCA automático.
@@ -189,6 +189,7 @@ FREE_MISSION_LIMIT=5
 | §97 | Mascote 36px ajustado no canto | s97-done | - |
 | §99 | §98-A resolvido (falso positivo stress test) — ST-01..ST-08 36/36 pass | - | f9f2328 |
 | §100 | §98-D resolvido — detectActiveAgent() keywords + active_agent no copilot + badge chat — ST-10 4/4 | s98d-done | 136d33f |
+| §101 | T5 Agentes Extras live — 5 passos + accordion desbloqueado — tutoriais T1-T6 6/6 completos | t5-done | 61e8d71 |
 
 ---
 
@@ -196,7 +197,8 @@ FREE_MISSION_LIMIT=5
 
 1. **§98-E** — Mission Timeline: persistência no vault/localStorage
 
-2. **Tutoriais T2, T3, T4, T5, T6** — TODOS LIBERADOS (T5 também com §98-D resolvido)
+2. **Tutoriais T1-T6** — 6/6 LIVE em produção (accordion sidebar completo, todos clicáveis)
+   - T1 Geral · T2 Agent Local · T3 SF · T4 Mission Control · T5 Agentes Extras · T6 PASS GOLD
    - T2 Agent Local — `vc_tutorial_agent_done`
    - T3 Software Factory — `vc_tutorial_sf_done`
    - T4 Mission Control — `vc_tutorial_mission_done`
