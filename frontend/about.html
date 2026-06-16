@@ -413,8 +413,7 @@
         </div>
 
         <!-- §70 CI INFRA -->
-        <div style="background:#0a0f1a;border:2px solid #f59e0b;border-radius:16px;padding:24px;text-align:center;position:relative;overflow:hidden;box-shadow:0 0 30px rgba(245,158,11,0.1)">
-          <div style="position:absolute;top:12px;right:12px;background:#f59e0b;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:1px">ATUAL</div>
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:16px;padding:24px;text-align:center;position:relative;overflow:hidden">
           <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div>
           <div style="font-size:11px;letter-spacing:2px;color:#f59e0b;font-weight:700;margin-bottom:12px">§70 CI INFRA</div>
           <div style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">80/80</div>
@@ -425,6 +424,22 @@
             <div style="margin-bottom:4px">✅ V3 15/15 confirmado pós-§70</div>
             <div style="margin-bottom:4px">✅ cfn-hup restart absorvido</div>
             <div>🔑 §70 — causa: restart, não OOM</div>
+          </div>
+        </div>
+
+        <!-- §99-§101 ATUAL -->
+        <div style="background:#0a0f1a;border:2px solid #a78bfa;border-radius:16px;padding:24px;text-align:center;position:relative;overflow:hidden;box-shadow:0 0 30px rgba(167,139,250,0.1)">
+          <div style="position:absolute;top:12px;right:12px;background:#a78bfa;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:1px">ATUAL</div>
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#a78bfa,#c4b5fd)"></div>
+          <div style="font-size:11px;letter-spacing:2px;color:#a78bfa;font-weight:700;margin-bottom:12px">§99-§101 TUTORIAIS + AGENTES</div>
+          <div style="font-size:36px;font-weight:900;color:#fff;margin-bottom:4px">40/40</div>
+          <div style="font-size:24px;font-weight:700;color:#4ade80;margin-bottom:8px">100%</div>
+          <div style="font-size:11px;color:#a78bfa;margin-bottom:16px">✨ ST-00 a ST-10 — falso positivo eliminado</div>
+          <div style="font-size:11px;color:#94a3b8;line-height:1.5;text-align:left;background:#0f172a;border-radius:8px;padding:10px">
+            <div style="margin-bottom:4px">✅ Vision Agent Local: 100% real (não era bug)</div>
+            <div style="margin-bottom:4px">✅ Sistema de tutoriais T1-T6 completo</div>
+            <div style="margin-bottom:4px">✅ Accordion sidebar — 6 itens clicáveis</div>
+            <div>🔑 §98-D: agentes respondem por especialidade</div>
           </div>
         </div>
 
@@ -526,6 +541,24 @@
           <div style="font-size:28px;margin-bottom:10px">⚙️</div>
           <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"CI #79 e CI #82 voltaram com a suíte V3 zerada — 0/15 e 3/15 respectivamente. A suspeita inicial era memory leak ou instância EB subdimensionada para a carga acumulada de 25 requests. Os PID lifecycle nos logs do ambiente contaram uma história diferente: o Elastic Beanstalk reinicia o processo Node.js periodicamente por config refresh (cfn-hup), criando uma janela de 2 a 4 segundos sem resposta. Qualquer request nesse intervalo recebe um 502 do nginx — e nos dois runs problemáticos, o timing do CI coincidiu com exatamente esse gap. A solução não envolveu nenhuma mudança de infraestrutura: retry automático de 502 com 3 tentativas e 4 segundos de backoff, adicionado nos 5 runners de stress test. CI #83: 80/80, V3 15/15, nenhum retry precisou disparar nessa run."</div>
           <div style="font-size:11px;color:#64748b">— §70 retry 502 · CI #79→#83 · PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔍</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O stress test ST-01 reportava read❌ no Vision Agent Local há duas sessões — parecia um bug real no agente. A causa raiz era mais simples: o teste enviava o campo <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>mission</code>, mas o agent sempre esperou <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>input</code>. Curl direto no agent com o campo certo confirmou ok=true, 50 arquivos encontrados, leitura completa. O bug nunca existiu no produto — só no teste que o validava."</div>
+          <div style="font-size:11px;color:#64748b">— §98-A, ST-01 7/7, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🏷️</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>_agentModesStore</code> gravava o modo OFF/AUTO/ON de 15 agentes especializados desde a §80 — mas nada no <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/copilot</code> nunca lia esse valor. O usuário ligava o Agente Database para ON e nada mudava na conversa. A fix não foi reescrever a feature, foi conectar o fio que faltava: <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>detectActiveAgent()</code> faz keyword match e injeta o agente certo no system prompt do LLM, com badge visual no chat."</div>
+          <div style="font-size:11px;color:#64748b">— §98-D, ST-10 4/4, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🪐</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Seis tutoriais de seção (Agent Local, Mission Control, Software Factory, Pass Gold, Agentes Extras) foram implementados com uma única infraestrutura compartilhada — <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>vcRegisterTutorial</code>/<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>vcStartSectionTutorial</code> — em vez de seis sistemas isolados. Resultado: um item de menu na sidebar, accordion inline, zero duplicação de código entre os tutoriais."</div>
+          <div style="font-size:11px;color:#64748b">— §99-§101, T-MENU, PASS</div>
         </div>
 
       </div>
