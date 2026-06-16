@@ -8949,6 +8949,16 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   ];
   window.vcRegisterTutorial('sf', STEPS_SF, 'vc_tutorial_sf_done');
 
+  // ── T5: TUTORIAL AGENTES EXTRAS ──
+  var STEPS_AGENTS = [
+    { title: '🤖 O que são os Agentes Extras', text: 'São 15 especialistas — Backend, Database, Auth, Frontend, Security e outros — que ficam de prontidão para responder sobre o assunto certo quando você conversa no Mission Control.', target: '#agentsBoard', pos: 'top' },
+    { title: '🎛️ Três modos: OFF, AUTO, ON', text: 'OFF desliga o agente — ele nunca participa. AUTO deixa o Vision Core decidir quando ele é relevante. ON garante prioridade sempre que o assunto bate com a especialidade dele.', target: '#agentsBoard', pos: 'top' },
+    { title: '🔍 Como a detecção funciona', text: 'Cada agente tem palavras-chave da própria área — "jwt" e "token" acionam o Agente Auth, "sql" e "schema" acionam o Agente Database. Se a sua mensagem bater com alguma, ele entra na conversa.', target: '#agentsBoard', pos: 'top' },
+    { title: '🏷️ O badge no chat', text: 'Quando um agente especializado responde, aparece um selo "🤖 Nome do Agente" acima da resposta — assim você sabe exatamente quem está te ajudando.', target: '#mission', pos: 'top' },
+    { title: '⚙️ Ajustando os modos', text: 'Em "AGENTES EXTRAS" na sidebar, cada card tem os botões OFF/AUTO/ON. A escolha é salva no backend e vale para todas as suas próximas conversas.', target: '#agentsBoard', pos: 'top' }
+  ];
+  window.vcRegisterTutorial('agents', STEPS_AGENTS, 'vc_tutorial_agents_done');
+
   // T-MENU: toggle do accordion na sidebar
   window.vcToggleTutorialMenu = function() {
     var panel   = document.getElementById('vcTutPanel');
