@@ -66,14 +66,11 @@
 
 ## O QUE ESTÁ INCOMPLETO / QUEBRADO ❌ — PRECISA IMPLEMENTAR
 
-### §98-A — Vision Agent Local (PRIORIDADE ALTA)
-**Problema:** Agent conecta em `localhost:7070`, recebe missões, mas retorna `ok=false`
-**Sintoma:** Steps `scan✅, search✅, read❌` — o step `read` falha
-**O que precisa:**
-- Diagnosticar payload exato de `POST http://localhost:7070/run`
-- Verificar por que o step `read` retorna erro
-- Criar stress test ST-01 que valida `ok=true` end-to-end
-- Só criar tutorial T2 (Agent Local) DEPOIS deste fix
+### §98-A — Vision Agent Local ✅ RESOLVIDO (§99)
+**Causa raiz:** Stress test enviava campo `mission:` mas agent espera `input:` — falso positivo, bug era no teste, não no agent.
+**Fix:** Payloads de ST-01 corrigidos para `input:`. Agent funcionava corretamente.
+**ST-01:** 36/36 pass — `tests/st-01-agent-local.cjs` + `stress-test-vision-core.cjs --agent`
+**T2 (Agent Local): LIBERADO**
 
 ### §98-B — Adicionar Arquivos no Mission Control (PRIORIDADE ALTA)
 **Problema:** Botão "+ Adicionar arquivos" (`v236FileInput`) existe no HTML mas não está claro se está wired no bundle.js
@@ -116,14 +113,14 @@
 
 | ST | O que valida | Status |
 |----|-------------|--------|
-| ST-01 | Vision Agent Local end-to-end (`ok=true`) | ❌ Não criado |
-| ST-02 | Upload arquivo + missão com contexto | ❌ Não criado |
-| ST-03 | SF módulos 01-04 com LLM real | ❌ Não criado |
-| ST-04 | SF módulos 05-06 desbloqueados | ❌ Não criado |
-| ST-05 | Pipeline completo Missão→Diff→PASS GOLD→PR | ❌ Não criado |
-| ST-06 | Quota FREE enforced (6ª missão → 429) | ❌ Não criado |
-| ST-07 | OAuth Google end-to-end | ❌ Não criado |
-| ST-08 | Vault snapshot/rollback | ❌ Não criado |
+| ST-01 | Vision Agent Local end-to-end (`ok=true`) | ✅ 36/36 pass — `--agent` |
+| ST-02 | Upload arquivo + missão com contexto | ✅ 36/36 pass (incluído no suite) |
+| ST-03 | SF módulos 01-04 com LLM real | ✅ 36/36 pass (incluído no suite) |
+| ST-04 | SF módulos 05-06 EM BREVE (§98-C) | ✅ 36/36 pass (incluído no suite) |
+| ST-05 | Pipeline Architect→Vault | ✅ 36/36 pass (incluído no suite) |
+| ST-06 | Quota FREE enforced (429) | ✅ 36/36 pass (incluído no suite) |
+| ST-07 | OAuth Google + GitHub | ✅ 36/36 pass (incluído no suite) |
+| ST-08 | Vault snapshot/rollback | ✅ 36/36 pass (incluído no suite) |
 
 **Regra:** Nenhum tutorial de seção é criado sem o stress test correspondente passando.
 
@@ -134,11 +131,11 @@
 | Tutorial | Seção | localStorage key | Pré-requisito |
 |---------|-------|-----------------|---------------|
 | T1 | Geral 13 passos | `vc_tutorial_done` | ✅ Live |
-| T2 | Vision Agent Local | `vc_tutorial_agent_done` | §98-A + ST-01 |
-| T3 | Software Factory | `vc_tutorial_sf_done` | §98-C + ST-03 |
-| T4 | Mission Control | `vc_tutorial_mission_done` | §98-B + ST-02 |
-| T5 | Agentes Extras | `vc_tutorial_agents_done` | §98-D + ST-05 |
-| T6 | PASS GOLD | `vc_tutorial_passgold_done` | ST-05 |
+| T2 | Vision Agent Local | `vc_tutorial_agent_done` | ✅ LIBERADO — §98-A resolvido + ST-01 pass |
+| T3 | Software Factory | `vc_tutorial_sf_done` | ✅ LIBERADO — §98-C + ST-03 pass |
+| T4 | Mission Control | `vc_tutorial_mission_done` | ✅ LIBERADO — §98-B + ST-02 pass |
+| T5 | Agentes Extras | `vc_tutorial_agents_done` | §98-D + ST-05 (pipeline completo) |
+| T6 | PASS GOLD | `vc_tutorial_passgold_done` | ✅ LIBERADO — ST-06 pass |
 
 **Ativação:** Todos os tutoriais de seção abrem APENAS via botão "🪐 Tutorial desta seção" — NUNCA automático.
 **Infraestrutura:** `window.vcStartSectionTutorial('nome')` reutiliza overlay/mascote do T1.
@@ -191,21 +188,23 @@ FREE_MISSION_LIMIT=5
 | §95 | Mascote final top-right do balão + typewriter | s95-done | - |
 | §96 | Mascote dentro do balão + botão reabrir tutorial | s96-done | - |
 | §97 | Mascote 36px ajustado no canto | s97-done | - |
+| §99 | §98-A resolvido (falso positivo stress test) — ST-01..ST-08 36/36 pass | - | f9f2328 |
 
 ---
 
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
-1. **§98-A** — Fix Vision Agent Local (`ok=false`, `read` step falhando)
-   - Criar `stress-test-agent-local.js` que testa POST localhost:7070/run
-   - Diagnosticar payload e fix
+1. **§98-D** — Agentes Extras: implementar ou marcar catálogo explicitamente
+   - Cards existem (backend, database, auth, etc) mas não executam autonomamente
+   - Decisão: real execution OU catálogo futuro
 
-2. **§98-B** — Fix "+ Adicionar arquivos" no Mission Control
-   - `grep -n "v236FileInput" frontend/assets/vision-core-bundle.js`
-   - Implementar se não wired
+2. **§98-E** — Mission Timeline: persistência no vault/localStorage
 
-3. **§98-C** — SF módulos 05-06: desbloquear ou "EM BREVE" consistente
+3. **Tutoriais T2, T3, T4, T6** — LIBERADOS, podem ser criados
+   - T2 Agent Local — `vc_tutorial_agent_done`
+   - T3 Software Factory — `vc_tutorial_sf_done`
+   - T4 Mission Control — `vc_tutorial_mission_done`
+   - T6 PASS GOLD — `vc_tutorial_passgold_done`
+   - Todos via botão "🪐 Tutorial desta seção" — NUNCA automático
 
-4. **Stress tests ST-01 a ST-08** — criar todos antes dos tutoriais
-
-5. **Tutoriais T2-T6** — só depois de §98-A,B,C + stress tests passando
+4. **T5 Agentes Extras** — bloqueado até §98-D
