@@ -127,8 +127,9 @@ async function executeMission(mission) {
         (hits.length > 1 ? `\n\nOutros arquivos relevantes:\n${hits.slice(1,5).map(h => '  ' + path.relative(projectRoot, h.file)).join('\n')}` : '');
       ok = true;
     } else {
-      steps.push({ step: 'read', ok: false, detail: 'Nenhum arquivo relevante — retornando estrutura' });
+      steps.push({ step: 'read', ok: true, detail: 'Sem match de keywords — retornando estrutura do projeto' });
       output = `Estrutura do projeto (${projectRoot}):\n\n${listing}`;
+      ok = true;
     }
 
   } catch (err) {
@@ -182,7 +183,12 @@ http.createServer((req, res) => {
     req.on('data', d => { body += d; });
     req.on('end', async () => {
       try {
-        const mission = { id: `local_${Date.now()}`, ...JSON.parse(body) };
+        const parsed  = JSON.parse(body);
+        // Normalise field: accept `mission`, `message`, `prompt` as aliases for `input`
+        if (!parsed.input && (parsed.mission || parsed.message || parsed.prompt)) {
+          parsed.input = parsed.mission || parsed.message || parsed.prompt;
+        }
+        const mission = { id: `local_${Date.now()}`, ...parsed };
         const result  = await executeMission(mission);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));

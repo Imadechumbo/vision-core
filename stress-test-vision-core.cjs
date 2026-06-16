@@ -124,11 +124,10 @@ async function st01() {
     return;
   }
 
-  await test('POST /run aceita missão', async () => {
+  await test('POST /run aceita missão (campo input)', async () => {
     const r = await POST(`${AGENT}/run`, {
-      mission: 'echo hello',
-      type: 'general',
-      mission_id: `st01_${Date.now()}`
+      input: 'echo hello world test',
+      type: 'general'
     });
     if (!r.ok) return `status ${r.status}: ${r.raw?.slice(0,200)}`;
     return true;
@@ -136,37 +135,39 @@ async function st01() {
 
   await test('Step scan ok=true', async () => {
     const r = await POST(`${AGENT}/run`, {
-      mission: 'scan projeto',
-      type: 'scan',
-      mission_id: `st01_scan_${Date.now()}`
+      input: 'scan projeto arquivos raiz',
+      type: 'general'
     });
     if (!r.ok) return `status ${r.status}`;
     if (r.body?.ok === false) return `ok=false: ${JSON.stringify(r.body).slice(0,200)}`;
+    const scan = r.body?.steps?.find(s => s.step === 'scan');
+    if (!scan?.ok) return `scan step ok=false`;
     return true;
   });
 
   await test('Step search ok=true', async () => {
     const r = await POST(`${AGENT}/run`, {
-      mission: 'search arquivos',
-      type: 'search',
-      mission_id: `st01_search_${Date.now()}`
+      input: 'server.js quota middleware backend route',
+      type: 'general'
     });
     if (!r.ok) return `status ${r.status}`;
     if (r.body?.ok === false) return `ok=false: ${JSON.stringify(r.body).slice(0,200)}`;
+    const search = r.body?.steps?.find(s => s.step === 'search');
+    if (!search?.ok) return `search step ok=false`;
     return true;
   });
 
-  await test('Step read ok=true (§98-A)', async () => {
+  await test('Step read ok=true (§98-A fix: campo input)', async () => {
     const r = await POST(`${AGENT}/run`, {
-      mission: 'ler arquivo package.json',
-      type: 'read',
-      file: 'package.json',
-      mission_id: `st01_read_${Date.now()}`
+      input: 'package.json dependências versão',
+      type: 'general'
     });
     if (!r.ok) return `status ${r.status}`;
     if (r.body?.ok === false) {
       return `READ FALHA §98-A: ${JSON.stringify(r.body).slice(0,300)}`;
     }
+    const read = r.body?.steps?.find(s => s.step === 'read');
+    if (!read?.ok) return `read step ok=false: ${read?.detail}`;
     return true;
   });
 
