@@ -89,12 +89,11 @@
 - Se roadmap: substituir "EXEC BLOQUEADO" por badge "EM BREVE" consistente com o resto
 - Criar stress test ST-03/ST-04
 
-### §98-D — Agentes Extras (PRIORIDADE MÉDIA)
-**Problema:** Cards de agentes existem (backend, database, auth, etc) mas não executam autonomamente
-**O que precisa:**
-- Implementar execução real de agentes especializados OU
-- Deixar claro que são catálogo/reserve para ativação futura
-- Criar stress test ST-05
+### §98-D — Agentes Extras ✅ RESOLVIDO (§100)
+**Diagnóstico real:** `_agentModesStore` era gravado mas nunca lido em `/api/copilot`. Agentes NÃO eram stub — catálogo real com 15 agentes, modos OFF/AUTO/ON funcionavam. Faltava apenas ligar o store à resposta.
+**Fix:** `detectActiveAgent()` faz keyword match contra catálogo + respeita modo OFF → `active_agent` retornado no JSON → badge `🤖 NomeDoAgente` no chat → system prompt LLM especializado.
+**ST-10:** 4/4 pass (jwt→auth, sql→database, OFF não detecta, genérico sem match)
+**T5 (Agentes Extras): LIBERADO**
 
 ### §98-E — Mission Timeline (PRIORIDADE BAIXA)
 **Problema:** Existe mas só popula após missão executada — não há persistência
@@ -134,7 +133,7 @@
 | T2 | Vision Agent Local | `vc_tutorial_agent_done` | ✅ LIBERADO — §98-A resolvido + ST-01 pass |
 | T3 | Software Factory | `vc_tutorial_sf_done` | ✅ LIBERADO — §98-C + ST-03 pass |
 | T4 | Mission Control | `vc_tutorial_mission_done` | ✅ LIBERADO — §98-B + ST-02 pass |
-| T5 | Agentes Extras | `vc_tutorial_agents_done` | §98-D + ST-05 (pipeline completo) |
+| T5 | Agentes Extras | `vc_tutorial_agents_done` | ✅ LIBERADO — §98-D resolvido + ST-10 pass |
 | T6 | PASS GOLD | `vc_tutorial_passgold_done` | ✅ LIBERADO — ST-06 pass |
 
 **Ativação:** Todos os tutoriais de seção abrem APENAS via botão "🪐 Tutorial desta seção" — NUNCA automático.
@@ -189,18 +188,15 @@ FREE_MISSION_LIMIT=5
 | §96 | Mascote dentro do balão + botão reabrir tutorial | s96-done | - |
 | §97 | Mascote 36px ajustado no canto | s97-done | - |
 | §99 | §98-A resolvido (falso positivo stress test) — ST-01..ST-08 36/36 pass | - | f9f2328 |
+| §100 | §98-D resolvido — detectActiveAgent() keywords + active_agent no copilot + badge chat — ST-10 4/4 | s98d-done | 136d33f |
 
 ---
 
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
-1. **§98-D** — Agentes Extras: implementar ou marcar catálogo explicitamente
-   - Cards existem (backend, database, auth, etc) mas não executam autonomamente
-   - Decisão: real execution OU catálogo futuro
+1. **§98-E** — Mission Timeline: persistência no vault/localStorage
 
-2. **§98-E** — Mission Timeline: persistência no vault/localStorage
-
-3. **Tutoriais T2, T3, T4, T6** — LIBERADOS, podem ser criados
+2. **Tutoriais T2, T3, T4, T5, T6** — TODOS LIBERADOS (T5 também com §98-D resolvido)
    - T2 Agent Local — `vc_tutorial_agent_done`
    - T3 Software Factory — `vc_tutorial_sf_done`
    - T4 Mission Control — `vc_tutorial_mission_done`
