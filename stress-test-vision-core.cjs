@@ -459,6 +459,64 @@ async function st10() {
   });
 }
 
+// ── ST-11: MISSION TIMELINE / HISTÓRICO PERSISTIDO (§98-E) ───────────────────
+async function st11() {
+  section('ST-11 — Mission Timeline / Histórico Persistido (§98-E)');
+
+  await test('/api/mission/timeline existe e tem anti_stub', async () => {
+    const r = await GET(`${EB}/api/mission/timeline`);
+    if (r.status === 404) return 'endpoint nao existe';
+    if (!r.ok) return `status ${r.status}`;
+    if (!r.body?.anti_stub) return 'sem anti_stub';
+    return true;
+  });
+
+  await test('Anônimo recebe authenticated:false e lista vazia', async () => {
+    const r = await GET(`${EB}/api/mission/timeline`);
+    if (!r.ok) return `status ${r.status}`;
+    if (r.body?.authenticated !== false) return 'deveria ser authenticated:false sem token';
+    if (!Array.isArray(r.body?.entries) || r.body.entries.length !== 0) return 'esperava entries:[]';
+    return true;
+  });
+
+  let token = null;
+  await test('Registrar usuário de teste para o histórico', async () => {
+    const email = `stress_tl_${Date.now()}@vc.test`;
+    const r = await POST(`${EB}/api/auth/register`, { email, password: 'stress123', name: 'ST11' });
+    if (r.ok && r.body?.token) { token = r.body.token; console.log(`\n    ${I} criado: ${email}`); return true; }
+    return `status ${r.status}: ${r.raw?.slice(0,100)}`;
+  });
+
+  const marker = `marcador-st11-${Date.now()}`;
+  await test('Enviar missão via /api/chat com marcador único', async () => {
+    if (!token) return 'warn'; // sem token, não dá pra testar o caminho autenticado
+    const r = await POST(`${EB}/api/chat`, { message: marker + ' — teste de histórico de missões' }, { Authorization: `Bearer ${token}` });
+    if (r.status === 429) return 'warn'; // quota — /api/chat hoje não é gated, mas fica defensivo
+    if (!r.ok) return `status ${r.status}`;
+    return true;
+  });
+
+  await test('Histórico autenticado contém o marcador enviado', async () => {
+    if (!token) return 'warn';
+    const r = await GET(`${EB}/api/mission/timeline?limit=5`, { Authorization: `Bearer ${token}` });
+    if (!r.ok) return `status ${r.status}`;
+    if (r.body?.authenticated !== true) return 'esperava authenticated:true com token válido';
+    const found = (r.body.entries || []).some(e => (e.input || '').includes(marker));
+    if (!found) return `marcador não encontrado no histórico: ${JSON.stringify((r.body.entries || []).slice(0, 2))}`;
+    return true;
+  });
+
+  await test('Entrada do histórico tem campos esperados (source, status, ts)', async () => {
+    if (!token) return 'warn';
+    const r = await GET(`${EB}/api/mission/timeline?limit=5`, { Authorization: `Bearer ${token}` });
+    if (!r.ok) return `status ${r.status}`;
+    const e = (r.body.entries || [])[0];
+    if (!e) return 'sem entradas';
+    if (!e.source || !e.status || !e.ts) return `campos faltando: ${JSON.stringify(e)}`;
+    return true;
+  });
+}
+
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 async function main() {
   const args      = process.argv.slice(2);
@@ -485,6 +543,7 @@ async function main() {
   if (run('08')) await st08();
   if (run('09')) await st09();
   if (run('10')) await st10();
+  if (run('11')) await st11();
 
   console.log(`\n${SEP}\n  RESULTADO FINAL\n${SEP}`);
   console.log(`  ${G} Passaram: ${passed}`);

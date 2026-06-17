@@ -787,6 +787,47 @@ function logMission(userId, type) {
   } catch {}
 }
 
+/* ── §98-E MISSION TIMELINE — historico persistido de missoes (por usuario) ──
+   Anonimo nao persiste no backend (evita misturar historico de visitantes
+   diferentes no mesmo bucket) — fica so no localStorage do navegador. ── */
+const MISSION_TIMELINE_PATH = path.join(DB_ROOT, 'mission-timeline.json');
+
+function appendMissionTimeline(userId, entry) {
+  if (!userId) return;
+  try {
+    const log = readJsonFile(MISSION_TIMELINE_PATH, { entries: [] });
+    log.entries.push({
+      id: makeId('mt'),
+      user_id: userId,
+      ts: now(),
+      source: entry.source || 'mission',
+      input: String(entry.input || '').slice(0, 200),
+      summary: entry.summary ? String(entry.summary).slice(0, 240) : null,
+      status: entry.status || (entry.pass_gold ? 'PASS_GOLD' : 'DONE'),
+      pass_gold: entry.pass_gold === true,
+      agent: entry.agent || null,
+      mission_id: entry.mission_id || null
+    });
+    // Manter no maximo 90 dias e 500 entradas globais (arquivo nao cresce sem limite)
+    const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    log.entries = log.entries.filter(e => new Date(e.ts).getTime() >= cutoff);
+    if (log.entries.length > 500) log.entries = log.entries.slice(-500);
+    writeJsonFile(MISSION_TIMELINE_PATH, log);
+  } catch (err) { console.warn('[timeline §98-E] append failed', err.message); }
+}
+
+function getMissionTimeline(userId, limit) {
+  if (!userId) return [];
+  try {
+    const log = readJsonFile(MISSION_TIMELINE_PATH, { entries: [] });
+    return log.entries
+      .filter(e => e.user_id === userId)
+      .slice()
+      .sort((a, b) => String(b.ts).localeCompare(String(a.ts)))
+      .slice(0, limit);
+  } catch { return []; }
+}
+
 function checkMissionQuota(req, res, next) {
   const user = getAuthUser(req);
   if (!user) return next(); // unauthenticated — pass through, may fail elsewhere
@@ -812,6 +853,14 @@ app.get('/api/mission/quota', (req, res) => {
   const used = getMissionCount(user.id);
   const limit = parseInt(process.env.FREE_MISSION_LIMIT || '5', 10);
   return sendOk(res, { plan: 'free', used, limit, remaining: Math.max(0, limit - used), anti_stub: true });
+});
+
+/* §98-E — historico de missoes (so para autenticados; anonimo usa cache local) */
+app.get('/api/mission/timeline', (req, res) => {
+  const user  = getAuthUser(req);
+  const limit = Math.min(parseInt(req.query.limit, 10) || 30, 100);
+  const entries = user ? getMissionTimeline(user.id, limit) : [];
+  return sendOk(res, { entries, count: entries.length, authenticated: Boolean(user), anti_stub: true });
 });
 
 /* COPILOT — nunca retorna 405 por body vazio */
@@ -962,6 +1011,24 @@ function hasLocalPath(text) {
 app.all('/api/run-live', checkMissionQuota, async (req, res) => {
   const body     = normalizeBody(req);
   const input    = body.mission || body.message || body.prompt || body.input || 'self-test';
+
+  /* §98-E — historico de missoes; cobre todos os returns do handler (LOCAL_ACCESS_REQUIRED,
+     go_runtime_failure e sucesso) via monkey-patch de res.json. */
+  const _tlUser98e2  = getAuthUser(req);
+  const _origJson98e2 = res.json.bind(res);
+  res.json = function (payload) {
+    if (_tlUser98e2 && payload) {
+      appendMissionTimeline(_tlUser98e2.id, {
+        source: 'run-live',
+        input,
+        summary: Array.isArray(payload.summary) ? payload.summary.join(' ') : (payload.summary || payload.message || null),
+        pass_gold: payload.pass_gold === true,
+        mission_id: payload.mission_id || null,
+        status: payload.pass_gold === true ? 'PASS_GOLD' : (payload.status || (payload.ok === false ? 'FAIL' : 'DONE'))
+      });
+    }
+    return _origJson98e2(payload);
+  };
 
   // Detectar caminhos locais inacessíveis ao servidor remoto
   if (hasLocalPath(input)) {
@@ -1634,6 +1701,26 @@ app.post('/api/chat', async (req, res) => {
   const mode    = body.mode  || 'vision-geral';
   let   message = body.message || body.prompt || '';
   if (!message) return res.status(400).json({ ok: false, error: 'message_required', time: now() });
+
+  /* §98-E — captura a resposta final do /api/chat (qualquer branch interno)
+     via monkey-patch de res.json, em vez de editar cada return separadamente.
+     NOTA: /api/chat é o endpoint REAL usado pelo frontend (ENVIAR) — não é
+     /api/copilot. Verificado: zero referências a /api/copilot ou /api/run-live
+     no bundle.js atual. */
+  const _tlUser98e  = getAuthUser(req);
+  const _tlInput98e = message;
+  const _origJson98e = res.json.bind(res);
+  res.json = function (payload) {
+    if (_tlUser98e && payload && payload.ok !== false) {
+      appendMissionTimeline(_tlUser98e.id, {
+        source: 'chat',
+        input: _tlInput98e,
+        summary: payload.answer || null,
+        status: 'ANSWERED'
+      });
+    }
+    return _origJson98e(payload);
+  };
 
   /* ── toolFetchUrl v2 — detecta URLs e injeta conteúdo real ── */
   const urlRegex  = /https?:\/\/[^\s"'<>)\]]+/g;

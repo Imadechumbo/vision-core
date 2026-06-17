@@ -5998,9 +5998,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     stream.appendChild(thinking);
     stream.scrollTop = stream.scrollHeight;
 
+    var tok1 = (function () { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch (e) { return null; } })();
     fetch(BACKEND_URL + '/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: tok1 ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok1 } : { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: text, mode: 'vision-geral' })
     })
     .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
@@ -6541,6 +6542,103 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
     function clearHistory() { _sessionHistory = []; updateContextBadge(); }
 
+    /* ── §98-E MISSION TIMELINE — historico persistido de missoes ──────────
+       Logado: backend (/api/mission/timeline) é a fonte de verdade.
+       Visitante sem login: so o cache deste navegador (localStorage). ── */
+    var MISSION_HISTORY_CACHE_KEY = 'vc_mission_timeline_cache';
+    var _missionHistoryCache = [];
+
+    function _escapeHtml98e(s) {
+      return String(s || '').replace(/[&<>"]/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c];
+      });
+    }
+
+    function _loadMissionHistoryCache() {
+      try {
+        var raw = localStorage.getItem(MISSION_HISTORY_CACHE_KEY);
+        _missionHistoryCache = raw ? JSON.parse(raw) : [];
+      } catch (e) { _missionHistoryCache = []; }
+    }
+
+    function _saveMissionHistoryCache() {
+      try { localStorage.setItem(MISSION_HISTORY_CACHE_KEY, JSON.stringify(_missionHistoryCache.slice(0, 30))); } catch (e) { /* quota cheia ou bloqueado — ignora, nao quebra a UI */ }
+    }
+
+    function renderMissionHistory() {
+      var list  = document.getElementById('v298MissionHistoryList');
+      var count = document.getElementById('v298MissionHistoryCount');
+      if (!list) return;
+      if (!_missionHistoryCache.length) {
+        list.innerHTML = '<div class="v298-mission-history-empty">Nenhuma missão ainda. Converse ou execute uma missão — fica salvo aqui.</div>';
+        if (count) count.textContent = '';
+        return;
+      }
+      if (count) count.textContent = _missionHistoryCache.length + ' ' + (_missionHistoryCache.length > 1 ? 'missões' : 'missão');
+      list.innerHTML = '';
+      _missionHistoryCache.forEach(function (item) {
+        var row = document.createElement('div');
+        row.className = 'v298-mh-item';
+        var dotClass = item.pass_gold === true ? 'ok' : (item.status === 'FAIL' ? 'fail' : (item.status === 'ANSWERED' ? 'ok' : 'wait'));
+        var when = '';
+        try { when = new Date(item.ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { when = ''; }
+        row.innerHTML =
+          '<span class="v298-mh-dot ' + dotClass + '"></span>' +
+          '<div class="v298-mh-body">' +
+            '<div class="v298-mh-input">' + _escapeHtml98e((item.input || '').slice(0, 90)) + '</div>' +
+            '<div class="v298-mh-meta">' + when + ' · ' + (item.source || 'chat') + (item.status ? ' · ' + item.status : '') + '</div>' +
+          '</div>';
+        list.appendChild(row);
+      });
+    }
+
+    function recordMissionTimelineEntry(entry) {
+      _missionHistoryCache.unshift({
+        ts: Date.now(),
+        source: entry.source || 'chat',
+        input: entry.input || '',
+        summary: entry.summary || null,
+        status: entry.status || 'DONE',
+        pass_gold: entry.pass_gold === true
+      });
+      _missionHistoryCache = _missionHistoryCache.slice(0, 30);
+      _saveMissionHistoryCache();
+      renderMissionHistory();
+    }
+
+    function loadMissionHistoryFromBackend() {
+      var tok = (function () { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch (e) { return null; } })();
+      if (!tok) return; /* sem login: histórico fica só no cache deste navegador */
+      fetch(BACKEND_URL + '/api/mission/timeline?limit=20', { headers: { 'Authorization': 'Bearer ' + tok } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+          if (!data || !data.authenticated || !Array.isArray(data.entries)) return;
+          /* §102-fix: se backend retornou vazio mas localStorage tem dados,
+             manter localStorage (proteção contra EB restart / file loss). */
+          if (data.entries.length === 0 && _missionHistoryCache.length > 0) return;
+          _missionHistoryCache = data.entries.map(function (e) {
+            return {
+              ts: new Date(e.ts).getTime() || Date.now(),
+              source: e.source, input: e.input, summary: e.summary,
+              status: e.status, pass_gold: e.pass_gold === true
+            };
+          });
+          _saveMissionHistoryCache();
+          renderMissionHistory();
+        })
+        .catch(function () { /* falha de rede — mantém o que já estava no cache local */ });
+    }
+
+    _loadMissionHistoryCache();
+    renderMissionHistory();
+    loadMissionHistoryFromBackend();
+
+    var _missionHistoryHead  = document.getElementById('v298MissionHistoryHead');
+    var _missionHistoryPanel = document.getElementById('v298MissionHistory');
+    if (_missionHistoryHead && _missionHistoryPanel) {
+      _missionHistoryHead.addEventListener('click', function () { _missionHistoryPanel.classList.toggle('collapsed'); });
+    }
+
     var addFilesBtn  = document.getElementById('v298AddFilesBtn');
     var fileInput    = document.getElementById('v298FileInput');
     var fileNote     = document.getElementById('v298FileNote');
@@ -6740,9 +6838,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       if (imgName) { payload.image_name = imgName; }
       if (imgB64)  { payload.image_base64 = imgB64; payload.image_mime = imgMime || 'image/jpeg'; }
 
+      var tok2 = (function () { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch (e) { return null; } })();
       fetch(BACKEND_URL + '/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: tok2 ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok2 } : { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
       .then(function(r) { return r.ok ? r.json() : Promise.reject(r.status); })
@@ -6763,6 +6862,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           chatStream.scrollTop = chatStream.scrollHeight;
         }
         addToHistory('assistant', answer);
+        // §98-E: registrar no histórico persistido de missões
+        recordMissionTimelineEntry({ source: 'chat', input: text, summary: answer, status: 'ANSWERED' });
         renderFetchBadge(data, chatStream);          // §21
         var hermesObj = parseHermesBlock(answer);
         var msgEl = appendMsg('', '');
@@ -7332,9 +7433,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           _t2Span.textContent = '📋 missão iniciada — processando via Hermes...';
           thinking2.appendChild(_t2Span);
           setStatus('EXECUTANDO MISSÃO...', 'busy');
+          var tok3 = (function () { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch (e) { return null; } })();
           fetch(BACKEND_URL + '/api/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: tok3 ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok3 } : { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: missionText, mode: 'fix', model: 'auto' })
           })
           .then(function(r) { return r.ok ? r.json() : Promise.reject('HTTP ' + r.status); })
@@ -7595,9 +7697,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             var ctrl    = new AbortController();
             var timeout = setTimeout(function() { ctrl.abort(); }, 55000);
 
+            var tok4 = (function () { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch (e) { return null; } })();
             return fetch(BACKEND_URL + '/api/chat', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: tok4 ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok4 } : { 'Content-Type': 'application/json' },
               body: JSON.stringify({ message: context, mode: zipMode, model: zipModel }),
               signal: ctrl.signal
             });

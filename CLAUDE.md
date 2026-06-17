@@ -95,11 +95,16 @@
 **ST-10:** 4/4 pass (jwt→auth, sql→database, OFF não detecta, genérico sem match)
 **T5 (Agentes Extras): LIBERADO**
 
-### §98-E — Mission Timeline (PRIORIDADE BAIXA)
-**Problema:** Existe mas só popula após missão executada — não há persistência
-**O que precisa:**
-- Persistir timeline no vault/localStorage após cada missão
-- Mostrar histórico de missões anteriores
+### §98-E — Mission Timeline ✅ RESOLVIDO (§102)
+**Descoberta importante nesta sessão:** o frontend NÃO chama `/api/copilot` nem `/api/run-live` (zero referências no bundle) — o botão ENVIAR chama `/api/chat`, que também não tinha `checkMissionQuota`. O histórico foi implementado no endpoint real.
+**Fix:**
+- Backend: `appendMissionTimeline()` / `getMissionTimeline()` (data/mission-timeline.json, 90 dias / 500 entradas), hook via monkey-patch de `res.json` em `/api/chat` e `/api/run-live` (cobre todos os branches sem duplicar código). Anônimo nunca persiste no backend (evita misturar histórico entre visitantes) — só localStorage.
+- Endpoint novo: `GET /api/mission/timeline` (anti_stub:true).
+- Frontend: painel `#v298MissionHistory` (colapsável) abaixo do chat — `vc_mission_timeline_cache` no localStorage + sync com backend quando logado.
+- 21 testes unitários isolados (9 backend + 12 frontend, com mocks) rodados antes do commit.
+**ST-11:** criado (6 casos) — endpoint existe, anônimo vazio, registro, envio com marcador, marcador aparece no histórico, shape dos campos.
+**Pendente para confirmar:** ainda não cobre o fluxo "EXECUTAR MISSÃO" (Standard Method Panel / hermesObj) — só ENVIAR/chat e run-live. Decisão consciente de escopo, não esquecimento.
+**§103 — causa raiz real:** as 4 chamadas `/api/chat` no bundle não mandavam `Authorization` header → `getAuthUser` sempre retornava null → histórico nunca persistia para usuário logado via chat real. Corrigido em tok1-4 (linhas ~6001/6840/7434/7697). CSS do painel não estava no `vision-core-bundle.css` (snapshot pré-concatenado diferente do arquivo fonte individual) → painel existia no DOM mas sem estilo. CSS adicionado direto no bundle. Fix defensivo: `loadMissionHistoryFromBackend()` não sobrescreve cache local com array vazio. Persistência confirmada via curl/PowerShell ponta a ponta.
 
 ### §98-F — OPENCLAW / OPENSQUAD / OSINT / V10 (ROADMAP — NÃO TOCAR)
 **Status:** Badge `SCALE` / roadmap puro
@@ -190,6 +195,7 @@ FREE_MISSION_LIMIT=5
 | §99 | §98-A resolvido (falso positivo stress test) — ST-01..ST-08 36/36 pass | - | f9f2328 |
 | §100 | §98-D resolvido — detectActiveAgent() keywords + active_agent no copilot + badge chat — ST-10 4/4 | s98d-done | 136d33f |
 | §101 | T5 Agentes Extras live — 5 passos + accordion desbloqueado — tutoriais T1-T6 6/6 completos | t5-done | 61e8d71 |
+| §102 | §98-E resolvido — Mission Timeline persistido (descoberta: endpoint real é /api/chat, não /api/copilot) — ST-11 criado (6 casos), 21 testes unitários | - | (preencher após commit) |
 
 ---
 
