@@ -28,7 +28,7 @@
 
 | Componente | Versão | Tag git | HEAD |
 |-----------|--------|---------|------|
-| Backend EB | 5.9.11-s109-multi-file-atomic | - | PENDING |
+| Backend EB | 5.9.11-s109-multi-file-atomic | - | 929610c |
 | CF Pages | live | s97-done | após s97 |
 
 ---
@@ -205,7 +205,7 @@ FREE_MISSION_LIMIT=5
 | §106 | Etapa A do roadmap: lógica de polling do agent extraída para `vcQueueApplyPatchViaAgent(hermesObj, statusEl, onReset, onDone)` — função compartilhada sem duplicação. `renderStandardMethodPanel` (EXECUTAR MISSÃO) ganhou botão "📡 Aplicar no Vision Agent Local" idêntico ao do chat. Backend intocado. `_test106_static_wiring.cjs` 9/9 + regressão `_test105_*` confirmada (13/13 + 9/9). SDDF_SPEC §106 adicionado. | - | 578a651 |
 | §107 | Etapa B retirada do roadmap (SDDF_SPEC §66 já fechado — tiered routing resolvido sem código novo). Etapa C implementada: memory layer fase 2 no Hermes — `tokenize`/`jaccardOverlap`/`readLowConfidenceLog`/`findSimilarLowConfidenceCases`/`applyMemoryReordering`/`computeMemoryMetrics` em `hermes-rca.js`; `callHermes` desprioriza (nunca remove) provider que falhou em caso similar; log de baixa confiança ganha campo `keywords` pra matching futuro. `_test107_memory_layer_unit.cjs` 26/26. SDDF_SPEC §107 adicionado. | - | eab69de |
 | §108 | Etapa E implementada: painel "MÉTRICAS DOS AGENTES" (100% estático com badge "UI LOCAL") ligado a 4 endpoints reais (`/api/metrics/agents`, `/api/metrics/summary`, `/api/dora-metrics`, `/api/metrics/memory`). Novo endpoint `GET /api/metrics/memory` com `computeMemoryMetrics()` e `anti_stub:true`. Badge vira "DADOS REAIS" quando backend responde. Fallback estático preservado. `_test108_observability_unit.cjs` 23/23 + `_test108_endpoint_smoke.sh` 10/10. SDDF_SPEC §108 adicionado. | - | eab69de |
-| §109 | Etapa D implementada: missão multi-arquivo atômica (`apply_patch_multi`). Backend valida array `files[]` com file+patch por item. Vision Agent: `resolveTargetFile()` (helper standalone), `rollbackFiles()`, `gitCommitMulti()`, `applyPatchMultiMission()` — 4 etapas: resolver/aplicar/validar Aegis/commit único. Falha em qualquer etapa reverte TODOS via git checkout. `applyPatchMission` (§105) intocada. `_test109_static_wiring.cjs` 12/12 + E2E real (commit único + 2 cenários de rollback atômico confirmados). Regressão completa 90 testes 0 falhas. SDDF_SPEC §109 adicionado. | - | PENDING |
+| §109 | Etapa D implementada: missão multi-arquivo atômica (`apply_patch_multi`). Backend valida array `files[]` com file+patch por item. Vision Agent: `resolveTargetFile()` (helper standalone), `rollbackFiles()`, `gitCommitMulti()`, `applyPatchMultiMission()` — 4 etapas: resolver/aplicar/validar Aegis/commit único. Falha em qualquer etapa reverte TODOS via git checkout. `applyPatchMission` (§105) intocada. `_test109_static_wiring.cjs` 12/12 + E2E real (commit único + 2 cenários de rollback atômico confirmados). Regressão completa 90 testes 0 falhas. SDDF_SPEC §109 adicionado. | - | 929610c |
 
 ---
 
