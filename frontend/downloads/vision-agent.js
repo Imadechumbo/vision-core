@@ -725,6 +725,92 @@ function applyPatchMultiMission(m) {
   });
 }
 
+/* ── §110 — Etapa A (Software Factory fora do sandbox), Fase 1: ─────
+ * FIREWALL DE AUTO-MODIFICAÇÃO.
+ *
+ * Princípio: a Software Factory pode, no futuro, rodar dry-run real
+ * (diagnóstico real + diff real, sem commit/push) contra um repositório
+ * EXTERNO autorizado explicitamente pelo usuário — mas em NENHUMA
+ * hipótese pode ser apontada pra si mesma (o próprio vision-core). Um
+ * agente capaz de reescrever as próprias regras de governança deixa de
+ * ser confiável; o SDDF gate só vale alguma coisa se for inviolável.
+ *
+ * Esta função tem que estar provada robusta ANTES de qualquer lógica de
+ * dry-run real ser construída em cima dela — é por isso que ela é a
+ * primeira peça de Etapa A, entregue isolada e com testes próprios,
+ * antes do endpoint/mission type que vai consumi-la (fase 2, sessão
+ * futura).
+ *
+ * 4 camadas de defesa independentes — qualquer uma bastando pra bloquear: */
+
+/* Camada 1+2: contenção de caminho. `child` é bloqueado se for igual a
+ * `parent`, estiver DENTRO de `parent`, ou se `parent` estiver dentro de
+ * `child` (cobre tanto "apontar pra dentro do vision-core" quanto
+ * "apontar pra uma pasta-pai que contém o vision-core como subpasta"). */
+function isPathInside(parent, child) {
+  var rel = path.relative(parent, child);
+  return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+}
+
+/* Camada 3: remote git. Normaliza https vs ssh (git@host:org/repo.git),
+ * com/sem sufixo .git, com/sem barra final, e case — pra não deixar uma
+ * variação de formatação escapar da comparação. */
+function normalizeGitUrl(url) {
+  return (url || '').toLowerCase()
+    .replace(/^git@([^:]+):/, 'https://$1/')
+    .replace(/\.git$/, '')
+    .replace(/\/$/, '');
+}
+
+var SELF_GIT_REMOTES = [
+  'https://github.com/imadechumbo/vision-core',
+  'https://gitlab.com/imadechumbo/vision-core-pages'
+];
+
+function hasSelfGitRemote(dir) {
+  var r = spawnSync('git', ['remote', '-v'], { cwd: dir, encoding: 'utf8', timeout: 5000 });
+  if (r.status !== 0) return false;
+  var urls = (r.stdout || '').split('\n').map(function(line) {
+    var m = line.match(/\s(\S+)\s+\(/);
+    return m ? normalizeGitUrl(m[1]) : null;
+  }).filter(Boolean);
+  return urls.some(function(u) { return SELF_GIT_REMOTES.indexOf(u) !== -1; });
+}
+
+/* Camada 4: fingerprint de arquivos. CLAUDE.md + SDDF_SPEC.md juntos na
+ * raiz são uma assinatura forte deste projeto específico — cobre o caso
+ * de alguém copiar/clonar o vision-core pra outro caminho, sem .git ou
+ * com remote removido, e tentar usar isso como alvo do dry-run. */
+function hasSelfFingerprint(dir) {
+  return fs.existsSync(path.join(dir, 'CLAUDE.md')) && fs.existsSync(path.join(dir, 'SDDF_SPEC.md'));
+}
+
+function realpathOrResolve(p) {
+  try { return fs.realpathSync(path.resolve(p)); }
+  catch (e) { return path.resolve(p); } // pode nao existir ainda (ex: alvo hipotetico) — segue com o path resolvido
+}
+
+/* Função principal — chamar ANTES de qualquer leitura/escrita num alvo
+ * de dry-run real. Retorna { forbidden: bool, reason?: string }. */
+function isSelfTargetForbidden(targetPath) {
+  var resolvedTarget = realpathOrResolve(targetPath);
+  var resolvedRoot    = realpathOrResolve(ROOT);
+
+  if (isPathInside(resolvedRoot, resolvedTarget)) {
+    return { forbidden: true, reason: 'caminho alvo é o próprio vision-core ou está dentro dele (camada 1/2 — contenção de caminho): ' + resolvedTarget };
+  }
+  if (isPathInside(resolvedTarget, resolvedRoot)) {
+    return { forbidden: true, reason: 'caminho alvo é uma pasta-pai que contém o vision-core (camada 1/2 — contenção de caminho): ' + resolvedTarget };
+  }
+  if (fs.existsSync(resolvedTarget) && hasSelfGitRemote(resolvedTarget)) {
+    return { forbidden: true, reason: 'remote git do alvo aponta pro repositório do próprio vision-core (camada 3 — remote git)' };
+  }
+  if (fs.existsSync(resolvedTarget) && hasSelfFingerprint(resolvedTarget)) {
+    return { forbidden: true, reason: 'alvo contém CLAUDE.md + SDDF_SPEC.md — fingerprint do próprio vision-core, mesmo fora do caminho/git esperado (camada 4 — fingerprint)' };
+  }
+  return { forbidden: false };
+}
+
 /* ── Polling loop ─────────────────────────────────────────────── */
 function poll() {
   httpRequest(WORKER + '/api/agent/mission/pending', {}, function(err, res) {
@@ -754,19 +840,36 @@ function poll() {
   });
 }
 
-/* ── Health server ────────────────────────────────────────────── */
-var PORT = Number(process.env.VC_PORT) || 7070;
-var srv  = http.createServer(function(req, res) {
-  res.writeHead(200, {
-    'Content-Type':                 'application/json',
-    'Access-Control-Allow-Origin':  '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+/* ── Health server + start ───────────────────────────────────────
+ * Só inicia o servidor de health-check e o polling quando este arquivo
+ * é executado diretamente via `node vision-agent.js` (uso normal do
+ * usuário, e também como os testes E2E já existentes — _test105,
+ * _test108, _test109 — sempre o invocaram, então nada muda pra eles).
+ * Quando importado via require() — usado pelo §110 pra testar de
+ * verdade as funções puras do firewall de auto-modificação, em vez de
+ * só verificar a presença do código por grep — nada disso roda; só as
+ * funções abaixo ficam disponíveis via module.exports. */
+if (require.main === module) {
+  var PORT = Number(process.env.VC_PORT) || 7070;
+  var srv  = http.createServer(function(req, res) {
+    res.writeHead(200, {
+      'Content-Type':                 'application/json',
+      'Access-Control-Allow-Origin':  '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+    });
+    res.end(JSON.stringify({ ok: true, version: VERSION, project: ROOT, worker: WORKER, sddf: 'compliant' }));
   });
-  res.end(JSON.stringify({ ok: true, version: VERSION, project: ROOT, worker: WORKER, sddf: 'compliant' }));
-});
-srv.on('error', function(e) { if (e.code === 'EADDRINUSE') { PORT++; srv.listen(PORT); } });
-srv.listen(PORT, function() {
-  console.log('Health : http://localhost:' + PORT);
-  console.log('');
-  poll();
-});
+  srv.on('error', function(e) { if (e.code === 'EADDRINUSE') { PORT++; srv.listen(PORT); } });
+  srv.listen(PORT, function() {
+    console.log('Health : http://localhost:' + PORT);
+    console.log('');
+    poll();
+  });
+}
+
+module.exports = {
+  isSelfTargetForbidden: isSelfTargetForbidden,
+  isPathInside:           isPathInside,
+  normalizeGitUrl:        normalizeGitUrl,
+  hasSelfFingerprint:     hasSelfFingerprint
+};

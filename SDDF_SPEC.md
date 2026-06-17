@@ -5048,3 +5048,65 @@ Dispatcher em `poll()` extendido: linha `m.type === 'apply_patch_multi' ? applyP
 - `/api/agent/mission/queue` bloco `apply_patch`: intocado
 - Todo o resto do pipeline (dispatcher `gitPush`/`gitRevert`/`executeMission`): intocado
 - Interface de usuário: nenhuma mudança frontend — o chat ainda não compõe automaticamente `apply_patch_multi`; o tipo existe no backend+agent e pode ser chamado via API, mas a coordenação LLM de quais arquivos compõem a transação é trabalho futuro
+
+---
+
+## §110 — Fase 1 de N: Firewall de Auto-Modificação (Etapa A — Software Factory Dry-Run Real)
+
+### Contexto
+
+Esta seção documenta exclusivamente a **Fase 1** de uma etapa maior (Etapa A). A Fase 1 entrega o firewall de segurança que impede que qualquer futura capacidade de dry-run real seja apontada pro próprio vision-core. Não há endpoint novo, não há mission type novo, não há capability visível ao usuário.
+
+**Por que entregar o firewall antes do endpoint?** A garantia de que "nunca posso me modificar" tem que estar provada e testada com git e diretórios reais *antes* de qualquer código de leitura/diagnóstico externo ser construído em cima dela. Um agente capaz de reescrever suas próprias regras de governança deixa de ser confiável; o SDDF gate só vale alguma coisa se for inviolável.
+
+### Fix (`frontend/downloads/vision-agent.js`)
+
+5 funções inseridas entre `applyPatchMultiMission` (§109) e o comentário `/* ── Polling loop */`:
+
+**`isPathInside(parent, child)`** — retorna `true` se `child` é igual a `parent` (rel `''`) ou está dentro de `parent` (rel não começa com `..` e não é absoluto). Camada 1/2 da defesa.
+
+**`normalizeGitUrl(url)`** — lowercase + converte `git@host:org/repo` → `https://host/org/repo` + remove `.git` final + remove barra final. Garante que `https://github.com/Imadechumbo/vision-core.git`, `https://github.com/Imadechumbo/vision-core` e `git@github.com:Imadechumbo/vision-core.git` produzam o mesmo valor para comparação. Camada 3.
+
+**`hasSelfGitRemote(dir)`** — `spawnSync('git', ['remote', '-v'])` + parse + `normalizeGitUrl` em cada URL + `indexOf` contra `SELF_GIT_REMOTES` (`['https://github.com/imadechumbo/vision-core', 'https://gitlab.com/imadechumbo/vision-core-pages']`). Retorna `false` se `git remote` falhar (sem git, sem remote, sem permissão). Camada 3.
+
+**`hasSelfFingerprint(dir)`** — `fs.existsSync(CLAUDE.md) && fs.existsSync(SDDF_SPEC.md)`. Cobre clone/cópia sem git ou com remote removido. Precisa dos 2 arquivos juntos (1 arquivo sozinho é comum em projetos externos legítimos). Camada 4.
+
+**`realpathOrResolve(p)`** — `fs.realpathSync(path.resolve(p))` com fallback para `path.resolve(p)` (cobre caminhos hipotéticos/inexistentes sem exceção). Resolve symlinks antes de comparar.
+
+**`isSelfTargetForbidden(targetPath)`** — função principal. 4 camadas em sequência, qualquer uma bastando pra bloquear:
+1. `isPathInside(resolvedRoot, resolvedTarget)` → `{ forbidden: true, reason: 'caminho alvo é o próprio vision-core ou está dentro dele...' }`
+2. `isPathInside(resolvedTarget, resolvedRoot)` → `{ forbidden: true, reason: 'caminho alvo é uma pasta-pai que contém o vision-core...' }`
+3. `fs.existsSync(target) && hasSelfGitRemote(target)` → `{ forbidden: true, reason: 'remote git do alvo aponta pro repositório do próprio vision-core...' }`
+4. `fs.existsSync(target) && hasSelfFingerprint(target)` → `{ forbidden: true, reason: 'alvo contém CLAUDE.md + SDDF_SPEC.md — fingerprint do próprio vision-core...' }`
+5. Se nenhuma camada bloquear → `{ forbidden: false }`
+
+**`require.main` guard + `module.exports`:** o bloco de bootstrap (servidor de health + `poll()`) foi envolvido em `if (require.main === module)`. O comportamento CLI é **exatamente o mesmo** — a guard só impede que servidor/poll iniciem ao fazer `require('vision-agent.js')`. `module.exports` expõe `isSelfTargetForbidden`, `isPathInside`, `normalizeGitUrl`, `hasSelfFingerprint` para testes que importam via `require()`.
+
+### Evidência
+
+- `_test110_self_modification_firewall_unit.cjs` — **20/20 PASS** (diretórios e repositórios git reais em `/tmp`):
+  - Camada 1 (4 casos): ROOT idêntico, ROOT+separador, subpasta, sub-subpasta → todos bloqueados
+  - Camada 2 (1 caso): pasta-pai do ROOT → bloqueada
+  - Negativo camada 1/2 (1 caso): diretório não-relacionado → não bloqueado
+  - Symlink (1 caso): pulado graciosamente em Windows sem privilégio elevado, sem falha
+  - Camada 3 (5 casos): https+.git, https sem .git, ssh, GitLab, projeto diferente (negativo), sem remote (negativo) → comportamento correto em todos
+  - Camada 4 (3 casos): CLAUDE.md+SDDF_SPEC.md juntos → bloqueado; só um dos dois → não bloqueado (×2)
+  - Caminho inexistente (1 caso): `forbidden: false` sem exceção
+  - Unitários `isPathInside`/`normalizeGitUrl` (3 casos)
+- **Regressão 8 suites** — 110 testes, 0 falhas: §105 (13+9), §106 (9), §107 (26), §108 (23+10), §109 (12+E2E), §110 (20). **Os 2 E2E (`_test105_full_loop_e2e.sh` + `_test109_multi_patch_atomic_e2e.sh`) confirmam que o CLI via `node vision-agent.js` continua funcionando igual pós-guard.**
+
+### O que NÃO mudou
+
+- `server.js`: zero alterações
+- `about.html`, `landing.html`: zero alterações (nenhuma capability visível ao usuário)
+- Todo o pipeline existente (`applyPatchMission`, `applyPatchMultiMission`, `gitPush`, `gitRevert`, `executeMission`, `poll`): intocado
+- Comportamento CLI de `vision-agent.js` quando executado via `node vision-agent.js`: **idêntico ao anterior** — servidor de health sobe na mesma porta, polling começa da mesma forma
+
+### O que NÃO foi feito ainda (Fase 2 — próxima sessão)
+
+- Endpoint `POST /api/sf/dry-run-real` em `server.js`
+- Mission type `dry_run_real` no dispatcher de `poll()`
+- Leitura real do `target_path` (scan de arquivos, sem escrever)
+- Integração com Hermes para diagnóstico do repo externo
+- `simulatePatch()` — gera diff sem escrever no disco
+- E2E de dry-run real: repo temp com bug → diff correto + arquivo intacto + zero commit novo
