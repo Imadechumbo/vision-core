@@ -1518,10 +1518,18 @@ for (const [platform, meta] of Object.entries(_agentDownloadMeta)) {
     return res.status(200).json({ available: false, reason: 'download_via_frontend_only', platform: meta.platform, download_url: meta.url, anti_stub: true, time: now() });
   });
 }
-app.all('/api/agent/register', (req, res) => sendOk(res, { agent_id: makeId('agent'), status: 'registered' }));
-app.all('/api/agent/heartbeat', (req, res) => sendOk(res, { status: 'online' }));
-app.all('/api/agent/report', (req, res) => sendOk(res, { received: true, pass_gold: Boolean(normalizeBody(req).pass_gold) }));
-app.get('/api/agent/status', (req, res) => sendOk(res, { connected: false, mode: 'download_ready' }));
+/* §105: timestamp do ultimo poll real do Vision Agent Local (heartbeat OU /mission/pending) */
+let _agentLastSeenAt = 0;
+app.all('/api/agent/register', (req, res) => sendOk(res, { agent_id: makeId('agent'), status: 'registered', anti_stub: true }));
+app.all('/api/agent/heartbeat', (req, res) => { _agentLastSeenAt = Date.now(); return sendOk(res, { status: 'online', anti_stub: true }); });
+app.all('/api/agent/report', (req, res) => sendOk(res, { received: true, pass_gold: Boolean(normalizeBody(req).pass_gold), anti_stub: true }));
+app.get('/api/agent/status', (req, res) => {
+  /* §105: connected real (era hardcoded false antes) — agent considerado online se fez */
+  /* poll em /mission/pending ou heartbeat nos ultimos 15s (3x o VC_POLL_MS padrao de 3000ms) */
+  const lastSeenMsAgo = _agentLastSeenAt ? (Date.now() - _agentLastSeenAt) : null;
+  const connected     = lastSeenMsAgo !== null && lastSeenMsAgo < 15000;
+  return sendOk(res, { connected, last_seen_ms_ago: lastSeenMsAgo, mode: connected ? 'connected' : 'download_ready', anti_stub: true });
+});
 
 /* GITHUB / TOOLS / METRICS */
 app.get('/api/github/status', (req, res) => sendOk(res, { configured: Boolean(process.env.GITHUB_TOKEN), policy: 'PASS_GOLD_REQUIRED' }));
@@ -2269,17 +2277,30 @@ const _agentResults = {};
 
 app.post('/api/agent/mission/queue', (req, res) => {
   const body    = normalizeBody(req);
+  const type    = body.type || 'general';
   const mission = {
     id:        `mission_${Date.now()}_${Math.random().toString(16).slice(2,6)}`,
     input:     body.input || body.message || '',
-    type:      body.type  || 'general',
+    type:      type,
     queued_at: now()
   };
+  /* §105: apply_patch carrega o patch ja diagnosticado pelo chat — sem isso o */
+  /* agent local nao tem o que aplicar (campos eram descartados antes desta sessao) */
+  if (type === 'apply_patch') {
+    if (!body.file || !body.patch) {
+      return res.status(400).json({ ok: false, error: 'apply_patch_requires_file_and_patch', time: now() });
+    }
+    mission.file      = body.file;
+    mission.patch     = body.patch;
+    mission.fix_type  = body.fix_type  || 'code_patch';
+    mission.diagnosis = body.diagnosis || '';
+  }
   _agentQueue.push(mission);
-  return sendOk(res, { mission_id: mission.id, queued: true, queue_length: _agentQueue.length });
+  return sendOk(res, { mission_id: mission.id, queued: true, queue_length: _agentQueue.length, type: mission.type });
 });
 
 app.get('/api/agent/mission/pending', (req, res) => {
+  _agentLastSeenAt = Date.now(); /* §105: todo poll real atualiza presenca p/ /api/agent/status */
   const mission = _agentQueue.shift();
   return sendOk(res, { mission: mission || null, queue_remaining: _agentQueue.length });
 });

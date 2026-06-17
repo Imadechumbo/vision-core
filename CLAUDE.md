@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-15
+## Documento central do projeto | Atualizado: 2026-06-17 (§105)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -45,6 +45,7 @@
 - Billing: `/api/billing/status` (plano real do JWT), Stripe webhook
 - DORA metrics reais via vault + `data/deploy-log.json`
 - Architect: `/api/architect/interpret` — LLM_REAL, não BLOQUEADA
+- **§105: `/api/agent/mission/queue` aceita `type=apply_patch` com `file`+`patch`+`fix_type`+`diagnosis` reais (antes descartados) — `/api/agent/status` reporta presença real do agent (`_agentLastSeenAt` < 15s), não mais hardcoded**
 
 ### Frontend (index.html + bundle.js)
 - Tutorial interativo 13 passos com mascote animado idle/reading
@@ -54,6 +55,7 @@
 - Planos FREE (BETA ATIVO) / PRO (EM BREVE) / ENTERPRISE (EM BREVE)
 - OAuth Google + GitHub botões funcionais (SSO ainda "Em breve")
 - Mascote: `mascote-idle-final.png` + `mascote-reading-final.png` em `frontend/assets/`
+- **§105: `renderApplyFixPanel` tem 3º botão "📡 Aplicar no Vision Agent Local" — fecha o loop chat→agent local→patch real no disco (snapshot+rollback) →aprovar push/reverter. `renderValidationPanel` (push/revert) deixou de ser código morto.**
 
 ### OAuth (configurado nos providers)
 - Google Client ID: `793969655414-suvojcna44rchiq65n66io6flkf970ql.apps.googleusercontent.com`
@@ -102,6 +104,14 @@
 **Decisão:** NÃO implementar ainda, NÃO criar tutorial
 **Ação:** Manter como estão até decisão de produto
 
+### §105 — Fechar o Loop: Chat → Mission Queue → Vision Agent Local → Patch Real ✅ RESOLVIDO
+**Origem:** item #1 do roadmap publicado em `about.html` ("Fechar o loop VISION AI COMMAND → mission queue → Agent Local → patch real").
+**Causa raiz real (auditoria de código antes de tocar em qualquer arquivo):** as 3 peças já existiam isoladas — chat diagnostica com `hermesObj.{file,patch,fix_type}`, `vision-agent.js` já sabia aplicar `type=apply_patch` com backup `.vision-bak`+validação Aegis+rollback via `git checkout --` (zero mudança necessária aqui), e `/api/agent/mission/push`+`/revert` já existiam. O que faltava: (1) `/api/agent/mission/queue` descartava silenciosamente `file`/`patch`/`fix_type`/`diagnosis` para qualquer tipo de missão; (2) `/api/agent/status` retornava `connected:false` hardcoded sem `anti_stub:true` (stub real, violava regra #4); (3) `renderValidationPanel()` (botões push/revert) existia desde antes mas **nunca tinha um único call site** — código morto confirmado por grep.
+**Fix:** backend valida+preserva os 4 campos quando `type==='apply_patch'` (400 se `file`/`patch` ausentes); `_agentLastSeenAt` atualizado a cada poll real de `/mission/pending` e em `/heartbeat`; `/api/agent/status` calcula `connected` real (<15s desde último poll). Frontend: novo 3º botão em `renderApplyFixPanel` ("📡 Aplicar no Vision Agent Local") que checa status → enfileira `apply_patch` → faz polling do resultado (2s×15, com retomada manual) → finalmente invoca `renderValidationPanel()`.
+**Evidência:** `_test105_backend_logic.cjs` 13/13 (mocks isolados) + `_test105_full_loop_e2e.sh` 9/9 (backend real + `vision-agent.js` real, projeto git temporário, patch aplicado com commit real, rollback automático em patch com erro de sintaxe confirmado, validação 400 confirmada) — tudo sem navegador, reproduzível via `bash _test105_full_loop_e2e.sh`.
+**Fora do escopo desta sessão (decisão consciente):** o botão "EXECUTAR MISSÃO" (Standard Method Panel) continua aplicando via `/api/chat/apply-patch` (cloud) — adicionar a mesma opção de agent local lá é o mesmo padrão, ver pendências abaixo.
+**Patch:** `_patch105_agent_loop_closure.py` (idempotente, assert-based, mesmo padrão de §102/§104).
+
 ---
 
 ## STRESS TESTS — A CRIAR ANTES DOS TUTORIAIS
@@ -116,6 +126,8 @@
 | ST-06 | Quota FREE enforced (429) | ✅ 36/36 pass (incluído no suite) |
 | ST-07 | OAuth Google + GitHub | ✅ 36/36 pass (incluído no suite) |
 | ST-08 | Vault snapshot/rollback | ✅ 36/36 pass (incluído no suite) |
+
+**ST-12 (novo, §105):** Loop fechado chat→agent local→patch real→rollback. `_test105_full_loop_e2e.sh` — 9/9 checks, backend+agent reais (sem produção, sem navegador). Ainda não integrado ao `stress-test-vision-core.cjs` principal (próxima sessão, ver pendências).
 
 **Regra:** Nenhum tutorial de seção é criado sem o stress test correspondente passando.
 
@@ -189,22 +201,92 @@ FREE_MISSION_LIMIT=5
 | §102 | §98-E resolvido — Mission Timeline persistido (descoberta: endpoint real é /api/chat, não /api/copilot) — ST-11 criado (6 casos), 21 testes unitários | s102-done | 13a6748 |
 | §103 | Causa raiz real do §102: header Authorization ausente nas 4 chamadas /api/chat (tok1-4) + CSS ausente no bundle pré-concatenado + overwrite-guard defensivo. Persistência confirmada ponta a ponta via curl/PowerShell. Mesmo commit/tag do §102. | s102-done | 13a6748 |
 | §104 | Limpeza: v236FileInput órfão removido, versão backend padronizada (4.1.0/v5.9.0 → 5.9.7), display_input pro histórico mostrar texto limpo (sem prefixo de contexto), recordMissionTimelineEntry adicionado nos 3 fluxos que faltavam (sf-chat, hermes, zip-upload) — §98-B/§98-C doc sincronizada com código real. | - | (pendente commit) |
+| §105 | Fechou o loop chat→agent local→patch real (roadmap item #1 de about.html). `/api/agent/mission/queue` preserva file/patch/fix_type/diagnosis p/ apply_patch (antes descartados); `/api/agent/status` real via `_agentLastSeenAt` (antes hardcoded false); novo botão "Aplicar no Vision Agent Local" ativa `renderValidationPanel` (código morto desde sempre). ST-12 criado (9/9, backend+agent reais). SDDF_SPEC §14.3/14.4 corrigidos (removida doc de `tryAgent` fictício) + novo §105. | - | (pendente commit) |
 
 ---
 
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
-**Status: todas as pendências de código conhecidas até §103 foram resolvidas e registradas no §104 abaixo.** Itens já LIVE/resolvidos removidos desta lista (§98-A/B/C/D/E, T1-T6, §103) — ver seções correspondentes acima pra histórico.
+**Status: §105 fechou o item #1 do roadmap de `about.html`.** Itens já LIVE/resolvidos removidos desta lista (§98-A/B/C/D/E, T1-T6, §103, §104, §105) — ver seções correspondentes acima pra histórico. As "ETAPAS GRANDES" abaixo são a continuação direta — vieram da auditoria de código real desta sessão + dos roadmaps já publicados em `about.html`/`landing.html`.
 
-### §104 — limpeza + cobertura completa do histórico (5 itens, 1 patch consolidado)
-Implementado via `_patch104_cleanup_and_coverage.py` — cada item é independente e tem assert próprio:
-1. `v236FileInput` órfão removido do `index.html` (zero outras referências confirmadas antes de remover — o resto do bloco `v236-action-row`/`v236FileBtn`/`v236CopilotBtn` TEM CSS e JS reais, não foi tocado).
-2. Versão do backend padronizada: `package.json` 4.1.0 → 5.9.7, e os 8 textos de fallback dos módulos SF (vazam pro usuário quando o LLM falha) de v5.9.0 → v5.9.7. Frontend `V2.9.10` não foi tocado (versionamento separado, sem evidência de estar errado).
-3. Backend `/api/chat` agora prefere `body.display_input` (texto limpo) sobre `body.message` (que pode ter prefixo de contexto) pra montar a entrada do histórico.
-4. Frontend: chat principal e upload de ZIP agora mandam `display_input` com o texto original do usuário, sem o prefixo de contexto / conteúdo de arquivo.
-5. Frontend: os 3 fluxos que ainda não chamavam `recordMissionTimelineEntry()` (mini-chat dos módulos SF, EXECUTAR MISSÃO/Hermes, upload de ZIP) agora chamam, equiparando ao chat principal (que já tinha desde o §102). Backend já persistia os 4 desde o §103 (header Authorization) — isso era só o feedback visual imediato que faltava.
+### §104 (histórico) — limpeza + cobertura completa do histórico
+Implementado via `_patch104_cleanup_and_coverage.py`. Ver commit `bc0325f`. Resumo: removeu `v236FileInput` órfão, padronizou versão backend (5.9.7), `display_input` limpo no histórico, `recordMissionTimelineEntry` nos 3 fluxos que faltavam.
 
-**Verificação:** item 1-3 verificáveis por grep/sintaxe puro. Item 4 (display_input) tem verificação automatizada via `_test104_verify_e2e.sh` (curl, sem navegador — mesmo padrão do §103). Item 5 (recordMissionTimelineEntry nos 3 fluxos novos) é client-side puro — não dá pra verificar via curl, só visualmente; código segue padrão já testado no §102/§103, risco baixo. Se quiser certeza total, mandar uma missão via EXECUTAR MISSÃO ou upload de ZIP e confirmar que aparece no painel na hora (não precisa F5, é só pra esse item específico).
+### §105 (histórico) — fechar o loop chat→agent local→patch real
+Ver seção "§105 — Fechar o Loop" acima para o write-up completo. Patch: `_patch105_agent_loop_closure.py`. Testes: `_test105_backend_logic.cjs` (13/13) + `_test105_full_loop_e2e.sh` (9/9, backend+agent reais).
 
-### Fora de escopo (decisão deliberada, não esquecimento)
+### Fora de escopo / decisão deliberada (não esquecimento)
 - §98-F (OPENCLAW/OPENSQUAD/OSINT/V10) — roadmap puro, NÃO implementar ainda.
+- §105 não estendeu o mesmo botão pro Standard Method Panel (EXECUTAR MISSÃO) — ver Etapa A abaixo.
+
+---
+
+## ETAPAS GRANDES — ROADMAP DE IMPLEMENTAÇÃO AUTÔNOMA (próximas sessões)
+
+**Como usar esta seção com `claude --dangerously-skip-permissions`:** cada etapa abaixo é desenhada para ser executada **inteira, sem parar para teste manual no navegador** — a "Verificação automatizada" de cada etapa é o critério de PASS, no mesmo espírito de `_test105_full_loop_e2e.sh` (sobe backend real localmente, sobe agent real quando aplicável, curl/assert, sem depender de produção nem de clique humano). Se uma etapa não tiver verificação 100% automatizável, isso está dito explicitamente nela — nesse caso, implemente e documente o que falta verificar manualmente, não pule a etapa.
+
+**Origem:** Etapas B–F vêm dos itens #2–#6 do roadmap publicado em `about.html` ("POTENCIAIS DE EVOLUÇÃO") + os itens "EM EVOLUÇÃO" de `landing.html`. Renumerados aqui em ordem de prioridade/risco, não na ordem original do about.html.
+
+### Etapa A — Estender o botão "Aplicar no Vision Agent Local" ao EXECUTAR MISSÃO
+**Risco:** baixo. **Esforço:** pequeno (mesmo padrão do §105, código já provado).
+O Standard Method Panel (`renderStandardMethodPanel`, botão "✅ Confirmar e Aplicar Patch") hoje só aplica via `/api/chat/apply-patch` (cloud). Adicionar a mesma opção do §105 ali: ou um 2º botão "📡 Aplicar no Vision Agent Local" ao lado do "Confirmar", ou um toggle. Os endpoints (`/api/agent/status`, `/api/agent/mission/queue`, `/api/agent/mission/result/:id`) e a lógica de polling já existem e já estão testados pelo backend — esta etapa é puramente frontend (extrair a lógica de polling do §105 para uma função compartilhada `vcQueueApplyPatchViaAgent(hermesObj, statusEl, onResult)` reaproveitada nos dois lugares, em vez de duplicar código).
+**Verificação automatizada:** o contrato de backend já está 100% coberto por `_test105_full_loop_e2e.sh` — não precisa de teste novo de backend. Para a wiring de frontend, adicionar um assert estático (`grep` no bundle confirmando que a nova função é chamada nos dois call-sites) já documentando explicitamente que a wiring real do clique só é confirmável visualmente (mesmo precedente aceito no §104 item 5).
+
+### Etapa B — Software Factory: dry-run real em repositório externo autorizado
+**Risco:** médio-alto (escopo precisa ficar restrito). **Esforço:** grande — provavelmente 2-3 sessões.
+Hoje a Software Factory nunca toca código de produção — é camada de governança simulada (flags `release_allowed`/`deploy_allowed` sempre `false`). A evolução natural (não "destravar tudo"): para um repositório **explicitamente apontado pelo usuário** (path local ou URL, nunca o próprio vision-core), rodar em modo "dry-run real": ler o código de verdade, gerar diff de verdade, **nunca commitar nem dar push**.
+**Plano concreto:**
+1. Novo endpoint `POST /api/sf/dry-run-real` — recebe `{ repo_path, request }` (ou `{ repo_url }` para clone temporário read-only em `/tmp`).
+2. Reaproveita a lógica de scan do `vision-agent.js` (`scanProject`) e o pipeline de diagnóstico do chat (`askIA`/Hermes) — não dois sistemas paralelos.
+3. Retorna `{ diff_preview, files_analyzed, confidence, real_io: true }` — nunca escreve no repo de destino.
+4. Firewall explícito: se `repo_path` resolver para dentro do próprio `vision-core` (checar `path.resolve` contra `ROOT`), recusar com `403 self_modification_blocked` — nunca deixar a Factory "se auto-editar" por engano.
+**Verificação automatizada:** criar um repo de teste temporário (mesmo padrão do §105: `mktemp -d`, `git init`, arquivo com bug conhecido), chamar o endpoint, `assert` que o diff retornado contém a correção esperada E que o arquivo no disco do repo de teste **não foi alterado** (hash antes/depois idêntico) E que nenhum commit novo existe.
+
+### Etapa C — Tiered routing de providers por dificuldade (spec já existe: SDDF_SPEC §66)
+**Risco:** baixo (spec completa já escrita, linhas 4122-4306 de `SDDF_SPEC.md`). **Esforço:** médio.
+Classificar a missão por heurística simples (tamanho do diff, presença de termos como "race condition"/"shadowing"/"closure"/estado compartilhado) e rotear direto para o provider/modelo mais robusto antes da primeira tentativa, em vez de só fallback reativo. SDDF_SPEC §66 já documenta as 4 fases e a tabela de modelos.
+**Verificação automatizada:** testes unitários puros da função de classificação (`classifyMissionDifficulty(input) → 'easy'|'hard'|'expert'`) com fixtures de texto conhecidos — não precisa chamar LLM real nem rede.
+
+### Etapa D — Memory layer: aprender com diagnósticos de baixa confiança anteriores (§72 fases 2-4)
+**Risco:** baixo. **Esforço:** médio.
+`.vision-memory/hermes_low_confidence.jsonl` já está sendo escrito (fase 1, §72). Fase 2: antes do diagnóstico, consultar esse histórico — se o payload atual é similar a um caso anterior que precisou de escalação, pular direto pro provider robusto em vez de tentar o mais barato primeiro.
+**Plano concreto:** função `findSimilarLowConfidenceCase(input, jsonlPath)` com matching simples (normalizar texto, comparar tokens/keywords em comum, threshold de similaridade) — sem embeddings/vetores pesados, manter barato.
+**Verificação automatizada:** fixture `.jsonl` com 2-3 entradas conhecidas, testes unitários confirmando que um input similar dispara a rota "direto pro robusto" e um input diferente não.
+
+### Etapa E — Multi-arquivo / multi-step missions reais (apply, não só diagnóstico)
+**Risco:** médio (semântica de transação importa). **Esforço:** médio-grande.
+§56 (Multi-DIFF) já resolve multi-arquivo no **diagnóstico**. Falta multi-arquivo na **aplicação real**: hoje `applyPatchMission` em `vision-agent.js` e `/api/agent/mission/queue` só carregam 1 `file`+1 `patch` por missão. Estender para aceitar `patches: [{file, patch, fix_type}, ...]` e aplicar como transação atômica — se qualquer arquivo falhar a validação Aegis, fazer rollback de TODOS os arquivos já aplicados na mesma missão antes de reportar falha (não deixar a missão pela metade).
+**Verificação automatizada:** estender `_test105_full_loop_e2e.sh` (ou criar `_test106`) com um caso de 2 arquivos onde um precisa mudar a assinatura de uma função e o outro precisa atualizar o call site — assert que ambos mudam juntos com um único commit, e um segundo caso onde o 2º arquivo falha Aegis — assert que o 1º também é revertido (zero estado parcial).
+
+### Etapa F — Observabilidade do Vision Core como produto (dashboard visível)
+**Risco:** baixo. **Esforço:** pequeno-médio.
+`/api/dora-metrics`, `/api/metrics/agents`, `/api/metrics/summary` já existem mas são só internos. Expor um painel visível (Enterprise) com: quantas vezes cada provider foi usado, taxa de escalação (§72), tempo médio de diagnóstico por dificuldade (depende da Etapa C para ter o dado de "dificuldade" pra agrupar).
+**Verificação automatizada:** os 3 endpoints já existem — testar via curl que retornam shape esperado (sem precisar montar HTML), e um teste estático confirmando que o painel novo no frontend chama os 3 endpoints (grep no bundle).
+
+### Etapa G (infra, não código puro) — Banco de dados persistente
+**Risco:** alto (decisão de infraestrutura, não só código). **Esforço:** grande, fora do escopo de uma sessão autônoma sem decisão humana prévia.
+Hoje: JSON + `/tmp` no EB, reseta a cada restart do processo (cfn-hup periódico, ver §70). Migrar pra SQLite (arquivo em `/var/app/current` persistente entre restarts, mas não entre deploys) ou RDS PostgreSQL (persistente de verdade, custo mensal). **Esta etapa precisa de uma decisão humana explícita sobre qual opção antes de qualquer código** — não é uma boa candidata pra `--dangerously-skip-permissions` sem essa decisão prévia registrada aqui primeiro.
+
+---
+
+## PADRÃO DE REGISTRO — DEPOIMENTOS E TESTES NAS PÁGINAS PÚBLICAS
+
+**Regra:** toda etapa grande concluída (acima) deve, além do código+testes, atualizar as duas páginas públicas que documentam a trajetória real do produto. Isso já vinha sendo seguido desde §53 e precisa continuar — é a prova pública de "produto testado, não prometido" que sustenta o posicionamento do about.html ("IAs criam. VISION CORE corrige.").
+
+### `frontend/about.html` — dois lugares para atualizar
+1. **Seção "O QUE OS TESTES REVELARAM"** — um card novo por descoberta real (bug encontrado, causa raiz, como foi resolvido). Formato: emoji temático + citação em 1ª pessoa do que o teste revelou (estilo "depoimento técnico") + atribuição `— §NNN, contexto, PASS/FAIL`. Exemplos já no ar: §98-A (falso positivo no stress test), §98-D (agente especializado não lia o modo), §99-§101 (T-MENU). **Para §105:** adicionar um card sobre `renderValidationPanel` ser código morto desde sempre — é exatamente o tipo de descoberta que esta seção existe para registrar.
+2. **Seção "POTENCIAIS DE EVOLUÇÃO" (roadmap numerado)** — quando uma etapa do roadmap acima é implementada, REMOVER o item correspondente desta lista (renumerando os que restam) e adicionar a entrada equivalente na seção "RESOLVIDO" de `landing.html` (abaixo). Não deixar um item simultaneamente em "roadmap não implementado" E "resolvido" — isso já causou inconsistência de doc antes (§98-B/§98-C, ver histórico).
+
+### `frontend/landing.html` — três lugares para atualizar
+1. **Seção "TRANSPARÊNCIA TÉCNICA"** — mover o card de "🔄 EM EVOLUÇÃO" pra "✅ RESOLVIDO — V2.9.10+" (ou criar um card resolvido novo, se a feature não tinha card "em evolução" ainda). Cada card resolvido tem: título, 1-2 frases de descrição, e uma linha "**Entregue:** endpoint(s) + certificação (quantos testes, qual arquivo)".
+2. **Tabela de versão (`TRAJETÓRIA REAL`)** — adicionar/atualizar a linha `V2.9.10+` com a entrega mais recente, mesmo padrão de "Sistema de tutoriais contextual (T1-T6)... Stress test suite 40/40".
+3. **Seção "ENTREGAS V2.9.10"** (cards com badge tipo `LIVE AGORA`/`fase de testes`) — se a etapa for grande o suficiente para merecer card próprio (como "Agente Arquiteto + Spec Library"), criar um novo bloco seguindo o mesmo HTML/CSS dos existentes.
+
+### Depois de editar as páginas
+Local dos arquivos fonte: `frontend/about.html` e `frontend/landing.html` (HTML estático, sem framework — strings concatenadas direto, mesmo estilo do resto do frontend). Deploy via `bash bin/deploy-pages.sh "msg"` (CF Pages) — **só depois** que os testes automatizados da etapa passarem. Nunca documentar uma etapa como resolvida nas páginas públicas antes do teste automatizado correspondente passar localmente.
+
+---
+
+## NOTA TÉCNICA — RUÍDO DE CRLF/LF NO GIT DIFF (achado nesta sessão, não é bug introduzido)
+
+`git status`/`git diff` na working tree mostra ~1580 arquivos como "modified" mesmo sem nenhuma mudança de conteúdo real — confirmado comparando `README.md`: o HEAD do git tem LF, a working tree tem CRLF (provavelmente `core.autocrlf` configurado diferente entre a máquina Windows onde o projeto é normalmente editado e o ambiente onde este .zip foi gerado/extraído). **Isso já existia antes desta sessão** — não foi introduzido agora. Os arquivos tocados nesta sessão (`backend/server.js`, `frontend/assets/vision-core-bundle.js`, `SDDF_SPEC.md`) mantiveram CRLF consistente com o resto do arquivo, então o diff real desses 3 arquivos fica limitado às linhas de fato alteradas — não devolve cada linha do arquivo inteiro como "mudada". **Não é prioridade corrigir isso agora** (mexer em `.gitattributes`/`core.autocrlf` tem raio de explosão grande pra um benefício cosmético) — só registrado aqui pra próxima sessão não estranhar o `git status` gigante e não achar que é regressão.

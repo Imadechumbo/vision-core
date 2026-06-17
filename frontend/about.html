@@ -561,6 +561,18 @@
           <div style="font-size:11px;color:#64748b">— §99-§101, T-MENU, PASS</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔁</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>renderValidationPanel()</code> — o painel com os botões 'Aprovar e fazer Push' / 'Reverter' — existia no bundle desde antes desta sessão. Auditoria de código confirmou: zero call sites. Não era uma feature em uso que quebrou, era uma feature que nunca tinha sido ligada a nada. A causa raiz do item #1 do roadmap não era código faltando — era um fio que faltava conectar três peças que já existiam."</div>
+          <div style="font-size:11px;color:#64748b">— §105, auditoria de código morto, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">📡</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Loop fechado de ponta a ponta sem navegador: backend real + <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>vision-agent.js</code> real apontados um pro outro, um arquivo com bug de verdade num repo git temporário. O agent aplicou o patch, validou a sintaxe, comitou — e quando o patch seguinte quebrava a sintaxe de propósito, o Aegis reprovou e o <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>git checkout --</code> reverteu o arquivo bit a bit, sem deixar nenhum commit espúrio."</div>
+          <div style="font-size:11px;color:#64748b">— §105, ST-12 9/9, PASS</div>
+        </div>
+
       </div>
     </div>
 
@@ -792,15 +804,6 @@
         <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
           <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
           <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">1</div>
-          <div style="font-size:13px;font-weight:700;color:#a5b4fc">Fechar o loop VISION AI COMMAND → mission queue → Agent Local → patch real</div>
-          <div style="font-size:13px;color:#64748b;line-height:1.6">
-            Hoje existem três peças que já funcionam isoladamente: o chat diagnostica, o agent-local escaneia o PC do usuário, e <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/agent/mission/push</code> + <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/revert</code> já existem como endpoints. O que falta é o fio que conecta "usuário pede fix no chat" → "missão enviada para o agente local" → "agente aplica patch real no projeto local, com snapshot/rollback" → "resultado volta pro chat". Isso transformaria o Vision Core de "diagnostica e te dá o patch para colar" em "corrige seu projeto local de fato", mantendo PASS GOLD como gate.
-          </div>
-        </div>
-
-        <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
-          <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
-          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">2</div>
           <div style="font-size:13px;font-weight:700;color:#a5b4fc">Software Factory saindo do sandbox — com escopo restrito e auditável</div>
           <div style="font-size:13px;color:#64748b;line-height:1.6">
             A arquitetura de evidence levels (simulated → dry-run → sandbox → real) já é projetada para isso. O próximo passo natural não é "destravar tudo", mas permitir que, para um repositório explicitamente autorizado pelo usuário (não o próprio vision-core), a Factory rode em modo dry-run real — gerando diffs de verdade sobre o código do usuário, sem commit/push automático. Isso daria à SF um produto tangível: <em style="color:#e2e8f0">"gire a Fábrica de Software no meu projeto e me retorne um rascunho de PR"</em>.
@@ -809,7 +812,7 @@
 
         <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
           <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
-          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">3</div>
+          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">2</div>
           <div style="font-size:13px;font-weight:700;color:#a5b4fc">Tiered routing de providers (§66 Fases 1-4)</div>
           <div style="font-size:13px;color:#64748b;line-height:1.6">
             Funcionou sem elas porque trocar para deepseek-v4-flash resolveu 17/17 fails. Mas a tabela de modelos já mapeada (Qwen, Nemotron, Poolside — vários gratuitos) sugere uma evolução natural: classificar a missão por dificuldade (heurística simples: tamanho do diff, presença de termos como "race condition", "shadowing", "async") e rotear para o modelo certo antes de gastar a primeira tentativa — reduzindo latência e custo em vez de só fallback reativo.
@@ -818,7 +821,7 @@
 
         <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
           <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
-          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">4</div>
+          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">3</div>
           <div style="font-size:13px;font-weight:700;color:#a5b4fc">Memory layer (§72 Fase 2-4) como diferencial real de produto</div>
           <div style="font-size:13px;color:#64748b;line-height:1.6">
             O <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">.vision-memory/hermes_low_confidence.jsonl</code> já está sendo escrito. A Fase 2 (consultar esse histórico antes do diagnóstico para pular direto pro provider robusto em payloads parecidos) é relativamente barata de implementar e tem um efeito composto: cada missão deixa o sistema mais rápido/preciso na próxima parecida — isso é uma história de marketing forte (<em style="color:#e2e8f0">"o Vision Core aprende com cada bug que já viu"</em>).
@@ -827,7 +830,7 @@
 
         <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
           <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
-          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">5</div>
+          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">4</div>
           <div style="font-size:13px;font-weight:700;color:#a5b4fc">Multi-arquivo e multi-step missions de verdade</div>
           <div style="font-size:13px;color:#64748b;line-height:1.6">
             §56 (Multi-DIFF) resolveu o caso de "3 arquivos com bugs simultâneos" para diagnóstico. O próximo nível é missões que precisam de múltiplas rodadas de patch coordenadas (ex: mudar uma assinatura de função em um arquivo e todos os call-sites em outros) — isso aproximaria a Factory de um "agente de refatoração" real, que é justamente o pitch da seção "Refatoração assistida de código legado" no about.html, ainda não comprovado por stress test.
@@ -836,7 +839,7 @@
 
         <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
           <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
-          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">6</div>
+          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">5</div>
           <div style="font-size:13px;font-weight:700;color:#a5b4fc">Observabilidade do próprio Vision Core como produto</div>
           <div style="font-size:13px;color:#64748b;line-height:1.6">
             Vocês já têm <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/dora-metrics</code>, <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/metrics/agents</code>, <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/metrics/summary</code>, <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">.vision-memory/*</code>. Isso é quase um dashboard de "saúde do seu pipeline de IA" pronto — poderia virar uma feature visível no painel (não só interna) para o Enterprise: <em style="color:#e2e8f0">"veja quantas vezes cada provider foi usado, taxa de escalação, tempo médio de diagnóstico por dificuldade"</em>.

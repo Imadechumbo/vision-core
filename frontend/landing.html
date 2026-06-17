@@ -211,7 +211,7 @@
           <tr><td>V51.0–V200.0</td><td>✅ Fusão</td><td>Cadeia completa de governança (sandbox, patch, tag, estável)</td></tr>
           <tr><td>V285–V450</td><td>✅ Fusão</td><td>Reforço do SaaS, segurança corporativa, governança</td></tr>
           <tr><td><strong>V2.9.10</strong></td><td>✅ <strong>Base</strong></td><td>Cadeia RTP (RTP-0 a RTP-6), Software Factory, chat com IA real, auth JWT, Stripe, CF Pages + Worker + EB prod, 29/29 testes e2e</td></tr>
-          <tr class="current"><td><strong>V2.9.10+</strong></td><td>✅ <strong>Atualidade</strong></td><td>Sistema de tutoriais contextual (T1-T6) com accordion na sidebar. Agentes especializados detectam contexto por keyword e respondem com atribuição visível. Stress test suite 40/40 (ST-00 a ST-10).</td></tr>
+          <tr class="current"><td><strong>V2.9.10+</strong></td><td>✅ <strong>Atualidade</strong></td><td>Sistema de tutoriais contextual (T1-T6) com accordion na sidebar. Agentes especializados detectam contexto por keyword e respondem com atribuição visível. Loop chat → Vision Agent Local → patch real no disco fechado (detecção de presença real, fila com patch completo, push/revert ativado). Stress test suite 40/40 (ST-00 a ST-10) + novo ST-12 (loop do agent, 9/9) certificado em ambiente local.</td></tr>
           <tr class="planned"><td>V3.0.0</td><td>⏩ Planejado</td><td>Execução real de staging da sonda (pós-EXECUTAR MISSÃO local)</td></tr>
         </tbody>
       </table>
@@ -286,6 +286,17 @@
         </div>
       </div>
 
+      <!-- §105 — Loop chat → Vision Agent Local → patch real -->
+      <div class="tl-item">
+        <span class="tl-dot" style="color:#06b6d4;background:#06b6d4"></span>
+        <div class="tl-content">
+          <div class="tl-header"><span class="tl-version">Vision Agent Local</span><span class="tl-badge" style="background:rgba(6,182,212,0.15);color:#22d3ee;border:1px solid rgba(6,182,212,0.4)">LOOP FECHADO</span></div>
+          <h3 class="tl-title">Chat aplica patch direto no disco do usuário</h3>
+          <p class="tl-desc">O chat já diagnosticava bugs e gerava o patch — agora um botão envia esse patch direto para o Vision Agent Local, que aplica no projeto de verdade com backup automático, valida a sintaxe e comita no git, revertendo sozinho se algo der errado. Detecção de presença do agent passou de simulada para real (último poll há menos de 15s). Certificado ponta a ponta com backend e agent reais — sem mock, sem navegador.</p>
+          <div class="tl-tags"><span>apply_patch real</span><span>backup + rollback</span><span>git commit</span><span>ST-12 9/9</span></div>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -323,10 +334,17 @@
         <div class="bn-fix" style="color:var(--green)"><strong>Entregue:</strong> /api/agents/catalog + /api/agents/:id/mode + detectActiveAgent() no /api/copilot. Certificado com 4/4 testes (ST-10).</div>
       </div>
 
+      <!-- §105 — Loop chat → agent local → patch real RESOLVIDO -->
+      <div class="bn-card" style="border-color:rgba(34,197,94,.3)">
+        <div class="bn-header"><span class="bn-icon">✅</span><div><div class="bn-label" style="color:var(--green)">RESOLVIDO — V2.9.10+</div><h3>Chat aplica patch direto no projeto local</h3></div></div>
+        <p>Quando o chat diagnostica um bug, agora existe um botão "Aplicar no Vision Agent Local" além de baixar o arquivo corrigido: ele enfileira o patch, o Vision Agent que já roda na máquina do usuário aplica no disco real com backup automático, valida a sintaxe (Aegis) e comita no git — ou reverte sozinho se a validação falhar. O usuário aprova o push manualmente depois.</p>
+        <div class="bn-fix" style="color:var(--green)"><strong>Entregue:</strong> /api/agent/status real (detecção de presença) + /api/agent/mission/queue carregando o patch de verdade. Certificado E2E com backend e agent reais (sem mock): patch aplicado + commit real, e rollback automático confirmado num caso de erro de sintaxe proposital.</div>
+      </div>
+
       <div class="bn-card bn-medium">
         <div class="bn-header"><span class="bn-icon">🔄</span><div><div class="bn-label">EM EVOLUÇÃO — V3.0.0</div><h3>EXECUTAR MISSÃO real</h3></div></div>
-        <p>EXECUTAR MISSÃO chama /api/run-live → go-core no servidor EB. Para missões em projetos locais, o servidor precisa ter acesso ao código. V3.0.0 endereça isso.</p>
-        <div class="bn-fix"><strong>Próximo:</strong> Vision Agent local + integração com projetos via path/GitHub.</div>
+        <p>EXECUTAR MISSÃO chama /api/run-live → go-core no servidor EB. A infraestrutura de comunicação com o Vision Agent Local (detecção de presença, fila de missões, push/revert) já está pronta e em uso pelo chat — falta levar a mesma opção para o botão EXECUTAR MISSÃO.</p>
+        <div class="bn-fix"><strong>Próximo:</strong> mesmo botão "Aplicar no Vision Agent Local" do chat, agora no painel do EXECUTAR MISSÃO.</div>
       </div>
       <div class="bn-card bn-low">
         <div class="bn-header"><span class="bn-icon">🔄</span><div><div class="bn-label">EM EVOLUÇÃO</div><h3>APIs pagas opcionais</h3></div></div>

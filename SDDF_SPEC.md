@@ -432,29 +432,58 @@ Missão recebida (via polling ou /run direto)
 
 | Endpoint | Método | Papel |
 |----------|--------|-------|
-| `GET /api/agent/mission/pending` | Polling | Agent consulta se há missão pendente (a cada `VC_POLL_MS` ms) |
-| `POST /api/agent/mission/queue` | Frontend | Frontend enfileira missão quando agent está ativo |
+| `GET /api/agent/mission/pending` | Polling | Agent consulta se há missão pendente (a cada `VC_POLL_MS` ms) — §105: cada poll real atualiza `_agentLastSeenAt` |
+| `POST /api/agent/mission/queue` | Frontend | Frontend enfileira missão. §105: quando `type=apply_patch`, exige `file`+`patch` (400 se ausentes) e preserva `file`/`patch`/`fix_type`/`diagnosis` na missão — antes do §105 esses campos eram silenciosamente descartados para qualquer `type` |
 | `POST /api/agent/mission/result` | Agent | Agent retorna resultado processado ao servidor |
 | `GET /api/agent/mission/result/:id` | Frontend | Frontend polling para buscar resultado da missão |
-| `GET localhost:70xx` | Health | Frontend detecta agent ativo antes de enfileirar |
+| `GET /api/agent/status` | Frontend | §105: real — `connected:true` se houve poll/heartbeat nos últimos 15s (`_agentLastSeenAt`). Antes do §105 retornava `connected:false` hardcoded, sem `anti_stub` |
+| `POST /api/agent/heartbeat` | Agent | §105: agora atualiza `_agentLastSeenAt` (antes só respondia `{status:'online'}` sem efeito) |
 
-### 14.4 Detecção de agent no frontend
+### 14.4 Detecção de agent no frontend — histórico e estado real
 
-O botão EXECUTAR MISSÃO (`v298RunBtn`) tenta detectar o agent antes de usar `/api/run-live`:
+**Nota de precisão (2026-06-17, sessão §105):** esta subseção descrevia um fluxo
+`tryAgent([7070, 7071, 7072])` que **nunca existiu no bundle.js real** — era
+spec aspiracional não implementada. Auditoria de código confirmou zero
+ocorrências da string `tryAgent` no bundle. O que existia de fato:
+`renderValidationPanel()` (push/revert) estava definida mas **nunca era
+chamada em lugar nenhum** — código morto desde sua criação. O botão EXECUTAR
+MISSÃO sempre aplicou patch no servidor via `/api/chat/apply-patch` (em
+memória, sem tocar no disco do usuário), nunca via agent local.
+
+**Fluxo real implementado no §105** (substitui a spec antiga abaixo):
 
 ```
-tryAgent([7070, 7071, 7072], timeout=800ms)
+Chat diagnostica (upload de arquivo/ZIP) → hermesObj.{file,patch,fix_type,diagnosis}
   │
-  ├─ AGENT ATIVO
-  │    POST /api/agent/mission/queue → { mission_id }
-  │    Poll /api/agent/mission/result/:id a cada 2s (máx 30s / 15 tentativas)
-  │    Exibe: "✅ AGENT EXECUTOU" + output
-  │
-  └─ AGENT INATIVO
-       POST /api/run-live
-       Se LOCAL_ACCESS_REQUIRED → "📋 ACESSO LOCAL NECESSÁRIO" + 4 métodos
-       Se PASS GOLD → "✅ MISSÃO CONCLUÍDA"
+  └─ renderApplyFixPanel() mostra 2 opções desde então + 1 nova:
+       1. "✅ Aplicar e Baixar Arquivo Corrigido"  → /api/chat/apply-patch (cloud, inalterado)
+       2. "📡 Aplicar no Vision Agent Local"        → NOVO, fecha o loop:
+            │
+            ├─ GET /api/agent/status
+            │    connected:false → mensagem + link de download, para aqui
+            │    connected:true  → continua
+            │
+            ├─ POST /api/agent/mission/queue { type:'apply_patch', file, patch, fix_type, diagnosis }
+            │    400 se file/patch ausentes
+            │
+            ├─ Poll GET /api/agent/mission/result/:id a cada 2s (máx 30s / 15 tentativas,
+            │    com botão "continuar aguardando" se expirar — agent pode estar processando
+            │    uma missão anterior mais lenta)
+            │
+            └─ Resultado chega → renderValidationPanel(result) — primeira vez que essa
+                 função é de fato invocada — mostra "✅ Aprovar e fazer Push" / "❌ Reverter"
+       3. "✖ Ignorar"
 ```
+
+O Vision Agent Local (`vision-agent.js`) **não precisou de nenhuma mudança** —
+`applyPatchMission()` já suportava `type=apply_patch` com backup `.vision-bak`
++ validação Aegis (`node --check`) + rollback via `git checkout --` desde antes
+desta sessão. Faltava apenas o backend parar de descartar os campos e o
+frontend chamar o endpoint certo. Validado E2E com backend + agent reais
+(sem navegador) em `_test105_full_loop_e2e.sh`: caminho feliz (patch aplicado
++ commit real), caminho de rollback (sintaxe quebrada → Aegis reprova → git
+checkout reverte, zero commit espúrio), e caminho de validação (400 sem
+file/patch).
 
 ### 14.5 Modo fix — contrato de resposta da IA
 
@@ -4703,3 +4732,80 @@ Total:      ~60.0s = hit exato do timeout do cliente
 - **d) reordenar cenários** — evidência contrária (S10 é rápido em posição 10 quando Cerebras OK). 🔲 descartada
 
 **Fix adicional:** Hermes deve retornar HTTP 503 estruturado quando exaure todos os providers, em vez de deixar o cliente atingir o timeout cego.
+
+---
+
+## §105 — Fechar o Loop: Chat → Mission Queue → Vision Agent Local → Patch Real
+
+**Nota de numeração:** esta seção usa o contador de sessões do `CLAUDE.md`
+(§83→§104→§105), não o contador interno deste documento (que parou em §72).
+Os dois subsistemas (motor de diagnóstico/patch vs. camada SaaS/auth/UI)
+divergiram em numeração ao longo do tempo; mantido aqui para não criar um
+terceiro contador. Ver `CLAUDE.md` para o histórico de sessão completo.
+
+### Contexto
+
+Item #1 do roadmap publicado em `about.html` ("Fechar o loop VISION AI
+COMMAND → mission queue → Agent Local → patch real"). Três peças já
+funcionavam isoladamente — chat diagnostica (`hermesObj.{file,patch,fix_type}`),
+`vision-agent.js` sabe aplicar `type=apply_patch` com backup+rollback, e
+`/api/agent/mission/push`+`/revert` já existiam — mas nada conectava as três.
+
+### Causa raiz (auditoria de código, não suposição)
+
+1. `POST /api/agent/mission/queue` só lia `body.input`/`body.message`/`body.type`
+   — qualquer outro campo (`file`, `patch`, `fix_type`, `diagnosis`) era
+   silenciosamente descartado antes de chegar na fila, para **qualquer** tipo
+   de missão, não só `apply_patch`.
+2. `GET /api/agent/status` retornava `{ connected: false }` hardcoded, sem
+   `anti_stub: true` — violação da regra do projeto (`CLAUDE.md` regra #4) e
+   sem nenhuma forma real de saber se o agent estava rodando.
+3. `renderValidationPanel()` no frontend (botões "Aprovar e fazer Push" /
+   "Reverter") existia desde antes desta sessão mas **não tinha nenhum call
+   site** — código morto, confirmado por `grep` (uma única ocorrência no
+   arquivo, a própria definição).
+4. `vision-agent.js`: **nenhum problema encontrado** — `applyPatchMission()`
+   já implementava o fluxo completo (resolve path → `applyPatch()` com backup
+   `.vision-bak` → `validatePatch()` via `node --check`/`JSON.parse` → commit
+   git ou `git checkout --` em caso de falha). Confirmado lendo o código-fonte
+   inteiro antes de tocar em qualquer arquivo — zero mudanças necessárias aqui.
+
+### Fix
+
+- **Backend** (`backend/server.js`): `/api/agent/mission/queue` agora valida
+  (`400 apply_patch_requires_file_and_patch`) e preserva `file`/`patch`/
+  `fix_type`/`diagnosis` quando `type==='apply_patch'`. Variável de módulo
+  `_agentLastSeenAt` atualizada em cada poll real de `/mission/pending` e em
+  `/heartbeat`; `/api/agent/status` calcula `connected` real (`< 15000ms`
+  desde o último poll) em vez de retornar `false` fixo. `anti_stub: true`
+  adicionado em `/register`, `/heartbeat`, `/report`, `/status`.
+- **Frontend** (`vision-core-bundle.js`, função `renderApplyFixPanel`): novo
+  botão "📡 Aplicar no Vision Agent Local" — consulta `/api/agent/status`,
+  enfileira `apply_patch` com o patch já diagnosticado, faz polling de
+  `/api/agent/mission/result/:id` (2s × 15 tentativas, com retomada manual se
+  expirar) e, ao receber resultado, finalmente invoca `renderValidationPanel()`
+  (ativando o código morto) para o usuário aprovar push ou reverter.
+- **Agent**: nenhuma mudança.
+
+### Evidência (sem navegador, reproduzível)
+
+- `_test105_backend_logic.cjs` — 13/13 testes unitários isolados (mocks da
+  lógica de validação de `queue` e do cálculo de `connected`).
+- `_test105_full_loop_e2e.sh` — E2E real: sobe `backend/server.js` +
+  `vision-agent.js` (processos reais, projeto git temporário com arquivo com
+  bug real). 9/9 checks: agent detectado via `/api/agent/status`, patch
+  aplicado + commit git real criado, conteúdo do arquivo no disco corrigido
+  de fato, patch com erro de sintaxe revertido automaticamente via Aegis +
+  `git checkout --` (zero commit espúrio, arquivo bit-a-bit idêntico ao
+  estado anterior), e validação 400 sem `file`/`patch`.
+
+### O que NÃO mudou (escopo deliberado)
+
+- O botão "EXECUTAR MISSÃO" (Standard Method Panel) continua aplicando via
+  `/api/chat/apply-patch` (cloud). Adicionar a mesma opção de agent local lá
+  é direto (mesmo padrão) mas ficou fora do escopo desta sessão — ver
+  `CLAUDE.md` para o item de continuação.
+- `git push` real continua exigindo aprovação humana explícita via o botão
+  "Aprovar e fazer Push" → `/api/agent/mission/push` → o próprio agent local
+  decide se executa (`gitPush` em `vision-agent.js`) — REGRA ABSOLUTA mantida
+  intacta, nenhuma flag de deploy/push automático foi tocada.
