@@ -7112,6 +7112,62 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       return wrap;
     }
 
+    /* ── §106: vcQueueApplyPatchViaAgent — lógica compartilhada entre renderApplyFixPanel  */
+    /* e renderStandardMethodPanel: verifica agent → queue apply_patch → poll resultado.    */
+    /* hermesObj : objeto com file, patch, fix_type, diagnosis.                             */
+    /* statusEl  : elemento DOM para mensagens de status.                                   */
+    /* onReset   : callback chamado em qualquer erro (re-habilita botões do caller).        */
+    /* onDone    : callback chamado com (rd) quando o agent responde com sucesso.           */
+    function vcQueueApplyPatchViaAgent(hermesObj, statusEl, onReset, onDone) {
+      statusEl.textContent = 'Consultando /api/agent/status...';
+      fetch(BACKEND_URL + '/api/agent/status').then(function(r) { return r.json(); }).then(function(st) {
+        if (!st || !st.connected) {
+          statusEl.innerHTML = '⚠️ Vision Agent Local não detectado (sem poll nos últimos 15s). ' +
+            '<a href="https://visioncoreai.pages.dev/landing.html#agent" target="_blank" style="color:#93c5fd;">Baixe e abra o Vision Agent</a> na máquina onde está o projeto, depois clique novamente.';
+          onReset();
+          return;
+        }
+        statusEl.textContent = 'Vision Agent Local ativo — enviando patch para fila...';
+        fetch(BACKEND_URL + '/api/agent/mission/queue', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'apply_patch', file: hermesObj.file, patch: hermesObj.patch, fix_type: hermesObj.fix_type || 'code_patch', diagnosis: hermesObj.diagnosis || 'vision fix' })
+        }).then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error || ('HTTP ' + r.status)); }); })
+        .then(function(qd) {
+          if (!qd.ok || !qd.mission_id) throw new Error(qd.error || 'queue_failed');
+          var missionId106 = qd.mission_id;
+          statusEl.textContent = 'Missão ' + missionId106 + ' enfileirada — aguardando o agent aplicar no disco real (até 30s)...';
+          var tries106 = 0, maxTries106 = 15; /* §14.4 spec: 2s * 15 = 30s */
+          function pollResult106() {
+            tries106++;
+            fetch(BACKEND_URL + '/api/agent/mission/result/' + missionId106)
+              .then(function(rr) { return rr.status === 404 ? null : rr.json(); })
+              .then(function(rd) {
+                if (rd && rd.mission_id) { onDone(rd); return; }
+                if (tries106 >= maxTries106) {
+                  statusEl.innerHTML = '⏱ Vision Agent Local não respondeu em 30s. Confirme se está rodando ' +
+                    '(<code>node vision-agent.js .</code> ou app instalado) e ' +
+                    '<a href="#" id="vcRetryAgentPoll106" style="color:#93c5fd;">clique para continuar aguardando</a>.';
+                  var _retry106 = document.getElementById('vcRetryAgentPoll106');
+                  if (_retry106) { _retry106.onclick = function(e) { e.preventDefault(); tries106 = 0; statusEl.textContent = 'Retomando espera por missão ' + missionId106 + '...'; pollResult106(); }; }
+                  onReset();
+                  return;
+                }
+                setTimeout(pollResult106, 2000);
+              })
+              .catch(function() { setTimeout(pollResult106, 2000); });
+          }
+          pollResult106();
+        })
+        .catch(function(err) {
+          statusEl.textContent = '❌ ' + (err.message || 'Erro ao enfileirar missão.');
+          onReset();
+        });
+      }).catch(function() {
+        statusEl.textContent = '❌ Erro de rede ao consultar /api/agent/status.';
+        onReset();
+      });
+    }
+
     /* ── renderApplyFixPanel — aplica patch via /api/chat/apply-patch (sem agent local) ── */
     function renderApplyFixPanel(hermesObj) {
       var wrap = document.createElement('div');
@@ -7252,10 +7308,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         });
       };
 
-      /* §105 — fecha o loop: enfileira apply_patch real para o Vision Agent Local, */
-      /* aguarda o agent aplicar no disco (backup .vision-bak + git commit) e renderiza */
-      /* o painel de aprovar push / reverter (renderValidationPanel — existia desde antes */
-      /* mas nunca era chamada em lugar nenhum do bundle, era codigo morto). */
+      /* §105/§106 — aplicar patch no Vision Agent Local via vcQueueApplyPatchViaAgent (§106: extraído para função compartilhada). */
       agentBtn.onclick = function() {
         var _dec105 = hermesObj.decisao;
         if (_dec105 === 'BLOCKED_INPUT' || _dec105 === 'BLOCKED_RUNTIME' || _dec105 === 'ABORTED') {
@@ -7263,72 +7316,16 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           return;
         }
         if (!hermesObj.patch || !hermesObj.file) { statusEl.textContent = '❌ Patch ou arquivo ausente no diagnóstico.'; return; }
-
-        function _resetBtns105() {
-          applyBtn.disabled = false; agentBtn.disabled = false; cancelBtn.disabled = false;
-          agentBtn.textContent = '📡 Aplicar no Vision Agent Local';
-        }
-
         applyBtn.disabled = true; agentBtn.disabled = true; cancelBtn.disabled = true;
         agentBtn.textContent = '⏳ Verificando Vision Agent Local...';
-        statusEl.textContent = 'Consultando /api/agent/status...';
-
-        fetch(BACKEND_URL + '/api/agent/status').then(function(r) { return r.json(); }).then(function(st) {
-          if (!st || !st.connected) {
-            statusEl.innerHTML = '⚠️ Vision Agent Local não detectado (sem poll nos últimos 15s). ' +
-              '<a href="https://visioncoreai.pages.dev/landing.html#agent" target="_blank" style="color:#93c5fd;">Baixe e abra o Vision Agent</a> na máquina onde está o projeto, depois clique novamente.';
-            _resetBtns105();
-            return;
-          }
-
-          agentBtn.textContent = '⏳ Enfileirando missão...';
-          statusEl.textContent = 'Vision Agent Local ativo — enviando patch para fila...';
-
-          fetch(BACKEND_URL + '/api/agent/mission/queue', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'apply_patch', file: hermesObj.file, patch: hermesObj.patch, fix_type: hermesObj.fix_type || 'code_patch', diagnosis: hermesObj.diagnosis || 'vision fix' })
-          }).then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error || ('HTTP ' + r.status)); }); })
-          .then(function(qd) {
-            if (!qd.ok || !qd.mission_id) throw new Error(qd.error || 'queue_failed');
-            var missionId105 = qd.mission_id;
-            agentBtn.textContent = '⏳ Aguardando Vision Agent Local processar...';
-            statusEl.textContent = 'Missão ' + missionId105 + ' enfileirada — aguardando o agent aplicar no disco real (até 30s)...';
-
-            var tries105 = 0, maxTries105 = 15; /* §14.4 spec: 2s * 15 = 30s */
-            function pollResult105() {
-              tries105++;
-              fetch(BACKEND_URL + '/api/agent/mission/result/' + missionId105)
-                .then(function(rr) { return rr.status === 404 ? null : rr.json(); })
-                .then(function(rd) {
-                  if (rd && rd.mission_id) {
-                    wrap.remove();
-                    chatStream.appendChild(renderValidationPanel(rd));
-                    chatStream.scrollTop = chatStream.scrollHeight;
-                    setStatus('READY');
-                    return;
-                  }
-                  if (tries105 >= maxTries105) {
-                    statusEl.innerHTML = '⏱ Vision Agent Local não respondeu em 30s. Confirme se está rodando ' +
-                      '(<code>node vision-agent.js .</code> ou app instalado) e ' +
-                      '<a href="#" id="vcRetryAgentPoll105" style="color:#93c5fd;">clique para continuar aguardando</a>.';
-                    var _retry105 = document.getElementById('vcRetryAgentPoll105');
-                    if (_retry105) { _retry105.onclick = function(e) { e.preventDefault(); tries105 = 0; statusEl.textContent = 'Retomando espera por missão ' + missionId105 + '...'; pollResult105(); }; }
-                    _resetBtns105();
-                    return;
-                  }
-                  setTimeout(pollResult105, 2000);
-                })
-                .catch(function() { setTimeout(pollResult105, 2000); });
-            }
-            pollResult105();
-          })
-          .catch(function(err) {
-            statusEl.textContent = '❌ ' + (err.message || 'Erro ao enfileirar missão.');
-            _resetBtns105();
-          });
-        }).catch(function() {
-          statusEl.textContent = '❌ Erro de rede ao consultar /api/agent/status.';
-          _resetBtns105();
+        vcQueueApplyPatchViaAgent(hermesObj, statusEl, function() {
+          applyBtn.disabled = false; agentBtn.disabled = false; cancelBtn.disabled = false;
+          agentBtn.textContent = '📡 Aplicar no Vision Agent Local';
+        }, function(rd) {
+          wrap.remove();
+          chatStream.appendChild(renderValidationPanel(rd));
+          chatStream.scrollTop = chatStream.scrollHeight;
+          setStatus('READY');
         });
       };
 
@@ -7390,10 +7387,30 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         b.textContent = txt;
         return b;
       }
-      var confirmBtn = mkBtn(h ? '✅ Confirmar e Aplicar Patch' : '▶ Iniciar Missão SDDF', '#0a1f0a', '#22c55e', '#86efac');
-      var cancelBtn  = mkBtn('✖ Cancelar', '#1c1c1e', '#555', '#888');
-      var statusEl   = document.createElement('div');
+      var confirmBtn  = mkBtn(h ? '✅ Confirmar e Aplicar Patch' : '▶ Iniciar Missão SDDF', '#0a1f0a', '#22c55e', '#86efac');
+      var agentBtn106 = h && h.patch && h.file ? mkBtn('📡 Aplicar no Vision Agent Local', '#0a1a2a', '#3b82f6', '#93c5fd') : null; /* §106 */
+      var cancelBtn   = mkBtn('✖ Cancelar', '#1c1c1e', '#555', '#888');
+      var statusEl    = document.createElement('div');
       statusEl.style.cssText = 'color:#94a3b8;font-size:12px;margin-top:10px;min-height:18px;width:100%;';
+      if (agentBtn106) {
+        agentBtn106.onclick = function() {
+          if (h.decisao === 'BLOCKED_INPUT' || h.decisao === 'BLOCKED_RUNTIME' || h.decisao === 'ABORTED') {
+            statusEl.textContent = '⚠️ Diagnóstico ' + h.decisao + ' — patch não disponível para o agent local.';
+            return;
+          }
+          confirmBtn.disabled = true; agentBtn106.disabled = true; cancelBtn.disabled = true;
+          agentBtn106.textContent = '⏳ Verificando Vision Agent Local...';
+          vcQueueApplyPatchViaAgent(h, statusEl, function() {
+            confirmBtn.disabled = false; agentBtn106.disabled = false; cancelBtn.disabled = false;
+            agentBtn106.textContent = '📡 Aplicar no Vision Agent Local';
+          }, function(rd) {
+            wrap.remove(); _activeMission = null;
+            chatStream.appendChild(renderValidationPanel(rd));
+            chatStream.scrollTop = chatStream.scrollHeight;
+            setStatus('READY');
+          });
+        };
+      }
       confirmBtn.onclick = function() {
         /* §41: guard BLOCKED/ABORTED decisao — não acionar apply-patch */
         if (h && (h.decisao === 'BLOCKED_INPUT' || h.decisao === 'BLOCKED_RUNTIME' || h.decisao === 'ABORTED')) {
@@ -7556,7 +7573,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         }
       };
       cancelBtn.onclick = function() { wrap.remove(); _activeMission = null; setStatus('READY'); };
-      btnRow.appendChild(confirmBtn); btnRow.appendChild(cancelBtn);
+      btnRow.appendChild(confirmBtn);
+      if (agentBtn106) { btnRow.appendChild(agentBtn106); }
+      btnRow.appendChild(cancelBtn);
       wrap.appendChild(btnRow); wrap.appendChild(statusEl);
       chatStream.appendChild(wrap);
       chatStream.scrollTop = chatStream.scrollHeight;

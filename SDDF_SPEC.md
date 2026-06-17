@@ -4801,11 +4801,79 @@ funcionavam isoladamente — chat diagnostica (`hermesObj.{file,patch,fix_type}`
 
 ### O que NÃO mudou (escopo deliberado)
 
-- O botão "EXECUTAR MISSÃO" (Standard Method Panel) continua aplicando via
-  `/api/chat/apply-patch` (cloud). Adicionar a mesma opção de agent local lá
-  é direto (mesmo padrão) mas ficou fora do escopo desta sessão — ver
-  `CLAUDE.md` para o item de continuação.
+- O botão "EXECUTAR MISSÃO" (Standard Method Panel) continuava aplicando via
+  `/api/chat/apply-patch` (cloud) até o §106 — ver seção §106 abaixo.
 - `git push` real continua exigindo aprovação humana explícita via o botão
   "Aprovar e fazer Push" → `/api/agent/mission/push` → o próprio agent local
   decide se executa (`gitPush` em `vision-agent.js`) — REGRA ABSOLUTA mantida
   intacta, nenhuma flag de deploy/push automático foi tocada.
+
+---
+
+## §106 — Etapa A: Agent Local Também no EXECUTAR MISSÃO
+
+**Nota de numeração:** segue o mesmo contador de sessões do `CLAUDE.md` (§106).
+
+### Contexto
+
+O §105 fechou o loop chat → agent local → patch real, mas apenas no painel
+de diagnóstico do chat (`renderApplyFixPanel`). O painel EXECUTAR MISSÃO
+(`renderStandardMethodPanel`) ainda aplicava exclusivamente via
+`/api/chat/apply-patch` (cloud), que depende do ZIP estar em memória no
+navegador (BUG2 documentado no próprio código com comentário `§36fix BUG2`).
+
+### Causa raiz
+
+A lógica de polling (status → queue → poll result → renderValidationPanel)
+estava duplicada como código inline de ~60 linhas dentro de `agentBtn.onclick`
+em `renderApplyFixPanel`. Copiar esse bloco para `renderStandardMethodPanel`
+criaria dois sistemas paralelos com a mesma lógica — difíceis de manter e
+de corrigir quando o contrato de endpoint mudar.
+
+### Fix (apenas frontend — backend intocado)
+
+**Nova função compartilhada** (`vision-core-bundle.js`, escopo global dentro
+do IIFE):
+
+```
+vcQueueApplyPatchViaAgent(hermesObj, statusEl, onReset, onDone)
+```
+
+- `hermesObj`: objeto com `file`, `patch`, `fix_type`, `diagnosis`
+- `statusEl`: elemento DOM para feedback de status ao usuário
+- `onReset`: callback chamado em qualquer erro — re-habilita botões do caller
+- `onDone(rd)`: callback chamado com o resultado da missão quando o agent responde
+
+A função encapsula o fluxo completo:
+1. `GET /api/agent/status` → se `!connected`, chama `onReset()` com mensagem
+2. `POST /api/agent/mission/queue` com `type=apply_patch` + os 4 campos
+3. Polling de `GET /api/agent/mission/result/:id` (2s × 15 tentativas, com
+   link de retomada manual se expirar), chama `onDone(rd)` ao receber resultado
+
+**Refatoração em `renderApplyFixPanel`:** `agentBtn.onclick` simplificado —
+guarda de BLOCKED/ABORTED + desabilita botões + chama `vcQueueApplyPatchViaAgent`.
+O `onDone` remove o painel e chama `renderValidationPanel(rd)`.
+
+**Extensão em `renderStandardMethodPanel`:** novo `agentBtn106` criado
+condicionalmente (`h && h.patch && h.file` — só quando há diagnóstico com
+patch). O `onclick` segue o mesmo padrão: guarda de BLOCKED/ABORTED + desabilita
+os 3 botões + `vcQueueApplyPatchViaAgent(h, ...)`. O `onDone` remove o painel,
+limpa `_activeMission` e chama `renderValidationPanel(rd)`.
+
+### Evidência (sem navegador, sem rede)
+
+- `_test106_static_wiring.cjs` — 9/9 asserts estruturais:
+  `vcQueueApplyPatchViaAgent` definida 1 vez, chamada de 2 lugares distintos
+  (1 def + 2 calls = 3 ocorrências de `vcQueueApplyPatchViaAgent(`),
+  `pollResult105` removido (0 ocorrências), `pollResult106` presente,
+  as 3 funções de painel intactas, `agentBtn106` presente, botão no bloco SMP.
+- Regressão §105 confirmada: `_test105_backend_logic.cjs` 13/13 +
+  `_test105_full_loop_e2e.sh` 9/9 (backend + agent reais, sem mock).
+
+### O que NÃO mudou (escopo deliberado)
+
+- `backend/server.js`: **zero alterações** — o contrato do §105 já cobria
+  todos os endpoints necessários.
+- `vision-agent.js`: **zero alterações**.
+- A lógica cloud (`/api/chat/apply-patch`) no `renderStandardMethodPanel`
+  permanece intacta — os dois caminhos coexistem (cloud vs. agent local).

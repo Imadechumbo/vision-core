@@ -202,12 +202,13 @@ FREE_MISSION_LIMIT=5
 | §103 | Causa raiz real do §102: header Authorization ausente nas 4 chamadas /api/chat (tok1-4) + CSS ausente no bundle pré-concatenado + overwrite-guard defensivo. Persistência confirmada ponta a ponta via curl/PowerShell. Mesmo commit/tag do §102. | s102-done | 13a6748 |
 | §104 | Limpeza: v236FileInput órfão removido, versão backend padronizada (4.1.0/v5.9.0 → 5.9.7), display_input pro histórico mostrar texto limpo (sem prefixo de contexto), recordMissionTimelineEntry adicionado nos 3 fluxos que faltavam (sf-chat, hermes, zip-upload) — §98-B/§98-C doc sincronizada com código real. | s104-done | bc0325f |
 | §105 | Fechou o loop chat→agent local→patch real (roadmap item #1 de about.html). `/api/agent/mission/queue` preserva file/patch/fix_type/diagnosis p/ apply_patch (antes descartados); `/api/agent/status` real via `_agentLastSeenAt` (antes hardcoded false); novo botão "Aplicar no Vision Agent Local" ativa `renderValidationPanel` (código morto desde sempre). ST-12 criado (9/9, backend+agent reais). SDDF_SPEC §14.3/14.4 corrigidos (removida doc de `tryAgent` fictício) + novo §105. | - | bd2362a |
+| §106 | Etapa A do roadmap: lógica de polling do agent extraída para `vcQueueApplyPatchViaAgent(hermesObj, statusEl, onReset, onDone)` — função compartilhada sem duplicação. `renderStandardMethodPanel` (EXECUTAR MISSÃO) ganhou botão "📡 Aplicar no Vision Agent Local" idêntico ao do chat. Backend intocado. `_test106_static_wiring.cjs` 9/9 + regressão `_test105_*` confirmada (13/13 + 9/9). SDDF_SPEC §106 adicionado. | - | (pendente commit) |
 
 ---
 
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
-**Status: §105 fechou o item #1 do roadmap de `about.html`.** Itens já LIVE/resolvidos removidos desta lista (§98-A/B/C/D/E, T1-T6, §103, §104, §105) — ver seções correspondentes acima pra histórico. As "ETAPAS GRANDES" abaixo são a continuação direta — vieram da auditoria de código real desta sessão + dos roadmaps já publicados em `about.html`/`landing.html`.
+**Status: §106 fechou a Etapa A.** Itens já LIVE/resolvidos removidos desta lista (§98-A/B/C/D/E, T1-T6, §103, §104, §105, §106/Etapa A) — ver seções correspondentes acima pra histórico. As "ETAPAS GRANDES" abaixo são a continuação direta — vieram da auditoria de código real + dos roadmaps já publicados em `about.html`/`landing.html`.
 
 ### §104 (histórico) — limpeza + cobertura completa do histórico
 Implementado via `_patch104_cleanup_and_coverage.py`. Ver commit `bc0325f`. Resumo: removeu `v236FileInput` órfão, padronizou versão backend (5.9.7), `display_input` limpo no histórico, `recordMissionTimelineEntry` nos 3 fluxos que faltavam.
@@ -215,9 +216,11 @@ Implementado via `_patch104_cleanup_and_coverage.py`. Ver commit `bc0325f`. Resu
 ### §105 (histórico) — fechar o loop chat→agent local→patch real
 Ver seção "§105 — Fechar o Loop" acima para o write-up completo. Patch: `_patch105_agent_loop_closure.py`. Testes: `_test105_backend_logic.cjs` (13/13) + `_test105_full_loop_e2e.sh` (9/9, backend+agent reais).
 
+### §106 (histórico) — Etapa A: agent local também no EXECUTAR MISSÃO
+Inline polling de ~60 linhas extraído para `vcQueueApplyPatchViaAgent(hermesObj, statusEl, onReset, onDone)` compartilhada entre `renderApplyFixPanel` (§105) e `renderStandardMethodPanel` (§106). `agentBtn106` adicionado no EXECUTAR MISSÃO panel. Backend intocado. Testes: `_test106_static_wiring.cjs` (9/9) + regressão `_test105_*` (13/13 + 9/9). `landing.html` converteu card "EM EVOLUÇÃO — EXECUTAR MISSÃO real" para RESOLVIDO.
+
 ### Fora de escopo / decisão deliberada (não esquecimento)
 - §98-F (OPENCLAW/OPENSQUAD/OSINT/V10) — roadmap puro, NÃO implementar ainda.
-- §105 não estendeu o mesmo botão pro Standard Method Panel (EXECUTAR MISSÃO) — ver Etapa A abaixo.
 
 ---
 
@@ -225,14 +228,9 @@ Ver seção "§105 — Fechar o Loop" acima para o write-up completo. Patch: `_p
 
 **Como usar esta seção com `claude --dangerously-skip-permissions`:** cada etapa abaixo é desenhada para ser executada **inteira, sem parar para teste manual no navegador** — a "Verificação automatizada" de cada etapa é o critério de PASS, no mesmo espírito de `_test105_full_loop_e2e.sh` (sobe backend real localmente, sobe agent real quando aplicável, curl/assert, sem depender de produção nem de clique humano). Se uma etapa não tiver verificação 100% automatizável, isso está dito explicitamente nela — nesse caso, implemente e documente o que falta verificar manualmente, não pule a etapa.
 
-**Origem:** Etapas B–F vêm dos itens #2–#6 do roadmap publicado em `about.html` ("POTENCIAIS DE EVOLUÇÃO") + os itens "EM EVOLUÇÃO" de `landing.html`. Renumerados aqui em ordem de prioridade/risco, não na ordem original do about.html.
+**Origem:** Etapas A–E vêm dos itens #1–#5 do roadmap publicado em `about.html` ("POTENCIAIS DE EVOLUÇÃO") + os itens "EM EVOLUÇÃO" de `landing.html`. Renumerados aqui em ordem de prioridade/risco, não na ordem original do about.html. (Etapa A do roadmap anterior = agent local no EXECUTAR MISSÃO — **concluída no §106**, removida desta lista.)
 
-### Etapa A — Estender o botão "Aplicar no Vision Agent Local" ao EXECUTAR MISSÃO
-**Risco:** baixo. **Esforço:** pequeno (mesmo padrão do §105, código já provado).
-O Standard Method Panel (`renderStandardMethodPanel`, botão "✅ Confirmar e Aplicar Patch") hoje só aplica via `/api/chat/apply-patch` (cloud). Adicionar a mesma opção do §105 ali: ou um 2º botão "📡 Aplicar no Vision Agent Local" ao lado do "Confirmar", ou um toggle. Os endpoints (`/api/agent/status`, `/api/agent/mission/queue`, `/api/agent/mission/result/:id`) e a lógica de polling já existem e já estão testados pelo backend — esta etapa é puramente frontend (extrair a lógica de polling do §105 para uma função compartilhada `vcQueueApplyPatchViaAgent(hermesObj, statusEl, onResult)` reaproveitada nos dois lugares, em vez de duplicar código).
-**Verificação automatizada:** o contrato de backend já está 100% coberto por `_test105_full_loop_e2e.sh` — não precisa de teste novo de backend. Para a wiring de frontend, adicionar um assert estático (`grep` no bundle confirmando que a nova função é chamada nos dois call-sites) já documentando explicitamente que a wiring real do clique só é confirmável visualmente (mesmo precedente aceito no §104 item 5).
-
-### Etapa B — Software Factory: dry-run real em repositório externo autorizado
+### Etapa A — Software Factory: dry-run real em repositório externo autorizado
 **Risco:** médio-alto (escopo precisa ficar restrito). **Esforço:** grande — provavelmente 2-3 sessões.
 Hoje a Software Factory nunca toca código de produção — é camada de governança simulada (flags `release_allowed`/`deploy_allowed` sempre `false`). A evolução natural (não "destravar tudo"): para um repositório **explicitamente apontado pelo usuário** (path local ou URL, nunca o próprio vision-core), rodar em modo "dry-run real": ler o código de verdade, gerar diff de verdade, **nunca commitar nem dar push**.
 **Plano concreto:**
@@ -242,28 +240,28 @@ Hoje a Software Factory nunca toca código de produção — é camada de govern
 4. Firewall explícito: se `repo_path` resolver para dentro do próprio `vision-core` (checar `path.resolve` contra `ROOT`), recusar com `403 self_modification_blocked` — nunca deixar a Factory "se auto-editar" por engano.
 **Verificação automatizada:** criar um repo de teste temporário (mesmo padrão do §105: `mktemp -d`, `git init`, arquivo com bug conhecido), chamar o endpoint, `assert` que o diff retornado contém a correção esperada E que o arquivo no disco do repo de teste **não foi alterado** (hash antes/depois idêntico) E que nenhum commit novo existe.
 
-### Etapa C — Tiered routing de providers por dificuldade (spec já existe: SDDF_SPEC §66)
+### Etapa B — Tiered routing de providers por dificuldade (spec já existe: SDDF_SPEC §66)
 **Risco:** baixo (spec completa já escrita, linhas 4122-4306 de `SDDF_SPEC.md`). **Esforço:** médio.
 Classificar a missão por heurística simples (tamanho do diff, presença de termos como "race condition"/"shadowing"/"closure"/estado compartilhado) e rotear direto para o provider/modelo mais robusto antes da primeira tentativa, em vez de só fallback reativo. SDDF_SPEC §66 já documenta as 4 fases e a tabela de modelos.
 **Verificação automatizada:** testes unitários puros da função de classificação (`classifyMissionDifficulty(input) → 'easy'|'hard'|'expert'`) com fixtures de texto conhecidos — não precisa chamar LLM real nem rede.
 
-### Etapa D — Memory layer: aprender com diagnósticos de baixa confiança anteriores (§72 fases 2-4)
+### Etapa C — Memory layer: aprender com diagnósticos de baixa confiança anteriores (§72 fases 2-4)
 **Risco:** baixo. **Esforço:** médio.
 `.vision-memory/hermes_low_confidence.jsonl` já está sendo escrito (fase 1, §72). Fase 2: antes do diagnóstico, consultar esse histórico — se o payload atual é similar a um caso anterior que precisou de escalação, pular direto pro provider robusto em vez de tentar o mais barato primeiro.
 **Plano concreto:** função `findSimilarLowConfidenceCase(input, jsonlPath)` com matching simples (normalizar texto, comparar tokens/keywords em comum, threshold de similaridade) — sem embeddings/vetores pesados, manter barato.
 **Verificação automatizada:** fixture `.jsonl` com 2-3 entradas conhecidas, testes unitários confirmando que um input similar dispara a rota "direto pro robusto" e um input diferente não.
 
-### Etapa E — Multi-arquivo / multi-step missions reais (apply, não só diagnóstico)
+### Etapa D — Multi-arquivo / multi-step missions reais (apply, não só diagnóstico)
 **Risco:** médio (semântica de transação importa). **Esforço:** médio-grande.
 §56 (Multi-DIFF) já resolve multi-arquivo no **diagnóstico**. Falta multi-arquivo na **aplicação real**: hoje `applyPatchMission` em `vision-agent.js` e `/api/agent/mission/queue` só carregam 1 `file`+1 `patch` por missão. Estender para aceitar `patches: [{file, patch, fix_type}, ...]` e aplicar como transação atômica — se qualquer arquivo falhar a validação Aegis, fazer rollback de TODOS os arquivos já aplicados na mesma missão antes de reportar falha (não deixar a missão pela metade).
 **Verificação automatizada:** estender `_test105_full_loop_e2e.sh` (ou criar `_test106`) com um caso de 2 arquivos onde um precisa mudar a assinatura de uma função e o outro precisa atualizar o call site — assert que ambos mudam juntos com um único commit, e um segundo caso onde o 2º arquivo falha Aegis — assert que o 1º também é revertido (zero estado parcial).
 
-### Etapa F — Observabilidade do Vision Core como produto (dashboard visível)
+### Etapa E — Observabilidade do Vision Core como produto (dashboard visível)
 **Risco:** baixo. **Esforço:** pequeno-médio.
 `/api/dora-metrics`, `/api/metrics/agents`, `/api/metrics/summary` já existem mas são só internos. Expor um painel visível (Enterprise) com: quantas vezes cada provider foi usado, taxa de escalação (§72), tempo médio de diagnóstico por dificuldade (depende da Etapa C para ter o dado de "dificuldade" pra agrupar).
 **Verificação automatizada:** os 3 endpoints já existem — testar via curl que retornam shape esperado (sem precisar montar HTML), e um teste estático confirmando que o painel novo no frontend chama os 3 endpoints (grep no bundle).
 
-### Etapa G (infra, não código puro) — Banco de dados persistente
+### Etapa F (infra, não código puro) — Banco de dados persistente
 **Risco:** alto (decisão de infraestrutura, não só código). **Esforço:** grande, fora do escopo de uma sessão autônoma sem decisão humana prévia.
 Hoje: JSON + `/tmp` no EB, reseta a cada restart do processo (cfn-hup periódico, ver §70). Migrar pra SQLite (arquivo em `/var/app/current` persistente entre restarts, mas não entre deploys) ou RDS PostgreSQL (persistente de verdade, custo mensal). **Esta etapa precisa de uma decisão humana explícita sobre qual opção antes de qualquer código** — não é uma boa candidata pra `--dangerously-skip-permissions` sem essa decisão prévia registrada aqui primeiro.
 
