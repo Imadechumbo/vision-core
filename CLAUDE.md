@@ -195,15 +195,13 @@ FREE_MISSION_LIMIT=5
 | §99 | §98-A resolvido (falso positivo stress test) — ST-01..ST-08 36/36 pass | - | f9f2328 |
 | §100 | §98-D resolvido — detectActiveAgent() keywords + active_agent no copilot + badge chat — ST-10 4/4 | s98d-done | 136d33f |
 | §101 | T5 Agentes Extras live — 5 passos + accordion desbloqueado — tutoriais T1-T6 6/6 completos | t5-done | 61e8d71 |
-| §102 | §98-E resolvido — Mission Timeline persistido (descoberta: endpoint real é /api/chat, não /api/copilot) — ST-11 criado (6 casos), 21 testes unitários | - | (preencher após commit) |
+| §102+§103 | §98-E resolvido — Mission Timeline persistido + fix Authorization header ausente nas 4 chamadas /api/chat + CSS bundle — ST-11 6/6, 21 testes unitários | s102-done | 13a6748 |
 
 ---
 
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
-1. **§98-E** — Mission Timeline: persistência no vault/localStorage
-
-2. **Tutoriais T1-T6** — 6/6 LIVE em produção (accordion sidebar completo, todos clicáveis)
+1. **Tutoriais T1-T6** — 6/6 LIVE em produção (accordion sidebar completo, todos clicáveis)
    - T1 Geral · T2 Agent Local · T3 SF · T4 Mission Control · T5 Agentes Extras · T6 PASS GOLD
    - T2 Agent Local — `vc_tutorial_agent_done`
    - T3 Software Factory — `vc_tutorial_sf_done`
