@@ -597,6 +597,12 @@
           <div style="font-size:11px;color:#64748b">— §109, _test109_static_wiring.cjs 12/12 + E2E real (commit único + 2 rollbacks atômicos), PASS</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🛡️</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Antes de deixar a Software Factory ler código de fora do sandbox, construímos primeiro a trava que impede ela de se apontar pra si mesma — caminho, pasta-pai, remote git normalizado, e a assinatura CLAUDE.md+SDDF_SPEC.md juntos, 4 camadas independentes, 20/20 testes com git de verdade. Só depois disso fomos construir o dry-run em si — e no caminho, descobrimos que a função de diagnóstico já existente (usada desde a v1.0 do agente) nunca incluía o formato de arquivo que o próprio gate anti-alucinação do backend exige, então sempre caía bloqueada antes de chegar em qualquer LLM. Corrigimos isso junto. Hoje, pra um projeto externo autorizado: leitura real, diagnóstico real, patch inteiramente simulado em memória — o arquivo do projeto-alvo fica bit-a-bit idêntico ao original, e nenhum commit é criado. 4 cenários de E2E confirmam isso, incluindo o firewall bloqueando antes de qualquer leitura."</div>
+          <div style="font-size:11px;color:#64748b">— §110+§111, _test110 20/20 + _test111_dry_run_real_unit 18/18 + _test111_dry_run_real_e2e 18/18, PASS</div>
+        </div>
+
       </div>
     </div>
 
@@ -825,12 +831,14 @@
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
 
-        <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
-          <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
-          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">1</div>
-          <div style="font-size:13px;font-weight:700;color:#a5b4fc">Software Factory saindo do sandbox — com escopo restrito e auditável</div>
-          <div style="font-size:13px;color:#64748b;line-height:1.6">
-            A arquitetura de evidence levels (simulated → dry-run → sandbox → real) já é projetada para isso. O próximo passo natural não é "destravar tudo", mas permitir que, para um repositório explicitamente autorizado pelo usuário (não o próprio vision-core), a Factory rode em modo dry-run real — gerando diffs de verdade sobre o código do usuário, sem commit/push automático. Isso daria à SF um produto tangível: <em style="color:#e2e8f0">"gire a Fábrica de Software no meu projeto e me retorne um rascunho de PR"</em>.
+        <div style="background:#0a0f1a;border:1px dashed rgba(74,222,128,0.4);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
+          <div style="position:absolute;top:12px;right:12px;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#4ade80;letter-spacing:1px">PARCIALMENTE RESOLVIDO — §110+§111</div>
+          <div style="font-size:22px;font-weight:900;color:rgba(74,222,128,0.4);line-height:1">1</div>
+          <div style="font-size:13px;font-weight:700;color:#bbf7d0">Software Factory saindo do sandbox — com escopo restrito e auditável</div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.6">
+            <strong style="color:#bbf7d0">O núcleo técnico de risco está resolvido:</strong> pra um repositório explicitamente apontado (nunca o próprio vision-core, bloqueado por um firewall de 4 camadas testado com 20/20 casos), a Factory agora lê o código real, gera um diagnóstico real via a mesma infraestrutura Hermes do chat, e simula o patch inteiramente em memória — o arquivo no disco do projeto-alvo fica bit-a-bit idêntico ao original, e nenhum commit é criado. Certificado com E2E real: diff correto + arquivo intacto + git HEAD inalterado, nos 4 cenários (firewall, caminho feliz, falha de patch, falha de validação).
+            <br><br>
+            <span style="color:#64748b">Ainda como roadmap:</span> não há um fluxo no chat pra apontar um repositório externo e disparar isso visualmente ainda (hoje é uma capability de backend+agent, chamável via missão, sem botão na interface) — e o dry-run ainda é de um arquivo por missão, não combinado com a atomicidade multi-arquivo do item 2 abaixo.
           </div>
         </div>
 

@@ -37,7 +37,7 @@
   <div class="shell topin">
     <div>
       <div class="brand">VISION CORE</div>
-      <div class="sub">V2.9.11 CLEAN FULLSTACK • SAAS • HERMES • PASS GOLD</div>
+      <div class="sub">V2.9.12 CLEAN FULLSTACK • SAAS • HERMES • PASS GOLD</div>
     </div>
     <div class="top-actions">
       <a class="btn ghost" href="index.html">DASHBOARD</a>
@@ -104,7 +104,7 @@
 
   <!-- STACK TÉCNICO -->
   <section class="startup-section" id="stack">
-    <p class="eyebrow">STACK TÉCNICO V2.9.11</p>
+    <p class="eyebrow">STACK TÉCNICO V2.9.12</p>
     <h2>Full-stack real em produção.</h2>
     <p class="section-lead">Cada camada deployada, testada e com health check verificado.</p>
     <div class="so-ia-grid compact-pillar-grid">
@@ -211,7 +211,7 @@
           <tr><td>V51.0–V200.0</td><td>✅ Fusão</td><td>Cadeia completa de governança (sandbox, patch, tag, estável)</td></tr>
           <tr><td>V285–V450</td><td>✅ Fusão</td><td>Reforço do SaaS, segurança corporativa, governança</td></tr>
           <tr><td><strong>V2.9.10</strong></td><td>✅ <strong>Base</strong></td><td>Cadeia RTP (RTP-0 a RTP-6), Software Factory, chat com IA real, auth JWT, Stripe, CF Pages + Worker + EB prod, 29/29 testes e2e</td></tr>
-          <tr class="current"><td><strong>V2.9.11+</strong></td><td>✅ <strong>Atualidade</strong></td><td>Sistema de tutoriais contextual (T1-T6) com accordion na sidebar. Agentes especializados detectam contexto por keyword e respondem com atribuição visível. Loop chat → Vision Agent Local → patch real no disco fechado (detecção de presença real, fila com patch completo, push/revert ativado). EXECUTAR MISSÃO também ganha botão de aplicação local via vcQueueApplyPatchViaAgent() (§106). Hermes ganha memory layer: Jaccard sobre tokens do histórico de baixa confiança, provider fraco despriorizado (nunca removido), 26/26 testes unitários (§107). Painel de métricas ligado a 4 endpoints reais + novo GET /api/metrics/memory com anti_stub:true, fallback estático preservado, 23/23 unit + 10/10 smoke (§108). Missões multi-arquivo atômicas: apply_patch_multi com garantia tudo-ou-nada (rollback via git checkout se qualquer patch ou Aegis falhar, commit único no caminho feliz), 12/12 asserts + E2E real 3 cenários (§109). Stress test suite 40/40 + ST-12 9/9 + test106 9/9 + test107 26/26 + test108 23/23+10/10 + test109 12/12 certificados em ambiente local.</td></tr>
+          <tr class="current"><td><strong>V2.9.12+</strong></td><td>✅ <strong>Atualidade</strong></td><td>Sistema de tutoriais contextual (T1-T6) com accordion na sidebar. Agentes especializados detectam contexto por keyword e respondem com atribuição visível. Loop chat → Vision Agent Local → patch real no disco fechado, agora também disponível no painel EXECUTAR MISSÃO (lógica unificada, não duplicada). Hermes ganha memória de baixa confiança (§72 Fase 2) — despriorize providers que falharam em casos parecidos. Painel de métricas da tela principal ligado a dados reais (4 endpoints, fallback preservado se backend offline). Missões agora suportam N arquivos atomicamente (tudo-ou-nada, 1 commit no caminho feliz). Software Factory ganha dry-run real em repositório externo autorizado: firewall de auto-modificação de 4 camadas (§110) + leitura real + diagnóstico real + patch simulado em memória, sem nenhuma escrita no disco do projeto-alvo nem commit (§111). Stress test suite 40/40 (ST-00 a ST-10) + ST-12 (loop do agent, 9/9) + memory layer (26/26) + observabilidade (23/23 + smoke 10/10) + multi-arquivo atômico (12/12 + E2E real) + firewall (20/20) + dry-run real (18/18 + E2E 18/18) certificados em ambiente local.</td></tr>
           <tr class="planned"><td>V3.0.0</td><td>⏩ Planejado</td><td>Execução real de staging da sonda (pós-EXECUTAR MISSÃO local)</td></tr>
         </tbody>
       </table>
@@ -372,9 +372,14 @@
       </div>
       <!-- §109 — Missão multi-arquivo atômica RESOLVIDO -->
       <div class="bn-card" style="border-color:rgba(34,197,94,.3)">
-        <div class="bn-header"><span class="bn-icon">✅</span><div><div class="bn-label" style="color:var(--green)">RESOLVIDO — V2.9.11+</div><h3>Missões multi-arquivo com garantia atômica</h3></div></div>
+        <div class="bn-header"><span class="bn-icon">✅</span><div><div class="bn-label" style="color:var(--green)">RESOLVIDO — V2.9.12+</div><h3>Missões multi-arquivo com garantia atômica</h3></div></div>
         <p>Novo tipo <code>apply_patch_multi</code>: uma única missão pode tocar N arquivos com garantia tudo-ou-nada. Se qualquer patch falhar (busca não encontrada) ou qualquer arquivo reprovar na validação Aegis de sintaxe, TODOS os arquivos da missão voltam ao estado do HEAD via <code>git checkout</code> — nenhuma alteração parcial fica no repositório. No caminho feliz, é exatamente 1 commit cobrindo todos os arquivos juntos.</p>
         <div class="bn-fix" style="color:var(--green)"><strong>Entregue:</strong> apply_patch_multi no /api/agent/mission/queue + applyPatchMultiMission() em vision-agent.js (resolveTargetFile, rollbackFiles, gitCommitMulti). Certificado com 12/12 asserts estáticos + E2E real: commit único com 2 arquivos, rollback quando 2º patch não casa, rollback quando Aegis falha depois do PatchEngine já ter passado.</div>
+      </div>
+      <div class="bn-card" style="border-color:rgba(34,197,94,.3)">
+        <div class="bn-header"><span class="bn-icon">✅</span><div><div class="bn-label" style="color:var(--green)">RESOLVIDO — V2.9.12+</div><h3>Software Factory: dry-run real em repositório externo</h3></div></div>
+        <p>Pra um repositório explicitamente apontado pelo usuário (nunca o próprio vision-core), a Factory agora lê o código real, diagnostica de verdade via a mesma infraestrutura Hermes do chat, e simula o patch inteiramente em memória — o arquivo do projeto-alvo fica bit-a-bit idêntico ao original, e nenhum commit é criado. Um firewall de 4 camadas independentes (caminho, pasta-pai, remote git, fingerprint de arquivos) bloqueia qualquer tentativa de apontar isso pra si mesma.</p>
+        <div class="bn-fix" style="color:var(--green)"><strong>Entregue:</strong> sf_dry_run_real (server.js) + isSelfTargetForbidden()/simulatePatch()/validatePatchContent()/sfDryRunRealMission() (vision-agent.js). Certificado com 20/20 + 18/18 + 18/18 testes, incluindo E2E real: firewall bloqueando antes de qualquer leitura, diff correto com arquivo e git HEAD intactos, e 2 cenários de falha (patch/validação) também sem nenhuma escrita real.</div>
       </div>
       <div class="bn-card bn-low">
         <div class="bn-header"><span class="bn-icon">🔄</span><div><div class="bn-label">EM EVOLUÇÃO</div><h3>APIs pagas opcionais</h3></div></div>

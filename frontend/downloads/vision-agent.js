@@ -15,6 +15,7 @@ const fs            = require('fs');
 const path          = require('path');
 const https         = require('https');
 const http          = require('http');
+const os            = require('os');
 const { spawnSync } = require('child_process');
 
 const VERSION = '1.2';
@@ -122,9 +123,17 @@ function scanProject(input) {
 
 /* ── Hermes / askIA — supervisor de decisão ──────────────────── */
 // SDDF papel: Hermes — RCA + Decision + mode=fix JSON patch
-function askIA(fileContent, missionInput) {
+// §111 — fileLabel adicionado: o gate anti-alucinação do backend (§25, em
+// server.js) só libera mode=fix se a mensagem tiver um nome de arquivo
+// entre colchetes (ex: "[buggy.js]") — sem isso, TODA chamada caía em
+// BLOCKED_INPUT antes de chegar no LLM, mesmo com conteúdo real anexado.
+// Isso afetava o executeMission() original (chamada sem fileLabel) desde
+// sempre; corrigido aqui mantendo o parâmetro opcional pra não quebrar
+// nenhuma chamada existente — só passa a respeitar o gate de verdade.
+function askIA(fileContent, missionInput, fileLabel) {
   return new Promise(function(resolve, reject) {
-    var message = 'ARQUIVO:\n' + fileContent + '\n\nMISSÃO:\n' + missionInput;
+    var label   = fileLabel || 'arquivo.txt';
+    var message = '[' + label + ']\n' + fileContent + '\n\nMISSÃO:\n' + missionInput;
     httpRequest(WORKER + '/api/chat', {
       method:  'POST',
       body:    { message: message, mode: 'fix' },
@@ -317,7 +326,7 @@ async function executeMission(m) {
   // ── PASSO 2: Hermes/askIA ────────────────────────────────────
   var aiAnswer = '';
   try {
-    aiAnswer = await askIA(scan.content, m.input);
+    aiAnswer = await askIA(scan.content, m.input, relTarget);
     step('Hermes', true, 'diagnóstico OK (' + aiAnswer.length + ' chars)');
   } catch(e) {
     step('Hermes', false, e.message);
@@ -811,6 +820,308 @@ function isSelfTargetForbidden(targetPath) {
   return { forbidden: false };
 }
 
+/* ── §111 — Etapa A, Fase 2: dry-run real ────────────────────────
+ * Agora que o firewall (§110) está provado, esta é a capability que ele
+ * protege: rodar o MESMO pipeline scan→Hermes→patch já usado por
+ * `executeMission` (linha ~287), mas apontado pra um `target_path`
+ * explícito em vez do próprio ROOT, e SEM NUNCA escrever no disco real
+ * nem fazer commit/push. O resultado é um diff_preview — equivalente a
+ * um rascunho de PR, não uma alteração de verdade. */
+
+/* Mesma lógica de varredura de `scanProject` (linha ~72), parametrizada
+ * por um root explícito em vez do ROOT fixo do agente — extraída como
+ * função standalone pra não tocar em `scanProject`/`executeMission`,
+ * que já estão testados e em produção desde a v1.0 deste arquivo. */
+function scanExternalProject(targetRoot, input) {
+  var result   = { files: [], byName: [], byContent: [], target: null, content: '' };
+  var words    = input.toLowerCase().split(/\s+/).filter(function(w) { return w.length > 2; });
+  var fileRefs = words.filter(function(w) { return w.includes('.') && w.length > 3; });
+
+  function walk(dir, depth) {
+    if (depth > 5) return;
+    var entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch(e) { return; }
+    for (var i = 0; i < entries.length; i++) {
+      var e = entries[i];
+      if (SKIP_DIRS.has(e.name)) continue;
+      var full = path.join(dir, e.name);
+      if (e.isDirectory()) { walk(full, depth + 1); continue; }
+      var ext = path.extname(e.name).toLowerCase();
+      if (!TEXT_EXTS.has(ext)) continue;
+      result.files.push(full);
+      var nameLower = e.name.toLowerCase();
+
+      var nameMatch = fileRefs.some(function(fn) { return nameLower === fn; });
+      if (nameMatch) {
+        try {
+          var text = fs.readFileSync(full, 'utf8');
+          result.byName.push({ file: full, content: text, score: 100 });
+        } catch(err) {}
+      }
+
+      if (!result.byName.length) {
+        try {
+          var content = fs.readFileSync(full, 'utf8');
+          var lc      = content.toLowerCase();
+          var score   = words.filter(function(w) { return w.length > 3 && lc.includes(w); }).length;
+          if (score > 0) result.byContent.push({ file: full, content: content, score: score });
+        } catch(err2) {}
+      }
+    }
+  }
+
+  walk(targetRoot, 0);
+  result.byContent.sort(function(a, b) { return b.score - a.score; });
+
+  var top = result.byName[0] || result.byContent[0];
+  if (top) {
+    result.target  = top.file;
+    result.content = top.content.slice(0, 4000);
+  }
+  return result;
+}
+
+/* Mesma lógica de transformação de `applyPatch` (linha ~161), mas NUNCA
+ * chama fs.writeFileSync — lê o conteúdo real (read-only) e calcula só
+ * em memória o que o patch produziria. Retorna { ok, before, after } em
+ * vez de escrever. Sem backup (não precisa — nada é alterado de fato). */
+function simulatePatch(filePath, patch, fixType) {
+  var before;
+  try { before = fs.readFileSync(filePath, 'utf8'); }
+  catch(e) { return { ok: false, error: 'leitura falhou: ' + e.message }; }
+
+  try {
+    var after;
+    if (fixType === 'json_field') {
+      var obj = JSON.parse(before);
+      var fields = patch.fields || patch;
+      if (Array.isArray(obj) && patch.target_title) {
+        var found = false;
+        for (var i = 0; i < obj.length; i++) {
+          var item = obj[i];
+          var title = (item.title || item.name || item.label || '').toLowerCase();
+          if (title.includes(patch.target_title.toLowerCase())) {
+            Object.assign(item, fields);
+            found = true;
+            break;
+          }
+        }
+        if (!found) throw new Error('item com title "' + patch.target_title + '" não encontrado no array');
+      } else if (typeof obj === 'object' && !Array.isArray(obj)) {
+        Object.assign(obj, fields);
+      } else {
+        throw new Error('json_field: arquivo não é objeto nem array com target_title');
+      }
+      after = JSON.stringify(obj, null, 2) + '\n';
+
+    } else if (fixType === 'code_patch') {
+      var search  = patch.search  || patch.old_value || '';
+      var replace = patch.replace !== undefined ? patch.replace : (patch.new_value || '');
+      if (!search) throw new Error('code_patch: campo search ausente');
+      if (!before.includes(search)) throw new Error('code_patch: trecho "' + search.slice(0, 40) + '..." não encontrado');
+      after = before.replace(search, replace);
+
+    } else {
+      after = typeof patch === 'string' ? patch : JSON.stringify(patch, null, 2) + '\n';
+    }
+
+    return { ok: true, before: before, after: after };
+
+  } catch(e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+/* Equivalente a `validatePatch`, mas valida uma STRING em memória em vez
+ * de um arquivo real — escreve num arquivo TEMPORÁRIO fora do projeto
+ * alvo (os.tmpdir()) só pra rodar `node --check` (que exige um caminho
+ * real), e apaga o temporário imediatamente depois. O arquivo real do
+ * projeto-alvo nunca é tocado nesse processo. */
+function validatePatchContent(content, ext) {
+  if (ext === '.json') {
+    try { JSON.parse(content); return { ok: true }; }
+    catch(e) { return { ok: false, error: 'JSON inválido: ' + e.message }; }
+  }
+  if (['.js', '.mjs', '.cjs'].includes(ext)) {
+    var tmpFile = path.join(os.tmpdir(), 'vc-dryrun-check-' + Date.now() + '-' + Math.random().toString(16).slice(2) + ext);
+    try {
+      fs.writeFileSync(tmpFile, content, 'utf8');
+      var r = spawnSync(process.execPath, ['--check', tmpFile], { encoding: 'utf8', timeout: 10000 });
+      if (r.status === 0) return { ok: true };
+      return { ok: false, error: (r.stderr || r.stdout || '').trim().slice(0, 200) };
+    } finally {
+      try { fs.unlinkSync(tmpFile); } catch(e) {}
+    }
+  }
+  return { ok: true };
+}
+
+// Tipo: 'sf_dry_run_real'
+// Dados: { type, target_path, input, mission_id }
+// Garantia: NUNCA escreve no arquivo real do target_path, NUNCA commita,
+// NUNCA dá push. Mesma infraestrutura de diagnóstico (askIA/parsePatchFromAI)
+// já usada por executeMission/apply_patch — não duplica o pipeline de IA,
+// só troca o que acontece DEPOIS do diagnóstico (simulação em vez de escrita).
+async function sfDryRunRealMission(m) {
+  var log   = [];
+  var steps = [];
+  function step(agent, ok, detail) {
+    steps.push({ agent: agent, ok: ok, detail: detail });
+    log.push(agent + ': ' + (ok ? '✓' : '✗') + ' ' + detail);
+    console.log('  › ' + agent + ': ' + detail);
+  }
+
+  if (!m.target_path) {
+    step('Firewall', false, 'campo target_path ausente na missão sf_dry_run_real');
+    return {
+      mission_id: m.id, ok: false, pass_gold: false,
+      action: 'sf_dry_run_failed',
+      output: '❌ Campo target_path ausente — obrigatório pra dry-run real.',
+      log: log, steps: steps, sddf: SDDF_BASELINE
+    };
+  }
+
+  // ── PASSO 0: Firewall de auto-modificação (§110) — ANTES de qualquer leitura ──
+  var firewallCheck = isSelfTargetForbidden(m.target_path);
+  step('Firewall', !firewallCheck.forbidden,
+    firewallCheck.forbidden ? firewallCheck.reason : 'alvo liberado: ' + m.target_path);
+
+  if (firewallCheck.forbidden) {
+    return {
+      mission_id: m.id, ok: false, pass_gold: false,
+      action: 'sf_dry_run_blocked_self_target',
+      output: '🛑 Dry-run bloqueado pelo firewall de auto-modificação:\n' + firewallCheck.reason,
+      target_path: m.target_path,
+      log: log, steps: steps, sddf: SDDF_BASELINE
+    };
+  }
+
+  var resolvedTargetRoot = realpathOrResolve(m.target_path);
+  if (!fs.existsSync(resolvedTargetRoot)) {
+    step('Scanner', false, 'target_path não existe: ' + resolvedTargetRoot);
+    return {
+      mission_id: m.id, ok: false, pass_gold: false,
+      action: 'sf_dry_run_failed',
+      output: '❌ target_path não existe no disco: ' + resolvedTargetRoot,
+      log: log, steps: steps, sddf: SDDF_BASELINE
+    };
+  }
+
+  // ── PASSO 1: Scanner (no target_path, NUNCA no ROOT do agente) ──
+  var scan = scanExternalProject(resolvedTargetRoot, m.input || '');
+  step('Scanner', scan.target !== null,
+    scan.target
+      ? 'byName=' + scan.byName.length + ' byContent=' + scan.byContent.length + ' → ' + path.relative(resolvedTargetRoot, scan.target)
+      : scan.files.length + ' arquivos, sem match');
+
+  if (!scan.target) {
+    return {
+      mission_id: m.id, ok: true, pass_gold: false,
+      action: 'sf_dry_run_listing',
+      output: 'Estrutura do projeto-alvo (' + resolvedTargetRoot + '):\n' + scan.files.slice(0, 40).map(function(f) { return '  ' + path.relative(resolvedTargetRoot, f); }).join('\n'),
+      files: scan.files.length, target_path: m.target_path,
+      log: log, steps: steps, sddf: SDDF_BASELINE
+    };
+  }
+
+  var relTarget = path.relative(resolvedTargetRoot, scan.target);
+
+  // ── PASSO 2: Hermes/askIA — mesma infraestrutura do chat, sem duplicar ──
+  var aiAnswer = '';
+  try {
+    aiAnswer = await askIA(scan.content, m.input || '', relTarget);
+    step('Hermes', true, 'diagnóstico OK (' + aiAnswer.length + ' chars)');
+  } catch(e) {
+    step('Hermes', false, e.message);
+    return {
+      mission_id: m.id, ok: true, pass_gold: false,
+      action: 'sf_dry_run_diagnosis_failed',
+      output: 'Arquivo: ' + relTarget + '\n\n' + scan.content,
+      files: scan.files.length, target_path: m.target_path,
+      log: log, steps: steps, sddf: SDDF_BASELINE
+    };
+  }
+
+  // ── PASSO 3: parsePatch — mesmo parser usado por executeMission ──
+  var patchJson = parsePatchFromAI(aiAnswer);
+  if (!patchJson || !patchJson.patch) {
+    step('PatchEngine', false, 'sem bloco JSON — análise apenas, sem diff');
+    return {
+      mission_id: m.id, ok: true, pass_gold: false,
+      action: 'sf_dry_run_analysis_only', output: aiAnswer,
+      files: scan.files.length, target_path: m.target_path,
+      log: log, steps: steps, sddf: SDDF_BASELINE
+    };
+  }
+
+  var targetFile = scan.target;
+  if (patchJson.file) {
+    var resolvedFile = path.resolve(resolvedTargetRoot, patchJson.file);
+    if (fs.existsSync(resolvedFile)) targetFile = resolvedFile;
+  }
+
+  // ── PASSO 4: simulatePatch — NUNCA escreve no disco real do target ──
+  var simResult = simulatePatch(targetFile, patchJson.patch, patchJson.fix_type || 'full_replace');
+  step('PatchEngine (simulado)', simResult.ok,
+    simResult.ok ? (patchJson.fix_type || 'full_replace') + ' → ' + path.relative(resolvedTargetRoot, targetFile) + ' (em memória)' : simResult.error);
+
+  if (!simResult.ok) {
+    return {
+      mission_id: m.id, ok: false, pass_gold: false,
+      action: 'sf_dry_run_patch_failed',
+      output: aiAnswer + '\n\n⚠️ Simulação de patch falhou (nada foi escrito):\n' + simResult.error,
+      files: scan.files.length, target_path: m.target_path,
+      log: log, steps: steps, sddf: SDDF_BASELINE
+    };
+  }
+
+  // ── PASSO 5: Aegis — valida o CONTEÚDO simulado, não o arquivo real ──
+  var ext = path.extname(targetFile).toLowerCase();
+  var validation = validatePatchContent(simResult.after, ext);
+  step('Aegis (simulado)', validation.ok, validation.ok ? 'PASS' : 'FAIL — ' + validation.error);
+
+  if (!validation.ok) {
+    return {
+      mission_id: m.id, ok: false, pass_gold: false,
+      action: 'sf_dry_run_validation_failed',
+      output: aiAnswer + '\n\n⚠️ Validação Aegis do diff simulado falhou (nada foi escrito):\n' + validation.error,
+      files: scan.files.length, target_path: m.target_path,
+      log: log, steps: steps, sddf: SDDF_BASELINE
+    };
+  }
+
+  // ── Resultado: diff_preview — NUNCA commit, NUNCA push, NUNCA escrita real ──
+  return {
+    mission_id:      m.id,
+    ok:              true,
+    pass_gold:       false,
+    action:          'sf_dry_run_completed',
+    real_io:         true,
+    written_to_disk: false,
+    committed:       false,
+    output: [
+      aiAnswer, '',
+      '─────────────────────────────────────────────',
+      '🔍 DRY-RUN REAL — diff gerado, NADA foi escrito no disco do projeto-alvo',
+      'Projeto-alvo : ' + resolvedTargetRoot,
+      'Arquivo      : ' + path.relative(resolvedTargetRoot, targetFile),
+      'Fix type     : ' + (patchJson.fix_type || 'full_replace'),
+      '',
+      'Pra aplicar de verdade, use uma missão apply_patch separada com este mesmo patch.'
+    ].join('\n'),
+    target_path: m.target_path,
+    file:        path.relative(resolvedTargetRoot, targetFile),
+    fix_type:    patchJson.fix_type || 'full_replace',
+    diagnosis:   patchJson.diagnosis || null,
+    diff_preview: {
+      before: simResult.before,
+      after:  simResult.after
+    },
+    patch: patchJson.patch,
+    log: log, steps: steps, sddf: SDDF_BASELINE
+  };
+}
+
 /* ── Polling loop ─────────────────────────────────────────────── */
 function poll() {
   httpRequest(WORKER + '/api/agent/mission/pending', {}, function(err, res) {
@@ -823,6 +1134,7 @@ function poll() {
                     m.type === 'git_revert'        ? gitRevert              :
                     m.type === 'apply_patch'       ? applyPatchMission      :
                     m.type === 'apply_patch_multi' ? applyPatchMultiMission :
+                    m.type === 'sf_dry_run_real'   ? sfDryRunRealMission    :
                     executeMission;
       handler(m).then(function(result) {
         console.log('Ação  : ' + result.action);
@@ -871,5 +1183,8 @@ module.exports = {
   isSelfTargetForbidden: isSelfTargetForbidden,
   isPathInside:           isPathInside,
   normalizeGitUrl:        normalizeGitUrl,
-  hasSelfFingerprint:     hasSelfFingerprint
+  hasSelfFingerprint:     hasSelfFingerprint,
+  simulatePatch:          simulatePatch,
+  validatePatchContent:   validatePatchContent,
+  scanExternalProject:    scanExternalProject
 };

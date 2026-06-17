@@ -5110,3 +5110,74 @@ Esta seção documenta exclusivamente a **Fase 1** de uma etapa maior (Etapa A).
 - Integração com Hermes para diagnóstico do repo externo
 - `simulatePatch()` — gera diff sem escrever no disco
 - E2E de dry-run real: repo temp com bug → diff correto + arquivo intacto + zero commit novo
+
+## §111 — Fase 2 de N: Dry-Run Real (Etapa A — Software Factory Dry-Run Real, núcleo técnico completo)
+
+### Contexto
+
+Esta seção documenta a **Fase 2** da Etapa A — a capability que o firewall do §110 protege. Constrói diretamente sobre a infraestrutura existente: reaproveita `executeMission`/`askIA`/`parsePatchFromAI` (o pipeline scan→hermes→parsePatch já usado desde a v1.0 do agente) em vez de duplicar a lógica de diagnóstico. Só o que acontece DEPOIS do diagnóstico muda — em vez de escrever e commitar de verdade, tudo é simulado em memória.
+
+### Descoberta: gate anti-alucinação bloqueava `askIA` silenciosamente
+
+Investigando o gate anti-alucinação do backend (`server.js`, "FIX C §25", ~linha 2096), descobrimos que `mode:fix` só é processado se a mensagem corresponder a um de 4 padrões — entre eles, um nome de arquivo entre colchetes: `/\[[^\]]{2,}\.(js|ts|html|css|json|py|go|md|txt|mjs|cjs|jsx|tsx)\]/`. A função `askIA(fileContent, missionInput)` pré-existente constrói a mensagem como `'ARQUIVO:\n' + fileContent + ...` — **sem nenhum dos 4 padrões aceitos**. Isso significa que o caminho de código usado pelo tipo de missão genérico (`executeMission`, usado desde a v1.0 sempre que a missão não é `apply_patch`/`apply_patch_multi`/`git_push`/`git_revert`) provavelmente **sempre caiu em `BLOCKED_INPUT` em produção**, instantaneamente, antes de qualquer chamada de LLM — um bug latente nunca disparado/testado nas sessões §105-§110, que focaram exclusivamente em `apply_patch`/`apply_patch_multi` (que carregam patch pré-computado pelo chat e não passam por esta chamada).
+
+**Confirmação manual:** rodando o `server.js` real localmente nesta sessão, uma mensagem sem o padrão de colchetes retornou `BLOCKED_INPUT` síncrono e instantâneo (sem tentar nenhum LLM). A mesma chamada com `[buggy.js]` antes do conteúdo não retornou a resposta síncrona do gate — o request seguiu adiante e expirou tentando alcançar um provedor de LLM real (esperado: a whitelist de rede deste ambiente sandbox não inclui domínios de provedores de LLM como Groq/Gemini/OpenRouter). Isso confirma que o gate foi passado; a chamada real ao LLM funciona normalmente no ambiente real de produção (rede e chaves de API completas).
+
+### Fix (`frontend/downloads/vision-agent.js`)
+
+**`askIA(fileContent, missionInput, fileLabel)`** — ganhou um 3º parâmetro opcional com default retrocompatível (`'arquivo.txt'`). Mensagem agora: `'[' + label + ']\n' + fileContent + '\n\nMISSÃO:\n' + missionInput`. Os dois call-sites existentes/novos foram atualizados para passar o nome relativo já calculado: `executeMission` (linha ~329, passa `relTarget`) e o novo `sfDryRunRealMission` (linha ~1032, passa `relTarget`). Esta é uma correção genuína que beneficia o `executeMission` pré-existente também, não só a capability nova — documentada com transparência.
+
+### Novas funções (`frontend/downloads/vision-agent.js`)
+
+Inseridas entre o bloco do firewall (§110) e o comentário `/* ── Polling loop */`:
+
+**`scanExternalProject(targetRoot, input)`** — cópia de `scanProject` (linha ~72) parametrizada por um root explícito em vez do `ROOT` fixo do agente. Mantida como função standalone — não um refatoramento de `scanProject` — pra não arriscar o par já testado `scanProject`/`executeMission`, seguindo o mesmo padrão risk-averse do `resolveTargetFile` no §109.
+
+**`simulatePatch(filePath, patch, fixType)`** — espelha exatamente a lógica de transformação de `applyPatch` (linha ~161): `code_patch` (search/replace), `json_field` (Object.assign em objeto ou item de array via `target_title`), `full_replace`. Lê o arquivo real (read-only) via `fs.readFileSync`, mas **NUNCA chama `fs.writeFileSync`**. Retorna `{ ok, before, after, error }` em vez de escrever. Sem backup — não precisa, nada real é alterado.
+
+**`validatePatchContent(content, ext)`** — espelha `validatePatch` (linha ~233), mas valida uma STRING em memória. Para `.json`, `JSON.parse` direto na string. Para `.js/.mjs/.cjs`, escreve o conteúdo num arquivo TEMPORÁRIO em `os.tmpdir()` (fora do projeto-alvo, nome único com timestamp+random) só para rodar `node --check <tmpFile>` (que exige um caminho real de arquivo), depois apaga o temporário num bloco `finally` (garantido mesmo se a checagem falhar). O arquivo real do projeto-alvo nunca é tocado neste processo.
+
+**`sfDryRunRealMission(m)`** — orquestrador assíncrono para o tipo `sf_dry_run_real`:
+- Exige `m.target_path` — sem ele, retorna falha imediata sem nenhuma ação.
+- **PASSO 0 — Firewall:** `isSelfTargetForbidden(m.target_path)` chamado **antes de qualquer leitura**. Se proibido: retorna `{ action: 'sf_dry_run_blocked_self_target', ok: false }` imediatamente — nenhum arquivo é lido, nenhum scan ocorre.
+- **PASSO 1 — Scanner:** `scanExternalProject(resolvedTargetRoot, m.input)`. Sem match: retorna listagem (`sf_dry_run_listing`).
+- **PASSO 2 — Hermes:** `askIA(scan.content, m.input, relTarget)` — mesma infraestrutura do chat, com o fix de formato de mensagem aplicado.
+- **PASSO 3 — PatchEngine (parse):** `parsePatchFromAI(aiAnswer)`. Sem JSON válido: retorna só a análise (`sf_dry_run_analysis_only`).
+- **PASSO 4 — PatchEngine (simulado):** `simulatePatch(targetFile, patchJson.patch, patchJson.fix_type)`. Falha: `sf_dry_run_patch_failed`, nada escrito.
+- **PASSO 5 — Aegis (simulado):** `validatePatchContent(simResult.after, ext)`. Falha: `sf_dry_run_validation_failed`, nada escrito.
+- **Sucesso:** `{ action: 'sf_dry_run_completed', ok: true, real_io: true, written_to_disk: false, committed: false, diff_preview: { before, after }, target_path, file, fix_type, diagnosis, patch, log, steps, sddf }`.
+
+**Suporte:** `const os = require('os');` adicionado ao topo do arquivo. Dispatcher do `poll()` estendido com `m.type === 'sf_dry_run_real' ? sfDryRunRealMission : ...` antes do fallback final `executeMission`. `module.exports` estendido com `simulatePatch`, `validatePatchContent`, `scanExternalProject` (além das exportações do §110), permitindo teste real via `require()`.
+
+### Fix (`backend/server.js`)
+
+Bloco `sf_dry_run_real` em `/api/agent/mission/queue`, inserido depois do bloco `apply_patch_multi` (§109): valida `body.target_path` obrigatório (400 `sf_dry_run_real_requires_target_path` se ausente), persiste `mission.target_path` no objeto da missão. **Relay e validação pura** — consistente com o modelo de confiança estabelecido: o backend nunca lê nem escreve arquivos reais do projeto-alvo; toda a leitura/diagnóstico/simulação acontece no Vision Agent Local, no computador do próprio usuário.
+
+### Evidência
+
+**`_test111_dry_run_real_unit.cjs` — 18/18 PASS:**
+- `simulatePatch`: code_patch caminho feliz (before/after corretos, arquivo real intacto), busca inexistente (falha, arquivo intacto), json_field (objeto simples, campos preservados), full_replace.
+- `validatePatchContent`: JS válido/inválido, JSON válido/inválido, extensão sem validador específico (passa sem checagem, mesmo comportamento de `validatePatch`), confirma zero arquivo temporário órfão em `os.tmpdir()` após múltiplas chamadas (sucesso e falha).
+- `scanExternalProject`: encontra arquivo por nome num diretório externo (não-ROOT), fallback por score de conteúdo, respeita `SKIP_DIRS` (não desce em `node_modules`), confirma que opera no diretório passado e não no `ROOT` do agente.
+- `askIA`: verificação via servidor stub local capturando a mensagem real enviada, confirmando que ela contém o padrão `[arquivo.ext]` exigido pelo gate do backend.
+- Checagens estáticas: `server.js` valida `sf_dry_run_real` e exige `target_path`; dispatcher do agente registra o tipo; `sfDryRunRealMission` chama o firewall ANTES do scanner (verificado pela ordem das substrings no código-fonte).
+
+**`_test111_dry_run_real_e2e.cjs` — 18/18 PASS:** E2E completo usando um backend STUB próprio (não o `server.js` real) implementando só os 4 endpoints necessários (fila/pendente/resultado de missão + `/api/chat` determinístico retornando patches JSON pré-definidos por cenário — evita qualquer dependência de LLM real ou chave de API, mesmo espírito do `_test105_full_loop_e2e.sh`) + `vision-agent.js` real rodando como processo CLI de verdade (via `child_process.spawn`) + repositórios git temporários reais.
+
+4 cenários:
+1. **FIREWALL** — `target_path` apontando pra raiz real do vision-core (este sandbox) → `sf_dry_run_blocked_self_target`, confirmado que o array `steps` do resultado contém só 1 entrada (`Firewall`) — o Scanner nunca chegou a executar.
+2. **CAMINHO FELIZ** — repositório git temporário com um bug conhecido (`return a - b` em vez de `+`) → `sf_dry_run_completed`; `diff_preview.before` é exatamente o conteúdo original, `diff_preview.after` contém a correção; `real_io:true / written_to_disk:false / committed:false`; o arquivo no disco do projeto-alvo é **bit-a-bit idêntico** ao original; o HEAD do git **não mudou**; o working tree está limpo.
+3. **FALHA NO PATCH** — stub retorna um patch com string de busca que não existe no arquivo → `sf_dry_run_patch_failed`; arquivo e HEAD permanecem intactos.
+4. **FALHA NA VALIDAÇÃO** — stub retorna um patch sintaticamente válido para aplicar (busca encontrada), mas cujo resultado simulado é JS inválido → `sf_dry_run_validation_failed`; arquivo, HEAD e working tree permanecem intactos — provando que a validação roda sobre o conteúdo simulado, não o arquivo real, e que mesmo uma simulação "perigosa" nunca toca o disco.
+
+**Regressão completa confirmada sem quebrar**, após a mudança de assinatura do `askIA`: `_test105_backend_logic.cjs` (13/13), `_test105_full_loop_e2e.sh` (9/9), `_test106_static_wiring.cjs` (9/9), `_test107_memory_layer_unit.cjs`, `_test108_observability_unit.cjs` + `_test108_endpoint_smoke.sh`, `_test109_static_wiring.cjs` (12/12) + `_test109_multi_patch_atomic_e2e.sh` (E2E), `_test110_self_modification_firewall_unit.cjs` (20/20) — todos 0 falhas.
+
+### O que NÃO mudou
+
+- Nenhuma função existente (`applyPatch`, `applyPatchMission`, `applyPatchMultiMission`, `validatePatch`, `gitCommit`, `gitCommitMulti`, `scanProject`, `isSelfTargetForbidden` e as outras 3 funções do firewall §110) foi alterada — só `askIA` ganhou um parâmetro opcional retrocompatível.
+- O comportamento de `executeMission` ao ser chamado com 2 argumentos pra `askIA` continua idêntico na ASSINATURA (o `fileLabel` é opcional) — a única mudança de COMPORTAMENTO é que agora a chamada de fato passa pelo gate do backend em vez de ser bloqueada instantaneamente, o que é uma correção, não uma regressão.
+- `about.html`/`landing.html`: cards atualizados para refletir a capability real entregue (ver `CLAUDE.md` para o texto exato), mas nenhuma estrutura de página foi alterada — balanço de tags `<div>`/`<section>` confirmado idêntico antes/depois.
+
+### O que ainda NÃO foi feito (polish de UX, não risco técnico)
+
+Nenhuma interface no chat para o usuário escolher um repositório externo e disparar o dry-run real visualmente — hoje é uma capability de backend+agent, chamável via missão na API, sem botão dedicado na interface. O dry-run ainda processa um arquivo por missão; não foi combinado com a atomicidade multi-arquivo do `apply_patch_multi` (§109). Nenhum dos dois é uma lacuna de segurança ou risco técnico — é trabalho de UX/integração que pode ser feito quando houver demanda, no mesmo espírito de como o `apply_patch_multi` também não tem UI de chat pra compor missões multi-arquivo automaticamente.

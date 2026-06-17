@@ -2322,6 +2322,16 @@ app.post('/api/agent/mission/queue', (req, res) => {
     mission.files      = body.files.map(f => ({ file: f.file, patch: f.patch, fix_type: f.fix_type || 'code_patch' }));
     mission.diagnosis  = body.diagnosis || '';
   }
+  /* §111 — Etapa A, Fase 2: dry-run real contra um repositorio externo. */
+  /* O backend so valida e relay a missao — toda leitura real do target_path, */
+  /* o firewall de auto-modificacao (§110) e a simulacao em memoria (nunca */
+  /* escreve no disco) acontecem no Vision Agent Local, nunca aqui. */
+  if (type === 'sf_dry_run_real') {
+    if (!body.target_path) {
+      return res.status(400).json({ ok: false, error: 'sf_dry_run_real_requires_target_path', time: now() });
+    }
+    mission.target_path = body.target_path;
+  }
   _agentQueue.push(mission);
   return sendOk(res, { mission_id: mission.id, queued: true, queue_length: _agentQueue.length, type: mission.type });
 });
