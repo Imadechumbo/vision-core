@@ -203,6 +203,8 @@ FREE_MISSION_LIMIT=5
 | §104 | Limpeza: v236FileInput órfão removido, versão backend padronizada (4.1.0/v5.9.0 → 5.9.7), display_input pro histórico mostrar texto limpo (sem prefixo de contexto), recordMissionTimelineEntry adicionado nos 3 fluxos que faltavam (sf-chat, hermes, zip-upload) — §98-B/§98-C doc sincronizada com código real. | s104-done | bc0325f |
 | §105 | Fechou o loop chat→agent local→patch real (roadmap item #1 de about.html). `/api/agent/mission/queue` preserva file/patch/fix_type/diagnosis p/ apply_patch (antes descartados); `/api/agent/status` real via `_agentLastSeenAt` (antes hardcoded false); novo botão "Aplicar no Vision Agent Local" ativa `renderValidationPanel` (código morto desde sempre). ST-12 criado (9/9, backend+agent reais). SDDF_SPEC §14.3/14.4 corrigidos (removida doc de `tryAgent` fictício) + novo §105. | - | bd2362a |
 | §106 | Etapa A do roadmap: lógica de polling do agent extraída para `vcQueueApplyPatchViaAgent(hermesObj, statusEl, onReset, onDone)` — função compartilhada sem duplicação. `renderStandardMethodPanel` (EXECUTAR MISSÃO) ganhou botão "📡 Aplicar no Vision Agent Local" idêntico ao do chat. Backend intocado. `_test106_static_wiring.cjs` 9/9 + regressão `_test105_*` confirmada (13/13 + 9/9). SDDF_SPEC §106 adicionado. | - | 578a651 |
+| §107 | Etapa B retirada do roadmap (SDDF_SPEC §66 já fechado — tiered routing resolvido sem código novo). Etapa C implementada: memory layer fase 2 no Hermes — `tokenize`/`jaccardOverlap`/`readLowConfidenceLog`/`findSimilarLowConfidenceCases`/`applyMemoryReordering`/`computeMemoryMetrics` em `hermes-rca.js`; `callHermes` desprioriza (nunca remove) provider que falhou em caso similar; log de baixa confiança ganha campo `keywords` pra matching futuro. `_test107_memory_layer_unit.cjs` 26/26. SDDF_SPEC §107 adicionado. | - | PENDENTE |
+| §108 | Etapa E implementada: painel "MÉTRICAS DOS AGENTES" (100% estático com badge "UI LOCAL") ligado a 4 endpoints reais (`/api/metrics/agents`, `/api/metrics/summary`, `/api/dora-metrics`, `/api/metrics/memory`). Novo endpoint `GET /api/metrics/memory` com `computeMemoryMetrics()` e `anti_stub:true`. Badge vira "DADOS REAIS" quando backend responde. Fallback estático preservado. `_test108_observability_unit.cjs` 23/23 + `_test108_endpoint_smoke.sh` 10/10. SDDF_SPEC §108 adicionado. | - | PENDENTE |
 
 ---
 
@@ -218,6 +220,24 @@ Ver seção "§105 — Fechar o Loop" acima para o write-up completo. Patch: `_p
 
 ### §106 (histórico) — Etapa A: agent local também no EXECUTAR MISSÃO
 Inline polling de ~60 linhas extraído para `vcQueueApplyPatchViaAgent(hermesObj, statusEl, onReset, onDone)` compartilhada entre `renderApplyFixPanel` (§105) e `renderStandardMethodPanel` (§106). `agentBtn106` adicionado no EXECUTAR MISSÃO panel. Backend intocado. Testes: `_test106_static_wiring.cjs` (9/9) + regressão `_test105_*` (13/13 + 9/9). `landing.html` converteu card "EM EVOLUÇÃO — EXECUTAR MISSÃO real" para RESOLVIDO.
+
+### §107 (histórico) — Etapa C: memory layer no Hermes (§72 Fase 2)
+**Etapa B descartada por razão correta:** a Etapa B do roadmap propunha implementar tiered routing por dificuldade (classifyMissionDifficulty). Ao abrir `SDDF_SPEC.md §66` para referência, confirmado "Status: ✅ FECHADO — 80/80 CI #67" — o problema de qualidade que motivou a Etapa B já estava resolvido sem código de classificação (via ajuste de `OPENROUTER_MODEL` para `deepseek/deepseek-v4-flash`). Etapa B retirada do roadmap. Nota adicionada ao §66 em `SDDF_SPEC.md`.
+**Implementação (Etapa C — memory layer):** novas funções em `backend/hermes-rca.js`:
+- `tokenize(text)` — Set de tokens ≥4 chars, minúsculas, sem embeddings
+- `jaccardOverlap(setA, setB)` — similaridade de Jaccard entre Sets de tokens
+- `readLowConfidenceLog(maxEntries)` — lê `.vision-memory/hermes_low_confidence.jsonl`, mais recente primeiro, tolera linhas corrompidas
+- `findSimilarLowConfidenceCases(input, entries, opts)` — filtra entradas com Jaccard ≥ 0.15 (configurável)
+- `applyMemoryReordering(order, similarCases)` — move (nunca remove) providers fracos pro final da fila
+- `computeMemoryMetrics(entries)` — agrega stats para `/api/metrics/memory` (§108)
+`callHermes` modificado: `const order` → `let order`, bloco de memory lookup antes do `for`, não bloqueante (erro → log + segue). Campo `keywords` adicionado ao log de baixa confiança para matching futuro.
+**Evidência:** `_test107_memory_layer_unit.cjs` 26/26 (tokenize×5, jaccard×6, readLog×5, findSimilar×4, reorder×6). Regressão §105/§106 confirmada (13/13 + 9/9 + 9/9).
+
+### §108 (histórico) — Etapa E: painel de métricas com dados reais
+**Achado:** painel `#metricsBoard` ("MÉTRICAS DOS AGENTES") existia 100% estático em `index.html` — 8 linhas de custo fictício hardcoded e badge "UI LOCAL". O próprio texto do painel dizia "quando backend offline, fallback local" — promessa nunca cumprida: zero JS por trás do painel.
+**Fix backend:** novo `GET /api/metrics/memory` em `server.js` — chama `readLowConfidenceLog(500)` + `computeMemoryMetrics()`, retorna `{ total_escalations, by_provider, memory_capable_entries, legacy_entries_without_keywords, last_escalation_at, data_source, anti_stub:true }`.
+**Fix frontend:** `initObservabilityPanel107()` IIFE inserida após o bloco `clearBtn` em `vision-core-bundle.js` — faz `Promise.all` nos 4 endpoints, se qualquer retornar `ok:true` converte badge para "DADOS REAIS" (verde), preenche status dos agentes por nome, e adiciona grid com 3 blocos: RUNTIME (backend), DORA METRICS, MEMORY LAYER. Fallback: se todos os fetches falharem → `if (!gotAny) return` — nada muda, estático permanece.
+**Evidência:** `_test108_observability_unit.cjs` 23/23 (computeMemoryMetrics×8 + wiring estático×10) + `_test108_endpoint_smoke.sh` 10/10 (health + 4 endpoints + 5 campos do endpoint novo, backend real porta 4498).
 
 ### Fora de escopo / decisão deliberada (não esquecimento)
 - §98-F (OPENCLAW/OPENSQUAD/OSINT/V10) — roadmap puro, NÃO implementar ainda.
@@ -240,26 +260,19 @@ Hoje a Software Factory nunca toca código de produção — é camada de govern
 4. Firewall explícito: se `repo_path` resolver para dentro do próprio `vision-core` (checar `path.resolve` contra `ROOT`), recusar com `403 self_modification_blocked` — nunca deixar a Factory "se auto-editar" por engano.
 **Verificação automatizada:** criar um repo de teste temporário (mesmo padrão do §105: `mktemp -d`, `git init`, arquivo com bug conhecido), chamar o endpoint, `assert` que o diff retornado contém a correção esperada E que o arquivo no disco do repo de teste **não foi alterado** (hash antes/depois idêntico) E que nenhum commit novo existe.
 
-### Etapa B — Tiered routing de providers por dificuldade (spec já existe: SDDF_SPEC §66)
-**Risco:** baixo (spec completa já escrita, linhas 4122-4306 de `SDDF_SPEC.md`). **Esforço:** médio.
-Classificar a missão por heurística simples (tamanho do diff, presença de termos como "race condition"/"shadowing"/"closure"/estado compartilhado) e rotear direto para o provider/modelo mais robusto antes da primeira tentativa, em vez de só fallback reativo. SDDF_SPEC §66 já documenta as 4 fases e a tabela de modelos.
-**Verificação automatizada:** testes unitários puros da função de classificação (`classifyMissionDifficulty(input) → 'easy'|'hard'|'expert'`) com fixtures de texto conhecidos — não precisa chamar LLM real nem rede.
+### Etapa B — Tiered routing de providers por dificuldade ✅ RETIRADA DO ROADMAP (§107)
+**Razão:** SDDF_SPEC §66 já estava FECHADO (80/80 CI #67) — o problema de qualidade que motivou esta etapa resolvido sem código de classificação. Nenhum código escrito. Nota adicionada ao §66 em `SDDF_SPEC.md`. Ver §107 (histórico) acima.
 
-### Etapa C — Memory layer: aprender com diagnósticos de baixa confiança anteriores (§72 fases 2-4)
-**Risco:** baixo. **Esforço:** médio.
-`.vision-memory/hermes_low_confidence.jsonl` já está sendo escrito (fase 1, §72). Fase 2: antes do diagnóstico, consultar esse histórico — se o payload atual é similar a um caso anterior que precisou de escalação, pular direto pro provider robusto em vez de tentar o mais barato primeiro.
-**Plano concreto:** função `findSimilarLowConfidenceCase(input, jsonlPath)` com matching simples (normalizar texto, comparar tokens/keywords em comum, threshold de similaridade) — sem embeddings/vetores pesados, manter barato.
-**Verificação automatizada:** fixture `.jsonl` com 2-3 entradas conhecidas, testes unitários confirmando que um input similar dispara a rota "direto pro robusto" e um input diferente não.
+### Etapa C — Memory layer: aprender com diagnósticos de baixa confiança anteriores ✅ RESOLVIDA (§107)
+**Implementada em §107.** `tokenize`/`jaccardOverlap`/`readLowConfidenceLog`/`findSimilarLowConfidenceCases`/`applyMemoryReordering` em `hermes-rca.js`. `callHermes` desprioriza providers fracos. `_test107_memory_layer_unit.cjs` 26/26. Ver §107 (histórico) acima.
 
 ### Etapa D — Multi-arquivo / multi-step missions reais (apply, não só diagnóstico)
 **Risco:** médio (semântica de transação importa). **Esforço:** médio-grande.
 §56 (Multi-DIFF) já resolve multi-arquivo no **diagnóstico**. Falta multi-arquivo na **aplicação real**: hoje `applyPatchMission` em `vision-agent.js` e `/api/agent/mission/queue` só carregam 1 `file`+1 `patch` por missão. Estender para aceitar `patches: [{file, patch, fix_type}, ...]` e aplicar como transação atômica — se qualquer arquivo falhar a validação Aegis, fazer rollback de TODOS os arquivos já aplicados na mesma missão antes de reportar falha (não deixar a missão pela metade).
 **Verificação automatizada:** estender `_test105_full_loop_e2e.sh` (ou criar `_test106`) com um caso de 2 arquivos onde um precisa mudar a assinatura de uma função e o outro precisa atualizar o call site — assert que ambos mudam juntos com um único commit, e um segundo caso onde o 2º arquivo falha Aegis — assert que o 1º também é revertido (zero estado parcial).
 
-### Etapa E — Observabilidade do Vision Core como produto (dashboard visível)
-**Risco:** baixo. **Esforço:** pequeno-médio.
-`/api/dora-metrics`, `/api/metrics/agents`, `/api/metrics/summary` já existem mas são só internos. Expor um painel visível (Enterprise) com: quantas vezes cada provider foi usado, taxa de escalação (§72), tempo médio de diagnóstico por dificuldade (depende da Etapa C para ter o dado de "dificuldade" pra agrupar).
-**Verificação automatizada:** os 3 endpoints já existem — testar via curl que retornam shape esperado (sem precisar montar HTML), e um teste estático confirmando que o painel novo no frontend chama os 3 endpoints (grep no bundle).
+### Etapa E — Observabilidade do Vision Core como produto ✅ RESOLVIDA (§108)
+**Implementada em §108.** Novo endpoint `/api/metrics/memory` + painel `#metricsBoard` ligado a 4 endpoints reais com fallback estático preservado. `_test108_observability_unit.cjs` 23/23 + `_test108_endpoint_smoke.sh` 10/10. Ver §108 (histórico) acima.
 
 ### Etapa F (infra, não código puro) — Banco de dados persistente
 **Risco:** alto (decisão de infraestrutura, não só código). **Esforço:** grande, fora do escopo de uma sessão autônoma sem decisão humana prévia.

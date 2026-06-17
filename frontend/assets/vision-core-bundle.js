@@ -7616,6 +7616,105 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       });
     }
 
+    /* ── §108 — observabilidade: liga o painel estático #metricsBoard a dados reais. ──
+     * O painel já existia 100% estático em index.html (8 linhas com custos fictícios
+     * hardcoded e o badge "UI LOCAL"), sem nenhum código JS por trás — exatamente o
+     * comportamento que o próprio texto do painel já prometia ("quando o backend
+     * estiver offline, fallback local"). Aqui só cumprimos essa promessa. Se o
+     * backend estiver offline, nada muda — o fallback estático continua intacto. */
+    (function initObservabilityPanel107() {
+      var board = document.getElementById('metricsBoard');
+      if (!board) return;
+      var badge = document.getElementById('metricsSourceBadge');
+      var endpoints = [
+        { key: 'agents',  url: '/api/metrics/agents' },
+        { key: 'summary', url: '/api/metrics/summary' },
+        { key: 'dora',    url: '/api/dora-metrics' },
+        { key: 'memory',  url: '/api/metrics/memory' }
+      ];
+      Promise.all(endpoints.map(function(ep) {
+        return fetch(BACKEND_URL + ep.url, { signal: AbortSignal.timeout(8000) })
+          .then(function(r) { return r.ok ? r.json() : null; })
+          .catch(function() { return null; })
+          .then(function(d) { return { key: ep.key, data: d }; });
+      })).then(function(results) {
+        var data = {};
+        results.forEach(function(r) { data[r.key] = r.data; });
+        var gotAny = Object.keys(data).some(function(k) { return data[k] && data[k].ok; });
+        if (!gotAny) return;
+
+        if (badge) {
+          badge.textContent = 'DADOS REAIS';
+          badge.style.background = 'rgba(74,222,128,.12)';
+          badge.style.color = '#4ade80';
+          badge.style.borderColor = 'rgba(74,222,128,.35)';
+        }
+
+        if (data.agents && data.agents.ok && Array.isArray(data.agents.agents)) {
+          var idMap107 = { 'OpenClaw': 'openclaw', 'Hermes RCA': 'hermes', 'Scanner': 'scanner', 'Aegis': 'aegis', 'PASS GOLD': 'passgold' };
+          data.agents.agents.forEach(function(a) {
+            var suffix = idMap107[a.name];
+            if (!suffix) return;
+            var valEl = document.getElementById('val-' + suffix);
+            if (valEl) { valEl.textContent = a.status === 'ok' ? '✅ ok' : '⚠ ' + a.status; }
+          });
+        }
+
+        var extra = document.createElement('div');
+        extra.id = 'vcObservabilityExtra107';
+        extra.style.cssText = 'margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;font-size:12px;color:#94a3b8;';
+
+        function block107(title, rows) {
+          var d = document.createElement('div');
+          var h = document.createElement('div');
+          h.style.cssText = 'color:#a5b4fc;font-weight:600;margin-bottom:6px;font-size:11px;letter-spacing:.04em;';
+          h.textContent = title;
+          d.appendChild(h);
+          rows.forEach(function(r) {
+            var row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;gap:8px;padding:2px 0;';
+            var labelSpan = document.createElement('span');
+            labelSpan.textContent = r[0];
+            var valSpan = document.createElement('span');
+            valSpan.style.cssText = 'color:#e2e8f0;font-family:monospace;';
+            valSpan.textContent = String(r[1]);
+            row.appendChild(labelSpan); row.appendChild(valSpan);
+            d.appendChild(row);
+          });
+          return d;
+        }
+
+        if (data.summary && data.summary.ok && data.summary.runtime) {
+          var rt = data.summary.runtime;
+          extra.appendChild(block107('RUNTIME (backend)', [
+            ['CPU', rt.cpu + '%'], ['Memória', rt.memory + '%'], ['Heap', rt.heap + '%'],
+            ['Uptime', rt.uptime_s + 's'], ['Node', rt.node_version]
+          ]));
+        }
+        if (data.dora && data.dora.ok) {
+          extra.appendChild(block107('DORA METRICS', [
+            ['Deploy freq.', data.dora.deployment_frequency],
+            ['Lead time', data.dora.lead_time],
+            ['MTTR', data.dora.mttr],
+            ['Change fail %', data.dora.change_failure_rate]
+          ]));
+        }
+        if (data.memory && data.memory.ok) {
+          var byProv107 = data.memory.by_provider || {};
+          var byProvStr107 = Object.keys(byProv107).length
+            ? Object.keys(byProv107).map(function(k) { return k + ':' + byProv107[k]; }).join(', ')
+            : '—';
+          extra.appendChild(block107('MEMORY LAYER (§72/§107)', [
+            ['Escalações totais', data.memory.total_escalations],
+            ['Por provider', byProvStr107],
+            ['Aptas a reordenar', data.memory.memory_capable_entries]
+          ]));
+        }
+
+        if (extra.children.length > 0) { board.appendChild(extra); }
+      });
+    }());
+
     /* ── ZIP handlers — §redesign: stage on attach, fire on ENVIAR ── */
 
     /* Stage ZIP — read ArrayBuffer now, fire analysis only on sendMessage */

@@ -4152,6 +4152,7 @@ Para superar 63/80 e chegar mais perto de 80/80:
 
 **Data:** 2026-06-11 → 2026-06-12  
 **Status:** ✅ FECHADO — 80/80 CI #67 (100%) PASS GOLD  
+**Nota §107 (2026-06-17):** A Etapa B do roadmap (`CLAUDE.md`) propunha implementar `classifyMissionDifficulty()` com base nesta spec. Avaliada na sessão §107 — esta seção já estava FECHADA com 100% de aprovação, o problema de qualidade que a motivou foi resolvido via ajuste de modelo (`OPENROUTER_MODEL → deepseek/deepseek-v4-flash`), não via código de classificação. Etapa B retirada do roadmap; nenhum código de tiered routing escrito.  
 **Motivação:** Run #34 (63/80, 78.75%) — 17 fails concentrados em HARD/EXPERT/NIGHTMARE  
 **Scope:** Todos os 6 providers configurados no EB (não só OpenRouter)
 
@@ -4877,3 +4878,120 @@ limpa `_activeMission` e chama `renderValidationPanel(rd)`.
 - `vision-agent.js`: **zero alterações**.
 - A lógica cloud (`/api/chat/apply-patch`) no `renderStandardMethodPanel`
   permanece intacta — os dois caminhos coexistem (cloud vs. agent local).
+
+---
+
+## §107 — Memory Layer no Hermes: §72 Fase 2 (aprender com escalações passadas)
+
+**Data:** 2026-06-17  
+**Nota de numeração:** segue o mesmo contador de sessões do `CLAUDE.md` (§107).
+
+### Contexto
+
+§72 Fase 1 (sessão anterior) já gravava entradas de baixa confiança em `.vision-memory/hermes_low_confidence.jsonl` — timestamp, provider escalado, providers tentados, tamanho do payload. Mas nenhum código consultava esse histórico antes de tentar novamente: o Hermes repetia sempre a mesma ordem de providers, ignorando o que tinha aprendido.
+
+A Etapa B do roadmap propunha `classifyMissionDifficulty()` (tiered routing) como solução adjacente. Ao abrir §66 para referência, confirmado já FECHADO (80/80, 100%) — problema de qualidade já resolvido via ajuste de modelo, não via classificação. Etapa B descartada; Etapa C (memory layer) implementada.
+
+### Fix (`backend/hermes-rca.js`)
+
+**Novas funções puras (sem I/O, testáveis sem rede/LLM):**
+
+- `tokenize(text)` — normaliza pra minúsculas, remove pontuação, filtra tokens com menos de 4 chars, retorna `Set<string>`
+- `jaccardOverlap(setA, setB)` — `|A ∩ B| / |A ∪ B|`, retorna 0 se qualquer Set vazio ou null
+- `findSimilarLowConfidenceCases(input, entries, opts)` — filtra entradas onde Jaccard(tokenize(input), new Set(entry.keywords)) ≥ opts.minOverlap (padrão 0.15)
+- `applyMemoryReordering(order, similarCases)` — move (nunca remove) os `escalated_from` dos casos similares pro final da fila; se nenhum match → retorna cópia sem alterar
+- `computeMemoryMetrics(entries)` — agrega total_escalations, by_provider, memory_capable_entries, legacy_entries_without_keywords, last_escalation_at (para §108)
+
+**Funções com I/O:**
+
+- `readLowConfidenceLog(maxEntries)` — lê `.vision-memory/hermes_low_confidence.jsonl`, retorna array ordenado do mais recente para o mais antigo, limita a maxEntries (padrão 200), tolera linhas JSON corrompidas (pula silenciosamente), retorna `[]` se arquivo ausente
+
+**`callHermes` modificado:**
+
+1. `const order` → `let order`
+2. Bloco `try/catch` não bloqueante após `providersTried = []` — chama `findSimilarLowConfidenceCases` + `applyMemoryReordering`; se ordem mudou, loga `[HERMES §72] despriorizando: <providers>`; qualquer erro → log + segue com ordem original
+3. Log de baixa confiança ganha campo `keywords: Array.from(tokenize(userMessage)).slice(0, 40)` para alimentar matching de sessões futuras
+
+**Contrato preservado:** todos os providers continuam sendo tentados (nenhum é removido); só a posição muda. Fallback total do §49 intacto.
+
+**Exports adicionados ao `module.exports`:**
+`tokenize, jaccardOverlap, readLowConfidenceLog, findSimilarLowConfidenceCases, applyMemoryReordering, computeMemoryMetrics`
+
+### Evidência
+
+- `_test107_memory_layer_unit.cjs` — **26/26 PASS**:
+  - tokenize: 5 casos (inclusão, exclusão de curtas, string vazia, null, case-insensitive)
+  - jaccardOverlap: 6 casos (idênticos=1, sem overlap=0, parcial=0.25, Set vazio A/B, null)
+  - readLowConfidenceLog: 5 casos (arquivo ausente, lê 3 entradas, mais recente primeiro, maxEntries, linha corrompida)
+  - findSimilarLowConfidenceCases: 4 casos (detecta similar, ignora diferente, entries vazio, input vazio)
+  - applyMemoryReordering: 6 casos (sem match=mesma ordem, move pra final, não remove, sem duplicata, ordem relativa preservada, null escalated_from)
+- Regressão confirmada: `_test105_backend_logic.cjs` 13/13, `_test105_full_loop_e2e.sh` 9/9, `_test106_static_wiring.cjs` 9/9
+
+### O que NÃO mudou
+
+- `backend/server.js`: não tocado nesta etapa (o endpoint `/api/metrics/memory` é §108)
+- `vision-agent.js`: zero alterações
+- Contrato de fallback do §49: todos os providers ainda são tentados
+
+---
+
+## §108 — Observabilidade: Painel de Métricas com Dados Reais
+
+**Data:** 2026-06-17  
+**Nota de numeração:** segue o mesmo contador de sessões do `CLAUDE.md` (§108).
+
+### Contexto
+
+O painel `#metricsBoard` ("MÉTRICAS DOS AGENTES") existia em `index.html` desde sessões anteriores — 8 linhas estáticas com custos fictícios hardcoded e badge "UI LOCAL". O texto do painel prometia "quando backend offline, fallback local", mas zero código JS havia sido escrito para buscar dados reais. Era código morto de apresentação.
+
+Três endpoints de observabilidade (`/api/metrics/agents`, `/api/metrics/summary`, `/api/dora-metrics`) já existiam no backend mas nunca eram chamados pelo frontend. A Etapa E do roadmap pedia exatamente isso.
+
+### Fix (`backend/server.js`)
+
+**Novo endpoint `GET /api/metrics/memory`** — inserido imediatamente antes de `/api/dora-metrics`:
+
+```
+app.get('/api/metrics/memory', (req, res) => { ... })
+```
+
+Chama `readLowConfidenceLog(500)` + `computeMemoryMetrics()` (do §107), retorna:
+```json
+{
+  "ok": true,
+  "anti_stub": true,
+  "data_source": ".vision-memory/hermes_low_confidence.jsonl",
+  "total_escalations": N,
+  "by_provider": { ... },
+  "memory_capable_entries": N,
+  "legacy_entries_without_keywords": N,
+  "last_escalation_at": "ISO8601 | null"
+}
+```
+
+Import atualizado: `const { callHermes, readLowConfidenceLog, computeMemoryMetrics } = require('./hermes-rca');`
+
+### Fix (`frontend/assets/vision-core-bundle.js`)
+
+**`initObservabilityPanel107()` IIFE** inserida imediatamente após o bloco `clearBtn` (antes dos ZIP handlers):
+
+1. `document.getElementById('metricsBoard')` — guard; retorna se painel não existe no DOM
+2. `Promise.all` dos 4 endpoints via `fetch(BACKEND_URL + url)` com `AbortSignal.timeout(8000)` e `.catch(() => null)` (nunca rejeita)
+3. Guard `if (!gotAny) return` — se todos falharem, fallback estático preservado, nada muda
+4. Se algum retornar `ok:true`: badge "UI LOCAL" → "DADOS REAIS" (verde), status dos 5 agentes atualizado por nome via `idMap107`
+5. Grid extra `#vcObservabilityExtra107` appended ao board com 3 blocos condicionais:
+   - RUNTIME (backend) — `data.summary.runtime`: cpu, memory, heap, uptime_s, node_version
+   - DORA METRICS — `data.dora`: deployment_frequency, lead_time, mttr, change_failure_rate
+   - MEMORY LAYER (§72/§107) — `data.memory`: total_escalations, by_provider (como string), memory_capable_entries
+
+### Evidência
+
+- `_test108_observability_unit.cjs` — **23/23 PASS**:
+  - computeMemoryMetrics: 8 casos (lista vazia, null, undefined, agregação por provider, contagem com/sem keywords, timestamp mais recente, entry nula, escalated_from ausente → 'unknown')
+  - wiring estático: 10 asserts (server.js: rota presente, computeMemoryMetrics/readLowConfidenceLog importados, anti_stub presente; bundle.js: initObservabilityPanel107, 4 endpoints referenciados, guard if(!gotAny))
+- `_test108_endpoint_smoke.sh` — **10/10 PASS** (backend real porta 4498): health, agents, summary, dora-metrics, memory (ok), total_escalations, by_provider, memory_capable_entries, data_source, anti_stub
+
+### O que NÃO mudou
+
+- HTML de `index.html`: o painel `#metricsBoard` estático não foi alterado — o JS se enxerta sobre ele
+- Fallback estático: se backend offline, `if (!gotAny) return` preserva tudo como estava
+- `vision-agent.js`: zero alterações

@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { scanConfig, applyConfigFixes, enforceConfigGold } = require('./vision_core/config/selfHealingConfig');
 const { runGoMission, streamGoMission, checkGoHealth, resolveGoBinary } = require('./src/runtime/goRunner');
-const { callHermes } = require('./hermes-rca');
+const { callHermes, readLowConfidenceLog, computeMemoryMetrics } = require('./hermes-rca');
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
@@ -1609,6 +1609,19 @@ app.get('/api/metrics/summary', (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ ok: false, error: 'metrics_failed', message: err.message, time: now() });
+  }
+});
+app.get('/api/metrics/memory', (req, res) => {
+  /* §108 — observabilidade: estatísticas do memory layer (§72 Fase 1+2 / §107) */
+  try {
+    const entries = readLowConfidenceLog(500);
+    const stats   = computeMemoryMetrics(entries);
+    return sendOk(res, Object.assign(
+      { data_source: '.vision-memory/hermes_low_confidence.jsonl', anti_stub: true },
+      stats
+    ));
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'memory_metrics_failed', message: err.message, time: now() });
   }
 });
 app.get('/api/dora-metrics', async (req, res) => {

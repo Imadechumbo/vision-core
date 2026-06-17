@@ -114,6 +114,110 @@ function appendLowConfidenceLog(entry) {
   }
 }
 
+/* ── §72 Fase 2 — Memory: encontrar casos similares de baixa confiança ───
+ * Princípio: se o payload atual "lembra" um caso passado que precisou
+ * escalar, despriorizar (nunca remover — o contrato de fallback total
+ * precisa continuar valendo) o provider que falhou naquele caso, em vez
+ * de repetir o mesmo caminho perdedor antes de chegar num provider robusto.
+ * Matching por overlap de tokens (sem embeddings/vetores pesados) — barato,
+ * determinístico e fácil de testar sem rede/LLM real. */
+
+/** Tokeniza texto em um Set de palavras significativas (>=4 chars, minúsculas) */
+function tokenize(text) {
+  const tokens = String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9áéíóúâêôãõàèìòùç_]+/gi, ' ')
+    .split(/\s+/)
+    .filter(t => t.length >= 4);
+  return new Set(tokens);
+}
+
+/** Similaridade de Jaccard entre dois Sets de tokens (0 = nada em comum, 1 = idênticos) */
+function jaccardOverlap(setA, setB) {
+  if (!setA || !setB || setA.size === 0 || setB.size === 0) return 0;
+  let intersection = 0;
+  for (const t of setA) { if (setB.has(t)) intersection++; }
+  const union = setA.size + setB.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+
+/** Lê .vision-memory/hermes_low_confidence.jsonl — até maxEntries, mais recente primeiro */
+function readLowConfidenceLog(maxEntries) {
+  const limit = maxEntries || 200;
+  try {
+    const filePath = path.join(process.cwd(), '.vision-memory', 'hermes_low_confidence.jsonl');
+    if (!fs.existsSync(filePath)) return [];
+    const lines = fs.readFileSync(filePath, 'utf8').split('\n').filter(Boolean);
+    const entries = [];
+    for (const line of lines) {
+      try { entries.push(JSON.parse(line)); } catch (_) { /* linha corrompida — pula, não quebra */ }
+    }
+    return entries.slice(-limit).reverse();
+  } catch (e) {
+    console.log('[HERMES §72] low-confidence log read failed: ' + e.message);
+    return [];
+  }
+}
+
+/**
+ * findSimilarLowConfidenceCases(input, entries, opts) → entradas similares (>= threshold)
+ * @param {object} [opts.minOverlap=0.15] — threshold de similaridade Jaccard
+ */
+function findSimilarLowConfidenceCases(input, entries, opts) {
+  const minOverlap  = (opts && opts.minOverlap != null) ? opts.minOverlap : 0.15;
+  const inputTokens = tokenize(input);
+  if (inputTokens.size === 0 || !Array.isArray(entries)) return [];
+  return entries.filter(e => {
+    if (!e || !Array.isArray(e.keywords) || e.keywords.length === 0) return false;
+    return jaccardOverlap(inputTokens, new Set(e.keywords)) >= minOverlap;
+  });
+}
+
+/**
+ * applyMemoryReordering(order, similarCases) → array reordenado de provider ids
+ * Move (nunca remove) os providers que apareceram como `escalated_from` em
+ * casos similares de baixa confiança pro final da fila — preserva o contrato
+ * de fallback total (todos os providers continuam sendo tentados, só a ordem
+ * muda). Função pura, sem I/O — fácil de testar sem rede/LLM real.
+ */
+function applyMemoryReordering(order, similarCases) {
+  if (!Array.isArray(similarCases) || similarCases.length === 0) return order.slice();
+  const weakProviders = new Set(similarCases.map(c => c && c.escalated_from).filter(Boolean));
+  if (weakProviders.size === 0) return order.slice();
+  return order.filter(id => !weakProviders.has(id))
+    .concat(order.filter(id => weakProviders.has(id)));
+}
+
+/**
+ * computeMemoryMetrics(entries) → estatísticas agregadas do log de baixa confiança
+ * Usado pelo endpoint /api/metrics/memory (§108 — observabilidade). Função
+ * pura, sem I/O — recebe as entradas já lidas por readLowConfidenceLog().
+ */
+function computeMemoryMetrics(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  const byProvider = {};
+  let withKeywords = 0;
+  let withoutKeywords = 0;
+  let lastEscalationAt = null;
+
+  list.forEach(e => {
+    if (!e) return;
+    const provider = e.escalated_from || 'unknown';
+    byProvider[provider] = (byProvider[provider] || 0) + 1;
+    if (Array.isArray(e.keywords) && e.keywords.length > 0) withKeywords++;
+    else withoutKeywords++;
+    if (e.timestamp && (!lastEscalationAt || e.timestamp > lastEscalationAt)) lastEscalationAt = e.timestamp;
+  });
+
+  return {
+    total_escalations:             list.length,
+    by_provider:                   byProvider,
+    memory_capable_entries:        withKeywords,
+    legacy_entries_without_keywords: withoutKeywords,
+    last_escalation_at:            lastEscalationAt
+  };
+}
+
 /* ── Ordem dos providers ────────────────────────────────────────── */
 function getProviderOrder() {
   return (process.env.AI_PROVIDER_ORDER || 'anthropic,cerebras,groq,openrouter,deepseek,gemini,ollama')
@@ -204,10 +308,27 @@ async function callProvider(id, systemPrompt, userMessage, opts) {
  * @param {number}  [opts.timeout=30000]  — timeout por provider (ms)
  */
 async function callHermes(systemPrompt, userMessage, opts) {
-  const order          = getProviderOrder();
+  let   order          = getProviderOrder();
   const msgLen         = userMessage.length;
   let   prevWasTimeout = false;
   const providersTried = [];
+
+  /* §72 Fase 2 — Memory: payload parecido com caso passado que escalou →
+   * despriorizar (não remover) o provider que falhou naquele caso. Nunca
+   * bloqueante — qualquer erro aqui é só logado, o fluxo principal segue. */
+  try {
+    const similarCases = findSimilarLowConfidenceCases(userMessage, readLowConfidenceLog());
+    const reordered     = applyMemoryReordering(order, similarCases);
+    if (reordered.join(',') !== order.join(',')) {
+      console.log(
+        '[HERMES §72] payload similar a ' + similarCases.length + ' caso(s) de baixa confiança anterior(es) — ' +
+        'despriorizando: ' + Array.from(new Set(similarCases.map(c => c.escalated_from))).join(', ')
+      );
+      order = reordered;
+    }
+  } catch (e) {
+    console.log('[HERMES §72] memory lookup falhou (não bloqueante): ' + e.message);
+  }
 
   for (let i = 0; i < order.length; i++) {
     const id  = order[i];
@@ -246,7 +367,8 @@ async function callHermes(systemPrompt, userMessage, opts) {
             providers_tried: providersTried.slice(),
             escalated_from:  id,
             final_decision:  'none_low_confidence',
-            payload_size:    msgLen
+            payload_size:    msgLen,
+            keywords:        Array.from(tokenize(userMessage)).slice(0, 40) /* §72 Fase 2 */
           });
           prevWasTimeout = false;
           continue;
@@ -278,4 +400,8 @@ async function callHermes(systemPrompt, userMessage, opts) {
   };
 }
 
-module.exports = { callHermes, callProvider, PROVIDER_REGISTRY, getProviderOrder };
+module.exports = {
+  callHermes, callProvider, PROVIDER_REGISTRY, getProviderOrder,
+  tokenize, jaccardOverlap, readLowConfidenceLog, findSimilarLowConfidenceCases, applyMemoryReordering,
+  computeMemoryMetrics
+};
