@@ -6008,6 +6008,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     .then(function(data) {
       thinking.textContent = (data && data.answer) ? data.answer : JSON.stringify(data);
       stream.scrollTop = stream.scrollHeight;
+      // §104: registrar no histórico persistido de missões
+      recordMissionTimelineEntry({ source: 'sf-chat', input: text, summary: (data && data.answer) || null, status: 'ANSWERED' });
     })
     .catch(function(err) {
       thinking.textContent = '[Erro: ' + err + '. Worker: ' + BACKEND_URL + ']';
@@ -6834,7 +6836,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       _attachedImg = null;
       var _histPrefix = getHistoryPrefix();
       var _msgWithCtx = _histPrefix + (text || '(análise de imagem: ' + imgName + ')');
-      var payload  = { message: _msgWithCtx, mode: mode, model: model };
+      var payload  = { message: _msgWithCtx, mode: mode, model: model, display_input: (text || null) };
       if (imgName) { payload.image_name = imgName; }
       if (imgB64)  { payload.image_base64 = imgB64; payload.image_mime = imgMime || 'image/jpeg'; }
 
@@ -7444,6 +7446,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             thinking2.remove();
             var answer = (d && d.answer) ? d.answer : JSON.stringify(d);
             var hObj = parseHermesBlock(answer);
+            // §104: registrar no histórico persistido de missões
+            recordMissionTimelineEntry({ source: 'hermes', input: missionText, summary: answer, status: hObj ? 'DIAGNOSED' : 'ANSWERED' });
             if (hObj) {
               _activeMission = { id: mission.id, hermesObj: hObj, input: missionText, stage: 'diagnosed', evidence: [{ type: 'diagnosis', data: hObj, ts: Date.now() }], zipB64: _lastZipB64 || null, startedAt: mission.startedAt };
               renderHermesBlock(hObj, chatStream);
@@ -7701,7 +7705,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             return fetch(BACKEND_URL + '/api/chat', {
               method: 'POST',
               headers: tok4 ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok4 } : { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ message: context, mode: zipMode, model: zipModel }),
+              body: JSON.stringify({ message: context, mode: zipMode, model: zipModel, display_input: question }),
               signal: ctrl.signal
             });
           }).then(function(r) {
@@ -7723,6 +7727,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
             /* Adicionar ao histórico */
             addToHistory('assistant', answer);
+            // §104: registrar no histórico persistido de missões
+            recordMissionTimelineEntry({ source: 'zip-upload', input: question, summary: answer, status: 'ANSWERED' });
 
             /* §21 fetch transparency badge */
             renderFetchBadge(d, chatStream);

@@ -1,6 +1,6 @@
 {
   "name": "vision-core-backend-v41",
-  "version": "4.1.0",
+  "version": "5.9.7",
   "description": "Vision Core V4.1 — Auth real, Multi-tenant real, Stripe real, GitHub CI real",
   "main": "server.js",
   "type": "commonjs",

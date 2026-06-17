@@ -28,7 +28,7 @@
 
 | Componente | Versão | Tag git | HEAD |
 |-----------|--------|---------|------|
-| Backend EB | v5.9.5-s89-tutorial-quota | s89-done | 0678db5 |
+| Backend EB | 5.9.7-s104 | (pendente) | (pendente) |
 | CF Pages | live | s97-done | após s97 |
 
 ---
@@ -72,22 +72,13 @@
 **ST-01:** 36/36 pass — `tests/st-01-agent-local.cjs` + `stress-test-vision-core.cjs --agent`
 **T2 (Agent Local): LIBERADO**
 
-### §98-B — Adicionar Arquivos no Mission Control (PRIORIDADE ALTA)
-**Problema:** Botão "+ Adicionar arquivos" (`v236FileInput`) existe no HTML mas não está claro se está wired no bundle.js
-**O que precisa:**
-- Verificar `grep -n "v236FileInput\|FileInput\|file.*attach" frontend/assets/vision-core-bundle.js`
-- Se não wired: implementar upload de arquivo junto com a missão
-- Arquivos devem ir no contexto do copiloto
-- Criar stress test ST-02
+### §98-B — Adicionar Arquivos no Mission Control ✅ RESOLVIDO (doc estava desatualizada)
+**Causa raiz real (achada em análise de código §104):** funciona, mas NÃO via os campos documentados `file_context`/`file_name` — o backend nunca lê esses campos. O frontend's `sendMessage()` prepara o conteúdo do arquivo direto no texto da `message` via `_attachedFiles`. ST-02 testa os campos errados/mortos, dando falso-positivo de "funciona certo" quando na verdade funciona por outro caminho. `v236FileInput` (HTML) era órfão — sem listener, superado por `v298FileInput`, removido no §104.
+**T4 (Mission Control): LIBERADO** — funcional, doc corrigida.
 
-### §98-C — SF Módulos 05-06 Desbloqueados (PRIORIDADE MÉDIA)
-**Problema:** Módulos 05 (Preview de Criação) e 06 (Comando Real) têm `EXEC BLOQUEADO` no HTML
-**Módulo 08** (Painel Final) tem `BLOQUEADO`
-**O que precisa:**
-- Decisão: implementar real ou marcar explicitamente como "Em breve no roadmap"
-- Se implementar: criar endpoints `/api/sf/preview-creation` e `/api/sf/real-command`
-- Se roadmap: substituir "EXEC BLOQUEADO" por badge "EM BREVE" consistente com o resto
-- Criar stress test ST-03/ST-04
+### §98-C — SF Módulos 05-06-08 ✅ RESOLVIDO (doc estava desatualizada)
+**Causa raiz real:** já resolvido antes desta sessão (commit `74179b7`) — os 3 módulos mostram badge "EM BREVE" consistente com o resto, não "EXEC BLOQUEADO"/"BLOQUEADO" como a doc dizia. Nenhum código novo necessário, decisão de roadmap já tomada e implementada.
+**T3 (Software Factory): LIBERADO**.
 
 ### §98-D — Agentes Extras ✅ RESOLVIDO (§100)
 **Diagnóstico real:** `_agentModesStore` era gravado mas nunca lido em `/api/copilot`. Agentes NÃO eram stub — catálogo real com 15 agentes, modos OFF/AUTO/ON funcionavam. Faltava apenas ligar o store à resposta.
@@ -195,18 +186,25 @@ FREE_MISSION_LIMIT=5
 | §99 | §98-A resolvido (falso positivo stress test) — ST-01..ST-08 36/36 pass | - | f9f2328 |
 | §100 | §98-D resolvido — detectActiveAgent() keywords + active_agent no copilot + badge chat — ST-10 4/4 | s98d-done | 136d33f |
 | §101 | T5 Agentes Extras live — 5 passos + accordion desbloqueado — tutoriais T1-T6 6/6 completos | t5-done | 61e8d71 |
-| §102+§103 | §98-E resolvido — Mission Timeline persistido + fix Authorization header ausente nas 4 chamadas /api/chat + CSS bundle — ST-11 6/6, 21 testes unitários | s102-done | 13a6748 |
+| §102 | §98-E resolvido — Mission Timeline persistido (descoberta: endpoint real é /api/chat, não /api/copilot) — ST-11 criado (6 casos), 21 testes unitários | s102-done | 13a6748 |
+| §103 | Causa raiz real do §102: header Authorization ausente nas 4 chamadas /api/chat (tok1-4) + CSS ausente no bundle pré-concatenado + overwrite-guard defensivo. Persistência confirmada ponta a ponta via curl/PowerShell. Mesmo commit/tag do §102. | s102-done | 13a6748 |
+| §104 | Limpeza: v236FileInput órfão removido, versão backend padronizada (4.1.0/v5.9.0 → 5.9.7), display_input pro histórico mostrar texto limpo (sem prefixo de contexto), recordMissionTimelineEntry adicionado nos 3 fluxos que faltavam (sf-chat, hermes, zip-upload) — §98-B/§98-C doc sincronizada com código real. | - | (pendente commit) |
 
 ---
 
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
-1. **Tutoriais T1-T6** — 6/6 LIVE em produção (accordion sidebar completo, todos clicáveis)
-   - T1 Geral · T2 Agent Local · T3 SF · T4 Mission Control · T5 Agentes Extras · T6 PASS GOLD
-   - T2 Agent Local — `vc_tutorial_agent_done`
-   - T3 Software Factory — `vc_tutorial_sf_done`
-   - T4 Mission Control — `vc_tutorial_mission_done`
-   - T6 PASS GOLD — `vc_tutorial_passgold_done`
-   - Todos via botão "🪐 Tutorial desta seção" — NUNCA automático
+**Status: todas as pendências de código conhecidas até §103 foram resolvidas e registradas no §104 abaixo.** Itens já LIVE/resolvidos removidos desta lista (§98-A/B/C/D/E, T1-T6, §103) — ver seções correspondentes acima pra histórico.
 
-4. **T5 Agentes Extras** — bloqueado até §98-D
+### §104 — limpeza + cobertura completa do histórico (5 itens, 1 patch consolidado)
+Implementado via `_patch104_cleanup_and_coverage.py` — cada item é independente e tem assert próprio:
+1. `v236FileInput` órfão removido do `index.html` (zero outras referências confirmadas antes de remover — o resto do bloco `v236-action-row`/`v236FileBtn`/`v236CopilotBtn` TEM CSS e JS reais, não foi tocado).
+2. Versão do backend padronizada: `package.json` 4.1.0 → 5.9.7, e os 8 textos de fallback dos módulos SF (vazam pro usuário quando o LLM falha) de v5.9.0 → v5.9.7. Frontend `V2.9.10` não foi tocado (versionamento separado, sem evidência de estar errado).
+3. Backend `/api/chat` agora prefere `body.display_input` (texto limpo) sobre `body.message` (que pode ter prefixo de contexto) pra montar a entrada do histórico.
+4. Frontend: chat principal e upload de ZIP agora mandam `display_input` com o texto original do usuário, sem o prefixo de contexto / conteúdo de arquivo.
+5. Frontend: os 3 fluxos que ainda não chamavam `recordMissionTimelineEntry()` (mini-chat dos módulos SF, EXECUTAR MISSÃO/Hermes, upload de ZIP) agora chamam, equiparando ao chat principal (que já tinha desde o §102). Backend já persistia os 4 desde o §103 (header Authorization) — isso era só o feedback visual imediato que faltava.
+
+**Verificação:** item 1-3 verificáveis por grep/sintaxe puro. Item 4 (display_input) tem verificação automatizada via `_test104_verify_e2e.sh` (curl, sem navegador — mesmo padrão do §103). Item 5 (recordMissionTimelineEntry nos 3 fluxos novos) é client-side puro — não dá pra verificar via curl, só visualmente; código segue padrão já testado no §102/§103, risco baixo. Se quiser certeza total, mandar uma missão via EXECUTAR MISSÃO ou upload de ZIP e confirmar que aparece no painel na hora (não precisa F5, é só pra esse item específico).
+
+### Fora de escopo (decisão deliberada, não esquecimento)
+- §98-F (OPENCLAW/OPENSQUAD/OSINT/V10) — roadmap puro, NÃO implementar ainda.
