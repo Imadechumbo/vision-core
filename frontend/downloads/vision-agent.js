@@ -551,6 +551,180 @@ function applyPatchMission(m) {
   });
 }
 
+/* ── §109 — Etapa D: multi-arquivo atômico ───────────────────────
+ * Princípio: uma missão pode tocar N arquivos, mas é tudo-ou-nada.
+ * Se qualquer patch ou validação Aegis falhar em qualquer arquivo,
+ * TODOS os arquivos da missão voltam ao estado anterior (git checkout)
+ * — nenhuma alteração parcial fica no repositório. No caminho feliz,
+ * é feito exatamente UM commit cobrindo todos os arquivos juntos
+ * (não um commit por arquivo). Reaproveita applyPatch/validatePatch
+ * já testados pelo §105 — não duplica a lógica de patch em si, só a
+ * orquestração de múltiplos arquivos em volta dela. */
+
+/* Mesma lógica de resolução por nome do applyPatchMission, extraída como
+ * helper standalone — não toca na função single-arquivo já testada em produção. */
+function resolveTargetFile(fileRef) {
+  var targetFile = fileRef ? path.resolve(ROOT, fileRef) : null;
+  if (targetFile && fs.existsSync(targetFile)) return { path: targetFile, via: 'direto' };
+  var baseName = fileRef ? path.basename(fileRef) : null;
+  if (!baseName) return { path: null, error: 'campo file ausente' };
+  var found = null;
+  function findFile(dir, depth) {
+    if (depth > 6 || found) return;
+    var entries;
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch(e) { return; }
+    for (var i = 0; i < entries.length; i++) {
+      if (found) return;
+      var e = entries[i];
+      if (SKIP_DIRS.has(e.name)) continue;
+      var full = path.join(dir, e.name);
+      if (e.isDirectory()) { findFile(full, depth + 1); }
+      else if (e.name === baseName) { found = full; }
+    }
+  }
+  findFile(ROOT, 0);
+  if (found) return { path: found, via: 'busca por nome' };
+  return { path: null, error: 'não encontrado por caminho ou nome: ' + fileRef };
+}
+
+/* Reverte uma lista de arquivos (caminhos relativos) pro estado do HEAD do git.
+ * Usado nos dois pontos de falha possíveis (patch ou validação) pra garantir
+ * que a missão nunca deixa um subconjunto de arquivos meio-alterado. */
+function rollbackFiles(relPaths) {
+  relPaths.forEach(function(rel) {
+    spawnSync('git', ['checkout', '--', rel], { cwd: ROOT });
+  });
+}
+
+/* Commit único cobrindo múltiplos arquivos — diferente de gitCommit (1 arquivo),
+ * essa versão faz um `git add` com todos os caminhos antes do commit, garantindo
+ * que o caminho feliz produz exatamente 1 commit, não N commits separados. */
+function gitCommitMulti(filePaths, message) {
+  var rels = filePaths.map(function(fp) { return path.relative(ROOT, fp); });
+  var addR = spawnSync('git', ['add'].concat(rels), { cwd: ROOT, encoding: 'utf8' });
+  if (addR.status !== 0) return { ok: false, error: 'git add: ' + addR.stderr.trim() };
+  var comR = spawnSync('git', ['commit', '-m', message], { cwd: ROOT, encoding: 'utf8' });
+  if (comR.status !== 0) return { ok: false, error: 'git commit: ' + comR.stderr.trim().slice(0, 100) };
+  var logR = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT, encoding: 'utf8' });
+  return { ok: true, hash: (logR.stdout || '').trim(), output: comR.stdout.trim().slice(0, 80) };
+}
+
+// Tipo: 'apply_patch_multi'
+// Dados: { type, files: [{file, patch, fix_type}], diagnosis, mission_id }
+// Garantia: tudo-ou-nada. Ver comentário do bloco acima.
+function applyPatchMultiMission(m) {
+  return new Promise(function(resolve) {
+    var steps = [];
+    var log   = [];
+    function step(agent, ok, detail) {
+      steps.push({ agent: agent, ok: ok, detail: detail });
+      log.push(agent + ': ' + (ok ? '✓' : '✗') + ' ' + detail);
+      console.log('  › ' + agent + ': ' + detail);
+    }
+
+    if (!Array.isArray(m.files) || m.files.length === 0) {
+      step('Resolver', false, 'missão apply_patch_multi sem campo files (array)');
+      return resolve({
+        mission_id: m.id, ok: false, pass_gold: false,
+        action: 'patch_multi_failed',
+        output: '❌ Campo files ausente ou vazio na missão apply_patch_multi.',
+        log: log, steps: steps, sddf: SDDF_BASELINE
+      });
+    }
+
+    // Etapa 1: resolver todos os caminhos ANTES de tocar em qualquer arquivo —
+    // assim uma falha de resolução nunca deixa um arquivo parcialmente alterado.
+    var resolved = [];
+    for (var i = 0; i < m.files.length; i++) {
+      var f = m.files[i];
+      var r = resolveTargetFile(f.file);
+      if (!r.path) {
+        step('Resolver', false, 'arquivo ' + (i + 1) + '/' + m.files.length + ' (' + f.file + '): ' + r.error);
+        return resolve({
+          mission_id: m.id, ok: false, pass_gold: false,
+          action: 'patch_multi_failed',
+          output: '❌ Arquivo não encontrado antes de aplicar qualquer patch: ' + f.file + '\n' + r.error +
+                   '\n\nNenhum arquivo foi tocado — a resolução de caminho roda antes de qualquer escrita.',
+          log: log, steps: steps, sddf: SDDF_BASELINE
+        });
+      }
+      step('Resolver', true, (i + 1) + '/' + m.files.length + ': ' + path.relative(ROOT, r.path) + ' (' + r.via + ')');
+      resolved.push({ path: r.path, rel: path.relative(ROOT, r.path), patch: f.patch, fix_type: f.fix_type || 'code_patch' });
+    }
+
+    // Etapa 2: aplicar patches em ordem; se algum falhar, reverter os já aplicados
+    var applied = [];
+    for (var j = 0; j < resolved.length; j++) {
+      var rf = resolved[j];
+      var patchResult = applyPatch(rf.path, rf.patch, rf.fix_type);
+      step('PatchEngine', patchResult.ok,
+        patchResult.ok ? rf.fix_type + ' → ' + rf.rel : rf.rel + ': ' + patchResult.error);
+      if (!patchResult.ok) {
+        rollbackFiles(applied.map(function(a) { return a.rel; }));
+        step('Rollback', true, applied.length + ' arquivo(s) revertido(s) via git checkout: ' +
+          applied.map(function(a) { return a.rel; }).join(', '));
+        return resolve({
+          mission_id: m.id, ok: false, pass_gold: false,
+          action: 'patch_multi_failed',
+          output: '❌ Patch falhou em "' + rf.rel + '" (' + (j + 1) + '/' + resolved.length + '):\n' + patchResult.error +
+                   '\n\n↩️  Atômico: ' + applied.length + ' arquivo(s) já modificado(s) nesta missão foram revertidos. ' +
+                   'Nenhum arquivo da missão ficou parcialmente alterado.',
+          files: resolved.map(function(r) { return r.rel; }),
+          log: log, steps: steps, sddf: SDDF_BASELINE
+        });
+      }
+      applied.push(rf);
+    }
+
+    // Etapa 3: Aegis — validar sintaxe de TODOS os arquivos; se algum falhar, reverter tudo
+    for (var k = 0; k < applied.length; k++) {
+      var av = applied[k];
+      var validation = validatePatch(av.path);
+      step('Aegis', validation.ok, av.rel + ': ' + (validation.ok ? 'PASS' : 'FAIL — ' + validation.error));
+      if (!validation.ok) {
+        rollbackFiles(applied.map(function(a) { return a.rel; }));
+        step('Rollback', true, applied.length + ' arquivo(s) revertido(s) via git checkout (validação falhou)');
+        return resolve({
+          mission_id: m.id, ok: false, pass_gold: false,
+          action: 'patch_multi_rollback',
+          output: '⚠️ Validação Aegis falhou em "' + av.rel + '":\n' + validation.error +
+                   '\n\n↩️  Atômico: todos os ' + applied.length + ' arquivo(s) desta missão foram revertidos — ' +
+                   'nenhuma alteração parcial ficou no repositório.',
+          files: applied.map(function(a) { return a.rel; }),
+          log: log, steps: steps, sddf: SDDF_BASELINE
+        });
+      }
+    }
+
+    // Etapa 4: commit único cobrindo todos os arquivos juntos
+    var diagnosis    = (m.diagnosis || 'vision fix multi-arquivo').slice(0, 60);
+    var commitMsg    = 'fix: ' + diagnosis + ' [vision-agent apply_patch_multi, ' + applied.length + ' arquivos]';
+    var commitResult = gitCommitMulti(applied.map(function(a) { return a.path; }), commitMsg);
+    step('GoCore', commitResult.ok,
+      commitResult.ok ? 'commit único ' + commitResult.hash + ' (' + applied.length + ' arquivos)' : commitResult.error);
+
+    resolve({
+      mission_id: m.id,
+      ok:         true,
+      pass_gold:  false,
+      action:     commitResult.ok ? 'patch_multi_applied_committed' : 'patch_multi_applied_no_commit',
+      output: [
+        '✅ Patch multi-arquivo aplicado atomicamente via apply_patch_multi',
+        'Arquivos (' + applied.length + '): ' + applied.map(function(a) { return a.rel; }).join(', '),
+        'Commit  : ' + (commitResult.hash || 'N/A') + ' (um único commit cobrindo todos)',
+        '',
+        '⚠️  Push pendente — revisar e aprovar manualmente.',
+        'SDDF: deploy_allowed=false | push=manual'
+      ].join('\n'),
+      files:      applied.map(function(a) { return a.rel; }),
+      hash:       commitResult.hash || null,
+      log:        log,
+      steps:      steps,
+      sddf:       SDDF_BASELINE
+    });
+  });
+}
+
 /* ── Polling loop ─────────────────────────────────────────────── */
 function poll() {
   httpRequest(WORKER + '/api/agent/mission/pending', {}, function(err, res) {
@@ -559,9 +733,10 @@ function poll() {
       console.log('[' + new Date().toLocaleTimeString() + '] Missão: ' + m.id);
       console.log('Input : ' + (m.input || '').slice(0, 100));
 
-      var handler = m.type === 'git_push'    ? gitPush           :
-                    m.type === 'git_revert'  ? gitRevert         :
-                    m.type === 'apply_patch' ? applyPatchMission :
+      var handler = m.type === 'git_push'          ? gitPush                :
+                    m.type === 'git_revert'        ? gitRevert              :
+                    m.type === 'apply_patch'       ? applyPatchMission      :
+                    m.type === 'apply_patch_multi' ? applyPatchMultiMission :
                     executeMission;
       handler(m).then(function(result) {
         console.log('Ação  : ' + result.action);

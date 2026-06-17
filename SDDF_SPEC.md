@@ -4995,3 +4995,56 @@ Import atualizado: `const { callHermes, readLowConfidenceLog, computeMemoryMetri
 - HTML de `index.html`: o painel `#metricsBoard` estático não foi alterado — o JS se enxerta sobre ele
 - Fallback estático: se backend offline, `if (!gotAny) return` preserva tudo como estava
 - `vision-agent.js`: zero alterações
+
+---
+
+## §109 — Etapa D: Missão Multi-arquivo Atômica
+
+### Contexto
+
+Toda missão `apply_patch` (§105) sempre operou sobre exatamente 1 arquivo: `/api/agent/mission/queue` aceitava campos singulares `file`/`patch`, e `applyPatchMission()` em `vision-agent.js` processava 1 arquivo com 1 commit. Não havia como submeter N arquivos numa única missão com garantia transacional — se o 2º arquivo falhasse, o 1º ficaria modificado no disco sem commit (estado parcial no repositório).
+
+### Fix (`backend/server.js`)
+
+Novo bloco `if (type === 'apply_patch_multi')` no handler `POST /api/agent/mission/queue`, inserido imediatamente após o bloco `apply_patch` do §105:
+
+- Valida `Array.isArray(body.files) && body.files.length > 0` — 400 `apply_patch_multi_requires_files_array` se não
+- Valida cada item do array: `f.file && f.patch` obrigatórios — 400 `apply_patch_multi_each_file_requires_file_and_patch` se não
+- Persiste `mission.files = body.files.map(f => ({ file, patch, fix_type: f.fix_type || 'code_patch' }))` e `mission.diagnosis`
+- Bloco `apply_patch` do §105 intocado
+
+### Fix (`frontend/downloads/vision-agent.js`)
+
+4 funções novas inseridas entre `applyPatchMission` e o comentário `/* ── Polling loop */`:
+
+**`resolveTargetFile(fileRef)`** — helper standalone (não duplica lógica do §105): tenta `path.resolve(ROOT, fileRef)` direto; se não existe, busca por nome via `fs.readdirSync` recursivo (profundidade máx 6, respeita `SKIP_DIRS`). Retorna `{ path, via }` ou `{ path: null, error }`.
+
+**`rollbackFiles(relPaths)`** — `forEach` com `spawnSync('git', ['checkout', '--', rel], { cwd: ROOT })`. Usado nos dois pontos de falha (patch e validação Aegis) para garantir zero estado parcial.
+
+**`gitCommitMulti(filePaths, message)`** — `git add` com todos os caminhos concatenados + `git commit` — produz exatamente 1 commit no caminho feliz (não N commits separados). Retorna `{ ok, hash, error }`.
+
+**`applyPatchMultiMission(m)`** — Promise que orquestra 4 etapas sequenciais com rollback total em qualquer falha:
+1. **Resolver** — todos os N caminhos resolvidos via `resolveTargetFile` antes de escrever qualquer arquivo. Falha → retorna `patch_multi_failed` sem ter tocado nada.
+2. **PatchEngine** — aplica patches em ordem via `applyPatch` (reutiliza §105, zero duplicação). Falha no arquivo J → `rollbackFiles` dos arquivos 0..J-1 + retorna `patch_multi_failed`.
+3. **Aegis** — valida sintaxe de todos os arquivos via `validatePatch` (reutiliza §105). Falha em qualquer → `rollbackFiles` de todos + retorna `patch_multi_rollback`.
+4. **GoCore** — `gitCommitMulti` com todos os caminhos → retorna `patch_multi_applied_committed` (ou `patch_multi_applied_no_commit` se commit falhar).
+
+Dispatcher em `poll()` extendido: linha `m.type === 'apply_patch_multi' ? applyPatchMultiMission :` adicionada antes de `executeMission`.
+
+### Evidência
+
+- `_test109_static_wiring.cjs` — **12/12 PASS** (sem servidor):
+  - server.js: `type === 'apply_patch_multi'` presente, `apply_patch_multi_requires_files_array`, `apply_patch_multi_each_file_requires_file_and_patch`
+  - vision-agent.js: `resolveTargetFile`, `rollbackFiles`, `gitCommitMulti` (com `spawnSync(['add'].concat(rels))`), `applyPatchMultiMission`, rollback em falha de patch, rollback em falha Aegis, commit com `gitCommitMulti`, dispatcher registrado, `applyPatchMission` (§105) intocada
+- `_test109_multi_patch_atomic_e2e.sh` — **todos os checks PASSARAM** (backend real porta 4499 + agent real porta 7299 + repo git temporário com 6 arquivos em 3 cenários):
+  - **Caminho feliz** (buggy1.js + buggy2.js): `action: patch_multi_applied_committed`, novo commit `9444616`, 2 arquivos no mesmo commit, ambos corrigidos
+  - **Falha no patch** (buggy3.js válido + buggy4.js busca inexistente): `action: patch_multi_failed`, HEAD não mudou, buggy3.js revertido (zero diff), buggy4.js não escrito
+  - **Falha na validação Aegis** (buggy5.js válido + buggy6.js sintaxe inválida): `action: patch_multi_rollback`, HEAD não mudou, buggy5.js revertido (mesmo tendo passado pelo PatchEngine), buggy6.js revertido
+- **Regressão completa**: §105 13/13 + 9/9, §106 9/9, §107 26/26, §108 23/23 + 10/10 = 90 testes, 0 falhas
+
+### O que NÃO mudou
+
+- `applyPatchMission` (§105): função intocada — mesma assinatura, mesma lógica, mesmo comportamento em produção
+- `/api/agent/mission/queue` bloco `apply_patch`: intocado
+- Todo o resto do pipeline (dispatcher `gitPush`/`gitRevert`/`executeMission`): intocado
+- Interface de usuário: nenhuma mudança frontend — o chat ainda não compõe automaticamente `apply_patch_multi`; o tipo existe no backend+agent e pode ser chamado via API, mas a coordenação LLM de quais arquivos compõem a transação é trabalho futuro

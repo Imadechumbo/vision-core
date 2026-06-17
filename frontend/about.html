@@ -591,6 +591,12 @@
           <div style="font-size:11px;color:#64748b">— §108, _test108_observability_unit.cjs 23/23 + smoke 10/10, PASS</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔗</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Toda missão de patch sempre tocou exatamente 1 arquivo. Se o diagnóstico envolvesse mudar a assinatura de uma função em A e o call site em B, o agent aplicava A, commitava, depois tentava B — se B falhasse na validação Aegis, A já estava no histórico do git sem o par. O repositório ficava num estado parcialmente corrigido. O fix foi criar <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>apply_patch_multi</code>: resolve todos os caminhos antes de escrever qualquer arquivo, aplica os patches em ordem, valida Aegis em todos — qualquer falha reverte TODOS via <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>git checkout</code>, e no caminho feliz é um único commit cobrindo N arquivos. O E2E real confirma nos 3 cenários: commit único com 2 arquivos, rollback quando o 2º patch não casa, rollback quando o Aegis falha no 2º arquivo depois do 1º já ter passado."</div>
+          <div style="font-size:11px;color:#64748b">— §109, _test109_static_wiring.cjs 12/12 + E2E real (commit único + 2 rollbacks atômicos), PASS</div>
+        </div>
+
       </div>
     </div>
 
@@ -846,12 +852,14 @@
           </div>
         </div>
 
-        <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
-          <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
-          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">4</div>
-          <div style="font-size:13px;font-weight:700;color:#a5b4fc">Multi-arquivo e multi-step missions de verdade</div>
-          <div style="font-size:13px;color:#64748b;line-height:1.6">
-            §56 (Multi-DIFF) resolveu o caso de "3 arquivos com bugs simultâneos" para diagnóstico. O próximo nível é missões que precisam de múltiplas rodadas de patch coordenadas (ex: mudar uma assinatura de função em um arquivo e todos os call-sites em outros) — isso aproximaria a Factory de um "agente de refatoração" real, que é justamente o pitch da seção "Refatoração assistida de código legado" no about.html, ainda não comprovado por stress test.
+        <div style="background:#0a0f1a;border:1px dashed rgba(250,204,21,0.4);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
+          <div style="position:absolute;top:12px;right:12px;background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.35);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#fbbf24;letter-spacing:1px">PARCIALMENTE RESOLVIDO</div>
+          <div style="font-size:22px;font-weight:900;color:rgba(250,204,21,0.4);line-height:1">4</div>
+          <div style="font-size:13px;font-weight:700;color:#fde68a">Multi-arquivo e multi-step missions de verdade</div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.6">
+            <strong style="color:#fde68a">§109 resolveu a garantia transacional:</strong> novo tipo <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#fde68a">apply_patch_multi</code> aceita N arquivos numa única missão tudo-ou-nada — se qualquer patch ou validação Aegis falhar em qualquer arquivo, TODOS revertem via <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#fde68a">git checkout</code>. No caminho feliz, é exatamente 1 commit cobrindo todos os arquivos juntos. E2E real confirma: commit único com 2 arquivos, rollback quando 2º patch não casa, rollback quando Aegis falha depois do PatchEngine já ter passado.
+            <br><br>
+            <span style="color:#64748b">Ainda como roadmap:</span> a coordenação autônoma por LLM de <em>quais</em> arquivos/call-sites mudar juntos (ex: mudar assinatura de função em A e todos os call-sites em B, C, D) — isso requer que o chat componha o <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#64748b">files[]</code> corretamente via prompt engineering multi-arquivo. A garantia de execução atômica existe; a coordenação inteligente de escopo é a parte que continua como evolução futura.
           </div>
         </div>
 

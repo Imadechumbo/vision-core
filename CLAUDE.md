@@ -28,7 +28,7 @@
 
 | Componente | Versão | Tag git | HEAD |
 |-----------|--------|---------|------|
-| Backend EB | 5.9.10-s107-s108-memory-observability | - | eab69de |
+| Backend EB | 5.9.11-s109-multi-file-atomic | - | PENDING |
 | CF Pages | live | s97-done | após s97 |
 
 ---
@@ -205,6 +205,7 @@ FREE_MISSION_LIMIT=5
 | §106 | Etapa A do roadmap: lógica de polling do agent extraída para `vcQueueApplyPatchViaAgent(hermesObj, statusEl, onReset, onDone)` — função compartilhada sem duplicação. `renderStandardMethodPanel` (EXECUTAR MISSÃO) ganhou botão "📡 Aplicar no Vision Agent Local" idêntico ao do chat. Backend intocado. `_test106_static_wiring.cjs` 9/9 + regressão `_test105_*` confirmada (13/13 + 9/9). SDDF_SPEC §106 adicionado. | - | 578a651 |
 | §107 | Etapa B retirada do roadmap (SDDF_SPEC §66 já fechado — tiered routing resolvido sem código novo). Etapa C implementada: memory layer fase 2 no Hermes — `tokenize`/`jaccardOverlap`/`readLowConfidenceLog`/`findSimilarLowConfidenceCases`/`applyMemoryReordering`/`computeMemoryMetrics` em `hermes-rca.js`; `callHermes` desprioriza (nunca remove) provider que falhou em caso similar; log de baixa confiança ganha campo `keywords` pra matching futuro. `_test107_memory_layer_unit.cjs` 26/26. SDDF_SPEC §107 adicionado. | - | eab69de |
 | §108 | Etapa E implementada: painel "MÉTRICAS DOS AGENTES" (100% estático com badge "UI LOCAL") ligado a 4 endpoints reais (`/api/metrics/agents`, `/api/metrics/summary`, `/api/dora-metrics`, `/api/metrics/memory`). Novo endpoint `GET /api/metrics/memory` com `computeMemoryMetrics()` e `anti_stub:true`. Badge vira "DADOS REAIS" quando backend responde. Fallback estático preservado. `_test108_observability_unit.cjs` 23/23 + `_test108_endpoint_smoke.sh` 10/10. SDDF_SPEC §108 adicionado. | - | eab69de |
+| §109 | Etapa D implementada: missão multi-arquivo atômica (`apply_patch_multi`). Backend valida array `files[]` com file+patch por item. Vision Agent: `resolveTargetFile()` (helper standalone), `rollbackFiles()`, `gitCommitMulti()`, `applyPatchMultiMission()` — 4 etapas: resolver/aplicar/validar Aegis/commit único. Falha em qualquer etapa reverte TODOS via git checkout. `applyPatchMission` (§105) intocada. `_test109_static_wiring.cjs` 12/12 + E2E real (commit único + 2 cenários de rollback atômico confirmados). Regressão completa 90 testes 0 falhas. SDDF_SPEC §109 adicionado. | - | PENDING |
 
 ---
 
@@ -239,6 +240,18 @@ Inline polling de ~60 linhas extraído para `vcQueueApplyPatchViaAgent(hermesObj
 **Fix frontend:** `initObservabilityPanel107()` IIFE inserida após o bloco `clearBtn` em `vision-core-bundle.js` — faz `Promise.all` nos 4 endpoints, se qualquer retornar `ok:true` converte badge para "DADOS REAIS" (verde), preenche status dos agentes por nome, e adiciona grid com 3 blocos: RUNTIME (backend), DORA METRICS, MEMORY LAYER. Fallback: se todos os fetches falharem → `if (!gotAny) return` — nada muda, estático permanece.
 **Evidência:** `_test108_observability_unit.cjs` 23/23 (computeMemoryMetrics×8 + wiring estático×10) + `_test108_endpoint_smoke.sh` 10/10 (health + 4 endpoints + 5 campos do endpoint novo, backend real porta 4498).
 
+### §109 (histórico) — Etapa D: missão multi-arquivo atômica
+**Contexto:** toda missão `apply_patch` (§105) sempre operou sobre exatamente 1 arquivo. `/api/agent/mission/queue` e `applyPatchMission` em `vision-agent.js` aceitavam campos `file`/`patch` singulares — não havia como agrupar N arquivos numa única transação atômica.
+**Fix backend (`server.js`):** novo bloco `if (type === 'apply_patch_multi')` no handler `/api/agent/mission/queue` — valida que `body.files` é array não-vazio e que cada item tem `file`+`patch`, rejeita com 400 se não (dois erros distintos: `apply_patch_multi_requires_files_array` e `apply_patch_multi_each_file_requires_file_and_patch`). Persiste o array mapeado como `mission.files` com `fix_type` defaultado para `'code_patch'`. Bloco `if (type === 'apply_patch')` do §105 intocado.
+**Fix vision-agent.js:** 4 funções novas ao lado (não substituindo) de `applyPatchMission`:
+- `resolveTargetFile(fileRef)` — mesma lógica de resolução por caminho direto + busca por nome do §105, extraída como helper standalone para não duplicar código.
+- `rollbackFiles(relPaths)` — reverte array de caminhos relativos via `git checkout --`.
+- `gitCommitMulti(filePaths, message)` — `git add` com todos os caminhos + `git commit` único (não N commits separados).
+- `applyPatchMultiMission(m)` — orquestra 4 etapas em sequência: (1) resolver todos os caminhos antes de escrever qualquer arquivo; (2) aplicar patches em ordem — falha em qualquer → rollback dos já aplicados + retorna `patch_multi_failed`; (3) validar Aegis em todos os arquivos já modificados — falha em qualquer → rollback de todos + retorna `patch_multi_rollback`; (4) commit único via `gitCommitMulti` — retorna `patch_multi_applied_committed`.
+Dispatcher em `poll()` extendido com linha `m.type === 'apply_patch_multi' ? applyPatchMultiMission :`.
+**Não verificado manualmente:** interface de usuário para submeter `apply_patch_multi` (o LLM do chat ainda não compõe automaticamente o array `files[]` — isso é trabalho futuro de prompt engineering/coordenação LLM multi-arquivo). O loop técnico (backend → agent → resultado) foi validado via E2E automatizado.
+**Evidência:** `_test109_static_wiring.cjs` 12/12 (3 backend + 9 agent — wiring estático sem servidor) + `_test109_multi_patch_atomic_e2e.sh` todos os checks (backend+agent reais, repo git temporário com 6 arquivos em 3 cenários: caminho feliz com 1 commit cobrindo 2 arquivos, falha de patch com rollback, falha de validação Aegis com rollback). Regressão completa: §105 (13/13 + 9/9) + §106 (9/9) + §107 (26/26) + §108 (23/23 + 10/10) = 90 testes, 0 falhas.
+
 ### Fora de escopo / decisão deliberada (não esquecimento)
 - §98-F (OPENCLAW/OPENSQUAD/OSINT/V10) — roadmap puro, NÃO implementar ainda.
 
@@ -266,10 +279,9 @@ Hoje a Software Factory nunca toca código de produção — é camada de govern
 ### Etapa C — Memory layer: aprender com diagnósticos de baixa confiança anteriores ✅ RESOLVIDA (§107)
 **Implementada em §107.** `tokenize`/`jaccardOverlap`/`readLowConfidenceLog`/`findSimilarLowConfidenceCases`/`applyMemoryReordering` em `hermes-rca.js`. `callHermes` desprioriza providers fracos. `_test107_memory_layer_unit.cjs` 26/26. Ver §107 (histórico) acima.
 
-### Etapa D — Multi-arquivo / multi-step missions reais (apply, não só diagnóstico)
-**Risco:** médio (semântica de transação importa). **Esforço:** médio-grande.
-§56 (Multi-DIFF) já resolve multi-arquivo no **diagnóstico**. Falta multi-arquivo na **aplicação real**: hoje `applyPatchMission` em `vision-agent.js` e `/api/agent/mission/queue` só carregam 1 `file`+1 `patch` por missão. Estender para aceitar `patches: [{file, patch, fix_type}, ...]` e aplicar como transação atômica — se qualquer arquivo falhar a validação Aegis, fazer rollback de TODOS os arquivos já aplicados na mesma missão antes de reportar falha (não deixar a missão pela metade).
-**Verificação automatizada:** estender `_test105_full_loop_e2e.sh` (ou criar `_test106`) com um caso de 2 arquivos onde um precisa mudar a assinatura de uma função e o outro precisa atualizar o call site — assert que ambos mudam juntos com um único commit, e um segundo caso onde o 2º arquivo falha Aegis — assert que o 1º também é revertido (zero estado parcial).
+### Etapa D — Multi-arquivo / multi-step missions reais (apply, não só diagnóstico) ✅ RESOLVIDA (§109)
+**Implementada em §109.** Novo tipo `apply_patch_multi` com garantia atômica tudo-ou-nada. Ver §109 (histórico) abaixo para write-up completo.
+**Nota:** a parte resolvida é a garantia transacional (atomicidade na aplicação real). A coordenação autônoma por LLM de quais arquivos/call-sites mudar juntos (ex.: refatoração de assinatura + call sites) continua sendo trabalho futuro — o LLM pode hoje diagnosticar multi-arquivo (§56 Multi-DIFF) e enfileirar como `apply_patch_multi`, mas a decisão de *quais* arquivos compõem a transação ainda é do usuário/chat.
 
 ### Etapa E — Observabilidade do Vision Core como produto ✅ RESOLVIDA (§108)
 **Implementada em §108.** Novo endpoint `/api/metrics/memory` + painel `#metricsBoard` ligado a 4 endpoints reais com fallback estático preservado. `_test108_observability_unit.cjs` 23/23 + `_test108_endpoint_smoke.sh` 10/10. Ver §108 (histórico) acima.

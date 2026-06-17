@@ -2308,6 +2308,20 @@ app.post('/api/agent/mission/queue', (req, res) => {
     mission.fix_type  = body.fix_type  || 'code_patch';
     mission.diagnosis = body.diagnosis || '';
   }
+  /* §109 — Etapa D: missao multi-arquivo atomica. files e um array de */
+  /* {file, patch, fix_type} — o agent local aplica tudo-ou-nada (ver vision-agent.js) */
+  if (type === 'apply_patch_multi') {
+    if (!Array.isArray(body.files) || body.files.length === 0) {
+      return res.status(400).json({ ok: false, error: 'apply_patch_multi_requires_files_array', time: now() });
+    }
+    for (const f of body.files) {
+      if (!f || !f.file || !f.patch) {
+        return res.status(400).json({ ok: false, error: 'apply_patch_multi_each_file_requires_file_and_patch', time: now() });
+      }
+    }
+    mission.files      = body.files.map(f => ({ file: f.file, patch: f.patch, fix_type: f.fix_type || 'code_patch' }));
+    mission.diagnosis  = body.diagnosis || '';
+  }
   _agentQueue.push(mission);
   return sendOk(res, { mission_id: mission.id, queued: true, queue_length: _agentQueue.length, type: mission.type });
 });
