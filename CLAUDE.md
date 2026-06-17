@@ -28,7 +28,7 @@
 
 | Componente | Versão | Tag git | HEAD |
 |-----------|--------|---------|------|
-| Backend EB | 5.9.7-s104 | (pendente) | (pendente) |
+| Backend EB | 5.9.8-s105-agent-loop-closure | s105-done | bd2362a |
 | CF Pages | live | s97-done | após s97 |
 
 ---
@@ -200,8 +200,8 @@ FREE_MISSION_LIMIT=5
 | §101 | T5 Agentes Extras live — 5 passos + accordion desbloqueado — tutoriais T1-T6 6/6 completos | t5-done | 61e8d71 |
 | §102 | §98-E resolvido — Mission Timeline persistido (descoberta: endpoint real é /api/chat, não /api/copilot) — ST-11 criado (6 casos), 21 testes unitários | s102-done | 13a6748 |
 | §103 | Causa raiz real do §102: header Authorization ausente nas 4 chamadas /api/chat (tok1-4) + CSS ausente no bundle pré-concatenado + overwrite-guard defensivo. Persistência confirmada ponta a ponta via curl/PowerShell. Mesmo commit/tag do §102. | s102-done | 13a6748 |
-| §104 | Limpeza: v236FileInput órfão removido, versão backend padronizada (4.1.0/v5.9.0 → 5.9.7), display_input pro histórico mostrar texto limpo (sem prefixo de contexto), recordMissionTimelineEntry adicionado nos 3 fluxos que faltavam (sf-chat, hermes, zip-upload) — §98-B/§98-C doc sincronizada com código real. | - | (pendente commit) |
-| §105 | Fechou o loop chat→agent local→patch real (roadmap item #1 de about.html). `/api/agent/mission/queue` preserva file/patch/fix_type/diagnosis p/ apply_patch (antes descartados); `/api/agent/status` real via `_agentLastSeenAt` (antes hardcoded false); novo botão "Aplicar no Vision Agent Local" ativa `renderValidationPanel` (código morto desde sempre). ST-12 criado (9/9, backend+agent reais). SDDF_SPEC §14.3/14.4 corrigidos (removida doc de `tryAgent` fictício) + novo §105. | - | (pendente commit) |
+| §104 | Limpeza: v236FileInput órfão removido, versão backend padronizada (4.1.0/v5.9.0 → 5.9.7), display_input pro histórico mostrar texto limpo (sem prefixo de contexto), recordMissionTimelineEntry adicionado nos 3 fluxos que faltavam (sf-chat, hermes, zip-upload) — §98-B/§98-C doc sincronizada com código real. | s104-done | bc0325f |
+| §105 | Fechou o loop chat→agent local→patch real (roadmap item #1 de about.html). `/api/agent/mission/queue` preserva file/patch/fix_type/diagnosis p/ apply_patch (antes descartados); `/api/agent/status` real via `_agentLastSeenAt` (antes hardcoded false); novo botão "Aplicar no Vision Agent Local" ativa `renderValidationPanel` (código morto desde sempre). ST-12 criado (9/9, backend+agent reais). SDDF_SPEC §14.3/14.4 corrigidos (removida doc de `tryAgent` fictício) + novo §105. | - | bd2362a |
 
 ---
 

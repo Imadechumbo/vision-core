@@ -3358,42 +3358,42 @@ const SF_GENERATORS = {
   'mission-composer': async (ctx) => {
     const prompt = `Você é o Mission Composer do Vision Core. Gere um prompt estruturado de missão SDDF para o projeto "${ctx.project}". Inclua: objetivo, escopo, agentes envolvidos, critérios de PASS GOLD, e sequência de execução. Timestamp: ${ctx.timestamp}`;
     const llm = await callLLM(prompt, { max_tokens: 800, system: 'Você é um gerador de missões SDDF. Responda em português. Seja técnico e estruturado.' });
-    return { module: 'SF02', result: llm ? llm.text : `MISSION COMPOSER\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\nObjetivo: [definir]\nEscopo: [definir]\nAgentes: OpenClaw → Scanner → Hermes → Aegis → SDDF → PASS GOLD\nCritérios: PASS GOLD score ≥ 95\n\nGerado por Vision Core v5.9.7 — SF02`, provider: llm ? llm.provider : 'local' };
+    return { module: 'SF02', result: llm ? llm.text : `MISSION COMPOSER\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\nObjetivo: [definir]\nEscopo: [definir]\nAgentes: OpenClaw → Scanner → Hermes → Aegis → SDDF → PASS GOLD\nCritérios: PASS GOLD score ≥ 95\n\nGerado por Vision Core v5.9.8 — SF02`, provider: llm ? llm.provider : 'local' };
   },
   'worker-handoff': async (ctx) => {
     const prompt = `Gere um pacote de handoff estruturado para o projeto "${ctx.project}". Inclua: contexto atual, artefatos disponíveis, próximos passos, worker de destino, e checklist de transferência. Timestamp: ${ctx.timestamp}`;
     const llm = await callLLM(prompt, { max_tokens: 700, system: 'Você é o Worker Handoff agent do Vision Core. Responda em português.' });
-    return { module: 'SF03', result: llm ? llm.text : `WORKER HANDOFF\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\nContexto: deploy em andamento\nArtifatos: server.js, frontend bundle\nPróximos passos: validar endpoints, rodar smoke test\n\nGerado por Vision Core v5.9.7 — SF03`, provider: llm ? llm.provider : 'local' };
+    return { module: 'SF03', result: llm ? llm.text : `WORKER HANDOFF\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\nContexto: deploy em andamento\nArtifatos: server.js, frontend bundle\nPróximos passos: validar endpoints, rodar smoke test\n\nGerado por Vision Core v5.9.8 — SF03`, provider: llm ? llm.provider : 'local' };
   },
   'context-snapshot': async (ctx) => {
     const prompt = `Gere um snapshot de contexto para auditoria do projeto "${ctx.project}". Inclua: estado atual do sistema, versão, endpoints ativos, providers configurados. Timestamp: ${ctx.timestamp}`;
     const llm = await callLLM(prompt, { max_tokens: 600, system: 'Você é o Context Snapshot agent. Responda em português.' });
-    return { module: 'SF04', result: llm ? llm.text : `CONTEXT SNAPSHOT\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\nVersão: v5.9.7-s104\nStatus: operacional\n\nGerado por Vision Core v5.9.7 — SF04`, provider: llm ? llm.provider : 'local' };
+    return { module: 'SF04', result: llm ? llm.text : `CONTEXT SNAPSHOT\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\nVersão: v5.9.8-s105\nStatus: operacional\n\nGerado por Vision Core v5.9.8 — SF04`, provider: llm ? llm.provider : 'local' };
   },
   'patch-validator': async (ctx) => {
     const prompt = `Gere um relatório de validação de patch para o projeto "${ctx.project}". Inclua: checklist de segurança, compatibilidade, estabilidade, e critérios de PASS GOLD. Timestamp: ${ctx.timestamp}`;
     const llm = await callLLM(prompt, { max_tokens: 700, system: 'Você é o Patch Validator do Vision Core. Responda em português.' });
-    return { module: 'SF05', result: llm ? llm.text : `PATCH VALIDATOR\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\n☐ SECURITY — revisar\n☐ COMPATIBILITY — testar\n☐ STABILITY — validar\n☐ PASS GOLD — pendente\n\nGerado por Vision Core v5.9.7 — SF05`, provider: llm ? llm.provider : 'local' };
+    return { module: 'SF05', result: llm ? llm.text : `PATCH VALIDATOR\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\n☐ SECURITY — revisar\n☐ COMPATIBILITY — testar\n☐ STABILITY — validar\n☐ PASS GOLD — pendente\n\nGerado por Vision Core v5.9.8 — SF05`, provider: llm ? llm.provider : 'local' };
   },
   'risk-assessor': async (ctx) => {
     const prompt = `Avalie os riscos de deploy para o projeto "${ctx.project}". Classifique por severidade: BAIXO/MÉDIO/ALTO. Inclua: riscos de rollback, segurança, performance, compatibilidade. Timestamp: ${ctx.timestamp}`;
     const llm = await callLLM(prompt, { max_tokens: 700, system: 'Você é o Risk Assessor do Vision Core. Responda em português.' });
-    return { module: 'SF06', result: llm ? llm.text : `RISK ASSESSMENT\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\nRisco deploy: BAIXO\nRisco rollback: MÉDIO\nRisco segurança: BAIXO\nRisco performance: BAIXO\n\nGerado por Vision Core v5.9.7 — SF06`, provider: llm ? llm.provider : 'local' };
+    return { module: 'SF06', result: llm ? llm.text : `RISK ASSESSMENT\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\nRisco deploy: BAIXO\nRisco rollback: MÉDIO\nRisco segurança: BAIXO\nRisco performance: BAIXO\n\nGerado por Vision Core v5.9.8 — SF06`, provider: llm ? llm.provider : 'local' };
   },
   'rollback-planner': async (ctx) => {
     const prompt = `Crie um plano de rollback detalhado para o projeto "${ctx.project}". Inclua: steps sequenciais, estimativa de tempo, validações pós-rollback. Timestamp: ${ctx.timestamp}`;
     const llm = await callLLM(prompt, { max_tokens: 700, system: 'Você é o Rollback Planner do Vision Core. Responda em português.' });
-    return { module: 'SF07', result: llm ? llm.text : `ROLLBACK PLAN\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\nStep 1: Snapshot vault\nStep 2: Reverter Cloudflare Pages\nStep 3: Reverter Elastic Beanstalk\nStep 4: Validar /api/health\nETC: 4 min\n\nGerado por Vision Core v5.9.7 — SF07`, provider: llm ? llm.provider : 'local' };
+    return { module: 'SF07', result: llm ? llm.text : `ROLLBACK PLAN\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\nStep 1: Snapshot vault\nStep 2: Reverter Cloudflare Pages\nStep 3: Reverter Elastic Beanstalk\nStep 4: Validar /api/health\nETC: 4 min\n\nGerado por Vision Core v5.9.8 — SF07`, provider: llm ? llm.provider : 'local' };
   },
   'gold-gate': async (ctx) => {
     const prompt = `Gere o checklist completo de Gold Gate para o projeto "${ctx.project}". Verifique todos os gates SDDF obrigatórios para PASS GOLD. Timestamp: ${ctx.timestamp}`;
     const llm = await callLLM(prompt, { max_tokens: 700, system: 'Você é o Gold Gate Checker do Vision Core. Responda em português com checklist detalhado.' });
-    return { module: 'SF08', result: llm ? llm.text : `GOLD GATE CHECKLIST\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\n☐ SECURITY\n☐ COMPATIBILITY\n☐ STABILITY\n☐ RUNTIME — /api/health OK\n☐ DIFF — patch revisado\n☐ VAULT — snapshot criado\n☐ AEGIS — aprovação\n☐ SDDF — harness completo\n\nGerado por Vision Core v5.9.7 — SF08`, provider: llm ? llm.provider : 'local' };
+    return { module: 'SF08', result: llm ? llm.text : `GOLD GATE CHECKLIST\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\n☐ SECURITY\n☐ COMPATIBILITY\n☐ STABILITY\n☐ RUNTIME — /api/health OK\n☐ DIFF — patch revisado\n☐ VAULT — snapshot criado\n☐ AEGIS — aprovação\n☐ SDDF — harness completo\n\nGerado por Vision Core v5.9.8 — SF08`, provider: llm ? llm.provider : 'local' };
   },
   'deploy-blueprint': async (ctx) => {
     const prompt = `Gere o blueprint de deploy completo para o projeto "${ctx.project}". Inclua: fase pre-deploy, deploy, post-deploy, smoke tests. Timestamp: ${ctx.timestamp}`;
     const llm = await callLLM(prompt, { max_tokens: 800, system: 'Você é o Deploy Blueprint agent do Vision Core. Responda em português com steps detalhados.' });
-    return { module: 'SF09', result: llm ? llm.text : `DEPLOY BLUEPRINT\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\nFase 1: Pre-deploy\n  → SDDF harness\n  → PASS GOLD score ≥ 95\n  → Snapshot vault\n\nFase 2: Deploy\n  → Cloudflare Pages\n  → Elastic Beanstalk\n  → Worker gateway\n\nFase 3: Post-deploy\n  → Validar /api/health\n  → Smoke tests\n\nGerado por Vision Core v5.9.7 — SF09`, provider: llm ? llm.provider : 'local' };
+    return { module: 'SF09', result: llm ? llm.text : `DEPLOY BLUEPRINT\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\nFase 1: Pre-deploy\n  → SDDF harness\n  → PASS GOLD score ≥ 95\n  → Snapshot vault\n\nFase 2: Deploy\n  → Cloudflare Pages\n  → Elastic Beanstalk\n  → Worker gateway\n\nFase 3: Post-deploy\n  → Validar /api/health\n  → Smoke tests\n\nGerado por Vision Core v5.9.8 — SF09`, provider: llm ? llm.provider : 'local' };
   },
 };
 
