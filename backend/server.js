@@ -2284,9 +2284,9 @@ app.get('/api/auth/status', (req, res) => {
 });
 
 /* ── Vision Agent Local endpoints ──────────────────────────── */
-/* Fila em memória — reset ao reiniciar o processo                */
-const _agentQueue   = [];
-const _agentResults = {};
+/* §112: fila e resultados persistidos em SQLite via agent-queue-db.js    */
+/* (anteriormente array/objeto em memória — perdia tudo no restart do EB) */
+const agentQueueDB = require('./agent-queue-db');
 
 app.post('/api/agent/mission/queue', (req, res) => {
   const body    = normalizeBody(req);
@@ -2332,25 +2332,25 @@ app.post('/api/agent/mission/queue', (req, res) => {
     }
     mission.target_path = body.target_path;
   }
-  _agentQueue.push(mission);
-  return sendOk(res, { mission_id: mission.id, queued: true, queue_length: _agentQueue.length, type: mission.type });
+  agentQueueDB.push(mission);
+  return sendOk(res, { mission_id: mission.id, queued: true, queue_length: agentQueueDB.length(), type: mission.type });
 });
 
 app.get('/api/agent/mission/pending', (req, res) => {
   _agentLastSeenAt = Date.now(); /* §105: todo poll real atualiza presenca p/ /api/agent/status */
-  const mission = _agentQueue.shift();
-  return sendOk(res, { mission: mission || null, queue_remaining: _agentQueue.length });
+  const mission = agentQueueDB.shift();
+  return sendOk(res, { mission: mission || null, queue_remaining: agentQueueDB.length() });
 });
 
 app.post('/api/agent/mission/result', (req, res) => {
   const body = normalizeBody(req);
   if (!body.mission_id) return res.status(400).json({ ok: false, error: 'mission_id_required', time: now() });
-  _agentResults[body.mission_id] = { ...body, received_at: now() };
+  agentQueueDB.storeResult(body.mission_id, { ...body, received_at: now() });
   return sendOk(res, { received: true, mission_id: body.mission_id });
 });
 
 app.get('/api/agent/mission/result/:id', (req, res) => {
-  const result = _agentResults[req.params.id];
+  const result = agentQueueDB.getResult(req.params.id);
   if (!result) return res.status(404).json({ ok: false, error: 'result_not_found', time: now() });
   return sendOk(res, result);
 });
@@ -2367,7 +2367,7 @@ app.post('/api/agent/mission/push', (req, res) => {
     hash:        body.hash  || null,
     queued_at:   now()
   };
-  _agentQueue.push(mission);
+  agentQueueDB.push(mission);
   return sendOk(res, { ok: true, mission_id: mission.id, queued: true, action: 'push_enqueued' });
 });
 
@@ -2382,7 +2382,7 @@ app.post('/api/agent/mission/revert', (req, res) => {
     hash:        body.hash  || null,
     queued_at:   now()
   };
-  _agentQueue.push(mission);
+  agentQueueDB.push(mission);
   return sendOk(res, { ok: true, mission_id: mission.id, queued: true, action: 'revert_enqueued' });
 });
 
@@ -3460,16 +3460,20 @@ app.all('/api/*', (req, res) => {
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('================================================================');
-  console.log('SERVIDOR VISION CORE V2.9.10 SELF-HEALING CONFIG');
-  console.log('================================================================');
-  console.log(`URL: http://0.0.0.0:${PORT}`);
-  console.log('CORS: MANUAL HARDENED BEFORE ALL ROUTES');
-  console.log('BODY PARSER: RAW + JSON + TEXT + URLENCODED FALLBACK');
-  console.log('Contratos: ALL/POST /api/copilot | ALL/POST /api/hermes/analyze | ALL/POST /api/run-live | GET /api/run-live-stream');
-  console.log('NO CUSTOM 405: payload vazio nunca retorna 405');
-  console.log('SELF-HEALING CONFIG: nginx/env/node gates ativos');
-  console.log('PASS GOLD: obrigatório para promoção');
-  console.log('================================================================');
-});
+/* §112: init SQLite queue before accepting requests */
+(async () => {
+  await agentQueueDB.init(DB_ROOT);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log('================================================================');
+    console.log('SERVIDOR VISION CORE V2.9.10 SELF-HEALING CONFIG');
+    console.log('================================================================');
+    console.log(`URL: http://0.0.0.0:${PORT}`);
+    console.log('CORS: MANUAL HARDENED BEFORE ALL ROUTES');
+    console.log('BODY PARSER: RAW + JSON + TEXT + URLENCODED FALLBACK');
+    console.log('Contratos: ALL/POST /api/copilot | ALL/POST /api/hermes/analyze | ALL/POST /api/run-live | GET /api/run-live-stream');
+    console.log('NO CUSTOM 405: payload vazio nunca retorna 405');
+    console.log('SELF-HEALING CONFIG: nginx/env/node gates ativos');
+    console.log('PASS GOLD: obrigatório para promoção');
+    console.log('================================================================');
+  });
+})();
