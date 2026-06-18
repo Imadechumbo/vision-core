@@ -512,7 +512,8 @@
     "test:software-factory-release-execution-firewall-phase-gate-unit": "node --no-deprecation tools/tests/software-factory/software-factory-release-execution-firewall-phase-gate.test.mjs",
     "test:software-factory": "node --no-deprecation tools/run-software-factory-test.mjs",
     "test:software-factory-tooling-conflict-reduction-unit": "node --no-deprecation tools/tests/software-factory/software-factory-tooling-conflict-reduction.test.mjs",
-    "test:e2e:architect": "playwright test tests/e2e/architect.spec.mjs"
+    "test:e2e:architect": "playwright test tests/e2e/architect.spec.mjs",
+    "test:e2e:manual-verification": "playwright test tests/e2e/manual-verification.spec.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

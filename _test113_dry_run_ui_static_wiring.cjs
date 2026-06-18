@@ -53,11 +53,14 @@ assert(
   index.includes('id="vcOpenDryRunPanelBtn"')
 );
 
-/* 6. Wiring: o botão chama renderSfDryRunPanel() e dropa no chatStream (mesmo host dos outros painéis) */
+/* 6. Wiring: o botão chama renderSfDryRunPanel() e dropa no chatStream (mesmo host dos outros painéis).
+      §117-fix: 'chatStream' no handler era undefined (bug de escopo do §113) — corrigido para
+      usar document.getElementById('v298ChatStream') diretamente dentro do handler. */
 assert(
-  'wiring liga vcOpenDryRunPanelBtn → chatStream.appendChild(renderSfDryRunPanel())',
+  'wiring liga vcOpenDryRunPanelBtn → [chatStream].appendChild(renderSfDryRunPanel())',
   bundle.includes("getElementById('vcOpenDryRunPanelBtn')") &&
-  bundle.includes('chatStream.appendChild(renderSfDryRunPanel())')
+  (bundle.includes('chatStream.appendChild(renderSfDryRunPanel())') || /* pré-§117 */
+   bundle.includes('_cs.appendChild(renderSfDryRunPanel())'))          /* pós-§117-fix */
 );
 
 /* 7. renderSfDryRunPanel valida os 2 campos obrigatórios antes de enfileirar */

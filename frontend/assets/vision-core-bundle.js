@@ -8638,9 +8638,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var dryRunPanelBtn = document.getElementById('vcOpenDryRunPanelBtn');
     if (dryRunPanelBtn) {
       dryRunPanelBtn.addEventListener('click', function () {
-        if (chatStream) {
-          chatStream.appendChild(renderSfDryRunPanel());
-          chatStream.scrollTop = chatStream.scrollHeight;
+        var _cs = document.getElementById('v298ChatStream'); /* §117-fix: chatStream do outer scope era undefined aqui (bug de §113) */
+        if (_cs) {
+          _cs.appendChild(renderSfDryRunPanel());
+          _cs.scrollTop = _cs.scrollHeight;
         }
       });
     }
