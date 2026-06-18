@@ -5276,3 +5276,41 @@ Esse upgrade resolveria a inconsistência entre o `engines` declarado em `packag
 `users.json`/autenticação/Stripe continua em arquivo JSON, não SQLite — deliberado, fora do escopo. RDS PostgreSQL não foi avaliado mais a fundo — a decisão humana já descartou essa opção. O upgrade de plataforma EB / Node local para Node 22 ou 24 — adiado deliberadamente, ver seção acima.
 
 **Limitação conhecida do design atual, não bloqueante:** a tabela `results` não tem nenhuma rotina de limpeza ou expiração — cada resultado de missão executada fica armazenado indefinidamente. Como `_save()` reexporta o banco SQLite *inteiro* a cada escrita (não é um append incremental no arquivo), o custo de cada `push`/`shift`/`storeResult` cresce lentamente conforme o histórico de resultados acumula ao longo do tempo. No volume atual do projeto isso não é um problema prático, mas é uma característica inerente ao design baseado em `sql.js` (que sempre reexporta o banco completo) que um `node:sqlite` nativo não teria (escreve incrementalmente direto no arquivo) — outro motivo, além da deprecação de plataforma, a favor do upgrade de Node mencionado acima, caso o volume de missões cresça substancialmente no futuro.
+
+## §113 — Fase 3 de N: UI no Chat para o Dry-Run Real (Etapa A — fechamento do polish de UX pendente desde o §111)
+
+### Contexto
+
+Esta seção fecha a única lacuna que ficou explicitamente registrada como "ainda NÃO foi feito" no §111: o núcleo técnico do dry-run real (firewall §110 + scanner/diagnóstico/simulação §111) já existia desde a sessão anterior, acessível apenas via chamada direta à API (`POST /api/agent/mission/queue` com `type: 'sf_dry_run_real'`). Não havia nenhum ponto de entrada no chat para um humano apontar um repositório externo e disparar isso visualmente. Esta etapa é deliberadamente **só frontend** — nem `backend/server.js` nem `frontend/downloads/vision-agent.js` foram tocados, porque o contrato HTTP e o tipo de missão já estavam prontos e validados desde o §111.
+
+### Fix (`frontend/assets/vision-core-bundle.js`)
+
+Três funções novas inseridas imediatamente depois de `vcQueueApplyPatchViaAgent` (§106) e antes de `renderApplyFixPanel` (§105) — mesma vizinhança de código, mesmo padrão de organização por etapa que já vínhamos seguindo.
+
+### Novas funções (`frontend/assets/vision-core-bundle.js`)
+
+**`vcQueueSfDryRunViaAgent(targetPath, inputDesc, statusEl, onReset, onDone)`** — é o §106 (`vcQueueApplyPatchViaAgent`) reaproveitado quase literalmente: mesmo aviso de `/api/agent/status` desconectado, mesmo orçamento de polling (2s × 15 tentativas = 30s) em `/api/agent/mission/result/:id`, mesmo fallback de "clique para continuar aguardando" se o tempo esgotar. A única diferença é o corpo do POST — `{ type: 'sf_dry_run_real', target_path: targetPath, input: inputDesc }` em vez de `{ type: 'apply_patch', file, patch, fix_type, diagnosis }` — porque o dry-run não chega com um patch pré-diagnosticado pelo chat; ele é quem vai diagnosticar, lendo o repositório externo do zero.
+
+**`renderSfDryRunResult(rd)`** — renderiza qualquer um dos 8 desfechos possíveis de `sfDryRunRealMission` (`blocked_self_target`, `failed`, `listing`, `diagnosis_failed`, `analysis_only`, `patch_failed`, `validation_failed`, `completed`), todos já existentes e testados desde o §111 — esta função só precisa reconhecer e exibir cada um. Borda verde para `sf_dry_run_completed`, vermelha para `sf_dry_run_blocked_self_target`, amarela para os outros 5 desfechos intermediários (falha em qualquer etapa do pipeline, sem sucesso nem bloqueio de firewall). No caso de sucesso, renderiza um painel de 2 colunas — "ANTES (arquivo real, intacto)" em vermelho e "DEPOIS (simulado em memória — NADA foi escrito)" em verde — usando `rd.diff_preview.before`/`rd.diff_preview.after`, que já vinham prontos do §111. **Decisão de segurança deliberada:** todo o conteúdo do projeto-alvo (`rd.output`, `diff_preview.before`, `diff_preview.after`) é inserido via `textContent`, nunca `innerHTML` — é código de um repositório de terceiros que o usuário aponta livremente, e não deve nunca ser interpretado como HTML/script pela página do Vision Core.
+
+**`renderSfDryRunPanel()`** — o ponto de entrada visual: um card com um campo de texto para o caminho completo do projeto-alvo, uma textarea para a descrição do problema, e o botão "🔬 Rodar Dry-Run Real". Valida que os dois campos não estão vazios antes de chamar `vcQueueSfDryRunViaAgent` (mensagem de aviso inline, sem `alert()`). Acionado pelo novo botão de sidebar `#vcOpenDryRunPanelBtn`, que dropa o painel direto no `chatStream` — o mesmo host de mensagens já usado por `renderApplyFixPanel`/`renderStandardMethodPanel` — sem precisar abrir a página separada do SF Builder.
+
+### Fix (`frontend/index.html`)
+
+Um único botão novo na sidebar, reaproveitando a classe CSS já existente `vc-sf-sidebar-link` (nenhum CSS novo foi necessário): `<button id="vcOpenDryRunPanelBtn">🔬 DRY-RUN EXTERNO</button>`, posicionado logo depois do botão existente que abre o SF Builder. O wiring (`addEventListener('click', ...)`) foi adicionado dentro de `initSoftwareFactoryPage()`, na mesma função que já registra o listener de `[data-open-sf-page]`.
+
+### Evidência
+
+**`_test113_dry_run_ui_static_wiring.cjs` — 15/15 PASS** (mesmo estilo do `_test106_static_wiring.cjs`, asserts estáticos via leitura de código-fonte, sem browser): as 3 novas funções cada uma definida exatamente 1 vez; o corpo do POST usa exatamente `type: 'sf_dry_run_real', target_path: targetPath, input: inputDesc`; o botão `#vcOpenDryRunPanelBtn` está presente em `index.html`; o wiring liga o botão a `chatStream.appendChild(renderSfDryRunPanel())`; o painel valida `targetPath`/`inputDesc` antes de enfileirar; as 8 strings de `action` de `sfDryRunRealMission` (`vision-agent.js`) continuam intactas (prova de que o contrato do §111 não foi tocado); `renderSfDryRunResult` distingue visualmente `completed` de `blocked_self_target`; `renderSfDryRunResult` usa `textContent`, não `innerHTML`, para o conteúdo do projeto-alvo; 4 checagens de regressão confirmando que `vcQueueApplyPatchViaAgent`/`renderApplyFixPanel`/`renderStandardMethodPanel`/`renderValidationPanel` (§105/§106) continuam cada uma definida exatamente 1 vez; checagem final confirmando que a forma `diff_preview:{before,after}` do caso de sucesso em `vision-agent.js` está inalterada.
+
+**Regressão confirmada sem quebrar:** `_test106_static_wiring.cjs` (9/9, inalterado). Balanceamento de tags HTML em `frontend/index.html` confirmado idêntico (`<div>` 1149/1149, `<section>` 10/10, `<main>` 1/1, `<aside>` 2/2, `<nav>` 2/2, `<header>` 1/1, `<button>` 211/211). `node --check frontend/assets/vision-core-bundle.js` confirma sintaxe válida.
+
+### O que NÃO mudou
+
+- Nenhuma linha de `backend/server.js` foi tocada — o endpoint `/api/agent/mission/queue` e a validação de `sf_dry_run_real` já existiam desde o §111.
+- Nenhuma linha de `frontend/downloads/vision-agent.js` foi tocada — `sfDryRunRealMission`, o firewall de 4 camadas (§110) e as 8 formas de resultado continuam exatamente como estavam.
+- `vcQueueApplyPatchViaAgent`, `renderApplyFixPanel`, `renderStandardMethodPanel`, `renderValidationPanel` (§105/§106) — intactas, confirmado por teste.
+
+### O que ainda NÃO foi feito (Fase 4 — opcional, sem risco técnico)
+
+O dry-run real continua operando em um único arquivo por missão — não foi combinado com a atomicidade multi-arquivo do `apply_patch_multi` (§109), ou seja, ainda não existe um "dry-run multi-arquivo". Isso fecha a Etapa A como tecnicamente completa nas suas 3 fases planejadas (firewall, núcleo do dry-run, UI); uma eventual Fase 4 de combinação com multi-arquivo é uma extensão de conveniência, não uma lacuna de segurança ou um caminho de código não testado.

@@ -7168,6 +7168,134 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       });
     }
 
+    /* ── §113: vcQueueSfDryRunViaAgent — Etapa A, Fase 3 (polish de UX) ──────────────────── */
+    /* Mesmo padrão de polling do §106 (vcQueueApplyPatchViaAgent), mas para o tipo de missão  */
+    /* sf_dry_run_real (§111): exige target_path + input (descrição do problema) em vez de     */
+    /* file+patch já diagnosticados. Backend/agent NÃO foram alterados — endpoint e mission     */
+    /* type já existiam desde o §111; esta função só os chama pela primeira vez via UI.         */
+    function vcQueueSfDryRunViaAgent(targetPath, inputDesc, statusEl, onReset, onDone) {
+      statusEl.textContent = 'Consultando /api/agent/status...';
+      fetch(BACKEND_URL + '/api/agent/status').then(function(r) { return r.json(); }).then(function(st) {
+        if (!st || !st.connected) {
+          statusEl.innerHTML = '⚠️ Vision Agent Local não detectado (sem poll nos últimos 15s). ' +
+            '<a href="https://visioncoreai.pages.dev/landing.html#agent" target="_blank" style="color:#93c5fd;">Baixe e abra o Vision Agent</a> na máquina onde está o projeto-alvo, depois clique novamente.';
+          onReset();
+          return;
+        }
+        statusEl.textContent = 'Vision Agent Local ativo — enviando dry-run para fila...';
+        fetch(BACKEND_URL + '/api/agent/mission/queue', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'sf_dry_run_real', target_path: targetPath, input: inputDesc })
+        }).then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error || ('HTTP ' + r.status)); }); })
+        .then(function(qd) {
+          if (!qd.ok || !qd.mission_id) throw new Error(qd.error || 'queue_failed');
+          var missionId113 = qd.mission_id;
+          statusEl.textContent = 'Missão ' + missionId113 + ' enfileirada — aguardando o agent ler/diagnosticar/simular (até 30s)...';
+          var tries113 = 0, maxTries113 = 15; /* mesmo orçamento de espera do §106: 2s * 15 = 30s */
+          function pollResult113() {
+            tries113++;
+            fetch(BACKEND_URL + '/api/agent/mission/result/' + missionId113)
+              .then(function(rr) { return rr.status === 404 ? null : rr.json(); })
+              .then(function(rd) {
+                if (rd && rd.mission_id) { onDone(rd); return; }
+                if (tries113 >= maxTries113) {
+                  statusEl.innerHTML = '⏱ Vision Agent Local não respondeu em 30s. Confirme se está rodando ' +
+                    '(<code>node vision-agent.js .</code> ou app instalado) e ' +
+                    '<a href="#" id="vcRetryAgentPoll113" style="color:#93c5fd;">clique para continuar aguardando</a>.';
+                  var _retry113 = document.getElementById('vcRetryAgentPoll113');
+                  if (_retry113) { _retry113.onclick = function(e) { e.preventDefault(); tries113 = 0; statusEl.textContent = 'Retomando espera por missão ' + missionId113 + '...'; pollResult113(); }; }
+                  onReset();
+                  return;
+                }
+                setTimeout(pollResult113, 2000);
+              })
+              .catch(function() { setTimeout(pollResult113, 2000); });
+          }
+          pollResult113();
+        })
+        .catch(function(err) {
+          statusEl.textContent = '❌ ' + (err.message || 'Erro ao enfileirar dry-run.');
+          onReset();
+        });
+      }).catch(function() {
+        statusEl.textContent = '❌ Erro de rede ao consultar /api/agent/status.';
+        onReset();
+      });
+    }
+
+    /* ── §113: renderSfDryRunResult — renderiza qualquer um dos 8 desfechos possíveis de   */
+    /* sfDryRunRealMission (vision-agent.js): blocked_self_target, failed, listing,        */
+    /* diagnosis_failed, analysis_only, patch_failed, validation_failed, completed.        */
+    /* Usa textContent (não innerHTML) para o conteúdo do projeto-alvo/IA — é conteúdo de   */
+    /* um repositório externo, nunca deve ser interpretado como HTML.                       */
+    function renderSfDryRunResult(rd) {
+      var box = document.createElement('div');
+      var isSuccess = rd.action === 'sf_dry_run_completed';
+      var isBlocked = rd.action === 'sf_dry_run_blocked_self_target';
+      var borderColor = isSuccess ? 'rgba(74,222,128,.45)' : (isBlocked ? 'rgba(239,68,68,.5)' : 'rgba(250,204,21,.4)');
+      box.style.cssText = 'background:#050a0f;border:1px solid ' + borderColor + ';border-radius:12px;padding:14px;margin-top:10px;font-size:12.5px;';
+      var pre = document.createElement('pre');
+      pre.style.cssText = 'white-space:pre-wrap;font-family:inherit;color:#cbd5e1;margin:0;';
+      pre.textContent = rd.output || '(sem output)';
+      box.appendChild(pre);
+      if (isSuccess && rd.diff_preview) {
+        var diffWrap = document.createElement('div');
+        diffWrap.style.cssText = 'margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;';
+        var beforeCol = document.createElement('pre');
+        beforeCol.style.cssText = 'background:#1a0a0a;border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px;font-size:11px;max-height:260px;overflow:auto;color:#fca5a5;white-space:pre-wrap;margin:0;';
+        beforeCol.textContent = '— ANTES (arquivo real, intacto) —\n' + (rd.diff_preview.before || '');
+        var afterCol = document.createElement('pre');
+        afterCol.style.cssText = 'background:#0a1a0a;border:1px solid rgba(74,222,128,.3);border-radius:8px;padding:10px;font-size:11px;max-height:260px;overflow:auto;color:#86efac;white-space:pre-wrap;margin:0;';
+        afterCol.textContent = '— DEPOIS (simulado em memória — NADA foi escrito) —\n' + (rd.diff_preview.after || '');
+        diffWrap.appendChild(beforeCol); diffWrap.appendChild(afterCol);
+        box.appendChild(diffWrap);
+      }
+      return box;
+    }
+
+    /* ── §113: renderSfDryRunPanel — Etapa A, Fase 3: ponto de entrada no chat para apontar  */
+    /* um repositório externo e disparar o dry-run real (§111) visualmente. Núcleo técnico    */
+    /* (firewall, scanner, simulação) já existia desde o §111 — esta função só dá uma UI a     */
+    /* ele. Acionada pelo botão #vcOpenDryRunPanelBtn (sidebar).                              */
+    function renderSfDryRunPanel() {
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'background:#050a0f;border:1px solid rgba(129,140,248,.4);border-radius:14px;padding:16px;margin:4px 0 8px;font-size:13px;font-family:inherit;';
+      wrap.innerHTML =
+        '<div style="font-weight:700;color:#a5b4fc;margin-bottom:8px;">🔬 Software Factory — Dry-Run Real em Repositório Externo</div>' +
+        '<div style="color:#94a3b8;font-size:12px;margin-bottom:10px;line-height:1.5;">Aponte um projeto seu — nunca o próprio Vision Core, bloqueado por um firewall de 4 camadas — para ler o código real, diagnosticar de verdade e simular o patch só em memória. Nada é escrito no disco do projeto-alvo nem comitado.</div>' +
+        '<input type="text" id="vcSfDryRunPath" placeholder="Caminho completo do projeto no seu computador, ex: C:\\Users\\voce\\Desktop\\meu-projeto" style="width:100%;box-sizing:border-box;background:#0a0f1a;border:1px solid #1e293b;border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:12.5px;margin-bottom:8px;font-family:inherit;">' +
+        '<textarea id="vcSfDryRunDesc" placeholder="Descreva o problema, ex: a função soma() está subtraindo em vez de somar" rows="2" style="width:100%;box-sizing:border-box;background:#0a0f1a;border:1px solid #1e293b;border-radius:8px;padding:8px 10px;color:#e2e8f0;font-size:12.5px;margin-bottom:10px;resize:vertical;font-family:inherit;"></textarea>' +
+        '<button id="vcSfDryRunBtn" type="button" style="background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;">🔬 Rodar Dry-Run Real</button>' +
+        '<div id="vcSfDryRunStatus" style="margin-top:10px;font-size:12px;color:#94a3b8;"></div>' +
+        '<div id="vcSfDryRunResultHost"></div>';
+
+      var btn        = wrap.querySelector('#vcSfDryRunBtn');
+      var statusEl   = wrap.querySelector('#vcSfDryRunStatus');
+      var resultHost = wrap.querySelector('#vcSfDryRunResultHost');
+
+      btn.addEventListener('click', function() {
+        var targetPath = wrap.querySelector('#vcSfDryRunPath').value.trim();
+        var inputDesc  = wrap.querySelector('#vcSfDryRunDesc').value.trim();
+        resultHost.innerHTML = '';
+        if (!targetPath || !inputDesc) {
+          statusEl.textContent = '⚠️ Informe o caminho do projeto e descreva o problema antes de rodar.';
+          return;
+        }
+        btn.disabled = true;
+        vcQueueSfDryRunViaAgent(targetPath, inputDesc, statusEl, function() {
+          btn.disabled = false;
+        }, function(rd) {
+          btn.disabled = false;
+          statusEl.textContent = rd.action === 'sf_dry_run_completed'
+            ? '✅ Dry-run concluído — nada foi escrito no disco real.'
+            : 'Resultado recebido — ver detalhes abaixo.';
+          resultHost.appendChild(renderSfDryRunResult(rd));
+        });
+      });
+
+      return wrap;
+    }
+
     /* ── renderApplyFixPanel — aplica patch via /api/chat/apply-patch (sem agent local) ── */
     function renderApplyFixPanel(hermesObj) {
       var wrap = document.createElement('div');
@@ -8404,6 +8532,19 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     document.querySelectorAll('[data-open-sf-page]').forEach(function (btn) {
       btn.addEventListener('click', showSoftwareFactoryPage);
     });
+
+    // §113 — Etapa A, Fase 3: botão de entrada do Dry-Run Real em repositório externo.
+    // Dropa o painel renderSfDryRunPanel() direto no chat stream (mesmo host usado por
+    // renderApplyFixPanel/renderStandardMethodPanel) — sem abrir a página SF Builder.
+    var dryRunPanelBtn = document.getElementById('vcOpenDryRunPanelBtn');
+    if (dryRunPanelBtn) {
+      dryRunPanelBtn.addEventListener('click', function () {
+        if (chatStream) {
+          chatStream.appendChild(renderSfDryRunPanel());
+          chatStream.scrollTop = chatStream.scrollHeight;
+        }
+      });
+    }
 
     // Module nav buttons
     document.querySelectorAll('.vc-sf-module-btn').forEach(function (btn) {

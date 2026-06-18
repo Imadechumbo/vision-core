@@ -609,6 +609,12 @@
           <div style="font-size:11px;color:#64748b">— §112, _test112_persistent_queue_unit 13/13 + E2E com kill -9 real do processo, PASS</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔬</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O dry-run real em repositório externo já existia por completo desde a sessão anterior — firewall, leitura, diagnóstico, simulação de patch — mas só era acionável chamando a API direto. Faltava só uma porta de entrada visual. Em vez de duplicar qualquer lógica, reaproveitamos quase literalmente o mesmo padrão de polling já usado pelo botão 'Aplicar no Vision Agent Local', só trocando o que vai dentro do envelope da missão. A decisão mais deliberada desta etapa: o conteúdo lido do repositório de terceiros nunca é inserido como HTML — sempre como texto puro — porque é código de outra pessoa, escolhido livremente por quem está usando, e nunca deveria poder rodar um script na nossa própria página. Backend e agente continuam exatamente como estavam; isso aqui é só a porta que faltava construir."</div>
+          <div style="font-size:11px;color:#64748b">— §113, _test113_dry_run_ui_static_wiring.cjs 15/15, PASS</div>
+        </div>
+
       </div>
     </div>
 
@@ -838,51 +844,24 @@
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
 
         <div style="background:#0a0f1a;border:1px dashed rgba(74,222,128,0.4);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
-          <div style="position:absolute;top:12px;right:12px;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#4ade80;letter-spacing:1px">PARCIALMENTE RESOLVIDO — §110+§111</div>
+          <div style="position:absolute;top:12px;right:12px;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#4ade80;letter-spacing:1px">PARCIALMENTE RESOLVIDO — §110+§111+§113</div>
           <div style="font-size:22px;font-weight:900;color:rgba(74,222,128,0.4);line-height:1">1</div>
           <div style="font-size:13px;font-weight:700;color:#bbf7d0">Software Factory saindo do sandbox — com escopo restrito e auditável</div>
           <div style="font-size:13px;color:#94a3b8;line-height:1.6">
-            <strong style="color:#bbf7d0">O núcleo técnico de risco está resolvido:</strong> pra um repositório explicitamente apontado (nunca o próprio vision-core, bloqueado por um firewall de 4 camadas testado com 20/20 casos), a Factory agora lê o código real, gera um diagnóstico real via a mesma infraestrutura Hermes do chat, e simula o patch inteiramente em memória — o arquivo no disco do projeto-alvo fica bit-a-bit idêntico ao original, e nenhum commit é criado. Certificado com E2E real: diff correto + arquivo intacto + git HEAD inalterado, nos 4 cenários (firewall, caminho feliz, falha de patch, falha de validação).
+            <strong style="color:#bbf7d0">O núcleo técnico de risco está resolvido, e agora também a interface:</strong> pra um repositório explicitamente apontado (nunca o próprio vision-core, bloqueado por um firewall de 4 camadas testado com 20/20 casos), a Factory lê o código real, gera um diagnóstico real via a mesma infraestrutura Hermes do chat, e simula o patch inteiramente em memória — o arquivo no disco do projeto-alvo fica bit-a-bit idêntico ao original, e nenhum commit é criado. Certificado com E2E real: diff correto + arquivo intacto + git HEAD inalterado, nos 4 cenários (firewall, caminho feliz, falha de patch, falha de validação). Desde o §113, isso também tem um botão dedicado na sidebar ("🔬 DRY-RUN EXTERNO") — não é mais só uma chamada de API.
             <br><br>
-            <span style="color:#64748b">Ainda como roadmap:</span> não há um fluxo no chat pra apontar um repositório externo e disparar isso visualmente ainda (hoje é uma capability de backend+agent, chamável via missão, sem botão na interface) — e o dry-run ainda é de um arquivo por missão, não combinado com a atomicidade multi-arquivo do item 2 abaixo.
-          </div>
-        </div>
-
-        <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
-          <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
-          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">2</div>
-          <div style="font-size:13px;font-weight:700;color:#a5b4fc">Tiered routing de providers (§66 Fases 1-4)</div>
-          <div style="font-size:13px;color:#64748b;line-height:1.6">
-            Funcionou sem elas porque trocar para deepseek-v4-flash resolveu 17/17 fails. Mas a tabela de modelos já mapeada (Qwen, Nemotron, Poolside — vários gratuitos) sugere uma evolução natural: classificar a missão por dificuldade (heurística simples: tamanho do diff, presença de termos como "race condition", "shadowing", "async") e rotear para o modelo certo antes de gastar a primeira tentativa — reduzindo latência e custo em vez de só fallback reativo.
-          </div>
-        </div>
-
-        <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
-          <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
-          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">3</div>
-          <div style="font-size:13px;font-weight:700;color:#a5b4fc">Memory layer (§72 Fase 2-4) como diferencial real de produto</div>
-          <div style="font-size:13px;color:#64748b;line-height:1.6">
-            O <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">.vision-memory/hermes_low_confidence.jsonl</code> já está sendo escrito. A Fase 2 (consultar esse histórico antes do diagnóstico para pular direto pro provider robusto em payloads parecidos) é relativamente barata de implementar e tem um efeito composto: cada missão deixa o sistema mais rápido/preciso na próxima parecida — isso é uma história de marketing forte (<em style="color:#e2e8f0">"o Vision Core aprende com cada bug que já viu"</em>).
+            <span style="color:#64748b">Ainda como roadmap:</span> o dry-run continua de um arquivo por missão, não combinado com a atomicidade multi-arquivo do item 2 abaixo — um "dry-run multi-arquivo" seria a extensão natural, mas é conveniência, não risco técnico.
           </div>
         </div>
 
         <div style="background:#0a0f1a;border:1px dashed rgba(250,204,21,0.4);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
           <div style="position:absolute;top:12px;right:12px;background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.35);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#fbbf24;letter-spacing:1px">PARCIALMENTE RESOLVIDO</div>
-          <div style="font-size:22px;font-weight:900;color:rgba(250,204,21,0.4);line-height:1">4</div>
+          <div style="font-size:22px;font-weight:900;color:rgba(250,204,21,0.4);line-height:1">2</div>
           <div style="font-size:13px;font-weight:700;color:#fde68a">Multi-arquivo e multi-step missions de verdade</div>
           <div style="font-size:13px;color:#94a3b8;line-height:1.6">
             <strong style="color:#fde68a">§109 resolveu a garantia transacional:</strong> novo tipo <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#fde68a">apply_patch_multi</code> aceita N arquivos numa única missão tudo-ou-nada — se qualquer patch ou validação Aegis falhar em qualquer arquivo, TODOS revertem via <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#fde68a">git checkout</code>. No caminho feliz, é exatamente 1 commit cobrindo todos os arquivos juntos. E2E real confirma: commit único com 2 arquivos, rollback quando 2º patch não casa, rollback quando Aegis falha depois do PatchEngine já ter passado.
             <br><br>
             <span style="color:#64748b">Ainda como roadmap:</span> a coordenação autônoma por LLM de <em>quais</em> arquivos/call-sites mudar juntos (ex: mudar assinatura de função em A e todos os call-sites em B, C, D) — isso requer que o chat componha o <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#64748b">files[]</code> corretamente via prompt engineering multi-arquivo. A garantia de execução atômica existe; a coordenação inteligente de escopo é a parte que continua como evolução futura.
-          </div>
-        </div>
-
-        <div style="background:#0a0f1a;border:1px dashed rgba(99,102,241,0.35);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
-          <div style="position:absolute;top:12px;right:12px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#818cf8;letter-spacing:1px">ROADMAP</div>
-          <div style="font-size:22px;font-weight:900;color:rgba(99,102,241,0.4);line-height:1">5</div>
-          <div style="font-size:13px;font-weight:700;color:#a5b4fc">Observabilidade do próprio Vision Core como produto</div>
-          <div style="font-size:13px;color:#64748b;line-height:1.6">
-            Vocês já têm <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/dora-metrics</code>, <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/metrics/agents</code>, <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">/api/metrics/summary</code>, <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#a5b4fc">.vision-memory/*</code>. Isso é quase um dashboard de "saúde do seu pipeline de IA" pronto — poderia virar uma feature visível no painel (não só interna) para o Enterprise: <em style="color:#e2e8f0">"veja quantas vezes cada provider foi usado, taxa de escalação, tempo médio de diagnóstico por dificuldade"</em>.
           </div>
         </div>
 
