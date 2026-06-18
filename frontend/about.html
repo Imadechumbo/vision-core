@@ -603,6 +603,12 @@
           <div style="font-size:11px;color:#64748b">— §110+§111, _test110 20/20 + _test111_dry_run_real_unit 18/18 + _test111_dry_run_real_e2e 18/18, PASS</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">💾</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O plano era usar o SQLite nativo do Node — zero pacote novo. Mas a máquina real que roda o projeto está em Node 20, não na versão que o próprio package.json declara exigir. Esse módulo nem existe ali. Tentamos a alternativa nativa via npm e o build falhou por um certificado SSL bloqueado na rede local — nada a ver com o código. A solução que funcionou foi SQLite compilado pra WebAssembly: zero binário, zero compilação, funcionou de primeira. No caminho, descobrimos também que o painel da AWS já está nos avisando que essa versão do Node está obsoleta — decidimos não resolver isso agora, é um problema separado. O que importava aqui era a fila de missões do agente, que vivia só em memória e evaporava a cada restart automático do servidor (isso acontece sozinho, a cada 15-90 minutos). Pra provar que resolveu de verdade, subimos o servidor real, matamos o processo no meio de uma fila não-vazia, e subimos de novo. A fila e os resultados estavam exatamente onde deixamos."</div>
+          <div style="font-size:11px;color:#64748b">— §112, _test112_persistent_queue_unit 13/13 + E2E com kill -9 real do processo, PASS</div>
+        </div>
+
       </div>
     </div>
 

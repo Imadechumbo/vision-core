@@ -5181,3 +5181,98 @@ Bloco `sf_dry_run_real` em `/api/agent/mission/queue`, inserido depois do bloco 
 ### O que ainda NÃO foi feito (polish de UX, não risco técnico)
 
 Nenhuma interface no chat para o usuário escolher um repositório externo e disparar o dry-run real visualmente — hoje é uma capability de backend+agent, chamável via missão na API, sem botão dedicado na interface. O dry-run ainda processa um arquivo por missão; não foi combinado com a atomicidade multi-arquivo do `apply_patch_multi` (§109). Nenhum dos dois é uma lacuna de segurança ou risco técnico — é trabalho de UX/integração que pode ser feito quando houver demanda, no mesmo espírito de como o `apply_patch_multi` também não tem UI de chat pra compor missões multi-arquivo automaticamente.
+
+## §112 — Etapa F: Fila de Missões do Agente Persistida em SQLite (decisão humana: SQLite, não RDS)
+
+### Decisão registrada
+
+Antes de qualquer código, a decisão entre SQLite e RDS PostgreSQL foi colocada explicitamente para o usuário. Resposta: **SQLite** — sem custo mensal adicional, suficiente para o problema real identificado abaixo.
+
+### Investigação: o que estava realmente quebrado
+
+A descrição original da Etapa F ("Hoje: JSON + `/tmp` no EB, reseta a cada restart do processo") foi escrita especulativamente numa sessão anterior, sem confirmação direta no código. Busca por `/tmp` literal em `server.js`: zero ocorrências no caminho de dados da aplicação. `users.json` (autenticação, multi-tenant, Stripe) vive em `DB_ROOT = path.join(ROOT, 'data')` e já é persistido em arquivo — sem o bug de volatilidade.
+
+O ponto real, confirmado por leitura direta do código-fonte: `const _agentQueue = []` e `const _agentResults = {}` em `server.js` são **inteiramente estruturas em memória**, sem nenhuma escrita em disco em nenhum dos 6 pontos onde são usadas. O §70 (já fechado) confirma que o `web.service` no Elastic Beanstalk reinicia periodicamente via `cfn-hup` (~15-90 minutos), restart limpo do processo (não OOM). Qualquer missão enfileirada ainda não consumida, ou resultado ainda não buscado, era genuinamente perdido nesse restart.
+
+### Escopo deliberadamente contido
+
+Apenas a fila de missões e seus resultados foram migrados. `users.json`/autenticação/Stripe não foi tocado — não apresentava o bug de volatilidade que motivou esta etapa.
+
+### O driver real divergiu do planejado — e isso faz parte da evidência, não é um detalhe a esconder
+
+O plano original (registrado antes de qualquer código) era usar `node:sqlite`, o módulo SQLite nativo do Node, assumindo que `backend/package.json` (`"engines": {"node": ">=24.0.0"}`) refletia a versão real do ambiente. Na hora de implementar, checando o ambiente de verdade em vez de confiar na declaração: `node --version` na máquina real de desenvolvimento/deploy retornou **v20.12.2**. `node:sqlite` não existe antes do Node 22.5 — essa rota estava fechada desde o início, e só foi descoberta checando a máquina real, não a documentação do projeto.
+
+Segunda tentativa: `better-sqlite3`, um pacote npm com binding nativo (requer compilação via `node-gyp`). `npm install better-sqlite3 --save` falhou — `node-gyp` tentou baixar os headers do Node correspondentes à versão instalada e encontrou um erro de certificado SSL na rede local. Esta é uma limitação do ambiente Windows local (rede/certificados, possivelmente um proxy corporativo ou configuração de certificado raiz), não um problema do pacote ou da escolha de driver.
+
+Terceira tentativa, que funcionou: `sql.js` — SQLite compilado para WebAssembly, pure JavaScript, sem qualquer binário nativo ou etapa de compilação. `npm install sql.js --save` e um teste manual de fumaça (`new SQL.Database()`) funcionaram de primeira.
+
+### Novo módulo (`backend/agent-queue-db.js`)
+
+Desenho diferente do planejado originalmente — o plano inicial era uma função fábrica (`createAgentQueueDb(dbPath)`) retornando instâncias independentes; o módulo real é um **singleton de módulo**, com `let _db = null; let _dbPath = null;` declarados no escopo do arquivo.
+
+`init(dataDir)` é assíncrono — carrega o módulo WASM do `sql.js` (`await initSqlJs()`), garante que o diretório existe, e então carrega o arquivo `.sqlite` existente (se houver) ou cria um banco novo em memória. Roda `CREATE TABLE IF NOT EXISTS` para as duas tabelas (idempotente — seguro chamar contra um banco já existente). Chama `_save()` uma vez para garantir que o arquivo exista no disco imediatamente. A própria função tem uma guarda de idempotência (`if (_db) return;`) — uma segunda chamada de `init()` na mesma instância de módulo é um no-op seguro.
+
+Depois de `init()`, todas as operações são **síncronas**:
+
+- `push(mission)` — `INSERT INTO queue (id, payload) VALUES (?, ?)`, serializando a missão inteira como JSON na coluna `payload`, seguido de `_save()`.
+- `shift()` — `SELECT rowid, payload FROM queue ORDER BY rowid ASC LIMIT 1`; se houver linha, deleta por `rowid` e retorna o payload desserializado; se não houver, retorna `null`. A tabela `queue` declara `rowid INTEGER PRIMARY KEY AUTOINCREMENT` explicitamente — o `AUTOINCREMENT` garante que o SQLite nunca reutiliza um valor de rowid já usado anteriormente, mesmo depois de deletar linhas, fechando uma classe de bug de desordenação que um contador mantido em JavaScript teria (um contador resetaria a `0` a cada restart e poderia gerar valores menores que rowids de linhas antigas ainda não consumidas).
+- `length()` — `SELECT COUNT(*) FROM queue`.
+- `storeResult(mission_id, result)` — `INSERT OR REPLACE INTO results (mission_id, payload) VALUES (?, ?)` — upsert real.
+- `getResult(mission_id)` — `SELECT payload FROM results WHERE mission_id = ?`, retornando `null` se não encontrado.
+
+Não há `close()` exposto na API pública. Isso é o desenho correto para o processo do servidor real, que só precisa de uma única conexão durante toda a sua vida — mas tem uma consequência direta sobre como o teste unitário precisou ser desenhado (ver Evidência).
+
+**Persistência (`_save()`):** depois de toda escrita (`push`, `shift`, `storeResult`), `_save()` roda `db.export()` — que serializa o banco SQLite *inteiro*, como ele existe em memória dentro do WASM, para um buffer binário — e grava esse buffer no arquivo `.sqlite` via `fs.writeFileSync` síncrono. Esse flush termina antes do handler HTTP correspondente retornar uma resposta, então mesmo um `kill -9` no meio de um request só poderia perder, no pior caso, a escrita daquele request específico que ainda estava em andamento — a mesma garantia de durabilidade que qualquer banco com fsync síncrono oferece nesse nível.
+
+### Fix (`backend/server.js`)
+
+Os 6 pontos que liam/escreviam `_agentQueue`/`_agentResults` diretamente foram substituídos por chamadas ao módulo `agentQueueDB` (importado via `require('./agent-queue-db')`):
+
+| Endpoint | Antes | Depois |
+|---|---|---|
+| `POST /api/agent/mission/queue` | `_agentQueue.push(mission)` | `agentQueueDB.push(mission)` |
+| `GET /api/agent/mission/pending` | `_agentQueue.shift()` | `agentQueueDB.shift()` |
+| `POST /api/agent/mission/result` | `_agentResults[id] = {...}` | `agentQueueDB.storeResult(id, {...})` |
+| `GET /api/agent/mission/result/:id` | `_agentResults[id]` | `agentQueueDB.getResult(id)` |
+| `POST /api/agent/mission/push` | `_agentQueue.push(mission)` | `agentQueueDB.push(mission)` |
+| `POST /api/agent/mission/revert` | `_agentQueue.push(mission)` | `agentQueueDB.push(mission)` |
+
+Como `init()` é assíncrono, `app.listen(...)` (antes uma chamada direta no topo do arquivo) foi envolvido numa IIFE assíncrona: `(async () => { await agentQueueDB.init(DB_ROOT); app.listen(...); })();` — o servidor só começa a escutar requisições depois que o banco estiver pronto, evitando uma janela onde uma requisição inicial poderia chegar antes do `_db` estar inicializado.
+
+O contrato HTTP de todos os 6 endpoints é idêntico ao anterior — nenhuma mudança necessária em `vision-agent.js` nem no bundle do frontend.
+
+### Fix de ambiente: caminhos Windows no teste E2E
+
+A primeira versão de `_test112_persistent_queue_e2e.sh` usava `mktemp -d /tmp/vc-test112-XXXXXX` e passava esse path Unix-style direto para `process.chdir()` dentro de um `node -e "..."` inline. Isso funciona normalmente em Linux/macOS, mas falhou na máquina Windows real: o Git Bash entende e traduz paths estilo `/tmp/...` para suas próprias chamadas, mas o Node.js nativo do Windows (rodando fora do WSL) não entende esse formato — `process.chdir('/tmp/...')` lança um erro de path inválido.
+
+Fix: `cygpath -w "$DB_DIR"` converte o path Git-Bash para o formato Windows nativo (`C:\Users\...\AppData\Local\Temp\...`) antes de passar para o Node. Os paths convertidos são passados via variáveis de ambiente (`VC_TEST_DB_ROOT`, `VC_TEST_SRV`) em vez de interpolação direta de string dentro do script inline do `node -e`, evitando o problema de escapar barras invertidas dentro de aspas dentro de aspas. O script tenta `cygpath -w` e cai de volta no path original (`|| echo "$DB_DIR"`) se `cygpath` não existir — então o mesmo script roda corretamente tanto em Windows/Git Bash quanto em Linux/macOS sem `cygpath` disponível.
+
+### Evidência
+
+**`_test112_persistent_queue_unit.cjs` — 13/13 PASS:** operações básicas de fila (push/shift retorna o objeto exato, ordem FIFO com 3 missões, `length()` correto após push/shift, `shift()` em fila vazia retorna `null`), operações de resultado (`storeResult`/`getResult` roundtrip, upsert via `INSERT OR REPLACE` confirmado com duas chamadas do mesmo `mission_id`, `getResult` em id inexistente retorna `null`), confirmação de que o arquivo `.sqlite` é criado no disco logo após `init()`, confirmação de que `init()` é idempotente (segunda chamada na mesma instância não reseta a fila).
+
+**A propriedade central** precisou de um desenho de teste específico por causa do singleton sem `close()`: como o módulo mantém `_db`/`_dbPath` no escopo do próprio arquivo, simplesmente chamar `require()` de novo dentro do mesmo processo de teste retornaria a MESMA instância já inicializada (cache de módulos do Node). A solução: `delete require.cache[require.resolve(MODULE_PATH)]` antes de cada `require()` força o Node a reexecutar o arquivo do zero, redeclarando `_db`/`_dbPath` como `null` — o equivalente de um processo novo, sem precisar de `child_process` real para essa verificação específica (o teste com processo real está no E2E, ver abaixo). Com essa técnica: uma "sessão 1" grava 2 missões e 1 resultado; uma "sessão 2" (módulo reimportado do zero, mesmo `dataDir`) os recupera com ordem FIFO correta e o resultado intacto. Mais um teste com 5 reaberturas sequenciais confirma que não há corrupção em uso repetido. Duas checagens estáticas finais confirmam que `server.js` não tem mais nenhuma referência a `_agentQueue`/`_agentResults` e que usa `agentQueueDB.*` em todos os 6 call-sites, incluindo o `await agentQueueDB.init(...)` antes de `app.listen`.
+
+**`_test112_persistent_queue_e2e.sh`:** sobe o `server.js` real (não um stub), enfileira 2 missões e armazena 1 resultado via HTTP real, confirma que o contrato 400 do `apply_patch` sem campos obrigatórios continua funcionando, **mata o processo com `kill -9` de verdade**, confirma a morte via `kill -0`, **sobe um processo Node completamente novo** apontando para o mesmo diretório de dados, e confirma: `queue_length` correto somando as 2 missões antigas com a nova enfileirada pós-restart, ordem FIFO das 2 missões antigas preservada exatamente entre os dois processos, o resultado armazenado antes do restart ainda recuperável, e o 404 de id inexistente ainda funcionando.
+
+**Regressão completa confirmada sem quebrar:** `_test105_backend_logic.cjs` (13/13), `_test105_full_loop_e2e.sh` (9/9), `_test106_static_wiring.cjs` (9/9), `_test107_memory_layer_unit.cjs` (26/26), `_test108_observability_unit.cjs` (23/23) + `_test108_endpoint_smoke.sh` (10/10), `_test109_static_wiring.cjs` (12/12) + `_test109_multi_patch_atomic_e2e.sh` (E2E pass), `_test110_self_modification_firewall_unit.cjs` (20/20), `_test111_dry_run_real_unit.cjs` (18/18) + `_test111_dry_run_real_e2e.cjs` (18/18) — todos 0 falhas.
+
+### Achado em paralelo, deliberadamente não resolvido nesta etapa
+
+O painel do AWS Elastic Beanstalk mostra a plataforma em produção atual ("Node.js 20 running on 64bit Amazon Linux 2023") com status "Obsoleto" — uma sinalização da própria AWS, independente de qualquer coisa relacionada a este trabalho de SQLite. O painel de atualização de plataforma oferece Node.js 22 e Node.js 24 como ramificações "Compatível" para upgrade direto.
+
+Esse upgrade resolveria a inconsistência entre o `engines` declarado em `package.json` (`>=24.0.0`) e a versão real em uso, e abriria caminho para usar `node:sqlite` nativo no lugar de `sql.js` no futuro, se desejado. Mas dois fatores pesam contra fazer isso na mesma sessão: primeiro, um upgrade de versão de plataforma no Elastic Beanstalk substitui as instâncias EC2 subjacentes, e a aplicação fica indisponível durante a troca a menos que atualizações contínuas (rolling updates) estejam configuradas — um custo de disponibilidade real, mesmo que pequeno para um ambiente de instância única. Segundo, atualizar só a plataforma do EB não resolve a limitação que motivou a escolha do `sql.js` nesta etapa — a máquina de desenvolvimento local também precisaria ter o Node atualizado separadamente para que `node:sqlite` funcionasse nos testes locais.
+
+**Decisão: este upgrade foi deliberadamente adiado**, registrado aqui como uma melhoria de infraestrutura independente e válida por conta própria (a deprecação já sinalizada pela AWS, isoladamente, já seria motivo suficiente), mas não como parte do escopo do §112.
+
+### O que NÃO mudou
+
+- Nenhuma função existente em `vision-agent.js` foi tocada — esta etapa é inteiramente do lado do backend.
+- `users.json`, autenticação, multi-tenant e Stripe continuam exatamente como estavam.
+- O contrato HTTP de todos os 6 endpoints de missão é idêntico ao anterior.
+
+### O que ainda NÃO foi feito
+
+`users.json`/autenticação/Stripe continua em arquivo JSON, não SQLite — deliberado, fora do escopo. RDS PostgreSQL não foi avaliado mais a fundo — a decisão humana já descartou essa opção. O upgrade de plataforma EB / Node local para Node 22 ou 24 — adiado deliberadamente, ver seção acima.
+
+**Limitação conhecida do design atual, não bloqueante:** a tabela `results` não tem nenhuma rotina de limpeza ou expiração — cada resultado de missão executada fica armazenado indefinidamente. Como `_save()` reexporta o banco SQLite *inteiro* a cada escrita (não é um append incremental no arquivo), o custo de cada `push`/`shift`/`storeResult` cresce lentamente conforme o histórico de resultados acumula ao longo do tempo. No volume atual do projeto isso não é um problema prático, mas é uma característica inerente ao design baseado em `sql.js` (que sempre reexporta o banco completo) que um `node:sqlite` nativo não teria (escreve incrementalmente direto no arquivo) — outro motivo, além da deprecação de plataforma, a favor do upgrade de Node mencionado acima, caso o volume de missões cresça substancialmente no futuro.
