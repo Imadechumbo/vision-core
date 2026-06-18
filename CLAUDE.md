@@ -178,7 +178,7 @@ FREE_MISSION_LIMIT=5
 | §112 | Etapa F: fila de missões do agente migrada pra SQLite via `sql.js` (decisão humana: SQLite, não RDS). 13/13 + E2E com kill -9 real. | - | eee4335 |
 | §113 | Etapa A Fase 3: UI no chat pro dry-run real (`#vcOpenDryRunPanelBtn`) — fecha a Etapa A por completo. 15/15 + regressão 9/9. Live em produção. | - | dfac9bd |
 | §113-docs | Fechamento de hash + achados em paralelo (boto3 bloqueado por SSL local, version string desatualizada em `server.js`). | - | 28b1a66 |
-| §114 | Limpeza de doc: `CLAUDE.md` dividido em `CLAUDE.md` (estado atual) + `CLAUDE_HISTORY.md` (write-ups completos) — Claude Code tinha avisado sobre impacto de performance (60.9k chars > 40k). Nenhum código tocado. | - | (pendente commit) |
+| §114 | Limpeza de doc: `CLAUDE.md` dividido em `CLAUDE.md` (estado atual) + `CLAUDE_HISTORY.md` (write-ups completos) — Claude Code tinha avisado sobre impacto de performance (60.9k chars > 40k). Nenhum código tocado. | - | a7baecf |
 
 > Write-up completo (causa raiz, fix, evidência) de cada sessão acima → `CLAUDE_HISTORY.md`.
 
