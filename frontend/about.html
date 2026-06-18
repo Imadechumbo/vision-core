@@ -615,8 +615,21 @@
           <div style="font-size:11px;color:#64748b">— §113, _test113_dry_run_ui_static_wiring.cjs 15/15, PASS</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔌</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>apply_patch_multi</code> estava testado de ponta a ponta desde o §109 — 12/12 unitário, E2E real com rollback atômico confirmado — e tinha zero referências no chat. Uma busca no bundle confirmou: a capability existia, funcionava, e ninguém conseguia chegar até ela. A causa raiz não era no agente, era no prompt: o LLM só sabia devolver 1 arquivo por resposta, mesmo quando já diagnosticava vários em prosa. O fix deu ao modelo um formato <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>files[]</code> alternativo pra usar quando — e só quando — o fix genuinamente precisa de mais de 1 arquivo. No caminho, achamos outro bug: os dois pontos que aplicam patch via agent local mostravam o painel de '✅ commitado, aprove o push' mesmo quando a missão tinha falhado e revertido tudo. Corrigido junto — falha agora mostra falha."</div>
+          <div style="font-size:11px;color:#64748b">— §115, _test115_apply_patch_multi_chat_ui.cjs 35/35, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">💥</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Testando o prompt novo contra um cenário de todos os provedores de IA falhando ao mesmo tempo, o backend crashou — não no código que tínhamos escrito, num trecho completamente diferente, a resposta de erro pra exatamente esse cenário. Uma variável era referenciada na mensagem mas nunca tinha sido definida em lugar nenhum do arquivo — resquício de um design antigo de 'orçamento global' que um refactor anterior removeu, esquecendo essa 1 linha. Improvável de acontecer em produção (precisa de 7 provedores falhando juntos), mas real: um outage simultâneo faria o processo cair com uma exceção crua em vez do erro 503 educado que o próprio código já tinha sido desenhado pra entregar. Corrigido apontando pra variável certa, e certificado com um servidor de verdade, sem nenhuma chave de API, reproduzindo o crash exato — e confirmando que o processo agora sobrevive."</div>
+          <div style="font-size:11px;color:#64748b">— §115, _test115_h49_exhausted_fix_e2e.sh, processo real sem API keys, PASS</div>
+        </div>
+
       </div>
     </div>
+
 
     <!-- O que PASS GOLD significa -->
     <div style="max-width:900px;margin:0 auto 48px;background:linear-gradient(135deg,#0a0f1a,#111827);border:1px solid #f59e0b;border-radius:20px;padding:40px;position:relative;overflow:hidden">
@@ -850,18 +863,7 @@
           <div style="font-size:13px;color:#94a3b8;line-height:1.6">
             <strong style="color:#bbf7d0">O núcleo técnico de risco está resolvido, e agora também a interface:</strong> pra um repositório explicitamente apontado (nunca o próprio vision-core, bloqueado por um firewall de 4 camadas testado com 20/20 casos), a Factory lê o código real, gera um diagnóstico real via a mesma infraestrutura Hermes do chat, e simula o patch inteiramente em memória — o arquivo no disco do projeto-alvo fica bit-a-bit idêntico ao original, e nenhum commit é criado. Certificado com E2E real: diff correto + arquivo intacto + git HEAD inalterado, nos 4 cenários (firewall, caminho feliz, falha de patch, falha de validação). Desde o §113, isso também tem um botão dedicado na sidebar ("🔬 DRY-RUN EXTERNO") — não é mais só uma chamada de API.
             <br><br>
-            <span style="color:#64748b">Ainda como roadmap:</span> o dry-run continua de um arquivo por missão, não combinado com a atomicidade multi-arquivo do item 2 abaixo — um "dry-run multi-arquivo" seria a extensão natural, mas é conveniência, não risco técnico.
-          </div>
-        </div>
-
-        <div style="background:#0a0f1a;border:1px dashed rgba(250,204,21,0.4);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
-          <div style="position:absolute;top:12px;right:12px;background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.35);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#fbbf24;letter-spacing:1px">PARCIALMENTE RESOLVIDO</div>
-          <div style="font-size:22px;font-weight:900;color:rgba(250,204,21,0.4);line-height:1">2</div>
-          <div style="font-size:13px;font-weight:700;color:#fde68a">Multi-arquivo e multi-step missions de verdade</div>
-          <div style="font-size:13px;color:#94a3b8;line-height:1.6">
-            <strong style="color:#fde68a">§109 resolveu a garantia transacional:</strong> novo tipo <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#fde68a">apply_patch_multi</code> aceita N arquivos numa única missão tudo-ou-nada — se qualquer patch ou validação Aegis falhar em qualquer arquivo, TODOS revertem via <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#fde68a">git checkout</code>. No caminho feliz, é exatamente 1 commit cobrindo todos os arquivos juntos. E2E real confirma: commit único com 2 arquivos, rollback quando 2º patch não casa, rollback quando Aegis falha depois do PatchEngine já ter passado.
-            <br><br>
-            <span style="color:#64748b">Ainda como roadmap:</span> a coordenação autônoma por LLM de <em>quais</em> arquivos/call-sites mudar juntos (ex: mudar assinatura de função em A e todos os call-sites em B, C, D) — isso requer que o chat componha o <code style="background:#1e293b;padding:1px 5px;border-radius:3px;color:#64748b">files[]</code> corretamente via prompt engineering multi-arquivo. A garantia de execução atômica existe; a coordenação inteligente de escopo é a parte que continua como evolução futura.
+            <span style="color:#64748b">Ainda como roadmap:</span> o dry-run continua de um arquivo por missão — não combinado com a atomicidade multi-arquivo que <code style="background:#1e293b;padding:1px 5px;border-radius:3px">apply_patch_multi</code> já tem pra missões de patch comuns (§109, com gatilho real no chat desde o §115). Um "dry-run multi-arquivo" seria a extensão natural, mas é conveniência, não risco técnico.
           </div>
         </div>
 

@@ -1997,7 +1997,7 @@ app.post('/api/chat', async (req, res) => {
     `  2. Use SEMPRE um path da lista — NUNCA invente nomes de arquivo.`,
     `  3. Se lista ausente ou incompleta, use path mais próximo e explique em "diagnosis".`,
     ``,
-    `FORMATO OBRIGATÓRIO:`,
+    `FORMATO OBRIGATÓRIO (caso comum — exatamente 1 arquivo precisa de fix):`,
     `\`\`\`json`,
     `{`,
     `  "diagnosis":  "causa-raiz objetiva — arquivo, linha, razão",`,
@@ -2008,6 +2008,23 @@ app.post('/api/chat', async (req, res) => {
     `  "decisao":    "NEEDS_FIX | BLOCKED_INPUT | ABORTED | READY"`,
     `}`,
     `\`\`\``,
+    ``,
+    `FORMATO MULTI-ARQUIVO (§115 — SOMENTE quando 2 OU MAIS arquivos diferentes precisam de fix na MESMA resposta,`,
+    `ex.: mudar a assinatura de uma função em A e atualizar os call sites em B/C):`,
+    `\`\`\`json`,
+    `{`,
+    `  "diagnosis":  "causa-raiz objetiva cobrindo todos os arquivos",`,
+    `  "files": [`,
+    `    { "file": "caminho/A.js", "fix_type": "code_patch", "patch": { "search": "...", "replace": "..." } },`,
+    `    { "file": "caminho/B.js", "fix_type": "code_patch", "patch": { "search": "...", "replace": "..." } }`,
+    `  ],`,
+    `  "confidence": 0.0,`,
+    `  "decisao":    "NEEDS_FIX | BLOCKED_INPUT | ABORTED | READY"`,
+    `}`,
+    `\`\`\``,
+    `REGRA: nunca use "files" com 1 único item — esse caso usa o formato de 1 arquivo acima (campos file/patch direto).`,
+    `"files" é exclusivamente para quando a correção REALMENTE precisa tocar mais de 1 arquivo pra ficar completa —`,
+    `não force um fix de 1 arquivo a virar "files" com 1 item, e não invente um 2º arquivo só pra preencher o array.`,
     ``,
     `REGRAS POR fix_type:`,
     `  json_field   → patch = objeto com campos a setar.`,
@@ -2085,6 +2102,8 @@ app.post('/api/chat', async (req, res) => {
     `  6. MÚLTIPLOS BUGS: se houver ${_allDiffs53.length > 1 ? _allDiffs53.length + ' blocos [DIFF]' : 'múltiplos arquivos no [DIFF]'}, CADA bloco é um arquivo diferente com bug próprio.`,
     `     Diagnostique TODOS os arquivos. Mencione cada bug separadamente na sua resposta.`,
     `     Não pare no primeiro bug — continue até analisar TODOS os arquivos modificados.`,
+    `     §115: se 2+ arquivos diferentes precisam de patch, retorne o JSON no FORMATO MULTI-ARQUIVO`,
+    `     ("files": [...], um item por arquivo) em vez do formato de 1 arquivo — NÃO escolha só o bug mais saliente.`,
   ].join('\n') : '';
 
   /* Imagem detectada → Gemini (único provider com suporte multimodal) */
@@ -2170,8 +2189,10 @@ app.post('/api/chat', async (req, res) => {
       '4. Se diff tem 1-2 linhas simples: fix_type="code_patch"\n' +
       '   patch = { "search": "linha original", "replace": "linha nova" }\n' +
       '5. file: caminho exato do arquivo no diff (sem o prefixo a/ ou b/)\n' +
-      '6. Se não extrair arquivo do diff, use o caminho de arquivo mais mencionado no contexto\n\n' +
-      'Formato:\n' +
+      '6. Se não extrair arquivo do diff, use o caminho de arquivo mais mencionado no contexto\n' +
+      '7. §115: se o texto menciona fixes em 2+ arquivos DIFERENTES, use "files": [{file, fix_type, patch}, ...]\n' +
+      '   em vez de file/patch único — só nesse caso de múltiplos arquivos reais\n\n' +
+      'Formato (1 arquivo):\n' +
       '```json\n' +
       '{\n' +
       '  "decisao": "NEEDS_FIX",\n' +
@@ -2271,7 +2292,7 @@ app.post('/api/chat', async (req, res) => {
     code:            _exhaustCode,
     providers_tried: _exhaustTried,
     payload_chars:   _payloadLen,
-    message:         'Todos os providers de IA falharam ou atingiram o budget de ' + (_h49budgetMs / 1000) + 's. '
+    message:         'Todos os providers de IA falharam ou atingiram o timeout de ' + (_h49timeout / 1000) + 's. '
                    + 'Providers tentados: [' + (_exhaustTried.join(', ') || 'nenhum') + ']. '
                    + 'Causas: quota/day esgotada (Cerebras), rate limit (Groq), congestionamento (OpenRouter).',
     anti_stub:       true

@@ -6760,18 +6760,38 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       var color = colorMap[decisao] || '#a1a1aa';
       var panel = document.createElement('div');
       panel.style.cssText = 'background:rgba(15,15,25,.7);border:1px solid ' + color + '55;border-radius:10px;padding:14px 16px;margin:8px 0;font-size:13px;';
+      var isMulti115 = Array.isArray(obj.files) && obj.files.length > 0;
       var parts = [
         '<div style="color:' + color + ';font-weight:700;font-size:14px;margin-bottom:8px;">🔍 HERMES DIAGNÓSTICO</div>',
         '<div style="color:#e2e8f0;margin-bottom:4px;"><b>Decisão:</b> <span style="color:' + color + '">' + decisao + '</span></div>',
-        obj.file       ? '<div style="color:#94a3b8;margin-bottom:4px;"><b>Arquivo:</b> ' + obj.file + '</div>' : '',
-        obj.fix_type   ? '<div style="color:#94a3b8;margin-bottom:4px;"><b>Fix type:</b> ' + obj.fix_type + '</div>' : '',
+        isMulti115 ? '<div style="color:#94a3b8;margin-bottom:4px;"><b>Arquivos (' + obj.files.length + '):</b> ' + obj.files.map(function(f) { return f.file; }).join(', ') + '</div>' : '',
+        (!isMulti115 && obj.file)     ? '<div style="color:#94a3b8;margin-bottom:4px;"><b>Arquivo:</b> ' + obj.file + '</div>' : '',
+        (!isMulti115 && obj.fix_type) ? '<div style="color:#94a3b8;margin-bottom:4px;"><b>Fix type:</b> ' + obj.fix_type + '</div>' : '',
         obj.confidence ? '<div style="color:#94a3b8;margin-bottom:4px;"><b>Confiança:</b> ' + (Number(obj.confidence) * 100).toFixed(0) + '%</div>' : '',
         obj.diagnosis  ? '<div style="color:#cbd5e1;margin-top:8px;padding-top:8px;border-top:1px solid #ffffff18;">' + String(obj.diagnosis).replace(/</g,'&lt;') + '</div>' : ''
       ];
-      if (obj.patch && typeof obj.patch === 'object' && Object.keys(obj.patch).length) {
-        parts.push('<details style="margin-top:8px;"><summary style="color:#60a5fa;cursor:pointer;">Ver patch</summary><pre style="background:#0a0a12;padding:8px;border-radius:6px;overflow:auto;font-size:11px;margin-top:4px;color:#a5f3fc;">' + JSON.stringify(obj.patch, null, 2).replace(/</g,'&lt;') + '</pre></details>');
-      }
       panel.innerHTML = parts.join('');
+      if (isMulti115) {
+        /* §115: 1 <details> por arquivo — patch individual, nunca um blob combinado */
+        obj.files.forEach(function(f) {
+          var det = document.createElement('details');
+          det.style.cssText = 'margin-top:8px;';
+          var sum = document.createElement('summary');
+          sum.style.cssText = 'color:#60a5fa;cursor:pointer;';
+          sum.textContent = 'Ver patch — ' + (f.file || '?') + ' (' + (f.fix_type || '—') + ')';
+          var pre = document.createElement('pre');
+          pre.style.cssText = 'background:#0a0a12;padding:8px;border-radius:6px;overflow:auto;font-size:11px;margin-top:4px;color:#a5f3fc;';
+          var pstr115 = ''; try { pstr115 = JSON.stringify(f.patch, null, 2); } catch(e) { pstr115 = String(f.patch || ''); }
+          pre.textContent = pstr115;
+          det.appendChild(sum); det.appendChild(pre);
+          panel.appendChild(det);
+        });
+      } else if (obj.patch && typeof obj.patch === 'object' && Object.keys(obj.patch).length) {
+        var detSingle = document.createElement('details');
+        detSingle.style.cssText = 'margin-top:8px;';
+        detSingle.innerHTML = '<summary style="color:#60a5fa;cursor:pointer;">Ver patch</summary><pre style="background:#0a0a12;padding:8px;border-radius:6px;overflow:auto;font-size:11px;margin-top:4px;color:#a5f3fc;">' + JSON.stringify(obj.patch, null, 2).replace(/</g,'&lt;') + '</pre>';
+        panel.appendChild(detSingle);
+      }
       container.appendChild(panel);
     }
 
@@ -7062,18 +7082,28 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       wrap.style.cssText = 'background:#050a08;border:1px solid rgba(34,197,94,.4);border-radius:14px;padding:16px;margin:4px 0 8px;font-size:13px;font-family:inherit;';
       var title = document.createElement('div');
       title.style.cssText = 'color:#4ade80;font-weight:600;font-size:14px;margin-bottom:10px;';
-      title.textContent = '✅ Patch aplicado e commitado — validação manual obrigatória (SDDF §14)';
+      var isMulti115v = Array.isArray(res.files) && res.files.length > 0;
+      title.textContent = isMulti115v
+        ? '✅ ' + res.files.length + ' arquivos aplicados num único commit — validação manual obrigatória (SDDF §14)'
+        : '✅ Patch aplicado e commitado — validação manual obrigatória (SDDF §14)';
       wrap.appendChild(title);
       var info = document.createElement('pre');
       info.style.cssText = 'background:#020504;border:1px solid #1a2e1a;border-radius:10px;padding:12px;color:#d4d4d8;overflow:auto;max-height:180px;font-size:11px;margin:0 0 12px;white-space:pre-wrap;word-break:break-all;';
-      var pstr = '';
-      try { pstr = JSON.stringify(res.patch, null, 2); } catch(e) { pstr = String(res.patch || ''); }
-      info.textContent = [
-        'Arquivo : ' + (res.file     || '—'),
-        'Fix type: ' + (res.fix_type || '—'),
-        'Commit  : ' + (res.hash     || 'sem hash'),
-        '', '── PATCH ──', pstr
-      ].join('\n');
+      if (isMulti115v) {
+        info.textContent = [
+          'Arquivos (' + res.files.length + '): ' + res.files.join(', '),
+          'Commit  : ' + (res.hash || 'sem hash') + ' (único commit cobrindo todos os arquivos)'
+        ].join('\n');
+      } else {
+        var pstr = '';
+        try { pstr = JSON.stringify(res.patch, null, 2); } catch(e) { pstr = String(res.patch || ''); }
+        info.textContent = [
+          'Arquivo : ' + (res.file     || '—'),
+          'Fix type: ' + (res.fix_type || '—'),
+          'Commit  : ' + (res.hash     || 'sem hash'),
+          '', '── PATCH ──', pstr
+        ].join('\n');
+      }
       wrap.appendChild(info);
       var row = document.createElement('div');
       row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
@@ -7090,18 +7120,18 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         approveBtn.textContent = '⏳ Enviando push...';
         fetch(BACKEND_URL + '/api/agent/mission/push', {
           method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ mission_id: res.mission_id, file: res.file, hash: res.hash })
+          body: JSON.stringify({ mission_id: res.mission_id, file: isMulti115v ? res.files.join(', ') : res.file, hash: res.hash })
         }).then(function(r){ return r.json(); })
           .then(function(d){ approveBtn.textContent = d.ok ? '✅ Push enfileirado' : '❌ ' + (d.error || 'Erro'); approveBtn.style.opacity = '0.7'; })
           .catch(function(){ approveBtn.textContent = '❌ Erro de rede'; approveBtn.disabled = false; revertBtn.disabled = false; });
       };
       revertBtn.onclick = function() {
-        if (!confirm('Reverter o último commit? Isso desfaz o patch aplicado.')) return;
+        if (!confirm(isMulti115v ? 'Reverter o último commit? Isso desfaz o patch nos ' + res.files.length + ' arquivos aplicados juntos.' : 'Reverter o último commit? Isso desfaz o patch aplicado.')) return;
         approveBtn.disabled = true; revertBtn.disabled = true;
         revertBtn.textContent = '⏳ Revertendo...';
         fetch(BACKEND_URL + '/api/agent/mission/revert', {
           method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ mission_id: res.mission_id, file: res.file, hash: res.hash })
+          body: JSON.stringify({ mission_id: res.mission_id, file: isMulti115v ? res.files.join(', ') : res.file, hash: res.hash })
         }).then(function(r){ return r.json(); })
           .then(function(d){ revertBtn.textContent = d.ok ? '✅ Reversão enfileirada' : '❌ ' + (d.error || 'Erro'); revertBtn.style.opacity = '0.7'; })
           .catch(function(){ revertBtn.textContent = '❌ Erro de rede'; approveBtn.disabled = false; revertBtn.disabled = false; });
@@ -7119,6 +7149,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     /* onReset   : callback chamado em qualquer erro (re-habilita botões do caller).        */
     /* onDone    : callback chamado com (rd) quando o agent responde com sucesso.           */
     function vcQueueApplyPatchViaAgent(hermesObj, statusEl, onReset, onDone) {
+      /* §115: missão multi-arquivo quando hermesObj.files é um array não-vazio —
+       * mesma função de polling do §106, só troca o corpo do POST e o tipo de missão. */
+      var isMulti115 = Array.isArray(hermesObj.files) && hermesObj.files.length > 0;
+      var queueBody115 = isMulti115
+        ? { type: 'apply_patch_multi', files: hermesObj.files.map(function(f) { return { file: f.file, patch: f.patch, fix_type: f.fix_type || 'code_patch' }; }), diagnosis: hermesObj.diagnosis || 'vision fix multi-arquivo' }
+        : { type: 'apply_patch', file: hermesObj.file, patch: hermesObj.patch, fix_type: hermesObj.fix_type || 'code_patch', diagnosis: hermesObj.diagnosis || 'vision fix' };
       statusEl.textContent = 'Consultando /api/agent/status...';
       fetch(BACKEND_URL + '/api/agent/status').then(function(r) { return r.json(); }).then(function(st) {
         if (!st || !st.connected) {
@@ -7127,10 +7163,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           onReset();
           return;
         }
-        statusEl.textContent = 'Vision Agent Local ativo — enviando patch para fila...';
+        statusEl.textContent = isMulti115
+          ? 'Vision Agent Local ativo — enviando ' + hermesObj.files.length + ' arquivos para fila (missão atômica)...'
+          : 'Vision Agent Local ativo — enviando patch para fila...';
         fetch(BACKEND_URL + '/api/agent/mission/queue', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'apply_patch', file: hermesObj.file, patch: hermesObj.patch, fix_type: hermesObj.fix_type || 'code_patch', diagnosis: hermesObj.diagnosis || 'vision fix' })
+          body: JSON.stringify(queueBody115)
         }).then(function(r) { return r.ok ? r.json() : r.json().then(function(e) { throw new Error(e.error || ('HTTP ' + r.status)); }); })
         .then(function(qd) {
           if (!qd.ok || !qd.mission_id) throw new Error(qd.error || 'queue_failed');
@@ -7308,15 +7346,29 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
       var info = document.createElement('pre');
       info.style.cssText = 'background:#020408;border:1px solid #1a2040;border-radius:10px;padding:12px;color:#d4d4d8;overflow:auto;max-height:180px;font-size:11px;margin:0 0 12px;white-space:pre-wrap;word-break:break-all;';
-      var pstr = '';
-      try { pstr = JSON.stringify(hermesObj.patch, null, 2); } catch(e) { pstr = String(hermesObj.patch || ''); }
-      info.textContent = [
-        'Arquivo  : ' + (hermesObj.file        || '—'),
-        'Fix type : ' + (hermesObj.fix_type     || '—'),
-        'Confiança: ' + (hermesObj.confidence != null ? (Number(hermesObj.confidence) * 100).toFixed(0) : '—') + '%',
-        'Diagnóstico: ' + (hermesObj.diagnosis   || '—'),
-        '', '── PATCH ──', pstr
-      ].join('\n');
+      var isMulti115panel = Array.isArray(hermesObj.files) && hermesObj.files.length > 0;
+      if (isMulti115panel) {
+        info.textContent = [
+          'Arquivos (' + hermesObj.files.length + '): ' + hermesObj.files.map(function(f) { return f.file; }).join(', '),
+          'Confiança: ' + (hermesObj.confidence != null ? (Number(hermesObj.confidence) * 100).toFixed(0) : '—') + '%',
+          'Diagnóstico: ' + (hermesObj.diagnosis || '—'),
+          '', '── PATCHES (' + hermesObj.files.length + ' arquivos, missão atômica — tudo ou nada) ──',
+          hermesObj.files.map(function(f) {
+            var p115 = ''; try { p115 = JSON.stringify(f.patch, null, 2); } catch(e) { p115 = String(f.patch || ''); }
+            return f.file + ' (' + (f.fix_type || '—') + '):\n' + p115;
+          }).join('\n\n')
+        ].join('\n');
+      } else {
+        var pstr = '';
+        try { pstr = JSON.stringify(hermesObj.patch, null, 2); } catch(e) { pstr = String(hermesObj.patch || ''); }
+        info.textContent = [
+          'Arquivo  : ' + (hermesObj.file        || '—'),
+          'Fix type : ' + (hermesObj.fix_type     || '—'),
+          'Confiança: ' + (hermesObj.confidence != null ? (Number(hermesObj.confidence) * 100).toFixed(0) : '—') + '%',
+          'Diagnóstico: ' + (hermesObj.diagnosis   || '—'),
+          '', '── PATCH ──', pstr
+        ].join('\n');
+      }
       wrap.appendChild(info);
 
       var statusEl = document.createElement('div');
@@ -7333,11 +7385,17 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         return b;
       }
 
-      var applyBtn  = mkBtn('✅ Aplicar e Baixar Arquivo Corrigido', '#0a2a1a', '#22c55e', '#86efac');
-      var agentBtn  = mkBtn('📡 Aplicar no Vision Agent Local', '#0a1a2a', '#3b82f6', '#93c5fd'); /* §105 */
+      var applyBtn  = isMulti115panel ? null : mkBtn('✅ Aplicar e Baixar Arquivo Corrigido', '#0a2a1a', '#22c55e', '#86efac');
+      var agentBtn  = mkBtn(isMulti115panel ? '📡 Aplicar no Vision Agent Local (' + hermesObj.files.length + ' arquivos)' : '📡 Aplicar no Vision Agent Local', '#0a1a2a', '#3b82f6', '#93c5fd'); /* §105/§115 */
       var cancelBtn = mkBtn('✖ Ignorar', '#1c1c1e', '#555', '#888');
+      if (isMulti115panel) {
+        var multiNote115 = document.createElement('div');
+        multiNote115.style.cssText = 'color:#64748b;font-size:11px;margin:-2px 0 8px;';
+        multiNote115.textContent = 'Esse fix abrange ' + hermesObj.files.length + ' arquivos — só disponível via Vision Agent Local, que aplica todos atomicamente (§109).';
+        wrap.appendChild(multiNote115);
+      }
 
-      applyBtn.onclick = function() {
+      if (applyBtn) applyBtn.onclick = function() {
         /* §41: guard BLOCKED/ABORTED decisao — não acionar apply-patch */
         var _dec = hermesObj.decisao;
         if (_dec === 'BLOCKED_INPUT' || _dec === 'BLOCKED_RUNTIME' || _dec === 'ABORTED') {
@@ -7436,22 +7494,31 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         });
       };
 
-      /* §105/§106 — aplicar patch no Vision Agent Local via vcQueueApplyPatchViaAgent (§106: extraído para função compartilhada). */
+      /* §105/§106 — aplicar patch no Vision Agent Local via vcQueueApplyPatchViaAgent (§106: extraído para função compartilhada; §115: agora também aceita hermesObj.files). */
       agentBtn.onclick = function() {
         var _dec105 = hermesObj.decisao;
         if (_dec105 === 'BLOCKED_INPUT' || _dec105 === 'BLOCKED_RUNTIME' || _dec105 === 'ABORTED') {
           statusEl.textContent = '⚠️ Diagnóstico ' + _dec105 + ' — patch não disponível para o agent local.';
           return;
         }
-        if (!hermesObj.patch || !hermesObj.file) { statusEl.textContent = '❌ Patch ou arquivo ausente no diagnóstico.'; return; }
-        applyBtn.disabled = true; agentBtn.disabled = true; cancelBtn.disabled = true;
+        var _hasSingle115 = hermesObj.patch && hermesObj.file;
+        var _hasMulti115  = Array.isArray(hermesObj.files) && hermesObj.files.length > 0;
+        if (!_hasSingle115 && !_hasMulti115) { statusEl.textContent = '❌ Patch ou arquivo ausente no diagnóstico.'; return; }
+        if (applyBtn) applyBtn.disabled = true; agentBtn.disabled = true; cancelBtn.disabled = true;
         agentBtn.textContent = '⏳ Verificando Vision Agent Local...';
         vcQueueApplyPatchViaAgent(hermesObj, statusEl, function() {
-          applyBtn.disabled = false; agentBtn.disabled = false; cancelBtn.disabled = false;
-          agentBtn.textContent = '📡 Aplicar no Vision Agent Local';
+          if (applyBtn) applyBtn.disabled = false; agentBtn.disabled = false; cancelBtn.disabled = false;
+          agentBtn.textContent = _hasMulti115 ? '📡 Aplicar no Vision Agent Local (' + hermesObj.files.length + ' arquivos)' : '📡 Aplicar no Vision Agent Local';
         }, function(rd) {
           wrap.remove();
-          chatStream.appendChild(renderValidationPanel(rd));
+          /* §115fix: rd.ok=false (patch_failed/patch_rollback/patch_multi_failed/patch_multi_rollback)
+           * nunca deve render renderValidationPanel — esse painel assume sucesso (push/revert de um
+           * commit real) e o agent, nesses casos, ja reverteu tudo via git checkout. */
+          if (rd && rd.ok === false) {
+            appendMsg(rd.output || ('❌ Missão falhou: ' + (rd.action || 'erro desconhecido')), 'error');
+          } else {
+            chatStream.appendChild(renderValidationPanel(rd));
+          }
           chatStream.scrollTop = chatStream.scrollHeight;
           setStatus('READY');
         });
@@ -7459,7 +7526,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
       cancelBtn.onclick = function() { wrap.remove(); };
 
-      row.appendChild(applyBtn);
+      if (applyBtn) row.appendChild(applyBtn);
       row.appendChild(agentBtn);
       row.appendChild(cancelBtn);
       wrap.appendChild(row);
@@ -7478,7 +7545,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       if (h) {
         var diagBox = document.createElement('div');
         diagBox.style.cssText = 'background:#0a0f1a;border:1px solid #1e2a4a;border-radius:10px;padding:12px;margin-bottom:16px;';
-        diagBox.innerHTML = '<div style="color:#60a5fa;font-size:11px;font-weight:500;margin-bottom:8px;letter-spacing:.06em;">DIAGNÓSTICO HERMES</div><div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px;"><span style="color:#64748b;">Arquivo</span><span style="color:#e2e8f0;font-family:monospace;">' + (h.file || '—') + '</span><span style="color:#64748b;">Fix type</span><span style="color:#e2e8f0;">' + (h.fix_type || '—') + '</span><span style="color:#64748b;">Decisão</span><span style="color:' + (h.decisao === 'NEEDS_FIX' ? '#4ade80' : '#f87171') + ';font-weight:500;">' + (h.decisao || '—') + '</span><span style="color:#64748b;">Confiança</span><span style="color:#e2e8f0;">' + (h.confidence != null ? Math.round(Number(h.confidence) * 100) + '%' : '—') + '</span><span style="color:#64748b;">Diagnóstico</span><span style="color:#a5b4fc;">' + (h.diagnosis || '—') + '</span></div>';
+        var isMulti115sm = Array.isArray(h.files) && h.files.length > 0;
+        var fileRow115sm = isMulti115sm
+          ? '<span style="color:#64748b;">Arquivos</span><span style="color:#e2e8f0;font-family:monospace;">' + h.files.length + ': ' + h.files.map(function(f) { return f.file; }).join(', ') + '</span>'
+          : '<span style="color:#64748b;">Arquivo</span><span style="color:#e2e8f0;font-family:monospace;">' + (h.file || '—') + '</span><span style="color:#64748b;">Fix type</span><span style="color:#e2e8f0;">' + (h.fix_type || '—') + '</span>';
+        diagBox.innerHTML = '<div style="color:#60a5fa;font-size:11px;font-weight:500;margin-bottom:8px;letter-spacing:.06em;">DIAGNÓSTICO HERMES</div><div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px;">' + fileRow115sm + '<span style="color:#64748b;">Decisão</span><span style="color:' + (h.decisao === 'NEEDS_FIX' ? '#4ade80' : '#f87171') + ';font-weight:500;">' + (h.decisao || '—') + '</span><span style="color:#64748b;">Confiança</span><span style="color:#e2e8f0;">' + (h.confidence != null ? Math.round(Number(h.confidence) * 100) + '%' : '—') + '</span><span style="color:#64748b;">Diagnóstico</span><span style="color:#a5b4fc;">' + (h.diagnosis || '—') + '</span></div>';
         wrap.appendChild(diagBox);
       }
       var stages = [
@@ -7516,7 +7587,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         return b;
       }
       var confirmBtn  = mkBtn(h ? '✅ Confirmar e Aplicar Patch' : '▶ Iniciar Missão SDDF', '#0a1f0a', '#22c55e', '#86efac');
-      var agentBtn106 = h && h.patch && h.file ? mkBtn('📡 Aplicar no Vision Agent Local', '#0a1a2a', '#3b82f6', '#93c5fd') : null; /* §106 */
+      var _hMulti115sm = h && Array.isArray(h.files) && h.files.length > 0;
+      var agentBtn106 = (h && h.patch && h.file) || _hMulti115sm
+        ? mkBtn(_hMulti115sm ? '📡 Aplicar no Vision Agent Local (' + h.files.length + ' arquivos)' : '📡 Aplicar no Vision Agent Local', '#0a1a2a', '#3b82f6', '#93c5fd')
+        : null; /* §106/§115 */
       var cancelBtn   = mkBtn('✖ Cancelar', '#1c1c1e', '#555', '#888');
       var statusEl    = document.createElement('div');
       statusEl.style.cssText = 'color:#94a3b8;font-size:12px;margin-top:10px;min-height:18px;width:100%;';
@@ -7530,10 +7604,14 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           agentBtn106.textContent = '⏳ Verificando Vision Agent Local...';
           vcQueueApplyPatchViaAgent(h, statusEl, function() {
             confirmBtn.disabled = false; agentBtn106.disabled = false; cancelBtn.disabled = false;
-            agentBtn106.textContent = '📡 Aplicar no Vision Agent Local';
+            agentBtn106.textContent = _hMulti115sm ? '📡 Aplicar no Vision Agent Local (' + h.files.length + ' arquivos)' : '📡 Aplicar no Vision Agent Local';
           }, function(rd) {
             wrap.remove(); _activeMission = null;
-            chatStream.appendChild(renderValidationPanel(rd));
+            if (rd && rd.ok === false) {
+              appendMsg(rd.output || ('❌ Missão falhou: ' + (rd.action || 'erro desconhecido')), 'error');
+            } else {
+              chatStream.appendChild(renderValidationPanel(rd));
+            }
             chatStream.scrollTop = chatStream.scrollHeight;
             setStatus('READY');
           });
@@ -7549,6 +7627,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             : '⛔ Diagnóstico ABORTED — arquivo proibido. Operação recusada por segurança.';
           appendMsg(['🛡 Vision Core Standard Method — BLOQUEADO', '', '⚖️  Decisão:    ' + h.decisao, '📋 Diagnóstico: ' + (h.diagnosis || '—'), '', _blockedLabel].join('\n'), 'error');
           wrap.remove(); _activeMission = null; setStatus('READY'); return;
+        }
+        /* §115: diagnostico multi-arquivo — Standard Method (ZIP/apply-patch) so cobre 1 arquivo,
+         * o caminho certo pra isso e o botao do Vision Agent Local (apply_patch_multi), nao um erro. */
+        if (h && Array.isArray(h.files) && h.files.length > 0) {
+          appendMsg(['🛡 Vision Core Standard Method — fix multi-arquivo', '', '⚖️  Decisão:    ' + (h.decisao || '—'), '📋 Diagnóstico: ' + (h.diagnosis || '—'), '', 'Esse fix abrange ' + h.files.length + ' arquivos (' + h.files.map(function(f) { return f.file; }).join(', ') + ') — o "Confirmar e Aplicar Patch" (Standard Method) só cobre 1 arquivo por vez.', 'Use o botão "📡 Aplicar no Vision Agent Local (' + h.files.length + ' arquivos)" abaixo, que aplica todos atomicamente via apply_patch_multi (§109).'].join('\n'), '');
+          return;
         }
         /* §36fix BUG1: h existe mas sem patch/file → BLOCKED_INPUT ou diagnóstico incompleto */
         if (h && (!h.patch || !h.file)) {

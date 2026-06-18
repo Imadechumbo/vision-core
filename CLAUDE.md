@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-18 (§113/§114)
+## Documento central do projeto | Atualizado: 2026-06-18 (§115)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -31,8 +31,12 @@
 |-----------|--------|---------|------|
 | Backend EB | 5.9.13-s112-sqlite-queue | - | 1d0f9af6f52290bfc1cb0d708d1e31fe2d5e9bf7 |
 | CF Pages | 5.9.13+s113-dry-run-ui | - | dfac9bd5343bd81df73d084b9307d57eb9e24206 |
+| Backend EB (pendente) | 5.9.14-s115-apply-patch-multi-chat | - | (pendente commit) |
+| CF Pages (pendente) | 5.9.14+s115-apply-patch-multi-chat | - | (pendente commit) |
 
 **Nota de correção (§113):** esta tabela estava parada na entrega do §109 (5.9.11) mesmo depois de §110/§111/§112 já estarem implementados e deployados — inconsistência de documentação encontrada e corrigida nesta sessão, não uma mudança de versão real nova além do que §112 já tinha entregue. A linha CF Pages reflete o trabalho desta sessão (§113), ainda só no sandbox — vira "live" só depois do `bash bin/deploy-pages.sh` real (ver prompt para Claude Code).
+
+**Nota §115:** ao contrário do §114 (só documentação), esta sessão muda código real em `backend/server.js` (prompt do LLM + fix do `_h49budgetMs`) — exige deploy real no EB (`python _deployNN_eb.py`), não só `bash bin/deploy-pages.sh`. As duas linhas "(pendente)" acima viram as linhas reais (hash + versão definitivos) só depois que o Claude Code confirmar a execução completa no repositório real (commit + deploy backend + deploy frontend) — ver prompt entregue para esta sessão.
 
 ---
 
@@ -49,6 +53,7 @@
 - DORA metrics reais via vault + `data/deploy-log.json`
 - Architect: `/api/architect/interpret` — LLM_REAL, não BLOQUEADA
 - **§105: `/api/agent/mission/queue` aceita `type=apply_patch` com `file`+`patch`+`fix_type`+`diagnosis` reais (antes descartados) — `/api/agent/status` reporta presença real do agent (`_agentLastSeenAt` < 15s), não mais hardcoded**
+- **§115: prompt de `mode:fix` ganhou um formato `"files": [...]` alternativo (multi-arquivo) além do `file`/`patch` único — usado quando 2+ arquivos precisam de fix na mesma resposta, fechando o gap entre o §53 (LLM já diagnosticava múltiplos arquivos em prosa) e o JSON estruturado (só sabia 1 arquivo). Bug pré-existente corrigido em paralelo: `_h49budgetMs` (variável nunca definida) crashava o processo toda vez que TODOS os providers de IA falhavam — substituído por `_h49timeout`, real e já em scope.**
 
 ### Frontend (index.html + bundle.js)
 - Tutorial interativo 13 passos com mascote animado idle/reading
@@ -60,6 +65,7 @@
 - Mascote: `mascote-idle-final.png` + `mascote-reading-final.png` em `frontend/assets/`
 - **§105: `renderApplyFixPanel` tem 3º botão "📡 Aplicar no Vision Agent Local" — fecha o loop chat→agent local→patch real no disco (snapshot+rollback) →aprovar push/reverter. `renderValidationPanel` (push/revert) deixou de ser código morto.**
 - **§113: botão de sidebar "🔬 DRY-RUN EXTERNO" (`#vcOpenDryRunPanelBtn`) dropa `renderSfDryRunPanel()` no chat — UI para apontar um repositório externo e disparar o dry-run real do §111 (firewall §110) visualmente, sem precisar chamar a API direto. Fecha a Etapa A por completo.**
+- **§115: `apply_patch_multi` (§109) ganhou gatilho real no chat — `vcQueueApplyPatchViaAgent` (§106) ramifica pra `apply_patch_multi` quando o diagnóstico do LLM traz `files[]` (2+ arquivos), `renderApplyFixPanel`/`renderStandardMethodPanel`/`renderValidationPanel` sabem exibir e disparar o caso multi. Bug pré-existente corrigido em paralelo: os dois pontos que chamam `vcQueueApplyPatchViaAgent` mostravam `renderValidationPanel` ("✅ commitado") mesmo quando a missão falhava (`rd.ok===false`) — agora mostram a falha real.**
 
 ### OAuth (configurado nos providers)
 - Google Client ID: `793969655414-suvojcna44rchiq65n66io6flkf970ql.apps.googleusercontent.com`
@@ -178,7 +184,8 @@ FREE_MISSION_LIMIT=5
 | §112 | Etapa F: fila de missões do agente migrada pra SQLite via `sql.js` (decisão humana: SQLite, não RDS). 13/13 + E2E com kill -9 real. | - | eee4335 |
 | §113 | Etapa A Fase 3: UI no chat pro dry-run real (`#vcOpenDryRunPanelBtn`) — fecha a Etapa A por completo. 15/15 + regressão 9/9. Live em produção. | - | dfac9bd |
 | §113-docs | Fechamento de hash + achados em paralelo (boto3 bloqueado por SSL local, version string desatualizada em `server.js`). | - | 28b1a66 |
-| §114 | Limpeza de doc: `CLAUDE.md` dividido em `CLAUDE.md` (estado atual) + `CLAUDE_HISTORY.md` (write-ups completos) — Claude Code tinha avisado sobre impacto de performance (60.9k chars > 40k). Nenhum código tocado. | - | a7baecf |
+| §114 | Limpeza de doc: `CLAUDE.md` dividido em `CLAUDE.md` (estado atual) + `CLAUDE_HISTORY.md` (write-ups completos) — Claude Code tinha avisado sobre impacto de performance (60.9k chars > 40k). Nenhum código tocado. | - | a7baecf1ee74d65e9252e314a0224e800c8635fc |
+| §115 | `apply_patch_multi` (§109) ganha gatilho real no chat — prompt do LLM + `vcQueueApplyPatchViaAgent`/`renderApplyFixPanel`/`renderStandardMethodPanel`/`renderValidationPanel`. 35/35 + E2E dedicado + regressão 14 suites. 2 bugs pré-existentes achados e corrigidos em paralelo (`renderValidationPanel` em falha, `_h49budgetMs` indefinido). | - | (pendente commit) |
 
 > Write-up completo (causa raiz, fix, evidência) de cada sessão acima → `CLAUDE_HISTORY.md`.
 
@@ -186,9 +193,11 @@ FREE_MISSION_LIMIT=5
 
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
-**Status: §113 fechou a Etapa A por completo, confirmado em produção.** O Claude Code executou o prompt do §113 ponta a ponta no repositório real: Etapa 0-2 confirmaram git sincronizado e regressão 13/13 testes 0 falhas antes de qualquer mudança nova; Etapa 3-5 aplicaram e validaram o código do §113 (15/15 + regressão §106 9/9 + balanço HTML 21/21); Etapa 7-9 comitaram (`dfac9bd`) e deployaram no Cloudflare Pages real, fechando os hashes pendentes neste arquivo (`28b1a66`). O roteiro original de 5 etapas (A-F) está com todos os itens resolvidos ou retirados — **não há uma "Etapa G" definida ainda**, a próxima sessão precisa de uma conversa nova com o humano sobre prioridade, não deve assumir o próximo item automaticamente.
+**Status: §115 implementado e testado no SANDBOX (35/35 + E2E dedicado + regressão completa de 14 suites), ainda NÃO executado no repositório real.** O prompt para o Claude Code rodar em `C:\Users\imadechumbo\Desktop\vision-core` foi entregue junto com o zip desta sessão — depois que ele confirmar a execução (commit + deploy backend real via `python _deployNN_eb.py` + deploy frontend via `bash bin/deploy-pages.sh`), as 2 linhas "(pendente)" na tabela VERSÕES ATUAIS e a linha §115 da tabela acima precisam ser sincronizadas com os hashes reais — mesmo procedimento já seguido em toda sessão anterior. Diferença importante desta vez: como `backend/server.js` mudou de fato (não só frontend, como no §113/§114), esta é a primeira sessão desde o §112 que exige um deploy real de backend, não só de Pages.
 
-**Pequenos itens que sobraram desta auditoria, nenhum bloqueante:** (1) a Etapa 6 (verificação manual no navegador do botão "🔬 DRY-RUN EXTERNO") não foi feita antes do deploy, só depois — vale conferir visualmente em `visioncoreai.pages.dev` numa próxima sessão, mesmo sem ser urgente; (2) o boto3 continua bloqueado por certificado SSL na máquina Windows local (mesma limitação do §112 com `node-gyp`) — a saúde do EB foi confirmada por uma rota alternativa (gateway Cloudflare + teste funcional real), mas o `VersionLabel` exato nunca foi lido diretamente do AWS; (3) achado em paralelo: `server.js` retorna `version: "2.9.10-self-healing-config"` em `/api/health` — uma string hardcoded NUNCA atualizada desde sessões muito anteriores, dessincronizada da numeração usada neste arquivo (`5.9.13-s112-sqlite-queue`). Não afeta nada funcionalmente, mas é uma limpeza de doc barata pra uma sessão futura, junto com a inconsistência de `engines`/Node já registrada no §112.
+**Próximo item já combinado com o humano:** depois que o §115 estiver confirmado em produção, a próxima etapa é o "dry-run multi-arquivo" — combinar o núcleo técnico do dry-run real (§110/§111/§113, hoje single-file) com a atomicidade multi-arquivo que o §109/§115 já entregaram pro `apply_patch_multi`. Não é uma lacuna de segurança nem um caminho não testado — é a Fase 4 já citada no fechamento do §113, agora com uma base mais sólida (`files[]` no JSON do LLM já existe e está testado).
+
+**Pequenos itens que sobraram de sessões anteriores, nenhum bloqueante:** (1) a Etapa 6 (verificação manual no navegador do botão "🔬 DRY-RUN EXTERNO", §113) ainda não foi feita — vale conferir visualmente em `visioncoreai.pages.dev`; (2) o boto3 continua bloqueado por certificado SSL na máquina Windows local (mesma limitação do §112 com `node-gyp`); (3) `server.js` retorna `version: "2.9.10-self-healing-config"` em `/api/health` — string hardcoded nunca atualizada, dessincronizada da numeração deste arquivo. Nenhum desses afeta funcionalidade, só limpeza de doc barata pra uma sessão futura.
 
 ## ROADMAP A–F — STATUS: TODAS RESOLVIDAS OU RETIRADAS (write-up completo em `CLAUDE_HISTORY.md`)
 
@@ -197,7 +206,7 @@ FREE_MISSION_LIMIT=5
 | A | Software Factory: dry-run real em repositório externo autorizado | ✅ Resolvida por completo (firewall + núcleo técnico + UI no chat) | §110+§111+§113 |
 | B | Tiered routing de providers por dificuldade | ✅ Retirada do roadmap — problema já resolvido sem código de classificação | §107 |
 | C | Memory layer: aprender com diagnósticos de baixa confiança anteriores | ✅ Resolvida | §107 |
-| D | Multi-arquivo / multi-step missions reais (apply, não só diagnóstico) | ✅ Resolvida (garantia transacional; coordenação autônoma por LLM de *quais* arquivos ainda é trabalho futuro) | §109 |
+| D | Multi-arquivo / multi-step missions reais (apply, não só diagnóstico) | ✅ Resolvida por completo — garantia transacional (§109) + coordenação autônoma de *quais* arquivos pelo LLM, com gatilho real no chat (§115) | §109+§115 |
 | E | Observabilidade do Vision Core como produto | ✅ Resolvida | §108 |
 | F | Banco de dados persistente | ✅ Resolvida — decisão humana: SQLite, não RDS | §112 |
 
