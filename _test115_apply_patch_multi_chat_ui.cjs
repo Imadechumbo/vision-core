@@ -197,10 +197,17 @@ assert(
   'vision-agent.js: applyPatchMultiMission (§109) ainda dispatchada por type apply_patch_multi (contrato intocado)',
   agent.includes("m.type === 'apply_patch_multi' ? applyPatchMultiMission :")
 );
-assert(
-  'vision-agent.js: nenhuma marca de §115 aqui — esta etapa é só backend (prompt) + frontend, agent fica como estava',
-  !agent.includes('§115')
-);
+/* Nota (§116): a asserção que originalmente checava `!agent.includes('§115')`
+   foi removida aqui. Sua premissa — "vision-agent.js não foi tocado nesta
+   sessão" — era verdadeira só no momento do §115 (agent ficou de fora,
+   etapa era só backend+frontend); deixou de ser uma invariante válida no
+   §116, que passou a tocar vision-agent.js por um motivo sem relação com o
+   §115 (dry-run multi-arquivo), e cujos comentários de código citam "§115"
+   como referência histórica de onde vem o formato files[] que ele consome.
+   Isso não é uma regressão de comportamento — é só a checagem ter ficado
+   datada. A garantia que de fato importa (dispatcher/contrato do §109
+   intactos) já está coberta pela asserção acima, e reconfirmada de ponta a
+   ponta pela regressão completa do _test109_multi_patch_atomic_e2e.sh. */
 
 /* ── Achado em paralelo (bug pré-existente, não introduzido nesta sessão): ───────
    _h49budgetMs era referenciado na resposta 503 de ALL_PROVIDERS_EXHAUSTED mas

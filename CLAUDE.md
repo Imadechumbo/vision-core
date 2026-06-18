@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-18 (§115)
+## Documento central do projeto | Atualizado: 2026-06-18 (§116)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -33,10 +33,13 @@
 | CF Pages | 5.9.13+s113-dry-run-ui | - | dfac9bd5343bd81df73d084b9307d57eb9e24206 |
 | Backend EB | 5.9.14-s115-apply-patch-multi-chat | - | dbc1d5d |
 | CF Pages | 5.9.14+s115-apply-patch-multi-chat | - | dbc1d5d |
+| CF Pages (pendente) | 5.9.14+s116-dry-run-multi | - | (pendente commit) |
 
 **Nota de correção (§113):** esta tabela estava parada na entrega do §109 (5.9.11) mesmo depois de §110/§111/§112 já estarem implementados e deployados — inconsistência de documentação encontrada e corrigida nesta sessão, não uma mudança de versão real nova além do que §112 já tinha entregue. A linha CF Pages reflete o trabalho desta sessão (§113), ainda só no sandbox — vira "live" só depois do `bash bin/deploy-pages.sh` real (ver prompt para Claude Code).
 
-**Nota §115:** ao contrário do §114 (só documentação), esta sessão muda código real em `backend/server.js` (prompt do LLM + fix do `_h49budgetMs`) — exige deploy real no EB (`python _deployNN_eb.py`), não só `bash bin/deploy-pages.sh`. As duas linhas "(pendente)" acima viram as linhas reais (hash + versão definitivos) só depois que o Claude Code confirmar a execução completa no repositório real (commit + deploy backend + deploy frontend) — ver prompt entregue para esta sessão.
+**Nota §115 (confirmado em produção):** diferente do §114 (só documentação), esta sessão mudou código real em `backend/server.js` (prompt do LLM + fix do `_h49budgetMs`) — exigiu deploy real no EB, não só `bash bin/deploy-pages.sh`. O Claude Code precisou criar um novo script de deploy (`_deploy94_eb.py` — o anterior, `_deploy93_eb.py`, era do §112) e o EB levou cerca de 5min pra propagar (mais que o típico ~90s, sem causar nenhum problema — só levou mais tempo dessa vez). Confirmado com `ok:true` via o gateway Cloudflare depois da propagação, e o frontend confirmado ao vivo em `visioncoreai.pages.dev`. Hash do commit principal: `dbc1d5d75759f4de7f5f5e63c21671f52025abe2`; hash do fechamento de pendências: `a918c09a8a12b2be9c0e535416555975cb0e7568`. Nota cosmética: o Claude Code usou o hash curto (`dbc1d5d`) nas 2 linhas acima da tabela, em vez do hash completo de 40 caracteres usado nas linhas anteriores — inconsistência de formato, não de conteúdo, sem impacto funcional.
+
+**Nota §116:** ao contrário do §115, esta sessão **não** muda nada em `backend/server.js` — confirmado lendo o código antes de escrever qualquer linha nova, não só assumido (validação de `sf_dry_run_real` e armazenamento do resultado já suportavam qualquer formato sem whitelist). Só `frontend/downloads/vision-agent.js` (asset baixado pelo Vision Agent Local, servido como arquivo estático pelo CF Pages) e `frontend/assets/vision-core-bundle.js` foram tocados — exige só `bash bin/deploy-pages.sh`, igual §113/§114, **sem** deploy de backend EB. A linha "(pendente)" acima vira a linha real (hash definitivo) só depois que o Claude Code confirmar a execução completa no repositório real — ver prompt entregue para esta sessão.
 
 ---
 
@@ -66,6 +69,7 @@
 - **§105: `renderApplyFixPanel` tem 3º botão "📡 Aplicar no Vision Agent Local" — fecha o loop chat→agent local→patch real no disco (snapshot+rollback) →aprovar push/reverter. `renderValidationPanel` (push/revert) deixou de ser código morto.**
 - **§113: botão de sidebar "🔬 DRY-RUN EXTERNO" (`#vcOpenDryRunPanelBtn`) dropa `renderSfDryRunPanel()` no chat — UI para apontar um repositório externo e disparar o dry-run real do §111 (firewall §110) visualmente, sem precisar chamar a API direto. Fecha a Etapa A por completo.**
 - **§115: `apply_patch_multi` (§109) ganhou gatilho real no chat — `vcQueueApplyPatchViaAgent` (§106) ramifica pra `apply_patch_multi` quando o diagnóstico do LLM traz `files[]` (2+ arquivos), `renderApplyFixPanel`/`renderStandardMethodPanel`/`renderValidationPanel` sabem exibir e disparar o caso multi. Bug pré-existente corrigido em paralelo: os dois pontos que chamam `vcQueueApplyPatchViaAgent` mostravam `renderValidationPanel` ("✅ commitado") mesmo quando a missão falhava (`rd.ok===false`) — agora mostram a falha real.**
+- **§116: o dry-run real (§110/§111/§113) ganhou a mesma capacidade multi-arquivo que o `apply_patch_multi` já tinha (§109/§115) — quando o diagnóstico do LLM traz `files[]`, o Vision Agent Local (`vision-agent.js`) simula CADA arquivo em memória (nunca escreve em disco, single ou multi) com a mesma semântica tudo-ou-nada: se 1 arquivo falhar, a leva inteira é descartada, sem expor diffs parciais. `renderSfDryRunResult` (§113) agora mostra 1 grid antes/depois por arquivo no caso multi.**
 
 ### OAuth (configurado nos providers)
 - Google Client ID: `793969655414-suvojcna44rchiq65n66io6flkf970ql.apps.googleusercontent.com`
@@ -186,6 +190,7 @@ FREE_MISSION_LIMIT=5
 | §113-docs | Fechamento de hash + achados em paralelo (boto3 bloqueado por SSL local, version string desatualizada em `server.js`). | - | 28b1a66 |
 | §114 | Limpeza de doc: `CLAUDE.md` dividido em `CLAUDE.md` (estado atual) + `CLAUDE_HISTORY.md` (write-ups completos) — Claude Code tinha avisado sobre impacto de performance (60.9k chars > 40k). Nenhum código tocado. | - | a7baecf1ee74d65e9252e314a0224e800c8635fc |
 | §115 | `apply_patch_multi` (§109) ganha gatilho real no chat — prompt do LLM + `vcQueueApplyPatchViaAgent`/`renderApplyFixPanel`/`renderStandardMethodPanel`/`renderValidationPanel`. 35/35 + E2E dedicado + regressão 14 suites. 2 bugs pré-existentes achados e corrigidos em paralelo (`renderValidationPanel` em falha, `_h49budgetMs` indefinido). | - | dbc1d5d |
+| §116 | Dry-run multi-arquivo: combina o núcleo do dry-run real (§110/§111/§113) com a atomicidade do `apply_patch_multi` (§109/§115) — `sfDryRunRealMission` (vision-agent.js) ganha um ramo que simula N arquivos em memória com a mesma semântica tudo-ou-nada, sem nunca escrever em disco. `renderSfDryRunResult` exibe 1 diff por arquivo. Zero mudança em `server.js`. 17/17 + 29/29 + regressão 16 suites (inclui correção de contagem do §115: 35/35→34/34, ver `CLAUDE_HISTORY.md`). | - | (pendente commit) |
 
 > Write-up completo (causa raiz, fix, evidência) de cada sessão acima → `CLAUDE_HISTORY.md`.
 
@@ -193,9 +198,11 @@ FREE_MISSION_LIMIT=5
 
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
-**Status: §115 implementado e testado no SANDBOX (35/35 + E2E dedicado + regressão completa de 14 suites), ainda NÃO executado no repositório real.** O prompt para o Claude Code rodar em `C:\Users\imadechumbo\Desktop\vision-core` foi entregue junto com o zip desta sessão — depois que ele confirmar a execução (commit + deploy backend real via `python _deployNN_eb.py` + deploy frontend via `bash bin/deploy-pages.sh`), as 2 linhas "(pendente)" na tabela VERSÕES ATUAIS e a linha §115 da tabela acima precisam ser sincronizadas com os hashes reais — mesmo procedimento já seguido em toda sessão anterior. Diferença importante desta vez: como `backend/server.js` mudou de fato (não só frontend, como no §113/§114), esta é a primeira sessão desde o §112 que exige um deploy real de backend, não só de Pages.
+**Status: §116 implementado e testado no SANDBOX (17/17 + 29/29 + regressão completa de 16 suítes anteriores), ainda NÃO executado no repositório real.** O prompt para o Claude Code rodar em `C:\Users\imadechumbo\Desktop\vision-core` foi entregue junto com o zip desta sessão — depois que ele confirmar a execução (commit + deploy frontend via `bash bin/deploy-pages.sh`, **sem** deploy de backend EB, já que `server.js` não foi tocado), a linha "(pendente)" na tabela VERSÕES ATUAIS e a linha §116 da tabela acima precisam ser sincronizadas com os hashes reais — mesmo procedimento já seguido em toda sessão anterior.
 
-**Próximo item já combinado com o humano:** depois que o §115 estiver confirmado em produção, a próxima etapa é o "dry-run multi-arquivo" — combinar o núcleo técnico do dry-run real (§110/§111/§113, hoje single-file) com a atomicidade multi-arquivo que o §109/§115 já entregaram pro `apply_patch_multi`. Não é uma lacuna de segurança nem um caminho não testado — é a Fase 4 já citada no fechamento do §113, agora com uma base mais sólida (`files[]` no JSON do LLM já existe e está testado).
+**Achado em paralelo nesta sessão, já corrigido:** a regressão completa revelou `_test115_apply_patch_multi_chat_ui.cjs` caindo de 35/35 pra 34/35 — não por uma regressão de comportamento, mas por uma asserção daquele teste (`!agent.includes('§115')`) cuja premissa só era válida no momento do §115 (confirmar que `vision-agent.js` ficou de fora daquela sessão) e deixou de ser uma invariante válida agora que o §116 legitimamente toca esse arquivo por um motivo sem relação com o §115. A asserção foi removida com um comentário explicando o porquê; a garantia real que ela protegia continua coberta por outra asserção + pela regressão do §109. **A partir desta sessão, a contagem correta de `_test115_apply_patch_multi_chat_ui.cjs` é 34/34, não 35/35** — write-up completo em `CLAUDE_HISTORY.md` e `SDDF_SPEC.md`.
+
+**Próximo item:** com o dry-run multi-arquivo entregue, não há um próximo item já combinado com o humano — a próxima sessão precisa de uma conversa nova sobre prioridade (mesma situação descrita no ROADMAP abaixo, agora reforçada: a Etapa A do roadmap está, com o §116, tecnicamente mais completa do que nunca).
 
 **Pequenos itens que sobraram de sessões anteriores, nenhum bloqueante:** (1) a Etapa 6 (verificação manual no navegador do botão "🔬 DRY-RUN EXTERNO", §113) ainda não foi feita — vale conferir visualmente em `visioncoreai.pages.dev`; (2) o boto3 continua bloqueado por certificado SSL na máquina Windows local (mesma limitação do §112 com `node-gyp`); (3) `server.js` retorna `version: "2.9.10-self-healing-config"` em `/api/health` — string hardcoded nunca atualizada, dessincronizada da numeração deste arquivo. Nenhum desses afeta funcionalidade, só limpeza de doc barata pra uma sessão futura.
 
@@ -203,7 +210,7 @@ FREE_MISSION_LIMIT=5
 
 | Etapa | O que era | Resultado | § |
 |-------|-----------|-----------|---|
-| A | Software Factory: dry-run real em repositório externo autorizado | ✅ Resolvida por completo (firewall + núcleo técnico + UI no chat) | §110+§111+§113 |
+| A | Software Factory: dry-run real em repositório externo autorizado | ✅ Resolvida por completo (firewall + núcleo técnico + UI no chat + dry-run multi-arquivo) | §110+§111+§113+§116 |
 | B | Tiered routing de providers por dificuldade | ✅ Retirada do roadmap — problema já resolvido sem código de classificação | §107 |
 | C | Memory layer: aprender com diagnósticos de baixa confiança anteriores | ✅ Resolvida | §107 |
 | D | Multi-arquivo / multi-step missions reais (apply, não só diagnóstico) | ✅ Resolvida por completo — garantia transacional (§109) + coordenação autônoma de *quais* arquivos pelo LLM, com gatilho real no chat (§115) | §109+§115 |

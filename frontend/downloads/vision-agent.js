@@ -572,8 +572,14 @@ function applyPatchMission(m) {
 
 /* Mesma lógica de resolução por nome do applyPatchMission, extraída como
  * helper standalone — não toca na função single-arquivo já testada em produção. */
-function resolveTargetFile(fileRef) {
-  var targetFile = fileRef ? path.resolve(ROOT, fileRef) : null;
+/* §116 — igual a resolveTargetFile, mas com o root explícito em vez do ROOT
+ * fixo do próprio agente. Criado pra reaproveitar a mesma busca "caminho
+ * direto, senão por nome" no dry-run multi-arquivo (que resolve contra um
+ * target_path externo, nunca contra o ROOT do agente) sem duplicar a lógica
+ * recursiva de busca. resolveTargetFile (abaixo) passa a ser só um atalho
+ * desta função com targetRoot=ROOT — comportamento idêntico ao de antes. */
+function resolveTargetFileInRoot(targetRoot, fileRef) {
+  var targetFile = fileRef ? path.resolve(targetRoot, fileRef) : null;
   if (targetFile && fs.existsSync(targetFile)) return { path: targetFile, via: 'direto' };
   var baseName = fileRef ? path.basename(fileRef) : null;
   if (!baseName) return { path: null, error: 'campo file ausente' };
@@ -591,9 +597,13 @@ function resolveTargetFile(fileRef) {
       else if (e.name === baseName) { found = full; }
     }
   }
-  findFile(ROOT, 0);
+  findFile(targetRoot, 0);
   if (found) return { path: found, via: 'busca por nome' };
   return { path: null, error: 'não encontrado por caminho ou nome: ' + fileRef };
+}
+
+function resolveTargetFile(fileRef) {
+  return resolveTargetFileInRoot(ROOT, fileRef);
 }
 
 /* Reverte uma lista de arquivos (caminhos relativos) pro estado do HEAD do git.
@@ -1044,6 +1054,100 @@ async function sfDryRunRealMission(m) {
 
   // ── PASSO 3: parsePatch — mesmo parser usado por executeMission ──
   var patchJson = parsePatchFromAI(aiAnswer);
+
+  // ── PASSO 3.5 (§116): formato multi-arquivo (§115) detectado no diagnóstico ──
+  // O LLM, via a MESMA infraestrutura Hermes do PASSO 2, pode devolver "files": [...]
+  // quando o fix genuinamente abrange 2+ arquivos (mesmo prompt do mode:fix já usado
+  // pelo chat e pelo apply_patch_multi real — ver server.js §115). Aqui simulamos
+  // CADA arquivo em memória, com a MESMA semântica tudo-ou-nada de applyPatchMultiMission
+  // (§109): se qualquer arquivo falhar a simulação ou a validação, a missão inteira é
+  // reportada como falha — sem nunca escrever em disco, em nenhum dos casos, igual ao
+  // dry-run single-file. A diferença real entre "atômico de verdade" (§109) e "atômico
+  // simulado" (aqui) é só semântica de relatório: como dry-run nunca escreve nada,
+  // não existe rollback real pra fazer — só a decisão de não expor diffs parciais
+  // como se fossem um resultado válido quando nem todos os arquivos da leva passariam.
+  if (patchJson && Array.isArray(patchJson.files) && patchJson.files.length > 0) {
+    var multiFiles = [];
+    for (var mi = 0; mi < patchJson.files.length; mi++) {
+      var mf = patchJson.files[mi];
+      var mfLabel = (mi + 1) + '/' + patchJson.files.length + ' (' + mf.file + ')';
+      var mfResolve = resolveTargetFileInRoot(resolvedTargetRoot, mf.file);
+
+      if (!mfResolve.path) {
+        step('PatchEngine (simulado)', false, mfLabel + ': ' + mfResolve.error);
+        return {
+          mission_id: m.id, ok: false, pass_gold: false,
+          action: 'sf_dry_run_multi_patch_failed',
+          output: aiAnswer + '\n\n⚠️ Simulação multi-arquivo abortada (nada foi escrito) — arquivo ' + mfLabel + ' não encontrado em ' + resolvedTargetRoot + ':\n' + mfResolve.error,
+          files: patchJson.files.map(function(f) { return f.file; }),
+          target_path: m.target_path,
+          log: log, steps: steps, sddf: SDDF_BASELINE
+        };
+      }
+
+      var mfSim = simulatePatch(mfResolve.path, mf.patch, mf.fix_type || 'full_replace');
+      step('PatchEngine (simulado)', mfSim.ok,
+        mfSim.ok ? mfLabel + ': ' + (mf.fix_type || 'full_replace') + ' (em memória, via ' + mfResolve.via + ')' : mfLabel + ': ' + mfSim.error);
+
+      if (!mfSim.ok) {
+        return {
+          mission_id: m.id, ok: false, pass_gold: false,
+          action: 'sf_dry_run_multi_patch_failed',
+          output: aiAnswer + '\n\n⚠️ Simulação de patch falhou em ' + mfLabel + ' (nada foi escrito):\n' + mfSim.error +
+                   '\n\nAtômico (simulado): nenhum arquivo desta leva é exibido como diff válido — a mesma garantia tudo-ou-nada do apply_patch_multi real.',
+          files: patchJson.files.map(function(f) { return f.file; }),
+          target_path: m.target_path,
+          log: log, steps: steps, sddf: SDDF_BASELINE
+        };
+      }
+
+      var mfExt        = path.extname(mfResolve.path).toLowerCase();
+      var mfValidation = validatePatchContent(mfSim.after, mfExt);
+      step('Aegis (simulado)', mfValidation.ok, mfLabel + ': ' + (mfValidation.ok ? 'PASS' : 'FAIL — ' + mfValidation.error));
+
+      if (!mfValidation.ok) {
+        return {
+          mission_id: m.id, ok: false, pass_gold: false,
+          action: 'sf_dry_run_multi_validation_failed',
+          output: aiAnswer + '\n\n⚠️ Validação Aegis do diff simulado falhou em ' + mfLabel + ' (nada foi escrito):\n' + mfValidation.error +
+                   '\n\nAtômico (simulado): nenhum arquivo desta leva é exibido como diff válido — a mesma garantia tudo-ou-nada do apply_patch_multi real.',
+          files: patchJson.files.map(function(f) { return f.file; }),
+          target_path: m.target_path,
+          log: log, steps: steps, sddf: SDDF_BASELINE
+        };
+      }
+
+      multiFiles.push({
+        file:         mf.file,
+        fix_type:     mf.fix_type || 'full_replace',
+        diff_preview: { before: mfSim.before, after: mfSim.after }
+      });
+    }
+
+    return {
+      mission_id:      m.id,
+      ok:              true,
+      pass_gold:       false,
+      action:          'sf_dry_run_multi_completed',
+      real_io:         true,
+      written_to_disk: false,
+      committed:       false,
+      output: [
+        aiAnswer, '',
+        '─────────────────────────────────────────────',
+        '🔍 DRY-RUN REAL MULTI-ARQUIVO — ' + multiFiles.length + ' arquivo(s) simulados, NADA foi escrito no disco do projeto-alvo',
+        'Projeto-alvo : ' + resolvedTargetRoot,
+        'Arquivos     : ' + multiFiles.map(function(f) { return f.file; }).join(', '),
+        '',
+        'Pra aplicar de verdade, use uma missão apply_patch_multi separada com estes mesmos patches.'
+      ].join('\n'),
+      target_path: m.target_path,
+      files:       multiFiles,
+      diagnosis:   patchJson.diagnosis || null,
+      log: log, steps: steps, sddf: SDDF_BASELINE
+    };
+  }
+
   if (!patchJson || !patchJson.patch) {
     step('PatchEngine', false, 'sem bloco JSON — análise apenas, sem diff');
     return {
@@ -1180,11 +1284,12 @@ if (require.main === module) {
 }
 
 module.exports = {
-  isSelfTargetForbidden: isSelfTargetForbidden,
-  isPathInside:           isPathInside,
-  normalizeGitUrl:        normalizeGitUrl,
-  hasSelfFingerprint:     hasSelfFingerprint,
-  simulatePatch:          simulatePatch,
-  validatePatchContent:   validatePatchContent,
-  scanExternalProject:    scanExternalProject
+  isSelfTargetForbidden:    isSelfTargetForbidden,
+  isPathInside:             isPathInside,
+  normalizeGitUrl:          normalizeGitUrl,
+  hasSelfFingerprint:       hasSelfFingerprint,
+  simulatePatch:            simulatePatch,
+  validatePatchContent:     validatePatchContent,
+  scanExternalProject:      scanExternalProject,
+  resolveTargetFileInRoot:  resolveTargetFileInRoot
 };

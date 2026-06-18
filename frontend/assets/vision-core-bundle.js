@@ -7261,32 +7261,47 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       });
     }
 
-    /* ── §113: renderSfDryRunResult — renderiza qualquer um dos 8 desfechos possíveis de   */
-    /* sfDryRunRealMission (vision-agent.js): blocked_self_target, failed, listing,        */
-    /* diagnosis_failed, analysis_only, patch_failed, validation_failed, completed.        */
+    /* ── §113/§116: renderSfDryRunResult — renderiza qualquer um dos 10 desfechos possíveis */
+    /* de sfDryRunRealMission (vision-agent.js): blocked_self_target, failed, listing,       */
+    /* diagnosis_failed, analysis_only, patch_failed, validation_failed, completed (1 arquivo,*/
+    /* §113), e multi_patch_failed/multi_validation_failed/multi_completed (N arquivos, §116).*/
     /* Usa textContent (não innerHTML) para o conteúdo do projeto-alvo/IA — é conteúdo de   */
     /* um repositório externo, nunca deve ser interpretado como HTML.                       */
     function renderSfDryRunResult(rd) {
       var box = document.createElement('div');
-      var isSuccess = rd.action === 'sf_dry_run_completed';
-      var isBlocked = rd.action === 'sf_dry_run_blocked_self_target';
+      var isSuccess  = rd.action === 'sf_dry_run_completed' || rd.action === 'sf_dry_run_multi_completed';
+      var isMulti116 = rd.action === 'sf_dry_run_multi_completed' && Array.isArray(rd.files);
+      var isBlocked  = rd.action === 'sf_dry_run_blocked_self_target';
       var borderColor = isSuccess ? 'rgba(74,222,128,.45)' : (isBlocked ? 'rgba(239,68,68,.5)' : 'rgba(250,204,21,.4)');
       box.style.cssText = 'background:#050a0f;border:1px solid ' + borderColor + ';border-radius:12px;padding:14px;margin-top:10px;font-size:12.5px;';
       var pre = document.createElement('pre');
       pre.style.cssText = 'white-space:pre-wrap;font-family:inherit;color:#cbd5e1;margin:0;';
       pre.textContent = rd.output || '(sem output)';
       box.appendChild(pre);
-      if (isSuccess && rd.diff_preview) {
+
+      function appendDiffGrid(beforeText, afterText) {
         var diffWrap = document.createElement('div');
-        diffWrap.style.cssText = 'margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;';
+        diffWrap.style.cssText = 'margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:10px;';
         var beforeCol = document.createElement('pre');
         beforeCol.style.cssText = 'background:#1a0a0a;border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px;font-size:11px;max-height:260px;overflow:auto;color:#fca5a5;white-space:pre-wrap;margin:0;';
-        beforeCol.textContent = '— ANTES (arquivo real, intacto) —\n' + (rd.diff_preview.before || '');
+        beforeCol.textContent = '— ANTES (arquivo real, intacto) —\n' + (beforeText || '');
         var afterCol = document.createElement('pre');
         afterCol.style.cssText = 'background:#0a1a0a;border:1px solid rgba(74,222,128,.3);border-radius:8px;padding:10px;font-size:11px;max-height:260px;overflow:auto;color:#86efac;white-space:pre-wrap;margin:0;';
-        afterCol.textContent = '— DEPOIS (simulado em memória — NADA foi escrito) —\n' + (rd.diff_preview.after || '');
+        afterCol.textContent = '— DEPOIS (simulado em memória — NADA foi escrito) —\n' + (afterText || '');
         diffWrap.appendChild(beforeCol); diffWrap.appendChild(afterCol);
         box.appendChild(diffWrap);
+      }
+
+      if (rd.action === 'sf_dry_run_completed' && rd.diff_preview) {
+        appendDiffGrid(rd.diff_preview.before, rd.diff_preview.after);
+      } else if (isMulti116) {
+        rd.files.forEach(function(f) {
+          var fileLabel = document.createElement('div');
+          fileLabel.style.cssText = 'margin-top:12px;font-weight:700;color:#a5b4fc;font-size:11.5px;';
+          fileLabel.textContent = '📄 ' + f.file + ' (' + (f.fix_type || '—') + ')';
+          box.appendChild(fileLabel);
+          appendDiffGrid(f.diff_preview && f.diff_preview.before, f.diff_preview && f.diff_preview.after);
+        });
       }
       return box;
     }
@@ -7324,7 +7339,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           btn.disabled = false;
         }, function(rd) {
           btn.disabled = false;
-          statusEl.textContent = rd.action === 'sf_dry_run_completed'
+          statusEl.textContent = (rd.action === 'sf_dry_run_completed' || rd.action === 'sf_dry_run_multi_completed')
             ? '✅ Dry-run concluído — nada foi escrito no disco real.'
             : 'Resultado recebido — ver detalhes abaixo.';
           resultHost.appendChild(renderSfDryRunResult(rd));

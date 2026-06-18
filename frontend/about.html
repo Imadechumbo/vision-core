@@ -618,13 +618,25 @@
         <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
           <div style="font-size:28px;margin-bottom:10px">🔌</div>
           <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>apply_patch_multi</code> estava testado de ponta a ponta desde o §109 — 12/12 unitário, E2E real com rollback atômico confirmado — e tinha zero referências no chat. Uma busca no bundle confirmou: a capability existia, funcionava, e ninguém conseguia chegar até ela. A causa raiz não era no agente, era no prompt: o LLM só sabia devolver 1 arquivo por resposta, mesmo quando já diagnosticava vários em prosa. O fix deu ao modelo um formato <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>files[]</code> alternativo pra usar quando — e só quando — o fix genuinamente precisa de mais de 1 arquivo. No caminho, achamos outro bug: os dois pontos que aplicam patch via agent local mostravam o painel de '✅ commitado, aprove o push' mesmo quando a missão tinha falhado e revertido tudo. Corrigido junto — falha agora mostra falha."</div>
-          <div style="font-size:11px;color:#64748b">— §115, _test115_apply_patch_multi_chat_ui.cjs 35/35, PASS</div>
+          <div style="font-size:11px;color:#64748b">— §115, _test115_apply_patch_multi_chat_ui.cjs 34/34¹, PASS</div>
         </div>
 
         <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
           <div style="font-size:28px;margin-bottom:10px">💥</div>
           <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Testando o prompt novo contra um cenário de todos os provedores de IA falhando ao mesmo tempo, o backend crashou — não no código que tínhamos escrito, num trecho completamente diferente, a resposta de erro pra exatamente esse cenário. Uma variável era referenciada na mensagem mas nunca tinha sido definida em lugar nenhum do arquivo — resquício de um design antigo de 'orçamento global' que um refactor anterior removeu, esquecendo essa 1 linha. Improvável de acontecer em produção (precisa de 7 provedores falhando juntos), mas real: um outage simultâneo faria o processo cair com uma exceção crua em vez do erro 503 educado que o próprio código já tinha sido desenhado pra entregar. Corrigido apontando pra variável certa, e certificado com um servidor de verdade, sem nenhuma chave de API, reproduzindo o crash exato — e confirmando que o processo agora sobrevive."</div>
           <div style="font-size:11px;color:#64748b">— §115, _test115_h49_exhausted_fix_e2e.sh, processo real sem API keys, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🧩</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O parser que extrai o JSON da resposta da IA já aceitava o formato multi-arquivo do §115 sem nenhum erro — seu critério de match olha pro campo <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>diagnosis</code>, presente nos dois formatos. Mas o código que vinha depois só sabia procurar o patch na raiz do objeto; no formato multi-arquivo, cada patch mora dentro de um item da lista <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>files[]</code>, não na raiz. O resultado, silencioso: um diagnóstico cobrindo 2 arquivos virava, sem erro nenhum, só uma análise em prosa, sem diff. O fix deu ao dry-run o mesmo tratamento por arquivo que o apply_patch_multi já tem pra aplicação de verdade — simula cada um em memória, e se qualquer um falhar, a leva inteira é descartada, nunca expondo um diff parcial como se fosse válido."</div>
+          <div style="font-size:11px;color:#64748b">— §116, _test116_dry_run_multi_unit.cjs 17/17 + _test116_dry_run_multi_e2e.cjs 29/29, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🕰️</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Rodar a regressão completa depois de implementar o dry-run multi-arquivo revelou uma queda de 35/35 pra 34/35 num teste de uma sessão anterior — não uma regressão de comportamento, uma asserção que checava 'este arquivo não foi tocado nesta sessão', verdade válida só naquele momento específico. Esta sessão tocou o mesmo arquivo por um motivo completamente diferente, e os comentários do código novo citam a sessão antiga como referência histórica — o suficiente pra quebrar uma checagem que nunca devia ter sido uma invariante permanente. Removida, com a explicação registrada no próprio teste, em vez de escondida. ¹A contagem certa do §115 a partir de agora é 34/34, não 35/35 — corrigido nesta página também, não só no código."</div>
+          <div style="font-size:11px;color:#64748b">— §116, achado durante a regressão completa, _test115_apply_patch_multi_chat_ui.cjs corrigido</div>
         </div>
 
       </div>
@@ -856,15 +868,8 @@
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
 
-        <div style="background:#0a0f1a;border:1px dashed rgba(74,222,128,0.4);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;position:relative">
-          <div style="position:absolute;top:12px;right:12px;background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;color:#4ade80;letter-spacing:1px">PARCIALMENTE RESOLVIDO — §110+§111+§113</div>
-          <div style="font-size:22px;font-weight:900;color:rgba(74,222,128,0.4);line-height:1">1</div>
-          <div style="font-size:13px;font-weight:700;color:#bbf7d0">Software Factory saindo do sandbox — com escopo restrito e auditável</div>
-          <div style="font-size:13px;color:#94a3b8;line-height:1.6">
-            <strong style="color:#bbf7d0">O núcleo técnico de risco está resolvido, e agora também a interface:</strong> pra um repositório explicitamente apontado (nunca o próprio vision-core, bloqueado por um firewall de 4 camadas testado com 20/20 casos), a Factory lê o código real, gera um diagnóstico real via a mesma infraestrutura Hermes do chat, e simula o patch inteiramente em memória — o arquivo no disco do projeto-alvo fica bit-a-bit idêntico ao original, e nenhum commit é criado. Certificado com E2E real: diff correto + arquivo intacto + git HEAD inalterado, nos 4 cenários (firewall, caminho feliz, falha de patch, falha de validação). Desde o §113, isso também tem um botão dedicado na sidebar ("🔬 DRY-RUN EXTERNO") — não é mais só uma chamada de API.
-            <br><br>
-            <span style="color:#64748b">Ainda como roadmap:</span> o dry-run continua de um arquivo por missão — não combinado com a atomicidade multi-arquivo que <code style="background:#1e293b;padding:1px 5px;border-radius:3px">apply_patch_multi</code> já tem pra missões de patch comuns (§109, com gatilho real no chat desde o §115). Um "dry-run multi-arquivo" seria a extensão natural, mas é conveniência, não risco técnico.
-          </div>
+        <div style="background:#0a0f1a;border:1px dashed rgba(100,116,139,0.3);border-radius:14px;padding:24px;text-align:center;color:#64748b;font-size:13px;line-height:1.6">
+          Nenhum item de roadmap aberto no momento. O último (Software Factory multi-arquivo no dry-run, item que ficava aqui) foi resolvido no §116 — write-up completo na seção "TRAJETÓRIA TÉCNICA REAL" da <a href="landing.html" style="color:#a5b4fc">página de trajetória</a>. Quando uma nova direção de produto for definida, ela aparece aqui antes de virar código.
         </div>
 
       </div>
