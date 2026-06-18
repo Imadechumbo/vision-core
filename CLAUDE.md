@@ -33,7 +33,7 @@
 | CF Pages | 5.9.13+s113-dry-run-ui | - | dfac9bd5343bd81df73d084b9307d57eb9e24206 |
 | Backend EB | 5.9.14-s115-apply-patch-multi-chat | - | dbc1d5d |
 | CF Pages | 5.9.14+s115-apply-patch-multi-chat | - | dbc1d5d |
-| CF Pages (pendente) | 5.9.14+s116-dry-run-multi | - | (pendente commit) |
+| CF Pages | 5.9.14+s116-dry-run-multi | - | b8e2f2c |
 
 **Nota de correção (§113):** esta tabela estava parada na entrega do §109 (5.9.11) mesmo depois de §110/§111/§112 já estarem implementados e deployados — inconsistência de documentação encontrada e corrigida nesta sessão, não uma mudança de versão real nova além do que §112 já tinha entregue. A linha CF Pages reflete o trabalho desta sessão (§113), ainda só no sandbox — vira "live" só depois do `bash bin/deploy-pages.sh` real (ver prompt para Claude Code).
 
@@ -190,7 +190,7 @@ FREE_MISSION_LIMIT=5
 | §113-docs | Fechamento de hash + achados em paralelo (boto3 bloqueado por SSL local, version string desatualizada em `server.js`). | - | 28b1a66 |
 | §114 | Limpeza de doc: `CLAUDE.md` dividido em `CLAUDE.md` (estado atual) + `CLAUDE_HISTORY.md` (write-ups completos) — Claude Code tinha avisado sobre impacto de performance (60.9k chars > 40k). Nenhum código tocado. | - | a7baecf1ee74d65e9252e314a0224e800c8635fc |
 | §115 | `apply_patch_multi` (§109) ganha gatilho real no chat — prompt do LLM + `vcQueueApplyPatchViaAgent`/`renderApplyFixPanel`/`renderStandardMethodPanel`/`renderValidationPanel`. 35/35 + E2E dedicado + regressão 14 suites. 2 bugs pré-existentes achados e corrigidos em paralelo (`renderValidationPanel` em falha, `_h49budgetMs` indefinido). | - | dbc1d5d |
-| §116 | Dry-run multi-arquivo: combina o núcleo do dry-run real (§110/§111/§113) com a atomicidade do `apply_patch_multi` (§109/§115) — `sfDryRunRealMission` (vision-agent.js) ganha um ramo que simula N arquivos em memória com a mesma semântica tudo-ou-nada, sem nunca escrever em disco. `renderSfDryRunResult` exibe 1 diff por arquivo. Zero mudança em `server.js`. 17/17 + 29/29 + regressão 16 suites (inclui correção de contagem do §115: 35/35→34/34, ver `CLAUDE_HISTORY.md`). | - | (pendente commit) |
+| §116 | Dry-run multi-arquivo: combina o núcleo do dry-run real (§110/§111/§113) com a atomicidade do `apply_patch_multi` (§109/§115) — `sfDryRunRealMission` (vision-agent.js) ganha um ramo que simula N arquivos em memória com a mesma semântica tudo-ou-nada, sem nunca escrever em disco. `renderSfDryRunResult` exibe 1 diff por arquivo. Zero mudança em `server.js`. 17/17 + 29/29 + regressão 16 suites (inclui correção de contagem do §115: 35/35→34/34, ver `CLAUDE_HISTORY.md`). | - | b8e2f2c |
 
 > Write-up completo (causa raiz, fix, evidência) de cada sessão acima → `CLAUDE_HISTORY.md`.
 
