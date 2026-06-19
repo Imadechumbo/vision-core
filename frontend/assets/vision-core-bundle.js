@@ -8618,6 +8618,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   }
 
   function initSoftwareFactoryPage() {
+    // §118: expõe para tutoriais de seção (T3 — STEPS_SF onEnter)
+    window.showSoftwareFactoryPage  = showSoftwareFactoryPage;
+    window.setSoftwareFactoryModule = setSoftwareFactoryModule;
     var sfPage = document.getElementById('vcSoftwareFactoryPage');
     if (!sfPage) return;
 
@@ -9348,8 +9351,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     nextBtn.textContent   = idx === STEPS.length - 1 ? 'Fechar' : 'Próximo →';
     if (ctaBtn) { step.cta ? ctaBtn.classList.remove('hidden') : ctaBtn.classList.add('hidden'); }
     typeText(step.text, textEl, null);
-    var targetEl = getEl(step.target);
-    setTimeout(function() { positionBalloon(targetEl, step.pos); }, 80);
+    // §118: onEnter — aciona navegação/reveal antes de medir getBoundingClientRect
+    if (typeof step.onEnter === 'function') { try { step.onEnter(); } catch(e) {} }
+    // getEl dentro do setTimeout para CSS/transição assentar (mesmo padrão original)
+    setTimeout(function() { positionBalloon(getEl(step.target), step.pos); }, 80);
   }
 
   function closeTutorial() {
@@ -9429,37 +9434,59 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     }
   };
 
+  // §118: helper de scroll — elementos abaixo do viewport ficam com spotlight=0 sem isso.
+  // _scrollInto(sel) retorna um onEnter que faz scrollIntoView antes de positionBalloon.
+  // Definido aqui (antes de qualquer STEPS_*) para que todos os tutoriais possam usá-lo.
+  var _scrollInto = function(sel) {
+    return function() {
+      var el = document.querySelector(sel);
+      if (el) el.scrollIntoView({ behavior: 'instant', block: 'center' });
+    };
+  };
+
   // ── T2: TUTORIAL VISION AGENT LOCAL ──
+  // §118: targets corrigidos — cada passo ilumina o elemento específico descrito.
+  // onEnter no passo 1 garante que o painel da aba AGENT LOCAL está visível
+  // antes de calcular getBoundingClientRect() (tabs usam display:none por padrão).
   var STEPS_AGENT = [
     {
       title: '🪐 O que é o Vision Agent Local',
       text: 'É um programa pequeno que roda no seu computador e dá ao Vision Core acesso real aos arquivos do seu projeto — sem precisar subir tudo para a nuvem.',
-      target: '#mc-tab-agent', pos: 'top'
+      target: '.mc-tab[data-tab="agent"]', pos: 'top',
+      onEnter: function() {
+        var agentTab = document.querySelector('.mc-tab[data-tab="agent"]');
+        if (agentTab) agentTab.click();
+      }
     },
     {
       title: '⬇️ Baixar e instalar',
       text: 'Clique em "VisionAgentSetup.exe (Windows)" para o instalador completo, ou "vision-agent.js" se você já tem Node.js e prefere rodar direto.',
-      target: '#mc-tab-agent', pos: 'top'
+      target: '#mc-tab-agent .agent-download', pos: 'bottom',
+      // §118: botão pode estar fora do viewport — scroll antes de medir
+      onEnter: function() {
+        var el = document.querySelector('#mc-tab-agent .agent-download');
+        if (el) el.scrollIntoView({ behavior: 'instant', block: 'center' });
+      }
     },
     {
       title: '▶️ Rodando o agent',
       text: 'Depois de instalado, o agent fica escutando em localhost:7070. Se outro programa já estiver usando essa porta (como o AnyDesk), mude a porta dele nas configurações antes de abrir o agent.',
-      target: '#mc-tab-agent', pos: 'top'
+      target: '.agent-cmd', pos: 'top'
     },
     {
       title: '🔍 O que ele faz: scan → search → read',
       text: 'Quando uma missão chega, o agent primeiro escaneia a raiz do projeto, depois busca arquivos relevantes pela missão descrita, e por fim lê o conteúdo mais relevante para enviar ao Vision Core.',
-      target: '#mc-tab-agent', pos: 'top'
+      target: '.agent-cmd', pos: 'top'
     },
     {
       title: '📡 Conexão com o Worker',
       text: 'O agent faz polling no Worker Gateway a cada poucos segundos perguntando se há missões pendentes para este projeto — assim ele trabalha junto com o Vision Core sem você precisar copiar e colar nada manualmente.',
-      target: '#mc-tab-agent', pos: 'top'
+      target: '.agent-cmd', pos: 'top'
     },
     {
       title: '✅ Resultado de volta',
       text: 'Depois de executar, o agent envia o resultado (ok=true/false, arquivos lidos, detalhes de cada etapa) de volta para o backend, que segue o pipeline normal até o PASS GOLD.',
-      target: '#mc-tab-agent', pos: 'top'
+      target: '.agent-cmd', pos: 'top'
     }
   ];
 
@@ -9473,39 +9500,58 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     { title: '⚙️ Escolha o modo e modelo', text: '"Vision geral" conversa livremente. "Corrigir projeto" ou "Rodar SDDF" ativam o pipeline completo. O modelo pode ficar em automático ou você escolhe.', target: '#runMode', pos: 'top' },
     { title: '📤 ENVIAR vs EXECUTAR MISSÃO', text: '"ENVIAR" é só conversa — a IA responde no chat. "EXECUTAR MISSÃO" dispara o pipeline real: Scanner → Hermes → PatchEngine → Aegis → PASS GOLD → PR.', target: '#v298RunBtn', pos: 'top' },
     { title: '🎯 Acompanhe o pipeline', text: 'A timeline compacta mostra cada estágio em tempo real. Quando passar do PASS GOLD, o Pull Request é criado automaticamente no GitHub.', target: '.mini-pipeline', pos: 'bottom' },
-    { title: '🎁 Quota e planos', text: 'No plano FREE você tem 5 missões por mês, sem cartão. O badge no canto mostra quantas restam.', target: '#quotaBadge', pos: 'bottom' }
+    { title: '🎁 Quota e planos', text: 'No plano FREE você tem 5 missões por mês, sem cartão. O badge no canto mostra quantas restam.', target: '#v299QuotaBadge', pos: 'bottom' }
   ];
   window.vcRegisterTutorial('mission', STEPS_MISSION, 'vc_tutorial_mission_done');
 
   // ── T6: TUTORIAL PASS GOLD ──
+  // §118: #score, #githubPanel, #policyBtn ficam longe abaixo do viewport —
+  // scroll via onEnter obrigatório para positionBalloon enxergar os elementos.
   var STEPS_PASSGOLD = [
-    { title: '🏅 O que é PASS GOLD', text: 'PASS GOLD é o selo de aprovação do Vision Core. Só depois dele o sistema cria o Pull Request no GitHub — é como uma inspeção de qualidade antes da entrega.', target: '#score', pos: 'top' },
-    { title: '📊 Como funciona o score', text: 'Cada missão passa por gates: segurança, compatibilidade, estabilidade e testes. O score precisa estar acima do corte GOLD para liberar a promoção.', target: '#score', pos: 'top' },
-    { title: '🔁 Reprovou? Rollback automático', text: 'Se o código não atingir o corte, o Vision Core faz rollback automático. Nenhum código de baixa confiança chega ao seu repositório.', target: '#score', pos: 'bottom' },
-    { title: '🔗 GitHub Integration Real', text: 'Com PASS GOLD aprovado, o botão "Criar PR PASS GOLD" cria branch, aplica commit e abre o Pull Request de verdade via GitHub REST API.', target: '#githubPanel', pos: 'top' },
-    { title: '⚙️ Auto-merge Policy', text: 'Você pode configurar se PRs aprovados com PASS GOLD são mesclados automaticamente ou aguardam revisão manual.', target: '#githubPanel', pos: 'top' }
+    { title: '🏅 O que é PASS GOLD', text: 'PASS GOLD é o selo de aprovação do Vision Core. Só depois dele o sistema cria o Pull Request no GitHub — é como uma inspeção de qualidade antes da entrega.', target: '#score', pos: 'top', onEnter: _scrollInto('#score') },
+    { title: '📊 Como funciona o score', text: 'Cada missão passa por gates: segurança, compatibilidade, estabilidade e testes. O score precisa estar acima do corte GOLD para liberar a promoção.', target: '#score', pos: 'top', onEnter: _scrollInto('#score') },
+    { title: '🔁 Reprovou? Rollback automático', text: 'Se o código não atingir o corte, o Vision Core faz rollback automático. Nenhum código de baixa confiança chega ao seu repositório.', target: '#score', pos: 'bottom', onEnter: _scrollInto('#score') },
+    { title: '🔗 GitHub Integration Real', text: 'Com PASS GOLD aprovado, o botão "Criar PR PASS GOLD" cria branch, aplica commit e abre o Pull Request de verdade via GitHub REST API.', target: '#githubPanel', pos: 'top', onEnter: _scrollInto('#githubPanel') },
+    // §118: #policyBtn é o elemento real do botão "Auto-merge Policy" dentro de #githubPanel
+    { title: '⚙️ Auto-merge Policy', text: 'Você pode configurar se PRs aprovados com PASS GOLD são mesclados automaticamente ou aguardam revisão manual.', target: '#policyBtn', pos: 'top', onEnter: _scrollInto('#policyBtn') }
   ];
   window.vcRegisterTutorial('passgold', STEPS_PASSGOLD, 'vc_tutorial_passgold_done');
 
   // ── T3: TUTORIAL SOFTWARE FACTORY ──
+  // §118: targets corrigidos — cada passo ilumina o botão de módulo real.
+  // onEnter abre a SF page e navega ao módulo certo antes de posicionar o spotlight.
+  // window.showSoftwareFactoryPage e window.setSoftwareFactoryModule são expostos
+  // por initSoftwareFactoryPage() (§118).
+  var _sfOnEnter = function(moduleId) {
+    return function() {
+      if (typeof window.showSoftwareFactoryPage  === 'function') window.showSoftwareFactoryPage();
+      if (moduleId && typeof window.setSoftwareFactoryModule === 'function') window.setSoftwareFactoryModule(moduleId);
+    };
+  };
   var STEPS_SF = [
-    { title: '◈ Bem-vindo à Software Factory', text: 'Aqui você monta um projeto do zero com 8 módulos de IA — da definição de stack até o blueprint de deploy.', target: '[data-open-sf-page]', pos: 'bottom' },
-    { title: '01 — Montar Projeto do Zero', text: 'Descreva o tipo de projeto e a stack desejada. A IA monta a estrutura inicial e sugere a arquitetura.', target: '[data-open-sf-page]', pos: 'bottom' },
-    { title: '03 — Templates de Projeto', text: 'Use blueprints locais prontos para acelerar o início — templates testados para os padrões mais comuns de SaaS e API.', target: '[data-open-sf-page]', pos: 'bottom' },
-    { title: '04 — Compositor de Missão', text: 'Transforma sua descrição em um prompt estruturado e pronto para copiar.', target: '[data-open-sf-page]', pos: 'bottom' },
-    { title: '05 — Pacotes para Workers', text: 'Gera o pacote de handoff completo para um worker externo executar.', target: '[data-open-sf-page]', pos: 'bottom' },
-    { title: '🟡 Módulos em breve', text: 'Comando para Criação Real, Preview de Criação e Painel Final aparecem como "EM BREVE" — esses módulos de execução direta ainda não criam nada automaticamente.', target: '[data-open-sf-page]', pos: 'bottom' },
-    { title: '🏅 Gold Gate — o validador final', text: 'Antes de qualquer entrega, o Gold Gate avalia segurança, risco e qualidade — o mesmo padrão de validação do PASS GOLD.', target: '[data-open-sf-page]', pos: 'bottom' }
+    { title: '◈ Bem-vindo à Software Factory', text: 'Aqui você monta um projeto do zero com 8 módulos de IA — da definição de stack até o blueprint de deploy.', target: '#vcSfHomeBtn', pos: 'bottom', onEnter: _sfOnEnter(null) },
+    { title: '01 — Montar Projeto do Zero', text: 'Descreva o tipo de projeto e a stack desejada. A IA monta a estrutura inicial e sugere a arquitetura.', target: '[data-sf-module="project_builder"]', pos: 'bottom', onEnter: _sfOnEnter('project_builder') },
+    { title: '03 — Templates de Projeto', text: 'Use blueprints locais prontos para acelerar o início — templates testados para os padrões mais comuns de SaaS e API.', target: '[data-sf-module="project_templates"]', pos: 'bottom', onEnter: _sfOnEnter('project_templates') },
+    { title: '04 — Compositor de Missão', text: 'Transforma sua descrição em um prompt estruturado e pronto para copiar.', target: '[data-sf-module="mission_composer"]', pos: 'bottom', onEnter: _sfOnEnter('mission_composer') },
+    { title: '05 — Pacotes para Workers', text: 'Gera o pacote de handoff completo para um worker externo executar.', target: '[data-sf-module="worker_handoff"]', pos: 'bottom', onEnter: _sfOnEnter('worker_handoff') },
+    // §118: "EM BREVE" — ilumina o primeiro módulo marcado como EM BREVE no HTML (real_file_command, módulo 06)
+    { title: '🟡 Módulos em breve', text: 'Comando para Criação Real (06), Preview de Criação (02) e Painel Final (09) aparecem como "EM BREVE" — esses módulos ainda não criam nada automaticamente.', target: '[data-sf-module="real_file_command"]', pos: 'bottom', onEnter: _sfOnEnter('real_file_command') },
+    // §118: Gold Gate — usa módulo 09 "PAINEL FINAL" como alvo visual
+    // (#vcSfSddfSteps fica dentro da timeline colapsada por padrão — height:0 = spotlight zerado)
+    { title: '🏅 Gold Gate — o validador final', text: 'Antes de qualquer entrega, o Gold Gate avalia segurança, risco e qualidade — o mesmo padrão de validação do PASS GOLD. O módulo "Painel Final" (09) é o destino após todas as etapas de validação.', target: '[data-sf-module="final_dashboard"]', pos: 'bottom', onEnter: _sfOnEnter(null) }
   ];
   window.vcRegisterTutorial('sf', STEPS_SF, 'vc_tutorial_sf_done');
 
   // ── T5: TUTORIAL AGENTES EXTRAS ──
+  // §118: #agentsBoard fica longe abaixo do viewport — scroll via onEnter (usando _scrollInto acima)
   var STEPS_AGENTS = [
-    { title: '🤖 O que são os Agentes Extras', text: 'São 15 especialistas — Backend, Database, Auth, Frontend, Security e outros — que ficam de prontidão para responder sobre o assunto certo quando você conversa no Mission Control.', target: '#agentsBoard', pos: 'top' },
-    { title: '🎛️ Três modos: OFF, AUTO, ON', text: 'OFF desliga o agente — ele nunca participa. AUTO deixa o Vision Core decidir quando ele é relevante. ON garante prioridade sempre que o assunto bate com a especialidade dele.', target: '#agentsBoard', pos: 'top' },
-    { title: '🔍 Como a detecção funciona', text: 'Cada agente tem palavras-chave da própria área — "jwt" e "token" acionam o Agente Auth, "sql" e "schema" acionam o Agente Database. Se a sua mensagem bater com alguma, ele entra na conversa.', target: '#agentsBoard', pos: 'top' },
-    { title: '🏷️ O badge no chat', text: 'Quando um agente especializado responde, aparece um selo "🤖 Nome do Agente" acima da resposta — assim você sabe exatamente quem está te ajudando.', target: '#mission', pos: 'top' },
-    { title: '⚙️ Ajustando os modos', text: 'Em "AGENTES EXTRAS" na sidebar, cada card tem os botões OFF/AUTO/ON. A escolha é salva no backend e vale para todas as suas próximas conversas.', target: '#agentsBoard', pos: 'top' }
+    { title: '🤖 O que são os Agentes Extras', text: 'São 15 especialistas — Backend, Database, Auth, Frontend, Security e outros — que ficam de prontidão para responder sobre o assunto certo quando você conversa no Mission Control.', target: '#agentsBoard', pos: 'top', onEnter: _scrollInto('#agentsBoard') },
+    // §118: ilumina os botões reais de modo do primeiro card (backend) em vez do board inteiro
+    { title: '🎛️ Três modos: OFF, AUTO, ON', text: 'OFF desliga o agente — ele nunca participa. AUTO deixa o Vision Core decidir quando ele é relevante. ON garante prioridade sempre que o assunto bate com a especialidade dele.', target: '.vc-reserve-card[data-agent-id="backend"] .vc-reserve-modes', pos: 'top', onEnter: _scrollInto('.vc-reserve-card[data-agent-id="backend"] .vc-reserve-modes') },
+    // §118: ilumina as tags/keywords reais do card backend em vez do board inteiro
+    { title: '🔍 Como a detecção funciona', text: 'Cada agente tem palavras-chave da própria área — "jwt" e "token" acionam o Agente Auth, "sql" e "schema" acionam o Agente Database. Se a sua mensagem bater com alguma, ele entra na conversa.', target: '.vc-reserve-card[data-agent-id="backend"] .vc-reserve-tags', pos: 'top', onEnter: _scrollInto('.vc-reserve-card[data-agent-id="backend"] .vc-reserve-tags') },
+    { title: '🏷️ O badge no chat', text: 'Quando um agente especializado responde, aparece um selo "🤖 Nome do Agente" acima da resposta — assim você sabe exatamente quem está te ajudando.', target: '#mission', pos: 'top', onEnter: _scrollInto('#mission') },
+    { title: '⚙️ Ajustando os modos', text: 'Em "AGENTES EXTRAS" na sidebar, cada card tem os botões OFF/AUTO/ON. A escolha é salva no backend e vale para todas as suas próximas conversas.', target: '#agentsBoard', pos: 'top', onEnter: _scrollInto('#agentsBoard') }
   ];
   window.vcRegisterTutorial('agents', STEPS_AGENTS, 'vc_tutorial_agents_done');
 

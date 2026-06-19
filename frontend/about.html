@@ -639,6 +639,12 @@
           <div style="font-size:11px;color:#64748b">— §116, achado durante a regressão completa, _test115_apply_patch_multi_chat_ui.cjs corrigido</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🎯</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O sistema de tutorial estava com os balões de explicação apontando sempre para o mesmo elemento — o botão de entrada de cada seção — independente do que o texto de cada passo descrevia. Em 4 dos 6 tutoriais de seção, o spotlight iluminava o botão de fora enquanto o texto já explicava funcionalidades internas que só aparecem depois de uma navegação. O Playwright provou o bug: spotlight.width=0 em qualquer passo que deveria iluminar um elemento específico. A correção adicionou um hook <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>onEnter</code> a cada passo que exige navegação, um <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>_scrollInto</code> para elementos abaixo da viewport, e expôs <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>showSoftwareFactoryPage</code>/<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>setSoftwareFactoryModule</code> no window para que o tutorial T3 pudesse navegar para cada módulo real. Prova numérica: spotlight.top ≈ target.top − 14px em cada passo verificado."</div>
+          <div style="font-size:11px;color:#64748b">— §118, E2E Playwright 7/7 pass (4 novos testes de tutorial + regressão completa), PASS</div>
+        </div>
+
       </div>
     </div>
 

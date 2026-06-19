@@ -58,7 +58,7 @@
 
 import { test, expect } from '@playwright/test';
 import { spawn, execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import AdmZip from 'adm-zip';
@@ -525,5 +525,268 @@ test.describe('apply_patch_multi no chat principal — §115', () => {
     } else {
       console.log('  INCONCLUSIVO (não é falha): "' + buttonText.trim() + '" — LLM decidiu single-file. Válido por design. Ver screenshot.');
     }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §118 — TUTORIAL: BALÕES ALINHADOS COM ELEMENTOS REAIS (T2/T3/T5/T6)
+//
+// Estes testes verificam que positionBalloon() ilumina o elemento específico
+// descrito em cada passo, em vez de um container genérico.
+//
+// Estratégia:
+//   1. Navegar sem suppressTutorial — o T1 precisa inicializar para
+//      _vcSetActiveTutorial ficar disponível no window.
+//   2. Disparar tutorial de seção via window.vcStartSectionTutorial(name).
+//   3. Para cada passo, aguardar typewriter + 80ms de positionBalloon.
+//   4. Comparar getBoundingClientRect() do spotlight vs. do elemento-alvo.
+//      spotlight.top ≈ target.top - pad (pad=14), dentro de tolerância de 20px.
+//      spotlight.width > 0 confirma que o elemento foi encontrado e está em view.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * v5-§118: intercept bundle.js e serve o arquivo LOCAL em vez do de produção.
+ * Necessário para testar as mudanças §118 antes do deploy.
+ * Deve ser chamada ANTES de page.goto().
+ */
+const LOCAL_BUNDLE_PATH = path.resolve(process.cwd(), 'frontend/assets/vision-core-bundle.js');
+async function setupLocalBundleRoute(page) {
+  let localBundle;
+  try {
+    localBundle = readFileSync(LOCAL_BUNDLE_PATH, 'utf8');
+    console.log('[LOCAL BUNDLE] lido: ' + LOCAL_BUNDLE_PATH + ' (' + localBundle.length + ' bytes)');
+  } catch (e) {
+    console.warn('[LOCAL BUNDLE] ERRO ao ler bundle local: ' + e.message + ' — continuando sem intercept');
+    return;
+  }
+  await page.route('**/vision-core-bundle.js', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/javascript; charset=utf-8',
+      body: localBundle,
+    });
+  });
+}
+
+/**
+ * Navega para BASE_URL SEM suprimir o tutorial — necessário para que
+ * initTutorial() registre _vcSetActiveTutorial no window.
+ */
+async function gotoPageForTutorialTest(page) {
+  await page.goto(BASE_URL);
+  await page.waitForLoadState('networkidle', { timeout: 20_000 });
+  // Aguardar o setTimeout de 1500ms do T1 disparar e _vcSetActiveTutorial ficar disponível
+  await page.waitForFunction(
+    () => typeof window._vcSetActiveTutorial === 'function',
+    {},
+    { timeout: 5_000 }
+  );
+}
+
+/**
+ * Aguarda o typewriter do passo atual terminar (nextBtn fica habilitado)
+ * e dá uma margem extra para o setTimeout(80ms) de positionBalloon assentar.
+ */
+async function waitForStepReady(page) {
+  await page.waitForFunction(
+    () => {
+      var btn = document.getElementById('vcTutorialNext');
+      return btn && !btn.disabled;
+    },
+    {},
+    { timeout: 15_000 }
+  );
+  await page.waitForTimeout(200); // margem para onEnter + setTimeout(80ms)
+}
+
+/**
+ * Lê a posição visual do spotlight e do elemento-alvo.
+ * Retorna um objeto com dimensões normalizadas para assertSpotlightCoversTarget().
+ */
+async function getSpotlightVsTarget(page, targetSel) {
+  return await page.evaluate(function(sel) {
+    var spotlight = document.getElementById('vcTutorialSpotlight');
+    var target    = sel ? document.querySelector(sel) : null;
+    var sp = spotlight ? spotlight.getBoundingClientRect() : null;
+    var tg = target    ? target.getBoundingClientRect()    : null;
+    return {
+      spotW:    sp ? sp.width  : -1,
+      spotH:    sp ? sp.height : -1,
+      spotTop:  sp ? sp.top    : -1,
+      spotLeft: sp ? sp.left   : -1,
+      tgTop:    tg ? tg.top    : -1,
+      tgLeft:   tg ? tg.left   : -1,
+      tgW:      tg ? tg.width  : -1,
+      tgH:      tg ? tg.height : -1,
+      targetExists:   !!target,
+      overlayVisible: !!(document.getElementById('vcTutorialOverlay') &&
+                         document.getElementById('vcTutorialOverlay').style.display !== 'none')
+    };
+  }, targetSel);
+}
+
+/**
+ * Verifica que o spotlight está sobre o elemento-alvo.
+ * pad = 14 (mesmo valor de positionBalloon no bundle).
+ * Tolerância de 20px para rounding e diferenças de viewport.
+ */
+function assertSpotlightCoversTarget(pos, stepLabel, pad) {
+  var p = (pad !== undefined) ? pad : 14;
+  var tol = 20;
+  expect(pos.overlayVisible, stepLabel + ': overlay deve estar visível').toBe(true);
+  expect(pos.spotW, stepLabel + ': spotlight.width deve ser > 0 (elemento não encontrado ou fora do viewport)').toBeGreaterThan(0);
+  expect(pos.spotH, stepLabel + ': spotlight.height deve ser > 0').toBeGreaterThan(0);
+  if (pos.targetExists && pos.tgW > 0) {
+    // spotlight.top ≈ target.top - pad
+    expect(
+      Math.abs(pos.spotTop - (pos.tgTop - p)),
+      stepLabel + ': spotlight.top (' + pos.spotTop + ') deve ≈ target.top (' + pos.tgTop + ') - pad (' + p + ')'
+    ).toBeLessThan(tol);
+    // spotlight.left ≈ target.left - pad
+    expect(
+      Math.abs(pos.spotLeft - (pos.tgLeft - p)),
+      stepLabel + ': spotlight.left (' + pos.spotLeft + ') deve ≈ target.left (' + pos.tgLeft + ') - pad (' + p + ')'
+    ).toBeLessThan(tol);
+  }
+}
+
+test.describe('§118 — Tutorial: balões alinhados com elementos reais (T2/T3/T5/T6)', () => {
+
+  test('T2 — Vision Agent Local: spotlight cobre elementos reais por passo', async ({ page }) => {
+    test.setTimeout(60_000);
+    // O botão de download fica a ~730px do topo com viewport 720px padrão — o cockpit
+    // usa altura de viewport, impossibilitando scroll adicional para centralizá-lo.
+    // Aumentamos a viewport para que o elemento fique dentro da área visível.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await setupLocalBundleRoute(page); // serve bundle local com §118 changes
+    await gotoPageForTutorialTest(page);
+
+    await page.evaluate(() => window.vcStartSectionTutorial('agent'));
+    await waitForStepReady(page);
+
+    // Passo 0: .mc-tab[data-tab="agent"] — onEnter abre a aba
+    const p0 = await getSpotlightVsTarget(page, '.mc-tab[data-tab="agent"]');
+    console.log('  T2 p0 (agent tab):', JSON.stringify(p0));
+    assertSpotlightCoversTarget(p0, 'T2 passo 0 — .mc-tab[data-tab="agent"]');
+
+    await clickJS(page, '#vcTutorialNext');
+    await waitForStepReady(page);
+
+    // Passo 1: #mc-tab-agent .agent-download (botão de download real)
+    const p1 = await getSpotlightVsTarget(page, '#mc-tab-agent .agent-download');
+    console.log('  T2 p1 (agent-download):', JSON.stringify(p1));
+    assertSpotlightCoversTarget(p1, 'T2 passo 1 — .agent-download');
+
+    await clickJS(page, '#vcTutorialNext');
+    await waitForStepReady(page);
+
+    // Passo 2: .agent-cmd (o comando node vision-agent.js)
+    const p2 = await getSpotlightVsTarget(page, '.agent-cmd');
+    console.log('  T2 p2 (agent-cmd):', JSON.stringify(p2));
+    assertSpotlightCoversTarget(p2, 'T2 passo 2 — .agent-cmd');
+
+    console.log('  T2 PASS: 3 passos verificados, spotlight sobre elemento real em cada um.');
+  });
+
+  test('T3 — Software Factory: spotlight cobre módulos reais + onEnter abre SF page', async ({ page }) => {
+    test.setTimeout(60_000);
+    await setupLocalBundleRoute(page); // serve bundle local com §118 changes
+    await gotoPageForTutorialTest(page);
+
+    await page.evaluate(() => window.vcStartSectionTutorial('sf'));
+    await waitForStepReady(page);
+
+    // Passo 0: #vcSfHomeBtn — onEnter abre a SF page
+    const p0 = await getSpotlightVsTarget(page, '#vcSfHomeBtn');
+    console.log('  T3 p0 (SF home btn):', JSON.stringify(p0));
+    assertSpotlightCoversTarget(p0, 'T3 passo 0 — #vcSfHomeBtn');
+
+    await clickJS(page, '#vcTutorialNext');
+    await waitForStepReady(page);
+
+    // Passo 1: [data-sf-module="project_builder"] — onEnter navega ao módulo
+    const p1 = await getSpotlightVsTarget(page, '[data-sf-module="project_builder"]');
+    console.log('  T3 p1 (project_builder):', JSON.stringify(p1));
+    assertSpotlightCoversTarget(p1, 'T3 passo 1 — [data-sf-module="project_builder"]');
+
+    await clickJS(page, '#vcTutorialNext');
+    await waitForStepReady(page);
+
+    // Passo 2: [data-sf-module="project_templates"]
+    const p2 = await getSpotlightVsTarget(page, '[data-sf-module="project_templates"]');
+    console.log('  T3 p2 (project_templates):', JSON.stringify(p2));
+    assertSpotlightCoversTarget(p2, 'T3 passo 2 — [data-sf-module="project_templates"]');
+
+    console.log('  T3 PASS: 3 passos verificados, SF page aberta, módulos iluminados.');
+  });
+
+  test('T5 — Agentes Extras: spotlight cobre .vc-reserve-modes e .vc-reserve-tags', async ({ page }) => {
+    test.setTimeout(60_000);
+    await setupLocalBundleRoute(page); // serve bundle local com §118 changes
+    await gotoPageForTutorialTest(page);
+
+    await page.evaluate(() => window.vcStartSectionTutorial('agents'));
+    await waitForStepReady(page);
+
+    // Passo 0: #agentsBoard (geral — unchanged, apenas confirmação)
+    const p0 = await getSpotlightVsTarget(page, '#agentsBoard');
+    console.log('  T5 p0 (agentsBoard):', JSON.stringify(p0));
+    assertSpotlightCoversTarget(p0, 'T5 passo 0 — #agentsBoard');
+
+    await clickJS(page, '#vcTutorialNext');
+    await waitForStepReady(page);
+
+    // Passo 1 (§118 fix): .vc-reserve-card[data-agent-id="backend"] .vc-reserve-modes
+    const p1 = await getSpotlightVsTarget(page, '.vc-reserve-card[data-agent-id="backend"] .vc-reserve-modes');
+    console.log('  T5 p1 (backend .vc-reserve-modes):', JSON.stringify(p1));
+    assertSpotlightCoversTarget(p1, 'T5 passo 1 — backend .vc-reserve-modes');
+
+    await clickJS(page, '#vcTutorialNext');
+    await waitForStepReady(page);
+
+    // Passo 2 (§118 fix): .vc-reserve-card[data-agent-id="backend"] .vc-reserve-tags
+    const p2 = await getSpotlightVsTarget(page, '.vc-reserve-card[data-agent-id="backend"] .vc-reserve-tags');
+    console.log('  T5 p2 (backend .vc-reserve-tags):', JSON.stringify(p2));
+    assertSpotlightCoversTarget(p2, 'T5 passo 2 — backend .vc-reserve-tags');
+
+    console.log('  T5 PASS: 3 passos verificados, modos e tags do card backend iluminados.');
+  });
+
+  test('T6 — PASS GOLD: passo Auto-merge ilumina #policyBtn (não #githubPanel)', async ({ page }) => {
+    test.setTimeout(60_000);
+    await setupLocalBundleRoute(page); // serve bundle local com §118 changes
+    await gotoPageForTutorialTest(page);
+
+    await page.evaluate(() => window.vcStartSectionTutorial('passgold'));
+    await waitForStepReady(page);
+
+    // Avançar até o passo 3 (GitHub Integration Real — target #githubPanel)
+    for (let i = 0; i < 3; i++) {
+      await clickJS(page, '#vcTutorialNext');
+      await waitForStepReady(page);
+    }
+
+    // Passo 3: #githubPanel (GitHub Integration Real — deve continuar correto)
+    const p3 = await getSpotlightVsTarget(page, '#githubPanel');
+    console.log('  T6 p3 (githubPanel):', JSON.stringify(p3));
+    assertSpotlightCoversTarget(p3, 'T6 passo 3 — #githubPanel');
+
+    await clickJS(page, '#vcTutorialNext');
+    await waitForStepReady(page);
+
+    // Passo 4 (§118 fix): #policyBtn — Auto-merge Policy
+    const p4 = await getSpotlightVsTarget(page, '#policyBtn');
+    console.log('  T6 p4 (policyBtn):', JSON.stringify(p4));
+    assertSpotlightCoversTarget(p4, 'T6 passo 4 — #policyBtn (Auto-merge)');
+
+    // Verificação extra: spotlight NÃO deve estar sobre o githubPanel inteiro
+    // (se fosse, spotW seria muito maior que o policyBtn)
+    const policyBtnW = p4.tgW;
+    expect(
+      p4.spotW,
+      'T6 p4: spotlight.width (' + p4.spotW + ') deve ser próximo ao policyBtn.width (' + policyBtnW + '), não ao githubPanel inteiro'
+    ).toBeLessThan(policyBtnW + 80); // policyBtn + 2*pad + tolerância
+
+    console.log('  T6 PASS: #policyBtn iluminado (w=' + Math.round(p4.spotW) + 'px), não o painel inteiro.');
   });
 });
