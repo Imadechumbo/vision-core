@@ -663,6 +663,12 @@
           <div style="font-size:11px;color:#64748b">— §121, E2E Playwright 18/18 pass (5 novos: position:fixed, 2 viewports, scroll, seta + regressão completa), PASS</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔡</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O ícone '◉' (U+25C9 FISHEYE) no item 'Geral' do menu de tutoriais renderizava de forma irreconhecível em alguns browsers e combinações de fonte — aparecia como quadradinho vazio ou ponto mínimo, fazendo o item parecer 'sumido'. Em contraste, os outros itens usavam emoji universais (🏅, 🤖) ou símbolos distintos já consolidados no produto (◎ para Mission, ◈ para SF). A investigação com Playwright confirmou que o DOM, o HTML e a produção estavam todos corretos — 6 itens únicos, sem duplicata. O bug era de rendering tipográfico, não de código. Fix: substituído '◉' por '🌟' (emoji universalmente suportado). Novo teste: conta os 6 itens e verifica unicidade de texto e onclick, para que futuras regressões reais de conteúdo sejam detectadas automaticamente."</div>
+          <div style="font-size:11px;color:#64748b">— §122, E2E Playwright 19/19 pass (1 novo: integridade do menu accordion + regressão completa), PASS</div>
+        </div>
+
       </div>
     </div>
 

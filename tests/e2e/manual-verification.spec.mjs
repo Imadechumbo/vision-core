@@ -1259,3 +1259,69 @@ test.describe('§121 — position:fixed restaurado + seta direcional + scroll tr
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §122 — Menu accordion "🪐 Tutoriais": 6 itens únicos, sem duplicata
+//
+// Causa raiz: ◉ (U+25C9 FISHEYE) renderizava de forma irreconhecível em alguns
+// browsers/zoom/fontes, fazendo "◉ Geral" parecer "sumido" e o menu parecer ter
+// "Agent local" duplicado. Fix: ◉ → 🌟 (emoji universal).
+// Investigação confirmou: DOM/HTML/JS nunca duplicou conteúdo — era rendering only.
+// Teste cobre integridade do menu para impedir regressão real de conteúdo.
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('§122 — Menu accordion: 6 itens únicos sem duplicata', () => {
+
+  test('Menu tem 6 itens com onclick e texto únicos', async ({ page }) => {
+    test.setTimeout(30_000);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await setupLocalIndexRoute(page);   // §121: serve index.html local
+    await setupLocalBundleRoute(page);
+    await gotoPageForTutorialTest(page);
+
+    // Abrir accordion
+    await page.evaluate(() => {
+      var btn = document.getElementById('vcTutMenuBtn');
+      if (btn) btn.click();
+    });
+    await page.waitForTimeout(400);
+
+    // Contar itens
+    const count = await page.locator('#vcTutPanel a.vc-tut-item').count();
+    console.log('  §122 itens no menu:', count);
+    expect(count, '§122: deve ter exatamente 6 itens no menu').toBe(6);
+
+    // Extrair texto e onclick de todos
+    const items = await page.evaluate(() => {
+      var links = document.querySelectorAll('#vcTutPanel a.vc-tut-item');
+      return Array.from(links).map(function(el) {
+        return { text: el.textContent.trim(), onclick: el.getAttribute('onclick') };
+      });
+    });
+
+    const texts   = items.map(function(i) { return i.text; });
+    const onclicks = items.map(function(i) { return i.onclick; });
+    console.log('  §122 itens:', texts);
+
+    // Verificar unicidade de texto (sem "Agent local" aparecendo 2x)
+    const dupTexts = texts.filter(function(t, i) { return texts.indexOf(t) !== i; });
+    expect(dupTexts.length, '§122: nenhum texto deve aparecer duplicado: ' + JSON.stringify(dupTexts)).toBe(0);
+
+    // Verificar unicidade de onclick (sem mesma função 2x)
+    const dupOncl = onclicks.filter(function(o, i) { return onclicks.indexOf(o) !== i; });
+    expect(dupOncl.length, '§122: nenhum onclick deve aparecer duplicado: ' + JSON.stringify(dupOncl)).toBe(0);
+
+    // Verificar que "Geral" existe (texto contém "Geral")
+    const hasGeral = texts.some(function(t) { return t.includes('Geral'); });
+    expect(hasGeral, '§122: item "Geral" deve existir no menu').toBe(true);
+
+    // Verificar que "Agent local" existe exatamente 1x
+    const agentCount = texts.filter(function(t) { return t.includes('Agent local'); }).length;
+    expect(agentCount, '§122: "Agent local" deve aparecer exatamente 1x').toBe(1);
+
+    // Screenshot visual do menu aberto
+    await page.screenshot({ path: 'test-results/s122-menu-accordion.png' });
+
+    console.log('  §122 PASS: 6 itens únicos, Geral presente, Agent local 1x apenas.');
+  });
+});
