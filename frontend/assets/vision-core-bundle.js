@@ -9254,15 +9254,16 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                  && rect.left > -rect.width && rect.right < vw + rect.width;
 
     if (!inView) {
-      // Centralizar balão na tela
+      // §120: passo conceitual — balão centralizado; overlay escurece uniformemente
+      // (spotlight a 0x0 mas com box-shadow, sem apagar o efeito visual).
       balloon.style.transform = '';
       balloon.style.top  = Math.max(80, vh / 2 - 120) + 'px';
       balloon.style.left = Math.max(16, vw / 2 - (balloon.offsetWidth || 320) / 2) + 'px';
-      spotlight.style.cssText = 'top:0;left:0;width:0;height:0;box-shadow:none';
+      spotlight.style.cssText = 'top:0;left:0;width:0;height:0;box-shadow:0 0 0 9999px rgba(0,0,0,0.55)';
       return;
     }
 
-    // Spotlight
+    // Spotlight sobre o elemento real
     spotlight.style.cssText = '';
     spotlight.style.top    = (rect.top - pad) + 'px';
     spotlight.style.left   = (rect.left - pad) + 'px';
@@ -9271,26 +9272,65 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
     var bw = balloon.offsetWidth || 320;
     var bh = balloon.offsetHeight || 220;
-    var top, left;
 
-    // Tentar posição pedida, fallback para oposta se não couber
-    if (pos === 'bottom') {
-      top = rect.bottom + pad + 8;
-      if (top + bh > vh - 12) top = rect.top - bh - pad - 8; // flip to top
-    } else {
-      top = rect.top - bh - pad - 8;
-      if (top < 12) top = rect.bottom + pad + 8; // flip to bottom
+    // §120: área do spotlight expandida com pad — o balão nunca deve cair dentro dela.
+    var spT = rect.top  - pad;
+    var spL = rect.left - pad;
+    var spR = rect.right  + pad;
+    var spB = rect.bottom + pad;
+
+    // Dois retângulos se sobrepõem quando NÃO é verdade que um está fora do outro.
+    function overlaps(t, l) {
+      return !(l + bw <= spL || l >= spR || t + bh <= spT || t >= spB);
     }
 
-    left = rect.left + rect.width / 2 - bw / 2;
+    // §120: quando o alvo é mais largo que o balão * 1.5, ancora na borda esquerda
+    // em vez de centralizar — evita que o balão centralizado caia dentro do spotlight.
+    var isWide = rect.width > bw * 1.5;
+    function calcPos(candidate) {
+      var t, l;
+      if (candidate === 'bottom') {
+        t = rect.bottom + pad + 8;
+        l = isWide ? rect.left + 8 : rect.left + rect.width / 2 - bw / 2;
+      } else if (candidate === 'top') {
+        t = rect.top - bh - pad - 8;
+        l = isWide ? rect.left + 8 : rect.left + rect.width / 2 - bw / 2;
+      } else if (candidate === 'right') {
+        t = rect.top + rect.height / 2 - bh / 2;
+        l = rect.right + pad + 8;
+      } else { // left
+        t = rect.top + rect.height / 2 - bh / 2;
+        l = rect.left - bw - pad - 8;
+      }
+      l = Math.max(16, Math.min(l, vw - bw - 16));
+      t = Math.max(70, Math.min(t, vh - bh - 16));
+      return { t: t, l: l };
+    }
 
-    // Clampar dentro da tela
-    left = Math.max(16, Math.min(left, vw - bw - 16));
-    top  = Math.max(70, Math.min(top,  vh - bh - 16));
+    // Ordem de tentativa: posição pedida, oposta, lados.
+    var order = pos === 'bottom'
+      ? ['bottom', 'top', 'right', 'left']
+      : ['top', 'bottom', 'right', 'left'];
+
+    var chosen = null;
+    for (var ci = 0; ci < order.length; ci++) {
+      var p = calcPos(order[ci]);
+      if (!overlaps(p.t, p.l)) { chosen = p; break; }
+    }
+
+    // Fallback: nenhuma candidata escapa do spotlight — elemento preenche o viewport.
+    // Usa fallback conceitual (balão centralizado, spotlight zerado) em vez de sobrepôr.
+    if (!chosen) {
+      balloon.style.transform = '';
+      balloon.style.top  = Math.max(80, vh / 2 - 120) + 'px';
+      balloon.style.left = Math.max(16, vw / 2 - bw / 2) + 'px';
+      spotlight.style.cssText = 'top:0;left:0;width:0;height:0;box-shadow:0 0 0 9999px rgba(0,0,0,0.55)';
+      return;
+    }
 
     balloon.style.transform = '';
-    balloon.style.top  = top + 'px';
-    balloon.style.left = left + 'px';
+    balloon.style.top  = chosen.t + 'px';
+    balloon.style.left = chosen.l + 'px';
 
     // Scroll suave para o elemento
     try { targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e) {}
@@ -9360,8 +9400,23 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     typeText(step.text, textEl, null);
     // §118: onEnter — aciona navegação/reveal antes de medir getBoundingClientRect
     if (typeof step.onEnter === 'function') { try { step.onEnter(); } catch(e) {} }
-    // getEl dentro do setTimeout para CSS/transição assentar (mesmo padrão original)
-    setTimeout(function() { positionBalloon(getEl(step.target), step.pos); }, 80);
+    // §120: 80ms base para todos (evita entrar no meio de transições CSS do onEnter);
+    // se o elemento ainda não estiver em view, retenta 1x após 200ms extra
+    // (cobre o caso de SF page que não abre instantaneamente).
+    setTimeout(function() {
+      var el = getEl(step.target);
+      var r  = el ? el.getBoundingClientRect() : null;
+      var _vw = window.innerWidth, _vh = window.innerHeight;
+      var inV = r && r.width > 0 && r.height > 0
+                && r.top > -r.height && r.bottom < _vh + r.height
+                && r.left > -r.width  && r.right  < _vw + r.width;
+      if (!inV && el) {
+        // Elemento existe mas ainda não está em view — retenta uma vez
+        setTimeout(function() { positionBalloon(getEl(step.target), step.pos); }, 200);
+      } else {
+        positionBalloon(el, step.pos);
+      }
+    }, 80);
   }
 
   function closeTutorial() {

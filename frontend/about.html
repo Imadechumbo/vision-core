@@ -651,6 +651,12 @@
           <div style="font-size:11px;color:#64748b">— §119, E2E Playwright 10/10 pass (3 novos testes determinísticos de DOM/localStorage + regressão completa), PASS</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🎯</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O §118 garantiu que cada passo do tutorial aponta para o elemento certo — mas apontar para o lugar certo não significa que o balão de texto apareça no lugar certo. Dois screenshots reais de produção enviados pelo usuário mostraram duas falhas de geometria independentes: no tutorial 'Agentes Extras' (passo 1), o balão aparecia desenhado por cima dos próprios cards que deveria estar descrevendo — o centralizador de largura do balão não verificava se o resultado caía dentro da área do spotlight. No tutorial 'Software Factory' (passo 1), nenhuma área da tela ficava destacada — o spotlight simplesmente sumia quando o onEnter da página SF não terminava de renderizar dentro do timeout de 80ms. Nenhum dos dois bugs teria sido detectado só por inspeção de código: precisou de olho humano em produção real para ver que o balão estava 'errado' geometricamente, mesmo com o target correto."</div>
+          <div style="font-size:11px;color:#64748b">— §120, E2E Playwright 13/13 pass (3 novos testes de geometria + regressão completa), PASS</div>
+        </div>
+
       </div>
     </div>
 
