@@ -9240,7 +9240,32 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
   function getEl(sel) { try { return document.querySelector(sel); } catch(e) { return null; } }
 
-  function positionBalloon(targetEl, pos) {
+  // §121: scroll tracking — reposiciona balão quando usuário rola manualmente
+  var _scrollTgt = null, _scrollHint = null, _scrollRafId = null, _scrollDebTimer = null, _scrollListenerOn = false;
+  function _onScroll() {
+    if (_scrollRafId) return;
+    _scrollRafId = requestAnimationFrame(function() {
+      _scrollRafId = null;
+      if (!_scrollTgt || !overlay || overlay.style.display === 'none') return;
+      var _sb = document.getElementById('vcTutorialBalloon');
+      if (_sb) _sb.style.transition = 'none';
+      positionBalloon(_scrollTgt, _scrollHint, true); // skipScroll=true
+      clearTimeout(_scrollDebTimer);
+      _scrollDebTimer = setTimeout(function() { if (_sb) _sb.style.transition = ''; }, 150);
+    });
+  }
+  function _addScrollListener() {
+    if (!_scrollListenerOn) { window.addEventListener('scroll', _onScroll, true); _scrollListenerOn = true; }
+  }
+  function _removeScrollListener() {
+    window.removeEventListener('scroll', _onScroll, true);
+    _scrollListenerOn = false;
+    if (_scrollRafId) { cancelAnimationFrame(_scrollRafId); _scrollRafId = null; }
+    clearTimeout(_scrollDebTimer); _scrollDebTimer = null;
+    _scrollTgt = null; _scrollHint = null;
+  }
+
+  function positionBalloon(targetEl, pos, skipScroll) {
     var balloon = document.getElementById('vcTutorialBalloon');
     var pad = 14;
     if (!balloon) return;
@@ -9256,6 +9281,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     if (!inView) {
       // §120: passo conceitual — balão centralizado; overlay escurece uniformemente
       // (spotlight a 0x0 mas com box-shadow, sem apagar o efeito visual).
+      balloon.removeAttribute('data-arrow'); // §121: sem seta em passo conceitual
       balloon.style.transform = '';
       balloon.style.top  = Math.max(80, vh / 2 - 120) + 'px';
       balloon.style.left = Math.max(16, vw / 2 - (balloon.offsetWidth || 320) / 2) + 'px';
@@ -9313,14 +9339,16 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       : ['top', 'bottom', 'right', 'left'];
 
     var chosen = null;
+    var _cand = pos; // §121: candidata escolhida — define data-arrow
     for (var ci = 0; ci < order.length; ci++) {
       var p = calcPos(order[ci]);
-      if (!overlaps(p.t, p.l)) { chosen = p; break; }
+      if (!overlaps(p.t, p.l)) { chosen = p; _cand = order[ci]; break; }
     }
 
     // Fallback: nenhuma candidata escapa do spotlight — elemento preenche o viewport.
     // Usa fallback conceitual (balão centralizado, spotlight zerado) em vez de sobrepôr.
     if (!chosen) {
+      balloon.removeAttribute('data-arrow'); // §121: sem seta no fallback
       balloon.style.transform = '';
       balloon.style.top  = Math.max(80, vh / 2 - 120) + 'px';
       balloon.style.left = Math.max(16, vw / 2 - bw / 2) + 'px';
@@ -9332,8 +9360,19 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     balloon.style.top  = chosen.t + 'px';
     balloon.style.left = chosen.l + 'px';
 
-    // Scroll suave para o elemento
-    try { targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e) {}
+    // §121: seta direcional — aponta do balão para o elemento iluminado
+    var _arrowDir = { bottom: 'up', top: 'down', right: 'left', left: 'right' };
+    balloon.setAttribute('data-arrow', _arrowDir[_cand] || 'up');
+    // Alinha ponta ao centro do elemento-alvo (clamped dentro do balão)
+    var _ax = Math.round(rect.left + rect.width  / 2 - chosen.l - 9);
+    var _ay = Math.round(rect.top  + rect.height / 2 - chosen.t - 9);
+    balloon.style.setProperty('--vc-arrow-x', Math.max(12, Math.min(_ax, bw - 30)) + 'px');
+    balloon.style.setProperty('--vc-arrow-y', Math.max(12, Math.min(_ay, bh - 30)) + 'px');
+
+    // Scroll suave para o elemento (omitido quando chamado pelo scroll handler)
+    if (!skipScroll) {
+      try { targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e) {}
+    }
   }
 
   // §90: mascote refs
@@ -9403,6 +9442,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     // §120: 80ms base para todos (evita entrar no meio de transições CSS do onEnter);
     // se o elemento ainda não estiver em view, retenta 1x após 200ms extra
     // (cobre o caso de SF page que não abre instantaneamente).
+    _addScrollListener(); // §121: garante listener ativo durante qualquer passo
     setTimeout(function() {
       var el = getEl(step.target);
       var r  = el ? el.getBoundingClientRect() : null;
@@ -9412,14 +9452,22 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                 && r.left > -r.width  && r.right  < _vw + r.width;
       if (!inV && el) {
         // Elemento existe mas ainda não está em view — retenta uma vez
-        setTimeout(function() { positionBalloon(getEl(step.target), step.pos); }, 200);
+        setTimeout(function() {
+          var el2 = getEl(step.target);
+          _scrollTgt = el2; _scrollHint = step.pos; // §121
+          positionBalloon(el2, step.pos);
+        }, 200);
       } else {
+        _scrollTgt = el; _scrollHint = step.pos; // §121
         positionBalloon(el, step.pos);
       }
     }, 80);
   }
 
   function closeTutorial() {
+    _removeScrollListener(); // §121: para de acompanhar scroll ao fechar
+    var _cb = document.getElementById('vcTutorialBalloon');
+    if (_cb) _cb.removeAttribute('data-arrow'); // §121: remove seta ao fechar
     if (_typeTimer) { clearInterval(_typeTimer); _typeTimer = null; }
     _setMascot('idle');
     nextBtn.disabled = false;

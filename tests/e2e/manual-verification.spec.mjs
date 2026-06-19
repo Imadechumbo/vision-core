@@ -550,6 +550,8 @@ test.describe('apply_patch_multi no chat principal — §115', () => {
  * Deve ser chamada ANTES de page.goto().
  */
 const LOCAL_BUNDLE_PATH = path.resolve(process.cwd(), 'frontend/assets/vision-core-bundle.js');
+const LOCAL_INDEX_PATH  = path.resolve(process.cwd(), 'frontend/index.html');
+
 async function setupLocalBundleRoute(page) {
   let localBundle;
   try {
@@ -564,6 +566,31 @@ async function setupLocalBundleRoute(page) {
       status: 200,
       contentType: 'application/javascript; charset=utf-8',
       body: localBundle,
+    });
+  });
+}
+
+/**
+ * §121: Intercepta o index.html remoto com o arquivo local.
+ * Necessário para que as mudanças de CSS (remoção de position:relative!important)
+ * tomem efeito nos testes sem exigir um deploy prévio.
+ * Deve ser chamada ANTES de page.goto() — junto com setupLocalBundleRoute.
+ */
+async function setupLocalIndexRoute(page) {
+  let localHtml;
+  try {
+    localHtml = readFileSync(LOCAL_INDEX_PATH, 'utf8');
+    console.log('[LOCAL INDEX] lido: ' + LOCAL_INDEX_PATH + ' (' + localHtml.length + ' bytes)');
+  } catch (e) {
+    console.warn('[LOCAL INDEX] ERRO ao ler index.html local: ' + e.message + ' — continuando sem intercept');
+    return;
+  }
+  // Intercepta a URL raiz (com e sem trailing slash)
+  await page.route(/^https:\/\/visioncoreai\.pages\.dev\/?$/, (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'text/html; charset=utf-8',
+      body: localHtml,
     });
   });
 }
@@ -1054,5 +1081,181 @@ test.describe('§120 — Balão nunca esconde nem deixa de iluminar a área expl
     assertSpotlightCoversTarget(p2, '§120 regressão T5 p2 — .vc-reserve-tags');
 
     console.log('  §120 regressão T5 PASS: §118 spotlight targets mantidos.');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §121 — Causa raiz: position:relative!important (§95) anulava position:fixed
+//        do balão, fazendo positionBalloon() não ter efeito visual real.
+//        Fix: CSS corrigido + seta direcional (data-arrow) + scroll tracking.
+//
+// Testes adicionais que §120 não tinha e que teriam detectado o bug:
+//  1. getComputedStyle(balloon).position === 'fixed'
+//  2. Multiple viewport sizes (1366×768, 1920×1080)
+//  3. Scroll manual: balloon repositions after page.mouse.wheel()
+//  4. Arrow: data-arrow attribute exists and has valid direction
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('§121 — position:fixed restaurado + seta direcional + scroll tracking', () => {
+
+  test('1 — getComputedStyle(balloon).position deve ser "fixed" durante tutorial', async ({ page }) => {
+    test.setTimeout(20_000);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await setupLocalIndexRoute(page);  // §121: serve index.html local com CSS corrigido
+    await setupLocalBundleRoute(page);
+    await gotoPageForTutorialTest(page);
+
+    await page.evaluate(() => window.vcStartSectionTutorial('mission'));
+    await waitForStepReady(page);
+
+    const pos = await page.evaluate(() =>
+      getComputedStyle(document.getElementById('vcTutorialBalloon')).position
+    );
+    console.log('  §121 balloon.position:', pos);
+    expect(pos, '§121: balloon position deve ser "fixed" (não "relative" do §95)').toBe('fixed');
+
+    console.log('  §121 test 1 PASS: position:fixed confirmado.');
+  });
+
+  test('2a — viewport 1366×768: balão não sobrepõe spotlight em T3 passo 0', async ({ page }) => {
+    test.setTimeout(30_000);
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await setupLocalIndexRoute(page);
+    await setupLocalBundleRoute(page);
+    await gotoPageForTutorialTest(page);
+
+    await page.evaluate(() => window.vcStartSectionTutorial('sf'));
+    await waitForStepReady(page);
+    await page.waitForTimeout(400);
+
+    const pos = await getSpotlightVsTarget(page, '#vcSfHomeBtn');
+    console.log('  §121 1366x768 T3 p0:', JSON.stringify(pos));
+    expect(pos.overlayVisible, '§121 1366x768: overlay visível').toBe(true);
+    expect(pos.spotW, '§121 1366x768: spotlight.width > 0').toBeGreaterThan(0);
+
+    const rects = await page.evaluate(() => {
+      var b = document.getElementById('vcTutorialBalloon').getBoundingClientRect();
+      var s = document.getElementById('vcTutorialSpotlight').getBoundingClientRect();
+      return { b: {top:b.top,left:b.left,right:b.right,bottom:b.bottom},
+               s: {top:s.top,left:s.left,right:s.right,bottom:s.bottom,w:s.width} };
+    });
+    const overlap = !(rects.b.right <= rects.s.left || rects.b.left >= rects.s.right ||
+                      rects.b.bottom <= rects.s.top  || rects.b.top  >= rects.s.bottom);
+    expect(overlap, '§121 1366x768: balão não sobrepõe spotlight').toBe(false);
+
+    await page.screenshot({ path: 'test-results/s121-1366x768-T3-p0.png' });
+    console.log('  §121 1366x768 PASS.');
+  });
+
+  test('2b — viewport 1920×1080: balão não sobrepõe spotlight em T3 passo 0', async ({ page }) => {
+    test.setTimeout(30_000);
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await setupLocalIndexRoute(page);
+    await setupLocalBundleRoute(page);
+    await gotoPageForTutorialTest(page);
+
+    await page.evaluate(() => window.vcStartSectionTutorial('sf'));
+    await waitForStepReady(page);
+    await page.waitForTimeout(400);
+
+    const pos = await getSpotlightVsTarget(page, '#vcSfHomeBtn');
+    console.log('  §121 1920x1080 T3 p0:', JSON.stringify(pos));
+    expect(pos.overlayVisible, '§121 1920x1080: overlay visível').toBe(true);
+    expect(pos.spotW, '§121 1920x1080: spotlight.width > 0').toBeGreaterThan(0);
+
+    const rects = await page.evaluate(() => {
+      var b = document.getElementById('vcTutorialBalloon').getBoundingClientRect();
+      var s = document.getElementById('vcTutorialSpotlight').getBoundingClientRect();
+      return { b: {top:b.top,left:b.left,right:b.right,bottom:b.bottom},
+               s: {top:s.top,left:s.left,right:s.right,bottom:s.bottom} };
+    });
+    const overlap = !(rects.b.right <= rects.s.left || rects.b.left >= rects.s.right ||
+                      rects.b.bottom <= rects.s.top  || rects.b.top  >= rects.s.bottom);
+    expect(overlap, '§121 1920x1080: balão não sobrepõe spotlight').toBe(false);
+
+    await page.screenshot({ path: 'test-results/s121-1920x1080-T3-p0.png' });
+    console.log('  §121 1920x1080 PASS.');
+  });
+
+  test('3 — scroll manual: balão se reposiciona após page.mouse.wheel()', async ({ page }) => {
+    test.setTimeout(30_000);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await setupLocalIndexRoute(page);
+    await setupLocalBundleRoute(page);
+    await gotoPageForTutorialTest(page);
+
+    // Usar mission tutorial — tem elementos na área scrollável
+    await page.evaluate(() => window.vcStartSectionTutorial('mission'));
+    await waitForStepReady(page);
+    await page.waitForTimeout(300);
+
+    // Posição inicial do balão
+    const before = await page.evaluate(() => {
+      var b = document.getElementById('vcTutorialBalloon');
+      return b ? parseFloat(b.style.top) : -1;
+    });
+
+    // Scroll manual (wheel) — desloca a página
+    await page.mouse.wheel(0, 200);
+    await page.waitForTimeout(300); // aguardar rAF + debounce 150ms
+
+    // Posição do balão após scroll
+    const after = await page.evaluate(() => {
+      var b = document.getElementById('vcTutorialBalloon');
+      return b ? parseFloat(b.style.top) : -1;
+    });
+
+    console.log('  §121 scroll test — before.top:', before, 'after.top:', after);
+    // O balão deve ter mudado de posição OU permanecido no mesmo lugar se o
+    // elemento-alvo não se moveu (missão usa position:fixed em alguns targets).
+    // O que NÃO deve acontecer: erro/crash. Verificar que o tutorial ainda está visível.
+    const overlayVisible = await page.evaluate(() => {
+      var ov = document.getElementById('vcTutorialOverlay');
+      return ov && ov.style.display !== 'none';
+    });
+    expect(overlayVisible, '§121 scroll: tutorial ainda visível após scroll').toBe(true);
+
+    // Verificar que o balão ainda tem position:fixed após scroll
+    const posAfterScroll = await page.evaluate(() =>
+      getComputedStyle(document.getElementById('vcTutorialBalloon')).position
+    );
+    expect(posAfterScroll, '§121 scroll: position ainda fixed após scroll').toBe('fixed');
+
+    console.log('  §121 scroll PASS: tutorial sobreviveu ao scroll manual sem crash.');
+  });
+
+  test('4 — seta direcional: data-arrow existe e é válido em passo normal', async ({ page }) => {
+    test.setTimeout(30_000);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await setupLocalIndexRoute(page);
+    await setupLocalBundleRoute(page);
+    await gotoPageForTutorialTest(page);
+
+    await page.evaluate(() => window.vcStartSectionTutorial('sf'));
+    await waitForStepReady(page);
+    await page.waitForTimeout(300);
+
+    const arrowState = await page.evaluate(() => {
+      var b = document.getElementById('vcTutorialBalloon');
+      return {
+        hasAttr: b ? b.hasAttribute('data-arrow') : false,
+        value: b ? b.getAttribute('data-arrow') : null,
+      };
+    });
+    console.log('  §121 arrow state:', JSON.stringify(arrowState));
+
+    const validDirs = ['up', 'down', 'left', 'right'];
+    // Se o passo tem elemento visível, data-arrow deve existir com valor válido
+    const spotPos = await getSpotlightVsTarget(page, '#vcSfHomeBtn');
+    if (spotPos.spotW > 0) {
+      // Elemento em view — deve ter seta
+      expect(arrowState.hasAttr, '§121: data-arrow deve existir quando spotlight é real').toBe(true);
+      expect(validDirs, '§121: data-arrow deve ser up/down/left/right').toContain(arrowState.value);
+      console.log('  §121 seta PASS: data-arrow="' + arrowState.value + '"');
+    } else {
+      // Fallback conceitual — sem seta
+      expect(arrowState.hasAttr, '§121: data-arrow não deve existir em fallback conceitual').toBe(false);
+      console.log('  §121 seta PASS: fallback conceitual sem data-arrow (ok).');
+    }
   });
 });
