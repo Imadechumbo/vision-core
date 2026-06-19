@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-19 (§121)
+## Documento central do projeto | Atualizado: 2026-06-19 (§122-investigacao)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -212,6 +212,8 @@ FREE_MISSION_LIMIT=5
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
 **Status: §121 implementado, testado (18/18 Playwright) e deployado em produção (commit dc27005, CF Pages ao vivo).**
+
+**§122 (investigação, sem código novo):** humano reportou dois screenshots do accordion "🪐 Tutoriais" mostrando o que parecia ser inconsistência visual entre os itens "◉ Geral"/"🖥 Agent local" e os outros 4. Investigação com `getComputedStyle` nos 6 itens (`#vcTutPanel .vc-tut-item`) confirmou que todos têm exatamente o mesmo CSS computado (color, fontSize, fontWeight, padding, opacity). O HTML também é idêntico — todos usam apenas `class="vc-tut-item"` sem modificadores. Diagnóstico: os dois prints eram DOIS RECORTES da mesma lista em posições de scroll diferentes (print 1 = itens 3-6, print 2 = itens 1-2 + cabeçalho). A diferença visual percebida pelo humano vem do rendering de Unicode — `◉` (U+25C9) e `◎` (U+25CE) e `◈` (U+25C8) são símbolos geométricos que rendem diferente de emoji como `🏅`/`🤖` — isso é comportamento esperado do font stack, não bug de CSS. Nenhum código alterado. Suite 18/18 confirmada após investigação.
 
 **Próximo item:** não há próximo item combinado com o humano — mesmo padrão do fim das sessões anteriores. Próxima sessão precisa de conversa nova sobre prioridade. Não há "Etapa G" definida no roadmap.
 
