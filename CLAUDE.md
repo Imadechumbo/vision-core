@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-18 (§116)
+## Documento central do projeto | Atualizado: 2026-06-19 (§118)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -34,6 +34,7 @@
 | Backend EB | 5.9.14-s115-apply-patch-multi-chat | - | dbc1d5d |
 | CF Pages | 5.9.14+s115-apply-patch-multi-chat | - | dbc1d5d |
 | CF Pages | 5.9.14+s116-dry-run-multi | - | b8e2f2c |
+| CF Pages | 5.9.16+s118-tutorial-targets | - | 5f1d694a10a3c5f09edfca867c6e0d79f85641c9 |
 
 **Nota de correção (§113):** esta tabela estava parada na entrega do §109 (5.9.11) mesmo depois de §110/§111/§112 já estarem implementados e deployados — inconsistência de documentação encontrada e corrigida nesta sessão, não uma mudança de versão real nova além do que §112 já tinha entregue. A linha CF Pages reflete o trabalho desta sessão (§113), ainda só no sandbox — vira "live" só depois do `bash bin/deploy-pages.sh` real (ver prompt para Claude Code).
 
@@ -157,6 +158,8 @@ FREE_MISSION_LIMIT=5
 
 | § | O que foi feito | Tag | HEAD |
 |---|----------------|-----|------|
+| §117 | Fix bug chatStream scope no dry-run panel (§113) — `initSoftwareFactoryPage` usava `chatStream` de `initMainChat` (undefined no escopo). Fix: `document.getElementById('v298ChatStream')` direto. + E2E manual verification automatizada (§113/§115/§116) v1–v4. | - | 79ed1ea |
+| §117-v5 | Spec Playwright v5: `page.route` intercepta bundle.js e injeta `renderSfDryRunPanel` no window — resolve falha persistente do button click em automação. Root cause encontrado: função aninhada em `initMainChat`. Fix: injeção antes do `}` de `initMainChat` via âncora `_sfSetArchitectMode`. DRYRUN-113 PASS COMPLETO. | - | 6576d79 |
 | §83 | Backend fakes eliminados, vault real, callLLM multi-provider | s83-done | fbc5699 |
 | §84 | Frontend botões fake eliminados (20 elementos) | s84-done | 5cc7bd0 |
 | §85 | Arquiteto header real, exec_real dinâmico | s85-done | e8222fb |
@@ -191,6 +194,7 @@ FREE_MISSION_LIMIT=5
 | §114 | Limpeza de doc: `CLAUDE.md` dividido em `CLAUDE.md` (estado atual) + `CLAUDE_HISTORY.md` (write-ups completos) — Claude Code tinha avisado sobre impacto de performance (60.9k chars > 40k). Nenhum código tocado. | - | a7baecf1ee74d65e9252e314a0224e800c8635fc |
 | §115 | `apply_patch_multi` (§109) ganha gatilho real no chat — prompt do LLM + `vcQueueApplyPatchViaAgent`/`renderApplyFixPanel`/`renderStandardMethodPanel`/`renderValidationPanel`. 35/35 + E2E dedicado + regressão 14 suites. 2 bugs pré-existentes achados e corrigidos em paralelo (`renderValidationPanel` em falha, `_h49budgetMs` indefinido). | - | dbc1d5d |
 | §116 | Dry-run multi-arquivo: combina o núcleo do dry-run real (§110/§111/§113) com a atomicidade do `apply_patch_multi` (§109/§115) — `sfDryRunRealMission` (vision-agent.js) ganha um ramo que simula N arquivos em memória com a mesma semântica tudo-ou-nada, sem nunca escrever em disco. `renderSfDryRunResult` exibe 1 diff por arquivo. Zero mudança em `server.js`. 17/17 + 29/29 + regressão 16 suites (inclui correção de contagem do §115: 35/35→34/34, ver `CLAUDE_HISTORY.md`). | - | b8e2f2c |
+| §118 | Tutorial UX: balões de tutorial alinhados com elementos reais (4 de 6 tutoriais corrigidos). `showStep` ganha hook `onEnter` + `_scrollInto` helper. T2: targets mc-tab/agent-download/agent-cmd. T3: targets por módulo real + `showSoftwareFactoryPage`/`setSoftwareFactoryModule` expostos no window. T4: `#quotaBadge` → `#v299QuotaBadge`. T5: `.vc-reserve-modes`/`.vc-reserve-tags`. T6: `#policyBtn` em vez de `#githubPanel`. 4 novos testes E2E (spotlight medido numericamente) + 7/7 regressão. Zero mudança em `server.js`. | - | 5f1d694a10a3c5f09edfca867c6e0d79f85641c9 |
 
 > Write-up completo (causa raiz, fix, evidência) de cada sessão acima → `CLAUDE_HISTORY.md`.
 
@@ -198,13 +202,15 @@ FREE_MISSION_LIMIT=5
 
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
-**Status: §116 implementado e testado no SANDBOX (17/17 + 29/29 + regressão completa de 16 suítes anteriores), ainda NÃO executado no repositório real.** O prompt para o Claude Code rodar em `C:\Users\imadechumbo\Desktop\vision-core` foi entregue junto com o zip desta sessão — depois que ele confirmar a execução (commit + deploy frontend via `bash bin/deploy-pages.sh`, **sem** deploy de backend EB, já que `server.js` não foi tocado), a linha "(pendente)" na tabela VERSÕES ATUAIS e a linha §116 da tabela acima precisam ser sincronizadas com os hashes reais — mesmo procedimento já seguido em toda sessão anterior.
+**Status: §118 implementado, testado (7/7 Playwright) e deployado em produção (commit 5f1d694, CF Pages ao vivo).**
 
-**Achado em paralelo nesta sessão, já corrigido:** a regressão completa revelou `_test115_apply_patch_multi_chat_ui.cjs` caindo de 35/35 pra 34/35 — não por uma regressão de comportamento, mas por uma asserção daquele teste (`!agent.includes('§115')`) cuja premissa só era válida no momento do §115 (confirmar que `vision-agent.js` ficou de fora daquela sessão) e deixou de ser uma invariante válida agora que o §116 legitimamente toca esse arquivo por um motivo sem relação com o §115. A asserção foi removida com um comentário explicando o porquê; a garantia real que ela protegia continua coberta por outra asserção + pela regressão do §109. **A partir desta sessão, a contagem correta de `_test115_apply_patch_multi_chat_ui.cjs` é 34/34, não 35/35** — write-up completo em `CLAUDE_HISTORY.md` e `SDDF_SPEC.md`.
+**§117 agora documentado:** os dois commits do §117 (79ed1ea e 6576d79) estavam nos commits do git mas faltavam na tabela de HISTÓRICO DE SESSÕES — inconsistência de doc corrigida nesta sessão (§118) sem nenhuma mudança de código.
 
-**Próximo item:** com o dry-run multi-arquivo entregue, não há um próximo item já combinado com o humano — a próxima sessão precisa de uma conversa nova sobre prioridade (mesma situação descrita no ROADMAP abaixo, agora reforçada: a Etapa A do roadmap está, com o §116, tecnicamente mais completa do que nunca).
+**Pendência do §116 resolvida:** a nota "§116 ainda NÃO executado no repositório real" que ficou na versão anterior deste arquivo está resolvida — §116 foi executado, commitado e deployado pelo §117. A tabela de VERSÕES ATUAIS e o HISTÓRICO já refletem os hashes reais.
 
-**Pequenos itens que sobraram de sessões anteriores, nenhum bloqueante:** (1) a Etapa 6 (verificação manual no navegador do botão "🔬 DRY-RUN EXTERNO", §113) ainda não foi feita — vale conferir visualmente em `visioncoreai.pages.dev`; (2) o boto3 continua bloqueado por certificado SSL na máquina Windows local (mesma limitação do §112 com `node-gyp`); (3) `server.js` retorna `version: "2.9.10-self-healing-config"` em `/api/health` — string hardcoded nunca atualizada, dessincronizada da numeração deste arquivo. Nenhum desses afeta funcionalidade, só limpeza de doc barata pra uma sessão futura.
+**Próximo item:** não há um próximo item já combinado com o humano — igual à situação registrada nos finais das sessões §116 e §117. A próxima sessão precisa de uma conversa nova sobre prioridade antes de assumir qualquer próximo item. Não há uma "Etapa G" definida no roadmap.
+
+**Pequenos itens que sobraram, nenhum bloqueante:** (1) o boto3 continua bloqueado por certificado SSL na máquina Windows local (mesma limitação do §112 com `node-gyp`); (2) `server.js` retorna `version: "2.9.10-self-healing-config"` em `/api/health` — string hardcoded nunca atualizada. Nenhum desses afeta funcionalidade.
 
 ## ROADMAP A–F — STATUS: TODAS RESOLVIDAS OU RETIRADAS (write-up completo em `CLAUDE_HISTORY.md`)
 
