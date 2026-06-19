@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-19 (§118)
+## Documento central do projeto | Atualizado: 2026-06-19 (§119)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -35,6 +35,7 @@
 | CF Pages | 5.9.14+s115-apply-patch-multi-chat | - | dbc1d5d |
 | CF Pages | 5.9.14+s116-dry-run-multi | - | b8e2f2c |
 | CF Pages | 5.9.16+s118-tutorial-targets | - | 5f1d694a10a3c5f09edfca867c6e0d79f85641c9 |
+| CF Pages | 5.9.17+s119-tutorial-menu-fix | - | 90020b266e052eac61fbf9d3c6823a221229c6e8 |
 
 **Nota de correção (§113):** esta tabela estava parada na entrega do §109 (5.9.11) mesmo depois de §110/§111/§112 já estarem implementados e deployados — inconsistência de documentação encontrada e corrigida nesta sessão, não uma mudança de versão real nova além do que §112 já tinha entregue. A linha CF Pages reflete o trabalho desta sessão (§113), ainda só no sandbox — vira "live" só depois do `bash bin/deploy-pages.sh` real (ver prompt para Claude Code).
 
@@ -137,6 +138,7 @@
 6. **Mascote** — `mascote-idle-final.png` (sorridente) e `mascote-reading-final.png` (óculos+livro) em `frontend/assets/`
 7. **Balão tutorial** — fundo `#000000` preto puro, texto `#f1f5f9` branco
 8. **FREE limit** — 5 missões/mês enforced via `checkMissionQuota` middleware em `/api/copilot` e `/api/run-live`
+9. **Guards de localStorage em IIFEs de tutorial** — guards que controlam "auto-abrir uma vez" devem envolver APENAS o bloco de auto-trigger, não a definição de infraestrutura compartilhada (funções expostas no window, event listeners). Caso contrário, qualquer feature que dependa dessas funções fica silenciosamente quebrada quando a flag estiver setada. (§119 — descoberto com o menu "🪐 Tutoriais".)
 
 ---
 
@@ -195,6 +197,7 @@ FREE_MISSION_LIMIT=5
 | §115 | `apply_patch_multi` (§109) ganha gatilho real no chat — prompt do LLM + `vcQueueApplyPatchViaAgent`/`renderApplyFixPanel`/`renderStandardMethodPanel`/`renderValidationPanel`. 35/35 + E2E dedicado + regressão 14 suites. 2 bugs pré-existentes achados e corrigidos em paralelo (`renderValidationPanel` em falha, `_h49budgetMs` indefinido). | - | dbc1d5d |
 | §116 | Dry-run multi-arquivo: combina o núcleo do dry-run real (§110/§111/§113) com a atomicidade do `apply_patch_multi` (§109/§115) — `sfDryRunRealMission` (vision-agent.js) ganha um ramo que simula N arquivos em memória com a mesma semântica tudo-ou-nada, sem nunca escrever em disco. `renderSfDryRunResult` exibe 1 diff por arquivo. Zero mudança em `server.js`. 17/17 + 29/29 + regressão 16 suites (inclui correção de contagem do §115: 35/35→34/34, ver `CLAUDE_HISTORY.md`). | - | b8e2f2c |
 | §118 | Tutorial UX: balões de tutorial alinhados com elementos reais (4 de 6 tutoriais corrigidos). `showStep` ganha hook `onEnter` + `_scrollInto` helper. T2: targets mc-tab/agent-download/agent-cmd. T3: targets por módulo real + `showSoftwareFactoryPage`/`setSoftwareFactoryModule` expostos no window. T4: `#quotaBadge` → `#v299QuotaBadge`. T5: `.vc-reserve-modes`/`.vc-reserve-tags`. T6: `#policyBtn` em vez de `#githubPanel`. 4 novos testes E2E (spotlight medido numericamente) + 7/7 regressão. Zero mudança em `server.js`. | - | 5f1d694a10a3c5f09edfca867c6e0d79f85641c9 |
+| §119 | Fix bug: menu "🪐 Tutoriais" sidebar não respondia a clique para usuários recorrentes. Causa: guard `vc_tutorial_done` no topo do IIFE bloqueava definição de `window._vcSetActiveTutorial`. Fix: guard movido para apenas o bloco de auto-start do T1. Achado secundário corrigido: `closeTutorial` agora grava em `_activeStorageKey` (chave do tutorial ativo) em vez de `vc_tutorial_done` hardcoded — tutoriais de seção persistem na própria chave. 3 novos testes determinísticos + 10/10 regressão. Zero mudança em `server.js`. | - | 90020b266e052eac61fbf9d3c6823a221229c6e8 |
 
 > Write-up completo (causa raiz, fix, evidência) de cada sessão acima → `CLAUDE_HISTORY.md`.
 
@@ -208,7 +211,7 @@ FREE_MISSION_LIMIT=5
 
 **Pendência do §116 resolvida:** a nota "§116 ainda NÃO executado no repositório real" que ficou na versão anterior deste arquivo está resolvida — §116 foi executado, commitado e deployado pelo §117. A tabela de VERSÕES ATUAIS e o HISTÓRICO já refletem os hashes reais.
 
-**Próximo item:** não há um próximo item já combinado com o humano — igual à situação registrada nos finais das sessões §116 e §117. A próxima sessão precisa de uma conversa nova sobre prioridade antes de assumir qualquer próximo item. Não há uma "Etapa G" definida no roadmap.
+**Próximo item:** não há um próximo item já combinado com o humano — igual ao fim das sessões §116/§117/§118/§119. Próxima sessão precisa de conversa nova sobre prioridade. Não há "Etapa G" definida no roadmap.
 
 **Pequenos itens que sobraram, nenhum bloqueante:** (1) o boto3 continua bloqueado por certificado SSL na máquina Windows local (mesma limitação do §112 com `node-gyp`); (2) `server.js` retorna `version: "2.9.10-self-healing-config"` em `/api/health` — string hardcoded nunca atualizada. Nenhum desses afeta funcionalidade.
 
