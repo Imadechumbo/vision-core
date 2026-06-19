@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-19 (§120)
+## Documento central do projeto | Atualizado: 2026-06-19 (§121)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -37,6 +37,7 @@
 | CF Pages | 5.9.16+s118-tutorial-targets | - | 5f1d694a10a3c5f09edfca867c6e0d79f85641c9 |
 | CF Pages | 5.9.17+s119-tutorial-menu-fix | - | 90020b266e052eac61fbf9d3c6823a221229c6e8 |
 | CF Pages | 5.9.18+s120-balloon-geometry-fix | - | 4e3e0b6 |
+| CF Pages | 5.9.19+s121-position-fixed-restore | - | dc27005 |
 
 **Nota de correção (§113):** esta tabela estava parada na entrega do §109 (5.9.11) mesmo depois de §110/§111/§112 já estarem implementados e deployados — inconsistência de documentação encontrada e corrigida nesta sessão, não uma mudança de versão real nova além do que §112 já tinha entregue. A linha CF Pages reflete o trabalho desta sessão (§113), ainda só no sandbox — vira "live" só depois do `bash bin/deploy-pages.sh` real (ver prompt para Claude Code).
 
@@ -141,6 +142,7 @@
 8. **FREE limit** — 5 missões/mês enforced via `checkMissionQuota` middleware em `/api/copilot` e `/api/run-live`
 9. **Guards de localStorage em IIFEs de tutorial** — guards que controlam "auto-abrir uma vez" devem envolver APENAS o bloco de auto-trigger, não a definição de infraestrutura compartilhada (funções expostas no window, event listeners). Caso contrário, qualquer feature que dependa dessas funções fica silenciosamente quebrada quando a flag estiver setada. (§119 — descoberto com o menu "🪐 Tutoriais".)
 10. **Geometria de overlay/spotlight exige teste visual (screenshot), não só verificação de seletor** — `positionBalloon` garante "spotlight está sobre o elemento certo" (verificável com `getBoundingClientRect`), mas "balão não esconde o elemento" e "spotlight não some quando onEnter demora" só foram pegos com screenshots reais de produção (§120). Testes de tutorial devem incluir `rectsOverlap(balloon, spotlight) === false` além de `assertSpotlightCoversTarget`. (§120 — dois bugs independentes detectados só por olho humano em produção.)
+11. **CSS `!important` sobre `position`/`top`/`left`/`transform` de elementos manipulados via JS é risco de classe alta** — qualquer regra CSS com `!important` sobre essas propriedades pode silenciosamente anular todo o cálculo de posicionamento em JavaScript, enquanto os testes continuam passando (porque leem o resultado pós-CSS, não a intenção do JS). Antes de adicionar qualquer `!important` futuro nessas propriedades em elementos de overlay/tooltip/tutorial, auditar contra `positionBalloon()` ou qualquer outro código que use `.style.top`/`.style.left` no mesmo elemento. Teste de segurança: `getComputedStyle(el).position === 'fixed'` (ou o valor esperado) deve ser parte dos testes de qualquer passo de tutorial. (§121 — bug criado em §95, detectado só em §121 após uma sessão inteira §120 de fixes que não tiveram efeito visual.)
 
 ---
 
@@ -201,6 +203,7 @@ FREE_MISSION_LIMIT=5
 | §118 | Tutorial UX: balões de tutorial alinhados com elementos reais (4 de 6 tutoriais corrigidos). `showStep` ganha hook `onEnter` + `_scrollInto` helper. T2: targets mc-tab/agent-download/agent-cmd. T3: targets por módulo real + `showSoftwareFactoryPage`/`setSoftwareFactoryModule` expostos no window. T4: `#quotaBadge` → `#v299QuotaBadge`. T5: `.vc-reserve-modes`/`.vc-reserve-tags`. T6: `#policyBtn` em vez de `#githubPanel`. 4 novos testes E2E (spotlight medido numericamente) + 7/7 regressão. Zero mudança em `server.js`. | - | 5f1d694a10a3c5f09edfca867c6e0d79f85641c9 |
 | §119 | Fix bug: menu "🪐 Tutoriais" sidebar não respondia a clique para usuários recorrentes. Causa: guard `vc_tutorial_done` no topo do IIFE bloqueava definição de `window._vcSetActiveTutorial`. Fix: guard movido para apenas o bloco de auto-start do T1. Achado secundário corrigido: `closeTutorial` agora grava em `_activeStorageKey` (chave do tutorial ativo) em vez de `vc_tutorial_done` hardcoded — tutoriais de seção persistem na própria chave. 3 novos testes determinísticos + 10/10 regressão. Zero mudança em `server.js`. | - | 90020b266e052eac61fbf9d3c6823a221229c6e8 |
 | §120 | Fix de geometria em `positionBalloon`: (Print 1) balão sobrepunha o spotlight quando elemento-alvo era largo — fix testa 4 posições candidatas, para alvos largos ancora na borda em vez de centralizar, quando todas colide usa fallback conceitual (spotlight zerado, balão centralizado). (Print 2) spotlight zerava silenciosamente quando onEnter não renderizava em 80ms — showStep retenta 1x após 200ms se inView===false. Dois bugs detectados via screenshots reais de produção enviados pelo usuário, não por inspeção de código. 13/13 testes (3 novos + regressão §118/§119 completa). Zero mudança em `server.js`. | - | 4e3e0b6 |
+| §121 | Causa raiz real do §120: `.vc-tutorial-balloon{position:relative!important}` (§95, index.html) sobrescrevia `position:fixed` — `positionBalloon()` calculava `top/left` corretos mas o navegador os interpretava como offset do fluxo HTML, não coordenadas na viewport. Testes do §120 passavam porque `getBoundingClientRect()` retorna posição após CSS aplicar os offsets, e em 1280x900 a posição final não colidia, mas colide em produção. Fix: remover regra §95 (position:fixed já cria containing block para filhos absolute — regra nunca foi necessária) + seta direcional triangular CSS puro (`data-arrow` + `::before/::after`) + scroll listener rAF que reposiciona o balão durante scroll manual. Novo teste crítico: `getComputedStyle(balloon).position==='fixed'` — teria pego o bug no §120. 18/18 testes (5 novos: position check, 2 viewports, scroll, seta + regressão). Zero mudança em `server.js`. | - | dc27005 |
 
 > Write-up completo (causa raiz, fix, evidência) de cada sessão acima → `CLAUDE_HISTORY.md`.
 
@@ -208,9 +211,11 @@ FREE_MISSION_LIMIT=5
 
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
-**Status: §120 implementado, testado (13/13 Playwright) e deployado em produção (commit 4e3e0b6, CF Pages ao vivo).**
+**Status: §121 implementado, testado (18/18 Playwright) e deployado em produção (commit dc27005, CF Pages ao vivo).**
 
-**Próximo item:** não há um próximo item já combinado com o humano — mesmo padrão do fim de §116/§117/§118/§119/§120. Próxima sessão precisa de conversa nova sobre prioridade. Não há "Etapa G" definida no roadmap.
+**Próximo item:** não há próximo item combinado com o humano — mesmo padrão do fim das sessões anteriores. Próxima sessão precisa de conversa nova sobre prioridade. Não há "Etapa G" definida no roadmap.
+
+**Nota §121 → próxima sessão:** features visuais com overlay/tutorial que foram consertadas precisam de confirmação visual real em produção pelo humano antes de serem declaradas resolvidas — a sequência §120+§121 mostrou que "testes passando" não garantiu "funciona em produção" quando CSS e JS se contradizem.
 
 **Pequenos itens que sobraram, nenhum bloqueante:** (1) o boto3 continua bloqueado por certificado SSL na máquina Windows local (mesma limitação do §112 com `node-gyp`); (2) `server.js` retorna `version: "2.9.10-self-healing-config"` em `/api/health` — string hardcoded nunca atualizada. Nenhum desses afeta funcionalidade.
 
