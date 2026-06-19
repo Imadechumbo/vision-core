@@ -9200,7 +9200,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
 /* ── §89 TUTORIAL INTERATIVO ── */
 (function initTutorial() {
-  try { if (localStorage.getItem('vc_tutorial_done') === '1') return; } catch(e) {}
+  // §119: guard removido do topo — só controlava o auto-start do T1, mas bloqueava
+  // toda a infraestrutura (window._vcSetActiveTutorial etc.) de ser definida.
+  // Consequência: após o usuário ver o T1 uma vez, clicar em qualquer item do menu
+  // "🪐 Tutoriais" não fazia nada (window._vcSetActiveTutorial era undefined).
+  // O guard foi movido para antes do setTimeout de auto-start, mais abaixo.
 
   var STEPS = [
     { id:'welcome',  title:'👋 Bem-vindo ao Vision Core!',          text:'Este é um sistema autônomo de desenvolvimento com IA. Ele detecta erros, corrige código, valida e cria PRs no GitHub automaticamente. Vamos mostrar tudo em 12 passos rápidos.',                                                        target:'.premium-logo',       pos:'bottom' },
@@ -9219,6 +9223,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   ];
 
   var current = 0;
+  // §119: chave de storage do tutorial ativo — T1 usa 'vc_tutorial_done', tutoriais
+  // de seção usam suas chaves próprias. Atualizada por _vcSetActiveTutorial.
+  var _activeStorageKey = 'vc_tutorial_done';
   var overlay   = document.getElementById('vcTutorialOverlay');
   var spotlight = document.getElementById('vcTutorialSpotlight');
   var titleEl   = document.getElementById('vcTutorialTitle');
@@ -9363,7 +9370,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     nextBtn.disabled = false;
     overlay.style.display = 'none';
     overlay.classList.remove('active');
-    try { if (noShowCb && noShowCb.checked) localStorage.setItem('vc_tutorial_done', '1'); } catch(e) {}
+    // §119: usa _activeStorageKey em vez de 'vc_tutorial_done' hardcoded —
+    // tutoriais de seção gravam na chave certa (ex: 'vc_tutorial_sf_done').
+    try { if (noShowCb && noShowCb.checked) localStorage.setItem(_activeStorageKey, '1'); } catch(e) {}
+    _activeStorageKey = 'vc_tutorial_done'; // reset para default após fechar
   }
 
   if (nextBtn) nextBtn.addEventListener('click', function() {
@@ -9383,11 +9393,19 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     if (overlay.style.display !== 'none') showStep(current);
   });
 
-  setTimeout(function() {
-    overlay.style.display = 'block';
-    overlay.classList.add('active');
-    showStep(0);
-  }, 1500);
+  // §119: guard movido para cá — controla APENAS o auto-start do T1.
+  // A infraestrutura (window._vcSetActiveTutorial, etc.) fica sempre disponível.
+  try {
+    if (localStorage.getItem('vc_tutorial_done') !== '1') {
+      setTimeout(function() {
+        overlay.style.display = 'block';
+        overlay.classList.add('active');
+        showStep(0);
+      }, 1500);
+    }
+  } catch(e) {
+    // localStorage indisponível (privado/bloqueado) — não auto-abre, silencioso
+  }
 
   window.vcStartTutorial = function() {
     try { localStorage.removeItem('vc_tutorial_done'); } catch(e) {}
@@ -9406,10 +9424,13 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   }
 
   // §T2: expor setter para tutoriais de seção reutilizarem overlay/mascote do T1
-  window._vcSetActiveTutorial = function(stepsArr) {
+  // §119: aceita storageKey para persistência por tutorial de seção
+  window._vcSetActiveTutorial = function(stepsArr, storageKey) {
     if (_typeTimer) { clearInterval(_typeTimer); _typeTimer = null; }
     STEPS   = stepsArr;
     current = 0;
+    // §119: atualiza chave ativa — closeTutorial gravará na chave certa
+    _activeStorageKey = storageKey || 'vc_tutorial_done';
     overlay.style.display = 'block';
     overlay.classList.add('active');
     showStep(0);
@@ -9428,7 +9449,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var t = window.vcTutorials[name];
     if (!t) { console.warn('[Vision] Tutorial não encontrado:', name); return; }
     if (typeof window._vcSetActiveTutorial === 'function') {
-      window._vcSetActiveTutorial(t.steps);
+      // §119: passa t.key para que closeTutorial grave na chave certa do tutorial
+      window._vcSetActiveTutorial(t.steps, t.key);
     } else {
       console.warn('[Vision] _vcSetActiveTutorial não disponível');
     }

@@ -645,6 +645,12 @@
           <div style="font-size:11px;color:#64748b">— §118, E2E Playwright 7/7 pass (4 novos testes de tutorial + regressão completa), PASS</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔇</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Clicar em qualquer item do menu 🪐 Tutoriais da sidebar não fazia absolutamente nada — sem animação, sem erro, sem mensagem — para a maioria dos usuários recorrentes (qualquer um que tivesse visto o tutorial geral pelo menos uma vez). A causa: um guard de 'não exibir o tutorial de novo' ficava no topo do IIFE inteiro, bloqueando não só o auto-start do tutorial geral mas toda a infraestrutura compartilhada de overlay e balão. Quando o guard disparava, <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>window._vcSetActiveTutorial</code> nunca era definida — e ela é exatamente o que os menus de seção precisam para funcionar. O fix foi mover o guard para dentro do bloco de auto-start do T1 (as 4 linhas do <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>setTimeout</code>), deixando toda a infraestrutura ser inicializada independente do histórico do localStorage. Em paralelo, a persistência por tutorial de seção estava igualmente quebrada: fechar qualquer tutorial de seção com 'não exibir novamente' marcado gravava na chave do tutorial geral (<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>vc_tutorial_done</code>) em vez da chave específica da seção — corrigido pela mesma refatoração."</div>
+          <div style="font-size:11px;color:#64748b">— §119, E2E Playwright 10/10 pass (3 novos testes determinísticos de DOM/localStorage + regressão completa), PASS</div>
+        </div>
+
       </div>
     </div>
 

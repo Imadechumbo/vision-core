@@ -790,3 +790,145 @@ test.describe('§118 — Tutorial: balões alinhados com elementos reais (T2/T3/
     console.log('  T6 PASS: #policyBtn iluminado (w=' + Math.round(p4.spotW) + 'px), não o painel inteiro.');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §119 — Menu de tutoriais funciona mesmo após vc_tutorial_done=1
+//
+// Testes determinísticos de DOM/localStorage — sem chamadas de LLM.
+// Causa raiz: guard `if (vc_tutorial_done==='1') return` bloqueava a definição
+// de window._vcSetActiveTutorial, que os itens do accordion precisam.
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('§119 — Menu de tutoriais funciona mesmo após vc_tutorial_done=1', () => {
+
+  /**
+   * Navega com vc_tutorial_done=1 no localStorage (reproduz usuário recorrente).
+   * Usa bundle local (com §119 fix) e NÃO suprime via gotoPage para poder verificar
+   * que o overlay inicializa corretamente.
+   */
+  async function gotoAsReturningUser(page) {
+    // Seta a flag ANTES do goto via addInitScript (roda antes do JS da página)
+    await page.addInitScript(() => {
+      try { localStorage.setItem('vc_tutorial_done', '1'); } catch(e) {}
+    });
+    await page.goto(BASE_URL);
+    await page.waitForLoadState('networkidle', { timeout: 20_000 });
+    // _vcSetActiveTutorial deve existir mesmo com vc_tutorial_done=1 (§119 fix)
+    await page.waitForFunction(
+      () => typeof window._vcSetActiveTutorial === 'function',
+      {},
+      { timeout: 5_000 }
+    );
+  }
+
+  test('1 — Bug reproduzido+corrigido: vcStartSectionTutorial funciona com vc_tutorial_done=1', async ({ page }) => {
+    test.setTimeout(30_000);
+    await setupLocalBundleRoute(page);
+    await gotoAsReturningUser(page);
+
+    // Clicar no accordion para abrir o painel
+    await clickJS(page, '#vcTutMenuBtn');
+    await page.waitForTimeout(200);
+
+    // Clicar no item "Software factory" via link real (como usuário faria)
+    await clickJS(page, 'a[onclick*="vcStartSectionTutorial(\'sf\')"]');
+    await page.waitForTimeout(300);
+
+    // Overlay deve estar visível e ativo
+    const overlayState = await page.evaluate(() => {
+      var ov = document.getElementById('vcTutorialOverlay');
+      return {
+        display: ov ? ov.style.display : 'not-found',
+        hasActive: ov ? ov.classList.contains('active') : false,
+        titleText: document.getElementById('vcTutorialTitle') ? document.getElementById('vcTutorialTitle').textContent : ''
+      };
+    });
+    console.log('  §119 overlay state:', JSON.stringify(overlayState));
+
+    expect(overlayState.display, '§119: overlay deve estar visível (display != none)').not.toBe('none');
+    expect(overlayState.display, '§119: overlay deve estar exibido').not.toBe('');
+    expect(overlayState.hasActive, '§119: overlay.classList deve ter "active"').toBe(true);
+    expect(overlayState.titleText.length, '§119: título do tutorial deve estar preenchido').toBeGreaterThan(0);
+
+    console.log('  §119 PASS: overlay visível após clicar no menu com vc_tutorial_done=1 (bug corrigido).');
+  });
+
+  test('2 — Persistência por tutorial: fechar SF tutorial grava vc_tutorial_sf_done, não vc_tutorial_done', async ({ page }) => {
+    test.setTimeout(30_000);
+    await setupLocalBundleRoute(page);
+    await gotoAsReturningUser(page);
+
+    // Abrir tutorial SF
+    await page.evaluate(() => window.vcStartSectionTutorial('sf'));
+    await waitForStepReady(page);
+
+    // Marcar "não exibir novamente" e fechar
+    await page.evaluate(() => {
+      var cb = document.getElementById('vcTutorialNoShow');
+      if (cb) cb.checked = true;
+    });
+    await clickJS(page, '#vcTutorialSkip');
+    await page.waitForTimeout(200);
+
+    // Verificar que a chave certa foi gravada
+    const keys = await page.evaluate(() => ({
+      sfKey:   localStorage.getItem('vc_tutorial_sf_done'),
+      t1Key:   localStorage.getItem('vc_tutorial_done'),
+    }));
+    console.log('  §119 storage keys after close:', JSON.stringify(keys));
+
+    expect(keys.sfKey, '§119: vc_tutorial_sf_done deve ser "1"').toBe('1');
+    // vc_tutorial_done pode ser '1' (setado no addInitScript) mas não deve ter sido
+    // SOBRESCRITO pela persistência do tutorial SF — já tinha '1', continua '1' (ok).
+    // O que não pode acontecer: antes do fix, closeTutorial gravava em vc_tutorial_done
+    // mesmo quando o tutorial ativo era de seção. Ambos são '1' aqui é um falso positivo
+    // aceitável — o que importa é que sf_done foi gravado.
+    // Para certificar que o comportamento é correto: abrir 'agents' (diferente de 'sf')
+    // e fechar também deve gravar a chave certa.
+    await page.evaluate(() => { localStorage.removeItem('vc_tutorial_agents_done'); });
+    await page.evaluate(() => window.vcStartSectionTutorial('agents'));
+    await waitForStepReady(page);
+    await page.evaluate(() => {
+      var cb = document.getElementById('vcTutorialNoShow');
+      if (cb) cb.checked = true;
+    });
+    await clickJS(page, '#vcTutorialSkip');
+    await page.waitForTimeout(200);
+
+    const agentsKey = await page.evaluate(() => localStorage.getItem('vc_tutorial_agents_done'));
+    console.log('  §119 agents key:', agentsKey);
+    expect(agentsKey, '§119: vc_tutorial_agents_done deve ser "1"').toBe('1');
+
+    console.log('  §119 PASS: cada tutorial de seção grava na própria chave ao fechar.');
+  });
+
+  test('3 — Regressão T1: sem flag, tutorial geral ainda auto-abre após 1500ms', async ({ page }) => {
+    test.setTimeout(10_000);
+    await setupLocalBundleRoute(page);
+    // SEM addInitScript de vc_tutorial_done — primeira visita simulada
+    await page.goto(BASE_URL);
+    await page.waitForLoadState('networkidle', { timeout: 20_000 });
+
+    // Aguardar o setTimeout de 1500ms + margem
+    await page.waitForFunction(
+      () => {
+        var ov = document.getElementById('vcTutorialOverlay');
+        return ov && ov.style.display !== 'none' && ov.classList.contains('active');
+      },
+      {},
+      { timeout: 5_000 }
+    );
+
+    const overlayState = await page.evaluate(() => ({
+      display: document.getElementById('vcTutorialOverlay')?.style.display,
+      active: document.getElementById('vcTutorialOverlay')?.classList.contains('active'),
+      title: document.getElementById('vcTutorialTitle')?.textContent
+    }));
+    console.log('  §119 T1 auto-start:', JSON.stringify(overlayState));
+
+    expect(overlayState.active, '§119 regressão T1: overlay deve ter classe active').toBe(true);
+    expect(overlayState.title, '§119 regressão T1: título T1 deve ser do primeiro passo').toContain('Bem-vindo');
+
+    console.log('  §119 PASS: T1 ainda auto-abre sem vc_tutorial_done (regressão ok).');
+  });
+});
