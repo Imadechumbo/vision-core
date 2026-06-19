@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-19 (§122-investigacao)
+## Documento central do projeto | Atualizado: 2026-06-19 (§122)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -38,6 +38,7 @@
 | CF Pages | 5.9.17+s119-tutorial-menu-fix | - | 90020b266e052eac61fbf9d3c6823a221229c6e8 |
 | CF Pages | 5.9.18+s120-balloon-geometry-fix | - | 4e3e0b6 |
 | CF Pages | 5.9.19+s121-position-fixed-restore | - | dc27005 |
+| CF Pages | 5.9.20+s122-menu-geral-emoji | - | 6d57cb6 |
 
 **Nota de correção (§113):** esta tabela estava parada na entrega do §109 (5.9.11) mesmo depois de §110/§111/§112 já estarem implementados e deployados — inconsistência de documentação encontrada e corrigida nesta sessão, não uma mudança de versão real nova além do que §112 já tinha entregue. A linha CF Pages reflete o trabalho desta sessão (§113), ainda só no sandbox — vira "live" só depois do `bash bin/deploy-pages.sh` real (ver prompt para Claude Code).
 
@@ -204,6 +205,7 @@ FREE_MISSION_LIMIT=5
 | §119 | Fix bug: menu "🪐 Tutoriais" sidebar não respondia a clique para usuários recorrentes. Causa: guard `vc_tutorial_done` no topo do IIFE bloqueava definição de `window._vcSetActiveTutorial`. Fix: guard movido para apenas o bloco de auto-start do T1. Achado secundário corrigido: `closeTutorial` agora grava em `_activeStorageKey` (chave do tutorial ativo) em vez de `vc_tutorial_done` hardcoded — tutoriais de seção persistem na própria chave. 3 novos testes determinísticos + 10/10 regressão. Zero mudança em `server.js`. | - | 90020b266e052eac61fbf9d3c6823a221229c6e8 |
 | §120 | Fix de geometria em `positionBalloon`: (Print 1) balão sobrepunha o spotlight quando elemento-alvo era largo — fix testa 4 posições candidatas, para alvos largos ancora na borda em vez de centralizar, quando todas colide usa fallback conceitual (spotlight zerado, balão centralizado). (Print 2) spotlight zerava silenciosamente quando onEnter não renderizava em 80ms — showStep retenta 1x após 200ms se inView===false. Dois bugs detectados via screenshots reais de produção enviados pelo usuário, não por inspeção de código. 13/13 testes (3 novos + regressão §118/§119 completa). Zero mudança em `server.js`. | - | 4e3e0b6 |
 | §121 | Causa raiz real do §120: `.vc-tutorial-balloon{position:relative!important}` (§95, index.html) sobrescrevia `position:fixed` — `positionBalloon()` calculava `top/left` corretos mas o navegador os interpretava como offset do fluxo HTML, não coordenadas na viewport. Testes do §120 passavam porque `getBoundingClientRect()` retorna posição após CSS aplicar os offsets, e em 1280x900 a posição final não colidia, mas colide em produção. Fix: remover regra §95 (position:fixed já cria containing block para filhos absolute — regra nunca foi necessária) + seta direcional triangular CSS puro (`data-arrow` + `::before/::after`) + scroll listener rAF que reposiciona o balão durante scroll manual. Novo teste crítico: `getComputedStyle(balloon).position==='fixed'` — teria pego o bug no §120. 18/18 testes (5 novos: position check, 2 viewports, scroll, seta + regressão). Zero mudança em `server.js`. | - | dc27005 |
+| §122 | Menu accordion "🪐 Tutoriais": ícone `◉` (U+25C9 FISHEYE, caractere Unicode geométrico) do item "Geral" renderizava como quadradinho vazio/invisível em alguns browsers/fontes — item parecia "sumido" e os 2 primeiros itens pareciam idênticos (visual de "Agent local duplicado"). Investigação exaustiva (curl, Playwright runtime, git history, tamanho de bundle) confirmou que DOM, HTML e produção estavam corretos; não havia duplicata real nem código que modificasse o menu. Causa: rendering tipográfico de U+25C9 vs emoji universais. Fix: substituído `◉` por `🌟` em `index.html`. Novo teste E2E: conta 6 itens, verifica unicidade de texto e onclick. 19/19 testes (1 novo + regressão). Zero mudança em `server.js`. | - | 6d57cb6 |
 
 > Write-up completo (causa raiz, fix, evidência) de cada sessão acima → `CLAUDE_HISTORY.md`.
 
@@ -213,9 +215,9 @@ FREE_MISSION_LIMIT=5
 
 **Status: §121 implementado, testado (18/18 Playwright) e deployado em produção (commit dc27005, CF Pages ao vivo).**
 
-**§122 (investigação, sem código novo):** humano reportou dois screenshots do accordion "🪐 Tutoriais" mostrando o que parecia ser inconsistência visual entre os itens "◉ Geral"/"🖥 Agent local" e os outros 4. Investigação com `getComputedStyle` nos 6 itens (`#vcTutPanel .vc-tut-item`) confirmou que todos têm exatamente o mesmo CSS computado (color, fontSize, fontWeight, padding, opacity). O HTML também é idêntico — todos usam apenas `class="vc-tut-item"` sem modificadores. Diagnóstico: os dois prints eram DOIS RECORTES da mesma lista em posições de scroll diferentes (print 1 = itens 3-6, print 2 = itens 1-2 + cabeçalho). A diferença visual percebida pelo humano vem do rendering de Unicode — `◉` (U+25C9) e `◎` (U+25CE) e `◈` (U+25C8) são símbolos geométricos que rendem diferente de emoji como `🏅`/`🤖` — isso é comportamento esperado do font stack, não bug de CSS. Nenhum código alterado. Suite 18/18 confirmada após investigação.
+**Status: §122 implementado, testado (19/19 Playwright) e deployado em produção (commit 6d57cb6, CF Pages ao vivo).**
 
-**Próximo item:** não há próximo item combinado com o humano — mesmo padrão do fim das sessões anteriores. Próxima sessão precisa de conversa nova sobre prioridade. Não há "Etapa G" definida no roadmap.
+**Próximo item:** não há próximo item combinado com o humano. Próxima sessão precisa de conversa nova sobre prioridade.
 
 **Nota §121 → próxima sessão:** features visuais com overlay/tutorial que foram consertadas precisam de confirmação visual real em produção pelo humano antes de serem declaradas resolvidas — a sequência §120+§121 mostrou que "testes passando" não garantiu "funciona em produção" quando CSS e JS se contradizem.
 
