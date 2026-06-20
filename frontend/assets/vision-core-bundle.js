@@ -9221,6 +9221,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     { id:'sf',       title:'◈ Software Factory — construa do zero', text:'8 módulos para criar projetos completos: define stack, compõe missão, gera pacotes para workers, valida patches e gera blueprint de deploy. Acesse pelo menu superior.',                                                                  target:'[data-open-sf-page]',  pos:'bottom' },
     { id:'finish',   title:'🚀 Pronto para começar!',               text:'Agora você conhece o Vision Core. Crie sua conta FREE (5 missões/mês, sem cartão de crédito) e experimente agora. É grátis para sempre no plano básico.',                                                                               target:'#openAuthBtn2',        pos:'bottom', cta:true }
   ];
+  // §123: referência imutável ao array original do T1 — STEPS (acima) é reatribuída
+  // por window._vcSetActiveTutorial sempre que um tutorial de seção é aberto (Agent
+  // local, Mission control, etc.) e nunca era restaurada ao reabrir o tutorial Geral.
+  // Bug: clicar "Geral" depois de qualquer tutorial de seção mostrava o conteúdo da
+  // última seção aberta, porque STEPS continuava apontando pro array dela.
+  var STEPS_GERAL = STEPS;
 
   var current = 0;
   // §119: chave de storage do tutorial ativo — T1 usa 'vc_tutorial_done', tutoriais
@@ -9512,6 +9518,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
   window.vcStartTutorial = function() {
     try { localStorage.removeItem('vc_tutorial_done'); } catch(e) {}
+    // §123: restaura STEPS pro array do tutorial Geral e a chave de storage padrão —
+    // sem isso, se um tutorial de seção tivesse sido aberto antes, "Geral" mostrava
+    // o conteúdo da seção anterior (STEPS nunca era resetada).
+    STEPS = STEPS_GERAL;
+    _activeStorageKey = 'vc_tutorial_done';
     current = 0;
     overlay.style.display = 'block';
     overlay.classList.add('active');
