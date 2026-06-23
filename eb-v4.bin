@@ -1,0 +1,525 @@
+----------------------------------------
+/var/log/eb-hooks.log
+----------------------------------------
+    "pass_gold_ready": true,
+    "files_scanned": 3,
+    "issues": []
+  },
+  "critical": []
+}
+[VISION CORE V3] Self-Healing Config Layer predeploy PASS
+
+2026/06/13 09:14:53.668591 [INFO] Running command: .platform/hooks/predeploy/01_install_semgrep.sh
+2026/06/13 09:14:54.710660 [INFO] [VISION CORE ¬ß68] Verificando semgrep no EB instance...
+[VISION CORE ¬ß68] semgrep j√° dispon√≠vel:  ‚úÖ (skip install)
+
+2026/06/14 05:41:29.304489 [INFO] Running command: .platform/hooks/predeploy/00_self_healing_config.sh
+2026/06/14 05:41:29.455158 [INFO] [VISION CORE V3] Self-Healing Config Layer predeploy start
+{
+  "layer": "VISION CORE V3 SELF-HEALING CONFIG LAYER",
+  "root": "/var/app/staging",
+  "apply": true,
+  "ok": true,
+  "status": "GOLD",
+  "pass_gold": true,
+  "promotion_allowed": true,
+  "patched": [],
+  "report": {
+    "ok": true,
+    "status": "PASS",
+    "pass_gold_ready": true,
+    "files_scanned": 2,
+    "issues": []
+  },
+  "critical": []
+}
+[VISION CORE V3] Self-Healing Config Layer predeploy PASS
+
+2026/06/14 05:56:13.407910 [INFO] Running command: .platform/hooks/predeploy/00_self_healing_config.sh
+2026/06/14 05:56:13.625714 [INFO] [VISION CORE V3] Self-Healing Config Layer predeploy start
+{
+  "layer": "VISION CORE V3 SELF-HEALING CONFIG LAYER",
+  "root": "/var/app/staging",
+  "apply": true,
+  "ok": true,
+  "status": "GOLD",
+  "pass_gold": true,
+  "promotion_allowed": true,
+  "patched": [],
+  "report": {
+    "ok": true,
+    "status": "PASS",
+    "pass_gold_ready": true,
+    "files_scanned": 2,
+    "issues": []
+  },
+  "critical": []
+}
+[VISION CORE V3] Self-Healing Config Layer predeploy PASS
+
+2026/06/14 05:58:24.267556 [INFO] Running command: .platform/hooks/predeploy/00_self_healing_config.sh
+2026/06/14 05:58:24.410778 [INFO] [VISION CORE V3] Self-Healing Config Layer predeploy start
+{
+  "layer": "VISION CORE V3 SELF-HEALING CONFIG LAYER",
+  "root": "/var/app/staging",
+  "apply": true,
+  "ok": true,
+  "status": "GOLD",
+  "pass_gold": true,
+  "promotion_allowed": true,
+  "patched": [],
+  "report": {
+    "ok": true,
+    "status": "PASS",
+    "pass_gold_ready": true,
+    "files_scanned": 2,
+    "issues": []
+  },
+  "critical": []
+}
+[VISION CORE V3] Self-Healing Config Layer predeploy PASS
+
+2026/06/14 06:04:17.792045 [INFO] Running command: .platform/hooks/predeploy/00_self_healing_config.sh
+2026/06/14 06:04:17.932447 [INFO] [VISION CORE V3] Self-Healing Config Layer predeploy start
+{
+  "layer": "VISION CORE V3 SELF-HEALING CONFIG LAYER",
+  "root": "/var/app/staging",
+  "apply": true,
+  "ok": true,
+  "status": "GOLD",
+  "pass_gold": true,
+  "promotion_allowed": true,
+  "patched": [],
+  "report": {
+    "ok": true,
+    "status": "PASS",
+    "pass_gold_ready": true,
+    "files_scanned": 2,
+    "issues": []
+  },
+  "critical": []
+}
+[VISION CORE V3] Self-Healing Config Layer predeploy PASS
+
+
+
+----------------------------------------
+/var/log/nginx/access.log
+----------------------------------------
+168.228.200.14 - - [14/Jun/2026:05:53:35 +0000] "GET /api/health HTTP/1.1" 502 150 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:53:50 +0000] "GET /api/health HTTP/1.1" 502 150 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:54:06 +0000] "GET /api/health HTTP/1.1" 502 150 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:54:21 +0000] "GET /api/health HTTP/1.1" 502 150 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:54:37 +0000] "GET /api/health HTTP/1.1" 502 150 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:54:52 +0000] "GET /api/health HTTP/1.1" 502 150 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:55:08 +0000] "GET /api/health HTTP/1.1" 502 150 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:55:23 +0000] "GET /api/health HTTP/1.1" 502 150 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:55:39 +0000] "GET /api/health HTTP/1.1" 502 150 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:55:54 +0000] "GET /api/health HTTP/1.1" 502 150 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:56:05 +0000] "GET /api/health HTTP/1.1" 502 150 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:56:07 +0000] "GET /api/health HTTP/1.1" 502 150 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:56:10 +0000] "GET /api/health HTTP/1.1" 502 150 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:56:25 +0000] "GET /api/health HTTP/1.1" 200 203 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:56:26 +0000] "GET /api/health HTTP/1.1" 200 203 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:56:27 +0000] "GET /api/health HTTP/1.1" 200 203 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:56:28 +0000] "GET /api/health HTTP/1.1" 200 203 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:56:36 +0000] "POST /api/architect/interpret HTTP/1.1" 500 143 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:56:36 +0000] "GET /api/spec/summary HTTP/1.1" 404 86 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:56:48 +0000] "POST /api/architect/interpret HTTP/1.1" 500 143 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:58:19 +0000] "POST /api/architect/interpret HTTP/1.1" 500 143 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:58:19 +0000] "GET /api/health HTTP/1.1" 200 203 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:58:40 +0000] "POST /api/architect/interpret HTTP/1.1" 200 1067 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:58:41 +0000] "POST /api/architect/interpret HTTP/1.1" 200 2278 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:58:48 +0000] "POST /api/architect/interpret HTTP/1.1" 200 2261 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:58:49 +0000] "POST /api/architect/interpret HTTP/1.1" 200 1262 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:58:51 +0000] "POST /api/architect/interpret HTTP/1.1" 200 2232 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:58:53 +0000] "POST /api/architect/interpret HTTP/1.1" 200 767 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:58:55 +0000] "POST /api/architect/interpret HTTP/1.1" 200 961 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:58:57 +0000] "POST /api/architect/interpret HTTP/1.1" 200 2325 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:59:00 +0000] "POST /api/architect/interpret HTTP/1.1" 200 2364 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:59:02 +0000] "POST /api/architect/interpret HTTP/1.1" 502 485 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:59:07 +0000] "POST /api/architect/interpret HTTP/1.1" 200 2181 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:59:48 +0000] "POST /api/chat HTTP/1.1" 499 0 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:59:50 +0000] "POST /api/chat HTTP/1.1" 200 386 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:59:51 +0000] "POST /api/chat HTTP/1.1" 200 330 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:59:53 +0000] "POST /api/chat HTTP/1.1" 200 339 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:59:55 +0000] "POST /api/chat HTTP/1.1" 200 1917 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:05:59:58 +0000] "POST /api/chat HTTP/1.1" 200 1674 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:00:02 +0000] "POST /api/chat HTTP/1.1" 200 1597 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:00:03 +0000] "GET /api/spec/summary HTTP/1.1" 404 86 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:00:04 +0000] "GET /api/spec/summary HTTP/1.1" 404 86 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:00:05 +0000] "GET /api/spec/summary HTTP/1.1" 404 86 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:00:06 +0000] "GET /api/spec/summary HTTP/1.1" 404 86 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:00:07 +0000] "GET /api/spec/summary HTTP/1.1" 404 86 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:00:08 +0000] "GET /api/spec/summary HTTP/1.1" 404 86 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:00:10 +0000] "GET /api/spec/summary HTTP/1.1" 404 86 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:00:12 +0000] "POST /api/architect/interpret HTTP/1.1" 200 2282 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:00:52 +0000] "POST /api/chat HTTP/1.1" 499 0 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:00:53 +0000] "POST /api/chat HTTP/1.1" 200 293 "-" "axios/1.17.0" "-"
+94.183.232.247 - - [14/Jun/2026:06:02:18 +0000] "GET / HTTP/1.1" 200 53 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.85 Safari/537.36 Edg/90.0.818.46" "-"
+168.228.200.14 - - [14/Jun/2026:06:02:49 +0000] "GET /api/spec/summary HTTP/1.1" 404 86 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:11 +0000] "GET /api/spec/summary HTTP/1.1" 404 86 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:31 +0000] "GET /api/spec/summary HTTP/1.1" 200 1372 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:32 +0000] "GET /api/spec/summary HTTP/1.1" 200 1372 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:41 +0000] "POST /api/architect/interpret HTTP/1.1" 404 125 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:42 +0000] "POST /api/architect/interpret HTTP/1.1" 404 125 "-" "axios/1.17.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:42 +0000] "GET /.git/config HTTP/1.1" 404 150 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:43 +0000] "POST /api/architect/interpret HTTP/1.1" 404 125 "-" "axios/1.17.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:43 +0000] "GET /.env HTTP/1.1" 404 143 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:44 +0000] "GET /.env.local HTTP/1.1" 404 149 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:44 +0000] "POST /api/architect/interpret HTTP/1.1" 404 125 "-" "axios/1.17.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:44 +0000] "GET /.env.production HTTP/1.1" 404 154 "-" "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:45 +0000] "GET /.env.backup HTTP/1.1" 404 150 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:45 +0000] "POST /api/architect/interpret HTTP/1.1" 404 125 "-" "axios/1.17.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:45 +0000] "GET /.env.save HTTP/1.1" 404 148 "-" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:46 +0000] "POST /api/architect/interpret HTTP/1.1" 404 125 "-" "axios/1.17.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:46 +0000] "GET /wp-config.php HTTP/1.1" 404 152 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:48 +0000] "POST /api/architect/interpret HTTP/1.1" 404 125 "-" "axios/1.17.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:48 +0000] "GET /.aws/credentials HTTP/1.1" 404 155 "-" "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:49 +0000] "POST /api/architect/interpret HTTP/1.1" 404 125 "-" "axios/1.17.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:50 +0000] "GET /actuator/env HTTP/1.1" 404 151 "-" "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:51 +0000] "POST /api/chat HTTP/1.1" 200 429 "-" "axios/1.17.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:51 +0000] "GET /.DS_Store HTTP/1.1" 404 148 "-" "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:52 +0000] "GET /config.php HTTP/1.1" 404 149 "-" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:52 +0000] "GET /app/config/parameters.yml HTTP/1.1" 404 164 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:53 +0000] "GET /.htpasswd HTTP/1.1" 404 148 "-" "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:53 +0000] "POST /api/chat HTTP/1.1" 200 5661 "-" "axios/1.17.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:54 +0000] "GET /backup.sql HTTP/1.1" 404 149 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:54 +0000] "GET /dump.sql HTTP/1.1" 404 147 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:55 +0000] "POST /api/chat HTTP/1.1" 200 350 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:57 +0000] "POST /api/chat HTTP/1.1" 200 432 "-" "axios/1.17.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:59 +0000] "POST /___proxy_subdomain_whm/login/?login_only=1 HTTP/1.1" 404 169 "-" "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0" "-"
+172.182.226.198 - - [14/Jun/2026:06:04:59 +0000] "GET /___proxy_subdomain_whm/login/ HTTP/1.1" 404 168 "-" "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36" "-"
+168.228.200.14 - - [14/Jun/2026:06:04:59 +0000] "POST /api/chat HTTP/1.1" 200 4782 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:05:10 +0000] "POST /api/chat HTTP/1.1" 200 1177 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:05:12 +0000] "POST /api/chat HTTP/1.1" 200 345 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:05:13 +0000] "GET /api/spec/summary HTTP/1.1" 200 1372 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:05:14 +0000] "GET /api/spec/summary HTTP/1.1" 200 1372 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:05:15 +0000] "GET /api/spec/summary HTTP/1.1" 200 1372 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:05:16 +0000] "GET /api/spec/summary HTTP/1.1" 200 1372 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:05:17 +0000] "GET /api/spec/summary HTTP/1.1" 200 1372 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:05:19 +0000] "GET /api/spec/summary HTTP/1.1" 200 1372 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:05:20 +0000] "GET /api/spec/summary HTTP/1.1" 200 1372 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:05:21 +0000] "POST /api/architect/interpret HTTP/1.1" 404 125 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:06:01 +0000] "POST /api/chat HTTP/1.1" 499 0 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:06:03 +0000] "POST /api/chat HTTP/1.1" 200 302 "-" "axios/1.17.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:07:15 +0000] "POST /api/architect/interpret HTTP/1.1" 404 125 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:08:07 +0000] "GET /api/health HTTP/1.1" 200 203 "-" "curl/8.18.0" "-"
+168.228.200.14 - - [14/Jun/2026:06:08:17 +0000] "POST /api/architect/interpret HTTP/1.1" 404 125 "-" "curl/8.18.0" "-"
+
+
+----------------------------------------
+/var/log/nginx/error.log
+----------------------------------------
+2026/06/13 22:46:28 [warn] 772272#772272: *2883 using uninitialized "month" variable while logging request, client: 34.93.81.43, server: , request: " Í  Êg<*ﬁïYO±Ú"
+2026/06/13 22:46:28 [warn] 772272#772272: *2883 using uninitialized "day" variable while logging request, client: 34.93.81.43, server: , request: " Í  Êg<*ﬁïYO±Ú"
+2026/06/13 22:46:28 [warn] 772272#772272: *2883 using uninitialized "hour" variable while logging request, client: 34.93.81.43, server: , request: " Í  Êg<*ﬁïYO±Ú"
+2026/06/13 23:36:45 [warn] 772272#772272: *2945 using uninitialized "year" variable while logging request, client: 205.210.31.25, server: , request: "    ∆∞ïMWÖgTZ¶-ygîëÎ8…∫≤qGv0á8ìUÄ  hÃÃ¿/¿+¿0¿,¿¿¿'¿#¿¿	¿(¿$¿¿"
+2026/06/13 23:36:45 [warn] 772272#772272: *2945 using uninitialized "month" variable while logging request, client: 205.210.31.25, server: , request: "    ∆∞ïMWÖgTZ¶-ygîëÎ8…∫≤qGv0á8ìUÄ  hÃÃ¿/¿+¿0¿,¿¿¿'¿#¿¿	¿(¿$¿¿"
+2026/06/13 23:36:45 [warn] 772272#772272: *2945 using uninitialized "day" variable while logging request, client: 205.210.31.25, server: , request: "    ∆∞ïMWÖgTZ¶-ygîëÎ8…∫≤qGv0á8ìUÄ  hÃÃ¿/¿+¿0¿,¿¿¿'¿#¿¿	¿(¿$¿¿"
+2026/06/13 23:36:45 [warn] 772272#772272: *2945 using uninitialized "hour" variable while logging request, client: 205.210.31.25, server: , request: "    ∆∞ïMWÖgTZ¶-ygîëÎ8…∫≤qGv0á8ìUÄ  hÃÃ¿/¿+¿0¿,¿¿¿'¿#¿¿	¿(¿$¿¿"
+2026/06/13 23:36:45 [warn] 772272#772272: *2944 using uninitialized "year" variable while logging request, client: 205.210.31.25, server: , request: " Ó  ÍTwÔX #bHâ:j¸‰Üx€0b≠Ô˛˘£÷[A îJ™˛Ç∫Ó+ˆ∫5§Ô’JWçÌ<%°oÏkî&≠Ω @ &¿+¿/¿,¿0Ã©Ã®¿	¿¿"
+2026/06/13 23:36:45 [warn] 772272#772272: *2944 using uninitialized "month" variable while logging request, client: 205.210.31.25, server: , request: " Ó  ÍTwÔX #bHâ:j¸‰Üx€0b≠Ô˛˘£÷[A îJ™˛Ç∫Ó+ˆ∫5§Ô’JWçÌ<%°oÏkî&≠Ω @ &¿+¿/¿,¿0Ã©Ã®¿	¿¿"
+2026/06/13 23:36:45 [warn] 772272#772272: *2944 using uninitialized "day" variable while logging request, client: 205.210.31.25, server: , request: " Ó  ÍTwÔX #bHâ:j¸‰Üx€0b≠Ô˛˘£÷[A îJ™˛Ç∫Ó+ˆ∫5§Ô’JWçÌ<%°oÏkî&≠Ω @ &¿+¿/¿,¿0Ã©Ã®¿	¿¿"
+2026/06/13 23:36:45 [warn] 772272#772272: *2944 using uninitialized "hour" variable while logging request, client: 205.210.31.25, server: , request: " Ó  ÍTwÔX #bHâ:j¸‰Üx€0b≠Ô˛˘£÷[A îJ™˛Ç∫Ó+ˆ∫5§Ô’JWçÌ<%°oÏkî&≠Ω @ &¿+¿/¿,¿0Ã©Ã®¿	¿¿"
+2026/06/14 00:08:11 [warn] 772271#772271: *2956 using uninitialized "year" variable while logging request, client: 91.230.168.103, server: , request: "` \©æ§É—1cJ(⁄î'" “ÆüQd⁄Æ$IN¬f „Ú˚< è™¶üπ˛qÒY<2Ó"
+2026/06/14 00:08:11 [warn] 772271#772271: *2956 using uninitialized "month" variable while logging request, client: 91.230.168.103, server: , request: "` \©æ§É—1cJ(⁄î'" “ÆüQd⁄Æ$IN¬f „Ú˚< è™¶üπ˛qÒY<2Ó"
+2026/06/14 00:08:11 [warn] 772271#772271: *2956 using uninitialized "day" variable while logging request, client: 91.230.168.103, server: , request: "` \©æ§É—1cJ(⁄î'" “ÆüQd⁄Æ$IN¬f „Ú˚< è™¶üπ˛qÒY<2Ó"
+2026/06/14 00:08:11 [warn] 772271#772271: *2956 using uninitialized "hour" variable while logging request, client: 91.230.168.103, server: , request: "` \©æ§É—1cJ(⁄î'" “ÆüQd⁄Æ$IN¬f „Ú˚< è™¶üπ˛qÒY<2Ó"
+2026/06/14 00:16:19 [warn] 772271#772271: *2961 using uninitialized "year" variable while logging request, client: 34.152.61.66, server: , request: "ﬁ ⁄≤ÉuPR_+#« Œ4ÔB|ÛÕq√3ù´+†Çîï ¨!c™⁄G´€Ù÷/"f˜øÔ˘(ì3Ãƒ‚aD¨T ¿+¿/¿,¿0Ã©Ã®¿	¿¿"
+2026/06/14 00:16:19 [warn] 772271#772271: *2961 using uninitialized "month" variable while logging request, client: 34.152.61.66, server: , request: "ﬁ ⁄≤ÉuPR_+#« Œ4ÔB|ÛÕq√3ù´+†Çîï ¨!c™⁄G´€Ù÷/"f˜øÔ˘(ì3Ãƒ‚aD¨T ¿+¿/¿,¿0Ã©Ã®¿	¿¿"
+2026/06/14 00:16:19 [warn] 772271#772271: *2961 using uninitialized "day" variable while logging request, client: 34.152.61.66, server: , request: "ﬁ ⁄≤ÉuPR_+#« Œ4ÔB|ÛÕq√3ù´+†Çîï ¨!c™⁄G´€Ù÷/"f˜øÔ˘(ì3Ãƒ‚aD¨T ¿+¿/¿,¿0Ã©Ã®¿	¿¿"
+2026/06/14 00:16:19 [warn] 772271#772271: *2961 using uninitialized "hour" variable while logging request, client: 34.152.61.66, server: , request: "ﬁ ⁄≤ÉuPR_+#« Œ4ÔB|ÛÕq√3ù´+†Çîï ¨!c™⁄G´€Ù÷/"f˜øÔ˘(ì3Ãƒ‚aD¨T ¿+¿/¿,¿0Ã©Ã®¿	¿¿"
+2026/06/14 00:46:52 [warn] 772271#772271: *2974 using uninitialized "year" variable while logging request, client: 60.166.83.205, server: , request: "   Gƒ0~ó   ¥"
+2026/06/14 00:46:52 [warn] 772271#772271: *2974 using uninitialized "month" variable while logging request, client: 60.166.83.205, server: , request: "   Gƒ0~ó   ¥"
+2026/06/14 00:46:52 [warn] 772271#772271: *2974 using uninitialized "day" variable while logging request, client: 60.166.83.205, server: , request: "   Gƒ0~ó   ¥"
+2026/06/14 00:46:52 [warn] 772271#772271: *2974 using uninitialized "hour" variable while logging request, client: 60.166.83.205, server: , request: "   Gƒ0~ó   ¥"
+2026/06/14 02:21:38 [warn] 772272#772272: *2995 using uninitialized "year" variable while logging request, client: 24.144.84.83, server: , request: " Ú  ÓÇq¶£≠aØ´>Ñõı)ô ïg»‚(≈;—˘Æá/R DíÚÂ⁄¥–=õîE∫Öç˝IÆ·"[‹_”≤_;•ù] &¿+¿/¿,¿0Ã©Ã®¿	¿¿"
+2026/06/14 02:21:38 [warn] 772272#772272: *2995 using uninitialized "month" variable while logging request, client: 24.144.84.83, server: , request: " Ú  ÓÇq¶£≠aØ´>Ñõı)ô ïg»‚(≈;—˘Æá/R DíÚÂ⁄¥–=õîE∫Öç˝IÆ·"[‹_”≤_;•ù] &¿+¿/¿,¿0Ã©Ã®¿	¿¿"
+2026/06/14 02:21:38 [warn] 772272#772272: *2995 using uninitialized "day" variable while logging request, client: 24.144.84.83, server: , request: " Ú  ÓÇq¶£≠aØ´>Ñõı)ô ïg»‚(≈;—˘Æá/R DíÚÂ⁄¥–=õîE∫Öç˝IÆ·"[‹_”≤_;•ù] &¿+¿/¿,¿0Ã©Ã®¿	¿¿"
+2026/06/14 02:21:38 [warn] 772272#772272: *2995 using uninitialized "hour" variable while logging request, client: 24.144.84.83, server: , request: " Ú  ÓÇq¶£≠aØ´>Ñõı)ô ïg»‚(≈;—˘Æá/R DíÚÂ⁄¥–=õîE∫Öç˝IÆ·"[‹_”≤_;•ù] &¿+¿/¿,¿0Ã©Ã®¿	¿¿"
+2026/06/14 05:40:52 [warn] 772272#772272: *3093 using uninitialized "year" variable while logging request, client: 216.180.246.172, server: , request: " ˝  ˘∆û,QzsGe]G:ï©3Áw4b=r<Q˜€óÇì	 KÒπ4„…º∞¥å‘Ú{ö0‡ËO‘ê‚'“©≠_ &Ã®Ã©¿/¿0¿+¿,¿¿	¿¿"
+2026/06/14 05:40:52 [warn] 772272#772272: *3093 using uninitialized "month" variable while logging request, client: 216.180.246.172, server: , request: " ˝  ˘∆û,QzsGe]G:ï©3Áw4b=r<Q˜€óÇì	 KÒπ4„…º∞¥å‘Ú{ö0‡ËO‘ê‚'“©≠_ &Ã®Ã©¿/¿0¿+¿,¿¿	¿¿"
+2026/06/14 05:40:52 [warn] 772272#772272: *3093 using uninitialized "day" variable while logging request, client: 216.180.246.172, server: , request: " ˝  ˘∆û,QzsGe]G:ï©3Áw4b=r<Q˜€óÇì	 KÒπ4„…º∞¥å‘Ú{ö0‡ËO‘ê‚'“©≠_ &Ã®Ã©¿/¿0¿+¿,¿¿	¿¿"
+2026/06/14 05:40:52 [warn] 772272#772272: *3093 using uninitialized "hour" variable while logging request, client: 216.180.246.172, server: , request: " ˝  ˘∆û,QzsGe]G:ï©3Áw4b=r<Q˜€óÇì	 KÒπ4„…º∞¥å‘Ú{ö0‡ËO‘ê‚'“©≠_ &Ã®Ã©¿/¿0¿+¿,¿¿	¿¿"
+2026/06/14 05:41:34 [warn] 813323#813323: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/06/14 05:41:34 [warn] 813372#813372: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/06/14 05:41:34 [warn] 813378#813378: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/06/14 05:42:32 [error] 813383#813383: *1 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "POST /api/architect/interpret HTTP/1.1", upstream: "http://127.0.0.1:8080/api/architect/interpret", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:42:37 [error] 813382#813382: *3 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "POST /api/architect/interpret HTTP/1.1", upstream: "http://127.0.0.1:8080/api/architect/interpret", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:42:42 [error] 813383#813383: *5 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "POST /api/architect/interpret HTTP/1.1", upstream: "http://127.0.0.1:8080/api/architect/interpret", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:43:02 [error] 813383#813383: *7 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "POST /api/architect/interpret HTTP/1.1", upstream: "http://127.0.0.1:8080/api/architect/interpret", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:43:23 [error] 813383#813383: *9 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "POST /api/architect/interpret HTTP/1.1", upstream: "http://127.0.0.1:8080/api/architect/interpret", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:43:43 [error] 813383#813383: *11 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "POST /api/architect/interpret HTTP/1.1", upstream: "http://127.0.0.1:8080/api/architect/interpret", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:44:12 [error] 813383#813383: *13 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:44:38 [error] 813383#813383: *15 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:45:03 [error] 813383#813383: *17 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:45:29 [error] 813383#813383: *19 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:45:54 [error] 813383#813383: *21 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:46:20 [error] 813383#813383: *23 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:46:50 [error] 813383#813383: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 216.180.246.172, server: , request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "34.238.11.9"
+2026/06/14 05:46:51 [error] 813383#813383: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 216.180.246.172, server: , request: "GET /manage/account/login HTTP/1.1", upstream: "http://127.0.0.1:8080/manage/account/login", host: "34.238.11.9"
+2026/06/14 05:46:52 [error] 813383#813383: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 216.180.246.172, server: , request: "GET /admin/index.html HTTP/1.1", upstream: "http://127.0.0.1:8080/admin/index.html", host: "34.238.11.9"
+2026/06/14 05:46:53 [error] 813383#813383: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 216.180.246.172, server: , request: "GET /index.html HTTP/1.1", upstream: "http://127.0.0.1:8080/index.html", host: "34.238.11.9"
+2026/06/14 05:46:54 [error] 813383#813383: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 216.180.246.172, server: , request: "GET /+CSCOE+/logon.html HTTP/1.1", upstream: "http://127.0.0.1:8080/+CSCOE+/logon.html", host: "34.238.11.9"
+2026/06/14 05:46:56 [error] 813383#813383: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 216.180.246.172, server: , request: "GET /cgi-bin/login.cgi HTTP/1.1", upstream: "http://127.0.0.1:8080/cgi-bin/login.cgi", host: "34.238.11.9"
+2026/06/14 05:46:58 [error] 813383#813383: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 216.180.246.172, server: , request: "GET /login.htm HTTP/1.1", upstream: "http://127.0.0.1:8080/login.htm", host: "34.238.11.9"
+2026/06/14 05:46:59 [error] 813383#813383: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 216.180.246.172, server: , request: "GET /login.html HTTP/1.1", upstream: "http://127.0.0.1:8080/login.html", host: "34.238.11.9"
+2026/06/14 05:47:01 [error] 813383#813383: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 216.180.246.172, server: , request: "GET /login.jsp HTTP/1.1", upstream: "http://127.0.0.1:8080/login.jsp", host: "34.238.11.9"
+2026/06/14 05:47:03 [error] 813383#813383: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 216.180.246.172, server: , request: "GET /login HTTP/1.1", upstream: "http://127.0.0.1:8080/login", host: "34.238.11.9"
+2026/06/14 05:47:05 [error] 813383#813383: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 216.180.246.172, server: , request: "GET /doc/index.html HTTP/1.1", upstream: "http://127.0.0.1:8080/doc/index.html", host: "34.238.11.9"
+2026/06/14 05:47:06 [error] 813383#813383: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 216.180.246.172, server: , request: "GET /remote/login HTTP/1.1", upstream: "http://127.0.0.1:8080/remote/login", host: "34.238.11.9"
+2026/06/14 05:47:07 [error] 813383#813383: *25 connect() failed (111: Connection refused) while connecting to upstream, client: 216.180.246.172, server: , request: "GET /admin/login.asp HTTP/1.1", upstream: "http://127.0.0.1:8080/admin/login.asp", host: "34.238.11.9"
+2026/06/14 05:48:41 [error] 813383#813383: *39 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:48:56 [error] 813383#813383: *41 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:49:12 [error] 813383#813383: *43 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:49:27 [error] 813383#813383: *45 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:49:43 [error] 813383#813383: *47 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:49:58 [error] 813382#813382: *49 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:50:14 [error] 813382#813382: *51 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:50:29 [error] 813382#813382: *53 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:50:45 [error] 813382#813382: *55 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:51:00 [error] 813382#813382: *57 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:51:16 [error] 813382#813382: *59 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:51:31 [error] 813382#813382: *61 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:51:47 [error] 813382#813382: *63 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:52:02 [error] 813382#813382: *65 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:52:17 [error] 813382#813382: *67 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:52:33 [error] 813382#813382: *69 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:52:48 [error] 813382#813382: *71 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:53:04 [error] 813382#813382: *73 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:53:19 [error] 813382#813382: *75 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:53:35 [error] 813382#813382: *77 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:53:50 [error] 813382#813382: *79 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:54:06 [error] 813383#813383: *81 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:54:21 [error] 813383#813383: *83 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:54:37 [error] 813383#813383: *85 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:54:52 [error] 813383#813383: *87 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:55:08 [error] 813383#813383: *89 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:55:23 [error] 813383#813383: *91 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:55:39 [error] 813383#813383: *93 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:55:54 [error] 813383#813383: *95 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:56:05 [error] 813383#813383: *97 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:56:07 [error] 813383#813383: *99 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:56:10 [error] 813383#813383: *101 connect() failed (111: Connection refused) while connecting to upstream, client: 168.228.200.14, server: , request: "GET /api/health HTTP/1.1", upstream: "http://127.0.0.1:8080/api/health", host: "vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com"
+2026/06/14 05:56:18 [warn] 850359#850359: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/06/14 05:56:19 [warn] 850399#850399: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/06/14 05:56:19 [warn] 850400#850400: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/06/14 05:58:29 [warn] 851087#851087: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/06/14 05:58:29 [warn] 851127#851127: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/06/14 05:58:29 [warn] 851128#851128: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/06/14 06:04:22 [warn] 852017#852017: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/06/14 06:04:23 [warn] 852057#852057: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/06/14 06:04:23 [warn] 852058#852058: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+
+
+----------------------------------------
+/var/log/web.stdout.log
+----------------------------------------
+Jun 14 06:04:22 ip-172-31-28-254 web[851917]:    "ok": true,
+Jun 14 06:04:22 ip-172-31-28-254 web[851917]:    "status": "PASS",
+Jun 14 06:04:22 ip-172-31-28-254 web[851917]:    "pass_gold_ready": true,
+Jun 14 06:04:22 ip-172-31-28-254 web[851917]:    "files_scanned": 2,
+Jun 14 06:04:22 ip-172-31-28-254 web[851917]:    "issues": []
+Jun 14 06:04:22 ip-172-31-28-254 web[851917]:  },
+Jun 14 06:04:22 ip-172-31-28-254 web[851917]:  "critical": []
+Jun 14 06:04:22 ip-172-31-28-254 web[851917]: }
+Jun 14 06:04:22 ip-172-31-28-254 web[851903]: > vision-core-backend-v41@4.1.0 start
+Jun 14 06:04:22 ip-172-31-28-254 web[851903]: > node server.js
+Jun 14 06:04:23 ip-172-31-28-254 web[852021]: ================================================================
+Jun 14 06:04:23 ip-172-31-28-254 web[852021]: SERVIDOR VISION CORE V2.9.10 SELF-HEALING CONFIG
+Jun 14 06:04:23 ip-172-31-28-254 web[852021]: ================================================================
+Jun 14 06:04:23 ip-172-31-28-254 web[852021]: URL: http://0.0.0.0:8080
+Jun 14 06:04:23 ip-172-31-28-254 web[852021]: CORS: MANUAL HARDENED BEFORE ALL ROUTES
+Jun 14 06:04:23 ip-172-31-28-254 web[852021]: BODY PARSER: RAW + JSON + TEXT + URLENCODED FALLBACK
+Jun 14 06:04:23 ip-172-31-28-254 web[852021]: Contratos: ALL/POST /api/copilot | ALL/POST /api/hermes/analyze | ALL/POST /api/run-live | GET /api/run-live-stream
+Jun 14 06:04:23 ip-172-31-28-254 web[852021]: NO CUSTOM 405: payload vazio nunca retorna 405
+Jun 14 06:04:23 ip-172-31-28-254 web[852021]: SELF-HEALING CONFIG: nginx/env/node gates ativos
+Jun 14 06:04:23 ip-172-31-28-254 web[852021]: PASS GOLD: obrigat√≥rio para promo√ß√£o
+Jun 14 06:04:23 ip-172-31-28-254 web[852021]: ================================================================
+Jun 14 06:04:31 ip-172-31-28-254 web[852021]: [REQ] GET /api/spec/summary origin=- ct=- bodyKeys=-
+Jun 14 06:04:31 ip-172-31-28-254 web[852021]: [spec] loaded 120 specs from /var/app/current/spec-library
+Jun 14 06:04:32 ip-172-31-28-254 web[852021]: [REQ] GET /api/spec/summary origin=- ct=- bodyKeys=-
+Jun 14 06:04:41 ip-172-31-28-254 web[852021]: [REQ] POST /api/architect/interpret origin=- ct=application/json bodyKeys=message
+Jun 14 06:04:42 ip-172-31-28-254 web[852021]: [REQ] POST /api/architect/interpret origin=- ct=application/json bodyKeys=message
+Jun 14 06:04:43 ip-172-31-28-254 web[852021]: [REQ] POST /api/architect/interpret origin=- ct=application/json bodyKeys=message
+Jun 14 06:04:44 ip-172-31-28-254 web[852021]: [REQ] POST /api/architect/interpret origin=- ct=application/json bodyKeys=message
+Jun 14 06:04:45 ip-172-31-28-254 web[852021]: [REQ] POST /api/architect/interpret origin=- ct=application/json bodyKeys=message
+Jun 14 06:04:46 ip-172-31-28-254 web[852021]: [REQ] POST /api/architect/interpret origin=- ct=application/json bodyKeys=message
+Jun 14 06:04:48 ip-172-31-28-254 web[852021]: [REQ] POST /api/architect/interpret origin=- ct=application/json bodyKeys=message
+Jun 14 06:04:49 ip-172-31-28-254 web[852021]: [REQ] POST /api/architect/interpret origin=- ct=application/json bodyKeys=message
+Jun 14 06:04:50 ip-172-31-28-254 web[852021]: [REQ] POST /api/chat origin=- ct=application/json bodyKeys=message,mode
+Jun 14 06:04:50 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Anthropic...
+Jun 14 06:04:50 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Anthropic falhou (Anthropic: HTTP 401 ‚Äî {"type":"error","error":{"type":"authentication_error","me) ‚Äî tentando Cerebras...
+Jun 14 06:04:50 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Cerebras...
+Jun 14 06:04:51 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Respondido por: Cerebras (gpt-oss-120b)
+Jun 14 06:04:52 ip-172-31-28-254 web[852021]: [REQ] POST /api/chat origin=- ct=application/json bodyKeys=message,mode,architect_context
+Jun 14 06:04:52 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Anthropic...
+Jun 14 06:04:52 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Anthropic falhou (Anthropic: HTTP 401 ‚Äî {"type":"error","error":{"type":"authentication_error","me) ‚Äî tentando Cerebras...
+Jun 14 06:04:52 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Cerebras...
+Jun 14 06:04:53 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Respondido por: Cerebras (gpt-oss-120b)
+Jun 14 06:04:55 ip-172-31-28-254 web[852021]: [REQ] POST /api/chat origin=- ct=application/json bodyKeys=message,mode
+Jun 14 06:04:55 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Anthropic...
+Jun 14 06:04:55 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Anthropic falhou (Anthropic: HTTP 401 ‚Äî {"type":"error","error":{"type":"authentication_error","me) ‚Äî tentando Cerebras...
+Jun 14 06:04:55 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Cerebras...
+Jun 14 06:04:55 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Respondido por: Cerebras (gpt-oss-120b)
+Jun 14 06:04:56 ip-172-31-28-254 web[852021]: [REQ] POST /api/chat origin=- ct=application/json bodyKeys=message,mode
+Jun 14 06:04:56 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Anthropic...
+Jun 14 06:04:56 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Anthropic falhou (Anthropic: HTTP 401 ‚Äî {"type":"error","error":{"type":"authentication_error","me) ‚Äî tentando Cerebras...
+Jun 14 06:04:56 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Cerebras...
+Jun 14 06:04:57 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Respondido por: Cerebras (gpt-oss-120b)
+Jun 14 06:04:58 ip-172-31-28-254 web[852021]: [REQ] POST /api/chat origin=- ct=application/json bodyKeys=message,mode
+Jun 14 06:04:58 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Anthropic...
+Jun 14 06:04:58 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Anthropic falhou (Anthropic: HTTP 401 ‚Äî {"type":"error","error":{"type":"authentication_error","me) ‚Äî tentando Cerebras...
+Jun 14 06:04:58 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Cerebras...
+Jun 14 06:04:59 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Respondido por: Cerebras (gpt-oss-120b)
+Jun 14 06:05:00 ip-172-31-28-254 web[852021]: [REQ] POST /api/chat origin=- ct=application/json bodyKeys=message,mode,architect_context
+Jun 14 06:05:00 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Anthropic...
+Jun 14 06:05:01 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Anthropic falhou (Anthropic: HTTP 401 ‚Äî {"type":"error","error":{"type":"authentication_error","me) ‚Äî tentando Cerebras...
+Jun 14 06:05:01 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Cerebras...
+Jun 14 06:05:01 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Cerebras falhou (Cerebras: HTTP 429 ‚Äî {"message":"Requests per minute limit exceeded - too many r) ‚Äî tentando Groq...
+Jun 14 06:05:01 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Groq...
+Jun 14 06:05:01 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Groq falhou (Groq: HTTP 429 ‚Äî {"error":{"message":"Rate limit reached for model `llama-3.3-70) ‚Äî tentando OpenRouter...
+Jun 14 06:05:01 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: OpenRouter...
+Jun 14 06:05:10 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Respondido por: OpenRouter (deepseek/deepseek-v4-flash-20260423)
+Jun 14 06:05:11 ip-172-31-28-254 web[852021]: [REQ] POST /api/chat origin=- ct=application/json bodyKeys=message,mode
+Jun 14 06:05:11 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Anthropic...
+Jun 14 06:05:11 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Anthropic falhou (Anthropic: HTTP 401 ‚Äî {"type":"error","error":{"type":"authentication_error","me) ‚Äî tentando Cerebras...
+Jun 14 06:05:11 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Cerebras...
+Jun 14 06:05:12 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Respondido por: Cerebras (gpt-oss-120b)
+Jun 14 06:05:13 ip-172-31-28-254 web[852021]: [REQ] GET /api/spec/summary origin=- ct=- bodyKeys=-
+Jun 14 06:05:14 ip-172-31-28-254 web[852021]: [REQ] GET /api/spec/summary origin=- ct=- bodyKeys=-
+Jun 14 06:05:15 ip-172-31-28-254 web[852021]: [REQ] GET /api/spec/summary origin=- ct=- bodyKeys=-
+Jun 14 06:05:16 ip-172-31-28-254 web[852021]: [REQ] GET /api/spec/summary origin=- ct=- bodyKeys=-
+Jun 14 06:05:17 ip-172-31-28-254 web[852021]: [REQ] GET /api/spec/summary origin=- ct=- bodyKeys=-
+Jun 14 06:05:19 ip-172-31-28-254 web[852021]: [REQ] GET /api/spec/summary origin=- ct=- bodyKeys=-
+Jun 14 06:05:20 ip-172-31-28-254 web[852021]: [REQ] GET /api/spec/summary origin=- ct=- bodyKeys=-
+Jun 14 06:05:21 ip-172-31-28-254 web[852021]: [REQ] POST /api/architect/interpret origin=- ct=application/json bodyKeys=message
+Jun 14 06:05:21 ip-172-31-28-254 web[852021]: [REQ] POST /api/chat origin=- ct=application/json bodyKeys=message,mode,architect_context
+Jun 14 06:05:21 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Anthropic...
+Jun 14 06:05:21 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Anthropic falhou (Anthropic: HTTP 401 ‚Äî {"type":"error","error":{"type":"authentication_error","me) ‚Äî tentando Cerebras...
+Jun 14 06:05:21 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Cerebras...
+Jun 14 06:05:21 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Cerebras falhou (Cerebras: HTTP 429 ‚Äî {"message":"Requests per minute limit exceeded - too many r) ‚Äî tentando Groq...
+Jun 14 06:05:21 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Groq...
+Jun 14 06:05:21 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Groq falhou (Groq: HTTP 429 ‚Äî {"error":{"message":"Rate limit reached for model `llama-3.3-70) ‚Äî tentando OpenRouter...
+Jun 14 06:05:21 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: OpenRouter...
+Jun 14 06:05:51 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] OpenRouter falhou (The operation was aborted due to timeout) [TIMEOUT] ‚Äî tentando DeepSeek...
+Jun 14 06:05:51 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: DeepSeek...
+Jun 14 06:05:52 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] DeepSeek falhou (DeepSeek: HTTP 402 ‚Äî {"error":{"message":"Insufficient Balance","type":"unknown_) ‚Äî tentando Gemini...
+Jun 14 06:05:52 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Gemini...
+Jun 14 06:06:02 ip-172-31-28-254 web[852021]: [REQ] POST /api/chat origin=- ct=application/json bodyKeys=message,mode
+Jun 14 06:06:02 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Anthropic...
+Jun 14 06:06:02 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Anthropic falhou (Anthropic: HTTP 401 ‚Äî {"type":"error","error":{"type":"authentication_error","me) ‚Äî tentando Cerebras...
+Jun 14 06:06:02 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Tentando provider: Cerebras...
+Jun 14 06:06:03 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Respondido por: Cerebras (gpt-oss-120b)
+Jun 14 06:06:08 ip-172-31-28-254 web[852021]: [HERMES ¬ß49] Respondido por: Gemini (gemini-2.5-flash)
+Jun 14 06:07:15 ip-172-31-28-254 web[852021]: [REQ] POST /api/architect/interpret origin=- ct=application/json bodyKeys=message
+Jun 14 06:08:07 ip-172-31-28-254 web[852021]: [REQ] GET /api/health origin=- ct=- bodyKeys=-
+Jun 14 06:08:17 ip-172-31-28-254 web[852021]: [REQ] POST /api/architect/interpret origin=- ct=application/json bodyKeys=message
+
+
+----------------------------------------
+/var/log/eb-engine.log
+----------------------------------------
+2026/06/14 06:04:17.946869 [WARN] stopProcess Warning: process xray is not registered 
+2026/06/14 06:04:17.946897 [INFO] Running command: systemctl stop xray.service
+2026/06/14 06:04:17.960945 [INFO] Executing instruction: stop proxy
+2026/06/14 06:04:17.960980 [INFO] Running command: systemctl show -p PartOf httpd.service
+2026/06/14 06:04:17.975326 [WARN] deregisterProcess Warning: process httpd is not registered, skipping...
+
+2026/06/14 06:04:17.975358 [INFO] Running command: systemctl show -p PartOf nginx.service
+2026/06/14 06:04:17.986793 [INFO] Running command: systemctl is-active nginx.service
+2026/06/14 06:04:17.994515 [INFO] Running command: systemctl show -p PartOf nginx.service
+2026/06/14 06:04:18.003582 [INFO] Running command: systemctl stop nginx.service
+2026/06/14 06:04:18.170950 [INFO] Running command: systemctl disable nginx.service
+2026/06/14 06:04:18.469155 [INFO] Running command: systemctl daemon-reload
+2026/06/14 06:04:18.745174 [INFO] Running command: systemctl reset-failed
+2026/06/14 06:04:18.753521 [INFO] Executing instruction: FlipApplication
+2026/06/14 06:04:18.753537 [INFO] Fetching environment variables...
+2026/06/14 06:04:18.753790 [INFO] Purge old process...
+2026/06/14 06:04:18.753814 [INFO] Running command: systemctl stop eb-app.target
+2026/06/14 06:04:18.764335 [INFO] Running command: systemctl show -p ConsistsOf eb-app.target | cut -d= -f2
+2026/06/14 06:04:18.839895 [INFO] web.service
+
+2026/06/14 06:04:18.839918 [INFO] deregistering process: web
+2026/06/14 06:04:18.839928 [INFO] Running command: systemctl show -p PartOf web.service
+2026/06/14 06:04:18.913182 [INFO] Running command: systemctl is-active web.service
+2026/06/14 06:04:18.921364 [INFO] Running command: systemctl disable web.service
+2026/06/14 06:04:19.215245 [INFO] Removed "/etc/systemd/system/multi-user.target.wants/web.service".
+
+2026/06/14 06:04:19.215324 [INFO] Running command: systemctl daemon-reload
+2026/06/14 06:04:19.466240 [INFO] Running command: systemctl reset-failed
+2026/06/14 06:04:19.474679 [INFO] Running command: systemctl is-active web.service
+2026/06/14 06:04:19.481880 [INFO] Process web has been fully terminated
+2026/06/14 06:04:19.481904 [INFO] All processes have been fully terminated
+2026/06/14 06:04:19.481908 [INFO] Removing /var/app/current/ if it exists
+2026/06/14 06:04:19.546757 [INFO] Renaming /var/app/staging/ to /var/app/current/
+2026/06/14 06:04:19.546812 [INFO] Register application processes...
+2026/06/14 06:04:19.546818 [INFO] Registering the proc: web
+
+2026/06/14 06:04:19.546833 [INFO] Running command: systemctl show -p PartOf web.service
+2026/06/14 06:04:19.567840 [INFO] Running command: systemctl daemon-reload
+2026/06/14 06:04:19.853871 [INFO] Running command: systemctl reset-failed
+2026/06/14 06:04:19.862470 [INFO] Running command: systemctl is-enabled eb-app.target
+2026/06/14 06:04:19.870390 [INFO] Running command: systemctl enable eb-app.target
+2026/06/14 06:04:20.146622 [INFO] Running command: systemctl start eb-app.target
+2026/06/14 06:04:20.155603 [INFO] Running command: systemctl enable web.service
+2026/06/14 06:04:20.477504 [INFO] Created symlink /etc/systemd/system/multi-user.target.wants/web.service ‚Üí /etc/systemd/system/web.service.
+
+2026/06/14 06:04:20.477550 [INFO] Running command: systemctl show -p PartOf web.service
+2026/06/14 06:04:20.488347 [INFO] Running command: systemctl is-active web.service
+2026/06/14 06:04:20.496022 [INFO] Running command: systemctl start web.service
+2026/06/14 06:04:22.555036 [INFO] Executing instruction: start X-Ray
+2026/06/14 06:04:22.555046 [INFO] X-Ray is not enabled.
+2026/06/14 06:04:22.555050 [INFO] Executing instruction: start proxy with new configuration
+2026/06/14 06:04:22.555079 [INFO] Running command: /usr/sbin/nginx -t -c /var/proxy/staging/nginx/nginx.conf
+2026/06/14 06:04:22.584178 [INFO] nginx: [warn] could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+nginx: the configuration file /var/proxy/staging/nginx/nginx.conf syntax is ok
+nginx: configuration file /var/proxy/staging/nginx/nginx.conf test is successful
+
+2026/06/14 06:04:22.584550 [INFO] Running command: cp -rp /var/proxy/staging/nginx/* /etc/nginx
+2026/06/14 06:04:22.589402 [INFO] Running command: systemctl show -p PartOf nginx.service
+2026/06/14 06:04:22.613464 [INFO] Running command: systemctl daemon-reload
+2026/06/14 06:04:23.033281 [INFO] Running command: systemctl reset-failed
+2026/06/14 06:04:23.046231 [INFO] Running command: systemctl show -p PartOf nginx.service
+2026/06/14 06:04:23.066584 [INFO] Running command: systemctl is-active nginx.service
+2026/06/14 06:04:23.085432 [INFO] Running command: systemctl start nginx.service
+2026/06/14 06:04:23.197916 [INFO] Executing instruction: configureSqsd
+2026/06/14 06:04:23.197937 [INFO] This is a web server environment instance, skip configure sqsd daemon ...
+2026/06/14 06:04:23.197942 [INFO] Executing instruction: startSqsd
+2026/06/14 06:04:23.197944 [INFO] This is a web server environment instance, skip start sqsd daemon ...
+2026/06/14 06:04:23.197948 [INFO] Executing instruction: Track pids in healthd
+2026/06/14 06:04:23.197952 [INFO] This is an enhanced health env...
+2026/06/14 06:04:23.197965 [INFO] Running command: systemctl show -p ConsistsOf aws-eb.target | cut -d= -f2
+2026/06/14 06:04:23.209027 [INFO] cfn-hup.service nginx.service healthd.service
+
+2026/06/14 06:04:23.209058 [INFO] Running command: systemctl show -p ConsistsOf eb-app.target | cut -d= -f2
+2026/06/14 06:04:23.219917 [INFO] web.service
+
+2026/06/14 06:04:23.220217 [INFO] Executing instruction: RunAppDeployPostDeployHooks
+2026/06/14 06:04:23.220232 [INFO] No hooks found in .platform/hooks/postdeploy/, skipping
+2026/06/14 06:04:23.220236 [INFO] Executing cleanup logic
+2026/06/14 06:04:23.220309 [INFO] CommandService Response: {"status":"SUCCESS","api_version":"1.0","results":[{"status":"SUCCESS","msg":"Engine execution has succeeded.","returncode":0,"events":[{"msg":"Instance deployment: The deployment used the default Node.js version for your platform version instead of the Node.js version included in your 'package.json'.","timestamp":1781417050863,"severity":"WARN"},{"msg":"Instance deployment completed successfully.","timestamp":1781417063220,"severity":"INFO"}]}]}
+
+2026/06/14 06:04:23.251207 [INFO] Platform Engine finished execution on command: app-deploy
+
+2026/06/14 06:08:38.662263 [INFO] Starting...
+2026/06/14 06:08:38.662316 [INFO] Starting EBPlatform-PlatformEngine
+2026/06/14 06:08:38.662358 [INFO] reading event message file
+2026/06/14 06:08:38.662848 [INFO] Engine received EB command cfn-hup-exec
+
+2026/06/14 06:08:38.744016 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-1:374894298219:stack/awseb-e-3i63tnycpc-stack/d547fcc0-5b1d-11f1-b191-0eb6e4a910ad -r AWSEBAutoScalingGroup --region us-east-1
+2026/06/14 06:08:39.016509 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:us-east-1:374894298219:stack/awseb-e-3i63tnycpc-stack/d547fcc0-5b1d-11f1-b191-0eb6e4a910ad -r AWSEBBeanstalkMetadata --region us-east-1
+2026/06/14 06:08:39.281556 [INFO] checking whether command tail-log is applicable to this instance...
+2026/06/14 06:08:39.281574 [INFO] this command is applicable to the instance, thus instance should execute command
+2026/06/14 06:08:39.281579 [INFO] Engine command: (tail-log)
+
+2026/06/14 06:08:39.281623 [INFO] Executing instruction: GetTailLogs
+2026/06/14 06:08:39.281627 [INFO] Tail Logs...
+2026/06/14 06:08:39.282127 [INFO] Running command: tail -n 100 /var/log/eb-hooks.log
+2026/06/14 06:08:39.284350 [INFO] Running command: tail -n 100 /var/log/nginx/access.log
+2026/06/14 06:08:39.286211 [INFO] Running command: tail -n 100 /var/log/nginx/error.log
+2026/06/14 06:08:39.288011 [INFO] Running command: tail -n 100 /var/log/web.stdout.log
+2026/06/14 06:08:39.289691 [INFO] Running command: tail -n 100 /var/log/eb-engine.log
+
+

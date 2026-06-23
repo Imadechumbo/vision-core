@@ -1,0 +1,12 @@
+================================================================
+SERVIDOR VISION CORE V2.9.10 SELF-HEALING CONFIG
+================================================================
+URL: http://0.0.0.0:8080
+CORS: MANUAL HARDENED BEFORE ALL ROUTES
+BODY PARSER: RAW + JSON + TEXT + URLENCODED FALLBACK
+Contratos: ALL/POST /api/copilot | ALL/POST /api/hermes/analyze | ALL/POST /api/run-live | GET /api/run-live-stream
+NO CUSTOM 405: payload vazio nunca retorna 405
+SELF-HEALING CONFIG: nginx/env/node gates ativos
+PASS GOLD: obrigatório para promoção
+================================================================
+[REQ] GET /api/mission/timeline origin=- ct=- bodyKeys=-
