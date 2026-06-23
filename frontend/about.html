@@ -693,6 +693,12 @@
           <div style="font-size:11px;color:#64748b">— §128, 10 steps mapeados em 3 novos tutoriais, unit test 50/50 PASS, menu sidebar: 6→9 itens, deploy CF Pages</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🗃️</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O Archivist tinha rotas funcionais (<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/memory/save</code> e <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/memory/search</code>) desde o §64, mas era uma memória que ninguém consultava — nenhum agente de decisão buscava no Archivist antes de responder. A memória existia em isolamento. Nesta sessão, dois helpers internos foram criados (<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>archivistSearch</code> e <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>archivistSave</code>) que acessam o FS diretamente, sem HTTP. O Hermes (<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/chat</code>) e o OpenClaw (<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/openclaw/orchestrate</code>) agora buscam contexto de missões anteriores antes de responder e salvam um resumo após cada missão. O Archivist é sempre best-effort — nunca quebra o fluxo principal. Smoke test confirmou entradas <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>openclaw-*</code> sendo salvas automaticamente em produção imediatamente após o deploy."</div>
+          <div style="font-size:11px;color:#64748b">— §129, smoke test 26/26 PASS, entradas openclaw-* confirmadas no Archivist em produção, deploy EB v5.9.24-s129</div>
+        </div>
+
       </div>
 
     </div>

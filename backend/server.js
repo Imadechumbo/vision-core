@@ -109,6 +109,48 @@ function saveMarkdown(folder, title, data) {
   return file;
 }
 
+/* §129: helpers internos do Archivist — acesso direto ao FS, sem HTTP */
+/* Nunca devem quebrar o fluxo principal — todos erros são capturados.  */
+async function archivistSearch(query, limit) {
+  limit = limit || 3;
+  try {
+    const q = String(query || '').toLowerCase().slice(0, 200);
+    const results = [];
+    for (const dir of ['incidents', 'patterns']) {
+      const full = path.join(MEMORY_ROOT, dir);
+      if (!fs.existsSync(full)) continue;
+      for (const name of fs.readdirSync(full)) {
+        const fp = path.join(full, name);
+        try {
+          if (!fs.statSync(fp).isFile()) continue;
+          const text = fs.readFileSync(fp, 'utf8');
+          if (!q || text.toLowerCase().includes(q)) {
+            results.push({ file: name, preview: text.slice(0, 200) });
+          }
+          if (results.length >= limit * 3) break;
+        } catch (_) { /* arquivo ilegível — pula */ }
+      }
+      if (results.length >= limit) break;
+    }
+    /* retorna os mais recentes (nome de arquivo começa com timestamp) */
+    results.sort((a, b) => b.file.localeCompare(a.file));
+    return results.slice(0, limit);
+  } catch (e) {
+    console.warn('[Archivist] search failed (non-fatal):', e.message);
+    return [];
+  }
+}
+
+async function archivistSave(key, value) {
+  try {
+    const content = typeof value === 'string' ? value : JSON.stringify(value);
+    saveMarkdown('incidents', key, { context: content, source: 'auto-archivist' });
+    console.log('[Archivist] saved:', key);
+  } catch (e) {
+    console.warn('[Archivist] save failed (non-fatal):', e.message);
+  }
+}
+
 /* 1. CORS MANUAL BLINDADO — antes de parser/rotas */
 app.use((req, res, next) => {
   const origin = req.headers.origin || '*';
@@ -1224,9 +1266,17 @@ app.all('/api/openclaw/orchestrate', async (req, res) => {
       '{"mission_summary":"unclear","tasks":[],"risk_level":"high","pass_gold_required":true}'
     ].join('\n');
 
+    /* §129: busca contexto de missões anteriores no Archivist (best-effort) */
+    const _s129ocCtx = await archivistSearch(missionText.slice(0, 200), 3);
+    const _s129ocBlock = _s129ocCtx.length > 0
+      ? '\n\nCONTEXT FROM PREVIOUS MISSIONS (Archivist):\n' +
+        _s129ocCtx.map(m => '- ' + m.preview.slice(0, 120).replace(/\n/g, ' ')).join('\n')
+      : '';
+    const _s129ocSystem = ocSystem + _s129ocBlock;
+
     try {
       const llmResult = await callLLM(missionText, {
-        system:     ocSystem,
+        system:     _s129ocSystem,
         max_tokens: 600
       });
       if (llmResult && llmResult.text) {
@@ -1234,6 +1284,13 @@ app.all('/api/openclaw/orchestrate', async (req, res) => {
         const raw = llmResult.text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
         plan         = JSON.parse(raw);
         llm_provider = llmResult.provider;
+        /* §129: persiste plano da missão no Archivist (best-effort) */
+        archivistSave('openclaw-' + Date.now(), {
+          mission:   missionText.slice(0, 300),
+          plan,
+          provider:  llm_provider,
+          timestamp: now()
+        });
       }
     } catch (_e) {
       /* LLM failed or returned invalid JSON — fall through with plan=null */
@@ -2304,9 +2361,18 @@ app.post('/api/chat', async (req, res) => {
    * 503 estruturado mantido apenas para exaustão REAL (callHermes retorna ok=false).
    * Cliente stress test agora usa 90s (§69) — margem suficiente sem budget global. */
   const _h49timeout = message.length > 45000 ? 90000 : 60000;
+
+  /* §129: busca contexto de missões anteriores no Archivist (best-effort, nunca bloqueia) */
+  const _s129hCtx = await archivistSearch(message.slice(0, 200), 3);
+  const _s129hBlock = _s129hCtx.length > 0
+    ? '\n\n[CONTEXTO DE MISSÕES ANTERIORES NO ARCHIVIST]\n' +
+      _s129hCtx.map(m => '- ' + m.preview.slice(0, 150).replace(/\n/g, ' ')).join('\n')
+    : '';
+  const _s129systemPrompt = systemPrompt + _s129hBlock;
+
   let _h49result;
   try {
-    _h49result = await _callHermes49(systemPrompt, message, { timeout: _h49timeout });
+    _h49result = await _callHermes49(_s129systemPrompt, message, { timeout: _h49timeout });
   } catch (_e49) {
     _h49result = { ok: false, code: 'HERMES_EXCEPTION', requires_manual_review: true };
   }
@@ -2314,9 +2380,16 @@ app.post('/api/chat', async (req, res) => {
   if (_h49result && _h49result.answer) {
     const finalAnswer = await ensureHermesJson(_h49result.answer, async (prompt) => {
       try {
-        const r2 = await _callHermes49(systemPrompt, prompt, { timeout: 20000 });
+        const r2 = await _callHermes49(_s129systemPrompt, prompt, { timeout: 20000 });
         return r2.answer || '';
       } catch (_) { return ''; }
+    });
+    /* §129: salva resumo da missão no Archivist após resposta (best-effort) */
+    archivistSave('hermes-' + Date.now(), {
+      query:     message.slice(0, 300),
+      summary:   finalAnswer.slice(0, 500),
+      mode,
+      timestamp: now()
     });
     return sendOk(res, { answer: finalAnswer, provider: _h49result.provider_used, model: _h49result.model_used, mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
   }
