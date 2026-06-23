@@ -1,0 +1,223 @@
+#!/usr/bin/env node
+/**
+ * Real Repo Patch Apply Controller — V172.0
+ * Safe controller contract for applying a real permitted patch in the repo.
+ * Does NOT perform the physical patch — requires human command confirmation.
+ */
+
+import { createHash } from 'crypto';
+
+export const REAL_REPO_PATCH_APPLY_CONTROLLER_STATUSES = [
+  'REPO_PATCH_APPLY_BLOCKED_INPUT',
+  'REPO_PATCH_APPLY_BLOCKED_SCOPE',
+  'REPO_PATCH_APPLY_BLOCKED_PRE_STATE',
+  'REPO_PATCH_APPLY_READY',
+  'REPO_PATCH_APPLY_REQUIRES_HUMAN_COMMAND',
+];
+
+const SCHEMA_VERSION = 'v172.0';
+
+function sha256(s) {
+  return createHash('sha256').update(s).digest('hex');
+}
+
+function blocked(status, reason, overrides = {}) {
+  return {
+    schema_version: SCHEMA_VERSION,
+    apply_controller_status: status,
+    apply_ready: false,
+    human_command_required: true,
+    command_executed: false,
+    blocked_reason: reason,
+    controller_hash: null,
+    production_touched: false,
+    deploy_performed: false,
+    stable_promoted: false,
+    release_performed: false,
+    local_only: true,
+    is_real_execution: false,
+    ...overrides,
+  };
+}
+
+export function buildRealRepoPatchApplyController(input) {
+  if (
+    !input ||
+    typeof input !== 'object' ||
+    !input.apply_controller_id ||
+    typeof input.apply_controller_id !== 'string' ||
+    !input.apply_controller_id.trim()
+  ) {
+    return blocked('REPO_PATCH_APPLY_BLOCKED_INPUT', 'Missing or invalid apply_controller_id');
+  }
+
+  const {
+    apply_controller_id,
+    scope_contract_id,
+    scope_contract_status,
+    snapshot_id,
+    pre_state_status,
+    target_file,
+    patch_type,
+    patch_intent,
+    patch_content_hash,
+    human_command_confirmed,
+  } = input;
+
+  if (!scope_contract_id || typeof scope_contract_id !== 'string' || !scope_contract_id.trim()) {
+    return blocked('REPO_PATCH_APPLY_BLOCKED_INPUT', 'Missing or invalid scope_contract_id');
+  }
+  if (!snapshot_id || typeof snapshot_id !== 'string' || !snapshot_id.trim()) {
+    return blocked('REPO_PATCH_APPLY_BLOCKED_INPUT', 'Missing or invalid snapshot_id');
+  }
+  if (!target_file || typeof target_file !== 'string' || !target_file.trim()) {
+    return blocked('REPO_PATCH_APPLY_BLOCKED_INPUT', 'Missing or invalid target_file');
+  }
+  if (!patch_type || typeof patch_type !== 'string' || !patch_type.trim()) {
+    return blocked('REPO_PATCH_APPLY_BLOCKED_INPUT', 'Missing or invalid patch_type');
+  }
+  if (!patch_intent || typeof patch_intent !== 'string' || !patch_intent.trim()) {
+    return blocked('REPO_PATCH_APPLY_BLOCKED_INPUT', 'Missing or invalid patch_intent');
+  }
+  if (!patch_content_hash || typeof patch_content_hash !== 'string' || !patch_content_hash.trim()) {
+    return blocked('REPO_PATCH_APPLY_BLOCKED_INPUT', 'Missing or invalid patch_content_hash');
+  }
+
+  if (input.production_touched === true) {
+    return blocked('REPO_PATCH_APPLY_BLOCKED_INPUT', 'production_touched must be false');
+  }
+  if (input.local_only === false) {
+    return blocked('REPO_PATCH_APPLY_BLOCKED_INPUT', 'local_only must be true');
+  }
+
+  if (scope_contract_status !== 'REPO_PATCH_SCOPE_READY') {
+    return blocked(
+      'REPO_PATCH_APPLY_BLOCKED_SCOPE',
+      `scope_contract_status must be REPO_PATCH_SCOPE_READY, got: ${scope_contract_status}`
+    );
+  }
+
+  if (pre_state_status !== 'REPO_PRE_STATE_READY') {
+    return blocked(
+      'REPO_PATCH_APPLY_BLOCKED_PRE_STATE',
+      `pre_state_status must be REPO_PRE_STATE_READY, got: ${pre_state_status}`
+    );
+  }
+
+  const controller_hash = sha256(
+    `${apply_controller_id}:${scope_contract_id}:${snapshot_id}:${target_file}:${patch_type}:${patch_content_hash}`
+  );
+
+  if (!human_command_confirmed) {
+    return {
+      schema_version: SCHEMA_VERSION,
+      apply_controller_id,
+      scope_contract_id,
+      snapshot_id,
+      target_file,
+      patch_type,
+      patch_intent,
+      patch_content_hash,
+      controller_hash,
+      apply_controller_status: 'REPO_PATCH_APPLY_REQUIRES_HUMAN_COMMAND',
+      apply_ready: false,
+      human_command_required: true,
+      command_executed: false,
+      blocked_reason: 'Waiting for human_command_confirmed=true',
+      production_touched: false,
+      deploy_performed: false,
+      stable_promoted: false,
+      release_performed: false,
+      local_only: true,
+      is_real_execution: false,
+    };
+  }
+
+  return {
+    schema_version: SCHEMA_VERSION,
+    apply_controller_id,
+    scope_contract_id,
+    snapshot_id,
+    target_file,
+    patch_type,
+    patch_intent,
+    patch_content_hash,
+    controller_hash,
+    apply_controller_status: 'REPO_PATCH_APPLY_READY',
+    apply_ready: true,
+    human_command_required: true,
+    command_executed: false,
+    blocked_reason: null,
+    production_touched: false,
+    deploy_performed: false,
+    stable_promoted: false,
+    release_performed: false,
+    local_only: true,
+    is_real_execution: false,
+  };
+}
+
+export function validateRealRepoPatchApplyController(controller) {
+  if (!controller || typeof controller !== 'object') {
+    return { valid: false, errors: ['controller is null or not an object'] };
+  }
+  const errors = [];
+  if (controller.production_touched !== false) errors.push('production_touched must be false');
+  if (controller.deploy_performed !== false) errors.push('deploy_performed must be false');
+  if (controller.stable_promoted !== false) errors.push('stable_promoted must be false');
+  if (controller.release_performed !== false) errors.push('release_performed must be false');
+  if (controller.local_only !== true) errors.push('local_only must be true');
+  if (controller.command_executed !== false) errors.push('command_executed must be false');
+  if (controller.human_command_required !== true) errors.push('human_command_required must be true');
+  if (!REAL_REPO_PATCH_APPLY_CONTROLLER_STATUSES.includes(controller.apply_controller_status)) {
+    errors.push(`Invalid apply_controller_status: ${controller.apply_controller_status}`);
+  }
+  if (controller.apply_controller_status === 'REPO_PATCH_APPLY_READY' && !controller.controller_hash) {
+    errors.push('REPO_PATCH_APPLY_READY requires controller_hash');
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function renderRealRepoPatchApplyController(controller) {
+  if (!controller || typeof controller !== 'object') {
+    return '[RealRepoPatchApplyController: null]';
+  }
+  const lines = [
+    `=== Real Repo Patch Apply Controller ${SCHEMA_VERSION} ===`,
+    `Status          : ${controller.apply_controller_status}`,
+    `Apply Ready     : ${controller.apply_ready}`,
+    `Controller ID   : ${controller.apply_controller_id ?? 'N/A'}`,
+    `Target File     : ${controller.target_file ?? 'N/A'}`,
+    `Patch Type      : ${controller.patch_type ?? 'N/A'}`,
+    `Patch Intent    : ${controller.patch_intent ?? 'N/A'}`,
+    `Human Required  : ${controller.human_command_required}`,
+    `Cmd Executed    : ${controller.command_executed}`,
+    `Controller Hash : ${controller.controller_hash ?? 'N/A'}`,
+    `Local Only      : ${controller.local_only}`,
+    `Prod Touched    : ${controller.production_touched}`,
+  ];
+  if (controller.blocked_reason) lines.push(`Blocked         : ${controller.blocked_reason}`);
+  lines.push('--- REGRA ABSOLUTA: SEM PASS GOLD REAL → não promove, não libera, não marca stable ---');
+  return lines.join('\n');
+}
+
+if (process.argv[1] && process.argv[1].endsWith('real-repo-patch-apply-controller.mjs')) {
+  const demo = buildRealRepoPatchApplyController({
+    apply_controller_id: 'apply-controller-demo-001',
+    scope_contract_id: 'scope-001',
+    scope_contract_status: 'REPO_PATCH_SCOPE_READY',
+    snapshot_id: 'snapshot-001',
+    pre_state_status: 'REPO_PRE_STATE_READY',
+    target_file: 'docs/real-repo-patch-drill-target.md',
+    patch_type: 'CREATE_DOC',
+    patch_intent: 'Create drill target doc for V172.1',
+    patch_content_hash: 'content-hash-demo-001',
+    human_command_confirmed: true,
+    local_only: true,
+    production_touched: false,
+  });
+  console.log(renderRealRepoPatchApplyController(demo));
+  const v = validateRealRepoPatchApplyController(demo);
+  console.log(`\nValidation: ${v.valid ? 'OK' : 'FAIL'}`);
+  if (!v.valid) console.error(v.errors);
+}
