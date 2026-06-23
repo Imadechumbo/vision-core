@@ -63,6 +63,11 @@ function resolveGoBinary() {
 
   for (const candidate of candidates) {
     if (isFile(candidate)) {
+      // §130c: chmod +x programático — EB não honra permissões de zip.
+      // Roda só em Linux (no Windows não é necessário e poderia falhar).
+      if (process.platform !== 'win32') {
+        try { fs.chmodSync(candidate, 0o755); } catch (_) {}
+      }
       return {
         available: true,
         mode: 'binary',
