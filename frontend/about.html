@@ -687,6 +687,12 @@
           <div style="font-size:11px;color:#64748b">— §127, smoke test: PR real criado (PR #738) + branch de teste deletada, /api/github/status: configured: true em produção</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🎯</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O menu lateral de tutoriais tinha 6 seções — mas só 'Geral' e as seções já corrigidas em §118-§123 tinham conteúdo funcional. Três seções com uso real no produto (GitHub Agent, Tools Marketplace, Métricas dos Agentes) não tinham tutorial nenhum: o botão aparecia no menu mas não havia steps definidos. Mais importante: quando o usuário estava na Software Factory page e abria qualquer tutorial de seção do cockpit (Agent local, Mission Control, etc.), os targets tinham getBoundingClientRect() retornando zero porque os elementos estavam em display:none na view oculta. Fix: (1) exposto window.showMainCockpitPage para que tutorials de seção possam voltar ao cockpit antes de medir; (2) adicionado helper _cockpitScroll que combina showMainCockpitPage + scrollIntoView no onEnter de cada step; (3) implementados 3 novos tutoriais completos com targets reais mapeados: GitHub (5 passos, #githubPanel/#githubStatus/#githubStatusBtn/#githubPrBtn/#policyBtn), Tools (2 passos, #marketplace/#toolsBox), Métricas (3 passos, #metricsBoard/#agentMetricsLarge/#metricsSourceBadge)."</div>
+          <div style="font-size:11px;color:#64748b">— §128, 10 steps mapeados em 3 novos tutoriais, unit test 50/50 PASS, menu sidebar: 6→9 itens, deploy CF Pages</div>
+        </div>
+
       </div>
 
     </div>

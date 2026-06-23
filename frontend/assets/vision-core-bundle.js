@@ -8621,6 +8621,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     // §118: expõe para tutoriais de seção (T3 — STEPS_SF onEnter)
     window.showSoftwareFactoryPage  = showSoftwareFactoryPage;
     window.setSoftwareFactoryModule = setSoftwareFactoryModule;
+    // §128: expõe para tutoriais que precisam voltar ao cockpit antes de iluminar
+    window.showMainCockpitPage = showMainCockpitPage;
     var sfPage = document.getElementById('vcSoftwareFactoryPage');
     if (!sfPage) return;
 
@@ -9690,6 +9692,96 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     { title: '⚙️ Ajustando os modos', text: 'Em "AGENTES EXTRAS" na sidebar, cada card tem os botões OFF/AUTO/ON. A escolha é salva no backend e vale para todas as suas próximas conversas.', target: '#agentsBoard', pos: 'top', onEnter: _scrollInto('#agentsBoard') }
   ];
   window.vcRegisterTutorial('agents', STEPS_AGENTS, 'vc_tutorial_agents_done');
+
+  // §128: helper — garante cockpit visível + scroll ao alvo.
+  // Tutoriais de seções fora do SF page precisam voltar ao cockpit
+  // caso o usuário esteja na SF page quando abrir o tutorial.
+  var _cockpitScroll = function(sel) {
+    return function() {
+      if (typeof window.showMainCockpitPage === 'function') window.showMainCockpitPage();
+      var el = document.querySelector(sel);
+      if (el) el.scrollIntoView({ behavior: 'instant', block: 'center' });
+    };
+  };
+
+  // ── T7: TUTORIAL GITHUB AGENT ──
+  // §128: ilumina cada elemento real do painel de integração GitHub.
+  // onEnter garante cockpit visível + scroll ao elemento antes de medir getBoundingClientRect.
+  var STEPS_GITHUB = [
+    {
+      title: '⌬ GitHub Integration Real',
+      text: 'O Vision Core cria Pull Requests reais no GitHub — branch, commit e PR aberto automaticamente. Funciona só com GITHUB_TOKEN configurado no backend e após PASS GOLD.',
+      target: '#githubPanel', pos: 'top',
+      onEnter: _cockpitScroll('#githubPanel')
+    },
+    {
+      title: '🔍 Status da conexão',
+      text: 'Este badge mostra se o token está configurado e qual repositório está conectado. Fica verde quando o GitHub responde com sucesso.',
+      target: '#githubStatus', pos: 'top',
+      onEnter: _cockpitScroll('#githubStatus')
+    },
+    {
+      title: '▶ Verificar GitHub',
+      text: 'Clique para testar a conexão agora. O Vision Core chama /api/github/status no backend e exibe o resultado — repo, usuário, permissões.',
+      target: '#githubStatusBtn', pos: 'bottom',
+      onEnter: _cockpitScroll('#githubStatusBtn')
+    },
+    {
+      title: '🔃 Criar PR PASS GOLD',
+      text: 'Só ativo depois que uma missão atinge PASS GOLD. Cria branch com o nome do fix, aplica o commit e abre o PR automaticamente. Você só revisa e faz merge.',
+      target: '#githubPrBtn', pos: 'bottom',
+      onEnter: _cockpitScroll('#githubPrBtn')
+    },
+    {
+      title: '⚙ Auto-merge Policy',
+      text: 'Configura se PRs com PASS GOLD são merged automaticamente ou aguardam revisão manual. Recomendado: revisão manual até o time confiar no pipeline.',
+      target: '#policyBtn', pos: 'bottom',
+      onEnter: _cockpitScroll('#policyBtn')
+    }
+  ];
+  window.vcRegisterTutorial('github', STEPS_GITHUB, 'vc_tutorial_github_done');
+
+  // ── T8: TUTORIAL TOOLS MARKETPLACE ──
+  // §128: ilumina o painel e a grade de ferramentas disponíveis.
+  var STEPS_TOOLS = [
+    {
+      title: '▣ Tools Marketplace',
+      text: 'Conectores prontos para integrar o Vision Core com suas ferramentas externas: GitHub, Cloudflare, Railway, Docker, Langfuse e billing via Stripe.',
+      target: '#marketplace', pos: 'top',
+      onEnter: _cockpitScroll('#marketplace')
+    },
+    {
+      title: '🔧 Grade de conectores',
+      text: 'Cada card mostra o status de conexão (ativo/pendente) e permite configurar credenciais. Os conectores habilitados aparecem no pipeline de missões como destinos de deploy.',
+      target: '#toolsBox', pos: 'top',
+      onEnter: _cockpitScroll('#toolsBox')
+    }
+  ];
+  window.vcRegisterTutorial('tools', STEPS_TOOLS, 'vc_tutorial_tools_done');
+
+  // ── T9: TUTORIAL MÉTRICAS ──
+  // §128: ilumina o painel de métricas de agentes com dados reais do backend.
+  var STEPS_METRICS = [
+    {
+      title: '▥ Métricas dos Agentes',
+      text: 'Custo real por agente e método de execução. Dados vivos do backend em /api/metrics/agents. Quando o backend está offline, fallback estático mantém a tela visível (badge "UI LOCAL").',
+      target: '#metricsBoard', pos: 'top',
+      onEnter: _cockpitScroll('#metricsBoard')
+    },
+    {
+      title: '📊 Barras de custo por agente',
+      text: 'Cada barra mostra custo relativo de tokens/chamadas. CONVERSA = resposta única, LOOP = múltiplas iterações, ADAPTIVE = modo varia por missão. Hermes e PatchEngine costumam ser os mais caros.',
+      target: '#agentMetricsLarge', pos: 'top',
+      onEnter: _cockpitScroll('#agentMetricsLarge')
+    },
+    {
+      title: '🏷 Fonte dos dados',
+      text: 'O badge "UI LOCAL" aparece quando o backend está offline — os valores são estimativas estáticas. Quando o backend responde, o badge some e os valores são dados reais da sessão.',
+      target: '#metricsSourceBadge', pos: 'bottom',
+      onEnter: _cockpitScroll('#metricsSourceBadge')
+    }
+  ];
+  window.vcRegisterTutorial('metrics', STEPS_METRICS, 'vc_tutorial_metrics_done');
 
   // T-MENU: toggle do accordion na sidebar
   window.vcToggleTutorialMenu = function() {

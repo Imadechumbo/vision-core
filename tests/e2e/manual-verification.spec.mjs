@@ -1289,7 +1289,7 @@ test.describe('§122 — Menu accordion: 6 itens únicos sem duplicata', () => {
     // Contar itens
     const count = await page.locator('#vcTutPanel a.vc-tut-item').count();
     console.log('  §122 itens no menu:', count);
-    expect(count, '§122: deve ter exatamente 6 itens no menu').toBe(6);
+    expect(count, '§122/§128: deve ter exatamente 9 itens no menu (6 originais + 3 novos do §128: GitHub, Tools, Métricas)').toBe(9);
 
     // Extrair texto e onclick de todos
     const items = await page.evaluate(() => {
@@ -1322,6 +1322,6 @@ test.describe('§122 — Menu accordion: 6 itens únicos sem duplicata', () => {
     // Screenshot visual do menu aberto
     await page.screenshot({ path: 'test-results/s122-menu-accordion.png' });
 
-    console.log('  §122 PASS: 6 itens únicos, Geral presente, Agent local 1x apenas.');
+    console.log('  §122/§128 PASS: 9 itens únicos, Geral presente, Agent local 1x apenas (6 originais + 3 do §128).');
   });
 });
