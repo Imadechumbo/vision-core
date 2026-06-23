@@ -23,7 +23,11 @@ const { spawn } = require('child_process');
 const DEFAULT_TIMEOUT_MS = 30000;
 
 function repoRoot() {
-  return path.resolve(__dirname, '..', '..', '..');
+  // §130: VISION_PROJECT_ROOT tem prioridade (setado no EB ou localmente).
+  // Fallback: process.cwd() funciona no EB (/var/app) e localmente (vision-core/).
+  // __dirname = .../src/runtime/ — vai 3 níveis pra cima localmente (backend/ incluído)
+  // mas no EB o zip não tem backend/ na raiz, então vai a /var/ (errado).
+  return process.env.VISION_PROJECT_ROOT || process.cwd();
 }
 
 function isFile(file) {

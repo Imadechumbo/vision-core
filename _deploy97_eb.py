@@ -18,16 +18,16 @@ ROOT       = Path('C:/Users/imadechumbo/Desktop/vision-core')
 BACKEND    = ROOT / 'backend'
 APP_VERS   = BACKEND / '.elasticbeanstalk' / 'app_versions'
 LATEST_ZIP = APP_VERS / 'vision-core-v5.9.24-s129.zip'
-NEW_ZIP    = APP_VERS / 'vision-core-v5.9.25-s130.zip'
+NEW_ZIP    = APP_VERS / 'vision-core-v5.9.26-s130b.zip'
 SERVER_SRC = BACKEND / 'server.js'
 GORUNNER   = BACKEND / 'src' / 'runtime' / 'goRunner.js'
 LINUX_BIN  = ROOT / 'bin' / 'vision-core-linux'
 S3_BUCKET  = 'elasticbeanstalk-us-east-1-374894298219'
-S3_KEY     = 'vision-core-v5.9.25-s130.zip'
+S3_KEY     = 'vision-core-v5.9.26-s130b.zip'
 APP_NAME   = 'vision-core'
 ENV_NAME   = 'vision-core-prod'
 REGION     = 'us-east-1'
-VER_LABEL  = 'v5.9.25-s130-piharness-v3'
+VER_LABEL  = 'v5.9.26-s130b-gorunner-reporoot'
 
 # ── leitura dos arquivos novos ───────────────────────────────────────────────
 print('Reading source files...')
@@ -47,6 +47,8 @@ assert b'missionRoot = path.resolve(process.env.VISION_PROJECT_ROOT || ROOT || p
     'ERROR: missionRoot fix not found in server.js (should NOT have ..'
 assert b"// if (dryRun) missionArgs.push('--dry-run')" in new_gorunner, \
     'ERROR: --dry-run removal not found in goRunner.js'
+assert b'process.env.VISION_PROJECT_ROOT || process.cwd()' in new_gorunner, \
+    'ERROR: repoRoot fix not found in goRunner.js'
 assert b'archivistSearch' in new_server, \
     'ERROR: archivistSearch missing (regression §129)'
 assert b'apply_patch_multi' in new_server, \
