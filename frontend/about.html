@@ -681,6 +681,12 @@
           <div style="font-size:11px;color:#64748b">— §126, smoke test bash 14/14 PASS (7 casos de roteamento + 4 validações de campo plan + 2 fallback + 1 anti-stub), deploy EB v5.9.22-s126, health check confirmado em produção</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🐙</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"GitHub Agent estava implementado desde o §64 mas nunca ativo em produção — a rota <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/github/create-pr</code> existia, criava branch, commitava arquivos e abria PR via GitHub REST API, mas o <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>GITHUB_TOKEN</code> nunca foi enviado como variável de ambiente pro EB. O <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/github/status</code> retornava <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>configured: false</code> em produção mesmo com o código completo. Zero linha de código nova nesta sessão — só configuração de ambiente. Smoke test confirmou PR criado de verdade no repositório real (PR #738, branch <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>vision-core-test-s127</code>), depois fechado e branch deletada via <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>gh pr close --delete-branch</code>."</div>
+          <div style="font-size:11px;color:#64748b">— §127, smoke test: PR real criado (PR #738) + branch de teste deletada, /api/github/status: configured: true em produção</div>
+        </div>
+
       </div>
 
     </div>
