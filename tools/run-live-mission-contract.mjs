@@ -69,11 +69,17 @@ function _isFakeMissionId(id) {
 
 function _isStubBody(body) {
   if (!body || typeof body !== 'object') return true;
-  // Check stub indicators on non-mission fields only — mission_id has its own gate
+  // §131: Check stub markers only in STRING VALUES, not field names.
+  // The field name "backend_stub" is a legitimate response field that contained "stub"
+  // in its name — checking the full JSON string would incorrectly flag real responses.
+  // Known safe boolean fields: backend_stub:false = NOT a stub.
   const { mission_id: _omit, ...rest } = body;
-  const text = JSON.stringify(rest).toLowerCase();
-  for (const m of STUB_MARKERS) {
-    if (text.includes(m)) return true;
+  const stringValues = Object.values(rest).filter(v => typeof v === 'string');
+  for (const val of stringValues) {
+    const low = val.toLowerCase();
+    for (const m of STUB_MARKERS) {
+      if (low.includes(m)) return true;
+    }
   }
   return false;
 }
@@ -136,11 +142,28 @@ export function validateRunLiveContract(options = {}) {
     });
   }
 
-  // Gate 5: fake pass_gold claim detection
+  // Gate 5: fake pass_gold/promotion_allowed claim detection
+  // §131: A backend backed by real Go Core evidence (backend_stub:false +
+  // evidence_receipt.source:'go-core') legitimately returns pass_gold:true AND
+  // promotion_allowed:true. Block only when these are claimed WITHOUT real evidence.
+  // deploy_allowed is a separate invariant always enforced (never true regardless).
   const passGoldClaimed       = parsed.pass_gold === true || parsed.pass_gold_candidate === true;
   const promotionAllowedClaim = parsed.promotion_allowed === true;
+  const deployAllowedClaim    = parsed.deploy_allowed === true;
+  const hasRealEvidence       = parsed.backend_stub === false
+    && parsed.evidence_receipt?.source === 'go-core';
 
-  if (passGoldClaimed || promotionAllowedClaim) {
+  if (deployAllowedClaim) {
+    // deploy_allowed:true is ALWAYS blocked — absolute invariant
+    return _blocked('RUNLIVE_BLOCKED_FAKE_PASS_GOLD', {
+      mission_id:              missionId,
+      pass_gold_claimed:       passGoldClaimed,
+      promotion_allowed_claimed: promotionAllowedClaim,
+      run_live_evidence:       { parsed },
+    });
+  }
+  if ((passGoldClaimed || promotionAllowedClaim) && !hasRealEvidence) {
+    // pass_gold or promotion_allowed without real go-core evidence → stub/fake claim
     return _blocked('RUNLIVE_BLOCKED_FAKE_PASS_GOLD', {
       mission_id:              missionId,
       pass_gold_claimed:       passGoldClaimed,

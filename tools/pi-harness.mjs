@@ -1350,6 +1350,16 @@ async function runRuntimeProbe(s) {
 
   audit('[D4] [runtime-probe] V15.2 contract: PASS ✓');
 
+  // §131: propagate evidence_receipt.id from /api/run-live probe → goRuntimeEvidenceId
+  // D3 runs `--dry-run` which the binary does not support (returns error without receipt).
+  // D4 calls /api/run-live which invokes Go Core and returns the real evidence receipt.
+  // Semantically equivalent: both are Go Core receipts from the same binary execution path.
+  if (probe.evidence_receipt?.id && !s.goRuntimeEvidenceId) {
+    s.goRuntimeEvidenceId     = probe.evidence_receipt.id;
+    s.goRuntimeEvidenceSource = probe.evidence_receipt.source || s.runLiveEvidenceSource || null;
+    audit(`[D4] [runtime-probe] §131: propagated goRuntimeEvidenceId = ${s.goRuntimeEvidenceId}`);
+  }
+
   s.runtimeProbePass = true;
   audit('[D4] [runtime-probe] todas validações PASS ✓');
   return true;
@@ -1400,9 +1410,14 @@ async function runLayerD4BackendRuntime(s) {
     try {
       probeOk = await runRuntimeProbe(s);
     } finally {
-      if (s.backendProcessStarted && !s.backendProcessStopped) {
+      // §131: when --runtime-probe is active, defer backend stop to AFTER the V27.0 E2E
+      // probe. The E2E probe reuses the same backend instance (launcher detects healthy
+      // port-busy and returns BACKEND_LAUNCH_SKIPPED). Backend is stopped post-V27.0.
+      if (s.backendProcessStarted && !s.backendProcessStopped && !RUNTIME_PROBE) {
         s.backendProcessStopped = stopBackend();
         audit(`[D4] backend processo parado: ${s.backendProcessStopped}`);
+      } else if (RUNTIME_PROBE && s.backendProcessStarted) {
+        audit('[D4] [runtime-probe] §131: backend mantido vivo para E2E probe (V27.0)');
       }
       // V15.3: cleanup probe temp root regardless of outcome
       s.runtimeProbeTempRootRemoved = removeProbeTempRoot();
@@ -2504,9 +2519,12 @@ async function main() {
 
     if (result === 'PASS' && s.layersFailed.length > 0) result = 'BLOCKED';
   } finally {
-    if (s.backendProcessStarted && !s.backendProcessStopped) {
+    // §131: when --runtime-probe active, defer backend stop to after V27.0 E2E probe.
+    if (s.backendProcessStarted && !s.backendProcessStopped && !RUNTIME_PROBE) {
       s.backendProcessStopped = stopBackend();
       if (s.backendProcessStopped) audit('[MAIN] backend processo parado no cleanup final');
+    } else if (RUNTIME_PROBE && s.backendProcessStarted && !s.backendProcessStopped) {
+      audit('[MAIN] §131: backend mantido vivo — E2E probe (V27.0) roda em seguida');
     }
   }
 
@@ -2646,6 +2664,11 @@ async function main() {
       }
     } catch (e) {
       audit(`[V27.0] E2E probe error: ${e.message}`);
+    }
+    // §131: stop the backend that D4 kept alive for this E2E probe
+    if (s.backendProcessStarted && !s.backendProcessStopped) {
+      s.backendProcessStopped = stopBackend();
+      audit(`[V27.0] §131: backend parado pós E2E probe: ${s.backendProcessStopped}`);
     }
   } else if (RUNTIME_PROBE && RUNTIME_PROBE_NO_START) {
     _e2eProbeResult = { e2e_runtime_status: 'E2E_SKIPPED_NO_START', runtime_probe_pass: false };

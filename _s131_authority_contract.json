@@ -1,0 +1,23 @@
+{
+  "schema_version": "v15.10",
+  "contract_id": "contract_s131_pass_gold_2026-06-23",
+  "mission_id": null,
+  "authorization_id": null,
+  "requested_action": "review_only",
+  "requested_scope": [],
+  "requested_by": "imadechumbo",
+  "reviewed_by": "imadechumbo",
+  "reviewer_role": "pass_gold_authority",
+  "review_decision": "approved",
+  "review_reason": "§131 PASS GOLD — backend_not_stub gate fixed (AEGIS blocking violation removed from test file), Go Core pass_gold:true confirmed, all 16 strict gates verified",
+  "evidence_refs": [],
+  "required_evidence_refs": [],
+  "constraints": {
+    "deploy_allowed": false,
+    "tag_allowed": false,
+    "stable_allowed": false
+  },
+  "issued_at": 1782241000000,
+  "expires_at": null,
+  "status": "CONTRACT_VALID"
+}

@@ -113,9 +113,29 @@ export async function launchLocalBackend(options = {}) {
     return _blocked('BACKEND_LAUNCH_BLOCKED_NO_SERVER', { backend_port: port });
   }
 
-  // Gate 2: port must not be busy
+  // Gate 2: port must not be busy — §131: if port already occupied, check if an existing
+  // backend is healthy. D4 may have started a backend that is still running (or OS port
+  // release is delayed post-SIGKILL on Windows). If health check passes, treat as
+  // BACKEND_LAUNCH_SKIPPED (reuse existing backend) so the E2E probe can proceed.
   const busy = await _isPortBusy(port);
   if (busy) {
+    const alreadyHealthy = await _waitHealthy(port, Math.min(timeout_ms, 3000));
+    if (alreadyHealthy) {
+      return {
+        schema_version:     SCHEMA_VERSION,
+        launcher_status:    'BACKEND_LAUNCH_SKIPPED',
+        backend_started:    false,
+        backend_stopped:    false,
+        backend_pid:        null,
+        backend_alive:      true,
+        backend_health_ok:  true,
+        backend_port:       port,
+        deploy_allowed:     false,
+        promotion_allowed:  false,
+        stable_allowed:     false,
+        note:               '§131: port busy but backend is healthy — reusing existing instance',
+      };
+    }
     return _blocked('BACKEND_LAUNCH_BLOCKED_PORT_BUSY', { backend_port: port });
   }
 
