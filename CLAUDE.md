@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-23 (§125)
+## Documento central do projeto | Atualizado: 2026-06-23 (§123-close)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -220,11 +220,11 @@ FREE_MISSION_LIMIT=5
 
 **Status: §122 implementado, testado (19/19 Playwright) e deployado em produção (commit 6d57cb6, CF Pages ao vivo).**
 
-**Status §123:** commitado (3844ab8) mas NÃO deployado — suíte Playwright completa (18/18 + 19/19 anteriores) ainda pendente de confirmação real no browser. Humano precisa: rodar `npm run test:e2e:*` pra confirmar zero regressão, atualizar `about.html`/`landing.html` e deployar via `bash bin/deploy-pages.sh`.
+**§123 FECHADO** — fix em produção (confirmado visualmente pelo humano via wrangler pages deploy manual + confirmação visual), Playwright 19/19 PASS, páginas públicas atualizadas (`about.html` atribuição + `landing.html` V2.9.21+ Playwright confirmado). Deploy das páginas públicas via `bash bin/deploy-pages.sh` nesta sessão.
 
 **Status §125:** implementado, commitado (4 commits — `6f34a9f`, `125512e`, `c6c4cc6`, `2a0763c`). 585 arquivos órfãos movidos para `tools/_archive/`. pi-harness, syntax-check e test:quick validados. NÃO deployado (só `tools/` — não afeta frontend/backend, deploy não necessário).
 
-**Próximo item:** conversa nova com o humano sobre prioridade após fechar §123 (deploy + Playwright).
+**Próximo item:** conversa nova com o humano sobre prioridade (itens da auditoria §124: OpenClaw, GitHub Agent, Archivist, ou outro item combinado).
 
 **Nota §121 → próxima sessão:** features visuais com overlay/tutorial que foram consertadas precisam de confirmação visual real em produção pelo humano antes de serem declaradas resolvidas — a sequência §120+§121 mostrou que "testes passando" não garantiu "funciona em produção" quando CSS e JS se contradizem.
 
