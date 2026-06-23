@@ -323,7 +323,10 @@ async function runGoMission({ root, input, dryRun } = {}) {
     };
 
     const missionArgs = ['mission', '--root', missionRoot, '--input', missionInput];
-    if (dryRun) missionArgs.push('--dry-run');
+    // §130: --dry-run flag removido — binary go-core não suporta o sub-flag para
+    // o subcomando 'mission' (causa hang indefinido). dry_run no payload da API
+    // é só metadado; o binário sempre executa a missão completa.
+    // if (dryRun) missionArgs.push('--dry-run');
 
     const args = [...resolved.argsPrefix, ...missionArgs];
 

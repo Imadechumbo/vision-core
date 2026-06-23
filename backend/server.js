@@ -1107,7 +1107,9 @@ app.all('/api/run-live', checkMissionQuota, async (req, res) => {
     });
   }
 
-  const missionRoot = path.resolve(process.env.VISION_PROJECT_ROOT || ROOT || process.cwd(), '..');
+  // §130: removido '..' — ROOT já é a raiz do projeto (process.cwd() no EB ou VISION_PROJECT_ROOT).
+  // Com '..', ia para o dir pai (e.g. Desktop/), causando scan de milhares de arquivos e timeout.
+  const missionRoot = path.resolve(process.env.VISION_PROJECT_ROOT || ROOT || process.cwd());
 
   let result;
   try {
@@ -1182,7 +1184,9 @@ app.all('/api/run-live', checkMissionQuota, async (req, res) => {
 app.get('/api/run-live-stream', async (req, res) => {
   const input    = req.query.mission || req.query.input || req.query.message || 'self-test';
   const missionId = makeId('mission');
-  const missionRoot = path.resolve(process.env.VISION_PROJECT_ROOT || ROOT || process.cwd(), '..');
+  // §130: removido '..' — ROOT já é a raiz do projeto (process.cwd() no EB ou VISION_PROJECT_ROOT).
+  // Com '..', ia para o dir pai (e.g. Desktop/), causando scan de milhares de arquivos e timeout.
+  const missionRoot = path.resolve(process.env.VISION_PROJECT_ROOT || ROOT || process.cwd());
 
   res.writeHead(200, {
     'Content-Type':  'text/event-stream; charset=utf-8',

@@ -539,11 +539,19 @@ function httpGet(url, timeoutMs = 8000) {
 }
 
 function httpPost(url, body, timeoutMs = 10000) {
-  const payload = JSON.stringify(body).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-  const cmd = `node -e "const http=require('http');const d=JSON.stringify(${JSON.stringify(body)});const u=new URL('${url}');const req=http.request({hostname:u.hostname,port:u.port,path:u.pathname,method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(d)},timeout:${timeoutMs}},(res)=>{let b='';res.on('data',c=>b+=c);res.on('end',()=>{try{process.stdout.write(JSON.stringify(JSON.parse(b)));}catch{process.stdout.write(b);}});});req.on('error',e=>process.stdout.write('ERROR:'+e.message));req.write(d);req.end();"`;
-  const r = shFull(cmd, timeoutMs + 2000);
-  if (!r.ok || r.out.startsWith('ERROR:')) return null;
-  try { return JSON.parse(r.out); } catch { return null; }
+  // §130: fix — escreve JSON em arquivo temp para evitar quebra de quoting no shell.
+  // Embed direto de JSON.stringify(body) em node -e "..." quebra quando body tem
+  // strings com aspas duplas (e.g. paths do tempRoot ou qualquer campo string).
+  const tmpFile = join(tmpdir(), `pi-harness-post-${Date.now()}.json`).replace(/\\/g, '/');
+  try {
+    writeFileSync(tmpFile, JSON.stringify(body), 'utf8');
+    const cmd = `node -e "const fs=require('fs'),http=require('http');const d=fs.readFileSync('${tmpFile}','utf8');const u=new URL('${url}');const req=http.request({hostname:u.hostname,port:u.port,path:u.pathname,method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(d)},timeout:${timeoutMs}},(res)=>{let b='';res.on('data',c=>b+=c);res.on('end',()=>{try{process.stdout.write(JSON.stringify(JSON.parse(b)));}catch{process.stdout.write(b);}});});req.on('error',e=>process.stdout.write('ERROR:'+e.message));req.write(d);req.end();"`;
+    const r = shFull(cmd, timeoutMs + 5000);
+    if (!r.ok || r.out.startsWith('ERROR:')) return null;
+    try { return JSON.parse(r.out); } catch { return null; }
+  } finally {
+    try { rmSync(tmpFile, { force: true }); } catch (_) {}
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════

@@ -699,6 +699,12 @@
           <div style="font-size:11px;color:#64748b">— §129, smoke test 26/26 PASS, entradas openclaw-* confirmadas no Archivist em produção, deploy EB v5.9.24-s129</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔬</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O PI Harness (D0-D8) existia como script local desde o §64, mas nunca havia sido executado em condições reais de staging. A sonda revelou três bugs de infraestrutura em sequência: (1) o EB nunca tinha o binário Linux do Go Core — só o <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>vision-core.exe</code> (Windows) existia localmente; (2) <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>missionRoot</code> em <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>server.js</code> usava <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>path.resolve(ROOT, '..')</code>, apontando para o Desktop inteiro em vez da raiz do projeto — causava timeout de 30s no binário Go; (3) <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>goRunner.js</code> passava <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>--dry-run</code> ao subcomando <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>mission</code>, que não suporta esse flag e travava indefinidamente. Após os três fixes: Go Core executou localmente (<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>mission_id real + evidence_receipt.source=go-core</code>), D0-D4 foram executados pelo PI Harness, e o binário Linux foi compilado e deployado no EB. V3.0.0 alcançado."</div>
+          <div style="font-size:11px;color:#64748b">— §130, V3.0.0: D0-D4 PASS, evidence_receipt.source=go-core confirmado, 3 bugs de infra corrigidos, binário Linux compilado e deployado (EB v5.9.25-s130)</div>
+        </div>
+
       </div>
 
     </div>
