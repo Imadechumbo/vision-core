@@ -135,7 +135,7 @@ func Scan(root string) Result {
 			return nil
 		}
 		if d.IsDir() {
-			if dirSkip[d.Name()] {
+			if path != root && dirSkip[d.Name()] { // §133: never skip root itself
 				return filepath.SkipDir
 			}
 			return nil

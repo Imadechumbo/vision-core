@@ -145,7 +145,10 @@ func Scan(root string) Result {
 			return nil
 		}
 		if d.IsDir() {
-			if dirSkip[d.Name()] {
+			// §133: never skip the root itself — dirSkip only applies to subdirectories.
+			// Without this guard, `Scan("_fixture_stress")` would skip its own root
+			// because "_fixture_stress" is in dirSkip, returning 0 violations.
+			if path != root && dirSkip[d.Name()] {
 				return filepath.SkipDir
 			}
 			return nil

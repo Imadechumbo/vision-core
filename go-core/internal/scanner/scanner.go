@@ -29,9 +29,13 @@ var (
 		"node_modules": true, ".git": true, "dist": true,
 		"build": true, ".cache": true, "bin": true, "out": true,
 	}
+	// §133: expanded to all languages AEGIS can scan (was JS/Go only → 0 files for Python projects)
 	jsExts = map[string]bool{
 		".js": true, ".jsx": true, ".ts": true, ".tsx": true,
 		".mjs": true, ".cjs": true, ".go": true,
+		".py": true, ".java": true, ".yaml": true, ".yml": true,
+		".json": true, ".toml": true, ".sh": true, ".env": true,
+		".conf": true, ".config": true, ".properties": true,
 	}
 )
 
@@ -75,7 +79,7 @@ func Run(root string) Result {
 			return nil
 		}
 		if d.IsDir() {
-			if skipDirs[d.Name()] {
+			if path != root && skipDirs[d.Name()] { // §133: never skip root itself
 				return filepath.SkipDir
 			}
 			return nil

@@ -123,7 +123,7 @@ func Scan(root string) Result {
 		}
 		if d.IsDir() {
 			skip := map[string]bool{"node_modules": true, ".git": true, "vendor": true, ".vision-snapshots": true, ".vision-test": true}
-			if skip[d.Name()] {
+			if path != root && skip[d.Name()] { // §133: never skip root itself
 				return filepath.SkipDir
 			}
 			return nil
