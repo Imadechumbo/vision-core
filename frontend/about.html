@@ -675,6 +675,12 @@
           <div style="font-size:11px;color:#64748b">— §123, teste unitário jsdom contra o bundle de produção real 7/7 pass (com prova de regressão: 5/7 falhas contra a versão sem o fix), confirmado visualmente em produção pelo humano, Playwright 19/19 PASS</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🦾</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"OpenClaw era o único agente do decágono com rota real mas lógica mock — detectava o tipo de missão (zip, patch, message, mission_id) mas não chamava nenhum LLM. A rota <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/openclaw/orchestrate</code> existia há sessões, roteava corretamente, e o campo <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>orchestration_real: true</code> já estava presente — mas o plano era sempre <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>null</code>. O fix: quando o input é uma missão em linguagem natural (<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>message</code>/<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>prompt</code>), o handler chama <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>callLLM</code> com system prompt de 'Patch Strategist' e devolve um plano JSON estruturado com subtarefas concretas (scan/patch/validate/rollback), nível de risco e flag <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>pass_gold_required</code>. Se o LLM falhar, cai em fallback local sem quebrar o fluxo. O roteamento para zip/patch/mission_id foi mantido sem LLM — nesses casos o plano vem do agente seguinte."</div>
+          <div style="font-size:11px;color:#64748b">— §126, smoke test bash 14/14 PASS (7 casos de roteamento + 4 validações de campo plan + 2 fallback + 1 anti-stub), deploy EB v5.9.22-s126, health check confirmado em produção</div>
+        </div>
+
       </div>
 
     </div>

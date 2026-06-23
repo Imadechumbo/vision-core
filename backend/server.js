@@ -1172,7 +1172,7 @@ app.get('/api/run-live-stream', async (req, res) => {
 });
 
 /* AGENTS */
-app.all('/api/openclaw/orchestrate', (req, res) => {
+app.all('/api/openclaw/orchestrate', async (req, res) => {
   const body = normalizeBody(req);
   /* Real routing decision based on input signals — §70 */
   let decision = 'unknown';
@@ -1201,12 +1201,54 @@ app.all('/api/openclaw/orchestrate', (req, res) => {
     signals.push('no_actionable_signal');
   }
 
+  /* §126: For 'diagnose' (natural-language mission), call LLM as patch strategist */
+  let plan         = null;
+  let llm_provider = null;
+
+  if (decision === 'diagnose') {
+    const missionText = body.message || body.prompt || body.question || '';
+    const ocSystem = [
+      'You are OpenClaw, the Patch Strategist of Vision Core.',
+      'Your job is to decompose a software mission into concrete subtasks.',
+      'Analyze the input and return a JSON object with this exact structure:',
+      '{',
+      '  "mission_summary": "one sentence describing the mission",',
+      '  "tasks": [',
+      '    { "id": "T1", "type": "scan|patch|validate|rollback", "target": "file or component", "reason": "why" }',
+      '  ],',
+      '  "risk_level": "low|medium|high",',
+      '  "pass_gold_required": true',
+      '}',
+      'Return ONLY the JSON object, no markdown, no explanation.',
+      'If you cannot decompose the mission, return:',
+      '{"mission_summary":"unclear","tasks":[],"risk_level":"high","pass_gold_required":true}'
+    ].join('\n');
+
+    try {
+      const llmResult = await callLLM(missionText, {
+        system:     ocSystem,
+        max_tokens: 600
+      });
+      if (llmResult && llmResult.text) {
+        /* Strip markdown fences if model ignores the "no markdown" instruction */
+        const raw = llmResult.text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
+        plan         = JSON.parse(raw);
+        llm_provider = llmResult.provider;
+      }
+    } catch (_e) {
+      /* LLM failed or returned invalid JSON — fall through with plan=null */
+      llm_provider = 'local';
+    }
+  }
+
   sendOk(res, {
     agent:              'OpenClaw',
     decision,
     next_stage:         stage,
     signals_detected:   signals,
     orchestration_real: true,
+    plan,
+    llm_provider,
     body_keys:          Object.keys(body).filter(k => k !== 'zip_base64') /* omit large blob */
   });
 });
