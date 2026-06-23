@@ -18,16 +18,16 @@ ROOT       = Path('C:/Users/imadechumbo/Desktop/vision-core')
 BACKEND    = ROOT / 'backend'
 APP_VERS   = BACKEND / '.elasticbeanstalk' / 'app_versions'
 LATEST_ZIP = APP_VERS / 'vision-core-v5.9.24-s129.zip'
-NEW_ZIP    = APP_VERS / 'vision-core-v5.9.26-s130b.zip'
+NEW_ZIP    = APP_VERS / 'vision-core-v5.9.27-s130c.zip'
 SERVER_SRC = BACKEND / 'server.js'
 GORUNNER   = BACKEND / 'src' / 'runtime' / 'goRunner.js'
 LINUX_BIN  = ROOT / 'bin' / 'vision-core-linux'
 S3_BUCKET  = 'elasticbeanstalk-us-east-1-374894298219'
-S3_KEY     = 'vision-core-v5.9.26-s130b.zip'
+S3_KEY     = 'vision-core-v5.9.27-s130c.zip'
 APP_NAME   = 'vision-core'
 ENV_NAME   = 'vision-core-prod'
 REGION     = 'us-east-1'
-VER_LABEL  = 'v5.9.26-s130b-gorunner-reporoot'
+VER_LABEL  = 'v5.9.27-s130c-gocore-chmod'
 
 # ── leitura dos arquivos novos ───────────────────────────────────────────────
 print('Reading source files...')
@@ -84,6 +84,13 @@ with zipfile.ZipFile(LATEST_ZIP, 'r') as src:
         info.external_attr = 0o755 << 16  # rwxr-xr-x
         dst.writestr(info, linux_bin_bytes)
         print(f'  Added: bin/vision-core ({len(linux_bin_bytes):,} bytes, Linux amd64)')
+        # Hook predeploy: chmod +x no binario (EB nao honra permissoes do zip)
+        chmod_script = b'#!/bin/bash\nchmod +x /var/app/current/bin/vision-core 2>/dev/null || true\nchmod +x /var/app/bin/vision-core 2>/dev/null || true\necho "[s130] go-core binary chmod +x applied"\n'
+        hook_info = zf.ZipInfo('.platform/hooks/predeploy/01_chmod_gocore.sh')
+        hook_info.compress_type = zf.ZIP_DEFLATED
+        hook_info.external_attr = 0o755 << 16
+        dst.writestr(hook_info, chmod_script)
+        print(f'  Added: .platform/hooks/predeploy/01_chmod_gocore.sh')
 
 buf.seek(0)
 NEW_ZIP.write_bytes(buf.read())
