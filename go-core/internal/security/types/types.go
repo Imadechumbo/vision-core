@@ -157,6 +157,13 @@ func ClassifySourceContext(relPath string) string {
 		return SourceContextGenerated
 	}
 
+	// 6. §132: fixture dirs and archive dirs are test fixtures (not production code)
+	for _, seg := range strings.Split(norm, "/") {
+		if seg == "_fixture_stress" || seg == "_archive" || seg == "tools/_archive" {
+			return SourceContextTestFixture
+		}
+	}
+
 	return SourceContextProduction
 }
 

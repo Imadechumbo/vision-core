@@ -1,0 +1,18 @@
+{
+  "app_name": "stress-fixture",
+  "version": "1.0.0",
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "stress_db",
+    "user": "app_user",
+    "password": "db_pass_placeholder"
+  },
+  "api": {
+    "timeout_ms": 5000,
+    "retry_count": 3,
+    "base_url": "https://api.example.com"
+  },
+  "debug": true,
+  "log_level": "DEBUG"
+}

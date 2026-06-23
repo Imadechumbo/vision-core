@@ -133,6 +133,7 @@ var dirSkip = map[string]bool{
 	"node_modules": true, ".git": true, "vendor": true,
 	".vision-snapshots": true, ".vision-test": true,
 	"dist": true, "build": true, ".next": true,
+	"_fixture_stress": true, "_archive": true, // §132: fixture + archive dirs are test fixtures
 }
 
 // Scan varre root em busca de segredos expostos.
