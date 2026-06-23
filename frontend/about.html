@@ -717,6 +717,12 @@
           <div style="font-size:11px;color:#64748b">— §132, pipeline E2E: fixture L1-L4 → D0-D7 PASS GOLD → PR #739 via GitHub Agent, 20/20 unit tests PASS, deploy EB v5.9.29</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔍</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Scanner real: o Go Core passava <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>scanned 0 files</code> em projetos Python — as violations L3 (API key, MD5, SQL injection) nunca eram detectadas, gerando <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>security_score:100</code> e <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>pass_secure:true</code> em bases não varridas. Falso negativo silencioso. Duas causas raiz: (1) <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>jsExts</code> no scanner só incluía <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>.js/.go</code> — fix: expandido para <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>.py, .java, .yaml, .json, .sh</code> e mais; (2) <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>dirSkip</code> aplicava ao root da varredura quando o nome do root estava na lista — <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>Scan('_fixture_stress')</code> pulava si mesmo porque '<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>_fixture_stress</code>' estava no dirSkip — fix: <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>path != root</code> guard em secrets.go, api.go e containers.go. Resultado: fixture L3 detecta <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>AEGIS_SECRET_010</code> em <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>level3_security.py:6</code> (bloqueante). Projeto principal inalterado: <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>security_score:100</code>, <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>scanned 1924 files</code>."</div>
+          <div style="font-size:11px;color:#64748b">— §133, scanner: 0 files → 1924 files varridos, AEGIS_SECRET_010 detectado em level3_security.py:6, 16/16 unit tests PASS, deploy EB v5.9.30</div>
+        </div>
+
       </div>
 
     </div>
