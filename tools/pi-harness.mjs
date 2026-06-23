@@ -1203,6 +1203,8 @@ async function tryStartBackend(s) {
     const h = httpGet(`${LOCAL_BACKEND_BASE}/api/health`, 1500);
     if (h) {
       audit(`[D4] backend respondeu após ${waited}ms`);
+      s.backendAlive = true;   // §132: set state so runLayerD4 doesn't re-block
+      s.backendHealthOk = !!(h.status === 'ok' || h.ok === true || h.anti_stub);
       return true;
     }
   }

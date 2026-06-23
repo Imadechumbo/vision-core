@@ -711,6 +711,12 @@
           <div style="font-size:11px;color:#64748b">— §131, pass_gold_candidate:true, D0-D7 PASS, zero gates falhando, 14/14 unit tests PASS</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔄</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Pipeline end-to-end pela primeira vez: projeto fixture com bugs graduados por nível (L1 sintaxe Python, L2 lógica de negócio, L3 segurança/AEGIS, L4 runtime) foi processado pelo pipeline completo. 5 bugs de harness encontrados e corrigidos ao longo da sessão: (1) AEGIS bloqueava fixture como produção — adicionado <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>_fixture_stress</code> ao <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>dirSkip</code> do AEGIS + classificado como <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>test_fixture</code>; (2) Go binary recompilado; (3) <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>tryStartBackend</code> não setava <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>s.backendAlive = true</code> após sucesso — harness bloqueava mesmo quando backend subia corretamente; (4) E2E probe timeout de run-live: <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>Math.min(30000, 10000) = 10s</code> vs Go Core que leva 12-13s — cap aumentado para 25s; (5) forbidden diff bloqueava porque <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>bin/vision-core.exe</code> modificado não estava commitado. Com todos os fixes: D0-D7 executados, <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>pass_gold_candidate:true</code>, PR #739 aberto pelo GitHub Agent automaticamente (fechado logo após como teste). Pipeline bug→PASS GOLD→PR confirmado de ponta a ponta."</div>
+          <div style="font-size:11px;color:#64748b">— §132, pipeline E2E: fixture L1-L4 → D0-D7 PASS GOLD → PR #739 via GitHub Agent, 20/20 unit tests PASS, deploy EB v5.9.29</div>
+        </div>
+
       </div>
 
     </div>

@@ -126,7 +126,9 @@ export async function runRuntimeProbeE2ELocal(options = {}) {
     if (_mock?.runLiveResult) {
       runLiveResult = _mock.runLiveResult;
     } else {
-      runLiveResult = await fetchAndValidateRunLive({ base_url, timeout_ms: Math.min(timeout_ms, 10000) });
+      // §132: Go Core scan takes 12-13s with project fixture files. Raised cap from
+      // 10000 to 25000 to accommodate real execution time under --runtime-probe.
+      runLiveResult = await fetchAndValidateRunLive({ base_url, timeout_ms: Math.min(timeout_ms, 25000) });
     }
 
     if (!runLiveResult.run_live_ready) {
