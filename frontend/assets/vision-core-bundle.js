@@ -6701,8 +6701,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       var count = (data && typeof data.fetched_count === 'number') ? data.fetched_count : -1;
       var urls  = (data && Array.isArray(data.fetched_urls)) ? data.fetched_urls : [];
       if (count < 0) return; // backend pré-§20 — silencioso
-      var badge = document.createElement('div');
       var ok    = count > 0;
+      if (!ok) return;       // §143 — suprimir badge "Nenhuma fonte obtida" (ruído)
+      var badge = document.createElement('div');
       var color = ok ? '#22c55e' : '#f87171';
       var icon  = ok ? '🔗' : '⚠️';
       var label = ok
