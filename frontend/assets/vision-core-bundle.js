@@ -9218,6 +9218,38 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         }
       }
 
+      /* §145 — badge de usuário logado no header */
+      function s145UpdateAuthUI(userEmail, plan) {
+        var btn1 = document.getElementById('openAuthBtn');
+        var btn2 = document.getElementById('openAuthBtn2');
+        var existing = document.getElementById('s145UserBadge');
+        if (existing) existing.remove();
+        if (!btn1) return;
+
+        var planColor = plan === 'pro' ? '#22c55e' : plan === 'enterprise' ? '#f59e0b' : '#94a3b8';
+        var badge = document.createElement('div');
+        badge.id = 's145UserBadge';
+        badge.title = 'Clique para sair';
+        badge.style.cssText = 'display:flex;align-items:center;gap:6px;background:rgba(109,40,217,.25);border:1px solid rgba(168,85,247,.4);border-radius:20px;padding:4px 12px;color:#e2d9f3;font-size:12px;font-weight:600;cursor:pointer;';
+        badge.innerHTML = '<span style="color:' + planColor + ';font-size:10px;font-weight:700;">' + (plan || 'free').toUpperCase() + '</span>' +
+          '<span style="color:#c4b5fd;">●</span>' +
+          '<span>' + (userEmail || '').split('@')[0] + '</span>';
+
+        badge.onclick = function() {
+          if (!confirm('Sair da conta?')) return;
+          try { localStorage.removeItem('vision_token'); sessionStorage.removeItem('vc_token'); sessionStorage.removeItem('vision_token'); } catch(e) {}
+          badge.remove();
+          if (btn1) { btn1.style.display = ''; }
+          if (btn2) { btn2.style.display = ''; }
+          var qb = document.getElementById('v299QuotaBadge');
+          if (qb) { var pt = qb.querySelector('.v299-plan-tag'); if (pt) { pt.textContent = 'FREE'; pt.className = 'v299-plan-tag free'; } var qs = qb.querySelector('.v299-quota-ok'); if (qs) qs.textContent = '5 missões/mês'; }
+        };
+
+        btn1.parentNode.insertBefore(badge, btn1);
+        btn1.style.display = 'none';
+        if (btn2) btn2.style.display = 'none';
+      }
+
       function doAuth() {
         var email = (emailEl.value || '').trim();
         if (!email || email.indexOf('@') === -1) {
@@ -9227,10 +9259,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         if (resultEl) { resultEl.textContent = 'Conectando…'; resultEl.style.color = '#94a3b8'; }
         signupBtn.disabled = true;
 
+        /* §145: usar senha salva por email, ou fallback 'vc-user-auto' para usuários antigos */
+        var _pw145 = (function() { try { return localStorage.getItem('vc_user_pw_' + email) || 'vc-user-auto'; } catch(e) { return 'vc-user-auto'; } })();
         fetch(BACKEND_URL + '/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email, password: 'vc-user-auto', name: '' })
+          body: JSON.stringify({ email: email, password: _pw145, name: '' })
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
@@ -9238,22 +9272,27 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             if (data.token) {
               try { sessionStorage.setItem('vc_token', data.token); localStorage.setItem('vision_token', data.token); } catch (ex) {}
             }
-            if (data.user && data.user.plan) { updatePlanBadge(data.user.plan); }
-            if (resultEl) {
-              resultEl.textContent = '✓ Conta criada! Token: ' + (data.token ? data.token.slice(0, 14) + '…' : 'ok');
-              resultEl.style.color = '#22c55e';
+            /* §145: salvar senha gerada + email para próximos logins */
+            if (data.generated_password) {
+              try { localStorage.setItem('vc_user_pw_' + email, data.generated_password); } catch(ex) {}
             }
+            try { localStorage.setItem('vc_user_email', email); } catch(ex) {}
+            var _plan = (data.user && data.user.plan) || 'free';
+            if (data.user && data.user.plan) { updatePlanBadge(_plan); }
+            s145UpdateAuthUI(email, _plan);
+            if (resultEl) { resultEl.textContent = 'Conta criada!'; resultEl.style.color = '#22c55e'; }
             setTimeout(function () {
               authBackdrop.classList.remove('show');
               authBackdrop.setAttribute('aria-hidden', 'true');
             }, 2000);
             signupBtn.disabled = false;
           } else {
-            /* Fall back to login */
+            /* Fall back to login — usar senha salva */
+            var _loginPw = (function() { try { return localStorage.getItem('vc_user_pw_' + email) || 'vc-user-auto'; } catch(e) { return 'vc-user-auto'; } })();
             return fetch(BACKEND_URL + '/api/auth/login', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: email, password: 'vc-user-auto' })
+              body: JSON.stringify({ email: email, password: _loginPw })
             })
             .then(function (r2) { return r2.json(); })
             .then(function (d2) {
@@ -9262,8 +9301,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                 if (d2.token) {
                   try { sessionStorage.setItem('vc_token', d2.token); localStorage.setItem('vision_token', d2.token); } catch (ex) {}
                 }
-                if (d2.user && d2.user.plan) { updatePlanBadge(d2.user.plan); }
-                if (resultEl) { resultEl.textContent = '✓ Login realizado!'; resultEl.style.color = '#22c55e'; }
+                try { localStorage.setItem('vc_user_email', email); } catch(ex) {}
+                var _plan2 = (d2.user && d2.user.plan) || 'free';
+                if (d2.user && d2.user.plan) { updatePlanBadge(_plan2); }
+                s145UpdateAuthUI(email, _plan2);
+                if (resultEl) { resultEl.textContent = 'Login realizado!'; resultEl.style.color = '#22c55e'; }
                 setTimeout(function () {
                   authBackdrop.classList.remove('show');
                   authBackdrop.setAttribute('aria-hidden', 'true');
@@ -9287,9 +9329,17 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       (function () {
         var tok = (function () { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch (e) { return null; } })();
         if (tok) {
+          /* §145: mostrar badge imediatamente com email salvo */
+          var _storedEmail = (function() { try { return localStorage.getItem('vc_user_email') || ''; } catch(e) { return ''; } })();
+          if (_storedEmail) { try { s145UpdateAuthUI(_storedEmail, 'free'); } catch(e) {} }
           fetch(BACKEND_URL + '/api/billing/status', { headers: { 'Authorization': 'Bearer ' + tok } })
             .then(function (r) { return r.json(); })
-            .then(function (d) { if (d && d.plan) updatePlanBadge(d.plan); })
+            .then(function (d) {
+              if (d && d.plan) {
+                updatePlanBadge(d.plan);
+                if (_storedEmail) { try { s145UpdateAuthUI(_storedEmail, d.plan); } catch(e) {} }
+              }
+            })
             .catch(function () {});
         }
       })();

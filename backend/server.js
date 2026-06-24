@@ -494,18 +494,21 @@ app.get('/api/runtime/contracts', (req, res) => sendOk(res, {
 
 /* V4.0 ANTI-STUB ROUTES — real logic, no ok:true-only stubs */
 app.all('/api/auth/register', (req, res) => {
-  const body = normalizeBody(req);
+  const body  = normalizeBody(req);
   const email = String(body.email || '').trim().toLowerCase();
-  const password = String(body.password || '');
   if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ ok: false, error: 'valid_email_required', time: now() });
-  if (password.length < 8) return res.status(400).json({ ok: false, error: 'password_min_8_required', time: now() });
+  // §145: gerar senha única por usuário quando frontend envia 'vc-user-auto' (fluxo só-email)
+  const provided = String(body.password || '');
+  const rawPw = (provided && provided !== 'vc-user-auto' && provided.length >= 8)
+    ? provided
+    : crypto.randomBytes(8).toString('hex'); // 16 chars hex, único por usuário
   const db = readJsonFile(USERS_DB, { users: [] });
   if (db.users.some(u => u.email === email)) return res.status(409).json({ ok: false, error: 'email_already_registered', time: now() });
-  const user = { id: makeId('usr'), email, name: body.name || '', password_hash: hashPassword(password), plan: 'free', created_at: now(), last_login: null };
+  const user = { id: makeId('usr'), email, name: body.name || '', password_hash: hashPassword(rawPw), plan: 'free', created_at: now(), last_login: null };
   db.users.push(user); writeJsonFile(USERS_DB, db);
   const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
   res.setHeader('Set-Cookie', `vision_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`);
-  return sendOk(res, { user: publicUser(user), token, token_type: 'session', persisted: true, anti_stub: true });
+  return sendOk(res, { user: publicUser(user), token, token_type: 'session', persisted: true, generated_password: rawPw, anti_stub: true });
 });
 
 app.all('/api/auth/login', (req, res) => {
