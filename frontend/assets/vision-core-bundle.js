@@ -1948,10 +1948,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     }
 
     var mcCoreStatus = document.getElementById('mcCoreStatus');
-    if (mcCoreStatus) mcCoreStatus.textContent = 'FECHADO';
+    if (mcCoreStatus) mcCoreStatus.textContent = 'CORE'; /* §137: CORE fixo */
 
     var mcCoreSub = document.getElementById('mcCoreSub');
-    if (mcCoreSub) mcCoreSub.textContent = 'CONTROLLED CLOSURE';
+    if (mcCoreSub) mcCoreSub.textContent = ''; /* §137: sub vazio */
 
     var runtimeText = document.getElementById('runtimeText');
     if (runtimeText) runtimeText.textContent = 'CLOSURE';
@@ -6059,51 +6059,42 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         '@keyframes vcRipple {',  /* §50fix-ui: ripple ENVIAR */
         '  to { transform: scale(2.5); opacity: 0; }',
         '}',
-        /* §136 — loading ring em volta do decágono */
-        '@keyframes s136spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }',
-        '#s136-ring { transform-box: fill-box; transform-origin: center; animation: s136spin 1.4s linear infinite; opacity: 0; transition: opacity 0.35s; }',
-        '#s136-ring.s136-active { opacity: 1; }'
+        /* §137 — ring CSS ::before em volta de #mcCore */
+        '@keyframes s137spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }',
+        '#mcCore { position: relative; overflow: visible; }',
+        '#mcCore::before { content: ""; position: absolute; inset: -8px; border-radius: 50%; border: 3px solid transparent; border-top-color: #a78bfa; border-right-color: #818cf8; animation: s137spin 1.1s linear infinite; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 5; }',
+        '#mcCore.s137-active::before { opacity: 1; }'
       ].join('\n');
       document.head.appendChild(_animStyle);
     }
 
-    /* §136 — loading ring: injetar circle no SVG do decágono */
-    (function s136InitRing() {
-      var svg = document.querySelector('.mi-svg');
-      if (!svg || document.getElementById('s136-ring')) return;
-      /* Gradient roxo→índigo para o arco */
-      var defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-      var grad = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-      grad.setAttribute('id', 's136grad');
-      grad.setAttribute('gradientUnits', 'userSpaceOnUse');
-      grad.setAttribute('x1', '230'); grad.setAttribute('y1', '24');
-      grad.setAttribute('x2', '427'); grad.setAttribute('y2', '307');
-      var stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-      stop1.setAttribute('offset', '0%'); stop1.setAttribute('stop-color', '#a78bfa');
-      var stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-      stop2.setAttribute('offset', '100%'); stop2.setAttribute('stop-color', '#818cf8');
-      grad.appendChild(stop1); grad.appendChild(stop2);
-      defs.appendChild(grad);
-      svg.insertBefore(defs, svg.firstChild);
-      /* Arco girando (stroke-dasharray: 200 de 1356 = ~53° de arco) */
-      var ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      ring.setAttribute('id', 's136-ring');
-      ring.setAttribute('cx', '230'); ring.setAttribute('cy', '240'); ring.setAttribute('r', '216');
-      ring.setAttribute('fill', 'none');
-      ring.setAttribute('stroke', 'url(#s136grad)');
-      ring.setAttribute('stroke-width', '4');
-      ring.setAttribute('stroke-dasharray', '200 1156');
-      ring.setAttribute('stroke-linecap', 'round');
-      svg.appendChild(ring);
-    }());
+    /* §137 — ring via CSS ::before em #mcCore (sem SVG) */
 
-    function s136StartRing() {
-      var r = document.getElementById('s136-ring');
-      if (r) r.classList.add('s136-active');
+    function s136StartRing() { /* §137 */
+      var core = document.getElementById('mcCore');
+      if (core) core.classList.add('s137-active');
+      var st = document.getElementById('mcCoreStatus');
+      if (st) { st.textContent = 'CORE'; st.style.color = ''; st.style.fontWeight = ''; }
     }
-    function s136StopRing() {
-      var r = document.getElementById('s136-ring');
-      if (r) r.classList.remove('s136-active');
+    function s136StopRing(success) { /* §137 */
+      var core = document.getElementById('mcCore');
+      if (core) core.classList.remove('s137-active');
+      var st = document.getElementById('mcCoreStatus');
+      if (!st) return;
+      if (success) {
+        st.textContent = 'OK';
+        st.style.color = '#34d399';
+        st.style.fontWeight = '700';
+        setTimeout(function() {
+          st.textContent = 'CORE';
+          st.style.color = '';
+          st.style.fontWeight = '';
+        }, 2000);
+      } else {
+        st.textContent = 'CORE';
+        st.style.color = '';
+        st.style.fontWeight = '';
+      }
     }
 
     /* §39 — spinner clássico SVG 12 segmentos (cinza/branco p/ fundo escuro) */
@@ -7006,7 +6997,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         clearTimeout(_chatAnimTimer);
         thinking.remove();
         resetAllAgents();
-        s136StopRing(); /* §136 */
+        s136StopRing(false); /* §137: sem OK */
         appendMsg('[Erro de conexão com worker: ' + BACKEND_URL + ' — ' + err + ']', 'error');
         setStatus('ERRO', 'error');
         setTimeout(function() { setStatus('READY'); }, 3000);
@@ -7120,7 +7111,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       seq.forEach(function(k) { activateAgent(k, stMap[k] || overall); });
       if (result.ok && result.action === 'patch_applied_committed') { activateAgent('passgold', 'done'); }
       else if (!result.ok) { activateAgent('passgold', 'idle'); }
-      s136StopRing(); /* §136 */
+      s136StopRing(result && result.ok); /* §137: OK se sucesso */
     }
 
     function renderValidationPanel(res) {
