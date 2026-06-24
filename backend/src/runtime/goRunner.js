@@ -257,6 +257,9 @@ function normalizeGoResult(parsed = {}, stdout = '', stderr = '', bin = '', opti
     security_blocking_violations: Array.isArray(parsed.security_blocking_violations) ? parsed.security_blocking_violations : [],
     security_report_only_violations: Array.isArray(parsed.security_report_only_violations) ? parsed.security_report_only_violations : [],
     security_total_violations: Number(parsed.security_total_violations || 0),
+    // §136: security score + scanned files for dashboard
+    security_score: Number(parsed.security_score || 0),
+    scanned_files:  Number(parsed.total_files || parsed.scanned_files || 0),
 
     duration_ms: Number(parsed.duration_ms || 0),
     summary: parsed.summary || (strictPassGold

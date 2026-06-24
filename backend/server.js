@@ -1070,6 +1070,32 @@ app.post('/api/security/suggest-fixes', async (req, res) => {
   return sendOk(res, { suggestions, total: suggestions.length, anti_stub: true });
 });
 
+// §136: in-memory security event history (session-scoped; also persisted via archivistSave)
+var _s136SecurityHistory = [];
+
+// POST /api/security/history — registra evento de scan/fix/rescan
+app.post('/api/security/history', (req, res) => {
+  const body = normalizeBody(req);
+  const event = {
+    timestamp:        body.timestamp || now(),
+    type:             body.type             || 'scan',
+    rule_id:          body.rule_id          || null,
+    file:             body.file             || null,
+    fixed:            body.fixed === true,
+    security_score:   Number(body.security_score   || 0),
+    total_violations: Number(body.total_violations  || 0),
+    session:          body.session          || 's136',
+  };
+  _s136SecurityHistory.push(event);
+  try { archivistSave('sec-history-' + Date.now(), event); } catch (_) {}
+  return sendOk(res, { saved: true, total: _s136SecurityHistory.length, anti_stub: true });
+});
+
+// GET /api/security/history — retorna últimos 50 eventos
+app.get('/api/security/history', (req, res) => {
+  return sendOk(res, { history: _s136SecurityHistory.slice(-50), total: _s136SecurityHistory.length, anti_stub: true });
+});
+
 // POST /api/security/apply-fix — §135: aplica fix.after em arquivo real do filesystem
 // Input:  { violation: {file, line, rule_id}, fix: {after, suggestion}, project_root? }
 // Output: { ok, file, line, before, after, diff_preview, backup_created }

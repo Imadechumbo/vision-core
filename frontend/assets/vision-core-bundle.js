@@ -6058,9 +6058,52 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         '}',
         '@keyframes vcRipple {',  /* §50fix-ui: ripple ENVIAR */
         '  to { transform: scale(2.5); opacity: 0; }',
-        '}'
+        '}',
+        /* §136 — loading ring em volta do decágono */
+        '@keyframes s136spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }',
+        '#s136-ring { transform-box: fill-box; transform-origin: center; animation: s136spin 1.4s linear infinite; opacity: 0; transition: opacity 0.35s; }',
+        '#s136-ring.s136-active { opacity: 1; }'
       ].join('\n');
       document.head.appendChild(_animStyle);
+    }
+
+    /* §136 — loading ring: injetar circle no SVG do decágono */
+    (function s136InitRing() {
+      var svg = document.querySelector('.mi-svg');
+      if (!svg || document.getElementById('s136-ring')) return;
+      /* Gradient roxo→índigo para o arco */
+      var defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      var grad = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+      grad.setAttribute('id', 's136grad');
+      grad.setAttribute('gradientUnits', 'userSpaceOnUse');
+      grad.setAttribute('x1', '230'); grad.setAttribute('y1', '24');
+      grad.setAttribute('x2', '427'); grad.setAttribute('y2', '307');
+      var stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+      stop1.setAttribute('offset', '0%'); stop1.setAttribute('stop-color', '#a78bfa');
+      var stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+      stop2.setAttribute('offset', '100%'); stop2.setAttribute('stop-color', '#818cf8');
+      grad.appendChild(stop1); grad.appendChild(stop2);
+      defs.appendChild(grad);
+      svg.insertBefore(defs, svg.firstChild);
+      /* Arco girando (stroke-dasharray: 200 de 1356 = ~53° de arco) */
+      var ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      ring.setAttribute('id', 's136-ring');
+      ring.setAttribute('cx', '230'); ring.setAttribute('cy', '240'); ring.setAttribute('r', '216');
+      ring.setAttribute('fill', 'none');
+      ring.setAttribute('stroke', 'url(#s136grad)');
+      ring.setAttribute('stroke-width', '4');
+      ring.setAttribute('stroke-dasharray', '200 1156');
+      ring.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(ring);
+    }());
+
+    function s136StartRing() {
+      var r = document.getElementById('s136-ring');
+      if (r) r.classList.add('s136-active');
+    }
+    function s136StopRing() {
+      var r = document.getElementById('s136-ring');
+      if (r) r.classList.remove('s136-active');
     }
 
     /* §39 — spinner clássico SVG 12 segmentos (cinza/branco p/ fundo escuro) */
@@ -6848,6 +6891,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       thinking.appendChild(_chatThinkSpan);
       if (sendBtn) sendBtn.style.animation = 'vcPulse 1s ease-in-out infinite'; /* §38 pulse */
       activateAgent('scanner', 'active');
+      s136StartRing(); /* §136 */
       var _chatAnimTimer = setTimeout(function() { activateAgent('hermes', 'active'); }, 1200);
 
       var imgName  = _attachedImg ? _attachedImg.name   : null;
@@ -6962,6 +7006,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         clearTimeout(_chatAnimTimer);
         thinking.remove();
         resetAllAgents();
+        s136StopRing(); /* §136 */
         appendMsg('[Erro de conexão com worker: ' + BACKEND_URL + ' — ' + err + ']', 'error');
         setStatus('ERRO', 'error');
         setTimeout(function() { setStatus('READY'); }, 3000);
@@ -7075,6 +7120,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       seq.forEach(function(k) { activateAgent(k, stMap[k] || overall); });
       if (result.ok && result.action === 'patch_applied_committed') { activateAgent('passgold', 'done'); }
       else if (!result.ok) { activateAgent('passgold', 'idle'); }
+      s136StopRing(); /* §136 */
     }
 
     function renderValidationPanel(res) {
@@ -7212,6 +7258,32 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                     '<div style="color:#ef4444">- ' + String(result.before || '').replace(/</g,'&lt;') + '</div>' +
                     '<div style="color:#34d399">+ ' + String(result.after  || '').replace(/</g,'&lt;') + '</div>';
                   _box135.appendChild(diffDiv);
+                  // §136: salvar evento de fix no histórico
+                  s136SaveHistory({ type: 'fix', rule_id: _v135.rule_id, file: _v135.file, fixed: true, timestamp: new Date().toISOString() });
+                  // §136: re-scan após 1.5s para confirmar que violation sumiu
+                  setTimeout(function() {
+                    var rescanDiv = document.createElement('div');
+                    rescanDiv.style.cssText = 'margin-top:6px;color:#94a3b8;font-size:10px;';
+                    rescanDiv.textContent = '🔄 Re-scanning para confirmar que a violation foi corrigida...';
+                    _box135.appendChild(rescanDiv);
+                    fetch(BACKEND_URL + '/api/run-live', {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ input: 'rescan-after-fix-' + (_v135.rule_id || 's136'), dry_run: false })
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(rescan) {
+                      var remaining = (rescan.security_violations || []).filter(function(v2) {
+                        return v2.rule_id === _v135.rule_id && v2.file === _v135.file;
+                      });
+                      if (remaining.length === 0) {
+                        rescanDiv.innerHTML = '✅ <strong style="color:#34d399">Violation corrigida</strong> — re-scan confirmou que ' + (_v135.rule_id || '') + ' não está mais presente.';
+                      } else {
+                        rescanDiv.innerHTML = '⚠️ <span style="color:#f97316">Violation ainda presente</span> — fix pode precisar de ajuste manual.';
+                      }
+                      s136SaveHistory({ type: 'rescan', rule_id: _v135.rule_id, file: _v135.file, fixed: remaining.length === 0, security_score: rescan.security_score || 0, total_violations: rescan.security_total_violations || 0, timestamp: new Date().toISOString() });
+                    })
+                    .catch(function() { rescanDiv.textContent = '⚠️ Re-scan não disponível (backend offline).'; });
+                  }, 1500);
                 } else {
                   applyBtn135.textContent = '❌ ' + (result.error || 'Erro');
                   applyBtn135.style.background = '#7f1d1d';
@@ -7231,6 +7303,79 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         wrap.appendChild(card);
       });
       return wrap;
+    }
+
+    /* ── §136: helper history + dashboard de saúde ─────────────────────────────── */
+
+    // Salva evento no /api/security/history (best-effort, nunca lança)
+    function s136SaveHistory(event) {
+      fetch(BACKEND_URL + '/api/security/history', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event)
+      }).catch(function() {});
+    }
+
+    // Painel de saúde: métricas da execução atual + histórico de sessão
+    function renderSecurityDashboard(rd) {
+      var score    = Number(rd.security_score    || 0);
+      var total    = Number(rd.security_total_violations || 0);
+      var blocking = Array.isArray(rd.security_blocking_violations) ? rd.security_blocking_violations.length : 0;
+      var scanned  = Number(rd.scanned_files || 0);
+      // Só renderiza se há dados úteis
+      if (!score && !total && !scanned) return null;
+
+      var panel = document.createElement('div');
+      panel.style.cssText = 'margin-top:12px;background:#0a0f1a;border:1px solid #1e293b;border-radius:12px;padding:14px;';
+      var title = document.createElement('div');
+      title.style.cssText = 'color:#7dd3fc;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:10px;';
+      title.textContent = '📊 SAÚDE DO PROJETO';
+      panel.appendChild(title);
+
+      var scoreColor = score >= 90 ? '#34d399' : score >= 70 ? '#eab308' : '#ef4444';
+      var metrics = [
+        { label: 'Security Score',    value: score + '/100', color: scoreColor  },
+        { label: 'Arquivos varridos', value: scanned,        color: '#94a3b8'   },
+        { label: 'Violations',        value: total,          color: total > 0   ? '#f97316' : '#34d399' },
+        { label: 'Blocking',          value: blocking,       color: blocking > 0 ? '#ef4444' : '#34d399' },
+      ];
+      var grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;';
+      metrics.forEach(function(m) {
+        var cell = document.createElement('div');
+        cell.style.cssText = 'background:#0f172a;border-radius:7px;padding:8px;text-align:center;';
+        cell.innerHTML = '<div style="color:' + m.color + ';font-size:17px;font-weight:700">' + m.value + '</div>' +
+                         '<div style="color:#64748b;font-size:10px;margin-top:2px">' + m.label + '</div>';
+        grid.appendChild(cell);
+      });
+      panel.appendChild(grid);
+
+      // Histórico via /api/security/history
+      var histSection = document.createElement('div');
+      histSection.style.cssText = 'border-top:1px solid #1e293b;padding-top:8px;';
+      histSection.innerHTML = '<div style="color:#475569;font-size:10px">Carregando histórico...</div>';
+      panel.appendChild(histSection);
+
+      fetch(BACKEND_URL + '/api/security/history')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var hist = (data.history || []).slice(-5).reverse();
+          if (!hist.length) { histSection.innerHTML = '<div style="color:#334155;font-size:10px">Nenhum histórico ainda.</div>'; return; }
+          histSection.innerHTML = '<div style="color:#475569;font-size:10px;margin-bottom:5px">HISTÓRICO</div>';
+          hist.forEach(function(ev) {
+            var row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px;';
+            var icon = ev.type === 'fix' ? '⚙️' : ev.type === 'rescan' ? '🔄' : '🔍';
+            var fixStr = ev.type === 'fix' ? (ev.fixed ? ' ✅' : ' ⚠️') : '';
+            row.innerHTML = '<span style="color:#94a3b8">' + icon + ' ' + (ev.rule_id || ev.type) + fixStr + '</span>' +
+                            '<span style="color:#334155">' + String(ev.timestamp || '').slice(11,19) + '</span>';
+            histSection.appendChild(row);
+          });
+        })
+        .catch(function() { histSection.innerHTML = '<div style="color:#334155;font-size:10px">Histórico offline.</div>'; });
+
+      // Registra scan atual
+      s136SaveHistory({ type: 'scan', security_score: score, total_violations: total, timestamp: new Date().toISOString() });
+      return panel;
     }
 
     /* ── §106: vcQueueApplyPatchViaAgent — lógica compartilhada entre renderApplyFixPanel  */
@@ -7627,6 +7772,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             // §134: painel de violations AEGIS com sugestões Hermes
             var _sv134a = renderSecurityViolations(rd && rd.security_violations, rd && rd.security_fix_suggestions);
             if (_sv134a) { chatStream.appendChild(_sv134a); }
+            var _dash136a = renderSecurityDashboard(rd || {});
+            if (_dash136a) { chatStream.appendChild(_dash136a); }
           }
           chatStream.scrollTop = chatStream.scrollHeight;
           setStatus('READY');
@@ -7723,6 +7870,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               // §134: painel de violations AEGIS com sugestões Hermes
               var _sv134b = renderSecurityViolations(rd && rd.security_violations, rd && rd.security_fix_suggestions);
               if (_sv134b) { chatStream.appendChild(_sv134b); }
+              var _dash136b = renderSecurityDashboard(rd || {});
+              if (_dash136b) { chatStream.appendChild(_dash136b); }
             }
             chatStream.scrollTop = chatStream.scrollHeight;
             setStatus('READY');
