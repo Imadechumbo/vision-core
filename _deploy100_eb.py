@@ -38,9 +38,12 @@ REGION     = 'us-east-1'
 VER_LABEL  = 'v5.9.31-s134-security-fixes-ui'
 
 # Files to update in the zip (relative path inside zip -> local path)
+# IMPORTANT: EB ZIP stores backend files WITHOUT 'backend/' prefix at root level.
+# server.js in ZIP = server.js (not backend/server.js)
+# src/runtime/goRunner.js in ZIP = src/runtime/goRunner.js (not backend/src/...)
 UPDATES = {
-    'backend/server.js':                    ROOT / 'backend' / 'server.js',
-    'backend/src/runtime/goRunner.js':      ROOT / 'backend' / 'src' / 'runtime' / 'goRunner.js',
+    'server.js':                    ROOT / 'backend' / 'server.js',
+    'src/runtime/goRunner.js':      ROOT / 'backend' / 'src' / 'runtime' / 'goRunner.js',
 }
 
 print('Reading Linux binary...')
