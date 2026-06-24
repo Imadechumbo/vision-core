@@ -7986,3 +7986,8 @@ body,
   display: none !important;
 }
 
+/* §145-hotfix5 — SIGN IN some quando usuário está logado */
+.s145-hidden {
+  display: none !important;
+}
+

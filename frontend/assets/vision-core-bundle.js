@@ -9239,15 +9239,16 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           if (!confirm('Sair da conta?')) return;
           try { localStorage.removeItem('vision_token'); sessionStorage.removeItem('vc_token'); sessionStorage.removeItem('vision_token'); } catch(e) {}
           badge.remove();
-          if (btn1) { btn1.style.display = ''; }
-          if (btn2) { btn2.style.display = ''; }
+          if (btn1) { btn1.style.display = ''; btn1.classList.remove('s145-hidden'); }
+          if (btn2) { btn2.style.display = ''; btn2.classList.remove('s145-hidden'); }
           var qb = document.getElementById('v299QuotaBadge');
           if (qb) { var pt = qb.querySelector('.v299-plan-tag'); if (pt) { pt.textContent = 'FREE'; pt.className = 'v299-plan-tag free'; } var qs = qb.querySelector('.v299-quota-ok'); if (qs) qs.textContent = '5 missões/mês'; }
         };
 
         btn1.parentNode.insertBefore(badge, btn1);
         btn1.style.display = 'none';
-        if (btn2) btn2.style.display = 'none';
+        btn1.classList.add('s145-hidden'); /* §145-hotfix5: !important via class */
+        if (btn2) { btn2.style.display = 'none'; btn2.classList.add('s145-hidden'); }
       }
 
       function doAuth() {
@@ -9340,15 +9341,16 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           var _storedEmail = (function() { try { return localStorage.getItem('vc_user_email') || ''; } catch(e) { return ''; } })();
           if (_storedEmail) {
             try { s145UpdateAuthUI(_storedEmail, 'free'); } catch(e) {}
-            /* §145-hotfix4: garantir SIGN IN some mesmo se DOM ainda carregando */
-            setTimeout(function() {
+            /* §145-hotfix5: interval garante hide mesmo contra CSS !important externo */
+            var _s145HideInterval = setInterval(function() {
+              var badge = document.getElementById('s145UserBadge');
+              if (!badge) { clearInterval(_s145HideInterval); return; }
               var b1 = document.getElementById('openAuthBtn');
               var b2 = document.getElementById('openAuthBtn2');
-              if (document.getElementById('s145UserBadge')) {
-                if (b1) b1.style.display = 'none';
-                if (b2) b2.style.display = 'none';
-              }
-            }, 500);
+              if (b1) { b1.style.display = 'none'; b1.classList.add('s145-hidden'); }
+              if (b2) { b2.style.display = 'none'; b2.classList.add('s145-hidden'); }
+            }, 300);
+            setTimeout(function() { clearInterval(_s145HideInterval); }, 3000);
           }
           fetch(BACKEND_URL + '/api/billing/status', { headers: { 'Authorization': 'Bearer ' + tok } })
             .then(function (r) { return r.json(); })
