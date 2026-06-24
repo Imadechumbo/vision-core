@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-24 (§137)
+## Documento central do projeto | Atualizado: 2026-06-24 (§141)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -193,6 +193,7 @@ FREE_MISSION_LIMIT=5
 | §138 | Compactação CLAUDE.md: 46.5k → 27k chars (−42%). §83-§116 agrupados em 10 linhas temáticas. §117-§124 resumidos 1 linha cada. PENDÊNCIAS longas → 1 linha cada. Zero código tocado. | - | 619b809e |
 | §139 | **Auditoria SF02-SF09.** Investigação exaustiva: todos os 8 endpoints SF em produção retornam `ok:true, anti_stub:true` (curl verificado). `SF_ENDPOINT_MAP` cobre todos os 8 moduleKeys dos botões `[data-sf-generate]`. Backend routes registradas via `Object.keys(SF_GENERATORS).forEach`. CORS correto. Nenhuma auth middleware bloqueando SF. Smoke test `_test139_sf_modules_unit.cjs` 22/22 PASS (14 estáticos + 8 live network). Zero mudança em código — auditoria confirmou sistema correto. | - | 85af8384 |
 | §140 | **Fix `v582-sf-modules.js` workerUrl fallback.** Causa raiz: `workerUrl()` usava `''` como fallback quando `__VISION_API__`/`API`/`API_BASE_URL` são undefined — URL relativa `/api/sf/*` resolvia para `visioncoreai.pages.dev` (CF Pages sem backend) → 405. Fix: 1 linha, `|| ''` → `|| 'https://visioncore-api-gateway.weiganlight.workers.dev'`. 5/5 PASS. CF Pages ao vivo. Zero mudança em `server.js`. | - | 6164d772 |
+| §141 | **Fix botões v236 visíveis (cursor:not-allowed).** Causa raiz: `v272-layout-force.css` + `v273-sddf-command-chat.css` tinham `.v236-action-row{display:grid!important}` que sobrescrevia `style="display:none"` do HTML, expondo `v236FileBtn` (＋ ADICIONAR ARQUIVOS) + `v236CopilotBtn` (💬 COPILOTO) — ambos em BLOCKED_IDS → cursor:not-allowed. Fix: `display:none!important` no final de `vision-core-bundle.css` (último `!important` de mesma especificidade vence). CF Pages ao vivo. Zero server.js. | - | 627e47e4 |
 
 > Write-up completo (causa raiz, fix, evidência) de cada sessão acima → `CLAUDE_HISTORY.md`.
 
@@ -235,6 +236,8 @@ FREE_MISSION_LIMIT=5
 **§139 FECHADO** — Auditoria SF02-SF09: todos os 8 endpoints OK em produção (ok:true, anti_stub:true). SF_ENDPOINT_MAP cobre todos os 8 moduleKeys. CORS correto, sem auth bloqueando SF. 22/22 PASS. Zero mudança em código.
 
 **§140 FECHADO** — Fix v582-sf-modules.js workerUrl: `|| ''` → `|| gateway`. 1 linha. 5/5 PASS. CF Pages. Zero server.js.
+
+**§141 FECHADO** — Fix botões v236 visíveis (＋ ADICIONAR ARQUIVOS + 💬 COPILOTO). Causa raiz: `v272-layout-force.css` + `v273-sddf-command-chat.css` tinham `.v236-action-row{display:grid!important}` que sobrescrevia `style="display:none"` do HTML, expondo v236FileBtn+v236CopilotBtn (ambos em BLOCKED_IDS → cursor:not-allowed). Fix: `display:none!important` no final de `vision-core-bundle.css` (último `!important` de mesma especificidade vence). CF Pages ao vivo. Zero server.js.
 
 **Próximo item:** conversa nova com o humano sobre prioridade.
 
