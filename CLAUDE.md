@@ -190,6 +190,8 @@ FREE_MISSION_LIMIT=5
 | §135 | **PatchEngine aplica fix L3 — loop detect→suggest→apply completo.** `POST /api/security/apply-fix`: lê arquivo real, backup `.bak-s135-*`, substitui linha violadora por `fix.after`, retorna `{before, after, diff_preview, backup_created}`. Proteções: path traversal → 403, file not found → 404, line out of range → 400, backup obrigatório antes de qualquer write. Frontend: botão "⚙ APLICAR FIX (PatchEngine)" em cada card de violation com `fix.after` — IIFE closure captura `(v, fix, fixBox)` por iteração. Bug histórico do deploy script §134 (prefixo `backend/` errado no ZIP) documentado e corrigido no padrão. 14/14 PASS. Deploy EB v5.9.32-s135. CF Pages ao vivo. | - | 475638f5 |
 | §136 | **Loading ring + re-scan + dashboard de saúde.** `goRunner.js`: `normalizeGoResult` passa `security_score` + `scanned_files` do Go Core. `GET/POST /api/security/history` em `server.js` — in-memory + `archivistSave`. Bundle: (1) anel SVG em `.mi-svg` (r=216, `stroke-dasharray: 200 1156`, `transform-box: fill-box`, keyframe `s136spin`) ativado/desativado por `s136StartRing/StopRing` conectados ao chat handler e `stopMissionAnimation`; (2) re-scan 1.5s após apply-fix — `fetch /api/run-live` + filtra violations restantes + `s136SaveHistory`; (3) `renderSecurityDashboard` — 4 métricas + histórico de sessão via `/api/security/history`, injetado em 2 pontos. 22/22 PASS. Deploy EB v5.9.33-s136. CF Pages ao vivo. | - | ccdfd839 |
 | §137 | **Ring central: CORE fixo + OK ao terminar.** `index.html`: `mcCoreStatus="CORE"`, sub vazio, hint oculto. Bundle: CSS §136 (SVG circle + IIFE `s136InitRing`) substituído por CSS `::before` em `#mcCore` (`@keyframes s137spin`, `s137-active`); `s136StartRing` adiciona classe no `#mcCore`; `s136StopRing(success)` flash 'OK' verde 2s se sucesso, volta 'CORE' em ambos os casos; `stopMissionAnimation` passa `result && result.ok`; error handler passa `false`. Texto 'FECHADO / CONTROLLED CLOSURE' removido. Zero mudança em `server.js`. 9/9 PASS. CF Pages ao vivo. | - | 60e4c638 |
+| §138 | Compactação CLAUDE.md: 46.5k → 27k chars (−42%). §83-§116 agrupados em 10 linhas temáticas. §117-§124 resumidos 1 linha cada. PENDÊNCIAS longas → 1 linha cada. Zero código tocado. | - | 619b809e |
+| §139 | **Auditoria SF02-SF09.** Investigação exaustiva: todos os 8 endpoints SF em produção retornam `ok:true, anti_stub:true` (curl verificado). `SF_ENDPOINT_MAP` cobre todos os 8 moduleKeys dos botões `[data-sf-generate]`. Backend routes registradas via `Object.keys(SF_GENERATORS).forEach`. CORS correto. Nenhuma auth middleware bloqueando SF. Smoke test `_test139_sf_modules_unit.cjs` 22/22 PASS (14 estáticos + 8 live network). Zero mudança em código — auditoria confirmou sistema correto. | - | (pendente) |
 
 > Write-up completo (causa raiz, fix, evidência) de cada sessão acima → `CLAUDE_HISTORY.md`.
 
@@ -226,6 +228,10 @@ FREE_MISSION_LIMIT=5
 **§136 FECHADO** — Ring SVG + re-scan 1.5s + renderSecurityDashboard. 22/22. EB v5.9.33.
 
 **§137 FECHADO** — Ring CORE fixo + OK ao terminar. CSS ::before em #mcCore. 9/9. CF Pages. Zero server.js.
+
+**§138 FECHADO** — CLAUDE.md compactado: 46.5k → 27k chars (−42%). §83-§124 resumidos. Zero código tocado.
+
+**§139 FECHADO** — Auditoria SF02-SF09: todos os 8 endpoints OK em produção (ok:true, anti_stub:true). SF_ENDPOINT_MAP cobre todos os 8 moduleKeys. CORS correto, sem auth bloqueando SF. 22/22 PASS. Zero mudança em código.
 
 **Próximo item:** conversa nova com o humano sobre prioridade.
 
