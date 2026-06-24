@@ -7986,8 +7986,14 @@ body,
   display: none !important;
 }
 
-/* §145-hotfix5 — SIGN IN some quando usuário está logado */
-.s145-hidden {
+/* §145-hotfix5 — SIGN IN some quando usuário está logado.
+   .top-actions .btn.s145-hidden (0,3,0) > .top-actions .btn (0,2,0) do v272 */
+.s145-hidden,
+.btn.s145-hidden,
+.top-actions .s145-hidden,
+.top-actions .btn.s145-hidden,
+.top-actions a.s145-hidden,
+.top-actions button.s145-hidden {
   display: none !important;
 }
 
