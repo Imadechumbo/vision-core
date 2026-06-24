@@ -9269,6 +9269,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         .then(function (r) { return r.json(); })
         .then(function (data) {
           if (data && data.ok) {
+            signupBtn.disabled = false; /* §145-hotfix: re-enable FIRST — antes de qualquer UI call */
             if (data.token) {
               try { sessionStorage.setItem('vc_token', data.token); localStorage.setItem('vision_token', data.token); } catch (ex) {}
             }
@@ -9279,13 +9280,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             try { localStorage.setItem('vc_user_email', email); } catch(ex) {}
             var _plan = (data.user && data.user.plan) || 'free';
             if (data.user && data.user.plan) { updatePlanBadge(_plan); }
-            s145UpdateAuthUI(email, _plan);
+            try { s145UpdateAuthUI(email, _plan); } catch(ex) {} /* §145-hotfix: nunca travar o modal */
             if (resultEl) { resultEl.textContent = 'Conta criada!'; resultEl.style.color = '#22c55e'; }
             setTimeout(function () {
               authBackdrop.classList.remove('show');
               authBackdrop.setAttribute('aria-hidden', 'true');
             }, 2000);
-            signupBtn.disabled = false;
           } else {
             /* Fall back to login — usar senha salva */
             var _loginPw = (function() { try { return localStorage.getItem('vc_user_pw_' + email) || 'vc-user-auto'; } catch(e) { return 'vc-user-auto'; } })();
@@ -9304,7 +9304,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                 try { localStorage.setItem('vc_user_email', email); } catch(ex) {}
                 var _plan2 = (d2.user && d2.user.plan) || 'free';
                 if (d2.user && d2.user.plan) { updatePlanBadge(_plan2); }
-                s145UpdateAuthUI(email, _plan2);
+                try { s145UpdateAuthUI(email, _plan2); } catch(ex) {} /* §145-hotfix */
                 if (resultEl) { resultEl.textContent = 'Login realizado!'; resultEl.style.color = '#22c55e'; }
                 setTimeout(function () {
                   authBackdrop.classList.remove('show');
