@@ -729,6 +729,12 @@
           <div style="font-size:11px;color:#64748b">— §134, fix L3 automático + UI de violations, /api/security/suggest-fixes, 15/15 unit tests PASS, deploy EB v5.9.31</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">⚙️</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"PatchEngine aplica fix L3: o ciclo completa. O AEGIS detecta a violation, o Hermes sugere o patch (§134), e agora o PatchEngine aplica (§135). Um clique no botão 'Aplicar Fix' chama <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/security/apply-fix</code>, que lê o arquivo real do filesystem, faz backup automático (<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>.bak-s135-*</code>), substitui a linha violadora pelo código corrigido, e mostra o diff inline (<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>- API_KEY = 'sk-prod-abc123xyz789'</code> → <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>+ API_KEY = os.environ.get('API_KEY')</code>). Path traversal bloqueado (403). Arquivo inexistente retorna 404. Loop detect→suggest→apply completo em 3 sessões (§133→§134→§135)."</div>
+          <div style="font-size:11px;color:#64748b">— §135, PatchEngine aplica fix L3, backup automático, path traversal bloqueado, 14/14 unit tests PASS, deploy EB v5.9.32</div>
+        </div>
+
       </div>
 
     </div>

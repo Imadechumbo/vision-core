@@ -1070,6 +1070,86 @@ app.post('/api/security/suggest-fixes', async (req, res) => {
   return sendOk(res, { suggestions, total: suggestions.length, anti_stub: true });
 });
 
+// POST /api/security/apply-fix — §135: aplica fix.after em arquivo real do filesystem
+// Input:  { violation: {file, line, rule_id}, fix: {after, suggestion}, project_root? }
+// Output: { ok, file, line, before, after, diff_preview, backup_created }
+app.post('/api/security/apply-fix', async (req, res) => {
+  try {
+    const body = normalizeBody(req);
+    const { violation, fix, project_root } = body;
+
+    // Validação básica
+    if (!violation || !violation.file || !violation.line) {
+      return res.status(400).json({ ok: false, error: 'apply_fix_requires_violation_file_and_line', time: now() });
+    }
+    if (!fix || (!fix.after && !fix.suggestion)) {
+      return res.status(400).json({ ok: false, error: 'apply_fix_requires_fix_after_or_suggestion', time: now() });
+    }
+
+    // §135: resolução segura do caminho
+    const safeRoot = path.resolve(project_root || ROOT);
+    const filePath = path.resolve(safeRoot, violation.file);
+
+    // Proteção contra path traversal
+    if (!filePath.startsWith(safeRoot + path.sep) && filePath !== safeRoot) {
+      return res.status(403).json({ ok: false, error: 'apply_fix_path_traversal_blocked', file: violation.file, time: now() });
+    }
+
+    // Ler arquivo original
+    let originalContent;
+    try {
+      originalContent = fs.readFileSync(filePath, 'utf8');
+    } catch (e) {
+      return res.status(404).json({ ok: false, error: 'apply_fix_file_not_found', file: violation.file, time: now() });
+    }
+
+    // Backup antes de modificar
+    const backupPath = filePath + '.bak-s135-' + Date.now();
+    fs.writeFileSync(backupPath, originalContent, 'utf8');
+
+    // Aplicar fix na linha específica (1-indexed)
+    const lines = originalContent.split('\n');
+    const lineIdx = Number(violation.line) - 1;
+    if (lineIdx < 0 || lineIdx >= lines.length) {
+      fs.unlinkSync(backupPath); // limpa backup se linha inválida
+      return res.status(400).json({ ok: false, error: 'apply_fix_line_out_of_range', line: violation.line, total_lines: lines.length, time: now() });
+    }
+
+    const beforeLine = lines[lineIdx];
+    const afterLine  = fix.after || fix.suggestion || beforeLine;
+
+    // Substituição cirúrgica na linha
+    lines[lineIdx] = afterLine;
+    const patchedContent = lines.join('\n');
+    fs.writeFileSync(filePath, patchedContent, 'utf8');
+
+    // Diff preview (2 linhas de contexto)
+    const ctxStart = Math.max(0, lineIdx - 2);
+    const ctxEnd   = Math.min(lines.length - 1, lineIdx + 2);
+    const origLines = originalContent.split('\n');
+    const diffPreview = {
+      before: origLines.slice(ctxStart, ctxEnd + 1).join('\n'),
+      after:  patchedContent.split('\n').slice(ctxStart, ctxEnd + 1).join('\n'),
+    };
+
+    console.log(`[PatchEngine §135] Applied fix ${violation.rule_id} → ${violation.file}:${violation.line}`);
+
+    return sendOk(res, {
+      file:           violation.file,
+      line:           violation.line,
+      rule_id:        violation.rule_id || '',
+      before:         beforeLine,
+      after:          afterLine,
+      diff_preview:   diffPreview,
+      backup_created: backupPath,
+      anti_stub:      true,
+    });
+  } catch (e) {
+    console.error('[PatchEngine §135] apply-fix error:', e.message);
+    return res.status(500).json({ ok: false, error: 'apply_fix_internal_error', message: e.message, time: now() });
+  }
+});
+
 /* ── V5.3: RUN LIVE — Go Core real ───────────────────────────── */
 
 // GET /api/go-core/health — verifica binário + self-test

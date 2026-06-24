@@ -7188,6 +7188,44 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             envLine.textContent = '.env.example: ' + fix.env_var + '=YOUR_KEY_HERE';
             fixBox.appendChild(envLine);
           }
+          // §135: botão "Aplicar Fix" — chama /api/security/apply-fix
+          if (fix.after || fix.suggestion) {
+            var applyBtn135 = document.createElement('button');
+            applyBtn135.style.cssText = 'margin-top:8px;padding:5px 10px;background:#059669;border:none;border-radius:5px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.3px;display:block;';
+            applyBtn135.textContent = '⚙ APLICAR FIX (PatchEngine)';
+            applyBtn135.onclick = (function(_v135, _fix135, _box135) { return function() {
+              applyBtn135.textContent = '⏳ Aplicando...';
+              applyBtn135.disabled = true;
+              fetch(BACKEND_URL + '/api/security/apply-fix', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ violation: _v135, fix: _fix135 })
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(result) {
+                if (result.ok) {
+                  applyBtn135.textContent = '✅ Fix aplicado!';
+                  applyBtn135.style.background = '#065f46';
+                  var diffDiv = document.createElement('div');
+                  diffDiv.style.cssText = 'margin-top:6px;font-family:monospace;font-size:10px;';
+                  diffDiv.innerHTML =
+                    '<div style="color:#ef4444">- ' + String(result.before || '').replace(/</g,'&lt;') + '</div>' +
+                    '<div style="color:#34d399">+ ' + String(result.after  || '').replace(/</g,'&lt;') + '</div>';
+                  _box135.appendChild(diffDiv);
+                } else {
+                  applyBtn135.textContent = '❌ ' + (result.error || 'Erro');
+                  applyBtn135.style.background = '#7f1d1d';
+                  applyBtn135.disabled = false;
+                }
+              })
+              .catch(function() {
+                applyBtn135.textContent = '❌ Erro de rede';
+                applyBtn135.style.background = '#7f1d1d';
+                applyBtn135.disabled = false;
+              });
+            }; }(v, fix, fixBox));
+            fixBox.appendChild(applyBtn135);
+          }
           card.appendChild(fixBox);
         }
         wrap.appendChild(card);
