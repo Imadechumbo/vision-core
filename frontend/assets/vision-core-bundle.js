@@ -7033,10 +7033,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     });
 
     /* ── MISSION INPUT agent animation ─────────────────────────── */
-    var AGENT_KEYS   = ['scanner','hermes','patchengine','aegis','gocore','passgold'];
-    var AGENT_COLORS = { scanner:'#60a5fa', hermes:'#34d399', patchengine:'#c084fc', aegis:'#fbbf24', gocore:'#fbbf24', passgold:'#facc15' };
-    var AGENT_ATXT   = { scanner:'SCAN...', hermes:'RCA...', patchengine:'PATCH...', aegis:'AEGIS...', gocore:'COMMIT...', passgold:'GOLD...' };
-    var AGENT_DTXT   = { scanner:'✓ SCAN',  hermes:'✓ RCA',  patchengine:'✓ PATCH',  aegis:'✓ AEGIS',  gocore:'✓ COMMIT',  passgold:'★ GOLD' };
+    var AGENT_KEYS   = ['piharness','openclaw','scanner','hermes','patchengine','aegis','gocore','archivist','passgold','github'];
+    var AGENT_COLORS = { scanner:'#60a5fa', hermes:'#34d399', patchengine:'#c084fc', aegis:'#fbbf24', gocore:'#fbbf24', passgold:'#facc15', piharness:'#a78bfa', openclaw:'#f472b6', archivist:'#fb923c', github:'#94a3b8' };
+    var AGENT_ATXT   = { scanner:'SCAN...', hermes:'RCA...', patchengine:'PATCH...', aegis:'AEGIS...', gocore:'COMMIT...', passgold:'GOLD...', piharness:'PI...', openclaw:'CLAW...', archivist:'ARCH...', github:'PR...' };
+    var AGENT_DTXT   = { scanner:'✓ SCAN',  hermes:'✓ RCA',  patchengine:'✓ PATCH',  aegis:'✓ AEGIS',  gocore:'✓ COMMIT',  passgold:'★ GOLD',  piharness:'✓ PI',   openclaw:'✓ CLAW',  archivist:'✓ ARCH',  github:'✓ PR' };
     var _agentAnimTimer = null;
 
     function activateAgent(key, state) {
@@ -7081,7 +7081,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     function startMissionAnimation() {
       if (_agentAnimTimer) { clearTimeout(_agentAnimTimer); _agentAnimTimer = null; }
       resetAllAgents();
-      var seq = ['scanner','hermes','patchengine','aegis','gocore'];
+      var seq = ['piharness','openclaw','scanner','hermes','patchengine','aegis','gocore','archivist'];
       var i = 0;
       function tick() {
         if (i > 0) activateAgent(seq[i - 1], 'done');
@@ -7095,17 +7095,21 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
     function stopMissionAnimation(result) {
       if (_agentAnimTimer) { clearTimeout(_agentAnimTimer); _agentAnimTimer = null; }
-      var seq = ['scanner','hermes','patchengine','aegis','gocore'];
+      var seq = ['piharness','openclaw','scanner','hermes','patchengine','aegis','gocore','archivist'];
       if (!result) { resetAllAgents(); return; }
       var steps = (result && result.steps) || [];
       var stMap = {};
       steps.forEach(function(s) {
         var n = (s.agent || '').toLowerCase().replace(/\s+/g, '');
-        if (n.indexOf('scan')    >= 0) stMap['scanner']     = s.ok ? 'done' : 'error';
-        if (n.indexOf('hermes')  >= 0) stMap['hermes']      = s.ok ? 'done' : 'error';
-        if (n.indexOf('patch')   >= 0) stMap['patchengine'] = s.ok ? 'done' : 'error';
-        if (n.indexOf('aegis')   >= 0) stMap['aegis']       = s.ok ? 'done' : 'error';
-        if (n.indexOf('gocore')  >= 0 || n.indexOf('commit') >= 0) stMap['gocore'] = s.ok ? 'done' : 'error';
+        if (n.indexOf('scan')      >= 0) stMap['scanner']     = s.ok ? 'done' : 'error';
+        if (n.indexOf('hermes')    >= 0) stMap['hermes']      = s.ok ? 'done' : 'error';
+        if (n.indexOf('patch')     >= 0) stMap['patchengine'] = s.ok ? 'done' : 'error';
+        if (n.indexOf('aegis')     >= 0) stMap['aegis']       = s.ok ? 'done' : 'error';
+        if (n.indexOf('gocore')    >= 0 || n.indexOf('commit') >= 0) stMap['gocore'] = s.ok ? 'done' : 'error';
+        if (n.indexOf('piharness') >= 0 || n.indexOf('harness') >= 0) stMap['piharness']  = s.ok ? 'done' : 'error';
+        if (n.indexOf('openclaw')  >= 0) stMap['openclaw']   = s.ok ? 'done' : 'error';
+        if (n.indexOf('archivist') >= 0) stMap['archivist']  = s.ok ? 'done' : 'error';
+        if (n.indexOf('github')    >= 0) stMap['github']     = s.ok ? 'done' : 'error';
       });
       var overall = result.ok ? 'done' : 'error';
       seq.forEach(function(k) { activateAgent(k, stMap[k] || overall); });
@@ -8115,12 +8119,29 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         }
 
         if (data.agents && data.agents.ok && Array.isArray(data.agents.agents)) {
-          var idMap107 = { 'OpenClaw': 'openclaw', 'Hermes RCA': 'hermes', 'Scanner': 'scanner', 'Aegis': 'aegis', 'PASS GOLD': 'passgold' };
+          /* §142 — extended: real bar widths + colors from status, not hardcoded */
+          var idMap107 = { 'OpenClaw': 'openclaw', 'Hermes RCA': 'hermes', 'Scanner': 'scanner', 'Aegis': 'aegis', 'Go Core': 'gocore', 'PASS GOLD': 'passgold' };
+          var s142StatusWidth = { 'ok': '85%', 'binary_not_found': '20%', 'PENDING_EVIDENCE': '30%' };
+          var s142StatusColor = { 'ok': '#22c55e', 'binary_not_found': '#f97316', 'PENDING_EVIDENCE': '#eab308' };
           data.agents.agents.forEach(function(a) {
             var suffix = idMap107[a.name];
             if (!suffix) return;
             var valEl = document.getElementById('val-' + suffix);
-            if (valEl) { valEl.textContent = a.status === 'ok' ? '✅ ok' : '⚠ ' + a.status; }
+            if (valEl) {
+              if (a.status === 'ok') {
+                valEl.textContent = '✅ ok';
+                valEl.style.color = '#22c55e';
+              } else {
+                valEl.textContent = '⚠ ' + a.status.replace(/_/g, ' ');
+                valEl.style.color = '#f97316';
+              }
+            }
+            var barEl = document.getElementById('bar-' + suffix);
+            if (barEl) {
+              barEl.style.width      = s142StatusWidth[a.status]  || '15%';
+              barEl.style.background = s142StatusColor[a.status]  || '#64748b';
+              barEl.style.transition = 'width 0.8s ease, background 0.4s';
+            }
           });
         }
 
@@ -9327,6 +9348,67 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   /* Chat init guaranteed independent of DOMContentLoaded chain errors */
   window.addEventListener('load', function () { initMainChat(); });
 
+  /* §142 — popular #projectSelector a partir de /api/projects */
+  function s142InitProjects() {
+    var sel = document.getElementById('projectSelector');
+    if (!sel) return;
+
+    function s142LoadProjects() {
+      fetch(BACKEND_URL + '/api/projects')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var projects = (data && Array.isArray(data.projects)) ? data.projects : [];
+          sel.innerHTML = '';
+          var defOpt = document.createElement('option');
+          defOpt.value = '';
+          defOpt.textContent = projects.length ? 'Selecionar projeto...' : 'Nenhum projeto ainda';
+          sel.appendChild(defOpt);
+          projects.forEach(function(p) {
+            var opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            sel.appendChild(opt);
+          });
+        })
+        .catch(function() {
+          sel.innerHTML = '<option>Erro ao carregar</option>';
+        });
+    }
+
+    function s142AddCreateProjectBtn() {
+      if (document.getElementById('s142CreateProjectBtn')) return;
+      var btn = document.createElement('button');
+      btn.id = 's142CreateProjectBtn';
+      btn.type = 'button';
+      btn.textContent = '+ Novo';
+      btn.style.cssText = 'margin-left:6px;padding:4px 10px;background:#6d28d9;border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;height:38px;border-radius:12px;';
+      btn.onclick = function() {
+        var name = prompt('Nome do projeto:');
+        if (!name || !name.trim()) return;
+        fetch(BACKEND_URL + '/api/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name.trim() })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data && data.ok) {
+            s142LoadProjects();
+            setTimeout(function() {
+              var s = document.getElementById('projectSelector');
+              if (s && data.project) s.value = data.project.id;
+            }, 350);
+          }
+        })
+        .catch(function() {});
+      };
+      sel.parentNode.insertBefore(btn, sel.nextSibling);
+    }
+
+    s142LoadProjects();
+    s142AddCreateProjectBtn();
+  }
+
   function _runAllInits() {
     try { init(); } catch (e) { console.error('[vc] init:', e); }
     try { initReserve(); } catch (e) { console.error('[vc] initReserve:', e); }
@@ -9343,6 +9425,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     try { initMainChat(); } catch (e) { console.error('[vc] initMainChat:', e); }
     try { initAuthModal(); } catch (e) { console.error('[vc] initAuthModal:', e); }
     try { initQuickConfig(); } catch (e) { console.error('[vc] initQuickConfig:', e); }
+    try { s142InitProjects(); } catch (e) { console.error('[vc] s142InitProjects:', e); }
   }
 
   if (document.readyState === 'loading') {

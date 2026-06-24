@@ -748,6 +748,29 @@ app.get('/api/account/me', (req, res) => {
   return sendOk(res, { user: publicUser(user), projects: projectsDb.projects.filter(p => p.user_id === user.id), anti_stub: true });
 });
 
+// §142 — GET /api/projects (sem auth — projetos por sessão/anônimos)
+app.get('/api/projects', (req, res) => {
+  try {
+    const db = readJsonFile(PROJECTS_DB, { projects: [] });
+    return sendOk(res, { projects: Array.isArray(db.projects) ? db.projects : [], anti_stub: true });
+  } catch (err) {
+    return sendOk(res, { projects: [], anti_stub: true });
+  }
+});
+
+// §142 — POST /api/projects
+app.post('/api/projects', (req, res) => {
+  const body = normalizeBody(req);
+  const name = (body.name || '').trim();
+  if (!name) return res.status(400).json({ ok: false, error: 'project_name_required', time: now() });
+  const db = readJsonFile(PROJECTS_DB, { projects: [] });
+  if (!Array.isArray(db.projects)) db.projects = [];
+  const project = { id: 'proj_' + Date.now(), name, created_at: now(), user_id: body.user_id || 'anonymous' };
+  db.projects.push(project);
+  writeJsonFile(PROJECTS_DB, db);
+  return sendOk(res, { project, anti_stub: true });
+});
+
 app.get('/api/runtime/providers', (req, res) => sendOk(res, { providers: providerList().concat([{ id: 'local', configured: Boolean(process.env.OLLAMA_BASE_URL), base_url: process.env.OLLAMA_BASE_URL || '', model: process.env.OLLAMA_MODEL || '' }]), default: process.env.DEFAULT_AI_PROVIDER || 'auto', anti_stub: true }));
 app.get('/api/runtime/provider-status', async (req, res) => sendOk(res, { providers: await providerStatus(), checked_env: ['OLLAMA_BASE_URL','OPENROUTER_API_KEY','GROQ_API_KEY','GEMINI_API_KEY','DEEPSEEK_API_KEY','OPENAI_API_KEY'], anti_stub: true }));
 
