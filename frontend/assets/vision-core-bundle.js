@@ -9287,36 +9287,43 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               authBackdrop.setAttribute('aria-hidden', 'true');
             }, 2000);
           } else {
-            /* Fall back to login — usar senha salva */
+            /* Fall back to login — §145-hotfix2: tenta senha salva, depois 'vc-user-auto' */
             var _loginPw = (function() { try { return localStorage.getItem('vc_user_pw_' + email) || 'vc-user-auto'; } catch(e) { return 'vc-user-auto'; } })();
-            return fetch(BACKEND_URL + '/api/auth/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: email, password: _loginPw })
-            })
-            .then(function (r2) { return r2.json(); })
-            .then(function (d2) {
-              signupBtn.disabled = false;
-              if (d2 && d2.ok) {
-                if (d2.token) {
-                  try { sessionStorage.setItem('vc_token', d2.token); localStorage.setItem('vision_token', d2.token); } catch (ex) {}
+            function _doLogin(pw, isFinal) {
+              return fetch(BACKEND_URL + '/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, password: pw })
+              })
+              .then(function (r2) { return r2.json(); })
+              .then(function (d2) {
+                if (d2 && d2.ok) {
+                  signupBtn.disabled = false;
+                  if (d2.token) {
+                    try { sessionStorage.setItem('vc_token', d2.token); localStorage.setItem('vision_token', d2.token); } catch (ex) {}
+                  }
+                  try { localStorage.setItem('vc_user_email', email); } catch(ex) {}
+                  var _plan2 = (d2.user && d2.user.plan) || 'free';
+                  if (d2.user && d2.user.plan) { updatePlanBadge(_plan2); }
+                  try { s145UpdateAuthUI(email, _plan2); } catch(ex) {}
+                  if (resultEl) { resultEl.textContent = 'Login realizado!'; resultEl.style.color = '#22c55e'; }
+                  setTimeout(function () {
+                    authBackdrop.classList.remove('show');
+                    authBackdrop.setAttribute('aria-hidden', 'true');
+                  }, 2000);
+                } else if (!isFinal && pw !== 'vc-user-auto') {
+                  /* §145-hotfix2: primeira tentativa falhou — retry com senha legada */
+                  return _doLogin('vc-user-auto', true);
+                } else {
+                  signupBtn.disabled = false;
+                  if (resultEl) {
+                    resultEl.textContent = 'Erro: ' + (d2 && d2.error ? d2.error : 'falha ao autenticar');
+                    resultEl.style.color = '#f87171';
+                  }
                 }
-                try { localStorage.setItem('vc_user_email', email); } catch(ex) {}
-                var _plan2 = (d2.user && d2.user.plan) || 'free';
-                if (d2.user && d2.user.plan) { updatePlanBadge(_plan2); }
-                try { s145UpdateAuthUI(email, _plan2); } catch(ex) {} /* §145-hotfix */
-                if (resultEl) { resultEl.textContent = 'Login realizado!'; resultEl.style.color = '#22c55e'; }
-                setTimeout(function () {
-                  authBackdrop.classList.remove('show');
-                  authBackdrop.setAttribute('aria-hidden', 'true');
-                }, 2000);
-              } else {
-                if (resultEl) {
-                  resultEl.textContent = 'Erro: ' + (d2 && d2.error ? d2.error : 'falha ao autenticar');
-                  resultEl.style.color = '#f87171';
-                }
-              }
-            });
+              });
+            }
+            return _doLogin(_loginPw, _loginPw === 'vc-user-auto');
           }
         })
         .catch(function (err) {
