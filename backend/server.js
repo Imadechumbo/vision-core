@@ -771,6 +771,48 @@ app.post('/api/projects', (req, res) => {
   return sendOk(res, { project, anti_stub: true });
 });
 
+// §144 — Hotmart webhook (PURCHASE_COMPLETE → user.plan = 'pro')
+app.post('/api/billing/hotmart-webhook', (req, res) => {
+  try {
+    const body  = normalizeBody(req);
+    const event = body.event || '';
+    const email = body.data && body.data.buyer && body.data.buyer.email;
+    if (!email) return res.json({ ok: true, skipped: 'no_email' });
+
+    const db   = readJsonFile(USERS_DB, { users: [] });
+    const user = Array.isArray(db.users) ? db.users.find(u => u.email === email) : null;
+    if (!user) return res.json({ ok: true, skipped: 'user_not_found' });
+
+    const cancelEvents  = ['PURCHASE_CANCELED', 'PURCHASE_REFUNDED', 'SUBSCRIPTION_CANCELLATION'];
+    const approveEvents = ['PURCHASE_COMPLETE', 'PURCHASE_APPROVED', 'PURCHASE_BILLET_PRINTED'];
+
+    if (approveEvents.includes(event)) {
+      user.plan            = 'pro';
+      user.plan_updated_at = now();
+      user.hotmart_event   = event;
+    } else if (cancelEvents.includes(event)) {
+      user.plan            = 'free';
+      user.plan_updated_at = now();
+      user.hotmart_event   = event;
+    }
+
+    writeJsonFile(USERS_DB, db);
+    console.log('[hotmart-webhook] event:', event, 'email:', email, 'plan:', user.plan);
+    return res.json({ ok: true, plan: user.plan, anti_stub: true });
+  } catch (err) {
+    console.error('[hotmart-webhook] error:', err.message);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// §144 — Hotmart checkout redirect
+app.get('/api/billing/hotmart-checkout', (req, res) => {
+  const email = req.query.email || '';
+  const base  = process.env.HOTMART_CHECKOUT_URL || 'https://pay.hotmart.com/U106475644Y';
+  const url   = email ? base + (base.includes('?') ? '&' : '?') + 'email=' + encodeURIComponent(email) : base;
+  return res.json({ ok: true, checkout_url: url, anti_stub: true });
+});
+
 app.get('/api/runtime/providers', (req, res) => sendOk(res, { providers: providerList().concat([{ id: 'local', configured: Boolean(process.env.OLLAMA_BASE_URL), base_url: process.env.OLLAMA_BASE_URL || '', model: process.env.OLLAMA_MODEL || '' }]), default: process.env.DEFAULT_AI_PROVIDER || 'auto', anti_stub: true }));
 app.get('/api/runtime/provider-status', async (req, res) => sendOk(res, { providers: await providerStatus(), checked_env: ['OLLAMA_BASE_URL','OPENROUTER_API_KEY','GROQ_API_KEY','GEMINI_API_KEY','DEEPSEEK_API_KEY','OPENAI_API_KEY'], anti_stub: true }));
 
