@@ -323,6 +323,54 @@ async function providerStatus() { const providers = providerList(); providers.un
 
 /* ── §83 callLLM — multi-provider real (native https, no node-fetch) ── */
 const https = require('https');
+
+// §146 — S3 persistence layer (zero deps: usa aws CLI disponível no EC2 via IAM role)
+// Quando AWS_S3_BUCKET está setado, users.json e projects.json são sincronizados com S3.
+// Sem o env var → comportamento anterior (local somente).
+const S3_BUCKET = process.env.AWS_S3_BUCKET || '';
+const S3_PREFIX = process.env.AWS_S3_PREFIX || 'data/';
+const { exec: _exec146 } = require('child_process');
+
+function _s3Key(localPath) { return S3_PREFIX + path.basename(localPath); }
+
+// Startup: lê do S3 e sobrescreve arquivo local (execSync OK antes do app.listen)
+function _s3LoadSync(localPath) {
+  if (!S3_BUCKET) return;
+  const key = _s3Key(localPath);
+  try {
+    const { execSync } = require('child_process');
+    const content = execSync(`aws s3 cp "s3://${S3_BUCKET}/${key}" -`,
+      { encoding: 'utf8', timeout: 15000, stdio: ['ignore', 'pipe', 'ignore'] });
+    const data = JSON.parse(content);
+    fs.mkdirSync(path.dirname(localPath), { recursive: true });
+    fs.writeFileSync(localPath, JSON.stringify(data, null, 2), 'utf8');
+    console.log('[s3] §146 loaded', key);
+  } catch(e) {
+    console.log('[s3] §146 no data for', key, '—', e.message.slice(0, 60));
+  }
+}
+
+// Fire-and-forget: sincroniza S3 após escrever local
+function _s3PutAsync(localPath, data) {
+  if (!S3_BUCKET) return;
+  const key = _s3Key(localPath);
+  const tmp = path.join(require('os').tmpdir(), 'vc146_' + Date.now() + '.json');
+  fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf8', (err) => {
+    if (err) return;
+    _exec146(`aws s3 cp "${tmp}" "s3://${S3_BUCKET}/${key}"`,
+      { timeout: 30000 }, (err2) => {
+        fs.unlink(tmp, () => {});
+        if (err2) console.warn('[s3] §146 put failed:', key, err2.message.slice(0,60));
+      });
+  });
+}
+
+// Drop-in replacement: escreve local + sincroniza S3 (fire-and-forget)
+function writeAndSyncS3(localPath, data) {
+  writeJsonFile(localPath, data);
+  _s3PutAsync(localPath, data);
+}
+
 function httpsPost(url, headers, bodyStr, timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
@@ -505,7 +553,7 @@ app.all('/api/auth/register', (req, res) => {
   const db = readJsonFile(USERS_DB, { users: [] });
   if (db.users.some(u => u.email === email)) return res.status(409).json({ ok: false, error: 'email_already_registered', time: now() });
   const user = { id: makeId('usr'), email, name: body.name || '', password_hash: hashPassword(rawPw), plan: 'free', created_at: now(), last_login: null };
-  db.users.push(user); writeJsonFile(USERS_DB, db);
+  db.users.push(user); writeAndSyncS3(USERS_DB, db);
   const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
   res.setHeader('Set-Cookie', `vision_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`);
   return sendOk(res, { user: publicUser(user), token, token_type: 'session', persisted: true, generated_password: rawPw, anti_stub: true });
@@ -518,7 +566,7 @@ app.all('/api/auth/login', (req, res) => {
   const db = readJsonFile(USERS_DB, { users: [] });
   const user = db.users.find(u => u.email === email);
   if (!user || !verifyPassword(password, user.password_hash)) return res.status(401).json({ ok: false, error: 'invalid_credentials', time: now() });
-  user.last_login = now(); writeJsonFile(USERS_DB, db);
+  user.last_login = now(); writeAndSyncS3(USERS_DB, db);
   const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
   res.setHeader('Set-Cookie', `vision_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`);
   return sendOk(res, { user: publicUser(user), token, token_type: 'session', persisted: true, anti_stub: true });
@@ -577,7 +625,7 @@ app.post('/api/vault/rollback/:snapshotId', (req, res) => {
     if (snapshot.state && snapshot.state.projects) {
       const projectsDb = readJsonFile(PROJECTS_DB, { projects: [] });
       projectsDb.projects = snapshot.state.projects;
-      writeJsonFile(PROJECTS_DB, projectsDb);
+      writeAndSyncS3(PROJECTS_DB, projectsDb);
     }
     return sendOk(res, { rolled_back: true, snapshot_id: snapshotId, restored_at: now(), label: snapshot.label, anti_stub: true });
   } catch (err) {
@@ -662,7 +710,7 @@ app.get('/api/auth/oauth/google/callback', async (req, res) => {
       user.last_login = now();
       if (!user.oauth_provider) user.oauth_provider = 'google';
     }
-    writeJsonFile(USERS_DB, db);
+    writeAndSyncS3(USERS_DB, db);
     const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
     return res.redirect(`${FRONTEND_URL}/#oauth-success&token=${encodeURIComponent(token)}&plan=${user.plan}&email=${encodeURIComponent(email)}`);
   } catch (err) {
@@ -735,7 +783,7 @@ app.get('/api/auth/oauth/github/callback', async (req, res) => {
       user.last_login = now();
       if (!user.github_login) user.github_login = ghUser.login;
     }
-    writeJsonFile(USERS_DB, db);
+    writeAndSyncS3(USERS_DB, db);
     const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
     return res.redirect(`${FRONTEND_URL}/#oauth-success&token=${encodeURIComponent(token)}&plan=${user.plan}&email=${encodeURIComponent(email)}`);
   } catch (err) {
@@ -770,7 +818,7 @@ app.post('/api/projects', (req, res) => {
   if (!Array.isArray(db.projects)) db.projects = [];
   const project = { id: 'proj_' + Date.now(), name, created_at: now(), user_id: body.user_id || 'anonymous' };
   db.projects.push(project);
-  writeJsonFile(PROJECTS_DB, db);
+  writeAndSyncS3(PROJECTS_DB, db);
   return sendOk(res, { project, anti_stub: true });
 });
 
@@ -799,7 +847,7 @@ app.post('/api/billing/hotmart-webhook', (req, res) => {
       user.hotmart_event   = event;
     }
 
-    writeJsonFile(USERS_DB, db);
+    writeAndSyncS3(USERS_DB, db);
     console.log('[hotmart-webhook] event:', event, 'email:', email, 'plan:', user.plan);
     return res.json({ ok: true, plan: user.plan, anti_stub: true });
   } catch (err) {
@@ -1719,7 +1767,7 @@ async function ensureStripeCustomer(stripe, user) {
 function updateUserPlan(userId, plan, extra = {}) {
   const users = readJsonFile(USERS_DB, { users: [] });
   const user = users.users.find(u => u.id === userId);
-  if (user) { user.plan = plan || user.plan || 'free'; user.billing = { ...(user.billing || {}), ...extra, updated_at: now() }; writeJsonFile(USERS_DB, users); }
+  if (user) { user.plan = plan || user.plan || 'free'; user.billing = { ...(user.billing || {}), ...extra, updated_at: now() }; writeAndSyncS3(USERS_DB, users); }
 }
 app.post('/api/billing/create-checkout-session', requireVisionAuth, async (req, res) => {
   const stripe = getStripeClient(); if (!stripe) return billingUnavailable(res);
@@ -3831,6 +3879,14 @@ app.all('/api/*', (req, res) => {
     time: now()
   });
 });
+
+/* §146: carregar DBs do S3 no startup (antes de app.listen) */
+if (S3_BUCKET) {
+  console.log('[s3] §146 startup: loading from bucket', S3_BUCKET);
+  _s3LoadSync(USERS_DB);
+  _s3LoadSync(PROJECTS_DB);
+  console.log('[s3] §146 startup load done');
+}
 
 /* §112: init SQLite queue before accepting requests */
 (async () => {
