@@ -8,7 +8,7 @@
 
   // Herda gateway do runtime principal
   function workerUrl(path) {
-    const base = window.__VISION_API__ || window.API || window.API_BASE_URL || '';
+    const base = window.__VISION_API__ || window.API || window.API_BASE_URL || 'https://visioncore-api-gateway.weiganlight.workers.dev';
     return base.replace(/\/$/, '') + path;
   }
 
