@@ -7978,3 +7978,11 @@ body,
 #vcSoftwareFactoryPage .vc-final-timeline-item { padding: 5px 9px; gap: 7px; }
 /* §74.2b end — 2026-06-13 */
 
+/* §141 — v236-action-row: v272/v273 display:grid!important sobrescrevia style="display:none"
+   tornando v236FileBtn + v236CopilotBtn visíveis (ambos em BLOCKED_IDS → cursor:not-allowed).
+   Override com !important no final do bundle (mesmo especificidade, último vence). */
+.v236-action-row,
+#mission .v236-action-row {
+  display: none !important;
+}
+

@@ -127,3 +127,10 @@
   .v298-dd{flex:1 1 100%;width:100%}
   .v298-dd-menu{bottom:auto;top:calc(100% + 8px);width:100%}
 }
+
+/* §141 — v236-action-row hidden: v272/v273 display:grid!important sobrescrevia style="display:none"
+   tornando v236FileBtn + v236CopilotBtn visíveis (ambos em BLOCKED_IDS → cursor:not-allowed). */
+.v236-action-row,
+#mission .v236-action-row {
+  display: none !important;
+}
