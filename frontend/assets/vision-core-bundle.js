@@ -7142,6 +7142,59 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       return wrap;
     }
 
+    /* ── §134: renderSecurityViolations — painel de violations AEGIS com sugestões Hermes ── */
+    function renderSecurityViolations(violations, fixSuggestions) {
+      if (!violations || violations.length === 0) return null;
+      var severityColor = { 'CRITICAL': '#ef4444', 'HIGH': '#f97316', 'MEDIUM': '#eab308', 'LOW': '#6b7280' };
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'margin-top:12px;';
+      var header = document.createElement('div');
+      header.style.cssText = 'color:#f87171;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:8px;';
+      header.textContent = '🛡 AEGIS — ' + violations.length + ' VIOLATION' + (violations.length > 1 ? 'S' : '') + ' DETECTADA' + (violations.length > 1 ? 'S' : '');
+      wrap.appendChild(header);
+      violations.forEach(function(v, i) {
+        var fix = fixSuggestions && fixSuggestions[i] && fixSuggestions[i].fix;
+        var color = severityColor[v.severity] || '#6b7280';
+        var card = document.createElement('div');
+        card.style.cssText = 'border:1px solid ' + color + '33;border-radius:8px;padding:12px;margin-bottom:8px;background:#0f172a;';
+        var cardTop = document.createElement('div');
+        cardTop.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;';
+        var badge = document.createElement('span');
+        badge.style.cssText = 'color:' + color + ';font-size:11px;font-weight:700;letter-spacing:1px;';
+        badge.textContent = (v.severity || 'INFO') + ' — ' + (v.rule_id || '');
+        var loc = document.createElement('span');
+        loc.style.cssText = 'color:#64748b;font-size:10px;font-family:monospace;';
+        loc.textContent = (v.file || '') + (v.line ? ':' + v.line : '');
+        cardTop.appendChild(badge); cardTop.appendChild(loc);
+        card.appendChild(cardTop);
+        var msg = document.createElement('div');
+        msg.style.cssText = 'color:#cbd5e1;font-size:12px;' + (fix ? 'margin-bottom:8px;' : '');
+        msg.textContent = v.message || '';
+        card.appendChild(msg);
+        if (fix) {
+          var fixBox = document.createElement('div');
+          fixBox.style.cssText = 'background:#1e293b;border-radius:6px;padding:8px;margin-top:4px;';
+          var fixLabel = document.createElement('div');
+          fixLabel.style.cssText = 'color:#34d399;font-size:10px;font-weight:600;margin-bottom:4px;';
+          fixLabel.textContent = '💡 SUGESTÃO DE FIX (Hermes)';
+          fixBox.appendChild(fixLabel);
+          var fixText = document.createElement('div');
+          fixText.style.cssText = 'color:#94a3b8;font-size:11px;font-family:monospace;white-space:pre-wrap;word-break:break-all;';
+          fixText.textContent = fix.after || fix.suggestion || JSON.stringify(fix, null, 2);
+          fixBox.appendChild(fixText);
+          if (fix.env_var) {
+            var envLine = document.createElement('div');
+            envLine.style.cssText = 'color:#7dd3fc;font-size:10px;margin-top:4px;font-family:monospace;';
+            envLine.textContent = '.env.example: ' + fix.env_var + '=YOUR_KEY_HERE';
+            fixBox.appendChild(envLine);
+          }
+          card.appendChild(fixBox);
+        }
+        wrap.appendChild(card);
+      });
+      return wrap;
+    }
+
     /* ── §106: vcQueueApplyPatchViaAgent — lógica compartilhada entre renderApplyFixPanel  */
     /* e renderStandardMethodPanel: verifica agent → queue apply_patch → poll resultado.    */
     /* hermesObj : objeto com file, patch, fix_type, diagnosis.                             */
@@ -7533,6 +7586,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             appendMsg(rd.output || ('❌ Missão falhou: ' + (rd.action || 'erro desconhecido')), 'error');
           } else {
             chatStream.appendChild(renderValidationPanel(rd));
+            // §134: painel de violations AEGIS com sugestões Hermes
+            var _sv134a = renderSecurityViolations(rd && rd.security_violations, rd && rd.security_fix_suggestions);
+            if (_sv134a) { chatStream.appendChild(_sv134a); }
           }
           chatStream.scrollTop = chatStream.scrollHeight;
           setStatus('READY');
@@ -7626,6 +7682,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               appendMsg(rd.output || ('❌ Missão falhou: ' + (rd.action || 'erro desconhecido')), 'error');
             } else {
               chatStream.appendChild(renderValidationPanel(rd));
+              // §134: painel de violations AEGIS com sugestões Hermes
+              var _sv134b = renderSecurityViolations(rd && rd.security_violations, rd && rd.security_fix_suggestions);
+              if (_sv134b) { chatStream.appendChild(_sv134b); }
             }
             chatStream.scrollTop = chatStream.scrollHeight;
             setStatus('READY');

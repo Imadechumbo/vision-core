@@ -1021,6 +1021,55 @@ app.all('/api/hermes/rca', (req, res) => sendOk(res, {
   fix_plan: ['validate_api_contract', 'validate_sse', 'aegis_policy', 'pass_gold']
 }));
 
+/* ── §134: SECURITY VIOLATIONS — fix suggestions via Hermes ─────── */
+
+// Mapa de prompts por rule_id — gerado inline para cada violation detectada pelo AEGIS
+const VIOLATION_FIX_PROMPTS = {
+  'AEGIS_SECRET_009': (v) => `Arquivo: ${v.file}, linha ${v.line}\nViolation: senha ou secret hardcoded encontrada.\nSugira como mover para variável de ambiente.\nResponda APENAS em JSON válido: {"before":"...","after":"...","env_var":"...","env_example":"...","reason":"..."}`,
+  'AEGIS_SECRET_010': (v) => `Arquivo: ${v.file}, linha ${v.line}\nViolation: API key ou token hardcoded (${v.message}).\nSugira como mover para variável de ambiente.\nResponda APENAS em JSON válido: {"before":"...","after":"...","env_var":"...","env_example":"...","reason":"..."}`,
+  'AEGIS_CRYPTO':     (v) => `Arquivo: ${v.file}, linha ${v.line}\nViolation: algoritmo criptográfico fraco (MD5/SHA1).\nSugira substituição por SHA-256 ou bcrypt conforme o contexto.\nResponda APENAS em JSON válido: {"before":"...","after":"...","reason":"..."}`,
+  'AEGIS_INJECTION':  (v) => `Arquivo: ${v.file}, linha ${v.line}\nViolation: SQL/command injection — concatenação de input não sanitizado.\nSugira uso de prepared statements ou parameterização.\nResponda APENAS em JSON válido: {"before":"...","after":"...","reason":"..."}`,
+  'AEGIS_EXPOSURE':   (v) => `Arquivo: ${v.file}, linha ${v.line}\nViolation: dado sensível exposto em log.\nSugira como mascarar ou remover do log.\nResponda APENAS em JSON válido: {"before":"...","after":"...","reason":"..."}`,
+};
+function _defaultViolationPrompt(v) {
+  return `Arquivo: ${v.file}, linha ${v.line}\nViolation AEGIS ${v.rule_id}: ${v.message}\nSeverity: ${v.severity}\nSugira como corrigir este problema de segurança.\nResponda APENAS em JSON válido: {"suggestion":"...","reason":"..."}`;
+}
+
+// Gera sugestões de fix para um array de violations (max 5, best-effort)
+async function generateViolationFixes(violations = []) {
+  const fixes = [];
+  for (const v of violations.slice(0, 5)) {
+    const promptFn = VIOLATION_FIX_PROMPTS[v.rule_id] || _defaultViolationPrompt;
+    try {
+      const llmResult = await callLLM(promptFn(v), {
+        system: 'Você é um especialista em segurança de código. Sugira correções específicas e práticas. Responda APENAS em JSON válido, sem markdown.',
+        max_tokens: 400,
+      });
+      let fix = null;
+      if (llmResult && llmResult.text) {
+        try {
+          const clean = llmResult.text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
+          fix = JSON.parse(clean);
+        } catch (_) { fix = { suggestion: llmResult.text }; }
+      }
+      fixes.push({ violation: v, fix, provider: llmResult && llmResult.provider });
+    } catch (e) {
+      fixes.push({ violation: v, fix: null, error: e.message });
+    }
+  }
+  return fixes;
+}
+
+// POST /api/security/suggest-fixes — recebe violations[], retorna sugestões Hermes
+app.post('/api/security/suggest-fixes', async (req, res) => {
+  const { violations = [] } = normalizeBody(req);
+  if (!violations.length) {
+    return sendOk(res, { suggestions: [], note: 'no violations provided', anti_stub: true });
+  }
+  const suggestions = await generateViolationFixes(violations);
+  return sendOk(res, { suggestions, total: suggestions.length, anti_stub: true });
+});
+
 /* ── V5.3: RUN LIVE — Go Core real ───────────────────────────── */
 
 // GET /api/go-core/health — verifica binário + self-test
@@ -1136,6 +1185,15 @@ app.all('/api/run-live', checkMissionQuota, async (req, res) => {
       steps: [],
       time: now()
     });
+  }
+
+  // §134: sugestões automáticas de fix para violations detectadas pelo AEGIS (best-effort)
+  if (Array.isArray(result.security_violations) && result.security_violations.length > 0) {
+    try {
+      result.security_fix_suggestions = await generateViolationFixes(result.security_violations.slice(0, 3));
+    } catch (_) {
+      result.security_fix_suggestions = [];
+    }
   }
 
   // Salvar incidente apenas se PASS GOLD real

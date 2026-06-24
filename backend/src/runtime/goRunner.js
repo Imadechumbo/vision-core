@@ -252,6 +252,12 @@ function normalizeGoResult(parsed = {}, stdout = '', stderr = '', bin = '', opti
     gates,
     failed_gates: unique(failedGates),
 
+    // §134: pass-through security violations from Go Core
+    security_violations: Array.isArray(parsed.security_violations) ? parsed.security_violations : [],
+    security_blocking_violations: Array.isArray(parsed.security_blocking_violations) ? parsed.security_blocking_violations : [],
+    security_report_only_violations: Array.isArray(parsed.security_report_only_violations) ? parsed.security_report_only_violations : [],
+    security_total_violations: Number(parsed.security_total_violations || 0),
+
     duration_ms: Number(parsed.duration_ms || 0),
     summary: parsed.summary || (strictPassGold
       ? 'PASS GOLD confirmed by Go Core.'

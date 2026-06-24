@@ -723,6 +723,12 @@
           <div style="font-size:11px;color:#64748b">— §133, scanner: 0 files → 1924 files varridos, AEGIS_SECRET_010 detectado em level3_security.py:6, 16/16 unit tests PASS, deploy EB v5.9.30</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🛡</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Fix automático L3: quando o AEGIS detecta uma violation de segurança (API key hardcoded, MD5, SQL injection, log de senha), o Hermes agora sugere o patch específico — mover credencial para variável de ambiente, substituir MD5 por SHA-256, usar prepared statements. As sugestões aparecem no Mission Control em tempo real, logo abaixo de cada violation, com o código antes/depois. A rota <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/security/suggest-fixes</code> está disponível para integrações externas. Antes desta sessão: violations eram detectadas pelo AEGIS mas nenhuma sugestão de correção era gerada — o AEGIS sabia o problema mas ficava em silêncio sobre como resolver. Agora cada violation volta com <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>fix.after</code> (código corrigido) ou <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>fix.suggestion</code> (descrição do fix) e <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>fix.env_var</code> com a linha para o <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>.env.example</code>."</div>
+          <div style="font-size:11px;color:#64748b">— §134, fix L3 automático + UI de violations, /api/security/suggest-fixes, 15/15 unit tests PASS, deploy EB v5.9.31</div>
+        </div>
+
       </div>
 
     </div>
