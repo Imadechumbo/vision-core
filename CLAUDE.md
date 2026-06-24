@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-23 (§135)
+## Documento central do projeto | Atualizado: 2026-06-23 (§136)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -219,6 +219,7 @@ FREE_MISSION_LIMIT=5
 | §133 | **Scanner real — `scanned 0 files` → `scanned 1924 files`.** Duas causas raiz: (1) `jsExts` em `scanner.go` só incluía `.js/.go` — expandido para `.py, .java, .yaml, .json, .sh, .env, .conf`; (2) `dirSkip` aplicava ao root quando root.Name() estava na lista — `path != root` guard em `secrets.go`, `api.go`, `containers.go`, `scanner.go`. AEGIS detecta `AEGIS_SECRET_010` em `level3_security.py:6` quando `--root _fixture_stress`. Main: `security_score=100`, zero blocking (fixture no dirSkip). D7: `pass_gold_candidate:true`. 16/16 PASS. Deploy EB v5.9.30-s133. CF Pages ao vivo. | - | 7e43fcd3 |
 | §134 | **Fix automático L3 + violations UI.** `VIOLATION_FIX_PROMPTS` map por rule_id + `generateViolationFixes()` helper. `POST /api/security/suggest-fixes` — aceita `violations[]`, retorna sugestões Hermes (`fix.after`, `fix.env_var`, `fix.suggestion`). `/api/run-live` injeta `security_fix_suggestions` best-effort quando violations presentes. `normalizeGoResult` em `goRunner.js` agora passa `security_violations/blocking/report_only/total` do Go Core. Frontend: `renderSecurityViolations()` exibe painel por violation com sugestão inline, injetado em 2 pontos (renderApplyFixPanel + renderStandardMethodPanel). 15/15 PASS. Deploy EB v5.9.31-s134. CF Pages ao vivo. | - | 976b779c |
 | §135 | **PatchEngine aplica fix L3 — loop detect→suggest→apply completo.** `POST /api/security/apply-fix`: lê arquivo real, backup `.bak-s135-*`, substitui linha violadora por `fix.after`, retorna `{before, after, diff_preview, backup_created}`. Proteções: path traversal → 403, file not found → 404, line out of range → 400, backup obrigatório antes de qualquer write. Frontend: botão "⚙ APLICAR FIX (PatchEngine)" em cada card de violation com `fix.after` — IIFE closure captura `(v, fix, fixBox)` por iteração. Bug histórico do deploy script §134 (prefixo `backend/` errado no ZIP) documentado e corrigido no padrão. 14/14 PASS. Deploy EB v5.9.32-s135. CF Pages ao vivo. | - | 475638f5 |
+| §136 | **Loading ring + re-scan + dashboard de saúde.** `goRunner.js`: `normalizeGoResult` passa `security_score` + `scanned_files` do Go Core. `GET/POST /api/security/history` em `server.js` — in-memory + `archivistSave`. Bundle: (1) anel SVG em `.mi-svg` (r=216, `stroke-dasharray: 200 1156`, `transform-box: fill-box`, keyframe `s136spin`) ativado/desativado por `s136StartRing/StopRing` conectados ao chat handler e `stopMissionAnimation`; (2) re-scan 1.5s após apply-fix — `fetch /api/run-live` + filtra violations restantes + `s136SaveHistory`; (3) `renderSecurityDashboard` — 4 métricas + histórico de sessão via `/api/security/history`, injetado em 2 pontos. 22/22 PASS. Deploy EB v5.9.33-s136. CF Pages ao vivo. | - | ccdfd839 |
 
 > Write-up completo (causa raiz, fix, evidência) de cada sessão acima → `CLAUDE_HISTORY.md`.
 
@@ -253,6 +254,8 @@ FREE_MISSION_LIMIT=5
 **§134 FECHADO** — Fix automático L3 + violations UI. `VIOLATION_FIX_PROMPTS` + `generateViolationFixes()` em `server.js`. Nova rota `POST /api/security/suggest-fixes`. `/api/run-live` injeta `security_fix_suggestions` best-effort. `normalizeGoResult` em `goRunner.js` passa `security_violations/blocking/report_only/total`. Frontend: `renderSecurityViolations()` com painel por violation + `fix.after` + `fix.env_var`, injetado em 2 pontos. 15/15 unit tests PASS. Deploy EB v5.9.31-s134. CF Pages ao vivo.
 
 **§135 FECHADO** — PatchEngine aplica fix L3. `POST /api/security/apply-fix`: lê arquivo real, backup `.bak-s135-*`, substitui linha violadora, retorna `{before, after, diff_preview, backup_created}`. Proteções: path traversal → 403, file not found → 404. Frontend: botão "⚙ APLICAR FIX" em cada card de violation. Loop detect→suggest→apply completo (§133+§134+§135). 14/14 unit tests PASS. Deploy EB v5.9.32-s135. CF Pages ao vivo.
+
+**§136 FECHADO** — Loading ring + re-scan + dashboard de saúde. `goRunner.js` passa `security_score` + `scanned_files`. `GET/POST /api/security/history`. Bundle: anel SVG animado no decágono, re-scan 1.5s pós apply-fix, `renderSecurityDashboard` com 4 métricas + histórico. 22/22 unit tests PASS. Deploy EB v5.9.33-s136. CF Pages ao vivo.
 
 **Próximo item:** conversa nova com o humano sobre prioridade.
 
