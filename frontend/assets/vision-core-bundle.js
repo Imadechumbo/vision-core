@@ -9338,7 +9338,18 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         if (tok) {
           /* §145: mostrar badge imediatamente com email salvo */
           var _storedEmail = (function() { try { return localStorage.getItem('vc_user_email') || ''; } catch(e) { return ''; } })();
-          if (_storedEmail) { try { s145UpdateAuthUI(_storedEmail, 'free'); } catch(e) {} }
+          if (_storedEmail) {
+            try { s145UpdateAuthUI(_storedEmail, 'free'); } catch(e) {}
+            /* §145-hotfix4: garantir SIGN IN some mesmo se DOM ainda carregando */
+            setTimeout(function() {
+              var b1 = document.getElementById('openAuthBtn');
+              var b2 = document.getElementById('openAuthBtn2');
+              if (document.getElementById('s145UserBadge')) {
+                if (b1) b1.style.display = 'none';
+                if (b2) b2.style.display = 'none';
+              }
+            }, 500);
+          }
           fetch(BACKEND_URL + '/api/billing/status', { headers: { 'Authorization': 'Bearer ' + tok } })
             .then(function (r) { return r.json(); })
             .then(function (d) {
