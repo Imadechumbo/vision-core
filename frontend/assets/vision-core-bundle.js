@@ -9016,6 +9016,18 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     }
     initSfAutoPilot(); // §161
 
+    // §162 — Tutorial SF (❓ TUTORIAL button → sf2)
+    function initSfTutorial() {
+      var tutBtn = document.getElementById('vcSfTutorialBtn');
+      if (!tutBtn) return;
+      tutBtn.addEventListener('click', function() {
+        if (typeof window.vcStartSectionTutorial === 'function') {
+          window.vcStartSectionTutorial('sf2');
+        }
+      });
+    }
+    initSfTutorial(); // §162
+
     // INICIAR MONTAGEM → open workspace at first module
     var startBtn = document.getElementById('vcSfStartBtn');
     if (startBtn) {
@@ -10179,6 +10191,32 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     { title: '🏅 Gold Gate — o validador final', text: 'Antes de qualquer entrega, o Gold Gate avalia segurança, risco e qualidade — o mesmo padrão de validação do PASS GOLD. O módulo "Painel Final" (09) é o destino após todas as etapas de validação.', target: '[data-sf-module="final_dashboard"]', pos: 'bottom', onEnter: _sfOnEnter(null) }
   ];
   window.vcRegisterTutorial('sf', STEPS_SF, 'vc_tutorial_sf_done');
+
+  // ── §162: TUTORIAL SF GUIA AUTO-PILOT (para leigos) ──
+  var STEPS_SF2 = [
+    { title: '🏭 Software Factory — o que é?',
+      text: 'Transforma sua ideia em projeto estruturado em minutos. Descreva em linguagem livre — o sistema cuida do resto. 9 módulos de IA do planejamento até o pacote de deploy.',
+      target: '#vcSfHomeBtn', pos: 'bottom', onEnter: _sfOnEnter(null) },
+    { title: '✍️ Passo 1 — Descreva seu projeto',
+      text: 'Digite aqui o que quer construir. Pode ser simples: "quero um app de delivery" ou "API para gerenciar estoque". Sem jargão técnico — linguagem livre.',
+      target: '#vcSfChatInput', pos: 'top', onEnter: _sfOnEnter(null) },
+    { title: '▶ Passo 2 — AUTO-PILOT (recomendado)',
+      text: 'Clique em AUTO-PILOT e o sistema executa 7 etapas automaticamente: analisa sua ideia, sugere a stack, gera templates, compõe missões e entrega um pacote completo para o worker.',
+      target: '#vcSfAutoPilotBtn', pos: 'top', onEnter: _sfOnEnter(null) },
+    { title: '🔢 Os 7 módulos em sequência',
+      text: '01 Sugere stack → 02 Lista arquivos → 03 Aplica template → 04 Compõe missão SDDF → 05 Gera pacote worker → 06 Comando de criação real (EXTERNAL ONLY) → 07 Validação Gold Gate. O Auto-Pilot roda todos automaticamente.',
+      target: '[data-sf-module="project_builder"]', pos: 'bottom', onEnter: _sfOnEnter(null) },
+    { title: '🔧 Modo manual (avançado)',
+      text: 'Prefere controle total? Navegue pelos módulos individualmente usando este menu. Cada módulo pode ser executado separado — útil para ajustar etapas específicas.',
+      target: '.vc-sf-module-nav-h', pos: 'bottom', onEnter: _sfOnEnter(null) },
+    { title: '🏅 Gold Gate — qualidade garantida',
+      text: 'O módulo 07 valida segurança, risco e qualidade antes de qualquer entrega — mesmo padrão PASS GOLD. Só passa o que é seguro executar por um worker externo.',
+      target: '[data-sf-module="worker_receipt"]', pos: 'bottom', onEnter: _sfOnEnter(null) },
+    { title: '✅ Pronto para começar!',
+      text: 'Digite sua ideia no campo de texto e clique em AUTO-PILOT. Em segundos você terá um projeto estruturado e pronto para ser executado por um worker.',
+      target: '#vcSfAutoPilotBtn', pos: 'top', onEnter: _sfOnEnter(null) },
+  ];
+  window.vcRegisterTutorial('sf2', STEPS_SF2, 'vc_tutorial_sf2_done');
 
   // ── T5: TUTORIAL AGENTES EXTRAS ──
   // §118: #agentsBoard fica longe abaixo do viewport — scroll via onEnter (usando _scrollInto acima)
