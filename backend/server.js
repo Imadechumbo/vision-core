@@ -859,9 +859,45 @@ app.post('/api/projects', (req, res) => {
   return sendOk(res, { project, anti_stub: true });
 });
 
+// §150 — Verificação de autenticidade do webhook Hotmart
+function verifyHotmartWebhook(req) {
+  // Estratégia 1: x-hotmart-hottok (token estático, configurável no painel Hotmart)
+  const hottok = process.env.HOTMART_HOTTOK || '';
+  if (hottok) {
+    const received = req.headers['x-hotmart-hottok'] || '';
+    if (received !== hottok) return { ok: false, reason: 'invalid_hottok' };
+    return { ok: true };
+  }
+  // Estratégia 2: x-hotmart-signature (HMAC-SHA256 do body com client_secret)
+  const signature = req.headers['x-hotmart-signature'] || '';
+  if (signature) {
+    const secret = process.env.HOTMART_CLIENT_SECRET || '';
+    if (!secret) return { ok: false, reason: 'no_secret_configured' };
+    const bodyStr = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
+    const expected = crypto.createHmac('sha256', secret).update(bodyStr).digest('hex');
+    if (signature !== expected) return { ok: false, reason: 'invalid_signature' };
+    return { ok: true };
+  }
+  // Sem header de verificação — rejeitar em produção, logar aviso em dev
+  if (process.env.NODE_ENV === 'production') {
+    return { ok: false, reason: 'missing_auth_header' };
+  }
+  console.warn('[§150] hotmart webhook sem verificacao — permitido apenas em dev');
+  return { ok: true };
+}
+
 // §144 — Hotmart webhook (PURCHASE_COMPLETE → user.plan = 'pro')
 app.post('/api/billing/hotmart-webhook', (req, res) => {
   try {
+    // §150: verificar autenticidade antes de processar
+    const auth = verifyHotmartWebhook(req);
+    if (!auth.ok) {
+      const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+                 || (req.connection && req.connection.remoteAddress) || 'unknown';
+      console.warn('[§150] webhook rejeitado:', auth.reason, 'ip:', ip);
+      return res.status(401).json({ ok: false, error: 'unauthorized_webhook', reason: auth.reason, anti_stub: true });
+    }
+
     const body  = normalizeBody(req);
     const event = body.event || '';
     const email = body.data && body.data.buyer && body.data.buyer.email;

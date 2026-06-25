@@ -18,7 +18,7 @@
 - HTTPS forçado em todos os endpoints
 
 ### Billing
-- HMAC obrigatório em todos os webhooks Hotmart (§150)
+- HMAC obrigatório em todos os webhooks Hotmart (§150 ✅ DONE)
 - Verificação de assinatura antes de qualquer mudança de plano
 
 ### Compliance
