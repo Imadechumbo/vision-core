@@ -3,7 +3,7 @@
 ## Atualizado: §149
 
 ### Autenticação
-- Senhas: bcrypt cost 12 (§151) — não sha256 caseiro atual
+- Senhas: scrypt N=16384 (§151 ✅ DONE) — migração automática de PBKDF2 no login
 - Rate limiting: 5 tentativas/IP/hora no register, 10/IP/15min no login (§149 ✅ DONE)
 - JWT: access 24h + refresh 30d + blacklist S3 para revogação (§152)
 - 2FA: TOTP obrigatório para ENTERPRISE, opcional para PRO (§158)

@@ -299,8 +299,41 @@ for (const dir of [DB_ROOT, VAULT_ROOT, path.join(VAULT_ROOT, 'Missions'), path.
 function readJsonFile(file, fallback) { try { return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : fallback; } catch (err) { console.warn('[ANTI-STUB] readJsonFile failed', file, err.message); return fallback; } }
 function writeJsonFile(file, data) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8'); }
 function publicUser(u) { return u ? { id: u.id, email: u.email, name: u.name || '', plan: u.plan || 'free', created_at: u.created_at, last_login: u.last_login || null } : null; }
-function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) { const hash = crypto.pbkdf2Sync(String(password), salt, 120000, 32, 'sha256').toString('hex'); return `${salt}:${hash}`; }
-function verifyPassword(password, stored) { if (!stored || !stored.includes(':')) return false; const [salt] = stored.split(':'); const expected = hashPassword(password, salt); return crypto.timingSafeEqual(Buffer.from(stored), Buffer.from(expected)); }
+// §151 — scrypt (memory-hard) para novos hashes; PBKDF2 mantido para migração de usuários existentes
+// Formato scrypt: '$scrypt$N$salt_hex$hash_hex'
+// Formato legado: 'salt_hex:pbkdf2_hex'
+const SCRYPT_N = 16384, SCRYPT_R = 8, SCRYPT_P = 1, SCRYPT_LEN = 32;
+
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(String(password), salt, SCRYPT_LEN, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P }).toString('hex');
+  return `$scrypt$${SCRYPT_N}$${salt}$${hash}`;
+}
+
+function _hashPasswordLegacy(password, salt) {
+  const hash = crypto.pbkdf2Sync(String(password), salt, 120000, 32, 'sha256').toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password, stored) {
+  if (!stored) return false;
+  if (stored.startsWith('$scrypt$')) {
+    // §151: scrypt format
+    const parts = stored.split('$'); // ['', 'scrypt', N, salt, hash]
+    if (parts.length !== 5) return false;
+    const [,, N, salt, expectedHex] = parts;
+    try {
+      const actual = crypto.scryptSync(String(password), salt, SCRYPT_LEN,
+        { N: parseInt(N, 10), r: SCRYPT_R, p: SCRYPT_P }).toString('hex');
+      return crypto.timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(expectedHex, 'hex'));
+    } catch { return false; }
+  }
+  // Legado: PBKDF2
+  if (!stored.includes(':')) return false;
+  const [salt] = stored.split(':');
+  const expected = _hashPasswordLegacy(password, salt);
+  return crypto.timingSafeEqual(Buffer.from(stored), Buffer.from(expected));
+}
 function base64url(input) { return Buffer.from(input).toString('base64url'); }
 function signSession(payload) { const secret = process.env.SESSION_SECRET || 'vision-core-dev-session-secret-change-me'; const body = base64url(JSON.stringify(payload)); const sig = crypto.createHmac('sha256', secret).update(body).digest('base64url'); return `${body}.${sig}`; }
 function verifySession(token) { try { if (!token || !String(token).includes('.')) return null; const [body, sig] = String(token).split('.'); const secret = process.env.SESSION_SECRET || 'vision-core-dev-session-secret-change-me'; const expected = crypto.createHmac('sha256', secret).update(body).digest('base64url'); if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null; const data = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')); if (data.exp && Date.now() > data.exp) return null; return data; } catch { return null; } }
@@ -603,6 +636,11 @@ app.all('/api/auth/login', rateLimitMiddleware('login', 10, 15 * 60 * 1000), (re
   const db = readJsonFile(USERS_DB, { users: [] });
   const user = db.users.find(u => u.email === email);
   if (!user || !verifyPassword(password, user.password_hash)) return res.status(401).json({ ok: false, error: 'invalid_credentials', time: now() });
+  // §151: migrar hash legado para scrypt automaticamente no primeiro login bem-sucedido
+  if (user.password_hash && !user.password_hash.startsWith('$scrypt$')) {
+    user.password_hash = hashPassword(password);
+    console.log('[§151] hash migrado para scrypt:', email);
+  }
   user.last_login = now(); writeAndSyncS3(USERS_DB, db);
   const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
   res.setHeader('Set-Cookie', `vision_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`);
