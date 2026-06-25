@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-25 (§149)
+## Documento central do projeto | Atualizado: 2026-06-25 (§150)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -194,6 +194,7 @@ FREE_MISSION_LIMIT=5
 | §139 | **Auditoria SF02-SF09.** Investigação exaustiva: todos os 8 endpoints SF em produção retornam `ok:true, anti_stub:true` (curl verificado). `SF_ENDPOINT_MAP` cobre todos os 8 moduleKeys dos botões `[data-sf-generate]`. Backend routes registradas via `Object.keys(SF_GENERATORS).forEach`. CORS correto. Nenhuma auth middleware bloqueando SF. Smoke test `_test139_sf_modules_unit.cjs` 22/22 PASS (14 estáticos + 8 live network). Zero mudança em código — auditoria confirmou sistema correto. | - | 85af8384 |
 | §140 | **Fix `v582-sf-modules.js` workerUrl fallback.** Causa raiz: `workerUrl()` usava `''` como fallback quando `__VISION_API__`/`API`/`API_BASE_URL` são undefined — URL relativa `/api/sf/*` resolvia para `visioncoreai.pages.dev` (CF Pages sem backend) → 405. Fix: 1 linha, `|| ''` → `|| 'https://visioncore-api-gateway.weiganlight.workers.dev'`. 5/5 PASS. CF Pages ao vivo. Zero mudança em `server.js`. | - | 6164d772 |
 | §141 | **Fix botões v236 visíveis (cursor:not-allowed).** Causa raiz: `v272-layout-force.css` + `v273-sddf-command-chat.css` tinham `.v236-action-row{display:grid!important}` que sobrescrevia `style="display:none"` do HTML, expondo `v236FileBtn` (＋ ADICIONAR ARQUIVOS) + `v236CopilotBtn` (💬 COPILOTO) — ambos em BLOCKED_IDS → cursor:not-allowed. Fix: `display:none!important` no final de `vision-core-bundle.css` (último `!important` de mesma especificidade vence). CF Pages ao vivo. Zero server.js. | - | 627e47e4 |
+| §150 | **HMAC webhook Hotmart.** `verifyHotmartWebhook()`: (1) `x-hotmart-hottok` vs `HOTMART_HOTTOK` env; (2) `x-hotmart-signature` HMAC-SHA256; (3) production sem header → 401; (4) dev → aviso. IP logado, hottok nunca logado. Pendente: `HOTMART_HOTTOK` no EB. 17/17 PASS. EB v5.9.41-s150. | - | ed44bd82 |
 | §149 | **Rate limiting auth (zero deps).** `rateLimitMiddleware()` em `Map`. Register: 5/IP/hora. Login: 10/IP/15min. 429 + `Retry-After` + `retry_after_seconds`. `setInterval` 5min limpeza. OAuth não afetado. `docs/SECURITY-SPEC.md` criado. 17/17 PASS. EB v5.9.40-s149. | - | c1d42a68 |
 | §148 | **Separação chat/missão quota (UX).** Backend JÁ correto: `/api/chat` sem `checkMissionQuota`, `/api/run-live` com. Zero code change em server.js. Fix: badge `"X missões restantes"` → `"X missões SDDF · chat livre"`. CF Pages. | - | 959c9fcb |
 | §147 | **Marketing anti-alucinação + spec interna.** `docs/PASS-GOLD-SPEC-INTERNA.md` (confidencial, gitignored): D1-D6, tabela revelar/esconder. Seção `#antialucinacao` em `index.html`: headline "O único copiloto que não confia em si mesmo" + 3 pilares + tabela comparativa Copilot/Cursor vs Vision Core. Zero AST/Semgrep/Hermes no HTML público. CF Pages ao vivo. | - | 3b28b217 |
@@ -249,6 +250,8 @@ FREE_MISSION_LIMIT=5
 
 **§142 FECHADO** — Métricas reais + projetos + 4 nós animados. (A) `initObservabilityPanel107` extendido: barras agora recebem largura/cor pelo `status` real do backend (`ok`=85% verde, `binary_not_found`=20% laranja, `PENDING_EVIDENCE`=30% amarelo); val-* colorido. (B) `GET/POST /api/projects` em server.js + `s142InitProjects()` popula `#projectSelector` + botão `+ Novo`. (C) `AGENT_KEYS` expandido de 6 para 10 nós (piharness/openclaw/archivist/github); `startMissionAnimation` seq 5→8; `stopMissionAnimation` stMap mapeando os 4 novos. 30/30 PASS. EB v5.9.34-s142. CF Pages ao vivo.
 
+**§150 FECHADO** — HMAC webhook Hotmart. `verifyHotmartWebhook()`: estratégia dupla — (1) `x-hotmart-hottok` contra `HOTMART_HOTTOK` env var; (2) `x-hotmart-signature` HMAC-SHA256 com `HOTMART_CLIENT_SECRET`; (3) `NODE_ENV=production` → rejeita sem header (401 `unauthorized_webhook`); (4) dev → permite, loga aviso. IP logado em rejeições. Hottok nunca logado. Pendente: configurar `HOTMART_HOTTOK` no EB após obter no painel Hotmart. 17/17 PASS. EB v5.9.41-s150.
+
 **§149 FECHADO** — Rate limiting auth. `rateLimitMiddleware(action, maxAttempts, windowMs)` em memória (`Map`, zero deps). Register: 5/IP/hora. Login: 10/IP/15min. 429 + `Retry-After` header + `retry_after_seconds`. `setInterval` 5min para limpeza. `x-forwarded-for` para IP real. OAuth não afetado. `docs/SECURITY-SPEC.md` criado (nível 4/10 → meta 9/10). 17/17 PASS. EB v5.9.40-s149.
 
 **§148 FECHADO** — Separação chat/missão no quota (UX). Investigação: backend JÁ separado — `/api/chat` (ENVIAR) sem `checkMissionQuota`, `/api/run-live` (EXECUTAR MISSÃO) com middleware. `logMission()` só chamado em `checkMissionQuota`. Zero mudança em server.js. Fix UX: badge `"X missões restantes"` → `"X missões SDDF · chat livre"`. CF Pages ao vivo.
@@ -263,7 +266,7 @@ FREE_MISSION_LIMIT=5
 
 **§143 FECHADO** — Suprimir badge "Nenhuma fonte obtida". `renderFetchBadge`: `if (!ok) return` antes de renderizar o badge negativo. Badge positivo (X fontes obtidas) intacto. 1 linha. CF Pages ao vivo. Zero server.js.
 
-**Próximo item:** §150 (HMAC Hotmart) → §151 (bcrypt) → §152 (JWT rotation).
+**Próximo item:** §151 (bcrypt) → §152 (JWT rotation).
 
 ## ROADMAP ENTERPRISE + SEGURANÇA §149–§160
 ### Nível de segurança atual: 5/10 (após §149)
@@ -273,7 +276,7 @@ FREE_MISSION_LIMIT=5
 | § | Feature | Status |
 |---|---------|--------|
 | §149 | Rate limiting auth register/login | ✅ DONE |
-| §150 | HMAC webhook Hotmart | pendente |
+| §150 | HMAC webhook Hotmart | ✅ DONE (HOTMART_HOTTOK EB pendente) |
 | §151 | Bcrypt nas senhas (substituir sha256) | pendente |
 
 #### P2 — Gaps sérios (antes de cobrar ENTERPRISE)
