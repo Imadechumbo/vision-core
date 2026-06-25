@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-25 (§161)
+## Documento central do projeto | Atualizado: 2026-06-25 (§162)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -283,7 +283,9 @@ FREE_MISSION_LIMIT=5
 
 **§161 FECHADO** — SF Auto-Pilot: 7 módulos em sequência automática. `SF_AUTOPILOT_STEPS[7]` + `runSfAutoPilot(desc)` (Promise chain recursiva, acumula `fullContext` entre steps) + `initSfAutoPilot()`. Botão "▶ AUTO-PILOT" (`vcSfAutoPilotBtn`) + progress panel com 4 estados (⏳/⚡/✅/❌) por step. Body: `{description, module, autopilot:true, step, total_steps}`. Usa `vcSfChatInput` como fonte da descrição. CSS: gradiente roxo-azul. Zero mudança no backend. 29/29 PASS. CF Pages ao vivo.
 
-**Próximo item:** §156 (multi-projeto com isolamento real) ou testar §161 em produção + refinamentos.
+**§162 FECHADO** — Tutorial SF dedicado. `STEPS_SF2[7]` em linguagem simples, foco no Auto-Pilot. Steps: o-que-é → descreva-projeto → AUTO-PILOT → 7-módulos-em-sequência → modo-manual → Gold-Gate → pronto. Targets: `#vcSfChatInput`, `#vcSfAutoPilotBtn`, `.vc-sf-module-nav-h`, `[data-sf-module="worker_receipt"]`. `vcRegisterTutorial('sf2', ..., 'vc_tutorial_sf2_done')`. Botão `❓ TUTORIAL` (`vcSfTutorialBtn`) no header SF → `.vc-sf-tutorial-trigger` CSS. Reutiliza overlay/mascote do T1 via `_vcSetActiveTutorial`. T3 original (STEPS_SF) intocado. 23/23 PASS. CF Pages ao vivo.
+
+**Próximo item:** §156 (multi-projeto isolamento real) ou testar §161+§162 em produção.
 
 ## ROADMAP ENTERPRISE + SEGURANÇA §149–§160
 ### Nível de segurança atual: 8.5/10 (após §155)
