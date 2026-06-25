@@ -1523,9 +1523,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   // substituídos pela chat UI v298) seguem bloqueados. Os demais botões abaixo
   // foram religados a endpoints reais do backend (ver wireRealActions()).
   var BLOCKED_IDS = [
-    'v297AddImageBtn',
-    'v297AddFileBtn',
-    'v297RunSddfBtn',
+    // v297AddImageBtn/v297AddFileBtn/v297RunSddfBtn removidos §SF-cleanup — IDs mortos (sem DOM)
     'v236FileBtn',
     'v236CopilotBtn',
   ];
@@ -10076,8 +10074,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     { title: '03 — Templates de Projeto', text: 'Use blueprints locais prontos para acelerar o início — templates testados para os padrões mais comuns de SaaS e API.', target: '[data-sf-module="project_templates"]', pos: 'bottom', onEnter: _sfOnEnter('project_templates') },
     { title: '04 — Compositor de Missão', text: 'Transforma sua descrição em um prompt estruturado e pronto para copiar.', target: '[data-sf-module="mission_composer"]', pos: 'bottom', onEnter: _sfOnEnter('mission_composer') },
     { title: '05 — Pacotes para Workers', text: 'Gera o pacote de handoff completo para um worker externo executar.', target: '[data-sf-module="worker_handoff"]', pos: 'bottom', onEnter: _sfOnEnter('worker_handoff') },
-    // §118: "EM BREVE" — ilumina o primeiro módulo marcado como EM BREVE no HTML (real_file_command, módulo 06)
-    { title: '🟡 Módulos em breve', text: 'Comando para Criação Real (06), Preview de Criação (02) e Painel Final (09) aparecem como "EM BREVE" — esses módulos ainda não criam nada automaticamente.', target: '[data-sf-module="real_file_command"]', pos: 'bottom', onEnter: _sfOnEnter('real_file_command') },
+    // §SF-cleanup: módulos 06 e 09 são funcionais — badge EM BREVE removido
+    { title: '06 — Pacote de Criação Real', text: 'Gera pacote de comando read-only via /api/sf/patch-validator. Nenhum arquivo é escrito pelo frontend — toda execução real exige worker externo (EXTERNAL ONLY).', target: '[data-sf-module="real_file_command"]', pos: 'bottom', onEnter: _sfOnEnter('real_file_command') },
     // §118: Gold Gate — usa módulo 09 "PAINEL FINAL" como alvo visual
     // (#vcSfSddfSteps fica dentro da timeline colapsada por padrão — height:0 = spotlight zerado)
     { title: '🏅 Gold Gate — o validador final', text: 'Antes de qualquer entrega, o Gold Gate avalia segurança, risco e qualidade — o mesmo padrão de validação do PASS GOLD. O módulo "Painel Final" (09) é o destino após todas as etapas de validação.', target: '[data-sf-module="final_dashboard"]', pos: 'bottom', onEnter: _sfOnEnter(null) }
