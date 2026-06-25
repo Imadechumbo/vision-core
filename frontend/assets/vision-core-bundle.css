@@ -7997,3 +7997,14 @@ body,
   display: none !important;
 }
 
+/* §147-overflow-fix — seção full-width fora do grid da shell */
+#antialucinacao {
+  position: relative;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  left: 50% !important;
+  margin-left: -50vw !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
