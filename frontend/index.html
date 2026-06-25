@@ -20,6 +20,14 @@
 .v299-quota-full{color:#ef4444;font-weight:700;}
 .v299-config-btn{color:#9ca3af!important;}
 .v299-obsidian-btn{color:#a78bfa!important;}
+/* §161 — SF Auto-Pilot */
+.vc-sf-autopilot-btn{width:100%;padding:14px 24px;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;margin-top:12px;letter-spacing:.05em;transition:opacity .2s;}
+.vc-sf-autopilot-btn:hover{opacity:.9;}.vc-sf-autopilot-btn:disabled{opacity:.5;cursor:not-allowed;}
+.vc-sf-autopilot-progress{margin-top:16px;background:rgba(255,255,255,.03);border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:16px;}
+.vc-sf-autopilot-status{font-size:.9rem;color:#c4b5fd;font-weight:600;margin-bottom:12px;}
+.vc-sf-autopilot-step{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:.85rem;color:#94a3b8;border-bottom:1px solid rgba(255,255,255,.05);}
+.vc-sf-autopilot-step.done{color:#22c55e;}.vc-sf-autopilot-step.running{color:#f59e0b;}.vc-sf-autopilot-step.error{color:#f87171;}
+.vc-sf-autopilot-result{margin-top:12px;background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:12px;font-size:.85rem;color:#e2d9f3;white-space:pre-wrap;display:none;max-height:300px;overflow-y:auto;}
 .v299-obsidian-btn.active{color:#22c55e!important;border-color:#22c55e!important;}
 /* §89 TUTORIAL */
 .vc-tutorial-overlay{position:fixed;inset:0;z-index:99999;pointer-events:none;transition:opacity .3s;display:none}
@@ -2388,6 +2396,14 @@
           <button class="vc-sf-action-btn" data-sf-fill="briefing"  type="button">📋 Importar briefing</button>
           <button class="vc-sf-action-btn" data-sf-fill="exemplos"  type="button">🗂️ Ver exemplos de projetos</button>
           <button class="vc-sf-action-btn primary" id="vcSfStartBtn" type="button">▶ INICIAR MONTAGEM DO PROJETO</button>
+        </div>
+
+        <!-- §161 — Auto-Pilot -->
+        <button id="vcSfAutoPilotBtn" class="vc-sf-autopilot-btn" type="button">▶ AUTO-PILOT — Gerar tudo automaticamente (7 etapas)</button>
+        <div id="vcSfAutoPilotProgress" class="vc-sf-autopilot-progress" style="display:none">
+          <div class="vc-sf-autopilot-status" id="vcSfAutoPilotStatus">Iniciando...</div>
+          <div class="vc-sf-autopilot-steps" id="vcSfAutoPilotSteps"></div>
+          <div class="vc-sf-autopilot-result" id="vcSfAutoPilotResult"></div>
         </div>
 
       </div><!-- end #vcSfHomeControl -->

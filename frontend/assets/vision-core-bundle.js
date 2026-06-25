@@ -5792,6 +5792,17 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     final_dashboard:   'SF-08',
     saas_api:          'SF-09',
   };
+  // §161 — Auto-Pilot: sequência de 7 módulos SF executados automaticamente
+  var SF_AUTOPILOT_STEPS = [
+    { id: 'step1', label: '01 — Analisar projeto e sugerir stack',      module: 'project_builder',   endpoint: '/api/sf/mission-composer' },
+    { id: 'step2', label: '02 — Preview de arquivos a criar',           module: 'export_preview',    endpoint: '/api/sf/deploy-blueprint' },
+    { id: 'step3', label: '03 — Selecionar template',                   module: 'project_templates', endpoint: '/api/sf/mission-composer' },
+    { id: 'step4', label: '04 — Compor missão SDDF',                    module: 'mission_composer',  endpoint: '/api/sf/mission-composer' },
+    { id: 'step5', label: '05 — Gerar pacote para worker',              module: 'worker_handoff',    endpoint: '/api/sf/worker-handoff'   },
+    { id: 'step6', label: '06 — Pacote de comando real (EXTERNAL ONLY)',module: 'real_file_command', endpoint: '/api/sf/patch-validator'  },
+    { id: 'step7', label: '07 — Validação Gold Gate',                   module: 'worker_receipt',    endpoint: '/api/sf/gold-gate'        },
+  ];
+
   var _sfSpecPanelOpen   = false;
   var _sfHighlightSpecId = null;  // §73.4 — spec to highlight after module switch
   // Inverse of SF_MODULE_SPEC_MAP: 'SF-01' → 'project_builder'
@@ -8917,6 +8928,93 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     if (homeBtn) {
       homeBtn.addEventListener('click', _sfShowHome);
     }
+
+    // §161 — Auto-Pilot: executa 7 módulos SF em sequência com Promise chain
+    function runSfAutoPilot(projectDescription) {
+      var apBtn    = document.getElementById('vcSfAutoPilotBtn');
+      var progress = document.getElementById('vcSfAutoPilotProgress');
+      var statusEl = document.getElementById('vcSfAutoPilotStatus');
+      var stepsEl  = document.getElementById('vcSfAutoPilotSteps');
+      var resultEl = document.getElementById('vcSfAutoPilotResult');
+      if (!apBtn || !progress) return;
+
+      apBtn.disabled = true;
+      progress.style.display = 'block';
+      stepsEl.innerHTML = '';
+      resultEl.style.display = 'none';
+
+      var stepEls = {};
+      SF_AUTOPILOT_STEPS.forEach(function(step) {
+        var el = document.createElement('div');
+        el.className = 'vc-sf-autopilot-step';
+        el.innerHTML = '<span class="sfap-icon">⏳</span><span>' + step.label + '</span>';
+        stepsEl.appendChild(el);
+        stepEls[step.id] = el;
+      });
+
+      var fullContext = projectDescription;
+      var finalPackage = '';
+
+      function runStep(idx) {
+        if (idx >= SF_AUTOPILOT_STEPS.length) {
+          statusEl.textContent = '✅ Auto-Pilot concluído! Pacote completo gerado.';
+          if (finalPackage) { resultEl.style.display = 'block'; resultEl.textContent = finalPackage; }
+          apBtn.disabled = false;
+          return;
+        }
+        var step = SF_AUTOPILOT_STEPS[idx];
+        var el   = stepEls[step.id];
+        statusEl.textContent = 'Executando: ' + step.label;
+        el.className = 'vc-sf-autopilot-step running';
+        el.querySelector('.sfap-icon').textContent = '⚡';
+
+        var tok = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return ''; } })() || '';
+        var _base = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+
+        fetch(_base + step.endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': tok ? 'Bearer ' + tok : '' },
+          body: JSON.stringify({ description: fullContext, module: step.module, autopilot: true, step: idx + 1, total_steps: SF_AUTOPILOT_STEPS.length })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok || data.content || data.result || data.mission) {
+            el.className = 'vc-sf-autopilot-step done';
+            el.querySelector('.sfap-icon').textContent = '✅';
+            var output = data.content || data.result || data.mission || '';
+            if (output) fullContext = fullContext + '\n\n[Etapa ' + (idx + 1) + ']:\n' + output;
+            if (idx === SF_AUTOPILOT_STEPS.length - 1) finalPackage = output;
+            setTimeout(function() { runStep(idx + 1); }, 300);
+          } else {
+            throw new Error(data.error || 'erro no módulo ' + step.module);
+          }
+        })
+        .catch(function(e) {
+          el.className = 'vc-sf-autopilot-step error';
+          el.querySelector('.sfap-icon').textContent = '❌';
+          statusEl.textContent = '⚠ Erro em: ' + step.label + ' — ' + (e && e.message ? e.message : String(e));
+          apBtn.disabled = false;
+        });
+      }
+
+      runStep(0);
+    }
+
+    function initSfAutoPilot() {
+      var apBtn = document.getElementById('vcSfAutoPilotBtn');
+      if (!apBtn) return;
+      apBtn.addEventListener('click', function() {
+        var descEl = document.getElementById('vcSfChatInput');
+        var desc = descEl ? descEl.value.trim() : '';
+        if (!desc || desc.length < 10) {
+          if (window.showToast) showToast('Descreva seu projeto antes de iniciar o Auto-Pilot (mínimo 10 caracteres).');
+          else alert('Descreva seu projeto antes de iniciar o Auto-Pilot (mínimo 10 caracteres).');
+          return;
+        }
+        runSfAutoPilot(desc);
+      });
+    }
+    initSfAutoPilot(); // §161
 
     // INICIAR MONTAGEM → open workspace at first module
     var startBtn = document.getElementById('vcSfStartBtn');
