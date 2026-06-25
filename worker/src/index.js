@@ -60,14 +60,13 @@ function corsHeaders(request) {
 }
 
 function jsonResponse(request, body, status = 200) {
-  return new Response(JSON.stringify(body, null, 2), {
-    status,
-    headers: {
-      ...corsHeaders(request),
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store"
-    }
+  const h = new Headers({
+    ...corsHeaders(request),
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store"
   });
+  addSecurityHeaders(h); // §153
+  return new Response(JSON.stringify(body, null, 2), { status, headers: h });
 }
 
 function checkRateLimit(key) {
@@ -85,6 +84,26 @@ function checkRateLimit(key) {
   }
 
   return { ok: true, remaining: RATE_LIMIT_MAX - item.count };
+}
+
+// §153 — Security response headers
+function addSecurityHeaders(h) {
+  h.set('X-Frame-Options', 'DENY');
+  h.set('X-Content-Type-Options', 'nosniff');
+  h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  h.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  h.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  h.set('Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: https:; " +
+    "connect-src 'self' https://visioncore-api-gateway.weiganlight.workers.dev https://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com; " +
+    "frame-ancestors 'none'"
+  );
+  h.delete('X-Powered-By');
+  h.delete('Server');
+  return h;
 }
 
 function sanitizeRequestHeaders(request) {
@@ -120,6 +139,7 @@ function withGatewayHeaders(request, originResponse, extra = {}) {
     headers.set(k, v);
   }
 
+  addSecurityHeaders(headers); // §153
   return headers;
 }
 
