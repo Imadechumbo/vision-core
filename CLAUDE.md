@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-25 (§152)
+## Documento central do projeto | Atualizado: 2026-06-25 (§153)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -271,10 +271,12 @@ FREE_MISSION_LIMIT=5
 
 **§152 FECHADO** — JWT rotation + blacklist. `BLACKLIST_FILE` + `_tokenBlacklist` Set em memória. `_loadBlacklist()/_saveBlacklist()` com S3 sync. `revokeToken(jti)`: adiciona à blacklist, persiste (max 10000 — shift quando excede). `isTokenRevoked(jti)` verificado em `verifySession()`. `POST /api/auth/logout` revoga token imediatamente antes de clearCookie. `_test152_jwt_blacklist_unit.cjs` 19/19 PASS. EB v5.9.43-s152.
 
-**Próximo item:** §153 (HTTPS security headers).
+**§153 FECHADO** — HTTPS security headers no CF Workers gateway. `addSecurityHeaders(h)` em `worker/src/index.js`: X-Frame-Options DENY, X-Content-Type-Options nosniff, HSTS max-age=31536000+includeSubDomains, Referrer-Policy strict-origin-when-cross-origin, CSP (default-src/script-src unsafe-inline+unsafe-eval/frame-ancestors none), Permissions-Policy camera/mic/geo/payment disabled, X-Powered-By+Server deletados. Injetado em `withGatewayHeaders` (proxy+SSE) e `jsonResponse` (errors/health). Wrangler deploy v3.2. Verificado em produção — todos os 7 headers presentes. 17/17 PASS. CF Worker ao vivo.
+
+**Próximo item:** §154 (Audit log ações críticas).
 
 ## ROADMAP ENTERPRISE + SEGURANÇA §149–§160
-### Nível de segurança atual: 7/10 (após §152)
+### Nível de segurança atual: 7.5/10 (após §153)
 ### Meta: 9/10 antes do lançamento ENTERPRISE
 
 #### P1 — Gaps críticos (bloqueantes)
@@ -288,7 +290,7 @@ FREE_MISSION_LIMIT=5
 | § | Feature | Status |
 |---|---------|--------|
 | §152 | JWT rotação + blacklist | ✅ DONE |
-| §153 | HTTPS security headers | pendente |
+| §153 | HTTPS security headers | ✅ DONE |
 | §154 | Audit log ações críticas | pendente |
 
 #### P3 — Features ENTERPRISE reais
