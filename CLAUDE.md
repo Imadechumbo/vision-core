@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-25 (§153)
+## Documento central do projeto | Atualizado: 2026-06-25 (§159)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -273,10 +273,14 @@ FREE_MISSION_LIMIT=5
 
 **§153 FECHADO** — HTTPS security headers no CF Workers gateway. `addSecurityHeaders(h)` em `worker/src/index.js`: X-Frame-Options DENY, X-Content-Type-Options nosniff, HSTS max-age=31536000+includeSubDomains, Referrer-Policy strict-origin-when-cross-origin, CSP (default-src/script-src unsafe-inline+unsafe-eval/frame-ancestors none), Permissions-Policy camera/mic/geo/payment disabled, X-Powered-By+Server deletados. Injetado em `withGatewayHeaders` (proxy+SSE) e `jsonResponse` (errors/health). Wrangler deploy v3.2. Verificado em produção — todos os 7 headers presentes. 17/17 PASS. CF Worker ao vivo.
 
-**Próximo item:** §154 (Audit log ações críticas).
+**§154 FECHADO** — Audit log ações críticas. `AUDIT_LOG_FILE` + `auditLog(action, req, extra)`: ts ISO, ip (x-forwarded-for), user-agent, max 10000 entries, `writeAndSyncS3`. Calls em: `register`, `login_ok`, `login_fail`, `logout`, `oauth_login` (google/github), `plan_upgrade`, `plan_downgrade`, `webhook_rejected`. `GET /api/audit-log`: admin-only (role='admin'), retorna últimas 100 entries. 26/26 PASS (inclui §159). EB v5.9.44-s154.
+
+**§159 FECHADO** — LGPD: direito ao esquecimento. `DELETE /api/auth/me`: verifica token → `revokeToken(jti)` (§152) → `db.users.splice(idx,1)` → `writeAndSyncS3` → `auditLog('account_deleted')`. Retorna `{ok:true, message:'account_deleted', email_deleted, anti_stub:true}`. Spec §155-§158 em `docs/ENTERPRISE-SPEC.md`. Checklist §160 em `docs/PENTEST-CHECKLIST.md`. 26/26 PASS. EB v5.9.44-s154-audit-lgpd.
+
+**Próximo item:** §155 (SSO via OpenID Connect) ou decisão sobre lançamento PRO.
 
 ## ROADMAP ENTERPRISE + SEGURANÇA §149–§160
-### Nível de segurança atual: 7.5/10 (após §153)
+### Nível de segurança atual: 8/10 (após §154+§159)
 ### Meta: 9/10 antes do lançamento ENTERPRISE
 
 #### P1 — Gaps críticos (bloqueantes)
@@ -291,21 +295,21 @@ FREE_MISSION_LIMIT=5
 |---|---------|--------|
 | §152 | JWT rotação + blacklist | ✅ DONE |
 | §153 | HTTPS security headers | ✅ DONE |
-| §154 | Audit log ações críticas | pendente |
+| §154 | Audit log ações críticas | ✅ DONE |
 
 #### P3 — Features ENTERPRISE reais
 | § | Feature | Status |
 |---|---------|--------|
-| §155 | SSO via OpenID Connect | pendente |
-| §156 | Multi-projeto com isolamento real | pendente |
-| §157 | Workers Dashboard completo | pendente |
-| §158 | 2FA TOTP obrigatório ENTERPRISE | pendente |
+| §155 | SSO via OpenID Connect | pendente — spec em `docs/ENTERPRISE-SPEC.md` |
+| §156 | Multi-projeto com isolamento real | pendente — spec em `docs/ENTERPRISE-SPEC.md` |
+| §157 | Workers Dashboard completo | pendente — spec em `docs/ENTERPRISE-SPEC.md` |
+| §158 | 2FA TOTP obrigatório ENTERPRISE | pendente — spec em `docs/ENTERPRISE-SPEC.md` |
 
 #### P4 — Compliance
 | § | Feature | Status |
 |---|---------|--------|
-| §159 | LGPD: DELETE /api/auth/me | pendente |
-| §160 | Penetration test OWASP ZAP | pendente |
+| §159 | LGPD: DELETE /api/auth/me | ✅ DONE |
+| §160 | Penetration test OWASP ZAP | pendente — checklist em `docs/PENTEST-CHECKLIST.md` |
 
 **Nota §121 → próxima sessão:** features visuais com overlay/tutorial que foram consertadas precisam de confirmação visual real em produção pelo humano antes de serem declaradas resolvidas — a sequência §120+§121 mostrou que "testes passando" não garantiu "funciona em produção" quando CSS e JS se contradizem.
 
