@@ -324,6 +324,42 @@ async function providerStatus() { const providers = providerList(); providers.un
 /* ── §83 callLLM — multi-provider real (native https, no node-fetch) ── */
 const https = require('https');
 
+// §149 — Rate limiting em memória (zero deps)
+const _rl149 = new Map(); // key: 'ip:action' → { count, resetAt }
+
+function rateLimitMiddleware(action, maxAttempts, windowMs) {
+  return function(req, res, next) {
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+               || (req.connection && req.connection.remoteAddress)
+               || 'unknown';
+    const key = ip + ':' + action;
+    const now = Date.now();
+    let entry = _rl149.get(key);
+    if (!entry || now > entry.resetAt) {
+      entry = { count: 0, resetAt: now + windowMs };
+      _rl149.set(key, entry);
+    }
+    entry.count++;
+    if (entry.count > maxAttempts) {
+      const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
+      res.setHeader('Retry-After', String(retryAfter));
+      return res.status(429).json({
+        ok: false, error: 'rate_limit_exceeded',
+        retry_after_seconds: retryAfter, anti_stub: true
+      });
+    }
+    next();
+  };
+}
+
+// Limpeza periódica — evita memory leak
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of _rl149.entries()) {
+    if (now > entry.resetAt) _rl149.delete(key);
+  }
+}, 5 * 60 * 1000);
+
 // §146 — S3 persistence layer (zero deps: usa aws CLI disponível no EC2 via IAM role)
 // Quando AWS_S3_BUCKET está setado, users.json e projects.json são sincronizados com S3.
 // Sem o env var → comportamento anterior (local somente).
@@ -541,7 +577,8 @@ app.get('/api/runtime/contracts', (req, res) => sendOk(res, {
 
 
 /* V4.0 ANTI-STUB ROUTES — real logic, no ok:true-only stubs */
-app.all('/api/auth/register', (req, res) => {
+// §149: 5 tentativas/IP/hora no register, 10/IP/15min no login
+app.all('/api/auth/register', rateLimitMiddleware('register', 5, 60 * 60 * 1000), (req, res) => {
   const body  = normalizeBody(req);
   const email = String(body.email || '').trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ ok: false, error: 'valid_email_required', time: now() });
@@ -559,7 +596,7 @@ app.all('/api/auth/register', (req, res) => {
   return sendOk(res, { user: publicUser(user), token, token_type: 'session', persisted: true, generated_password: rawPw, anti_stub: true });
 });
 
-app.all('/api/auth/login', (req, res) => {
+app.all('/api/auth/login', rateLimitMiddleware('login', 10, 15 * 60 * 1000), (req, res) => {
   const body = normalizeBody(req);
   const email = String(body.email || '').trim().toLowerCase();
   const password = String(body.password || '');
