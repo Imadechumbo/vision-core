@@ -335,8 +335,68 @@ function verifyPassword(password, stored) {
   return crypto.timingSafeEqual(Buffer.from(stored), Buffer.from(expected));
 }
 function base64url(input) { return Buffer.from(input).toString('base64url'); }
-function signSession(payload) { const secret = process.env.SESSION_SECRET || 'vision-core-dev-session-secret-change-me'; const body = base64url(JSON.stringify(payload)); const sig = crypto.createHmac('sha256', secret).update(body).digest('base64url'); return `${body}.${sig}`; }
-function verifySession(token) { try { if (!token || !String(token).includes('.')) return null; const [body, sig] = String(token).split('.'); const secret = process.env.SESSION_SECRET || 'vision-core-dev-session-secret-change-me'; const expected = crypto.createHmac('sha256', secret).update(body).digest('base64url'); if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null; const data = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')); if (data.exp && Date.now() > data.exp) return null; return data; } catch { return null; } }
+
+// §152 — Token blacklist (memória + S3)
+const BLACKLIST_FILE = path.join(DB_ROOT, 'token-blacklist.json');
+// §154 — Audit log de ações críticas
+const AUDIT_LOG_FILE = path.join(DB_ROOT, 'audit-log.json');
+let _tokenBlacklist = new Set();
+
+function _loadBlacklist() {
+  try {
+    const data = readJsonFile(BLACKLIST_FILE, { jti_list: [] });
+    _tokenBlacklist = new Set(Array.isArray(data.jti_list) ? data.jti_list : []);
+    console.log('[§152] blacklist carregada:', _tokenBlacklist.size, 'tokens');
+  } catch(e) { _tokenBlacklist = new Set(); }
+}
+
+function _saveBlacklist() {
+  const data = { jti_list: [..._tokenBlacklist], updated_at: new Date().toISOString() };
+  try { writeJsonFile(BLACKLIST_FILE, data); } catch(e) {}
+  // sync S3 após writeAndSyncS3 estar definida
+  if (typeof writeAndSyncS3 === 'function') writeAndSyncS3(BLACKLIST_FILE, data);
+}
+
+function revokeToken(jti) {
+  if (!jti) return;
+  _tokenBlacklist.add(jti);
+  // Limitar tamanho: máx 10.000 entradas
+  if (_tokenBlacklist.size > 10000) {
+    _tokenBlacklist = new Set([..._tokenBlacklist].slice(-5000));
+  }
+  try { writeJsonFile(BLACKLIST_FILE, { jti_list: [..._tokenBlacklist], updated_at: new Date().toISOString() }); } catch(e) {}
+}
+
+function isTokenRevoked(jti) { return !!jti && _tokenBlacklist.has(jti); }
+
+// §152 — signSession: adiciona JTI + expiração 24h
+function signSession(payload) {
+  const secret = process.env.SESSION_SECRET || 'vision-core-dev-session-secret-change-me';
+  const jti = crypto.randomBytes(16).toString('hex');
+  const fullPayload = Object.assign({}, payload, {
+    jti,
+    iat: Date.now(),
+    exp: payload.exp || (Date.now() + 24 * 60 * 60 * 1000) // 24h padrão
+  });
+  const body = base64url(JSON.stringify(fullPayload));
+  const sig = crypto.createHmac('sha256', secret).update(body).digest('base64url');
+  return `${body}.${sig}`;
+}
+
+// §152 — verifySession: verifica blacklist
+function verifySession(token) {
+  try {
+    if (!token || !String(token).includes('.')) return null;
+    const [body, sig] = String(token).split('.');
+    const secret = process.env.SESSION_SECRET || 'vision-core-dev-session-secret-change-me';
+    const expected = crypto.createHmac('sha256', secret).update(body).digest('base64url');
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+    const data = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (data.exp && Date.now() > data.exp) return null;
+    if (data.jti && isTokenRevoked(data.jti)) return null; // §152: blacklist
+    return data;
+  } catch { return null; }
+}
 function getAuthUser(req) { const auth = String(req.headers.authorization || ''); const bearer = auth.startsWith('Bearer ') ? auth.slice(7) : ''; const cookie = String(req.headers.cookie || '').split(';').map(x => x.trim()).find(x => x.startsWith('vision_session=')); const token = bearer || (cookie ? decodeURIComponent(cookie.split('=').slice(1).join('=')) : ''); const session = verifySession(token); if (!session) return null; const db = readJsonFile(USERS_DB, { users: [] }); return db.users.find(u => u.id === session.uid) || null; }
 function safeSlug(value, fallback = 'item') { return String(value || fallback).replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 96) || fallback; }
 function markdownMissionReport(data) { return [`# Mission Report - ${data.mission_id || 'unknown'}`,'',`- Projeto: ${data.project || data.projeto || '—'}`,`- Classificação: ${data.classification || data.classificacao || '—'}`,`- Root Cause: ${data.root_cause || '—'}`,`- Arquivos alterados: ${data.changed_files || data.files_changed || '—'}`,`- Tempo total: ${data.duration || data.total_time || '—'}`,`- PASS GOLD: ${data.pass_gold === true ? 'TRUE' : data.pass_gold === false ? 'FALSE' : '—'}`,`- Snapshot ID: ${data.snapshot_id || '—'}`,`- Promotion Allowed: ${data.promotion_allowed === true ? 'TRUE' : data.promotion_allowed === false ? 'FALSE' : '—'}`,'','## Pipeline','OpenClaw → Scanner → Hermes → PatchEngine → Aegis → SDDF → PASS GOLD','','## Logs',data.logs || '—','','## Raw','```json',JSON.stringify(data, null, 2),'```','','Tags: #vision-core #mission #pass-gold'].join('\n'); }
@@ -438,6 +498,19 @@ function _s3PutAsync(localPath, data) {
 function writeAndSyncS3(localPath, data) {
   writeJsonFile(localPath, data);
   _s3PutAsync(localPath, data);
+}
+
+// §154 — Audit log: registra ação crítica com ts/ip/ua/action + extra
+function auditLog(action, req, extra = {}) {
+  try {
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+              || (req.connection && req.connection.remoteAddress) || 'unknown';
+    const entry = { ts: new Date().toISOString(), action, ip, ua: req.headers['user-agent'] || '', ...extra };
+    const log = readJsonFile(AUDIT_LOG_FILE, { entries: [] });
+    log.entries.push(entry);
+    if (log.entries.length > 10000) log.entries = log.entries.slice(-10000);
+    writeAndSyncS3(AUDIT_LOG_FILE, log);
+  } catch(e) { console.error('[§154] auditLog falhou:', e.message); }
 }
 
 function httpsPost(url, headers, bodyStr, timeoutMs = 30000) {
@@ -624,7 +697,8 @@ app.all('/api/auth/register', rateLimitMiddleware('register', 5, 60 * 60 * 1000)
   if (db.users.some(u => u.email === email)) return res.status(409).json({ ok: false, error: 'email_already_registered', time: now() });
   const user = { id: makeId('usr'), email, name: body.name || '', password_hash: hashPassword(rawPw), plan: 'free', created_at: now(), last_login: null };
   db.users.push(user); writeAndSyncS3(USERS_DB, db);
-  const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
+  auditLog('register', req, { email }); // §154
+  const token = signSession({ uid: user.id, exp: Date.now() + 24 * 60 * 60 * 1000 });
   res.setHeader('Set-Cookie', `vision_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`);
   return sendOk(res, { user: publicUser(user), token, token_type: 'session', persisted: true, generated_password: rawPw, anti_stub: true });
 });
@@ -635,14 +709,15 @@ app.all('/api/auth/login', rateLimitMiddleware('login', 10, 15 * 60 * 1000), (re
   const password = String(body.password || '');
   const db = readJsonFile(USERS_DB, { users: [] });
   const user = db.users.find(u => u.email === email);
-  if (!user || !verifyPassword(password, user.password_hash)) return res.status(401).json({ ok: false, error: 'invalid_credentials', time: now() });
+  if (!user || !verifyPassword(password, user.password_hash)) { auditLog('login_fail', req, { email }); return res.status(401).json({ ok: false, error: 'invalid_credentials', time: now() }); } // §154
   // §151: migrar hash legado para scrypt automaticamente no primeiro login bem-sucedido
   if (user.password_hash && !user.password_hash.startsWith('$scrypt$')) {
     user.password_hash = hashPassword(password);
     console.log('[§151] hash migrado para scrypt:', email);
   }
   user.last_login = now(); writeAndSyncS3(USERS_DB, db);
-  const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
+  auditLog('login_ok', req, { email }); // §154
+  const token = signSession({ uid: user.id, exp: Date.now() + 24 * 60 * 60 * 1000 });
   res.setHeader('Set-Cookie', `vision_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`);
   return sendOk(res, { user: publicUser(user), token, token_type: 'session', persisted: true, anti_stub: true });
 });
@@ -786,7 +861,8 @@ app.get('/api/auth/oauth/google/callback', async (req, res) => {
       if (!user.oauth_provider) user.oauth_provider = 'google';
     }
     writeAndSyncS3(USERS_DB, db);
-    const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
+    auditLog('oauth_login', req, { email, provider: 'google' }); // §154
+    const token = signSession({ uid: user.id, exp: Date.now() + 24 * 60 * 60 * 1000 });
     return res.redirect(`${FRONTEND_URL}/#oauth-success&token=${encodeURIComponent(token)}&plan=${user.plan}&email=${encodeURIComponent(email)}`);
   } catch (err) {
     console.error('[oauth/google/callback]', err.message);
@@ -859,7 +935,8 @@ app.get('/api/auth/oauth/github/callback', async (req, res) => {
       if (!user.github_login) user.github_login = ghUser.login;
     }
     writeAndSyncS3(USERS_DB, db);
-    const token = signSession({ uid: user.id, exp: Date.now() + 7 * 86400 * 1000 });
+    auditLog('oauth_login', req, { email, provider: 'github' }); // §154
+    const token = signSession({ uid: user.id, exp: Date.now() + 24 * 60 * 60 * 1000 });
     return res.redirect(`${FRONTEND_URL}/#oauth-success&token=${encodeURIComponent(token)}&plan=${user.plan}&email=${encodeURIComponent(email)}`);
   } catch (err) {
     console.error('[oauth/github/callback]', err.message);
@@ -933,6 +1010,7 @@ app.post('/api/billing/hotmart-webhook', (req, res) => {
       const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
                  || (req.connection && req.connection.remoteAddress) || 'unknown';
       console.warn('[§150] webhook rejeitado:', auth.reason, 'ip:', ip);
+      auditLog('webhook_rejected', req, { reason: auth.reason }); // §154
       return res.status(401).json({ ok: false, error: 'unauthorized_webhook', reason: auth.reason, anti_stub: true });
     }
 
@@ -959,6 +1037,8 @@ app.post('/api/billing/hotmart-webhook', (req, res) => {
     }
 
     writeAndSyncS3(USERS_DB, db);
+    if (approveEvents.includes(event)) auditLog('plan_upgrade', req, { email, plan: user.plan, event }); // §154
+    if (cancelEvents.includes(event)) auditLog('plan_downgrade', req, { email, plan: user.plan, event }); // §154
     console.log('[hotmart-webhook] event:', event, 'email:', email, 'plan:', user.plan);
     return res.json({ ok: true, plan: user.plan, anti_stub: true });
   } catch (err) {
@@ -1858,6 +1938,54 @@ function requireVisionAuth(req, res, next) {
   req.visionUser = user;
   return next();
 }
+
+// §152 — Logout: revoga token imediatamente
+app.post('/api/auth/logout', (req, res) => {
+  const auth = String(req.headers.authorization || '');
+  const tokenStr = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  const session = verifySession(tokenStr);
+  if (session && session.jti) {
+    revokeToken(session.jti);
+    console.log('[§152] token revogado no logout:', session.jti.slice(0, 8) + '...');
+  }
+  auditLog('logout', req, { uid: session ? session.uid : 'unknown' }); // §154
+  res.clearCookie('vision_session');
+  return res.json({ ok: true, message: 'logged_out', anti_stub: true });
+});
+// §154 — Audit log endpoint (admin only)
+app.get('/api/audit-log', (req, res) => {
+  const token = (String(req.headers.authorization || '')).replace('Bearer ', '');
+  const session = verifySession(token);
+  if (!session) return res.status(401).json({ ok: false, error: 'unauthorized', anti_stub: true });
+  const db = readJsonFile(USERS_DB, { users: [] });
+  const user = db.users.find(u => u.id === session.uid);
+  if (!user || user.role !== 'admin') return res.status(403).json({ ok: false, error: 'forbidden', anti_stub: true });
+  const log = readJsonFile(AUDIT_LOG_FILE, { entries: [] });
+  return res.json({ ok: true, entries: log.entries.slice(-100), total: log.entries.length, anti_stub: true });
+});
+
+// §159 — LGPD: direito ao esquecimento
+app.delete('/api/auth/me', (req, res) => {
+  try {
+    const token = (String(req.headers.authorization || '')).replace('Bearer ', '');
+    const session = verifySession(token);
+    if (!session) return res.status(401).json({ ok: false, error: 'unauthorized', anti_stub: true });
+    const db = readJsonFile(USERS_DB, { users: [] });
+    const idx = db.users.findIndex(u => u.id === session.uid);
+    if (idx === -1) return res.status(404).json({ ok: false, error: 'user_not_found', anti_stub: true });
+    const email = db.users[idx].email;
+    if (session.jti) revokeToken(session.jti); // §152: invalidar token antes de deletar
+    db.users.splice(idx, 1);
+    writeAndSyncS3(USERS_DB, db);
+    auditLog('account_deleted', req, { email }); // §154
+    console.log('[§159] conta deletada (LGPD):', email);
+    return res.json({ ok: true, message: 'account_deleted', email_deleted: email, anti_stub: true });
+  } catch(e) {
+    console.error('[§159] DELETE /api/auth/me:', e.message);
+    return res.status(500).json({ ok: false, error: 'internal_error', anti_stub: true });
+  }
+});
+
 function readBillingDb() { return readJsonFile(BILLING_DB, { customers: {}, subscriptions: {}, events: [] }); }
 function writeBillingDb(db) { writeJsonFile(BILLING_DB, db); }
 function getStripeClient() {
@@ -3996,8 +4124,10 @@ if (S3_BUCKET) {
   console.log('[s3] §146 startup: loading from bucket', S3_BUCKET);
   _s3LoadSync(USERS_DB);
   _s3LoadSync(PROJECTS_DB);
+  _s3LoadSync(BLACKLIST_FILE); // §152: blacklist do S3 antes de aceitar requests
   console.log('[s3] §146 startup load done');
 }
+_loadBlacklist(); // §152: carregar blacklist do arquivo local (pode já ter sido baixada do S3)
 
 /* §112: init SQLite queue before accepting requests */
 (async () => {
