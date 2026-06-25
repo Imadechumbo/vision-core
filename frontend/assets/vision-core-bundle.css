@@ -8008,3 +8008,11 @@ body,
   overflow: hidden !important;
 }
 
+/* §147-final — ocultar painel direito (sticky) quando seção de marketing visível.
+   Seletor original: main.shell.grid > aside:last-of-type (0,2,3).
+   Com .s147-hide-panel prefix: (0,3,3) → vence o !important original. */
+.s147-hide-panel main.shell.grid > aside:last-of-type {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+

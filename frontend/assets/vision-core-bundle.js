@@ -9502,6 +9502,22 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     _runAllInits();
   }
 
+  // §147: ocultar painel direito (sticky) quando seção de marketing visível
+  (function() {
+    var section = document.getElementById('antialucinacao');
+    if (!section || !window.IntersectionObserver) return;
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting) {
+          document.body.classList.add('s147-hide-panel');
+        } else {
+          document.body.classList.remove('s147-hide-panel');
+        }
+      });
+    }, { threshold: 0.05 });
+    observer.observe(section);
+  })();
+
   // §88 B4: handle OAuth callback redirect via URL hash
   (function handleOAuthReturn() {
     var hash = window.location.hash || '';
