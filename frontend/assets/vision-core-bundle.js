@@ -9587,13 +9587,13 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           if (planTag) { planTag.className = 'v299-plan-tag free'; planTag.textContent = 'FREE'; }
           if (quotaOk) {
             if (remaining <= 0) {
-              quotaOk.textContent = 'Limite atingido — upgrade';
+              quotaOk.textContent = 'Limite de missões atingido — upgrade';
               quotaOk.className = 'v299-quota-full';
             } else if (remaining <= 1) {
-              quotaOk.textContent = remaining + ' missão restante';
+              quotaOk.textContent = remaining + ' missão SDDF restante · chat livre';
               quotaOk.className = 'v299-quota-warn';
             } else {
-              quotaOk.textContent = remaining + ' missões restantes';
+              quotaOk.textContent = remaining + ' missões SDDF · chat livre';
               quotaOk.className = 'v299-quota-ok';
             }
           }
