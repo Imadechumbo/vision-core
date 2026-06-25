@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-25 (§155)
+## Documento central do projeto | Atualizado: 2026-06-25 (§161)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -279,7 +279,11 @@ FREE_MISSION_LIMIT=5
 
 **§155 FECHADO** — SSO ENTERPRISE via Google OAuth. `SSO_DOMAINS_FILE` + `_ssoDomains` em memória + S3. `_loadSsoDomains/_saveSsoDomains/isSsoDomain`. Google OAuth callback: `isSsoDomain(email)` → `plan='enterprise'` automático; `auditLog('sso_enterprise_login', {domain})` (sem email completo). Admin endpoints: `GET/POST/DELETE /api/sso/domains` (role='admin'). Startup: `_s3LoadSync(SSO_DOMAINS_FILE)` + `_loadSsoDomains()`. `index.html`: `.v299-plan-tag.pro` (roxo #7c3aed) + `.enterprise` (dourado #f59e0b). 24/24 PASS. EB v5.9.45-s155. CF Pages ao vivo.
 
-**Próximo item:** §156 (multi-projeto com isolamento real) ou decisão sobre lançamento PRO.
+**§SF-cleanup FECHADO** — Badges "EM BREVE" enganosos removidos. Módulo 05 (export_preview): `EM BREVE` → `LOCAL`. Módulo 06 (real_file_command): `EM BREVE` → `EXTERNAL ONLY`. Módulo 09 (final_dashboard): 2 chain-tags `EM BREVE` → `LOCAL` + classe `ready`. Tutorial T3: texto atualizado. `BLOCKED_IDS`: removidos 3 IDs mortos `v297*`. Módulo 08 saas_api intocado. CF Pages ao vivo.
+
+**§161 FECHADO** — SF Auto-Pilot: 7 módulos em sequência automática. `SF_AUTOPILOT_STEPS[7]` + `runSfAutoPilot(desc)` (Promise chain recursiva, acumula `fullContext` entre steps) + `initSfAutoPilot()`. Botão "▶ AUTO-PILOT" (`vcSfAutoPilotBtn`) + progress panel com 4 estados (⏳/⚡/✅/❌) por step. Body: `{description, module, autopilot:true, step, total_steps}`. Usa `vcSfChatInput` como fonte da descrição. CSS: gradiente roxo-azul. Zero mudança no backend. 29/29 PASS. CF Pages ao vivo.
+
+**Próximo item:** §156 (multi-projeto com isolamento real) ou testar §161 em produção + refinamentos.
 
 ## ROADMAP ENTERPRISE + SEGURANÇA §149–§160
 ### Nível de segurança atual: 8.5/10 (após §155)
