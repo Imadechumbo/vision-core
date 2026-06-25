@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-25 (§151)
+## Documento central do projeto | Atualizado: 2026-06-25 (§152)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -269,10 +269,12 @@ FREE_MISSION_LIMIT=5
 
 **§143 FECHADO** — Suprimir badge "Nenhuma fonte obtida". `renderFetchBadge`: `if (!ok) return` antes de renderizar o badge negativo. Badge positivo (X fontes obtidas) intacto. 1 linha. CF Pages ao vivo. Zero server.js.
 
-**Próximo item:** §152 (JWT rotation + blacklist).
+**§152 FECHADO** — JWT rotation + blacklist. `BLACKLIST_FILE` + `_tokenBlacklist` Set em memória. `_loadBlacklist()/_saveBlacklist()` com S3 sync. `revokeToken(jti)`: adiciona à blacklist, persiste (max 10000 — shift quando excede). `isTokenRevoked(jti)` verificado em `verifySession()`. `POST /api/auth/logout` revoga token imediatamente antes de clearCookie. `_test152_jwt_blacklist_unit.cjs` 19/19 PASS. EB v5.9.43-s152.
+
+**Próximo item:** §153 (HTTPS security headers).
 
 ## ROADMAP ENTERPRISE + SEGURANÇA §149–§160
-### Nível de segurança atual: 5/10 (após §149)
+### Nível de segurança atual: 7/10 (após §152)
 ### Meta: 9/10 antes do lançamento ENTERPRISE
 
 #### P1 — Gaps críticos (bloqueantes)
@@ -285,7 +287,7 @@ FREE_MISSION_LIMIT=5
 #### P2 — Gaps sérios (antes de cobrar ENTERPRISE)
 | § | Feature | Status |
 |---|---------|--------|
-| §152 | JWT rotação + blacklist | pendente |
+| §152 | JWT rotação + blacklist | ✅ DONE |
 | §153 | HTTPS security headers | pendente |
 | §154 | Audit log ações críticas | pendente |
 
