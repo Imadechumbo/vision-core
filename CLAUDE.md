@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-25 (§159)
+## Documento central do projeto | Atualizado: 2026-06-25 (§155)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -277,10 +277,12 @@ FREE_MISSION_LIMIT=5
 
 **§159 FECHADO** — LGPD: direito ao esquecimento. `DELETE /api/auth/me`: verifica token → `revokeToken(jti)` (§152) → `db.users.splice(idx,1)` → `writeAndSyncS3` → `auditLog('account_deleted')`. Retorna `{ok:true, message:'account_deleted', email_deleted, anti_stub:true}`. Spec §155-§158 em `docs/ENTERPRISE-SPEC.md`. Checklist §160 em `docs/PENTEST-CHECKLIST.md`. 26/26 PASS. EB v5.9.44-s154-audit-lgpd.
 
-**Próximo item:** §155 (SSO via OpenID Connect) ou decisão sobre lançamento PRO.
+**§155 FECHADO** — SSO ENTERPRISE via Google OAuth. `SSO_DOMAINS_FILE` + `_ssoDomains` em memória + S3. `_loadSsoDomains/_saveSsoDomains/isSsoDomain`. Google OAuth callback: `isSsoDomain(email)` → `plan='enterprise'` automático; `auditLog('sso_enterprise_login', {domain})` (sem email completo). Admin endpoints: `GET/POST/DELETE /api/sso/domains` (role='admin'). Startup: `_s3LoadSync(SSO_DOMAINS_FILE)` + `_loadSsoDomains()`. `index.html`: `.v299-plan-tag.pro` (roxo #7c3aed) + `.enterprise` (dourado #f59e0b). 24/24 PASS. EB v5.9.45-s155. CF Pages ao vivo.
+
+**Próximo item:** §156 (multi-projeto com isolamento real) ou decisão sobre lançamento PRO.
 
 ## ROADMAP ENTERPRISE + SEGURANÇA §149–§160
-### Nível de segurança atual: 8/10 (após §154+§159)
+### Nível de segurança atual: 8.5/10 (após §155)
 ### Meta: 9/10 antes do lançamento ENTERPRISE
 
 #### P1 — Gaps críticos (bloqueantes)
@@ -300,7 +302,7 @@ FREE_MISSION_LIMIT=5
 #### P3 — Features ENTERPRISE reais
 | § | Feature | Status |
 |---|---------|--------|
-| §155 | SSO via OpenID Connect | pendente — spec em `docs/ENTERPRISE-SPEC.md` |
+| §155 | SSO via OpenID Connect | ✅ DONE (Google OAuth, auto-upgrade domain→enterprise) |
 | §156 | Multi-projeto com isolamento real | pendente — spec em `docs/ENTERPRISE-SPEC.md` |
 | §157 | Workers Dashboard completo | pendente — spec em `docs/ENTERPRISE-SPEC.md` |
 | §158 | 2FA TOTP obrigatório ENTERPRISE | pendente — spec em `docs/ENTERPRISE-SPEC.md` |
