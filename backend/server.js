@@ -340,6 +340,8 @@ function base64url(input) { return Buffer.from(input).toString('base64url'); }
 const BLACKLIST_FILE = path.join(DB_ROOT, 'token-blacklist.json');
 // §154 — Audit log de ações críticas
 const AUDIT_LOG_FILE = path.join(DB_ROOT, 'audit-log.json');
+// §155 — SSO ENTERPRISE domains
+const SSO_DOMAINS_FILE = path.join(DB_ROOT, 'sso-domains.json');
 let _tokenBlacklist = new Set();
 
 function _loadBlacklist() {
@@ -511,6 +513,24 @@ function auditLog(action, req, extra = {}) {
     if (log.entries.length > 10000) log.entries = log.entries.slice(-10000);
     writeAndSyncS3(AUDIT_LOG_FILE, log);
   } catch(e) { console.error('[§154] auditLog falhou:', e.message); }
+}
+
+// §155 — SSO ENTERPRISE domains (memória + S3)
+let _ssoDomains = {};
+function _loadSsoDomains() {
+  try {
+    const data = readJsonFile(SSO_DOMAINS_FILE, { domains: {} });
+    _ssoDomains = data.domains || {};
+    console.log('[§155] SSO domains carregados:', Object.keys(_ssoDomains).length);
+  } catch(e) { console.warn('[§155] falha ao carregar sso-domains:', e.message); _ssoDomains = {}; }
+}
+function _saveSsoDomains() {
+  writeAndSyncS3(SSO_DOMAINS_FILE, { domains: _ssoDomains, updated_at: new Date().toISOString() });
+}
+function isSsoDomain(email) {
+  if (!email || !email.includes('@')) return null;
+  const domain = email.split('@')[1].toLowerCase();
+  return _ssoDomains[domain] || null;
 }
 
 function httpsPost(url, headers, bodyStr, timeoutMs = 30000) {
@@ -859,6 +879,13 @@ app.get('/api/auth/oauth/google/callback', async (req, res) => {
     } else {
       user.last_login = now();
       if (!user.oauth_provider) user.oauth_provider = 'google';
+    }
+    // §155: SSO ENTERPRISE — domínio corporativo → plan='enterprise' automático
+    const ssoDomain = isSsoDomain(email);
+    if (ssoDomain && user.plan !== 'enterprise') {
+      user.plan = 'enterprise';
+      console.log('[§155] SSO ENTERPRISE auto-upgrade:', email.split('@')[1]);
+      auditLog('sso_enterprise_login', req, { domain: email.split('@')[1] }); // §154: não logar email completo
     }
     writeAndSyncS3(USERS_DB, db);
     auditLog('oauth_login', req, { email, provider: 'google' }); // §154
@@ -1984,6 +2011,50 @@ app.delete('/api/auth/me', (req, res) => {
     console.error('[§159] DELETE /api/auth/me:', e.message);
     return res.status(500).json({ ok: false, error: 'internal_error', anti_stub: true });
   }
+});
+
+// §155 — SSO ENTERPRISE domain management (admin only)
+app.get('/api/sso/domains', (req, res) => {
+  const token = (String(req.headers.authorization || '')).replace('Bearer ', '');
+  const session = verifySession(token);
+  if (!session) return res.status(401).json({ ok: false, error: 'unauthorized', anti_stub: true });
+  const db = readJsonFile(USERS_DB, { users: [] });
+  const user = db.users.find(u => u.id === session.uid);
+  if (!user || user.role !== 'admin') return res.status(403).json({ ok: false, error: 'forbidden', anti_stub: true });
+  return res.json({ ok: true, domains: _ssoDomains, count: Object.keys(_ssoDomains).length, anti_stub: true });
+});
+
+app.post('/api/sso/domains', (req, res) => {
+  const token = (String(req.headers.authorization || '')).replace('Bearer ', '');
+  const session = verifySession(token);
+  if (!session) return res.status(401).json({ ok: false, error: 'unauthorized', anti_stub: true });
+  const db = readJsonFile(USERS_DB, { users: [] });
+  const user = db.users.find(u => u.id === session.uid);
+  if (!user || user.role !== 'admin') return res.status(403).json({ ok: false, error: 'forbidden', anti_stub: true });
+  const body = normalizeBody(req);
+  const domain = String(body.domain || '').toLowerCase().trim();
+  if (!domain || !domain.includes('.') || domain.includes('@')) {
+    return res.status(400).json({ ok: false, error: 'invalid_domain', anti_stub: true });
+  }
+  _ssoDomains[domain] = { plan: 'enterprise', added_at: new Date().toISOString(), added_by: user.email };
+  _saveSsoDomains();
+  auditLog('sso_domain_added', req, { domain, added_by: user.email }); // §154
+  return res.json({ ok: true, domain, anti_stub: true });
+});
+
+app.delete('/api/sso/domains/:domain', (req, res) => {
+  const token = (String(req.headers.authorization || '')).replace('Bearer ', '');
+  const session = verifySession(token);
+  if (!session) return res.status(401).json({ ok: false, error: 'unauthorized', anti_stub: true });
+  const db = readJsonFile(USERS_DB, { users: [] });
+  const user = db.users.find(u => u.id === session.uid);
+  if (!user || user.role !== 'admin') return res.status(403).json({ ok: false, error: 'forbidden', anti_stub: true });
+  const domain = String(req.params.domain || '').toLowerCase().trim();
+  if (!_ssoDomains[domain]) return res.status(404).json({ ok: false, error: 'domain_not_found', anti_stub: true });
+  delete _ssoDomains[domain];
+  _saveSsoDomains();
+  auditLog('sso_domain_removed', req, { domain, removed_by: user.email }); // §154
+  return res.json({ ok: true, domain, removed: true, anti_stub: true });
 });
 
 function readBillingDb() { return readJsonFile(BILLING_DB, { customers: {}, subscriptions: {}, events: [] }); }
@@ -4125,9 +4196,11 @@ if (S3_BUCKET) {
   _s3LoadSync(USERS_DB);
   _s3LoadSync(PROJECTS_DB);
   _s3LoadSync(BLACKLIST_FILE); // §152: blacklist do S3 antes de aceitar requests
+  _s3LoadSync(SSO_DOMAINS_FILE); // §155: SSO domains do S3
   console.log('[s3] §146 startup load done');
 }
 _loadBlacklist(); // §152: carregar blacklist do arquivo local (pode já ter sido baixada do S3)
+_loadSsoDomains(); // §155: carregar SSO domains do arquivo local
 
 /* §112: init SQLite queue before accepting requests */
 (async () => {
