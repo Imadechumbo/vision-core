@@ -9119,10 +9119,37 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       return el;
     }
 
+    // §166 — verificar modo pela aba ativa (não pelo toggle removido)
+    function isSfAutoPilotMode() {
+      var tabAuto = document.getElementById('vcSfTabAutopilot');
+      return tabAuto && tabAuto.classList.contains('active');
+    }
+
+    // §166 — Arquiteto restaurado: MODO AVANÇADO usa /api/sf/mission-composer
     function sendSfChatMessage(text) {
-      var inp = document.getElementById('vcSfChatInput');
-      if (inp) inp.value = text;
-      _sfChatSend('vcSfChatInput', 'vcSfChatHistory');
+      var tok = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return ''; } })() || '';
+      var _base = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+      var typingEl = addSfChatMsg('assistant', '▪ arquiteto analisando...');
+      fetch(_base + '/api/sf/mission-composer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': tok ? 'Bearer ' + tok : '' },
+        body: JSON.stringify({ description: text, module: 'project_builder', context: { project: window.__VISION_PROJECT__ || 'visioncore', timestamp: new Date().toISOString() } })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (typingEl && typingEl.parentNode) typingEl.parentNode.removeChild(typingEl);
+        var reply = data.content || data.result || data.mission || (data.error ? '❌ ' + data.error : 'Sem resposta.');
+        var msgEl = addSfChatMsg('assistant', '');
+        if (msgEl) {
+          if (reply.length <= 3000) { vcSfTypewriter(msgEl, reply); }
+          else { msgEl.innerHTML = sfMarkdownToHtml(reply); }
+        }
+        var hist = document.getElementById('vcSfChatHistory');
+        if (hist) hist.scrollTop = hist.scrollHeight;
+      })
+      .catch(function(e) {
+        if (typingEl) typingEl.textContent = '❌ Erro: ' + (e && e.message ? e.message : String(e));
+      });
     }
 
     function extractUrl(text) {
@@ -9147,8 +9174,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       var desc = inp ? inp.value.trim() : '';
       if (!desc) return;
       var url = extractUrl(desc);
-      var toggleBtn = document.getElementById('vcSfAutoPilotToggle');
-      var autoPilotOn = toggleBtn && toggleBtn.classList.contains('active');
+      var autoPilotOn = isSfAutoPilotMode(); // §166: usa aba ativa, não toggle
 
       addSfChatMsg('user', desc);
       if (inp) { inp.value = ''; inp.style.height = 'auto'; }
@@ -9170,7 +9196,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     function initSfSimpleChat() {
       var sendBtn = document.getElementById('vcSfSendBtn');
       var inp     = document.getElementById('vcSfChatInput');
-      var toggle  = document.getElementById('vcSfAutoPilotToggle');
+      // §166: toggle removed — mode determined by header tab (isSfAutoPilotMode)
 
       if (sendBtn) sendBtn.addEventListener('click', handleSfSend);
 
@@ -9184,12 +9210,6 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         inp.addEventListener('input', function() {
           inp.style.height = 'auto';
           inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
-        });
-      }
-
-      if (toggle) {
-        toggle.addEventListener('click', function() {
-          toggle.classList.toggle('active');
         });
       }
     }
