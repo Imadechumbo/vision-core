@@ -4213,8 +4213,13 @@ app.get('/api/sf/job/:id', (req, res) => {
   });
 });
 
+// §185 — todos os SF generators assíncronos: retorna job_id imediato, LLM roda em background
+// Fix 502 intermitente: CF Worker tem timeout 10s para endpoints SF não-chat/deploy;
+// com resposta síncrona o LLM (~15-30s) ultrapassava. Padrão job_id igual ao gold-gate (§182).
+// gold-gate já tem rota própria acima — skip para evitar duplo registro.
 Object.keys(SF_GENERATORS).forEach(key => {
-  app.post('/api/sf/' + key, async (req, res) => {
+  if (key === 'gold-gate') return; // já registrado como async acima (§182)
+  app.post('/api/sf/' + key, (req, res) => {
     const body = normalizeBody(req);
     const ctx = body.context || body || {};
     ctx.timestamp = ctx.timestamp || now();
@@ -4223,12 +4228,14 @@ Object.keys(SF_GENERATORS).forEach(key => {
       ctx.project = String(body.description).split(/[\n.!?]/)[0].slice(0, 60).trim() || 'projeto';
     }
     ctx.project = ctx.project || 'visioncore';
-    try {
-      const result = await SF_GENERATORS[key](ctx);
-      return sendOk(res, { ...result, anti_stub: true });
-    } catch (err) {
-      return res.status(500).json({ ok: false, error: 'sf_generator_failed', module: key, message: err.message, time: now() });
-    }
+    const jobId = `sfj-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    sfJobs.set(jobId, { status: 'pending', result: null, error: null, ts: Date.now() });
+    const _now = Date.now();
+    for (const [k, v] of sfJobs.entries()) { if (_now - v.ts > 600000) sfJobs.delete(k); }
+    SF_GENERATORS[key](ctx)
+      .then(r  => sfJobs.set(jobId, { status: 'done',  result: r,    error: null,      ts: Date.now() }))
+      .catch(e => sfJobs.set(jobId, { status: 'error', result: null, error: e.message, ts: Date.now() }));
+    return sendOk(res, { job_id: jobId, status: 'pending', anti_stub: true });
   });
 });
 

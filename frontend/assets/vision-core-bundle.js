@@ -9139,7 +9139,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                 clearInterval(_pollTimer);
                 el.className = 'vc-sf-autopilot-step error';
                 el.querySelector('.sfap-icon').textContent = '❌';
-                statusEl.textContent = '⚠ Timeout: Gold Gate demorou mais de 120s';
+                statusEl.textContent = '⚠ Timeout: ' + step.label + ' demorou mais de 120s';
                 if (apBtn) apBtn.disabled = false;
                 return;
               }
@@ -9160,7 +9160,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                   clearInterval(_pollTimer);
                   el.className = 'vc-sf-autopilot-step error';
                   el.querySelector('.sfap-icon').textContent = '❌';
-                  statusEl.textContent = '⚠ Erro Gold Gate: ' + (job.error || 'falha desconhecida');
+                  statusEl.textContent = '⚠ Erro em ' + step.label + ': ' + (job.error || 'falha desconhecida');
                   if (apBtn) apBtn.disabled = false;
                 }
                 // status === 'pending': aguardar próximo poll
