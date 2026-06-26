@@ -9126,6 +9126,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
         var tok = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return ''; } })() || '';
         var _base = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+        // §186 — BUG 3: indicador de loading no chat durante polling de cada step
+        var _s186msg = addSfChatMsg('assistant', '⏳ ' + step.label + '...');
 
         fetch(_base + step.endpoint, {
           method: 'POST',
@@ -9146,6 +9148,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                 el.className = 'vc-sf-autopilot-step error';
                 el.querySelector('.sfap-icon').textContent = '❌';
                 statusEl.textContent = '⚠ Timeout: ' + step.label + ' demorou mais de 120s';
+                if (_s186msg && _s186msg.parentNode) { _s186msg.textContent = '⏱ Timeout: ' + step.label; }
                 if (apBtn) apBtn.disabled = false;
                 return;
               }
@@ -9161,12 +9164,15 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                   var output = job.result || '';
                   if (output) { fullContext = projectDescription.slice(0, 600) + '\n\n[Etapa ' + (idx + 1) + ']:\n' + output.slice(0, 400); }
                   finalPackage = output;
+                  // §186 — BUG 3: marcar step como concluído no chat
+                  if (_s186msg && _s186msg.parentNode) { _s186msg.textContent = '✅ ' + step.label; }
                   setTimeout(function() { runStep(idx + 1); }, 300);
                 } else if (job.status === 'error') {
                   clearInterval(_pollTimer);
                   el.className = 'vc-sf-autopilot-step error';
                   el.querySelector('.sfap-icon').textContent = '❌';
                   statusEl.textContent = '⚠ Erro em ' + step.label + ': ' + (job.error || 'falha desconhecida');
+                  if (_s186msg && _s186msg.parentNode) { _s186msg.textContent = '❌ ' + step.label + ': ' + (job.error || 'falha'); }
                   if (apBtn) apBtn.disabled = false;
                 }
                 // status === 'pending': aguardar próximo poll
@@ -9191,6 +9197,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           el.className = 'vc-sf-autopilot-step error';
           el.querySelector('.sfap-icon').textContent = '❌';
           statusEl.textContent = '⚠ Erro em: ' + step.label + ' — ' + (e && e.message ? e.message : String(e));
+          if (_s186msg && _s186msg.parentNode) { _s186msg.textContent = '❌ ' + step.label + ': erro de rede'; }
           if (apBtn) apBtn.disabled = false;
           // §171: em erro, manter progress visível com status de erro (não esconder)
         });
