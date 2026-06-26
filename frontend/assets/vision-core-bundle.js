@@ -8965,16 +8965,150 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         if (idx >= SF_AUTOPILOT_STEPS.length) {
           statusEl.textContent = '✅ Auto-Pilot concluído!';
           if (apBtn) apBtn.disabled = false;
-          // §171: não esconder progress — mostrar resultado dentro do resultEl
-          if (finalPackage && resultEl) {
-            stepsEl.style.display = 'none';
-            statusEl.style.display = 'none';
-            resultEl.style.display = 'block';
-            resultEl.innerHTML = sfMarkdownToHtml(finalPackage);
-            setTimeout(function() {
-              var hist = document.getElementById('vcSfChatHistory');
-              if (hist) hist.scrollTop = hist.scrollHeight;
-            }, 150);
+          // §183: esconder progress sempre — independente de finalPackage
+          stepsEl.style.display = 'none';
+          statusEl.style.display = 'none';
+          progress.style.display = 'none';
+          if (finalPackage) {
+            var resultDiv = document.createElement('div');
+            resultDiv.className = 'vc-sf-autopilot-result';
+            resultDiv.style.cssText = 'display:block;max-height:none;overflow:visible;white-space:normal;margin-top:12px;background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:12px;font-size:.85rem;color:#e2d9f3;line-height:1.6;';
+            resultDiv.innerHTML = sfMarkdownToHtml(finalPackage);
+
+            // §181 — action bar: Ver Estrutura + Baixar ZIP
+            var _sfFilesCache = null;
+            var _sfDesc = projectDescription.slice(0, 800);
+            var _sfBase = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+            var _sfTok = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return ''; } })() || '';
+
+            var actionBar = document.createElement('div');
+            actionBar.style.cssText = 'margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;';
+
+            var treePanel = document.createElement('div');
+            treePanel.style.cssText = 'display:none;width:100%;margin-top:8px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 12px;font-size:.78rem;font-family:monospace;color:#94a3b8;max-height:180px;overflow-y:auto;line-height:1.8;';
+
+            var filesBtn = document.createElement('button');
+            filesBtn.textContent = '📁 Ver Estrutura de Arquivos';
+            filesBtn.style.cssText = 'padding:6px 12px;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.4);border-radius:6px;color:#c4b5fd;font-size:.8rem;cursor:pointer;white-space:nowrap;';
+
+            var dlBtn = document.createElement('button');
+            dlBtn.textContent = '⬇️ Baixar ZIP';
+            dlBtn.style.cssText = 'display:none;padding:6px 12px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);border-radius:6px;color:#22c55e;font-size:.8rem;cursor:pointer;white-space:nowrap;';
+
+            filesBtn.addEventListener('click', function() {
+              if (_sfFilesCache) {
+                treePanel.style.display = treePanel.style.display === 'none' ? 'block' : 'none';
+                return;
+              }
+              filesBtn.disabled = true;
+              filesBtn.textContent = '⏳ Gerando estrutura...';
+              // §183 — project-files assíncrono: POST → job_id → polling GET /api/sf/job/:id
+              function _applyFiles(files) {
+                _sfFilesCache = files;
+                filesBtn.textContent = '📁 Estrutura (' + _sfFilesCache.length + ' arquivos)';
+                treePanel.innerHTML = _sfFilesCache.map(function(f) {
+                  var icon = /\.(json|yaml|yml|toml)$/.test(f.name) ? '⚙️' :
+                             /\.(md|txt)$/.test(f.name) ? '📝' :
+                             /\.(js|ts|py|java|go|rb|php|cs)$/.test(f.name) ? '💻' :
+                             /\.(css|scss|sass)$/.test(f.name) ? '🎨' :
+                             /\.(html|htm|jsx|tsx|vue|svelte)$/.test(f.name) ? '🌐' : '📄';
+                  return icon + ' ' + f.name;
+                }).join('<br>');
+                treePanel.style.display = 'block';
+                dlBtn.style.display = 'inline-block';
+              }
+              fetch(_sfBase + '/api/sf/project-files', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': _sfTok ? 'Bearer ' + _sfTok : '' },
+                body: JSON.stringify({ description: _sfDesc })
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                // Resposta síncrona (compatibilidade futura)
+                if (data.ok && data.files && data.files.length) {
+                  filesBtn.disabled = false;
+                  _applyFiles(data.files);
+                  return;
+                }
+                // Job assíncrono
+                if (data.job_id && data.status === 'pending') {
+                  var _fPollStart = Date.now();
+                  var _fPollTimer = setInterval(function() {
+                    if (Date.now() - _fPollStart > 90000) {
+                      clearInterval(_fPollTimer);
+                      filesBtn.disabled = false;
+                      filesBtn.textContent = '❌ Timeout ao gerar estrutura';
+                      return;
+                    }
+                    fetch(_sfBase + '/api/sf/job/' + data.job_id, {
+                      headers: { 'Authorization': _sfTok ? 'Bearer ' + _sfTok : '' }
+                    })
+                    .then(function(r2) { return r2.json(); })
+                    .then(function(job) {
+                      if (job.status === 'done' && job.result && job.result.files) {
+                        clearInterval(_fPollTimer);
+                        filesBtn.disabled = false;
+                        _applyFiles(job.result.files);
+                      } else if (job.status === 'error') {
+                        clearInterval(_fPollTimer);
+                        filesBtn.disabled = false;
+                        filesBtn.textContent = '❌ Falha ao gerar estrutura';
+                      }
+                    })
+                    .catch(function() { /* falha de rede — tentar próximo */ });
+                  }, 2000);
+                  return;
+                }
+                filesBtn.disabled = false;
+                filesBtn.textContent = '❌ Falha ao gerar estrutura';
+              })
+              .catch(function() {
+                filesBtn.disabled = false;
+                filesBtn.textContent = '❌ Erro de rede';
+              });
+            });
+
+            dlBtn.addEventListener('click', function() {
+              if (!_sfFilesCache) return;
+              dlBtn.disabled = true;
+              dlBtn.textContent = '⏳ Montando ZIP...';
+              var projName = _sfDesc.split(/[\n.!?]/)[0].slice(0, 40).replace(/[^a-z0-9-]/gi, '-').toLowerCase() || 'projeto';
+              fetch(_sfBase + '/api/sf/generate-zip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': _sfTok ? 'Bearer ' + _sfTok : '' },
+                body: JSON.stringify({ files: _sfFilesCache, project: projName })
+              })
+              .then(function(r) { return r.blob(); })
+              .then(function(blob) {
+                dlBtn.disabled = false;
+                dlBtn.textContent = '⬇️ Baixar ZIP';
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = projName + '-vision-core.zip';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+              })
+              .catch(function() {
+                dlBtn.disabled = false;
+                dlBtn.textContent = '❌ Falha no ZIP';
+              });
+            });
+
+            actionBar.appendChild(filesBtn);
+            actionBar.appendChild(dlBtn);
+            resultDiv.appendChild(actionBar);
+            resultDiv.appendChild(treePanel);
+
+            var hist = document.getElementById('vcSfChatHistory');
+            if (hist) {
+              hist.appendChild(resultDiv);
+              setTimeout(function() { hist.scrollTop = hist.scrollHeight; }, 150);
+            } else if (progress && progress.parentNode) {
+              progress.parentNode.appendChild(resultDiv);
+            }
           }
           return;
         }
@@ -8994,6 +9128,48 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
+          // §182 — job assíncrono: polling quando receber job_id
+          if (data.job_id && data.status === 'pending') {
+            var _pollBase = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+            var _pollTok  = tok;
+            var _pollStart = Date.now();
+            var _pollMax   = 120000; // 120s
+            var _pollTimer = setInterval(function() {
+              if (Date.now() - _pollStart > _pollMax) {
+                clearInterval(_pollTimer);
+                el.className = 'vc-sf-autopilot-step error';
+                el.querySelector('.sfap-icon').textContent = '❌';
+                statusEl.textContent = '⚠ Timeout: Gold Gate demorou mais de 120s';
+                if (apBtn) apBtn.disabled = false;
+                return;
+              }
+              fetch(_pollBase + '/api/sf/job/' + data.job_id, {
+                headers: { 'Authorization': _pollTok ? 'Bearer ' + _pollTok : '' }
+              })
+              .then(function(r2) { return r2.json(); })
+              .then(function(job) {
+                if (job.status === 'done') {
+                  clearInterval(_pollTimer);
+                  el.className = 'vc-sf-autopilot-step done';
+                  el.querySelector('.sfap-icon').textContent = '✅';
+                  var output = job.result || '';
+                  if (output) { fullContext = projectDescription.slice(0, 600) + '\n\n[Etapa ' + (idx + 1) + ']:\n' + output.slice(0, 400); }
+                  finalPackage = output;
+                  setTimeout(function() { runStep(idx + 1); }, 300);
+                } else if (job.status === 'error') {
+                  clearInterval(_pollTimer);
+                  el.className = 'vc-sf-autopilot-step error';
+                  el.querySelector('.sfap-icon').textContent = '❌';
+                  statusEl.textContent = '⚠ Erro Gold Gate: ' + (job.error || 'falha desconhecida');
+                  if (apBtn) apBtn.disabled = false;
+                }
+                // status === 'pending': aguardar próximo poll
+              })
+              .catch(function() { /* falha de rede no poll — tentar próximo */ });
+            }, 2000);
+            return; // não continuar para o fluxo normal
+          }
+          // fluxo normal (resposta síncrona)
           if (data.ok || data.content || data.result || data.mission) {
             el.className = 'vc-sf-autopilot-step done';
             el.querySelector('.sfap-icon').textContent = '✅';
@@ -9107,8 +9283,33 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
     // §165 — markdown simples → HTML seguro para mensagens do SF
     function sfMarkdownToHtml(text) {
-      // Escapar HTML primeiro (segurança)
-      var safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      // §175: tabelas markdown — processar antes do escape linha-a-linha
+      var lines = text.split('\n');
+      var out = [];
+      var inTable = false;
+      for (var li = 0; li < lines.length; li++) {
+        var line = lines[li];
+        var isTableRow = /^\|.+\|/.test(line.trim());
+        var isSeparator = /^\|[\s\-\|:]+\|/.test(line.trim());
+        if (isTableRow && isSeparator) { continue; } // pular linha separadora
+        if (isTableRow) {
+          if (!inTable) { out.push('<table style="border-collapse:collapse;width:100%;margin:8px 0;font-size:.82rem;">'); inTable = true; }
+          var cells = line.trim().replace(/^\||\|$/g,'').split('|');
+          out.push('<tr>' + cells.map(function(c){ return '<td style="border:1px solid rgba(255,255,255,.15);padding:4px 8px;color:#e2d9f3">' + c.trim() + '</td>'; }).join('') + '</tr>');
+        } else {
+          if (inTable) { out.push('</table>'); inTable = false; }
+          out.push(line);
+        }
+      }
+      if (inTable) { out.push('</table>'); }
+      var merged = out.join('\n');
+      // Escapar HTML em linhas não-tabela (segurança — tabelas já renderizadas como HTML)
+      // Processar por partes: split em <table>...</table>, escapar fora, manter dentro
+      var parts = merged.split(/(<table[\s\S]*?<\/table>)/);
+      var safe = parts.map(function(p, i) {
+        if (i % 2 === 1) return p; // é bloco <table> — manter intacto
+        return p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }).join('');
       return safe
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/^\* \[x\]/gim, '✅').replace(/^\* \[ \]/gm, '⬜')
@@ -9116,6 +9317,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
         .replace(/\\\[X\\\]/g,'✅').replace(/\\\[-\\\]/g,'🔄').replace(/\\\[\\\]/g,'⬜')
         .replace(/\[X\]/g,'✅').replace(/\[-\]/g,'🔄').replace(/\[\]/g,'⬜')
+        .replace(/☐/g,'⬜').replace(/☑/g,'✅').replace(/☒/g,'✅')
         .replace(/^### (.+)$/gm,'<h4 style="color:#c4b5fd;margin:8px 0 4px">$1</h4>')
         .replace(/^## (.+)$/gm,'<h3 style="color:#a78bfa;margin:10px 0 4px">$1</h3>')
         .replace(/^# (.+)$/gm,'<h2 style="color:#7c3aed;margin:12px 0 6px">$1</h2>')

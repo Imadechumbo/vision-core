@@ -558,9 +558,20 @@ function httpsPost(url, headers, bodyStr, timeoutMs = 30000) {
 
 async function callLLM(prompt, opts = {}) {
   const maxTokens = opts.max_tokens || 1024;
+  const timeoutMs = opts.timeout_ms || 30000;
   const systemPrompt = opts.system || 'You are Vision Core AI assistant. Be concise and technical.';
 
   const providers = [
+    {
+      // §184 — OpenRouter primeiro: chave configurada no EB, acesso a vários modelos
+      id: 'openrouter',
+      key: resolveApiKey('OPENROUTER'),
+      url: 'https://openrouter.ai/api/v1/chat/completions',
+      model: process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-4-5',
+      buildBody: (model) => JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }] }),
+      authHeaders: (key) => ({ 'Authorization': `Bearer ${key}`, 'HTTP-Referer': 'https://visioncoreai.pages.dev', 'X-Title': 'Vision Core' }),
+      extractText: (data) => data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content
+    },
     {
       id: 'openai',
       key: resolveApiKey('OPENAI'),
@@ -613,7 +624,7 @@ async function callLLM(prompt, opts = {}) {
     if (!p.key) continue;
     try {
       const url = p.urlOverride ? p.urlOverride(p.key) : p.url;
-      const resp = await httpsPost(url, p.authHeaders(p.key), p.buildBody(p.model));
+      const resp = await httpsPost(url, p.authHeaders(p.key), p.buildBody(p.model), timeoutMs);
       if (!resp.ok) { console.warn(`[callLLM] ${p.id} http ${resp.status}`); continue; }
       const data = JSON.parse(resp.text);
       const text = p.extractText(data);
@@ -4121,6 +4132,9 @@ app.post('/api/diff/preview', (req, res) => {
 });
 
 // ── SF Modules 02-09 — §84 B5: async + callLLM() real ────────
+// §182 — jobs assíncronos para steps de longa duração (gold-gate)
+const sfJobs = new Map(); // jobId → {status, result, error, ts}
+
 const SF_GENERATORS = {
   'mission-composer': async (ctx) => {
     const prompt = `Você é o Mission Composer do Vision Core. Gere um prompt estruturado de missão SDDF para o projeto "${ctx.project}". Inclua: objetivo, escopo, agentes envolvidos, critérios de PASS GOLD, e sequência de execução. Timestamp: ${ctx.timestamp}`;
@@ -4154,7 +4168,7 @@ const SF_GENERATORS = {
   },
   'gold-gate': async (ctx) => {
     const prompt = `Gere o checklist completo de Gold Gate para o projeto "${ctx.project}". Verifique todos os gates SDDF obrigatórios para PASS GOLD. Timestamp: ${ctx.timestamp}`;
-    const llm = await callLLM(prompt, { max_tokens: 700, system: 'Você é o Gold Gate Checker do Vision Core. Responda em português com checklist detalhado.' });
+    const llm = await callLLM(prompt, { max_tokens: 8000, timeout_ms: 90000, system: 'Você é o Gold Gate Checker do Vision Core. Responda em português com checklist detalhado. Seja objetivo e conciso. Máximo 2 linhas por item.' });
     return { module: 'SF08', result: llm ? llm.text : `GOLD GATE CHECKLIST\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\n☐ SECURITY\n☐ COMPATIBILITY\n☐ STABILITY\n☐ RUNTIME — /api/health OK\n☐ DIFF — patch revisado\n☐ VAULT — snapshot criado\n☐ AEGIS — aprovação\n☐ SDDF — harness completo\n\nGerado por Vision Core v5.9.8 — SF08`, provider: llm ? llm.provider : 'local' };
   },
   'deploy-blueprint': async (ctx) => {
@@ -4163,6 +4177,41 @@ const SF_GENERATORS = {
     return { module: 'SF09', result: llm ? llm.text : `DEPLOY BLUEPRINT\n\nProjeto: ${ctx.project}\nTimestamp: ${ctx.timestamp}\n\nFase 1: Pre-deploy\n  → SDDF harness\n  → PASS GOLD score ≥ 95\n  → Snapshot vault\n\nFase 2: Deploy\n  → Cloudflare Pages\n  → Elastic Beanstalk\n  → Worker gateway\n\nFase 3: Post-deploy\n  → Validar /api/health\n  → Smoke tests\n\nGerado por Vision Core v5.9.8 — SF09`, provider: llm ? llm.provider : 'local' };
   },
 };
+
+// §182 — gold-gate assíncrono: retorna job_id imediato, LLM roda em background
+app.post('/api/sf/gold-gate', async (req, res) => {
+  const body = normalizeBody(req);
+  const ctx = body.context || body || {};
+  ctx.timestamp = ctx.timestamp || now();
+  if (!ctx.project && body.description) {
+    ctx.project = String(body.description).split(/[\n.!?]/)[0].slice(0, 60).trim() || 'projeto';
+  }
+  ctx.project = ctx.project || 'visioncore';
+  const jobId = `sfj-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  sfJobs.set(jobId, { status: 'pending', result: null, error: null, ts: Date.now() });
+  // Limpar jobs antigos (> 10min)
+  const _now = Date.now();
+  for (const [k, v] of sfJobs.entries()) { if (_now - v.ts > 600000) sfJobs.delete(k); }
+  // Background — sem await
+  SF_GENERATORS['gold-gate'](ctx)
+    .then(r  => sfJobs.set(jobId, { status: 'done',  result: r,           error: null,      ts: Date.now() }))
+    .catch(e => sfJobs.set(jobId, { status: 'error', result: null,         error: e.message, ts: Date.now() }));
+  return sendOk(res, { job_id: jobId, status: 'pending', anti_stub: true });
+});
+
+// §182 — poll de job assíncrono
+app.get('/api/sf/job/:id', (req, res) => {
+  const job = sfJobs.get(req.params.id);
+  if (!job) return res.status(404).json({ ok: false, error: 'job_not_found', anti_stub: true });
+  return sendOk(res, {
+    job_id:   req.params.id,
+    status:   job.status,
+    result:   job.result ? job.result.result   : null,
+    provider: job.result ? job.result.provider : null,
+    error:    job.error,
+    anti_stub: true
+  });
+});
 
 Object.keys(SF_GENERATORS).forEach(key => {
   app.post('/api/sf/' + key, async (req, res) => {
@@ -4219,6 +4268,50 @@ app.post('/api/sf/fetch-url', (req, res) => {
     httpReq.end();
   } catch(e) {
     return res.status(400).json({ ok: false, error: 'invalid_url', detail: e.message, anti_stub: true });
+  }
+});
+
+// §183 — SF project-files: assíncrono (mesmo padrão §182) — retorna job_id imediato
+app.post('/api/sf/project-files', (req, res) => {
+  const body = normalizeBody(req);
+  const description = String(body.description || '').slice(0, 800);
+  if (!description) return res.status(400).json({ ok: false, error: 'description_required', anti_stub: true });
+  const jobId = `sfj-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  sfJobs.set(jobId, { status: 'pending', result: null, error: null, ts: Date.now() });
+  // Background — sem await
+  callLLM(
+    `Você é um arquiteto de software. Para o projeto: "${description}"\n\nGere uma estrutura de arquivos realista com conteúdo. Responda APENAS com JSON válido:\n{"files":[{"name":"caminho/arquivo.ext","content":"conteúdo completo do arquivo"}]}\nMáximo 8 arquivos. Inclua package.json ou equivalente, README.md, e arquivos principais do projeto.`,
+    { max_tokens: 4000, timeout_ms: 60000, system: 'Responda APENAS com JSON válido. Sem markdown, sem texto antes ou depois. Sem comentários.' }
+  ).then(llm => {
+    if (!llm) { sfJobs.set(jobId, { status: 'error', result: null, error: 'llm_unavailable', ts: Date.now() }); return; }
+    let files = [];
+    try {
+      const clean = llm.text.replace(/```json\n?|```\n?/g, '').trim();
+      const parsed = JSON.parse(clean);
+      files = (parsed.files || []).slice(0, 10).map(f => ({ name: String(f.name || 'arquivo.txt'), content: String(f.content || '') }));
+      sfJobs.set(jobId, { status: 'done', result: { files, total: files.length, provider: llm.provider }, error: null, ts: Date.now() });
+    } catch(e) {
+      sfJobs.set(jobId, { status: 'error', result: null, error: 'json_parse_failed', ts: Date.now() });
+    }
+  }).catch(e => sfJobs.set(jobId, { status: 'error', result: null, error: e.message, ts: Date.now() }));
+  return sendOk(res, { job_id: jobId, status: 'pending', anti_stub: true });
+});
+
+// §181 — SF generate-zip: monta ZIP em memória a partir de files[]
+app.post('/api/sf/generate-zip', (req, res) => {
+  const body = normalizeBody(req);
+  const files = body.files;
+  if (!Array.isArray(files) || !files.length) return res.status(400).json({ ok: false, error: 'files_required', anti_stub: true });
+  const project = String(body.project || 'projeto').replace(/[^a-z0-9-]/gi, '-').toLowerCase().slice(0, 40) || 'projeto';
+  try {
+    const zipBuf = makeZip(files.map(f => ({ name: String(f.name || 'arquivo.txt'), data: String(f.content || '') })));
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${project}-vision-core.zip"`);
+    res.setHeader('Content-Length', zipBuf.length);
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+    return res.end(zipBuf);
+  } catch(e) {
+    return res.status(500).json({ ok: false, error: 'zip_failed', detail: e.message, anti_stub: true });
   }
 });
 

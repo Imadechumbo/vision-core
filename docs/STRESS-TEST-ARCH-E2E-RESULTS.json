@@ -59,552 +59,342 @@
   },
   "suites": [
     {
-      "title": "manual-verification.spec.mjs",
-      "file": "manual-verification.spec.mjs",
+      "title": "architect.spec.mjs",
+      "file": "architect.spec.mjs",
       "column": 0,
       "line": 0,
-      "specs": [],
-      "suites": [
+      "specs": [
         {
-          "title": "Dry-run real — §113 (1 arquivo) / §116 (multi-arquivo)",
-          "file": "manual-verification.spec.mjs",
-          "line": 334,
-          "column": 6,
-          "specs": [
+          "title": "ARCH-14: spec sugerida clicável → módulo SF correto ativa + spec panel abre + data-spec-id presente",
+          "ok": false,
+          "tags": [],
+          "tests": [
             {
-              "title": "DRYRUN-113: dry-run real single-arquivo mostra diff antes/depois",
-              "ok": true,
-              "tags": [],
-              "tests": [
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
                 {
-                  "timeout": 150000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 38063,
+                  "error": {
+                    "message": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n",
+                    "stack": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n\n    at waitForArchitectPanel (C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:45:19)\n    at C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:68:3",
+                    "location": {
+                      "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                      "column": 19,
+                      "line": 45
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 43 |\u001b[39m   \u001b[90m// The Architect toggle is hidden until _backendConnected=true (health check)\u001b[39m\n \u001b[90m 44 |\u001b[39m   \u001b[36mconst\u001b[39m toggleBtn \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'#vcSfArchitectToggleBtn'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 45 |\u001b[39m   \u001b[36mawait\u001b[39m toggleBtn\u001b[33m.\u001b[39mwaitFor({ state\u001b[33m:\u001b[39m \u001b[32m'visible'\u001b[39m\u001b[33m,\u001b[39m timeout\u001b[33m:\u001b[39m \u001b[35m35\u001b[39m_000 })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 46 |\u001b[39m\n \u001b[90m 47 |\u001b[39m   \u001b[90m// ── Enable Architect mode ──────────────────────────────────────────────────\u001b[39m\n \u001b[90m 48 |\u001b[39m   \u001b[36mawait\u001b[39m toggleBtn\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 12647,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "[ROUTE inject] OK — injetado dentro de initMainChat, offset=403311, tamanho final=470141\n"
-                        },
-                        {
-                          "text": "[DIAG pre-open] {\"btnExists\":true,\"btnVisible\":true,\"btnText\":\"🔬 DRY-RUN EXTERNO\",\"csExists\":true,\"_vcRDPType\":\"function\",\"_vcQSDRType\":\"function\"}\n"
-                        },
-                        {
-                          "text": "[OPEN via click] FAILED: locator.waitFor: Timeout 5000ms exceeded.\n"
-                        },
-                        {
-                          "text": "[OPEN via _vcRDP] Tentando window._vcRDP() + appendChild no #v298ChatStream...\n"
-                        },
-                        {
-                          "text": "[OPEN via _vcRDP] {\"ok\":true,\"panelTagName\":\"DIV\"}\n"
-                        },
-                        {
-                          "text": "  Status dry-run: \"✅ Dry-run concluído — nada foi escrito no disco real.\"\n"
-                        },
-                        {
-                          "text": "  PASS COMPLETO: diff antes/depois renderizado. Labels 📄: 0 (0 esperado para single-file).\n"
-                        }
-                      ],
-                      "stderr": [
-                        {
-                          "buffer": ""
-                        },
-                        {
-                          "buffer": ""
-                        },
-                        {
-                          "buffer": ""
-                        },
-                        {
-                          "buffer": "d2FybmluZzogaW4gdGhlIHdvcmtpbmcgY29weSBvZiAnY2FsYy5qcycsIExGIHdpbGwgYmUgcmVwbGFjZWQgYnkgQ1JMRiB0aGUgbmV4dCB0aW1lIEdpdCB0b3VjaGVzIGl0Cndhcm5pbmc6IGluIHRoZSB3b3JraW5nIGNvcHkgb2YgJ3V0aWxzLmpzJywgTEYgd2lsbCBiZSByZXBsYWNlZCBieSBDUkxGIHRoZSBuZXh0IHRpbWUgR2l0IHRvdWNoZXMgaXQK"
-                        },
-                        {
-                          "buffer": ""
-                        }
-                      ],
-                      "retry": 0,
-                      "startTime": "2026-06-19T09:34:41.904Z",
-                      "annotations": [],
-                      "attachments": []
+                      "location": {
+                        "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                        "column": 19,
+                        "line": 45
+                      },
+                      "message": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n\n\n  43 |   // The Architect toggle is hidden until _backendConnected=true (health check)\n  44 |   const toggleBtn = page.locator('#vcSfArchitectToggleBtn');\n> 45 |   await toggleBtn.waitFor({ state: 'visible', timeout: 35_000 });\n     |                   ^\n  46 |\n  47 |   // ── Enable Architect mode ──────────────────────────────────────────────────\n  48 |   await toggleBtn.click();\n    at waitForArchitectPanel (C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:45:19)\n    at C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:68:3"
                     }
                   ],
-                  "status": "expected"
-                }
-              ],
-              "id": "c6feda596617fc36bc86-f93ca5f07dee8638cbd4",
-              "file": "manual-verification.spec.mjs",
-              "line": 352,
-              "column": 3
-            },
-            {
-              "title": "DRYRUN-116: dry-run multi-arquivo mostra diffs por arquivo (ou single-file — ambos válidos)",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 150000,
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-06-23T12:41:32.601Z",
                   "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
+                  "attachments": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 12141,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "[ROUTE inject] OK — injetado dentro de initMainChat, offset=403311, tamanho final=470141\n"
-                        },
-                        {
-                          "text": "[DIAG pre-open] {\"btnExists\":true,\"btnVisible\":true,\"btnText\":\"🔬 DRY-RUN EXTERNO\",\"csExists\":true,\"_vcRDPType\":\"function\",\"_vcQSDRType\":\"function\"}\n"
-                        },
-                        {
-                          "text": "[OPEN via click] FAILED: locator.waitFor: Timeout 5000ms exceeded.\n"
-                        },
-                        {
-                          "text": "[OPEN via _vcRDP] Tentando window._vcRDP() + appendChild no #v298ChatStream...\n"
-                        },
-                        {
-                          "text": "[OPEN via _vcRDP] {\"ok\":true,\"panelTagName\":\"DIV\"}\n"
-                        },
-                        {
-                          "text": "  Status dry-run: \"Resultado recebido — ver detalhes abaixo.\"\n"
-                        },
-                        {
-                          "text": "  INCONCLUSIVO: resultado sem diff explícito. resultHost preview: ```json\n{\n  \"diagnosis\": \"Falta o arquivo utils.js que contém a função 'dobro'; sem ele não é possível corrigir ambos os bugs.\",\n  \"file\": null,\n  \"fi...\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-19T09:34:56.646Z",
-                      "annotations": [],
-                      "attachments": []
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\test-results\\architect-ARCH-14-spec-sug-a561e--abre-data-spec-id-presente-chromium\\error-context.md"
                     }
                   ],
-                  "status": "expected"
+                  "errorLocation": {
+                    "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                    "column": 19,
+                    "line": 45
+                  }
+                },
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 37904,
+                  "error": {
+                    "message": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n",
+                    "stack": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n\n    at waitForArchitectPanel (C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:45:19)\n    at C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:68:3",
+                    "location": {
+                      "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                      "column": 19,
+                      "line": 45
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 43 |\u001b[39m   \u001b[90m// The Architect toggle is hidden until _backendConnected=true (health check)\u001b[39m\n \u001b[90m 44 |\u001b[39m   \u001b[36mconst\u001b[39m toggleBtn \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'#vcSfArchitectToggleBtn'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 45 |\u001b[39m   \u001b[36mawait\u001b[39m toggleBtn\u001b[33m.\u001b[39mwaitFor({ state\u001b[33m:\u001b[39m \u001b[32m'visible'\u001b[39m\u001b[33m,\u001b[39m timeout\u001b[33m:\u001b[39m \u001b[35m35\u001b[39m_000 })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 46 |\u001b[39m\n \u001b[90m 47 |\u001b[39m   \u001b[90m// ── Enable Architect mode ──────────────────────────────────────────────────\u001b[39m\n \u001b[90m 48 |\u001b[39m   \u001b[36mawait\u001b[39m toggleBtn\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                        "column": 19,
+                        "line": 45
+                      },
+                      "message": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n\n\n  43 |   // The Architect toggle is hidden until _backendConnected=true (health check)\n  44 |   const toggleBtn = page.locator('#vcSfArchitectToggleBtn');\n> 45 |   await toggleBtn.waitFor({ state: 'visible', timeout: 35_000 });\n     |                   ^\n  46 |\n  47 |   // ── Enable Architect mode ──────────────────────────────────────────────────\n  48 |   await toggleBtn.click();\n    at waitForArchitectPanel (C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:45:19)\n    at C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:68:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 1,
+                  "startTime": "2026-06-23T12:42:12.071Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\test-results\\architect-ARCH-14-spec-sug-a561e--abre-data-spec-id-presente-chromium-retry1\\error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                    "column": 19,
+                    "line": 45
+                  }
                 }
               ],
-              "id": "c6feda596617fc36bc86-2abd0b9b38e8965c444b",
-              "file": "manual-verification.spec.mjs",
-              "line": 403,
-              "column": 3
+              "status": "unexpected"
             }
-          ]
+          ],
+          "id": "ef323c489495a7052bef-04c53468ee3865be9089",
+          "file": "architect.spec.mjs",
+          "line": 65,
+          "column": 1
         },
         {
-          "title": "apply_patch_multi no chat principal — §115",
-          "file": "manual-verification.spec.mjs",
-          "line": 460,
-          "column": 6,
-          "specs": [
+          "title": "ARCH-15: stack cards com ícone+label+tooltip — sem fallback ⚙️ para tags conhecidas",
+          "ok": false,
+          "tags": [],
+          "tests": [
             {
-              "title": "APPLY-115: diagnóstico multi-arquivo no chat oferece \"Aplicar no Vision Agent Local\"",
-              "ok": true,
-              "tags": [],
-              "tests": [
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
                 {
-                  "timeout": 150000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 37362,
+                  "error": {
+                    "message": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n",
+                    "stack": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n\n    at waitForArchitectPanel (C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:45:19)\n    at C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:109:3",
+                    "location": {
+                      "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                      "column": 19,
+                      "line": 45
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 43 |\u001b[39m   \u001b[90m// The Architect toggle is hidden until _backendConnected=true (health check)\u001b[39m\n \u001b[90m 44 |\u001b[39m   \u001b[36mconst\u001b[39m toggleBtn \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'#vcSfArchitectToggleBtn'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 45 |\u001b[39m   \u001b[36mawait\u001b[39m toggleBtn\u001b[33m.\u001b[39mwaitFor({ state\u001b[33m:\u001b[39m \u001b[32m'visible'\u001b[39m\u001b[33m,\u001b[39m timeout\u001b[33m:\u001b[39m \u001b[35m35\u001b[39m_000 })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 46 |\u001b[39m\n \u001b[90m 47 |\u001b[39m   \u001b[90m// ── Enable Architect mode ──────────────────────────────────────────────────\u001b[39m\n \u001b[90m 48 |\u001b[39m   \u001b[36mawait\u001b[39m toggleBtn\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 3589,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "  INCONCLUSIVO: \"Diagnóstico concluído\" não apareceu. Chat stream: 📦 projeto-teste.zip — Dois bugs em arquivos diferentes: a função add em calc.js está subtraindo (a - b) em vez de somar (a + b), e a função dobro em utils.js está subtraindo (x - x) em vez de multipl...\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-19T09:35:08.861Z",
-                      "annotations": [],
-                      "attachments": []
+                      "location": {
+                        "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                        "column": 19,
+                        "line": 45
+                      },
+                      "message": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n\n\n  43 |   // The Architect toggle is hidden until _backendConnected=true (health check)\n  44 |   const toggleBtn = page.locator('#vcSfArchitectToggleBtn');\n> 45 |   await toggleBtn.waitFor({ state: 'visible', timeout: 35_000 });\n     |                   ^\n  46 |\n  47 |   // ── Enable Architect mode ──────────────────────────────────────────────────\n  48 |   await toggleBtn.click();\n    at waitForArchitectPanel (C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:45:19)\n    at C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:109:3"
                     }
                   ],
-                  "status": "expected"
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-06-23T12:42:51.203Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\test-results\\architect-ARCH-15-stack-ca-47a9b-ack-⚙️-para-tags-conhecidas-chromium\\error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                    "column": 19,
+                    "line": 45
+                  }
+                },
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 37917,
+                  "error": {
+                    "message": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n",
+                    "stack": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n\n    at waitForArchitectPanel (C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:45:19)\n    at C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:109:3",
+                    "location": {
+                      "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                      "column": 19,
+                      "line": 45
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 43 |\u001b[39m   \u001b[90m// The Architect toggle is hidden until _backendConnected=true (health check)\u001b[39m\n \u001b[90m 44 |\u001b[39m   \u001b[36mconst\u001b[39m toggleBtn \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'#vcSfArchitectToggleBtn'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 45 |\u001b[39m   \u001b[36mawait\u001b[39m toggleBtn\u001b[33m.\u001b[39mwaitFor({ state\u001b[33m:\u001b[39m \u001b[32m'visible'\u001b[39m\u001b[33m,\u001b[39m timeout\u001b[33m:\u001b[39m \u001b[35m35\u001b[39m_000 })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 46 |\u001b[39m\n \u001b[90m 47 |\u001b[39m   \u001b[90m// ── Enable Architect mode ──────────────────────────────────────────────────\u001b[39m\n \u001b[90m 48 |\u001b[39m   \u001b[36mawait\u001b[39m toggleBtn\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                        "column": 19,
+                        "line": 45
+                      },
+                      "message": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n\n\n  43 |   // The Architect toggle is hidden until _backendConnected=true (health check)\n  44 |   const toggleBtn = page.locator('#vcSfArchitectToggleBtn');\n> 45 |   await toggleBtn.waitFor({ state: 'visible', timeout: 35_000 });\n     |                   ^\n  46 |\n  47 |   // ── Enable Architect mode ──────────────────────────────────────────────────\n  48 |   await toggleBtn.click();\n    at waitForArchitectPanel (C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:45:19)\n    at C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:109:3"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 1,
+                  "startTime": "2026-06-23T12:43:30.179Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\test-results\\architect-ARCH-15-stack-ca-47a9b-ack-⚙️-para-tags-conhecidas-chromium-retry1\\error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                    "column": 19,
+                    "line": 45
+                  }
                 }
               ],
-              "id": "c6feda596617fc36bc86-644c64bd0cab5e6470ae",
-              "file": "manual-verification.spec.mjs",
-              "line": 461,
-              "column": 3
+              "status": "unexpected"
             }
-          ]
+          ],
+          "id": "ef323c489495a7052bef-5d2f5eb200f945c070ec",
+          "file": "architect.spec.mjs",
+          "line": 106,
+          "column": 1
         },
         {
-          "title": "§118 — Tutorial: balões alinhados com elementos reais (T2/T3/T5/T6)",
-          "file": "manual-verification.spec.mjs",
-          "line": 653,
-          "column": 6,
-          "specs": [
+          "title": "ARCH-16: Pacote Completo → Enviar para SF-03 → módulo muda + Arquiteto desativa + textarea populado",
+          "ok": false,
+          "tags": [],
+          "tests": [
             {
-              "title": "T2 — Vision Agent Local: spotlight cobre elementos reais por passo",
-              "ok": true,
-              "tags": [],
-              "tests": [
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
                 {
-                  "timeout": 60000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
+                  "workerIndex": 4,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 38155,
+                  "error": {
+                    "message": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n",
+                    "stack": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n\n    at waitForArchitectPanel (C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:45:19)\n    at C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:144:3",
+                    "location": {
+                      "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                      "column": 19,
+                      "line": 45
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 43 |\u001b[39m   \u001b[90m// The Architect toggle is hidden until _backendConnected=true (health check)\u001b[39m\n \u001b[90m 44 |\u001b[39m   \u001b[36mconst\u001b[39m toggleBtn \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'#vcSfArchitectToggleBtn'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 45 |\u001b[39m   \u001b[36mawait\u001b[39m toggleBtn\u001b[33m.\u001b[39mwaitFor({ state\u001b[33m:\u001b[39m \u001b[32m'visible'\u001b[39m\u001b[33m,\u001b[39m timeout\u001b[33m:\u001b[39m \u001b[35m35\u001b[39m_000 })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 46 |\u001b[39m\n \u001b[90m 47 |\u001b[39m   \u001b[90m// ── Enable Architect mode ──────────────────────────────────────────────────\u001b[39m\n \u001b[90m 48 |\u001b[39m   \u001b[36mawait\u001b[39m toggleBtn\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 11571,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "[LOCAL BUNDLE] lido: C:\\Users\\imadechumbo\\Desktop\\vision-core\\frontend\\assets\\vision-core-bundle.js (471354 bytes)\n"
-                        },
-                        {
-                          "text": "  T2 p0 (agent tab): {\"spotW\":182,\"spotH\":58,\"spotTop\":659.0625,\"spotLeft\":1089,\"tgTop\":673.0625,\"tgLeft\":1103,\"tgW\":154,\"tgH\":30,\"targetExists\":true,\"overlayVisible\":true}\n"
-                        },
-                        {
-                          "text": "  T2 p1 (agent-download): {\"spotW\":256.25,\"spotH\":66,\"spotTop\":716.0625,\"spotLeft\":929,\"tgTop\":730.0625,\"tgLeft\":943,\"tgW\":228.25,\"tgH\":38,\"targetExists\":true,\"overlayVisible\":true}\n"
-                        },
-                        {
-                          "text": "  T2 p2 (agent-cmd): {\"spotW\":342,\"spotH\":68.6875,\"spotTop\":814.0625,\"spotLeft\":929,\"tgTop\":828.0625,\"tgLeft\":943,\"tgW\":314,\"tgH\":40.6875,\"targetExists\":true,\"overlayVisible\":true}\n"
-                        },
-                        {
-                          "text": "  T2 PASS: 3 passos verificados, spotlight sobre elemento real em cada um.\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-19T09:35:12.475Z",
-                      "annotations": [],
-                      "attachments": []
+                      "location": {
+                        "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                        "column": 19,
+                        "line": 45
+                      },
+                      "message": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n\n\n  43 |   // The Architect toggle is hidden until _backendConnected=true (health check)\n  44 |   const toggleBtn = page.locator('#vcSfArchitectToggleBtn');\n> 45 |   await toggleBtn.waitFor({ state: 'visible', timeout: 35_000 });\n     |                   ^\n  46 |\n  47 |   // ── Enable Architect mode ──────────────────────────────────────────────────\n  48 |   await toggleBtn.click();\n    at waitForArchitectPanel (C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:45:19)\n    at C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:144:3"
                     }
                   ],
-                  "status": "expected"
-                }
-              ],
-              "id": "c6feda596617fc36bc86-44c3e233d860d12bd8b5",
-              "file": "manual-verification.spec.mjs",
-              "line": 655,
-              "column": 3
-            },
-            {
-              "title": "T3 — Software Factory: spotlight cobre módulos reais + onEnter abre SF page",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 60000,
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-06-23T12:44:10.190Z",
                   "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
+                  "attachments": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 11477,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "[LOCAL BUNDLE] lido: C:\\Users\\imadechumbo\\Desktop\\vision-core\\frontend\\assets\\vision-core-bundle.js (471354 bytes)\n"
-                        },
-                        {
-                          "text": "  T3 p0 (SF home btn): {\"spotW\":85.109375,\"spotH\":48,\"spotTop\":46.140625,\"spotLeft\":-2,\"tgTop\":60.140625,\"tgLeft\":12,\"tgW\":57.109375,\"tgH\":20,\"targetExists\":true,\"overlayVisible\":true}\n"
-                        },
-                        {
-                          "text": "  T3 p1 (project_builder): {\"spotW\":198.125,\"spotH\":48,\"spotTop\":46.140625,\"spotLeft\":58.109375,\"tgTop\":60.140625,\"tgLeft\":72.109375,\"tgW\":170.125,\"tgH\":20,\"targetExists\":true,\"overlayVisible\":true}\n"
-                        },
-                        {
-                          "text": "  T3 p2 (project_templates): {\"spotW\":183.90625,\"spotH\":48,\"spotTop\":46.140625,\"spotLeft\":376.25,\"tgTop\":60.140625,\"tgLeft\":390.25,\"tgW\":155.90625,\"tgH\":20,\"targetExists\":true,\"overlayVisible\":true}\n"
-                        },
-                        {
-                          "text": "  T3 PASS: 3 passos verificados, SF page aberta, módulos iluminados.\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-19T09:35:24.073Z",
-                      "annotations": [],
-                      "attachments": []
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\test-results\\architect-ARCH-16-Pacote-C-4f111--desativa-textarea-populado-chromium\\error-context.md"
                     }
                   ],
-                  "status": "expected"
-                }
-              ],
-              "id": "c6feda596617fc36bc86-973f05a5d27c1b3db83a",
-              "file": "manual-verification.spec.mjs",
-              "line": 691,
-              "column": 3
-            },
-            {
-              "title": "T5 — Agentes Extras: spotlight cobre .vc-reserve-modes e .vc-reserve-tags",
-              "ok": true,
-              "tags": [],
-              "tests": [
+                  "errorLocation": {
+                    "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                    "column": 19,
+                    "line": 45
+                  }
+                },
                 {
-                  "timeout": 60000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
+                  "workerIndex": 5,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 37549,
+                  "error": {
+                    "message": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n",
+                    "stack": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n\n    at waitForArchitectPanel (C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:45:19)\n    at C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:144:3",
+                    "location": {
+                      "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                      "column": 19,
+                      "line": 45
+                    },
+                    "snippet": "\u001b[0m \u001b[90m 43 |\u001b[39m   \u001b[90m// The Architect toggle is hidden until _backendConnected=true (health check)\u001b[39m\n \u001b[90m 44 |\u001b[39m   \u001b[36mconst\u001b[39m toggleBtn \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'#vcSfArchitectToggleBtn'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 45 |\u001b[39m   \u001b[36mawait\u001b[39m toggleBtn\u001b[33m.\u001b[39mwaitFor({ state\u001b[33m:\u001b[39m \u001b[32m'visible'\u001b[39m\u001b[33m,\u001b[39m timeout\u001b[33m:\u001b[39m \u001b[35m35\u001b[39m_000 })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                   \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 46 |\u001b[39m\n \u001b[90m 47 |\u001b[39m   \u001b[90m// ── Enable Architect mode ──────────────────────────────────────────────────\u001b[39m\n \u001b[90m 48 |\u001b[39m   \u001b[36mawait\u001b[39m toggleBtn\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\u001b[0m"
+                  },
+                  "errors": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 11803,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "[LOCAL BUNDLE] lido: C:\\Users\\imadechumbo\\Desktop\\vision-core\\frontend\\assets\\vision-core-bundle.js (471354 bytes)\n"
-                        },
-                        {
-                          "text": "  T5 p0 (agentsBoard): {\"spotW\":682,\"spotH\":1130.15625,\"spotTop\":-205,\"spotLeft\":254,\"tgTop\":-191,\"tgLeft\":268,\"tgW\":654,\"tgH\":1102.15625,\"targetExists\":true,\"overlayVisible\":true}\n"
-                        },
-                        {
-                          "text": "  T5 p1 (backend .vc-reserve-modes): {\"spotW\":152.875,\"spotH\":47,\"spotTop\":336.984375,\"spotLeft\":328.453125,\"tgTop\":350.984375,\"tgLeft\":342.453125,\"tgW\":124.875,\"tgH\":19,\"targetExists\":true,\"overlayVisible\":true}\n"
-                        },
-                        {
-                          "text": "  T5 p2 (backend .vc-reserve-tags): {\"spotW\":199.328125,\"spotH\":45.25,\"spotTop\":337.484375,\"spotLeft\":282,\"tgTop\":351.484375,\"tgLeft\":296,\"tgW\":171.328125,\"tgH\":17.25,\"targetExists\":true,\"overlayVisible\":true}\n"
-                        },
-                        {
-                          "text": "  T5 PASS: 3 passos verificados, modos e tags do card backend iluminados.\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-19T09:35:35.572Z",
-                      "annotations": [],
-                      "attachments": []
+                      "location": {
+                        "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                        "column": 19,
+                        "line": 45
+                      },
+                      "message": "TimeoutError: locator.waitFor: Timeout 35000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#vcSfArchitectToggleBtn') to be visible\u001b[22m\n\n\n  43 |   // The Architect toggle is hidden until _backendConnected=true (health check)\n  44 |   const toggleBtn = page.locator('#vcSfArchitectToggleBtn');\n> 45 |   await toggleBtn.waitFor({ state: 'visible', timeout: 35_000 });\n     |                   ^\n  46 |\n  47 |   // ── Enable Architect mode ──────────────────────────────────────────────────\n  48 |   await toggleBtn.click();\n    at waitForArchitectPanel (C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:45:19)\n    at C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs:144:3"
                     }
                   ],
-                  "status": "expected"
-                }
-              ],
-              "id": "c6feda596617fc36bc86-980843e3cdbf7c08d4b9",
-              "file": "manual-verification.spec.mjs",
-              "line": 723,
-              "column": 3
-            },
-            {
-              "title": "T6 — PASS GOLD: passo Auto-merge ilumina #policyBtn (não #githubPanel)",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 60000,
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 1,
+                  "startTime": "2026-06-23T12:44:49.628Z",
                   "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
+                  "attachments": [
                     {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 17334,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "[LOCAL BUNDLE] lido: C:\\Users\\imadechumbo\\Desktop\\vision-core\\frontend\\assets\\vision-core-bundle.js (471354 bytes)\n"
-                        },
-                        {
-                          "text": "  T6 p3 (githubPanel): {\"spotW\":682,\"spotH\":191.875,\"spotTop\":263.890625,\"spotLeft\":254,\"tgTop\":277.890625,\"tgLeft\":268,\"tgW\":654,\"tgH\":163.875,\"targetExists\":true,\"overlayVisible\":true}\n"
-                        },
-                        {
-                          "text": "  T6 p4 (policyBtn): {\"spotW\":162.8125,\"spotH\":66,\"spotTop\":326.765625,\"spotLeft\":552.078125,\"tgTop\":340.765625,\"tgLeft\":566.078125,\"tgW\":134.8125,\"tgH\":38,\"targetExists\":true,\"overlayVisible\":true}\n"
-                        },
-                        {
-                          "text": "  T6 PASS: #policyBtn iluminado (w=163px), não o painel inteiro.\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-19T09:35:47.398Z",
-                      "annotations": [],
-                      "attachments": []
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\test-results\\architect-ARCH-16-Pacote-C-4f111--desativa-textarea-populado-chromium-retry1\\error-context.md"
                     }
                   ],
-                  "status": "expected"
+                  "errorLocation": {
+                    "file": "C:\\Users\\imadechumbo\\Desktop\\vision-core\\tests\\e2e\\architect.spec.mjs",
+                    "column": 19,
+                    "line": 45
+                  }
                 }
               ],
-              "id": "c6feda596617fc36bc86-2fe8ee96f78ed71eb8e1",
-              "file": "manual-verification.spec.mjs",
-              "line": 755,
-              "column": 3
+              "status": "unexpected"
             }
-          ]
-        },
-        {
-          "title": "§119 — Menu de tutoriais funciona mesmo após vc_tutorial_done=1",
-          "file": "manual-verification.spec.mjs",
-          "line": 802,
-          "column": 6,
-          "specs": [
-            {
-              "title": "1 — Bug reproduzido+corrigido: vcStartSectionTutorial funciona com vc_tutorial_done=1",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 2742,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "[LOCAL BUNDLE] lido: C:\\Users\\imadechumbo\\Desktop\\vision-core\\frontend\\assets\\vision-core-bundle.js (471354 bytes)\n"
-                        },
-                        {
-                          "text": "  §119 overlay state: {\"display\":\"block\",\"hasActive\":true,\"titleText\":\"◈ Bem-vindo à Software Factory\"}\n"
-                        },
-                        {
-                          "text": "  §119 PASS: overlay visível após clicar no menu com vc_tutorial_done=1 (bug corrigido).\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-19T09:36:04.752Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "c6feda596617fc36bc86-1c091e9b440873db6d87",
-              "file": "manual-verification.spec.mjs",
-              "line": 824,
-              "column": 3
-            },
-            {
-              "title": "2 — Persistência por tutorial: fechar SF tutorial grava vc_tutorial_sf_done, não vc_tutorial_done",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 8447,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "[LOCAL BUNDLE] lido: C:\\Users\\imadechumbo\\Desktop\\vision-core\\frontend\\assets\\vision-core-bundle.js (471354 bytes)\n"
-                        },
-                        {
-                          "text": "  §119 storage keys after close: {\"sfKey\":\"1\",\"t1Key\":\"1\"}\n"
-                        },
-                        {
-                          "text": "  §119 agents key: 1\n"
-                        },
-                        {
-                          "text": "  §119 PASS: cada tutorial de seção grava na própria chave ao fechar.\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-19T09:36:07.525Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "c6feda596617fc36bc86-570947eed223b08144f7",
-              "file": "manual-verification.spec.mjs",
-              "line": 856,
-              "column": 3
-            },
-            {
-              "title": "3 — Regressão T1: sem flag, tutorial geral ainda auto-abre após 1500ms",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 10000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 2569,
-                      "errors": [],
-                      "stdout": [
-                        {
-                          "text": "[LOCAL BUNDLE] lido: C:\\Users\\imadechumbo\\Desktop\\vision-core\\frontend\\assets\\vision-core-bundle.js (471354 bytes)\n"
-                        },
-                        {
-                          "text": "  §119 T1 auto-start: {\"display\":\"block\",\"active\":true,\"title\":\"👋 Bem-vindo ao Vision Core!\"}\n"
-                        },
-                        {
-                          "text": "  §119 PASS: T1 ainda auto-abre sem vc_tutorial_done (regressão ok).\n"
-                        }
-                      ],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-06-19T09:36:16.002Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "c6feda596617fc36bc86-0d56f8fd56453b416ac4",
-              "file": "manual-verification.spec.mjs",
-              "line": 905,
-              "column": 3
-            }
-          ]
+          ],
+          "id": "ef323c489495a7052bef-ef2481b02d4412e7f673",
+          "file": "architect.spec.mjs",
+          "line": 141,
+          "column": 1
         }
       ]
     }
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-06-19T09:34:40.802Z",
-    "duration": 97912.098,
-    "expected": 10,
+    "startTime": "2026-06-23T12:41:30.944Z",
+    "duration": 236509.384,
+    "expected": 0,
     "skipped": 0,
-    "unexpected": 0,
+    "unexpected": 3,
     "flaky": 0
   }
 }

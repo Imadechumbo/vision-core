@@ -1,29 +1,30 @@
-"""Deploy §89 — tutorial + quota endpoints"""
+"""Deploy §184 — OpenRouter como primeiro provider em callLLM"""
 import zipfile, subprocess, sys, io
 from pathlib import Path
 
 ROOT       = Path('C:/Users/imadechumbo/Desktop/vision-core')
 BACKEND    = ROOT / 'backend'
 APP_VERS   = BACKEND / '.elasticbeanstalk' / 'app_versions'
-LATEST_ZIP = APP_VERS / 'vision-core-v5.9.4-s88.zip'
-NEW_ZIP    = APP_VERS / 'vision-core-v5.9.5-s89.zip'
+LATEST_ZIP = APP_VERS / 'vision-core-v5.9.53-s183.zip'
+NEW_ZIP    = APP_VERS / 'vision-core-v5.9.54-s184.zip'
 SERVER_SRC = BACKEND / 'server.js'
 S3_BUCKET  = 'elasticbeanstalk-us-east-1-374894298219'
-S3_KEY     = 'vision-core-v5.9.5-s89.zip'
+S3_KEY     = 'vision-core-v5.9.54-s184.zip'
 APP_NAME   = 'vision-core'
 ENV_NAME   = 'vision-core-prod'
 REGION     = 'us-east-1'
-VER_LABEL  = 'v5.9.5-s89-tutorial-quota'
+VER_LABEL  = 'v5.9.54-s184-openrouter-first-provider'
 
 print('Reading server.js...')
 with open(SERVER_SRC, encoding='utf-8') as f:
     new_server = f.read().encode('utf-8')
 print(f'  size: {len(new_server):,} bytes')
 
-assert b'mission_quota_exceeded' in new_server, 'ERROR: quota check not found'
-assert b'/api/mission/quota' in new_server, 'ERROR: quota endpoint not found'
-assert b'checkMissionQuota' in new_server, 'ERROR: quota middleware not found'
-print('  OK: quota middleware + endpoint present')
+assert b"id: 'openrouter'" in new_server, 'ERROR: openrouter provider not found in callLLM'
+assert b"anthropic/claude-haiku-4-5" in new_server, 'ERROR: claude-haiku-4-5 model not found'
+assert b"HTTP-Referer" in new_server, 'ERROR: HTTP-Referer header not found'
+assert b"resolveApiKey('OPENROUTER')" in new_server, 'ERROR: OPENROUTER key not resolved'
+print('  OK: §184 OpenRouter first provider in callLLM present')
 
 print('Building zip...')
 buf = io.BytesIO()
