@@ -4206,8 +4206,9 @@ app.get('/api/sf/job/:id', (req, res) => {
   return sendOk(res, {
     job_id:   req.params.id,
     status:   job.status,
-    result:   job.result ? job.result.result   : null,
-    provider: job.result ? job.result.provider : null,
+    result:   job.result ? (job.result.result   ?? null) : null,
+    files:    job.result ? (job.result.files    ?? null) : null, // §187 — project-files expõe files[]
+    provider: job.result ? job.result.provider  : null,
     error:    job.error,
     anti_stub: true
   });
