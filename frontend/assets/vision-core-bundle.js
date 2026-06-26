@@ -8931,17 +8931,18 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
     // §161 — Auto-Pilot: executa 7 módulos SF em sequência com Promise chain
     function runSfAutoPilot(projectDescription) {
-      var apBtn    = document.getElementById('vcSfAutoPilotBtn');
+      // §164-fix: apBtn agora pode ser vcSfSendBtn (nova UI) ou vcSfAutoPilotBtn (legado)
+      var apBtn    = document.getElementById('vcSfSendBtn') || document.getElementById('vcSfAutoPilotBtn');
       var progress = document.getElementById('vcSfAutoPilotProgress');
       var statusEl = document.getElementById('vcSfAutoPilotStatus');
       var stepsEl  = document.getElementById('vcSfAutoPilotSteps');
       var resultEl = document.getElementById('vcSfAutoPilotResult');
-      if (!apBtn || !progress) return;
+      if (!progress) return;
 
-      apBtn.disabled = true;
+      if (apBtn) apBtn.disabled = true;
       progress.style.display = 'block';
       stepsEl.innerHTML = '';
-      resultEl.style.display = 'none';
+      if (resultEl) resultEl.style.display = 'none';
 
       var stepEls = {};
       SF_AUTOPILOT_STEPS.forEach(function(step) {
@@ -8957,13 +8958,19 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
       function runStep(idx) {
         if (idx >= SF_AUTOPILOT_STEPS.length) {
-          statusEl.textContent = '✅ Auto-Pilot concluído! Pacote completo gerado.';
+          statusEl.textContent = '✅ Auto-Pilot concluído!';
+          if (apBtn) apBtn.disabled = false;
+          // §164-fix: esconder progress panel, inserir resultado no histórico
           if (finalPackage) {
-            resultEl.style.display = 'block';
-            if (finalPackage.length <= 2000) { vcSfTypewriter(resultEl, finalPackage); }
-            else { resultEl.textContent = finalPackage; }
+            progress.style.display = 'none';
+            var msgEl = addSfChatMsg('assistant', '');
+            if (msgEl) {
+              if (finalPackage.length <= 2000) { vcSfTypewriter(msgEl, finalPackage); }
+              else { msgEl.textContent = finalPackage; }
+            }
+            var hist = document.getElementById('vcSfChatHistory');
+            if (hist) hist.scrollTop = hist.scrollHeight;
           }
-          apBtn.disabled = false;
           return;
         }
         var step = SF_AUTOPILOT_STEPS[idx];
@@ -8997,7 +9004,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           el.className = 'vc-sf-autopilot-step error';
           el.querySelector('.sfap-icon').textContent = '❌';
           statusEl.textContent = '⚠ Erro em: ' + step.label + ' — ' + (e && e.message ? e.message : String(e));
-          apBtn.disabled = false;
+          if (apBtn) apBtn.disabled = false;
+          progress.style.display = 'none'; // §164-fix: esconder progress em erro também
         });
       }
 
