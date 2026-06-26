@@ -8967,14 +8967,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             progress.style.display = 'none';
             var msgEl = addSfChatMsg('assistant', '');
             if (msgEl) {
-              if (finalPackage.length <= 2000) { vcSfTypewriter(msgEl, finalPackage); }
-              else { msgEl.textContent = finalPackage; }
+              vcSfTypewriter(msgEl, finalPackage); // §168: sempre typewriter, sem limite
             }
-            // §167: scroll com delay para DOM atualizar após typewriter
-            setTimeout(function() {
-              var hist = document.getElementById('vcSfChatHistory');
-              if (hist) hist.scrollTop = hist.scrollHeight;
-            }, 200);
+            // scroll via typewriter interno (§168)
           }
           return;
         }
@@ -9032,25 +9027,35 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       });
     }
     // §163/§164/§165 — typewriter: animação char-by-char, markdown no final
+    // §168 — typewriter robusto: isConnected check + speed variável + chunk + scroll correto
     function vcSfTypewriter(el, text) {
+      if (!el || !text) return;
       el.textContent = '';
       el.classList.remove('vc-typewriter-done');
       el.classList.add('vc-typewriter-active');
       var i = 0;
+      var speed = text.length > 500 ? 5 : 12;
       function tick() {
+        if (!el.isConnected) return; // elemento saiu do DOM — parar silenciosamente
         if (i < text.length) {
-          el.textContent += text[i]; // texto simples durante animação
-          i++;
-          el.scrollTop = el.scrollHeight;
-          setTimeout(tick, 12);
+          var chunkSize = text.length > 1000 ? 5 : 1;
+          el.textContent += text.slice(i, i + chunkSize);
+          i += chunkSize;
+          // scroll via ancestral correto (não el.scrollTop que não tem overflow)
+          var hist = el.closest('.vc-sf-chat-history') || el.parentElement;
+          if (hist) hist.scrollTop = hist.scrollHeight;
+          setTimeout(tick, speed);
         } else {
-          // §165: renderizar markdown completo no final
-          el.innerHTML = sfMarkdownToHtml(text);
+          el.innerHTML = sfMarkdownToHtml(text); // markdown completo no final
           el.classList.remove('vc-typewriter-active');
           el.classList.add('vc-typewriter-done');
+          setTimeout(function() {
+            var hist = document.getElementById('vcSfChatHistory');
+            if (hist) hist.scrollTop = hist.scrollHeight;
+          }, 100);
         }
       }
-      setTimeout(tick, 50);
+      setTimeout(tick, 30);
     }
 
     // §163 — mode tabs: 🚀 AUTO-PILOT ↔ ⚙ MODO AVANÇADO
@@ -9146,8 +9151,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         var reply = data.content || data.result || data.mission || (data.error ? '❌ ' + data.error : 'Sem resposta.');
         var msgEl = addSfChatMsg('assistant', '');
         if (msgEl) {
-          if (reply.length <= 3000) { vcSfTypewriter(msgEl, reply); }
-          else { msgEl.innerHTML = sfMarkdownToHtml(reply); }
+          vcSfTypewriter(msgEl, reply); // §168: sempre typewriter, sem limite
         }
         var hist = document.getElementById('vcSfChatHistory');
         if (hist) hist.scrollTop = hist.scrollHeight;
