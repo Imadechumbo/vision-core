@@ -8946,6 +8946,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       var _s170hist = document.getElementById('vcSfChatHistory');
       if (_s170hist && progress.parentNode !== _s170hist) { _s170hist.appendChild(progress); }
       progress.style.display = 'block';
+      // §186 — BUG 2: resetar display de stepsEl/statusEl (primeiro run deixa display:none)
+      stepsEl.style.display = '';
+      statusEl.style.display = '';
       stepsEl.innerHTML = '';
       if (resultEl) resultEl.style.display = 'none';
 
