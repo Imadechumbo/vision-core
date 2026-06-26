@@ -9362,6 +9362,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     }
 
     // §166 — Arquiteto restaurado: MODO AVANÇADO usa /api/sf/mission-composer
+    // §186 — BUG 4: adiciona polling job_id (§185 tornou mission-composer assíncrona)
     function sendSfChatMessage(text) {
       var tok = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return ''; } })() || '';
       var _base = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
@@ -9373,6 +9374,31 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {
+        // §186 BUG 4: resposta async (job_id) — §185 tornou mission-composer assíncrona
+        if (data.job_id && data.status === 'pending') {
+          var _pStart = Date.now();
+          var _pTimer = setInterval(function() {
+            if (Date.now() - _pStart > 90000) {
+              clearInterval(_pTimer);
+              if (typingEl && typingEl.parentNode) { typingEl.textContent = '⚠ Arquiteto demorou demais. Tente novamente.'; }
+              return;
+            }
+            fetch(_base + '/api/sf/job/' + data.job_id, { headers: { 'Authorization': tok ? 'Bearer ' + tok : '' } })
+            .then(function(r2) { return r2.json(); })
+            .then(function(job) {
+              if (job.status === 'done' || job.status === 'error') {
+                clearInterval(_pTimer);
+                if (typingEl && typingEl.parentNode) { typingEl.parentNode.removeChild(typingEl); }
+                var reply = (job.status === 'done' && job.result) ? job.result : (job.error ? '❌ ' + job.error : 'Sem resposta.');
+                var msgEl = addSfChatMsg('assistant', '');
+                if (msgEl) { vcSfTypewriter(msgEl, reply); }
+              }
+            })
+            .catch(function() { /* falha de rede — tentar próximo poll */ });
+          }, 2000);
+          return;
+        }
+        // resposta síncrona (fallback)
         if (typingEl && typingEl.parentNode) typingEl.parentNode.removeChild(typingEl);
         var reply = data.content || data.result || data.mission || (data.error ? '❌ ' + data.error : 'Sem resposta.');
         var msgEl = addSfChatMsg('assistant', '');
