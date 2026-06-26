@@ -9108,7 +9108,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             var hist = document.getElementById('vcSfChatHistory');
             if (hist) {
               hist.appendChild(resultDiv);
-              setTimeout(function() { hist.scrollTop = hist.scrollHeight; }, 150);
+              // §186 — BUG 1: scrollIntoView no INÍCIO do resultado (setTimeout→bottom era o bug)
+              requestAnimationFrame(function() {
+                resultDiv.scrollIntoView({ block: 'start', behavior: 'smooth' });
+              });
             } else if (progress && progress.parentNode) {
               progress.parentNode.appendChild(resultDiv);
             }
