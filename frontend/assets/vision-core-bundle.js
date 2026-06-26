@@ -8940,6 +8940,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       if (!progress) return;
 
       if (apBtn) apBtn.disabled = true;
+      // §167: Arquiteto anuncia início no histórico
+      addSfChatMsg('assistant', '🏛️ Arquiteto analisando seu projeto e iniciando os 7 módulos...');
       progress.style.display = 'block';
       stepsEl.innerHTML = '';
       if (resultEl) resultEl.style.display = 'none';
@@ -8968,8 +8970,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               if (finalPackage.length <= 2000) { vcSfTypewriter(msgEl, finalPackage); }
               else { msgEl.textContent = finalPackage; }
             }
-            var hist = document.getElementById('vcSfChatHistory');
-            if (hist) hist.scrollTop = hist.scrollHeight;
+            // §167: scroll com delay para DOM atualizar após typewriter
+            setTimeout(function() {
+              var hist = document.getElementById('vcSfChatHistory');
+              if (hist) hist.scrollTop = hist.scrollHeight;
+            }, 200);
           }
           return;
         }
@@ -10399,28 +10404,29 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   window.vcRegisterTutorial('sf', STEPS_SF, 'vc_tutorial_sf_done');
 
   // ── §162: TUTORIAL SF GUIA AUTO-PILOT (para leigos) ──
+  // §167: STEPS_SF2 atualizado — targets para elementos visíveis na nova UI
   var STEPS_SF2 = [
-    { title: '🏭 Software Factory — o que é?',
-      text: 'Transforma sua ideia em projeto estruturado em minutos. Descreva em linguagem livre — o sistema cuida do resto. 9 módulos de IA do planejamento até o pacote de deploy.',
-      target: '#vcSfHomeBtn', pos: 'bottom', onEnter: _sfOnEnter(null) },
-    { title: '✍️ Passo 1 — Descreva seu projeto',
-      text: 'Digite aqui o que quer construir. Pode ser simples: "quero um app de delivery" ou "API para gerenciar estoque". Sem jargão técnico — linguagem livre.',
+    { title: '🏭 Software Factory — seu assistente de projetos',
+      text: 'Descreva qualquer ideia de projeto em linguagem simples. O Arquiteto analisa e gera tudo automaticamente — stack, arquivos, missão e pacote de deploy.',
+      target: '#vcSfHomeControl', pos: 'center', onEnter: _sfOnEnter(null) },
+    { title: '✍️ Descreva seu projeto aqui',
+      text: 'Digite em linguagem livre: "quero um app de delivery", "uma API para gerenciar estoque", ou cole uma URL para o Arquiteto analisar o site de referência.',
       target: '#vcSfChatInput', pos: 'top', onEnter: _sfOnEnter(null) },
-    { title: '▶ Passo 2 — AUTO-PILOT (recomendado)',
-      text: 'Clique em AUTO-PILOT e o sistema executa 7 etapas automaticamente: analisa sua ideia, sugere a stack, gera templates, compõe missões e entrega um pacote completo para o worker.',
-      target: '#vcSfAutoPilotBtn', pos: 'top', onEnter: _sfOnEnter(null) },
-    { title: '🔢 Os 7 módulos em sequência',
-      text: '01 Sugere stack → 02 Lista arquivos → 03 Aplica template → 04 Compõe missão SDDF → 05 Gera pacote worker → 06 Comando de criação real (EXTERNAL ONLY) → 07 Validação Gold Gate. O Auto-Pilot roda todos automaticamente.',
-      target: '[data-sf-module="project_builder"]', pos: 'bottom', onEnter: _sfOnEnter(null) },
-    { title: '🔧 Modo manual (avançado)',
-      text: 'Prefere controle total? Navegue pelos módulos individualmente usando este menu. Cada módulo pode ser executado separado — útil para ajustar etapas específicas.',
-      target: '.vc-sf-module-nav-h', pos: 'bottom', onEnter: _sfOnEnter(null) },
-    { title: '🏅 Gold Gate — qualidade garantida',
-      text: 'O módulo 07 valida segurança, risco e qualidade antes de qualquer entrega — mesmo padrão PASS GOLD. Só passa o que é seguro executar por um worker externo.',
-      target: '[data-sf-module="worker_receipt"]', pos: 'bottom', onEnter: _sfOnEnter(null) },
-    { title: '✅ Pronto para começar!',
-      text: 'Digite sua ideia no campo de texto e clique em AUTO-PILOT. Em segundos você terá um projeto estruturado e pronto para ser executado por um worker.',
-      target: '#vcSfAutoPilotBtn', pos: 'top', onEnter: _sfOnEnter(null) },
+    { title: '🚀 Aba AUTO-PILOT — modo automático',
+      text: 'Com AUTO-PILOT ativo, ao enviar sua descrição o Arquiteto executa 7 módulos em sequência: analisa stack, gera blueprint, compõe missão SDDF e valida no Gold Gate.',
+      target: '#vcSfTabAutopilot', pos: 'bottom', onEnter: _sfOnEnter(null) },
+    { title: '⚙ Aba MODO AVANÇADO — controle manual',
+      text: 'Com MODO AVANÇADO, o Arquiteto responde diretamente ao seu prompt. Use para ajustes específicos, perguntas técnicas ou para navegar pelos 9 módulos individualmente.',
+      target: '#vcSfTabAdvanced', pos: 'bottom', onEnter: _sfOnEnter(null) },
+    { title: '📋 Chips de exemplo — clique para preencher',
+      text: 'Não sabe por onde começar? Clique em um dos exemplos abaixo do chat — o Arquiteto preenche a descrição automaticamente.',
+      target: '#vcSfExamples', pos: 'top', onEnter: _sfOnEnter(null) },
+    { title: '↑ Enviar e ver resultado no chat',
+      text: 'Pressione Enter ou clique em ↑. No AUTO-PILOT, o Arquiteto anuncia o início e o resultado aparece no histórico do chat. No MODO AVANÇADO, responde diretamente.',
+      target: '#vcSfSendBtn', pos: 'top', onEnter: _sfOnEnter(null) },
+    { title: '✅ Pronto! Descreva e envie',
+      text: 'Digite aqui embaixo e pressione ↑ ou Enter. O Arquiteto responde em segundos com análise completa, stack sugerida e pacote pronto para execução.',
+      target: '#vcSfChatInput', pos: 'top', onEnter: _sfOnEnter(null) },
   ];
   window.vcRegisterTutorial('sf2', STEPS_SF2, 'vc_tutorial_sf2_done');
 
