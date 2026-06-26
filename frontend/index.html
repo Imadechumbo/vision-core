@@ -31,6 +31,23 @@
 /* §162 — Tutorial SF trigger */
 .vc-sf-tutorial-trigger{padding:5px 12px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.4);border-radius:6px;color:#c4b5fd;font-size:.78rem;font-weight:600;cursor:pointer;transition:background .2s;white-space:nowrap;}
 .vc-sf-tutorial-trigger:hover{background:rgba(124,58,237,.3);}
+/* §163 — SF mode tabs */
+.vc-sf-mode-tabs{display:flex;gap:4px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:3px;}
+.vc-sf-mode-tab{padding:6px 16px;border:none;border-radius:6px;font-size:.8rem;font-weight:600;cursor:pointer;color:#64748b;background:transparent;transition:all .2s;letter-spacing:.04em;}
+.vc-sf-mode-tab.active{background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;}
+.vc-sf-mode-tab:hover:not(.active){color:#c4b5fd;background:rgba(124,58,237,.1);}
+/* §163 — example chips */
+.vc-sf-examples{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;}
+.vc-sf-example-chip{padding:6px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;color:#94a3b8;font-size:.8rem;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.vc-sf-example-chip:hover{background:rgba(124,58,237,.15);border-color:rgba(124,58,237,.4);color:#c4b5fd;}
+/* §163 — SF chat input */
+#vcSfChatInput{background:#1e1e2e!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:10px!important;color:#e2d9f3!important;transition:border-color .2s;}
+#vcSfChatInput:focus{border-color:rgba(124,58,237,.6)!important;outline:none!important;box-shadow:0 0 0 2px rgba(124,58,237,.15)!important;}
+#vcSfChatInput::placeholder{color:#4a5568!important;font-style:italic;}
+/* §163 — typewriter cursor */
+.vc-typewriter-active::after{content:'▋';animation:vcBlink .7s infinite;color:#7c3aed;font-size:.9em;}
+@keyframes vcBlink{0%,100%{opacity:1}50%{opacity:0}}
+.vc-typewriter-done::after{content:none}
 .v299-obsidian-btn.active{color:#22c55e!important;border-color:#22c55e!important;}
 /* §89 TUTORIAL */
 .vc-tutorial-overlay{position:fixed;inset:0;z-index:99999;pointer-events:none;transition:opacity .3s;display:none}
@@ -2209,6 +2226,11 @@
       <p class="vc-sf-eyebrow">SOFTWARE FACTORY • PROJECT BUILDER • AGENT ORCHESTRATION</p>
       <h1 class="vc-sf-title">MONTAR PROJETO DO ZERO</h1>
     </div>
+    <!-- §163 — mode tabs -->
+    <div class="vc-sf-mode-tabs" id="vcSfModeTabs">
+      <button id="vcSfTabAutopilot" class="vc-sf-mode-tab active" type="button">🚀 AUTO-PILOT</button>
+      <button id="vcSfTabAdvanced" class="vc-sf-mode-tab" type="button">⚙ MODO AVANÇADO</button>
+    </div>
     <span class="vc-sf-local-badge">LOCAL PREVIEW</span>
     <button id="vcSfTutorialBtn" class="vc-sf-tutorial-trigger" type="button">❓ TUTORIAL</button>
   </div>
@@ -2400,6 +2422,13 @@
           <button class="vc-sf-action-btn" data-sf-fill="briefing"  type="button">📋 Importar briefing</button>
           <button class="vc-sf-action-btn" data-sf-fill="exemplos"  type="button">🗂️ Ver exemplos de projetos</button>
           <button class="vc-sf-action-btn primary" id="vcSfStartBtn" type="button">▶ INICIAR MONTAGEM DO PROJETO</button>
+        </div>
+
+        <!-- §163 — example chips -->
+        <div class="vc-sf-examples" id="vcSfExamples">
+          <button class="vc-sf-example-chip" data-example="Quero um app de tarefas com login, lista de tarefas e notificações por email. Stack: Node.js + React." type="button">📱 App de tarefas</button>
+          <button class="vc-sf-example-chip" data-example="Quero uma API REST para gerenciar estoque de uma loja. Preciso de CRUD de produtos, categorias e relatórios. Stack: Python + FastAPI." type="button">🛒 API de estoque</button>
+          <button class="vc-sf-example-chip" data-example="Quero um site de validação de provas online com cadastro de alunos, upload de gabaritos e correção automática. Stack: Node.js + HTML/CSS." type="button">📝 Plataforma de provas</button>
         </div>
 
         <!-- §161 — Auto-Pilot -->

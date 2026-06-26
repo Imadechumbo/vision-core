@@ -8958,7 +8958,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       function runStep(idx) {
         if (idx >= SF_AUTOPILOT_STEPS.length) {
           statusEl.textContent = '✅ Auto-Pilot concluído! Pacote completo gerado.';
-          if (finalPackage) { resultEl.style.display = 'block'; resultEl.textContent = finalPackage; }
+          if (finalPackage) {
+            resultEl.style.display = 'block';
+            if (finalPackage.length <= 2000) { vcSfTypewriter(resultEl, finalPackage); }
+            else { resultEl.textContent = finalPackage; }
+          }
           apBtn.disabled = false;
           return;
         }
@@ -9014,7 +9018,67 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         runSfAutoPilot(desc);
       });
     }
+    // §163 — typewriter para result panel do Auto-Pilot
+    function vcSfTypewriter(el, text) {
+      el.textContent = '';
+      el.classList.add('vc-typewriter-active');
+      var i = 0; var chunk = 3;
+      var prog = document.getElementById('vcSfAutoPilotProgress');
+      function tick() {
+        if (i < text.length) {
+          el.textContent += text.slice(i, i + chunk);
+          i += chunk;
+          if (prog) prog.scrollTop = prog.scrollHeight;
+          setTimeout(tick, 10);
+        } else {
+          el.classList.remove('vc-typewriter-active');
+          el.classList.add('vc-typewriter-done');
+        }
+      }
+      tick();
+    }
+
+    // §163 — mode tabs: 🚀 AUTO-PILOT ↔ ⚙ MODO AVANÇADO
+    function initSfModeTabs() {
+      var tabAuto   = document.getElementById('vcSfTabAutopilot');
+      var tabAdv    = document.getElementById('vcSfTabAdvanced');
+      var moduleNav = sfPage.querySelector('.vc-sf-module-nav-h');
+      if (!tabAuto || !tabAdv) return;
+      // Default: AUTO-PILOT — hide module nav
+      if (moduleNav) moduleNav.style.display = 'none';
+      tabAuto.addEventListener('click', function() {
+        tabAuto.classList.add('active');
+        tabAdv.classList.remove('active');
+        if (moduleNav) moduleNav.style.display = 'none';
+        _sfShowHome();
+      });
+      tabAdv.addEventListener('click', function() {
+        tabAdv.classList.add('active');
+        tabAuto.classList.remove('active');
+        if (moduleNav) moduleNav.style.display = '';
+        _sfShowHome();
+      });
+    }
+
+    // §163 — example chips → fill vcSfChatInput
+    function initSfExampleChips() {
+      var chips = sfPage.querySelectorAll('.vc-sf-example-chip');
+      chips.forEach(function(chip) {
+        chip.addEventListener('click', function() {
+          var inp = document.getElementById('vcSfChatInput');
+          if (inp) {
+            inp.value = chip.getAttribute('data-example');
+            inp.focus();
+            var apBtn = document.getElementById('vcSfAutoPilotBtn');
+            if (apBtn) apBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+      });
+    }
+
     initSfAutoPilot(); // §161
+    initSfModeTabs();  // §163
+    initSfExampleChips(); // §163
 
     // §162 — Tutorial SF (❓ TUTORIAL button → sf2)
     function initSfTutorial() {
