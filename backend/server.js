@@ -4301,6 +4301,7 @@ function _extractFilesJson(text) {
 
 // §183 — SF project-files: assíncrono (mesmo padrão §182) — retorna job_id imediato
 // §189 — parsing robusto + retry automático (até 1 retry) quando LLM retorna JSON inválido
+// §190 — prompts aprimorados: código funcional real, 12 arquivos, estrutura completa
 app.post('/api/sf/project-files', (req, res) => {
   const body = normalizeBody(req);
   const description = String(body.description || '').slice(0, 800);
@@ -4308,19 +4309,19 @@ app.post('/api/sf/project-files', (req, res) => {
   const jobId = `sfj-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   sfJobs.set(jobId, { status: 'pending', result: null, error: null, ts: Date.now() });
   // Background — sem await
-  const PROMPT1 = `Você é um arquiteto de software. Para o projeto: "${description}"\n\nGere uma estrutura de arquivos realista com conteúdo. Responda APENAS com JSON válido:\n{"files":[{"name":"caminho/arquivo.ext","content":"conteúdo completo do arquivo"}]}\nMáximo 8 arquivos. Inclua package.json ou equivalente, README.md, e arquivos principais do projeto.`;
-  const PROMPT2 = `Projeto: "${description.slice(0, 200)}"\n\nJSON EXATO sem texto adicional:\n{"files":[{"name":"arquivo.ext","content":"código"}]}\nMáximo 5 arquivos simples.`;
+  const PROMPT1 = `Você é um arquiteto de software sênior. Para o projeto: "${description}"\n\nGere uma estrutura de arquivos COMPLETA e FUNCIONAL. Responda APENAS com JSON válido:\n{"files":[{"name":"caminho/arquivo.ext","content":"conteúdo completo do arquivo"}]}\n\nREQUISITOS OBRIGATÓRIOS:\n- Máximo 12 arquivos\n- Código funcional real (ZERO comentários TODO, ZERO placeholders como "// implementar aqui")\n- Inclua obrigatoriamente: package.json (com dependências reais e scripts npm), README.md, .env.example\n- Inclua rotas de API reais (Express.js com handlers completos, não vazios)\n- Inclua schema de banco de dados real (SQL CREATE TABLE ou Mongoose Schema com campos reais)\n- Inclua lógica de negócio real (validações, transformações, queries reais)\n- Use estrutura de pastas: src/routes/, src/models/, src/middleware/, src/controllers/ quando aplicável\n- Se o projeto precisar de autenticação: implemente JWT com jsonwebtoken (signup + login + middleware)\n- Se o projeto precisar de upload de arquivos: implemente com multer (rota POST com diskStorage configurado)\n- Se o projeto precisar de relatório PDF: implemente com pdfkit ou puppeteer\n- Cada arquivo deve ter pelo menos 15 linhas de código real`;
+  const PROMPT2 = `Projeto: "${description.slice(0, 300)}"\n\nJSON EXATO sem texto adicional. Código funcional real, zero TODOs:\n{"files":[{"name":"arquivo.ext","content":"código completo e funcional"}]}\nMáximo 8 arquivos. Inclua package.json e .env.example.`;
   (async () => {
-    const llm1 = await callLLM(PROMPT1, { max_tokens: 4000, timeout_ms: 60000, system: 'Responda APENAS com JSON válido. Sem markdown, sem texto antes ou depois. Sem comentários.' });
+    const llm1 = await callLLM(PROMPT1, { max_tokens: 6000, timeout_ms: 90000, system: 'Responda APENAS com JSON válido. Sem markdown, sem texto antes ou depois. Sem comentários. Gere código funcional real, sem TODOs, sem placeholders.' });
     if (!llm1) { sfJobs.set(jobId, { status: 'error', result: null, error: 'llm_unavailable', ts: Date.now() }); return; }
     let parsed = _extractFilesJson(llm1.text);
     // §189: retry automático se parsing falhar
     if (!parsed) {
-      const llm2 = await callLLM(PROMPT2, { max_tokens: 2000, timeout_ms: 45000, system: 'Responda SOMENTE JSON. Zero texto adicional.' });
+      const llm2 = await callLLM(PROMPT2, { max_tokens: 3000, timeout_ms: 60000, system: 'Responda SOMENTE JSON. Zero texto adicional. Código funcional, zero TODOs.' });
       if (llm2) parsed = _extractFilesJson(llm2.text);
     }
     if (!parsed) { sfJobs.set(jobId, { status: 'error', result: null, error: 'json_parse_failed', ts: Date.now() }); return; }
-    const files = (parsed.files || []).slice(0, 10).map(f => ({ name: String(f.name || 'arquivo.txt'), content: String(f.content || '') }));
+    const files = (parsed.files || []).slice(0, 15).map(f => ({ name: String(f.name || 'arquivo.txt'), content: String(f.content || '') }));
     sfJobs.set(jobId, { status: 'done', result: { files, total: files.length, provider: llm1.provider }, error: null, ts: Date.now() });
   })().catch(e => sfJobs.set(jobId, { status: 'error', result: null, error: e.message, ts: Date.now() }));
   return sendOk(res, { job_id: jobId, status: 'pending', anti_stub: true });
