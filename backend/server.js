@@ -4169,6 +4169,10 @@ Object.keys(SF_GENERATORS).forEach(key => {
     const body = normalizeBody(req);
     const ctx = body.context || body || {};
     ctx.timestamp = ctx.timestamp || now();
+    // §171: extrair nome do projeto da description quando não há ctx.project explícito
+    if (!ctx.project && body.description) {
+      ctx.project = String(body.description).split(/[\n.!?]/)[0].slice(0, 60).trim() || 'projeto';
+    }
     ctx.project = ctx.project || 'visioncore';
     try {
       const result = await SF_GENERATORS[key](ctx);

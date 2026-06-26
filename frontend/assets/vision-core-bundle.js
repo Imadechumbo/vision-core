@@ -8965,14 +8965,16 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         if (idx >= SF_AUTOPILOT_STEPS.length) {
           statusEl.textContent = '✅ Auto-Pilot concluído!';
           if (apBtn) apBtn.disabled = false;
-          // §164-fix: esconder progress panel, inserir resultado no histórico
-          if (finalPackage) {
-            progress.style.display = 'none';
-            var msgEl = addSfChatMsg('assistant', '');
-            if (msgEl) {
-              vcSfTypewriter(msgEl, finalPackage); // §168: sempre typewriter, sem limite
-            }
-            // scroll via typewriter interno (§168)
+          // §171: não esconder progress — mostrar resultado dentro do resultEl
+          if (finalPackage && resultEl) {
+            stepsEl.style.display = 'none';
+            statusEl.style.display = 'none';
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = sfMarkdownToHtml(finalPackage);
+            setTimeout(function() {
+              var hist = document.getElementById('vcSfChatHistory');
+              if (hist) hist.scrollTop = hist.scrollHeight;
+            }, 150);
           }
           return;
         }
@@ -9008,7 +9010,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           el.querySelector('.sfap-icon').textContent = '❌';
           statusEl.textContent = '⚠ Erro em: ' + step.label + ' — ' + (e && e.message ? e.message : String(e));
           if (apBtn) apBtn.disabled = false;
-          progress.style.display = 'none'; // §164-fix: esconder progress em erro também
+          // §171: em erro, manter progress visível com status de erro (não esconder)
         });
       }
 
@@ -9105,6 +9107,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       var safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       return safe
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^\* \[x\]/gim, '✅').replace(/^\* \[ \]/gm, '⬜')
+        .replace(/^- \[x\]/gim, '✅').replace(/^- \[ \]/gm, '⬜')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
         .replace(/\\\[X\\\]/g,'✅').replace(/\\\[-\\\]/g,'🔄').replace(/\\\[\\\]/g,'⬜')
         .replace(/\[X\]/g,'✅').replace(/\[-\]/g,'🔄').replace(/\[\]/g,'⬜')
