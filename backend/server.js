@@ -4279,7 +4279,28 @@ app.post('/api/sf/fetch-url', (req, res) => {
   }
 });
 
+// §189 — extração robusta de JSON para project-files
+// Cobre: fences com/sem "json", CRLF, texto antes/depois, regex fallback
+function _extractFilesJson(text) {
+  // 1) strip fences de todo tipo (```json, ```javascript, ```, com \r\n ou \n)
+  let clean = text.replace(/```[\w]*\r?\n?/g, '').replace(/```/g, '').trim();
+  // 2) tentativa directa
+  try { const p = JSON.parse(clean); if (p && Array.isArray(p.files)) return p; } catch (_) {}
+  // 3) extrair primeiro objeto JSON do texto (ignora texto antes/depois)
+  const objMatch = clean.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    try { const p = JSON.parse(objMatch[0]); if (p && Array.isArray(p.files)) return p; } catch (_) {}
+  }
+  // 4) tentar array direto
+  const arrMatch = clean.match(/\[[\s\S]*\]/);
+  if (arrMatch) {
+    try { const arr = JSON.parse(arrMatch[0]); if (Array.isArray(arr)) return { files: arr }; } catch (_) {}
+  }
+  return null;
+}
+
 // §183 — SF project-files: assíncrono (mesmo padrão §182) — retorna job_id imediato
+// §189 — parsing robusto + retry automático (até 1 retry) quando LLM retorna JSON inválido
 app.post('/api/sf/project-files', (req, res) => {
   const body = normalizeBody(req);
   const description = String(body.description || '').slice(0, 800);
@@ -4287,21 +4308,21 @@ app.post('/api/sf/project-files', (req, res) => {
   const jobId = `sfj-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   sfJobs.set(jobId, { status: 'pending', result: null, error: null, ts: Date.now() });
   // Background — sem await
-  callLLM(
-    `Você é um arquiteto de software. Para o projeto: "${description}"\n\nGere uma estrutura de arquivos realista com conteúdo. Responda APENAS com JSON válido:\n{"files":[{"name":"caminho/arquivo.ext","content":"conteúdo completo do arquivo"}]}\nMáximo 8 arquivos. Inclua package.json ou equivalente, README.md, e arquivos principais do projeto.`,
-    { max_tokens: 4000, timeout_ms: 60000, system: 'Responda APENAS com JSON válido. Sem markdown, sem texto antes ou depois. Sem comentários.' }
-  ).then(llm => {
-    if (!llm) { sfJobs.set(jobId, { status: 'error', result: null, error: 'llm_unavailable', ts: Date.now() }); return; }
-    let files = [];
-    try {
-      const clean = llm.text.replace(/```json\n?|```\n?/g, '').trim();
-      const parsed = JSON.parse(clean);
-      files = (parsed.files || []).slice(0, 10).map(f => ({ name: String(f.name || 'arquivo.txt'), content: String(f.content || '') }));
-      sfJobs.set(jobId, { status: 'done', result: { files, total: files.length, provider: llm.provider }, error: null, ts: Date.now() });
-    } catch(e) {
-      sfJobs.set(jobId, { status: 'error', result: null, error: 'json_parse_failed', ts: Date.now() });
+  const PROMPT1 = `Você é um arquiteto de software. Para o projeto: "${description}"\n\nGere uma estrutura de arquivos realista com conteúdo. Responda APENAS com JSON válido:\n{"files":[{"name":"caminho/arquivo.ext","content":"conteúdo completo do arquivo"}]}\nMáximo 8 arquivos. Inclua package.json ou equivalente, README.md, e arquivos principais do projeto.`;
+  const PROMPT2 = `Projeto: "${description.slice(0, 200)}"\n\nJSON EXATO sem texto adicional:\n{"files":[{"name":"arquivo.ext","content":"código"}]}\nMáximo 5 arquivos simples.`;
+  (async () => {
+    const llm1 = await callLLM(PROMPT1, { max_tokens: 4000, timeout_ms: 60000, system: 'Responda APENAS com JSON válido. Sem markdown, sem texto antes ou depois. Sem comentários.' });
+    if (!llm1) { sfJobs.set(jobId, { status: 'error', result: null, error: 'llm_unavailable', ts: Date.now() }); return; }
+    let parsed = _extractFilesJson(llm1.text);
+    // §189: retry automático se parsing falhar
+    if (!parsed) {
+      const llm2 = await callLLM(PROMPT2, { max_tokens: 2000, timeout_ms: 45000, system: 'Responda SOMENTE JSON. Zero texto adicional.' });
+      if (llm2) parsed = _extractFilesJson(llm2.text);
     }
-  }).catch(e => sfJobs.set(jobId, { status: 'error', result: null, error: e.message, ts: Date.now() }));
+    if (!parsed) { sfJobs.set(jobId, { status: 'error', result: null, error: 'json_parse_failed', ts: Date.now() }); return; }
+    const files = (parsed.files || []).slice(0, 10).map(f => ({ name: String(f.name || 'arquivo.txt'), content: String(f.content || '') }));
+    sfJobs.set(jobId, { status: 'done', result: { files, total: files.length, provider: llm1.provider }, error: null, ts: Date.now() });
+  })().catch(e => sfJobs.set(jobId, { status: 'error', result: null, error: e.message, ts: Date.now() }));
   return sendOk(res, { job_id: jobId, status: 'pending', anti_stub: true });
 });
 
