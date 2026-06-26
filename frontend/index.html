@@ -38,8 +38,10 @@
 .vc-sf-mode-tab.active{background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;}
 .vc-sf-mode-tab:hover:not(.active){color:#c4b5fd;background:rgba(124,58,237,.1);}
 /* §163 — example chips */
-.vc-sf-examples{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;}
-.vc-sf-example-chip{padding:6px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;color:#94a3b8;font-size:.8rem;cursor:pointer;transition:all .2s;white-space:nowrap;}
+/* §171: chips como lista de sugestões no MODO AVANÇADO — flex-direction:column */
+.vc-sf-examples{display:flex;flex-direction:column;gap:6px;margin:8px 0;padding:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:8px;}
+.vc-sf-examples::before{content:'💡 Exemplos de projetos:';display:block;font-size:.75rem;color:#4a5568;font-weight:600;letter-spacing:.05em;margin-bottom:4px;}
+.vc-sf-example-chip{padding:6px 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:#94a3b8;font-size:.8rem;cursor:pointer;transition:all .2s;white-space:normal;text-align:left;}
 .vc-sf-example-chip:hover{background:rgba(124,58,237,.15);border-color:rgba(124,58,237,.4);color:#c4b5fd;}
 /* §163 — SF chat input */
 #vcSfChatInput{background:#1e1e2e!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:10px!important;color:#e2d9f3!important;transition:border-color .2s;}

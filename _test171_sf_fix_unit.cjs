@@ -79,6 +79,17 @@ const apCatch500 = apCatchIdx >= 0 ? bundle.slice(apCatchIdx, apCatchIdx + 500) 
 check('catch nao tem progress.display=none', !apCatch500.includes("progress.style.display = 'none'"));
 check('bundle tem comentario manter progress', bundle.includes('manter progress'));
 
+// ── 5. chips no MODO AVANÇADO
+console.log('\n§171 chips tabs:');
+const html = fs.readFileSync('frontend/index.html', 'utf8');
+check('chips CSS flex-direction:column', html.includes('flex-direction:column') && html.includes('vc-sf-examples'));
+check('chips ::before conteudo Exemplos', html.includes('Exemplos de projetos'));
+check('chips border-radius:6px (não pill)', html.includes('border-radius:6px') && html.includes('vc-sf-example-chip'));
+const apBundle = fs.readFileSync('frontend/assets/vision-core-bundle.js', 'utf8');
+check('chips.style.display=none em AUTO-PILOT', apBundle.includes("chips.style.display = 'none'"));
+check('chips.style.display=flex em MODO AVANCADO', apBundle.includes("chips.style.display = 'flex'"));
+check('chips escondidos no default (init)', (apBundle.match(/chips\.style\.display = 'none'/g) || []).length >= 2);
+
 console.log(`\n${'─'.repeat(40)}`);
 console.log(`§171 resultado: ${pass} pass, ${fail} fail`);
 if (fail > 0) process.exit(1);

@@ -9068,19 +9068,23 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       var tabAuto   = document.getElementById('vcSfTabAutopilot');
       var tabAdv    = document.getElementById('vcSfTabAdvanced');
       var moduleNav = sfPage.querySelector('.vc-sf-module-nav-h');
+      var chips     = document.getElementById('vcSfExamples');
       if (!tabAuto || !tabAdv) return;
-      // Default: AUTO-PILOT — hide module nav
+      // Default: AUTO-PILOT — hide module nav + hide chips
       if (moduleNav) moduleNav.style.display = 'none';
+      if (chips) chips.style.display = 'none'; // §171: chips somente no MODO AVANÇADO
       tabAuto.addEventListener('click', function() {
         tabAuto.classList.add('active');
         tabAdv.classList.remove('active');
         if (moduleNav) moduleNav.style.display = 'none';
+        if (chips) chips.style.display = 'none'; // §171: esconder chips no AUTO-PILOT
         _sfShowHome();
       });
       tabAdv.addEventListener('click', function() {
         tabAdv.classList.add('active');
         tabAuto.classList.remove('active');
         if (moduleNav) moduleNav.style.display = '';
+        if (chips) chips.style.display = 'flex'; // §171: mostrar chips no MODO AVANÇADO
         _sfShowHome();
       });
     }
