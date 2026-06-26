@@ -49,9 +49,10 @@
 @keyframes vcBlink{0%,100%{opacity:1}50%{opacity:0}}
 .vc-typewriter-done::after{content:none}
 /* §164 — SF simple chat layout */
-.vc-sf-home-simple{display:flex;flex-direction:column;height:calc(100vh - 180px);min-height:400px;padding:16px;gap:12px;}
-/* §165 — chat history altura garantida */
-.vc-sf-chat-history{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-bottom:8px;min-height:200px;max-height:calc(100vh - 380px);}
+/* §170: overflow:hidden contém filhos; chat history é a área scrollável principal */
+.vc-sf-home-simple{display:flex;flex-direction:column;height:calc(100vh - 180px);min-height:400px;padding:16px;gap:12px;overflow:hidden;}
+/* §170: min-height:0 permite flex shrink correto; progress entra dentro do histórico */
+.vc-sf-chat-history{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-bottom:8px;min-height:0;}
 .vc-sf-chat-msg.assistant h2,.vc-sf-chat-msg.assistant h3,.vc-sf-chat-msg.assistant h4{margin:8px 0 4px;}
 .vc-sf-chat-msg.assistant strong{color:#e2d9f3;}
 .vc-sf-chat-msg.assistant hr{border:none;border-top:1px solid rgba(255,255,255,.1);margin:8px 0;}

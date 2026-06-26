@@ -8942,6 +8942,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       if (apBtn) apBtn.disabled = true;
       // §167: Arquiteto anuncia início no histórico
       addSfChatMsg('assistant', '🏛️ Arquiteto analisando seu projeto e iniciando os 7 módulos...');
+      // §170: move progress para DENTRO do chat history — não compete por espaço com o histórico
+      var _s170hist = document.getElementById('vcSfChatHistory');
+      if (_s170hist && progress.parentNode !== _s170hist) { _s170hist.appendChild(progress); }
       progress.style.display = 'block';
       stepsEl.innerHTML = '';
       if (resultEl) resultEl.style.display = 'none';
