@@ -9026,7 +9026,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         runSfAutoPilot(desc);
       });
     }
-    // §163/§164 — typewriter para result panel do Auto-Pilot (char-by-char, fixed)
+    // §163/§164/§165 — typewriter: animação char-by-char, markdown no final
     function vcSfTypewriter(el, text) {
       el.textContent = '';
       el.classList.remove('vc-typewriter-done');
@@ -9034,16 +9034,18 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       var i = 0;
       function tick() {
         if (i < text.length) {
-          el.textContent += text[i];
+          el.textContent += text[i]; // texto simples durante animação
           i++;
           el.scrollTop = el.scrollHeight;
           setTimeout(tick, 12);
         } else {
+          // §165: renderizar markdown completo no final
+          el.innerHTML = sfMarkdownToHtml(text);
           el.classList.remove('vc-typewriter-active');
           el.classList.add('vc-typewriter-done');
         }
       }
-      setTimeout(tick, 50); // delay inicial para DOM atualizar
+      setTimeout(tick, 50);
     }
 
     // §163 — mode tabs: 🚀 AUTO-PILOT ↔ ⚙ MODO AVANÇADO
@@ -9084,13 +9086,34 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       });
     }
 
+    // §165 — markdown simples → HTML seguro para mensagens do SF
+    function sfMarkdownToHtml(text) {
+      // Escapar HTML primeiro (segurança)
+      var safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return safe
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\\\[X\\\]/g,'✅').replace(/\\\[-\\\]/g,'🔄').replace(/\\\[\\\]/g,'⬜')
+        .replace(/\[X\]/g,'✅').replace(/\[-\]/g,'🔄').replace(/\[\]/g,'⬜')
+        .replace(/^### (.+)$/gm,'<h4 style="color:#c4b5fd;margin:8px 0 4px">$1</h4>')
+        .replace(/^## (.+)$/gm,'<h3 style="color:#a78bfa;margin:10px 0 4px">$1</h3>')
+        .replace(/^# (.+)$/gm,'<h2 style="color:#7c3aed;margin:12px 0 6px">$1</h2>')
+        .replace(/^---$/gm,'<hr>')
+        .replace(/\n/g,'<br>');
+    }
+
     // §164 — SF simple chat functions
     function addSfChatMsg(role, text) {
       var hist = document.getElementById('vcSfChatHistory');
       if (!hist) return null;
       var el = document.createElement('div');
       el.className = 'vc-sf-chat-msg ' + role;
-      el.textContent = text;
+      // §165: assistant messages render markdown
+      if (role === 'assistant' && text) {
+        el.innerHTML = sfMarkdownToHtml(text);
+      } else {
+        el.textContent = text;
+      }
       hist.appendChild(el);
       hist.scrollTop = hist.scrollHeight;
       return el;
