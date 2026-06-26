@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-25 (§164)
+## Documento central do projeto | Atualizado: 2026-06-26 (§165)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -289,7 +289,9 @@ FREE_MISSION_LIMIT=5
 
 **§164 FECHADO** — SF chat simples + typewriter fix + URL fetch. `vcSfHomeControl` reestruturado: hero/composer/action-grid removidos; `vcSfChatHistory` (histórico estilo Claude) + `vc-sf-input-bar` (textarea + toggle 🚀/⚙ + botão ↑). `handleSfSend()`: detecta URL via `extractUrl()`, busca conteúdo via `fetchUrlContext()` → `/api/sf/fetch-url`, depois `runSfAutoPilot(enriched)` ou `sendSfChatMessage()`. `addSfChatMsg('user'|'assistant', text)` para histórico. Enter handler antigo condicionado a `vcSfSendBtn` inexistente. `vcSfTypewriter` fixado: char-by-char `text[i]`, delay inicial 50ms, remove `vc-typewriter-done` antes de `active`. Backend: `POST /api/sf/fetch-url` — HTTP nativo, strip HTML, max 3000 chars, timeout 8s. Elementos legacy mantidos hidden para backward compat. 37/37 PASS. EB v5.9.46-s164. CF Pages ao vivo.
 
-**Próximo item:** §156 (multi-projeto isolamento real) ou testar SF completo em produção.
+**§165 FECHADO** — SF resultado fixo + markdown render + layout. `sfMarkdownToHtml(text)`: HTML-escape primeiro (XSS safe), converte `**bold**`→`<strong>`, `*em*`→`<em>`, `[X]/[-]/[]`→✅/🔄/⬜, headings `#/##/###`, `---`→`<hr>`, `\n`→`<br>`. `addSfChatMsg`: role='assistant' usa `innerHTML = sfMarkdownToHtml(text)`, outros usam `textContent`. `vcSfTypewriter`: char-by-char durante animação, `innerHTML = sfMarkdownToHtml(text)` ao final. CSS: `.vc-sf-home-simple` com `height:calc(100vh - 180px)`, `.vc-sf-chat-history` com `min-height:200px` + `max-height:calc(100vh - 380px)`. `fullContext` confirmado var local em `runSfAutoPilot`. 15/15 PASS. CF Pages ao vivo. Zero backend.
+
+**Próximo item:** §156 (multi-projeto isolamento real) ou testar SF em produção + polish.
 
 ## ROADMAP ENTERPRISE + SEGURANÇA §149–§160
 ### Nível de segurança atual: 8.5/10 (após §155)
