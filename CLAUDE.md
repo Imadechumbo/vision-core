@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-25 (§162)
+## Documento central do projeto | Atualizado: 2026-06-25 (§163)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -285,7 +285,9 @@ FREE_MISSION_LIMIT=5
 
 **§162 FECHADO** — Tutorial SF dedicado. `STEPS_SF2[7]` em linguagem simples, foco no Auto-Pilot. Steps: o-que-é → descreva-projeto → AUTO-PILOT → 7-módulos-em-sequência → modo-manual → Gold-Gate → pronto. Targets: `#vcSfChatInput`, `#vcSfAutoPilotBtn`, `.vc-sf-module-nav-h`, `[data-sf-module="worker_receipt"]`. `vcRegisterTutorial('sf2', ..., 'vc_tutorial_sf2_done')`. Botão `❓ TUTORIAL` (`vcSfTutorialBtn`) no header SF → `.vc-sf-tutorial-trigger` CSS. Reutiliza overlay/mascote do T1 via `_vcSetActiveTutorial`. T3 original (STEPS_SF) intocado. 23/23 PASS. CF Pages ao vivo.
 
-**Próximo item:** §156 (multi-projeto isolamento real) ou testar §161+§162 em produção.
+**§163 FECHADO** — SF UX reformulação. Header SF: abas `[🚀 AUTO-PILOT]` / `[⚙ MODO AVANÇADO]` (`vcSfTabAutopilot/vcSfTabAdvanced`). `initSfModeTabs()`: AUTO-PILOT esconde `.vc-sf-module-nav-h` + `_sfShowHome()`; AVANÇADO mostra nav. 3 chips de exemplo clicáveis (`vcSfExamples`): preenche `vcSfChatInput` e scrolla para botão AUTO-PILOT. `vcSfTypewriter(el, text)`: cursor `▋` piscando (`.vc-typewriter-active`, `@keyframes vcBlink`), usado no result panel do Auto-Pilot (max 2000 chars, senão textContent direto). CSS: input `#vcSfChatInput` dark (`#1e1e2e`) + focus purple, chips pill. 32/32 PASS. CF Pages ao vivo.
+
+**Próximo item:** §156 (multi-projeto isolamento real) ou testar SF completo em produção.
 
 ## ROADMAP ENTERPRISE + SEGURANÇA §149–§160
 ### Nível de segurança atual: 8.5/10 (após §155)
