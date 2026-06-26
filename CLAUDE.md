@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-26 (§186)
+## Documento central do projeto | Atualizado: 2026-06-26 (§187)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -207,6 +207,7 @@ FREE_MISSION_LIMIT=5
 
 | §185 | **SF Auto-Pilot steps 1-6 async.** `forEach` SF_GENERATORS → `job_id` imediato (LLM background), igual ao gold-gate §182. Fix 502: CF Worker timeout 10s bloqueava LLM síncrono (~15-30s). `gold-gate` skipado. Bundle: msgs hardcoded 'Gold Gate' → `step.label`. EB v5.9.55-s185. CF Pages ao vivo. | - | a08fce3a |
 | §186 | **4 bugs Auto-Pilot.** BUG1: `scrollIntoView({block:'start'})` — scroll ia pro FIM do resultDiv. BUG2: reset `stepsEl/statusEl.style.display=''` — segundo run ficava invisível. BUG3: `_s186msg = addSfChatMsg('⏳...')` por step — chat estático durante polling. BUG4: polling job_id em `sendSfChatMessage` — MODO AVANÇADO quebrado por §185. 4 commits. CF Pages ao vivo. Zero backend. | - | d64f382f |
+| §187 | **Fix "Timeout ao gerar estrutura".** Root cause: `project-files` armazenava `{files,total,provider}` sem `.result`; poll endpoint lia `job.result.result` → `undefined` → campo `result` ausente no JSON → frontend `job.result.files` sempre falsy → 90s timeout. Fix: backend expõe `files: job.result.files ?? null` no poll; frontend verifica `job.files && job.files.length`. Smoke test: 9 arquivos presentes no response. EB v5.9.56-s187. CF Pages ao vivo. | - | 949c1ee5 |
 
 > Write-up completo (causa raiz, fix, evidência) de cada sessão acima → `CLAUDE_HISTORY.md`.
 
