@@ -4306,7 +4306,22 @@ app.post('/api/sf/fetch-url', (req, res) => {
 
 // §189 — extração robusta de JSON para project-files
 // Cobre: fences com/sem "json", CRLF, texto antes/depois, regex fallback
+// §191d — formato ===FILE:=== como estratégia primária (sem escaping, LLM produz naturalmente)
 function _extractFilesJson(text) {
+  // 0) §191d: formato delimitado ===FILE:=== — parse sem nenhum problema de escaping JSON
+  if (text.includes('===FILE:')) {
+    const files = [];
+    const parts = text.split(/===FILE:\s*/);
+    for (let i = 1; i < parts.length; i++) {
+      const nl = parts[i].indexOf('\n');
+      if (nl < 0) continue;
+      const name = parts[i].slice(0, nl).trim();
+      let content = parts[i].slice(nl + 1);
+      content = content.replace(/===END===[\s\S]*$/, '').replace(/===FILE:[\s\S]*$/, '').trim();
+      if (name && content) files.push({ name, content });
+    }
+    if (files.length > 0) return { files };
+  }
   // 1) strip fences de todo tipo (```json, ```javascript, ```, com \r\n ou \n)
   let clean = text.replace(/```[\w]*\r?\n?/g, '').replace(/```/g, '').trim();
   // 2) tentativa directa
@@ -4335,14 +4350,17 @@ app.post('/api/sf/project-files', (req, res) => {
   const jobId = `sfj-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   sfJobs.set(jobId, { status: 'pending', result: null, error: null, ts: Date.now() });
   // Background — sem await
-  const PROMPT1 = `Você é arquiteto sênior gerando um projeto PROFISSIONAL e COMPLETO com governança e segurança por design.\nProjeto: "${description}"\n\nGere EXATAMENTE as 3 camadas abaixo, máximo 15 arquivos. Responda APENAS com JSON válido:\n{"files":[{"name":"caminho/arquivo.ext","content":"conteúdo completo"}]}\n\nCAMADA 1 — BACKEND (src/):\n  src/index.js          — entry point: helmet(), cors({origin: process.env.FRONTEND_URL}), express-rate-limit OBRIGATÓRIOS no topo\n  src/config/env.js     — dotenv + validação: se var obrigatória ausente, process.exit(1) com mensagem clara\n  src/routes/index.js   — roteador central registrando sub-rotas\n  src/routes/auth.js    — POST /register e POST /login com validação Joi/Zod inline\n  src/controllers/authController.js — lógica de auth separada do router\n  src/middleware/auth.js — verifyToken: jwt.verify + role check + 401 se inválido\n  src/models/user.js    — schema Mongoose OU classe com pg pool: campos reais com tipos e constraints\n  Dockerfile            — multi-stage build: build + produção com USER node (NUNCA root)\n  .env.example          — TODAS as vars usadas no código com comentário explicando o valor\n\nCAMADA 2 — FRONTEND (public/):\n  public/index.html     — HTML COMPLETO com 3 telas reais: (1) landing/login, (2) dashboard com stats, (3) formulário principal do projeto. Navegação entre telas via JS. Não placeholder.\n  public/css/styles.css — CSS responsivo mobile-first, dark background (#0f0f0f), acentos roxo (#7c3aed), sem frameworks externos\n  public/js/app.js      — fetch() reais para os endpoints do backend, error handling, localStorage para JWT, sem jQuery\n\nCAMADA 3 — DOCS E GOVERNANÇA:\n  README.md             — setup completo: git clone, npm install, .env config, npm run dev, endpoints principais\n  docs/openapi.yaml     — OpenAPI 3.0 VÁLIDO com >= 3 endpoints: info/paths/components/securitySchemes Bearer JWT. Não placeholder.\n  docs/adr/0001-stack-decision.md — formato MADR: # Status: Accepted / ## Context / ## Decision / ## Consequences / ## Alternatives Considered\n  docs/SECURITY.md      — OWASP A01-A10 mapeados para este projeto, LGPD checklist, secrets policy, rate limiting config\n  .semgrep/semgrep.yaml — YAML válido com 4 regras: no-hardcoded-secrets (detecta password/secret = "string"), no-sql-injection (detecta concatenação em queries), no-path-traversal (detecta req.params em path.join), express-helmet-missing (detecta app.use sem helmet)\n\nREGRAS ABSOLUTAS:\n- ZERO comentários TODO ou "// implementar aqui"\n- src/index.js DEVE ter helmet() + cors() + rateLimit() nas primeiras 20 linhas\n- Dockerfile DEVE ter USER node antes do CMD\n- .env.example DEVE ter todas as vars que aparecem no código\n- docs/openapi.yaml DEVE ser YAML válido (não JSON, não placeholder)\n- .semgrep/semgrep.yaml DEVE ter estrutura "rules:" com id/languages/pattern/message para cada regra\n- public/index.html DEVE ter conteúdo real de pelo menos 3 seções funcionais`;
+  // §191d: PROMPT1 usa formato ===FILE:=== — LLM não precisa fazer JSON escaping de código
+  // Parser _extractFilesJson detecta ===FILE:=== primeiro (estratégia 0) antes de tentar JSON
+  const PROMPT1 = `Você é arquiteto sênior gerando um projeto PROFISSIONAL e COMPLETO com governança e segurança por design.\nProjeto: "${description}"\n\nUSE EXATAMENTE este formato para cada arquivo (NÃO use JSON — use os delimitadores abaixo):\n\n===FILE: caminho/do/arquivo.ext===\nconteúdo completo do arquivo aqui\n===FILE: outro/arquivo.js===\nconteúdo do próximo arquivo\n===END===\n\nGere máximo 15 arquivos nas 3 camadas:\n\nCAMADA 1 — BACKEND (src/):\n  src/index.js          — entry point: helmet(), cors({origin: process.env.FRONTEND_URL}), express-rate-limit OBRIGATÓRIOS\n  src/config/env.js     — dotenv + validação: process.exit(1) se var obrigatória ausente\n  src/routes/auth.js    — POST /register e POST /login com validação de input\n  src/controllers/authController.js — lógica auth separada\n  src/middleware/auth.js — jwt.verify + 401 se token inválido\n  src/models/user.js    — schema com campos reais e tipos\n  Dockerfile            — multi-stage build, USER node (nunca root)\n  .env.example          — TODAS as vars com comentário\n\nCAMADA 2 — FRONTEND (public/):\n  public/index.html     — HTML completo: landing/login + dashboard + formulário principal. Navegação JS.\n  public/css/styles.css — CSS responsivo, dark (#0f0f0f), roxo (#7c3aed)\n  public/js/app.js      — fetch() reais ao backend, JWT no localStorage\n\nCAMADA 3 — DOCS:\n  README.md             — setup, vars, scripts, endpoints\n  docs/openapi.yaml     — OpenAPI 3.0 com >= 3 endpoints e Bearer JWT\n  docs/adr/0001-stack-decision.md — MADR: Status/Context/Decision/Consequences\n  docs/SECURITY.md      — OWASP A01-A10, LGPD checklist, secrets policy\n  .semgrep/semgrep.yaml — rules: no-hardcoded-secrets, no-sql-injection, no-path-traversal, express-helmet-missing\n\nREGRAS:\n- ZERO TODO ou "// implementar"\n- src/index.js: helmet()+cors()+rateLimit() nas primeiras 20 linhas\n- Dockerfile: USER node antes do CMD\n- Use APENAS o formato ===FILE:=== acima — NÃO use JSON, NÃO use markdown code blocks`;
   // §191b: PROMPT2 é fallback simples — se PROMPT1 falhar no JSON, PROMPT2 retorna 6 arquivos básicos
   // NÃO incluir YAML/Dockerfile no PROMPT2 — formatos com colons/indentação quebram JSON encoding
   const PROMPT2 = `Projeto: "${description.slice(0, 200)}"\n\nJSON EXATO. Só JavaScript e Markdown. Máximo 6 arquivos simples:\n{"files":[{"name":"arquivo.ext","content":"código"}]}\nInclua: package.json, src/index.js (Express com helmet+cors), src/routes/auth.js, src/middleware/auth.js, public/index.html (HTML simples), README.md.\nZero YAML, zero Dockerfile, zero caracteres especiais que quebrem JSON.`;
   (async () => {
     // §191c: PROMPT1 com 4000 tokens/60s — mais rápido, LLM tem mais chance de completar dentro do timeout
     // §191c: se PROMPT1 timeout (llm1=null) OU json inválido → tenta PROMPT2 simples (não só em json_parse_failed)
-    const llm1 = await callLLM(PROMPT1, { max_tokens: 4000, timeout_ms: 60000, system: 'Responda APENAS com JSON válido. CRÍTICO: escape aspas como \\" e barras como \\\\. Newlines como \\n. Sem texto fora do JSON. Código funcional real, sem TODOs.' });
+    // §191d: system prompt instrui formato ===FILE:=== — sem JSON escaping
+    const llm1 = await callLLM(PROMPT1, { max_tokens: 4000, timeout_ms: 60000, system: 'Use EXATAMENTE o formato ===FILE: caminho===\\nconteúdo\\n===END=== para cada arquivo. NÃO use JSON. NÃO use markdown. Código funcional real, sem TODOs, sem placeholders.' });
     let parsed = llm1 ? _extractFilesJson(llm1.text) : null;
     // §191c: retry se PROMPT1 falhou por timeout (llm1=null) OU por JSON inválido (parsed=null)
     if (!parsed) {
