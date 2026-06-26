@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-26 (§166)
+## Documento central do projeto | Atualizado: 2026-06-26 (§167)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -293,7 +293,9 @@ FREE_MISSION_LIMIT=5
 
 **§166 FECHADO** — SF Arquiteto restaurado + toggle duplicado removido. `vcSfAutoPilotToggle` + CSS `.vc-sf-ap-toggle` removidos do HTML (redundantes com abas do header). `isSfAutoPilotMode()`: verifica `vcSfTabAutopilot.classList.contains('active')`. `handleSfSend`: usa `isSfAutoPilotMode()` em vez do toggle. `sendSfChatMessage`: Arquiteto via `POST /api/sf/mission-composer` → typing indicator `'▪ arquiteto analisando...'` → remove indicator → `addSfChatMsg('assistant')` + `vcSfTypewriter` (≤3000 chars) ou `innerHTML` direto. `initSfSimpleChat`: bloco toggle removido. 15/15 PASS. CF Pages ao vivo.
 
-**Próximo item:** §156 (multi-projeto isolamento real) ou testar SF completo em produção.
+**§167 FECHADO** — SF fix estrutural final. HTML já correto (progress fora do history). `runSfAutoPilot`: `addSfChatMsg('assistant', '🏛️ Arquiteto analisando...')` antes de `progress.style.display='block'`. Scroll `hist.scrollTop = hist.scrollHeight` agora em `setTimeout(fn, 200)` para DOM atualizar após typewriter. `STEPS_SF2` substituído completamente: 7 steps com targets válidos na nova UI (`#vcSfHomeControl`, `#vcSfChatInput`, `#vcSfTabAutopilot`, `#vcSfTabAdvanced`, `#vcSfExamples`, `#vcSfSendBtn`). Removidos targets quebrados `#vcSfAutoPilotBtn`/`.vc-sf-module-nav-h`/`[data-sf-module=*]` (ocultos no modo AUTO-PILOT). 13/13 PASS. CF Pages ao vivo.
+
+**SF considerado funcional. Próximo: §156 (multi-projeto isolamento real) ou lançamento PRO.**
 
 ## ROADMAP ENTERPRISE + SEGURANÇA §149–§160
 ### Nível de segurança atual: 8.5/10 (após §155)
