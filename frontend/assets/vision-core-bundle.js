@@ -9056,7 +9056,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                       } else if (job.status === 'error') {
                         clearInterval(_fPollTimer);
                         filesBtn.disabled = false;
-                        filesBtn.textContent = '❌ Falha ao gerar estrutura';
+                        // §189: mensagem amigável + botão de retry para json_parse_failed
+                        filesBtn.textContent = job.error === 'json_parse_failed'
+                          ? '🔄 JSON inválido — clicar para tentar novamente'
+                          : '❌ Falha ao gerar estrutura';
                       }
                     })
                     .catch(function() { /* falha de rede — tentar próximo */ });
