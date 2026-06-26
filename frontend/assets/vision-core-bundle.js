@@ -8993,7 +8993,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             el.className = 'vc-sf-autopilot-step done';
             el.querySelector('.sfap-icon').textContent = '✅';
             var output = data.content || data.result || data.mission || '';
-            if (output) fullContext = fullContext + '\n\n[Etapa ' + (idx + 1) + ']:\n' + output;
+            if (output) { fullContext = projectDescription.slice(0, 600) + '\n\n[Etapa ' + (idx + 1) + ']:\n' + output.slice(0, 400); } // §169: limite context
             if (idx === SF_AUTOPILOT_STEPS.length - 1) finalPackage = output;
             setTimeout(function() { runStep(idx + 1); }, 300);
           } else {
