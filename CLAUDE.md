@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-26 (§165)
+## Documento central do projeto | Atualizado: 2026-06-26 (§166)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -291,7 +291,9 @@ FREE_MISSION_LIMIT=5
 
 **§165 FECHADO** — SF resultado fixo + markdown render + layout. `sfMarkdownToHtml(text)`: HTML-escape primeiro (XSS safe), converte `**bold**`→`<strong>`, `*em*`→`<em>`, `[X]/[-]/[]`→✅/🔄/⬜, headings `#/##/###`, `---`→`<hr>`, `\n`→`<br>`. `addSfChatMsg`: role='assistant' usa `innerHTML = sfMarkdownToHtml(text)`, outros usam `textContent`. `vcSfTypewriter`: char-by-char durante animação, `innerHTML = sfMarkdownToHtml(text)` ao final. CSS: `.vc-sf-home-simple` com `height:calc(100vh - 180px)`, `.vc-sf-chat-history` com `min-height:200px` + `max-height:calc(100vh - 380px)`. `fullContext` confirmado var local em `runSfAutoPilot`. 15/15 PASS. CF Pages ao vivo. Zero backend.
 
-**Próximo item:** §156 (multi-projeto isolamento real) ou testar SF em produção + polish.
+**§166 FECHADO** — SF Arquiteto restaurado + toggle duplicado removido. `vcSfAutoPilotToggle` + CSS `.vc-sf-ap-toggle` removidos do HTML (redundantes com abas do header). `isSfAutoPilotMode()`: verifica `vcSfTabAutopilot.classList.contains('active')`. `handleSfSend`: usa `isSfAutoPilotMode()` em vez do toggle. `sendSfChatMessage`: Arquiteto via `POST /api/sf/mission-composer` → typing indicator `'▪ arquiteto analisando...'` → remove indicator → `addSfChatMsg('assistant')` + `vcSfTypewriter` (≤3000 chars) ou `innerHTML` direto. `initSfSimpleChat`: bloco toggle removido. 15/15 PASS. CF Pages ao vivo.
+
+**Próximo item:** §156 (multi-projeto isolamento real) ou testar SF completo em produção.
 
 ## ROADMAP ENTERPRISE + SEGURANÇA §149–§160
 ### Nível de segurança atual: 8.5/10 (após §155)
