@@ -9048,10 +9048,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                     })
                     .then(function(r2) { return r2.json(); })
                     .then(function(job) {
-                      if (job.status === 'done' && job.result && job.result.files) {
+                      // §187: checar job.files (poll expõe files[] direto — job.result era null)
+                      if (job.status === 'done' && job.files && job.files.length) {
                         clearInterval(_fPollTimer);
                         filesBtn.disabled = false;
-                        _applyFiles(job.result.files);
+                        _applyFiles(job.files);
                       } else if (job.status === 'error') {
                         clearInterval(_fPollTimer);
                         filesBtn.disabled = false;
