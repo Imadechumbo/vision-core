@@ -4315,7 +4315,7 @@ function _extractFilesJson(text) {
     for (let i = 1; i < parts.length; i++) {
       const nl = parts[i].indexOf('\n');
       if (nl < 0) continue;
-      const name = parts[i].slice(0, nl).trim();
+      const name = parts[i].slice(0, nl).trim().replace(/={1,3}\s*$/, ''); // strip trailing === from name
       let content = parts[i].slice(nl + 1);
       content = content.replace(/===END===[\s\S]*$/, '').replace(/===FILE:[\s\S]*$/, '').trim();
       if (name && content) files.push({ name, content });
@@ -4360,7 +4360,8 @@ app.post('/api/sf/project-files', (req, res) => {
     // §191c: PROMPT1 com 4000 tokens/60s — mais rápido, LLM tem mais chance de completar dentro do timeout
     // §191c: se PROMPT1 timeout (llm1=null) OU json inválido → tenta PROMPT2 simples (não só em json_parse_failed)
     // §191d: system prompt instrui formato ===FILE:=== — sem JSON escaping
-    const llm1 = await callLLM(PROMPT1, { max_tokens: 4000, timeout_ms: 60000, system: 'Use EXATAMENTE o formato ===FILE: caminho===\\nconteúdo\\n===END=== para cada arquivo. NÃO use JSON. NÃO use markdown. Código funcional real, sem TODOs, sem placeholders.' });
+    // §191e: 6000 tokens seguro agora — ===FILE:=== não tem JSON parse issues
+    const llm1 = await callLLM(PROMPT1, { max_tokens: 6000, timeout_ms: 90000, system: 'Use EXATAMENTE o formato ===FILE: caminho===\\nconteúdo\\n===END=== para cada arquivo. NÃO use JSON. NÃO use markdown. Código funcional real, sem TODOs, sem placeholders.' });
     let parsed = llm1 ? _extractFilesJson(llm1.text) : null;
     // §191c: retry se PROMPT1 falhou por timeout (llm1=null) OU por JSON inválido (parsed=null)
     if (!parsed) {
