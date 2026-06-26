@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-26 (§167)
+## Documento central do projeto | Atualizado: 2026-06-26 (§168)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -294,6 +294,8 @@ FREE_MISSION_LIMIT=5
 **§166 FECHADO** — SF Arquiteto restaurado + toggle duplicado removido. `vcSfAutoPilotToggle` + CSS `.vc-sf-ap-toggle` removidos do HTML (redundantes com abas do header). `isSfAutoPilotMode()`: verifica `vcSfTabAutopilot.classList.contains('active')`. `handleSfSend`: usa `isSfAutoPilotMode()` em vez do toggle. `sendSfChatMessage`: Arquiteto via `POST /api/sf/mission-composer` → typing indicator `'▪ arquiteto analisando...'` → remove indicator → `addSfChatMsg('assistant')` + `vcSfTypewriter` (≤3000 chars) ou `innerHTML` direto. `initSfSimpleChat`: bloco toggle removido. 15/15 PASS. CF Pages ao vivo.
 
 **§167 FECHADO** — SF fix estrutural final. HTML já correto (progress fora do history). `runSfAutoPilot`: `addSfChatMsg('assistant', '🏛️ Arquiteto analisando...')` antes de `progress.style.display='block'`. Scroll `hist.scrollTop = hist.scrollHeight` agora em `setTimeout(fn, 200)` para DOM atualizar após typewriter. `STEPS_SF2` substituído completamente: 7 steps com targets válidos na nova UI (`#vcSfHomeControl`, `#vcSfChatInput`, `#vcSfTabAutopilot`, `#vcSfTabAdvanced`, `#vcSfExamples`, `#vcSfSendBtn`). Removidos targets quebrados `#vcSfAutoPilotBtn`/`.vc-sf-module-nav-h`/`[data-sf-module=*]` (ocultos no modo AUTO-PILOT). 13/13 PASS. CF Pages ao vivo.
+
+**§168 FECHADO** — Typewriter robusto + sem limite de chars. `vcSfTypewriter`: `el.isConnected` check (para se elemento sair do DOM), speed variável (5ms para textos >500 chars, 12ms para curtos), chunkSize (5 chars para textos >1000, 1 para curtos), scroll via `el.closest('.vc-sf-chat-history')` em vez de `el.scrollTop` (que não tem overflow), scroll final `setTimeout(fn, 100)` ao concluir markdown, delay inicial 30ms. Auto-Pilot e `sendSfChatMessage`: sempre `vcSfTypewriter`, sem limites 2000/3000 chars. 11/11 PASS. CF Pages ao vivo. Zero backend.
 
 **SF considerado funcional. Próximo: §156 (multi-projeto isolamento real) ou lançamento PRO.**
 
