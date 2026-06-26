@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-26 (§168)
+## Documento central do projeto | Atualizado: 2026-06-26 (§186)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -205,6 +205,9 @@ FREE_MISSION_LIMIT=5
 | §143 | **Suprimir badge "Nenhuma fonte obtida".** `renderFetchBadge`: `if (!ok) return` antes de renderizar badge negativo — remove aviso de ruído. Badge positivo (X fontes obtidas) intacto. 1 linha. CF Pages ao vivo. Zero server.js. | - | 255cc669 |
 | §142 | **Métricas reais + projetos + 4 nós animados.** (A) barras de `#agentMetricsLarge` recebem largura/cor por `status` real do `/api/metrics/agents` (`ok`=85% verde, `binary_not_found`=20% laranja, `PENDING_EVIDENCE`=30% amarelo); (B) `GET/POST /api/projects` em `server.js` + `s142InitProjects()` popula `#projectSelector` + botão `+ Novo`; (C) `AGENT_KEYS` expandido 6→10 (piharness/openclaw/archivist/github) + `startMissionAnimation` seq 5→8 + `stopMissionAnimation` stMap extendido. 30/30 PASS. EB v5.9.34-s142. CF Pages ao vivo. | - | 39a5998b |
 
+| §185 | **SF Auto-Pilot steps 1-6 async.** `forEach` SF_GENERATORS → `job_id` imediato (LLM background), igual ao gold-gate §182. Fix 502: CF Worker timeout 10s bloqueava LLM síncrono (~15-30s). `gold-gate` skipado. Bundle: msgs hardcoded 'Gold Gate' → `step.label`. EB v5.9.55-s185. CF Pages ao vivo. | - | a08fce3a |
+| §186 | **4 bugs Auto-Pilot.** BUG1: `scrollIntoView({block:'start'})` — scroll ia pro FIM do resultDiv. BUG2: reset `stepsEl/statusEl.style.display=''` — segundo run ficava invisível. BUG3: `_s186msg = addSfChatMsg('⏳...')` por step — chat estático durante polling. BUG4: polling job_id em `sendSfChatMessage` — MODO AVANÇADO quebrado por §185. 4 commits. CF Pages ao vivo. Zero backend. | - | d64f382f |
+
 > Write-up completo (causa raiz, fix, evidência) de cada sessão acima → `CLAUDE_HISTORY.md`.
 
 ---
@@ -296,6 +299,10 @@ FREE_MISSION_LIMIT=5
 **§167 FECHADO** — SF fix estrutural final. HTML já correto (progress fora do history). `runSfAutoPilot`: `addSfChatMsg('assistant', '🏛️ Arquiteto analisando...')` antes de `progress.style.display='block'`. Scroll `hist.scrollTop = hist.scrollHeight` agora em `setTimeout(fn, 200)` para DOM atualizar após typewriter. `STEPS_SF2` substituído completamente: 7 steps com targets válidos na nova UI (`#vcSfHomeControl`, `#vcSfChatInput`, `#vcSfTabAutopilot`, `#vcSfTabAdvanced`, `#vcSfExamples`, `#vcSfSendBtn`). Removidos targets quebrados `#vcSfAutoPilotBtn`/`.vc-sf-module-nav-h`/`[data-sf-module=*]` (ocultos no modo AUTO-PILOT). 13/13 PASS. CF Pages ao vivo.
 
 **§168 FECHADO** — Typewriter robusto + sem limite de chars. `vcSfTypewriter`: `el.isConnected` check (para se elemento sair do DOM), speed variável (5ms para textos >500 chars, 12ms para curtos), chunkSize (5 chars para textos >1000, 1 para curtos), scroll via `el.closest('.vc-sf-chat-history')` em vez de `el.scrollTop` (que não tem overflow), scroll final `setTimeout(fn, 100)` ao concluir markdown, delay inicial 30ms. Auto-Pilot e `sendSfChatMessage`: sempre `vcSfTypewriter`, sem limites 2000/3000 chars. 11/11 PASS. CF Pages ao vivo. Zero backend.
+
+**§185 FECHADO** — SF Auto-Pilot steps 1-6 assíncronos (job_id pattern). `forEach` de SF_GENERATORS agora retorna `job_id` imediatamente (LLM em background), igual ao gold-gate §182. Fix 502 intermitente: CF Worker tinha timeout 10s para endpoints SF não-chat; resposta síncrona do LLM (~15-30s) ultrapassava. `gold-gate` skipado no `forEach` (rota própria já existia). Bundle: mensagens timeout/erro hardcoded 'Gold Gate' → `step.label`. Smoke test: `mission-composer`, `deploy-blueprint`, `worker-handoff`, `patch-validator` todos retornam `job_id` imediato + `done` via poll. EB v5.9.55-s185. CF Pages ao vivo.
+
+**§186 FECHADO** — 4 bugs do Auto-Pilot corrigidos. (BUG 1) Resultado sumia: `setTimeout(150ms, scrollTop=scrollHeight)` rolava para o FIM do resultDiv (Gold Gate ~50 linhas → scroll saltava para botões no rodapé, markdown ficava acima do viewport). Fix: `requestAnimationFrame + scrollIntoView({block:'start'})`. (BUG 2) Segundo run invisível: primeiro run deixava `stepsEl/statusEl` com `display:none` permanente; segundo run reconstruía steps mas eles ficavam ocultos. Fix: `stepsEl.style.display=''` + `statusEl.style.display=''` no início de `runSfAutoPilot`. (BUG 3) Sem loading indicator: chat estático durante ~20s de polling por step. Fix: `_s186msg = addSfChatMsg('⏳ step.label...')` por step, atualiza para ✅/❌/⏱ em done/error/timeout. (BUG 4) MODO AVANÇADO quebrado por §185: `sendSfChatMessage` esperava `data.content|result|mission` mas recebia `job_id` → fallback 'Sem resposta.'. Fix: polling `setInterval(2s)` em `sendSfChatMessage` idêntico ao Auto-Pilot. Zero mudança backend. 4 commits separados. CF Pages ao vivo.
 
 **SF considerado funcional. Próximo: §156 (multi-projeto isolamento real) ou lançamento PRO.**
 
