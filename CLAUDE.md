@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-25 (§163)
+## Documento central do projeto | Atualizado: 2026-06-25 (§164)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -286,6 +286,8 @@ FREE_MISSION_LIMIT=5
 **§162 FECHADO** — Tutorial SF dedicado. `STEPS_SF2[7]` em linguagem simples, foco no Auto-Pilot. Steps: o-que-é → descreva-projeto → AUTO-PILOT → 7-módulos-em-sequência → modo-manual → Gold-Gate → pronto. Targets: `#vcSfChatInput`, `#vcSfAutoPilotBtn`, `.vc-sf-module-nav-h`, `[data-sf-module="worker_receipt"]`. `vcRegisterTutorial('sf2', ..., 'vc_tutorial_sf2_done')`. Botão `❓ TUTORIAL` (`vcSfTutorialBtn`) no header SF → `.vc-sf-tutorial-trigger` CSS. Reutiliza overlay/mascote do T1 via `_vcSetActiveTutorial`. T3 original (STEPS_SF) intocado. 23/23 PASS. CF Pages ao vivo.
 
 **§163 FECHADO** — SF UX reformulação. Header SF: abas `[🚀 AUTO-PILOT]` / `[⚙ MODO AVANÇADO]` (`vcSfTabAutopilot/vcSfTabAdvanced`). `initSfModeTabs()`: AUTO-PILOT esconde `.vc-sf-module-nav-h` + `_sfShowHome()`; AVANÇADO mostra nav. 3 chips de exemplo clicáveis (`vcSfExamples`): preenche `vcSfChatInput` e scrolla para botão AUTO-PILOT. `vcSfTypewriter(el, text)`: cursor `▋` piscando (`.vc-typewriter-active`, `@keyframes vcBlink`), usado no result panel do Auto-Pilot (max 2000 chars, senão textContent direto). CSS: input `#vcSfChatInput` dark (`#1e1e2e`) + focus purple, chips pill. 32/32 PASS. CF Pages ao vivo.
+
+**§164 FECHADO** — SF chat simples + typewriter fix + URL fetch. `vcSfHomeControl` reestruturado: hero/composer/action-grid removidos; `vcSfChatHistory` (histórico estilo Claude) + `vc-sf-input-bar` (textarea + toggle 🚀/⚙ + botão ↑). `handleSfSend()`: detecta URL via `extractUrl()`, busca conteúdo via `fetchUrlContext()` → `/api/sf/fetch-url`, depois `runSfAutoPilot(enriched)` ou `sendSfChatMessage()`. `addSfChatMsg('user'|'assistant', text)` para histórico. Enter handler antigo condicionado a `vcSfSendBtn` inexistente. `vcSfTypewriter` fixado: char-by-char `text[i]`, delay inicial 50ms, remove `vc-typewriter-done` antes de `active`. Backend: `POST /api/sf/fetch-url` — HTTP nativo, strip HTML, max 3000 chars, timeout 8s. Elementos legacy mantidos hidden para backward compat. 37/37 PASS. EB v5.9.46-s164. CF Pages ao vivo.
 
 **Próximo item:** §156 (multi-projeto isolamento real) ou testar SF completo em produção.
 
