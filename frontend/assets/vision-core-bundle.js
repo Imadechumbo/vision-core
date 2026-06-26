@@ -9018,24 +9018,24 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         runSfAutoPilot(desc);
       });
     }
-    // §163 — typewriter para result panel do Auto-Pilot
+    // §163/§164 — typewriter para result panel do Auto-Pilot (char-by-char, fixed)
     function vcSfTypewriter(el, text) {
       el.textContent = '';
+      el.classList.remove('vc-typewriter-done');
       el.classList.add('vc-typewriter-active');
-      var i = 0; var chunk = 3;
-      var prog = document.getElementById('vcSfAutoPilotProgress');
+      var i = 0;
       function tick() {
         if (i < text.length) {
-          el.textContent += text.slice(i, i + chunk);
-          i += chunk;
-          if (prog) prog.scrollTop = prog.scrollHeight;
-          setTimeout(tick, 10);
+          el.textContent += text[i];
+          i++;
+          el.scrollTop = el.scrollHeight;
+          setTimeout(tick, 12);
         } else {
           el.classList.remove('vc-typewriter-active');
           el.classList.add('vc-typewriter-done');
         }
       }
-      tick();
+      setTimeout(tick, 50); // delay inicial para DOM atualizar
     }
 
     // §163 — mode tabs: 🚀 AUTO-PILOT ↔ ⚙ MODO AVANÇADO
@@ -9076,9 +9076,97 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       });
     }
 
+    // §164 — SF simple chat functions
+    function addSfChatMsg(role, text) {
+      var hist = document.getElementById('vcSfChatHistory');
+      if (!hist) return null;
+      var el = document.createElement('div');
+      el.className = 'vc-sf-chat-msg ' + role;
+      el.textContent = text;
+      hist.appendChild(el);
+      hist.scrollTop = hist.scrollHeight;
+      return el;
+    }
+
+    function sendSfChatMessage(text) {
+      var inp = document.getElementById('vcSfChatInput');
+      if (inp) inp.value = text;
+      _sfChatSend('vcSfChatInput', 'vcSfChatHistory');
+    }
+
+    function extractUrl(text) {
+      var m = text.match(/https?:\/\/[^\s]+/);
+      return m ? m[0] : null;
+    }
+
+    function fetchUrlContext(url) {
+      var _base = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+      return fetch(_base + '/api/sf/fetch-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) { return d.content || d.text || ''; })
+      .catch(function() { return ''; });
+    }
+
+    function handleSfSend() {
+      var inp = document.getElementById('vcSfChatInput');
+      var desc = inp ? inp.value.trim() : '';
+      if (!desc) return;
+      var url = extractUrl(desc);
+      var toggleBtn = document.getElementById('vcSfAutoPilotToggle');
+      var autoPilotOn = toggleBtn && toggleBtn.classList.contains('active');
+
+      addSfChatMsg('user', desc);
+      if (inp) { inp.value = ''; inp.style.height = 'auto'; }
+
+      if (url) {
+        var hint = addSfChatMsg('assistant', '🔍 Analisando ' + url + '...');
+        fetchUrlContext(url).then(function(urlContent) {
+          if (hint && hint.parentNode) hint.parentNode.removeChild(hint);
+          var enriched = desc + (urlContent ? '\n\n[CONTEÚDO DO SITE ' + url + ']:\n' + urlContent : '');
+          if (autoPilotOn) { runSfAutoPilot(enriched); }
+          else { sendSfChatMessage(enriched); }
+        });
+      } else {
+        if (autoPilotOn) { runSfAutoPilot(desc); }
+        else { sendSfChatMessage(desc); }
+      }
+    }
+
+    function initSfSimpleChat() {
+      var sendBtn = document.getElementById('vcSfSendBtn');
+      var inp     = document.getElementById('vcSfChatInput');
+      var toggle  = document.getElementById('vcSfAutoPilotToggle');
+
+      if (sendBtn) sendBtn.addEventListener('click', handleSfSend);
+
+      if (inp) {
+        inp.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSfSend();
+          }
+        });
+        inp.addEventListener('input', function() {
+          inp.style.height = 'auto';
+          inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
+        });
+      }
+
+      if (toggle) {
+        toggle.addEventListener('click', function() {
+          toggle.classList.toggle('active');
+        });
+      }
+    }
+
     initSfAutoPilot(); // §161
     initSfModeTabs();  // §163
     initSfExampleChips(); // §163
+    initSfSimpleChat(); // §164
 
     // §162 — Tutorial SF (❓ TUTORIAL button → sf2)
     function initSfTutorial() {
@@ -9159,7 +9247,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       chatInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          _sfArchitectSend('vcSfChatInput', 'vcSfChatStream');
+          // §164: skip old architect send when new simple UI active
+          if (!document.getElementById('vcSfSendBtn')) {
+            _sfArchitectSend('vcSfChatInput', 'vcSfChatStream');
+          }
         }
       });
     }

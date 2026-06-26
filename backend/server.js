@@ -4179,6 +4179,45 @@ Object.keys(SF_GENERATORS).forEach(key => {
   });
 });
 
+// §164 — SF fetch-url: busca conteúdo de URL para contexto do Auto-Pilot
+app.post('/api/sf/fetch-url', (req, res) => {
+  const body = normalizeBody(req);
+  const url = String(body.url || '').trim();
+  if (!url.startsWith('http')) {
+    return res.status(400).json({ ok: false, error: 'invalid_url', anti_stub: true });
+  }
+  try {
+    const parsed = new URL(url);
+    const isHttps = url.startsWith('https');
+    const mod = isHttps ? require('https') : require('http');
+    const options = {
+      hostname: parsed.hostname,
+      path: parsed.pathname + parsed.search,
+      method: 'GET',
+      headers: { 'User-Agent': 'VisionCore-SF/1.0', 'Accept': 'text/html,text/plain', 'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8' },
+    };
+    const httpReq = mod.request(options, (resp) => {
+      let data = '';
+      resp.on('data', chunk => { data += chunk; if (data.length > 50000) data = data.slice(0, 50000); });
+      resp.on('end', () => {
+        const text = data
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 3000);
+        return res.json({ ok: true, content: text, url, anti_stub: true });
+      });
+    });
+    httpReq.on('error', (e) => res.status(500).json({ ok: false, error: e.message, anti_stub: true }));
+    httpReq.setTimeout(8000, () => { httpReq.destroy(); res.status(408).json({ ok: false, error: 'timeout', anti_stub: true }); });
+    httpReq.end();
+  } catch(e) {
+    return res.status(400).json({ ok: false, error: 'invalid_url', detail: e.message, anti_stub: true });
+  }
+});
+
 /* SAFE 404 — nunca 405 */
 app.all('/api/*', (req, res) => {
   return res.status(404).json({

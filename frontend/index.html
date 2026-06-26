@@ -48,6 +48,21 @@
 .vc-typewriter-active::after{content:'▋';animation:vcBlink .7s infinite;color:#7c3aed;font-size:.9em;}
 @keyframes vcBlink{0%,100%{opacity:1}50%{opacity:0}}
 .vc-typewriter-done::after{content:none}
+/* §164 — SF simple chat layout */
+.vc-sf-home-simple{display:flex;flex-direction:column;height:100%;padding:16px;gap:12px;}
+.vc-sf-chat-history{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-bottom:8px;min-height:80px;}
+.vc-sf-chat-msg{max-width:80%;padding:12px 16px;border-radius:12px;font-size:.9rem;line-height:1.6;white-space:pre-wrap;}
+.vc-sf-chat-msg.user{align-self:flex-end;background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.3);color:#e2d9f3;}
+.vc-sf-chat-msg.assistant{align-self:flex-start;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:#94a3b8;}
+.vc-sf-input-bar{display:flex;align-items:flex-end;gap:8px;background:#1e1e2e;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px 12px;}
+.vc-sf-input-field{flex:1;background:transparent;border:none;outline:none;color:#e2d9f3;font-size:.95rem;line-height:1.5;resize:none;max-height:120px;overflow-y:auto;font-family:inherit;}
+.vc-sf-input-field::placeholder{color:#4a5568;font-style:italic;}
+.vc-sf-input-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.vc-sf-ap-toggle{padding:5px 10px;border-radius:8px;border:1px solid rgba(124,58,237,.4);background:rgba(124,58,237,.15);color:#c4b5fd;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.vc-sf-ap-toggle.active{background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border-color:transparent;}
+.vc-sf-ap-toggle:not(.active){opacity:.6;}
+.vc-sf-send-btn{width:36px;height:36px;border-radius:8px;border:none;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .2s;}
+.vc-sf-send-btn:hover{opacity:.85;}
 .v299-obsidian-btn.active{color:#22c55e!important;border-color:#22c55e!important;}
 /* §89 TUTORIAL */
 .vc-tutorial-overlay{position:fixed;inset:0;z-index:99999;pointer-events:none;transition:opacity .3s;display:none}
@@ -2376,67 +2391,43 @@
     <!-- CENTER: SF Home (LLM Control) + Module Workspace -->
     <div class="vc-sf-col-center">
 
-      <!-- HOME: exclusive landing — hidden completely when workspace opens -->
-      <div id="vcSfHomeControl">
+      <!-- HOME: exclusive landing — §164 simple chat UI -->
+      <div id="vcSfHomeControl" class="vc-sf-home-simple">
 
-        <!-- Hero intro -->
-        <div class="vc-sf-hero">
-          <div class="vc-sf-hero-title">⬡ Vamos construir algo extraordinário.</div>
-          <div class="vc-sf-hero-subtitle">Descreva sua ideia de projeto, objetivos, funcionalidades principais, regras de negócio e requisitos técnicos. Tudo fica na memória local desta sessão — sem backend, sem API.</div>
+        <!-- §164 — chat history area -->
+        <div id="vcSfChatHistory" class="vc-sf-chat-history"></div>
+
+        <!-- §161 — Auto-Pilot progress (keep) -->
+        <div id="vcSfAutoPilotProgress" class="vc-sf-autopilot-progress" style="display:none">
+          <div class="vc-sf-autopilot-status" id="vcSfAutoPilotStatus">Iniciando...</div>
+          <div class="vc-sf-autopilot-steps" id="vcSfAutoPilotSteps"></div>
+          <div class="vc-sf-autopilot-result" id="vcSfAutoPilotResult"></div>
         </div>
 
-        <!-- Large central LLM Control -->
-        <div class="vc-sf-llm-control">
-          <div class="vc-sf-llm-control-header">
-            <span class="vc-sf-llm-title vc-sf-llm-title--arch">🏛️ AGENTE ARQUITETO</span>
-            <span class="vc-sf-llm-status" id="vcSfLlmStatus">LOCAL · SEM BACKEND · SEM API</span>
-          </div>
-          <div class="vc-sf-chat-stream" id="vcSfChatStream">
-            <div class="vc-sf-chat-hint">Descreva sua ideia de projeto aqui. Mensagens ficam na memória local desta sessão. Nenhuma informação é enviada a servidores externos.</div>
-          </div>
-          <!-- §73.2b — Architect response panel (hidden until response arrives) -->
-          <div id="vcSfArchitectPanel" style="display:none;margin-top:8px;border:1px solid #1e40af33;border-radius:6px;background:#060d1a;padding:10px 14px">
-            <div style="font-size:10px;color:#3b82f6;letter-spacing:1px;margin-bottom:8px">🏛️ AGENTE ARQUITETO · LOCAL PREVIEW · EXEC REAL BLOQUEADA</div>
-            <div id="vcSfArchitectExplanation" style="font-size:13px;color:#cbd5e1;line-height:1.6;margin-bottom:10px"></div>
-            <div id="vcSfArchitectQuestions" style="display:none;margin-bottom:10px">
-              <div style="font-size:10px;color:#f59e0b;letter-spacing:1px;margin-bottom:6px">PRECISO DE MAIS INFORMAÇÕES:</div>
-              <div id="vcSfArchitectQList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-            </div>
-            <div id="vcSfArchitectSpecsWrap" style="display:none">
-              <div style="font-size:10px;color:#4ade80;letter-spacing:1px;margin-bottom:6px">SPECS SUGERIDAS DA LIBRARY:</div>
-              <div id="vcSfArchitectSpecsList"></div>
-            </div>
-          </div>
-          <div class="vc-sf-chat-composer">
-            <textarea class="vc-sf-chat-input" id="vcSfChatInput" rows="4" placeholder="Ex.: Quero construir um SaaS de gestão de projetos com autenticação, dashboard, planos de assinatura e API REST. Stack preferida: Node.js + React + PostgreSQL. Tamanho: Production Ready.&#10;&#10;(Enter = enviar · Shift+Enter = nova linha)"></textarea>
-            <div class="vc-sf-chat-btn-group">
-              <button class="vc-sf-chat-send" id="vcSfChatSendBtn" type="button">ENVIAR</button>
-              <button class="vc-sf-run-btn" id="vcSfRunBtn" type="button">EXECUTAR MISSÃO SDDF</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quick action buttons -->
-        <div class="vc-sf-action-grid">
-          <button class="vc-sf-action-btn" data-sf-fill="descricao" type="button">💡 Descrever ideia do projeto</button>
-          <button class="vc-sf-action-btn" data-sf-fill="briefing"  type="button">📋 Importar briefing</button>
-          <button class="vc-sf-action-btn" data-sf-fill="exemplos"  type="button">🗂️ Ver exemplos de projetos</button>
-          <button class="vc-sf-action-btn primary" id="vcSfStartBtn" type="button">▶ INICIAR MONTAGEM DO PROJETO</button>
-        </div>
-
-        <!-- §163 — example chips -->
+        <!-- §163 — example chips (keep) -->
         <div class="vc-sf-examples" id="vcSfExamples">
           <button class="vc-sf-example-chip" data-example="Quero um app de tarefas com login, lista de tarefas e notificações por email. Stack: Node.js + React." type="button">📱 App de tarefas</button>
           <button class="vc-sf-example-chip" data-example="Quero uma API REST para gerenciar estoque de uma loja. Preciso de CRUD de produtos, categorias e relatórios. Stack: Python + FastAPI." type="button">🛒 API de estoque</button>
           <button class="vc-sf-example-chip" data-example="Quero um site de validação de provas online com cadastro de alunos, upload de gabaritos e correção automática. Stack: Node.js + HTML/CSS." type="button">📝 Plataforma de provas</button>
         </div>
 
-        <!-- §161 — Auto-Pilot -->
-        <button id="vcSfAutoPilotBtn" class="vc-sf-autopilot-btn" type="button">▶ AUTO-PILOT — Gerar tudo automaticamente (7 etapas)</button>
-        <div id="vcSfAutoPilotProgress" class="vc-sf-autopilot-progress" style="display:none">
-          <div class="vc-sf-autopilot-status" id="vcSfAutoPilotStatus">Iniciando...</div>
-          <div class="vc-sf-autopilot-steps" id="vcSfAutoPilotSteps"></div>
-          <div class="vc-sf-autopilot-result" id="vcSfAutoPilotResult"></div>
+        <!-- §164 — input bar simples -->
+        <div class="vc-sf-input-bar" id="vcSfInputBar">
+          <textarea id="vcSfChatInput" class="vc-sf-input-field" placeholder="Descreva seu projeto... ou cole uma URL para analisar" rows="1"></textarea>
+          <div class="vc-sf-input-actions">
+            <button id="vcSfAutoPilotToggle" class="vc-sf-ap-toggle active" type="button" title="AUTO-PILOT: executa 7 módulos automaticamente">🚀 AUTO-PILOT</button>
+            <button id="vcSfSendBtn" class="vc-sf-send-btn" type="button">↑</button>
+          </div>
+        </div>
+
+        <!-- §164 — legacy elements (hidden, backward compat com bundle.js) -->
+        <div style="display:none">
+          <div id="vcSfChatStream"></div>
+          <div id="vcSfArchitectPanel"><div id="vcSfArchitectExplanation"></div><div id="vcSfArchitectQuestions"><div id="vcSfArchitectQList"></div></div><div id="vcSfArchitectSpecsWrap"><div id="vcSfArchitectSpecsList"></div></div></div>
+          <span id="vcSfLlmStatus"></span>
+          <button id="vcSfChatSendBtn" type="button"></button>
+          <button id="vcSfRunBtn" type="button"></button>
+          <button id="vcSfStartBtn" type="button"></button>
         </div>
 
       </div><!-- end #vcSfHomeControl -->
