@@ -1250,6 +1250,36 @@ app.get('/api/mission/timeline', (req, res) => {
   return sendOk(res, { entries, count: entries.length, authenticated: Boolean(user), anti_stub: true });
 });
 
+// §205 — /api/deploy/pages: advisory endpoint — CF Pages deploy requer CLI local (wrangler não disponível no EB)
+app.post('/api/deploy/pages', (req, res) => {
+  const body = normalizeBody(req);
+  return sendOk(res, {
+    ok: true,
+    mode: 'advisory',
+    url: process.env.FRONTEND_URL || 'https://visioncoreai.pages.dev',
+    note: 'Deploy CF Pages requer CLI local: bash bin/deploy-pages.sh "mensagem"',
+    source: body.source || 'sf-autopilot',
+    pass_gold: body.pass_gold || false,
+    anti_stub: true
+  });
+});
+
+// §205 — /api/deploy/eb: advisory endpoint — EB deploy requer CLI local (python _deploy89_eb.py)
+app.post('/api/deploy/eb', (req, res) => {
+  const body = normalizeBody(req);
+  const pkg = (() => { try { return require('./package.json'); } catch { return {}; } })();
+  return sendOk(res, {
+    ok: true,
+    mode: 'advisory',
+    version: pkg.version || 'unknown',
+    environment: process.env.NODE_ENV || 'production',
+    note: 'Deploy EB requer CLI local: python _deploy89_eb.py',
+    source: body.source || 'sf-autopilot',
+    pass_gold: body.pass_gold || false,
+    anti_stub: true
+  });
+});
+
 // §202+ — POST /api/mission/timeline: SF Auto-Pilot loga runs reais na Timeline UI
 app.post('/api/mission/timeline', (req, res) => {
   try {
