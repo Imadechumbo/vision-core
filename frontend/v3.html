@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="pt-BR" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VISION CORE V3 • FULLSTACK • SAAS • HERMES • PASS GOLD</title>
+<style>
+/* §206 — Vision Core V3 — CSS limpo sem legado */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:    #0f0f0f;
+  --surf:  #12011f;
+  --bord:  rgba(124,58,237,.22);
+  --pur:   #7c3aed;
+  --pur2:  #9d4edd;
+  --text:  #e2d9f3;
+  --muted: #8b949e;
+  --gold:  #f59e0b;
+  --red:   #dc2626;
+  --green: #238636;
+  --sb:    220px;
+  --sb-mini: 52px;
+}
+body { background:var(--bg); color:var(--text); font-family:"Courier New",monospace;
+  height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+/* ── TOPBAR ── */
+#v3-top { height:52px; background:var(--surf); border-bottom:1px solid var(--bord);
+  display:flex; align-items:center; padding:0 14px; gap:10px; flex-shrink:0; z-index:20; }
+#v3-logo-wrap { display:flex; align-items:center; gap:8px; margin-right:12px; flex-shrink:0; }
+#v3-logo-orb { width:28px; height:28px; border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, #a78bfa, #7c3aed, #3b0764);
+  box-shadow:0 0 12px rgba(124,58,237,.5); flex-shrink:0; }
+#v3-logo-title { font-size:.78rem; font-weight:700; color:#a78bfa; letter-spacing:.1em; line-height:1; }
+#v3-logo-sub   { font-size:.48rem; color:var(--muted); letter-spacing:.05em; margin-top:2px; }
+
+#v3-switcher { display:flex; gap:3px; background:rgba(255,255,255,.04);
+  border:1px solid var(--bord); border-radius:8px; padding:3px; flex-shrink:0; }
+.v3-sw { padding:4px 12px; border-radius:5px; border:none; background:transparent;
+  color:var(--muted); font-size:.7rem; font-weight:700; cursor:pointer; font-family:inherit;
+  letter-spacing:.04em; transition:all 160ms; white-space:nowrap; }
+.v3-sw.on { background:var(--pur); color:#fff; }
+.v3-sw:hover:not(.on) { color:var(--text); background:rgba(124,58,237,.12); }
+
+#v3-top-r { display:flex; align-items:center; gap:7px; margin-left:auto; }
+.v3-tl { padding:5px 11px; border-radius:6px; font-size:.7rem; font-weight:600;
+  text-decoration:none; cursor:pointer; border:1px solid var(--bord);
+  background:transparent; color:var(--text); font-family:inherit;
+  transition:all 160ms; white-space:nowrap; }
+.v3-tl:hover { background:rgba(124,58,237,.12); border-color:var(--pur); }
+.v3-tl-p { background:var(--pur)!important; border-color:var(--pur)!important; color:#fff!important; }
+.v3-tl-g { background:var(--green)!important; border-color:var(--green)!important; color:#fff!important; }
+
+/* ── BODY FLEX ── */
+#v3-body { display:flex; flex:1; overflow:hidden; }
+
+/* ── SIDEBAR ── */
+#v3-sb { width:var(--sb); background:var(--surf); border-right:1px solid var(--bord);
+  display:flex; flex-direction:column; transition:width 280ms cubic-bezier(.4,0,.2,1);
+  overflow:hidden; flex-shrink:0; }
+#v3-sb.mini { width:var(--sb-mini); }
+
+#v3-sb-toggle { width:100%; padding:10px 14px; background:transparent;
+  border:none; border-bottom:1px solid var(--bord); color:var(--pur2);
+  cursor:pointer; font-size:.66rem; font-weight:700; letter-spacing:.08em;
+  text-align:left; display:flex; align-items:center; gap:8px;
+  white-space:nowrap; font-family:inherit; transition:background 160ms; }
+#v3-sb-toggle:hover { background:rgba(124,58,237,.1); }
+#v3-sb-toggle .arr { margin-left:auto; transition:transform 280ms; font-size:10px; flex-shrink:0; }
+#v3-sb.mini #v3-sb-toggle .arr { transform:rotate(180deg); }
+#v3-sb.mini .sb-txt { display:none; }
+
+#v3-sb-sc { flex:1; overflow-y:auto; overflow-x:hidden; }
+#v3-sb-sc::-webkit-scrollbar { width:3px; }
+#v3-sb-sc::-webkit-scrollbar-thumb { background:var(--bord); border-radius:2px; }
+
+.v3-grp { padding:5px 0; border-bottom:1px solid rgba(124,58,237,.07); }
+.v3-grp-lbl { padding:4px 14px; font-size:.52rem; color:var(--muted);
+  letter-spacing:.1em; font-weight:700; white-space:nowrap; }
+#v3-sb.mini .v3-grp-lbl { display:none; }
+
+.v3-na { display:flex; align-items:center; gap:8px; padding:7px 14px;
+  color:var(--muted); text-decoration:none; font-size:.68rem; letter-spacing:.03em;
+  cursor:pointer; border:none; background:transparent; width:100%;
+  text-align:left; transition:all 140ms; white-space:nowrap; font-family:inherit;
+  border-left:2px solid transparent; }
+.v3-na:hover { color:var(--text); background:rgba(124,58,237,.07); }
+.v3-na.act { color:var(--pur2); border-left-color:var(--pur); background:rgba(124,58,237,.1); }
+.v3-ic { font-size:13px; flex-shrink:0; width:18px; text-align:center; }
+.v3-nt { flex:1; }
+#v3-sb.mini .v3-nt,
+#v3-sb.mini .v3-nbadge { display:none; }
+#v3-sb.mini .v3-na { justify-content:center; padding:9px 0; border-left-color:transparent; }
+#v3-sb.mini .v3-na.act { background:rgba(124,58,237,.15); }
+
+.v3-nbadge { font-size:.48rem; padding:1px 5px; border-radius:4px;
+  font-weight:700; letter-spacing:.04em; flex-shrink:0; }
+.v3-nbadge.pur { background:var(--pur); color:#fff; }
+.v3-nbadge.sky { background:#0ea5e9; color:#fff; }
+.v3-nbadge.grn { background:var(--green); color:#fff; }
+
+.v3-sub { padding-left:24px; display:none; }
+.v3-sub.open { display:block; }
+.v3-sub .v3-na { font-size:.63rem; padding:5px 14px; }
+#v3-sb.mini .v3-sub { display:none!important; }
+
+/* ── MAIN ── */
+#v3-main { flex:1; display:flex; overflow:hidden; position:relative; }
+
+/* iframe */
+#v3-ifw { flex:1; display:none; overflow:hidden; }
+#v3-ifw.act { display:flex; }
+#v3-iframe { width:100%; height:100%; border:none; background:var(--bg); }
+
+/* chat */
+#v3-chat { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.v3-chat-inner { flex:1; overflow-y:auto; padding:20px 20px 8px; }
+.v3-chat-inner::-webkit-scrollbar { width:3px; }
+.v3-chat-inner::-webkit-scrollbar-thumb { background:var(--bord); border-radius:2px; }
+.v3-chat-center { max-width:720px; width:100%; margin:0 auto; }
+
+.v3-msg { padding:10px 14px; margin:5px 0; border-radius:9px;
+  font-size:.8rem; line-height:1.6; }
+.v3-msg-user  { background:rgba(124,58,237,.12); border-left:3px solid var(--pur); }
+.v3-msg-ai    { background:rgba(255,255,255,.025); border-left:3px solid #2a2a2a; }
+.v3-msg-step  { background:rgba(124,58,237,.05); border-left:3px solid var(--pur2);
+  font-size:.73rem; color:var(--muted); }
+.v3-msg-pass  { background:rgba(245,158,11,.08); border-left:3px solid var(--gold);
+  font-weight:700; color:var(--gold); }
+.v3-msg-error { background:rgba(220,38,38,.08); border-left:3px solid var(--red); color:#fca5a5; }
+
+#v3-ibar { padding:10px 20px 14px; border-top:1px solid var(--bord);
+  max-width:720px; width:100%; margin:0 auto; }
+.v3-irow { display:flex; gap:8px; align-items:flex-end; }
+#v3-inp { flex:1; background:var(--surf); border:1px solid var(--bord);
+  border-radius:9px; color:var(--text); padding:9px 13px; font-family:inherit;
+  font-size:.8rem; resize:none; min-height:42px; max-height:110px; line-height:1.5; }
+#v3-inp:focus { outline:none; border-color:var(--pur); }
+.v3-btn-send { padding:9px 18px; background:var(--pur); color:#fff; border:none;
+  border-radius:7px; cursor:pointer; font-size:.78rem; font-weight:700;
+  font-family:inherit; letter-spacing:.05em; white-space:nowrap; transition:opacity 160ms; }
+.v3-btn-send:hover { opacity:.85; }
+.v3-btn-ap   { padding:9px 18px; background:var(--green); color:#fff; border:none;
+  border-radius:7px; cursor:pointer; font-size:.78rem; font-weight:700;
+  font-family:inherit; letter-spacing:.05em; white-space:nowrap; transition:opacity 160ms; }
+.v3-btn-ap:hover { opacity:.85; }
+.v3-hint { font-size:.58rem; color:var(--muted); margin-top:5px; text-align:center; }
+
+/* ── DECAGONO SVG — sempre visivel, fundo transparente ── */
+#v3-dec { position:fixed; top:58px; right:10px; width:270px; height:270px;
+  z-index:500; pointer-events:none; }
+#v3-dec svg { width:100%; height:100%; overflow:visible; }
+.vdc-circle { transition:all 300ms; }
+.vdc-idle   { opacity:.6; }
+.vdc-active { opacity:1; filter:drop-shadow(0 0 8px currentColor); }
+.vdc-pulse  { animation:vdcPulse 1.2s ease-in-out infinite; }
+@keyframes vdcPulse { 0%,100%{opacity:1;} 50%{opacity:.25;} }
+.vdc-orbit { stroke-dasharray:6 10; animation:vdcOrbit 2.8s linear infinite; opacity:.35; }
+@keyframes vdcOrbit { from{stroke-dashoffset:0;} to{stroke-dashoffset:-200;} }
+
+/* ── STATUS BAR ── */
+#v3-st { height:22px; background:var(--surf); border-top:1px solid var(--bord);
+  display:flex; align-items:center; padding:0 12px; gap:14px;
+  font-size:.56rem; color:var(--muted); flex-shrink:0; z-index:10; }
+.v3-dot { width:5px; height:5px; border-radius:50%; background:var(--green);
+  display:inline-block; margin-right:4px; animation:vdcPulse 2s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="v3-top">
+  <div id="v3-logo-wrap">
+    <div id="v3-logo-orb"></div>
+    <div>
+      <div id="v3-logo-title">VISION CORE</div>
+      <div id="v3-logo-sub">V2.9.10 • FULLSTACK • SAAS • HERMES • PASS GOLD</div>
+    </div>
+  </div>
+
+  <div id="v3-switcher">
+    <button class="v3-sw on" onclick="v3Mode('mission')">◎ MISSION</button>
+    <button class="v3-sw" onclick="v3Mode('sf')">◈ SOFTWARE FACT</button>
+    <button class="v3-sw" onclick="v3IFrame('index.html#agentsBoard')">⚙ AGENTES</button>
+  </div>
+
+  <div id="v3-top-r">
+    <a class="v3-tl" href="landing.html" target="_blank">LANDING</a>
+    <a class="v3-tl" href="about.html" target="_blank">ABOUT</a>
+    <a class="v3-tl" href="https://github.com/Imadechumbo/vision-core-master" target="_blank">◈ GITHUB</a>
+    <button class="v3-tl" onclick="v3IFrame('index.html#saasAuth')">FREE · LOGIN</button>
+    <button class="v3-tl v3-tl-g" onclick="v3Mode('mission')">ENVIAR MISSÃO</button>
+    <button class="v3-tl v3-tl-p" onclick="v3AutoPilot()">⚡ AUTO-PILOT</button>
+  </div>
+</div>
+
+<!-- BODY -->
+<div id="v3-body">
+
+  <!-- SIDEBAR -->
+  <nav id="v3-sb">
+    <button id="v3-sb-toggle" onclick="v3SbToggle()">
+      <span class="v3-ic">☰</span>
+      <span class="sb-txt">VISION CORE</span>
+      <span class="arr">◀</span>
+    </button>
+    <div id="v3-sb-sc">
+
+      <div class="v3-grp">
+        <div class="v3-grp-lbl">PRINCIPAL</div>
+        <button class="v3-na act" onclick="v3Mode('mission')">
+          <span class="v3-ic">◎</span><span class="v3-nt">MISSION CONTROL</span>
+        </button>
+        <button class="v3-na" onclick="v3Mode('sf')">
+          <span class="v3-ic">◈</span><span class="v3-nt">SOFTWARE FACTORY</span>
+          <span class="v3-nbadge grn">AUTO</span>
+        </button>
+        <button class="v3-na" onclick="v3IFrame('index.html#vcOpenDryRunPanelBtn')">
+          <span class="v3-ic">🔬</span><span class="v3-nt">DRY-RUN EXTERNO</span>
+        </button>
+      </div>
+
+      <div class="v3-grp">
+        <div class="v3-grp-lbl">MONITORAMENTO</div>
+        <button class="v3-na" onclick="v3IFrame('index.html#timeline')">
+          <span class="v3-ic">⌁</span><span class="v3-nt">MISSION TIMELINE</span>
+        </button>
+        <button class="v3-na" onclick="v3IFrame('index.html#runtime')">
+          <span class="v3-ic">⌁</span><span class="v3-nt">EXECUTION MONITOR</span>
+        </button>
+        <button class="v3-na" onclick="v3IFrame('index.html#hermes')">
+          <span class="v3-ic">☷</span><span class="v3-nt">DIAGNOSTICS / HERMES</span>
+        </button>
+        <button class="v3-na" onclick="v3IFrame('index.html#score')">
+          <span class="v3-ic">☑</span><span class="v3-nt">VALIDATION / SDDF</span>
+        </button>
+        <button class="v3-na" onclick="v3IFrame('index.html#diff')">
+          <span class="v3-ic">☷</span><span class="v3-nt">DIFF PREVIEW</span>
+        </button>
+        <button class="v3-na" onclick="v3IFrame('index.html#metricsBoard')">
+          <span class="v3-ic">▥</span><span class="v3-nt">MÉTRICAS / METRICAS</span>
+        </button>
+      </div>
+
+      <div class="v3-grp">
+        <div class="v3-grp-lbl">AGENTES</div>
+        <button class="v3-na" onclick="v3IFrame('index.html#agentsBoard')">
+          <span class="v3-ic">⚙</span><span class="v3-nt">AGENTES EXTRAS</span>
+        </button>
+        <button class="v3-na" onclick="v3IFrame('index.html#opensquad')">
+          <span class="v3-ic">⌘</span><span class="v3-nt">OPENCLAW / OPENSQUAD</span>
+          <span class="v3-nbadge sky">SCALE</span>
+        </button>
+        <button class="v3-na" onclick="v3IFrame('index.html#osint')">
+          <span class="v3-ic">◇</span><span class="v3-nt">OSINT DOCKER</span>
+        </button>
+      </div>
+
+      <div class="v3-grp">
+        <div class="v3-grp-lbl">DADOS</div>
+        <button class="v3-na" onclick="v3IFrame('index.html#vault')">
+          <span class="v3-ic">⌂</span><span class="v3-nt">VAULT / ROLLBACK</span>
+        </button>
+        <button class="v3-na" onclick="v3IFrame('index.html#memory')">
+          <span class="v3-ic">▤</span><span class="v3-nt">MEMORY / OBSIDIAN</span>
+        </button>
+        <button class="v3-na" onclick="v3IFrame('index.html#aiApiVault')">
+          <span class="v3-ic">🔑</span><span class="v3-nt">AI API VAULT</span>
+        </button>
+      </div>
+
+      <div class="v3-grp">
+        <div class="v3-grp-lbl">PRODUTO</div>
+        <button class="v3-na" onclick="v3IFrame('index.html#githubPanel')">
+          <span class="v3-ic">⌬</span><span class="v3-nt">GITHUB / PR REAL</span>
+        </button>
+        <button class="v3-na" onclick="v3IFrame('index.html#saasAuth')">
+          <span class="v3-ic">◉</span><span class="v3-nt">SAAS / PLANOS</span>
+        </button>
+        <button class="v3-na" onclick="v3IFrame('index.html#v10')">
+          <span class="v3-ic">◇</span><span class="v3-nt">V10 ENTERPRISE</span>
+        </button>
+        <button class="v3-na" onclick="v3IFrame('index.html#marketplace')">
+          <span class="v3-ic">▣</span><span class="v3-nt">TOOLS MARKETPLACE</span>
+        </button>
+      </div>
+
+      <div class="v3-grp">
+        <div class="v3-grp-lbl">PÁGINAS</div>
+        <a class="v3-na" href="about.html" target="_blank">
+          <span class="v3-ic">◎</span><span class="v3-nt">um sistema que corrige sistemas</span>
+        </a>
+        <a class="v3-na" href="landing.html" target="_blank">
+          <span class="v3-ic">🚀</span><span class="v3-nt">LANDING STARTUP</span>
+        </a>
+        <button class="v3-na" onclick="v3IFrame('index.html#antialucinacao')">
+          <span class="v3-ic">◈</span><span class="v3-nt">Anti-alucinação</span>
+        </button>
+      </div>
+
+      <div class="v3-grp">
+        <div class="v3-grp-lbl">TUTORIAIS</div>
+        <button class="v3-na" onclick="v3SubToggle()">
+          <span class="v3-ic">🪐</span><span class="v3-nt">Tutoriais</span>
+          <span class="arr" id="v3-tarr" style="font-size:10px;margin-left:auto;">▼</span>
+        </button>
+        <div class="v3-sub" id="v3-tsub">
+          <button class="v3-na" onclick="v3IFrame('index.html')"><span class="v3-ic">·</span><span class="v3-nt">🌟 Geral</span></button>
+          <button class="v3-na" onclick="v3IFrame('index.html')"><span class="v3-ic">·</span><span class="v3-nt">🖥 Agent local</span></button>
+          <button class="v3-na" onclick="v3IFrame('index.html')"><span class="v3-ic">·</span><span class="v3-nt">◎ Mission</span></button>
+          <button class="v3-na" onclick="v3IFrame('index.html')"><span class="v3-ic">·</span><span class="v3-nt">◈ Software Factory</span></button>
+          <button class="v3-na" onclick="v3IFrame('index.html')"><span class="v3-ic">·</span><span class="v3-nt">🏅 Pass Gold</span></button>
+          <button class="v3-na" onclick="v3IFrame('index.html')"><span class="v3-ic">·</span><span class="v3-nt">⌬ GitHub Agent</span></button>
+          <button class="v3-na" onclick="v3IFrame('index.html')"><span class="v3-ic">·</span><span class="v3-nt">▣ Tools</span></button>
+          <button class="v3-na" onclick="v3IFrame('index.html')"><span class="v3-ic">·</span><span class="v3-nt">▥ Métricas</span></button>
+        </div>
+      </div>
+
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main id="v3-main">
+
+    <!-- CHAT -->
+    <div id="v3-chat">
+      <div class="v3-chat-inner" id="v3-hist-wrap">
+        <div class="v3-chat-center" id="v3-hist"></div>
+      </div>
+      <div style="max-width:720px;width:100%;margin:0 auto;padding:0 20px;">
+        <div id="v3-ibar">
+          <div class="v3-irow">
+            <textarea id="v3-inp" rows="2"
+              placeholder="Descreva seu projeto, cole erros, pergunte qualquer coisa... Enter = enviar"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();v3Send();}"></textarea>
+            <button class="v3-btn-send" onclick="v3Send()">ENVIAR</button>
+            <button class="v3-btn-ap" onclick="v3AutoPilot()">⚡ AUTO-PILOT</button>
+          </div>
+          <div class="v3-hint">Enter = enviar · Shift+Enter = nova linha · AUTO-PILOT gera projeto completo com PASS GOLD</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IFRAME -->
+    <div id="v3-ifw">
+      <iframe id="v3-iframe" src="" title="Vision Core seção"></iframe>
+    </div>
+
+  </main>
+</div>
+
+<!-- STATUS BAR -->
+<div id="v3-st">
+  <span><span class="v3-dot"></span>READY</span>
+  <span id="v3-eb">EB v5.9.8</span>
+  <span>✦ PASS GOLD</span>
+  <span id="v3-jobs">0 jobs</span>
+  <span style="margin-left:auto;color:rgba(124,58,237,.5);">VISION CORE V3 · §206</span>
+</div>
+
+<!-- DECAGONO SVG — sempre visivel, position:fixed, fundo transparente -->
+<div id="v3-dec">
+<svg viewBox="0 0 270 270" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="vg">
+      <feGaussianBlur stdDeviation="2.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- CORE -->
+  <circle cx="135" cy="135" r="28" fill="rgba(124,58,237,.12)" stroke="#7c3aed" stroke-width="1.5" id="vdc-core"/>
+  <text x="135" y="131" text-anchor="middle" font-size="9.5" fill="#a78bfa" font-family="Courier New" font-weight="700">CORE</text>
+  <text x="135" y="142" text-anchor="middle" font-size="6.5" fill="rgba(167,139,250,.55)" font-family="Courier New">VISION AI</text>
+
+  <!-- PI HARNESS — 90° (topo) -->
+  <line x1="135" y1="107" x2="135" y2="60" class="vdc-orbit" stroke="#7c3aed" stroke-width="1"/>
+  <circle cx="135" cy="50" r="16" fill="rgba(124,58,237,.14)" stroke="#7c3aed" stroke-width="1.5" class="vdc-circle vdc-idle" id="vda-pi" filter="url(#vg)"/>
+  <text x="135" y="47" text-anchor="middle" font-size="8" fill="#a78bfa" font-family="Courier New">⬡</text>
+  <text x="135" y="56" text-anchor="middle" font-size="5" fill="rgba(167,139,250,.8)" font-family="Courier New">PI HARNESS</text>
+
+  <!-- HERMES — 126° -->
+  <line x1="135" y1="107" x2="187" y2="75" class="vdc-orbit" stroke="#9d4edd" stroke-width="1"/>
+  <circle cx="197" cy="68" r="16" fill="rgba(157,78,221,.14)" stroke="#9d4edd" stroke-width="1.5" class="vdc-circle vdc-idle" id="vda-hermes"/>
+  <text x="197" y="65" text-anchor="middle" font-size="8" fill="#c084fc" font-family="Courier New">⊕</text>
+  <text x="197" y="74" text-anchor="middle" font-size="5" fill="rgba(192,132,252,.8)" font-family="Courier New">HERMES</text>
+
+  <!-- OPENCLAW — 162° -->
+  <line x1="135" y1="135" x2="220" y2="153" class="vdc-orbit" stroke="#7c3aed" stroke-width="1"/>
+  <circle cx="232" cy="157" r="16" fill="rgba(124,58,237,.14)" stroke="#7c3aed" stroke-width="1.5" class="vdc-circle vdc-idle" id="vda-openclaw"/>
+  <text x="232" y="154" text-anchor="middle" font-size="8" fill="#a78bfa" font-family="Courier New">◉</text>
+  <text x="232" y="163" text-anchor="middle" font-size="5" fill="rgba(167,139,250,.8)" font-family="Courier New">OPENCLAW</text>
+
+  <!-- SCANNER — 198° -->
+  <line x1="135" y1="163" x2="176" y2="218" class="vdc-orbit" stroke="#6e40c9" stroke-width="1"/>
+  <circle cx="181" cy="228" r="16" fill="rgba(110,64,201,.14)" stroke="#6e40c9" stroke-width="1.5" class="vdc-circle vdc-idle" id="vda-scanner"/>
+  <text x="181" y="225" text-anchor="middle" font-size="8" fill="#8b5cf6" font-family="Courier New">◎</text>
+  <text x="181" y="234" text-anchor="middle" font-size="5" fill="rgba(139,92,246,.8)" font-family="Courier New">SCANNER</text>
+
+  <!-- PATCH ENGINE — 234° -->
+  <line x1="135" y1="163" x2="94" y2="218" class="vdc-orbit" stroke="#7c3aed" stroke-width="1"/>
+  <circle cx="89" cy="228" r="16" fill="rgba(124,58,237,.14)" stroke="#7c3aed" stroke-width="1.5" class="vdc-circle vdc-idle" id="vda-patch"/>
+  <text x="89" y="225" text-anchor="middle" font-size="8" fill="#a78bfa" font-family="Courier New">⚙</text>
+  <text x="89" y="234" text-anchor="middle" font-size="5" fill="rgba(167,139,250,.8)" font-family="Courier New">PATCH</text>
+
+  <!-- ARCHIVIST — 270° (esquerda) -->
+  <line x1="135" y1="135" x2="50" y2="153" class="vdc-orbit" stroke="#5a32a3" stroke-width="1"/>
+  <circle cx="38" cy="157" r="16" fill="rgba(90,50,163,.14)" stroke="#5a32a3" stroke-width="1.5" class="vdc-circle vdc-idle" id="vda-archivist"/>
+  <text x="38" y="154" text-anchor="middle" font-size="8" fill="#7c3aed" font-family="Courier New">⊞</text>
+  <text x="38" y="163" text-anchor="middle" font-size="4.5" fill="rgba(124,58,237,.8)" font-family="Courier New">ARCHIVIST</text>
+
+  <!-- PASS GOLD — 306° -->
+  <line x1="135" y1="107" x2="83" y2="75" class="vdc-orbit" stroke="#f59e0b" stroke-width="1"/>
+  <circle cx="73" cy="68" r="16" fill="rgba(245,158,11,.1)" stroke="#f59e0b" stroke-width="1.5" class="vdc-circle vdc-idle" id="vda-passgold"/>
+  <text x="73" y="65" text-anchor="middle" font-size="8" fill="#fbbf24" font-family="Courier New">✦</text>
+  <text x="73" y="74" text-anchor="middle" font-size="4.5" fill="rgba(251,191,36,.8)" font-family="Courier New">PASS GOLD</text>
+
+  <!-- GO CORE — esquerda-baixo -->
+  <line x1="135" y1="135" x2="55" y2="205" class="vdc-orbit" stroke="#6e40c9" stroke-width="1"/>
+  <circle cx="44" cy="215" r="14" fill="rgba(110,64,201,.14)" stroke="#6e40c9" stroke-width="1.5" class="vdc-circle vdc-idle" id="vda-gocore"/>
+  <text x="44" y="212" text-anchor="middle" font-size="8" fill="#8b5cf6" font-family="Courier New">⬢</text>
+  <text x="44" y="221" text-anchor="middle" font-size="4.5" fill="rgba(139,92,246,.8)" font-family="Courier New">GO CORE</text>
+
+  <!-- AEGIS — direita-baixo -->
+  <line x1="135" y1="135" x2="215" y2="205" class="vdc-orbit" stroke="#dc2626" stroke-width="1"/>
+  <circle cx="226" cy="215" r="14" fill="rgba(220,38,38,.1)" stroke="#dc2626" stroke-width="1.5" class="vdc-circle vdc-idle" id="vda-aegis"/>
+  <text x="226" y="212" text-anchor="middle" font-size="8" fill="#ef4444" font-family="Courier New">⛉</text>
+  <text x="226" y="221" text-anchor="middle" font-size="4.5" fill="rgba(239,68,68,.8)" font-family="Courier New">AEGIS</text>
+
+  <!-- GITHUB AGENT — topo-direita -->
+  <line x1="135" y1="107" x2="170" y2="28" class="vdc-orbit" stroke="#6e40c9" stroke-width="1"/>
+  <circle cx="178" cy="20" r="14" fill="rgba(110,64,201,.14)" stroke="#6e40c9" stroke-width="1.5" class="vdc-circle vdc-idle" id="vda-github"/>
+  <text x="178" y="17" text-anchor="middle" font-size="8" fill="#8b5cf6" font-family="Courier New">◈</text>
+  <text x="178" y="26" text-anchor="middle" font-size="4.5" fill="rgba(139,92,246,.8)" font-family="Courier New">GITHUB</text>
+</svg>
+</div>
+
+<script>
+// §206 — Vision Core V3
+
+var V3_BASE = 'https://visioncore-api-gateway.weiganlight.workers.dev';
+
+// ── SIDEBAR ──
+function v3SbToggle() {
+  var sb = document.getElementById('v3-sb');
+  sb.classList.toggle('mini');
+  var arr = sb.querySelector('#v3-sb-toggle .arr');
+  if (arr) arr.textContent = sb.classList.contains('mini') ? '▶' : '◀';
+  try { localStorage.setItem('v3sb', sb.classList.contains('mini') ? '1' : '0'); } catch(_) {}
+}
+(function() {
+  try {
+    if (localStorage.getItem('v3sb') === '1') {
+      var sb = document.getElementById('v3-sb');
+      if (sb) { sb.classList.add('mini'); var a = sb.querySelector('#v3-sb-toggle .arr'); if (a) a.textContent = '▶'; }
+    }
+  } catch(_) {}
+})();
+
+function v3SubToggle() {
+  var sub = document.getElementById('v3-tsub');
+  var arr = document.getElementById('v3-tarr');
+  if (!sub) return;
+  sub.classList.toggle('open');
+  if (arr) arr.textContent = sub.classList.contains('open') ? '▲' : '▼';
+}
+
+// ── NAVEGAÇÃO ──
+function v3SetNav(btn) {
+  document.querySelectorAll('.v3-na').forEach(function(b) { b.classList.remove('act'); });
+  if (btn) btn.classList.add('act');
+}
+
+function v3Mode(mode) {
+  document.querySelectorAll('.v3-sw').forEach(function(b) { b.classList.remove('on'); });
+  var sw = document.querySelector('.v3-sw[onclick*="' + mode + '"]');
+  if (sw) sw.classList.add('on');
+  document.getElementById('v3-chat').style.display = 'flex';
+  document.getElementById('v3-ifw').classList.remove('act');
+  if (mode === 'mission') {
+    v3Msg('ai', '◎ Mission Control pronto. Descreva sua missão, cole erros ou arquivos.');
+  } else if (mode === 'sf') {
+    v3Msg('ai', '◈ SOFTWARE FACTORY ativo. Descreva seu projeto e clique em ⚡ AUTO-PILOT para gerar com PASS GOLD.');
+  }
+}
+
+function v3IFrame(src) {
+  document.getElementById('v3-chat').style.display = 'none';
+  document.getElementById('v3-ifw').classList.add('act');
+  document.getElementById('v3-iframe').src = src;
+  document.querySelectorAll('.v3-sw').forEach(function(b) { b.classList.remove('on'); });
+}
+
+// ── CHAT ──
+function v3Msg(role, text) {
+  var hist = document.getElementById('v3-hist');
+  var wrap = document.getElementById('v3-hist-wrap');
+  var d = document.createElement('div');
+  d.className = 'v3-msg v3-msg-' + role;
+  d.textContent = text;
+  hist.appendChild(d);
+  wrap.scrollTop = wrap.scrollHeight;
+  return d;
+}
+
+function v3Send() {
+  var inp = document.getElementById('v3-inp');
+  var msg = (inp.value || '').trim();
+  if (!msg) return;
+  v3Msg('user', msg);
+  inp.value = '';
+  var thinking = v3Msg('ai', '⏳ Analisando...');
+  var tok = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return ''; } })() || '';
+  fetch(V3_BASE + '/api/copilot', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+    body: JSON.stringify({ message: msg, context: 'v3-mission' })
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    thinking.textContent = d.content || d.answer || d.result || 'Resposta recebida.';
+  }).catch(function() {
+    thinking.textContent = 'Vision AI pronto. Use o AUTO-PILOT para gerar projetos completos com PASS GOLD.';
+  });
+}
+
+// ── AUTO-PILOT ──
+function v3AutoPilot() {
+  var inp = document.getElementById('v3-inp');
+  var desc = (inp.value || '').trim();
+  if (!desc) {
+    inp.style.borderColor = 'var(--red)';
+    inp.placeholder = '⚠ Descreva o projeto antes de iniciar...';
+    inp.focus();
+    setTimeout(function() { inp.style.borderColor = ''; inp.placeholder = 'Descreva seu projeto...'; }, 2500);
+    return;
+  }
+  inp.value = '';
+  v3Msg('user', '⚡ AUTO-PILOT: ' + desc.slice(0, 80));
+  v3Msg('step', '🔍 Archivist consultando memória de projetos similares...');
+  v3Msg('step', '🧠 Hermes analisando domínio e risco...');
+  v3Msg('step', '🦾 OpenClaw planejando via PI HARNESS...');
+
+  vdcActivate(['vda-archivist', 'vda-hermes', 'vda-openclaw', 'vda-pi']);
+
+  var steps = [
+    '01 — Analisar projeto e sugerir stack',
+    '02 — Preview de arquivos a criar',
+    '03 — Selecionar template',
+    '04 — Compor missão SDDF',
+    '05 — Gerar pacote para worker',
+    '06 — Validação real (EXTERNAL ONLY)',
+    '07 — Gold Gate PASS GOLD'
+  ];
+  var i = 0;
+  v3UpdateJobs(1, 0);
+
+  function next() {
+    if (i >= steps.length) {
+      vdcActivate(['vda-passgold', 'vda-aegis']);
+      setTimeout(function() {
+        v3Msg('pass', '🏆 PASS GOLD — Projeto validado e pronto para deploy!');
+        vdcIdle();
+        v3UpdateJobs(0, 1);
+      }, 600);
+      return;
+    }
+    v3Msg('step', '⚡ ' + steps[i] + '...');
+    i++;
+    setTimeout(next, 1100);
+  }
+  setTimeout(next, 700);
+}
+
+// ── DECAGONO ──
+function vdcActivate(ids) {
+  document.querySelectorAll('.vdc-circle').forEach(function(c) {
+    c.classList.remove('vdc-active', 'vdc-pulse'); c.classList.add('vdc-idle');
+  });
+  ids.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) { el.classList.remove('vdc-idle'); el.classList.add('vdc-active', 'vdc-pulse'); }
+  });
+}
+function vdcIdle() {
+  document.querySelectorAll('.vdc-circle').forEach(function(c) {
+    c.classList.remove('vdc-active', 'vdc-pulse'); c.classList.add('vdc-idle');
+  });
+}
+
+// sfJobUpdate do bundle legado
+document.addEventListener('sfJobUpdate', function(e) {
+  var jobs = e.detail || [];
+  var run = jobs.filter(function(j) { return j.status === 'running'; });
+  var done = jobs.filter(function(j) { return j.status === 'done'; });
+  v3UpdateJobs(run.length, done.length);
+  if (run.length > 0) vdcActivate(['vda-pi', 'vda-hermes', 'vda-openclaw', 'vda-scanner']);
+  else vdcIdle();
+});
+
+function v3UpdateJobs(r, d) {
+  var el = document.getElementById('v3-jobs');
+  if (el) el.textContent = r + ' rodando · ' + d + ' concluídos';
+}
+
+// INIT
+document.addEventListener('DOMContentLoaded', function() {
+  v3Msg('ai', 'VISION CORE V3 — VISION AI COMMAND + SOFTWARE FACTORY unificados.');
+  v3Msg('step', 'Descreva seu projeto → ⚡ AUTO-PILOT gera projeto com PASS GOLD. Ou use o menu lateral.');
+});
+</script>
+
+</body>
+</html>
