@@ -8930,7 +8930,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     }
 
     // §161 — Auto-Pilot: executa 7 módulos SF em sequência com Promise chain
-    function runSfAutoPilot(projectDescription) {
+    async function runSfAutoPilot(projectDescription) {
       // §164-fix: apBtn agora pode ser vcSfSendBtn (nova UI) ou vcSfAutoPilotBtn (legado)
       var apBtn    = document.getElementById('vcSfSendBtn') || document.getElementById('vcSfAutoPilotBtn');
       var progress = document.getElementById('vcSfAutoPilotProgress');
@@ -8964,6 +8964,49 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       window._sfStepOutputs = []; // §193: reset a cada run — acumular outputs de todos os steps
       var fullContext = projectDescription;
       var finalPackage = '';
+
+      // §195 — pré-pipeline: token + base URL para os fetches abaixo
+      var tok = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return ''; } })() || '';
+      var _s195base = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+      var _sfPreContext = '';
+
+      // §195 — Archivist: memória de projetos similares (GET /api/memory/search?q=)
+      statusEl.textContent = '🔍 Consultando memória de projetos similares...';
+      try {
+        var _archResp = await fetch(_s195base + '/api/memory/search?q=' + encodeURIComponent(projectDescription.slice(0, 200)), {
+          headers: { 'Authorization': 'Bearer ' + tok }
+        });
+        if (_archResp.ok) {
+          var _archData = await _archResp.json();
+          if (Array.isArray(_archData.results) && _archData.results.length > 0) {
+            var _archText = _archData.results.slice(0, 3).map(function(r) { return r.preview || ''; }).filter(Boolean).join('\n').slice(0, 600);
+            if (_archText.trim()) _sfPreContext += '\n\n[ARCHIVIST — Projetos similares]:\n' + _archText;
+          }
+        }
+      } catch(e) { console.warn('§195 Archivist skip:', e.message); }
+
+      // §195 — Hermes: análise de domínio (POST /api/hermes/analyze)
+      statusEl.textContent = '🧠 Hermes analisando domínio...';
+      try {
+        var _hermResp = await fetch(_s195base + '/api/hermes/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+          body: JSON.stringify({ message: projectDescription.slice(0, 600), mode: 'sf-autopilot' })
+        });
+        if (_hermResp.ok) {
+          var _hermData = await _hermResp.json();
+          var _hermText = String(_hermData.answer || _hermData.analysis || _hermData.content || '').slice(0, 600);
+          if (_hermText.trim()) _sfPreContext += '\n\n[HERMES RCA — Análise de domínio]:\n' + _hermText;
+        }
+      } catch(e) { console.warn('§195 Hermes skip:', e.message); }
+
+      if (_sfPreContext) {
+        fullContext = projectDescription.slice(0, 800) + _sfPreContext;
+        statusEl.textContent = '✅ Contexto real carregado — iniciando steps...';
+      } else {
+        statusEl.textContent = '▶ Iniciando Auto-Pilot...';
+      }
+      await new Promise(function(r) { setTimeout(r, 400); });
 
       function runStep(idx) {
         if (idx >= SF_AUTOPILOT_STEPS.length) {
