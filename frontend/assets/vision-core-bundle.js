@@ -9013,6 +9013,36 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         if (idx >= SF_AUTOPILOT_STEPS.length) {
           statusEl.textContent = '✅ Auto-Pilot concluído!';
           if (apBtn) apBtn.disabled = false;
+          // §197 — Aegis: validação de segurança real antes de concluir
+          (async function() {
+            try {
+              var _a197tok = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return ''; } })() || '';
+              var _a197base = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+              var _a197artifacts = (window._sfStepOutputs || []).map(function(s) { return '[' + s.label + ']:\n' + s.output; }).join('\n\n').slice(0, 1500);
+              var _a197resp = await fetch(_a197base + '/api/aegis/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _a197tok },
+                body: JSON.stringify({
+                  artifacts: _a197artifacts,
+                  description: (window._sfLastDescription || '').slice(0, 400),
+                  source: 'sf-autopilot',
+                  mode: 'security-gate'
+                })
+              });
+              if (_a197resp.ok) {
+                var _a197data = await _a197resp.json();
+                var _a197pass = (_a197data.verdict === 'PASS') || _a197data.ok || false;
+                if (_a197pass) {
+                  statusEl.textContent = '🛡 Aegis: PASS — Auto-Pilot concluído!';
+                } else {
+                  statusEl.textContent = '⚠ Aegis: ' + (String(_a197data.verdict || _a197data.policy || 'revisão sugerida').slice(0, 80)) + ' — concluído com aviso';
+                }
+                console.log('[§197] Aegis result:', _a197data);
+              }
+            } catch(e) {
+              console.warn('[§197] Aegis skip:', e.message);
+            }
+          })();
           // §196 — fechar ciclo de memória: salvar projeto no Archivist após conclusão
           (async function() {
             try {
