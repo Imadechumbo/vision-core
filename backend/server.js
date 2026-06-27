@@ -4229,13 +4229,14 @@ app.get('/api/sf/job/:id', (req, res) => {
   const job = sfJobs.get(req.params.id);
   if (!job) return res.status(404).json({ ok: false, error: 'job_not_found', anti_stub: true });
   return sendOk(res, {
-    job_id:   req.params.id,
-    status:   job.status,
-    result:   job.result ? (job.result.result   ?? null) : null,
-    files:    job.result ? (job.result.files    ?? null) : null, // §187 — project-files expõe files[]
-    provider: job.result ? job.result.provider  : null,
-    error:    job.error,
-    anti_stub: true
+    job_id:     req.params.id,
+    status:     job.status,
+    result:     job.result ? (job.result.result     ?? null) : null,
+    files:      job.result ? (job.result.files      ?? null) : null, // §187 — project-files expõe files[]
+    provider:   job.result ? job.result.provider    : null,
+    complexity: job.result ? (job.result.complexity ?? null) : null, // §193 — 'complex'|'standard'
+    error:      job.error,
+    anti_stub:  true
   });
 });
 
@@ -4339,47 +4340,92 @@ function _extractFilesJson(text) {
   return null;
 }
 
+// §193 — detecta domínio complexo que exige CLAUDE_CODE_BRIEF.md em vez de estrutura padrão
+function _detectComplexity(description, accumulatedContext) {
+  const text = (description + ' ' + (accumulatedContext || '')).toLowerCase();
+  const hits = [
+    'jurídic','judicial','forense','icp','tribunal','advogad','cartório','notarial',
+    'fintech','pagament','pci-dss','cartão','financ','bitcoin','cripto','boleto',
+    'saúde','medical','hipaa','prontuário','exame','laudo','diagnóstic',
+    'blockchain','certificad','timestamp','custódia','cadeia de custódia',
+    'semelhante ao','similar ao','como o site','igual ao','inspirado no'
+  ].filter(d => text.includes(d)).length;
+  return hits >= 2 ? 'complex' : 'standard';
+}
+
 // §183 — SF project-files: assíncrono (mesmo padrão §182) — retorna job_id imediato
 // §189 — parsing robusto + retry automático (até 1 retry) quando LLM retorna JSON inválido
 // §190 — prompts aprimorados: código funcional real, 12 arquivos, estrutura completa
 // §191 — SF Professional Identity: 3 camadas (backend+frontend+docs+semgrep), 15 arquivos, governança completa
+// §193 — acumulo de contexto dos steps + bifurcação complex/standard + CLAUDE_CODE_BRIEF.md
 app.post('/api/sf/project-files', (req, res) => {
   const body = normalizeBody(req);
   const description = String(body.description || '').slice(0, 800);
   if (!description) return res.status(400).json({ ok: false, error: 'description_required', anti_stub: true });
+  // §193: campos vindos do frontend após acumulo dos 7 steps
+  const accCtx  = String(body.accumulated_context || '').slice(0, 2000);
+  const step1   = String(body.step1_analysis || '').slice(0, 800);
+  const step2   = String(body.step2_blueprint || '').slice(0, 800);
+  const complexity = _detectComplexity(description, accCtx);
   const jobId = `sfj-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   sfJobs.set(jobId, { status: 'pending', result: null, error: null, ts: Date.now() });
   // Background — sem await
-  // §191d: PROMPT1 usa formato ===FILE:=== — LLM não precisa fazer JSON escaping de código
-  // §191f: lista numerada obrigatória — LLM para depois de N itens, não depois de "camada" completa
-  // §192: CSS INLINE no index.html (remove arquivo separado — evita /css/path que quebra em file://)
-  // Parser _extractFilesJson detecta ===FILE:=== primeiro (estratégia 0) antes de tentar JSON
-  const PROMPT1 = `Você é arquiteto sênior. Projeto: "${description}"\n\nGere EXATAMENTE estes 12 arquivos obrigatórios usando o formato abaixo. Todos os 12 são obrigatórios.\n\nFORMATO (use exatamente, sem markdown, sem JSON):\n===FILE: caminho/arquivo.ext===\nconteúdo\n===FILE: próximo/arquivo===\nconteúdo\n===END===\n\nARQUIVOS OBRIGATÓRIOS (gere todos os 12, nesta ordem):\n1.  src/index.js — Express com helmet(), cors({origin:process.env.FRONTEND_URL}), rateLimit() no topo\n2.  src/config/env.js — dotenv, process.exit(1) se var ausente\n3.  src/routes/auth.js — POST /register e POST /login com validação\n4.  src/middleware/auth.js — jwt.verify, retorna 401 se inválido\n5.  src/models/user.js — schema com campos reais (nome, email, senha, role)\n6.  Dockerfile — multi-stage, USER node, não root\n7.  .env.example — todas as vars com comentário\n8.  public/index.html — CSS INLINE no <head> (NÃO use <link> para CSS externo). 3 telas via JS: landing, login, dashboard. CSS obrigatório no <head>: background:#0f0f0f, cor primária #7c3aed, fonte system-ui, max-width:1200px margin:auto, navbar fixa, cards com border-radius:12px box-shadow, botões com hover roxo, form com inputs estilizados, responsivo mobile (media query max-width:768px). Pelo menos 60 linhas de CSS dentro do <style>.\n9.  public/js/app.js — fetch() reais aos endpoints, JWT no localStorage, sem jQuery\n10. README.md — setup completo (npm install, .env, npm start, endpoints)\n11. docs/openapi.yaml — OpenAPI 3.0: info + 3 paths (/register /login /me) + Bearer JWT\n12. docs/SECURITY.md — OWASP A01-A10 status, LGPD checklist, secrets policy\n\nREGRAS ABSOLUTAS:\n- ZERO TODO ou "// implementar"\n- Gere TODOS os 12 arquivos — não pare antes do arquivo 12\n- Use APENAS formato ===FILE:=== — sem JSON, sem markdown\n- NÃO use <link rel="stylesheet"> apontando para arquivo externo\n- CSS deve ser INLINE no <style> dentro do <head> do index.html`;
-  // §191b: PROMPT2 é fallback simples — se PROMPT1 falhar no JSON, PROMPT2 retorna 6 arquivos básicos
-  // NÃO incluir YAML/Dockerfile no PROMPT2 — formatos com colons/indentação quebram JSON encoding
-  const PROMPT2 = `Projeto: "${description.slice(0, 200)}"\n\nJSON EXATO. Só JavaScript e Markdown. Máximo 6 arquivos simples:\n{"files":[{"name":"arquivo.ext","content":"código"}]}\nInclua: package.json, src/index.js (Express com helmet+cors), src/routes/auth.js, src/middleware/auth.js, public/index.html (HTML simples), README.md.\nZero YAML, zero Dockerfile, zero caracteres especiais que quebrem JSON.`;
   (async () => {
-    // §191c: PROMPT1 com 4000 tokens/60s — mais rápido, LLM tem mais chance de completar dentro do timeout
-    // §191c: se PROMPT1 timeout (llm1=null) OU json inválido → tenta PROMPT2 simples (não só em json_parse_failed)
-    // §191d: system prompt instrui formato ===FILE:=== — sem JSON escaping
-    // §191e: 6000 tokens seguro agora — ===FILE:=== não tem JSON parse issues
-    const llm1 = await callLLM(PROMPT1, { max_tokens: 6000, timeout_ms: 90000, system: 'Use EXATAMENTE o formato ===FILE: caminho===\\nconteúdo\\n===END=== para cada arquivo. NÃO use JSON. NÃO use markdown. Código funcional real, sem TODOs, sem placeholders.' });
+    let files;
+    // §193: branch complex → CLAUDE_CODE_BRIEF.md (briefing para Claude Code executar)
+    if (complexity === 'complex') {
+      const briefPrompt = 'Projeto complexo de alto risco regulatorio: "' + description + '"\n\n'
+        + (step1 ? 'Analise do arquiteto (step1):\n' + step1 + '\n\n' : '')
+        + (step2 ? 'Blueprint tecnico (step2):\n' + step2 + '\n\n' : '')
+        + 'Use EXATAMENTE este formato:\n===FILE: CLAUDE_CODE_BRIEF.md===\n[conteudo]\n===END===\n\n'
+        + 'Gere um CLAUDE_CODE_BRIEF.md completo com estas secoes:\n'
+        + '# CLAUDE CODE BRIEF\n'
+        + '## DOMINIO E COMPLIANCE\n[dominio, compliance obrigatorio (LGPD/PCI/HIPAA/ICP), riscos especificos]\n'
+        + '## STACK JUSTIFICADA\n[cada tecnologia com motivo especifico para este dominio; alternativas rejeitadas]\n'
+        + '## ARQUITETURA DE COMPONENTES\n[diagrama ASCII completo]\n'
+        + '## MODULOS A IMPLEMENTAR\n[cada modulo: descricao, dependencias, criterio de done]\n'
+        + '## SEQUENCIA DE COMANDOS CLAUDE CODE\n[prompts exatos para executar, um por modulo, com contexto suficiente]\n'
+        + 'Exemplo: claude "Implemente [modulo]. Contexto: [contexto]. Criterio: [o que deve funcionar]"\n'
+        + '## SPECS DE SEGURANCA\n[OWASP mapeado, LGPD checklist, Semgrep rules especificas do dominio]\n'
+        + '## CRITERIOS DE PASS GOLD\n[gates especificos para este projeto, nao genericos]\n';
+      const llmBrief = await callLLM(briefPrompt, { max_tokens: 6000, timeout_ms: 90000, system: 'Use EXATAMENTE o formato ===FILE: CLAUDE_CODE_BRIEF.md===\\nconteudo\\n===END===. Nao use JSON, nao use markdown code blocks. Seja especifico para o dominio.' });
+      const parsedBrief = llmBrief ? _extractFilesJson(llmBrief.text) : null;
+      if (parsedBrief && parsedBrief.files && parsedBrief.files.length) {
+        files = parsedBrief.files.map(f => ({ name: String(f.name || 'CLAUDE_CODE_BRIEF.md'), content: String(f.content || '') }));
+      } else {
+        // fallback: gerar brief mínimo determinístico
+        files = [{ name: 'CLAUDE_CODE_BRIEF.md', content: '# CLAUDE CODE BRIEF\n\n## Projeto\n' + description + '\n\n## Contexto Acumulado\n' + (accCtx || '(sem contexto dos steps — rodar Auto-Pilot primeiro)') + '\n\n## Stack (step1)\n' + (step1 || '(executar step 1 para analise de dominio)') + '\n\n## Blueprint (step2)\n' + (step2 || '(executar step 2 para blueprint tecnico)') + '\n\n## Proximos Passos\nExecute o Auto-Pilot completo antes de gerar o brief final.\n' }];
+      }
+      // injetar ADR + semgrep no brief tambem
+      if (!files.some(f => f.name.includes('adr'))) files.push({ name: 'docs/adr/0001-stack-decision.md', content: '# ADR 0001: Stack Decision\n\n## Status\nAccepted\n\n## Context\nProjeto complexo: ' + description.slice(0, 120) + '\n\n## Decision\nVer CLAUDE_CODE_BRIEF.md — secao STACK JUSTIFICADA\n\n## Consequences\nCompliance obrigatorio identificado em CLAUDE_CODE_BRIEF.md\n' });
+      if (!files.some(f => f.name.includes('semgrep'))) files.push({ name: '.semgrep/semgrep.yaml', content: 'rules:\n  - id: no-hardcoded-secrets\n    languages: [javascript, typescript]\n    message: Hardcoded secret detected.\n    severity: ERROR\n    pattern-either:\n      - pattern: PASSWORD = "..."\n      - pattern: SECRET = "..."\n  - id: no-sql-injection\n    languages: [javascript, typescript]\n    message: SQL injection risk.\n    severity: ERROR\n    pattern: db.query("..." + INPUT)\n  - id: no-path-traversal\n    languages: [javascript, typescript]\n    message: Path traversal risk.\n    severity: ERROR\n    pattern: path.join(DIR, REQ_PARAM)\n  - id: express-helmet-missing\n    languages: [javascript, typescript]\n    message: Use helmet() for security headers.\n    severity: WARNING\n    pattern: app.use(express.json())\n' });
+      const _prov = (llmBrief && llmBrief.provider) || 'local';
+      sfJobs.set(jobId, { status: 'done', result: { files, total: files.length, provider: _prov, complexity: 'complex' }, error: null, ts: Date.now() });
+      return;
+    }
+    // §193: branch standard — PROMPT1 enriquecido com decisoes dos steps 1+2
+    // §191d/f/192: formato ===FILE:===, lista numerada, CSS inline
+    const contextPrefix = (step1 || step2)
+      ? 'DECISOES ARQUITETURAIS JA TOMADAS (use estas, nao invente stack diferente):\n'
+        + (step1 ? 'Stack e dominio (step1):\n' + step1 + '\n\n' : '')
+        + (step2 ? 'Blueprint tecnico (step2):\n' + step2 + '\n\n' : '')
+        + '---\n\n'
+      : '';
+    const PROMPT1 = contextPrefix + 'Você é arquiteto sênior. Projeto: "' + description + '"\n\nGere EXATAMENTE estes 12 arquivos obrigatórios usando o formato abaixo. Todos os 12 são obrigatórios.\n\nFORMATO (use exatamente, sem markdown, sem JSON):\n===FILE: caminho/arquivo.ext===\nconteúdo\n===FILE: próximo/arquivo===\nconteúdo\n===END===\n\nARQUIVOS OBRIGATÓRIOS (gere todos os 12, nesta ordem):\n1.  src/index.js — Express com helmet(), cors({origin:process.env.FRONTEND_URL}), rateLimit() no topo\n2.  src/config/env.js — dotenv, process.exit(1) se var ausente\n3.  src/routes/auth.js — POST /register e POST /login com validação\n4.  src/middleware/auth.js — jwt.verify, retorna 401 se inválido\n5.  src/models/user.js — schema com campos reais (nome, email, senha, role)\n6.  Dockerfile — multi-stage, USER node, não root\n7.  .env.example — todas as vars com comentário\n8.  public/index.html — CSS INLINE no <head> (NÃO use <link> para CSS externo). 3 telas via JS: landing, login, dashboard. CSS obrigatório: background:#0f0f0f, cor primária #7c3aed, font system-ui, border-radius:12px, @media 768px.\n9.  public/js/app.js — fetch() reais aos endpoints, JWT no localStorage, sem jQuery\n10. README.md — setup completo (npm install, .env, npm start, endpoints)\n11. docs/openapi.yaml — OpenAPI 3.0: info + 3 paths (/register /login /me) + Bearer JWT\n12. docs/SECURITY.md — OWASP A01-A10 status, LGPD checklist, secrets policy\n\nREGRAS ABSOLUTAS:\n- ZERO TODO ou "// implementar"\n- Gere TODOS os 12 arquivos — não pare antes do arquivo 12\n- Use APENAS formato ===FILE:=== — sem JSON, sem markdown\n- CSS INLINE no <style> no index.html';
+    const PROMPT2 = 'Projeto: "' + description.slice(0, 200) + '"\n\nJSON EXATO. Só JavaScript e Markdown. Máximo 6 arquivos simples:\n{"files":[{"name":"arquivo.ext","content":"código"}]}\nInclua: package.json, src/index.js (Express com helmet+cors), src/routes/auth.js, src/middleware/auth.js, public/index.html (HTML simples), README.md.\nZero YAML, zero Dockerfile, zero caracteres especiais que quebrem JSON.';
+    const llm1 = await callLLM(PROMPT1, { max_tokens: 6000, timeout_ms: 90000, system: 'Use EXATAMENTE o formato ===FILE: caminho===\\nconteudo\\n===END=== para cada arquivo. NÃO use JSON. NÃO use markdown. Código funcional real, sem TODOs.' });
     let parsed = llm1 ? _extractFilesJson(llm1.text) : null;
-    // §191c: retry se PROMPT1 falhou por timeout (llm1=null) OU por JSON inválido (parsed=null)
     if (!parsed) {
       const llm2 = await callLLM(PROMPT2, { max_tokens: 2000, timeout_ms: 45000, system: 'Responda SOMENTE JSON. Zero texto adicional. Código JS funcional básico. Máximo 6 arquivos simples.' });
       if (llm2) parsed = _extractFilesJson(llm2.text);
     }
     if (!parsed) { sfJobs.set(jobId, { status: 'error', result: null, error: llm1 ? 'json_parse_failed' : 'llm_unavailable', ts: Date.now() }); return; }
-    const files = (parsed.files || []).slice(0, 15).map(f => ({ name: String(f.name || 'arquivo.txt'), content: String(f.content || '') }));
-    // §191g: injetar templates determinísticos se LLM não gerou (ADR + semgrep — não precisam de LLM)
-    const hasAdr = files.some(f => f.name.includes('adr'));
-    const hasSemgrep = files.some(f => f.name.includes('semgrep'));
-    if (!hasAdr) files.push({ name: 'docs/adr/0001-stack-decision.md', content: '# ADR 0001: Stack Decision\n\n## Status\nAccepted\n\n## Context\nProjeto: ' + description.slice(0, 120) + '\nNecessita de autenticacao segura, API REST, persistencia de dados e deploy containerizado.\n\n## Decision\nNode.js + Express: ecossistema maduro, npm extenso, ideal para APIs REST.\nJWT: autenticacao stateless, adequado para APIs distribuidas.\nMongoose/PostgreSQL: schema definido, validacao, migrations.\nDocker: portabilidade, deploy consistente entre ambientes.\n\n## Consequences\n- Curva de aprendizado baixa para desenvolvedores JavaScript\n- JWT requer blacklist para revogacao antes da expiracao\n- Docker adiciona overhead mas garante reproducibilidade\n\n## Alternatives Considered\n- Python/FastAPI: rejeitado -- ecossistema JS preferido para consistencia\n- Sessions: rejeitado -- nao adequado para arquitetura stateless\n- SQLite: rejeitado -- nao adequado para producao concorrente\n' });
-    if (!hasSemgrep) files.push({ name: '.semgrep/semgrep.yaml', content: 'rules:\n  - id: no-hardcoded-secrets\n    languages: [javascript, typescript]\n    message: Hardcoded secret detected. Use environment variables instead.\n    severity: ERROR\n    pattern-either:\n      - pattern: PASSWORD = "..."\n      - pattern: SECRET = "..."\n      - pattern: API_KEY = "..."\n\n  - id: no-sql-injection\n    languages: [javascript, typescript]\n    message: Potential SQL injection. Use parameterized queries.\n    severity: ERROR\n    pattern: db.query("..." + INPUT)\n\n  - id: no-path-traversal\n    languages: [javascript, typescript]\n    message: Potential path traversal. Validate file paths from user input.\n    severity: ERROR\n    pattern: path.join(DIR, REQ_PARAM)\n\n  - id: express-helmet-missing\n    languages: [javascript, typescript]\n    message: Express app should use helmet() for security headers.\n    severity: WARNING\n    pattern: app.use(express.json())\n' });
-    // §192: provider seguro — llm1 pode ser null se PROMPT2 foi usado como fallback
+    files = (parsed.files || []).slice(0, 15).map(f => ({ name: String(f.name || 'arquivo.txt'), content: String(f.content || '') }));
+    // §191g: injetar templates determinísticos se LLM não gerou
+    if (!files.some(f => f.name.includes('adr'))) files.push({ name: 'docs/adr/0001-stack-decision.md', content: '# ADR 0001: Stack Decision\n\n## Status\nAccepted\n\n## Context\nProjeto: ' + description.slice(0, 120) + '\nNecessita de autenticacao segura, API REST, persistencia de dados e deploy containerizado.\n\n## Decision\nNode.js + Express: ecossistema maduro, npm extenso, ideal para APIs REST.\nJWT: autenticacao stateless, adequado para APIs distribuidas.\nMongoose/PostgreSQL: schema definido, validacao, migrations.\nDocker: portabilidade, deploy consistente entre ambientes.\n\n## Consequences\n- Curva de aprendizado baixa para desenvolvedores JavaScript\n- JWT requer blacklist para revogacao antes da expiracao\n- Docker adiciona overhead mas garante reproducibilidade\n\n## Alternatives Considered\n- Python/FastAPI: rejeitado -- ecossistema JS preferido para consistencia\n- Sessions: rejeitado -- nao adequado para arquitetura stateless\n- SQLite: rejeitado -- nao adequado para producao concorrente\n' });
+    if (!files.some(f => f.name.includes('semgrep'))) files.push({ name: '.semgrep/semgrep.yaml', content: 'rules:\n  - id: no-hardcoded-secrets\n    languages: [javascript, typescript]\n    message: Hardcoded secret detected. Use environment variables instead.\n    severity: ERROR\n    pattern-either:\n      - pattern: PASSWORD = "..."\n      - pattern: SECRET = "..."\n      - pattern: API_KEY = "..."\n\n  - id: no-sql-injection\n    languages: [javascript, typescript]\n    message: Potential SQL injection. Use parameterized queries.\n    severity: ERROR\n    pattern: db.query("..." + INPUT)\n\n  - id: no-path-traversal\n    languages: [javascript, typescript]\n    message: Potential path traversal. Validate file paths from user input.\n    severity: ERROR\n    pattern: path.join(DIR, REQ_PARAM)\n\n  - id: express-helmet-missing\n    languages: [javascript, typescript]\n    message: Express app should use helmet() for security headers.\n    severity: WARNING\n    pattern: app.use(express.json())\n' });
     const _provider = (llm1 && llm1.provider) || 'local';
-    sfJobs.set(jobId, { status: 'done', result: { files, total: files.length, provider: _provider }, error: null, ts: Date.now() });
+    sfJobs.set(jobId, { status: 'done', result: { files, total: files.length, provider: _provider, complexity: 'standard' }, error: null, ts: Date.now() });
   })().catch(e => sfJobs.set(jobId, { status: 'error', result: null, error: e.message, ts: Date.now() }));
   return sendOk(res, { job_id: jobId, status: 'pending', anti_stub: true });
 });
