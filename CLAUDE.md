@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-27 (§200)
+## Documento central do projeto | Atualizado: 2026-06-27 (§201)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -210,6 +210,7 @@ FREE_MISSION_LIMIT=5
 | §187 | **Fix "Timeout ao gerar estrutura".** Root cause: `project-files` armazenava `{files,total,provider}` sem `.result`; poll endpoint lia `job.result.result` → `undefined` → campo `result` ausente no JSON → frontend `job.result.files` sempre falsy → 90s timeout. Fix: backend expõe `files: job.result.files ?? null` no poll; frontend verifica `job.files && job.files.length`. Smoke test: 9 arquivos presentes no response. EB v5.9.56-s187. CF Pages ao vivo. | - | 949c1ee5 |
 | §189 | **Fix `json_parse_failed` intermitente em project-files.** Root cause: strip regex só cobria ` ```json\n` — não cobria CRLF, texto antes/depois das fences, ` ```javascript`, etc. Fix backend: `_extractFilesJson()` com 4 estratégias (strip all fences, JSON.parse direto, regex `/{...}/`, regex `/[...]/`) + retry automático com PROMPT2 mais curto antes de retornar erro. Fix frontend: `job.error==='json_parse_failed'` exibe `'🔄 JSON inválido — clicar para tentar novamente'` (botão re-clicável). Smoke test: 3/3 PASS, 0 `json_parse_failed`. EB v5.9.57-s189. CF Pages ao vivo. | - | 1fa11d73 |
 | §190 | **project-files: código funcional real, 12 arquivos, estrutura Express completa.** PROMPT1 reescrito: exige ZERO TODOs/placeholders, src/routes/, src/models/, src/controllers/, .env.example obrigatório, JWT+multer+schema real quando aplicável. `max_tokens`: 4000→6000, `timeout_ms`: 60s→90s. `slice(0,10)`→`slice(0,15)`. PROMPT2 retry: 5→8 arquivos. Smoke test 5/6 PASS: 12 arquivos, ~11KB, estrutura Express real (routes/models/controllers/middleware/JWT/multer/PostgreSQL schema). Antes: 8 arquivos estáticos ~7KB. EB v5.9.58-s190. | - | 442b2ab3 |
+| §201 | **Diagnóstico Vision Core menu vs LionClaw.** SDDF = methodology não ferramenta (`/api/sddf/check` stub). OSINT = 3 adapters 503 (sem env vars Docker). SF não loga em Mission Timeline (`logMission()` só em `/api/run-live`). Gaps reais: Timeline logging, Execution Monitor visibility, PR automático pós-geração. Zero código. | - | - |
 | §200 | **Reserve Agents como fallback real do SF — pré-registro.** 5 agentes (Memory/Locator/Security/Validator/Architect). Mapa: §195 Archivist→Reserve Memory; §197 Aegis→Reserve Security; §198 PASS GOLD→Reserve Validator; complexidade→Reserve Architect. Diferença chave: catch atual degrada silent; Reserve preserva contexto com agente alternativo. Zero código. | - | - |
 | §199 | **OpenClaw PI HARNESS planejador SF.** Antes do `runStep(0)`: POST `/api/openclaw/orchestrate` `{message, context, steps_count, mode:'sf-autopilot'}`. `plan.mission_summary` → enriquece `fullContext` com `[OPENCLAW PLAN]`. `runStep(0)` sempre executa (OpenClaw=planejador, loop=executor). Nota técnica: `body.message` dispara `diagnose`+LLM; `body.mission` retorna `plan:null`. Internamente chama `archivistSearch` (PI HARNESS). 6/6 PASS. CF Pages. | - | - |
 | §198 | **PASS GOLD vault/snapshot — validação final real.** Encadeado em §197 ramo PASS: POST `/api/vault/snapshot` → `snapshot_id`. Status: `🏆 PASS GOLD [<ref>]`. Fail-safe duplo (vault offline → §197 msg; Aegis FAIL → vault não chamado). 5/5 PASS. CF Pages. Zero server.js. | - | - |
@@ -319,6 +320,36 @@ FREE_MISSION_LIMIT=5
 **§186 FECHADO** — 4 bugs do Auto-Pilot corrigidos. (BUG 1) Resultado sumia: `setTimeout(150ms, scrollTop=scrollHeight)` rolava para o FIM do resultDiv (Gold Gate ~50 linhas → scroll saltava para botões no rodapé, markdown ficava acima do viewport). Fix: `requestAnimationFrame + scrollIntoView({block:'start'})`. (BUG 2) Segundo run invisível: primeiro run deixava `stepsEl/statusEl` com `display:none` permanente; segundo run reconstruía steps mas eles ficavam ocultos. Fix: `stepsEl.style.display=''` + `statusEl.style.display=''` no início de `runSfAutoPilot`. (BUG 3) Sem loading indicator: chat estático durante ~20s de polling por step. Fix: `_s186msg = addSfChatMsg('⏳ step.label...')` por step, atualiza para ✅/❌/⏱ em done/error/timeout. (BUG 4) MODO AVANÇADO quebrado por §185: `sendSfChatMessage` esperava `data.content|result|mission` mas recebia `job_id` → fallback 'Sem resposta.'. Fix: polling `setInterval(2s)` em `sendSfChatMessage` idêntico ao Auto-Pilot. Zero mudança backend. 4 commits separados. CF Pages ao vivo.
 
 **§190 FECHADO** — project-files gerador melhorado. 5/6 PASS: 12 arquivos, ~11KB, Express real. EB v5.9.58-s190.
+
+**§201 DIAGNÓSTICO** — Vision Core menu vs LionClaw + audit SDDF/OSINT.
+
+**MAPEAMENTO SIDEBAR → LionClaw:**
+| LionClaw | Vision Core | SF conectado? |
+|--|--|--|
+| Chat | SOFTWARE FACTORY | ✅ é o SF |
+| Pipeline | MISSION CONTROL | ❌ SF não loga em `/api/mission/timeline` |
+| Logs | MISSION TIMELINE | ❌ só `/api/run-live` e `/api/copilot` chamam `logMission()` |
+| Tasks | EXECUTION MONITOR | ❌ sfJobs isolados, não visíveis no `#runtime` |
+| Cerebro | DIAGNOSTICS/HERMES | ✅ §195 wired |
+| Skills | VALIDATION/SDDF | ⚠️ SDDF = methodology (não ferramenta); `/api/sddf/check` stub sempre ACTIVE |
+| Vault | VAULT/ROLLBACK | ✅ §198 wired |
+| Conhecimento | MEMORY/OBSIDIAN | ✅ §195+§196 wired |
+| SubAgents | OPENCLAW/OPENSQUAD | ✅ §199 wired |
+| MCP Servers | OSINT DOCKER | ❌ 3 adapters 503 — precisam env vars Docker não configurados no EB |
+| Canais | GITHUB/PR REAL | ❌ SF não abre PR após gerar código |
+| Usage | MÉTRICAS | ❌ SF não reporta tempo/provider/tokens por run |
+| SubAgents | AGENTES EXTRAS | ✅ §200 mapeado |
+
+**DIAGNÓSTICO SDDF:** `/api/sddf/check` retorna stub `{SDDF_ACTIVE, pass_gold:false, promotion_allowed:false}`. Sidebar "VALIDATION/SDDF" aponta `#score` (SF Gold Gate UI). SF já usa SDDF internamente como metodologia — nenhum endpoint novo a conectar. Não implementar.
+
+**DIAGNÓSTICO OSINT DOCKER:** `SpiderFoot`, `Recon-ng`, `Maryam` — todos 503 `adapter_not_configured`. Precisam `SPIDERFOOT_URL`/`RECONNG_URL`/`MARYAM_URL` no EB. Infraestrutura Docker não configurada. Não implementar até env vars disponíveis.
+
+**GAPS REAIS DO SF (próximos §):**
+1. SF não loga em Mission Timeline — `logMission()` poderia ser chamado ao concluir Auto-Pilot
+2. sfJobs não visíveis no Execution Monitor (`#runtime`)
+3. SF não abre PR automático via GitHub Agent após gerar código (§127 existe)
+
+Zero código nesta sessão.
 
 **§200 PRÉ-REGISTRO** — Reserve Agents como fallback real do SF. OpenSquad Reserve tem 5 agentes (Reserve Memory, Locator, Security, Validator, Architect) em modos CIRÚRGICO/AUTO/LOOP. Mapa de substituição: §195 Archivist falha → Reserve Memory (`/api/memory/search` query diferente); Scanner falha → Reserve Locator (`/api/scanner/locate`); §197 Aegis falha → Reserve Security (`/api/security/suggest-fixes`); §198 PASS GOLD falha → Reserve Validator (`/api/aegis/validate` mode:'validation'); complexidade alta → Reserve Architect (`/api/hermes/analyze` mode:'architecture'). Padrão: catch atual degrada silenciosamente (`console.warn`) — Reserve preserva contexto com agente alternativo real antes de degradar. Implementação futura: cada `catch(e)` nos §195–§199 ganha bloco try interno chamando o Reserve. `_detectComplexity()='complex'` aciona Reserve Architect automaticamente. Estado pós §199: agentes primários todos wired. §200 = próximo passo natural. Zero código nesta sessão.
 
