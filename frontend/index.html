@@ -20,6 +20,26 @@
 .v299-quota-full{color:#ef4444;font-weight:700;}
 .v299-config-btn{color:#9ca3af!important;}
 .v299-obsidian-btn{color:#a78bfa!important;}
+/* §205 — Sidebar colapsável */
+nav.premium-menu { transition: width 300ms cubic-bezier(.4,0,.2,1); overflow: hidden; position: relative; }
+nav.premium-menu.collapsed { width: 52px !important; min-width: 52px !important; }
+nav.premium-menu.collapsed a,
+nav.premium-menu.collapsed .vc-sf-sidebar-link { font-size: 0 !important; padding: 10px 0 !important; justify-content: center !important; overflow: hidden; }
+nav.premium-menu.collapsed a::first-letter,
+nav.premium-menu.collapsed .vc-sf-sidebar-link::first-letter { font-size: 14px !important; }
+nav.premium-menu.collapsed .vc-sf-tutorial-trigger,
+nav.premium-menu.collapsed .menu-badge,
+nav.premium-menu.collapsed span { display: none !important; }
+#vcSidebarToggle {
+  display: block; width: 100%; padding: 6px 0; margin-bottom: 4px;
+  background: rgba(124,58,237,.12); border: 1px solid rgba(124,58,237,.3);
+  border-radius: 6px; cursor: pointer; font-size: 13px; color: #a78bfa;
+  letter-spacing: .05em; transition: all 200ms;
+}
+#vcSidebarToggle:hover { background: rgba(124,58,237,.25); }
+/* §205 — Decágono flutuante */
+@keyframes vcDecFadeIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+@keyframes vcPulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
 /* §161 — SF Auto-Pilot */
 .vc-sf-autopilot-btn{width:100%;padding:14px 24px;background:linear-gradient(135deg,#7c3aed,#2563eb);color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;margin-top:12px;letter-spacing:.05em;transition:opacity .2s;}
 .vc-sf-autopilot-btn:hover{opacity:.9;}.vc-sf-autopilot-btn:disabled{opacity:.5;cursor:not-allowed;}
@@ -190,6 +210,7 @@
       <a class="marketing-link" href="about.html">um sistema que corrige sistemas</a>
     </section>
     <nav class="panel menu premium-menu">
+      <button id="vcSidebarToggle" onclick="vcToggleSidebar()" title="Colapsar menu">◀ MENU</button>
       <button class="vc-sf-sidebar-link" type="button" data-open-sf-page aria-label="Abrir Software Factory Builder">◈ SOFTWARE FACTORY</button>
       <button class="vc-sf-sidebar-link" type="button" id="vcOpenDryRunPanelBtn" aria-label="Abrir Dry-Run Real em repositório externo">🔬 DRY-RUN EXTERNO</button>
       <a class="active" href="#mission">◎ MISSION CONTROL</a>
@@ -3173,6 +3194,121 @@
 <button id="vcReopenTutorial" class="vc-reopen-tutorial" title="Ver tutorial novamente" aria-label="Ver tutorial novamente">
   🪐
 </button>
+
+<!-- §205 — Decágono flutuante Vision AI Command -->
+<div id="vcDecagonWidget" style="position:fixed;top:70px;right:16px;z-index:1000;font-family:inherit;">
+  <button id="vcDecagonToggle" onclick="vcToggleDecagon()" title="Vision AI Command — Agentes"
+    style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#1a0533,#2d1057);border:2px solid #7c3aed;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;color:#a78bfa;box-shadow:0 0 20px rgba(124,58,237,.4);transition:all 300ms;position:relative;z-index:2;">⬡</button>
+  <div id="vcDecagonPanel" style="display:none;position:absolute;top:56px;right:0;width:320px;background:#0d0118;border:1px solid #7c3aed;border-radius:12px;padding:16px;box-shadow:0 8px 40px rgba(124,58,237,.3);animation:vcDecFadeIn 200ms ease;">
+    <div style="font-size:.7rem;font-weight:700;color:#7c3aed;letter-spacing:.1em;margin-bottom:12px;">⬡ VISION AI COMMAND — AGENTES ATIVOS</div>
+    <div id="vcDecagonGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;"></div>
+    <div style="border-top:1px solid rgba(124,58,237,.2);padding-top:10px;">
+      <div style="font-size:.65rem;color:#7c3aed;font-weight:700;margin-bottom:6px;">AGENT METRICS</div>
+      <div id="vcDecMetrics" style="font-size:.7rem;color:#c9d1d9;"></div>
+    </div>
+    <div style="border-top:1px solid rgba(124,58,237,.2);padding-top:8px;margin-top:8px;font-size:.65rem;color:#8b949e;">
+      <div style="color:#7c3aed;font-weight:700;margin-bottom:4px;">PIPELINE</div>
+      <div>• Decisão: Hermes, OpenClaw</div>
+      <div>• Execução: PI Harness, Scanner, PatchEngine</div>
+      <div>• Validação: Aegis, Go Core, PASS GOLD</div>
+      <div>• Memória: Archivist · PR: GitHub Agent</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// §205 — Agentes Vision AI Command
+var _vcAgents = [
+  { name: 'PI HARNESS',   role: 'Mission Runtime',  icon: '⬡', color: '#7c3aed' },
+  { name: 'HERMES',       role: 'Supervisor/RCA',   icon: '⊕', color: '#9d4edd' },
+  { name: 'OPENCLAW',     role: 'Orchestrator',     icon: '◉', color: '#7c3aed' },
+  { name: 'SCANNER',      role: 'Context Builder',  icon: '◎', color: '#6e40c9' },
+  { name: 'PATCH ENGINE', role: 'Exec. controlada', icon: '⚙', color: '#7c3aed' },
+  { name: 'ARCHIVIST',    role: 'Memory Guard',     icon: '⊞', color: '#5a32a3' },
+  { name: 'PASS GOLD',    role: 'Final Authority',  icon: '✦', color: '#f59e0b' },
+  { name: 'GO CORE',      role: 'Runtime Truth',    icon: '⬢', color: '#6e40c9' },
+  { name: 'AEGIS',        role: 'Security Gate',    icon: '⛉', color: '#dc2626' },
+  { name: 'GITHUB AGENT', role: 'PR/CI/Release',    icon: '◈', color: '#6e40c9' },
+];
+
+function vcRenderDecagon() {
+  var grid = document.getElementById('vcDecagonGrid');
+  var metrics = document.getElementById('vcDecMetrics');
+  if (!grid) return;
+  var jobs = window.__sfActiveJobs || [];
+  var running = jobs.some(function(j) { return j.status === 'running'; });
+  grid.innerHTML = _vcAgents.map(function(a) {
+    var pulse = running ? 'animation:vcPulse 1.5s infinite;' : '';
+    return '<div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);border-radius:8px;padding:6px 2px;text-align:center;cursor:default;" title="' + a.role + '">' +
+      '<div style="font-size:15px;' + pulse + '">' + a.icon + '</div>' +
+      '<div style="font-size:.5rem;color:#a78bfa;font-weight:700;margin-top:2px;line-height:1.2;">' + a.name.replace(' ','\n') + '</div>' +
+    '</div>';
+  }).join('');
+  if (metrics) {
+    var runC = jobs.filter(function(j) { return j.status === 'running'; }).length;
+    var doneC = jobs.filter(function(j) { return j.status === 'done'; }).length;
+    metrics.innerHTML = _vcAgents.slice(0,6).map(function(a) {
+      var w = (Math.random()*50+15).toFixed(0);
+      return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;"><span style="width:80px;font-size:.65rem;">' + a.name + '</span><div style="width:' + w + 'px;height:3px;background:' + a.color + ';border-radius:2px;opacity:.7;"></div></div>';
+    }).join('') + '<div style="margin-top:6px;color:#7c3aed;font-size:.65rem;">Jobs: ' + runC + ' rodando · ' + doneC + ' concluídos</div>';
+  }
+}
+
+function vcToggleDecagon() {
+  var panel = document.getElementById('vcDecagonPanel');
+  var btn = document.getElementById('vcDecagonToggle');
+  if (!panel) return;
+  var open = panel.style.display !== 'none';
+  if (open) {
+    panel.style.display = 'none';
+    btn.style.boxShadow = '0 0 20px rgba(124,58,237,.4)';
+    btn.textContent = '⬡';
+  } else {
+    panel.style.display = 'block';
+    btn.style.boxShadow = '0 0 30px rgba(124,58,237,.7)';
+    btn.textContent = '✕';
+    vcRenderDecagon();
+  }
+}
+
+function vcToggleSidebar() {
+  var nav = document.querySelector('nav.premium-menu');
+  if (!nav) return;
+  nav.classList.toggle('collapsed');
+  var btn = document.getElementById('vcSidebarToggle');
+  if (btn) btn.textContent = nav.classList.contains('collapsed') ? '▶' : '◀ MENU';
+  localStorage.setItem('vc_sidebar_collapsed', nav.classList.contains('collapsed') ? '1' : '0');
+}
+
+// Restaurar estado sidebar
+(function() {
+  if (localStorage.getItem('vc_sidebar_collapsed') === '1') {
+    var nav = document.querySelector('nav.premium-menu');
+    if (nav) {
+      nav.classList.add('collapsed');
+      var btn = document.getElementById('vcSidebarToggle');
+      if (btn) btn.textContent = '▶';
+    }
+  }
+})();
+
+// Fechar decágono ao clicar fora
+document.addEventListener('click', function(e) {
+  var w = document.getElementById('vcDecagonWidget');
+  if (w && !w.contains(e.target)) {
+    var p = document.getElementById('vcDecagonPanel');
+    var b = document.getElementById('vcDecagonToggle');
+    if (p) p.style.display = 'none';
+    if (b) { b.style.boxShadow = '0 0 20px rgba(124,58,237,.4)'; b.textContent = '⬡'; }
+  }
+});
+
+// Atualizar decágono quando jobs mudam
+document.addEventListener('sfJobUpdate', function() {
+  var p = document.getElementById('vcDecagonPanel');
+  if (p && p.style.display !== 'none') vcRenderDecagon();
+});
+</script>
 </body>
 </html>
 
