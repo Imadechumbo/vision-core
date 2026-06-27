@@ -8962,6 +8962,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       });
 
       window._sfStepOutputs = []; // §193: reset a cada run — acumular outputs de todos os steps
+      window._sfLastDescription = projectDescription; // §196: salvar para Archivist/learn
       var fullContext = projectDescription;
       var finalPackage = '';
 
@@ -9012,6 +9013,31 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         if (idx >= SF_AUTOPILOT_STEPS.length) {
           statusEl.textContent = '✅ Auto-Pilot concluído!';
           if (apBtn) apBtn.disabled = false;
+          // §196 — fechar ciclo de memória: salvar projeto no Archivist após conclusão
+          (async function() {
+            try {
+              var _a196tok = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return ''; } })() || '';
+              var _a196base = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+              var _a196desc = (window._sfLastDescription || '').slice(0, 400);
+              var _a196ctx  = (window._sfStepOutputs || []).map(function(s) { return '[' + s.label + ']:\n' + s.output; }).join('\n\n').slice(0, 1200);
+              if (!_a196desc) return;
+              await fetch(_a196base + '/api/archivist/learn', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _a196tok },
+                body: JSON.stringify({
+                  pass_gold: true,
+                  title: 'sf-autopilot-' + Date.now(),
+                  description: _a196desc,
+                  content: _a196ctx,
+                  tags: ['sf-autopilot', 'auto-saved'],
+                  source: 'sf-gold-gate'
+                })
+              });
+              console.log('[§196] Archivist/learn: projeto salvo no Memory Vault');
+            } catch(e) {
+              console.warn('[§196] Archivist/learn skip:', e.message);
+            }
+          })();
           // §183: esconder progress sempre — independente de finalPackage
           stepsEl.style.display = 'none';
           statusEl.style.display = 'none';
