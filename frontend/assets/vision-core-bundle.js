@@ -8961,6 +8961,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         stepEls[step.id] = el;
       });
 
+      window._sfStepOutputs = []; // §193: reset a cada run — acumular outputs de todos os steps
       var fullContext = projectDescription;
       var finalPackage = '';
 
@@ -9008,22 +9009,76 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               // §183 — project-files assíncrono: POST → job_id → polling GET /api/sf/job/:id
               function _applyFiles(files) {
                 _sfFilesCache = files;
-                filesBtn.textContent = '📁 Estrutura (' + _sfFilesCache.length + ' arquivos)';
-                treePanel.innerHTML = _sfFilesCache.map(function(f) {
-                  var icon = /\.(json|yaml|yml|toml)$/.test(f.name) ? '⚙️' :
-                             /\.(md|txt)$/.test(f.name) ? '📝' :
-                             /\.(js|ts|py|java|go|rb|php|cs)$/.test(f.name) ? '💻' :
-                             /\.(css|scss|sass)$/.test(f.name) ? '🎨' :
-                             /\.(html|htm|jsx|tsx|vue|svelte)$/.test(f.name) ? '🌐' : '📄';
-                  return icon + ' ' + f.name;
-                }).join('<br>');
-                treePanel.style.display = 'block';
-                dlBtn.style.display = 'inline-block';
+                // §193: bifurcação — CLAUDE_CODE_BRIEF.md (projeto complexo) vs estrutura padrão
+                var _isBrief = files.length > 0 && files[0].name === 'CLAUDE_CODE_BRIEF.md';
+                if (_isBrief) {
+                  filesBtn.textContent = '📋 Ver Briefing Claude Code (' + files.length + ' arquivo' + (files.length !== 1 ? 's' : '') + ')';
+                  filesBtn.disabled = false;
+                  // substituir click handler para modo brief
+                  var _oldBtn = filesBtn;
+                  var _newBtn = _oldBtn.cloneNode(true);
+                  _oldBtn.parentNode.replaceChild(_newBtn, _oldBtn);
+                  filesBtn = _newBtn;
+                  filesBtn.addEventListener('click', function() {
+                    var briefContent = (_sfFilesCache[0] || {}).content || '';
+                    // injetar brief no chat SF como mensagem assistant
+                    var hist = document.getElementById('vcSfChatHistory');
+                    if (hist) {
+                      var msgDiv = document.createElement('div');
+                      msgDiv.className = 'vc-sf-msg vc-sf-msg-assistant';
+                      msgDiv.style.cssText = 'background:rgba(124,58,237,.08);border-left:3px solid #7c3aed;padding:12px 14px;border-radius:8px;margin:8px 0;';
+                      var label = document.createElement('div');
+                      label.style.cssText = 'font-size:.75rem;color:#7c3aed;font-weight:600;margin-bottom:8px;';
+                      label.textContent = '🎯 Projeto complexo detectado — briefing para Claude Code executar:';
+                      var content = document.createElement('div');
+                      content.className = 'vc-sf-msg-content';
+                      content.style.cssText = 'font-size:.85rem;color:#e2d9f3;line-height:1.6;white-space:pre-wrap;';
+                      msgDiv.appendChild(label);
+                      msgDiv.appendChild(content);
+                      hist.appendChild(msgDiv);
+                      if (window.vcSfTypewriter) vcSfTypewriter(content, briefContent);
+                      else content.textContent = briefContent;
+                      setTimeout(function(){ hist.scrollTop = hist.scrollHeight; }, 100);
+                    }
+                    dlBtn.textContent = '⬇️ Baixar CLAUDE_CODE_BRIEF.md';
+                    dlBtn.style.display = 'inline-block';
+                    // sobrescrever dlBtn para download .md em vez de ZIP
+                    var _oldDl = dlBtn;
+                    var _newDl = _oldDl.cloneNode(true);
+                    _oldDl.parentNode.replaceChild(_newDl, _oldDl);
+                    dlBtn = _newDl;
+                    dlBtn.textContent = '⬇️ Baixar CLAUDE_CODE_BRIEF.md';
+                    dlBtn.style.display = 'inline-block';
+                    dlBtn.addEventListener('click', function() {
+                      var blob = new Blob([briefContent], { type: 'text/markdown' });
+                      var a = document.createElement('a');
+                      a.href = URL.createObjectURL(blob);
+                      a.download = 'CLAUDE_CODE_BRIEF.md';
+                      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                    });
+                  });
+                } else {
+                  filesBtn.textContent = '📁 Estrutura (' + _sfFilesCache.length + ' arquivos)';
+                  treePanel.innerHTML = _sfFilesCache.map(function(f) {
+                    var icon = /\.(json|yaml|yml|toml)$/.test(f.name) ? '⚙️' :
+                               /\.(md|txt)$/.test(f.name) ? '📝' :
+                               /\.(js|ts|py|java|go|rb|php|cs)$/.test(f.name) ? '💻' :
+                               /\.(css|scss|sass)$/.test(f.name) ? '🎨' :
+                               /\.(html|htm|jsx|tsx|vue|svelte)$/.test(f.name) ? '🌐' : '📄';
+                    return icon + ' ' + f.name;
+                  }).join('<br>');
+                  treePanel.style.display = 'block';
+                  dlBtn.style.display = 'inline-block';
+                }
               }
+              // §193: passar contexto acumulado dos steps para project-files
+              var _sfAcc = (window._sfStepOutputs || []).map(function(s){ return '[' + s.label + ']:\n' + s.output; }).join('\n\n').slice(0, 2000);
+              var _sfStep1 = ((window._sfStepOutputs || [])[0] || {}).output || '';
+              var _sfStep2 = ((window._sfStepOutputs || [])[1] || {}).output || '';
               fetch(_sfBase + '/api/sf/project-files', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': _sfTok ? 'Bearer ' + _sfTok : '' },
-                body: JSON.stringify({ description: _sfDesc })
+                body: JSON.stringify({ description: _sfDesc, accumulated_context: _sfAcc, step1_analysis: _sfStep1, step2_blueprint: _sfStep2 })
               })
               .then(function(r) { return r.json(); })
               .then(function(data) {
@@ -9166,7 +9221,13 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                   el.className = 'vc-sf-autopilot-step done';
                   el.querySelector('.sfap-icon').textContent = '✅';
                   var output = job.result || '';
-                  if (output) { fullContext = projectDescription.slice(0, 600) + '\n\n[Etapa ' + (idx + 1) + ']:\n' + output.slice(0, 400); }
+                  if (output) {
+                    // §193: acumular todos os outputs, não sobrescrever
+                    window._sfStepOutputs.push({ step: idx+1, label: step.label, output: output.slice(0, 600) });
+                    fullContext = projectDescription.slice(0, 400)
+                      + '\n\n[Decisoes anteriores]:\n'
+                      + window._sfStepOutputs.map(function(s){ return '[Step ' + s.step + ' - ' + s.label + ']:\n' + s.output; }).join('\n\n');
+                  }
                   finalPackage = output;
                   // §186 — BUG 3: marcar step como concluído no chat
                   if (_s186msg && _s186msg.parentNode) { _s186msg.textContent = '✅ ' + step.label; }
@@ -9190,7 +9251,13 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             el.className = 'vc-sf-autopilot-step done';
             el.querySelector('.sfap-icon').textContent = '✅';
             var output = data.content || data.result || data.mission || '';
-            if (output) { fullContext = projectDescription.slice(0, 600) + '\n\n[Etapa ' + (idx + 1) + ']:\n' + output.slice(0, 400); } // §169: limite context
+            if (output) {
+              // §193: acumular todos os outputs, não sobrescrever (fix context loss §169)
+              window._sfStepOutputs.push({ step: idx+1, label: step.label, output: output.slice(0, 600) });
+              fullContext = projectDescription.slice(0, 400)
+                + '\n\n[Decisoes anteriores]:\n'
+                + window._sfStepOutputs.map(function(s){ return '[Step ' + s.step + ' - ' + s.label + ']:\n' + s.output; }).join('\n\n');
+            }
             if (idx === SF_AUTOPILOT_STEPS.length - 1) finalPackage = output;
             setTimeout(function() { runStep(idx + 1); }, 300);
           } else {
