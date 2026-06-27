@@ -9400,6 +9400,49 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         });
       }
 
+      // §199 — OpenClaw: planejamento via PI HARNESS antes do loop for
+      // OpenClaw roteia + chama Archivist internamente (§129) + LLM Patch Strategist
+      // Enriquece fullContext com plano estruturado; runStep(0) executa os steps normalmente
+      try {
+        var _oc199tok = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return ''; } })() || '';
+        var _oc199base = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+        statusEl.textContent = '🦾 OpenClaw planejando via PI HARNESS...';
+        var _oc199resp = await fetch(_oc199base + '/api/openclaw/orchestrate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _oc199tok },
+          body: JSON.stringify({
+            message: projectDescription.slice(0, 600),
+            context: fullContext.slice(0, 800),
+            steps_count: SF_AUTOPILOT_STEPS.length,
+            mode: 'sf-autopilot',
+            source: 'sf-frontend-§199'
+          })
+        });
+        if (_oc199resp.ok) {
+          var _oc199data = await _oc199resp.json();
+          var _oc199plan = _oc199data.plan;
+          if (_oc199plan && _oc199plan.mission_summary) {
+            // PI HARNESS gerou plano estruturado — enriquecer fullContext
+            var _oc199block = '\n\n[OPENCLAW PLAN via PI HARNESS]:\n';
+            _oc199block += 'Missão: ' + _oc199plan.mission_summary + '\n';
+            if (Array.isArray(_oc199plan.tasks) && _oc199plan.tasks.length) {
+              _oc199block += 'Tasks: ' + _oc199plan.tasks.map(function(t) { return t.id + ':' + t.type + '(' + (t.target||'') + ')'; }).join(', ') + '\n';
+            }
+            _oc199block += 'Risco: ' + (_oc199plan.risk_level || 'unknown');
+            fullContext = fullContext + _oc199block;
+            statusEl.textContent = '📋 Plano PI HARNESS: ' + String(_oc199plan.mission_summary).slice(0, 60) + '...';
+            console.log('[§199] OpenClaw plan:', _oc199plan);
+          } else {
+            statusEl.textContent = '▶ Iniciando steps (PI HARNESS delegou)...';
+          }
+        } else {
+          statusEl.textContent = '▶ Iniciando steps...';
+        }
+      } catch(e) {
+        console.warn('[§199] OpenClaw skip, loop for normal:', e.message);
+        statusEl.textContent = '▶ Iniciando steps (modo direto)...';
+      }
+      await new Promise(function(r) { setTimeout(r, 300); });
       runStep(0);
     }
 
