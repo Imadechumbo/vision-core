@@ -9033,7 +9033,34 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                 var _a197data = await _a197resp.json();
                 var _a197pass = (_a197data.verdict === 'PASS') || _a197data.ok || false;
                 if (_a197pass) {
-                  statusEl.textContent = '🛡 Aegis: PASS — Auto-Pilot concluído!';
+                  // §198 — PASS GOLD: vault snapshot + aprovação final
+                  try {
+                    var _a198base = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+                    var _a198pkg = {
+                      label: 'sf-autopilot-' + Date.now(),
+                      project: (window._sfLastDescription || 'sf-project').slice(0, 60),
+                      triggered_by: 'sf-autopilot',
+                      aegis_verdict: 'PASS',
+                      pass_gold: true,
+                      source: 'sf-autopilot'
+                    };
+                    var _a198resp = await fetch(_a198base + '/api/vault/snapshot', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _a197tok },
+                      body: JSON.stringify(_a198pkg)
+                    });
+                    if (_a198resp.ok) {
+                      var _a198data = await _a198resp.json();
+                      var _a198ref = _a198data.snapshot_id || _a198data.id || '';
+                      statusEl.textContent = '🏆 PASS GOLD — Auto-Pilot validado!' + (_a198ref ? ' [' + String(_a198ref).slice(-20) + ']' : '');
+                      console.log('[§198] Vault snapshot:', _a198data);
+                    } else {
+                      statusEl.textContent = '🛡 Aegis: PASS — Auto-Pilot concluído!';
+                    }
+                  } catch(e) {
+                    console.warn('[§198] Vault snapshot skip:', e.message);
+                    statusEl.textContent = '🛡 Aegis: PASS — Auto-Pilot concluído!';
+                  }
                 } else {
                   statusEl.textContent = '⚠ Aegis: ' + (String(_a197data.verdict || _a197data.policy || 'revisão sugerida').slice(0, 80)) + ' — concluído com aviso';
                 }
