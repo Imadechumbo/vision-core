@@ -9107,12 +9107,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               var _a202base = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
               var _a202desc = (window._sfLastDescription || '').slice(0, 200);
               if (!_a202desc) return;
-              await fetch(_a202base + '/api/memory/save', {
+              await fetch(_a202base + '/api/mission/timeline', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _a202tok },
-                body: JSON.stringify({ type: 'sf-missions', title: 'sf-autopilot-' + Date.now(), content: _a202desc, steps_completed: (window._sfStepOutputs || []).length, source: 'sf-autopilot-§202', timestamp: new Date().toISOString() })
+                body: JSON.stringify({ type: 'sf-autopilot', title: 'Auto-Pilot: ' + _a202desc.slice(0, 60), description: _a202desc, steps_completed: (window._sfStepOutputs || []).length, source: 'sf-autopilot-§202+', timestamp: new Date().toISOString(), pass_gold: true })
               });
-              console.log('[§202] Mission log: run salvo em memory/save');
+              console.log('[§202+] Mission Timeline: run logado via POST');
             } catch(e) { console.warn('[§202] Mission log skip:', e.message); }
           })();
           // §203 — Execution Monitor: marcar job como concluído
@@ -9322,61 +9322,96 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               hist.appendChild(resultDiv);
               // §204 — PR automático via GitHub Agent (botão com mini-form)
               try {
+                // §204+ — Deploy dropdown: ZIP / CF Pages / EB / Docker / PR
                 var _s204existing = document.getElementById('sf-pr-btn-wrap');
                 if (_s204existing) _s204existing.remove();
                 var _s204wrap = document.createElement('div');
                 _s204wrap.id = 'sf-pr-btn-wrap';
-                _s204wrap.style.cssText = 'margin-top:10px;padding:10px;background:rgba(35,134,54,.08);border:1px solid rgba(35,134,54,.3);border-radius:8px;';
+                _s204wrap.style.cssText = 'margin-top:10px;padding:12px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.25);border-radius:8px;';
+                var _s204title = document.createElement('div');
+                _s204title.style.cssText = 'font-size:.8rem;font-weight:700;color:#7c3aed;margin-bottom:8px;letter-spacing:.05em;';
+                _s204title.textContent = '🚀 DEPLOY OPTIONS';
+                _s204wrap.appendChild(_s204title);
+                var _s204select = document.createElement('select');
+                _s204select.style.cssText = 'width:100%;padding:6px 10px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:.8rem;margin-bottom:8px;box-sizing:border-box;';
+                [['zip','⬇️  Baixar ZIP / MD (client-side)'],['pr','🐙 Criar PR via GitHub Agent'],['pages','☁️  Deploy Cloudflare Pages'],['eb','📦 Deploy Elastic Beanstalk'],['docker','🐳 Deploy Docker (requer infra)']]
+                  .forEach(function(opt) { var o = document.createElement('option'); o.value = opt[0]; o.textContent = opt[1]; _s204select.appendChild(o); });
+                _s204wrap.appendChild(_s204select);
+                var _s204prFields = document.createElement('div');
+                _s204prFields.style.cssText = 'margin-bottom:8px;display:none;';
                 var _s204repo = document.createElement('input');
                 _s204repo.placeholder = 'repo: usuario/repositorio';
                 _s204repo.style.cssText = 'width:100%;padding:6px 10px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:.8rem;margin-bottom:6px;box-sizing:border-box;';
-                var _s204base = document.createElement('input');
-                _s204base.placeholder = 'branch base: main';
-                _s204base.value = 'main';
-                _s204base.style.cssText = 'width:calc(50% - 3px);padding:6px 10px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:.8rem;box-sizing:border-box;margin-right:6px;';
+                var _s204baseInp = document.createElement('input');
+                _s204baseInp.placeholder = 'branch base: main';
+                _s204baseInp.value = 'main';
+                _s204baseInp.style.cssText = 'width:100%;padding:6px 10px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:.8rem;box-sizing:border-box;';
+                _s204prFields.appendChild(_s204repo);
+                _s204prFields.appendChild(_s204baseInp);
+                _s204wrap.appendChild(_s204prFields);
+                _s204select.addEventListener('change', function() { _s204prFields.style.display = _s204select.value === 'pr' ? 'block' : 'none'; });
                 var _s204btn = document.createElement('button');
-                _s204btn.textContent = '🐙 Criar PR via GitHub Agent';
-                _s204btn.style.cssText = 'width:calc(50% - 3px);padding:6px 10px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.8rem;';
-                _s204btn.onclick = (function(_repo, _base, _btn) {
+                _s204btn.textContent = '🚀 Executar';
+                _s204btn.style.cssText = 'width:100%;padding:8px 16px;background:#7c3aed;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:600;';
+                _s204btn.onclick = (function(_sel, _repo, _base, _btn) {
                   return async function() {
+                    var action = _sel.value;
+                    _btn.disabled = true;
+                    var _tok204 = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return ''; } })() || '';
+                    var _api204 = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+                    if (action === 'zip') {
+                      var _zc = finalPackage || (window._sfStepOutputs || []).map(function(s) { return '# ' + s.label + '\n\n' + s.output; }).join('\n\n---\n\n');
+                      var _za = document.createElement('a'); _za.href = URL.createObjectURL(new Blob([_zc], { type: 'text/markdown' })); _za.download = 'sf-autopilot-' + Date.now() + '.md'; _za.click();
+                      _btn.textContent = '✅ Baixado!'; _btn.disabled = false; return;
+                    }
+                    if (action === 'pages') {
+                      _btn.textContent = '☁️  Solicitando CF Pages...';
+                      try {
+                        var _pr = await fetch(_api204 + '/api/deploy/pages', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tok204 }, body: JSON.stringify({ source: 'sf-autopilot', content: finalPackage, pass_gold: true }) });
+                        var _pd = await _pr.json().catch(function() { return {}; });
+                        _btn.textContent = _pr.ok ? ('✅ CF Pages: ' + (_pd.url || 'solicitado')) : ('⚠ ' + (_pd.error || 'erro ' + _pr.status).slice(0, 40));
+                      } catch(e) { _btn.textContent = '❌ CF Pages: ' + e.message.slice(0, 40); }
+                      _btn.disabled = false; return;
+                    }
+                    if (action === 'eb') {
+                      _btn.textContent = '📦 Solicitando EB...';
+                      try {
+                        var _er = await fetch(_api204 + '/api/deploy/eb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tok204 }, body: JSON.stringify({ source: 'sf-autopilot', content: finalPackage, pass_gold: true }) });
+                        var _ed = await _er.json().catch(function() { return {}; });
+                        _btn.textContent = _er.ok ? ('✅ EB: ' + (_ed.version || 'solicitado')) : ('⚠ ' + (_ed.error || 'erro ' + _er.status).slice(0, 40));
+                      } catch(e) { _btn.textContent = '❌ EB: ' + e.message.slice(0, 40); }
+                      _btn.disabled = false; return;
+                    }
+                    if (action === 'docker') {
+                      _btn.textContent = '⚠ Docker: configure SPIDERFOOT_URL no EB primeiro';
+                      setTimeout(function() { _btn.textContent = '🚀 Executar'; _btn.disabled = false; }, 2500); return;
+                    }
+                    // PR
                     var repo = _repo.value.trim();
                     var baseBranch = _base.value.trim() || 'main';
-                    if (!repo || !repo.includes('/')) { _btn.textContent = '⚠ Formato: usuario/repo'; setTimeout(function() { _btn.textContent = '🐙 Criar PR via GitHub Agent'; }, 2000); return; }
-                    _btn.disabled = true; _btn.textContent = '⏳ Criando PR...';
+                    if (!repo || !repo.includes('/')) { _btn.textContent = '⚠ Formato: usuario/repo'; setTimeout(function() { _btn.textContent = '🚀 Executar'; _btn.disabled = false; }, 2000); return; }
+                    _btn.textContent = '⏳ Criando PR...';
                     try {
-                      var _prTok = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return ''; } })() || '';
-                      var _prApiBase = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
-                      var _prResp = await fetch(_prApiBase + '/api/github/create-pr', {
+                      var _prR = await fetch(_api204 + '/api/github/create-pr', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _prTok },
-                        body: JSON.stringify({ repo: repo, base_branch: baseBranch, head_branch: 'sf-autopilot-' + Date.now(), title: 'Auto-Pilot SF: ' + (window._sfLastDescription || 'SF project').slice(0, 60), body: (window._sfStepOutputs || []).map(function(s) { return '## ' + s.label + '\n' + s.output.slice(0, 300); }).join('\n\n'), files: [{ path: 'SF_AUTOPILOT_OUTPUT.md', content: finalPackage || '' }], pass_gold: true, source: 'sf-autopilot-§204' })
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tok204 },
+                        body: JSON.stringify({ repo: repo, base_branch: baseBranch, head_branch: 'sf-autopilot-' + Date.now(), title: 'Auto-Pilot SF: ' + (window._sfLastDescription || 'SF project').slice(0, 60), body: (window._sfStepOutputs || []).map(function(s) { return '## ' + s.label + '\n' + s.output.slice(0, 300); }).join('\n\n'), files: [{ path: 'SF_AUTOPILOT_OUTPUT.md', content: finalPackage || '' }], pass_gold: true, source: 'sf-autopilot-§204+' })
                       });
-                      if (_prResp.ok) {
-                        var _prData = await _prResp.json();
-                        var _prUrl = _prData.pr_url || '';
-                        _btn.textContent = '✅ PR #' + (_prData.pr_number || '?') + ' criado!';
-                        _btn.style.background = '#1a7f37';
-                        if (_prUrl) window.open(_prUrl, '_blank');
+                      if (_prR.ok) {
+                        var _prD = await _prR.json();
+                        _btn.textContent = '✅ PR #' + (_prD.pr_number || '?') + ' criado!'; _btn.style.background = '#1a7f37';
+                        if (_prD.pr_url) window.open(_prD.pr_url, '_blank');
                       } else {
-                        var _prErr = await _prResp.json().catch(function() { return {}; });
-                        _btn.textContent = '⚠ ' + (_prErr.error || 'erro ' + _prResp.status).slice(0, 40);
+                        var _prE = await _prR.json().catch(function() { return {}; });
+                        _btn.textContent = '⚠ ' + (_prE.error || 'erro ' + _prR.status).slice(0, 40);
                         _btn.disabled = false; _btn.style.background = '#da3633';
                       }
-                    } catch(e) {
-                      _btn.textContent = '❌ ' + e.message.slice(0, 40);
-                      _btn.disabled = false; _btn.style.background = '#da3633';
-                      console.warn('[§204] PR skip:', e.message);
-                    }
+                    } catch(e) { _btn.textContent = '❌ ' + e.message.slice(0, 40); _btn.disabled = false; _btn.style.background = '#da3633'; }
                   };
-                })(_s204repo, _s204base, _s204btn);
-                _s204wrap.appendChild(_s204repo);
-                var _s204row = document.createElement('div');
-                _s204row.style.cssText = 'display:flex;gap:6px;';
-                _s204row.appendChild(_s204base);
-                _s204row.appendChild(_s204btn);
-                _s204wrap.appendChild(_s204row);
+                })(_s204select, _s204repo, _s204baseInp, _s204btn);
+                _s204wrap.appendChild(_s204btn);
                 hist.appendChild(_s204wrap);
-                console.log('[§204] PR form inserido');
+                console.log('[§204+] Deploy dropdown inserido');
               } catch(e) { console.warn('[§204] PR form skip:', e.message); }
               // §186 — BUG 1: scrollIntoView no INÍCIO do resultado (setTimeout→bottom era o bug)
               requestAnimationFrame(function() {
@@ -9532,6 +9567,24 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     }
 
     function initSfAutoPilot() {
+      // §203+ — Execution Monitor: listener para sfJobUpdate → popula #runtimeJobList
+      document.addEventListener('sfJobUpdate', function(e) {
+        var jobs = e.detail || [];
+        var listEl = document.getElementById('runtimeJobList');
+        var countEl = document.getElementById('runtimeJobCount');
+        if (!listEl) return;
+        if (countEl) countEl.textContent = jobs.length + ' job' + (jobs.length !== 1 ? 's' : '');
+        if (jobs.length === 0) { listEl.innerHTML = '<div style="opacity:.5;font-style:italic;">Nenhum job ativo.</div>'; return; }
+        listEl.innerHTML = jobs.slice().reverse().map(function(j) {
+          var icon = j.status === 'done' ? '✅' : j.status === 'error' ? '❌' : '⚡';
+          var dur = (j.ended && j.started) ? ' · ' + ((new Date(j.ended) - new Date(j.started)) / 1000).toFixed(1) + 's' : '';
+          var color = j.status === 'done' ? '#238636' : j.status === 'error' ? '#da3633' : '#7c3aed';
+          return '<div style="padding:8px;margin-bottom:6px;background:rgba(124,58,237,.06);border-left:3px solid ' + color + ';border-radius:4px;">' +
+            '<div style="font-weight:600;">' + icon + ' ' + (j.title || j.id) + '</div>' +
+            '<div style="opacity:.6;font-size:.75rem;">' + j.status.toUpperCase() + (j.steps_done ? ' · ' + j.steps_done + ' steps' : '') + dur + '</div></div>';
+        }).join('');
+      });
+
       var apBtn = document.getElementById('vcSfAutoPilotBtn');
       if (!apBtn) return;
       apBtn.addEventListener('click', function() {

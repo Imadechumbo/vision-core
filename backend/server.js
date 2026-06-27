@@ -1250,6 +1250,28 @@ app.get('/api/mission/timeline', (req, res) => {
   return sendOk(res, { entries, count: entries.length, authenticated: Boolean(user), anti_stub: true });
 });
 
+// §202+ — POST /api/mission/timeline: SF Auto-Pilot loga runs reais na Timeline UI
+app.post('/api/mission/timeline', (req, res) => {
+  try {
+    const body = normalizeBody(req);
+    const user = getAuthUser(req);
+    const entry = {
+      type:            body.type            || 'sf-autopilot',
+      title:           body.title           || 'Auto-Pilot run',
+      input:           body.description     || body.content || body.title || '',
+      summary:         body.description     || body.content || '',
+      steps_completed: body.steps_completed || 0,
+      source:          body.source          || 'sf-autopilot',
+      pass_gold:       body.pass_gold       || false,
+      status:          body.pass_gold ? 'PASS_GOLD' : 'DONE'
+    };
+    appendMissionTimeline(user ? user.id : null, entry);
+    return sendOk(res, { ok: true, logged: true, anti_stub: true });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 /* COPILOT — nunca retorna 405 por body vazio */
 app.all('/api/copilot', checkMissionQuota, async (req, res) => {
   const body = normalizeBody(req);
