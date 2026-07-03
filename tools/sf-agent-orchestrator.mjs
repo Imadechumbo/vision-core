@@ -137,11 +137,16 @@ function validateDestructiveCommandGate(toolName, toolInput) {
 // reconhecemos é diferente: um bloco JSON EXPLÍCITO (```json ... ``` ou um
 // objeto {...} isolado) que os prompts dos subagents (abaixo) instruem
 // explicitamente a devolver — não é inferência de significado a partir de
-// texto, é um contrato estruturado que o próprio prompt pede. Se o SDK
-// devolver `input.result` já como objeto (não confirmado — ver comentário
-// no topo do arquivo sobre incerteza de shape do SubagentStop), os campos
-// são lidos direto; se vier como string com o bloco JSON, extraímos dali.
-// Texto solto sem esse bloco nunca vira claim, de nenhuma forma.
+// texto, é um contrato estruturado que o próprio prompt pede.
+//
+// CONFIRMADO contra node_modules/@anthropic-ai/claude-agent-sdk/sdk.d.ts
+// (SubagentStopHookInput): o campo com o texto da última mensagem do
+// subagent chama-se `last_assistant_message` — NÃO `result` (esse campo
+// não existe no tipo real; um código anterior que lia `input.result`
+// estava sempre recebendo undefined). Sempre uma string (ou ausente),
+// nunca objeto — por isso extractAgentClaims só precisa do caminho de
+// parsing de bloco JSON em string; texto solto sem esse bloco nunca vira
+// claim, de nenhuma forma.
 // ---------------------------------------------------------------------------
 const KNOWN_CLAIM_FIELDS = [
   'test_pass', 'ci_green', 'backend_online', 'file_changed',
@@ -160,11 +165,12 @@ function parseClaimsJsonBlock(text) {
   }
 }
 
-function extractAgentClaims(subagentResult) {
+function extractAgentClaims(lastAssistantMessage) {
   const claims = {};
-  const source = typeof subagentResult === 'string'
-    ? parseClaimsJsonBlock(subagentResult)
-    : (subagentResult && typeof subagentResult === 'object' ? subagentResult : null);
+  // last_assistant_message é sempre string|undefined no tipo real (nunca
+  // objeto) — sem branch de objeto solto pra não fingir suportar um shape
+  // que o SDK provadamente não usa.
+  const source = typeof lastAssistantMessage === 'string' ? parseClaimsJsonBlock(lastAssistantMessage) : null;
   if (source) {
     for (const key of KNOWN_CLAIM_FIELDS) {
       if (typeof source[key] === 'boolean') claims[key] = source[key];
@@ -359,7 +365,7 @@ function buildHooks({ missionEvidence, onEvent, moduleEvidence, moduleId, projec
       {
         hooks: [
           async (input) => {
-            const agentClaims = extractAgentClaims(input.result);
+            const agentClaims = extractAgentClaims(input.last_assistant_message);
 
             // git_diff é FATO observado por fora, não claim do agente. Só
             // compara com o "antes" se conseguimos capturar os dois lados

@@ -64,14 +64,14 @@ async function* mockQueryFn({ prompt, options }) {
   // (test_pass:true exige exit_code ou log em missionEvidence — não fornecidos)
   captured.unverifiedClaimResult = await subagentStopHook({
     subagent_type: 'backend-agent',
-    result: { test_pass: true },
+    last_assistant_message: '```json\n{"test_pass": true}\n```',
   });
 
   // [Suite C] SubagentStop — texto livre (sem campos booleanos conhecidos)
   // nunca vira claim, então nada pra bloquear
   captured.freeTextResult = await subagentStopHook({
     subagent_type: 'backend-agent',
-    result: 'Implementei o endpoint e rodei os testes, tudo passou.',
+    last_assistant_message: 'Implementei o endpoint e rodei os testes, tudo passou.',
   });
 
   yield { type: 'assistant', message: { content: [{ type: 'text', text: 'Módulo concluído.' }] } };
@@ -118,7 +118,7 @@ async function* mockQueryFn2({ options }) {
   const subagentStopHook = options.hooks.SubagentStop[0].hooks[0];
   captured2.verifiedClaimResult = await subagentStopHook({
     subagent_type: 'backend-agent',
-    result: { test_pass: true },
+    last_assistant_message: '```json\n{"test_pass": true}\n```',
   });
   yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
 }
@@ -240,7 +240,7 @@ async function checkSubagentResult(resultValue, missionEvidence = {}) {
   let stopResult;
   async function* mockStopQuery({ options }) {
     const subagentStopHook = options.hooks.SubagentStop[0].hooks[0];
-    stopResult = await subagentStopHook({ subagent_type: 'backend-agent', result: resultValue });
+    stopResult = await subagentStopHook({ subagent_type: 'backend-agent', last_assistant_message: resultValue });
     yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
   }
   await runSoftwareFactoryBrief(BRIEF, {
@@ -428,7 +428,7 @@ async function runSubagentStopWithFsChange(mutateFsFn) {
   async function* mockGitDiffQuery({ options }) {
     const subagentStopHook = options.hooks.SubagentStop[0].hooks[0];
     if (mutateFsFn) mutateFsFn();
-    await subagentStopHook({ subagent_type: 'backend-agent', result: 'Terminei.' });
+    await subagentStopHook({ subagent_type: 'backend-agent', last_assistant_message: 'Terminei.' });
     yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
   }
   await runSoftwareFactoryBrief(BRIEF, {
@@ -468,7 +468,7 @@ async function runInNonGitDir() {
   const events = [];
   async function* mockQuery({ options }) {
     const subagentStopHook = options.hooks.SubagentStop[0].hooks[0];
-    await subagentStopHook({ subagent_type: 'backend-agent', result: 'Terminei.' });
+    await subagentStopHook({ subagent_type: 'backend-agent', last_assistant_message: 'Terminei.' });
     yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
   }
   await runSoftwareFactoryBrief(BRIEF, {
@@ -508,7 +508,7 @@ async function runMergeScenario(missionEvidence) {
 
     stopResult = await subagentStopHook({
       subagent_type: 'backend-agent',
-      result: '```json\n{"test_pass": true, "file_changed": true}\n```',
+      last_assistant_message: '```json\n{"test_pass": true, "file_changed": true}\n```',
     });
     yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
   }
@@ -535,7 +535,7 @@ async function runMergeScenarioUntouchedClaim() {
     const subagentStopHook = options.hooks.SubagentStop[0].hooks[0];
     stopResult = await subagentStopHook({
       subagent_type: 'backend-agent',
-      result: '```json\n{"real_evidence": true}\n```', // claim que a captura NUNCA alimenta
+      last_assistant_message: '```json\n{"real_evidence": true}\n```', // claim que a captura NUNCA alimenta
     });
     yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
   }
@@ -552,6 +552,34 @@ assert(untouchedClaimResult?.decision === 'approve',
   '[K-03] claim que a captura não alcança (real_evidence) continua funcionando só com estático — merge não quebra o caminho antigo');
 
 rmSync(mergeFixtureDir, { recursive: true, force: true });
+
+// [Suite L] extractAgentClaims via last_assistant_message (não input.result —
+// confirmado contra sdk.d.ts real que SubagentStopHookInput não tem campo
+// `result`). Objeto não-string é defensivamente ignorado, não crasha.
+console.log('\n[Suite L] last_assistant_message — campo real confirmado contra sdk.d.ts');
+
+async function runWithLastAssistantMessage(value) {
+  let stopResult;
+  async function* mockQuery({ options }) {
+    const subagentStopHook = options.hooks.SubagentStop[0].hooks[0];
+    stopResult = await subagentStopHook({ subagent_type: 'backend-agent', last_assistant_message: value });
+    yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
+  }
+  await runSoftwareFactoryBrief(BRIEF, {
+    projectWorkspace: '/tmp/fixture-project',
+    queryFn: mockQuery,
+    onEvent: () => {},
+  });
+  return stopResult;
+}
+
+const objectDefensiveResult = await runWithLastAssistantMessage({ weird: 'objeto solto, não deveria acontecer no SDK real' });
+assert(objectDefensiveResult?.decision === 'approve',
+  '[L-01] valor não-string (defensivo — o tipo real nunca produz isso) não crasha e não vira claim');
+
+const undefinedResult = await runWithLastAssistantMessage(undefined);
+assert(undefinedResult?.decision === 'approve',
+  '[L-02] last_assistant_message ausente (campo é opcional no tipo real) → aprovado, sem crash');
 
 console.log(`\nsf-agent-orchestrator: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);
