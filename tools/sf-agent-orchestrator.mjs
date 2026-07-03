@@ -43,9 +43,14 @@ import { validateAgentOutput } from './hermes/mission-supervisor.mjs';
 // coisa que importe este arquivo, inclusive testes; (2) permite injetar um
 // mock via opts.queryFn em teste, sem precisar do pacote real instalado nem
 // gastar tokens de verdade.
-async function defaultQueryFn(args) {
+// Precisa ser um GERADOR async (function*), não uma função async comum.
+// Uma função async comum retorna uma Promise ao ser chamada — `for await`
+// em runModule espera que `queryFn(...)` seja diretamente async-iterável,
+// não uma Promise que resolve pra um iterável. `yield*` delega a
+// iteração real pro que query() devolver, depois de esperar o import.
+async function* defaultQueryFn(args) {
   const { query } = await import('@anthropic-ai/claude-agent-sdk');
-  return query(args);
+  yield* query(args);
 }
 
 // ---------------------------------------------------------------------------
