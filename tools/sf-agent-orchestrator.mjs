@@ -27,6 +27,7 @@
  * Requer: npm install @anthropic-ai/claude-agent-sdk
  */
 
+import { spawnSync } from 'child_process';
 import { validateAgentOutput } from './hermes/mission-supervisor.mjs';
 
 // `query` do @anthropic-ai/claude-agent-sdk é importado dinamicamente (não no
@@ -206,6 +207,28 @@ function extractBashExitCode(input) {
   return candidates.find((v) => typeof v === 'number');
 }
 
+// `git status --porcelain` em vez de `git diff`: o caso principal deste
+// orquestrador é o subagent CRIAR arquivos novos (scaffolding do zero) —
+// `git diff` sozinho não mostra nada pra arquivo novo não rastreado (`??`
+// no status), só compara arquivos já rastreados. `git status --porcelain`
+// lista criados/modificados/removidos, é mais barato, e o conteúdo
+// devolvido vira o próprio campo `git_diff` (o nome do campo é fixo pelo
+// contrato de validateAgentOutput — só o CONTEÚDO que capturamos aqui é o
+// mais correto pro caso real de uso). Retorna null (não string vazia)
+// quando não dá pra confiar no resultado (não é repo git, git ausente,
+// timeout) — null é tratado como "não sabemos", nunca como "sem mudança".
+function captureGitStatusPorcelain(cwd) {
+  try {
+    const result = spawnSync('git', ['status', '--porcelain'], {
+      cwd, encoding: 'utf8', timeout: 5000,
+    });
+    if (result.error || typeof result.status !== 'number' || result.status !== 0) return null;
+    return result.stdout ?? '';
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Definição dos subagents — mapeiam 1:1 com o painel "Agentes Orquestradores"
 // ---------------------------------------------------------------------------
@@ -274,7 +297,7 @@ const SUBAGENTS = {
 //   SubagentStop gate no que um subagent tem permissão de devolver a Hermes
 // ---------------------------------------------------------------------------
 
-function buildHooks({ missionEvidence, onEvent, moduleEvidence, moduleId }) {
+function buildHooks({ missionEvidence, onEvent, moduleEvidence, moduleId, projectWorkspace, gitBeforeSnapshot }) {
   return {
     PreToolUse: [
       {
@@ -319,6 +342,19 @@ function buildHooks({ missionEvidence, onEvent, moduleEvidence, moduleId }) {
         hooks: [
           async (input) => {
             const agentClaims = extractAgentClaims(input.result);
+
+            // git_diff é FATO observado por fora, não claim do agente. Só
+            // compara com o "antes" se conseguimos capturar os dois lados
+            // com confiança (gitBeforeSnapshot !== null e o "depois"
+            // também não falhou) — senão não arriscamos afirmar nada.
+            if (gitBeforeSnapshot !== null) {
+              const afterSnapshot = captureGitStatusPorcelain(projectWorkspace);
+              if (afterSnapshot !== null && afterSnapshot !== gitBeforeSnapshot) {
+                moduleEvidence.git_diff = afterSnapshot;
+                onEvent?.({ type: 'evidence_captured', field: 'git_diff', moduleId });
+              }
+            }
+
             const { ok, errors, blocked_claims } = validateAgentOutput(agentClaims, missionEvidence);
             onEvent?.({
               type: 'subagent_stop',
@@ -405,7 +441,11 @@ export async function runSoftwareFactoryBrief(brief, opts = {}) {
     // chamada a runModule — nunca compartilhados entre módulos concorrentes
     // (parallelModules:true pode rodar vários ao mesmo tempo via Promise.all).
     const moduleEvidence = createModuleEvidence();
-    const hooks = buildHooks({ missionEvidence, onEvent, moduleEvidence, moduleId: mod.moduleId });
+    const gitBeforeSnapshot = captureGitStatusPorcelain(projectWorkspace);
+    const hooks = buildHooks({
+      missionEvidence, onEvent, moduleEvidence, moduleId: mod.moduleId,
+      projectWorkspace, gitBeforeSnapshot,
+    });
 
     const options = {
       cwd: projectWorkspace,

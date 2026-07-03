@@ -7,6 +7,10 @@
  * PreToolUse/SubagentStop exatamente como o SDK real os invocaria.
  */
 
+import { execSync } from 'child_process';
+import { mkdtempSync, writeFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { runSoftwareFactoryBrief } from '../sf-agent-orchestrator.mjs';
 
 let passed = 0, failed = 0;
@@ -407,6 +411,79 @@ const m2Event = isolationEvents.find((e) => e.moduleId === 'M2');
 assert(isolationEvents.length === 2, '[I-08] 2 eventos de evidência, um por módulo');
 assert(m1Event?.value === 10, '[I-09] M1 capturou seu próprio exit_code (10), não o de M2');
 assert(m2Event?.value === 20, '[I-10] M2 capturou seu próprio exit_code (20), não o de M1');
+
+// [Suite J] git_diff — captura real via git status --porcelain (item 2 do
+// incremento). Usa um repositório git de verdade num diretório temporário
+// (não o repo do vision-core) — precisa validar comportamento real de git,
+// não só a lógica de comparação de strings.
+console.log('\n[Suite J] git_diff — captura real de mudança de arquivo');
+
+const gitFixtureDir = mkdtempSync(join(tmpdir(), 'sf-agent-orchestrator-git-'));
+execSync('git init -q', { cwd: gitFixtureDir });
+execSync('git config user.email "test@test.com"', { cwd: gitFixtureDir });
+execSync('git config user.name "test"', { cwd: gitFixtureDir });
+
+async function runSubagentStopWithFsChange(mutateFsFn) {
+  const evidenceEvents = [];
+  async function* mockGitDiffQuery({ options }) {
+    const subagentStopHook = options.hooks.SubagentStop[0].hooks[0];
+    if (mutateFsFn) mutateFsFn();
+    await subagentStopHook({ subagent_type: 'backend-agent', result: 'Terminei.' });
+    yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
+  }
+  await runSoftwareFactoryBrief(BRIEF, {
+    projectWorkspace: gitFixtureDir,
+    queryFn: mockGitDiffQuery,
+    onEvent: (ev) => { if (ev.type === 'evidence_captured' && ev.field === 'git_diff') evidenceEvents.push(ev); },
+  });
+  return evidenceEvents;
+}
+
+const noChangeEvents = await runSubagentStopWithFsChange(null);
+assert(noChangeEvents.length === 0,
+  '[J-01] repo git limpo, nenhuma mudança no módulo → nenhum evento git_diff');
+
+const newFileEvents = await runSubagentStopWithFsChange(() => {
+  writeFileSync(join(gitFixtureDir, 'novo-arquivo.js'), 'console.log(1);\n');
+});
+assert(newFileEvents.length === 1,
+  '[J-02] arquivo novo criado durante o módulo → evento git_diff disparado');
+
+// Segunda rodada, repo já "sujo" da rodada anterior — prova que a
+// comparação é sempre feita contra o "antes" DESTE módulo (recapturado a
+// cada chamada de runModule), não contra um estado fixo global.
+const anotherFileEvents = await runSubagentStopWithFsChange(() => {
+  writeFileSync(join(gitFixtureDir, 'outro-arquivo.js'), 'console.log(2);\n');
+});
+assert(anotherFileEvents.length === 1,
+  '[J-03] segunda rodada com repo já sujo — nova mudança ainda detectada (before recapturado por módulo, não fixo)');
+
+const stableEvents = await runSubagentStopWithFsChange(null); // sem nenhuma nova mudança agora
+assert(stableEvents.length === 0,
+  '[J-04] rodada sem nenhuma mudança nova (repo permanece igual ao "antes" desta chamada) → nenhum evento');
+
+console.log('\n[Suite J] git_diff — diretório que não é repo git não crasha');
+const nonGitDir = mkdtempSync(join(tmpdir(), 'sf-agent-orchestrator-nongit-'));
+async function runInNonGitDir() {
+  const events = [];
+  async function* mockQuery({ options }) {
+    const subagentStopHook = options.hooks.SubagentStop[0].hooks[0];
+    await subagentStopHook({ subagent_type: 'backend-agent', result: 'Terminei.' });
+    yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
+  }
+  await runSoftwareFactoryBrief(BRIEF, {
+    projectWorkspace: nonGitDir,
+    queryFn: mockQuery,
+    onEvent: (ev) => { if (ev.type === 'evidence_captured' && ev.field === 'git_diff') events.push(ev); },
+  });
+  return events;
+}
+const nonGitResult = await runInNonGitDir();
+assert(nonGitResult.length === 0,
+  '[J-05] diretório sem .git não gera evento git_diff nem lança exceção (captureGitStatusPorcelain retorna null)');
+
+rmSync(gitFixtureDir, { recursive: true, force: true });
+rmSync(nonGitDir, { recursive: true, force: true });
 
 console.log(`\nsf-agent-orchestrator: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);
