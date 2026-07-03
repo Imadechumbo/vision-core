@@ -753,6 +753,12 @@
           <div style="font-size:11px;color:#64748b">— §139, SF02-SF09 validados em produção, 22/22 PASS</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🧪</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Testamos um caminho diferente do Agente Arquiteto: um orquestrador baseado no Claude Agent SDK, onde um Hermes delega tarefas de código a subagentes especializados (backend/frontend) via a ferramenta Task. A camada de governança funciona de verdade — hooks bloqueiam comandos destrutivos antes de qualquer execução, capturam evidência real (exit code de testes reconhecidos, diff real do git) em vez de aceitar a palavra do próprio agente, e um gate só aprova a alegação quando ela bate com essa evidência. Em 3 execuções reais e pagas, porém, nenhum subagente conseguiu escrever um arquivo de fato — o loop completo (briefing → subagente escreve código → evidência → aprovação) nunca terminou com sucesso, provável limitação de sessão aninhada. A parte que pudemos testar de verdade, testamos; a parte que não funcionou, dizemos que não funcionou."</div>
+          <div style="font-size:11px;color:#64748b">— protótipo interno (sf-agent-orchestrator.mjs), 72/72 testes automatizados (hooks + evidência), escrita real de arquivo: BLOQUEADA, não integrado a produção</div>
+        </div>
+
       </div>
 
     </div>
