@@ -234,6 +234,45 @@ FREE_MISSION_LIMIT=5
 
 ---
 
+## SF-AGENT-ORCHESTRATOR — CHECKPOINT DE CONTINUIDADE (em andamento)
+
+### O que é
+
+`tools/sf-agent-orchestrator.mjs` — orquestra o pipeline de "montar projeto do zero" do Software Factory usando o **Claude Agent SDK** (`@anthropic-ai/claude-agent-sdk`, pacote novo, ainda avaliando instalação). Um agente "Hermes" no topo planeja e delega (sem `Write/Edit/Bash` no próprio `allowedTools`) pra subagents especializados (`backend-agent`, `frontend-agent`) que executam cada módulo de um `CLAUDE_CODE_BRIEF` (o mesmo formato gerado pelo SF em §193). Governança via hooks `PreToolUse` (bloqueia comando destrutivo antes de rodar), `PostToolUse` (captura evidência real de teste) e `SubagentStop` (valida claims do subagent contra evidência real antes de deixar o resultado voltar pro Hermes) — reaproveitando `tools/hermes/mission-supervisor.mjs` (a mesma `validateAgentOutput` que o `pi-harness.mjs` usa) em vez de reinventar checagem de alucinação.
+
+Teste: `tools/tests/sf-agent-orchestrator.test.mjs` — 100% mockado (injeta `queryFn` via opts, não precisa do pacote real nem gasta tokens). Não depende de instalação de dependência pra rodar.
+
+### Padrão de disciplina desta feature — vale pra qualquer sessão futura
+
+Isto não é só documentação do que foi feito — é o **modo de trabalhar** que se mostrou certo nesta feature e deveria se repetir em qualquer coisa parecida (integração de SDK externo, gate de segurança, camada de evidência):
+
+1. **Commit isolado por peça lógica, teste ANTES de cada commit.** Nunca acumular várias mudanças conceituais num commit só — cada gate, cada hook, cada fonte de evidência ganha seu próprio commit com teste passando antes de existir no histórico.
+2. **Revisão adversarial antes de instalar dependência de risco.** Não perguntar "ficou bom?" e aceitar "sim" — perguntar ativamente "que comando destrutivo concreto passaria batido nesse regex?", "que subtype de erro esse SDK pode devolver que eu não tô checando?". Listar bypass/lacuna concreta, não ressalva genérica. Se não achar nada de errado, dizer isso explicitamente em vez de inventar ressalva pra parecer que revisou.
+3. **Incerteza documentada explicitamente no código, nunca fingida como certeza.** Quando não dá pra confirmar o shape de uma API externa contra fonte oficial (aconteceu com o payload do `PostToolUse` pra Bash — nem a doc nem o repo-fonte no GitHub confirmaram), o código ganha um comentário tipo `// NÃO VERIFICADO CONTRA FONTE OFICIAL` explicando exatamente o que não foi confirmado e o que fazer quando for possível verificar (não é "TODO" vago — é "aqui está a lista de candidatos, remova os que nunca baterem quando o pacote estiver instalado").
+4. **Defaults fail-closed, não fail-open.** Tool desconhecida = tratar como potencialmente perigosa até prova em contrário (não o oposto). Campo de evidência ausente = não aprovar a claim (não assumir que "sem evidência" significa "tudo bem").
+5. **Gate de confirmação humana antes de qualquer ação que:** gaste tokens de API de verdade, mude `package.json` (dependência nova), ou publique conteúdo em página pública (`frontend/about.html`, `frontend/landing.html`). Nenhuma dessas três acontece sem confirmação explícita — "sem resposta" NUNCA é tratado como "sim" nesses três casos especificamente (é tratado como "sim, pela opção mais conservadora" em decisões técnicas reversíveis, mas não nessas três).
+
+### Estado atual (ao escrever este checkpoint)
+
+- `@anthropic-ai/claude-agent-sdk` **ainda não instalado** — prestes a mudar na Fase 1 do roteiro abaixo.
+- 70/70 testes mockados passando (`node tools/tests/sf-agent-orchestrator.test.mjs`).
+- 4 achados de uma revisão adversarial inicial já corrigidos (bug de `status:'done'` mascarando corte por `maxTurns`; gate de comando destrutivo reescrito cobrindo bypasses concretos; hook anti-alucinação conectado aos prompts reais dos subagents; teste de sanidade automático matcher-vs-tools).
+- Incremento de 3 partes sobre `missionEvidence` estático já implementado e commitado: captura de `exit_code` real (amarrada a comando de teste reconhecido, isolada por módulo), captura de `git_diff` real (via `git status --porcelain`, não `git diff` — motivo documentado no código), e `mergeEvidence()` ligando os dois com o `missionEvidence` estático (estático explícito sempre vence quando presente).
+- Campos de evidência **deliberadamente fora de escopo** (não esquecidos): `log`, `github_api_evidence`, `health_probe`, `evidence_receipt.source`, `gates_pass`, `failed_gates`.
+
+### Roteiro de fases (pra retomar se a sessão cortar no meio)
+
+Se você está lendo isto numa sessão nova: confira qual fase está marcada como a última concluída abaixo (procure por commits recentes tocando `tools/sf-agent-orchestrator.mjs` ou `package.json` pra confirmar) e continue da próxima.
+
+- **Fase 0 (este checkpoint)** — registrar disciplina + estado no CLAUDE.md.
+- **Fase 1** — instalar `@anthropic-ai/claude-agent-sdk`, confirmar versão, `node --check` nos dois arquivos, rodar os 70 testes mockados (devem passar sem regressão), validar import real do pacote (`query` é função) SEM chamar a API. Commit isolado.
+- **Fase 2 — GASTA TOKENS.** Requer confirmação explícita do humano ANTES de executar (modelo por subagent, custo estimado). Depois de confirmado: 1 brief mínimo, 1 módulo trivial, workspace temporário **fora do repo vision-core**, capturar log completo de eventos, confirmar que os gates dispararam na prática (não só no mock).
+- **Fase 3** — com o SDK instalado e a Fase 2 rodada de verdade, reconciliar a incerteza documentada em `extractBashExitCode` contra o shape real observado. Simplificar a função se confirmar o campo exato; reportar se nenhum candidato bater. Commit isolado.
+- **Fase 4 — conteúdo público, requer aprovação de texto antes de commitar.** Ler `frontend/about.html`/`frontend/landing.html` primeiro. Só descrever capacidades REALMENTE testadas na Fase 2, no nível de maturidade real (mesmo padrão "produto testado, não prometido" do resto do CLAUDE.md). Mostrar o texto proposto antes de editar.
+- **Fase 5** — ler `SDDF_SPEC.md` primeiro e verificar se a feature cai no escopo dele antes de assumir que sim. Se cair, propor atualização antes de aplicar; se não, registrar o motivo e pular.
+
+---
+
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
 **§121-§122 FECHADOS** — positionBalloon + seta CSS (18/18). Menu tutoriais U+25C9→🌟 (19/19). Ambos em produção.
