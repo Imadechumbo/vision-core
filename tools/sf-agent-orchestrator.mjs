@@ -12,6 +12,18 @@
  * (PreToolUse / SubagentStop) que reaproveitam a governança já construída
  * em tools/hermes/mission-supervisor.mjs do próprio repo vision-core.
  *
+ * LIMITE CONHECIDO, NÃO RESOLVIDO NESTA VERSÃO: `missionEvidence` (passado
+ * uma vez em opts.missionEvidence) é ESTÁTICO durante toda a execução de
+ * runSoftwareFactoryBrief — não existe nenhum caminho de código que capture
+ * o resultado real de uma tool call Bash (ex: exit code de um teste que o
+ * backend-agent de fato rodou) e alimente isso de volta como evidência pro
+ * SubagentStop hook seguinte. Isso significa que claims tipo `test_pass`
+ * só podem ser corroboradas pela evidência que o CALLER decidiu passar
+ * antes da missão começar — nunca pela evidência gerada DURANTE a própria
+ * execução. Resolver isso é mudança arquitetural maior (um coletor de
+ * evidência viva plugado no PreToolUse/PostToolUse do Bash) e foi
+ * deliberadamente deixado de fora desta versão.
+ *
  * Requer: npm install @anthropic-ai/claude-agent-sdk
  */
 
@@ -111,23 +123,43 @@ function validateDestructiveCommandGate(toolName, toolInput) {
 // Ponte pra validateAgentOutput real (tools/hermes/mission-supervisor.mjs).
 // A função real espera um objeto de claims booleanos com nomes exatos
 // (test_pass, ci_green, backend_online, file_changed, real_evidence,
-// pass_gold, merge, deploy, tag, stable) — não texto livre. O SDK devolve
-// `input.result` como resultado do subagent, tipicamente string. NÃO
-// fazemos parsing heurístico de texto livre pra "adivinhar" claims — isso
-// seria o próprio tipo de alucinação que a função existe pra detectar. Só
-// extraímos claims quando o subagent devolver campos booleanos explícitos
-// com esses nomes; texto livre nunca vira claim.
+// pass_gold, merge, deploy, tag, stable) — não texto livre. NÃO fazemos
+// parsing heurístico de PROSA livre pra "adivinhar" claims — isso seria o
+// próprio tipo de alucinação que a função existe pra detectar. O que
+// reconhecemos é diferente: um bloco JSON EXPLÍCITO (```json ... ``` ou um
+// objeto {...} isolado) que os prompts dos subagents (abaixo) instruem
+// explicitamente a devolver — não é inferência de significado a partir de
+// texto, é um contrato estruturado que o próprio prompt pede. Se o SDK
+// devolver `input.result` já como objeto (não confirmado — ver comentário
+// no topo do arquivo sobre incerteza de shape do SubagentStop), os campos
+// são lidos direto; se vier como string com o bloco JSON, extraímos dali.
+// Texto solto sem esse bloco nunca vira claim, de nenhuma forma.
 // ---------------------------------------------------------------------------
 const KNOWN_CLAIM_FIELDS = [
   'test_pass', 'ci_green', 'backend_online', 'file_changed',
   'real_evidence', 'pass_gold', 'merge', 'deploy', 'tag', 'stable',
 ];
 
+function parseClaimsJsonBlock(text) {
+  const fenced = text.match(/```json\s*([\s\S]*?)```/i);
+  const raw = fenced ? fenced[1] : (text.match(/\{[\s\S]*\}/)?.[0] ?? null);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return (parsed && typeof parsed === 'object') ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function extractAgentClaims(subagentResult) {
   const claims = {};
-  if (subagentResult && typeof subagentResult === 'object') {
+  const source = typeof subagentResult === 'string'
+    ? parseClaimsJsonBlock(subagentResult)
+    : (subagentResult && typeof subagentResult === 'object' ? subagentResult : null);
+  if (source) {
     for (const key of KNOWN_CLAIM_FIELDS) {
-      if (typeof subagentResult[key] === 'boolean') claims[key] = subagentResult[key];
+      if (typeof source[key] === 'boolean') claims[key] = source[key];
     }
   }
   return claims;
@@ -143,14 +175,38 @@ Regras obrigatórias:
 - Use https.request nativo, nunca axios/node-fetch, para chamadas HTTP no backend.
 - Nunca marque um gate de release como liberado (allowed:true) sem evidência real.
 - Siga exatamente os requisitos do módulo do brief — não adicione escopo não pedido.
-- Ao terminar, resuma o que foi criado/alterado e liste os arquivos tocados.`;
+- Ao terminar, resuma o que foi criado/alterado e liste os arquivos tocados.
+- Ao terminar, inclua também um bloco JSON com os claims verificáveis do seu
+  trabalho, exatamente neste formato (nunca reporte um valor que você não
+  verificou de fato):
+  \`\`\`json
+  {"file_changed": true, "test_pass": true}
+  \`\`\`
+  - file_changed: true se você criou ou alterou algum arquivo, false caso
+    contrário. Nunca omita este campo.
+  - test_pass: só inclua este campo se você de fato rodou os testes do
+    módulo (via Bash) e observou o resultado real. Omita o campo inteiro
+    se não rodou nenhum teste — nunca reporte true sem ter rodado de verdade.
+  Não inclua ci_green, backend_online, real_evidence, pass_gold, merge,
+  deploy, tag ou stable — são claims de pipeline de release/CI, fora do
+  seu escopo de escrever código.`;
 
 const FRONTEND_AGENT_PROMPT = `Você é o Frontend Agent do Vision Core Software Factory.
 
 Regras obrigatórias:
 - Trabalhe apenas dentro de frontend/.
 - Não introduza dependências novas sem necessidade clara (YAGNI).
-- Ao terminar, resuma o que foi criado/alterado e liste os arquivos tocados.`;
+- Ao terminar, resuma o que foi criado/alterado e liste os arquivos tocados.
+- Ao terminar, inclua também um bloco JSON com os claims verificáveis do seu
+  trabalho, exatamente neste formato (nunca reporte um valor que você não
+  verificou de fato):
+  \`\`\`json
+  {"file_changed": true}
+  \`\`\`
+  - file_changed: true se você criou ou alterou algum arquivo, false caso
+    contrário. Nunca omita este campo.
+  Não inclua test_pass, ci_green, backend_online, real_evidence, pass_gold,
+  merge, deploy, tag ou stable — são claims fora do seu escopo.`;
 
 const SUBAGENTS = {
   'backend-agent': {

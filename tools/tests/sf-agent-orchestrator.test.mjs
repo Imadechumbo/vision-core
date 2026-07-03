@@ -214,5 +214,70 @@ for (const [command, label] of SHOULD_APPROVE) {
   assert(result?.decision === 'approve', `[F-approve] ${label} → aprovado ("${command}")`);
 }
 
+// [Suite G] extractAgentClaims — bloco JSON dentro de texto (o formato que
+// os prompts atualizados de BACKEND_AGENT_PROMPT/FRONTEND_AGENT_PROMPT
+// agora pedem aos subagents), não só objeto puro.
+console.log('\n[Suite G] SubagentStop — claim via bloco JSON em texto livre');
+
+async function checkSubagentResult(resultValue, missionEvidence = {}) {
+  let stopResult;
+  async function* mockStopQuery({ options }) {
+    const subagentStopHook = options.hooks.SubagentStop[0].hooks[0];
+    stopResult = await subagentStopHook({ subagent_type: 'backend-agent', result: resultValue });
+    yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
+  }
+  await runSoftwareFactoryBrief(BRIEF, {
+    projectWorkspace: '/tmp/fixture-project',
+    missionEvidence,
+    queryFn: mockStopQuery,
+    onEvent: () => {},
+  });
+  return stopResult;
+}
+
+const textWithFencedClaim = [
+  'Implementei o endpoint de login em backend/routes/auth.js.',
+  '',
+  '```json',
+  '{"file_changed": true, "test_pass": true}',
+  '```',
+].join('\n');
+
+const gBlocked = await checkSubagentResult(textWithFencedClaim, {}); // sem exit_code/log
+assert(gBlocked?.decision === 'block',
+  '[G-01] claim test_pass:true dentro de bloco json em texto → extraído e bloqueado sem evidência');
+
+// file_changed:true TAMBÉM exige evidência própria na validateAgentOutput
+// real (git_diff não-vazio) — o bloco tem os dois claims, então a evidência
+// precisa cobrir os dois pra aprovar.
+const gApproved = await checkSubagentResult(textWithFencedClaim, {
+  exit_code: 0,
+  git_diff: 'diff --git a/backend/routes/auth.js b/backend/routes/auth.js\n+added',
+});
+assert(gApproved?.decision === 'approve',
+  '[G-02] mesmo bloco, agora com exit_code + git_diff em missionEvidence → aprovado');
+
+const textWithFalseClaim = [
+  'Ainda não rodei os testes.',
+  '```json',
+  '{"file_changed": true}',
+  '```',
+].join('\n');
+const gNoTestClaim = await checkSubagentResult(textWithFalseClaim, {
+  git_diff: 'diff --git a/frontend/x.html b/frontend/x.html\n+added',
+});
+assert(gNoTestClaim?.decision === 'approve',
+  '[G-03] bloco json sem test_pass (agente não rodou teste), file_changed com evidência → aprovado');
+
+const textWithBrokenJson = 'Terminei. ```json\n{not valid json at all\n```';
+const gBroken = await checkSubagentResult(textWithBrokenJson, {});
+assert(gBroken?.decision === 'approve',
+  '[G-04] bloco json malformado não crasha e não vira claim → aprovado');
+
+const textWithBracesInProse = 'A função calcula { x: 1 } como exemplo, mas não terminei ainda.';
+const gProseBraces = await checkSubagentResult(textWithBracesInProse, {});
+assert(gProseBraces?.decision === 'approve',
+  '[G-05] chaves soltas em prosa (não JSON de claim) não viram claim → aprovado');
+
 console.log(`\nsf-agent-orchestrator: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);
