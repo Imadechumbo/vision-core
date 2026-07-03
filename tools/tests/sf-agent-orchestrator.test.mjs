@@ -308,7 +308,7 @@ assert(gProseBraces?.decision === 'approve',
 // fail-closed (tool desconhecida = trate como perigosa), não fail-open.
 console.log('\n[Suite H] Sanidade — matcher do PreToolUse cobre toda tool de escrita dos subagents');
 
-const READ_ONLY_TOOLS = new Set(['Read', 'Grep', 'Glob', 'Agent']);
+const READ_ONLY_TOOLS = new Set(['Read', 'Grep', 'Glob', 'Task']);
 
 function toolsRequiringGate(subagents) {
   const writeCapable = new Set();

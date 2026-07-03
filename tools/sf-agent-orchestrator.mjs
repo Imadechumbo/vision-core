@@ -5,7 +5,7 @@
  * Orquestra o pipeline de "montar projeto do zero" do Vision Core Software
  * Factory (SF) usando o Claude Agent SDK. Um agente "Hermes" no topo
  * planeja e delega — NÃO escreve código diretamente (sem Write/Edit/Bash
- * no allowedTools) — e invoca subagents especializados (Backend Agent,
+ * no `tools`) — e invoca subagents especializados (Backend Agent,
  * Frontend Agent) para executar cada módulo do CLAUDE_CODE_BRIEF.
  *
  * Toda escrita de arquivo e execução de comando passa por hooks
@@ -442,7 +442,7 @@ const RESULT_ERROR_REASONS = {
 
 // ---------------------------------------------------------------------------
 // Orquestrador — roda Hermes como planejador/delegador. Hermes em si não
-// tem Write/Edit/Bash — só pode raciocinar e invocar subagents via "Agent".
+// tem Write/Edit/Bash — só pode raciocinar e invocar subagents via "Task".
 // ---------------------------------------------------------------------------
 
 export async function runSoftwareFactoryBrief(brief, opts = {}) {
@@ -479,7 +479,16 @@ export async function runSoftwareFactoryBrief(brief, opts = {}) {
 
     const options = {
       cwd: projectWorkspace,
-      allowedTools: ['Read', 'Grep', 'Glob', 'Agent'],
+      // `tools` (não `allowedTools`) é quem realmente restringe o que o
+      // modelo pode chamar — allowedTools só afeta se a tool pede aprovação
+      // interativa, não remove nada do que está disponível. Confirmado
+      // contra sdk.d.ts: "To restrict which tools are available, use the
+      // `tools` option instead." Achado num smoke test real (Fase 2) —
+      // Hermes usou Write diretamente porque allowedTools não bloqueava
+      // nada. `Task` é o nome real da tool de delegação pra subagent (não
+      // `Agent` — confirmado pela lista de tools da mensagem system/init
+      // de uma execução real; `Agent` nunca apareceu lá).
+      tools: ['Read', 'Grep', 'Glob', 'Task'],
       agents: SUBAGENTS,
       hooks,
       permissionMode: 'default',
@@ -547,7 +556,7 @@ export async function runSoftwareFactoryBrief(brief, opts = {}) {
 function emitProgress(message, mod, onEvent) {
   if (message.type === 'assistant') {
     for (const block of message.message?.content ?? []) {
-      if (block.type === 'tool_use' && block.name === 'Agent') {
+      if (block.type === 'tool_use' && block.name === 'Task') {
         onEvent({
           type: 'agent_status',
           subagent: block.input?.subagent_type,
