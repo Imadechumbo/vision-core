@@ -16,7 +16,7 @@
  * - manual_only=true always.
  */
 
-import { createHash } from 'crypto';
+import { sha256, makeLockedFlags } from './_shared/gate-kit.mjs';
 import { runSupervisedReleaseCandidateController } from './supervised-release-candidate-controller.mjs';
 
 const SCHEMA_VERSION = 'v43.0';
@@ -31,13 +31,15 @@ export const PROMOTION_PACKAGE_STATUSES = [
 
 function _locked() {
   return {
-    deploy_allowed:      false,
-    promotion_allowed:   false,
-    stable_allowed:      false,
-    tag_allowed:         false,
-    release_performed:   false,
-    promote_performed:   false,
-    manual_only:         true,
+    ...makeLockedFlags([
+      'deploy_allowed',
+      'promotion_allowed',
+      'stable_allowed',
+      'tag_allowed',
+      'release_performed',
+      'promote_performed',
+    ]),
+    manual_only: true,
   };
 }
 
@@ -119,10 +121,9 @@ export function buildManualPromotionPackage(options = {}) {
 
   const ts = _mock_timestamp ?? new Date().toISOString();
 
-  const package_hash = createHash('sha256')
-    .update(`${rcResult.rc_id}:${rcResult.intent_id}:${rcResult.evidence_receipt_id}:${ts}`)
-    .digest('hex')
-    .slice(0, 32);
+  const package_hash = sha256(
+    `${rcResult.rc_id}:${rcResult.intent_id}:${rcResult.evidence_receipt_id}:${ts}`
+  ).slice(0, 32);
 
   return {
     schema_version:             SCHEMA_VERSION,

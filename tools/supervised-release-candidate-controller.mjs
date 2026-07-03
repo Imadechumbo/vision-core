@@ -17,7 +17,7 @@
  * - supervised_only=true required.
  */
 
-import { createHash } from 'crypto';
+import { sha256, makeLockedFlags }                       from './_shared/gate-kit.mjs';
 import { _resetLedgerForTest }                           from './runtime-execution-ledger-binding.mjs';
 import { runRuntimePassGoldCandidateController }         from './runtime-pass-gold-candidate-controller.mjs';
 import { validateSupervisedReleaseIntent,
@@ -37,14 +37,14 @@ export const SUPERVISED_RC_STATUSES = [
 ];
 
 function _locked() {
-  return {
-    production_release_allowed: false,
-    deploy_allowed:             false,
-    promotion_allowed:          false,
-    stable_allowed:             false,
-    tag_allowed:                false,
-    release_performed:          false,
-  };
+  return makeLockedFlags([
+    'production_release_allowed',
+    'deploy_allowed',
+    'promotion_allowed',
+    'stable_allowed',
+    'tag_allowed',
+    'release_performed',
+  ]);
 }
 
 function _blocked(status, blocking_reason = 'blocked', extra = {}) {
@@ -162,9 +162,7 @@ export function runSupervisedReleaseCandidateController(options = {}) {
   }
 
   const rc_id = options.rc_id ?? `supervised_rc_${
-    createHash('sha256')
-      .update(`${releaseIntent.intent_id}:${intentAuthorityBinding.binding_id}`)
-      .digest('hex').slice(0, 16)
+    sha256(`${releaseIntent.intent_id}:${intentAuthorityBinding.binding_id}`).slice(0, 16)
   }`;
 
   return {

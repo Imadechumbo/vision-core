@@ -16,7 +16,7 @@
  * - promote_performed=false always.
  */
 
-import { createHash } from 'crypto';
+import { sha256, makeLockedFlags, HashChainLedger } from './_shared/gate-kit.mjs';
 
 const SCHEMA_VERSION = 'v44.0';
 
@@ -37,46 +37,30 @@ export const SUPERVISED_LEDGER_STATUSES = [
   'SUPERVISED_LEDGER_BLOCKED_PAYLOAD',
 ];
 
-const GENESIS_HASH = '0'.repeat(64);
-
 // In-memory ledger (append-only)
-let _ledger = [];
+const _ledger = new HashChainLedger();
 
 export function _resetSupervisedLedgerForTest() {
-  _ledger = [];
+  _ledger.reset();
 }
 
 export function readSupervisedLedger() {
-  return [..._ledger];
+  return _ledger.read();
 }
 
 function _locked() {
-  return {
-    deploy_allowed:    false,
-    promotion_allowed: false,
-    stable_allowed:    false,
-    tag_allowed:       false,
-    release_performed: false,
-    promote_performed: false,
-  };
+  return makeLockedFlags([
+    'deploy_allowed',
+    'promotion_allowed',
+    'stable_allowed',
+    'tag_allowed',
+    'release_performed',
+    'promote_performed',
+  ]);
 }
 
 function _buildEventId(eventType, actorId, timestamp) {
-  return createHash('sha256')
-    .update(`${eventType}:${actorId ?? 'system'}:${timestamp}`)
-    .digest('hex')
-    .slice(0, 24);
-}
-
-function _buildChainHash(prevHash, eventBody) {
-  return createHash('sha256')
-    .update(`${prevHash}:${JSON.stringify(eventBody)}`)
-    .digest('hex');
-}
-
-function _getLastHash() {
-  if (_ledger.length === 0) return GENESIS_HASH;
-  return _ledger[_ledger.length - 1].chain_hash;
+  return sha256(`${eventType}:${actorId ?? 'system'}:${timestamp}`).slice(0, 24);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -154,8 +138,7 @@ export function appendSupervisedLedgerEvent(params = {}) {
   }
 
   const ts       = _mock_timestamp ?? new Date().toISOString();
-  const seq      = _ledger.length;
-  const prevHash = _getLastHash();
+  const seq      = _ledger.size;
   const event_id = _buildEventId(event_type, actor_id, ts);
 
   const eventBody = {
@@ -171,14 +154,10 @@ export function appendSupervisedLedgerEvent(params = {}) {
     evidence_source,
     timestamp:       ts,
     payload,
-    prev_hash:       prevHash,
   };
 
-  const chain_hash = _buildChainHash(prevHash, eventBody);
-  const entry = { ...eventBody, chain_hash };
-
   // Append-only
-  _ledger.push(entry);
+  const entry = _ledger.append(eventBody);
 
   return {
     schema_version:           SCHEMA_VERSION,
@@ -186,7 +165,7 @@ export function appendSupervisedLedgerEvent(params = {}) {
     supervised_ledger_ready:  true,
     event_id,
     seq,
-    chain_hash,
+    chain_hash:               entry.chain_hash,
     event_type,
     actor_id,
     rc_id,
@@ -195,7 +174,7 @@ export function appendSupervisedLedgerEvent(params = {}) {
     review_id,
     evidence_source,
     timestamp:                ts,
-    ledger_size:              _ledger.length,
+    ledger_size:              _ledger.size,
     blocking_reason:          null,
     ..._locked(),
   };
@@ -210,22 +189,8 @@ export function appendSupervisedLedgerEvent(params = {}) {
  * @returns {{ valid: boolean, entries: number, broken_at: number|null }}
  */
 export function verifySupervisedLedgerChain() {
-  if (_ledger.length === 0) {
-    return { valid: true, entries: 0, broken_at: null };
-  }
-
-  let prevHash = GENESIS_HASH;
-  for (let i = 0; i < _ledger.length; i++) {
-    const entry = _ledger[i];
-    const { chain_hash, ...bodyWithoutChain } = entry;
-    const expectedChain = _buildChainHash(prevHash, bodyWithoutChain);
-    if (chain_hash !== expectedChain) {
-      return { valid: false, entries: _ledger.length, broken_at: i };
-    }
-    prevHash = chain_hash;
-  }
-
-  return { valid: true, entries: _ledger.length, broken_at: null };
+  const result = _ledger.verify();
+  return { valid: result.valid, entries: result.entries, broken_at: result.tampered_at_index };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -269,7 +234,7 @@ if (process.argv[1] && process.argv[1].endsWith('supervised-release-ledger-event
       schema_version:  SCHEMA_VERSION,
       event_types:     SUPERVISED_LEDGER_EVENT_TYPES,
       statuses:        SUPERVISED_LEDGER_STATUSES,
-      ledger_size:     _ledger.length,
+      ledger_size:     _ledger.size,
     }, null, 2));
   } else {
     console.log('SUPERVISED_LEDGER_EVENT_TYPES:');

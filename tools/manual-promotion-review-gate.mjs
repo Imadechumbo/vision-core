@@ -18,7 +18,7 @@
  * - promotion_review_allowed=true ONLY when MANUAL_PROMOTION_REVIEW_READY.
  */
 
-import { createHash } from 'crypto';
+import { sha256, makeLockedFlags } from './_shared/gate-kit.mjs';
 import { buildManualPromotionPackage } from './manual-promotion-package-builder.mjs';
 
 const SCHEMA_VERSION = 'v43.1';
@@ -34,14 +34,16 @@ export const PROMOTION_REVIEW_STATUSES = [
 
 function _locked() {
   return {
-    deploy_allowed:             false,
-    promotion_allowed:          false,
-    stable_allowed:             false,
-    tag_allowed:                false,
-    release_performed:          false,
-    promote_performed:          false,
-    manual_only:                true,
-    promotion_review_allowed:   false,
+    ...makeLockedFlags([
+      'deploy_allowed',
+      'promotion_allowed',
+      'stable_allowed',
+      'tag_allowed',
+      'release_performed',
+      'promote_performed',
+      'promotion_review_allowed',
+    ]),
+    manual_only: true,
   };
 }
 
@@ -132,10 +134,9 @@ export function runManualPromotionReviewGate(options = {}) {
 
   const ts = _mock_timestamp ?? new Date().toISOString();
 
-  const review_id = createHash('sha256')
-    .update(`review:${pkg.package_hash}:${reviewerId ?? 'fixture'}:${ts}`)
-    .digest('hex')
-    .slice(0, 32);
+  const review_id = sha256(
+    `review:${pkg.package_hash}:${reviewerId ?? 'fixture'}:${ts}`
+  ).slice(0, 32);
 
   return {
     schema_version:              SCHEMA_VERSION,
