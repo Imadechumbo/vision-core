@@ -8,7 +8,7 @@
  * REGRA ABSOLUTA: All execution flags false always.
  */
 
-import { createHash } from 'crypto';
+import { sha256, makeLockedFlags } from './_shared/gate-kit.mjs';
 
 const SCHEMA_VERSION = 'v46.2';
 
@@ -23,26 +23,26 @@ export const REQUEST_AUTHORITY_BINDING_STATUSES = [
 ];
 
 function _sha256(input) {
-  return createHash('sha256').update(String(input)).digest('hex');
+  return sha256(input);
 }
 
 function _locked() {
-  return {
-    can_execute_release:  false,
-    can_execute_deploy:   false,
-    can_create_tag:       false,
-    can_promote_stable:   false,
-    can_override_evidence: false,
-    can_override_go_core: false,
-    deploy_allowed:       false,
-    promotion_allowed:    false,
-    stable_allowed:       false,
-    tag_allowed:          false,
-    release_performed:    false,
-    tag_created:          false,
-    stable_promoted:      false,
-    deploy_performed:     false,
-  };
+  return makeLockedFlags([
+    'can_execute_release',
+    'can_execute_deploy',
+    'can_create_tag',
+    'can_promote_stable',
+    'can_override_evidence',
+    'can_override_go_core',
+    'deploy_allowed',
+    'promotion_allowed',
+    'stable_allowed',
+    'tag_allowed',
+    'release_performed',
+    'tag_created',
+    'stable_promoted',
+    'deploy_performed',
+  ]);
 }
 
 function _blocked(status, reason = 'blocked') {

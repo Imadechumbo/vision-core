@@ -14,7 +14,7 @@
  * - release_performed=false always
  */
 
-import { createHash } from 'crypto';
+import { sha256, makeLockedFlags } from './_shared/gate-kit.mjs';
 
 const SCHEMA_VERSION = 'v46.0';
 
@@ -30,17 +30,17 @@ export const MANUAL_RELEASE_REQUEST_STATUSES = [
 ];
 
 function _sha256(input) {
-  return createHash('sha256').update(String(input)).digest('hex');
+  return sha256(input);
 }
 
 function _locked() {
-  return {
-    deploy_allowed:    false,
-    promotion_allowed: false,
-    stable_allowed:    false,
-    tag_allowed:       false,
-    release_performed: false,
-  };
+  return makeLockedFlags([
+    'deploy_allowed',
+    'promotion_allowed',
+    'stable_allowed',
+    'tag_allowed',
+    'release_performed',
+  ]);
 }
 
 function _blocked(status, reason = 'blocked') {
