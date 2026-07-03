@@ -8,6 +8,8 @@
  * REGRA ABSOLUTA: All execution flags false always.
  */
 
+import { makeLockedFlags } from './_shared/gate-kit.mjs';
+
 const SCHEMA_VERSION = 'v51.1';
 
 export const POLICY_STATUSES = [
@@ -42,18 +44,20 @@ export const SANDBOX_BLOCKED_OPERATIONS = [
 
 function _locked() {
   return {
-    deploy_allowed:            false,
-    promotion_allowed:         false,
-    stable_allowed:            false,
-    tag_allowed:               false,
-    release_execution_allowed: false,
-    release_performed:         false,
-    tag_created:               false,
-    stable_promoted:           false,
-    deploy_performed:          false,
-    sandbox_only:              true,
-    rehearsal_only:            true,
-    safe_simulation_only:      true,
+    ...makeLockedFlags([
+      'deploy_allowed',
+      'promotion_allowed',
+      'stable_allowed',
+      'tag_allowed',
+      'release_execution_allowed',
+      'release_performed',
+      'tag_created',
+      'stable_promoted',
+      'deploy_performed',
+    ]),
+    sandbox_only:         true,
+    rehearsal_only:       true,
+    safe_simulation_only: true,
   };
 }
 

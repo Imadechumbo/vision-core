@@ -9,7 +9,7 @@
  * sandbox_only=true, rehearsal_only=true, local_only=true always.
  */
 
-import { createHash } from 'crypto';
+import { sha256, makeLockedFlags } from './_shared/gate-kit.mjs';
 
 const SCHEMA_VERSION = 'v51.0';
 
@@ -40,23 +40,25 @@ const ALLOWED_WRITE_ROOT_PREFIXES = [
 ];
 
 function _sha256(input) {
-  return createHash('sha256').update(String(input)).digest('hex');
+  return sha256(input);
 }
 
 function _locked() {
   return {
-    deploy_allowed:            false,
-    promotion_allowed:         false,
-    stable_allowed:            false,
-    tag_allowed:               false,
-    release_execution_allowed: false,
-    release_performed:         false,
-    tag_created:               false,
-    stable_promoted:           false,
-    deploy_performed:          false,
-    sandbox_only:              true,
-    rehearsal_only:            true,
-    local_only:                true,
+    ...makeLockedFlags([
+      'deploy_allowed',
+      'promotion_allowed',
+      'stable_allowed',
+      'tag_allowed',
+      'release_execution_allowed',
+      'release_performed',
+      'tag_created',
+      'stable_promoted',
+      'deploy_performed',
+    ]),
+    sandbox_only:   true,
+    rehearsal_only: true,
+    local_only:     true,
   };
 }
 

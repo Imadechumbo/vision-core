@@ -9,6 +9,8 @@
  * real_commands_executed=false always.
  */
 
+import { makeLockedFlags } from './_shared/gate-kit.mjs';
+
 const SCHEMA_VERSION = 'v51.2';
 
 export const COMMAND_SIM_STATUSES = [
@@ -30,18 +32,20 @@ export const SIMULATED_COMMAND_TYPES = [
 
 function _locked() {
   return {
-    deploy_allowed:            false,
-    promotion_allowed:         false,
-    stable_allowed:            false,
-    tag_allowed:               false,
-    release_execution_allowed: false,
-    release_performed:         false,
-    tag_created:               false,
-    stable_promoted:           false,
-    deploy_performed:          false,
-    real_commands_executed:    false,
-    sandbox_only:              true,
-    rehearsal_only:            true,
+    ...makeLockedFlags([
+      'deploy_allowed',
+      'promotion_allowed',
+      'stable_allowed',
+      'tag_allowed',
+      'release_execution_allowed',
+      'release_performed',
+      'tag_created',
+      'stable_promoted',
+      'deploy_performed',
+      'real_commands_executed',
+    ]),
+    sandbox_only:   true,
+    rehearsal_only: true,
   };
 }
 
