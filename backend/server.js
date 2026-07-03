@@ -1264,7 +1264,7 @@ app.post('/api/deploy/pages', (req, res) => {
   });
 });
 
-// §205 — /api/deploy/eb: advisory endpoint — EB deploy requer CLI local (python _deploy89_eb.py)
+// §205 — /api/deploy/eb: advisory endpoint — EB deploy requer CLI local (python _deploy191b_eb.py)
 app.post('/api/deploy/eb', (req, res) => {
   const body = normalizeBody(req);
   const pkg = (() => { try { return require('./package.json'); } catch { return {}; } })();
@@ -1273,7 +1273,7 @@ app.post('/api/deploy/eb', (req, res) => {
     mode: 'advisory',
     version: pkg.version || 'unknown',
     environment: process.env.NODE_ENV || 'production',
-    note: 'Deploy EB requer CLI local: python _deploy89_eb.py',
+    note: 'Deploy EB requer CLI local: python _deploy191b_eb.py',
     source: body.source || 'sf-autopilot',
     pass_gold: body.pass_gold || false,
     anti_stub: true
