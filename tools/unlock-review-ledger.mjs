@@ -10,7 +10,7 @@
  * future_execution_phase_required=true always.
  */
 
-import { createHash } from 'crypto';
+import { sha256, makeLockedFlags, HashChainLedger } from './_shared/gate-kit.mjs';
 
 const SCHEMA_VERSION = 'v63.0';
 
@@ -30,29 +30,29 @@ export const UNLOCK_REVIEW_LEDGER_STATUSES = [
   'UNLOCK_LEDGER_LOCKED',
 ];
 
-const GENESIS_HASH = '0'.repeat(64);
-
-let _ledger = [];
+const _ledger = new HashChainLedger();
 
 function _sha256(input) {
-  return createHash('sha256').update(String(input)).digest('hex');
+  return sha256(input);
 }
 
 function _locked() {
   return {
-    deploy_allowed:                    false,
-    promotion_allowed:                 false,
-    stable_allowed:                    false,
-    tag_allowed:                       false,
-    release_execution_allowed:         false,
-    release_performed:                 false,
-    tag_created:                       false,
-    stable_promoted:                   false,
-    deploy_performed:                  false,
-    production_execution_locked:       true,
-    unlock_executed:                   false,
-    unlock_review_only:                true,
-    future_execution_phase_required:   true,
+    ...makeLockedFlags([
+      'deploy_allowed',
+      'promotion_allowed',
+      'stable_allowed',
+      'tag_allowed',
+      'release_execution_allowed',
+      'release_performed',
+      'tag_created',
+      'stable_promoted',
+      'deploy_performed',
+      'unlock_executed',
+    ]),
+    production_execution_locked:     true,
+    unlock_review_only:              true,
+    future_execution_phase_required: true,
   };
 }
 
@@ -85,54 +85,37 @@ export function appendUnlockReviewLedgerEvent(params = {}) {
     };
   }
 
-  const prev_hash = _ledger.length > 0
-    ? _ledger[_ledger.length - 1].chain_hash
-    : GENESIS_HASH;
-
-  const event_body = {
-    event_type,
-    artifact_id:      artifact_id ?? null,
-    artifact_status:  artifact_status ?? null,
-    evidence_package_id,
-    created_at:       now,
-    fixture_mode:     fixture_mode === true,
-  };
+  const sequence = _ledger.size + 1;
 
   const event_id = _sha256([
     'unlock-review-event',
     event_type,
     artifact_id ?? '',
     now,
-    _ledger.length,
+    _ledger.size,
   ].join(':')).slice(0, 24);
 
-  const chain_hash = _sha256(`${prev_hash}:${JSON.stringify(event_body)}`);
-
-  const entry = {
-    schema_version:                    SCHEMA_VERSION,
+  const entry = _ledger.append({
+    schema_version:  SCHEMA_VERSION,
     event_id,
-    sequence:                          _ledger.length + 1,
+    sequence,
     event_type,
-    artifact_id:                       artifact_id ?? null,
-    artifact_status:                   artifact_status ?? null,
+    artifact_id:     artifact_id ?? null,
+    artifact_status: artifact_status ?? null,
     evidence_package_id,
-    prev_hash,
-    chain_hash,
-    created_at:                        now,
-    fixture_mode:                      fixture_mode === true,
+    created_at:      now,
+    fixture_mode:    fixture_mode === true,
     ..._locked(),
-  };
-
-  _ledger.push(entry);
+  });
 
   return {
     schema_version:                    SCHEMA_VERSION,
     ledger_status:                     'UNLOCK_LEDGER_OK',
     appended:                          true,
     event_id,
-    sequence:                          entry.sequence,
-    chain_hash,
-    total_events:                      _ledger.length,
+    sequence,
+    chain_hash:                        entry.chain_hash,
+    total_events:                      _ledger.size,
     blocking_reason:                   null,
     ..._locked(),
   };
@@ -144,9 +127,9 @@ export function appendUnlockReviewLedgerEvent(params = {}) {
 export function readUnlockReviewLedger() {
   return {
     schema_version:                    SCHEMA_VERSION,
-    ledger_status:                     _ledger.length > 0 ? 'UNLOCK_LEDGER_OK' : 'UNLOCK_LEDGER_EMPTY',
-    total_events:                      _ledger.length,
-    events:                            [..._ledger],
+    ledger_status:                     _ledger.size > 0 ? 'UNLOCK_LEDGER_OK' : 'UNLOCK_LEDGER_EMPTY',
+    total_events:                      _ledger.size,
+    events:                            _ledger.read(),
     ..._locked(),
   };
 }
@@ -155,7 +138,9 @@ export function readUnlockReviewLedger() {
  * Verify the hash chain integrity of the ledger.
  */
 export function verifyUnlockReviewLedgerChain() {
-  if (_ledger.length === 0) {
+  const result = _ledger.verify();
+
+  if (_ledger.size === 0) {
     return {
       schema_version:                  SCHEMA_VERSION,
       valid:                           true,
@@ -166,28 +151,23 @@ export function verifyUnlockReviewLedgerChain() {
     };
   }
 
-  let prev_hash = GENESIS_HASH;
-  for (let i = 0; i < _ledger.length; i++) {
-    const entry = _ledger[i];
-    if (entry.prev_hash !== prev_hash) {
-      return {
-        schema_version:                SCHEMA_VERSION,
-        valid:                         false,
-        ledger_status:                 'UNLOCK_LEDGER_CHAIN_BROKEN',
-        broken_at_sequence:            entry.sequence,
-        total_events:                  _ledger.length,
-        chain_valid:                   false,
-        ..._locked(),
-      };
-    }
-    prev_hash = entry.chain_hash;
+  if (!result.valid) {
+    return {
+      schema_version:                SCHEMA_VERSION,
+      valid:                         false,
+      ledger_status:                 'UNLOCK_LEDGER_CHAIN_BROKEN',
+      broken_at_sequence:            result.tampered_at_index + 1,
+      total_events:                  result.entries,
+      chain_valid:                   false,
+      ..._locked(),
+    };
   }
 
   return {
     schema_version:                    SCHEMA_VERSION,
     valid:                             true,
     ledger_status:                     'UNLOCK_LEDGER_OK',
-    total_events:                      _ledger.length,
+    total_events:                      result.entries,
     chain_valid:                       true,
     ..._locked(),
   };
@@ -197,7 +177,7 @@ export function verifyUnlockReviewLedgerChain() {
  * Reset ledger (test use only).
  */
 export function _resetUnlockReviewLedgerForTest() {
-  _ledger = [];
+  _ledger.reset();
 }
 
 /**
