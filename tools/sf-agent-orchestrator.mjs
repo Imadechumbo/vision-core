@@ -491,7 +491,17 @@ export async function runSoftwareFactoryBrief(brief, opts = {}) {
       tools: ['Read', 'Grep', 'Glob', 'Task'],
       agents: SUBAGENTS,
       hooks,
-      permissionMode: 'default',
+      // 'default' exige aprovação interativa pra qualquer operação de
+      // arquivo — não existe quem aprove num script headless (confirmado
+      // num smoke test real: toda tentativa de Write/Bash/Read de um
+      // subagent foi negada por permissão, nunca chegou nos nossos hooks).
+      // 'bypassPermissions' (+ allowDangerouslySkipPermissions:true, exigido
+      // pelo próprio SDK como confirmação de intenção — sdk.d.ts) remove
+      // esse prompt separado do SDK; a governança real continua sendo
+      // nossos hooks PreToolUse/PostToolUse/SubagentStop, que rodam
+      // independente do permissionMode.
+      permissionMode: 'bypassPermissions',
+      allowDangerouslySkipPermissions: true,
       maxTurns,
     };
 
