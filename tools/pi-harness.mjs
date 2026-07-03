@@ -31,22 +31,14 @@ import {
   detectAgentConflict,
   resolveAgentConflict,
   recordHermesEvent,
-  renderHermesSupervisionReport,
   attachRuntimeEvidence,
   evaluateHermesDecision,
   evaluateHermesAuthorization,
 } from './hermes/mission-supervisor.mjs';
 import {
-  createAuthorizationManifest,
-  createAuthorizationPolicy,
-  validateAuthorizationManifest,
-  evaluateAuthorizationLayer,
-  deriveAuthorizationRequirements,
-  renderAuthorizationSummary,
   renderAuthorizationGate,
 } from './hermes/authorization-layer.mjs';
 import {
-  createRuntimeEvidence,
   collectRuntimeEvidence,
   validateRuntimeEvidence,
   renderRuntimeEvidenceSummary,
@@ -76,10 +68,6 @@ import {
   generateReleasePlan,
 } from './release-plan-generator.mjs';
 import {
-  createDecisionMatrix,
-  evaluateDecisionMatrix,
-  evaluateReleaseReadiness,
-  renderDecisionMatrixSummary,
   renderReleaseReadinessGate,
 } from './hermes/decision-matrix.mjs';
 // V27.0: Real Runtime Probe E2E integration
