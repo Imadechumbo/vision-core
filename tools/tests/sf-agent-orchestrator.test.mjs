@@ -279,5 +279,61 @@ const gProseBraces = await checkSubagentResult(textWithBracesInProse, {});
 assert(gProseBraces?.decision === 'approve',
   '[G-05] chaves soltas em prosa (não JSON de claim) não viram claim → aprovado');
 
+// [Suite H] Sanidade automática: toda tool com capacidade de escrita
+// listada em SUBAGENTS[*].tools precisa estar coberta pelo matcher do
+// PreToolUse ('Write|Edit|Bash'). Não é checagem manual — roda sempre que
+// o teste roda, então se alguém adicionar uma tool nova (ex: NotebookEdit)
+// a um subagent sem atualizar o matcher, este teste falha imediatamente.
+//
+// "Capacidade de escrita" é definida por exclusão: qualquer tool que NÃO
+// esteja na allowlist explícita de tools somente-leitura é tratada como
+// potencialmente capaz de escrever e PRECISA estar coberta — default
+// fail-closed (tool desconhecida = trate como perigosa), não fail-open.
+console.log('\n[Suite H] Sanidade — matcher do PreToolUse cobre toda tool de escrita dos subagents');
+
+const READ_ONLY_TOOLS = new Set(['Read', 'Grep', 'Glob', 'Agent']);
+
+function toolsRequiringGate(subagents) {
+  const writeCapable = new Set();
+  for (const def of Object.values(subagents)) {
+    for (const tool of def.tools) {
+      if (!READ_ONLY_TOOLS.has(tool)) writeCapable.add(tool);
+    }
+  }
+  return [...writeCapable];
+}
+
+function isCoveredByMatcher(toolName, matcherPattern) {
+  // Match exato (não substring) — é a leitura mais estrita possível; se o
+  // SDK de verdade fizer substring match, qualquer coisa aprovada aqui
+  // também passaria lá (mais permissivo), então testar por match exato
+  // nunca gera falso-negativo em relação ao comportamento real do SDK.
+  const re = new RegExp(`^(?:${matcherPattern})$`);
+  return re.test(toolName);
+}
+
+// Reaproveita captured.options da Suite A (já populado pelo mockQueryFn
+// que roda dentro de runSoftwareFactoryBrief mais acima neste arquivo).
+const subagentsUsed = captured.options.agents;
+const preToolUseMatcher = captured.options.hooks.PreToolUse[0].matcher;
+
+assert(typeof preToolUseMatcher === 'string' && preToolUseMatcher.length > 0,
+  '[H-01] matcher do PreToolUse presente e não vazio');
+
+const requiringGate = toolsRequiringGate(subagentsUsed);
+assert(requiringGate.length > 0,
+  '[H-02] pelo menos uma tool de escrita encontrada nos subagents (sanity do próprio teste)');
+
+for (const tool of requiringGate) {
+  assert(isCoveredByMatcher(tool, preToolUseMatcher),
+    `[H-03] tool de escrita "${tool}" coberta pelo matcher "${preToolUseMatcher}"`);
+}
+
+// Prova negativa: se uma tool de escrita NÃO reconhecida aparecesse (ex:
+// 'NotebookEdit'), este teste teria que falhar — confirma que o teste
+// não está sempre aprovando por acidente (falso positivo de teste).
+assert(!isCoveredByMatcher('NotebookEdit', preToolUseMatcher),
+  '[H-04] prova negativa: tool hipotética não coberta é corretamente detectada como descoberta');
+
 console.log(`\nsf-agent-orchestrator: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);
