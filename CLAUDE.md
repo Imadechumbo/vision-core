@@ -328,7 +328,7 @@ FREE_MISSION_LIMIT=5
 
 **§190 FECHADO** — project-files gerador melhorado. 5/6 PASS: 12 arquivos, ~11KB, Express real. EB v5.9.58-s190.
 
-**§205 FECHADO** — `POST /api/deploy/pages` + `POST /api/deploy/eb` implementados. Advisory endpoints (EB não tem CLI local para wrangler/python scripts). `pages` retorna `{ok:true, mode:'advisory', url:FRONTEND_URL, note:'bash bin/deploy-pages.sh'}`. `eb` retorna `{ok:true, mode:'advisory', version:pkg.version, note:'python _deploy89_eb.py'}`. `anti_stub:true` em ambos. Frontend §204+ já lê `url` (CF Pages) e `version` (EB) nos botões. §202+ EB deploy também aplicado (POST `/api/mission/timeline` ativo). 5/5 PASS. EB ao vivo.
+**§205 FECHADO** — `POST /api/deploy/pages` + `POST /api/deploy/eb` implementados. Advisory endpoints (EB não tem CLI local para wrangler/python scripts). `pages` retorna `{ok:true, mode:'advisory', url:FRONTEND_URL, note:'bash bin/deploy-pages.sh'}`. `eb` retorna `{ok:true, mode:'advisory', version:pkg.version, note:'python _deploy191b_eb.py'}`. `anti_stub:true` em ambos. Frontend §204+ já lê `url` (CF Pages) e `version` (EB) nos botões. §202+ EB deploy também aplicado (POST `/api/mission/timeline` ativo). 5/5 PASS. EB ao vivo.
 
 **§204+ FECHADO** — Deploy dropdown com 5 opções substitui mini-form PR simples. `#sf-pr-btn-wrap` reconstruído: dropdown `<select>` com ZIP (client-side Blob download) / PR GitHub / CF Pages / EB / Docker. Campos repo+base_branch aparecem apenas quando PR selecionado. Cada action em closure separada `(_s204select, _s204repo, _s204baseInp, _s204btn)`. Docker → mensagem configuração. CF Pages / EB → POST `/api/deploy/pages|eb` (endpoints ainda não existem — erro 404 com msg clara). ZIP sempre funciona. CF Pages ao vivo. Zero EB (deploy posterior).
 
