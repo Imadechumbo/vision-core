@@ -166,6 +166,47 @@ function extractAgentClaims(subagentResult) {
 }
 
 // ---------------------------------------------------------------------------
+// Evidência capturada de verdade DURANTE a execução de um módulo — diferente
+// de missionEvidence (estático, decidido pelo caller antes da missão
+// começar). Uma instância NOVA por módulo (ver runModule) — nunca
+// compartilhada entre módulos concorrentes quando parallelModules:true.
+// ---------------------------------------------------------------------------
+function createModuleEvidence() {
+  return {
+    exit_code: undefined, // number — só setado se um comando RECONHECIDO de teste rodou
+    git_diff:  undefined, // string — só setado se houve mudança real de arquivo detectada
+  };
+}
+
+// Comandos reconhecidos como "rodou teste de verdade". Não tenta cobrir todo
+// test runner do mundo — só os prováveis pro tipo de projeto que os
+// subagents deste orquestrador escrevem (Node/JS comum + Go, já que o
+// próprio vision-core usa Go Core). Comando que não bate aqui NUNCA conta
+// como evidência de teste, mesmo que saia com exit 0.
+const TEST_COMMAND_PATTERN = /\b(npm|yarn|pnpm)\s+(run\s+)?test\b|\bpytest\b|\bjest\b|\bmocha\b|\bvitest\b|\bgo\s+test\b/i;
+
+// NÃO VERIFICADO CONTRA FONTE OFICIAL: nem a doc pública do Agent SDK
+// (platform.claude.com/docs/en/agent-sdk/hooks + referência TypeScript)
+// nem o repositório fonte no GitHub expõem a forma literal do payload que
+// PostToolUse recebe pra uma chamada Bash. A única pista (não-oficial, um
+// blog de terceiros) sugere {stdout, stderr, exit_code} como campos
+// irmãos, possivelmente aninhados em `tool_response`. Por isso checamos
+// MÚLTIPLOS caminhos candidatos — se nenhum bater, simplesmente não
+// capturamos nada (mesmo comportamento de hoje, sem regressão), em vez de
+// arriscar ler um campo errado com falsa confiança. RE-VERIFICAR contra os
+// tipos reais assim que o pacote for instalado.
+function extractBashExitCode(input) {
+  const candidates = [
+    input?.tool_response?.exit_code,
+    input?.tool_response?.exitCode,
+    input?.exit_code,
+    input?.exitCode,
+    input?.tool_response?.result?.exit_code,
+  ];
+  return candidates.find((v) => typeof v === 'number');
+}
+
+// ---------------------------------------------------------------------------
 // Definição dos subagents — mapeiam 1:1 com o painel "Agentes Orquestradores"
 // ---------------------------------------------------------------------------
 
@@ -233,7 +274,7 @@ const SUBAGENTS = {
 //   SubagentStop gate no que um subagent tem permissão de devolver a Hermes
 // ---------------------------------------------------------------------------
 
-function buildHooks({ missionEvidence, onEvent }) {
+function buildHooks({ missionEvidence, onEvent, moduleEvidence, moduleId }) {
   return {
     PreToolUse: [
       {
@@ -251,6 +292,24 @@ function buildHooks({ missionEvidence, onEvent }) {
               return { decision: 'block', reason: gate.reason ?? 'Bloqueado pelo gate de release.' };
             }
             return { decision: 'approve' };
+          },
+        ],
+      },
+    ],
+    PostToolUse: [
+      {
+        matcher: 'Bash',
+        hooks: [
+          async (input) => {
+            const command = input.tool_input?.command ?? '';
+            if (TEST_COMMAND_PATTERN.test(command)) {
+              const exitCode = extractBashExitCode(input);
+              if (typeof exitCode === 'number') {
+                moduleEvidence.exit_code = exitCode;
+                onEvent?.({ type: 'evidence_captured', field: 'exit_code', value: exitCode, command, moduleId });
+              }
+            }
+            return {};
           },
         ],
       },
@@ -337,11 +396,16 @@ export async function runSoftwareFactoryBrief(brief, opts = {}) {
   const modules = parseBriefModules(brief);
   onEvent({ type: 'plan', totalModules: modules.length, modules: modules.map((m) => m.moduleId) });
 
-  const hooks = buildHooks({ missionEvidence, onEvent });
   const results = [];
 
   const runModule = async (mod) => {
     onEvent({ type: 'module_start', moduleId: mod.moduleId, title: mod.title });
+
+    // Evidência (exit_code/git_diff) + hooks são construídos AQUI, um por
+    // chamada a runModule — nunca compartilhados entre módulos concorrentes
+    // (parallelModules:true pode rodar vários ao mesmo tempo via Promise.all).
+    const moduleEvidence = createModuleEvidence();
+    const hooks = buildHooks({ missionEvidence, onEvent, moduleEvidence, moduleId: mod.moduleId });
 
     const options = {
       cwd: projectWorkspace,

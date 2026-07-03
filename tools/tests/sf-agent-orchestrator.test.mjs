@@ -22,6 +22,19 @@ Implemente um endpoint de login JWT em backend/routes/auth.js.
 \`\`\`
 `;
 
+const BRIEF_TWO_MODULES = `### Prompt 1: M1 - Backend API de autenticação
+
+\`\`\`
+Implemente um endpoint de login JWT em backend/routes/auth.js.
+\`\`\`
+
+### Prompt 2: M2 - Frontend tela de login
+
+\`\`\`
+Implemente a tela de login em frontend/login.html.
+\`\`\`
+`;
+
 const captured = {};
 
 async function* mockQueryFn({ prompt, options }) {
@@ -334,6 +347,66 @@ for (const tool of requiringGate) {
 // não está sempre aprovando por acidente (falso positivo de teste).
 assert(!isCoveredByMatcher('NotebookEdit', preToolUseMatcher),
   '[H-04] prova negativa: tool hipotética não coberta é corretamente detectada como descoberta');
+
+// [Suite I] PostToolUse — captura de exit_code amarrada a comando de teste
+// reconhecido, isolada por módulo (item 1 do incremento de missionEvidence).
+console.log('\n[Suite I] PostToolUse — captura de exit_code por módulo');
+
+async function runPostToolUse(command, toolResponseShape) {
+  const evidenceEvents = [];
+  async function* mockPostToolUseQuery({ options }) {
+    const postToolUseHook = options.hooks.PostToolUse[0].hooks[0];
+    await postToolUseHook({ tool_name: 'Bash', tool_input: { command }, ...toolResponseShape });
+    yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
+  }
+  await runSoftwareFactoryBrief(BRIEF, {
+    projectWorkspace: '/tmp/fixture-project',
+    queryFn: mockPostToolUseQuery,
+    onEvent: (ev) => { if (ev.type === 'evidence_captured') evidenceEvents.push(ev); },
+  });
+  return evidenceEvents;
+}
+
+const testCmdEvents = await runPostToolUse('npm test', { tool_response: { exit_code: 0, stdout: 'ok' } });
+assert(testCmdEvents.length === 1, '[I-01] "npm test" reconhecido → 1 evento evidence_captured');
+assert(testCmdEvents[0]?.value === 0, '[I-02] exit_code capturado corretamente (0)');
+assert(testCmdEvents[0]?.field === 'exit_code', '[I-03] campo correto no evento');
+
+const nonZeroEvents = await runPostToolUse('pytest', { tool_response: { exit_code: 1 } });
+assert(nonZeroEvents[0]?.value === 1,
+  '[I-04] exit_code não-zero também é capturado como é (não filtra sucesso/falha)');
+
+const directFieldEvents = await runPostToolUse('go test ./...', { exit_code: 0 });
+assert(directFieldEvents.length === 1 && directFieldEvents[0]?.value === 0,
+  '[I-05] shape alternativo (exit_code direto no input, não em tool_response) também reconhecido — checagem defensiva de múltiplos candidatos funciona');
+
+const nonTestEvents = await runPostToolUse('ls -la', { tool_response: { exit_code: 0 } });
+assert(nonTestEvents.length === 0,
+  '[I-06] comando que NÃO bate no regex de teste não gera evidência, mesmo com exit_code 0');
+
+const noExitCodeEvents = await runPostToolUse('npm test', {});
+assert(noExitCodeEvents.length === 0,
+  '[I-07] comando de teste reconhecido mas sem exit_code em nenhum campo candidato → nada capturado (nenhuma regressão, sem chute)');
+
+console.log('\n[Suite I] Isolamento por módulo — 2 módulos concorrentes não se pisam');
+const isolationEvents = [];
+async function* mockIsolationQuery({ prompt, options }) {
+  const postToolUseHook = options.hooks.PostToolUse[0].hooks[0];
+  const exitCode = prompt.includes('login JWT') ? 10 : 20; // M1 vs M2
+  await postToolUseHook({ tool_name: 'Bash', tool_input: { command: 'npm test' }, tool_response: { exit_code: exitCode } });
+  yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
+}
+await runSoftwareFactoryBrief(BRIEF_TWO_MODULES, {
+  projectWorkspace: '/tmp/fixture-project',
+  parallelModules: true,
+  queryFn: mockIsolationQuery,
+  onEvent: (ev) => { if (ev.type === 'evidence_captured') isolationEvents.push(ev); },
+});
+const m1Event = isolationEvents.find((e) => e.moduleId === 'M1');
+const m2Event = isolationEvents.find((e) => e.moduleId === 'M2');
+assert(isolationEvents.length === 2, '[I-08] 2 eventos de evidência, um por módulo');
+assert(m1Event?.value === 10, '[I-09] M1 capturou seu próprio exit_code (10), não o de M2');
+assert(m2Event?.value === 20, '[I-10] M2 capturou seu próprio exit_code (20), não o de M1');
 
 console.log(`\nsf-agent-orchestrator: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);
