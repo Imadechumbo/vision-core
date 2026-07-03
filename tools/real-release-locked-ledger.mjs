@@ -10,10 +10,9 @@
  * production_execution_locked=true always. unlock_required=true always.
  */
 
-import { createHash } from 'crypto';
+import { sha256, makeLockedFlags, HashChainLedger } from './_shared/gate-kit.mjs';
 
 const SCHEMA_VERSION = 'v57.1';
-const GENESIS_HASH   = '0'.repeat(64);
 
 export const REAL_RELEASE_LOCKED_EVENT_TYPES = [
   'REAL_MANUAL_RELEASE_GATE_READY_LOCKED',
@@ -39,28 +38,30 @@ const READY_LOCKED_EVENTS = [
 ];
 
 function _sha256(input) {
-  return createHash('sha256').update(String(input)).digest('hex');
+  return sha256(input);
 }
 
-let _ledger = [];
+const _ledger = new HashChainLedger();
 
 export function _resetRealReleaseLedgerForTest() {
-  _ledger = [];
+  _ledger.reset();
 }
 
 function _locked() {
   return {
-    deploy_allowed:               false,
-    promotion_allowed:            false,
-    stable_allowed:               false,
-    tag_allowed:                  false,
-    release_execution_allowed:    false,
-    release_performed:            false,
-    tag_created:                  false,
-    stable_promoted:              false,
-    deploy_performed:             false,
-    production_execution_locked:  true,
-    unlock_required:              true,
+    ...makeLockedFlags([
+      'deploy_allowed',
+      'promotion_allowed',
+      'stable_allowed',
+      'tag_allowed',
+      'release_execution_allowed',
+      'release_performed',
+      'tag_created',
+      'stable_promoted',
+      'deploy_performed',
+    ]),
+    production_execution_locked: true,
+    unlock_required:             true,
   };
 }
 
@@ -121,13 +122,11 @@ export function appendRealReleaseLedgerEvent(params = {}) {
     }
   }
 
-  const prev_hash = _ledger.length === 0
-    ? GENESIS_HASH
-    : _ledger[_ledger.length - 1].chain_hash;
-
   const event_id = _sha256(`${event_type}:${actor_id ?? 'unknown'}:${now}`).slice(0, 24);
+  const index    = _ledger.size;
 
-  const event_body = {
+  const entry = _ledger.append({
+    event_id,
     event_type,
     actor_id:       actor_id ?? null,
     ledger_id:      ledger_id ?? null,
@@ -135,81 +134,24 @@ export function appendRealReleaseLedgerEvent(params = {}) {
     evidence_source: evidence_source ?? null,
     finalizer_id:   finalizer_id ?? null,
     timestamp:      now,
-  };
-
-  const chain_hash = _sha256(`${prev_hash}:${JSON.stringify(event_body)}`);
-
-  const entry = {
-    event_id,
-    ...event_body,
-    prev_hash,
-    chain_hash,
-    index:        _ledger.length,
+    index,
     ..._locked(),
-  };
+  });
 
-  _ledger.push(entry);
-
-  return { appended: true, event_id, chain_hash, index: entry.index, ..._locked() };
+  return { appended: true, event_id, chain_hash: entry.chain_hash, index, ..._locked() };
 }
 
 /**
  * Verify the real release locked ledger chain integrity.
  */
 export function verifyRealReleaseLedgerChain() {
-  if (_ledger.length === 0) {
-    return {
-      valid:             true,
-      entries:           0,
-      status:            'REAL_RELEASE_LOCKED_LEDGER_READY',
-      schema_version:    SCHEMA_VERSION,
-      tampered_at_index: null,
-      ..._locked(),
-    };
-  }
-
-  let prev = GENESIS_HASH;
-  for (let i = 0; i < _ledger.length; i++) {
-    const entry = _ledger[i];
-    if (entry.prev_hash !== prev) {
-      return {
-        valid:             false,
-        entries:           _ledger.length,
-        status:            'REAL_RELEASE_LOCKED_LEDGER_BLOCKED_TAMPER',
-        schema_version:    SCHEMA_VERSION,
-        tampered_at_index: i,
-        ..._locked(),
-      };
-    }
-    const event_body = {
-      event_type:      entry.event_type,
-      actor_id:        entry.actor_id,
-      ledger_id:       entry.ledger_id,
-      evidence_refs:   entry.evidence_refs,
-      evidence_source: entry.evidence_source,
-      finalizer_id:    entry.finalizer_id,
-      timestamp:       entry.timestamp,
-    };
-    const expected = _sha256(`${prev}:${JSON.stringify(event_body)}`);
-    if (entry.chain_hash !== expected) {
-      return {
-        valid:             false,
-        entries:           _ledger.length,
-        status:            'REAL_RELEASE_LOCKED_LEDGER_BLOCKED_TAMPER',
-        schema_version:    SCHEMA_VERSION,
-        tampered_at_index: i,
-        ..._locked(),
-      };
-    }
-    prev = entry.chain_hash;
-  }
-
+  const result = _ledger.verify();
   return {
-    valid:             true,
-    entries:           _ledger.length,
-    status:            'REAL_RELEASE_LOCKED_LEDGER_READY',
+    valid:             result.valid,
+    entries:           result.entries,
+    status:            result.valid ? 'REAL_RELEASE_LOCKED_LEDGER_READY' : 'REAL_RELEASE_LOCKED_LEDGER_BLOCKED_TAMPER',
     schema_version:    SCHEMA_VERSION,
-    tampered_at_index: null,
+    tampered_at_index: result.tampered_at_index,
     ..._locked(),
   };
 }
@@ -219,8 +161,8 @@ export function verifyRealReleaseLedgerChain() {
  */
 export function readRealReleaseLedger() {
   return {
-    entries:        _ledger.length,
-    events:         _ledger.map(e => ({ event_id: e.event_id, event_type: e.event_type, index: e.index })),
+    entries:        _ledger.size,
+    events:         _ledger.read().map(e => ({ event_id: e.event_id, event_type: e.event_type, index: e.index })),
     schema_version: SCHEMA_VERSION,
     ..._locked(),
   };

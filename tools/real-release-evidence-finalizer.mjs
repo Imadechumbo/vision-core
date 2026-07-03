@@ -9,7 +9,7 @@
  * production_execution_locked=true always. immutable=true always.
  */
 
-import { createHash } from 'crypto';
+import { sha256, makeLockedFlags } from './_shared/gate-kit.mjs';
 
 const SCHEMA_VERSION = 'v57.0';
 
@@ -22,23 +22,25 @@ export const FINALIZER_STATUSES = [
 ];
 
 function _sha256(input) {
-  return createHash('sha256').update(String(input)).digest('hex');
+  return sha256(input);
 }
 
 function _locked() {
   return {
-    deploy_allowed:               false,
-    promotion_allowed:            false,
-    stable_allowed:               false,
-    tag_allowed:                  false,
-    release_execution_allowed:    false,
-    release_performed:            false,
-    tag_created:                  false,
-    stable_promoted:              false,
-    deploy_performed:             false,
-    production_execution_locked:  true,
-    human_review_required:        true,
-    immutable:                    true,
+    ...makeLockedFlags([
+      'deploy_allowed',
+      'promotion_allowed',
+      'stable_allowed',
+      'tag_allowed',
+      'release_execution_allowed',
+      'release_performed',
+      'tag_created',
+      'stable_promoted',
+      'deploy_performed',
+    ]),
+    production_execution_locked: true,
+    human_review_required:       true,
+    immutable:                   true,
   };
 }
 
