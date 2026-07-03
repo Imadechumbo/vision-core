@@ -35,11 +35,74 @@ async function defaultQueryFn(args) {
 // HashChainLedger, runGateCli). Checar "esse comando Bash é destrutivo?"
 // é um domínio diferente, sem equivalente pra reaproveitar — fica aqui,
 // real, não é mais um stub.
+//
+// AVISO HONESTO: isto é uma BLOCKLIST, não uma allowlist — por natureza,
+// toda blocklist de comandos é incompleta. Cobre os bypasses concretos
+// identificados numa revisão adversarial (flags de rm em qualquer ordem/
+// forma, find -delete, git reset --hard, git push -f, truncamento sem
+// comando real antes do >, DROP DATABASE/TRUNCATE/DELETE sem WHERE,
+// curl|wget para shell, dd/mkfs, fork bomb) — mas NÃO cobre, por exemplo:
+// comandos construídos via substituição de variável/eval (`$(echo rm) -rf`),
+// `command > arquivo-real-existente.js` (sobrescreve um arquivo de código
+// de verdade sem apagar o arquivo inteiro — não dá pra distinguir isso de
+// um redirecionamento de saída legítimo só olhando a string do comando,
+// sem saber se o arquivo alvo já existe e o que tem dentro), chmod/chown
+// recursivos destrutivos, ou qualquer comando novo que não esteja na lista
+// abaixo. NÃO é suficiente como única linha de defesa em produção — serve
+// como piso conservador, não como gate de segurança completo.
 // ---------------------------------------------------------------------------
+
+function isDestructiveRm(command) {
+  // Isola cada trecho "rm ..." até o próximo separador de shell, pra não
+  // vazar flags de outros comandos numa linha composta (cmd1; rm -rf x).
+  const segments = command.match(/\brm\s+[^;&|]*/gi) || [];
+  return segments.some((seg) => {
+    const hasRecursive = /(?:^|\s)-\w*[rR]\w*(?:\s|$)/.test(seg) || /--recursive\b/i.test(seg);
+    const hasForce      = /(?:^|\s)-\w*f\w*(?:\s|$)/i.test(seg)  || /--force\b/i.test(seg);
+    return hasRecursive && hasForce;
+  });
+}
+
+function hasUnscopedSqlWipe(command) {
+  if (/\bDROP\s+(DATABASE|TABLE)\b/i.test(command)) return true;
+  if (/\bTRUNCATE\s+TABLE\b/i.test(command)) return true;
+  const deletes = command.match(/\bDELETE\s+FROM\s+\S+[^;]*/gi) || [];
+  return deletes.some((stmt) => !/\bWHERE\b/i.test(stmt));
+}
+
+function isBareTruncateRedirect(command) {
+  // `:> arquivo`, `> arquivo` sem nenhum comando real antes (só espaço/início
+  // de linha/separador de shell), `cat /dev/null > arquivo`, `truncate -s 0`.
+  // Deliberadamente NÃO bloqueia `comando > arquivo` em geral — isso
+  // quebraria uso legítimo de redirecionamento (ex: `echo x > log.txt`),
+  // que é maioria esmagadora dos usos de `>` num agente que escreve código.
+  if (/(^|[;&|]\s*):?>\s*\S/.test(command)) return true;
+  if (/\bcat\s+\/dev\/null\s*>\s*\S/i.test(command)) return true;
+  if (/\btruncate\s+(-s|--size)\s*0?\s*\d*\s+\S/i.test(command)) return true;
+  return false;
+}
+
+const DESTRUCTIVE_CHECKS = [
+  { test: isDestructiveRm,                                          label: 'rm recursivo + forçado (qualquer forma/ordem de flag)' },
+  { test: (c) => /\bfind\b[^;&|]*-delete\b/i.test(c),                label: 'find com -delete' },
+  { test: (c) => /\bgit\s+reset\s+--hard\b/i.test(c),                label: 'git reset --hard' },
+  { test: (c) => /\bgit\s+push\b[^;&|]*(-f\b|--force\b)/i.test(c),   label: 'git push forçado (-f/--force)' },
+  { test: isBareTruncateRedirect,                                   label: 'truncamento de arquivo sem comando real antes do redirect' },
+  { test: hasUnscopedSqlWipe,                                       label: 'DROP DATABASE/TABLE, TRUNCATE TABLE ou DELETE sem WHERE' },
+  { test: (c) => /\b(curl|wget)\b[^;&|]*\|\s*(sh|bash|zsh)\b/i.test(c), label: 'curl/wget pipado pra um shell' },
+  { test: (c) => /\bdd\s+if=/i.test(c) || /\bmkfs(\.\w+)?\b/i.test(c), label: 'dd ou mkfs (destruição em nível de disco)' },
+  // Sem \b no fim: o nome capturado pode ser ":" (idioma clássico), que não
+  // é word char — \b exigiria uma transição word/non-word que não existe
+  // ali, e o backreference \1 já garante repetição exata do nome.
+  { test: (c) => /([\w:]+)\s*\(\)\s*\{\s*\1\s*\|\s*\1\s*&?\s*;?\s*\}\s*;\s*\1/.test(c), label: 'fork bomb' },
+];
+
 function validateDestructiveCommandGate(toolName, toolInput) {
-  const destructive = /\brm\s+-rf\b|:>\s*\S|DROP\s+TABLE|git\s+push\s+--force/i;
-  if (toolName === 'Bash' && destructive.test(toolInput?.command ?? '')) {
-    return { ready: false, reason: 'Comando potencialmente destrutivo bloqueado pelo gate padrão.' };
+  if (toolName !== 'Bash') return { ready: true, reason: null };
+  const command = toolInput?.command ?? '';
+  const hit = DESTRUCTIVE_CHECKS.find(({ test }) => test(command));
+  if (hit) {
+    return { ready: false, reason: `Comando bloqueado pelo gate padrão: ${hit.label}.` };
   }
   return { ready: true, reason: null };
 }
