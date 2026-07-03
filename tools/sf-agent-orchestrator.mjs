@@ -259,6 +259,50 @@ function captureGitStatusPorcelain(cwd) {
 }
 
 // ---------------------------------------------------------------------------
+// Sanitização do env herdado pelo processo filho que o SDK spawna.
+//
+// CAUSA RAIZ (Fase 2B — confirmada lendo sdk.mjs direto, sem gastar token):
+// o transporte do SDK usa `env: {...process.env}` como default quando
+// `options.env` não é passado — herda 100% do ambiente do processo Node que
+// chamou query(). Numa sessão Claude Code (ou terminal aberto de dentro de
+// uma), isso inclui CLAUDE_CODE_SSE_PORT — que casa com um lock file vivo em
+// ~/.claude/ide/<porta>.lock (canal IDE ↔ editor). O motor spawnado usa essa
+// var pra se ANEXAR ao mesmo canal IDE do processo pai, herdando o toolset
+// real dessa sessão externa (Read/Grep/Glob/Agent + MCPs dela), em vez de
+// rodar como sessão nova e independente — foi isso, não um limite de
+// segurança deliberado da Anthropic, que produziu o bloqueio estrutural da
+// Fase 2 (nenhum subagent conseguiu Write/Bash real).
+//
+// Isto não é só higiene de teste — é correção de robustez do produto: se
+// isto algum dia rodar num terminal/processo com essas vars residuais (ex:
+// operador testando localmente de dentro de um terminal com Claude Code
+// aberto), o mesmo vazamento aconteceria em produção.
+//
+// Deliberadamente NÃO removidos, mesmo começando com CLAUDE/ANTHROPIC:
+// ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN, CLAUDE_CONFIG_DIR — são
+// credenciais/config que o processo filho PRECISA pra se autenticar e achar
+// o vault de config. Um prefixo genérico (`/^CLAUDE/i`) trocaria "vaza
+// sessão" por "quebra autenticação" — por isso a lista abaixo é uma
+// blocklist EXPLÍCITA dos marcadores confirmados de identidade de sessão,
+// não um regex de prefixo amplo.
+const SESSION_IDENTITY_ENV_KEYS = [
+  'CLAUDECODE',                 // flag genérica "rodando sob Claude Code"
+  'CLAUDE_CODE_SSE_PORT',       // a mais crítica — porta do canal IDE ativo
+  'CLAUDE_CODE_CHILD_SESSION',  // marcador explícito de sessão aninhada
+  'CLAUDE_CODE_SESSION_ID',     // ID da sessão externa
+  'CLAUDE_CODE_ENTRYPOINT',     // como o processo pai foi iniciado (cli/...)
+  'CLAUDE_CODE_EXECPATH',       // caminho do claude.exe pai
+  'AI_AGENT',                   // identidade do agente da sessão externa
+  'CLAUDE_EFFORT',              // nível de esforço da sessão externa
+];
+
+function sanitizeSpawnEnv(sourceEnv = process.env) {
+  const clean = { ...sourceEnv };
+  for (const key of SESSION_IDENTITY_ENV_KEYS) delete clean[key];
+  return clean;
+}
+
+// ---------------------------------------------------------------------------
 // Definição dos subagents — mapeiam 1:1 com o painel "Agentes Orquestradores"
 // ---------------------------------------------------------------------------
 
@@ -445,6 +489,8 @@ const RESULT_ERROR_REASONS = {
 // tem Write/Edit/Bash — só pode raciocinar e invocar subagents via "Task".
 // ---------------------------------------------------------------------------
 
+export { sanitizeSpawnEnv, SESSION_IDENTITY_ENV_KEYS };
+
 export async function runSoftwareFactoryBrief(brief, opts = {}) {
   const {
     projectWorkspace,
@@ -503,6 +549,9 @@ export async function runSoftwareFactoryBrief(brief, opts = {}) {
       permissionMode: 'bypassPermissions',
       allowDangerouslySkipPermissions: true,
       maxTurns,
+      // Sem isto, o SDK herda process.env inteiro (default do transporte) —
+      // ver SESSION_IDENTITY_ENV_KEYS acima pro porquê isso é perigoso.
+      env: sanitizeSpawnEnv(),
     };
 
     const messages = [];

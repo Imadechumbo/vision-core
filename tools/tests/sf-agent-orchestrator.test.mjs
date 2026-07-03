@@ -11,7 +11,7 @@ import { execSync } from 'child_process';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { runSoftwareFactoryBrief } from '../sf-agent-orchestrator.mjs';
+import { runSoftwareFactoryBrief, sanitizeSpawnEnv, SESSION_IDENTITY_ENV_KEYS } from '../sf-agent-orchestrator.mjs';
 
 let passed = 0, failed = 0;
 function assert(c, m) {
@@ -580,6 +580,81 @@ assert(objectDefensiveResult?.decision === 'approve',
 const undefinedResult = await runWithLastAssistantMessage(undefined);
 assert(undefinedResult?.decision === 'approve',
   '[L-02] last_assistant_message ausente (campo é opcional no tipo real) → aprovado, sem crash');
+
+// [Suite M] sanitizeSpawnEnv — o processo filho que o SDK spawna não pode
+// herdar os marcadores de identidade de sessão (causa raiz do bloqueio
+// estrutural da Fase 2: CLAUDE_CODE_SSE_PORT casava com um lock file IDE
+// vivo e o motor spawnado se anexava ao MESMO canal da sessão externa).
+// Credenciais legítimas (ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN,
+// CLAUDE_CONFIG_DIR) precisam sobreviver — não é um regex de prefixo.
+console.log('\n[Suite M] sanitizeSpawnEnv — higieniza env do processo filho spawnado');
+
+{
+  const FAKE_LEAKED = {
+    CLAUDECODE: '1',
+    CLAUDE_CODE_SSE_PORT: '12650',
+    CLAUDE_CODE_CHILD_SESSION: '1',
+    CLAUDE_CODE_SESSION_ID: 'fake-session-id',
+    CLAUDE_CODE_ENTRYPOINT: 'cli',
+    CLAUDE_CODE_EXECPATH: 'C:\\fake\\claude.exe',
+    AI_AGENT: 'claude-code_2-1-199_agent',
+    CLAUDE_EFFORT: 'high',
+  };
+  const FAKE_PRESERVED = {
+    ANTHROPIC_API_KEY: 'sk-ant-fake-test-key',
+    CLAUDE_CODE_OAUTH_TOKEN: 'fake-oauth-token',
+    CLAUDE_CONFIG_DIR: '/fake/.claude',
+    PATH: process.env.PATH ?? '/usr/bin',
+  };
+
+  // [M-01..02] unidade direta — sanitizeSpawnEnv sozinha, sem depender do
+  // fluxo inteiro nem de process.env real (fonte injetada explicitamente).
+  const directResult = sanitizeSpawnEnv({ ...FAKE_LEAKED, ...FAKE_PRESERVED });
+  const leakedStillPresent = SESSION_IDENTITY_ENV_KEYS.filter((k) => k in directResult);
+  assert(leakedStillPresent.length === 0,
+    `[M-01] sanitizeSpawnEnv remove todas as SESSION_IDENTITY_ENV_KEYS (sobrou: ${leakedStillPresent.join(',') || 'nenhuma'})`);
+  assert(Object.keys(FAKE_PRESERVED).every((k) => directResult[k] === FAKE_PRESERVED[k]),
+    '[M-02] sanitizeSpawnEnv preserva credenciais/config legítimos (ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN, CLAUDE_CONFIG_DIR)');
+
+  // [M-03..05] fim-a-fim — runSoftwareFactoryBrief real, com process.env
+  // poluído de propósito (simula rodar dentro de uma sessão Claude Code
+  // ativa), confirmando que options.env passado pro queryFn (o que o SDK
+  // real receberia) já sai higienizado.
+  const originalEnvValues = {};
+  for (const k of [...Object.keys(FAKE_LEAKED), ...Object.keys(FAKE_PRESERVED)]) {
+    originalEnvValues[k] = process.env[k];
+    process.env[k] = FAKE_LEAKED[k] ?? FAKE_PRESERVED[k];
+  }
+
+  let capturedOptions;
+  try {
+    async function* mockQueryEnv({ options }) {
+      capturedOptions = options;
+      yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
+    }
+    await runSoftwareFactoryBrief(BRIEF, {
+      projectWorkspace: '/tmp/fixture-project',
+      queryFn: mockQueryEnv,
+      onEvent: () => {},
+    });
+  } finally {
+    // Restaura process.env exatamente como estava (chave ausente antes →
+    // delete; presente antes → valor original) — não deve vazar pros
+    // outros testes deste arquivo nem pro resto da suíte.
+    for (const [k, v] of Object.entries(originalEnvValues)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }
+
+  const leakedInRealFlow = SESSION_IDENTITY_ENV_KEYS.filter((k) => k in (capturedOptions?.env ?? {}));
+  assert(capturedOptions?.env !== undefined,
+    '[M-03] options.env está presente no que seria passado pro SDK real');
+  assert(leakedInRealFlow.length === 0,
+    `[M-04] fim-a-fim: options.env não contém nenhuma SESSION_IDENTITY_ENV_KEYS (sobrou: ${leakedInRealFlow.join(',') || 'nenhuma'})`);
+  assert(Object.keys(FAKE_PRESERVED).every((k) => capturedOptions?.env?.[k] === FAKE_PRESERVED[k]),
+    '[M-05] fim-a-fim: options.env preserva ANTHROPIC_API_KEY/CLAUDE_CODE_OAUTH_TOKEN/CLAUDE_CONFIG_DIR/PATH');
+}
 
 console.log(`\nsf-agent-orchestrator: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);
