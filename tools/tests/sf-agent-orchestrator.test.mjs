@@ -485,5 +485,73 @@ assert(nonGitResult.length === 0,
 rmSync(gitFixtureDir, { recursive: true, force: true });
 rmSync(nonGitDir, { recursive: true, force: true });
 
+// [Suite K] mergeEvidence — evidência capturada + estática, prioridade
+// combinada (item 3 do incremento — a peça final que liga tudo).
+console.log('\n[Suite K] merge de evidência capturada + estática no SubagentStop real');
+
+const mergeFixtureDir = mkdtempSync(join(tmpdir(), 'sf-agent-orchestrator-merge-'));
+execSync('git init -q', { cwd: mergeFixtureDir });
+execSync('git config user.email "test@test.com"', { cwd: mergeFixtureDir });
+execSync('git config user.name "test"', { cwd: mergeFixtureDir });
+
+async function runMergeScenario(missionEvidence) {
+  let stopResult;
+  async function* mockMergeQuery({ options }) {
+    const preToolUseHook = options.hooks.PreToolUse[0].hooks[0]; // não usado, só simetria
+    const postToolUseHook = options.hooks.PostToolUse[0].hooks[0];
+    const subagentStopHook = options.hooks.SubagentStop[0].hooks[0];
+
+    // Captura real de exit_code (comando de teste reconhecido).
+    await postToolUseHook({ tool_name: 'Bash', tool_input: { command: 'npm test' }, tool_response: { exit_code: 0 } });
+    // Captura real de git_diff (arquivo novo criado durante o módulo).
+    writeFileSync(join(mergeFixtureDir, 'arquivo-do-modulo.js'), 'console.log(1);\n');
+
+    stopResult = await subagentStopHook({
+      subagent_type: 'backend-agent',
+      result: '```json\n{"test_pass": true, "file_changed": true}\n```',
+    });
+    yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
+  }
+  await runSoftwareFactoryBrief(BRIEF, {
+    projectWorkspace: mergeFixtureDir,
+    missionEvidence,
+    queryFn: mockMergeQuery,
+    onEvent: () => {},
+  });
+  return stopResult;
+}
+
+const onlyCapturedResult = await runMergeScenario({}); // sem estático nenhum
+assert(onlyCapturedResult?.decision === 'approve',
+  '[K-01] sem missionEvidence estático — evidência 100% capturada de verdade (exit_code+git_diff) já aprova');
+
+const staticOverrideResult = await runMergeScenario({ exit_code: null });
+assert(staticOverrideResult?.decision === 'block',
+  '[K-02] estático explícito (exit_code:null) sobrescreve o capturado (exit_code:0) e bloqueia — prioridade do estático confirmada');
+
+async function runMergeScenarioUntouchedClaim() {
+  let stopResult;
+  async function* mockQuery({ options }) {
+    const subagentStopHook = options.hooks.SubagentStop[0].hooks[0];
+    stopResult = await subagentStopHook({
+      subagent_type: 'backend-agent',
+      result: '```json\n{"real_evidence": true}\n```', // claim que a captura NUNCA alimenta
+    });
+    yield { type: 'result', subtype: 'success', total_cost_usd: 0, duration_ms: 1 };
+  }
+  await runSoftwareFactoryBrief(BRIEF, {
+    projectWorkspace: mergeFixtureDir,
+    missionEvidence: { evidence_receipt: { source: 'go-core' } }, // só estático cobre isso
+    queryFn: mockQuery,
+    onEvent: () => {},
+  });
+  return stopResult;
+}
+const untouchedClaimResult = await runMergeScenarioUntouchedClaim();
+assert(untouchedClaimResult?.decision === 'approve',
+  '[K-03] claim que a captura não alcança (real_evidence) continua funcionando só com estático — merge não quebra o caminho antigo');
+
+rmSync(mergeFixtureDir, { recursive: true, force: true });
+
 console.log(`\nsf-agent-orchestrator: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

@@ -12,17 +12,24 @@
  * (PreToolUse / SubagentStop) que reaproveitam a governança já construída
  * em tools/hermes/mission-supervisor.mjs do próprio repo vision-core.
  *
- * LIMITE CONHECIDO, NÃO RESOLVIDO NESTA VERSÃO: `missionEvidence` (passado
- * uma vez em opts.missionEvidence) é ESTÁTICO durante toda a execução de
- * runSoftwareFactoryBrief — não existe nenhum caminho de código que capture
- * o resultado real de uma tool call Bash (ex: exit code de um teste que o
- * backend-agent de fato rodou) e alimente isso de volta como evidência pro
- * SubagentStop hook seguinte. Isso significa que claims tipo `test_pass`
- * só podem ser corroboradas pela evidência que o CALLER decidiu passar
- * antes da missão começar — nunca pela evidência gerada DURANTE a própria
- * execução. Resolver isso é mudança arquitetural maior (um coletor de
- * evidência viva plugado no PreToolUse/PostToolUse do Bash) e foi
- * deliberadamente deixado de fora desta versão.
+ * EVIDÊNCIA VIVA — RESOLVIDA PARCIALMENTE: `missionEvidence` (opts.
+ * missionEvidence) continua existindo como piso ESTÁTICO, mas agora é só
+ * uma das duas fontes. Um segundo objeto, `moduleEvidence` — novo por
+ * módulo, nunca compartilhado entre módulos concorrentes — é alimentado
+ * DURANTE a execução por dois sinais reais, amarrados a comandos
+ * reconhecidos (não qualquer coisa que rode):
+ *   - exit_code: hook PostToolUse captura o exit code real de uma chamada
+ *     Bash, SE E SOMENTE SE o comando bater em TEST_COMMAND_PATTERN (npm/
+ *     yarn/pnpm test, pytest, jest, mocha, vitest, go test). Comando fora
+ *     dessa lista nunca vira evidência de teste, mesmo com exit 0.
+ *   - git_diff: hook SubagentStop compara `git status --porcelain` de
+ *     antes/depois do módulo — mudança real de arquivo, fato observado por
+ *     fora, não claim do agente.
+ * mergeEvidence() combina os dois: estático explícito do caller sempre
+ * vence campo a campo; capturado de verdade só preenche o que o caller não
+ * informou. AINDA FORA DE ESCOPO (deliberado, não esquecido): log,
+ * github_api_evidence, health_probe, evidence_receipt.source, gates_pass,
+ * failed_gates — só exit_code/test e git_diff foram resolvidos.
  *
  * Requer: npm install @anthropic-ai/claude-agent-sdk
  */
@@ -164,6 +171,17 @@ function extractAgentClaims(subagentResult) {
     }
   }
   return claims;
+}
+
+// Mescla a evidência capturada de verdade (moduleEvidence — exit_code/
+// git_diff observados durante o módulo) com a evidência estática que o
+// caller decidiu passar em opts.missionEvidence. Estático explícito sempre
+// vence campo a campo (o caller pode saber de algo que a captura não
+// alcança); capturado de verdade é o piso — só preenche o que o caller não
+// informou. Se o caller nunca passou uma chave, o spread simplesmente não
+// a copia, e o valor capturado continua valendo.
+function mergeEvidence(staticEvidence, moduleEvidence) {
+  return { ...moduleEvidence, ...staticEvidence };
 }
 
 // ---------------------------------------------------------------------------
@@ -355,7 +373,8 @@ function buildHooks({ missionEvidence, onEvent, moduleEvidence, moduleId, projec
               }
             }
 
-            const { ok, errors, blocked_claims } = validateAgentOutput(agentClaims, missionEvidence);
+            const effectiveEvidence = mergeEvidence(missionEvidence, moduleEvidence);
+            const { ok, errors, blocked_claims } = validateAgentOutput(agentClaims, effectiveEvidence);
             onEvent?.({
               type: 'subagent_stop',
               subagent: input.subagent_type,
