@@ -20,7 +20,7 @@
 
 **Deploy:**
 - Frontend: `bash bin/deploy-pages.sh "mensagem"`
-- Backend: `python _deploy89_eb.py` (ajustar versão)
+- Backend: `python _deploy191b_eb.py` (ajustar versão)
 - GitLab CI: NÃO funciona — runner allocation falha. Usar deploy manual sempre.
 
 ---
