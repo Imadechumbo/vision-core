@@ -6,6 +6,7 @@ const path = require('path');
 const { scanConfig, applyConfigFixes, enforceConfigGold } = require('./vision_core/config/selfHealingConfig');
 const { runGoMission, streamGoMission, checkGoHealth, resolveGoBinary } = require('./src/runtime/goRunner');
 const { callHermes, readLowConfidenceLog, computeMemoryMetrics } = require('./hermes-rca');
+const { encryptProviderKey, decryptProviderKey } = require('./provider-vault-crypto');
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
@@ -293,6 +294,7 @@ const crypto = require('crypto');
 const DB_ROOT = path.join(ROOT, 'data');
 const USERS_DB = path.join(DB_ROOT, 'users.json');
 const PROJECTS_DB = path.join(DB_ROOT, 'projects.json');
+const PROVIDERS_VAULT_FILE = path.join(DB_ROOT, 'ai-providers-vault.json');
 const VAULT_ROOT = path.join(MEMORY_ROOT, 'obsidian', 'VisionCoreVault');
 for (const dir of [DB_ROOT, VAULT_ROOT, path.join(VAULT_ROOT, 'Missions'), path.join(VAULT_ROOT, 'Incidents'), path.join(VAULT_ROOT, 'PASS-GOLD'), path.join(VAULT_ROOT, 'Projects')]) fs.mkdirSync(dir, { recursive: true });
 
@@ -531,6 +533,24 @@ function isSsoDomain(email) {
   if (!email || !email.includes('@')) return null;
   const domain = email.split('@')[1].toLowerCase();
   return _ssoDomains[domain] || null;
+}
+
+// AI Provider Vault "Configuração Principal" (Fase B: decisão do usuário foi
+// Opção 3 sobre Opção 2 — env vars do EB continuam default; este vault é um
+// override OPCIONAL, só passa a valer quando alguém salva um provider pela
+// tela nova). Persistido em memória + S3 (mesmo padrão §146/§152/§155).
+// A api_key nunca fica em texto plano aqui — sempre encryptProviderKey()
+// (backend/provider-vault-crypto.js) antes de qualquer writeAndSyncS3.
+let _providersStore = {};
+function _loadProviderVault() {
+  try {
+    const data = readJsonFile(PROVIDERS_VAULT_FILE, { providers: {} });
+    _providersStore = data.providers || {};
+    console.log('[vault] AI providers carregados:', Object.keys(_providersStore).length);
+  } catch (e) { _providersStore = {}; }
+}
+function _saveProviderVault() {
+  writeAndSyncS3(PROVIDERS_VAULT_FILE, { providers: _providersStore, updated_at: now() });
 }
 
 function httpsPost(url, headers, bodyStr, timeoutMs = 30000) {
@@ -1928,45 +1948,95 @@ app.get('/api/memory/patterns', (req, res) => sendOk(res, { patterns: fs.readdir
 
 /* PROVIDERS */
 app.get('/api/providers', (req, res) => sendOk(res, { providers: providerList(), default: process.env.DEFAULT_AI_PROVIDER || 'auto' }));
-const _providersStore = {};
 
+// §<AI-VAULT-CONFIG-PRINCIPAL> — /save aceita atualização PARCIAL de
+// propósito: a tela de "Providers Configurados" reenvia só {provider,
+// priority} pra reordenar, sem repassar api_key (a chave completa nunca
+// volta pro frontend depois de salva — só api_key_masked). Por isso, quando
+// body.api_key vem vazio, preservamos api_key_encrypted/api_key_masked
+// existentes em vez de apagar a chave já salva.
 app.all('/api/providers/save', (req, res) => {
   const body = normalizeBody(req);
   const provider = body.provider || 'auto';
+  const existing = _providersStore[provider] || {};
+  const hasNewKey = typeof body.api_key === 'string' && body.api_key.length > 0;
+
   _providersStore[provider] = {
     provider,
-    api_key_masked: maskSecret(body.api_key || ''),
-    api_key:        body.api_key || '',
-    model:          body.model   || '',
-    base_url:       body.base_url || '',
-    priority:       body.priority || 'primary',
+    api_key_encrypted: hasNewKey ? encryptProviderKey(body.api_key) : (existing.api_key_encrypted || ''),
+    api_key_masked:    hasNewKey ? maskSecret(body.api_key) : (existing.api_key_masked || ''),
+    model:          body.model    !== undefined ? body.model    : (existing.model    || ''),
+    base_url:       body.base_url !== undefined ? body.base_url : (existing.base_url || ''),
+    // prioridade numérica editável (1 = primeiro no fallback) — default:
+    // entra no fim da fila atual. Ainda não consultada pelo callLLM() nesta
+    // fase (Fase C é só a tela; plumbing real é Fase D+, fora de escopo aqui).
+    priority:       body.priority !== undefined ? Number(body.priority) || 0
+                     : (existing.priority !== undefined ? existing.priority : Object.keys(_providersStore).length + 1),
+    status:         hasNewKey ? 'untested' : (existing.status || 'untested'),
+    last_tested_at: hasNewKey ? null : (existing.last_tested_at || null),
     saved_at:       now()
   };
+  _saveProviderVault();
   console.log(`[providers] saved ${provider}`);
   return sendOk(res, {
     saved:           true,
     provider,
-    api_key_masked:  maskSecret(body.api_key || ''),
+    api_key_masked:  _providersStore[provider].api_key_masked,
+    priority:        _providersStore[provider].priority,
     providers_count: Object.keys(_providersStore).length,
     time:            now()
   });
 });
 
+// Nunca inclui api_key nem api_key_encrypted — só o indicador mascarado.
 app.get('/api/providers/list', (req, res) => {
-  const list = Object.values(_providersStore).map(p => ({
-    ...p,
-    api_key: undefined
-  }));
+  const list = Object.values(_providersStore)
+    .map(p => ({
+      provider:       p.provider,
+      api_key_masked: p.api_key_masked || '',
+      has_key:        Boolean(p.api_key_encrypted),
+      model:          p.model || '',
+      base_url:       p.base_url || '',
+      priority:       p.priority,
+      status:         p.status || 'untested',
+      last_tested_at: p.last_tested_at || null,
+      saved_at:       p.saved_at
+    }))
+    .sort((a, b) => (a.priority || 0) - (b.priority || 0));
   return sendOk(res, { providers: list, time: now() });
 });
 
+app.all('/api/providers/delete', (req, res) => {
+  const body = normalizeBody(req);
+  const provider = body.provider || '';
+  if (!provider || !_providersStore[provider]) {
+    return res.status(404).json({ ok: false, error: 'provider_not_found', time: now() });
+  }
+  delete _providersStore[provider];
+  _saveProviderVault();
+  return sendOk(res, { deleted: true, provider, providers_count: Object.keys(_providersStore).length });
+});
+
 app.all('/api/providers/test', async (req, res) => {
-  const body     = normalizeBody(req);
-  const provider = body.provider || 'auto';
-  const apiKey   = body.api_key  || (_providersStore[provider] && _providersStore[provider].api_key) || resolveApiKey(provider.toUpperCase()) || '';
-  const model    = body.model    || '';
+  const body       = normalizeBody(req);
+  const provider   = body.provider || 'auto';
+  const vaultEntry = _providersStore[provider];
+  const apiKey     = body.api_key
+    || (vaultEntry && vaultEntry.api_key_encrypted ? decryptProviderKey(vaultEntry.api_key_encrypted) : '')
+    || resolveApiKey(provider.toUpperCase())
+    || '';
+
+  // grava o resultado real do teste na entrada do vault (se existir) — é o
+  // que a coluna "status" da lista mostra: testado/falhou/não testado.
+  const recordResult = (status, connected) => {
+    if (!vaultEntry) return;
+    vaultEntry.status = status;
+    vaultEntry.last_tested_at = now();
+    _saveProviderVault();
+  };
 
   if (!apiKey) {
+    recordResult('no_key', false);
     return sendOk(res, { provider, status: 'no_key', connected: false, note: 'Salve uma API key primeiro.', time: now() });
   }
 
@@ -1990,6 +2060,7 @@ app.all('/api/providers/test', async (req, res) => {
       testUrl     = 'https://api.deepseek.com/v1/models';
       testHeaders = { 'Authorization': `Bearer ${apiKey}` };
     } else {
+      recordResult('unsupported_provider', false);
       return sendOk(res, { provider, status: 'unsupported_provider', connected: false, time: now() });
     }
 
@@ -2002,6 +2073,7 @@ app.all('/api/providers/test', async (req, res) => {
     if (r.ok) {
       const data = await r.json().catch(() => ({}));
       const modelCount = Array.isArray(data.data) ? data.data.length : (Array.isArray(data.models) ? data.models.length : null);
+      recordResult('connected', true);
       return sendOk(res, {
         provider,
         status:      'connected',
@@ -2011,9 +2083,11 @@ app.all('/api/providers/test', async (req, res) => {
         time:        now()
       });
     } else {
+      recordResult(`http_${r.status}`, false);
       return sendOk(res, { provider, status: `http_${r.status}`, connected: false, latency_ms: Date.now()-t0, time: now() });
     }
   } catch (err) {
+    recordResult('error', false);
     return sendOk(res, { provider, status: 'error', connected: false, error: err.message, latency_ms: Date.now()-t0, time: now() });
   }
 });
@@ -4470,7 +4544,7 @@ app.post('/api/sf/project-files', (req, res) => {
         + 'Exemplo: claude "Implemente [modulo]. Contexto: [contexto]. Criterio: [o que deve funcionar]"\n'
         + '## SPECS DE SEGURANCA\n[OWASP mapeado, LGPD checklist, Semgrep rules especificas do dominio]\n'
         + '## CRITERIOS DE PASS GOLD\n[gates especificos para este projeto, nao genericos]\n';
-      const llmBrief = await callLLM(briefPrompt, { max_tokens: 6000, timeout_ms: 90000, system: 'Use EXATAMENTE o formato ===FILE: CLAUDE_CODE_BRIEF.md===\\nconteudo\\n===END===. Nao use JSON, nao use markdown code blocks. Siga a risca a formatacao estrutural exigida em cada secao (tabela markdown em STACK JUSTIFICADA, headers ### M<N> em MODULOS A IMPLEMENTAR, bullets **R<N> - titulo:** em Riscos Especificos, bullets **Termo:** em Compliance Obrigatorio) — um parser automatico depende exatamente desse formato. Seja especifico para o dominio no CONTEUDO de cada item.' });
+      const llmBrief = await callLLM(briefPrompt, { max_tokens: 12000, timeout_ms: 120000, system: 'Use EXATAMENTE o formato ===FILE: CLAUDE_CODE_BRIEF.md===\\nconteudo\\n===END===. Nao use JSON, nao use markdown code blocks. Siga a risca a formatacao estrutural exigida em cada secao (tabela markdown em STACK JUSTIFICADA, headers ### M<N> em MODULOS A IMPLEMENTAR, bullets **R<N> - titulo:** em Riscos Especificos, bullets **Termo:** em Compliance Obrigatorio) — um parser automatico depende exatamente desse formato. Seja especifico para o dominio no CONTEUDO de cada item.' });
       const parsedBrief = llmBrief ? _extractFilesJson(llmBrief.text) : null;
       if (parsedBrief && parsedBrief.files && parsedBrief.files.length) {
         files = parsedBrief.files.map(f => ({ name: String(f.name || 'CLAUDE_CODE_BRIEF.md'), content: String(f.content || '') }));
@@ -4569,10 +4643,12 @@ if (S3_BUCKET) {
   _s3LoadSync(PROJECTS_DB);
   _s3LoadSync(BLACKLIST_FILE); // §152: blacklist do S3 antes de aceitar requests
   _s3LoadSync(SSO_DOMAINS_FILE); // §155: SSO domains do S3
+  _s3LoadSync(PROVIDERS_VAULT_FILE); // AI Provider Vault: config principal do S3
   console.log('[s3] §146 startup load done');
 }
 _loadBlacklist(); // §152: carregar blacklist do arquivo local (pode já ter sido baixada do S3)
 _loadSsoDomains(); // §155: carregar SSO domains do arquivo local
+_loadProviderVault(); // AI Provider Vault: carregar do arquivo local
 
 /* §112: init SQLite queue before accepting requests */
 (async () => {
