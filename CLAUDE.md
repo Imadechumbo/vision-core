@@ -88,6 +88,24 @@
 
 > §98-A a §98-E (auditoria pré-tutoriais) e o write-up original do §105 já estão resolvidos — write-up completo de causa raiz/fix/evidência de cada um em `CLAUDE_HISTORY.md`.
 
+### MIGRAÇÃO AWS→ALIBABA — DECISÃO FECHADA, NÃO REABRIR SEM NOVO MOTIVO
+
+**Contexto que motivou a investigação:** conta AWS atual encerrada automaticamente (créditos free tier esgotados). Avaliou-se migrar produção (EB + S3) pra Alibaba Cloud, já que ela não fecha conta do mesmo jeito.
+
+**Decisão: NÃO migrar por ora.**
+
+**Motivo:** não existe hoje na Alibaba Cloud um equivalente ao fluxo atual do Elastic Beanstalk (zip → application version → apontar ambiente → rollback de 1 comando, nginx gerenciado automaticamente) para Node.js:
+- **Web App Service (Web+)** — o candidato mais próximo (CLI própria com deploy/versão/rollback) — **foi descontinuado pela Alibaba em 19/07/2023**, não pode nem ser contratado.
+- **SAE (Serverless App Engine)** — tem API HTTP real e madura (`CreateApplication`/`DeployApplication`/`RollbackApplication`), mas **não suporta Node.js** (só Java/PHP/Python/.NET/Nginx estático).
+- **EDAS** — suporta Node.js, mas **só rodando dentro de um cluster Kubernetes (ACK)** — não é troca pontual de provedor, é adotar Kubernetes como arquitetura.
+- **Simple Application Server/ECS puro** — é VM crua; sem API de deploy/versão, exige gerenciamento manual de nginx/processo (SSH + PM2), reconstruindo à mão o que o EB já entrega hoje.
+
+A camada que seria barata de portar (S3→OSS, já que o projeto não usa SDK da AWS em lugar nenhum — só CLI via `aws s3 cp`) **continua barata**, mas isoladamente não justifica migrar só por isso — o custo real estaria concentrado no deploy/runtime, não nos dados.
+
+**Resolução do problema de origem:** upgrade da conta AWS atual pra pay-as-you-go, preservando toda a infraestrutura já configurada (EB, S3, IAM, env vars — incluindo `PROVIDER_VAULT_SECRET`, ainda pendente de configurar, ver checkpoint do AI Provider Vault acima).
+
+**Se esta decisão for revisitada no futuro:** o motivo precisa ser crescimento real que justifique Kubernetes por si (múltiplos serviços, necessidade de escala horizontal, etc.) — não uma reação a problema de conta/billing. Pesquisa completa (com fontes) feita em duas sessões — não repetir do zero; só revalidar se as premissas acima (Web+ morto, SAE sem Node.js, EDAS só via K8s) mudarem.
+
 ---
 
 ## STRESS TESTS — A CRIAR ANTES DOS TUTORIAIS
