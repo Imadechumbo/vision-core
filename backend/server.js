@@ -4426,26 +4426,65 @@ app.post('/api/sf/project-files', (req, res) => {
     let files;
     // §193: branch complex → CLAUDE_CODE_BRIEF.md (briefing para Claude Code executar)
     if (complexity === 'complex') {
+      // Fase A2 (gerador de infográfico do projeto, pós-brief — investigação
+      // registrada no CLAUDE.md): o prompt original só SUGERIA os headers de
+      // nível 1 como texto livre — nenhuma sub-formatação (tabela de stack,
+      // numeração de módulo, bullets de risco) era exigida, então um parser
+      // determinístico em cima do conteúdo não tinha contrato nenhum pra
+      // confiar, só a sorte de o LLM formatar "do jeito certo" numa geração
+      // específica. Cada seção abaixo agora especifica o FORMATO ESTRUTURAL
+      // exato que o parser vai reconhecer via regex — o CONTEÚDO dentro de
+      // cada item continua livre, só a casca (headers/tabela/bullets) é
+      // obrigatória. Isto não é validado automaticamente (comportamento de
+      // modelo, não determinístico) — só testável contra fixtures estáticas.
       const briefPrompt = 'Projeto complexo de alto risco regulatorio: "' + description + '"\n\n'
         + (step1 ? 'Analise do arquiteto (step1):\n' + step1 + '\n\n' : '')
         + (step2 ? 'Blueprint tecnico (step2):\n' + step2 + '\n\n' : '')
         + 'Use EXATAMENTE este formato:\n===FILE: CLAUDE_CODE_BRIEF.md===\n[conteudo]\n===END===\n\n'
-        + 'Gere um CLAUDE_CODE_BRIEF.md completo com estas secoes:\n'
+        + 'Gere um CLAUDE_CODE_BRIEF.md completo com estas secoes. O FORMATO ESTRUTURAL abaixo (headers, tabela, bullets) e OBRIGATORIO e deve ser seguido a risca, sem variacao — um parser automatico depende exatamente dele. O CONTEUDO dentro de cada item e livre.\n'
         + '# CLAUDE CODE BRIEF\n'
-        + '## DOMINIO E COMPLIANCE\n[dominio, compliance obrigatorio (LGPD/PCI/HIPAA/ICP), riscos especificos]\n'
-        + '## STACK JUSTIFICADA\n[cada tecnologia com motivo especifico para este dominio; alternativas rejeitadas]\n'
-        + '## ARQUITETURA DE COMPONENTES\n[diagrama ASCII completo]\n'
-        + '## MODULOS A IMPLEMENTAR\n[cada modulo: descricao, dependencias, criterio de done]\n'
+        + '## DOMINIO E COMPLIANCE\n'
+        + '**Dominio:** [uma frase objetiva descrevendo o dominio do projeto]\n'
+        + '**Compliance Obrigatorio:**\n'
+        + '- **<termo em negrito, ex: LGPD (Lei 13.709/2018)>:** [explicacao]\n'
+        + '(um bullet por item de compliance — sempre comece pelo termo em negrito antes dos dois-pontos)\n'
+        + '**Riscos Especificos:**\n'
+        + '- **R1 - <titulo curto do risco>:** [descricao]\n'
+        + '- **R2 - <titulo curto do risco>:** [descricao]\n'
+        + '(numeracao R1, R2, R3... sequencial sem pular numeros; use as palavras "mais critico" ou "ATENCAO:" dentro da descricao APENAS nos riscos que sejam de fato mais graves que os outros — nao marque todos, e nao marque nenhum se nenhum se destacar de verdade)\n'
+        + '## STACK JUSTIFICADA\n'
+        + '[introducao opcional em prosa]\n'
+        + '| Tecnologia | Camada | Justificativa |\n'
+        + '|---|---|---|\n'
+        + '| <nome da tecnologia> | <frontend/backend/dados/infra/seguranca> | <motivo especifico para este dominio> |\n'
+        + '(uma linha de tabela por tecnologia da stack — nao descreva stack fora da tabela)\n'
+        + '## ARQUITETURA DE COMPONENTES\n[diagrama ASCII completo, em bloco de codigo]\n'
+        + '## MODULOS A IMPLEMENTAR\n'
+        + '### M1 - <nome do modulo>\n'
+        + '**Descricao:** [descricao objetiva do modulo]\n'
+        + '**Dependencias:** [modulos ou servicos dos quais este depende]\n'
+        + '**Criterio de Done:** [o que precisa ser verdade pro modulo ser considerado pronto]\n'
+        + '### M2 - <nome do modulo>\n'
+        + '(mesma estrutura por modulo — numeracao M1, M2, M3... sequencial, na ordem de execucao)\n'
         + '## SEQUENCIA DE COMANDOS CLAUDE CODE\n[prompts exatos para executar, um por modulo, com contexto suficiente]\n'
         + 'Exemplo: claude "Implemente [modulo]. Contexto: [contexto]. Criterio: [o que deve funcionar]"\n'
         + '## SPECS DE SEGURANCA\n[OWASP mapeado, LGPD checklist, Semgrep rules especificas do dominio]\n'
         + '## CRITERIOS DE PASS GOLD\n[gates especificos para este projeto, nao genericos]\n';
-      const llmBrief = await callLLM(briefPrompt, { max_tokens: 6000, timeout_ms: 90000, system: 'Use EXATAMENTE o formato ===FILE: CLAUDE_CODE_BRIEF.md===\\nconteudo\\n===END===. Nao use JSON, nao use markdown code blocks. Seja especifico para o dominio.' });
+      const llmBrief = await callLLM(briefPrompt, { max_tokens: 6000, timeout_ms: 90000, system: 'Use EXATAMENTE o formato ===FILE: CLAUDE_CODE_BRIEF.md===\\nconteudo\\n===END===. Nao use JSON, nao use markdown code blocks. Siga a risca a formatacao estrutural exigida em cada secao (tabela markdown em STACK JUSTIFICADA, headers ### M<N> em MODULOS A IMPLEMENTAR, bullets **R<N> - titulo:** em Riscos Especificos, bullets **Termo:** em Compliance Obrigatorio) — um parser automatico depende exatamente desse formato. Seja especifico para o dominio no CONTEUDO de cada item.' });
       const parsedBrief = llmBrief ? _extractFilesJson(llmBrief.text) : null;
       if (parsedBrief && parsedBrief.files && parsedBrief.files.length) {
         files = parsedBrief.files.map(f => ({ name: String(f.name || 'CLAUDE_CODE_BRIEF.md'), content: String(f.content || '') }));
       } else {
-        // fallback: gerar brief mínimo determinístico
+        // Fallback determinístico — caminho legítimo e ESTRUTURALMENTE
+        // DIFERENTE do caminho de sucesso acima (dispara quando o LLM falha
+        // em usar ===FILE:=== ou a chamada erra/dá timeout). Reconhecível
+        // pelo header "## Projeto" logo no início — nenhuma das seções ricas
+        // acima (DOMINIO E COMPLIANCE, STACK JUSTIFICADA, MODULOS A
+        // IMPLEMENTAR) existe aqui. Qualquer parser/gerador downstream
+        // (ex: gerador de infográfico do projeto) que dependa dessas seções
+        // deve DETECTAR esse caso (checar "## Projeto" antes de "##
+        // DOMINIO E COMPLIANCE") e degradar graciosamente — pular a geração
+        // em vez de tentar extrair estrutura que não existe neste brief.
         files = [{ name: 'CLAUDE_CODE_BRIEF.md', content: '# CLAUDE CODE BRIEF\n\n## Projeto\n' + description + '\n\n## Contexto Acumulado\n' + (accCtx || '(sem contexto dos steps — rodar Auto-Pilot primeiro)') + '\n\n## Stack (step1)\n' + (step1 || '(executar step 1 para analise de dominio)') + '\n\n## Blueprint (step2)\n' + (step2 || '(executar step 2 para blueprint tecnico)') + '\n\n## Proximos Passos\nExecute o Auto-Pilot completo antes de gerar o brief final.\n' }];
       }
       // injetar ADR + semgrep no brief tambem
