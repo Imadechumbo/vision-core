@@ -4490,6 +4490,18 @@ app.post('/api/sf/project-files', (req, res) => {
       // injetar ADR + semgrep no brief tambem
       if (!files.some(f => f.name.includes('adr'))) files.push({ name: 'docs/adr/0001-stack-decision.md', content: '# ADR 0001: Stack Decision\n\n## Status\nAccepted\n\n## Context\nProjeto complexo: ' + description.slice(0, 120) + '\n\n## Decision\nVer CLAUDE_CODE_BRIEF.md — secao STACK JUSTIFICADA\n\n## Consequences\nCompliance obrigatorio identificado em CLAUDE_CODE_BRIEF.md\n' });
       if (!files.some(f => f.name.includes('semgrep'))) files.push({ name: '.semgrep/semgrep.yaml', content: 'rules:\n  - id: no-hardcoded-secrets\n    languages: [javascript, typescript]\n    message: Hardcoded secret detected.\n    severity: ERROR\n    pattern-either:\n      - pattern: PASSWORD = "..."\n      - pattern: SECRET = "..."\n  - id: no-sql-injection\n    languages: [javascript, typescript]\n    message: SQL injection risk.\n    severity: ERROR\n    pattern: db.query("..." + INPUT)\n  - id: no-path-traversal\n    languages: [javascript, typescript]\n    message: Path traversal risk.\n    severity: ERROR\n    pattern: path.join(DIR, REQ_PARAM)\n  - id: express-helmet-missing\n    languages: [javascript, typescript]\n    message: Use helmet() for security headers.\n    severity: WARNING\n    pattern: app.use(express.json())\n' });
+      // Fase C (gerador de infográfico do projeto): decisão de anexar
+      // PROJETO_INFOGRAFICO.html vive em tools/project-infographic.mjs
+      // (testada isoladamente, 54/54) — aqui é só o glue code. import()
+      // dinâmico porque o módulo é ESM (export/import) e este arquivo é
+      // CommonJS (backend/package.json: "type":"commonjs"); require() não
+      // carrega ESM de forma síncrona. Best-effort: falha na geração do
+      // infográfico nunca derruba a entrega do brief em si (mesmo padrão
+      // dos agentes best-effort do SF — Archivist/Hermes em §195).
+      try {
+        const { appendProjectInfographicFile } = await import('../tools/project-infographic.mjs');
+        files = appendProjectInfographicFile(files, { name: description.slice(0, 120) });
+      } catch (_) {}
       const _prov = (llmBrief && llmBrief.provider) || 'local';
       sfJobs.set(jobId, { status: 'done', result: { files, total: files.length, provider: _prov, complexity: 'complex' }, error: null, ts: Date.now() });
       return;
