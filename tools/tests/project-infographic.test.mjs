@@ -10,6 +10,7 @@
 
 import {
   generateProjectInfographic,
+  appendProjectInfographicFile,
   splitSections,
   parseStackTable,
   parseModules,
@@ -305,6 +306,39 @@ assert(isRiskCritical('nada de especial aqui') === false, '[D-08] isRiskCritical
 
 assert(categorizeRisk('problema de hash e dados de terceiros') === 'Dados pessoais',
   '[D-09] categorizeRisk desempata a favor de "Dados pessoais" quando ambas as categorias batem');
+
+console.log('\n[Suite E] appendProjectInfographicFile — decisão de integração (Fase C), isolada da rota Express');
+
+const filesWithRealBrief = [
+  { name: 'CLAUDE_CODE_BRIEF.md', content: BRIEF_LEGAL },
+  { name: 'docs/adr/0001-stack-decision.md', content: '# ADR 0001' },
+  { name: '.semgrep/semgrep.yaml', content: 'rules: []' },
+];
+const resultReal = appendProjectInfographicFile(filesWithRealBrief, { name: 'Prova Digital' });
+assert(resultReal.length === filesWithRealBrief.length + 1,
+  '[E-01] anexa exatamente 1 arquivo novo quando o brief tem seções ricas');
+assert(resultReal.some((f) => f.name === 'PROJETO_INFOGRAFICO.html'),
+  '[E-02] arquivo anexado se chama PROJETO_INFOGRAFICO.html');
+assert(filesWithRealBrief.length === 3,
+  '[E-03] array de entrada NÃO é mutado in-place (imutabilidade)');
+
+const filesWithFallbackBrief = [
+  { name: 'CLAUDE_CODE_BRIEF.md', content: BRIEF_FALLBACK },
+];
+const resultFallback = appendProjectInfographicFile(filesWithFallbackBrief, { name: 'Prontuarios' });
+assert(resultFallback.length === filesWithFallbackBrief.length,
+  '[E-04] NÃO anexa nada quando o brief é o fallback "## Projeto" (degradação graciosa)');
+assert(!resultFallback.some((f) => f.name === 'PROJETO_INFOGRAFICO.html'),
+  '[E-05] nenhum PROJETO_INFOGRAFICO.html presente no caso fallback — nunca arquivo vazio/erro');
+assert(resultFallback === filesWithFallbackBrief,
+  '[E-06] retorna a MESMA referência de array quando não há nada a anexar (sem cópia desnecessária)');
+
+const filesWithoutBrief = [
+  { name: 'docs/adr/0001-stack-decision.md', content: '# ADR 0001' },
+];
+const resultNoBrief = appendProjectInfographicFile(filesWithoutBrief, { name: 'X' });
+assert(resultNoBrief === filesWithoutBrief,
+  '[E-07] array sem nenhum CLAUDE_CODE_BRIEF.md — retorna inalterado, não quebra');
 
 console.log(`\nproject-infographic: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

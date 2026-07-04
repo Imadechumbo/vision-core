@@ -716,6 +716,30 @@ ${legendSection}
 </html>`;
 }
 
+/**
+ * appendProjectInfographicFile — Fase C: decisão pura de "quando anexar o
+ * infográfico", isolada da rota Express (server.js não exporta nada, nunca
+ * foi testado diretamente — esta função é o pedaço testável do glue code).
+ *
+ * Dado o array `files` já finalizado pelo endpoint /api/sf/project-files
+ * (branch complex — CLAUDE_CODE_BRIEF.md + ADR + semgrep), localiza o brief
+ * pelo nome, gera o infográfico e anexa como `PROJETO_INFOGRAFICO.html`.
+ * Nunca modifica `files` in-place — retorna um array novo (ou o mesmo array
+ * de entrada, sem cópia, quando não há nada a anexar).
+ *
+ * Degradação graciosa: se generateProjectInfographic retornar null (brief
+ * sem seções ricas — ex: fallback "## Projeto") ou se não houver nenhum
+ * arquivo CLAUDE_CODE_BRIEF no array, retorna `files` inalterado — nunca
+ * um arquivo vazio, nunca uma entrada de erro.
+ */
+export function appendProjectInfographicFile(files, projectMeta = {}) {
+  const briefFile = (files || []).find((f) => f.name && f.name.includes('CLAUDE_CODE_BRIEF'));
+  if (!briefFile) return files;
+  const html = generateProjectInfographic(briefFile.content, projectMeta);
+  if (!html) return files;
+  return [...files, { name: 'PROJETO_INFOGRAFICO.html', content: html }];
+}
+
 export {
   splitSections,
   parseStackTable,
