@@ -38,6 +38,16 @@ delete process.env.PROVIDER_VAULT_SECRET;
 const encFallback = encryptProviderKey(plain);
 assert(decryptProviderKey(encFallback) === plain, 'sem PROVIDER_VAULT_SECRET no env, cai no fallback dev e ainda faz roundtrip');
 
+// --- cache da derivação KDF (Fase D.a): precisa continuar correto quando
+// múltiplos secrets diferentes são usados na mesma execução do processo —
+// se o cache ignorasse qual secret foi pedido (bug de cache global sem
+// chave), este teste de "chave errada degrada pra vazio" (linha acima)
+// já teria falhado silenciosamente. Terceiro secret confirma que o cache
+// não "gruda" no primeiro valor visto.
+const encC = encryptProviderKey(plain, 'secret-C');
+assert(decryptProviderKey(encC, 'secret-C') === plain, 'terceiro secret distinto (secret-C) também faz roundtrip corretamente com o cache ativo');
+assert(decryptProviderKey(encC, 'secret-A') === '', 'cache não confunde secret-C com secret-A já cacheado anteriormente');
+
 // --- entradas malformadas nunca lançam exceção ---
 assert(decryptProviderKey('') === '', 'decrypt de string vazia retorna vazio, não lança');
 assert(decryptProviderKey('lixo-sem-formato') === '', 'decrypt de dado corrompido retorna vazio, não lança');

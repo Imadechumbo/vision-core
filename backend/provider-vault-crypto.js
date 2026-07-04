@@ -39,9 +39,22 @@ const DEV_FALLBACK_SECRET = 'vision-core-dev-vault-secret-change-me';
 // chamada tornaria toda decriptação futura impossível.
 const KDF_SALT = 'vision-core-provider-vault-v1';
 
+// Fase D(a): callLLM() passa a chamar decryptProviderKey() em TODA chamada
+// de LLM (não só quando alguém salva/testa pela tela) — sem isto, cada
+// request pagaria de novo o custo deliberadamente alto do scryptSync (mesmo
+// N=16384 do hash de senha, ~dezenas de ms). O que é seguro cachear é só a
+// CHAVE DERIVADA: ela depende unicamente de PROVIDER_VAULT_SECRET, que só
+// muda com restart do processo — não cacheia o ESTADO do vault (isso
+// continua sendo lido fresco de _providersStore a cada chamada, ver
+// provider-vault-routing.js). Map (não uma variável única) pra não quebrar
+// os testes que passam secretOverride diferentes na mesma execução.
+const _kdfKeyCache = new Map();
 function vaultEncryptionKey(secretOverride) {
   const secret = secretOverride || process.env.PROVIDER_VAULT_SECRET || DEV_FALLBACK_SECRET;
-  return crypto.scryptSync(secret, KDF_SALT, 32);
+  if (_kdfKeyCache.has(secret)) return _kdfKeyCache.get(secret);
+  const key = crypto.scryptSync(secret, KDF_SALT, 32);
+  _kdfKeyCache.set(secret, key);
+  return key;
 }
 
 function encryptProviderKey(plainText, secretOverride) {
