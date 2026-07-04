@@ -303,6 +303,43 @@ Se você está lendo isto numa sessão nova: confira qual fase está marcada com
 
 ---
 
+## AI PROVIDER VAULT — "CONFIGURAÇÃO PRINCIPAL" — CHECKPOINT DE CONTINUIDADE (em andamento)
+
+### O que é
+
+Hoje existem **dois sistemas de credencial de LLM desconectados um do outro**: (a) env vars do EB, que é o que `callLLM()` (`backend/server.js`) e todo o produto realmente usam; (b) a tela "AI API VAULT" do menu lateral, que até esta sessão era uma gaveta em memória (`_providersStore`), sem dono, sem persistência real e sem nenhum consumidor real — nem o próprio `callLLM()` a consultava. O pedido do humano: transformar (b) numa "Configuração Principal" que seja fonte única de verdade de credencial pra qualquer parte do Vision Core — incluindo `tools/sf-agent-orchestrator.mjs` (Fase 2 do checkpoint acima, hoje dependente de env var solta manual).
+
+Fases combinadas com o humano: **A** (diagnóstico, fechada) → **B** (decisão de arquitetura, fechada) → **C** (implementação da tela, fechada nesta sessão) → **D** (conectar ao orquestrador — e, gap identificado em C, possivelmente ao `callLLM()` também) → **E** (depoimento em about.html/landing.html, gated) → **F** (checar SDDF_SPEC.md, gated). D/E/F **ainda não começaram**.
+
+### Decisões da Fase B (arquitetura, confirmadas pelo humano)
+
+- **Persistência:** Opção 3 sobre Opção 2 — env vars do EB continuam sendo o default; o vault é um **override opcional** (só passa a valer quando alguém salva um provider pela tela nova), persistido em arquivo + S3 (mesmo padrão §146/§152/§155), com a `api_key` **cifrada em repouso** (AES-256-GCM), nunca em texto plano.
+- **UI:** Opção B — aba nova (`Providers Configurados`) dentro do painel `#aiApiVault` já existente, formulário de adicionar (`+ Adicionar Provider`) intocado numa aba própria, header renomeado pra "AI API VAULT — Configuração Principal". Sem item novo no menu lateral.
+
+### Fase C — FECHADA nesta sessão. 3 commits isolados, teste antes de cada um.
+
+1. **`056453b9`** — `backend/provider-vault-crypto.js`: módulo puro de criptografia (AES-256-GCM via `crypto` nativo, zero dependência nova), isolado pra ser testável sem Express/S3. `tools/tests/provider-vault-crypto.test.mjs` — 13/13 (roundtrip real, IV aleatório, rotação de chave-mestra simulada, entradas malformadas nunca lançam exceção).
+   - **`PROVIDER_VAULT_SECRET` — de onde vem HOJE (documentado no código-fonte, não só aqui):** a env var **não existe em nenhum deploy do EB ainda** — mesmo estado do `HOTMART_HOTTOK` (§150): pendente, documentado, não bloqueia a feature. Fallback dev hardcoded (`vision-core-dev-vault-secret-change-me`), mesmo padrão já usado por `SESSION_SECRET`. Deliberadamente **não** derivada de `SESSION_SECRET`/JWT existentes (segredos de propósitos diferentes — rotacionar um não pode destruir o outro).
+   - **INCERTEZA CONHECIDA, não resolvida nesta rodada:** rotação de `PROVIDER_VAULT_SECRET` não tem solução. Se o valor mudar, tudo cifrado com a chave antiga vira permanentemente ilegível (`decryptProviderKey()` degrada pra `''`, nunca lança exceção — provider volta a se comportar como "sem chave salva"). Não existe ferramenta de re-criptografia/migração nesta versão.
+2. **`2af07939`** — Backend: `_providersStore` deixa de ser objeto efêmero/global-sem-dono e passa a persistir em `data/ai-providers-vault.json` + S3. Endpoints reescritos: `/api/providers/save` (aceita atualização **parcial** — só `{provider, priority}` reordena sem tocar na chave salva), `/api/providers/list` (ordenado por prioridade, nunca expõe `api_key`/`api_key_encrypted`), `/api/providers/test` (grava `status` real + `last_tested_at` na entrada testada), `/api/providers/delete` (novo). `tools/tests/provider-vault-endpoints.test.mjs` — 22/22, contra o **backend real** (child process isolado, porta própria, zero chave de API real herdada do ambiente de dev, zero chamada de LLM paga).
+3. **`19c7fe9c`** — Frontend: aba "Providers Configurados" em `frontend/index.html` + `frontend/assets/vision-core-bundle.js` (lista, prioridade editável, status, Testar/Remover por linha) + CSS em `frontend/assets/vision-core-bundle.css` (o arquivo CSS **realmente carregado** por `index.html` — `style.css` é dead code pra essa página, serve só `landing.html`/`about.html`; mudança espelhada lá também por consistência, sem efeito prático). `tools/tests/provider-vault-frontend.test.mjs` — 21/21 (estático, sem navegador).
+   - **Bug pré-existente corrigido no mesmo commit** (bloqueava a própria feature nova): `providerPayload()` sempre mandava `provider: 'auto'` hardcoded — nunca lia o `<select>` de provider nem o campo de prioridade. Cada clique em "SALVAR PROVIDER" sobrescrevia sempre a mesma entrada `'auto'`, então a lista nova nunca mostraria mais de um provider de verdade. Corrigido: agora lê `aiProviderSelect.value` e `aiPriorityInput.value` de fato.
+
+Nenhum deploy (EB/CF Pages) foi feito nesta sessão — tudo local, commitado, não publicado ainda.
+
+### GAP EM ABERTO — é a decisão central da Fase D, ainda não resolvida
+
+`callLLM()` (`backend/server.js`, a função que `/api/copilot`, `/api/run-live`, todos os módulos SF, etc. realmente chamam pra falar com um LLM) **continua lendo só env vars via `resolveApiKey()`, numa ordem hardcoded no array** — não consulta `_providersStore`/o vault novo em nenhum momento. Ou seja: hoje você pode salvar um provider com prioridade 1 na tela "Configuração Principal" e isso **não muda em nada** qual provider o produto de fato usa. A prioridade é persistida e exibida corretamente, só não é *consultada* por ninguém real ainda.
+
+Fase D precisa decidir, com o humano, entre (não decidir sozinho):
+- **(a) Conectar `callLLM()` ao vault** — antes de montar o array `providers` fixo, consultar `_providersStore` e usar a chave/prioridade salva ali quando existir (fallback pra env var quando não existir entrada no vault — mesma filosofia de override opcional da Fase B).
+- **(b) Conectar `tools/sf-agent-orchestrator.mjs` ao vault** — este é o pedido original que abriu a Fase D. Análise pendente e **explicitamente não decidida ainda** (o humano pediu pra não decidir sozinho, só trazer os trade-offs quando chegar a hora): **MCP server fino** (o orquestrador já fala Agent SDK, que consome tools de MCP nativamente — exigiria expor o vault como um serviço/tool separado) **vs.** o orquestrador simplesmente **importar/ler a mesma lib de descriptografia** que o backend usa (`backend/provider-vault-crypto.js` já é um módulo puro, sem Express, reutilizável por qualquer processo Node — inclusive um script standalone como o orquestrador). Trade-offs a levantar quando chegarmos lá: acoplamento (MCP desacopla processo/versão; lib compartilhada acopla mas é mais simples), necessidade de rede/porta local (MCP precisa de um servidor rodando; lib compartilhada só precisa do arquivo `data/ai-providers-vault.json` + a env var da chave-mestra acessível), superfície de ataque (MCP adiciona um novo listener; lib compartilhada só adiciona um `require()`), e se o orquestrador (que já lida com isolamento de processo/env — ver Fase 2B acima) tem alguma razão específica pra preferir uma arquitetura de tool sobre um require direto.
+- **(c) Ambos.**
+
+**Antes de prosseguir para a Fase D:** o humano precisa decidir (a), (b) ou (c) — e, se (b) ou (c) estiver no escopo, a análise MCP-fino vs. lib compartilhada acima precisa ser aprofundada (não é uma decisão já tomada, é só o mapeamento inicial dos dois caminhos).
+
+---
+
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
 
 **§121-§122 FECHADOS** — positionBalloon + seta CSS (18/18). Menu tutoriais U+25C9→🌟 (19/19). Ambos em produção.
