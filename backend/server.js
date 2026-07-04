@@ -7,6 +7,7 @@ const { scanConfig, applyConfigFixes, enforceConfigGold } = require('./vision_co
 const { runGoMission, streamGoMission, checkGoHealth, resolveGoBinary } = require('./src/runtime/goRunner');
 const { callHermes, readLowConfidenceLog, computeMemoryMetrics } = require('./hermes-rca');
 const { encryptProviderKey, decryptProviderKey } = require('./provider-vault-crypto');
+const { resolveProviderKey, sortProvidersByEffectivePriority } = require('./provider-vault-routing');
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
@@ -581,11 +582,18 @@ async function callLLM(prompt, opts = {}) {
   const timeoutMs = opts.timeout_ms || 30000;
   const systemPrompt = opts.system || 'You are Vision Core AI assistant. Be concise and technical.';
 
+  // Fase D(a) — resolveProviderKey() usa a chave do AI Provider Vault em vez
+  // da env var APENAS quando aquele provider tem status:'connected' no
+  // vault (alguém já clicou "Testar" e funcionou) — ver
+  // backend/provider-vault-routing.js pras 3 regras completas + a
+  // limitação conhecida (status não expira sozinho). Sem nenhuma entrada
+  // salva no vault, resolveProviderKey() se comporta exatamente como
+  // resolveApiKey() sempre se comportou — zero mudança.
   const providers = [
     {
       // §184 — OpenRouter primeiro: chave configurada no EB, acesso a vários modelos
       id: 'openrouter',
-      key: resolveApiKey('OPENROUTER'),
+      key: resolveProviderKey('openrouter', resolveApiKey('OPENROUTER'), _providersStore, decryptProviderKey),
       url: 'https://openrouter.ai/api/v1/chat/completions',
       model: process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-4-5',
       buildBody: (model) => JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }] }),
@@ -594,7 +602,7 @@ async function callLLM(prompt, opts = {}) {
     },
     {
       id: 'openai',
-      key: resolveApiKey('OPENAI'),
+      key: resolveProviderKey('openai', resolveApiKey('OPENAI'), _providersStore, decryptProviderKey),
       url: 'https://api.openai.com/v1/chat/completions',
       model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       buildBody: (model) => JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }] }),
@@ -603,7 +611,7 @@ async function callLLM(prompt, opts = {}) {
     },
     {
       id: 'anthropic',
-      key: resolveApiKey('ANTHROPIC'),
+      key: resolveProviderKey('anthropic', resolveApiKey('ANTHROPIC'), _providersStore, decryptProviderKey),
       url: 'https://api.anthropic.com/v1/messages',
       model: process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001',
       buildBody: (model) => JSON.stringify({ model, max_tokens: maxTokens, system: systemPrompt, messages: [{ role: 'user', content: prompt }] }),
@@ -612,7 +620,7 @@ async function callLLM(prompt, opts = {}) {
     },
     {
       id: 'groq',
-      key: resolveApiKey('GROQ'),
+      key: resolveProviderKey('groq', resolveApiKey('GROQ'), _providersStore, decryptProviderKey),
       url: 'https://api.groq.com/openai/v1/chat/completions',
       model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
       buildBody: (model) => JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }] }),
@@ -621,7 +629,7 @@ async function callLLM(prompt, opts = {}) {
     },
     {
       id: 'deepseek',
-      key: resolveApiKey('DEEPSEEK'),
+      key: resolveProviderKey('deepseek', resolveApiKey('DEEPSEEK'), _providersStore, decryptProviderKey),
       url: 'https://api.deepseek.com/v1/chat/completions',
       model: 'deepseek-chat',
       buildBody: (model) => JSON.stringify({ model, max_tokens: maxTokens, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: prompt }] }),
@@ -630,7 +638,7 @@ async function callLLM(prompt, opts = {}) {
     },
     {
       id: 'gemini',
-      key: resolveApiKey('GEMINI'),
+      key: resolveProviderKey('gemini', resolveApiKey('GEMINI'), _providersStore, decryptProviderKey),
       url: `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || 'gemini-1.5-flash'}:generateContent`,
       model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
       buildBody: (model) => JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: maxTokens } }),
@@ -640,7 +648,13 @@ async function callLLM(prompt, opts = {}) {
     }
   ];
 
-  for (const p of providers) {
+  // Fase D(a): a ordem de fallback é a prioridade EFETIVA (vault, só quando
+  // status:'connected' pra aquele provider — senão a posição no array acima,
+  // idêntica à ordem de sempre). Vault vazio/sem status connected em nenhum
+  // provider = orderedProviders tem exatamente a mesma ordem de `providers`.
+  const orderedProviders = sortProvidersByEffectivePriority(providers, _providersStore);
+
+  for (const p of orderedProviders) {
     if (!p.key) continue;
     try {
       const url = p.urlOverride ? p.urlOverride(p.key) : p.url;
