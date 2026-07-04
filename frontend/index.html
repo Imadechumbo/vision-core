@@ -496,28 +496,42 @@
     <br>
     <div class="panel ai-api-panel" id="aiApiVault">
       <p class="eyebrow">AI API VAULT - PROVEDORES PAGOS - ROTEAMENTO INTELIGENTE</p>
-      <h2>Menu para adicionar APIs de IAs pagas</h2>
-      <p>Conecte provedores comerciais e defina prioridade/fallback. As chaves ficam preparadas para uso via variaveis de ambiente ou vault local em desenvolvimento.</p>
-      <div class="provider-grid">
-        <button class="provider active" data-provider="openai"><strong>OpenAI</strong><span>GPT / Vision / Assistants</span></button>
-        <button class="provider" data-provider="anthropic"><strong>Anthropic</strong><span>Claude</span></button>
-        <button class="provider" data-provider="gemini"><strong>Google Gemini</strong><span>Flash / Pro / Vision</span></button>
-        <button class="provider" data-provider="openrouter"><strong>OpenRouter</strong><span>multi-model fallback</span></button>
-        <button class="provider" data-provider="groq"><strong>Groq</strong><span>alta velocidade</span></button>
-        <button class="provider" data-provider="deepseek"><strong>DeepSeek</strong><span>reasoner/code</span></button>
+      <h2>AI API VAULT — Configuração Principal</h2>
+      <div class="ai-vault-tabs" id="aiVaultTabs" role="tablist">
+        <button class="ai-vault-tab active" id="aiVaultTabAddBtn" type="button" data-tab="add">+ Adicionar Provider</button>
+        <button class="ai-vault-tab" id="aiVaultTabListBtn" type="button" data-tab="list">Providers Configurados</button>
       </div>
-      <div class="api-form">
-        <label>Provider</label><select class="select" id="aiProviderSelect"><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="gemini">Google Gemini</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="deepseek">DeepSeek</option></select>
-        <label>API Key</label><input class="api-input" id="aiApiKey" type="password" placeholder="cole sua chave aqui...">
-        <label>Modelo padrao</label><input class="api-input" id="aiModel" type="text" placeholder="ex: gpt-4.1, claude-3.7-sonnet, gemini-2.0-flash">
-        <label>Prioridade</label><select class="select" id="aiPriority"><option>primary</option><option>fallback</option><option>disabled</option></select>
+
+      <div id="aiVaultTabAdd">
+        <p>Conecte provedores comerciais e defina prioridade/fallback. As chaves ficam preparadas para uso via variaveis de ambiente ou vault local em desenvolvimento.</p>
+        <div class="provider-grid">
+          <button class="provider active" data-provider="openai"><strong>OpenAI</strong><span>GPT / Vision / Assistants</span></button>
+          <button class="provider" data-provider="anthropic"><strong>Anthropic</strong><span>Claude</span></button>
+          <button class="provider" data-provider="gemini"><strong>Google Gemini</strong><span>Flash / Pro / Vision</span></button>
+          <button class="provider" data-provider="openrouter"><strong>OpenRouter</strong><span>multi-model fallback</span></button>
+          <button class="provider" data-provider="groq"><strong>Groq</strong><span>alta velocidade</span></button>
+          <button class="provider" data-provider="deepseek"><strong>DeepSeek</strong><span>reasoner/code</span></button>
+        </div>
+        <div class="api-form">
+          <label>Provider</label><select class="select" id="aiProviderSelect"><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="gemini">Google Gemini</option><option value="openrouter">OpenRouter</option><option value="groq">Groq</option><option value="deepseek">DeepSeek</option></select>
+          <label>API Key</label><input class="api-input" id="aiApiKey" type="password" placeholder="cole sua chave aqui...">
+          <label>Modelo padrao</label><input class="api-input" id="aiModel" type="text" placeholder="ex: gpt-4.1, claude-3.7-sonnet, gemini-2.0-flash">
+          <label>Prioridade</label><input class="api-input" id="aiPriority" type="number" min="1" step="1" placeholder="1 = primeiro no fallback">
+        </div>
+        <div class="github-actions">
+          <button class="btn github" id="saveAiProviderBtn" type="button">SALVAR PROVIDER</button>
+          <button class="btn ghost" id="testAiProviderBtn" type="button">TESTAR PROVIDER</button>
+          <a class="btn ghost" href="landing.html">VER LANDING STARTUP</a>
+        </div>
+        <div class="ai-provider-status" id="aiProviderStatus">Nenhuma API salva nesta sessao.</div>
       </div>
-      <div class="github-actions">
-        <button class="btn github" id="saveAiProviderBtn" type="button">SALVAR PROVIDER</button>
-        <button class="btn ghost" id="testAiProviderBtn" type="button">TESTAR PROVIDER</button>
-        <a class="btn ghost" href="landing.html">VER LANDING STARTUP</a>
+
+      <div id="aiVaultTabList" style="display:none;">
+        <p>Fonte única de configuração de LLM do Vision Core — prioridade define a ordem de fallback quando um provider falha. A chave completa nunca é reexibida depois de salva.</p>
+        <div id="aiVaultConfiguredList" class="ai-vault-configured-list">
+          <div class="ai-vault-empty">Carregando providers configurados...</div>
+        </div>
       </div>
-      <div class="ai-provider-status" id="aiProviderStatus">Nenhuma API salva nesta sessao.</div>
     </div>
 
     <br>

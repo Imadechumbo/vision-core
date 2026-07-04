@@ -1728,12 +1728,22 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
     var aiApiKey = document.getElementById('aiApiKey');
     var aiModel  = document.getElementById('aiModel');
+    var aiProviderSelect = document.getElementById('aiProviderSelect');
+    var aiPriorityInput  = document.getElementById('aiPriority');
     function providerPayload() {
-      return JSON.stringify({
-        provider: 'auto',
-        api_key: (aiApiKey && aiApiKey.value) || '',
-        model:   (aiModel && aiModel.value) || ''
-      });
+      // Bug pré-existente corrigido aqui: antes disto, 'provider' era sempre
+      // a string fixa 'auto' — o dropdown de provider e o campo de
+      // prioridade nunca eram lidos, então "SALVAR PROVIDER" sempre
+      // sobrescrevia a mesma entrada 'auto' independente do que o usuário
+      // escolhesse. A aba "Providers Configurados" só faz sentido mostrar
+      // múltiplas linhas se cada save realmente for pro provider certo.
+      var payload = {
+        provider: (aiProviderSelect && aiProviderSelect.value) || 'auto',
+        api_key:  (aiApiKey && aiApiKey.value) || '',
+        model:    (aiModel && aiModel.value) || ''
+      };
+      if (aiPriorityInput && aiPriorityInput.value) payload.priority = Number(aiPriorityInput.value);
+      return JSON.stringify(payload);
     }
 
     var saveAiProviderBtn = document.getElementById('saveAiProviderBtn');
@@ -1745,6 +1755,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             showToast(res.body && res.body.saved
               ? ('Provider salvo: ' + res.body.provider + ' (chave: ' + res.body.api_key_masked + ') — ' + res.body.providers_count + ' configurado(s)')
               : 'Falha ao salvar provider.');
+            if (res.body && res.body.saved && window.s_aiVaultRefreshList) window.s_aiVaultRefreshList();
           })
           .catch(function () { showToast('Erro de rede ao salvar.'); })
           .then(function () { saveAiProviderBtn.disabled = false; });
@@ -1768,11 +1779,92 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                 (res.body.note ? ' — ' + res.body.note : '');
             }
             showToast(msg);
+            if (window.s_aiVaultRefreshList) window.s_aiVaultRefreshList();
           })
           .catch(function () { showToast('Erro de rede ao testar.'); })
           .then(function () { testAiProviderBtn.disabled = false; });
       });
     }
+
+    // --- Aba "Providers Configurados" (Fase C) ---------------------------
+    (function initAiVaultConfiguredTab() {
+      var tabAddBtn  = document.getElementById('aiVaultTabAddBtn');
+      var tabListBtn = document.getElementById('aiVaultTabListBtn');
+      var tabAdd     = document.getElementById('aiVaultTabAdd');
+      var tabList    = document.getElementById('aiVaultTabList');
+      var listBox    = document.getElementById('aiVaultConfiguredList');
+      if (!tabAddBtn || !tabListBtn || !tabAdd || !tabList || !listBox) return;
+
+      var STATUS_LABEL = {
+        untested: '⚪ não testado', connected: '✅ conectado', no_key: '⚪ sem chave',
+        unsupported_provider: '⚠ não suportado', error: '❌ falhou'
+      };
+      function statusLabel(s) {
+        return STATUS_LABEL[s] || ('❌ ' + s); // http_401, http_500 etc caem aqui
+      }
+
+      function renderList(providers) {
+        if (!providers || !providers.length) {
+          listBox.innerHTML = '<div class="ai-vault-empty">Nenhum provider salvo ainda — use a aba "+ Adicionar Provider".</div>';
+          return;
+        }
+        listBox.innerHTML = '';
+        providers.forEach(function (p) {
+          var row = document.createElement('div');
+          row.className = 'ai-vault-row';
+          row.innerHTML =
+            '<div class="ai-vault-row-main">' +
+              '<strong>' + p.provider + '</strong>' +
+              '<span class="ai-vault-key">' + (p.has_key ? p.api_key_masked : 'sem chave salva') + '</span>' +
+              '<span class="ai-vault-model">' + (p.model || '(modelo padrão do provider)') + '</span>' +
+              '<span class="ai-vault-status">' + statusLabel(p.status) + '</span>' +
+            '</div>' +
+            '<div class="ai-vault-row-actions">' +
+              'Prioridade <input type="number" min="1" step="1" class="api-input ai-vault-priority" value="' + (p.priority || 0) + '" style="width:60px;display:inline-block;">' +
+              '<button class="btn ghost ai-vault-test" type="button">Testar</button>' +
+              '<button class="btn ghost ai-vault-remove" type="button">Remover</button>' +
+            '</div>';
+          var priorityInp = row.querySelector('.ai-vault-priority');
+          priorityInp.addEventListener('change', function () {
+            apiFetch('/api/providers/save', { method: 'POST', body: JSON.stringify({ provider: p.provider, priority: Number(priorityInp.value) }) })
+              .then(function () { showToast('Prioridade de ' + p.provider + ' atualizada.'); loadList(); })
+              .catch(function () { showToast('Erro de rede ao atualizar prioridade.'); });
+          });
+          row.querySelector('.ai-vault-test').addEventListener('click', function () {
+            apiFetch('/api/providers/test', { method: 'POST', body: JSON.stringify({ provider: p.provider }) })
+              .then(function (res) {
+                showToast(res.body && res.body.connected ? ('✅ ' + p.provider + ' conectado') : ('⚠ ' + p.provider + ': ' + (res.body && res.body.status)));
+                loadList();
+              })
+              .catch(function () { showToast('Erro de rede ao testar.'); });
+          });
+          row.querySelector('.ai-vault-remove').addEventListener('click', function () {
+            apiFetch('/api/providers/delete', { method: 'POST', body: JSON.stringify({ provider: p.provider }) })
+              .then(function () { showToast('Provider ' + p.provider + ' removido.'); loadList(); })
+              .catch(function () { showToast('Erro de rede ao remover.'); });
+          });
+          listBox.appendChild(row);
+        });
+      }
+
+      function loadList() {
+        apiFetch('/api/providers/list', { method: 'GET' })
+          .then(function (res) { renderList(res.body && res.body.providers); })
+          .catch(function () { listBox.innerHTML = '<div class="ai-vault-empty">Erro ao carregar providers configurados.</div>'; });
+      }
+      window.s_aiVaultRefreshList = loadList; // exposto pra save/test na aba "Adicionar" atualizarem esta lista também
+
+      function activateTab(name) {
+        var isAdd = name === 'add';
+        tabAddBtn.classList.toggle('active', isAdd);
+        tabListBtn.classList.toggle('active', !isAdd);
+        tabAdd.style.display  = isAdd ? '' : 'none';
+        tabList.style.display = isAdd ? 'none' : '';
+        if (!isAdd) loadList();
+      }
+      tabAddBtn.addEventListener('click', function () { activateTab('add'); });
+      tabListBtn.addEventListener('click', function () { activateTab('list'); });
+    })();
 
     var downloadLogsBtn = document.getElementById('downloadLogsBtn');
     if (downloadLogsBtn) {
