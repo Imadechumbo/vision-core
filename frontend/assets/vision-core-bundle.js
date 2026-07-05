@@ -11191,6 +11191,16 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   // §128: helper — garante cockpit visível + scroll ao alvo.
   // Tutoriais de seções fora do SF page precisam voltar ao cockpit
   // caso o usuário esteja na SF page quando abrir o tutorial.
+  //
+  // Sub-passo 3.4: revalidado, NÃO é removível. showSoftwareFactoryPage()
+  // (vision-core-bundle.js) continua fazendo cockpit.style.display='none'
+  // exatamente como antes — o Sub-passo 2 só tirou a SIDEBAR de dentro de
+  // #vcCockpitView (ela virou sibling persistente), não mudou nada sobre o
+  // próprio #vcCockpitView continuar sendo escondido quando a SF page abre.
+  // Confirmado empiricamente: sem essa chamada, um tutorial T7/T8/T9 disparado
+  // enquanto a SF page está aberta mira um alvo com display:block porém
+  // getBoundingClientRect() com height:0 (fora da viewport, dentro do
+  // #vcCockpitView ainda escondido) — o spotlight apontaria pro nada.
   var _cockpitScroll = function(sel) {
     return function() {
       if (typeof window.showMainCockpitPage === 'function') window.showMainCockpitPage();
