@@ -11318,4 +11318,20 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       if (chev) chev.classList.add('open');
     }
   };
+
+  // Sub-passo 3.1 — sidebar mini↔expandida. #vcNavSidebar já nasce com a
+  // classe "mini" no HTML (evita flash de sidebar expandida no load); este
+  // toggle só liga/desliga a classe pro resto da sessão. Sem persistência em
+  // localStorage de propósito — nasce recolhida a cada carregamento, como
+  // pedido; se precisar lembrar a escolha do usuário entre sessões, é um
+  // acréscimo pequeno depois (mesmo padrão de vc_tutorial_done).
+  var navSidebarToggleBtn = document.getElementById('vcNavSidebarToggle');
+  var navSidebarEl        = document.getElementById('vcNavSidebar');
+  if (navSidebarToggleBtn && navSidebarEl) {
+    navSidebarToggleBtn.addEventListener('click', function () {
+      var isMini = navSidebarEl.classList.toggle('mini');
+      navSidebarToggleBtn.setAttribute('aria-expanded', isMini ? 'false' : 'true');
+      navSidebarToggleBtn.title = isMini ? 'Expandir menu' : 'Recolher menu';
+    });
+  }
 })();

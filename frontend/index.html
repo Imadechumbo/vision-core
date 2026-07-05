@@ -150,6 +150,53 @@
 .vc-menu-grp-chevron.open{transform:rotate(180deg)}
 .vc-menu-grp-items{display:none;flex-direction:column}
 .vc-menu-grp-items.open{display:flex}
+
+/* Sub-passo 3.1 — sidebar mini mode (ícone-only), desktop apenas
+   (>=1181px, mesma faixa em que a sidebar já é position:fixed desde o
+   Sub-passo 1/2). Nasce mini por padrão (classe "mini" já vem no HTML
+   em #vcNavSidebar) — expande só com o botão #vcNavSidebarToggle.
+   Ícone e label agora são spans separados (.vc-menu-ico / .vc-menu-lbl)
+   em todo item de menu — só assim dá pra esconder o texto sem esconder
+   o ícone. */
+.vc-menu-mini-toggle{display:flex;align-items:center;justify-content:center;width:100%;height:40px;background:none;border:none;border-bottom:1px solid rgba(255,255,255,.06);color:#a78bfa;font-size:16px;cursor:pointer;flex-shrink:0}
+.vc-menu-mini-toggle:hover{background:rgba(167,139,250,.08)}
+.vc-menu-ico{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:1.4em}
+@media (min-width:1181px){
+  #vcNavSidebar.mini{width:52px!important}
+  /* Esconde todo texto — o ícone de cada item continua visível e clicável.
+     .vc-menu-grp-items fica sempre visível (força display:flex mesmo sem
+     .open): com só ícone, não existe "grupo colapsado" que faça sentido —
+     colapsar/expandir grupo só volta a ter efeito quando a sidebar inteira
+     está expandida (decisão do ponto 6, ver relatório). */
+  #vcNavSidebar.mini .vc-menu-lbl,
+  #vcNavSidebar.mini .vc-menu-grp-chevron,
+  #vcNavSidebar.mini .vc-tut-chevron,
+  #vcNavSidebar.mini .vc-tut-panel,
+  #vcNavSidebar.mini .menu-badge,
+  #vcNavSidebar.mini .premium-logo{
+    display:none!important;
+  }
+  #vcNavSidebar.mini .vc-menu-grp-items{display:flex!important}
+  #vcNavSidebar.mini .vc-menu-mini-toggle{font-size:15px}
+  #vcNavSidebar.mini .premium-menu,
+  #vcNavSidebar.mini .vc-sf-sidebar-link,
+  #vcNavSidebar.mini .vc-menu-grp-lbl,
+  #vcNavSidebar.mini .vc-menu-grp-items a,
+  #vcNavSidebar.mini .vc-tut-menu-btn,
+  #vcNavSidebar.mini .premium-menu > a{
+    justify-content:center!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    text-align:center!important;
+  }
+  body:has(#vcNavSidebar.mini) #vcCockpitView{padding-left:52px!important}
+}
+@media (max-width:1180px){
+  /* modo mini é só desktop — abaixo do breakpoint o botão não faz nada
+     visível (a regra .mini acima nem se aplica), então some pra não
+     parecer um controle quebrado no layout empilhado. */
+  .vc-menu-mini-toggle{display:none}
+}
 /* §98-D: badge de agente especializado no chat */
 .vc-agent-badge{display:inline-block;font-size:10px;font-weight:700;background:#6366f122;color:#a5b4fc;border:1px solid #6366f144;padding:2px 8px;border-radius:10px;margin-bottom:4px}
 </style>
@@ -190,7 +237,17 @@
      #vcSoftwareFactoryPage — nem showMainCockpitPage() nem showSoftwareFactoryPage()
      tocam nela. Visibilidade só via CSS (:has() reagindo ao aria-hidden que essas
      funções já alternam em #vcSoftwareFactoryPage por conta própria). -->
-<aside id="vcNavSidebar">
+<aside id="vcNavSidebar" class="mini">
+  <!-- Sub-passo 3.1: sidebar nasce em modo mini (ícone-only) por padrão em
+       telas >=1181px — classe "mini" já vem no HTML (sem depender de JS pra
+       o estado inicial, evita flash de sidebar expandida). Abaixo de 1181px
+       a regra .mini vive dentro de @media(min-width:1181px), então essa
+       classe não tem nenhum efeito no layout mobile/tablet (grid já vira
+       1fr e a sidebar empilha normal, exatamente como no Sub-passo 1/2).
+       Este botão é o único jeito de expandir — sempre visível em ambos os
+       modos (é o próprio ícone, nunca tem um <span class="vc-menu-lbl">
+       pra esconder). -->
+  <button id="vcNavSidebarToggle" class="vc-menu-mini-toggle" type="button" title="Expandir menu" aria-label="Expandir ou recolher menu de navegação" aria-expanded="false">☰</button>
   <section class="panel logo premium-logo">
     <div class="eye-wrap" title="VISION CORE ativo">
       <div class="ai-eye"><div class="pupil"></div></div>
@@ -200,112 +257,119 @@
     <a class="marketing-link" href="about.html">um sistema que corrige sistemas</a>
   </section>
   <nav class="panel menu premium-menu">
-    <button class="vc-sf-sidebar-link" type="button" data-open-sf-page aria-label="Abrir Software Factory Builder">◈ SOFTWARE FACTORY</button>
-    <button class="vc-sf-sidebar-link" type="button" id="vcOpenDryRunPanelBtn" aria-label="Abrir Dry-Run Real em repositório externo">🔬 DRY-RUN EXTERNO</button>
-    <a class="active" href="#mission">◎ MISSION CONTROL</a>
-    <a href="#marketplace">◇ CONECTORES EXTERNOS</a>
+    <button class="vc-sf-sidebar-link" type="button" data-open-sf-page aria-label="Abrir Software Factory Builder"><span class="vc-menu-ico">◈</span><span class="vc-menu-lbl">SOFTWARE FACTORY</span></button>
+    <button class="vc-sf-sidebar-link" type="button" id="vcOpenDryRunPanelBtn" aria-label="Abrir Dry-Run Real em repositório externo"><span class="vc-menu-ico">🔬</span><span class="vc-menu-lbl">DRY-RUN EXTERNO</span></button>
+    <a class="active" href="#mission"><span class="vc-menu-ico">◎</span><span class="vc-menu-lbl">MISSION CONTROL</span></a>
+    <a href="#marketplace"><span class="vc-menu-ico">◇</span><span class="vc-menu-lbl">CONECTORES EXTERNOS</span></a>
 
     <div class="vc-menu-grp">
       <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('qualidade')">
-        <span>QUALIDADE</span>
+        <span class="vc-menu-ico">☷</span>
+        <span class="vc-menu-lbl">QUALIDADE</span>
         <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-qualidade">▾</span>
       </button>
       <div class="vc-menu-grp-items open" id="vcMenuGrpItems-qualidade">
-        <a href="#hermes">☷ DIAGNOSTICS / HERMES</a>
-        <a href="#diff">☷ DIFF PREVIEW</a>
+        <a href="#hermes"><span class="vc-menu-ico">☷</span><span class="vc-menu-lbl">DIAGNOSTICS / HERMES</span></a>
+        <a href="#diff"><span class="vc-menu-ico">☷</span><span class="vc-menu-lbl">DIFF PREVIEW</span></a>
       </div>
     </div>
 
     <div class="vc-menu-grp">
       <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('monitoramento')">
-        <span>MONITORAMENTO</span>
+        <span class="vc-menu-ico">⌁</span>
+        <span class="vc-menu-lbl">MONITORAMENTO</span>
         <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-monitoramento">▾</span>
       </button>
       <div class="vc-menu-grp-items open" id="vcMenuGrpItems-monitoramento">
-        <a href="#timeline">⌁ MISSION TIMELINE</a>
-        <a href="#runtime">⌁ EXECUTION MONITOR</a>
-        <a href="#metricsBoard">▥ MÉTRICAS</a>
+        <a href="#timeline"><span class="vc-menu-ico">⌁</span><span class="vc-menu-lbl">MISSION TIMELINE</span></a>
+        <a href="#runtime"><span class="vc-menu-ico">⌁</span><span class="vc-menu-lbl">EXECUTION MONITOR</span></a>
+        <a href="#metricsBoard"><span class="vc-menu-ico">▥</span><span class="vc-menu-lbl">MÉTRICAS</span></a>
       </div>
     </div>
 
     <div class="vc-menu-grp">
       <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('dados')">
-        <span>DADOS</span>
+        <span class="vc-menu-ico">▤</span>
+        <span class="vc-menu-lbl">DADOS</span>
         <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-dados">▾</span>
       </button>
       <div class="vc-menu-grp-items open" id="vcMenuGrpItems-dados">
-        <a href="#vault">⌂ VAULT / ROLLBACK</a>
-        <a href="#memory">▤ MEMORY / OBSIDIAN</a>
-        <a href="#aiApiVault">AI API VAULT</a>
+        <a href="#vault"><span class="vc-menu-ico">⌂</span><span class="vc-menu-lbl">VAULT / ROLLBACK</span></a>
+        <a href="#memory"><span class="vc-menu-ico">▤</span><span class="vc-menu-lbl">MEMORY / OBSIDIAN</span></a>
+        <a href="#aiApiVault"><span class="vc-menu-ico">▤</span><span class="vc-menu-lbl">AI API VAULT</span></a>
       </div>
     </div>
 
     <div class="vc-menu-grp">
       <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('produto')">
-        <span>PRODUTO</span>
+        <span class="vc-menu-ico">⌬</span>
+        <span class="vc-menu-lbl">PRODUTO</span>
         <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-produto">▾</span>
       </button>
       <div class="vc-menu-grp-items open" id="vcMenuGrpItems-produto">
-        <a href="#githubPanel">⌬ GITHUB / PR REAL</a>
-        <a href="#saasAuth">◉ SAAS / PLANOS</a>
+        <a href="#githubPanel"><span class="vc-menu-ico">⌬</span><span class="vc-menu-lbl">GITHUB / PR REAL</span></a>
+        <a href="#saasAuth"><span class="vc-menu-ico">◉</span><span class="vc-menu-lbl">SAAS / PLANOS</span></a>
       </div>
     </div>
 
     <div class="vc-menu-grp">
       <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('agentes')">
-        <span>AGENTES</span>
+        <span class="vc-menu-ico">⚙</span>
+        <span class="vc-menu-lbl">AGENTES</span>
         <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-agentes">▾</span>
       </button>
       <div class="vc-menu-grp-items open" id="vcMenuGrpItems-agentes">
-        <a href="#agentsBoard">⚙ AGENTES EXTRAS</a>
-        <a href="#opensquad" class="menu-reserved">⌘ OPENCLAW / OPENSQUAD <span class="menu-badge">SCALE</span></a>
+        <a href="#agentsBoard"><span class="vc-menu-ico">⚙</span><span class="vc-menu-lbl">AGENTES EXTRAS</span></a>
+        <a href="#opensquad" class="menu-reserved"><span class="vc-menu-ico">⌘</span><span class="vc-menu-lbl">OPENCLAW / OPENSQUAD</span> <span class="menu-badge">SCALE</span></a>
       </div>
     </div>
 
     <div class="vc-menu-grp">
       <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('roadmap')">
-        <span>ROADMAP</span>
+        <span class="vc-menu-ico">◇</span>
+        <span class="vc-menu-lbl">ROADMAP</span>
         <span class="vc-menu-grp-chevron" id="vcMenuGrpChev-roadmap">▾</span>
       </button>
       <div class="vc-menu-grp-items" id="vcMenuGrpItems-roadmap">
-        <a href="#v10">◇ V10 ENTERPRISE</a>
+        <a href="#v10"><span class="vc-menu-ico">◇</span><span class="vc-menu-lbl">V10 ENTERPRISE</span></a>
       </div>
     </div>
 
     <div class="vc-sidebar-divider"></div>
 
     <button id="vcTutMenuBtn" class="vc-tut-menu-btn" type="button" onclick="window.vcToggleTutorialMenu()">
-      <span>🪐 Tutoriais</span>
+      <span class="vc-menu-ico">🪐</span>
+      <span class="vc-menu-lbl">Tutoriais</span>
       <span id="vcTutChevron" class="vc-tut-chevron">▾</span>
     </button>
 
     <div id="vcTutPanel" class="vc-tut-panel">
       <a href="#" class="vc-tut-item" onclick="window.vcStartTutorial(); return false;">
-        <span>🌟 Geral</span>
+        <span class="vc-menu-ico">🌟</span><span class="vc-menu-lbl">Geral</span>
       </a>
       <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('agent'); return false;">
-        <span>🖥 Agent local</span>
+        <span class="vc-menu-ico">🖥</span><span class="vc-menu-lbl">Agent local</span>
       </a>
       <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('mission'); return false;">
-        <span>◎ Mission control</span>
+        <span class="vc-menu-ico">◎</span><span class="vc-menu-lbl">Mission control</span>
       </a>
       <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('sf'); return false;">
-        <span>◈ Software factory</span>
+        <span class="vc-menu-ico">◈</span><span class="vc-menu-lbl">Software factory</span>
       </a>
       <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('passgold'); return false;">
-        <span>🏅 Pass gold</span>
+        <span class="vc-menu-ico">🏅</span><span class="vc-menu-lbl">Pass gold</span>
       </a>
       <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('agents'); return false;">
-        <span>🤖 Agentes extras</span>
+        <span class="vc-menu-ico">🤖</span><span class="vc-menu-lbl">Agentes extras</span>
       </a>
       <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('github'); return false;">
-        <span>⌬ GitHub Agent</span>
+        <span class="vc-menu-ico">⌬</span><span class="vc-menu-lbl">GitHub Agent</span>
       </a>
       <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('tools'); return false;">
-        <span>▣ Tools</span>
+        <span class="vc-menu-ico">▣</span><span class="vc-menu-lbl">Tools</span>
       </a>
       <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('metrics'); return false;">
-        <span>▥ Métricas</span>
+        <span class="vc-menu-ico">▥</span><span class="vc-menu-lbl">Métricas</span>
       </a>
     </div>
   </nav>
