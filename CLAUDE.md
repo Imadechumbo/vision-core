@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-06-27 (§205)
+## Documento central do projeto | Atualizado: 2026-07-04 (§206)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -50,7 +50,7 @@
 - Mission: `/api/copilot`, `/api/run-live` (com quota FREE enforced)
 - Quota: `/api/mission/quota` — FREE = 5 missões/mês, bloqueia com 429
 - Vault: `/api/vault/snapshot`, `/api/vault/snapshots`, `/api/vault/rollback/:id`
-- SF: `/api/sf/gold-gate` + 8 módulos via `callLLM()` (OpenAI→Anthropic→Groq→DeepSeek→Gemini)
+- SF: `/api/sf/gold-gate` + 8 módulos via `callLLM()` (OpenRouter→Anthropic→Groq→DeepSeek→Gemini→Cerebras — corrigido no §206; `OPENAI_API_KEY` nunca existiu em produção, a menção anterior a "OpenAI" nesta linha estava desatualizada)
 - Billing: `/api/billing/status` (plano real do JWT), Stripe webhook
 - DORA metrics reais via vault + `data/deploy-log.json`
 - Architect: `/api/architect/interpret` — LLM_REAL, não BLOQUEADA
@@ -169,8 +169,11 @@ GITHUB_CLIENT_ID=Ov23li2yBM5CMJzteH6u
 GITHUB_CLIENT_SECRET=d92d162926e24437dbb8ef97ee21a7a3c135fa46
 OAUTH_REDIRECT_BASE=https://visioncore-api-gateway.weiganlight.workers.dev
 FRONTEND_URL=https://visioncoreai.pages.dev
-FREE_MISSION_LIMIT=5
+FREE_MISSION_LIMIT=5          # ausente no ambiente real — default hardcoded '5' em server.js:1257/1275, sem risco
+PROVIDER_VAULT_SECRET=(configurado no §206, valor não documentado aqui por segurança)
 ```
+
+**Nota §206:** as 27 env vars reais do ambiente (incluindo chaves de LLM/OAuth/Stripe/Hotmart) foram capturadas e migradas integralmente para o ambiente recriado — não estão nesta lista por serem segredos; ver §206 no histórico abaixo para a lista completa de *nomes* (sem valores).
 
 ---
 
@@ -178,6 +181,7 @@ FREE_MISSION_LIMIT=5
 
 | § | O que foi feito | Tag | HEAD |
 |---|----------------|-----|------|
+| §206 | **Recriação completa do EB — ambiente preso em CREATE_FAILED (Launch Configuration).** Causa raiz confirmada nos eventos: `"The Launch Configuration creation operation is not available in your account. Use launch templates..."` — restrição de conta AWS (contas novas não permitem mais Launch Configuration clássica; plataforma Node.js 20/6.11.1 ainda dependia dela para o tier SingleInstance). Fix: (1) capturadas as 27 env vars reais via `describe-configuration-settings --no-verify-ssl` antes de qualquer ação destrutiva, salvas fora do git; (2) `terminate-environment` do ambiente antigo, confirmado `Terminated`; (3) `create-environment` novo com plataforma **Node.js 24 running on 64bit Amazon Linux 2023 / 6.11.3** (Launch Template — sem repetir o erro), mesmo tier SingleInstance/t3.micro/IAM roles, as 27 env vars reaplicadas + `PROVIDER_VAULT_SECRET` novo (`openssl rand -hex 32`, valor nunca exposto no chat); (4) ambiente subiu `Ready/Green` com o **mesmo CNAME** de antes (`vision-core-prod.eba-pdk6anxy...`) — zero mudança em `OAUTH_REDIRECT_BASE`/`FRONTEND_URL`; (5) `create-environment` só sobe a Sample App do AWS — deploy real do `server.js` atual + os 2 arquivos novos do AI Provider Vault (`provider-vault-crypto.js`, `provider-vault-routing.js`, ausentes do último zip local `v5.9.61-s193`) feito via `_deploy_eb_recreate.py` (script novo, mesmo padrão do `_deploy191b_eb.py`). Confirmado em produção: `/api/health` com `node_version:"v24.18.0"`, `/api/providers/list` respondendo `ok:true`. Correção de doc feita no mesmo commit: a linha de `callLLM()` acima ("O QUE ESTÁ IMPLEMENTADO") citava fallback "OpenAI→Anthropic→..." — `OPENAI_API_KEY` nunca existiu em produção (confirmado pela captura), corrigido para a ordem real (OpenRouter→Anthropic→Groq→DeepSeek→Gemini→Cerebras). Zero perda de credencial. | - | - |
 | §83-§87 | Backend fakes eliminados, vault real, callLLM multi-provider. Botões fake removidos (20 el.), Arquiteto/Billing reais, OAuth "Em breve". CF Pages ao vivo. | s87-done | 6006dc9 |
 | §88-§90 | OAuth Google + GitHub real. Tutorial 13 passos + quota FREE + SF landing. Mascote animado + passo PASS GOLD. | s90-done | 4484d74 |
 | §91-§97 | Balão tutorial: mascote inline → top-right → 36px. Fundo #000000 preto puro. positionBalloon viewport-safe. Typewriter. | s97-done | - |
