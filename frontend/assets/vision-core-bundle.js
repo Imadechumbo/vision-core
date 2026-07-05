@@ -11292,4 +11292,20 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       if (chevron) chevron.classList.add('open');
     }
   };
+
+  // Fase 1 — limpeza de menu: toggle dos grupos colapsaveis da sidebar
+  // (mesmo padrao do vcToggleTutorialMenu acima, generalizado por id de grupo)
+  window.vcToggleMenuGroup = function(groupId) {
+    var items = document.getElementById('vcMenuGrpItems-' + groupId);
+    var chev  = document.getElementById('vcMenuGrpChev-' + groupId);
+    if (!items) return;
+    var isOpen = items.classList.contains('open');
+    if (isOpen) {
+      items.classList.remove('open');
+      if (chev) chev.classList.remove('open');
+    } else {
+      items.classList.add('open');
+      if (chev) chev.classList.add('open');
+    }
+  };
 })();

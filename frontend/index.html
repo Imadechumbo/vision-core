@@ -142,6 +142,14 @@
 .vc-tut-item:hover{background:rgba(99,102,241,.12);color:#fff}
 .vc-tut-item-disabled{opacity:.5;cursor:not-allowed;pointer-events:none}
 .vc-tut-soon{font-size:9px;font-weight:700;background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44;padding:1px 6px;border-radius:3px;text-transform:uppercase}
+/* Fase 1 — grupos colapsaveis do menu lateral (mesmo padrao do accordion de Tutoriais acima) */
+.vc-menu-grp{border-top:1px solid rgba(255,255,255,.06);margin-top:4px;padding-top:4px}
+.vc-menu-grp-lbl{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;color:#8b949e;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:6px 14px;cursor:pointer;text-align:left}
+.vc-menu-grp-lbl:hover{background:rgba(167,139,250,.08);color:#a78bfa}
+.vc-menu-grp-chevron{font-size:10px;transition:transform .2s}
+.vc-menu-grp-chevron.open{transform:rotate(180deg)}
+.vc-menu-grp-items{display:none;flex-direction:column}
+.vc-menu-grp-items.open{display:flex}
 /* §98-D: badge de agente especializado no chat */
 .vc-agent-badge{display:inline-block;font-size:10px;font-weight:700;background:#6366f122;color:#a5b4fc;border:1px solid #6366f144;padding:2px 8px;border-radius:10px;margin-bottom:4px}
 </style>
@@ -193,22 +201,74 @@
       <button class="vc-sf-sidebar-link" type="button" data-open-sf-page aria-label="Abrir Software Factory Builder">◈ SOFTWARE FACTORY</button>
       <button class="vc-sf-sidebar-link" type="button" id="vcOpenDryRunPanelBtn" aria-label="Abrir Dry-Run Real em repositório externo">🔬 DRY-RUN EXTERNO</button>
       <a class="active" href="#mission">◎ MISSION CONTROL</a>
-      <a href="#timeline">⌁ MISSION TIMELINE</a>
-      <a href="#runtime">⌁ EXECUTION MONITOR</a>
-      <a href="#hermes">☷ DIAGNOSTICS / HERMES</a>
-      <a href="#score">☑ VALIDATION / SDDF</a>
-      <a href="#diff">☷ DIFF PREVIEW</a>
-      <a href="#vault">⌂ VAULT / ROLLBACK</a>
-      <a href="#memory">▤ MEMORY / OBSIDIAN</a>
-      <a href="#opensquad" class="menu-reserved">⌘ OPENCLAW / OPENSQUAD <span class="menu-badge">SCALE</span></a>
-      <a href="#osint">◇ OSINT DOCKER</a>
-      <a href="#githubPanel">⌬ GITHUB / PR REAL</a>
-      <a href="#saasAuth">◉ SAAS / PLANOS</a>
-      <a href="#v10">◇ V10 ENTERPRISE</a>
-      <a href="#aiApiVault">AI API VAULT</a>
-      <a href="#marketplace">▣ TOOLS MARKETPLACE</a>
-      <a href="#metricsBoard">▥ MÉTRICAS</a>
-      <a href="#agentsBoard">⚙ AGENTES EXTRAS</a>
+      <a href="#marketplace">◇ CONECTORES EXTERNOS</a>
+
+      <div class="vc-menu-grp">
+        <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('qualidade')">
+          <span>QUALIDADE</span>
+          <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-qualidade">▾</span>
+        </button>
+        <div class="vc-menu-grp-items open" id="vcMenuGrpItems-qualidade">
+          <a href="#hermes">☷ DIAGNOSTICS / HERMES</a>
+          <a href="#diff">☷ DIFF PREVIEW</a>
+        </div>
+      </div>
+
+      <div class="vc-menu-grp">
+        <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('monitoramento')">
+          <span>MONITORAMENTO</span>
+          <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-monitoramento">▾</span>
+        </button>
+        <div class="vc-menu-grp-items open" id="vcMenuGrpItems-monitoramento">
+          <a href="#timeline">⌁ MISSION TIMELINE</a>
+          <a href="#runtime">⌁ EXECUTION MONITOR</a>
+          <a href="#metricsBoard">▥ MÉTRICAS</a>
+        </div>
+      </div>
+
+      <div class="vc-menu-grp">
+        <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('dados')">
+          <span>DADOS</span>
+          <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-dados">▾</span>
+        </button>
+        <div class="vc-menu-grp-items open" id="vcMenuGrpItems-dados">
+          <a href="#vault">⌂ VAULT / ROLLBACK</a>
+          <a href="#memory">▤ MEMORY / OBSIDIAN</a>
+          <a href="#aiApiVault">AI API VAULT</a>
+        </div>
+      </div>
+
+      <div class="vc-menu-grp">
+        <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('produto')">
+          <span>PRODUTO</span>
+          <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-produto">▾</span>
+        </button>
+        <div class="vc-menu-grp-items open" id="vcMenuGrpItems-produto">
+          <a href="#githubPanel">⌬ GITHUB / PR REAL</a>
+          <a href="#saasAuth">◉ SAAS / PLANOS</a>
+        </div>
+      </div>
+
+      <div class="vc-menu-grp">
+        <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('agentes')">
+          <span>AGENTES</span>
+          <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-agentes">▾</span>
+        </button>
+        <div class="vc-menu-grp-items open" id="vcMenuGrpItems-agentes">
+          <a href="#agentsBoard">⚙ AGENTES EXTRAS</a>
+          <a href="#opensquad" class="menu-reserved">⌘ OPENCLAW / OPENSQUAD <span class="menu-badge">SCALE</span></a>
+        </div>
+      </div>
+
+      <div class="vc-menu-grp">
+        <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('roadmap')">
+          <span>ROADMAP</span>
+          <span class="vc-menu-grp-chevron" id="vcMenuGrpChev-roadmap">▾</span>
+        </button>
+        <div class="vc-menu-grp-items" id="vcMenuGrpItems-roadmap">
+          <a href="#v10">◇ V10 ENTERPRISE</a>
+        </div>
+      </div>
 
       <div class="vc-sidebar-divider"></div>
 
