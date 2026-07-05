@@ -633,3 +633,5 @@ Local dos arquivos fonte: `frontend/about.html` e `frontend/landing.html` (HTML 
 ## NOTA TÉCNICA — RUÍDO DE CRLF/LF NO GIT DIFF
 
 `git status` mostra ~1580 arquivos "modified" sem mudança real — LF no git, CRLF na working tree (core.autocrlf inconsistente). Pré-existente, não introduzido recentemente. Não é prioridade corrigir (raio de explosão de .gitattributes alto para benefício cosmético).
+
+**2026-07-04:** os 211 commits acumulados desde 2026-06-19 (fast-forward puro, zero divergência) foram sincronizados com `origin/main`, incluindo a remoção de `backend/.env` do tracking (era placeholder de dev, não segredo real, mas estava commitado por engano).
