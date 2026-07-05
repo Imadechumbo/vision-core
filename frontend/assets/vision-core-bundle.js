@@ -8967,6 +8967,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     // Sub-passo 3.2a: expõe pro STEPS_SF2 (_sfChatOnEnter) e pros botões da
     // aba dentro de #mission
     window.setCentralMode = setCentralMode;
+    // Sub-passo 3.2c: expõe pros testes (chip e palavra-chave chamam a mesma
+    // função internamente — não há necessidade de simular clique/digitação
+    // pra provar isso, mas expor ajuda testes futuros a invocar diretamente)
+    window.triggerGenCard = triggerGenCard;
+    window.matchGenKeyword = matchGenKeyword;
     var sfPage = document.getElementById('vcSoftwareFactoryPage');
     if (!sfPage) return;
 
@@ -9921,15 +9926,259 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       .catch(function() { return ''; });
     }
 
+    // ── Sub-passo 3.2c — geradores I/J/K/M/N/O como cards de chat ──────────
+    // Substitui o reskin visual do a43e0663 (painéis fixos em #projectBuilder):
+    // os 6 geradores agora são invocados de dentro do chat (chip explícito OU
+    // palavra-chave reconhecida no texto digitado) e o resultado aparece como
+    // card de resposta do assistente em #vcSfChatHistory. As funções build*()/
+    // render*() originais continuam INTACTAS — só ganham um novo chamador.
+    var _awaitingWorkerReport = false; // true = a próxima mensagem do usuário é o texto colado do relatório (gerador N), não uma intenção nova
+
+    var GEN_TRIGGERS = {
+      mission_composer: {
+        title: '📝 Prompt de Missão',
+        render: function() { renderMissionPrompt(); return mcState.generatedPrompt; },
+        change: {
+          label: 'modo', get: function() { return mcState.selectedOutputMode; },
+          set: function(v) { mcState.selectedOutputMode = v; },
+          options: function() {
+            var mc = getMissionComposerRegistry();
+            return mc ? mc.output_modes.map(function(m) { return { id: m.id, label: m.label }; }) : [];
+          }
+        }
+      },
+      worker_handoff: {
+        title: '📦 Pacote de Handoff',
+        render: function() { renderWorkerHandoffPackage(); return handoffState.generatedPackage; },
+        change: {
+          label: 'alvo', get: function() { return handoffState.selectedTarget; },
+          set: function(v) { handoffState.selectedTarget = v; },
+          options: function() {
+            var wh = getWorkerHandoffRegistry();
+            return wh ? wh.worker_profiles.map(function(w) { return { id: w.id, label: w.label }; }) : [];
+          }
+        }
+      },
+      export_preview: {
+        title: '👁 Export Preview',
+        render: function() { renderProjectExportPreview(); return exportPreviewState.generatedPreview; },
+        change: {
+          label: 'modo', get: function() { return exportPreviewState.selectedMode; },
+          set: function(v) { exportPreviewState.selectedMode = v; },
+          options: function() {
+            var ep = getExportPreviewRegistry();
+            return ep ? ep.preview_modes.map(function(m) { return { id: m.id, label: m.label }; }) : [];
+          }
+        }
+      },
+      real_file_command: {
+        title: '⚙ Comando Real',
+        render: function() { renderRealFileCommandPackage(); return realFileCommandState.generatedPackage; },
+        change: {
+          label: 'alvo', get: function() { return realFileCommandState.selectedWorker; },
+          set: function(v) { realFileCommandState.selectedWorker = v; },
+          options: function() {
+            var pkg = getRealFileCommandPackageRegistry();
+            return pkg ? pkg.external_worker_profiles.map(function(w) { return { id: w.id, label: w.label }; }) : [];
+          }
+        }
+      },
+      worker_receipt: {
+        title: '🧾 Recibo de Evidência',
+        needsReportText: true,
+        render: function() { analyzeWorkerEvidenceText(); renderWorkerEvidenceReceipt(); return workerResultReceiptState.generatedReceipt; },
+        change: {
+          label: 'modo', get: function() { return workerResultReceiptState.selectedMode; },
+          set: function(v) { workerResultReceiptState.selectedMode = v; },
+          options: function() {
+            var wrr = getWorkerResultReceiptRegistry();
+            return wrr ? wrr.review_modes.map(function(m) { return { id: m.id, label: m.label }; }) : [];
+          }
+        }
+      },
+      final_dashboard: {
+        title: '📊 Relatório Final',
+        render: function() {
+          return fetchRealBackendStatus().then(function() {
+            renderFinalProductReport();
+            return finalProductDashboardState.generatedReport;
+          });
+        },
+        change: {
+          label: 'decisão', get: function() { return finalProductDashboardState.selectedDecision; },
+          set: function(v) { finalProductDashboardState.selectedDecision = v; },
+          options: function() {
+            var fpd = getFinalProductDashboardRegistry();
+            return fpd ? fpd.decision_options.map(function(d) { return { id: d.id, label: d.label }; }) : [];
+          }
+        }
+      }
+    };
+
+    // Mapa de palavras-chave em português — cobre os termos mais naturais pra
+    // cada um dos 6 geradores. Primeira correspondência vence (ordem fixa).
+    var GEN_KEYWORDS = {
+      mission_composer:  ['prompt de missao', 'prompt de missão', 'compor missao', 'compor missão', 'montar o prompt', 'compositor de missao'],
+      worker_handoff:    ['handoff', 'pacote pro claude code', 'pacote para o claude code', 'pacote de entrega', 'entregar pro worker', 'entregar para o worker', 'pacote para o worker'],
+      export_preview:    ['preview de export', 'estrutura de pastas', 'arvore de arquivos', 'árvore de arquivos', 'lista de arquivos do projeto'],
+      real_file_command: ['comando real', 'comando de criacao', 'comando de criação', 'criar os arquivos de verdade', 'pacote de comando'],
+      worker_receipt:    ['recibo', 'relatorio do worker', 'relatório do worker', 'resultado do worker', 'analisar relatorio', 'analisar relatório'],
+      final_dashboard:   ['relatorio final', 'relatório final', 'painel final', 'dashboard final', 'relatorio do produto', 'relatório do produto']
+    };
+
+    function matchGenKeyword(text) {
+      var norm = text.toLowerCase();
+      var ids = Object.keys(GEN_KEYWORDS);
+      for (var i = 0; i < ids.length; i++) {
+        var kws = GEN_KEYWORDS[ids[i]];
+        for (var j = 0; j < kws.length; j++) {
+          if (norm.indexOf(kws[j]) !== -1) { return ids[i]; }
+        }
+      }
+      return null;
+    }
+
+    // Insere o card no stream do chat. Retorna a <textarea> do corpo — quem
+    // chamou usa essa referência pra atualizar o texto depois (caso async,
+    // ex: final_dashboard) ou pra regenerar no lugar via o controle "trocar".
+    function insertGenCard(genId, cfg, text) {
+      var hist = document.getElementById('vcSfChatHistory');
+      if (!hist) return null;
+
+      var wrap = document.createElement('div');
+      wrap.className = 'vc-sf-chat-msg assistant';
+
+      var card = document.createElement('div');
+      card.className = 'vc-gen-card';
+      card.setAttribute('data-gen-id', genId);
+
+      var header = document.createElement('div');
+      header.className = 'vc-gen-card-header';
+      var title = document.createElement('span');
+      title.className = 'vc-gen-card-title';
+      title.textContent = cfg.title;
+      var copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'vc-gen-card-copy';
+      copyBtn.textContent = '⎘ Copiar';
+      header.appendChild(title);
+      header.appendChild(copyBtn);
+
+      var body = document.createElement('textarea');
+      body.className = 'vc-gen-card-body';
+      body.readOnly = true;
+      body.value = text || '';
+
+      card.appendChild(header);
+      card.appendChild(body);
+
+      if (cfg.change) {
+        var footer = document.createElement('div');
+        footer.className = 'vc-gen-card-footer';
+        footer.appendChild(document.createTextNode('trocar ' + cfg.change.label + ':'));
+        var select = document.createElement('select');
+        select.className = 'vc-gen-card-change-select';
+        (cfg.change.options() || []).forEach(function(opt) {
+          var o = document.createElement('option');
+          o.value = opt.id;
+          o.textContent = opt.label;
+          if (opt.id === cfg.change.get()) { o.selected = true; }
+          select.appendChild(o);
+        });
+        select.addEventListener('change', function() {
+          // Sub-passo 3.2c: regenera o MESMO card no lugar — nunca duplica
+          // outro card novo no stream.
+          cfg.change.set(select.value);
+          var result = cfg.render();
+          if (result && typeof result.then === 'function') {
+            body.value = '⏳ Atualizando...';
+            result.then(function(newText) { body.value = newText || ''; });
+          } else {
+            body.value = result || '';
+          }
+        });
+        footer.appendChild(select);
+        card.appendChild(footer);
+      }
+
+      copyBtn.addEventListener('click', function() {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(body.value || '').then(function() {
+            copyBtn.textContent = '✓ Copiado';
+            setTimeout(function() { copyBtn.textContent = '⎘ Copiar'; }, 2000);
+          });
+        }
+      });
+
+      wrap.appendChild(card);
+      hist.appendChild(wrap);
+      hist.scrollTop = hist.scrollHeight;
+      return body;
+    }
+
+    function renderGenCard(genId) {
+      var cfg = GEN_TRIGGERS[genId];
+      if (!cfg) return;
+      var result = cfg.render();
+      if (result && typeof result.then === 'function') {
+        var body = insertGenCard(genId, cfg, '⏳ Consultando backend...');
+        result.then(function(text) { if (body) body.value = text || ''; });
+        return;
+      }
+      insertGenCard(genId, cfg, result);
+    }
+
+    // Função de trigger única — chip e palavra-chave chamam SEMPRE esta,
+    // nunca um caminho duplicado. `reportText` só é usado pelo gerador N
+    // (Recibo), no turno seguinte à pergunta de follow-up.
+    function triggerGenCard(genId, reportText) {
+      var cfg = GEN_TRIGGERS[genId];
+      if (!cfg) return;
+
+      if (cfg.needsReportText && typeof reportText !== 'string') {
+        _awaitingWorkerReport = true;
+        addSfChatMsg('assistant', '📋 Cole o relatório do worker aqui para eu gerar o recibo de evidência.');
+        return;
+      }
+      if (cfg.needsReportText) {
+        var reportInput = document.getElementById('vcWorkerReportInput');
+        if (reportInput) { reportInput.value = reportText; }
+      }
+
+      renderGenCard(genId);
+    }
+
+    function initSfGenChips() {
+      var chips = document.querySelectorAll('#vcSfGenChips [data-gen]');
+      chips.forEach(function(chip) {
+        chip.addEventListener('click', function() {
+          addSfChatMsg('user', chip.textContent.trim());
+          triggerGenCard(chip.getAttribute('data-gen'));
+        });
+      });
+    }
+
     function handleSfSend() {
       var inp = document.getElementById('vcSfChatInput');
       var desc = inp ? inp.value.trim() : '';
       if (!desc) return;
-      var url = extractUrl(desc);
-      var autoPilotOn = isSfAutoPilotMode(); // §166: usa aba ativa, não toggle
 
       addSfChatMsg('user', desc);
       if (inp) { inp.value = ''; inp.style.height = 'auto'; }
+
+      // Sub-passo 3.2c: follow-up do gerador N tem prioridade — o texto
+      // colado é conteúdo do relatório, não uma nova intenção a rotear.
+      if (_awaitingWorkerReport) {
+        _awaitingWorkerReport = false;
+        triggerGenCard('worker_receipt', desc);
+        return;
+      }
+
+      var genMatch = matchGenKeyword(desc);
+      if (genMatch) { triggerGenCard(genMatch); return; }
+
+      var url = extractUrl(desc);
+      var autoPilotOn = isSfAutoPilotMode(); // §166: usa aba ativa, não toggle
 
       if (url) {
         var hint = addSfChatMsg('assistant', '🔍 Analisando ' + url + '...');
@@ -9969,6 +10218,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     initSfAutoPilot(); // §161
     initSfModeTabs();  // §163
     initSfExampleChips(); // §163
+    initSfGenChips(); // Sub-passo 3.2c
     initSfSimpleChat(); // §164
 
     // §162 — Tutorial SF (❓ TUTORIAL button → sf2)
