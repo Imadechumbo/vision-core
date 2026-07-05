@@ -90,11 +90,15 @@ test('AUTO-PILOT controls remain functional inside the embedded pane (chat input
   await expect(page.locator('#vcSfSendBtn')).toBeVisible();
 });
 
-test('T3 (sf2) tutorial: the 5 retargeted points position correctly on the embedded pane', async ({ page }) => {
+test('T3 (sf2) tutorial: all 6 steps position correctly, chips become genuinely visible, tab restores afterward (Sub-passo 3.2f)', async ({ page }) => {
   await page.evaluate(() => window.vcStartSectionTutorial('sf2'));
   await expect(page.locator('#vcTutorialOverlay')).toBeVisible({ timeout: 5_000 });
 
-  // Step 0: #vcSfHomeControl, via the new _sfChatOnEnter()
+  // Sanity: tour starts from the real default — AUTO-PILOT active, chips hidden
+  await expect(page.locator('#vcSfTabAutopilot')).toHaveClass(/\bactive\b/);
+  await expect(page.locator('#vcSfExamples')).toBeHidden();
+
+  // Step 0: #vcSfHomeControl, via _sfChatOnEnter()
   await expect(page.locator('#mission')).toHaveClass(/\bsf-mode\b/);
   const step0Box = await page.locator('#vcSfHomeControl').boundingBox();
   expect(step0Box.height).toBeGreaterThan(200);
@@ -104,24 +108,53 @@ test('T3 (sf2) tutorial: the 5 retargeted points position correctly on the embed
   await expect(page.locator('#vcTutorialTitle')).toHaveText('✍️ Descreva seu projeto aqui');
   await expect(page.locator('#vcSfChatInput')).toBeInViewport();
 
-  // Steps 2-3 are the KNOWN PENDING points (old tabs in the legacy page) — skip past them
+  // Step 2 (Sub-passo 3.2f): consolidates the old PENDING "AUTO-PILOT tab"/
+  // "MODO AVANÇADO tab" steps — #vcSfTabAutopilot/#vcSfTabAdvanced never
+  // left the legacy page header, no 1:1 equivalent in the embedded UI.
+  // #vcSfGenChips (always visible regardless of mode) is the real
+  // functional equivalent of the old "MODO AVANÇADO" (manual control).
   await page.click('#vcTutorialNext');
-  await page.click('#vcTutorialNext');
+  await expect(page.locator('#vcTutorialTitle')).toHaveText('🚀 Automático por padrão, manual quando você quiser');
+  await expect(page.locator('#vcSfGenChips')).toBeInViewport();
 
-  // Step 4 (#vcSfExamples) is a pre-existing bug confirmed present on production
-  // too (chips hidden by default regardless of mode) — not in scope here, skip assertion.
+  // Step 3: #vcSfExamples — pre-existing production bug fixed here.
+  // _sfExamplesOnEnter() forces MODO AVANÇADO active (real .click(), same
+  // listener a user would trigger) so the chips are genuinely visible for
+  // the spotlight, not just structurally present.
   await page.click('#vcTutorialNext');
+  await expect(page.locator('#vcTutorialTitle')).toHaveText('📋 Chips de exemplo — clique para preencher');
+  await expect(page.locator('#vcSfTabAdvanced')).toHaveClass(/\bactive\b/);
+  await expect(page.locator('#vcSfExamples')).toBeVisible();
+  await expect(page.locator('#vcSfExamples')).toBeInViewport();
 
-  // Step 5: #vcSfSendBtn — advance from step 4. Regression net for the
-  // scroll-into-view fix (this step previously measured #mission thousands
-  // of pixels off-screen after steps 2-3's legacy full-page overlay closed
-  // without re-scrolling).
+  // Step 4: #vcSfSendBtn — _sfRestoreTabOnEnter() undoes the forced switch:
+  // the tour must not leave the user stuck in a tab they didn't choose.
   await page.click('#vcTutorialNext');
   await expect(page.locator('#vcTutorialTitle')).toHaveText('↑ Enviar e ver resultado no chat');
   await expect(page.locator('#vcSfSendBtn')).toBeInViewport({ timeout: 5_000 });
+  await expect(page.locator('#vcSfTabAutopilot')).toHaveClass(/\bactive\b/);
+  await expect(page.locator('#vcSfExamples')).toBeHidden();
 
-  // Step 6: #vcSfChatInput again
+  // Step 5: #vcSfChatInput again
   await page.click('#vcTutorialNext');
   await expect(page.locator('#vcTutorialTitle')).toHaveText('✅ Pronto! Descreva e envie');
   await expect(page.locator('#vcSfChatInput')).toBeInViewport();
+});
+
+test('T3 (sf2) tutorial: does NOT restore the tab if the user had already switched to MODO AVANÇADO before starting the tour', async ({ page }) => {
+  // Simulate a user who had already manually switched tabs before opening the tour
+  await page.click('#vcMissionSfTab');
+  await page.evaluate(() => document.getElementById('vcSfTabAdvanced').click());
+  await expect(page.locator('#vcSfTabAdvanced')).toHaveClass(/\bactive\b/);
+
+  await page.evaluate(() => window.vcStartSectionTutorial('sf2'));
+  await expect(page.locator('#vcTutorialOverlay')).toBeVisible({ timeout: 5_000 });
+
+  await page.click('#vcTutorialNext'); // step 1
+  await page.click('#vcTutorialNext'); // step 2
+  await page.click('#vcTutorialNext'); // step 3 (chips) — already MODO AVANÇADO, no switch needed
+  await page.click('#vcTutorialNext'); // step 4 (restore point)
+
+  // The tour never switched the tab (it was already like this) — must not touch it either
+  await expect(page.locator('#vcSfTabAdvanced')).toHaveClass(/\bactive\b/);
 });

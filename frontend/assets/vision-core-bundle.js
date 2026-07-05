@@ -11226,19 +11226,62 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   // ── §162: TUTORIAL SF GUIA AUTO-PILOT (para leigos) ──
   // §167: STEPS_SF2 atualizado — targets para elementos visíveis na nova UI
   // Sub-passo 3.2a: 5 dos 7 pontos trocaram onEnter pra _sfChatOnEnter()
-  // (mesma razão do helper: alvo se moveu pra dentro de #mission). Os 2
-  // pontos que miram #vcSfTabAutopilot/#vcSfTabAdvanced ficam PENDENTES —
-  // esses elementos continuam na SF page legada (.vc-sf-page-header, nunca
-  // fizeram parte de #vcSfHomeControl), sem alvo novo definido ainda.
-  // Mantidos com o _sfOnEnter(null) antigo por ora: a spotlight ainda
-  // encontra os elementos corretamente (a página legada + seu header não
-  // foram tocados), mas isso produz uma transição visualmente estranha no
-  // meio do tour — passo 3/4 abrem a SF page cheia (overlay full-screen)
-  // enquanto os passos vizinhos (1,2,5,6,7) mostram o switcher embutido em
-  // #mission. Não é quebra funcional (getBoundingClientRect encontra os
-  // alvos), é um flicker de modo. Decisão de alvo definitivo pendente do
-  // Sub-passo 3.2e (se o conceito de aba AUTO-PILOT/MODO AVANÇADO separado
-  // ainda existir depois da consolidação).
+  // (mesma razão do helper: alvo se moveu pra dentro de #mission).
+  //
+  // Sub-passo 3.2f — fecha os 3 pontos que ficaram PENDENTES desde o 3.2a:
+  // 1) Os antigos passos "AUTO-PILOT tab"/"MODO AVANÇADO tab" apontavam pra
+  //    #vcSfTabAutopilot/#vcSfTabAdvanced — elementos que nunca saíram da SF
+  //    page legada (.vc-sf-page-header) e não têm equivalente 1:1 na nova UI
+  //    embutida em #mission. Consolidados num ÚNICO passo novo, apontando
+  //    pra #vcSfGenChips: não fazia sentido manter 2 passos separados
+  //    mirando o MESMO botão só porque o conceito antigo tinha 2 abas — os 6
+  //    chips de geração (#vcSfGenChips, sempre visíveis independente de
+  //    modo) são o real equivalente funcional do antigo "MODO AVANÇADO"
+  //    (controle manual, um pacote por vez); AUTO-PILOT continua sendo o
+  //    comportamento padrão ao enviar texto livre, já coberto pelos passos
+  //    anteriores.
+  // 2) #vcSfExamples (chips de exemplo) tem um bug pré-existente, confirmado
+  //    em produção independente desta reforma: initSfModeTabs() esconde
+  //    esses chips por padrão (§171 — só aparecem com a aba MODO AVANÇADO
+  //    ativa), mas nada no fluxo alcançável hoje ativa essa aba. _sfExamplesOnEnter()
+  //    força a aba MODO AVANÇADO (via .click() real em #vcSfTabAdvanced —
+  //    dispara o mesmo listener de initSfModeTabs(), não duplica lógica)
+  //    só pra esse passo, garantindo que o spotlight encontre um elemento
+  //    visível.
+  // 3) Efeito colateral do fix acima: a troca de aba persistiria depois do
+  //    tour, deixando o usuário "preso" em MODO AVANÇADO mesmo que tivesse
+  //    começado (e devesse terminar) em AUTO-PILOT. _sfExamplesOnEnter()
+  //    grava se a aba JÁ estava em MODO AVANÇADO antes de forçar (não mexe
+  //    se sim — não é o tour que fez isso, não é o tour que deve desfazer);
+  //    _sfRestoreTabOnEnter() (passo seguinte, "Enviar") restaura AUTO-PILOT
+  //    só se foi o próprio tour quem trocou.
+  //    Limitação aceita, não corrigida: se o usuário fechar o tour bem no
+  //    meio do passo dos chips (sem avançar pro passo seguinte), a
+  //    restauração não roda — não há hook de "onExit" por passo no
+  //    framework de tutorial hoje (só onEnter), e criar um exigiria mudar
+  //    closeTutorial() genérico, compartilhado por TODOS os tutoriais, risco
+  //    desproporcional a esse ajuste pontual. Fica documentado aqui como
+  //    aceito, não como esquecido.
+  var _sfPreExamplesTabWasAdvanced = false;
+  var _sfExamplesOnEnter = function() {
+    return function() {
+      if (typeof window.setCentralMode === 'function') window.setCentralMode('sf');
+      var tabAdv = document.getElementById('vcSfTabAdvanced');
+      if (tabAdv) {
+        _sfPreExamplesTabWasAdvanced = tabAdv.classList.contains('active');
+        if (!_sfPreExamplesTabWasAdvanced) { tabAdv.click(); }
+      }
+    };
+  };
+  var _sfRestoreTabOnEnter = function() {
+    return function() {
+      if (typeof window.setCentralMode === 'function') window.setCentralMode('sf');
+      if (!_sfPreExamplesTabWasAdvanced) {
+        var tabAuto = document.getElementById('vcSfTabAutopilot');
+        if (tabAuto && !tabAuto.classList.contains('active')) { tabAuto.click(); }
+      }
+    };
+  };
   var STEPS_SF2 = [
     { title: '🏭 Software Factory — seu assistente de projetos',
       text: 'Descreva qualquer ideia de projeto em linguagem simples. O Arquiteto analisa e gera tudo automaticamente — stack, arquivos, missão e pacote de deploy.',
@@ -11246,21 +11289,15 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     { title: '✍️ Descreva seu projeto aqui',
       text: 'Digite em linguagem livre: "quero um app de delivery", "uma API para gerenciar estoque", ou cole uma URL para o Arquiteto analisar o site de referência.',
       target: '#vcSfChatInput', pos: 'top', onEnter: _sfChatOnEnter() },
-    // PENDENTE (Sub-passo 3.2e) — #vcSfTabAutopilot vive na SF page legada,
-    // não em #vcSfHomeControl. Ver comentário acima.
-    { title: '🚀 Aba AUTO-PILOT — modo automático',
-      text: 'Com AUTO-PILOT ativo, ao enviar sua descrição o Arquiteto executa 7 módulos em sequência: analisa stack, gera blueprint, compõe missão SDDF e valida no Gold Gate.',
-      target: '#vcSfTabAutopilot', pos: 'bottom', onEnter: _sfOnEnter(null) },
-    // PENDENTE (Sub-passo 3.2e) — #vcSfTabAdvanced idem.
-    { title: '⚙ Aba MODO AVANÇADO — controle manual',
-      text: 'Com MODO AVANÇADO, o Arquiteto responde diretamente ao seu prompt. Use para ajustes específicos, perguntas técnicas ou para navegar pelos 9 módulos individualmente.',
-      target: '#vcSfTabAdvanced', pos: 'bottom', onEnter: _sfOnEnter(null) },
+    { title: '🚀 Automático por padrão, manual quando você quiser',
+      text: 'Por padrão, o Arquiteto roda tudo automaticamente (AUTO-PILOT) ao você enviar a descrição. Prefere controle manual? Use os chips abaixo para gerar cada pacote individualmente.',
+      target: '#vcSfGenChips', pos: 'top', onEnter: _sfChatOnEnter() },
     { title: '📋 Chips de exemplo — clique para preencher',
       text: 'Não sabe por onde começar? Clique em um dos exemplos abaixo do chat — o Arquiteto preenche a descrição automaticamente.',
-      target: '#vcSfExamples', pos: 'top', onEnter: _sfChatOnEnter() },
+      target: '#vcSfExamples', pos: 'top', onEnter: _sfExamplesOnEnter() },
     { title: '↑ Enviar e ver resultado no chat',
       text: 'Pressione Enter ou clique em ↑. No AUTO-PILOT, o Arquiteto anuncia o início e o resultado aparece no histórico do chat. No MODO AVANÇADO, responde diretamente.',
-      target: '#vcSfSendBtn', pos: 'top', onEnter: _sfChatOnEnter() },
+      target: '#vcSfSendBtn', pos: 'top', onEnter: _sfRestoreTabOnEnter() },
     { title: '✅ Pronto! Descreva e envie',
       text: 'Digite aqui embaixo e pressione ↑ ou Enter. O Arquiteto responde em segundos com análise completa, stack sugerida e pacote pronto para execução.',
       target: '#vcSfChatInput', pos: 'top', onEnter: _sfChatOnEnter() },
