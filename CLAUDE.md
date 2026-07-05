@@ -108,6 +108,27 @@ A camada que seria barata de portar (S3→OSS, já que o projeto não usa SDK da
 
 ---
 
+### INFRAESTRUTURA AWS CONSOLIDADA EM 2 AMBIENTES EFETIVOS — DECISÃO FECHADA
+
+**Decisão:** infraestrutura AWS consolidada em **2 ambientes efetivos**: `Technetgame-env-1` (produção do domínio technetgame.com.br) e `vision-core-prod` (backend do vision-core; frontend fica em `visioncoreai.pages.dev`, fora da AWS). `TNGH-BACKEND`, `Tngh-aws-final-v2-env` e `vision-core-staging` foram **encerrados em 2026-07-05** — os 3 eram ambientes de teste confirmados pelo usuário, causa raiz da cota de EIP esgotada (estava em 5/5, resolvida).
+
+**Verificação de segurança feita ANTES do encerramento (nenhum bloqueio encontrado):**
+1. **DNS de technetgame.com.br** — confirmado via API da Cloudflare (não só nslookup, que só mostra IPs de proxy): o domínio é custom domain do projeto Cloudflare Pages `technetgame-aws` (frontend), não um CNAME direto pra nenhum ambiente EB. Zona sem nenhuma Worker Route cadastrada. Alvo de deploy do backend confirmado via variável de repositório `AWS_EB_ENVIRONMENT` (valor efetivo lido via API do GitHub, não só texto do workflow) = `Technetgame-env-1`.
+2. **GitHub Actions (2 repos)** — busca de código exaustiva (`gh api search/code`) pelas 3 strings dos ambientes a encerrar, mais leitura completa dos workflows e scripts Python de deploy/rollback do `technetgamev2` (todos parametrizados por env var, nunca hardcoded pros 3 a encerrar) e dos 10 workflows do `vision-core`. Zero ocorrências ativas em workflow/CI/script automatizado.
+3. **Cloudflare Worker gateway do vision-core** — `wrangler.toml`/`src/index.js` apontam pra `vision-core-prod`; confirmado ao vivo comparando `/api/health` do Worker com `/api/health` direto do EB (resposta idêntica).
+
+**Captura de config feita ANTES do terminate** (mesmo padrão do §206 — `describe-configuration-settings --no-verify-ssl`, salvo fora do git): TNGH-BACKEND (0 env vars — ambiente nunca chegou a ser configurado de verdade, bate com `Health: Grey`), Tngh-aws-final-v2-env (22 vars, mesmas chaves de LLM providers de outros ambientes do projeto), vision-core-staging (5 vars, config básica). Nada único ou crítico encontrado — confirmado com o usuário antes do terminate.
+
+**Pós-encerramento confirmado:** cota de EIP caiu de 5/5 para **2/5**. `Technetgame-env-1` e `vision-core-prod` seguem `Ready` (Yellow e Green respectivamente — Yellow em Technetgame-env-1 já era o estado pré-existente, não é regressão da limpeza).
+
+**Nota de baixa prioridade, não bloqueante:** os 3 scripts PowerShell dormentes na raiz do repo vision-core (`fix-deploy.ps1`, `deploy-completo.ps1`, `corrigir-worker-deploy.ps1`) mencionam `tngh-aws-final-v2-env` como se fosse o backend do vision-core — relíquia de antes do backend ser renomeado para `vision-core-prod`, nunca chamados por nenhum workflow/CI/cron (só rodam se um humano executar manualmente). Candidatos a limpeza futura, não bloqueiam nada hoje.
+
+**Se esta decisão for revisitada no futuro:** o motivo precisa ser necessidade real de um ambiente de teste/staging separado — não criar de novo sem essa necessidade concreta, para não repetir o esgotamento de cota de EIP.
+
+**Nota separada, sinalizada mas não implementada:** seria útil criar um `CLAUDE.md` no repositório `technetgamev2` — não foi feito nesta sessão, é uma decisão de escopo separada.
+
+---
+
 ## STRESS TESTS — A CRIAR ANTES DOS TUTORIAIS
 
 | ST | O que valida | Status |
@@ -574,7 +595,7 @@ Estado pós §195: SF tem pré-pipeline real (Archivist + Hermes). Steps 1–7 a
 
 **Nota §121 → próxima sessão:** features visuais com overlay/tutorial que foram consertadas precisam de confirmação visual real em produção pelo humano antes de serem declaradas resolvidas — a sequência §120+§121 mostrou que "testes passando" não garantiu "funciona em produção" quando CSS e JS se contradizem.
 
-**Pequenos itens que sobraram, nenhum bloqueante:** (1) o boto3 continua bloqueado por certificado SSL na máquina Windows local (mesma limitação do §112 com `node-gyp`); (2) `server.js` retorna `version: "2.9.10-self-healing-config"` em `/api/health` — string hardcoded nunca atualizada. Nenhum desses afeta funcionalidade.
+**Pequenos itens que sobraram, nenhum bloqueante:** (1) o boto3 continua bloqueado por certificado SSL na máquina Windows local (mesma limitação do §112 com `node-gyp`); (2) `server.js` retorna `version: "2.9.10-self-healing-config"` em `/api/health` — string hardcoded nunca atualizada; (3) 3 scripts PowerShell dormentes na raiz do repo (`fix-deploy.ps1`, `deploy-completo.ps1`, `corrigir-worker-deploy.ps1`) mencionam `tngh-aws-final-v2-env` como se fosse o backend do vision-core — relíquia de antes do backend ser renomeado para `vision-core-prod`, nunca chamados por nenhum workflow/CI/cron (só rodam se um humano executar manualmente), candidatos a limpeza futura, não bloqueiam nada hoje. Nenhum desses afeta funcionalidade.
 
 ## ROADMAP A–F — STATUS: TODAS RESOLVIDAS OU RETIRADAS (write-up completo em `CLAUDE_HISTORY.md`)
 
