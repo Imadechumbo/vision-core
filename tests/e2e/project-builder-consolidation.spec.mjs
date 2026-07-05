@@ -33,6 +33,14 @@
  *    .vc-sf-module-panel{display:none!important} made them permanently
  *    inert regardless).
  *
+ * Sub-passo 3.2e follow-up (adjusted here, not re-described in full):
+ * Sections A/C (project type card, stack chips) relocated out of
+ * #projectBuilder into the "Ajustar Projeto Manualmente" drawer —
+ * openManualAdjustDrawer() below opens it via the real chat trigger before
+ * clicking those elements. Section L (Human Approval Gate, referenced in
+ * item 2 above) was fully removed, not relocated — replaced by a 1-step
+ * chat card, covered by human-approval-card.spec.mjs instead.
+ *
  * Alvo: https://visioncoreai.pages.dev (produção)
  * Run:  npx playwright test tests/e2e/project-builder-consolidation.spec.mjs
  */
@@ -49,6 +57,17 @@ async function openLegacyFullPage(page) {
   await page.evaluate(() => window.setSoftwareFactoryModule('project_builder'));
 }
 
+/** Sub-passo 3.2e: Sections A-D (project type card, stack chips, etc.)
+ *  moved out of #projectBuilder into the "Ajustar Projeto Manualmente"
+ *  drawer — real click targets now require that drawer to be open (it's
+ *  position:fixed and starts display:none). Real UI path: open the SF
+ *  chat pane, then its "🎛 Ajustar projeto manualmente" trigger chip. */
+async function openManualAdjustDrawer(page) {
+  await page.click('#vcMissionSfTab');
+  await page.click('#vcOpenManualAdjustDrawerBtn');
+  await page.waitForSelector('#vcManualAdjustDrawer.open', { timeout: 8_000 });
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto(BASE_URL);
 });
@@ -61,7 +80,11 @@ test('item 1: Agent Matrix removed, setting a mode via #agentsBoard is reflected
   await backendCard.locator('.vc-mode-btn[data-mode="on"]').click();
   await expect(backendCard.locator('.vc-mode-btn.active-on')).toBeVisible();
 
-  await openLegacyFullPage(page);
+  // Sub-passo 3.2e: Section A relocated to the manual-adjust drawer — no
+  // longer reachable (or needed) via the legacy full page for this click.
+  // #vcPreviewAgentsOn (Section F) still lives inside #projectBuilder, but
+  // text assertions don't require it to be visible.
+  await openManualAdjustDrawer(page);
   await page.locator('.vc-project-type-card[data-type-id="saas_fullstack"]').click();
 
   // Section F ("Resumo do Projeto") must reflect #agentsBoard's real state —
@@ -81,11 +104,9 @@ test('item 2: redundant context summaries trimmed to section-unique fields; F st
   await expect(page.locator('#vcExportSourceSummary .vc-export-source-item')).toHaveCount(1);
   await expect(page.locator('#vcExportSourceSummary')).toContainText('Handoff Target');
 
-  // Expand the engineer-only <details> to reach Section L
-  await page.evaluate(() => { document.querySelector('.vc-engineer-details').open = true; });
-  await expect(page.locator('#vcHumanSummaryGrid .vc-human-summary-card')).toHaveCount(3);
-  await expect(page.locator('#vcHumanSummaryGrid')).toContainText('Aprovação');
-  await expect(page.locator('#vcHumanSummaryGrid')).not.toContainText('Tipo de Projeto');
+  // Sub-passo 3.2e: Section L (with #vcHumanSummaryGrid) was fully removed,
+  // not just relocated — the engineer-only <details> it lived in is gone
+  // too. Its own coverage now lives in human-approval-card.spec.mjs.
 
   await expect(page.locator('#vcRealReadinessGrid .vc-real-readiness-card')).toHaveCount(3);
   await expect(page.locator('#vcRealReadinessGrid')).toContainText('Export Preview');
@@ -96,7 +117,8 @@ test('item 2: redundant context summaries trimmed to section-unique fields; F st
 });
 
 test('item 2 (bug fix): generated receipt/report text reflects real selections, not always "—"', async ({ page }) => {
-  await openLegacyFullPage(page);
+  // Sub-passo 3.2e: Sections A/C relocated to the manual-adjust drawer.
+  await openManualAdjustDrawer(page);
   await page.locator('.vc-project-type-card[data-type-id="saas_fullstack"]').click();
   await page.locator('.vc-stack-chip[data-stack-id="React"]').click();
 
@@ -109,6 +131,10 @@ test('item 2 (bug fix): generated receipt/report text reflects real selections, 
   // package text used to always show "Tipo: —, Stack: —" (getRealFileCommandContext
   // read pbState.selectedType/selectedStack, which never existed) regardless
   // of what was picked above. Generate it and confirm the real values appear.
+  // Close the manual-adjust drawer first — it's fixed/right-docked and would
+  // otherwise cover #vcGenerateCommandPkgBtn once the legacy page opens too.
+  await page.click('#vcCloseManualAdjustDrawerBtn');
+  await openLegacyFullPage(page);
   await page.click('#vcGenerateCommandPkgBtn');
   const pkgText = await page.locator('#vcRealCommandOutput').inputValue();
   expect(pkgText).not.toContain('Tipo de Projeto  : —');
@@ -128,9 +154,8 @@ test('item 3: authority grids consolidated — only #vcFinalAuthorityGrid (Secti
   await expect(page.locator('.vc-real-authority-card')).toHaveCount(3);
   await expect(page.locator('.vc-real-authority-grid')).toContainText('Worker Externo');
 
-  // L (inside the engineer-only <details>): fully replaced by note too
-  await page.evaluate(() => { document.querySelector('.vc-engineer-details').open = true; });
-  await expect(page.locator('.vc-human-lock-grid')).toHaveCount(0);
+  // Sub-passo 3.2e: Section L (with .vc-human-lock-grid) was fully removed,
+  // not just relocated — no <details> to expand anymore.
 
   // The anchor link target used by the notes must resolve to a real element
   const anchorTarget = await page.evaluate(() => !!document.getElementById('vcFinalAuthorityGrid'));

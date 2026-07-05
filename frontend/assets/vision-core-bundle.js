@@ -4099,13 +4099,17 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     }
   }
 
-  /* ── Human Approval Gate — local UI only ─────────────────────── */
-  /* No file creation. No write. No download. No export. No API.   */
-  /* No Blob. No URL.createObjectURL. In-memory state only.        */
-
+  /* ── Human Approval Gate — simplificado (Sub-passo 3.2e) ──────── */
+  /* Antes: checklist de 12 itens + grid de 12 locks + textarea de  */
+  /* recibo completo (removidos). A substância real das 12          */
+  /* confirmações (revisão dos artefatos + entendimento dos limites)*/
+  /* preservada numa única frase — não é rubber-stamp. O contrato   */
+  /* externo de isHumanApprovalGateReadyForCommand() é o MESMO (só  */
+  /* true após confirmação explícita) — único consumidor real:      */
+  /* gerador M ("⚙ Comando Real"), que lê esse status pro texto      */
+  /* "READY"/"BLOCKED" no pacote gerado; e o card "Relatório Final". */
   var humanApprovalState = {
-    checked:           {},
-    generatedReceipt:  ''
+    confirmed: false
   };
 
   function getHumanApprovalGateRegistry() {
@@ -4113,336 +4117,13 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     return (pb && pb.human_approval_gate) ? pb.human_approval_gate : null;
   }
 
-  function getHumanApprovalContext() {
-    // Sub-passo 3.2b: reescrito pra usar as MESMAS fontes corretas de F/K
-    // (getSelectedProjectContext/getSelectedTemplate/getSelectedAgentsForMission)
-    // — a versão anterior lia pbState.selectedType/selectedStack/selectedSize/
-    // activeAgents, propriedades que NUNCA existiram em pbState (shape real:
-    // selectedProjectType/selectedStacks/selectedProjectSize, sem activeAgents)
-    // e em pbTemplateState.selectedTemplate (shape real: selectedTemplateId).
-    // Sempre retornava '—'/0 — não só no resumo (removido, redundante com F),
-    // mas também no RECIBO GERADO (buildHumanApprovalReceipt usa ctx.type/
-    // ctx.stack/etc.), que mostrava sempre "—" independente do que foi
-    // selecionado. Confirmado lendo os dois usos antes de decidir o que
-    // manter — o recibo não é redundante e precisa do dado correto.
-    var psc  = getSelectedProjectContext();
-    var tplO = getSelectedTemplate();
-    var agts = getSelectedAgentsForMission();
-    var type   = psc.projectType ? psc.projectType.label : '—';
-    var stack  = psc.stack.length ? psc.stack.join(', ') : '—';
-    var size   = psc.projectSize ? psc.projectSize.label : '—';
-    var tpl    = tplO ? tplO.name : '—';
-    var agents = agts.on.length + agts.auto.length;
-
-    /* Derive folder/file counts from export preview if generated */
-    var folderCount = 6;
-    var fileCount   = 10;
-    var validCount  = 4;
-    var riskCount   = 3;
-    if (typeof exportPreviewState !== 'undefined' && exportPreviewState.generatedPreview) {
-      var lines = exportPreviewState.generatedPreview.split('\n');
-      var fc = lines.filter(function (l) { return l.indexOf('/') !== -1 && l.trim().slice(-1) === '/'; }).length;
-      var fl = lines.filter(function (l) { return l.indexOf('.') !== -1 && l.trim().slice(-1) !== '/'; }).length;
-      if (fc > 0) { folderCount = fc; }
-      if (fl > 0) { fileCount   = fl; }
-    }
-
-    return {
-      type:        type,
-      template:    tpl,
-      stack:       stack,
-      size:        size,
-      agentCount:  agents,
-      folderCount: folderCount,
-      fileCount:   fileCount,
-      validCount:  validCount,
-      riskCount:   riskCount
-    };
-  }
-
-  function toggleHumanAcknowledgement(ackId) {
-    humanApprovalState.checked[ackId] = !humanApprovalState.checked[ackId];
-    renderHumanApprovalChecklist();
-    _updateHumanGateProgress();
-  }
-
-  function resetHumanApprovalChecklist() {
-    humanApprovalState.checked = {};
-    humanApprovalState.generatedReceipt = '';
-    renderHumanApprovalChecklist();
-    _updateHumanGateProgress();
-    var output = document.getElementById('vcHumanReceiptOutput');
-    if (output) {
-      output.value = 'Clique em GERAR RECIBO LOCAL para gerar o recibo.';
-      output.className = 'vc-human-receipt-output empty';
-    }
-    var statusEl = document.getElementById('vcHumanCopyStatus');
-    if (statusEl) { statusEl.className = 'vc-human-copy-status'; }
-    var genBtn = document.getElementById('vcGenerateReceiptBtn');
-    if (genBtn) {
-      genBtn.textContent = '⬡ GERAR RECIBO LOCAL';
-      genBtn.style.borderColor = '';
-      genBtn.style.color = '';
-    }
-  }
-
   function areAllHumanAcknowledgementsChecked() {
-    var hag = getHumanApprovalGateRegistry();
-    if (!hag) { return false; }
-    return hag.required_acknowledgements.every(function (a) {
-      return !!humanApprovalState.checked[a.id];
-    });
+    return !!(typeof humanApprovalState !== 'undefined' && humanApprovalState.confirmed);
   }
 
-  function _updateHumanGateProgress() {
-    var hag = getHumanApprovalGateRegistry();
-    if (!hag) { return; }
-    var total   = hag.required_acknowledgements.length;
-    var checked = hag.required_acknowledgements.filter(function (a) {
-      return !!humanApprovalState.checked[a.id];
-    }).length;
-    var allDone = checked === total;
-
-    /* Summary approval status */
-    var approvalEl = document.getElementById('vcHagApprovalStatus');
-    if (approvalEl) { approvalEl.textContent = allDone ? 'PRONTO' : (checked + '/' + total + ' pendentes'); }
-
-    /* Counter + gate badge in checklist area */
-    var countEl = document.getElementById('vcHagAckCount');
-    if (countEl) { countEl.textContent = checked; }
-    var gateEl = document.getElementById('vcHagGateStatus');
-    if (gateEl) {
-      gateEl.textContent = allDone ? 'PRONTO' : 'INCOMPLETO';
-      gateEl.className   = 'vc-human-status ' + (allDone ? 'ready' : 'incomplete');
-    }
-
-    /* Receipt header counters */
-    var rcAckEl = document.getElementById('vcHagReceiptAckCount');
-    if (rcAckEl) { rcAckEl.textContent = checked; }
-    var rcStatusEl = document.getElementById('vcHagReceiptStatus');
-    if (rcStatusEl) {
-      rcStatusEl.textContent = allDone ? 'PRONTO' : 'INCOMPLETO';
-      rcStatusEl.className   = 'vc-human-status ' + (allDone ? 'ready' : 'incomplete');
-    }
-  }
-
-  function buildHumanApprovalReceipt() {
-    var hag = getHumanApprovalGateRegistry();
-    if (!hag) { return ''; }
-    var ctx     = getHumanApprovalContext();
-    var allDone = areAllHumanAcknowledgementsChecked();
-    var total   = hag.required_acknowledgements.length;
-    var checked = hag.required_acknowledgements.filter(function (a) {
-      return !!humanApprovalState.checked[a.id];
-    }).length;
-
-    var lines = [];
-    lines.push('═══════════════════════════════════════════════════════════════');
-    lines.push('   VISION CORE — RECIBO DE APROVAÇÃO HUMANA');
-    lines.push('   FRONT-PRODUCT-6 | Local Preview Only');
-    lines.push('═══════════════════════════════════════════════════════════════');
-    lines.push('');
-    lines.push('STATUS: ' + (allDone ? 'LOCAL PREVIEW READY' : 'INCOMPLETO'));
-    lines.push('');
-    lines.push('── Contexto do Projeto ─────────────────────────────────────────');
-    lines.push('  Tipo de Projeto  : ' + ctx.type);
-    lines.push('  Template         : ' + ctx.template);
-    lines.push('  Stack            : ' + ctx.stack);
-    lines.push('  Tamanho/Risco    : ' + ctx.size);
-    lines.push('  Agentes Ativos   : ' + ctx.agentCount);
-    lines.push('  Pastas Previstas : ' + ctx.folderCount);
-    lines.push('  Arquivos Previstos: ' + ctx.fileCount);
-    lines.push('  Validações       : ' + ctx.validCount);
-    lines.push('  Riscos           : ' + ctx.riskCount);
-    lines.push('');
-    lines.push('── Confirmações (' + checked + '/' + total + ') ──────────────────────────────────────');
-    hag.required_acknowledgements.forEach(function (a) {
-      var mark = humanApprovalState.checked[a.id] ? '[✓]' : '[ ]';
-      lines.push('  ' + mark + ' ' + a.text);
-    });
-    lines.push('');
-    lines.push('── Capacidades Bloqueadas ───────────────────────────────────────');
-    hag.locked_capabilities.forEach(function (cap) {
-      lines.push('  ⊗ ' + cap.toUpperCase().replace(/_/g, ' ') + ' — LOCKED');
-    });
-    lines.push('');
-    lines.push('── Estado de Autoridade Final ──────────────────────────────────');
-    lines.push('  human_approval_gate_ready  : ' + allDone);
-    lines.push('  human_approval_collected   : ' + allDone);
-    lines.push('  file_creation_allowed      : false');
-    lines.push('  real_file_creation_enabled : false');
-    lines.push('  backend_write_allowed      : false');
-    lines.push('  command_execution_allowed  : false');
-    lines.push('  deploy_allowed             : false');
-    lines.push('  release_allowed            : false');
-    lines.push('  tag_allowed                : false');
-    lines.push('  stable_promotion_allowed   : false');
-    lines.push('  production_touched         : false');
-    lines.push('  pass_gold_real_claimed     : false');
-    lines.push('');
-    lines.push('── Fronteira do Próximo Phase ──────────────────────────────────');
-    lines.push('  ' + hag.next_phase_boundary);
-    lines.push('');
-    lines.push('── Aviso Final ─────────────────────────────────────────────────');
-    lines.push('  ' + hag.required_final_warning);
-    lines.push('  Este recibo é evidência local de prévia apenas.');
-    lines.push('  Não cria arquivos.');
-    lines.push('  Não concede autoridade de escrita backend.');
-    lines.push('  Não concede autoridade de execução de comandos.');
-    lines.push('  Não concede autoridade de deploy/release/tag/stable.');
-    lines.push('  Não reivindica PASS GOLD REAL.');
-    if (allDone) {
-      lines.push('');
-      lines.push('  Próximo phase obrigatório:');
-      lines.push('  FRONT-PRODUCT-7 ou comando explícito separado de criação real de arquivos.');
-    }
-    lines.push('');
-    lines.push('═══════════════════════════════════════════════════════════════');
-    return lines.join('\n');
-  }
-
-  function renderHumanApprovalReceipt() {
-    var receipt = buildHumanApprovalReceipt();
-    humanApprovalState.generatedReceipt = receipt;
-    var output = document.getElementById('vcHumanReceiptOutput');
-    if (!output) { return; }
-    output.value = receipt;
-    output.className = 'vc-human-receipt-output' + (receipt ? '' : ' empty');
-    _updateHumanGateProgress();
-  }
-
-  function copyHumanApprovalReceipt() {
-    var text     = humanApprovalState.generatedReceipt;
-    var statusEl = document.getElementById('vcHumanCopyStatus');
-    if (!text) {
-      if (statusEl) {
-        statusEl.textContent  = '⚠ Gere o recibo primeiro.';
-        statusEl.className    = 'vc-human-copy-status visible error';
-        setTimeout(function () { statusEl.className = 'vc-human-copy-status'; }, 2500);
-      }
-      return;
-    }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () {
-        if (statusEl) {
-          statusEl.textContent = '✓ Copiado!';
-          statusEl.className   = 'vc-human-copy-status visible';
-          setTimeout(function () { statusEl.className = 'vc-human-copy-status'; }, 2500);
-        }
-      }).catch(function () {
-        if (statusEl) {
-          statusEl.textContent = 'Selecione e copie manualmente.';
-          statusEl.className   = 'vc-human-copy-status visible error';
-          setTimeout(function () { statusEl.className = 'vc-human-copy-status'; }, 3000);
-        }
-      });
-    } else {
-      if (statusEl) {
-        statusEl.textContent = 'Selecione e copie manualmente.';
-        statusEl.className   = 'vc-human-copy-status visible error';
-        setTimeout(function () { statusEl.className = 'vc-human-copy-status'; }, 3000);
-      }
-    }
-  }
-
-  function clearHumanApprovalReceipt() {
-    humanApprovalState.generatedReceipt = '';
-    var output = document.getElementById('vcHumanReceiptOutput');
-    if (output) {
-      output.value     = 'Clique em GERAR RECIBO LOCAL para gerar o recibo.';
-      output.className = 'vc-human-receipt-output empty';
-    }
-    var statusEl = document.getElementById('vcHumanCopyStatus');
-    if (statusEl) { statusEl.className = 'vc-human-copy-status'; }
-  }
-
-  function renderHumanApprovalChecklist() {
-    var hag = getHumanApprovalGateRegistry();
-    var container = document.getElementById('vcHumanAckChecklist');
-    if (!hag || !container) { return; }
-    /* Rebuild checklist DOM */
-    container.innerHTML = '';
-    hag.required_acknowledgements.forEach(function (ack) {
-      var item = document.createElement('div');
-      var isChecked = !!humanApprovalState.checked[ack.id];
-      item.className = 'vc-human-ack-item' + (isChecked ? ' checked' : '');
-      item.setAttribute('role', 'checkbox');
-      item.setAttribute('aria-checked', isChecked ? 'true' : 'false');
-      item.setAttribute('tabindex', '0');
-      item.setAttribute('data-ack-id', ack.id);
-
-      var box = document.createElement('span');
-      box.className   = 'vc-human-ack-box';
-      box.textContent = isChecked ? '✓' : '';
-
-      var textEl = document.createElement('span');
-      textEl.className   = 'vc-human-ack-text';
-      textEl.textContent = ack.text;
-
-      item.appendChild(box);
-      item.appendChild(textEl);
-      item.addEventListener('click', function () { toggleHumanAcknowledgement(ack.id); });
-      item.addEventListener('keydown', function (e) {
-        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleHumanAcknowledgement(ack.id); }
-      });
-      container.appendChild(item);
-    });
-  }
-
-  function renderHumanApprovalSummary() {
-    // Sub-passo 3.2b: Tipo/Template/Stack/Tamanho/Agentes removidos do resumo
-    // (redundante com F) — ctx.type/template/stack/size/agentCount continuam
-    // computados corretamente em getHumanApprovalContext() pro recibo gerado.
-    var ctx = getHumanApprovalContext();
-    var map = {
-      vcHagFolderCount: ctx.folderCount + ' pasta(s)',
-      vcHagFileCount:   ctx.fileCount  + ' arquivo(s)'
-    };
-    Object.keys(map).forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) { el.textContent = map[id]; }
-    });
-  }
-
-  function initHumanApprovalGate() {
-    var hag = getHumanApprovalGateRegistry();
-    if (!hag) { return; }
-
-    renderHumanApprovalChecklist();
-    renderHumanApprovalSummary();
-    _updateHumanGateProgress();
-
-    /* Wire buttons */
-    var genBtn = document.getElementById('vcGenerateReceiptBtn');
-    if (genBtn) {
-      genBtn.addEventListener('click', function () {
-        renderHumanApprovalSummary();
-        renderHumanApprovalReceipt();
-        var allDone = areAllHumanAcknowledgementsChecked();
-        genBtn.textContent    = allDone ? '✓ RECIBO LOCAL PRONTO' : '✓ RECIBO GERADO — INCOMPLETO';
-        genBtn.style.borderColor = allDone ? 'rgba(34,197,94,.65)' : 'rgba(251,146,60,.65)';
-        genBtn.style.color       = allDone ? '#22c55e'             : '#fb923c';
-      });
-    }
-
-    var copyBtn = document.getElementById('vcCopyReceiptBtn');
-    if (copyBtn) { copyBtn.addEventListener('click', copyHumanApprovalReceipt); }
-
-    var clearBtn = document.getElementById('vcClearReceiptBtn');
-    if (clearBtn) {
-      clearBtn.addEventListener('click', function () {
-        clearHumanApprovalReceipt();
-        if (genBtn) {
-          genBtn.textContent       = '⬡ GERAR RECIBO LOCAL';
-          genBtn.style.borderColor = '';
-          genBtn.style.color       = '';
-        }
-      });
-    }
-
-    var resetBtn = document.getElementById('vcResetAckBtn');
-    if (resetBtn) { resetBtn.addEventListener('click', resetHumanApprovalChecklist); }
-  }
+  // Nota: insertHumanApprovalCard()/initHumanApprovalTrigger() NÃO vivem aqui
+  // — precisam de addSfChatMsg(), que é local ao escopo de
+  // initSoftwareFactoryPage() (junto de triggerGenCard/insertGenCard). Ver lá.
 
   /* ── Real File Creation Command Package — local UI only ──────── */
   /* No file creation. No write. No download. No export. No API.  */
@@ -4496,8 +4177,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var agents    = agts.on.concat(agts.auto);
 
     var exportAvailable = (typeof exportPreviewState !== 'undefined' && !!exportPreviewState.generatedPreview);
+    // Sub-passo 3.2e: receiptAvailable removido — dependia de humanApprovalState.
+    // generatedReceipt, campo que não existe mais desde a simplificação do
+    // Human Approval Gate (12 checkboxes + recibo → 1 confirmação). Nunca era
+    // lido de volta em lugar nenhum (grep confirmado antes de remover).
     var approvalReady   = (typeof humanApprovalState !== 'undefined' && areAllHumanAcknowledgementsChecked());
-    var receiptAvailable = (typeof humanApprovalState !== 'undefined' && !!humanApprovalState.generatedReceipt);
 
     return {
       type:            type,
@@ -4507,8 +4191,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       size:            size,
       agents:          agents,
       exportAvailable: exportAvailable,
-      approvalReady:   approvalReady,
-      receiptAvailable:receiptAvailable
+      approvalReady:   approvalReady
     };
   }
 
@@ -4532,12 +4215,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     setCard('vcRealReadyExport',   'vcRealReadyExportVal',   ctx.exportAvailable  ? 'Disponível'  : 'Não gerado',   ctx.exportAvailable);
     setCard('vcRealReadyApproval', 'vcRealReadyApprovalVal', ctx.approvalReady    ? 'PRONTO'      : 'Incompleto',   ctx.approvalReady);
 
-    var hag = getHumanApprovalGateRegistry ? getHumanApprovalGateRegistry() : null;
-    var total   = hag ? hag.required_acknowledgements.length : 12;
-    var checked = (typeof humanApprovalState !== 'undefined')
-      ? (hag ? hag.required_acknowledgements.filter(function (a) { return !!humanApprovalState.checked[a.id]; }).length : 0)
-      : 0;
-    setCard('vcRealReadyAck', 'vcRealReadyAckVal', checked + '/' + total, checked === total);
+    // Sub-passo 3.2e: humanApprovalState.checked (objeto por-item) não existe
+    // mais — o gate virou 1 flag único. Sem esse fix, o acesso a
+    // humanApprovalState.checked[a.id] lançaria TypeError (undefined[...]) e
+    // quebraria a função inteira, inclusive o gerador M ao vivo no chat.
+    var confirmed = (typeof humanApprovalState !== 'undefined') && !!humanApprovalState.confirmed;
+    setCard('vcRealReadyAck', 'vcRealReadyAckVal', confirmed ? 'Confirmado' : 'Pendente', confirmed);
   }
 
   /* ── Package builders ──────────────────────────────────────── */
@@ -5428,7 +5111,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var missionReady     = (typeof mcState !== 'undefined' && !!mcState.generatedPrompt);
     var handoffReady     = (typeof handoffState !== 'undefined' && !!handoffState.generatedPackage);
     var exportReady      = (typeof exportPreviewState !== 'undefined' && !!exportPreviewState.generatedPreview);
-    var approvalReady    = (typeof humanApprovalState !== 'undefined' && !!humanApprovalState.generatedReceipt);
+    // Sub-passo 3.2e: lia humanApprovalState.generatedReceipt (campo removido
+    // na simplificação do gate) — ficaria travado em 'waiting' pra sempre,
+    // mesmo depois de confirmado. Corrigido pro novo flag único.
+    var approvalReady    = (typeof humanApprovalState !== 'undefined' && !!humanApprovalState.confirmed);
     var cmdPkgReady      = (typeof realFileCommandState !== 'undefined' && !!realFileCommandState.generatedPackage);
     var workerRcptReady  = (typeof workerResultReceiptState !== 'undefined' && !!workerResultReceiptState.generatedReceipt);
     var evidenceHasData  = (typeof workerResultReceiptState !== 'undefined' && Object.keys(workerResultReceiptState.evidenceStatus).length > 0);
@@ -5443,7 +5129,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       { id: 'mission_generated',     label: 'Mission Prompt Generated',       status: missionReady ? 'ready' : 'waiting' },
       { id: 'handoff_generated',     label: 'Handoff Package Generated',      status: handoffReady ? 'ready' : 'waiting' },
       { id: 'export_generated',      label: 'Export Preview Generated',       status: exportReady  ? 'ready' : 'waiting' },
-      { id: 'approval_generated',    label: 'Human Approval Receipt Generated',status: approvalReady? 'ready' : 'waiting' },
+      { id: 'approval_generated',    label: 'Human Approval Confirmed',       status: approvalReady? 'ready' : 'waiting' },
       { id: 'cmdpkg_generated',      label: 'Real File Command Package',      status: cmdPkgReady  ? 'ready' : 'waiting' },
       { id: 'worker_rcpt_generated', label: 'Worker Result Receipt Generated',status: workerRcptReady? 'ready' : 'waiting' },
       { id: 'evidence_reviewed',     label: 'Evidence Checklist Reviewed',    status: evidenceStatus }
@@ -10158,15 +9844,81 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       });
     }
 
-    // ── Sub-passo 3.2d — painel lateral (drawer) de Templates (Seção H) ────
-    // #vcTemplateDrawer é sibling de #vcMissionSfPane, não filho — usa
-    // position:fixed, então abre/fecha independente da aba (Chat/SF) ativa.
-    // A grid/detalhe já vêm populados por initTemplatePacks() no load
-    // (roda incondicionalmente — ver linha ~10800), independente de o
-    // drawer já ter sido aberto alguma vez.
-    function openTemplateDrawer() {
-      var drawer = document.getElementById('vcTemplateDrawer');
-      var backdrop = document.getElementById('vcTemplateDrawerBackdrop');
+    // ── Sub-passo 3.2e — card de Aprovação Humana no chat (Seção L
+    // simplificada). Vive aqui (não no topo do arquivo, perto de
+    // humanApprovalState) porque precisa de addSfChatMsg(), local a este
+    // escopo — insertHumanApprovalCard() lê/escreve humanApprovalState.
+    // confirmed do escopo externo normalmente (var de fora acessível por
+    // closure).
+    var HUMAN_APPROVAL_CONFIRM_TEXT =
+      'Revisei os artefatos gerados (template, estrutura de pastas, arquivos, ' +
+      'avisos de risco) e entendo que esta aprovação NÃO cria arquivos, não ' +
+      'executa comandos, não faz deploy/release/tag/promoção estável, e não ' +
+      'constitui um PASS GOLD real — é evidência local até uma fase externa ' +
+      'separada e explicitamente autorizada.';
+
+    function insertHumanApprovalCard() {
+      var hist = document.getElementById('vcSfChatHistory');
+      if (!hist) { return; }
+
+      var wrap = document.createElement('div');
+      wrap.className = 'vc-sf-chat-msg assistant';
+
+      var card = document.createElement('div');
+      card.className = 'vc-gen-card';
+      card.setAttribute('data-gen-id', 'human_approval');
+
+      var header = document.createElement('div');
+      header.className = 'vc-gen-card-header';
+      var title = document.createElement('span');
+      title.className = 'vc-gen-card-title';
+      title.textContent = '🔒 Aprovação Humana';
+      header.appendChild(title);
+
+      var body = document.createElement('div');
+      body.className = 'vc-human-approval-card-body';
+      body.textContent = HUMAN_APPROVAL_CONFIRM_TEXT;
+
+      var actions = document.createElement('div');
+      actions.className = 'vc-gen-card-actions';
+      var confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.className = 'vc-gen-card-copy';
+      var alreadyConfirmed = humanApprovalState.confirmed;
+      confirmBtn.textContent = alreadyConfirmed ? '✅ Confirmado' : '✅ Confirmar';
+      confirmBtn.disabled = alreadyConfirmed;
+      confirmBtn.addEventListener('click', function () {
+        humanApprovalState.confirmed = true;
+        confirmBtn.textContent = '✅ Confirmado';
+        confirmBtn.disabled = true;
+      });
+      actions.appendChild(confirmBtn);
+
+      card.appendChild(header);
+      card.appendChild(body);
+      card.appendChild(actions);
+      wrap.appendChild(card);
+      hist.appendChild(wrap);
+      hist.scrollTop = hist.scrollHeight;
+    }
+
+    function initHumanApprovalTrigger() {
+      var openBtn = document.getElementById('vcOpenHumanApprovalCardBtn');
+      if (!openBtn) { return; }
+      openBtn.addEventListener('click', function () {
+        addSfChatMsg('user', openBtn.textContent.trim());
+        insertHumanApprovalCard();
+      });
+    }
+
+    // ── Painéis laterais (drawer) — Templates (3.2d) + Ajustar Projeto
+    // Manualmente (3.2e). Ambos são sibling de #vcMissionSfPane, não filho —
+    // usam position:fixed, então abrem/fecham independente da aba (Chat/SF)
+    // ativa. Generalizado no 3.2e (2º drawer real) em vez de duplicar as
+    // mesmas 3 funções com nomes diferentes.
+    function openSideDrawer(drawerId, backdropId) {
+      var drawer = document.getElementById(drawerId);
+      var backdrop = document.getElementById(backdropId);
       if (!drawer || !backdrop) return;
       backdrop.style.display = 'block';
       drawer.style.display = 'flex';
@@ -10175,26 +9927,41 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       requestAnimationFrame(function() { drawer.classList.add('open'); });
     }
 
-    function closeTemplateDrawer() {
-      var drawer = document.getElementById('vcTemplateDrawer');
-      var backdrop = document.getElementById('vcTemplateDrawerBackdrop');
+    function closeSideDrawer(drawerId, backdropId) {
+      var drawer = document.getElementById(drawerId);
+      var backdrop = document.getElementById(backdropId);
       if (!drawer || !backdrop) return;
       drawer.classList.remove('open');
       backdrop.style.display = 'none';
       setTimeout(function() { drawer.style.display = 'none'; }, 300); // aguarda a transição de slide-out (.3s)
     }
 
-    function initTemplateDrawer() {
-      var openBtn  = document.getElementById('vcOpenTemplateDrawerBtn');
-      var closeBtn = document.getElementById('vcCloseTemplateDrawerBtn');
-      var backdrop = document.getElementById('vcTemplateDrawerBackdrop');
-      if (openBtn)  { openBtn.addEventListener('click', openTemplateDrawer); }
-      if (closeBtn) { closeBtn.addEventListener('click', closeTemplateDrawer); }
-      if (backdrop) { backdrop.addEventListener('click', closeTemplateDrawer); }
+    var SIDE_DRAWERS = [
+      // Sub-passo 3.2d: grid/detalhe da Seção H já vêm populados por
+      // initTemplatePacks() no load (roda incondicionalmente — ver linha
+      // ~10800), independente de o drawer já ter sido aberto alguma vez.
+      { open: 'vcOpenTemplateDrawerBtn',      close: 'vcCloseTemplateDrawerBtn',      drawer: 'vcTemplateDrawer',      backdrop: 'vcTemplateDrawerBackdrop' },
+      // Sub-passo 3.2e: Seções A-D já vêm com clique/estado funcionando via
+      // initProjectBuilder() (querySelectorAll global, roda no load) —
+      // mesma relocação-sem-reescrita que a Seção H.
+      { open: 'vcOpenManualAdjustDrawerBtn',  close: 'vcCloseManualAdjustDrawerBtn',  drawer: 'vcManualAdjustDrawer',  backdrop: 'vcManualAdjustDrawerBackdrop' }
+    ];
+
+    function initSideDrawers() {
+      SIDE_DRAWERS.forEach(function(cfg) {
+        var openBtn  = document.getElementById(cfg.open);
+        var closeBtn = document.getElementById(cfg.close);
+        var backdrop = document.getElementById(cfg.backdrop);
+        if (openBtn)  { openBtn.addEventListener('click', function() { openSideDrawer(cfg.drawer, cfg.backdrop); }); }
+        if (closeBtn) { closeBtn.addEventListener('click', function() { closeSideDrawer(cfg.drawer, cfg.backdrop); }); }
+        if (backdrop) { backdrop.addEventListener('click', function() { closeSideDrawer(cfg.drawer, cfg.backdrop); }); }
+      });
       document.addEventListener('keydown', function(e) {
         if (e.key !== 'Escape') { return; }
-        var drawer = document.getElementById('vcTemplateDrawer');
-        if (drawer && drawer.classList.contains('open')) { closeTemplateDrawer(); }
+        SIDE_DRAWERS.forEach(function(cfg) {
+          var drawer = document.getElementById(cfg.drawer);
+          if (drawer && drawer.classList.contains('open')) { closeSideDrawer(cfg.drawer, cfg.backdrop); }
+        });
       });
     }
 
@@ -10259,7 +10026,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     initSfModeTabs();  // §163
     initSfExampleChips(); // §163
     initSfGenChips(); // Sub-passo 3.2c
-    initTemplateDrawer(); // Sub-passo 3.2d
+    initSideDrawers(); // Sub-passo 3.2d + 3.2e
+    initHumanApprovalTrigger(); // Sub-passo 3.2e
     initSfSimpleChat(); // §164
 
     // §162 — Tutorial SF (❓ TUTORIAL button → sf2)
@@ -10842,7 +10610,9 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     try { initMissionComposer(); } catch (e) { console.error('[vc] initMissionComposer:', e); }
     try { initWorkerHandoff(); } catch (e) { console.error('[vc] initWorkerHandoff:', e); }
     try { initProjectExportPreview(); } catch (e) { console.error('[vc] initProjectExportPreview:', e); }
-    try { initHumanApprovalGate(); } catch (e) { console.error('[vc] initHumanApprovalGate:', e); }
+    // Sub-passo 3.2e: initHumanApprovalTrigger() agora vive dentro de
+    // initSoftwareFactoryPage() (precisa de addSfChatMsg, local a esse
+    // escopo) — chamada abaixo, não mais aqui.
     try { initRealFileCommandPackage(); } catch (e) { console.error('[vc] initRealFileCommandPackage:', e); }
     try { initWorkerResultReceipt(); } catch (e) { console.error('[vc] initWorkerResultReceipt:', e); }
     try { initFinalProductDashboard(); } catch (e) { console.error('[vc] initFinalProductDashboard:', e); }

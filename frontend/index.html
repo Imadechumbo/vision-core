@@ -62,7 +62,9 @@
    pergunta de esclarecimento) e a de menor risco de CSS/responsividade
    (não mexe no breakpoint de 1181px do sidebar mini-mode nem reaproveita/
    conflita com o mecanismo de abas Chat/Software Factory já existente). */
-.vc-sf-templates-trigger{margin:0 0 8px;}
+.vc-sf-templates-trigger{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px;}
+/* Sub-passo 3.2e — card de Aprovação Humana (reaproveita .vc-gen-card do 3.2c) */
+.vc-human-approval-card-body{padding:0 10px 10px;font-size:.78rem;line-height:1.55;color:#cbd5e1;}
 .vc-template-drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;display:none;}
 .vc-template-drawer{position:fixed;top:0;right:0;height:100vh;width:min(460px,92vw);background:linear-gradient(180deg,#0b0b12,#050507);border-left:1px solid rgba(124,58,237,.35);box-shadow:-12px 0 40px rgba(0,0,0,.5);z-index:401;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:none;flex-direction:column;}
 .vc-template-drawer.open{transform:translateX(0);}
@@ -437,9 +439,13 @@
             <button class="vc-sf-example-chip" data-example="Quero um site de validação de provas online com cadastro de alunos, upload de gabaritos e correção automática. Stack: Node.js + HTML/CSS." type="button">📝 Plataforma de provas</button>
           </div>
 
-          <!-- Sub-passo 3.2d — botão inline pra abrir o painel lateral de Templates -->
+          <!-- Sub-passo 3.2d/3.2e — botões inline de ações auxiliares (drawers +
+               card de aprovação). Não são um dos 6 geradores (#vcSfGenChips) —
+               abrem painéis opcionais ou uma confirmação, não geram artefato. -->
           <div class="vc-sf-templates-trigger">
             <button id="vcOpenTemplateDrawerBtn" class="vc-sf-example-chip" type="button">📐 Ver templates disponíveis</button>
+            <button id="vcOpenManualAdjustDrawerBtn" class="vc-sf-example-chip" type="button">🎛 Ajustar projeto manualmente</button>
+            <button id="vcOpenHumanApprovalCardBtn" class="vc-sf-example-chip" type="button">🔒 Aprovação Humana</button>
           </div>
 
           <!-- Sub-passo 3.2c — gatilhos explícitos dos 6 geradores (I/J/K/M/N/O).
@@ -555,6 +561,125 @@
           </div>
         </div>
       </div><!-- end #vcTemplateDrawer -->
+
+      <!-- Sub-passo 3.2e — painel lateral (drawer) "Ajustar Projeto
+           Manualmente". Mesmo mecanismo do drawer de Templates (3.2d) — o
+           usuário já indicou isso explicitamente ao comparar os dois. Para
+           usuário avançado que quer sobrescrever o que o AUTO-PILOT já
+           infere do texto livre. Seções A-D movidas inteiras e intocadas —
+           zero mudança nos cliques/estado (initProjectBuilder() já os liga
+           globalmente por querySelectorAll, independente de onde vivem no
+           DOM — mesmo padrão comprovado pela Seção H no 3.2d). -->
+      <div class="vc-template-drawer-backdrop" id="vcManualAdjustDrawerBackdrop" style="display:none"></div>
+      <div class="vc-template-drawer" id="vcManualAdjustDrawer">
+        <div class="vc-template-drawer-header">
+          <span>AJUSTAR PROJETO MANUALMENTE</span>
+          <button id="vcCloseManualAdjustDrawerBtn" class="vc-template-drawer-close" type="button" aria-label="Fechar">✕</button>
+        </div>
+        <div class="vc-template-drawer-body">
+          <!-- ── Section A — Project Type (movida de #projectBuilder) ── -->
+          <div class="vc-pb-section">
+            <p class="vc-pb-section-label">Tipo de Projeto</p>
+            <div class="vc-project-type-grid">
+              <div class="vc-project-type-card" data-type-id="saas_fullstack">
+                <div class="vc-project-type-icon">⬡</div>
+                <div class="vc-project-type-label">SaaS Fullstack</div>
+              </div>
+              <div class="vc-project-type-card" data-type-id="api_backend">
+                <div class="vc-project-type-icon">⌬</div>
+                <div class="vc-project-type-label">API Backend</div>
+              </div>
+              <div class="vc-project-type-card" data-type-id="landing_page">
+                <div class="vc-project-type-icon">◻</div>
+                <div class="vc-project-type-label">Landing Page</div>
+              </div>
+              <div class="vc-project-type-card" data-type-id="dashboard_admin">
+                <div class="vc-project-type-icon">▥</div>
+                <div class="vc-project-type-label">Dashboard Admin</div>
+              </div>
+              <div class="vc-project-type-card" data-type-id="game_indie">
+                <div class="vc-project-type-icon">◈</div>
+                <div class="vc-project-type-label">Game / Indie Project</div>
+              </div>
+              <div class="vc-project-type-card" data-type-id="mobile_app">
+                <div class="vc-project-type-icon">▣</div>
+                <div class="vc-project-type-label">Mobile App</div>
+              </div>
+              <div class="vc-project-type-card" data-type-id="desktop_app">
+                <div class="vc-project-type-icon">⊞</div>
+                <div class="vc-project-type-label">Desktop App</div>
+              </div>
+              <div class="vc-project-type-card" data-type-id="automation_bot">
+                <div class="vc-project-type-icon">⚙</div>
+                <div class="vc-project-type-label">Automation / Bot</div>
+              </div>
+              <div class="vc-project-type-card" data-type-id="ai_agent_system">
+                <div class="vc-project-type-icon">◎</div>
+                <div class="vc-project-type-label">AI Agent System</div>
+              </div>
+              <div class="vc-project-type-card" data-type-id="ecommerce">
+                <div class="vc-project-type-icon">◇</div>
+                <div class="vc-project-type-label">E-commerce</div>
+              </div>
+              <div class="vc-project-type-card" data-type-id="blog_content">
+                <div class="vc-project-type-icon">⌁</div>
+                <div class="vc-project-type-label">Blog / Content Platform</div>
+              </div>
+              <div class="vc-project-type-card" data-type-id="custom">
+                <div class="vc-project-type-icon">✦</div>
+                <div class="vc-project-type-label">Custom</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Section B — Project Size / Risk (movida de #projectBuilder) ── -->
+          <div class="vc-pb-section">
+            <p class="vc-pb-section-label">Tamanho / Risco do Projeto</p>
+            <div class="vc-project-size-row">
+              <span class="vc-size-chip" data-size-id="prototype">Prototype</span>
+              <span class="vc-size-chip" data-size-id="mvp">MVP</span>
+              <span class="vc-size-chip" data-size-id="production_ready">Production Ready</span>
+              <span class="vc-size-chip" data-size-id="enterprise">Enterprise</span>
+              <span class="vc-size-chip" data-size-id="high_risk_refactor">High Risk Refactor</span>
+            </div>
+            <div class="vc-size-hint" id="vcSizeHint">Selecione o tamanho para ver modo sugerido.</div>
+          </div>
+
+          <!-- ── Section C — Stack Selector (movida de #projectBuilder) ── -->
+          <div class="vc-pb-section">
+            <p class="vc-pb-section-label">Stack Tecnológico</p>
+            <div class="vc-stack-row">
+              <span class="vc-stack-chip" data-stack-id="HTML/CSS/JS">HTML/CSS/JS</span>
+              <span class="vc-stack-chip" data-stack-id="React">React</span>
+              <span class="vc-stack-chip" data-stack-id="Vue">Vue</span>
+              <span class="vc-stack-chip" data-stack-id="Node/Express">Node/Express</span>
+              <span class="vc-stack-chip" data-stack-id="Python/FastAPI">Python/FastAPI</span>
+              <span class="vc-stack-chip" data-stack-id="PHP/Laravel">PHP/Laravel</span>
+              <span class="vc-stack-chip" data-stack-id="Go">Go</span>
+              <span class="vc-stack-chip" data-stack-id="MySQL">MySQL</span>
+              <span class="vc-stack-chip" data-stack-id="PostgreSQL">PostgreSQL</span>
+              <span class="vc-stack-chip" data-stack-id="SQLite">SQLite</span>
+              <span class="vc-stack-chip" data-stack-id="Firebase">Firebase</span>
+              <span class="vc-stack-chip" data-stack-id="Supabase">Supabase</span>
+              <span class="vc-stack-chip" data-stack-id="Docker">Docker</span>
+              <span class="vc-stack-chip" data-stack-id="GitHub Actions">GitHub Actions</span>
+            </div>
+          </div>
+
+          <!-- ── Section D — Orchestration Mode (movida de #projectBuilder) ── -->
+          <div class="vc-pb-section">
+            <p class="vc-pb-section-label">Modo de Orquestração</p>
+            <div class="vc-orchestration-mode-row">
+              <button class="vc-mode-chip" data-orch-mode="manual"         type="button">Manual</button>
+              <button class="vc-mode-chip" data-orch-mode="cirurgico"      type="button">Cirúrgico</button>
+              <button class="vc-mode-chip" data-orch-mode="auto_assistido" type="button">Auto Assistido</button>
+              <button class="vc-mode-chip" data-orch-mode="full_sf"        type="button">Full Software Factory</button>
+              <button class="vc-mode-chip" data-orch-mode="review_only"    type="button">Review Only</button>
+            </div>
+            <div class="vc-mode-desc" id="vcOrchModeDesc"></div>
+          </div>
+        </div>
+      </div><!-- end #vcManualAdjustDrawer -->
 
       <!-- V2.9.10 CLEAN FRONT: static command panel — approved V2.9.10 visual -->
       <div class="v298-command-chat" id="v298CommandChat">
@@ -1202,107 +1327,13 @@
         <span class="vc-ui-local-badge">LOCAL PREVIEW</span>
       </div>
 
-      <!-- ── Section A — Project Type ──────────────────────────── -->
-      <div class="vc-pb-section">
-        <p class="vc-pb-section-label">Tipo de Projeto</p>
-        <div class="vc-project-type-grid">
-          <div class="vc-project-type-card" data-type-id="saas_fullstack">
-            <div class="vc-project-type-icon">⬡</div>
-            <div class="vc-project-type-label">SaaS Fullstack</div>
-          </div>
-          <div class="vc-project-type-card" data-type-id="api_backend">
-            <div class="vc-project-type-icon">⌬</div>
-            <div class="vc-project-type-label">API Backend</div>
-          </div>
-          <div class="vc-project-type-card" data-type-id="landing_page">
-            <div class="vc-project-type-icon">◻</div>
-            <div class="vc-project-type-label">Landing Page</div>
-          </div>
-          <div class="vc-project-type-card" data-type-id="dashboard_admin">
-            <div class="vc-project-type-icon">▥</div>
-            <div class="vc-project-type-label">Dashboard Admin</div>
-          </div>
-          <div class="vc-project-type-card" data-type-id="game_indie">
-            <div class="vc-project-type-icon">◈</div>
-            <div class="vc-project-type-label">Game / Indie Project</div>
-          </div>
-          <div class="vc-project-type-card" data-type-id="mobile_app">
-            <div class="vc-project-type-icon">▣</div>
-            <div class="vc-project-type-label">Mobile App</div>
-          </div>
-          <div class="vc-project-type-card" data-type-id="desktop_app">
-            <div class="vc-project-type-icon">⊞</div>
-            <div class="vc-project-type-label">Desktop App</div>
-          </div>
-          <div class="vc-project-type-card" data-type-id="automation_bot">
-            <div class="vc-project-type-icon">⚙</div>
-            <div class="vc-project-type-label">Automation / Bot</div>
-          </div>
-          <div class="vc-project-type-card" data-type-id="ai_agent_system">
-            <div class="vc-project-type-icon">◎</div>
-            <div class="vc-project-type-label">AI Agent System</div>
-          </div>
-          <div class="vc-project-type-card" data-type-id="ecommerce">
-            <div class="vc-project-type-icon">◇</div>
-            <div class="vc-project-type-label">E-commerce</div>
-          </div>
-          <div class="vc-project-type-card" data-type-id="blog_content">
-            <div class="vc-project-type-icon">⌁</div>
-            <div class="vc-project-type-label">Blog / Content Platform</div>
-          </div>
-          <div class="vc-project-type-card" data-type-id="custom">
-            <div class="vc-project-type-icon">✦</div>
-            <div class="vc-project-type-label">Custom</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Section B — Project Size / Risk ───────────────────── -->
-      <div class="vc-pb-section">
-        <p class="vc-pb-section-label">Tamanho / Risco do Projeto</p>
-        <div class="vc-project-size-row">
-          <span class="vc-size-chip" data-size-id="prototype">Prototype</span>
-          <span class="vc-size-chip" data-size-id="mvp">MVP</span>
-          <span class="vc-size-chip" data-size-id="production_ready">Production Ready</span>
-          <span class="vc-size-chip" data-size-id="enterprise">Enterprise</span>
-          <span class="vc-size-chip" data-size-id="high_risk_refactor">High Risk Refactor</span>
-        </div>
-        <div class="vc-size-hint" id="vcSizeHint">Selecione o tamanho para ver modo sugerido.</div>
-      </div>
-
-      <!-- ── Section C — Stack Selector ────────────────────────── -->
-      <div class="vc-pb-section">
-        <p class="vc-pb-section-label">Stack Tecnológico</p>
-        <div class="vc-stack-row">
-          <span class="vc-stack-chip" data-stack-id="HTML/CSS/JS">HTML/CSS/JS</span>
-          <span class="vc-stack-chip" data-stack-id="React">React</span>
-          <span class="vc-stack-chip" data-stack-id="Vue">Vue</span>
-          <span class="vc-stack-chip" data-stack-id="Node/Express">Node/Express</span>
-          <span class="vc-stack-chip" data-stack-id="Python/FastAPI">Python/FastAPI</span>
-          <span class="vc-stack-chip" data-stack-id="PHP/Laravel">PHP/Laravel</span>
-          <span class="vc-stack-chip" data-stack-id="Go">Go</span>
-          <span class="vc-stack-chip" data-stack-id="MySQL">MySQL</span>
-          <span class="vc-stack-chip" data-stack-id="PostgreSQL">PostgreSQL</span>
-          <span class="vc-stack-chip" data-stack-id="SQLite">SQLite</span>
-          <span class="vc-stack-chip" data-stack-id="Firebase">Firebase</span>
-          <span class="vc-stack-chip" data-stack-id="Supabase">Supabase</span>
-          <span class="vc-stack-chip" data-stack-id="Docker">Docker</span>
-          <span class="vc-stack-chip" data-stack-id="GitHub Actions">GitHub Actions</span>
-        </div>
-      </div>
-
-      <!-- ── Section D — Orchestration Mode ────────────────────── -->
-      <div class="vc-pb-section">
-        <p class="vc-pb-section-label">Modo de Orquestração</p>
-        <div class="vc-orchestration-mode-row">
-          <button class="vc-mode-chip" data-orch-mode="manual"         type="button">Manual</button>
-          <button class="vc-mode-chip" data-orch-mode="cirurgico"      type="button">Cirúrgico</button>
-          <button class="vc-mode-chip" data-orch-mode="auto_assistido" type="button">Auto Assistido</button>
-          <button class="vc-mode-chip" data-orch-mode="full_sf"        type="button">Full Software Factory</button>
-          <button class="vc-mode-chip" data-orch-mode="review_only"    type="button">Review Only</button>
-        </div>
-        <div class="vc-mode-desc" id="vcOrchModeDesc"></div>
-      </div>
+      <!-- Sub-passo 3.2e: Seções A-D (Tipo/Tamanho/Stack/Modo de Orquestração)
+           movidas para o #vcManualAdjustDrawer painel lateral, aberto via
+           #vcOpenManualAdjustDrawerBtn no chat. Ver esse bloco pro markup
+           relocado — grid/chips inalterados, initProjectBuilder() (que já
+           roda incondicionalmente no load) continua os populando e ligando
+           os cliques, independente de onde vivem no DOM. Seção F permanece
+           aqui — só A-D fizeram parte desta decisão de escopo. -->
 
       <!-- ── Section F — Orchestration Preview ─────────────────── -->
       <div class="vc-pb-section">
@@ -1538,87 +1569,17 @@
 
       </div><!-- end vcExportPreview -->
 
-      <!-- ── Section L — Advanced Engineer Controls (Human Approval Safety Gate) ── -->
-      <!-- Hidden by default. Not part of normal user flow. Engineer-only. -->
-      <div class="vc-pb-section vc-engineer-only-section">
-        <details class="vc-engineer-details">
-          <summary class="vc-engineer-summary" aria-label="Mostrar controles avançados de engenharia">
-            <span class="vc-engineer-summary-icon">⚙</span>
-            <div class="vc-engineer-summary-text">
-              <strong>CONTROLES AVANÇADOS DE ENGENHARIA</strong>
-              <span>Painel oculto para operadores experientes revisarem travas de autoridade. Não faz parte do fluxo normal do usuário e não concede execução real.</span>
-            </div>
-            <span class="vc-engineer-badge">ENGINEER ONLY</span>
-          </summary>
-
-          <div class="vc-human-approval" id="vcHumanApprovalGate">
-
-        <!-- Headline -->
-        <div class="vc-human-headline">
-          <div class="vc-pb-headline-text">
-            <p class="eyebrow">SOFTWARE FACTORY • SAFETY GATE • ENGINEER CONTROLS</p>
-            <h2 style="font-size:14px;margin:0 0 4px;">CONTROLES AVANÇADOS DE ENGENHARIA</h2>
-            <p style="font-size:11px;color:#4b5563;margin:0;">Painel oculto para operadores experientes revisarem travas de autoridade. Não faz parte do fluxo normal do usuário e não concede execução real.</p>
-          </div>
-          <span class="vc-human-badge">ENGINEER ONLY</span>
-        </div>
-
-        <!-- Sub-passo 3.2b — item 2: Tipo/Template/Stack/Tamanho/Agentes
-             removidos (repetiam a Seção F) — mantido só o que é específico
-             deste gate (status de aprovação + contagens previstas). -->
-        <p class="vc-pb-section-label">Contexto do Gate</p>
-        <div class="vc-human-summary-grid" id="vcHumanSummaryGrid">
-          <div class="vc-human-summary-card"><div class="vc-human-summary-label">Aprovação</div><div class="vc-human-summary-value" id="vcHagApprovalStatus">—</div></div>
-          <div class="vc-human-summary-card"><div class="vc-human-summary-label">Pastas Previstas</div><div class="vc-human-summary-value" id="vcHagFolderCount">—</div></div>
-          <div class="vc-human-summary-card"><div class="vc-human-summary-label">Arquivos Previstos</div><div class="vc-human-summary-value" id="vcHagFileCount">—</div></div>
-        </div>
-
-        <!-- Required Acknowledgements Checklist -->
-        <p class="vc-pb-section-label">Confirmações Obrigatórias</p>
-        <div class="vc-human-checklist" id="vcHumanAckChecklist"></div>
-
-        <!-- Progress indicator -->
-        <p style="font-size:10px;color:#4b5563;margin:0 0 14px;letter-spacing:.05em;">
-          <span id="vcHagAckCount">0</span> / 12 confirmações — Gate:
-          <span class="vc-human-status incomplete" id="vcHagGateStatus">INCOMPLETO</span>
-        </p>
-
-        <!-- Sub-passo 3.2b — item 3: grid de autoridade consolidado — versão
-             completa (11 cards) só na Seção O. -->
-        <p class="vc-pb-section-label">Capacidades Bloqueadas</p>
-        <p class="vc-pb-authority-note">🔒 Nenhuma execução real é concedida por este gate — ver <a href="#vcFinalAuthorityGrid">Matriz de Autoridade completa no Painel Final</a>.</p>
-
-        <!-- Approval Receipt Panel -->
-        <!-- No download/export/create/execute/deploy/release/tag/stable buttons -->
-        <div class="vc-human-receipt-panel" id="vcHumanReceiptPanel">
-          <div class="vc-human-receipt-header">
-            <span class="vc-human-receipt-title">RECIBO DE APROVAÇÃO LOCAL</span>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="vc-human-ack-metric">Confirmações: <span id="vcHagReceiptAckCount">0</span>/12</span>
-              <span class="vc-human-status incomplete" id="vcHagReceiptStatus">INCOMPLETO</span>
-            </div>
-          </div>
-          <textarea
-            class="vc-human-receipt-output empty"
-            id="vcHumanReceiptOutput"
-            readonly
-            spellcheck="false"
-            aria-label="Recibo de aprovação humana — somente leitura"
-          >Clique em GERAR RECIBO LOCAL para gerar o recibo.</textarea>
-        </div>
-
-        <!-- Actions — no file creation / export / download / execute buttons -->
-        <div class="vc-human-actions">
-          <button class="vc-human-btn" id="vcGenerateReceiptBtn" type="button">⬡ GERAR RECIBO LOCAL</button>
-          <button class="vc-human-btn secondary" id="vcCopyReceiptBtn" type="button">⎘ COPIAR RECIBO</button>
-          <button class="vc-human-btn danger" id="vcClearReceiptBtn" type="button">✕ LIMPAR RECIBO</button>
-          <button class="vc-human-btn danger" id="vcResetAckBtn" type="button">↺ RESETAR CHECKLIST</button>
-          <span class="vc-human-copy-status" id="vcHumanCopyStatus">✓ Copiado!</span>
-        </div>
-
-          </div><!-- end vcHumanApprovalGate -->
-        </details>
-      </div><!-- end vc-engineer-only-section -->
+      <!-- Sub-passo 3.2e: Seção L (checklist de 12 confirmações + grid de
+           locks + textarea de recibo completo) simplificada por completo —
+           substituída por 1 card de confirmação no chat, aberto via
+           #vcOpenHumanApprovalCardBtn (insertHumanApprovalCard() no bundle).
+           A substância real das 12 confirmações (revisão dos artefatos +
+           entendimento dos limites) preservada numa única frase, não é
+           rubber-stamp. isHumanApprovalGateReadyForCommand() mantém o mesmo
+           contrato externo — único consumidor real: gerador M ("⚙ Comando
+           Real"). Markup antigo removido por completo (não só relocado,
+           como A-D/H) porque a lógica que o alimentava (12 checkboxes +
+           geração de recibo) foi deliberadamente descartada, não só movida. -->
 
       <!-- ── Section M — Real File Creation Command Package ──────── -->
       <div class="vc-pb-section vc-real-file-command" id="vcRealFileCommandPackage">
