@@ -9302,6 +9302,25 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                       document.body.appendChild(a); a.click(); document.body.removeChild(a);
                     });
                   });
+
+                  // Infográfico do projeto (PROJETO_INFOGRAFICO.html) — anexado pelo
+                  // backend só quando o brief tem seções ricas o suficiente (ver
+                  // tools/project-infographic.mjs). Abre em nova aba via Blob URL,
+                  // mesmo padrão do dlBtn acima — nunca innerHTML/iframe, porque o
+                  // infográfico é um <html> completo com seu próprio <style> (evita
+                  // colisão de CSS com a página do SF).
+                  var _infographicFile = _sfFilesCache.find(function(f) { return f.name === 'PROJETO_INFOGRAFICO.html'; });
+                  if (_infographicFile) {
+                    var infographicBtn = document.createElement('button');
+                    infographicBtn.textContent = '📊 Ver Infográfico do Projeto';
+                    infographicBtn.style.cssText = 'padding:6px 12px;background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.4);border-radius:6px;color:#7dd3fc;font-size:.8rem;cursor:pointer;white-space:nowrap;';
+                    infographicBtn.addEventListener('click', function() {
+                      var _infoUrl = URL.createObjectURL(new Blob([_infographicFile.content], { type: 'text/html' }));
+                      window.open(_infoUrl, '_blank');
+                      setTimeout(function() { URL.revokeObjectURL(_infoUrl); }, 60000);
+                    });
+                    actionBar.appendChild(infographicBtn);
+                  }
                 } else {
                   filesBtn.textContent = '📁 Estrutura (' + _sfFilesCache.length + ' arquivos)';
                   treePanel.innerHTML = _sfFilesCache.map(function(f) {
