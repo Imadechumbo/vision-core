@@ -1333,29 +1333,32 @@
           <div class="vc-composer-options" id="vcComposerOptions"></div>
         </div>
 
-        <!-- Generated prompt panel -->
-        <div class="vc-generated-prompt-panel" id="vcGeneratedPromptPanel">
-          <div class="vc-generated-prompt-header">
-            <span class="vc-generated-prompt-title">PROMPT DE MISSÃO GERADO</span>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="vc-prompt-metric" id="vcPromptMetric"><span id="vcPromptLineCount">0</span> linhas · <span id="vcPromptSectionCount">0</span> seções</span>
-              <span class="vc-local-only-badge">LOCAL ONLY</span>
+        <!-- Sub-passo 3.2c: card com aparência de mensagem de assistente —
+             botão copiar movido pro cabeçalho, LIMPAR sozinho na ação. -->
+        <div class="vc-gen-card">
+          <div class="vc-generated-prompt-panel" id="vcGeneratedPromptPanel">
+            <div class="vc-generated-prompt-header">
+              <span class="vc-generated-prompt-title">PROMPT DE MISSÃO GERADO</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="vc-prompt-metric" id="vcPromptMetric"><span id="vcPromptLineCount">0</span> linhas · <span id="vcPromptSectionCount">0</span> seções</span>
+                <span class="vc-local-only-badge">LOCAL ONLY</span>
+                <button class="vc-gen-card-copy" id="vcCopyMissionBtn" type="button">⎘ Copiar</button>
+              </div>
             </div>
+            <textarea
+              class="vc-generated-prompt-output empty"
+              id="vcMissionPromptOutput"
+              readonly
+              spellcheck="false"
+              aria-label="Prompt de missão gerado localmente"
+            >Clique em GERAR PROMPT DE MISSÃO para compor o prompt local.</textarea>
           </div>
-          <textarea
-            class="vc-generated-prompt-output empty"
-            id="vcMissionPromptOutput"
-            readonly
-            spellcheck="false"
-            aria-label="Prompt de missão gerado localmente"
-          >Clique em GERAR PROMPT DE MISSÃO para compor o prompt local.</textarea>
         </div>
 
         <!-- Actions -->
-        <div class="vc-composer-actions">
+        <div class="vc-gen-card-actions">
           <button class="vc-composer-btn" id="vcGenerateMissionBtn" type="button">⬡ GERAR PROMPT DE MISSÃO</button>
-          <button class="vc-composer-btn secondary" id="vcCopyMissionBtn" type="button">⎘ COPIAR PROMPT</button>
-          <button class="vc-composer-btn danger" id="vcClearMissionBtn" type="button">✕ LIMPAR PROMPT</button>
+          <button class="vc-composer-btn danger" id="vcClearMissionBtn" type="button">✕ LIMPAR</button>
           <span class="vc-copy-status" id="vcCopyStatus">✓ Copiado!</span>
         </div>
 
@@ -1386,29 +1389,31 @@
           <div class="vc-handoff-target-row" id="vcHandoffTargetRow"></div>
         </div>
 
-        <!-- Handoff preview panel -->
-        <div class="vc-handoff-preview-panel" id="vcHandoffPreviewPanel">
-          <div class="vc-handoff-preview-header">
-            <span class="vc-handoff-preview-title">PACOTE DE HANDOFF GERADO</span>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="vc-handoff-metric" id="vcHandoffMetric"><span id="vcHandoffLineCount">0</span> linhas</span>
-              <span class="vc-manual-handoff-badge">MANUAL HANDOFF</span>
+        <!-- Sub-passo 3.2c: card com aparência de mensagem de assistente. -->
+        <div class="vc-gen-card">
+          <div class="vc-handoff-preview-panel" id="vcHandoffPreviewPanel">
+            <div class="vc-handoff-preview-header">
+              <span class="vc-handoff-preview-title">PACOTE DE HANDOFF GERADO</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="vc-handoff-metric" id="vcHandoffMetric"><span id="vcHandoffLineCount">0</span> linhas</span>
+                <span class="vc-manual-handoff-badge">MANUAL HANDOFF</span>
+                <button class="vc-gen-card-copy" id="vcCopyHandoffBtn" type="button">⎘ Copiar</button>
+              </div>
             </div>
+            <textarea
+              class="vc-handoff-output empty"
+              id="vcHandoffOutput"
+              readonly
+              spellcheck="false"
+              aria-label="Pacote de handoff gerado localmente"
+            >Clique em GERAR PACOTE para compor o pacote de handoff local.</textarea>
           </div>
-          <textarea
-            class="vc-handoff-output empty"
-            id="vcHandoffOutput"
-            readonly
-            spellcheck="false"
-            aria-label="Pacote de handoff gerado localmente"
-          >Clique em GERAR PACOTE para compor o pacote de handoff local.</textarea>
         </div>
 
         <!-- Actions -->
-        <div class="vc-handoff-actions">
+        <div class="vc-gen-card-actions">
           <button class="vc-handoff-btn" id="vcGenerateHandoffBtn" type="button">⬡ GERAR PACOTE</button>
-          <button class="vc-handoff-btn secondary" id="vcCopyHandoffBtn" type="button">⎘ COPIAR PACOTE</button>
-          <button class="vc-handoff-btn danger" id="vcClearHandoffBtn" type="button">✕ LIMPAR PACOTE</button>
+          <button class="vc-handoff-btn danger" id="vcClearHandoffBtn" type="button">✕ LIMPAR</button>
           <span class="vc-handoff-copy-status" id="vcHandoffCopyStatus">✓ Copiado!</span>
         </div>
 
@@ -1443,29 +1448,31 @@
         <p class="vc-pb-section-label">Status de Criação de Arquivos</p>
         <p class="vc-pb-authority-note">🔒 Nenhuma ação real é criada nesta tela — ver <a href="#vcFinalAuthorityGrid">Matriz de Autoridade completa no Painel Final</a>.</p>
 
-        <!-- Preview output panel -->
-        <div class="vc-export-output-panel" id="vcExportOutputPanel">
-          <div class="vc-export-output-header">
-            <span class="vc-export-output-title">PREVIEW DE ESTRUTURA</span>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="vc-export-metric" id="vcExportMetric"><span id="vcExportLineCount">0</span> linhas</span>
-              <span class="vc-creation-locked-badge">CREATION LOCKED</span>
+        <!-- Sub-passo 3.2c: card com aparência de mensagem de assistente. -->
+        <div class="vc-gen-card">
+          <div class="vc-export-output-panel" id="vcExportOutputPanel">
+            <div class="vc-export-output-header">
+              <span class="vc-export-output-title">PREVIEW DE ESTRUTURA</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="vc-export-metric" id="vcExportMetric"><span id="vcExportLineCount">0</span> linhas</span>
+                <span class="vc-creation-locked-badge">CREATION LOCKED</span>
+                <button class="vc-gen-card-copy" id="vcCopyExportBtn" type="button">⎘ Copiar</button>
+              </div>
             </div>
+            <textarea
+              class="vc-export-output empty"
+              id="vcExportOutput"
+              readonly
+              spellcheck="false"
+              aria-label="Preview de criação do projeto — somente leitura"
+            >Clique em GERAR PREVIEW para visualizar a estrutura local.</textarea>
           </div>
-          <textarea
-            class="vc-export-output empty"
-            id="vcExportOutput"
-            readonly
-            spellcheck="false"
-            aria-label="Preview de criação do projeto — somente leitura"
-          >Clique em GERAR PREVIEW para visualizar a estrutura local.</textarea>
         </div>
 
         <!-- Actions — no download/export/create buttons -->
-        <div class="vc-export-actions">
+        <div class="vc-gen-card-actions">
           <button class="vc-export-btn" id="vcGenerateExportBtn" type="button">⬡ GERAR PREVIEW</button>
-          <button class="vc-export-btn secondary" id="vcCopyExportBtn" type="button">⎘ COPIAR PREVIEW</button>
-          <button class="vc-export-btn danger" id="vcClearExportBtn" type="button">✕ LIMPAR PREVIEW</button>
+          <button class="vc-export-btn danger" id="vcClearExportBtn" type="button">✕ LIMPAR</button>
           <span class="vc-export-copy-status" id="vcExportCopyStatus">✓ Copiado!</span>
         </div>
 
@@ -1595,30 +1602,32 @@
           <div class="vc-real-readiness-card" id="vcRealReadyAck"><div class="vc-real-readiness-label">Confirmações (12/12)</div><div class="vc-real-readiness-val" id="vcRealReadyAckVal">—</div></div>
         </div>
 
-        <!-- Command package output panel -->
+        <!-- Sub-passo 3.2c: card com aparência de mensagem de assistente. -->
         <!-- No file creation / write / export / download / execute / deploy / release / tag / stable buttons -->
-        <div class="vc-real-command-output-panel" id="vcRealCommandOutputPanel">
-          <div class="vc-real-command-output-header">
-            <span class="vc-real-command-output-title">PACOTE DE COMANDO EXTERNO</span>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="vc-real-command-metric" id="vcRealCommandMetric"><span id="vcRealCommandLineCount">0</span> linhas</span>
-              <span class="vc-external-only-badge">EXTERNAL ONLY</span>
+        <div class="vc-gen-card">
+          <div class="vc-real-command-output-panel" id="vcRealCommandOutputPanel">
+            <div class="vc-real-command-output-header">
+              <span class="vc-real-command-output-title">PACOTE DE COMANDO EXTERNO</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="vc-real-command-metric" id="vcRealCommandMetric"><span id="vcRealCommandLineCount">0</span> linhas</span>
+                <span class="vc-external-only-badge">EXTERNAL ONLY</span>
+                <button class="vc-gen-card-copy" id="vcCopyCommandPkgBtn" type="button">⎘ Copiar</button>
+              </div>
             </div>
+            <textarea
+              class="vc-real-command-output empty"
+              id="vcRealCommandOutput"
+              readonly
+              spellcheck="false"
+              aria-label="Pacote de comando externo — somente leitura"
+            >Clique em GERAR PACOTE DE COMANDO para gerar o pacote.</textarea>
           </div>
-          <textarea
-            class="vc-real-command-output empty"
-            id="vcRealCommandOutput"
-            readonly
-            spellcheck="false"
-            aria-label="Pacote de comando externo — somente leitura"
-          >Clique em GERAR PACOTE DE COMANDO para gerar o pacote.</textarea>
         </div>
 
         <!-- Actions — no create/write/execute/deploy/release/tag/stable/export/download buttons -->
-        <div class="vc-real-command-actions">
+        <div class="vc-gen-card-actions">
           <button class="vc-real-command-btn" id="vcGenerateCommandPkgBtn" type="button">⬡ GERAR PACOTE DE COMANDO</button>
-          <button class="vc-real-command-btn secondary" id="vcCopyCommandPkgBtn" type="button">⎘ COPIAR PACOTE</button>
-          <button class="vc-real-command-btn danger" id="vcClearCommandPkgBtn" type="button">✕ LIMPAR PACOTE</button>
+          <button class="vc-real-command-btn danger" id="vcClearCommandPkgBtn" type="button">✕ LIMPAR</button>
           <span class="vc-real-command-copy-status" id="vcRealCommandCopyStatus">✓ Copiado!</span>
         </div>
 
@@ -1669,30 +1678,32 @@
         <p class="vc-pb-section-label">Estado de Autoridade</p>
         <p class="vc-pb-authority-note">🔒 Nenhuma autoridade real concedida nesta tela — ver <a href="#vcFinalAuthorityGrid">Matriz de Autoridade completa no Painel Final</a>.</p>
 
-        <!-- Receipt summary output -->
+        <!-- Sub-passo 3.2c: card com aparência de mensagem de assistente. -->
         <!-- No upload / import file / validate repo / run command / PASS GOLD / deploy buttons -->
-        <div class="vc-result-output-panel" id="vcResultOutputPanel">
-          <div class="vc-result-output-header">
-            <span class="vc-result-output-title">RECIBO DE EVIDÊNCIA LOCAL</span>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="vc-result-metric">Linhas: <span id="vcResultLineCount">0</span></span>
-              <span class="vc-manual-evidence-badge">MANUAL EVIDENCE</span>
+        <div class="vc-gen-card">
+          <div class="vc-result-output-panel" id="vcResultOutputPanel">
+            <div class="vc-result-output-header">
+              <span class="vc-result-output-title">RECIBO DE EVIDÊNCIA LOCAL</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="vc-result-metric">Linhas: <span id="vcResultLineCount">0</span></span>
+                <span class="vc-manual-evidence-badge">MANUAL EVIDENCE</span>
+                <button class="vc-gen-card-copy" id="vcCopyEvidenceReceiptBtn" type="button">⎘ Copiar</button>
+              </div>
             </div>
+            <textarea
+              class="vc-result-output empty"
+              id="vcResultReceiptOutput"
+              readonly
+              spellcheck="false"
+              aria-label="Recibo de evidência local — somente leitura"
+            >Clique em ANALISAR TEXTO LOCAL e depois GERAR RECIBO DE EVIDÊNCIA.</textarea>
           </div>
-          <textarea
-            class="vc-result-output empty"
-            id="vcResultReceiptOutput"
-            readonly
-            spellcheck="false"
-            aria-label="Recibo de evidência local — somente leitura"
-          >Clique em ANALISAR TEXTO LOCAL e depois GERAR RECIBO DE EVIDÊNCIA.</textarea>
         </div>
 
         <!-- Actions — no upload/import/run/create/deploy/PASS GOLD buttons -->
-        <div class="vc-result-actions">
+        <div class="vc-gen-card-actions">
           <button class="vc-result-btn" id="vcAnalyzeWorkerReportBtn" type="button">⬡ ANALISAR TEXTO LOCAL</button>
-          <button class="vc-result-btn secondary" id="vcGenerateEvidenceReceiptBtn" type="button">⊡ GERAR RECIBO DE EVIDÊNCIA</button>
-          <button class="vc-result-btn secondary" id="vcCopyEvidenceReceiptBtn" type="button">⎘ COPIAR RECIBO</button>
+          <button class="vc-result-btn secondary" id="vcGenerateEvidenceReceiptBtn" type="button">⊡ GERAR RECIBO</button>
           <button class="vc-result-btn danger" id="vcClearEvidenceReviewBtn" type="button">✕ LIMPAR</button>
           <span class="vc-result-copy-status" id="vcResultCopyStatus">✓ Copiado!</span>
         </div>
@@ -1752,30 +1763,32 @@
         <p class="vc-pb-section-label">Decisão do Operador</p>
         <div class="vc-final-decision-row" id="vcFinalDecisionRow"></div>
 
-        <!-- Final product report output -->
+        <!-- Sub-passo 3.2c: card com aparência de mensagem de assistente. -->
         <!-- No upload / run / create / deploy / release / tag / stable / PASS GOLD buttons -->
-        <div class="vc-final-output-panel" id="vcFinalOutputPanel">
-          <div class="vc-final-output-header">
-            <span class="vc-final-output-title">RELATÓRIO FINAL DO PRODUTO</span>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span style="font-size:9px;color:#4b5563;letter-spacing:.05em;">Linhas: <span id="vcFinalReportLineCount">0</span></span>
-              <span class="vc-summary-only-badge">SUMMARY ONLY</span>
+        <div class="vc-gen-card">
+          <div class="vc-final-output-panel" id="vcFinalOutputPanel">
+            <div class="vc-final-output-header">
+              <span class="vc-final-output-title">RELATÓRIO FINAL DO PRODUTO</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:9px;color:#4b5563;letter-spacing:.05em;">Linhas: <span id="vcFinalReportLineCount">0</span></span>
+                <span class="vc-summary-only-badge">SUMMARY ONLY</span>
+                <button class="vc-gen-card-copy" id="vcCopyFinalReportBtn" type="button">⎘ Copiar</button>
+              </div>
             </div>
+            <textarea
+              class="vc-final-output empty"
+              id="vcFinalReportOutput"
+              readonly
+              spellcheck="false"
+              aria-label="Relatório final do produto — somente leitura"
+            >Clique em GERAR RELATÓRIO FINAL para gerar o relatório.</textarea>
           </div>
-          <textarea
-            class="vc-final-output empty"
-            id="vcFinalReportOutput"
-            readonly
-            spellcheck="false"
-            aria-label="Relatório final do produto — somente leitura"
-          >Clique em GERAR RELATÓRIO FINAL para gerar o relatório.</textarea>
         </div>
 
         <!-- Actions — no file creation / exec / deploy / release / tag / stable / PASS GOLD buttons -->
-        <div class="vc-final-actions">
+        <div class="vc-gen-card-actions">
           <button class="vc-final-btn" id="vcGenerateFinalReportBtn" type="button">⬡ GERAR RELATÓRIO FINAL</button>
-          <button class="vc-final-btn secondary" id="vcCopyFinalReportBtn" type="button">⎘ COPIAR RELATÓRIO</button>
-          <button class="vc-final-btn danger" id="vcClearFinalReportBtn" type="button">✕ LIMPAR RELATÓRIO</button>
+          <button class="vc-final-btn danger" id="vcClearFinalReportBtn" type="button">✕ LIMPAR</button>
           <span class="vc-final-copy-status" id="vcFinalCopyStatus">✓ Copiado!</span>
         </div>
 

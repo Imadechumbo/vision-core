@@ -2670,6 +2670,49 @@ main.shell.grid > aside:last-of-type::-webkit-scrollbar-thumb {
   text-decoration: underline;
 }
 
+/* Sub-passo 3.2c — "cards de chat": reskin visual dos geradores de texto
+   (Seções G/I/J/K/M/N/O) — mesmo lugar (Modo Avançado), mesmo trigger
+   (botão GERAR), só a APRESENTAÇÃO do resultado muda: de
+   textarea+3-botões-separados pra um card com aparência de mensagem de
+   assistente (borda + gradiente escuro, botão de copiar inline no
+   cabeçalho, como um bloco de código de chat). Wrapper por fora dos
+   elementos existentes — zero classe nova nos que JS gerencia via
+   className= (GERAR reescreve a className da textarea pra alternar
+   .empty; uma classe extra ali seria apagada a cada geração). */
+.vc-gen-card {
+  border: 1px solid var(--v298-border, rgba(168,85,247,.34));
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(9,10,16,.96), rgba(4,5,10,.96));
+  padding: 2px;
+  margin: 4px 0 14px;
+  overflow: hidden;
+}
+.vc-gen-card textarea {
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+.vc-gen-card-copy {
+  background: rgba(168,85,247,.12);
+  border: 1px solid rgba(168,85,247,.32);
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #c4b5fd;
+  cursor: pointer;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.vc-gen-card-copy:hover { background: rgba(168,85,247,.22); }
+.vc-gen-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 14px;
+}
+
 .vc-pb-section {
   margin-bottom: 20px;
 }
