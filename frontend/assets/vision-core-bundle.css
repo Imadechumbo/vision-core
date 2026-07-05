@@ -2658,6 +2658,18 @@ main.shell.grid > aside:last-of-type::-webkit-scrollbar-thumb {
   border-bottom: 1px solid rgba(255,255,255,.05);
 }
 
+/* Sub-passo 3.2b — item 3: nota leve substituindo grids de autoridade
+   duplicados (K/L/M/N apontam pra Seção O, a versão completa). */
+.vc-pb-authority-note {
+  font-size: 11px;
+  color: #4b5563;
+  margin: 0 0 18px;
+}
+.vc-pb-authority-note a {
+  color: #a78bfa;
+  text-decoration: underline;
+}
+
 .vc-pb-section {
   margin-bottom: 20px;
 }

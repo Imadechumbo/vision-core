@@ -2096,6 +2096,22 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       : [];
   }
 
+  // Sub-passo 3.2b — item 1: fonte única de verdade pro modo de um agente.
+  // #agentsBoard (.vc-reserve-card) é o painel real, persistido via
+  // POST /api/agents/:id/mode (initReserveAgentControls). A antiga Matriz de
+  // Controle de Agentes (Seção E do Project Builder) tinha seu PRÓPRIO estado
+  // local (pbState.agentModes) que nunca lia de volta o que foi persistido —
+  // dois caches divergentes do mesmo conceito. Removida a matriz; quem
+  // precisa saber o modo atual de um agente lê daqui.
+  function getAgentModeFromBoard(agentId, fallback) {
+    var card = document.querySelector('.vc-reserve-card[data-agent-id="' + agentId + '"]');
+    if (!card) { return fallback; }
+    if (card.querySelector('.vc-mode-btn.active-on'))   { return 'ON'; }
+    if (card.querySelector('.vc-mode-btn.active-off'))  { return 'OFF'; }
+    if (card.querySelector('.vc-mode-btn.active-auto')) { return 'AUTO'; }
+    return fallback;
+  }
+
   function findAgent(agentId) {
     var registry = getAgentRegistry();
     for (var i = 0; i < registry.length; i++) {
@@ -2207,8 +2223,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     selectedProjectType: null,
     selectedProjectSize: null,
     selectedStacks: [],
-    selectedMode: 'auto_assistido',
-    agentModes: {}
+    selectedMode: 'auto_assistido'
+    // agentModes removido no Sub-passo 3.2b — ver getAgentModeFromBoard()
   };
 
   function getPBRegistry() {
@@ -2254,7 +2270,6 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         card.classList.remove('selected');
       }
     });
-    applyRecommendedAgents(typeId);
     renderOrchestrationPreview();
     syncTemplateWithProjectType(typeId);
   }
@@ -2311,64 +2326,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     renderOrchestrationPreview();
   }
 
-  function applyRecommendedAgents(typeId) {
-    var pt = findProjectType(typeId);
-    /* Update matrix rows in project builder */
-    document.querySelectorAll('.vc-agent-matrix-row').forEach(function (row) {
-      var agentId = row.getAttribute('data-agent-id');
-      if (!pt || !pt.agents) {
-        row.classList.remove('vc-agent-recommended', 'vc-agent-selected');
-        var badge = row.querySelector('.vc-agent-matrix-badge');
-        if (badge) { badge.textContent = '—'; badge.className = 'vc-agent-matrix-badge norec'; }
-        return;
-      }
-      var recommended = pt.agents[agentId] || 'AUTO';
-      pbState.agentModes[agentId] = recommended;
-      /* Visual badge */
-      var badge = row.querySelector('.vc-agent-matrix-badge');
-      if (badge) {
-        if (recommended === 'ON') {
-          badge.textContent = 'ON'; badge.className = 'vc-agent-matrix-badge rec';
-          row.classList.add('vc-agent-recommended', 'vc-agent-selected');
-        } else if (recommended === 'AUTO') {
-          badge.textContent = 'AUTO'; badge.className = 'vc-agent-matrix-badge rec';
-          row.classList.add('vc-agent-recommended');
-          row.classList.remove('vc-agent-selected');
-        } else {
-          badge.textContent = 'OFF'; badge.className = 'vc-agent-matrix-badge norec';
-          row.classList.remove('vc-agent-recommended', 'vc-agent-selected');
-        }
-      }
-      /* Sync mode buttons in matrix row */
-      row.querySelectorAll('.vc-matrix-mode-btn').forEach(function (btn) {
-        btn.classList.remove('active-off','active-auto','active-on');
-        var m = btn.getAttribute('data-mode');
-        if (m === 'off'  && recommended === 'OFF')  { btn.classList.add('active-off'); }
-        if (m === 'auto' && recommended === 'AUTO') { btn.classList.add('active-auto'); }
-        if (m === 'on'   && recommended === 'ON')   { btn.classList.add('active-on'); }
-      });
-    });
-  }
-
-  function updateAgentMode(agentId, mode) {
-    pbState.agentModes[agentId] = mode;
-    var row = document.querySelector('.vc-agent-matrix-row[data-agent-id="' + agentId + '"]');
-    if (!row) { return; }
-    row.querySelectorAll('.vc-matrix-mode-btn').forEach(function (btn) {
-      btn.classList.remove('active-off','active-auto','active-on');
-      var m = btn.getAttribute('data-mode');
-      if (m === 'off'  && mode === 'OFF')  { btn.classList.add('active-off'); }
-      if (m === 'auto' && mode === 'AUTO') { btn.classList.add('active-auto'); }
-      if (m === 'on'   && mode === 'ON')   { btn.classList.add('active-on'); }
-    });
-    var badge = row.querySelector('.vc-agent-matrix-badge');
-    if (badge) {
-      if (mode === 'ON')   { badge.textContent = 'ON';   badge.className = 'vc-agent-matrix-badge rec'; }
-      if (mode === 'AUTO') { badge.textContent = 'AUTO'; badge.className = 'vc-agent-matrix-badge rec'; }
-      if (mode === 'OFF')  { badge.textContent = 'OFF';  badge.className = 'vc-agent-matrix-badge norec'; }
-    }
-    renderOrchestrationPreview();
-  }
+  // Sub-passo 3.2b — applyRecommendedAgents() e updateAgentMode() removidas:
+  // ambas só existiam pra sincronizar as linhas de .vc-agent-matrix-row (Seção
+  // E, removida). A recomendação de agente-por-tipo-de-projeto que
+  // applyRecommendedAgents fazia não tem mais um destino visual — o
+  // #agentsBoard (fonte real, ver getAgentModeFromBoard()) é genérico e não
+  // varia por tipo de projeto.
 
   function renderOrchestrationPreview() {
     var reg = getPBRegistry();
@@ -2395,7 +2358,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var agents = getAgentRegistry();
     var on = [], auto = [], off = [];
     agents.forEach(function (a) {
-      var m = pbState.agentModes[a.id] || a.default_mode || 'AUTO';
+      var m = getAgentModeFromBoard(a.id, a.default_mode || 'AUTO');
       if (m === 'ON')   { on.push(a.name); }
       else if (m === 'OFF') { off.push(a.name); }
       else              { auto.push(a.name); }
@@ -2457,7 +2420,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     /* Agent blocks */
     appendPlanSection(plan, 'AGENTES SELECIONADOS');
     agents.forEach(function (a) {
-      var m = pbState.agentModes[a.id] || a.default_mode || 'AUTO';
+      var m = getAgentModeFromBoard(a.id, a.default_mode || 'AUTO');
       if (m === 'OFF') { return; }
       var block = document.createElement('div');
       block.className = 'vc-plan-agent-block';
@@ -2779,26 +2742,6 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       });
     });
 
-    /* Agent matrix mode buttons */
-    document.querySelectorAll('.vc-agent-matrix-row').forEach(function (row) {
-      var agentId = row.getAttribute('data-agent-id');
-      row.querySelectorAll('.vc-matrix-mode-btn').forEach(function (btn) {
-        btn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          var modeRaw = btn.getAttribute('data-mode');
-          var modeUpper = modeRaw === 'off' ? 'OFF' : modeRaw === 'auto' ? 'AUTO' : 'ON';
-          updateAgentMode(agentId, modeUpper);
-          /* §80 B2 — persistir modo matrix no backend */
-          if (agentId) {
-            apiFetch('/api/agents/' + agentId + '/mode', {
-              method: 'POST',
-              body: JSON.stringify({ mode: modeUpper })
-            }).catch(function() {});
-          }
-        });
-      });
-    });
-
     /* Generate plan button */
     var genBtn = document.getElementById('vcGeneratePlanBtn');
     if (genBtn) {
@@ -2812,26 +2755,6 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
     /* Set default mode selection visually */
     setOrchestrationMode('auto_assistido');
-
-    /* Initialize agent matrix modes from registry defaults */
-    var agents = getAgentRegistry();
-    agents.forEach(function (a) {
-      pbState.agentModes[a.id] = a.default_mode || 'AUTO';
-    });
-
-    /* Sync matrix button active states from defaults */
-    agents.forEach(function (a) {
-      var row = document.querySelector('.vc-agent-matrix-row[data-agent-id="' + a.id + '"]');
-      if (!row) { return; }
-      var def = a.default_mode || 'AUTO';
-      row.querySelectorAll('.vc-matrix-mode-btn').forEach(function (btn) {
-        btn.classList.remove('active-off','active-auto','active-on');
-        var m = btn.getAttribute('data-mode');
-        if (m === 'off'  && def === 'OFF')  { btn.classList.add('active-off'); }
-        if (m === 'auto' && def === 'AUTO') { btn.classList.add('active-auto'); }
-        if (m === 'on'   && def === 'ON')   { btn.classList.add('active-on'); }
-      });
-    });
 
     renderOrchestrationPreview();
   }
@@ -2870,7 +2793,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     var agents = getAgentRegistry();
     var on = [], auto = [];
     agents.forEach(function (a) {
-      var m = pbState.agentModes[a.id] || a.default_mode || 'AUTO';
+      var m = getAgentModeFromBoard(a.id, a.default_mode || 'AUTO');
       if (m === 'ON')   { on.push(a); }
       else if (m === 'AUTO') { auto.push(a); }
     });
@@ -4071,12 +3994,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     /* Sync source summary */
     var c = getExportPreviewContext();
     function setVal(id, v) { var el = document.getElementById(id); if (el) { el.textContent = v || '—'; } }
-    setVal('vcExpSrcType',     c.ctx.projectType ? c.ctx.projectType.label : null);
-    setVal('vcExpSrcTemplate', c.tpl ? c.tpl.name : null);
-    setVal('vcExpSrcStack',    c.stack.length ? c.stack.join(', ') : null);
-    setVal('vcExpSrcSize',     c.ctx.projectSize ? c.ctx.projectSize.label : null);
-    var agentCount = c.agts ? (c.agts.on.length + c.agts.auto.length) : 0;
-    setVal('vcExpSrcAgents',   agentCount ? agentCount + ' ativos' : null);
+    // Sub-passo 3.2b: Tipo/Template/Stack/Tamanho/Agentes removidos daqui —
+    // já aparecem no Resumo do Projeto (renderOrchestrationPreview, Seção F).
     setVal('vcExpSrcHandoff',  handoffState && handoffState.selectedTarget
       ? handoffState.selectedTarget.replace(/_/g, ' ')
       : null);
@@ -4195,12 +4114,25 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   }
 
   function getHumanApprovalContext() {
-    /* Pull from existing in-memory states — no disk, no API */
-    var type     = (typeof pbState !== 'undefined' && pbState.selectedType)     ? pbState.selectedType     : '—';
-    var stack    = (typeof pbState !== 'undefined' && pbState.selectedStack)    ? pbState.selectedStack    : '—';
-    var size     = (typeof pbState !== 'undefined' && pbState.selectedSize)     ? pbState.selectedSize     : '—';
-    var tpl      = (typeof pbTemplateState !== 'undefined' && pbTemplateState.selectedTemplate) ? pbTemplateState.selectedTemplate : '—';
-    var agents   = (typeof pbState !== 'undefined' && Array.isArray(pbState.activeAgents)) ? pbState.activeAgents.length : 0;
+    // Sub-passo 3.2b: reescrito pra usar as MESMAS fontes corretas de F/K
+    // (getSelectedProjectContext/getSelectedTemplate/getSelectedAgentsForMission)
+    // — a versão anterior lia pbState.selectedType/selectedStack/selectedSize/
+    // activeAgents, propriedades que NUNCA existiram em pbState (shape real:
+    // selectedProjectType/selectedStacks/selectedProjectSize, sem activeAgents)
+    // e em pbTemplateState.selectedTemplate (shape real: selectedTemplateId).
+    // Sempre retornava '—'/0 — não só no resumo (removido, redundante com F),
+    // mas também no RECIBO GERADO (buildHumanApprovalReceipt usa ctx.type/
+    // ctx.stack/etc.), que mostrava sempre "—" independente do que foi
+    // selecionado. Confirmado lendo os dois usos antes de decidir o que
+    // manter — o recibo não é redundante e precisa do dado correto.
+    var psc  = getSelectedProjectContext();
+    var tplO = getSelectedTemplate();
+    var agts = getSelectedAgentsForMission();
+    var type   = psc.projectType ? psc.projectType.label : '—';
+    var stack  = psc.stack.length ? psc.stack.join(', ') : '—';
+    var size   = psc.projectSize ? psc.projectSize.label : '—';
+    var tpl    = tplO ? tplO.name : '—';
+    var agents = agts.on.length + agts.auto.length;
 
     /* Derive folder/file counts from export preview if generated */
     var folderCount = 6;
@@ -4458,13 +4390,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   }
 
   function renderHumanApprovalSummary() {
+    // Sub-passo 3.2b: Tipo/Template/Stack/Tamanho/Agentes removidos do resumo
+    // (redundante com F) — ctx.type/template/stack/size/agentCount continuam
+    // computados corretamente em getHumanApprovalContext() pro recibo gerado.
     var ctx = getHumanApprovalContext();
     var map = {
-      vcHagSrcType:     ctx.type,
-      vcHagSrcTemplate: ctx.template,
-      vcHagSrcStack:    ctx.stack,
-      vcHagSrcSize:     ctx.size,
-      vcHagSrcAgents:   ctx.agentCount + ' agente(s)',
       vcHagFolderCount: ctx.folderCount + ' pasta(s)',
       vcHagFileCount:   ctx.fileCount  + ' arquivo(s)'
     };
@@ -4550,21 +4480,20 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   }
 
   function getRealFileCommandContext() {
-    var type    = (typeof pbState !== 'undefined' && pbState.selectedType)  ? pbState.selectedType  : '—';
-    var stack   = (typeof pbState !== 'undefined' && pbState.selectedStack) ? pbState.selectedStack : '—';
-    var size    = (typeof pbState !== 'undefined' && pbState.selectedSize)  ? pbState.selectedSize  : '—';
-    var tpl     = (typeof pbTemplateState !== 'undefined' && pbTemplateState.selectedTemplate) ? pbTemplateState.selectedTemplate : '—';
-    var agents  = (typeof pbState !== 'undefined' && Array.isArray(pbState.activeAgents)) ? pbState.activeAgents : [];
-
-    /* Template registry detail */
-    var tplDetail = null;
-    var pb = window.VISION_CORE_PROJECT_BUILDER;
-    if (pb && pb.template_packs && tpl !== '—') {
-      tplDetail = null;
-      for (var i = 0; i < pb.template_packs.length; i++) {
-        if (pb.template_packs[i].id === tpl) { tplDetail = pb.template_packs[i]; break; }
-      }
-    }
+    // Sub-passo 3.2b: mesma correção de getHumanApprovalContext() acima —
+    // pbState.selectedType/selectedStack/selectedSize/activeAgents e
+    // pbTemplateState.selectedTemplate não existem (shape real:
+    // selectedProjectType/selectedStacks/selectedProjectSize/selectedTemplateId).
+    // Sempre retornava '—'/[] — inclusive no PACOTE DE COMANDO GERADO
+    // (_cmdHeader usa ctx.type/ctx.template/ctx.stack/ctx.size/ctx.agents.length).
+    var psc       = getSelectedProjectContext();
+    var tplDetail = getSelectedTemplate();
+    var agts      = getSelectedAgentsForMission();
+    var type      = psc.projectType ? psc.projectType.label : '—';
+    var stack     = psc.stack.length ? psc.stack.join(', ') : '—';
+    var size      = psc.projectSize ? psc.projectSize.label : '—';
+    var tpl       = tplDetail ? tplDetail.name : '—';
+    var agents    = agts.on.concat(agts.auto);
 
     var exportAvailable = (typeof exportPreviewState !== 'undefined' && !!exportPreviewState.generatedPreview);
     var approvalReady   = (typeof humanApprovalState !== 'undefined' && areAllHumanAcknowledgementsChecked());
@@ -4598,9 +4527,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       if (val)  { val.textContent = label; }
     };
 
-    setCard('vcRealReadyType',     'vcRealReadyTypeVal',     ctx.type !== '—'  ? ctx.type  : 'Não selecionado', ctx.type !== '—');
-    setCard('vcRealReadyTpl',      'vcRealReadyTplVal',      ctx.template !== '—' ? ctx.template : 'Não selecionado', ctx.template !== '—');
-    setCard('vcRealReadyStack',    'vcRealReadyStackVal',    ctx.stack !== '—' ? ctx.stack : 'Não selecionado', ctx.stack !== '—');
+    // Sub-passo 3.2b: Type/Tpl/Stack removidos (redundante com F) — ctx.type/
+    // template/stack continuam corretos acima pro pacote de comando gerado.
     setCard('vcRealReadyExport',   'vcRealReadyExportVal',   ctx.exportAvailable  ? 'Disponível'  : 'Não gerado',   ctx.exportAvailable);
     setCard('vcRealReadyApproval', 'vcRealReadyApprovalVal', ctx.approvalReady    ? 'PRONTO'      : 'Incompleto',   ctx.approvalReady);
 
@@ -5471,11 +5399,19 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   }
 
   function getFinalProductContext() {
-    var type         = (typeof pbState !== 'undefined' && pbState.selectedType)  ? pbState.selectedType  : '—';
-    var stack        = (typeof pbState !== 'undefined' && pbState.selectedStack) ? pbState.selectedStack : '—';
-    var size         = (typeof pbState !== 'undefined' && pbState.selectedSize)  ? pbState.selectedSize  : '—';
-    var tpl          = (typeof pbTemplateState !== 'undefined' && pbTemplateState.selectedTemplate) ? pbTemplateState.selectedTemplate : '—';
-    var agents       = (typeof pbState !== 'undefined' && Array.isArray(pbState.activeAgents)) ? pbState.activeAgents.length : 0;
+    // Sub-passo 3.2b: mesma correção de getHumanApprovalContext()/
+    // getRealFileCommandContext() — pbState.selectedType/selectedStack/
+    // selectedSize/activeAgents e pbTemplateState.selectedTemplate não
+    // existem (shape real: selectedProjectType/selectedStacks/
+    // selectedProjectSize/selectedTemplateId).
+    var psc          = getSelectedProjectContext();
+    var tplDetail    = getSelectedTemplate();
+    var agts         = getSelectedAgentsForMission();
+    var type         = psc.projectType ? psc.projectType.label : '—';
+    var stack        = psc.stack.length ? psc.stack.join(', ') : '—';
+    var size         = psc.projectSize ? psc.projectSize.label : '—';
+    var tpl          = tplDetail ? tplDetail.name : '—';
+    var agents       = agts.on.length + agts.auto.length;
     var workerTarget = (typeof realFileCommandState !== 'undefined') ? realFileCommandState.selectedWorker   : '—';
     var pkgMode      = (typeof realFileCommandState !== 'undefined') ? realFileCommandState.selectedMode.replace(/_/g, ' ') : '—';
     var fpd          = getFinalProductDashboardRegistry();
@@ -5485,7 +5421,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   }
 
   function getFinalArtifactReadiness() {
-    var tpl              = (typeof pbTemplateState !== 'undefined' && pbTemplateState.selectedTemplate);
+    // Sub-passo 3.2b: mesma correção — pbTemplateState.selectedTemplate não
+    // existe (shape real: selectedTemplateId), então "Template Selected"
+    // sempre reportava 'waiting' mesmo com um template escolhido.
+    var tpl              = !!getSelectedTemplate();
     var missionReady     = (typeof mcState !== 'undefined' && !!mcState.generatedPrompt);
     var handoffReady     = (typeof handoffState !== 'undefined' && !!handoffState.generatedPackage);
     var exportReady      = (typeof exportPreviewState !== 'undefined' && !!exportPreviewState.generatedPreview);
@@ -5557,13 +5496,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   }
 
   function renderFinalProductContext() {
+    // Sub-passo 3.2b: Tipo/Template/Stack/Tamanho/Agentes removidos
+    // (redundante com F) — ctx.type/template/stack/size/agents continuam
+    // corretos acima pro relatório final gerado (buildFinalProductReport).
     var ctx = getFinalProductContext();
     var map = {
-      vcFinalCtxType:        ctx.type,
-      vcFinalCtxTemplate:    ctx.template,
-      vcFinalCtxStack:       ctx.stack,
-      vcFinalCtxSize:        ctx.size,
-      vcFinalCtxAgents:      ctx.agents + ' agente(s)',
       vcFinalCtxWorker:      ctx.workerTarget,
       vcFinalCtxPackageMode: ctx.pkgMode,
       vcFinalCtxDecision:    ctx.decision
