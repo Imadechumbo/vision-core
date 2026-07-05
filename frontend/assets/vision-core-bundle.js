@@ -10158,6 +10158,46 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       });
     }
 
+    // ── Sub-passo 3.2d — painel lateral (drawer) de Templates (Seção H) ────
+    // #vcTemplateDrawer é sibling de #vcMissionSfPane, não filho — usa
+    // position:fixed, então abre/fecha independente da aba (Chat/SF) ativa.
+    // A grid/detalhe já vêm populados por initTemplatePacks() no load
+    // (roda incondicionalmente — ver linha ~10800), independente de o
+    // drawer já ter sido aberto alguma vez.
+    function openTemplateDrawer() {
+      var drawer = document.getElementById('vcTemplateDrawer');
+      var backdrop = document.getElementById('vcTemplateDrawerBackdrop');
+      if (!drawer || !backdrop) return;
+      backdrop.style.display = 'block';
+      drawer.style.display = 'flex';
+      // rAF: garante que display:flex já aplicou antes de disparar a
+      // transição de transform (senão o slide-in não anima na 1ª abertura).
+      requestAnimationFrame(function() { drawer.classList.add('open'); });
+    }
+
+    function closeTemplateDrawer() {
+      var drawer = document.getElementById('vcTemplateDrawer');
+      var backdrop = document.getElementById('vcTemplateDrawerBackdrop');
+      if (!drawer || !backdrop) return;
+      drawer.classList.remove('open');
+      backdrop.style.display = 'none';
+      setTimeout(function() { drawer.style.display = 'none'; }, 300); // aguarda a transição de slide-out (.3s)
+    }
+
+    function initTemplateDrawer() {
+      var openBtn  = document.getElementById('vcOpenTemplateDrawerBtn');
+      var closeBtn = document.getElementById('vcCloseTemplateDrawerBtn');
+      var backdrop = document.getElementById('vcTemplateDrawerBackdrop');
+      if (openBtn)  { openBtn.addEventListener('click', openTemplateDrawer); }
+      if (closeBtn) { closeBtn.addEventListener('click', closeTemplateDrawer); }
+      if (backdrop) { backdrop.addEventListener('click', closeTemplateDrawer); }
+      document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') { return; }
+        var drawer = document.getElementById('vcTemplateDrawer');
+        if (drawer && drawer.classList.contains('open')) { closeTemplateDrawer(); }
+      });
+    }
+
     function handleSfSend() {
       var inp = document.getElementById('vcSfChatInput');
       var desc = inp ? inp.value.trim() : '';
@@ -10219,6 +10259,7 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     initSfModeTabs();  // §163
     initSfExampleChips(); // §163
     initSfGenChips(); // Sub-passo 3.2c
+    initTemplateDrawer(); // Sub-passo 3.2d
     initSfSimpleChat(); // §164
 
     // §162 — Tutorial SF (❓ TUTORIAL button → sf2)

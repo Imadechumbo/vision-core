@@ -55,6 +55,26 @@
 .vc-gen-card-body{width:100%;box-sizing:border-box;min-height:110px;max-height:340px;color:#e2d9f3;font-family:'SFMono-Regular',Consolas,monospace;font-size:.76rem;line-height:1.5;padding:0 10px 10px;resize:vertical;}
 .vc-gen-card-footer{padding:6px 10px 10px;border-top:1px solid rgba(255,255,255,.06);font-size:.72rem;color:#94a3b8;}
 .vc-gen-card-change-select{background:#1e1e2e;color:#c4b5fd;border:1px solid rgba(168,85,247,.3);border-radius:4px;padding:2px 4px;font-size:.72rem;margin-left:4px;}
+/* Sub-passo 3.2d — painel lateral (drawer) de Templates.
+   Mecanismo escolhido sem resposta do usuário em 60s: drawer desliza da
+   borda direita sobre o chat, com backdrop escurecido atrás — a leitura
+   mais literal de "painel deslizante lateral" (termo usado na própria
+   pergunta de esclarecimento) e a de menor risco de CSS/responsividade
+   (não mexe no breakpoint de 1181px do sidebar mini-mode nem reaproveita/
+   conflita com o mecanismo de abas Chat/Software Factory já existente). */
+.vc-sf-templates-trigger{margin:0 0 8px;}
+.vc-template-drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;display:none;}
+.vc-template-drawer{position:fixed;top:0;right:0;height:100vh;width:min(460px,92vw);background:linear-gradient(180deg,#0b0b12,#050507);border-left:1px solid rgba(124,58,237,.35);box-shadow:-12px 0 40px rgba(0,0,0,.5);z-index:401;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:none;flex-direction:column;}
+.vc-template-drawer.open{transform:translateX(0);}
+.vc-template-drawer-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.08);font-size:.82rem;font-weight:700;letter-spacing:.05em;color:#c4b5fd;flex-shrink:0;}
+.vc-template-drawer-close{background:transparent;border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#94a3b8;width:28px;height:28px;cursor:pointer;font-size:.9rem;line-height:1;}
+.vc-template-drawer-close:hover{background:rgba(255,255,255,.06);color:#fff;}
+.vc-template-drawer-body{flex:1;overflow-y:auto;padding:14px 18px 24px;}
+/* Grid/detail da Seção H usam breakpoints de VIEWPORT (@media), não de
+   container — dentro de um drawer de 460px isso ficaria espremido em
+   viewports largos. Overrides fixos, independentes da largura da tela. */
+.vc-template-drawer .vc-template-grid{grid-template-columns:repeat(2,1fr);}
+.vc-template-drawer .vc-tpl-two-col{grid-template-columns:1fr;}
 /* §163 — SF chat input */
 #vcSfChatInput{background:#1e1e2e!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:10px!important;color:#e2d9f3!important;transition:border-color .2s;}
 #vcSfChatInput:focus{border-color:rgba(124,58,237,.6)!important;outline:none!important;box-shadow:0 0 0 2px rgba(124,58,237,.15)!important;}
@@ -417,6 +437,11 @@
             <button class="vc-sf-example-chip" data-example="Quero um site de validação de provas online com cadastro de alunos, upload de gabaritos e correção automática. Stack: Node.js + HTML/CSS." type="button">📝 Plataforma de provas</button>
           </div>
 
+          <!-- Sub-passo 3.2d — botão inline pra abrir o painel lateral de Templates -->
+          <div class="vc-sf-templates-trigger">
+            <button id="vcOpenTemplateDrawerBtn" class="vc-sf-example-chip" type="button">📐 Ver templates disponíveis</button>
+          </div>
+
           <!-- Sub-passo 3.2c — gatilhos explícitos dos 6 geradores (I/J/K/M/N/O).
                Clicar dispara triggerGenCard(genId) diretamente — mesma função
                que o reconhecimento por palavra-chave usa dentro de handleSfSend,
@@ -448,6 +473,89 @@
 
         </div><!-- end #vcSfHomeControl -->
       </div><!-- end #vcMissionSfPane -->
+
+      <!-- Sub-passo 3.2d — painel lateral (drawer) de Templates. Sibling de
+           #vcMissionSfPane (não filho): position:fixed escapa do fluxo
+           normal, então funciona independente de qual aba (Chat/Software
+           Factory) está ativa. Aberto por #vcOpenTemplateDrawerBtn (dentro
+           do chat), fechado por X, clique no backdrop, ou ESC. -->
+      <div class="vc-template-drawer-backdrop" id="vcTemplateDrawerBackdrop" style="display:none"></div>
+      <div class="vc-template-drawer" id="vcTemplateDrawer">
+        <div class="vc-template-drawer-header">
+          <span>TEMPLATES DE PROJETO</span>
+          <button id="vcCloseTemplateDrawerBtn" class="vc-template-drawer-close" type="button" aria-label="Fechar">✕</button>
+        </div>
+        <div class="vc-template-drawer-body">
+          <!-- ── Section H — Project Template Packs (movida de #projectBuilder) ── -->
+          <div class="vc-pb-section vc-template-packs" id="vcTemplatePacks">
+            <div class="vc-tpl-headline">
+              <div class="vc-pb-headline-text">
+                <p class="eyebrow">SOFTWARE FACTORY • TEMPLATE PACKS • LOCAL BLUEPRINTS</p>
+                <h2 style="font-size:14px;margin:0 0 4px;">TEMPLATES DE PROJETO</h2>
+                <p style="font-size:11px;color:#4b5563;margin:0;">Blueprints locais para iniciar projetos com estrutura, agentes, prompts e validações sugeridas. Nenhum arquivo é criado automaticamente.</p>
+              </div>
+              <span class="vc-tpl-badge">LOCAL BLUEPRINT</span>
+            </div>
+
+            <!-- Template selector grid -->
+            <div class="vc-template-grid" id="vcTemplateGrid">
+              <!-- populated by JS from template_packs registry -->
+            </div>
+
+            <!-- Template detail panel -->
+            <div class="vc-template-detail" id="vcTemplateDetail">
+              <div class="vc-template-detail-header">
+                <div>
+                  <div class="vc-template-detail-title" id="vcTplDetailName">BLUEPRINT LOCAL</div>
+                  <p class="vc-template-detail-summary" id="vcTplDetailSummary"></p>
+                </div>
+                <span class="vc-template-detail-bp-badge">BLUEPRINT LOCAL</span>
+              </div>
+
+              <!-- Recommended stack -->
+              <div class="vc-tpl-section-label">Stack Recomendada</div>
+              <div class="vc-template-stack-row" id="vcTplDetailStack"></div>
+
+              <!-- Folder structure + Initial files (2 col) -->
+              <div class="vc-tpl-two-col" style="margin-top:14px;">
+                <div>
+                  <div class="vc-tpl-section-label">Estrutura de Pastas</div>
+                  <div class="vc-template-tree" id="vcTplDetailTree"></div>
+                </div>
+                <div>
+                  <div class="vc-tpl-section-label">Arquivos Iniciais</div>
+                  <div class="vc-template-file-list" id="vcTplDetailFiles"></div>
+                </div>
+              </div>
+
+              <!-- Reserve agents -->
+              <div class="vc-tpl-section-label">Agentes Reserva</div>
+              <div class="vc-template-agent-list" id="vcTplDetailAgents"></div>
+
+              <!-- Prompt sequence -->
+              <div class="vc-tpl-section-label">Sequência de Prompts</div>
+              <div class="vc-template-prompt-sequence" id="vcTplDetailPrompts"></div>
+
+              <!-- Validation checklist -->
+              <div class="vc-tpl-section-label">Checklist de Validação</div>
+              <div class="vc-template-validation-list" id="vcTplDetailChecklist"></div>
+
+              <!-- Risk warnings -->
+              <div class="vc-tpl-section-label">Avisos de Risco</div>
+              <div class="vc-template-risk-list" id="vcTplDetailRisks"></div>
+
+              <!-- Forbidden actions -->
+              <div class="vc-tpl-section-label">Ações Proibidas</div>
+              <div class="vc-template-forbidden-row" id="vcTplDetailForbidden"></div>
+
+              <!-- Next safe action -->
+              <div class="vc-tpl-section-label" style="margin-top:14px;">Próxima Ação Segura</div>
+              <div class="vc-template-next-action" id="vcTplDetailNextAction"></div>
+            </div>
+          </div>
+        </div>
+      </div><!-- end #vcTemplateDrawer -->
+
       <!-- V2.9.10 CLEAN FRONT: static command panel — approved V2.9.10 visual -->
       <div class="v298-command-chat" id="v298CommandChat">
         <div class="v298-command-head">
@@ -1256,73 +1364,10 @@
         </div>
       </div>
 
-      <!-- ── Section H — Project Template Packs ─────────────────── -->
-      <div class="vc-pb-section vc-template-packs" id="vcTemplatePacks">
-        <div class="vc-tpl-headline">
-          <div class="vc-pb-headline-text">
-            <p class="eyebrow">SOFTWARE FACTORY • TEMPLATE PACKS • LOCAL BLUEPRINTS</p>
-            <h2 style="font-size:14px;margin:0 0 4px;">TEMPLATES DE PROJETO</h2>
-            <p style="font-size:11px;color:#4b5563;margin:0;">Blueprints locais para iniciar projetos com estrutura, agentes, prompts e validações sugeridas. Nenhum arquivo é criado automaticamente.</p>
-          </div>
-          <span class="vc-tpl-badge">LOCAL BLUEPRINT</span>
-        </div>
-
-        <!-- Template selector grid -->
-        <div class="vc-template-grid" id="vcTemplateGrid">
-          <!-- populated by JS from template_packs registry -->
-        </div>
-
-        <!-- Template detail panel -->
-        <div class="vc-template-detail" id="vcTemplateDetail">
-          <div class="vc-template-detail-header">
-            <div>
-              <div class="vc-template-detail-title" id="vcTplDetailName">BLUEPRINT LOCAL</div>
-              <p class="vc-template-detail-summary" id="vcTplDetailSummary"></p>
-            </div>
-            <span class="vc-template-detail-bp-badge">BLUEPRINT LOCAL</span>
-          </div>
-
-          <!-- Recommended stack -->
-          <div class="vc-tpl-section-label">Stack Recomendada</div>
-          <div class="vc-template-stack-row" id="vcTplDetailStack"></div>
-
-          <!-- Folder structure + Initial files (2 col) -->
-          <div class="vc-tpl-two-col" style="margin-top:14px;">
-            <div>
-              <div class="vc-tpl-section-label">Estrutura de Pastas</div>
-              <div class="vc-template-tree" id="vcTplDetailTree"></div>
-            </div>
-            <div>
-              <div class="vc-tpl-section-label">Arquivos Iniciais</div>
-              <div class="vc-template-file-list" id="vcTplDetailFiles"></div>
-            </div>
-          </div>
-
-          <!-- Reserve agents -->
-          <div class="vc-tpl-section-label">Agentes Reserva</div>
-          <div class="vc-template-agent-list" id="vcTplDetailAgents"></div>
-
-          <!-- Prompt sequence -->
-          <div class="vc-tpl-section-label">Sequência de Prompts</div>
-          <div class="vc-template-prompt-sequence" id="vcTplDetailPrompts"></div>
-
-          <!-- Validation checklist -->
-          <div class="vc-tpl-section-label">Checklist de Validação</div>
-          <div class="vc-template-validation-list" id="vcTplDetailChecklist"></div>
-
-          <!-- Risk warnings -->
-          <div class="vc-tpl-section-label">Avisos de Risco</div>
-          <div class="vc-template-risk-list" id="vcTplDetailRisks"></div>
-
-          <!-- Forbidden actions -->
-          <div class="vc-tpl-section-label">Ações Proibidas</div>
-          <div class="vc-template-forbidden-row" id="vcTplDetailForbidden"></div>
-
-          <!-- Next safe action -->
-          <div class="vc-tpl-section-label" style="margin-top:14px;">Próxima Ação Segura</div>
-          <div class="vc-template-next-action" id="vcTplDetailNextAction"></div>
-        </div>
-      </div>
+      <!-- Sub-passo 3.2d: Section H (Project Template Packs) moved to the
+           #vcTemplateDrawer painel lateral inside #mission > #vcMissionSfPane,
+           opened via #vcOpenTemplateDrawerBtn. See that block for the moved
+           markup — grid+detail unchanged, just relocated. -->
 
       <!-- ── Section I — Mission Plan Composer ─────────────────── -->
       <div class="vc-pb-section vc-mission-composer" id="vcMissionComposer">
