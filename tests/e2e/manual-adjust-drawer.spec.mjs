@@ -21,9 +21,17 @@
  * global querySelectorAll wiring in initProjectBuilder() (runs
  * unconditionally at load) regardless of where the DOM elements physically
  * live — pure relocation, not reimplementation, same pattern as Section H
- * (Templates) in 3.2d. Section F (live "current selection" summary) was
- * deliberately NOT moved into this drawer — the user's decision named only
- * Sections A-D; expanding scope to F was flagged, not assumed.
+ * (Templates) in 3.2d.
+ *
+ * Follow-up correction: Section F (live "current selection" summary) was
+ * initially left out of this drawer's scope — the user clarified that F was
+ * always meant to be included, in the footer, updating reactively as A-D
+ * change. Now relocated too, right after Section D inside the same drawer
+ * body. Zero JS change needed for this specific move: renderOrchestrationPreview()
+ * (called by all 4 A-D setters) already targets these ids via
+ * getElementById, indifferent to where they live in the DOM — the exact
+ * same "relocation, not reimplementation" property Section H/A-D already
+ * relied on.
  *
  * Selections apply live on click (no separate "Salvar" step) — same as the
  * original Section A-D UI always worked.
@@ -135,4 +143,37 @@ test('opening the Templates drawer and the manual-adjust drawer are independent 
   await page.click('#vcOpenManualAdjustDrawerBtn');
   await expect(page.locator('#vcManualAdjustDrawer')).toHaveClass(/\bopen\b/);
   await expect(page.locator('#vcTemplateDrawer')).not.toHaveClass(/\bopen\b/);
+});
+
+test('Section F (resumo ao vivo) lives inside the drawer body, visible in the footer when the drawer is open', async ({ page }) => {
+  await openManualAdjustDrawer(page);
+
+  const preview = page.locator('#vcManualAdjustDrawer #vcBuilderPreview');
+  await expect(preview).toBeVisible();
+  await expect(preview).toContainText('CONFIGURAÇÃO ATUAL');
+
+  // Structural check: F must be a real descendant of the drawer, not just
+  // coincidentally readable elsewhere in the DOM (would still pass a plain
+  // text assertion even if F had stayed behind in #projectBuilder).
+  const isInsideDrawer = await page.evaluate(() =>
+    !!document.getElementById('vcManualAdjustDrawer').contains(document.getElementById('vcBuilderPreview'))
+  );
+  expect(isInsideDrawer).toBe(true);
+});
+
+test('Section F footer reflects changes across all of A-D live, without closing/reopening the drawer', async ({ page }) => {
+  await openManualAdjustDrawer(page);
+  const preview = page.locator('#vcManualAdjustDrawer #vcBuilderPreview');
+
+  await page.locator('.vc-project-type-card[data-type-id="api_backend"]').click();
+  await expect(preview.locator('#vcPreviewType')).toContainText('API Backend');
+
+  await page.locator('.vc-size-chip[data-size-id="mvp"]').click();
+  await expect(preview.locator('#vcPreviewSize')).toContainText('MVP');
+
+  await page.locator('.vc-stack-chip[data-stack-id="Go"]').click();
+  await expect(preview.locator('#vcPreviewStack')).toContainText('Go');
+
+  await page.locator('.vc-mode-chip[data-orch-mode="review_only"]').click();
+  await expect(preview.locator('#vcPreviewMode')).toContainText('Review Only');
 });
