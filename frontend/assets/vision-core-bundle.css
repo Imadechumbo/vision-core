@@ -8069,3 +8069,54 @@ body:has(#vcSoftwareFactoryPage:not([aria-hidden="true"])) #vcNavSidebar {
   display: none !important;
 }
 
+/* Sub-passo 3.2a — switcher Chat/Software Factory dentro de #mission.
+   #vcSfHomeControl (AUTO-PILOT) saiu de dentro da SF page legada (position:
+   fixed;inset:0, altura ancorada em vh confirmada por experimento empírico —
+   ver histórico) e agora vive em #vcMissionSfPane, com altura em pixel fixo
+   no mesmo padrão de .v298-command-chat/.v298-chat-stream (min-height como
+   piso, não flex:1 dependendo de um ancestral vh que não existe mais aqui).
+   #vcSfModuleWorkspace (Modo Avançado, 985 linhas) NÃO foi tocado — continua
+   na SF page legada, fora de escopo até 3.2b-3.2e. */
+.vc-mission-mode-row {
+  margin: 0 0 10px;
+  width: fit-content;
+}
+.vc-mission-sf-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
+  margin: 0;
+  border: 1px solid var(--v298-border);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(168,85,247,.22), transparent 35%),
+    linear-gradient(180deg, rgba(9,10,16,.96), rgba(4,5,10,.96));
+  border-radius: 18px;
+  overflow: hidden;
+}
+/* Piso de altura real na área rolável — sem isso #vcSfChatHistory colapsa
+   pra ~8px (confirmado por experimento: moveu sem este fix, screenshot
+   mostrou o histórico praticamente invisível e a barra de input sobreposta
+   ao texto abaixo). Mesmos valores de .v298-chat-stream (min 330/max 520px). */
+#vcMissionSfPane #vcSfChatHistory {
+  min-height: 330px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+/* #mission.sf-mode: esconde o conteúdo de chat "clássico", mostra a pane SF.
+   Seletores de filho direto (>) — não reestrutura o DOM existente do chat,
+   só adiciona uma condição de visibilidade por cima (preserva os `order:N`
+   de flex já aplicados aos elementos do chat, que dependem de serem filhos
+   diretos de #mission). */
+#mission.sf-mode > .v298-command-chat,
+#mission.sf-mode > .v298-mission-history,
+#mission.sf-mode > h2,
+#mission.sf-mode > p,
+#mission.sf-mode > .project-strip,
+#mission.sf-mode > .pipeline-headline,
+#mission.sf-mode > .v236-compact-timeline {
+  display: none !important;
+}
+#mission.sf-mode #vcMissionSfPane {
+  display: flex !important;
+}
+

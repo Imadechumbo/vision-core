@@ -7085,6 +7085,12 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
             hint.querySelector('button').addEventListener('click', function() {
               hint.remove();
               showSoftwareFactoryPage();
+              // Sub-passo 3.2a: #vcSfHomeControl (o "home" que showSoftwareFactoryPage
+              // mostra por padrão) saiu da SF page legada — sem isso, este botão
+              // abriria a página num buraco vazio. Pula direto pro workspace real.
+              if (typeof window.setSoftwareFactoryModule === 'function') {
+                window.setSoftwareFactoryModule('project_builder');
+              }
             });
             chatStream.appendChild(hint);
             chatStream.scrollTop = chatStream.scrollHeight;
@@ -8974,12 +8980,56 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       .catch(function ()  { if (panel) panel.style.display = 'none'; });
   }
 
+  // Sub-passo 3.2a — switcher Chat/Software Factory dentro de #mission.
+  // Não abre a SF page legada (#vcSoftwareFactoryPage, position:fixed;inset:0)
+  // — só alterna a classe "sf-mode" em #mission, que CSS usa pra esconder o
+  // conteúdo de chat e mostrar #vcMissionSfPane (onde #vcSfHomeControl mora
+  // agora). showMainCockpitPage() garante o cockpit visível antes — #mission
+  // só existe dentro dele, mesma razão de _cockpitScroll (Sub-passo 3.4).
+  function setCentralMode(mode) {
+    if (typeof window.showMainCockpitPage === 'function') window.showMainCockpitPage();
+    var mission = document.getElementById('mission');
+    if (!mission) return;
+    var isSf    = mode === 'sf';
+    var chatTab = document.getElementById('vcMissionChatTab');
+    var sfTab   = document.getElementById('vcMissionSfTab');
+    mission.classList.toggle('sf-mode', isSf);
+    if (chatTab) chatTab.classList.toggle('active', !isSf);
+    if (sfTab)   sfTab.classList.toggle('active', isSf);
+    // #vcSfHomeControl nasce com display:none — initSoftwareFactoryPage()
+    // sempre chama setSoftwareFactoryModule(_sfActiveModule) no load, que
+    // aciona _sfShowWorkspace() (_sfHomeVisible começa true) e esconde
+    // #vcSfHomeControl. No fluxo antigo, showSoftwareFactoryPage() desfazia
+    // isso chamando _sfShowHome() toda vez que a SF page abria. Como
+    // setCentralMode('sf') não chama showSoftwareFactoryPage() de propósito
+    // (não deve abrir o overlay full-page), precisa chamar _sfShowHome()
+    // direto — sem isso #vcSfHomeControl fica preso em display:none pra
+    // sempre, mesmo com #vcMissionSfPane visível (confirmado por teste:
+    // getBoundingClientRect 0x0 em todo o conteúdo movido).
+    if (isSf && typeof _sfShowHome === 'function') _sfShowHome();
+    // #mission é um elemento normal da página (não um overlay position:fixed
+    // como a SF page legada) — precisa ser rolado até a viewport de verdade.
+    // Sem isso, alternar pra 'sf' logo depois de STEPS_SF2 ter passado pelos
+    // 2 pontos pendentes (que ainda abrem a SF page legada em tela cheia)
+    // deixa a página na posição de scroll de antes, e o próximo passo do
+    // tutorial mede getBoundingClientRect de um #mission fora da viewport.
+    // block:'center' (não 'start') — mesmo padrão de _scrollInto/_cockpitScroll
+    // já usado nos tutoriais: 'start' alinha o topo de #mission com o topo da
+    // viewport, mas o header (.top) é position:sticky com altura própria e
+    // fica por cima, escondendo as abas (confirmado por screenshot — a pill
+    // Chat/Software Factory ficava atrás do header).
+    if (isSf) mission.scrollIntoView({ behavior: 'instant', block: 'center' });
+  }
+
   function initSoftwareFactoryPage() {
     // §118: expõe para tutoriais de seção (T3 — STEPS_SF onEnter)
     window.showSoftwareFactoryPage  = showSoftwareFactoryPage;
     window.setSoftwareFactoryModule = setSoftwareFactoryModule;
     // §128: expõe para tutoriais que precisam voltar ao cockpit antes de iluminar
     window.showMainCockpitPage = showMainCockpitPage;
+    // Sub-passo 3.2a: expõe pro STEPS_SF2 (_sfChatOnEnter) e pros botões da
+    // aba dentro de #mission
+    window.setCentralMode = setCentralMode;
     var sfPage = document.getElementById('vcSoftwareFactoryPage');
     if (!sfPage) return;
 
@@ -8989,9 +9039,20 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       backBtn.addEventListener('click', showMainCockpitPage);
     }
 
-    // Nav open buttons (cockpit header/sidebar)
+    // Sub-passo 3.2a — abas Chat/Software Factory dentro de #mission
+    var missionChatTab = document.getElementById('vcMissionChatTab');
+    var missionSfTab   = document.getElementById('vcMissionSfTab');
+    if (missionChatTab) missionChatTab.addEventListener('click', function () { setCentralMode('chat'); });
+    if (missionSfTab)   missionSfTab.addEventListener('click', function () { setCentralMode('sf'); });
+
+    // Nav open buttons (cockpit header/sidebar) — Sub-passo 3.2a: abrem o
+    // switcher embutido em #mission, não mais a SF page legada (o AUTO-PILOT
+    // que showSoftwareFactoryPage() mostrava por padrão saiu de lá). A SF page
+    // legada (#vcSoftwareFactoryPage/#vcSfModuleWorkspace) continua existindo
+    // e reachable via o hint "Abrir Project Builder →" no chat e via T3 (sf)
+    // — pendente de 3.2b-3.2e, não removida.
     document.querySelectorAll('[data-open-sf-page]').forEach(function (btn) {
-      btn.addEventListener('click', showSoftwareFactoryPage);
+      btn.addEventListener('click', function () { setCentralMode('sf'); });
     });
 
     // §113 — Etapa A, Fase 3: botão de entrada do Dry-Run Real em repositório externo.
@@ -9769,7 +9830,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
     // §163 — example chips → fill vcSfChatInput
     function initSfExampleChips() {
-      var chips = sfPage.querySelectorAll('.vc-sf-example-chip');
+      // Sub-passo 3.2a: .vc-sf-example-chip vive em #vcSfHomeControl, que
+      // saiu de dentro de sfPage (#vcSoftwareFactoryPage) e agora mora em
+      // #mission > #vcMissionSfPane. querySelectorAll escopado em sfPage
+      // encontraria zero chips e os cliques nunca seriam ligados — global.
+      var chips = document.querySelectorAll('.vc-sf-example-chip');
       chips.forEach(function(chip) {
         chip.addEventListener('click', function() {
           var inp = document.getElementById('vcSfChatInput');
@@ -11134,6 +11199,18 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       if (moduleId && typeof window.setSoftwareFactoryModule === 'function') window.setSoftwareFactoryModule(moduleId);
     };
   };
+
+  // Sub-passo 3.2a — helper dedicado pra STEPS_SF2 (T3 "sf2"). NÃO reaproveita
+  // _sfOnEnter acima porque esse é compartilhado com STEPS_SF ("sf"), cujos
+  // passos 1-6 miram módulos reais que continuam na SF page legada — trocar
+  // _sfOnEnter pra abrir o switcher embutido quebraria esses passos. Este
+  // helper é só pros 5 pontos de STEPS_SF2 cujo alvo (#vcSfHomeControl e
+  // filhos) se moveu pra dentro de #mission.
+  var _sfChatOnEnter = function() {
+    return function() {
+      if (typeof window.setCentralMode === 'function') window.setCentralMode('sf');
+    };
+  };
   var STEPS_SF = [
     { title: '◈ Bem-vindo à Software Factory', text: 'Aqui você monta um projeto do zero com 8 módulos de IA — da definição de stack até o blueprint de deploy.', target: '#vcSfHomeBtn', pos: 'bottom', onEnter: _sfOnEnter(null) },
     { title: '01 — Montar Projeto do Zero', text: 'Descreva o tipo de projeto e a stack desejada. A IA monta a estrutura inicial e sugere a arquitetura.', target: '[data-sf-module="project_builder"]', pos: 'bottom', onEnter: _sfOnEnter('project_builder') },
@@ -11150,28 +11227,45 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
 
   // ── §162: TUTORIAL SF GUIA AUTO-PILOT (para leigos) ──
   // §167: STEPS_SF2 atualizado — targets para elementos visíveis na nova UI
+  // Sub-passo 3.2a: 5 dos 7 pontos trocaram onEnter pra _sfChatOnEnter()
+  // (mesma razão do helper: alvo se moveu pra dentro de #mission). Os 2
+  // pontos que miram #vcSfTabAutopilot/#vcSfTabAdvanced ficam PENDENTES —
+  // esses elementos continuam na SF page legada (.vc-sf-page-header, nunca
+  // fizeram parte de #vcSfHomeControl), sem alvo novo definido ainda.
+  // Mantidos com o _sfOnEnter(null) antigo por ora: a spotlight ainda
+  // encontra os elementos corretamente (a página legada + seu header não
+  // foram tocados), mas isso produz uma transição visualmente estranha no
+  // meio do tour — passo 3/4 abrem a SF page cheia (overlay full-screen)
+  // enquanto os passos vizinhos (1,2,5,6,7) mostram o switcher embutido em
+  // #mission. Não é quebra funcional (getBoundingClientRect encontra os
+  // alvos), é um flicker de modo. Decisão de alvo definitivo pendente do
+  // Sub-passo 3.2e (se o conceito de aba AUTO-PILOT/MODO AVANÇADO separado
+  // ainda existir depois da consolidação).
   var STEPS_SF2 = [
     { title: '🏭 Software Factory — seu assistente de projetos',
       text: 'Descreva qualquer ideia de projeto em linguagem simples. O Arquiteto analisa e gera tudo automaticamente — stack, arquivos, missão e pacote de deploy.',
-      target: '#vcSfHomeControl', pos: 'center', onEnter: _sfOnEnter(null) },
+      target: '#vcSfHomeControl', pos: 'center', onEnter: _sfChatOnEnter() },
     { title: '✍️ Descreva seu projeto aqui',
       text: 'Digite em linguagem livre: "quero um app de delivery", "uma API para gerenciar estoque", ou cole uma URL para o Arquiteto analisar o site de referência.',
-      target: '#vcSfChatInput', pos: 'top', onEnter: _sfOnEnter(null) },
+      target: '#vcSfChatInput', pos: 'top', onEnter: _sfChatOnEnter() },
+    // PENDENTE (Sub-passo 3.2e) — #vcSfTabAutopilot vive na SF page legada,
+    // não em #vcSfHomeControl. Ver comentário acima.
     { title: '🚀 Aba AUTO-PILOT — modo automático',
       text: 'Com AUTO-PILOT ativo, ao enviar sua descrição o Arquiteto executa 7 módulos em sequência: analisa stack, gera blueprint, compõe missão SDDF e valida no Gold Gate.',
       target: '#vcSfTabAutopilot', pos: 'bottom', onEnter: _sfOnEnter(null) },
+    // PENDENTE (Sub-passo 3.2e) — #vcSfTabAdvanced idem.
     { title: '⚙ Aba MODO AVANÇADO — controle manual',
       text: 'Com MODO AVANÇADO, o Arquiteto responde diretamente ao seu prompt. Use para ajustes específicos, perguntas técnicas ou para navegar pelos 9 módulos individualmente.',
       target: '#vcSfTabAdvanced', pos: 'bottom', onEnter: _sfOnEnter(null) },
     { title: '📋 Chips de exemplo — clique para preencher',
       text: 'Não sabe por onde começar? Clique em um dos exemplos abaixo do chat — o Arquiteto preenche a descrição automaticamente.',
-      target: '#vcSfExamples', pos: 'top', onEnter: _sfOnEnter(null) },
+      target: '#vcSfExamples', pos: 'top', onEnter: _sfChatOnEnter() },
     { title: '↑ Enviar e ver resultado no chat',
       text: 'Pressione Enter ou clique em ↑. No AUTO-PILOT, o Arquiteto anuncia o início e o resultado aparece no histórico do chat. No MODO AVANÇADO, responde diretamente.',
-      target: '#vcSfSendBtn', pos: 'top', onEnter: _sfOnEnter(null) },
+      target: '#vcSfSendBtn', pos: 'top', onEnter: _sfChatOnEnter() },
     { title: '✅ Pronto! Descreva e envie',
       text: 'Digite aqui embaixo e pressione ↑ ou Enter. O Arquiteto responde em segundos com análise completa, stack sugerida e pacote pronto para execução.',
-      target: '#vcSfChatInput', pos: 'top', onEnter: _sfOnEnter(null) },
+      target: '#vcSfChatInput', pos: 'top', onEnter: _sfChatOnEnter() },
   ];
   window.vcRegisterTutorial('sf2', STEPS_SF2, 'vc_tutorial_sf2_done');
 

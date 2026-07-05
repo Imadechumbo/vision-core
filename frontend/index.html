@@ -379,6 +379,53 @@
 <main class="shell grid">
   <section>
     <div class="panel" id="mission">
+      <!-- Sub-passo 3.2a: switcher Chat/Software Factory. #mission.sf-mode
+           (classe alternada por setCentralMode()) esconde o conteúdo de chat
+           abaixo e mostra #vcMissionSfPane no lugar. Reaproveita a mesma
+           classe visual .vc-sf-mode-tab já usada em #vcSfModeTabs (dentro da
+           SF page legada) — não é um componente novo. -->
+      <div class="vc-sf-mode-tabs vc-mission-mode-row" id="vcMissionModeTabs">
+        <button id="vcMissionChatTab" class="vc-sf-mode-tab active" type="button">💬 Chat</button>
+        <button id="vcMissionSfTab" class="vc-sf-mode-tab" type="button">◈ Software Factory</button>
+      </div>
+      <div id="vcMissionSfPane" class="vc-mission-sf-pane" style="display:none">
+        <div id="vcSfHomeControl" class="vc-sf-home-simple">
+
+          <!-- §164 — chat history area -->
+          <div id="vcSfChatHistory" class="vc-sf-chat-history"></div>
+
+          <!-- §161 — Auto-Pilot progress (keep) -->
+          <div id="vcSfAutoPilotProgress" class="vc-sf-autopilot-progress" style="display:none">
+            <div class="vc-sf-autopilot-status" id="vcSfAutoPilotStatus">Iniciando...</div>
+            <div class="vc-sf-autopilot-steps" id="vcSfAutoPilotSteps"></div>
+            <div class="vc-sf-autopilot-result" id="vcSfAutoPilotResult"></div>
+          </div>
+
+          <!-- §163 — example chips (keep) -->
+          <div class="vc-sf-examples" id="vcSfExamples">
+            <button class="vc-sf-example-chip" data-example="Quero um app de tarefas com login, lista de tarefas e notificações por email. Stack: Node.js + React." type="button">📱 App de tarefas</button>
+            <button class="vc-sf-example-chip" data-example="Quero uma API REST para gerenciar estoque de uma loja. Preciso de CRUD de produtos, categorias e relatórios. Stack: Python + FastAPI." type="button">🛒 API de estoque</button>
+            <button class="vc-sf-example-chip" data-example="Quero um site de validação de provas online com cadastro de alunos, upload de gabaritos e correção automática. Stack: Node.js + HTML/CSS." type="button">📝 Plataforma de provas</button>
+          </div>
+
+          <!-- §164 — input bar simples -->
+          <div class="vc-sf-input-bar" id="vcSfInputBar">
+            <textarea id="vcSfChatInput" class="vc-sf-input-field" placeholder="Descreva seu projeto... ou cole uma URL para analisar" rows="1"></textarea>
+            <button id="vcSfSendBtn" class="vc-sf-send-btn" type="button">↑</button>
+          </div>
+
+          <!-- §164 — legacy elements (hidden, backward compat com bundle.js) -->
+          <div style="display:none">
+            <div id="vcSfChatStream"></div>
+            <div id="vcSfArchitectPanel"><div id="vcSfArchitectExplanation"></div><div id="vcSfArchitectQuestions"><div id="vcSfArchitectQList"></div></div><div id="vcSfArchitectSpecsWrap"><div id="vcSfArchitectSpecsList"></div></div></div>
+            <span id="vcSfLlmStatus"></span>
+            <button id="vcSfChatSendBtn" type="button"></button>
+            <button id="vcSfRunBtn" type="button"></button>
+            <button id="vcSfStartBtn" type="button"></button>
+          </div>
+
+        </div><!-- end #vcSfHomeControl -->
+      </div><!-- end #vcMissionSfPane -->
       <!-- V2.9.10 CLEAN FRONT: static command panel — approved V2.9.10 visual -->
       <div class="v298-command-chat" id="v298CommandChat">
         <div class="v298-command-head">
@@ -2557,43 +2604,12 @@
     <!-- CENTER: SF Home (LLM Control) + Module Workspace -->
     <div class="vc-sf-col-center">
 
-      <!-- HOME: exclusive landing — §164 simple chat UI -->
-      <div id="vcSfHomeControl" class="vc-sf-home-simple">
-
-        <!-- §164 — chat history area -->
-        <div id="vcSfChatHistory" class="vc-sf-chat-history"></div>
-
-        <!-- §161 — Auto-Pilot progress (keep) -->
-        <div id="vcSfAutoPilotProgress" class="vc-sf-autopilot-progress" style="display:none">
-          <div class="vc-sf-autopilot-status" id="vcSfAutoPilotStatus">Iniciando...</div>
-          <div class="vc-sf-autopilot-steps" id="vcSfAutoPilotSteps"></div>
-          <div class="vc-sf-autopilot-result" id="vcSfAutoPilotResult"></div>
-        </div>
-
-        <!-- §163 — example chips (keep) -->
-        <div class="vc-sf-examples" id="vcSfExamples">
-          <button class="vc-sf-example-chip" data-example="Quero um app de tarefas com login, lista de tarefas e notificações por email. Stack: Node.js + React." type="button">📱 App de tarefas</button>
-          <button class="vc-sf-example-chip" data-example="Quero uma API REST para gerenciar estoque de uma loja. Preciso de CRUD de produtos, categorias e relatórios. Stack: Python + FastAPI." type="button">🛒 API de estoque</button>
-          <button class="vc-sf-example-chip" data-example="Quero um site de validação de provas online com cadastro de alunos, upload de gabaritos e correção automática. Stack: Node.js + HTML/CSS." type="button">📝 Plataforma de provas</button>
-        </div>
-
-        <!-- §164 — input bar simples -->
-        <div class="vc-sf-input-bar" id="vcSfInputBar">
-          <textarea id="vcSfChatInput" class="vc-sf-input-field" placeholder="Descreva seu projeto... ou cole uma URL para analisar" rows="1"></textarea>
-          <button id="vcSfSendBtn" class="vc-sf-send-btn" type="button">↑</button>
-        </div>
-
-        <!-- §164 — legacy elements (hidden, backward compat com bundle.js) -->
-        <div style="display:none">
-          <div id="vcSfChatStream"></div>
-          <div id="vcSfArchitectPanel"><div id="vcSfArchitectExplanation"></div><div id="vcSfArchitectQuestions"><div id="vcSfArchitectQList"></div></div><div id="vcSfArchitectSpecsWrap"><div id="vcSfArchitectSpecsList"></div></div></div>
-          <span id="vcSfLlmStatus"></span>
-          <button id="vcSfChatSendBtn" type="button"></button>
-          <button id="vcSfRunBtn" type="button"></button>
-          <button id="vcSfStartBtn" type="button"></button>
-        </div>
-
-      </div><!-- end #vcSfHomeControl -->
+      <!-- Sub-passo 3.2a: #vcSfHomeControl moved to #mission > #vcMissionSfPane
+           (AUTO-PILOT chat now lives in the cockpit's Chat/Software Factory
+           switcher, not in this legacy full-page view). #vcSfModuleWorkspace
+           below is unaffected — still lives here, still reachable via the
+           "Abrir Project Builder →" hint in the mission chat and via T3 (sf)
+           tutorial's module-targeting steps, pending 3.2b-3.2e. -->
 
       <!-- MODULE WORKSPACE: original Project Builder panels (hidden until user navigates) -->
       <div id="vcSfModuleWorkspace" style="display:none">

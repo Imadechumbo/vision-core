@@ -22,6 +22,16 @@
  * unchanged (T3/T7 above already cover that) — the sidebar's DOM location was never
  * something those helpers depended on.
  *
+ * Sub-passo 3.2a: [data-open-sf-page] (header nav + sidebar link) no longer opens
+ * this legacy full page — it now calls setCentralMode('sf'), opening the embedded
+ * Chat/Software Factory switcher inside #mission instead (see
+ * tests/e2e/mission-sf-switcher.spec.mjs). showSoftwareFactoryPage() itself is
+ * UNCHANGED and still real — still invoked internally by the "Abrir Project
+ * Builder →" chat hint and by T3 (sf) tutorial's module-targeting steps (Modo
+ * Avançado, pending 3.2b-3.2e). openSfPage() below was updated to invoke it
+ * directly instead of through the now-repointed button, preserving this suite's
+ * original intent: exercising the legacy full page's own show/hide contract.
+ *
  * Alvo: https://visioncoreai.pages.dev (produção)
  * Run:  npx playwright test tests/e2e/sf-cockpit-nav.spec.mjs
  */
@@ -30,13 +40,10 @@ import { test, expect } from '@playwright/test';
 
 const BASE_URL = 'https://visioncoreai.pages.dev';
 
-/** Nav button is hidden by responsive CSS in headless Chromium — click programmatically. */
+/** Sub-passo 3.2a: invoke the legacy full page directly — the real UI button
+ *  now opens the embedded switcher instead (see mission-sf-switcher.spec.mjs). */
 async function openSfPage(page) {
-  await page.waitForSelector('[data-open-sf-page]', { state: 'attached', timeout: 12_000 });
-  await page.evaluate(() => {
-    const btn = document.querySelector('[data-open-sf-page]');
-    if (btn) btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-  });
+  await page.evaluate(() => window.showSoftwareFactoryPage());
   await page.waitForSelector('#vcSoftwareFactoryPage', { state: 'visible', timeout: 8_000 });
 }
 
@@ -69,19 +76,34 @@ test('SF open/close round trip: opening hides #vcCockpitView, #vcSfBackBtn resto
 });
 
 // ── Critical side-effect: reset-to-home is bundled into every navigate/open ────
-test('showSoftwareFactoryPage() always resets to home view on open, discarding prior module state', async ({ page }) => {
-  const homeCtrl  = page.locator('#vcSfHomeControl');
+// Sub-passo 3.2a: #vcSfHomeControl moved out of the legacy full page into
+// #mission. showSoftwareFactoryPage() (invoked directly here, via openSfPage())
+// still hides #vcCockpitView as its first step — which now, as a structural
+// side effect of the move, ALSO hides #vcSfHomeControl (nested inside #mission,
+// inside the cockpit). _sfShowHome() still runs and still sets its inline
+// style to 'flex' (confirmed — see mission-sf-switcher.spec.mjs, which asserts
+// this same element becomes genuinely visible when reached via setCentralMode(),
+// the only path that keeps the cockpit visible). Testing "home becomes visible"
+// through THIS specific path (opening the legacy page in isolation, without an
+// immediate module switch) is no longer meaningful: it doesn't correspond to
+// any real, currently-exercised trigger — the two real callers of
+// showSoftwareFactoryPage() alone are the "Abrir Project Builder →" chat hint
+// (which immediately calls setSoftwareFactoryModule('project_builder') right
+// after, masking this) and T3 (sf)'s tutorial steps (which only spotlight
+// buttons, indifferent to home's content visibility). #vcSfModuleWorkspace
+// itself was NOT moved — it stays a sibling of #vcCockpitView, so its own
+// reset-on-open behavior (the actual point of this test: discarding prior
+// module state) is completely unaffected and still verified below.
+test('showSoftwareFactoryPage() always resets away from a stale module on open', async ({ page }) => {
   const workspace = page.locator('#vcSfModuleWorkspace');
 
-  // ── Open SF (1st time) — starts on home by default ─────────────────────────
+  // ── Open SF (1st time) ──────────────────────────────────────────────────────
   await openSfPage(page);
-  await expect(homeCtrl).toBeVisible();
   await expect(workspace).toBeHidden();
 
   // ── Navigate away from home to a module (simulates prior user activity) ────
   await page.evaluate(() => window.setSoftwareFactoryModule('mission_composer'));
   await expect(workspace).toBeVisible();
-  await expect(homeCtrl).toBeHidden();
 
   // ── Leave SF without resetting state manually ───────────────────────────────
   await page.click('#vcSfBackBtn');
@@ -90,7 +112,6 @@ test('showSoftwareFactoryPage() always resets to home view on open, discarding p
   // ── Reopen SF: reset happens automatically as part of navigate, no explicit
   //    "go home" action taken by the test — this is the side-effect under test ─
   await openSfPage(page);
-  await expect(homeCtrl).toBeVisible();
   await expect(workspace).toBeHidden();
 
   // Module nav no longer shows the previously active module as active

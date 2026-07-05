@@ -18,6 +18,10 @@
  *  - existing group-collapse (vcToggleMenuGroup, Fase 1) still works once expanded
  *  - mini mode only applies >=1181px — untouched below that breakpoint
  *
+ * Sub-passo 3.2a: the sidebar's SF link now opens the embedded Chat/Software
+ * Factory switcher (#mission.sf-mode), not the legacy full page — updated
+ * below to match (see tests/e2e/mission-sf-switcher.spec.mjs).
+ *
  * Alvo: https://visioncoreai.pages.dev (produção)
  * Run:  npx playwright test tests/e2e/sidebar-mini-mode.spec.mjs
  */
@@ -71,13 +75,17 @@ test('menu items are functionally clickable in mini mode, not just icon-visible'
 
   await expect(page.locator('#vcNavSidebar')).toHaveClass(/\bmini\b/);
 
-  // Top-level item: clicking the icon-only SF button in the sidebar still opens SF page
+  // Top-level item: clicking the icon-only SF button in the sidebar still fires
+  // its handler. Sub-passo 3.2a: this now opens the embedded Chat/Software
+  // Factory switcher in #mission (setCentralMode('sf')), not the legacy full
+  // page (see tests/e2e/mission-sf-switcher.spec.mjs) — updated to match.
   const sfSidebarBtn = page.locator('#vcNavSidebar [data-open-sf-page]');
   await expect(sfSidebarBtn).toBeVisible();
   await sfSidebarBtn.click();
-  await expect(page.locator('#vcSoftwareFactoryPage')).toBeVisible({ timeout: 5_000 });
-  await page.click('#vcSfBackBtn');
-  await expect(page.locator('#vcSoftwareFactoryPage')).toBeHidden();
+  await expect(page.locator('#mission')).toHaveClass(/\bsf-mode\b/);
+  await expect(page.locator('#vcMissionSfPane')).toBeVisible({ timeout: 5_000 });
+  await page.click('#vcMissionChatTab');
+  await expect(page.locator('#mission')).not.toHaveClass(/\bsf-mode\b/);
 
   // Group sub-item (inside .vc-menu-grp-items, forced visible in mini mode per
   // design decision — group collapse only matters once expanded): DIAGNOSTICS/HERMES
