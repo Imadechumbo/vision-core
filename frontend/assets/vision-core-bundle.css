@@ -8018,18 +8018,22 @@ body,
   pointer-events: none !important;
 }
 
-/* Sub-passo 1 — sidebar de navegação (aside:first-of-type, DISTINTO do
-   aside:last-of-type usado acima e em §141/§147/vision-v33-orbit — aquele é o
-   painel direito "Vision Agent Local"/decágono, este é o menu de navegação)
-   vira position:fixed persistente em telas >=1181px, mesma faixa em que o
-   grid já é multi-coluna hoje. Removida do fluxo do grid, ela para de ocupar
-   a 1a coluna — main.shell.grid encolhe para 2 colunas (conteúdo + coluna
-   direita, larguras idênticas às originais) e #vcCockpitView ganha
-   padding-left do mesmo valor da largura da sidebar, deslocando o restante
-   do conteúdo centralizado pra não ficar embaixo dela. Zero mudança abaixo
-   de 1181px — grid já vira 1fr e a sidebar continua empilhada normalmente. */
+/* Sub-passo 2 — sidebar de navegação (#vcNavSidebar) agora é um <aside> irmão
+   de #vcCockpitView/#vcSoftwareFactoryPage no HTML (Sub-passo 1 só a tirava do
+   fluxo via CSS; aqui ela saiu de fato de dentro de main.shell.grid). Distinta
+   do aside:last-of-type usado acima e em §141/§147/vision-v33-orbit — aquele
+   é o painel direito "Vision Agent Local"/decágono, que continua exatamente
+   onde estava, dentro do grid.
+   showMainCockpitPage()/showSoftwareFactoryPage() não referenciam a sidebar —
+   nem precisam: a regra :has() no fim deste bloco cobre a visibilidade dela
+   reagindo ao aria-hidden que essas duas funções já alternam em
+   #vcSoftwareFactoryPage por conta própria (motivo original: acessibilidade
+   da própria SF page, não da sidebar). Larguras/breakpoints idênticos ao
+   Sub-passo 1. main.shell.grid segue precisando encolher pra 2 colunas — ela
+   sempre teve só 2 filhos diretos "de verdade" (section + aside:last-of-type),
+   a 1a coluna do grid original nunca existiu pra eles. */
 @media (min-width: 1181px) {
-  main.shell.grid > aside:first-of-type {
+  #vcNavSidebar {
     position: fixed !important;
     top: 56px;
     left: 0;
@@ -8045,13 +8049,23 @@ body,
   #vcCockpitView { padding-left: 282px; }
 }
 @media (min-width: 1181px) and (max-width: 1540px) {
-  main.shell.grid > aside:first-of-type { width: 276px; }
+  #vcNavSidebar { width: 276px; }
   main.shell.grid { grid-template-columns: minmax(0,1fr) 382px !important; }
   #vcCockpitView { padding-left: 276px; }
 }
 @media (min-width: 1181px) and (max-width: 1380px) {
-  main.shell.grid > aside:first-of-type { width: 250px; }
+  #vcNavSidebar { width: 250px; }
   main.shell.grid { grid-template-columns: minmax(0,1fr) 340px !important; }
   #vcCockpitView { padding-left: 250px; }
+}
+
+/* #vcNavSidebar some enquanto a SF page está aberta, em qualquer largura —
+   mesmo efeito visual de antes (era display:none herdado por estar dentro de
+   #vcCockpitView), agora explícito e independente da posição dela no DOM.
+   Sem isso, os links da sidebar (aria) ficariam focáveis via teclado atrás do
+   overlay opaco da SF page (position:fixed;inset:0;z-index:300 — cobre a tela
+   toda), mesmo sem aparecer visualmente. */
+body:has(#vcSoftwareFactoryPage:not([aria-hidden="true"])) #vcNavSidebar {
+  display: none !important;
 }
 

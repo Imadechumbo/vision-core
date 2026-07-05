@@ -14,6 +14,14 @@
  *  - T3 (_sfOnEnter): tutorial step onEnter opens SF page + activates target module
  *  - T7 (_cockpitScroll): tutorial step onEnter forces cockpit visible + scrolls target into view
  *
+ * Sub-passo 2 adds: #vcNavSidebar moved out of #vcCockpitView/#vcSoftwareFactoryPage
+ * in the DOM (true persistent sibling). showMainCockpitPage()/showSoftwareFactoryPage()
+ * were NOT changed to manage it — visibility is 100% CSS, via a `:has()` rule reacting
+ * to the aria-hidden attribute those two functions already toggle on #vcSoftwareFactoryPage
+ * for their own (unrelated) reasons. Revalidated: _cockpitScroll/_sfOnEnter still work
+ * unchanged (T3/T7 above already cover that) — the sidebar's DOM location was never
+ * something those helpers depended on.
+ *
  * Alvo: https://visioncoreai.pages.dev (produção)
  * Run:  npx playwright test tests/e2e/sf-cockpit-nav.spec.mjs
  */
@@ -130,4 +138,30 @@ test('T7 tutorial (github): step onEnter forces cockpit visible and scrolls targ
   await expect(page.locator('#vcSoftwareFactoryPage')).toBeHidden({ timeout: 5_000 });
   await expect(page.locator('#vcCockpitView')).toBeVisible();
   await expect(page.locator('#githubPanel')).toBeInViewport({ timeout: 5_000 });
+});
+
+// ── Sub-passo 2: #vcNavSidebar is a persistent sibling, not owned by either
+//    toggle function — visibility is CSS-only, keyed off #vcSoftwareFactoryPage's
+//    own aria-hidden attribute ────────────────────────────────────────────────
+test('Sub-passo 2: nav sidebar lives outside #vcCockpitView/#vcSoftwareFactoryPage, hidden only while SF page is open', async ({ page }) => {
+  const sidebar = page.locator('#vcNavSidebar');
+
+  // ── Structural: sidebar is NOT a descendant of either page container ───────
+  const insideCockpit = await page.evaluate(() => !!document.querySelector('#vcCockpitView #vcNavSidebar'));
+  const insideSfPage  = await page.evaluate(() => !!document.querySelector('#vcSoftwareFactoryPage #vcNavSidebar'));
+  expect(insideCockpit, '#vcNavSidebar must not be nested inside #vcCockpitView').toBe(false);
+  expect(insideSfPage,  '#vcNavSidebar must not be nested inside #vcSoftwareFactoryPage').toBe(false);
+
+  // ── Cockpit active on load → sidebar visible ────────────────────────────────
+  await expect(sidebar).toBeVisible();
+
+  // ── Open SF: sidebar disappears (CSS :has() reacting to SF page's aria-hidden,
+  //    not any code path inside showSoftwareFactoryPage() touching the sidebar) ─
+  await openSfPage(page);
+  await expect(sidebar).toBeHidden();
+
+  // ── Back to cockpit: sidebar reappears, same CSS mechanism in reverse ──────
+  await page.click('#vcSfBackBtn');
+  await expect(page.locator('#vcSoftwareFactoryPage')).toBeHidden();
+  await expect(sidebar).toBeVisible();
 });

@@ -186,129 +186,133 @@
   </div>
 </header>
 
+<!-- Sub-passo 2: sidebar de navegação persistente, fora de #vcCockpitView e
+     #vcSoftwareFactoryPage — nem showMainCockpitPage() nem showSoftwareFactoryPage()
+     tocam nela. Visibilidade só via CSS (:has() reagindo ao aria-hidden que essas
+     funções já alternam em #vcSoftwareFactoryPage por conta própria). -->
+<aside id="vcNavSidebar">
+  <section class="panel logo premium-logo">
+    <div class="eye-wrap" title="VISION CORE ativo">
+      <div class="ai-eye"><div class="pupil"></div></div>
+    </div>
+    <h1>VISION CORE</h1>
+    <p class="cyan">SEE. DECIDE. EXECUTE.</p>
+    <a class="marketing-link" href="about.html">um sistema que corrige sistemas</a>
+  </section>
+  <nav class="panel menu premium-menu">
+    <button class="vc-sf-sidebar-link" type="button" data-open-sf-page aria-label="Abrir Software Factory Builder">◈ SOFTWARE FACTORY</button>
+    <button class="vc-sf-sidebar-link" type="button" id="vcOpenDryRunPanelBtn" aria-label="Abrir Dry-Run Real em repositório externo">🔬 DRY-RUN EXTERNO</button>
+    <a class="active" href="#mission">◎ MISSION CONTROL</a>
+    <a href="#marketplace">◇ CONECTORES EXTERNOS</a>
+
+    <div class="vc-menu-grp">
+      <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('qualidade')">
+        <span>QUALIDADE</span>
+        <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-qualidade">▾</span>
+      </button>
+      <div class="vc-menu-grp-items open" id="vcMenuGrpItems-qualidade">
+        <a href="#hermes">☷ DIAGNOSTICS / HERMES</a>
+        <a href="#diff">☷ DIFF PREVIEW</a>
+      </div>
+    </div>
+
+    <div class="vc-menu-grp">
+      <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('monitoramento')">
+        <span>MONITORAMENTO</span>
+        <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-monitoramento">▾</span>
+      </button>
+      <div class="vc-menu-grp-items open" id="vcMenuGrpItems-monitoramento">
+        <a href="#timeline">⌁ MISSION TIMELINE</a>
+        <a href="#runtime">⌁ EXECUTION MONITOR</a>
+        <a href="#metricsBoard">▥ MÉTRICAS</a>
+      </div>
+    </div>
+
+    <div class="vc-menu-grp">
+      <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('dados')">
+        <span>DADOS</span>
+        <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-dados">▾</span>
+      </button>
+      <div class="vc-menu-grp-items open" id="vcMenuGrpItems-dados">
+        <a href="#vault">⌂ VAULT / ROLLBACK</a>
+        <a href="#memory">▤ MEMORY / OBSIDIAN</a>
+        <a href="#aiApiVault">AI API VAULT</a>
+      </div>
+    </div>
+
+    <div class="vc-menu-grp">
+      <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('produto')">
+        <span>PRODUTO</span>
+        <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-produto">▾</span>
+      </button>
+      <div class="vc-menu-grp-items open" id="vcMenuGrpItems-produto">
+        <a href="#githubPanel">⌬ GITHUB / PR REAL</a>
+        <a href="#saasAuth">◉ SAAS / PLANOS</a>
+      </div>
+    </div>
+
+    <div class="vc-menu-grp">
+      <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('agentes')">
+        <span>AGENTES</span>
+        <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-agentes">▾</span>
+      </button>
+      <div class="vc-menu-grp-items open" id="vcMenuGrpItems-agentes">
+        <a href="#agentsBoard">⚙ AGENTES EXTRAS</a>
+        <a href="#opensquad" class="menu-reserved">⌘ OPENCLAW / OPENSQUAD <span class="menu-badge">SCALE</span></a>
+      </div>
+    </div>
+
+    <div class="vc-menu-grp">
+      <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('roadmap')">
+        <span>ROADMAP</span>
+        <span class="vc-menu-grp-chevron" id="vcMenuGrpChev-roadmap">▾</span>
+      </button>
+      <div class="vc-menu-grp-items" id="vcMenuGrpItems-roadmap">
+        <a href="#v10">◇ V10 ENTERPRISE</a>
+      </div>
+    </div>
+
+    <div class="vc-sidebar-divider"></div>
+
+    <button id="vcTutMenuBtn" class="vc-tut-menu-btn" type="button" onclick="window.vcToggleTutorialMenu()">
+      <span>🪐 Tutoriais</span>
+      <span id="vcTutChevron" class="vc-tut-chevron">▾</span>
+    </button>
+
+    <div id="vcTutPanel" class="vc-tut-panel">
+      <a href="#" class="vc-tut-item" onclick="window.vcStartTutorial(); return false;">
+        <span>🌟 Geral</span>
+      </a>
+      <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('agent'); return false;">
+        <span>🖥 Agent local</span>
+      </a>
+      <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('mission'); return false;">
+        <span>◎ Mission control</span>
+      </a>
+      <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('sf'); return false;">
+        <span>◈ Software factory</span>
+      </a>
+      <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('passgold'); return false;">
+        <span>🏅 Pass gold</span>
+      </a>
+      <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('agents'); return false;">
+        <span>🤖 Agentes extras</span>
+      </a>
+      <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('github'); return false;">
+        <span>⌬ GitHub Agent</span>
+      </a>
+      <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('tools'); return false;">
+        <span>▣ Tools</span>
+      </a>
+      <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('metrics'); return false;">
+        <span>▥ Métricas</span>
+      </a>
+    </div>
+  </nav>
+</aside>
+
 <div id="vcCockpitView">
 <main class="shell grid">
-  <aside>
-    <section class="panel logo premium-logo">
-      <div class="eye-wrap" title="VISION CORE ativo">
-        <div class="ai-eye"><div class="pupil"></div></div>
-      </div>
-      <h1>VISION CORE</h1>
-      <p class="cyan">SEE. DECIDE. EXECUTE.</p>
-      <a class="marketing-link" href="about.html">um sistema que corrige sistemas</a>
-    </section>
-    <nav class="panel menu premium-menu">
-      <button class="vc-sf-sidebar-link" type="button" data-open-sf-page aria-label="Abrir Software Factory Builder">◈ SOFTWARE FACTORY</button>
-      <button class="vc-sf-sidebar-link" type="button" id="vcOpenDryRunPanelBtn" aria-label="Abrir Dry-Run Real em repositório externo">🔬 DRY-RUN EXTERNO</button>
-      <a class="active" href="#mission">◎ MISSION CONTROL</a>
-      <a href="#marketplace">◇ CONECTORES EXTERNOS</a>
-
-      <div class="vc-menu-grp">
-        <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('qualidade')">
-          <span>QUALIDADE</span>
-          <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-qualidade">▾</span>
-        </button>
-        <div class="vc-menu-grp-items open" id="vcMenuGrpItems-qualidade">
-          <a href="#hermes">☷ DIAGNOSTICS / HERMES</a>
-          <a href="#diff">☷ DIFF PREVIEW</a>
-        </div>
-      </div>
-
-      <div class="vc-menu-grp">
-        <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('monitoramento')">
-          <span>MONITORAMENTO</span>
-          <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-monitoramento">▾</span>
-        </button>
-        <div class="vc-menu-grp-items open" id="vcMenuGrpItems-monitoramento">
-          <a href="#timeline">⌁ MISSION TIMELINE</a>
-          <a href="#runtime">⌁ EXECUTION MONITOR</a>
-          <a href="#metricsBoard">▥ MÉTRICAS</a>
-        </div>
-      </div>
-
-      <div class="vc-menu-grp">
-        <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('dados')">
-          <span>DADOS</span>
-          <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-dados">▾</span>
-        </button>
-        <div class="vc-menu-grp-items open" id="vcMenuGrpItems-dados">
-          <a href="#vault">⌂ VAULT / ROLLBACK</a>
-          <a href="#memory">▤ MEMORY / OBSIDIAN</a>
-          <a href="#aiApiVault">AI API VAULT</a>
-        </div>
-      </div>
-
-      <div class="vc-menu-grp">
-        <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('produto')">
-          <span>PRODUTO</span>
-          <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-produto">▾</span>
-        </button>
-        <div class="vc-menu-grp-items open" id="vcMenuGrpItems-produto">
-          <a href="#githubPanel">⌬ GITHUB / PR REAL</a>
-          <a href="#saasAuth">◉ SAAS / PLANOS</a>
-        </div>
-      </div>
-
-      <div class="vc-menu-grp">
-        <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('agentes')">
-          <span>AGENTES</span>
-          <span class="vc-menu-grp-chevron open" id="vcMenuGrpChev-agentes">▾</span>
-        </button>
-        <div class="vc-menu-grp-items open" id="vcMenuGrpItems-agentes">
-          <a href="#agentsBoard">⚙ AGENTES EXTRAS</a>
-          <a href="#opensquad" class="menu-reserved">⌘ OPENCLAW / OPENSQUAD <span class="menu-badge">SCALE</span></a>
-        </div>
-      </div>
-
-      <div class="vc-menu-grp">
-        <button class="vc-menu-grp-lbl" type="button" onclick="window.vcToggleMenuGroup('roadmap')">
-          <span>ROADMAP</span>
-          <span class="vc-menu-grp-chevron" id="vcMenuGrpChev-roadmap">▾</span>
-        </button>
-        <div class="vc-menu-grp-items" id="vcMenuGrpItems-roadmap">
-          <a href="#v10">◇ V10 ENTERPRISE</a>
-        </div>
-      </div>
-
-      <div class="vc-sidebar-divider"></div>
-
-      <button id="vcTutMenuBtn" class="vc-tut-menu-btn" type="button" onclick="window.vcToggleTutorialMenu()">
-        <span>🪐 Tutoriais</span>
-        <span id="vcTutChevron" class="vc-tut-chevron">▾</span>
-      </button>
-
-      <div id="vcTutPanel" class="vc-tut-panel">
-        <a href="#" class="vc-tut-item" onclick="window.vcStartTutorial(); return false;">
-          <span>🌟 Geral</span>
-        </a>
-        <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('agent'); return false;">
-          <span>🖥 Agent local</span>
-        </a>
-        <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('mission'); return false;">
-          <span>◎ Mission control</span>
-        </a>
-        <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('sf'); return false;">
-          <span>◈ Software factory</span>
-        </a>
-        <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('passgold'); return false;">
-          <span>🏅 Pass gold</span>
-        </a>
-        <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('agents'); return false;">
-          <span>🤖 Agentes extras</span>
-        </a>
-        <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('github'); return false;">
-          <span>⌬ GitHub Agent</span>
-        </a>
-        <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('tools'); return false;">
-          <span>▣ Tools</span>
-        </a>
-        <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('metrics'); return false;">
-          <span>▥ Métricas</span>
-        </a>
-      </div>
-    </nav>
-  </aside>
-
   <section>
     <div class="panel" id="mission">
       <!-- V2.9.10 CLEAN FRONT: static command panel — approved V2.9.10 visual -->
