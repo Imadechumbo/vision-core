@@ -6672,9 +6672,20 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
           })
           .then(function(r) { return r.ok ? r.json() : null; })
           .then(function(cls) {
-            if (!cls || !cls.ok) return;
-            var conf = cls.classification && cls.classification.confidence || 0;
-            if (cls.intent !== 'create' || conf < 0.6) return;
+            // Fix: `cls.intent` nunca existiu no schema real (nem no backend,
+            // nem no prompt architect-system.md: project_type/stack/tags/
+            // confidence/explanation/open_questions — sem "intent"). Essa
+            // condição era sempre verdadeira, o hint nunca aparecia pra
+            // nenhuma mensagem — a chamada de rede acontecia (custo real) e
+            // o resultado sempre era descartado. Mesmo limiar de confiança
+            // 0.6 já usado na Camada 2 do guard do SF (é o próprio
+            // CONFIDENCE_THRESHOLD do backend) + project_type preenchido
+            // como sinal real de "isto é uma descrição de projeto" — não
+            // existe (nem precisa existir) um campo "intent" separado.
+            if (!cls || !cls.ok || !cls.classification) return;
+            var conf = typeof cls.classification.confidence === 'number' ? cls.classification.confidence : 0;
+            var projType = cls.classification.project_type;
+            if (conf < 0.6 || !projType) return;
             /* Mostrar sugestão contextual abaixo da última bubble */
             var hint = document.createElement('div');
             hint.style.cssText = [
@@ -6689,11 +6700,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               'font-size:12px',
               'color:#a5b4fc',
             ].join(';');
-            var projType = (cls.classification && cls.classification.project_type) || 'projeto';
             hint.innerHTML =
               '<span style="opacity:.7">◈</span>' +
               '<span style="flex:1">Parece uma solicitação de <strong style="color:#c4b5fd">' +
-              projType + '</strong>.</span>' +
+              _esc(projType) + '</strong>.</span>' +
               '<button type="button" style="' +
                 'background:rgba(139,92,246,.15);' +
                 'border:1px solid rgba(139,92,246,.35);' +
@@ -6707,12 +6717,14 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               '">Abrir Project Builder →</button>';
             hint.querySelector('button').addEventListener('click', function() {
               hint.remove();
-              showSoftwareFactoryPage();
-              // Sub-passo 3.2a: #vcSfHomeControl (o "home" que showSoftwareFactoryPage
-              // mostra por padrão) saiu da SF page legada — sem isso, este botão
-              // abriria a página num buraco vazio. Pula direto pro workspace real.
-              if (typeof window.setSoftwareFactoryModule === 'function') {
-                window.setSoftwareFactoryModule('project_builder');
+              // Correção de retarget (este clique nunca tinha disparado de
+              // verdade antes do fix do bug acima — showSoftwareFactoryPage()
+              // abriria a página legada, que não é mais o fluxo real desde o
+              // Sub-passo 3.2a). setCentralMode('sf') é o mesmo caminho usado
+              // pelos botões reais [data-open-sf-page] do header/sidebar —
+              // abre o switcher embutido em #mission, não o overlay legado.
+              if (typeof window.setCentralMode === 'function') {
+                window.setCentralMode('sf');
               }
             });
             chatStream.appendChild(hint);
