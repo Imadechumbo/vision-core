@@ -472,12 +472,15 @@
             <button id="vcSfSendBtn" class="vc-sf-send-btn" type="button">↑</button>
           </div>
 
-          <!-- §164 — legacy elements (hidden, backward compat com bundle.js) -->
+          <!-- §164 — legacy elements (hidden, backward compat com bundle.js).
+               Sub-passo 3.3c removed vcSfChatStream/vcSfChatSendBtn/
+               vcSfArchitectPanel (+ nested children) — only ever used by
+               the dead _sfArchitectSend()/_sfRenderArchitectResponse() flow,
+               confirmed zero references left anywhere. vcSfLlmStatus/
+               vcSfRunBtn/vcSfStartBtn kept — used by other handlers,
+               out of this sub-passo's scope. -->
           <div style="display:none">
-            <div id="vcSfChatStream"></div>
-            <div id="vcSfArchitectPanel"><div id="vcSfArchitectExplanation"></div><div id="vcSfArchitectQuestions"><div id="vcSfArchitectQList"></div></div><div id="vcSfArchitectSpecsWrap"><div id="vcSfArchitectSpecsList"></div></div></div>
             <span id="vcSfLlmStatus"></span>
-            <button id="vcSfChatSendBtn" type="button"></button>
             <button id="vcSfRunBtn" type="button"></button>
             <button id="vcSfStartBtn" type="button"></button>
           </div>

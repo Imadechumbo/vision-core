@@ -8344,222 +8344,13 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     }
   }
 
-  /* ── §73.2b Architect Mode ─────────────────────────────────────── */
-
-  // §74.1 — Arquiteto é o único modo do chat SF-01; sem toggle, sem branch condicional
-  /** @deprecated §74.1 — noop; Arquiteto fixo no módulo 01 */
-  function _sfSetArchitectMode() { /* noop */ }
-
-  /** §74 — Render architect response INLINE in #vcSfChatStream as chat bubble */
-  function _sfRenderArchitectResponse(data) {
-    var stream = document.getElementById('vcSfChatStream');
-    if (!stream) return;
-
-    var c       = data.classification || {};
-    var confPct = Math.round((c.confidence || 0) * 100);
-    var confClr = confPct >= 80 ? '#4ade80' : confPct >= 60 ? '#f59e0b' : '#f87171';
-
-    // Meta: project_type + stack cards + confidence
-    var metaHtml = '';
-    if (c.project_type) metaHtml += '<span style="color:#38bdf8">' + _esc(c.project_type) + '</span>';
-    if (c.stack && c.stack.length) {
-      var stackCards = c.stack.map(function (tag) {
-        var info = STACK_EXPLAINER[tag] || { icon: '⚙️', label: tag, explain: 'Componente técnico do projeto.' };
-        return '<span title="' + _esc(info.explain) + '" style="display:inline-flex;align-items:center;gap:3px;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:2px 8px;font-size:10px;color:#cbd5e1;cursor:default;white-space:nowrap">' + info.icon + ' ' + _esc(info.label) + '</span>';
-      }).join(' ');
-      metaHtml += ' &nbsp;<span style="color:#64748b">·</span>&nbsp; <span style="display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;vertical-align:middle">' + stackCards + '</span>';
-    }
-    metaHtml += ' &nbsp;<span style="color:#64748b">·</span>&nbsp; <span style="color:' + confClr + '">' + confPct + '% confiança</span>';
-
-    // Open questions
-    var qs        = data.open_questions || [];
-    var questHtml = '';
-    if (qs.length > 0) {
-      questHtml = '<div style="margin-top:9px"><div style="font-size:9px;color:#f59e0b;letter-spacing:.1em;margin-bottom:5px">MAIS INFORMAÇÕES:</div>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:5px">' +
-        qs.map(function (q) {
-          return '<button type="button" onclick="(function(b){var inp=document.getElementById(\'vcSfChatInput\');if(inp){inp.value=b.textContent.trim();inp.focus();}})(this)" style="background:#1c2f4a;border:1px solid #1e40af55;color:#93c5fd;padding:3px 9px;border-radius:12px;font-size:11px;cursor:pointer;font-family:inherit">' + _esc(q) + '</button>';
-        }).join('') + '</div></div>';
-    }
-
-    // Specs suggested
-    var specs     = data.specs_suggested || [];
-    var specsHtml = '';
-    if (specs.length > 0) {
-      var typeColor = { 'HAPPY PATH': '#4ade80', 'EDGE': '#f59e0b', 'SECURITY': '#f87171', 'SECURITY CRÍTICO': '#ef4444', 'CRÍTICO': '#ef4444' };
-      specsHtml = '<div style="margin-top:9px"><div style="font-size:9px;color:#4ade80;letter-spacing:.1em;margin-bottom:5px">SPECS SUGERIDAS (' + specs.length + '):</div><div>' +
-        specs.map(function (s) {
-          var tc        = (s.type && typeColor[s.type]) || '#64748b';
-          var badge     = s.type ? '<span style="font-size:9px;padding:1px 4px;border-radius:3px;background:' + tc + '22;color:' + tc + ';border:1px solid ' + tc + '44;margin-left:4px">' + _esc(s.type) + '</span>' : '';
-          var via       = s.match_via === 'title' ? '<span style="font-size:9px;color:#475569;margin-left:4px">(título)</span>' : '';
-          var modPfx    = s.id ? s.id.split('-').slice(0, 2).join('-') : '';
-          var modId     = _sfSpecModuleInverse[modPfx] || '';
-          var linkHint  = modId ? '<span style="font-size:9px;color:#38bdf8;margin-left:5px;white-space:nowrap">→ ' + _esc(modPfx) + '</span>' : '';
-          var dataAttrs = modId ? ' data-sa-module="' + _esc(modId) + '" data-sa-spec="' + _esc(s.id) + '"' : '';
-          var clickStyle = modId ? ';cursor:pointer;border-radius:4px;transition:background .15s' : '';
-          return '<div' + dataAttrs + ' style="padding:5px 4px;border-bottom:1px solid #0f172a' + clickStyle + '">' +
-            '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:3px">' +
-              '<span style="font-size:10px;color:#475569;font-family:monospace">' + _esc(s.id) + '</span>' + badge + via + linkHint +
-            '</div>' +
-            '<div style="font-size:11px;color:#cbd5e1;margin-top:2px">' + _esc(s.title) + '</div>' +
-            '</div>';
-        }).join('') + '</div></div>';
-    }
-
-    // §73.6 — Pacote Completo Sugerido (confidence >= 0.6 e specs existem)
-    var pkgHtml = '';
-    var showPkg = (c.confidence || 0) >= 0.6 && specs.length > 0;
-    if (showPkg) {
-      var _stackReadable = (c.stack || []).map(function (tag) {
-        var info = STACK_EXPLAINER[tag] || { icon: '⚙️', label: tag };
-        return info.icon + ' ' + info.label;
-      }).join(', ');
-      var _sf03Text = 'Projeto: ' + (c.project_type || 'Site') +
-        '\nStack: ' + _stackReadable +
-        '\nSpecs de referência:\n' + specs.map(function (s) { return '  • ' + s.id + ' — ' + s.title; }).join('\n') +
-        '\n\n(gerado pelo Agente Arquiteto a partir do pedido original)';
-      pkgHtml =
-        '<div style="margin-top:10px;border-top:1px solid #1e293b;padding-top:8px">' +
-          '<button type="button" class="vc-arch-pkg-toggle" style="background:none;border:1px solid #334155;color:#94a3b8;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;width:100%;text-align:left">📦 VER CONFIGURAÇÃO COMPLETA SUGERIDA</button>' +
-          '<div class="vc-arch-pkg-body" style="display:none;margin-top:8px">' +
-            '<div style="font-size:11px;color:#64748b;margin-bottom:6px">Tipo: <span style="color:#38bdf8">' + _esc(c.project_type || '') + '</span></div>' +
-            '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">' +
-              (c.stack || []).map(function (tag) {
-                var info = STACK_EXPLAINER[tag] || { icon: '⚙️', label: tag, explain: 'Componente técnico do projeto.' };
-                return '<span title="' + _esc(info.explain) + '" style="display:inline-flex;align-items:center;gap:3px;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:2px 8px;font-size:10px;color:#cbd5e1;cursor:default">' + info.icon + ' ' + _esc(info.label) + '</span>';
-              }).join('') +
-            '</div>' +
-            '<div style="font-size:11px;color:#64748b;margin-bottom:4px">Specs de referência (' + specs.length + '):</div>' +
-            '<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;max-height:100px;overflow-y:auto;padding-left:4px">' +
-              specs.map(function (s) {
-                return '<div style="padding:1px 0"><span style="font-family:monospace;color:#475569">' + _esc(s.id) + '</span> — ' + _esc(s.title) + '</div>';
-              }).join('') +
-            '</div>' +
-            '<button type="button" class="vc-arch-sf03-btn" data-sf03text="' + _esc(_sf03Text) + '" style="background:#1e40af;border:none;color:#e2e8f0;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;width:100%;text-align:center">➡️ ENVIAR PARA COMPOSITOR DE MISSÃO (SF-03)</button>' +
-          '</div>' +
-        '</div>';
-    }
-
-    // Assemble inline bubble
-    var bubble = document.createElement('div');
-    bubble.className = 'vc-sf-chat-msg vc-sf-arch-bubble';
-    bubble.innerHTML =
-      '<div class="vc-sf-arch-bubble-hdr">🏛️ AGENTE ARQUITETO · ' +
-        (data.provider_used && data.provider_used !== 'local'
-          ? (data.provider_used.toUpperCase() + (data.model_used ? ' · ' + data.model_used : ''))
-          : 'BACKEND') +
-      '</div>' +
-      '<div style="font-size:11px;line-height:1.5;margin-bottom:6px">' + metaHtml + '</div>' +
-      '<div style="font-size:12px;color:#cbd5e1;line-height:1.6">' + _esc(c.explanation || '') + '</div>' +
-      questHtml + specsHtml + pkgHtml;
-
-    // Spec click delegation — §73.4
-    if (specs.length > 0) {
-      bubble.addEventListener('click', function (e) {
-        var item = e.target.closest('[data-sa-module]');
-        if (!item) return;
-        _sfHighlightSpecId = item.dataset.saSpec || null;
-        setSoftwareFactoryModule(item.dataset.saModule);
-      });
-      bubble.addEventListener('mouseover', function (e) {
-        var item = e.target.closest('[data-sa-module]');
-        if (item) item.style.background = '#1e293b';
-      });
-      bubble.addEventListener('mouseout', function (e) {
-        var item = e.target.closest('[data-sa-module]');
-        if (item) item.style.background = '';
-      });
-    }
-
-    // Pkg toggle + SF-03 button — §73.6
-    if (showPkg) {
-      var _toggleBtn = bubble.querySelector('.vc-arch-pkg-toggle');
-      var _pkgBody   = bubble.querySelector('.vc-arch-pkg-body');
-      if (_toggleBtn && _pkgBody) {
-        _toggleBtn.onclick = function () {
-          var open = _pkgBody.style.display !== 'none';
-          _pkgBody.style.display = open ? 'none' : '';
-          _toggleBtn.textContent = open ? '📦 VER CONFIGURAÇÃO COMPLETA SUGERIDA' : '📦 OCULTAR CONFIGURAÇÃO';
-        };
-      }
-      var _sf03Btn = bubble.querySelector('.vc-arch-sf03-btn');
-      if (_sf03Btn) {
-        _sf03Btn.onclick = function () {
-          var txt = _sf03Btn.dataset.sf03text;
-          setSoftwareFactoryModule('mission_composer');
-          var inp = document.getElementById('vcSfChatInput');
-          if (inp && txt) {
-            inp.value = txt;
-            setTimeout(function () {
-              inp.focus();
-              inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 150);
-          }
-        };
-      }
-    }
-
-    stream.appendChild(bubble);
-  }
-
+  // Sub-passo 3.3c removed: _sfSetArchitectMode() (deprecated noop, zero
+  // callers), _sfRenderArchitectResponse() and _sfArchitectSend() (dead
+  // Architect-in-legacy-chat flow — 100% unreachable, confirmed zero
+  // references anywhere else in bundle.js, HTML, or the local test suite).
   /** HTML-escape helper */
   function _esc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  /** Send to /api/architect/interpret */
-  function _sfArchitectSend(inputId, streamId) {
-    var input  = document.getElementById(inputId);
-    var stream = document.getElementById(streamId);
-    if (!input || !stream) return;
-    var text = (input.value || '').trim();
-    if (!text) return;
-    input.value = '';
-
-    if (!_backendConnected) {
-      var offlineEl = document.createElement('div');
-      offlineEl.className = 'vc-sf-chat-msg';
-      offlineEl.style.color = '#f87171';
-      offlineEl.textContent = '🏛️ Arquiteto requer backend conectado. Backend não detectado.';
-      stream.appendChild(offlineEl);
-      stream.scrollTop = stream.scrollHeight;
-      return;
-    }
-
-    // Remove hint
-    var hint = stream.querySelector('.vc-sf-chat-hint');
-    if (hint) hint.remove();
-
-    var uMsg = document.createElement('div');
-    uMsg.className = 'vc-sf-chat-msg user';
-    uMsg.textContent = text;
-    stream.appendChild(uMsg);
-
-    var thinking = document.createElement('div');
-    thinking.className = 'vc-sf-chat-msg';
-    thinking.textContent = '🏛️ Arquiteto analisando...';
-    stream.appendChild(thinking);
-    stream.scrollTop = stream.scrollHeight;
-
-    fetch(BACKEND_URL + '/api/architect/interpret', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text })
-    })
-    .then(function (r) { return r.ok ? r.json() : r.json().then(function (e) { return Promise.reject(e); }); })
-    .then(function (data) {
-      if (!data.ok) {
-        thinking.textContent = '🏛️ Erro: ' + (data.error || 'resposta inválida');
-        return;
-      }
-      thinking.remove();
-      _sfRenderArchitectResponse(data);
-      stream.scrollTop = stream.scrollHeight;
-    })
-    .catch(function (err) {
-      thinking.textContent = '🏛️ Erro de conexão: ' + (err.error || err.message || String(err));
-      stream.scrollTop = stream.scrollHeight;
-    });
   }
 
   /* ── §73.1d Spec Panel ─────────────────────────────────────────── */
@@ -10221,25 +10012,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       sddfCollapseBtn.textContent = '▼ PIPELINE';
     }
 
-    // Chat send — §74.1 Arquiteto fixo, sempre _sfArchitectSend
-    var sendBtn = document.getElementById('vcSfChatSendBtn');
-    if (sendBtn) {
-      sendBtn.addEventListener('click', function () {
-        _sfArchitectSend('vcSfChatInput', 'vcSfChatStream');
-      });
-    }
-    var chatInput = document.getElementById('vcSfChatInput');
-    if (chatInput) {
-      chatInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          // §164: skip old architect send when new simple UI active
-          if (!document.getElementById('vcSfSendBtn')) {
-            _sfArchitectSend('vcSfChatInput', 'vcSfChatStream');
-          }
-        }
-      });
-    }
+    // Sub-passo 3.3c removed: dead #vcSfChatSendBtn click listener + dead
+    // #vcSfChatInput keydown listener (both only ever called _sfArchitectSend,
+    // now removed — the guard `if (!document.getElementById('vcSfSendBtn'))`
+    // was always false since that button always exists in the current UI).
+    // Real Enter-to-send lives in initSfSimpleChat() (§164), untouched.
 
     // SDDF timeline node clicks → switch module
     var sddfContainer = document.getElementById('vcSfSddfSteps');
