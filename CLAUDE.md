@@ -1,5 +1,5 @@
 # VISION CORE — CLAUDE.md
-## Documento central do projeto | Atualizado: 2026-07-04 (§206)
+## Documento central do projeto | Atualizado: 2026-07-05 (Fase 2 concluída)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Este arquivo contém o estado real do projeto, o que está implementado, o que está faltando, e o que NÃO deve ser tocado.
@@ -202,6 +202,7 @@ PROVIDER_VAULT_SECRET=(configurado no §206, valor não documentado aqui por seg
 
 | § | O que foi feito | Tag | HEAD |
 |---|----------------|-----|------|
+| Fase 2 | **Unificação Software Factory no cockpit — CONCLUÍDA.** Sub-passo 0 (investigação) → 1-2 (sidebar sibling persistente) → 3.1 (sidebar mini) → 3.2a-f (switcher embutido em `#mission`, 6 geradores viram cards de chat, Templates + Ajuste Manual viram drawers, Human Approval simplificado, 3 pendências de tutorial fechadas). Testes 22→58 ao longo da fase. 2 itens conscientemente em aberto: página legada como dependência ativa (não remover sem antes corrigir 3 guardas latentes nos geradores), tutorial `STEPS_SF2` sem botão real que o dispare. Ver seção dedicada "FASE 2" acima + write-up completo em `CLAUDE_HISTORY.md`. | - | `6eafda38` |
 | §206 | **Recriação completa do EB — ambiente preso em CREATE_FAILED (Launch Configuration).** Causa raiz confirmada nos eventos: `"The Launch Configuration creation operation is not available in your account. Use launch templates..."` — restrição de conta AWS (contas novas não permitem mais Launch Configuration clássica; plataforma Node.js 20/6.11.1 ainda dependia dela para o tier SingleInstance). Fix: (1) capturadas as 27 env vars reais via `describe-configuration-settings --no-verify-ssl` antes de qualquer ação destrutiva, salvas fora do git; (2) `terminate-environment` do ambiente antigo, confirmado `Terminated`; (3) `create-environment` novo com plataforma **Node.js 24 running on 64bit Amazon Linux 2023 / 6.11.3** (Launch Template — sem repetir o erro), mesmo tier SingleInstance/t3.micro/IAM roles, as 27 env vars reaplicadas + `PROVIDER_VAULT_SECRET` novo (`openssl rand -hex 32`, valor nunca exposto no chat); (4) ambiente subiu `Ready/Green` com o **mesmo CNAME** de antes (`vision-core-prod.eba-pdk6anxy...`) — zero mudança em `OAUTH_REDIRECT_BASE`/`FRONTEND_URL`; (5) `create-environment` só sobe a Sample App do AWS — deploy real do `server.js` atual + os 2 arquivos novos do AI Provider Vault (`provider-vault-crypto.js`, `provider-vault-routing.js`, ausentes do último zip local `v5.9.61-s193`) feito via `_deploy_eb_recreate.py` (script novo, mesmo padrão do `_deploy191b_eb.py`). Confirmado em produção: `/api/health` com `node_version:"v24.18.0"`, `/api/providers/list` respondendo `ok:true`. Correção de doc feita no mesmo commit: a linha de `callLLM()` acima ("O QUE ESTÁ IMPLEMENTADO") citava fallback "OpenAI→Anthropic→..." — `OPENAI_API_KEY` nunca existiu em produção (confirmado pela captura), corrigido para a ordem real (OpenRouter→Anthropic→Groq→DeepSeek→Gemini→Cerebras). Zero perda de credencial. | - | - |
 | §83-§87 | Backend fakes eliminados, vault real, callLLM multi-provider. Botões fake removidos (20 el.), Arquiteto/Billing reais, OAuth "Em breve". CF Pages ao vivo. | s87-done | 6006dc9 |
 | §88-§90 | OAuth Google + GitHub real. Tutorial 13 passos + quota FREE + SF landing. Mascote animado + passo PASS GOLD. | s90-done | 4484d74 |
@@ -391,6 +392,8 @@ Conectar `tools/sf-agent-orchestrator.mjs` ao vault. Análise **explicitamente n
 ---
 
 ## PENDÊNCIAS IMEDIATAS (PRÓXIMA SESSÃO)
+
+**FASE 2 FECHADA (Sub-passo 0 a 3.2f)** — unificação Software Factory no cockpit concluída. Ver seção dedicada "FASE 2 — UNIFICAÇÃO SOFTWARE FACTORY NO COCKPIT" acima pro resumo completo + os 2 itens conscientemente em aberto (página legada como dependência ativa; tutorial STEPS_SF2 sem botão real que o dispare). **Não há uma "Fase 3" definida ainda** — próxima sessão nesta linha precisa de conversa nova com o humano antes de assumir qualquer item, mesma regra do ROADMAP A-F acima.
 
 **§121-§122 FECHADOS** — positionBalloon + seta CSS (18/18). Menu tutoriais U+25C9→🌟 (19/19). Ambos em produção.
 
@@ -609,6 +612,33 @@ Estado pós §195: SF tem pré-pipeline real (Archivist + Hermes). Steps 1–7 a
 | F | Banco de dados persistente | ✅ Resolvida — decisão humana: SQLite, não RDS | §112 |
 
 **Não há uma "Etapa G" definida ainda.** A próxima sessão precisa de uma conversa nova com o humano sobre prioridade antes de assumir qualquer próximo item — ver "PENDÊNCIAS IMEDIATAS" abaixo.
+
+---
+
+## FASE 2 — UNIFICAÇÃO SOFTWARE FACTORY NO COCKPIT — CONCLUÍDA (write-up completo em `CLAUDE_HISTORY.md`)
+
+**Nota de nomenclatura:** não confundir com "Fase 2" do checkpoint SF-AGENT-ORCHESTRATOR abaixo — são numerações independentes de features diferentes, coincidência de nome.
+
+Depois da Fase 1 (`a3622b4e` — limpeza/agrupamento de sidebar), a Software Factory — antes uma página cheia própria e separada — foi unificada dentro do cockpit persistente via Sub-passo 0 (investigação) → 1-2 (sidebar sibling persistente) → 3.1 (sidebar mini) → 3.2a-f (switcher embutido, consolidações, geradores viram cards de chat, Templates e Ajuste Manual viram drawers, Human Approval simplificado, 3 pendências de tutorial fechadas).
+
+| Sub-passo | O que foi feito | Commit |
+|-----------|------------------|--------|
+| 0 | Investigação: caracteriza nav cockpit↔SF + onEnter dos tutoriais T3/T7 antes de mexer em código | `2f4fe129` |
+| 1-2 | Sidebar vira `position:fixed`, sibling persistente do DOM (não mais escondida junto com `#vcCockpitView`) | `5edaac85`, `bb062817` |
+| 3.1 | Sidebar nasce em modo mini (ícone-only), expansível | `1ad464bf` |
+| 3.2a | Switcher Chat/Software Factory embutido em `#mission` — AUTO-PILOT sai da página legada | `44402c65` |
+| 3.2b | Matriz de Agentes removida, 5 resumos + 5 grids de autoridade consolidados, ~330 linhas mortas deletadas, 3 bugs de contexto corrigidos | `ca7db815` |
+| 3.2c | 6 geradores viram cards de chat (chip + palavra-chave, mesma função de trigger). Retrabalho: 1ª tentativa foi reskin no lugar errado, corrigida após o humano apontar o mal-entendido | `a43e0663` → `41ebb902` |
+| 3.2d | Templates (12 × 9 blocos) viram painel lateral (drawer) | `a7e87e34` |
+| 3.2e | Ajustar Manualmente (A-D) vira 2º drawer; Human Approval Gate simplificado de 12 checkboxes pra 1 card de confirmação | `3e24c2d1`, ajuste da Seção F em `d6f73e53` |
+| 3.2f | 3 pendências do tutorial STEPS_SF2 fechadas (alvo das abas antigas, bug dos chips escondidos, restauração de aba) | `6eafda38` |
+
+**Testes:** 22 → 58 ao longo da fase, suíte completa verde a cada commit, identidade visual (header/logo/órbita/Vision AI Command) confirmada via `git diff` em toda etapa.
+
+### 2 itens conscientemente em aberto (não são esquecimento — decisão registrada)
+
+1. **`#projectBuilder`/`#vcSoftwareFactoryPage` (página legada) continua no DOM — dependência ativa confirmada, não candidata a remoção agora.** Varredura final (antes do 3.2f) encontrou 2 motivos reais: (a) hint "Abrir Project Builder →" no chat PRINCIPAL (§81, `/api/architect/interpret` real, não cosmético) ainda aponta pra lá; (b) o tutorial `STEPS_SF` (menu lateral "🪐 Tutoriais → Software Factory", tecla `'sf'`) ainda navega a página inteira. **Achado adicional que muda o cálculo de risco:** 3 dos 6 geradores do chat (`mission_composer`/`worker_handoff`/`export_preview`) têm um `if (!output) { return; }` ANTES de calcular o valor nas suas funções `render*()` — dependem da textarea legada existir só pra calcular, não só pra exibir. Remover a página hoje quebraria esses 3 chips silenciosamente. Se essa remoção for revisitada no futuro: precisa primeiro inverter a ordem dessas 3 guardas (fix pequeno e isolado), depois redesenhar o destino do hint §81 e o conteúdo do `STEPS_SF`, com teste novo substituindo `sf-cockpit-nav.spec.mjs`.
+2. **Tutorial `STEPS_SF2` (a versão nova, que ensina o fluxo de chat) não tem nenhum botão real que o dispare hoje.** O único trigger (`#vcSfTutorialBtn`, "❓ TUTORIAL") vive dentro do header da página legada — inalcançável pela navegação normal. O item do menu lateral "🪐 Tutoriais → Software Factory" dispara `STEPS_SF` (a versão antiga), não `STEPS_SF2`. O 3.2f corrigiu o CONTEÚDO de `STEPS_SF2` (agora correto e testado), mas não resolveu como o usuário chega até ele — ficou fora do escopo pedido para esta sessão. Também sem correção nesta fase: `SF_MODULE_SECTION_MAP['project_templates']` ainda aponta pra `vcTemplatePacks`, que desde o 3.2d vive dentro do `#vcTemplateDrawer` (fechado por padrão) — o passo "03 — Templates de Projeto" do `STEPS_SF` antigo tenta rolar até lá e não encontra nada visível.
 
 ---
 
