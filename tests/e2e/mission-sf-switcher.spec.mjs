@@ -90,7 +90,7 @@ test('AUTO-PILOT controls remain functional inside the embedded pane (chat input
   await expect(page.locator('#vcSfSendBtn')).toBeVisible();
 });
 
-test('T3 (sf2) tutorial: all 6 steps position correctly, chips become genuinely visible, tab restores afterward (Sub-passo 3.2f)', async ({ page }) => {
+test('T3 (sf2) tutorial: all 7 steps position correctly, chips become genuinely visible, tab restores afterward (Sub-passo 3.2f + 3.3b)', async ({ page }) => {
   await page.evaluate(() => window.vcStartSectionTutorial('sf2'));
   await expect(page.locator('#vcTutorialOverlay')).toBeVisible({ timeout: 5_000 });
 
@@ -117,7 +117,20 @@ test('T3 (sf2) tutorial: all 6 steps position correctly, chips become genuinely 
   await expect(page.locator('#vcTutorialTitle')).toHaveText('🚀 Automático por padrão, manual quando você quiser');
   await expect(page.locator('#vcSfGenChips')).toBeInViewport();
 
-  // Step 3: #vcSfExamples — pre-existing production bug fixed here.
+  // Step 3 (Sub-passo 3.3b): NEW — .vc-sf-templates-trigger (Templates/
+  // Ajustar Manualmente/Aprovação Humana) never had tutorial coverage since
+  // the 2 drawers (3.2d/3.2e) and the approval card (3.2e) shipped. Content
+  // gap closed before exposing this tutorial for the first time. Always
+  // visible regardless of AUTO-PILOT/MODO AVANÇADO tab.
+  await page.click('#vcTutorialNext');
+  await expect(page.locator('#vcTutorialTitle')).toHaveText('📐 Templates, ajustes manuais e aprovação');
+  await expect(page.locator('.vc-sf-templates-trigger')).toBeVisible();
+  await expect(page.locator('.vc-sf-templates-trigger')).toBeInViewport();
+  await expect(page.locator('#vcOpenTemplateDrawerBtn')).toBeVisible();
+  await expect(page.locator('#vcOpenManualAdjustDrawerBtn')).toBeVisible();
+  await expect(page.locator('#vcOpenHumanApprovalCardBtn')).toBeVisible();
+
+  // Step 4: #vcSfExamples — pre-existing production bug fixed in 3.2f.
   // _sfExamplesOnEnter() forces MODO AVANÇADO active (real .click(), same
   // listener a user would trigger) so the chips are genuinely visible for
   // the spotlight, not just structurally present.
@@ -127,7 +140,7 @@ test('T3 (sf2) tutorial: all 6 steps position correctly, chips become genuinely 
   await expect(page.locator('#vcSfExamples')).toBeVisible();
   await expect(page.locator('#vcSfExamples')).toBeInViewport();
 
-  // Step 4: #vcSfSendBtn — _sfRestoreTabOnEnter() undoes the forced switch:
+  // Step 5: #vcSfSendBtn — _sfRestoreTabOnEnter() undoes the forced switch:
   // the tour must not leave the user stuck in a tab they didn't choose.
   await page.click('#vcTutorialNext');
   await expect(page.locator('#vcTutorialTitle')).toHaveText('↑ Enviar e ver resultado no chat');
@@ -135,10 +148,13 @@ test('T3 (sf2) tutorial: all 6 steps position correctly, chips become genuinely 
   await expect(page.locator('#vcSfTabAutopilot')).toHaveClass(/\bactive\b/);
   await expect(page.locator('#vcSfExamples')).toBeHidden();
 
-  // Step 5: #vcSfChatInput again
+  // Step 6: #vcSfChatInput again — last step, tour closes cleanly
   await page.click('#vcTutorialNext');
   await expect(page.locator('#vcTutorialTitle')).toHaveText('✅ Pronto! Descreva e envie');
   await expect(page.locator('#vcSfChatInput')).toBeInViewport();
+  await expect(page.locator('#vcTutorialNext')).toHaveText('Fechar');
+  await page.click('#vcTutorialNext');
+  await expect(page.locator('#vcTutorialOverlay')).toBeHidden();
 });
 
 test('T3 (sf2) tutorial: does NOT restore the tab if the user had already switched to MODO AVANÇADO before starting the tour', async ({ page }) => {
@@ -152,9 +168,27 @@ test('T3 (sf2) tutorial: does NOT restore the tab if the user had already switch
 
   await page.click('#vcTutorialNext'); // step 1
   await page.click('#vcTutorialNext'); // step 2
-  await page.click('#vcTutorialNext'); // step 3 (chips) — already MODO AVANÇADO, no switch needed
-  await page.click('#vcTutorialNext'); // step 4 (restore point)
+  await page.click('#vcTutorialNext'); // step 3 (templates/manual/approval — new in 3.3b)
+  await page.click('#vcTutorialNext'); // step 4 (chips) — already MODO AVANÇADO, no switch needed
+  await page.click('#vcTutorialNext'); // step 5 (restore point)
 
   // The tour never switched the tab (it was already like this) — must not touch it either
   await expect(page.locator('#vcSfTabAdvanced')).toHaveClass(/\bactive\b/);
+});
+
+test('T3 (sf2) tutorial: the "Software factory" sidebar menu item now triggers sf2, not the retired sf tutorial (Sub-passo 3.3b)', async ({ page }) => {
+  // STEPS_SF ('sf') was removed entirely — vcStartSectionTutorial('sf')
+  // must no longer do anything (console.warn + no-op), confirming the
+  // retirement is real, not just unreachable-but-still-registered.
+  const warnings = [];
+  page.on('console', (msg) => { if (msg.type() === 'warning') warnings.push(msg.text()); });
+  await page.evaluate(() => window.vcStartSectionTutorial('sf'));
+  await expect(page.locator('#vcTutorialOverlay')).toBeHidden();
+
+  // The real sidebar menu item triggers 'sf2' now
+  await page.evaluate(() => {
+    document.querySelector('a.vc-tut-item[onclick*="sf2"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  });
+  await expect(page.locator('#vcTutorialOverlay')).toBeVisible({ timeout: 5_000 });
+  await expect(page.locator('#vcTutorialTitle')).toHaveText('🏭 Software Factory — seu assistente de projetos');
 });

@@ -11,26 +11,34 @@
  *    every open (vision-core-bundle.js:5989 "Always reset to home view on every open"),
  *    discarding whatever module was active before the page was last closed — the
  *    reset is bundled into navigate, not a separate user action.
- *  - T3 (_sfOnEnter): tutorial step onEnter opens SF page + activates target module
  *  - T7 (_cockpitScroll): tutorial step onEnter forces cockpit visible + scrolls target into view
+ *  - T3 (_sfOnEnter) originally covered here too — removed in Sub-passo 3.3b
+ *    along with STEPS_SF itself (see note below).
  *
  * Sub-passo 2 adds: #vcNavSidebar moved out of #vcCockpitView/#vcSoftwareFactoryPage
  * in the DOM (true persistent sibling). showMainCockpitPage()/showSoftwareFactoryPage()
  * were NOT changed to manage it — visibility is 100% CSS, via a `:has()` rule reacting
  * to the aria-hidden attribute those two functions already toggle on #vcSoftwareFactoryPage
- * for their own (unrelated) reasons. Revalidated: _cockpitScroll/_sfOnEnter still work
- * unchanged (T3/T7 above already cover that) — the sidebar's DOM location was never
- * something those helpers depended on.
+ * for their own (unrelated) reasons. Revalidated: _cockpitScroll still works unchanged
+ * (T7 above covers that) — the sidebar's DOM location was never something that helper
+ * depended on.
  *
  * Sub-passo 3.2a: [data-open-sf-page] (header nav + sidebar link) no longer opens
  * this legacy full page — it now calls setCentralMode('sf'), opening the embedded
  * Chat/Software Factory switcher inside #mission instead (see
  * tests/e2e/mission-sf-switcher.spec.mjs). showSoftwareFactoryPage() itself is
- * UNCHANGED and still real — still invoked internally by the "Abrir Project
- * Builder →" chat hint and by T3 (sf) tutorial's module-targeting steps (Modo
- * Avançado, pending 3.2b-3.2e). openSfPage() below was updated to invoke it
- * directly instead of through the now-repointed button, preserving this suite's
- * original intent: exercising the legacy full page's own show/hide contract.
+ * UNCHANGED and still real — invoked internally by the legacy page's own module
+ * nav. openSfPage() below was updated to invoke it directly instead of through
+ * the now-repointed button, preserving this suite's original intent: exercising
+ * the legacy full page's own show/hide contract.
+ *
+ * Sub-passo 3.3b: STEPS_SF (the 'sf' tutorial that used to drive T3's
+ * module-targeting steps here) was retired — its only trigger (the sidebar
+ * "Software Factory" menu item) was repointed to STEPS_SF2 (the correct,
+ * embedded-UI tutorial — see tests/e2e/mission-sf-switcher.spec.mjs for its
+ * full walkthrough). The T3 test that used to live in this file was removed
+ * along with it; a small regression net confirming 'sf' no longer resolves
+ * to anything lives in mission-sf-switcher.spec.mjs instead.
  *
  * Alvo: https://visioncoreai.pages.dev (produção)
  * Run:  npx playwright test tests/e2e/sf-cockpit-nav.spec.mjs
@@ -117,31 +125,6 @@ test('showSoftwareFactoryPage() always resets away from a stale module on open',
   // Module nav no longer shows the previously active module as active
   const missionBtn = page.locator('.vc-sf-module-btn[data-sf-module="mission_composer"]');
   await expect(missionBtn).not.toHaveClass(/\bactive\b/);
-});
-
-// ── T3: _sfOnEnter opens SF page + activates the target module per step ────────
-test('T3 tutorial (sf): step onEnter opens SF page and activates the matching module', async ({ page }) => {
-  // Start from cockpit (tutorial can be triggered from anywhere)
-  await expect(page.locator('#vcCockpitView')).toBeVisible();
-
-  await page.evaluate(() => window.vcStartSectionTutorial('sf'));
-
-  const overlay = page.locator('#vcTutorialOverlay');
-  await expect(overlay).toBeVisible({ timeout: 5_000 });
-
-  // ── Step 0: target #vcSfHomeBtn, onEnter = _sfOnEnter(null) → just opens SF ──
-  await expect(page.locator('#vcSoftwareFactoryPage')).toBeVisible({ timeout: 5_000 });
-  await expect(page.locator('#vcTutorialTitle')).toHaveText('◈ Bem-vindo à Software Factory');
-
-  // ── Advance to step 1: target [data-sf-module="project_builder"],
-  //    onEnter = _sfOnEnter('project_builder') → activates that module ─────────
-  await page.click('#vcTutorialNext');
-  await expect(page.locator('#vcTutorialTitle')).toHaveText('01 — Montar Projeto do Zero');
-
-  const moduleBtn = page.locator('.vc-sf-module-btn[data-sf-module="project_builder"]');
-  await expect(moduleBtn).toHaveClass(/\bactive\b/, { timeout: 5_000 });
-  await expect(page.locator('#vcSfModuleWorkspace')).toBeVisible();
-  await expect(page.locator('#vcSfHomeControl')).toBeHidden();
 });
 
 // ── T7: _cockpitScroll forces cockpit visible + scrolls target into view ───────

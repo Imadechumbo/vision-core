@@ -8672,7 +8672,10 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   }
 
   function initSoftwareFactoryPage() {
-    // §118: expõe para tutoriais de seção (T3 — STEPS_SF onEnter)
+    // Sub-passo 3.3b: STEPS_SF (único consumidor externo do onEnter §118)
+    // foi removido — exposição mantida porque a própria página legada
+    // ainda usa essas 2 funções internamente (nav de módulo, clique nas
+    // abas). Reavaliar quando a página legada for removida (3.3d).
     window.showSoftwareFactoryPage  = showSoftwareFactoryPage;
     window.setSoftwareFactoryModule = setSoftwareFactoryModule;
     // §128: expõe para tutoriais que precisam voltar ao cockpit antes de iluminar
@@ -11312,37 +11315,18 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   // onEnter abre a SF page e navega ao módulo certo antes de posicionar o spotlight.
   // window.showSoftwareFactoryPage e window.setSoftwareFactoryModule são expostos
   // por initSoftwareFactoryPage() (§118).
-  var _sfOnEnter = function(moduleId) {
-    return function() {
-      if (typeof window.showSoftwareFactoryPage  === 'function') window.showSoftwareFactoryPage();
-      if (moduleId && typeof window.setSoftwareFactoryModule === 'function') window.setSoftwareFactoryModule(moduleId);
-    };
-  };
-
-  // Sub-passo 3.2a — helper dedicado pra STEPS_SF2 (T3 "sf2"). NÃO reaproveita
-  // _sfOnEnter acima porque esse é compartilhado com STEPS_SF ("sf"), cujos
-  // passos 1-6 miram módulos reais que continuam na SF page legada — trocar
-  // _sfOnEnter pra abrir o switcher embutido quebraria esses passos. Este
-  // helper é só pros 5 pontos de STEPS_SF2 cujo alvo (#vcSfHomeControl e
-  // filhos) se moveu pra dentro de #mission.
+  // Sub-passo 3.3b: _sfOnEnter() e STEPS_SF (tutorial 'sf' — 7 passos que
+  // navegavam a página legada #vcSoftwareFactoryPage) removidos por
+  // completo. STEPS_SF era um tutorial zumbi: o menu lateral que o
+  // disparava foi repontado pra 'sf2' (o tutorial certo, que ensina o
+  // switcher embutido em #mission — nunca tinha um gatilho real até
+  // agora). _sfOnEnter() só existia pros 7 onEnter de STEPS_SF — zero
+  // outro consumidor (confirmado por grep antes de remover).
   var _sfChatOnEnter = function() {
     return function() {
       if (typeof window.setCentralMode === 'function') window.setCentralMode('sf');
     };
   };
-  var STEPS_SF = [
-    { title: '◈ Bem-vindo à Software Factory', text: 'Aqui você monta um projeto do zero com 8 módulos de IA — da definição de stack até o blueprint de deploy.', target: '#vcSfHomeBtn', pos: 'bottom', onEnter: _sfOnEnter(null) },
-    { title: '01 — Montar Projeto do Zero', text: 'Descreva o tipo de projeto e a stack desejada. A IA monta a estrutura inicial e sugere a arquitetura.', target: '[data-sf-module="project_builder"]', pos: 'bottom', onEnter: _sfOnEnter('project_builder') },
-    { title: '03 — Templates de Projeto', text: 'Use blueprints locais prontos para acelerar o início — templates testados para os padrões mais comuns de SaaS e API.', target: '[data-sf-module="project_templates"]', pos: 'bottom', onEnter: _sfOnEnter('project_templates') },
-    { title: '04 — Compositor de Missão', text: 'Transforma sua descrição em um prompt estruturado e pronto para copiar.', target: '[data-sf-module="mission_composer"]', pos: 'bottom', onEnter: _sfOnEnter('mission_composer') },
-    { title: '05 — Pacotes para Workers', text: 'Gera o pacote de handoff completo para um worker externo executar.', target: '[data-sf-module="worker_handoff"]', pos: 'bottom', onEnter: _sfOnEnter('worker_handoff') },
-    // §SF-cleanup: módulos 06 e 09 são funcionais — badge EM BREVE removido
-    { title: '06 — Pacote de Criação Real', text: 'Gera pacote de comando read-only via /api/sf/patch-validator. Nenhum arquivo é escrito pelo frontend — toda execução real exige worker externo (EXTERNAL ONLY).', target: '[data-sf-module="real_file_command"]', pos: 'bottom', onEnter: _sfOnEnter('real_file_command') },
-    // §118: Gold Gate — usa módulo 09 "PAINEL FINAL" como alvo visual
-    // (#vcSfSddfSteps fica dentro da timeline colapsada por padrão — height:0 = spotlight zerado)
-    { title: '🏅 Gold Gate — o validador final', text: 'Antes de qualquer entrega, o Gold Gate avalia segurança, risco e qualidade — o mesmo padrão de validação do PASS GOLD. O módulo "Painel Final" (09) é o destino após todas as etapas de validação.', target: '[data-sf-module="final_dashboard"]', pos: 'bottom', onEnter: _sfOnEnter(null) }
-  ];
-  window.vcRegisterTutorial('sf', STEPS_SF, 'vc_tutorial_sf_done');
 
   // ── §162: TUTORIAL SF GUIA AUTO-PILOT (para leigos) ──
   // §167: STEPS_SF2 atualizado — targets para elementos visíveis na nova UI
@@ -11413,6 +11397,16 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     { title: '🚀 Automático por padrão, manual quando você quiser',
       text: 'Por padrão, o Arquiteto roda tudo automaticamente (AUTO-PILOT) ao você enviar a descrição. Prefere controle manual? Use os chips abaixo para gerar cada pacote individualmente.',
       target: '#vcSfGenChips', pos: 'top', onEnter: _sfChatOnEnter() },
+    // Sub-passo 3.3b: passo novo — .vc-sf-templates-trigger (Templates/
+    // Ajustar Manualmente/Aprovação Humana) nunca teve cobertura de tutorial
+    // desde que os 2 drawers (3.2d/3.2e) e o card de aprovação (3.2e)
+    // foram introduzidos. Gap real de conteúdo, corrigido antes de expor
+    // este tutorial de verdade pela primeira vez. Sempre visível
+    // independente da aba AUTO-PILOT/MODO AVANÇADO (initSfModeTabs() só
+    // alterna .vc-sf-module-nav-h e #vcSfExamples — não este grupo).
+    { title: '📐 Templates, ajustes manuais e aprovação',
+      text: 'Use "Ver templates disponíveis" pra começar de um blueprint pronto, "Ajustar projeto manualmente" pra definir tipo/stack/tamanho você mesmo, ou "Aprovação Humana" pra confirmar antes de qualquer pacote de comando real.',
+      target: '.vc-sf-templates-trigger', pos: 'top', onEnter: _sfChatOnEnter() },
     { title: '📋 Chips de exemplo — clique para preencher',
       text: 'Não sabe por onde começar? Clique em um dos exemplos abaixo do chat — o Arquiteto preenche a descrição automaticamente.',
       target: '#vcSfExamples', pos: 'top', onEnter: _sfExamplesOnEnter() },

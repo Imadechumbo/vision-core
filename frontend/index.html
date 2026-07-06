@@ -384,7 +384,12 @@
       <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('mission'); return false;">
         <span class="vc-menu-ico">◎</span><span class="vc-menu-lbl">Mission control</span>
       </a>
-      <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('sf'); return false;">
+      <!-- Sub-passo 3.3b: repontado de 'sf' pra 'sf2' — STEPS_SF (o tutorial
+           'sf' antigo, que navegava a página legada #vcSoftwareFactoryPage)
+           foi removido; STEPS_SF2 é o tutorial correto, que ensina o
+           switcher embutido em #mission, sem nunca ter tido um gatilho
+           real até agora. -->
+      <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('sf2'); return false;">
         <span class="vc-menu-ico">◈</span><span class="vc-menu-lbl">Software factory</span>
       </a>
       <a href="#" class="vc-tut-item" onclick="window.vcStartSectionTutorial('passgold'); return false;">
