@@ -3121,11 +3121,19 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   }
 
   function renderMissionPrompt() {
-    var output = document.getElementById('vcMissionPromptOutput');
-    if (!output) { return; }
+    // Sub-passo 3.3a: calcula ANTES de checar a saída opcional — mesmo
+    // padrão já usado em renderRealFileCommandPackage/renderWorkerEvidenceReceipt/
+    // renderFinalProductReport. Antes, o `if (!output) return` early-return
+    // vinha primeiro, então mcState.generatedPrompt nunca era calculado se
+    // #vcMissionPromptOutput (textarea da página legada) não existisse —
+    // o chip do chat (GEN_TRIGGERS.mission_composer) dependia dessa
+    // textarea legada existir só pra CALCULAR o valor, não só pra exibir.
     var text = buildMissionPrompt();
-    output.value = text;
-    output.classList.remove('empty');
+    var output = document.getElementById('vcMissionPromptOutput');
+    if (output) {
+      output.value = text;
+      output.classList.remove('empty');
+    }
   }
 
   function copyMissionPrompt() {
@@ -3683,11 +3691,14 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
   }
 
   function renderWorkerHandoffPackage() {
-    var output = document.getElementById('vcHandoffOutput');
-    if (!output) { return; }
+    // Sub-passo 3.3a: mesma correção de renderMissionPrompt() acima —
+    // calcula antes de checar a saída opcional (textarea legada).
     var text = buildWorkerHandoffPackage();
-    output.value = text;
-    output.classList.remove('empty');
+    var output = document.getElementById('vcHandoffOutput');
+    if (output) {
+      output.value = text;
+      output.classList.remove('empty');
+    }
   }
 
   function copyWorkerHandoffPackage() {
@@ -4001,11 +4012,15 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       : null);
 
     /* Build and render preview */
-    var output = document.getElementById('vcExportOutput');
-    if (!output) { return; }
+    // Sub-passo 3.3a: mesma correção de renderMissionPrompt()/
+    // renderWorkerHandoffPackage() acima — calcula antes de checar a saída
+    // opcional (textarea legada).
     var text = buildProjectExportPreview();
-    output.value = text;
-    output.classList.remove('empty');
+    var output = document.getElementById('vcExportOutput');
+    if (output) {
+      output.value = text;
+      output.classList.remove('empty');
+    }
   }
 
   function copyProjectExportPreview() {
