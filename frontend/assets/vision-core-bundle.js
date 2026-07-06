@@ -8710,8 +8710,39 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       homeBtn.addEventListener('click', _sfShowHome);
     }
 
+    // Salvaguarda de custo — texto trivial ("oi", "teste") nunca deveria
+    // disparar os 7 módulos (cada um uma chamada real de LLM via callLLM()).
+    // Achado em produção: mandar "oi" gerava um Gold Gate Checker completo
+    // com os 4 gates SDDF rodados — zero checagem de intenção existia entre
+    // o texto digitado e o pipeline. Havia uma guarda de 10 caracteres num
+    // botão legado (#vcSfAutoPilotBtn, linha ~9393) que ficou órfã quando o
+    // fluxo migrou pro #vcSfSendBtn/handleSfSend() — não é regressão da
+    // Fase 2 (3.2a-3.2f), é uma lacuna de antes (§164) que nunca foi
+    // carregada pro fluxo novo. Fix aqui, não em handleSfSend(), pra
+    // proteger os 3 call sites de runSfAutoPilot() de uma vez (defesa
+    // única, sem duplicar checagem). Não pretende detectar toda intenção
+    // corretamente — só barrar o caso óbvio antes de gastar dinheiro real;
+    // detecção mais sofisticada (reaproveitando /api/architect/interpret,
+    // já usado no chat principal) fica pra um sub-passo separado.
+    var SF_MIN_DESCRIPTION_LENGTH = 20;
+    var SF_TRIVIAL_GREETINGS = [
+      'oi', 'ola', 'olá', 'oii', 'oie', 'eae', 'e ai', 'e aí',
+      'teste', 'test', 'hello', 'hi', 'hey',
+      'bom dia', 'boa tarde', 'boa noite', 'tudo bem',
+      'oi tudo bem', 'ola tudo bem', 'olá tudo bem'
+    ];
+    function _sfIsTrivialInput(text) {
+      var norm = String(text || '').trim().toLowerCase().replace(/[.!?,;]+$/g, '').trim();
+      if (norm.length < SF_MIN_DESCRIPTION_LENGTH) { return true; }
+      return SF_TRIVIAL_GREETINGS.indexOf(norm) !== -1;
+    }
+
     // §161 — Auto-Pilot: executa 7 módulos SF em sequência com Promise chain
     async function runSfAutoPilot(projectDescription) {
+      if (_sfIsTrivialInput(projectDescription)) {
+        addSfChatMsg('assistant', 'Me conta um pouco mais sobre o projeto que você quer criar — que tipo de sistema, funcionalidades principais, público-alvo, etc. Com mais detalhes eu monto um plano completo pra você. 🙂');
+        return;
+      }
       // §164-fix: apBtn agora pode ser vcSfSendBtn (nova UI) ou vcSfAutoPilotBtn (legado)
       var apBtn    = document.getElementById('vcSfSendBtn') || document.getElementById('vcSfAutoPilotBtn');
       var progress = document.getElementById('vcSfAutoPilotProgress');
