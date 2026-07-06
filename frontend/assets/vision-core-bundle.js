@@ -8720,10 +8720,11 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
     // Fase 2 (3.2a-3.2f), é uma lacuna de antes (§164) que nunca foi
     // carregada pro fluxo novo. Fix aqui, não em handleSfSend(), pra
     // proteger os 3 call sites de runSfAutoPilot() de uma vez (defesa
-    // única, sem duplicar checagem). Não pretende detectar toda intenção
-    // corretamente — só barrar o caso óbvio antes de gastar dinheiro real;
-    // detecção mais sofisticada (reaproveitando /api/architect/interpret,
-    // já usado no chat principal) fica pra um sub-passo separado.
+    // única, sem duplicar checagem). Camada 1 — barata, síncrona, zero
+    // rede — pega só o caso óbvio. Camada 2 (logo abaixo,
+    // _sfCheckCreateIntent) reaproveita /api/architect/interpret pra
+    // detecção de intenção real nos casos que passam da Camada 1 mas
+    // ainda não são um pedido de projeto de verdade.
     var SF_MIN_DESCRIPTION_LENGTH = 20;
     var SF_TRIVIAL_GREETINGS = [
       'oi', 'ola', 'olá', 'oii', 'oie', 'eae', 'e ai', 'e aí',
@@ -8737,10 +8738,72 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
       return SF_TRIVIAL_GREETINGS.indexOf(norm) !== -1;
     }
 
+    // Camada 2 da salvaguarda — classificação real de intenção via
+    // /api/architect/interpret, o MESMO endpoint já usado no hint §81 do
+    // chat principal (não é um endpoint novo). Roda só depois da heurística
+    // acima já ter descartado de graça o caso óbvio — esta camada pega o
+    // "não trivial mas ainda não é uma descrição de projeto real" (ex:
+    // "isso é só um teste do sistema, ignora" — passa dos 20 caracteres,
+    // não bate com a lista de saudações, mas não é um pedido de verdade).
+    //
+    // Limiar 0.6 não é arbitrário — é o MESMO CONFIDENCE_THRESHOLD que o
+    // próprio backend usa (server.js) pra decidir se retorna specs
+    // sugeridas ou open_questions; e o próprio exemplo oficial do prompt
+    // (architect-system.md) classifica "quero um site para minha padaria"
+    // com confidence 0.75 — folga confortável acima do limiar pra um
+    // pedido real mas vago não ser barrado.
+    //
+    // ACHADO ADJACENTE (não corrigido aqui, fora do escopo deste guard):
+    // o hint §81 (chat principal, ~linha 6677) lê `cls.intent`, campo que
+    // NÃO EXISTE em lugar nenhum da resposta do backend nem no schema do
+    // prompt (`classification.{project_type,stack,tags,confidence,
+    // explanation,open_questions}` — sem `intent`). `cls.intent` é sempre
+    // `undefined`, então aquela condição (`cls.intent !== 'create'`) é
+    // sempre verdadeira — o hint "Abrir Project Builder →" nunca aparece,
+    // pra nenhuma mensagem. A chamada de rede ainda acontece (custo real a
+    // cada mensagem do chat principal), só o resultado nunca é usado. Não
+    // copiei esse padrão aqui — uso `classification.confidence` (campo que
+    // realmente existe) em vez de `intent`. Bug pré-existente, adjacente,
+    // fora do escopo deste fix; reportado, não corrigido silenciosamente.
+    var SF_INTENT_CONFIDENCE_THRESHOLD = 0.6;
+    function _sfCheckCreateIntent(text) {
+      var tok = (function() { try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch(e) { return ''; } })() || '';
+      var base = window.__VISION_API__ || window.API_BASE_URL || BACKEND_URL || '';
+      return fetch(base + '/api/architect/interpret', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': tok ? 'Bearer ' + tok : '' },
+        body: JSON.stringify({ message: text.slice(0, 4000) }) // backend rejeita >4000 (400 message_too_long)
+      })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(cls) {
+        // fail-open: resposta inesperada/malformada não deveria bloquear
+        // um pedido legítimo — a heurística de texto trivial já rodou de
+        // graça antes disso, esta é só uma camada de refinamento.
+        if (!cls || !cls.ok || !cls.classification) { return { proceed: true }; }
+        var conf = typeof cls.classification.confidence === 'number' ? cls.classification.confidence : 0;
+        if (conf >= SF_INTENT_CONFIDENCE_THRESHOLD) { return { proceed: true }; }
+        var qs = Array.isArray(cls.open_questions) ? cls.open_questions
+               : (Array.isArray(cls.classification.open_questions) ? cls.classification.open_questions : []);
+        return { proceed: false, questions: qs };
+      })
+      .catch(function() { return { proceed: true }; }); // fail-open: rede indisponível não bloqueia
+    }
+
     // §161 — Auto-Pilot: executa 7 módulos SF em sequência com Promise chain
     async function runSfAutoPilot(projectDescription) {
       if (_sfIsTrivialInput(projectDescription)) {
         addSfChatMsg('assistant', 'Me conta um pouco mais sobre o projeto que você quer criar — que tipo de sistema, funcionalidades principais, público-alvo, etc. Com mais detalhes eu monto um plano completo pra você. 🙂');
+        return;
+      }
+
+      var _intentTypingEl = addSfChatMsg('assistant', '🔍 Verificando sua descrição...');
+      var _intentCheck = await _sfCheckCreateIntent(projectDescription);
+      if (_intentTypingEl && _intentTypingEl.parentNode) { _intentTypingEl.parentNode.removeChild(_intentTypingEl); }
+      if (!_intentCheck.proceed) {
+        var _qMsg = (_intentCheck.questions && _intentCheck.questions.length)
+          ? _intentCheck.questions.join(' ')
+          : 'Pode detalhar melhor o tipo de projeto, funcionalidades principais e stack desejada?';
+        addSfChatMsg('assistant', 'Ainda não captei uma descrição clara de projeto. ' + _qMsg);
         return;
       }
       // §164-fix: apBtn agora pode ser vcSfSendBtn (nova UI) ou vcSfAutoPilotBtn (legado)
