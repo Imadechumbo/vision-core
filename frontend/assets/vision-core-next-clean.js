@@ -32,7 +32,7 @@
   };
 
   function appendMessage(kind, title, text) {
-    if (!stream) return;
+    if (!stream) return null;
     var item = document.createElement('article');
     var label = document.createElement('span');
     var body = document.createElement('p');
@@ -43,6 +43,7 @@
     item.appendChild(body);
     stream.appendChild(item);
     item.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    return item;
   }
 
   function resizePrompt() {
@@ -83,10 +84,29 @@
     if (announce) appendMessage('pending', feature.title.toUpperCase(), feature.text);
   }
 
+  var CHIP_PREFIX = {
+    missions: 'Missão: ',
+    factory: 'Factory: ',
+    github: 'GitHub: ',
+    vault: 'Vault: ',
+    settings: 'IA: '
+  };
+
   document.querySelectorAll('[data-feature]').forEach(function (node) {
     node.addEventListener('click', function (event) {
       event.preventDefault();
-      selectFeature(node.getAttribute('data-feature'), !!node.closest('.vc-composer-actions')); 
+      var key = node.getAttribute('data-feature');
+      var inComposer = !!node.closest('.vc-composer-actions');
+      selectFeature(key, false);
+      if (inComposer && prompt && CHIP_PREFIX[key]) {
+        if (prompt.value.indexOf(CHIP_PREFIX[key]) !== 0) {
+          prompt.value = CHIP_PREFIX[key] + prompt.value;
+        }
+        resizePrompt();
+        prompt.focus();
+        var len = prompt.value.length;
+        prompt.setSelectionRange(len, len);
+      }
     });
   });
 
@@ -113,20 +133,68 @@
     resizePrompt();
   }
 
+  var CHAT_BACKEND_URL = 'https://visioncore-api-gateway.weiganlight.workers.dev';
+  var CHAT_TIMEOUT_MS = 45000;
+
+  function getChatAuthToken() {
+    try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch (_) { return null; }
+  }
+
   if (composer) {
     composer.addEventListener('submit', function (event) {
       event.preventDefault();
       var text = prompt ? prompt.value.trim() : '';
       if (!text) return;
       appendMessage('user', 'VOCE', text);
-      if (window.setAtomicCoreState) window.setAtomicCoreState('action');
-      if (window.highlightAtomicAgents) window.highlightAtomicAgents(['hermes', 'scanner', 'patchEngine']);
-      appendMessage('pending', 'MISSION ROUTER', 'Miss\\u00e3o preparada na interface Next. Pendente: conectar este submit ao endpoint real sem trazer a UI legada.');
       prompt.value = '';
       resizePrompt();
-      window.setTimeout(function () {
+
+      if (window.setAtomicCoreState) window.setAtomicCoreState('action');
+      if (window.highlightAtomicAgents) window.highlightAtomicAgents(['hermes', 'scanner', 'patchEngine']);
+
+      var thinkingEl = appendMessage('pending', 'VISION CORE', 'Pensando...');
+
+      function finish() {
+        if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
         if (window.resetAtomicCore) window.resetAtomicCore();
-      }, 3200);
+      }
+
+      var token = getChatAuthToken();
+      var headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = 'Bearer ' + token;
+
+      var controller = null;
+      try { controller = new AbortController(); } catch (_) {}
+      var timeoutId = controller ? window.setTimeout(function () { controller.abort(); }, CHAT_TIMEOUT_MS) : null;
+
+      fetch(CHAT_BACKEND_URL + '/api/chat', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ message: text, mode: 'vision-geral', model: 'auto', display_input: text }),
+        signal: controller ? controller.signal : undefined
+      }).then(function (r) {
+        if (timeoutId) window.clearTimeout(timeoutId);
+        if (!r.ok) {
+          return r.json().catch(function () { return null; }).then(function (body) {
+            throw new Error((body && (body.error || body.message)) || ('HTTP ' + r.status));
+          });
+        }
+        return r.json();
+      }).then(function (data) {
+        finish();
+        if (data && typeof data.answer === 'string' && data.answer) {
+          appendMessage('assistant', 'VISION CORE', data.answer);
+        } else {
+          appendMessage('error', 'ERRO', 'Resposta do backend em formato inesperado (sem campo "answer").');
+        }
+      }).catch(function (err) {
+        if (timeoutId) window.clearTimeout(timeoutId);
+        finish();
+        var isAbort = err && err.name === 'AbortError';
+        appendMessage('error', 'ERRO', isAbort
+          ? 'Tempo esgotado ao falar com o backend (45s). Tente novamente.'
+          : ('Erro de conexão: ' + (err && err.message ? err.message : err)));
+      });
     });
   }
 
