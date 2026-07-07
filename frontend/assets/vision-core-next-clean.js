@@ -303,3 +303,69 @@
   selectFeature('chat', false);
   if (!reduceMotion) raf = window.requestAnimationFrame(frame);
 })();
+
+(function () {
+  'use strict';
+
+  var pupils = Array.prototype.slice.call(document.querySelectorAll('.vc-eye-logo .vc-pupil'));
+  if (!pupils.length) return;
+
+  var reduceMotion = false;
+  try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+  if (reduceMotion) return;
+
+  var atomicRoot = document.querySelector('[data-atomic-core]');
+  var BLINK_MS = 150;
+  var DOUBLE_BLINK_CHANCE = 0.2;
+  var DOUBLE_BLINK_GAP_MS = 250;
+  var MIN_DELAY_MS = 4000;
+  var MAX_DELAY_MS = 9000;
+  var timer = null;
+
+  function isIdle() {
+    return !atomicRoot || atomicRoot.getAttribute('data-state') !== 'action';
+  }
+
+  function blinkOnce() {
+    pupils.forEach(function (pupil) {
+      pupil.animate(
+        [
+          { transform: 'scaleY(1)' },
+          { transform: 'scaleY(0.1)', offset: 0.5 },
+          { transform: 'scaleY(1)' }
+        ],
+        { duration: BLINK_MS, easing: 'ease-in-out' }
+      );
+    });
+  }
+
+  function scheduleNext() {
+    if (timer) { window.clearTimeout(timer); timer = null; }
+    if (!isIdle()) return;
+    var delay = MIN_DELAY_MS + Math.random() * (MAX_DELAY_MS - MIN_DELAY_MS);
+    timer = window.setTimeout(function () {
+      timer = null;
+      if (!isIdle()) return;
+      blinkOnce();
+      if (Math.random() < DOUBLE_BLINK_CHANCE) {
+        window.setTimeout(function () {
+          if (isIdle()) blinkOnce();
+        }, DOUBLE_BLINK_GAP_MS);
+      }
+      scheduleNext();
+    }, delay);
+  }
+
+  if (atomicRoot && window.MutationObserver) {
+    new MutationObserver(function () {
+      if (isIdle()) {
+        if (!timer) scheduleNext();
+      } else if (timer) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+    }).observe(atomicRoot, { attributes: true, attributeFilter: ['data-state'] });
+  }
+
+  scheduleNext();
+})();
