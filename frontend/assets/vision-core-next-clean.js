@@ -315,7 +315,7 @@
   if (reduceMotion) return;
 
   var atomicRoot = document.querySelector('[data-atomic-core]');
-  var BLINK_MS = 150;
+  var BLINK_MS = 300;
   var DOUBLE_BLINK_CHANCE = 0.2;
   var DOUBLE_BLINK_GAP_MS = 250;
   var MIN_DELAY_MS = 4000;
@@ -330,9 +330,10 @@
     (targets || pupils).forEach(function (pupil) {
       pupil.animate(
         [
-          { transform: 'scaleY(1)' },
-          { transform: 'scaleY(0.1)', offset: 0.5 },
-          { transform: 'scaleY(1)' }
+          { transform: 'scaleY(1)', opacity: 1 },
+          { transform: 'scaleY(0.08)', opacity: 0.15, offset: 0.35 },
+          { transform: 'scaleY(0.08)', opacity: 0.15, offset: 0.6 },
+          { transform: 'scaleY(1)', opacity: 1 }
         ],
         { duration: BLINK_MS, easing: 'ease-in-out' }
       );
