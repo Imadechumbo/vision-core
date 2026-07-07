@@ -326,8 +326,8 @@
     return !atomicRoot || atomicRoot.getAttribute('data-state') !== 'action';
   }
 
-  function blinkOnce() {
-    pupils.forEach(function (pupil) {
+  function blinkOnce(targets) {
+    (targets || pupils).forEach(function (pupil) {
       pupil.animate(
         [
           { transform: 'scaleY(1)' },
@@ -366,6 +366,21 @@
       }
     }).observe(atomicRoot, { attributes: true, attributeFilter: ['data-state'] });
   }
+
+  var HOVER_BLINK_MIN_GAP_MS = 400;
+  var lastHoverBlink = new WeakMap();
+
+  Array.prototype.slice.call(document.querySelectorAll('.vc-eye-logo')).forEach(function (logo) {
+    var pupil = logo.querySelector('.vc-pupil');
+    if (!pupil) return;
+    logo.addEventListener('mouseenter', function () {
+      var now = Date.now();
+      var last = lastHoverBlink.get(logo) || 0;
+      if (now - last < HOVER_BLINK_MIN_GAP_MS) return;
+      lastHoverBlink.set(logo, now);
+      blinkOnce([pupil]);
+    });
+  });
 
   scheduleNext();
 })();
