@@ -307,12 +307,16 @@
 (function () {
   'use strict';
 
-  var pupils = Array.prototype.slice.call(document.querySelectorAll('.vc-eye-logo .vc-pupil'));
-  if (!pupils.length) return;
+  var eyes = Array.prototype.slice.call(document.querySelectorAll('.vc-eye-logo')).map(function (logo) {
+    return { logo: logo, eye: logo.querySelector('.vc-eye'), pupil: logo.querySelector('.vc-pupil') };
+  }).filter(function (target) { return target.eye && target.pupil; });
+  if (!eyes.length) return;
 
+  // prefers-reduced-motion only disables the ambient scheduler below - hover
+  // blink stays wired regardless, since it's a direct response to user input,
+  // not decorative/idle animation.
   var reduceMotion = false;
   try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
-  if (reduceMotion) return;
 
   var atomicRoot = document.querySelector('[data-atomic-core]');
   var BLINK_MS = 300;
@@ -320,20 +324,31 @@
   var DOUBLE_BLINK_GAP_MS = 250;
   var MIN_DELAY_MS = 4000;
   var MAX_DELAY_MS = 9000;
+  var HOVER_BLINK_MIN_GAP_MS = 400;
   var timer = null;
+  var lastHoverBlink = new WeakMap();
 
   function isIdle() {
     return !atomicRoot || atomicRoot.getAttribute('data-state') !== 'action';
   }
 
   function blinkOnce(targets) {
-    (targets || pupils).forEach(function (pupil) {
-      pupil.animate(
+    (targets || eyes).forEach(function (target) {
+      target.eye.animate(
         [
-          { transform: 'scaleY(1)', opacity: 1 },
-          { transform: 'scaleY(0.08)', opacity: 0.15, offset: 0.35 },
-          { transform: 'scaleY(0.08)', opacity: 0.15, offset: 0.6 },
-          { transform: 'scaleY(1)', opacity: 1 }
+          { transform: 'scaleY(1)' },
+          { transform: 'scaleY(0.12)', offset: 0.35 },
+          { transform: 'scaleY(0.12)', offset: 0.6 },
+          { transform: 'scaleY(1)' }
+        ],
+        { duration: BLINK_MS, easing: 'ease-in-out' }
+      );
+      target.pupil.animate(
+        [
+          { opacity: 1 },
+          { opacity: 0.2, offset: 0.35 },
+          { opacity: 0.2, offset: 0.6 },
+          { opacity: 1 }
         ],
         { duration: BLINK_MS, easing: 'ease-in-out' }
       );
@@ -342,7 +357,7 @@
 
   function scheduleNext() {
     if (timer) { window.clearTimeout(timer); timer = null; }
-    if (!isIdle()) return;
+    if (reduceMotion || !isIdle()) return;
     var delay = MIN_DELAY_MS + Math.random() * (MAX_DELAY_MS - MIN_DELAY_MS);
     timer = window.setTimeout(function () {
       timer = null;
@@ -357,7 +372,7 @@
     }, delay);
   }
 
-  if (atomicRoot && window.MutationObserver) {
+  if (!reduceMotion && atomicRoot && window.MutationObserver) {
     new MutationObserver(function () {
       if (isIdle()) {
         if (!timer) scheduleNext();
@@ -368,20 +383,15 @@
     }).observe(atomicRoot, { attributes: true, attributeFilter: ['data-state'] });
   }
 
-  var HOVER_BLINK_MIN_GAP_MS = 400;
-  var lastHoverBlink = new WeakMap();
-
-  Array.prototype.slice.call(document.querySelectorAll('.vc-eye-logo')).forEach(function (logo) {
-    var pupil = logo.querySelector('.vc-pupil');
-    if (!pupil) return;
-    logo.addEventListener('mouseenter', function () {
+  eyes.forEach(function (target) {
+    target.logo.addEventListener('mouseenter', function () {
       var now = Date.now();
-      var last = lastHoverBlink.get(logo) || 0;
+      var last = lastHoverBlink.get(target.logo) || 0;
       if (now - last < HOVER_BLINK_MIN_GAP_MS) return;
-      lastHoverBlink.set(logo, now);
-      blinkOnce([pupil]);
+      lastHoverBlink.set(target.logo, now);
+      blinkOnce([target]);
     });
   });
 
-  scheduleNext();
+  if (!reduceMotion) scheduleNext();
 })();
