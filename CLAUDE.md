@@ -672,54 +672,256 @@ Depois da Fase 1 (`a3622b4e` — limpeza/agrupamento de sidebar), a Software Fac
 
 ---
 
-## IDEIA REGISTRADA — ATOMIC CORE: ANIMAÇÃO COM SIGNIFICADO, NÃO DECORATIVA
+# IDEIA REGISTRADA — Atomic Core: animação com significado, não decorativa
 
-**Status: só especificação. Nada implementado. Não iniciar sem decisão humana explícita de começar.**
+---
 
-### Conceito central
+## CONTEXTO
 
-Renomear o diagrama de órbita de agentes (hoje "decágono", um dos 3 elementos de identidade visual protegidos desde a Fase 1/2 desta linha de trabalho) para **"Atomic Core"** — analogia com um átomo:
+Esta é uma especificação conceitual para implementação futura.
 
-- **CORE** = núcleo (prótons + nêutrons)
-- **Agentes** (GitHub Agent, PI Harness, Hermes, Archivist, OpenClaw, Pass Gold, Scanner, Go Core, Aegis, Patch Engine) = elétrons
-- **Órbitas** = níveis de energia
-- **Execução** = transferência de energia
-- **Comunicação** = pulsos elétricos
+O objetivo é registrar a filosofia de funcionamento do Atomic Core para orientar futuras implementações sem risco de perda de identidade visual.
 
-**Objetivo:** o usuário não deve ver um "loading" decorativo — deve perceber inconscientemente um sistema vivo.
+Esta documentação não autoriza nenhuma alteração de código.
 
-### Máquina de estados proposta (4 estados)
+---
 
-**1. IDLE (95% do tempo):**
-- Deslocamento orbital extremamente lento — cada agente percorre poucos graus, perceptível só depois de segundos (como um GIF de 20s).
-- Velocidades DIFERENTES e não sincronizadas por agente (ex: PI Harness = 0.015 rad/s, Hermes = 0.013, Scanner = 0.018, Patch Engine = 0.011 — nunca iguais entre si).
-- Movimento secundário de "respiração": escala oscilando sutilmente entre 1.00 e 1.02 e voltando.
-- Glow oscilando entre ~80% e 100% de opacidade, sem piscar (transição suave, não binária).
-- Órbitas quase invisíveis, mas com um ponto de brilho percorrendo lentamente uma órbita por vez, como um elétron passando.
+# CONCEITO CENTRAL
 
-**2. THINKING (ao enviar uma missão):**
-- Núcleo pulsa: expande e contrai.
-- Agentes aceleram a velocidade orbital.
-- Aumento discreto de velocidade + pulsos ocasionais nas conexões.
+O atual diagrama orbital de agentes (um dos três elementos oficiais de identidade visual do Vision Core) passa a ser tratado conceitualmente como:
 
-**3. EXECUTING (durante processamento):**
-- Sequência de ativação específica: Hermes move primeiro, depois PI Harness, OpenClaw, Scanner, Patch Engine, Aegis — como troca de energia em cadeia.
-- Pequenas partículas (não linhas brilhantes) percorrem as conexões entre núcleo e agentes.
-- Quando um agente específico está trabalhando: ele sai levemente da órbita (8-12px) e retorna — como um "elétron excitado".
+Atomic Core
 
-**4. COMPLETED (ao finalizar):**
-- Breve flash de energia.
-- Desaceleração gradual até retornar ao estado Idle.
+A inspiração é um átomo.
 
-### Restrição técnica explícita (meta de performance)
+Mapeamento conceitual:
 
-- Implementável apenas com CSS `transform`, `requestAnimationFrame`, SVG, `translate`, `rotate`, `opacity`.
-- Explicitamente SEM Three.js, SEM Canvas, SEM WebGL — deve ser leve o suficiente para não pesar a página.
+• CORE = núcleo (prótons + nêutrons)
 
-### Atenção para quando for implementar (não agora)
+• Agentes
+- GitHub Agent
+- PI Harness
+- Hermes
+- Archivist
+- OpenClaw
+- Pass Gold
+- Scanner
+- Go Core
+- Aegis
+- Patch Engine
 
-- Esse diagrama é um dos 3 elementos de identidade visual protegidos desde a Fase 1/2 desta sessão — qualquer implementação futura precisa passar pela mesma verificação de "identidade visual intacta" (`git diff` confirmando que só as regiões esperadas mudam) que foi usada em cada sub-passo da Fase 2/3 até aqui.
-- Ao implementar futuramente, tratar como sub-passos testáveis com a mesma disciplina (baseline de teste → implementação → identidade visual confirmada → suíte completa), não como mudança única.
+representam os elétrons.
+
+As órbitas representam níveis de energia.
+
+A execução de uma missão representa transferência de energia.
+
+A comunicação representa pulsos elétricos.
+
+Objetivo principal:
+
+O usuário nunca deve perceber um simples loading.
+
+A sensação desejada é de um sistema vivo, inteligente e constantemente em equilíbrio.
+
+A animação deve comunicar estado do sistema, nunca servir apenas como decoração.
+
+---
+
+# MÁQUINA DE ESTADOS
+
+Definir conceitualmente quatro estados.
+
+## IDLE
+
+Estado padrão.
+
+Presente aproximadamente 95% do tempo.
+
+Características:
+
+- deslocamento orbital extremamente lento;
+- cada agente percorre poucos graus ao longo de muitos segundos;
+- movimento perceptível apenas após observação prolongada;
+- velocidades diferentes entre todos os agentes;
+- nunca sincronizados.
+
+Cada agente possui velocidade própria.
+
+Exemplo ilustrativo:
+
+PI Harness = 0.015 rad/s
+
+Hermes = 0.013 rad/s
+
+Scanner = 0.018 rad/s
+
+Patch Engine = 0.011 rad/s
+
+Valores apenas como referência conceitual.
+
+Nunca utilizar velocidades iguais.
+
+Cada agente também apresenta:
+
+respiração discreta
+
+escala oscilando entre:
+
+1.00
+
+↓
+
+1.02
+
+↓
+
+1.00
+
+Glow respirando continuamente entre aproximadamente:
+
+80%
+
+↓
+
+100%
+
+↓
+
+80%
+
+Sem piscar.
+
+Sem efeito binário.
+
+As órbitas permanecem quase invisíveis.
+
+Um pequeno ponto luminoso percorre lentamente uma órbita por vez, simulando um elétron em movimento.
+
+---
+
+## THINKING
+
+Iniciado quando uma missão é enviada.
+
+Características:
+
+- núcleo pulsa;
+- expansão e contração suaves;
+- aumento discreto da velocidade orbital;
+- pequenos pulsos ocasionais nas conexões.
+
+Sem exageros.
+
+---
+
+## EXECUTING
+
+Estado durante processamento.
+
+Sequência conceitual de ativação:
+
+Hermes
+
+↓
+
+PI Harness
+
+↓
+
+OpenClaw
+
+↓
+
+Scanner
+
+↓
+
+Patch Engine
+
+↓
+
+Aegis
+
+Representando propagação de energia entre agentes.
+
+As conexões exibem pequenas partículas viajando entre núcleo e agentes.
+
+Não utilizar linhas brilhantes.
+
+Quando um agente estiver executando trabalho:
+
+ele deve deslocar-se levemente para fora da órbita (aproximadamente 8–12 px) e retornar, simulando um elétron excitado.
+
+---
+
+## COMPLETED
+
+Quando a missão termina.
+
+Características:
+
+- breve pulso de energia;
+- desaceleração gradual;
+- retorno suave ao estado Idle.
+
+---
+
+# META DE PERFORMANCE
+
+Quando esta especificação vier a ser implementada, priorizar:
+
+- SVG
+- CSS transform
+- translate
+- rotate
+- opacity
+- requestAnimationFrame
+
+Evitar qualquer solução pesada.
+
+Não utilizar:
+
+- Three.js
+- Canvas
+- WebGL
+
+A animação deve ter custo mínimo e não impactar a fluidez da interface.
+
+---
+
+# IMPORTÂNCIA PARA A IDENTIDADE VISUAL
+
+O Atomic Core permanece um dos três elementos oficiais de identidade visual do Vision Core.
+
+Qualquer implementação futura deverá preservar integralmente sua identidade gráfica.
+
+Antes de qualquer alteração visual deverão ser repetidos os mesmos procedimentos utilizados durante a reconstrução do Vision Core Next:
+
+- comparação visual;
+- validação da identidade;
+- revisão por etapas;
+- confirmação via git diff;
+- implementação incremental;
+- testes entre cada etapa.
+
+Nunca implementar mudanças grandes de uma única vez.
+
+Toda evolução deverá ocorrer em pequenos passos verificáveis.
+
+---
+
+## STATUS
+
+Estado desta especificação:
+
+IDEIA REGISTRADA
+
+Sem implementação.
+
+Sem código.
+
+Somente documentação para orientar o desenvolvimento futuro.
 
 ---
 
