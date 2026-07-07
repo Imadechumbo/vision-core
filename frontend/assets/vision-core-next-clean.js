@@ -150,7 +150,7 @@
       resizePrompt();
 
       if (window.setAtomicCoreState) window.setAtomicCoreState('action');
-      if (window.highlightAtomicAgents) window.highlightAtomicAgents(['hermes', 'scanner', 'patchEngine']);
+      if (window.startAtomicSequence) window.startAtomicSequence();
 
       var thinkingEl = appendMessage('pending', 'VISION CORE', 'Pensando...');
 
@@ -301,7 +301,13 @@
   };
 
   Agent.prototype.values = function (elapsed) {
-    if (reduceMotion) return { angle: this.base, radius: AGENT_RADIUS, scale: 1, opacity: .9, glow: 24, layer: 4 };
+    if (reduceMotion) {
+      // Posição/órbita ficam congeladas (acessibilidade), mas o glow ainda
+      // precisa refletir o estado real - é o único sinal visual de "action"
+      // disponível quando o loop de movimento está desligado.
+      var glowBase = state === 'action' ? 42 : 24;
+      return { angle: this.base, radius: AGENT_RADIUS, scale: 1, opacity: .9, glow: glowBase, layer: 4 };
+    }
     return state === 'action' ? this.actionValues(elapsed) : this.idleValues(elapsed);
   };
 
@@ -357,13 +363,39 @@
   }
 
   function resetAtomicCore() {
+    stopAtomicSequence();
     highlighted = Object.create(null);
     return setAtomicCoreState('idle');
+  }
+
+  // Propagação EXECUTING da spec Atomic Core: Hermes acende primeiro (recebe
+  // a missão), depois os agentes seguintes em sequência enquanto a resposta
+  // não chega. Loop contínuo (não para sozinho) - quem inicia o ciclo do
+  // chat é responsável por chamar stopAtomicSequence() ao terminar.
+  var ATOMIC_SEQUENCE = ['hermes', 'pi', 'openclaw', 'scanner', 'patchEngine', 'aegis'];
+  var ATOMIC_STEP_MS = 1800;
+  var atomicSequenceTimer = null;
+
+  function startAtomicSequence() {
+    stopAtomicSequence();
+    var idx = 0;
+    function step() {
+      highlightAtomicAgents([ATOMIC_SEQUENCE[idx]]);
+      idx = (idx + 1) % ATOMIC_SEQUENCE.length;
+      atomicSequenceTimer = window.setTimeout(step, ATOMIC_STEP_MS);
+    }
+    step();
+  }
+
+  function stopAtomicSequence() {
+    if (atomicSequenceTimer) { window.clearTimeout(atomicSequenceTimer); atomicSequenceTimer = null; }
   }
 
   window.setAtomicCoreState = setAtomicCoreState;
   window.highlightAtomicAgents = highlightAtomicAgents;
   window.resetAtomicCore = resetAtomicCore;
+  window.startAtomicSequence = startAtomicSequence;
+  window.stopAtomicSequence = stopAtomicSequence;
   window.AtomicCoreNext = { setState: setAtomicCoreState, highlight: highlightAtomicAgents, reset: resetAtomicCore };
 
   root.setAttribute('data-glow', 'on');
