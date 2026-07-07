@@ -672,6 +672,57 @@ Depois da Fase 1 (`a3622b4e` — limpeza/agrupamento de sidebar), a Software Fac
 
 ---
 
+## IDEIA REGISTRADA — ATOMIC CORE: ANIMAÇÃO COM SIGNIFICADO, NÃO DECORATIVA
+
+**Status: só especificação. Nada implementado. Não iniciar sem decisão humana explícita de começar.**
+
+### Conceito central
+
+Renomear o diagrama de órbita de agentes (hoje "decágono", um dos 3 elementos de identidade visual protegidos desde a Fase 1/2 desta linha de trabalho) para **"Atomic Core"** — analogia com um átomo:
+
+- **CORE** = núcleo (prótons + nêutrons)
+- **Agentes** (GitHub Agent, PI Harness, Hermes, Archivist, OpenClaw, Pass Gold, Scanner, Go Core, Aegis, Patch Engine) = elétrons
+- **Órbitas** = níveis de energia
+- **Execução** = transferência de energia
+- **Comunicação** = pulsos elétricos
+
+**Objetivo:** o usuário não deve ver um "loading" decorativo — deve perceber inconscientemente um sistema vivo.
+
+### Máquina de estados proposta (4 estados)
+
+**1. IDLE (95% do tempo):**
+- Deslocamento orbital extremamente lento — cada agente percorre poucos graus, perceptível só depois de segundos (como um GIF de 20s).
+- Velocidades DIFERENTES e não sincronizadas por agente (ex: PI Harness = 0.015 rad/s, Hermes = 0.013, Scanner = 0.018, Patch Engine = 0.011 — nunca iguais entre si).
+- Movimento secundário de "respiração": escala oscilando sutilmente entre 1.00 e 1.02 e voltando.
+- Glow oscilando entre ~80% e 100% de opacidade, sem piscar (transição suave, não binária).
+- Órbitas quase invisíveis, mas com um ponto de brilho percorrendo lentamente uma órbita por vez, como um elétron passando.
+
+**2. THINKING (ao enviar uma missão):**
+- Núcleo pulsa: expande e contrai.
+- Agentes aceleram a velocidade orbital.
+- Aumento discreto de velocidade + pulsos ocasionais nas conexões.
+
+**3. EXECUTING (durante processamento):**
+- Sequência de ativação específica: Hermes move primeiro, depois PI Harness, OpenClaw, Scanner, Patch Engine, Aegis — como troca de energia em cadeia.
+- Pequenas partículas (não linhas brilhantes) percorrem as conexões entre núcleo e agentes.
+- Quando um agente específico está trabalhando: ele sai levemente da órbita (8-12px) e retorna — como um "elétron excitado".
+
+**4. COMPLETED (ao finalizar):**
+- Breve flash de energia.
+- Desaceleração gradual até retornar ao estado Idle.
+
+### Restrição técnica explícita (meta de performance)
+
+- Implementável apenas com CSS `transform`, `requestAnimationFrame`, SVG, `translate`, `rotate`, `opacity`.
+- Explicitamente SEM Three.js, SEM Canvas, SEM WebGL — deve ser leve o suficiente para não pesar a página.
+
+### Atenção para quando for implementar (não agora)
+
+- Esse diagrama é um dos 3 elementos de identidade visual protegidos desde a Fase 1/2 desta sessão — qualquer implementação futura precisa passar pela mesma verificação de "identidade visual intacta" (`git diff` confirmando que só as regiões esperadas mudam) que foi usada em cada sub-passo da Fase 2/3 até aqui.
+- Ao implementar futuramente, tratar como sub-passos testáveis com a mesma disciplina (baseline de teste → implementação → identidade visual confirmada → suíte completa), não como mudança única.
+
+---
+
 ## PADRÃO DE REGISTRO — DEPOIMENTOS E TESTES NAS PÁGINAS PÚBLICAS
 
 **Regra:** toda etapa grande concluída (acima) deve, além do código+testes, atualizar as duas páginas públicas que documentam a trajetória real do produto. Isso já vinha sendo seguido desde §53 e precisa continuar — é a prova pública de "produto testado, não prometido" que sustenta o posicionamento do about.html ("IAs criam. VISION CORE corrige.").
