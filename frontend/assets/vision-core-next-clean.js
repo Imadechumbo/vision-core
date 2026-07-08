@@ -375,6 +375,48 @@
   }
   loadQuotaBadge();
 
+  // Agent connection badge — polling /api/agent/status a cada 10s,
+  // pausa quando a aba perde foco (document.visibilitychange),
+  // respeita reduced-motion (sem animação contínua).
+  var agentBadgeEl = document.getElementById('vcAgentBadge');
+  var agentPollTimer = null;
+
+  function updateAgentBadge(state, text) {
+    if (!agentBadgeEl) return;
+    agentBadgeEl.setAttribute('data-state', state);
+    agentBadgeEl.textContent = text || '';
+  }
+
+  function pollAgentStatus() {
+    apiRequest('/api/agent/status').then(function (data) {
+      if (data && data.connected) {
+        updateAgentBadge('connected', 'Agente conectado');
+      } else {
+        updateAgentBadge('disconnected', 'Agente desconectado');
+      }
+    }).catch(function () {
+      updateAgentBadge('error', 'Erro de rede');
+    });
+  }
+
+  function startAgentPolling() {
+    stopAgentPolling();
+    pollAgentStatus();
+    agentPollTimer = window.setInterval(pollAgentStatus, 10000);
+  }
+
+  function stopAgentPolling() {
+    if (agentPollTimer) { window.clearInterval(agentPollTimer); agentPollTimer = null; }
+  }
+
+  if (document.addEventListener) {
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { stopAgentPolling(); }
+      else { startAgentPolling(); }
+    });
+  }
+  startAgentPolling();
+
   // Executar Missão — Caminho A (item 4 da paridade, Etapa 1d Fase 1).
   // Pipeline real de 2 chamadas, igual ao legado: (1) POST /api/chat
   // mode:'fix' com o arquivo colado como contexto (o gate anti-alucinação
