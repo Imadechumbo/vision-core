@@ -215,6 +215,23 @@ Mecanismo real atual (verificado no código): **pálpebras reais via elementos D
 
 **Achado de bug corrigido durante a validação:** `.vc-github-pr { display: grid; }` no CSS sobrescrevia o atributo `hidden` do HTML (mesma especificidade autor-vs-UA, autor vence) — o painel de PR aparecia mesmo com o GitHub não sendo a aba ativa. Corrigido trocando o seletor para `.vc-github-pr:not([hidden])`.
 
+### Executar Missão — Caminho A implementado (item 4 da paridade, Etapa 1d Fase 1)
+
+**Achado que mudou o design original pedido:** `/api/chat/apply-patch` não gera patch a partir de descrição livre — ele *aplica* um patch já pronto (exige `file_content`/`zip_base64` + `file_path` + `patch`, 400 sem isso). E `/api/chat` com `mode:'fix'` **exige contexto real de arquivo** (gate anti-alucinação bloqueia com `BLOCKED_INPUT` sem `[Arquivo: ...]` na mensagem, antes de qualquer LLM). Ou seja, "Gerar Patch" real é sempre um pipeline de **2 chamadas encadeadas**, nunca 1 campo de descrição livre isolado — o formulário original de 1 campo pedido na etapa foi ajustado para 3 campos (caminho do arquivo, conteúdo atual, descrição do problema) para funcionar de verdade contra o backend real, não só contra mock.
+
+Painel "Missions" (`#vcMissionPatchForm`, sem confirmação dupla — não é ação irreversível, só gera diff para download): botão "Gerar Patch" desabilitado até os 3 campos preenchidos → (1) `POST /api/chat` `{message: '[Arquivo: <path>]\n<conteúdo>\n\n---\n\n<descrição>', mode:'fix', model:'auto'}` → extrai `{file, patch, fix_type, diagnosis}` de `data.answer` (`extractHermesDiagnosis()`, tenta JSON direto, dentro de fences ```` ```json ```` , e um regex `{...}` de fallback) → (2) se houver `patch`, `POST /api/chat/apply-patch` `{file_content, file_path, fix_type, patch, diagnosis}` → mostra `diff_preview` num bloco de código readonly + botão "Baixar patch" (`Blob`+`<a download>`, nunca escreve em disco nem aplica nada automaticamente). `AbortController` de 60s cobrindo as 2 chamadas. Integra com Atomic Core igual ao chat principal (`action` no clique, `startAtomicSequence()`, `resetAtomicCore()` sempre ao terminar — sucesso, erro em qualquer uma das 2 chamadas, diagnóstico sem patch aplicável, ou timeout).
+
+Validado com Playwright, incluindo o **timeout real via `page.clock` (relógio virtual do Playwright)** — avança 61s de tempo simulado sem esperar de verdade, disparando o `AbortController` real do código de produção (sem nenhum hook de teste no código-fonte).
+
+### Executar Missão — Caminho B REGISTRADO COMO PENDÊNCIA (Fase 2, não iniciada nesta sessão)
+
+Decisão explícita do usuário: só implementar se sobrar folga de contexto após a Fase 1 — não sobrou, registrando para sessão futura.
+
+- **Endpoint:** `POST /api/agent/mission/queue` (retorna `job_id`) + polling `GET /api/agent/mission/result/:id`. Quem escreve em disco de verdade é o **Vision Agent Local** (processo externo, fora do controle direto desta UI) — irreversível fora do nosso controle.
+- **Achado que muda o perfil de risco, verificado antes de decidir não implementar:** existe sim um modo dry-run **real** (não decorativo) — `type: 'sf_dry_run_real'` (exige `body.target_path`), comentário do próprio `backend/server.js:3206-3209` (§111) confirma: "toda leitura real do target_path, o firewall de auto-modificação (§110) e a simulação em memória (**nunca escreve no disco**) acontecem no Vision Agent Local". Ou seja, dá pra portar uma versão seguramente testável do Caminho B (`sf_dry_run_real`) SEM tocar no `type:'apply_patch'`/`apply_patch_multi'` real (esses sim escrevem em disco de verdade).
+- **Guards obrigatórios já especificados para quando for implementado:** banner fixo não-dismissable permanentemente avisando que é execução real via processo externo; confirmação dupla igual ao GitHub PR (Confirmar/Cancelar); polling ~2s com timeout total generoso (~5min) e botão "Cancelar acompanhamento" (só para de perguntar — deixar claro na UI se a API não suporta cancelar o job já enfileirado no servidor); estado "Executando..." com indicador de progresso/tempo decorrido (backend provavelmente não tem progresso granular).
+- **Decisão em aberto para quem retomar:** implementar só o `sf_dry_run_real` primeiro (seguro, testável de verdade sem custo de escrita real) como uma Fase 2a, deixando o `apply_patch` real via agente (Fase 2b, a parte genuinamente irreversível) para depois? Ou implementar as duas juntas? Não decidido — precisa de conversa nova.
+
 ### Padrão de trabalho desta sessão (seguir nas próximas)
 
 Baseline → implementação pequena e isolada → validação técnica (Playwright, **incluindo contexto `reducedMotion:'reduce'` explícito sempre que animação estiver envolvida** — `null`/omitido não são "neutros", caem no valor real do SO do host) → commit isolado com cache-bust incrementado → relatório → só então próxima etapa. **Screenshot headless não é confiável para validar animação em voo** (frame exato de uma transição rápida frequentemente não é capturado, mesmo com o DOM confirmando a mudança via `getBoundingClientRect`/computed style) — usar `recordVideo` do Playwright + extração de frames via ffmpeg (o binário empacotado pelo próprio Playwright, em `~/AppData/Local/ms-playwright/ffmpeg-*/`) quando precisar confirmar visualmente um efeito rápido.
@@ -223,7 +240,7 @@ Baseline → implementação pequena e isolada → validação técnica (Playwri
 
 ### Roadmap Etapas 2-7 — PENDENTE, não implementar sem conversa nova
 
-Paridade funcional alvo (mapeamento feito na Etapa 1a, implementação progressiva depois — ✅ = fechado): ✅ anexos/leitura de print (Etapa 1b), ✅ Agentes/Métricas/Timeline/Quota/Vault-leitura/Tools-leitura/Obsidian-leitura (Etapa 1b), ✅ GitHub PR com guard de confirmação dupla (Etapa 1c). Pendentes: executar missão real (`/api/run-live`/`/api/copilot`, dual-path complexo), Software Factory Auto-Pilot + modo avançado, configurações avançadas do SF, Vault-rollback, Tools-apply-fix, Settings/AI Provider Vault, autenticação/token/quota real (plano pago depende de login funcionando), logs/status/estados de missão do SF.
+Paridade funcional alvo (mapeamento feito na Etapa 1a, implementação progressiva depois — ✅ = fechado): ✅ anexos/leitura de print (Etapa 1b), ✅ Agentes/Métricas/Timeline/Quota/Vault-leitura/Tools-leitura/Obsidian-leitura (Etapa 1b), ✅ GitHub PR com guard de confirmação dupla (Etapa 1c), ✅ Executar Missão Caminho A / apply-patch seguro (Etapa 1d Fase 1). Pendentes: Executar Missão Caminho B / Vision Agent Local (Etapa 1d Fase 2 — ver checkpoint específico acima, achado do dry-run real `sf_dry_run_real`), Software Factory Auto-Pilot + modo avançado, configurações avançadas do SF, Vault-rollback, Tools-apply-fix, Settings/AI Provider Vault, autenticação/token/quota real (plano pago depende de login funcionando), logs/status/estados de missão do SF.
 
 Settings obrigatórios (Etapa 3): Atomic Core ligado/desligado, modo automático, reduzir movimento (override manual sobre o `matchMedia` real), glow on/off, intensidade visual (discreto/normal/ativo), persistência em `localStorage`.
 
@@ -235,7 +252,7 @@ Páginas públicas/specs/testes finais (Etapas 5-7): registradas como pendência
 
 Mapa inicial de endpoints a conectar/verificar (referência para a Etapa 1a, não lista final):
 - Chat livre: `/api/chat` (✅ conectado).
-- Missão: `/api/copilot`, `/api/run-live`, `/api/agent/mission/queue`, `/api/agent/status`.
+- Missão: `/api/chat` (mode:fix) + `/api/chat/apply-patch` (✅ conectados, Etapa 1d Fase 1 — Caminho A seguro). `/api/agent/mission/queue`+`/api/agent/mission/result/:id` pendentes (Caminho B, Fase 2 — ver checkpoint). `/api/copilot`/`/api/run-live` confirmados NÃO usados pelo fluxo real de missão (achado da Etapa 1a).
 - Software Factory: `/api/sf/*`, jobs/polling e Gold Gate.
 - Segurança: `/api/aegis/validate`, `/api/security/*`.
 - Vault: `/api/vault/*`.

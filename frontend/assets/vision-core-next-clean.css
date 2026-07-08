@@ -383,6 +383,101 @@ a { color: inherit; text-decoration: none; }
 }
 
 .vc-github-pr-status a { color: #c4b5fd; text-decoration: underline; }
+
+.vc-mission-patch:not([hidden]) {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(216, 180, 254, .12);
+}
+
+.vc-mission-patch h4 {
+  margin: 0;
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.vc-mission-patch label {
+  display: grid;
+  gap: 4px;
+  color: #b7a9cd;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.vc-mission-patch input,
+.vc-mission-patch textarea {
+  border: 1px solid rgba(216, 180, 254, .16);
+  border-radius: var(--radius);
+  background: rgba(18, 14, 28, .72);
+  color: #fff;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.vc-mission-patch #vcMissionFileContent,
+.vc-mission-patch #vcMissionDesc {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.vc-mission-patch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vc-mission-patch-actions button,
+.vc-mission-patch > #vcMissionDownloadBtn {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid rgba(216, 180, 254, .16);
+  border-radius: 999px;
+  color: #efe9ff;
+  background: rgba(18, 14, 28, .78);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.vc-mission-patch-actions button:disabled,
+.vc-mission-patch > #vcMissionDownloadBtn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.vc-mission-patch-actions button:not(:disabled):hover,
+.vc-mission-patch > #vcMissionDownloadBtn:not(:disabled):hover {
+  border-color: rgba(192, 132, 252, .44);
+}
+
+.vc-mission-patch-status {
+  margin: 0;
+  color: #bdb4cf;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.vc-mission-patch-output:not([hidden]) {
+  display: block;
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid rgba(216, 180, 254, .16);
+  border-radius: var(--radius);
+  background: rgba(4, 4, 9, .9);
+  color: #d1fae5;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .vc-composer-actions {
   display: flex;
   flex-wrap: wrap;

@@ -19,13 +19,22 @@
   var prBodyInput = document.getElementById('vcPrBody');
   var prActionsEl = document.getElementById('vcPrActions');
   var prStatusEl = document.getElementById('vcPrStatus');
+  var missionPatchForm = document.getElementById('vcMissionPatchForm');
+  var missionFilePathInput = document.getElementById('vcMissionFilePath');
+  var missionFileContentInput = document.getElementById('vcMissionFileContent');
+  var missionDescInput = document.getElementById('vcMissionDesc');
+  var missionGenerateBtn = document.getElementById('vcMissionGenerateBtn');
+  var missionStatusEl = document.getElementById('vcMissionStatus');
+  var missionPatchOutputWrap = document.getElementById('vcMissionPatchOutputWrap');
+  var missionPatchOutput = document.getElementById('vcMissionPatchOutput');
+  var missionDownloadBtn = document.getElementById('vcMissionDownloadBtn');
   var attachmentInput = document.getElementById('vcAttachmentInput');
   var imageInput = document.getElementById('vcImageInput');
   var activeFeature = 'chat';
 
   var featureMap = {
     chat: { title: 'Chat', status: 'READY', agents: ['hermes'], text: 'Chat livre conectado ao endpoint real /api/chat.', actions: [{ label: 'Checar API', path: '/api/health' }] },
-    missions: { title: 'Missions', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Missões reais existem em /api/copilot e /api/run-live, mas execução consome quota e só será ligada com confirmação explícita.', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
+    missions: { title: 'Missions', status: 'PATCH SEGURO', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Gerar Patch (abaixo) roda o pipeline real de diagnóstico + apply-patch, sem escrever nada sozinho — só gera diff para download. Execução real via Vision Agent Local (Caminho B) fica pendente.', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
     factory: { title: 'Software Factory', status: 'MAPPED', agents: ['openclaw', 'pi', 'aegis'], text: 'Auto-Pilot e Modo Avançado serão portados sem bundle legado. Jobs SF permanecem bloqueados nesta etapa para evitar custo/API real acidental.', actions: [{ label: 'Planejador', path: '/api/health' }] },
     timeline: { title: 'Timeline', status: 'SAFE READ', agents: ['archivist'], text: 'Timeline preparada para leitura real de missão.', actions: [{ label: 'Carregar timeline', path: '/api/mission/timeline' }] },
     agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }, { label: 'Métricas agentes', path: '/api/metrics/agents' }] },
@@ -121,6 +130,7 @@
     renderFeatureActions(feature);
     if (githubPrForm) githubPrForm.hidden = activeFeature !== 'github';
     if (activeFeature !== 'github') resetPrConfirm();
+    if (missionPatchForm) missionPatchForm.hidden = activeFeature !== 'missions';
     if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
     if (announce) appendMessage('pending', feature.title.toUpperCase(), feature.text);
   }
@@ -304,7 +314,8 @@
     return fetch(API_BASE_URL + path, {
       method: opts.method || 'GET',
       headers: headers,
-      body: opts.body ? JSON.stringify(opts.body) : undefined
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      signal: opts.signal
     }).then(function (r) {
       return r.text().then(function (text) {
         var data = null;
@@ -335,6 +346,152 @@
     }).catch(function () { /* mantém texto padrão - badge informativo, falha nao é crítica */ });
   }
   loadQuotaBadge();
+
+  // Executar Missão — Caminho A (item 4 da paridade, Etapa 1d Fase 1).
+  // Pipeline real de 2 chamadas, igual ao legado: (1) POST /api/chat
+  // mode:'fix' com o arquivo colado como contexto (o gate anti-alucinação
+  // do backend BLOQUEIA mode:fix sem contexto real de arquivo — por isso
+  // não dá pra gerar patch só a partir de uma descrição livre) extrai um
+  // diagnóstico {file, patch, fix_type, diagnosis} da resposta da LLM;
+  // (2) POST /api/chat/apply-patch aplica esse diagnóstico EM MEMÓRIA no
+  // servidor e devolve o diff/patch pronto pra download — nunca escreve
+  // nada em disco sozinho, nunca aplica automaticamente a nada real.
+  var MISSION_TIMEOUT_MS = 60000;
+  var missionRequestInFlight = false;
+  var missionLastPatchText = '';
+  var missionLastFileName = 'patch.patch';
+
+  function missionFieldsValid() {
+    return !!(missionFilePathInput && missionFileContentInput && missionDescInput &&
+      missionFilePathInput.value.trim() && missionFileContentInput.value.trim() && missionDescInput.value.trim());
+  }
+
+  function updateMissionButton() {
+    if (missionGenerateBtn) missionGenerateBtn.disabled = missionRequestInFlight || !missionFieldsValid();
+  }
+
+  [missionFilePathInput, missionFileContentInput, missionDescInput].forEach(function (el) {
+    if (el) el.addEventListener('input', updateMissionButton);
+  });
+
+  function extractHermesDiagnosis(answerText) {
+    if (!answerText) return null;
+    var text = String(answerText);
+    var fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+    var candidates = fenceMatch ? [fenceMatch[1], text] : [text];
+    var braceMatch = text.match(/\{[\s\S]*\}/);
+    if (braceMatch) candidates.push(braceMatch[0]);
+    for (var i = 0; i < candidates.length; i++) {
+      try {
+        var obj = JSON.parse(candidates[i].trim());
+        if (obj && (obj.patch || obj.fix_type || obj.diagnosis)) return obj;
+      } catch (_) { /* tenta o próximo candidato */ }
+    }
+    return null;
+  }
+
+  function downloadTextFile(filename, text) {
+    var blob = new Blob([text], { type: 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function resetMissionPatchOutput() {
+    if (missionPatchOutput) missionPatchOutput.textContent = '';
+    if (missionPatchOutputWrap) missionPatchOutputWrap.hidden = true;
+    if (missionDownloadBtn) missionDownloadBtn.hidden = true;
+    missionLastPatchText = '';
+  }
+
+  function generateMissionPatch() {
+    if (missionRequestInFlight || !missionFieldsValid()) return;
+    missionRequestInFlight = true;
+    updateMissionButton();
+    resetMissionPatchOutput();
+    if (missionStatusEl) missionStatusEl.textContent = 'Gerando patch...';
+
+    if (window.setAtomicCoreState) window.setAtomicCoreState('action');
+    if (window.startAtomicSequence) window.startAtomicSequence();
+
+    var filePath = missionFilePathInput.value.trim();
+    var fileContent = missionFileContentInput.value;
+    var description = missionDescInput.value.trim();
+    var chatMessage = '[Arquivo: ' + filePath + ']\n' + fileContent + '\n\n---\n\n' + description;
+
+    var controller = null;
+    try { controller = new AbortController(); } catch (_) {}
+    var timeoutId = controller ? window.setTimeout(function () { controller.abort(); }, MISSION_TIMEOUT_MS) : null;
+
+    function finishMission() {
+      missionRequestInFlight = false;
+      updateMissionButton();
+      if (window.resetAtomicCore) window.resetAtomicCore();
+    }
+
+    var token = getChatAuthToken();
+    var chatHeaders = { 'Content-Type': 'application/json' };
+    if (token) chatHeaders.Authorization = 'Bearer ' + token;
+
+    fetch(CHAT_BACKEND_URL + '/api/chat', {
+      method: 'POST',
+      headers: chatHeaders,
+      body: JSON.stringify({ message: chatMessage, mode: 'fix', model: 'auto', display_input: description }),
+      signal: controller ? controller.signal : undefined
+    }).then(function (r) {
+      return r.text().then(function (text) {
+        var data = null;
+        try { data = text ? JSON.parse(text) : {}; } catch (_) { data = null; }
+        if (!r.ok) throw new Error((data && (data.error || data.message)) || ('HTTP ' + r.status));
+        return data;
+      });
+    }).then(function (data) {
+      var diag = data && extractHermesDiagnosis(data.answer);
+      if (!diag || !diag.patch) {
+        var reason = (diag && (diag.decisao || diag.motivo)) || (data && data.answer ? String(data.answer).slice(0, 160) : 'resposta sem patch aplicável');
+        throw new Error('Diagnóstico não retornou um patch aplicável: ' + reason);
+      }
+      return apiRequest('/api/chat/apply-patch', {
+        method: 'POST',
+        signal: controller ? controller.signal : undefined,
+        body: {
+          file_content: fileContent,
+          file_path: filePath,
+          fix_type: diag.fix_type || 'code_patch',
+          patch: diag.patch,
+          diagnosis: diag.diagnosis || description
+        }
+      });
+    }).then(function (result) {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      var patchText = (result && (result.diff_preview || result.patch || result.patched_content)) || summarizeResult(result);
+      if (missionStatusEl) missionStatusEl.textContent = 'Patch gerado — revise antes de aplicar manualmente.';
+      if (missionPatchOutput) missionPatchOutput.textContent = patchText;
+      if (missionPatchOutputWrap) missionPatchOutputWrap.hidden = false;
+      missionLastPatchText = patchText;
+      missionLastFileName = (filePath.split('/').pop() || 'patch') + '.patch';
+      if (missionDownloadBtn) missionDownloadBtn.hidden = false;
+      finishMission();
+    }).catch(function (err) {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      var isAbort = err && err.name === 'AbortError';
+      if (missionStatusEl) missionStatusEl.textContent = isAbort
+        ? 'Tempo esgotado ao gerar o patch (60s). Tente novamente.'
+        : ('Erro: ' + (err && err.message ? err.message : String(err)));
+      finishMission();
+    });
+  }
+
+  if (missionGenerateBtn) missionGenerateBtn.addEventListener('click', generateMissionPatch);
+  if (missionDownloadBtn) missionDownloadBtn.addEventListener('click', function () {
+    if (missionLastPatchText) downloadTextFile(missionLastFileName, missionLastPatchText);
+  });
+  updateMissionButton();
 
   // Anexos/print — mesmo formato do legado: arquivos de texto viram
   // "[Arquivo: nome]\nconteudo" prependado a message; imagem vai como

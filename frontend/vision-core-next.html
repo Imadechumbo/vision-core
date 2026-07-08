@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-26">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-26" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-27">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-27" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -92,6 +92,25 @@
             </label>
             <div class="vc-github-pr-actions" id="vcPrActions"></div>
             <p class="vc-github-pr-status" id="vcPrStatus" aria-live="polite"></p>
+          </div>
+
+          <div class="vc-mission-patch" id="vcMissionPatchForm" hidden>
+            <h4>Gerar Patch (Caminho A — seguro, sem escrita automática)</h4>
+            <label>Caminho do arquivo
+              <input type="text" id="vcMissionFilePath" placeholder="ex: backend/server.js" autocomplete="off">
+            </label>
+            <label>Conteúdo atual do arquivo
+              <textarea id="vcMissionFileContent" rows="6" placeholder="Cole aqui o conteúdo atual do arquivo"></textarea>
+            </label>
+            <label>Descrição do problema/objetivo
+              <textarea id="vcMissionDesc" rows="3" placeholder="Descreva o bug ou o que precisa mudar"></textarea>
+            </label>
+            <div class="vc-mission-patch-actions">
+              <button type="button" id="vcMissionGenerateBtn" disabled>Gerar Patch</button>
+            </div>
+            <p class="vc-mission-patch-status" id="vcMissionStatus" aria-live="polite"></p>
+            <pre class="vc-mission-patch-output" id="vcMissionPatchOutputWrap" hidden><code id="vcMissionPatchOutput"></code></pre>
+            <button type="button" id="vcMissionDownloadBtn" hidden>Baixar patch</button>
           </div>
         </section>
         <form class="vc-composer" id="vcComposer">
