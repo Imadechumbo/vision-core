@@ -1284,6 +1284,8 @@
     { label: '04 — Compor missão SDDF',                    module: 'mission_composer',  endpoint: '/api/sf/mission-composer' },
     { label: '05 — Gerar pacote para worker',              module: 'worker_handoff',    endpoint: '/api/sf/worker-handoff' }
   ];
+  var SF_GOLD_GATE_STEP = { label: '06 — Validar PASS GOLD', module: 'gold_gate', endpoint: '/api/sf/gold-gate' };
+  var sfActiveSteps = SF_STEPS;
 
   function sfExtractReadable(data) {
     if (!data) return '';
@@ -1331,9 +1333,9 @@
     if (!sfProgress) return;
     sfProgress.hidden = false;
     var steps = sfProgress.querySelectorAll('.vc-sf-progress-step');
-    if (steps.length !== SF_STEPS.length) {
+    if (steps.length !== sfActiveSteps.length) {
       sfProgress.textContent = '';
-      SF_STEPS.forEach(function (s, i) {
+      sfActiveSteps.forEach(function (s, i) {
         var div = document.createElement('div');
         div.className = 'vc-sf-progress-step';
         div.textContent = '\u25CB ' + s.label;
@@ -1343,8 +1345,8 @@
     }
     steps.forEach(function (el, i) {
       el.className = 'vc-sf-progress-step';
-      if (i < idx) { el.classList.add('vc-sf-progress-done'); el.textContent = '\u2713 ' + SF_STEPS[i].label; }
-      else if (i === idx) { el.classList.add(status === 'error' ? 'vc-sf-progress-error' : 'vc-sf-progress-active'); el.textContent = (status === 'error' ? '\u2717 ' : '\u25CF ') + SF_STEPS[i].label; }
+      if (i < idx) { el.classList.add('vc-sf-progress-done'); el.textContent = '\u2713 ' + sfActiveSteps[i].label; }
+      else if (i === idx) { el.classList.add(status === 'error' ? 'vc-sf-progress-error' : 'vc-sf-progress-active'); el.textContent = (status === 'error' ? '\u2717 ' : '\u25CF ') + sfActiveSteps[i].label; }
     });
   }
 
@@ -1397,6 +1399,7 @@
     sfInFlight = true;
     sfFullContext = desc;
     sfRunOptions = readSfOptions();
+    sfActiveSteps = sfRunOptions.pass_gold ? SF_STEPS.concat([SF_GOLD_GATE_STEP]) : SF_STEPS;
     if (sfLog) { sfLog.textContent = ''; sfLog.hidden = false; }
     if (sfFinal) sfFinal.hidden = true;
     if (sfFinalBody) sfFinalBody.textContent = '';
@@ -1414,15 +1417,15 @@
 
     var idx = 0;
     function nextStep() {
-      if (idx >= SF_STEPS.length) {
+      if (idx >= sfActiveSteps.length) {
         appendSfMsg('assistant', 'Projeto concluído!');
         renderSfFinal();
         finishSf();
         return;
       }
       updateSfProgress(idx, 'active');
-      var step = SF_STEPS[idx];
-      var body = { description: desc, module: step.module, autopilot: true, step: idx, total_steps: SF_STEPS.length, sf_options: sfRunOptions || readSfOptions() };
+      var step = sfActiveSteps[idx];
+      var body = { description: desc, module: step.module, autopilot: true, step: idx, total_steps: sfActiveSteps.length, sf_options: sfRunOptions || readSfOptions() };
       appendSfLog('info', 'SEND ' + step.endpoint + ' module=' + step.module);
       if (sfFullContext && idx > 0) body.full_context = sfFullContext.slice(0, 3000);
       apiRequest(step.endpoint, { method: 'POST', body: body }).then(function (data) {

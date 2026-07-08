@@ -6,13 +6,19 @@
  * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_HANDOFF.md):
  * Software Factory is being built across multiple agent handoffs (Codex/
  * OpenCode/Claude Code) with no per-step human review, same rationale as
- * vision-core-next-agent-apply.spec.mjs. Every mocked POST here returns
- * {job_id, status:'pending'} + a follow-up GET /api/sf/job/:id poll — that
- * is the real backend contract (server.js SF_GENERATORS handlers always
- * respond this way, see server.js:4430). Do not go back to mocking a
- * synchronous {ok:true, content:...} response directly on the POST — that
- * shape never happens against the real server and hid the /api/sf/jobs
- * vs /api/sf/job URL mismatch bug found in an earlier session.
+ * vision-core-next-agent-apply.spec.mjs.
+ *
+ * Every mocked POST returns {job_id, status:'pending'} + a follow-up GET
+ * /api/sf/job/:id poll — that is the real backend contract (SF_GENERATORS
+ * handlers always respond this way, server.js:4436-4439). The poll mock's
+ * `result` field is a PLAIN STRING, not an object with content/files/output
+ * sub-fields: GET /api/sf/job/:id does `result: job.result.result` at the
+ * top level (server.js:4449), i.e. it unwraps to the raw generator text.
+ * `files` only gets populated for the unrelated /api/sf/project-files
+ * endpoint (§187), never for mission-composer/deploy-blueprint/worker-
+ * handoff/gold-gate — do not mock `.files` on those, it never happens
+ * against the real server. Verified by reading server.js directly, not
+ * assumed.
  */
 
 import { test, expect } from '@playwright/test';
@@ -22,17 +28,17 @@ import path from 'node:path';
 const NEXT_URL = pathToFileURL(path.resolve('frontend/vision-core-next.html')).toString();
 const API = 'https://visioncore-api-gateway.weiganlight.workers.dev';
 
-function mockAsyncSfEndpoints(page, resultsByEndpoint) {
+function mockAsyncSfEndpoints(page, textByEndpoint) {
   const posts = [];
   const polls = [];
   const results = new Map();
   let seq = 0;
 
-  async function queueJob(route, body) {
+  async function queueJob(route, text) {
     seq += 1;
     const id = `job-${seq}`;
     posts.push(route.request().postDataJSON());
-    results.set(id, body);
+    results.set(id, text);
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -40,20 +46,26 @@ function mockAsyncSfEndpoints(page, resultsByEndpoint) {
     });
   }
 
-  return Promise.all([
-    page.route(`${API}/api/sf/mission-composer`, (route) => queueJob(route, resultsByEndpoint['mission-composer'])),
-    page.route(`${API}/api/sf/deploy-blueprint`, (route) => queueJob(route, resultsByEndpoint['deploy-blueprint'])),
-    page.route(`${API}/api/sf/worker-handoff`, (route) => queueJob(route, resultsByEndpoint['worker-handoff'])),
+  const routes = [
+    page.route(`${API}/api/sf/mission-composer`, (route) => queueJob(route, textByEndpoint['mission-composer'])),
+    page.route(`${API}/api/sf/worker-handoff`, (route) => queueJob(route, textByEndpoint['worker-handoff'])),
     page.route(`${API}/api/sf/job/**`, async (route) => {
       const id = route.request().url().split('/').pop();
       polls.push(id);
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ ok: true, status: 'done', result: results.get(id) })
+        body: JSON.stringify({ ok: true, status: 'done', result: results.get(id) || null, files: null, provider: 'mock' })
       });
     })
-  ]).then(() => ({ posts, polls }));
+  ];
+  if (textByEndpoint['deploy-blueprint']) {
+    routes.push(page.route(`${API}/api/sf/deploy-blueprint`, (route) => queueJob(route, textByEndpoint['deploy-blueprint'])));
+  }
+  if (textByEndpoint['gold-gate']) {
+    routes.push(page.route(`${API}/api/sf/gold-gate`, (route) => queueJob(route, textByEndpoint['gold-gate'])));
+  }
+  return Promise.all(routes).then(() => ({ posts, polls }));
 }
 
 test('Software Factory opens from sidebar and hides the chat stage', async ({ page }) => {
@@ -75,32 +87,58 @@ test('Software Factory opens from sidebar and hides the chat stage', async ({ pa
   await expect(page.locator('#factory')).toBeHidden();
 });
 
-test('Software Factory Auto-Pilot runs five steps via real job_id + polling contract', async ({ page }) => {
+test('Software Factory Auto-Pilot runs six steps (5 + PASS GOLD default-on) via real job_id + polling contract', async ({ page }) => {
   const { posts, polls } = await mockAsyncSfEndpoints(page, {
-    'mission-composer': { ok: true, content: 'mission composer ok' },
-    'deploy-blueprint': { ok: true, files: [{ path: 'src/index.js' }] },
-    'worker-handoff':   { ok: true, output: 'worker handoff ok' }
+    'mission-composer': 'mission composer ok',
+    'deploy-blueprint': 'deploy blueprint ok',
+    'worker-handoff':   'worker handoff ok',
+    'gold-gate':        'GOLD GATE CHECKLIST\nVEREDICTO: PASS GOLD'
   });
 
   await page.goto(NEXT_URL);
   await page.locator('[data-feature="factory"]').first().click();
+  // PASS GOLD vem marcado por padrão no HTML — Auto-Pilot deve rodar o 6o passo sem o usuário mexer em nada.
+  await expect(page.locator('#vcSfPassGold')).toBeChecked();
   await page.locator('#vcSfInput').fill('um app de tarefas com login e dashboard');
   await page.getByRole('button', { name: 'Gerar Projeto' }).click();
 
   await expect(page.locator('#vcSfHistory')).toContainText('Projeto concluído!', { timeout: 10_000 });
-  await expect(page.locator('#vcSfProgress')).toContainText('05');
+  await expect(page.locator('#vcSfProgress')).toContainText('06 — Validar PASS GOLD');
   await expect(page.locator('#vcSfFinal')).toBeVisible();
   await expect(page.locator('#vcSfFinalBody')).toContainText('worker handoff ok');
+  await expect(page.locator('#vcSfFinalBody')).toContainText('VEREDICTO: PASS GOLD');
+  expect(posts).toHaveLength(6);
+  expect(polls).toHaveLength(6);
+  expect(posts[0]).toMatchObject({ autopilot: true, step: 0, total_steps: 6 });
+  expect(posts[5]).toMatchObject({ module: 'gold_gate', step: 5, total_steps: 6 });
+});
+
+test('Software Factory skips gold-gate step when PASS GOLD is unchecked', async ({ page }) => {
+  const { posts } = await mockAsyncSfEndpoints(page, {
+    'mission-composer': 'mission composer ok',
+    'deploy-blueprint': 'deploy blueprint ok',
+    'worker-handoff':   'worker handoff ok'
+  });
+  let goldGateCalled = false;
+  await page.route(`${API}/api/sf/gold-gate`, async (route) => { goldGateCalled = true; await route.abort(); });
+
+  await page.goto(NEXT_URL);
+  await page.locator('[data-feature="factory"]').first().click();
+  await page.locator('#vcSfPassGold').uncheck();
+  await page.locator('#vcSfInput').fill('um app sem validacao de gold gate');
+  await page.getByRole('button', { name: 'Gerar Projeto' }).click();
+
+  await expect(page.locator('#vcSfHistory')).toContainText('Projeto concluído!', { timeout: 10_000 });
   expect(posts).toHaveLength(5);
-  expect(polls).toHaveLength(5);
-  expect(posts[0]).toMatchObject({ autopilot: true, step: 0, total_steps: 5 });
+  expect(goldGateCalled).toBe(false);
 });
 
 test('Software Factory advanced mode sends explicit safe options only', async ({ page }) => {
   const { posts } = await mockAsyncSfEndpoints(page, {
-    'mission-composer': { ok: true, content: 'advanced ok' },
-    'deploy-blueprint': { ok: true, files: [{ path: 'src/app.js' }] },
-    'worker-handoff':   { ok: true, output: 'handoff ok' }
+    'mission-composer': 'advanced ok',
+    'deploy-blueprint': 'deploy blueprint advanced ok',
+    'worker-handoff':   'handoff ok',
+    'gold-gate':        'GOLD GATE CHECKLIST\nVEREDICTO: PASS GOLD'
   });
 
   await page.goto(NEXT_URL);
@@ -110,7 +148,7 @@ test('Software Factory advanced mode sends explicit safe options only', async ({
   await page.locator('#vcSfModel').fill('llama-test');
   await page.locator('#vcSfInput').fill('um CRM interno com perfis e auditoria');
   await page.getByRole('button', { name: 'Gerar Projeto' }).click();
-  await expect.poll(() => posts.length, { timeout: 10_000 }).toBe(5);
+  await expect.poll(() => posts.length, { timeout: 10_000 }).toBe(6);
   await expect(page.locator('#vcSfLog')).toContainText('real_execution_allowed=false');
   await expect(page.locator('#vcSfLog')).toContainText('provider=groq');
   await expect(page.locator('#vcSfFinal')).toBeVisible();
@@ -129,9 +167,10 @@ test('Software Factory advanced mode sends explicit safe options only', async ({
 
 test('Software Factory follows async job_id polling without real network', async ({ page }) => {
   const { posts, polls } = await mockAsyncSfEndpoints(page, {
-    'mission-composer': { ok: true, content: 'async composer ok' },
-    'deploy-blueprint': { ok: true, files: [{ path: 'src/async.js' }] },
-    'worker-handoff':   { ok: true, output: 'async handoff ok' }
+    'mission-composer': 'async composer ok',
+    'deploy-blueprint': 'async deploy blueprint ok',
+    'worker-handoff':   'async handoff ok',
+    'gold-gate':        'GOLD GATE CHECKLIST\nVEREDICTO: PASS GOLD'
   });
 
   await page.goto(NEXT_URL);
@@ -141,8 +180,8 @@ test('Software Factory follows async job_id polling without real network', async
 
   await expect(page.locator('#vcSfHistory')).toContainText('Projeto concluído!', { timeout: 10_000 });
   await expect(page.locator('#vcSfFinalBody')).toContainText('async handoff ok');
-  expect(posts).toHaveLength(5);
-  expect(polls).toHaveLength(5);
+  expect(posts).toHaveLength(6);
+  expect(polls).toHaveLength(6);
   expect(posts[0].sf_options).toMatchObject({
     real_execution_allowed: false,
     deploy_allowed: false,
