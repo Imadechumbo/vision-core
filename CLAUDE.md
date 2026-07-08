@@ -281,6 +281,29 @@ badcff08  feat   Executar Missao Caminho A / apply-patch seguro (Etapa 1d Fase 1
 
 **Confirmação importante, vale para a sessão inteira (incluindo a sessão de 2026-07-08):** todas as validações de todas as etapas acima foram **100% mockadas via `page.route()` do Playwright**. Em nenhum momento houve chamada real a GitHub (criação de PR), a um provider de LLM real (Anthropic/OpenRouter/etc.), ou ao Vision Agent Local — inclusive o novo fluxo `sf_dry_run_real` foi validado só contra mocks de `/api/agent/mission/queue`/`result/:id`, nunca contra um Agent Local de verdade rodando em `localhost:7070`.
 
+### PRIMEIRA CHAMADA REAL DA JORNADA — 2026-07-08 (quebra deliberada da premissa "tudo mockado")
+
+Decisão explícita do usuário: testar `sf_dry_run_real` uma única vez contra infraestrutura de verdade (backend real + Vision Agent Local real), sem nenhum mock. Deploy do frontend `v28` (commit `d09cd7b5`) feito antes, só pra UI, via `bash bin/deploy-pages.sh` → hash `https://f749dcb4.visioncoreai.pages.dev`.
+
+**O que foi real, sem nenhum mock:**
+- `GET /api/agent/status` contra o gateway real, repetido até `connected:true` — mostrou o estado real de conexão do Vision Agent Local com o backend de produção (ficou `false` por ~51h até o usuário efetivamente iniciar o processo).
+- Vision Agent Local (`frontend/downloads/vision-agent.js`) rodado de verdade em background nesta máquina, fazendo polling real em `/api/agent/mission/pending` no gateway real.
+- Um Playwright **sem `page.route()`**, contra a página publicada (`f749dcb4.visioncoreai.pages.dev`), preenchendo o formulário de verdade e clicando os botões reais → disparou `POST /api/agent/mission/queue` real → `mission_id` real → polling real em `GET /api/agent/mission/result/:id` até resultado real vindo do agente.
+
+**1ª tentativa (`target_path = C:\Users\imadechumbo\Desktop\vc-dry-run-test`) — bloqueada, achado confirmado do firewall §110:** o `ROOT` do Vision Agent Local **não é fixo** — é literalmente o argumento passado no `node vision-agent.js "<path>"` de inicialização. Como o processo foi iniciado com `ROOT = vc-dry-run-test` e o `target_path` da missão era a mesma pasta, `isSelfTargetForbidden()` (`vision-agent.js:814-831`) comparou `ROOT` com `target_path`, viu que eram idênticos, e bloqueou com `action:'sf_dry_run_blocked_self_target'` — **o guard funcionou exatamente como desenhado**, não foi bug. Regra confirmada em produção pra qualquer teste futuro: `target_path` da missão **nunca pode ser igual a, nem estar dentro de,** o `ROOT` (argv de inicialização) do Vision Agent Local que vai processá-la — são coisas semanticamente diferentes (projeto do agente vs. projeto-alvo do dry-run) e precisam ser pastas distintas.
+
+**2ª tentativa (`target_path = C:\Users\imadechumbo\Desktop\vc-dry-run-target`, pasta distinta do `ROOT`) — sucesso, resultado real:**
+```json
+{
+  "ok": true, "action": "sf_dry_run_listing", "files": 1,
+  "output": "Estrutura do projeto-alvo (...vc-dry-run-target):\n  hello.txt",
+  "log": ["Firewall: ✓ alvo liberado: ...", "Scanner: ✗ 1 arquivos, sem match"]
+}
+```
+Firewall liberou o alvo (pasta distinta do `ROOT`), Scanner escaneou o diretório de verdade e listou exatamente `hello.txt` (único arquivo presente) — bate 100% com a realidade do disco. `askIA()`/LLM real **não foi chamado** nesta corrida, confirmando o achado anterior desta sessão: sem campo de descrição/`input` no payload (nosso formulário não expõe esse campo), `scanExternalProject()` nunca acha `scan.target`, e a missão sempre retorna no ramo `sf_dry_run_listing` antes de qualquer chamada de IA. Nenhum `apply_patch` ou segundo enfileiramento ocorreu.
+
+**Encerramento:** processo do Vision Agent Local (PID local desta sessão) finalizado ao final do teste. Pastas de teste (`vc-dry-run-test/`, `vc-dry-run-target/`) e scripts temporários de validação não foram commitados — descartáveis, fora do repo/scratchpad.
+
 **O que falta, em ordem de prioridade sugerida (não é decisão tomada — próxima sessão decide com o humano):**
 1. **Executar Missão Fase 2b** (`apply_patch`/`apply_patch_multi` reais via Vision Agent Local — escreve em disco de verdade, fora do controle desta UI). Fase 2a (`sf_dry_run_real`) já fechada nesta sessão, ver checkpoint "Executar Missão — Caminho B, Fase 2a" acima. Guards equivalentes aos já usados na 2a (banner fixo não-dismissable, confirmação dupla, polling com timeout ~5min) mas o risco é maior por ser escrita real em disco.
 2. **Software Factory** (Auto-Pilot + modo avançado) — 12 endpoints mapeados na Etapa 1a, mais complexo por exigir recriar o loop de orquestração (hoje só existe no frontend legado, não pode ser importado).
