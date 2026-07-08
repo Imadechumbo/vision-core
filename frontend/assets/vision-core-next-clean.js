@@ -290,7 +290,7 @@
   var state = 'idle';
   var highlighted = Object.create(null);
 
-  try { reduceMotion = new URLSearchParams(window.location.search).get('reduce') === '1'; } catch (_) { reduceMotion = false; }
+  try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { reduceMotion = false; }
 
   function toRad(deg) { return deg * Math.PI / 180; }
   function lerp(min, max, t) { return min + (max - min) * t; }
@@ -452,7 +452,7 @@
   root.setAttribute('data-glow', 'on');
   setAtomicCoreState('idle');
   selectFeature('chat', false);
-  raf = window.requestAnimationFrame(frame);
+  if (!reduceMotion) raf = window.requestAnimationFrame(frame);
 })();
 
 (function () {
@@ -496,4 +496,52 @@
       });
     });
   });
+
+  // Piscada ambiente (idle-only, 4-9s, ~20% de chance de piscada dupla) -
+  // reaproveita o mesmo blinkOnce() do hover. prefers-reduced-motion real
+  // desativa SÓ este agendador; o hover continua funcionando sempre, é
+  // resposta direta a ação do usuário, não animação decorativa passiva.
+  var reduceMotion = false;
+  try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { reduceMotion = false; }
+
+  var atomicRoot = document.querySelector('[data-atomic-core]');
+  var DOUBLE_BLINK_CHANCE = 0.2;
+  var DOUBLE_BLINK_GAP_MS = 250;
+  var MIN_DELAY_MS = 4000;
+  var MAX_DELAY_MS = 9000;
+  var ambientTimer = null;
+
+  function isIdle() {
+    return !atomicRoot || atomicRoot.getAttribute('data-state') !== 'action';
+  }
+
+  function scheduleNextAmbientBlink() {
+    if (ambientTimer) { window.clearTimeout(ambientTimer); ambientTimer = null; }
+    if (reduceMotion || !isIdle()) return;
+    var delay = MIN_DELAY_MS + Math.random() * (MAX_DELAY_MS - MIN_DELAY_MS);
+    ambientTimer = window.setTimeout(function () {
+      ambientTimer = null;
+      if (!isIdle()) return;
+      eyes.forEach(blinkOnce);
+      if (Math.random() < DOUBLE_BLINK_CHANCE) {
+        window.setTimeout(function () {
+          if (isIdle()) eyes.forEach(blinkOnce);
+        }, DOUBLE_BLINK_GAP_MS);
+      }
+      scheduleNextAmbientBlink();
+    }, delay);
+  }
+
+  if (!reduceMotion && atomicRoot && window.MutationObserver) {
+    new MutationObserver(function () {
+      if (isIdle()) {
+        if (!ambientTimer) scheduleNextAmbientBlink();
+      } else if (ambientTimer) {
+        window.clearTimeout(ambientTimer);
+        ambientTimer = null;
+      }
+    }).observe(atomicRoot, { attributes: true, attributeFilter: ['data-state'] });
+  }
+
+  if (!reduceMotion) scheduleNextAmbientBlink();
 })();
