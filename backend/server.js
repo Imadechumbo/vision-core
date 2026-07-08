@@ -2372,7 +2372,30 @@ function normalizeAgentId(value) {
 function getRequestAgentId(req, body) {
   return normalizeAgentId((body && body.agent_id) || (req.query && req.query.agent_id) || (req.get && req.get('x-vision-agent-id')));
 }
-app.all('/api/agent/register', (req, res) => sendOk(res, { agent_id: makeId('agent'), status: 'registered', anti_stub: true }));
+function getRequestAgentSecret(req, body) {
+  const raw = (body && body.agent_secret) || (req.query && req.query.agent_secret) || (req.get && req.get('x-vision-agent-secret')) || '';
+  return /^[A-Za-z0-9]{1,128}$/.test(raw) ? raw : '';
+}
+/* §207: pareamento por agente — agent_id sozinho não autenticava nada (hash não-secreto de
+   hostname+pasta, sem checagem nenhuma nas rotas). agent_secret é o segredo real, gerado só
+   aqui, nunca adivinhável. Em memória (reseta a cada redeploy do EB) — mesmo padrão já usado
+   por agentQueueDB/sfJobs neste arquivo; persistência em S3 fica para quando isso for
+   realmente ligado em produção (AGENT_APPLY_ENABLED continua false até lá). */
+const agentPairings = new Map(); // agent_id -> agent_secret
+function verifyAgentSecret(agentId, secret) {
+  if (!agentId || !secret) return false;
+  const expected = agentPairings.get(agentId);
+  if (!expected) return false;
+  const a = Buffer.from(expected);
+  const b = Buffer.from(secret);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+app.post('/api/agent/register', (req, res) => {
+  const agentId = makeId('agent');
+  const secret  = crypto.randomBytes(24).toString('hex');
+  agentPairings.set(agentId, secret);
+  return sendOk(res, { agent_id: agentId, agent_secret: secret, status: 'registered', anti_stub: true });
+});
 app.all('/api/agent/heartbeat', (req, res) => {
   const body = normalizeBody(req);
   const agentId = getRequestAgentId(req, body);
@@ -3184,9 +3207,10 @@ app.get('/api/auth/status', (req, res) => {
 const agentQueueDB = require('./agent-queue-db');
 
 app.post('/api/agent/mission/queue', (req, res) => {
-  const body    = normalizeBody(req);
-  const type    = body.type || 'general';
-  const agentId = getRequestAgentId(req, body);
+  const body        = normalizeBody(req);
+  const type        = body.type || 'general';
+  const agentId     = getRequestAgentId(req, body);
+  const agentSecret = getRequestAgentSecret(req, body);
   const mission = {
     id:        `mission_${Date.now()}_${Math.random().toString(16).slice(2,6)}`,
     input:     body.input || body.message || '',
@@ -3195,15 +3219,21 @@ app.post('/api/agent/mission/queue', (req, res) => {
   };
   /* §105: apply_patch carrega o patch ja diagnosticado pelo chat — sem isso o */
   /* agent local nao tem o que aplicar (campos eram descartados antes desta sessao) */
+  /* §207: agent_id sozinho não autentica ninguém — apply_patch/apply_patch_multi exigem
+     agent_secret pareado via /api/agent/register, senão qualquer chamador da API pública
+     poderia enfileirar escrita real contra o agente de outra pessoa. */
   if (type === 'apply_patch') {
     if (!body.file || !body.patch) {
       return res.status(400).json({ ok: false, error: 'apply_patch_requires_file_and_patch', time: now() });
     }
-        if (!agentId) {
+    if (!agentId) {
       return res.status(400).json({ ok: false, error: 'agent_id_required_for_apply_patch', time: now() });
     }
-    mission.agent_id = agentId;
-mission.file      = body.file;
+    if (!verifyAgentSecret(agentId, agentSecret)) {
+      return res.status(401).json({ ok: false, error: 'agent_pairing_required', time: now() });
+    }
+    mission.agent_id  = agentId;
+    mission.file      = body.file;
     mission.patch     = body.patch;
     mission.fix_type  = body.fix_type  || 'code_patch';
     mission.diagnosis = body.diagnosis || '';
@@ -3214,8 +3244,11 @@ mission.file      = body.file;
     if (!Array.isArray(body.files) || body.files.length === 0) {
       return res.status(400).json({ ok: false, error: 'apply_patch_multi_requires_files_array', time: now() });
     }
-        if (!agentId) {
+    if (!agentId) {
       return res.status(400).json({ ok: false, error: 'agent_id_required_for_apply_patch_multi', time: now() });
+    }
+    if (!verifyAgentSecret(agentId, agentSecret)) {
+      return res.status(401).json({ ok: false, error: 'agent_pairing_required', time: now() });
     }
     mission.agent_id = agentId;
 for (const f of body.files) {

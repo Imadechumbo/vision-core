@@ -34,6 +34,7 @@
   var dryRunStatusEl = document.getElementById('vcDryRunStatus');
   var agentApplyForm = document.getElementById('vcAgentApplyForm');
   var agentApplyAgentIdInput = document.getElementById('vcAgentApplyAgentId');
+  var agentApplyAgentSecretInput = document.getElementById('vcAgentApplyAgentSecret');
   var agentApplyPayloadInput = document.getElementById('vcAgentApplyPayload');
   var agentApplyConfirmInput = document.getElementById('vcAgentApplyConfirm');
   var agentApplyActionsEl = document.getElementById('vcAgentApplyActions');
@@ -569,8 +570,12 @@
     return agentApplyAgentIdInput ? agentApplyAgentIdInput.value.trim() : '';
   }
 
+  function getAgentApplyAgentSecret() {
+    return agentApplyAgentSecretInput ? agentApplyAgentSecretInput.value.trim() : '';
+  }
+
   function agentApplyReady() {
-    if (!AGENT_APPLY_ENABLED || !getAgentApplyAgentId()) return false;
+    if (!AGENT_APPLY_ENABLED || !getAgentApplyAgentId() || !getAgentApplyAgentSecret()) return false;
     var parsed = parseAgentApplyPayload();
     var confirmed = agentApplyConfirmInput && agentApplyConfirmInput.value.trim() === AGENT_APPLY_CONFIRM_TEXT;
     return parsed.ok && confirmed;
@@ -623,6 +628,8 @@
     var parsed = parseAgentApplyPayload();
     if (agentApplyStatusEl && !getAgentApplyAgentId()) {
       agentApplyStatusEl.textContent = 'Informe o agent_id do Vision Agent conectado. A fila de escrita real é filtrada por este vínculo.';
+    } else if (agentApplyStatusEl && !getAgentApplyAgentSecret()) {
+      agentApplyStatusEl.textContent = 'Informe o agent_secret exibido pelo agente ao rodar /api/agent/register — agent_id sozinho não autentica ninguém.';
     }
     var prepareBtn = document.createElement('button');
     prepareBtn.type = 'button';
@@ -710,7 +717,7 @@
 
     apiRequest('/api/agent/mission/queue', {
       method: 'POST',
-      body: Object.assign({}, parsed.payload, { agent_id: getAgentApplyAgentId() })
+      body: Object.assign({}, parsed.payload, { agent_id: getAgentApplyAgentId(), agent_secret: getAgentApplyAgentSecret() })
     }).then(function (data) {
       agentApplyRequestInFlight = false;
       var missionId = data && data.mission_id;
@@ -735,7 +742,7 @@
     }).catch(function () {});
   }
 
-  [agentApplyAgentIdInput, agentApplyPayloadInput, agentApplyConfirmInput].forEach(function (el) {
+  [agentApplyAgentIdInput, agentApplyAgentSecretInput, agentApplyPayloadInput, agentApplyConfirmInput].forEach(function (el) {
     if (!el) return;
     el.addEventListener('input', function () {
       if (!agentApplyRequestInFlight && !agentApplyConfirmPending && !agentApplyPolling) renderAgentApplyActions();

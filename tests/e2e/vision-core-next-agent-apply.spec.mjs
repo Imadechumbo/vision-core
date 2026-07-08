@@ -54,7 +54,7 @@ test('connected agent_id auto-fills the field (refreshAgentApplyStatus wiring)',
   await expect(page.locator('#vcAgentApplyAgentId')).toHaveValue(AGENT_ID);
 });
 
-test('agent apply never queues, even with valid JSON, agent_id and exact phrase', async ({ page }) => {
+test('agent apply never queues, even with valid JSON, agent_id, agent_secret and exact phrase', async ({ page }) => {
   let queued = 0;
   await mockAgentStatus(page, { ok: true, connected: true, agent_id: AGENT_ID });
   await page.route(`${API}/api/agent/mission/queue`, async (route) => {
@@ -64,6 +64,7 @@ test('agent apply never queues, even with valid JSON, agent_id and exact phrase'
 
   await openNext(page);
   await expect(page.locator('#vcAgentApplyAgentId')).toHaveValue(AGENT_ID);
+  await page.locator('#vcAgentApplyAgentSecret').fill('fake-secret-would-be-real-in-production');
   await page.locator('#vcAgentApplyPayload').fill(JSON.stringify({
     type: 'apply_patch',
     file: 'buggy.js',
@@ -73,6 +74,9 @@ test('agent apply never queues, even with valid JSON, agent_id and exact phrase'
   }));
   await page.locator('#vcAgentApplyConfirm').fill(CONFIRM_TEXT);
 
+  // Mesmo com agent_id + agent_secret + JSON + frase exata preenchidos, o botão
+  // continua bloqueado: o gate é AGENT_APPLY_ENABLED=false, uma decisão do
+  // usuário, não a ausência de pareamento (isso o backend já resolve).
   await expect(page.locator('#vcAgentApplyActions button')).toBeDisabled();
   await expect(page.locator('#vcAgentApplyActions button')).toHaveText('Aplicação real bloqueada');
   expect(queued).toBe(0);

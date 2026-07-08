@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-36">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-36" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-37">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-37" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -116,9 +116,12 @@
 
           <div class="vc-agent-apply" id="vcAgentApplyForm" hidden>
             <h4>Aplicar Patch Real via Vision Agent Local (Fase 2b)</h4>
-            <p class="vc-agent-apply-banner" role="alert">Aplicação real bloqueada por governança: agent_id não é um segredo (é um hash de hostname+pasta, sem autenticação) e a fila ainda não exige token de pareamento por agente/projeto/owner. Formulário fica visível para documentar o payload esperado, mas o botão não dispara nenhuma chamada real. Não faz push, não faz deploy, não escreve em disco.</p>
+            <p class="vc-agent-apply-banner" role="alert">Aplicação real bloqueada por decisão do usuário, não por falta de mecanismo: o backend já exige agent_secret pareado via /api/agent/register (agent_id sozinho não autentica ninguém). Este formulário fica visível para documentar o payload esperado, mas o botão não dispara nenhuma chamada real até essa decisão ser tomada explicitamente. Não faz push, não faz deploy, não escreve em disco.</p>
             <label>Agent ID vinculado
               <input type="text" id="vcAgentApplyAgentId" placeholder="agent_id do Vision Agent conectado" autocomplete="off">
+            </label>
+            <label>Agent Secret (gerado por /api/agent/register, exibido uma vez no console do agente)
+              <input type="password" id="vcAgentApplyAgentSecret" placeholder="agent_secret" autocomplete="off">
             </label>
             <label>Payload JSON explícito
               <textarea id="vcAgentApplyPayload" rows="8" spellcheck="false" placeholder='{"type":"apply_patch","file":"buggy.js","fix_type":"code_patch","diagnosis":"operador errado","patch":{"search":"return a - b;","replace":"return a + b;"}}'></textarea>

@@ -23,7 +23,49 @@ const VERSION = '1.2';
 const WORKER  = process.env.VC_WORKER  || 'https://visioncore-api-gateway.weiganlight.workers.dev';
 const POLL_MS = Number(process.env.VC_POLL_MS) || 3000;
 const ROOT    = path.resolve(process.argv[2] || process.cwd());
-const AGENT_ID = process.env.VC_AGENT_ID || ('agent_' + crypto.createHash('sha256').update(os.hostname() + '|' + ROOT).digest('hex').slice(0, 12));
+
+/* §207: agent_id sozinho não autentica nada (hash não-secreto de hostname+pasta).
+   Pareamento real: registra uma vez em /api/agent/register, persiste {agent_id,
+   agent_secret} localmente, reusa nas próximas execuções. O secret é o que o
+   operador cola na UI (#vcAgentApplyAgentSecret) pra autorizar apply_patch real. */
+var CREDENTIALS_PATH = path.join(__dirname, '.vc-agent-credentials.json');
+var AGENT_ID     = process.env.VC_AGENT_ID     || '';
+var AGENT_SECRET = process.env.VC_AGENT_SECRET || '';
+
+function loadPersistedCredentials() {
+  try {
+    var raw = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
+    if (raw && raw.agent_id) return raw;
+  } catch (_) { /* primeiro run, arquivo ainda não existe */ }
+  return null;
+}
+
+function ensurePairing(cb) {
+  if (AGENT_ID && AGENT_SECRET) return cb(); // veio de env var explícita
+  var persisted = loadPersistedCredentials();
+  if (persisted) {
+    AGENT_ID = persisted.agent_id;
+    AGENT_SECRET = persisted.agent_secret;
+    return cb();
+  }
+  httpRequest(WORKER + '/api/agent/register', { method: 'POST' }, function(err, res) {
+    if (!err && res && res.status === 200 && res.body && res.body.agent_id && res.body.agent_secret) {
+      AGENT_ID = res.body.agent_id;
+      AGENT_SECRET = res.body.agent_secret;
+      try {
+        fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify({ agent_id: AGENT_ID, agent_secret: AGENT_SECRET }, null, 2));
+      } catch (_) {}
+      console.log('🔑 Pareado: ' + AGENT_ID);
+      console.log('   Secret (cole em "Agent Secret" na UI pra autorizar apply_patch real): ' + AGENT_SECRET);
+      return cb();
+    }
+    /* Fallback: worker offline no primeiro boot — id derivado só serve pra polling
+       de missões sem dono (dry-run/general); apply_patch será rejeitado (401) até
+       rodar de novo com o worker acessível e completar o /register. */
+    AGENT_ID = 'agent_' + crypto.createHash('sha256').update(os.hostname() + '|' + ROOT).digest('hex').slice(0, 12);
+    cb();
+  });
+}
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
@@ -33,7 +75,6 @@ console.log('║   VISION AGENT LOCAL v' + VERSION + '             ║');
 console.log('╚══════════════════════════════════════════╝');
 console.log('Projeto : ' + ROOT);
 console.log('Worker  : ' + WORKER);
-console.log('Agent ID: ' + AGENT_ID);
 console.log('SDDF    : scan→hermes→patch→aegis→commit');
 console.log('');
 
@@ -1282,7 +1323,11 @@ if (require.main === module) {
   srv.listen(PORT, function() {
     console.log('Health : http://localhost:' + PORT);
     console.log('');
-    poll();
+    ensurePairing(function() {
+      console.log('Agent ID: ' + AGENT_ID);
+      console.log('');
+      poll();
+    });
   });
 }
 

@@ -24,7 +24,49 @@ const LOCAL_PORT  = Number(process.env.VC_PORT) || 7070;
 
 const projectRoot = path.resolve(process.argv[2] || process.cwd());
 const agentToken  = process.env.VC_TOKEN || '';
-const agentId = process.env.VC_AGENT_ID || ('agent_' + crypto.createHash('sha256').update(os.hostname() + '|' + projectRoot).digest('hex').slice(0, 12));
+
+/* §207: agent_id sozinho não autentica nada (hash não-secreto de hostname+pasta).
+   Pareamento real: registra uma vez em /api/agent/register, persiste {agent_id,
+   agent_secret} localmente, reusa nas próximas execuções. O secret é o que o
+   operador cola na UI (#vcAgentApplyAgentSecret) pra autorizar apply_patch real —
+   nunca é enviado no polling/heartbeat, só existe pra provar posse no momento
+   de enfileirar uma missão de escrita. */
+const CREDENTIALS_PATH = path.join(__dirname, '.vc-agent-credentials.json');
+let agentId = process.env.VC_AGENT_ID || '';
+let agentSecret = process.env.VC_AGENT_SECRET || '';
+
+function loadPersistedCredentials() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf8'));
+    if (raw && raw.agent_id) return raw;
+  } catch (_) { /* primeiro run, arquivo ainda não existe */ }
+  return null;
+}
+
+async function ensurePairing() {
+  if (agentId && agentSecret) return; // veio de env var explícita
+  const persisted = loadPersistedCredentials();
+  if (persisted) {
+    agentId = persisted.agent_id;
+    agentSecret = persisted.agent_secret;
+    return;
+  }
+  try {
+    const res = await fetchJson(`${WORKER_URL}/api/agent/register`, { method: 'POST' });
+    if (res.status === 200 && res.body && res.body.agent_id && res.body.agent_secret) {
+      agentId = res.body.agent_id;
+      agentSecret = res.body.agent_secret;
+      fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify({ agent_id: agentId, agent_secret: agentSecret }, null, 2));
+      console.log(`🔑 Pareado: ${agentId}`);
+      console.log(`   Secret (cole em "Agent Secret" na UI pra autorizar apply_patch real): ${agentSecret}`);
+      return;
+    }
+  } catch (_) { /* worker offline no primeiro boot — cai no fallback abaixo */ }
+  /* Fallback: sem pareamento real ainda (offline), usa id derivado só pra polling
+     de missões sem dono (dry-run/general). apply_patch vai ser rejeitado (401)
+     até rodar de novo com o worker acessível e completar o /register. */
+  agentId = 'agent_' + crypto.createHash('sha256').update(os.hostname() + '|' + projectRoot).digest('hex').slice(0, 12);
+}
 
 console.log(`\n╔══════════════════════════════════════════╗`);
 console.log(`║   VISION AGENT LOCAL v${VERSION}              ║`);
@@ -207,5 +249,5 @@ http.createServer((req, res) => {
 }).listen(LOCAL_PORT, () => {
   console.log(`Agent health: http://localhost:${LOCAL_PORT}`);
   console.log(`Missão local: POST http://localhost:${LOCAL_PORT}/run\n`);
-  poll();
+  ensurePairing().finally(poll);
 });
