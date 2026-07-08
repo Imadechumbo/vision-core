@@ -223,14 +223,26 @@ Painel "Missions" (`#vcMissionPatchForm`, sem confirmação dupla — não é a�
 
 Validado com Playwright, incluindo o **timeout real via `page.clock` (relógio virtual do Playwright)** — avança 61s de tempo simulado sem esperar de verdade, disparando o `AbortController` real do código de produção (sem nenhum hook de teste no código-fonte).
 
-### Executar Missão — Caminho B REGISTRADO COMO PENDÊNCIA (Fase 2, não iniciada nesta sessão)
+### Executar Missão — Caminho B, Fase 2a (`sf_dry_run_real`) — IMPLEMENTADO (Etapa 1d Fase 2a, 2026-07-08)
 
-Decisão explícita do usuário: só implementar se sobrar folga de contexto após a Fase 1 — não sobrou, registrando para sessão futura.
+Decisão do usuário: implementar SOMENTE `type:'sf_dry_run_real'` nesta etapa — `apply_patch`/`apply_patch_multi` reais via agente (Fase 2b, genuinamente irreversível) ficam para decisão futura separada, não implementados.
 
-- **Endpoint:** `POST /api/agent/mission/queue` (retorna `job_id`) + polling `GET /api/agent/mission/result/:id`. Quem escreve em disco de verdade é o **Vision Agent Local** (processo externo, fora do controle direto desta UI) — irreversível fora do nosso controle.
-- **Achado que muda o perfil de risco, verificado antes de decidir não implementar:** existe sim um modo dry-run **real** (não decorativo) — `type: 'sf_dry_run_real'` (exige `body.target_path`), comentário do próprio `backend/server.js:3206-3209` (§111) confirma: "toda leitura real do target_path, o firewall de auto-modificação (§110) e a simulação em memória (**nunca escreve no disco**) acontecem no Vision Agent Local". Ou seja, dá pra portar uma versão seguramente testável do Caminho B (`sf_dry_run_real`) SEM tocar no `type:'apply_patch'`/`apply_patch_multi'` real (esses sim escrevem em disco de verdade).
-- **Guards obrigatórios já especificados para quando for implementado:** banner fixo não-dismissable permanentemente avisando que é execução real via processo externo; confirmação dupla igual ao GitHub PR (Confirmar/Cancelar); polling ~2s com timeout total generoso (~5min) e botão "Cancelar acompanhamento" (só para de perguntar — deixar claro na UI se a API não suporta cancelar o job já enfileirado no servidor); estado "Executando..." com indicador de progresso/tempo decorrido (backend provavelmente não tem progresso granular).
-- **Decisão em aberto para quem retomar:** implementar só o `sf_dry_run_real` primeiro (seguro, testável de verdade sem custo de escrita real) como uma Fase 2a, deixando o `apply_patch` real via agente (Fase 2b, a parte genuinamente irreversível) para depois? Ou implementar as duas juntas? Não decidido — precisa de conversa nova.
+**Achado de contrato de API, verificado direto em `backend/server.js` antes de implementar** (mudou o design assumido no registro anterior desta pendência):
+- `POST /api/agent/mission/queue` retorna `mission_id` (não `job_id`) — `{ok:true, mission_id, queued, queue_length, type, time}` (`sendOk()` acha campos, `server.js:3172-3218`). Exige `body.target_path` quando `type==='sf_dry_run_real'` (400 `sf_dry_run_real_requires_target_path` sem isso, `server.js:3210-3213`).
+- `GET /api/agent/mission/result/:id` **retorna 404 com `error:'result_not_found'` enquanto o Vision Agent Local ainda não postou resultado** (`server.js:3233-3237`) — isso NÃO é erro, é o sinal de "ainda rodando"; qualquer outro erro (rede, 5xx, corpo malformado) é falha real. O polling trata os dois casos de forma diferente.
+- Nem `/api/agent/mission/queue` nem `/api/agent/mission/result/:id` passam por `checkMissionQuota` (só `/api/copilot` e `/api/run-live` passam, confirmado por grep) — sem gate de quota FREE nesta ação.
+
+**Implementação (`frontend/vision-core-next.html` + `assets/vision-core-next-clean.{css,js}`, cache-bust `v28`):** novo bloco `#vcDryRunForm` dentro do painel Missions (mesma aba do `#vcMissionPatchForm`/Caminho A), com:
+- Banner de risco sempre visível, sem botão de fechar (não-dismissable por construção — não existe control de dismiss).
+- Campo único `target_path` + botão "Rodar Dry-Run" (desabilitado até preenchido) → 2º clique obrigatório "Confirmar dry-run em `<path>`"/"Cancelar" (mesmo padrão do GitHub PR) → só a confirmação dispara o `POST /api/agent/mission/queue` real.
+- Ao enfileirar: polling a cada 2s (`GET /api/agent/mission/result/:mission_id`) com status "Executando... (Ns decorridos)"; botão "Cancelar acompanhamento" visível durante o polling — cancela só a UI (para de perguntar), deixa explícito que o job pode continuar rodando no servidor (sem endpoint de cancelamento remoto).
+- Teto de 5min (`DRY_RUN_TIMEOUT_MS`): se não chegar resultado, para o polling e mostra mensagem de timeout, sem travar a UI.
+- Integra com Atomic Core igual aos outros fluxos (`action` na confirmação, `startAtomicSequence()`, `resetAtomicCore()` sempre ao final — sucesso, erro, timeout, cancelamento).
+- CSS segue a regra dura: `.vc-dry-run:not([hidden])` em vez de `display` direto.
+
+**Validado 100% mockado via Playwright** (spec temporário, rodado e depois apagado — mesmo padrão das etapas anteriores desta frente, nenhum spec commitado): formulário desabilitado até `target_path` preenchido; confirmar/cancelar antes da 1ª chamada (cancelar não dispara `fetch`); sucesso (queue→poll pendente 404→poll resultado 200); erro real do agente (5xx no result); cancelamento pelo botão (sem novas chamadas depois, verificado por contagem de requests); **timeout real de 5min via `page.clock.fastForward('05:01')`** (sem esperar tempo real, disparando os timers reais do código de produção); painel escondido fora da aba Missions; e um cenário completo sob `reducedMotion:'reduce'` confirmando que o Atomic Core ainda reflete `action`→`idle` corretamente.
+
+**Decisão que segue em aberto:** Fase 2b (`apply_patch`/`apply_patch_multi` reais via Vision Agent Local — escreve em disco de verdade, fora do controle desta UI) não implementada, aguarda conversa nova.
 
 ### Padrão de trabalho desta sessão (seguir nas próximas)
 
@@ -261,14 +273,16 @@ c1a55c03  feat   agentes/metricas/timeline/quota (Etapa 1b)
 2bc7fab4  feat   vault/tools/obsidian leitura (Etapa 1b, fecha bloco FACIL)
 ed886aa8  feat   GitHub PR com confirmacao dupla (Etapa 1c)
 badcff08  feat   Executar Missao Caminho A / apply-patch seguro (Etapa 1d Fase 1)
+──── nova sessão (2026-07-08), retomando a partir deste checkpoint ────
+(novo)    feat   Executar Missao Caminho B / sf_dry_run_real (Etapa 1d Fase 2a)
 ```
 
-**Cache-bust atual:** `?v=next-clean-27` (`frontend/vision-core-next.html`, CSS e JS na mesma versão — sempre incrementar os 2 juntos).
+**Cache-bust atual:** `?v=next-clean-28` (`frontend/vision-core-next.html`, CSS e JS na mesma versão — sempre incrementar os 2 juntos).
 
-**Confirmação importante, vale para a sessão inteira:** todas as validações de todas as etapas acima foram **100% mockadas via `page.route()` do Playwright**. Em nenhum momento desta sessão houve chamada real a GitHub (criação de PR), a um provider de LLM real (Anthropic/OpenRouter/etc.), ou ao Vision Agent Local. O único teste "quase real" foi um cálculo de custo estimado (não executado) de uma eventual mensagem manual do usuário no chat — ver histórico de conversa, não repetido aqui por já estar resolvido.
+**Confirmação importante, vale para a sessão inteira (incluindo a sessão de 2026-07-08):** todas as validações de todas as etapas acima foram **100% mockadas via `page.route()` do Playwright**. Em nenhum momento houve chamada real a GitHub (criação de PR), a um provider de LLM real (Anthropic/OpenRouter/etc.), ou ao Vision Agent Local — inclusive o novo fluxo `sf_dry_run_real` foi validado só contra mocks de `/api/agent/mission/queue`/`result/:id`, nunca contra um Agent Local de verdade rodando em `localhost:7070`.
 
 **O que falta, em ordem de prioridade sugerida (não é decisão tomada — próxima sessão decide com o humano):**
-1. **Executar Missão Fase 2** (Caminho B — `/api/agent/mission/queue` + polling, escreve em disco via Vision Agent Local, fora do nosso controle). Duas sub-opções em aberto, ver checkpoint "Executar Missão — Caminho B" acima: (a) implementar só `type:'sf_dry_run_real'` primeiro (dry-run real, nunca escreve em disco, confirmado no código) como uma Fase 2a mais segura; (b) implementar dry-run + `apply_patch` real juntos. Guards já especificados (banner fixo não-dismissable, confirmação dupla, polling com timeout ~5min).
+1. **Executar Missão Fase 2b** (`apply_patch`/`apply_patch_multi` reais via Vision Agent Local — escreve em disco de verdade, fora do controle desta UI). Fase 2a (`sf_dry_run_real`) já fechada nesta sessão, ver checkpoint "Executar Missão — Caminho B, Fase 2a" acima. Guards equivalentes aos já usados na 2a (banner fixo não-dismissable, confirmação dupla, polling com timeout ~5min) mas o risco é maior por ser escrita real em disco.
 2. **Software Factory** (Auto-Pilot + modo avançado) — 12 endpoints mapeados na Etapa 1a, mais complexo por exigir recriar o loop de orquestração (hoje só existe no frontend legado, não pode ser importado).
 3. **Vault-rollback** — ação destrutiva (sobrescreve `PROJECTS_DB`), mapeamento já encontrou um bug latente no legado (não restaura `users`/`providers` mesmo salvos no snapshot) — vale decidir se corrige o bug antes ou avisa o usuário do limite.
 4. **Tools-apply-fix** (`/api/security/apply-fix`) — escreve em disco real com backup automático, risco menor que Vault-rollback mas ainda é escrita real.
@@ -287,7 +301,7 @@ badcff08  feat   Executar Missao Caminho A / apply-patch seguro (Etapa 1d Fase 1
 
 ### Roadmap Etapas 2-7 — PENDENTE, não implementar sem conversa nova
 
-Paridade funcional alvo (mapeamento feito na Etapa 1a, implementação progressiva depois — ✅ = fechado): ✅ anexos/leitura de print (Etapa 1b), ✅ Agentes/Métricas/Timeline/Quota/Vault-leitura/Tools-leitura/Obsidian-leitura (Etapa 1b), ✅ GitHub PR com guard de confirmação dupla (Etapa 1c), ✅ Executar Missão Caminho A / apply-patch seguro (Etapa 1d Fase 1). Pendentes: Executar Missão Caminho B / Vision Agent Local (Etapa 1d Fase 2 — ver checkpoint específico acima, achado do dry-run real `sf_dry_run_real`), Software Factory Auto-Pilot + modo avançado, configurações avançadas do SF, Vault-rollback, Tools-apply-fix, Settings/AI Provider Vault, autenticação/token/quota real (plano pago depende de login funcionando), logs/status/estados de missão do SF.
+Paridade funcional alvo (mapeamento feito na Etapa 1a, implementação progressiva depois — ✅ = fechado): ✅ anexos/leitura de print (Etapa 1b), ✅ Agentes/Métricas/Timeline/Quota/Vault-leitura/Tools-leitura/Obsidian-leitura (Etapa 1b), ✅ GitHub PR com guard de confirmação dupla (Etapa 1c), ✅ Executar Missão Caminho A / apply-patch seguro (Etapa 1d Fase 1), ✅ Executar Missão Caminho B / `sf_dry_run_real` (Etapa 1d Fase 2a). Pendentes: Executar Missão Caminho B Fase 2b / `apply_patch` real via Vision Agent Local (escrita real em disco — ver checkpoint específico acima), Software Factory Auto-Pilot + modo avançado, configurações avançadas do SF, Vault-rollback, Tools-apply-fix, Settings/AI Provider Vault, autenticação/token/quota real (plano pago depende de login funcionando), logs/status/estados de missão do SF.
 
 Settings obrigatórios (Etapa 3): Atomic Core ligado/desligado, modo automático, reduzir movimento (override manual sobre o `matchMedia` real), glow on/off, intensidade visual (discreto/normal/ativo), persistência em `localStorage`.
 

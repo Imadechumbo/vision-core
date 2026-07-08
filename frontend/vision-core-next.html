@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-27">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-27" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-28">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-28" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -111,6 +111,16 @@
             <p class="vc-mission-patch-status" id="vcMissionStatus" aria-live="polite"></p>
             <pre class="vc-mission-patch-output" id="vcMissionPatchOutputWrap" hidden><code id="vcMissionPatchOutput"></code></pre>
             <button type="button" id="vcMissionDownloadBtn" hidden>Baixar patch</button>
+          </div>
+
+          <div class="vc-dry-run" id="vcDryRunForm" hidden>
+            <h4>Executar Missão — Dry-Run Real (Caminho B, Fase 2a)</h4>
+            <p class="vc-dry-run-banner" role="alert">Execução real via Vision Agent Local — processo externo, fora do controle direto desta UI. Modo dry-run: simulação em memória, o backend confirma que NUNCA escreve no disco, mas o job roda de verdade fora desta interface.</p>
+            <label>Caminho do repositório/projeto (target_path)
+              <input type="text" id="vcDryRunTargetPath" placeholder="ex: C:\projetos\meu-repo" autocomplete="off">
+            </label>
+            <div class="vc-dry-run-actions" id="vcDryRunActions"></div>
+            <p class="vc-dry-run-status" id="vcDryRunStatus" aria-live="polite"></p>
           </div>
         </section>
         <form class="vc-composer" id="vcComposer">

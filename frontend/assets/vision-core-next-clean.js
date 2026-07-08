@@ -28,13 +28,17 @@
   var missionPatchOutputWrap = document.getElementById('vcMissionPatchOutputWrap');
   var missionPatchOutput = document.getElementById('vcMissionPatchOutput');
   var missionDownloadBtn = document.getElementById('vcMissionDownloadBtn');
+  var dryRunForm = document.getElementById('vcDryRunForm');
+  var dryRunTargetInput = document.getElementById('vcDryRunTargetPath');
+  var dryRunActionsEl = document.getElementById('vcDryRunActions');
+  var dryRunStatusEl = document.getElementById('vcDryRunStatus');
   var attachmentInput = document.getElementById('vcAttachmentInput');
   var imageInput = document.getElementById('vcImageInput');
   var activeFeature = 'chat';
 
   var featureMap = {
     chat: { title: 'Chat', status: 'READY', agents: ['hermes'], text: 'Chat livre conectado ao endpoint real /api/chat.', actions: [{ label: 'Checar API', path: '/api/health' }] },
-    missions: { title: 'Missions', status: 'PATCH SEGURO', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Gerar Patch (abaixo) roda o pipeline real de diagnóstico + apply-patch, sem escrever nada sozinho — só gera diff para download. Execução real via Vision Agent Local (Caminho B) fica pendente.', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
+    missions: { title: 'Missions', status: 'PATCH SEGURO + DRY-RUN', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Gerar Patch roda o pipeline real de diagnóstico + apply-patch, sem escrever nada sozinho — só gera diff para download. Dry-Run Real (abaixo) enfileira execução real no Vision Agent Local, em modo simulação (nunca escreve no disco). Apply-patch real via agente segue pendente.', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
     factory: { title: 'Software Factory', status: 'MAPPED', agents: ['openclaw', 'pi', 'aegis'], text: 'Auto-Pilot e Modo Avançado serão portados sem bundle legado. Jobs SF permanecem bloqueados nesta etapa para evitar custo/API real acidental.', actions: [{ label: 'Planejador', path: '/api/health' }] },
     timeline: { title: 'Timeline', status: 'SAFE READ', agents: ['archivist'], text: 'Timeline preparada para leitura real de missão.', actions: [{ label: 'Carregar timeline', path: '/api/mission/timeline' }] },
     agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }, { label: 'Métricas agentes', path: '/api/metrics/agents' }] },
@@ -131,6 +135,8 @@
     if (githubPrForm) githubPrForm.hidden = activeFeature !== 'github';
     if (activeFeature !== 'github') resetPrConfirm();
     if (missionPatchForm) missionPatchForm.hidden = activeFeature !== 'missions';
+    if (dryRunForm) dryRunForm.hidden = activeFeature !== 'missions';
+    if (activeFeature !== 'missions') resetDryRunConfirm();
     if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
     if (announce) appendMessage('pending', feature.title.toUpperCase(), feature.text);
   }
@@ -492,6 +498,172 @@
     if (missionLastPatchText) downloadTextFile(missionLastFileName, missionLastPatchText);
   });
   updateMissionButton();
+
+  // Executar Missão — Caminho B / Fase 2a (item 4, dry-run real). POST
+  // /api/agent/mission/queue {type:'sf_dry_run_real', target_path} enfileira
+  // um job real pro Vision Agent Local (processo externo) — o backend só
+  // relay/valida, quem lê o target_path e roda a simulação em memória (nunca
+  // escreve no disco, confirmado no server.js) é o Agent local, fora do
+  // controle desta UI. Por isso exige confirmação dupla igual ao PR do
+  // GitHub. Resultado chega via GET /api/agent/mission/result/:id — 404
+  // com error 'result_not_found' significa "ainda sem resultado" (não é
+  // erro), qualquer outro erro é falha real. Polling ~2s, teto de 5min;
+  // "Cancelar acompanhamento" só para esta UI de perguntar — o job pode
+  // continuar rodando no servidor (nao ha endpoint de cancelamento remoto).
+  var DRY_RUN_POLL_MS = 2000;
+  var DRY_RUN_TIMEOUT_MS = 5 * 60 * 1000;
+  var dryRunConfirmPending = false;
+  var dryRunRequestInFlight = false;
+  var dryRunPolling = false;
+  var dryRunPollTimer = null;
+  var dryRunTimeoutTimer = null;
+  var dryRunStartedAt = 0;
+
+  function dryRunFieldValid() {
+    return !!(dryRunTargetInput && dryRunTargetInput.value.trim());
+  }
+
+  function resetDryRunConfirm() {
+    dryRunConfirmPending = false;
+    if (!dryRunRequestInFlight && !dryRunPolling) renderDryRunActions();
+  }
+
+  function renderDryRunActions() {
+    if (!dryRunActionsEl) return;
+    dryRunActionsEl.textContent = '';
+
+    if (dryRunPolling) {
+      var cancelWatchBtn = document.createElement('button');
+      cancelWatchBtn.type = 'button';
+      cancelWatchBtn.textContent = 'Cancelar acompanhamento';
+      cancelWatchBtn.addEventListener('click', function () { stopDryRunPolling('cancel'); });
+      dryRunActionsEl.appendChild(cancelWatchBtn);
+      return;
+    }
+
+    if (dryRunRequestInFlight) {
+      var busyBtn = document.createElement('button');
+      busyBtn.type = 'button';
+      busyBtn.disabled = true;
+      busyBtn.textContent = 'Enfileirando...';
+      dryRunActionsEl.appendChild(busyBtn);
+      return;
+    }
+
+    if (dryRunConfirmPending) {
+      var confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.textContent = 'Confirmar dry-run em ' + dryRunTargetInput.value.trim();
+      confirmBtn.addEventListener('click', submitDryRun);
+      var cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.textContent = 'Cancelar';
+      cancelBtn.addEventListener('click', function () {
+        dryRunConfirmPending = false;
+        renderDryRunActions();
+      });
+      dryRunActionsEl.appendChild(confirmBtn);
+      dryRunActionsEl.appendChild(cancelBtn);
+      return;
+    }
+
+    var runBtn = document.createElement('button');
+    runBtn.type = 'button';
+    runBtn.textContent = 'Rodar Dry-Run';
+    runBtn.disabled = !dryRunFieldValid();
+    runBtn.addEventListener('click', function () {
+      dryRunConfirmPending = true;
+      renderDryRunActions();
+    });
+    dryRunActionsEl.appendChild(runBtn);
+  }
+
+  function updateDryRunElapsedStatus(prefix) {
+    if (!dryRunStatusEl) return;
+    var elapsedSec = Math.round((Date.now() - dryRunStartedAt) / 1000);
+    dryRunStatusEl.textContent = (prefix || 'Executando dry-run real via Vision Agent Local...') + ' (' + elapsedSec + 's decorridos)';
+  }
+
+  function pollDryRunOnce(missionId) {
+    if (!dryRunPolling) return;
+    apiRequest('/api/agent/mission/result/' + missionId).then(function (data) {
+      if (!dryRunPolling) return;
+      stopDryRunPolling('success', data);
+    }).catch(function (err) {
+      if (!dryRunPolling) return;
+      var msg = err && err.message ? err.message : String(err);
+      if (msg === 'result_not_found') {
+        updateDryRunElapsedStatus();
+        return;
+      }
+      stopDryRunPolling('error', msg);
+    });
+  }
+
+  function startDryRunPolling(missionId) {
+    dryRunPolling = true;
+    dryRunStartedAt = Date.now();
+    renderDryRunActions();
+    updateDryRunElapsedStatus();
+    pollDryRunOnce(missionId);
+    dryRunPollTimer = window.setInterval(function () { pollDryRunOnce(missionId); }, DRY_RUN_POLL_MS);
+    dryRunTimeoutTimer = window.setTimeout(function () { stopDryRunPolling('timeout'); }, DRY_RUN_TIMEOUT_MS);
+  }
+
+  function stopDryRunPolling(reason, payload) {
+    if (dryRunPollTimer) { window.clearInterval(dryRunPollTimer); dryRunPollTimer = null; }
+    if (dryRunTimeoutTimer) { window.clearTimeout(dryRunTimeoutTimer); dryRunTimeoutTimer = null; }
+    var wasPolling = dryRunPolling;
+    dryRunPolling = false;
+    renderDryRunActions();
+    if (!wasPolling) return;
+    if (window.resetAtomicCore) window.resetAtomicCore();
+    if (!dryRunStatusEl) return;
+    if (reason === 'success') {
+      dryRunStatusEl.textContent = 'Dry-run concluído: ' + summarizeResult(payload);
+    } else if (reason === 'timeout') {
+      dryRunStatusEl.textContent = 'Tempo esgotado (5min) aguardando o Vision Agent Local. O job pode continuar rodando no servidor — esta UI parou de perguntar.';
+    } else if (reason === 'cancel') {
+      dryRunStatusEl.textContent = 'Acompanhamento cancelado. O job pode continuar rodando no servidor — esta UI não suporta cancelar remotamente.';
+    } else {
+      dryRunStatusEl.textContent = 'Erro no dry-run: ' + (payload || 'falha desconhecida');
+    }
+  }
+
+  function submitDryRun() {
+    if (dryRunRequestInFlight) return;
+    dryRunRequestInFlight = true;
+    dryRunConfirmPending = false;
+    renderDryRunActions();
+    if (dryRunStatusEl) dryRunStatusEl.textContent = 'Enfileirando dry-run...';
+
+    var targetPath = dryRunTargetInput.value.trim();
+
+    if (window.setAtomicCoreState) window.setAtomicCoreState('action');
+    if (window.startAtomicSequence) window.startAtomicSequence();
+
+    apiRequest('/api/agent/mission/queue', {
+      method: 'POST',
+      body: { type: 'sf_dry_run_real', target_path: targetPath }
+    }).then(function (data) {
+      dryRunRequestInFlight = false;
+      var missionId = data && data.mission_id;
+      if (!missionId) throw new Error('Resposta sem mission_id.');
+      startDryRunPolling(missionId);
+    }).catch(function (err) {
+      dryRunRequestInFlight = false;
+      if (dryRunStatusEl) dryRunStatusEl.textContent = 'Erro ao enfileirar: ' + (err && err.message ? err.message : String(err));
+      renderDryRunActions();
+      if (window.resetAtomicCore) window.resetAtomicCore();
+    });
+  }
+
+  if (dryRunTargetInput) {
+    dryRunTargetInput.addEventListener('input', function () {
+      if (!dryRunRequestInFlight && !dryRunConfirmPending && !dryRunPolling) renderDryRunActions();
+    });
+  }
+  renderDryRunActions();
 
   // Anexos/print — mesmo formato do legado: arquivos de texto viram
   // "[Arquivo: nome]\nconteudo" prependado a message; imagem vai como

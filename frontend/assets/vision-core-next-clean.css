@@ -478,6 +478,85 @@ a { color: inherit; text-decoration: none; }
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+.vc-dry-run:not([hidden]) {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(216, 180, 254, .12);
+}
+
+.vc-dry-run h4 {
+  margin: 0;
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.vc-dry-run-banner {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(250, 204, 21, .38);
+  border-left: 3px solid rgba(250, 204, 21, .7);
+  border-radius: var(--radius);
+  background: rgba(250, 204, 21, .08);
+  color: #fde68a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.vc-dry-run label {
+  display: grid;
+  gap: 4px;
+  color: #b7a9cd;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.vc-dry-run input {
+  border: 1px solid rgba(216, 180, 254, .16);
+  border-radius: var(--radius);
+  background: rgba(18, 14, 28, .72);
+  color: #fff;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.vc-dry-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vc-dry-run-actions button {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid rgba(216, 180, 254, .16);
+  border-radius: 999px;
+  color: #efe9ff;
+  background: rgba(18, 14, 28, .78);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.vc-dry-run-actions button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.vc-dry-run-actions button:not(:disabled):hover {
+  border-color: rgba(192, 132, 252, .44);
+}
+
+.vc-dry-run-status {
+  margin: 0;
+  color: #bdb4cf;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .vc-composer-actions {
   display: flex;
   flex-wrap: wrap;
