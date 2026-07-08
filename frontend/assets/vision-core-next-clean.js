@@ -191,12 +191,90 @@
     return text.length > 900 ? text.slice(0, 900) + '\n...' : text;
   }
 
+  // Anexos/print — mesmo formato do legado: arquivos de texto viram
+  // "[Arquivo: nome]\nconteudo" prependado a message; imagem vai como
+  // image_base64/image_mime/image_name no body do /api/chat (Gemini vision
+  // no backend). Nenhum endpoint novo - reaproveita o /api/chat existente.
+  var MAX_ATTACHMENT_CHARS = 12000;
+  var MAX_IMAGE_BASE64_CHARS = 5 * 1024 * 1024;
+  var pendingAttachments = [];
+  var pendingImage = null;
+
+  function readFileAsText(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(String(reader.result)); };
+      reader.onerror = function () { reject(reader.error || new Error('read_failed')); };
+      reader.readAsText(file);
+    });
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () { resolve(String(reader.result)); };
+      reader.onerror = function () { reject(reader.error || new Error('read_failed')); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function handleAttachmentFiles(fileList) {
+    var files = Array.prototype.slice.call(fileList || []);
+    if (!files.length) return;
+    selectFeature('attach', false);
+    Promise.all(files.map(function (file) {
+      return readFileAsText(file).then(function (content) {
+        pendingAttachments.push({ name: file.name, content: content.slice(0, MAX_ATTACHMENT_CHARS) });
+      }).catch(function () {
+        appendMessage('error', 'ANEXOS', 'Falha ao ler ' + file.name + '.');
+      });
+    })).then(function () {
+      if (!pendingAttachments.length) return;
+      var names = pendingAttachments.map(function (a) { return a.name; }).join(', ');
+      appendMessage('pending', 'ANEXOS', names + ' pronto(s) para enviar com a próxima mensagem.');
+    });
+  }
+
+  function handleImageFile(file) {
+    if (!file) return;
+    selectFeature('image', false);
+    readFileAsDataUrl(file).then(function (dataUrl) {
+      var comma = dataUrl.indexOf(',');
+      var meta = comma > -1 ? dataUrl.slice(5, comma) : '';
+      var mime = (meta.split(';')[0] || file.type || 'image/jpeg');
+      var base64 = comma > -1 ? dataUrl.slice(comma + 1) : '';
+      pendingImage = { name: file.name, mime: mime, base64: base64 };
+      if (base64.length > MAX_IMAGE_BASE64_CHARS) {
+        appendMessage('pending', 'IMAGEM', 'Aviso: ' + file.name + ' é grande (~' + Math.round(base64.length / 1024 / 1024) + 'MB) — pode demorar ou falhar.');
+      }
+      appendMessage('pending', 'IMAGEM', file.name + ' pronta para enviar com a próxima mensagem.');
+    }).catch(function () {
+      appendMessage('error', 'IMAGEM', 'Falha ao ler ' + file.name + '.');
+    });
+  }
+
   if (composer) {
     composer.addEventListener('submit', function (event) {
       event.preventDefault();
       var text = prompt ? prompt.value.trim() : '';
-      if (!text) return;
-      appendMessage('user', 'VOCE', text);
+      if (!text && !pendingAttachments.length && !pendingImage) return;
+
+      var attachmentsPrefix = pendingAttachments.map(function (a) {
+        return '[Arquivo: ' + a.name + ']\n' + a.content;
+      }).join('\n\n');
+      var fullMessage = attachmentsPrefix ? (attachmentsPrefix + (text ? '\n\n' + text : '')) : text;
+      if (!fullMessage) fullMessage = 'Analise esta imagem.';
+
+      var displayParts = [];
+      if (text) displayParts.push(text);
+      if (pendingAttachments.length) displayParts.push('[' + pendingAttachments.length + ' anexo(s): ' + pendingAttachments.map(function (a) { return a.name; }).join(', ') + ']');
+      if (pendingImage) displayParts.push('[imagem: ' + pendingImage.name + ']');
+      appendMessage('user', 'VOCE', displayParts.join('\n'));
+
+      var imagePayload = pendingImage;
+      pendingAttachments = [];
+      pendingImage = null;
+
       prompt.value = '';
       resizePrompt();
 
@@ -218,10 +296,17 @@
       try { controller = new AbortController(); } catch (_) {}
       var timeoutId = controller ? window.setTimeout(function () { controller.abort(); }, CHAT_TIMEOUT_MS) : null;
 
+      var bodyPayload = { message: fullMessage, mode: 'vision-geral', model: 'auto', display_input: (text || null) };
+      if (imagePayload) {
+        bodyPayload.image_name = imagePayload.name;
+        bodyPayload.image_base64 = imagePayload.base64;
+        bodyPayload.image_mime = imagePayload.mime;
+      }
+
       fetch(CHAT_BACKEND_URL + '/api/chat', {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({ message: text, mode: 'vision-geral', model: 'auto', display_input: text }),
+        body: JSON.stringify(bodyPayload),
         signal: controller ? controller.signal : undefined
       }).then(function (r) {
         if (timeoutId) window.clearTimeout(timeoutId);
@@ -264,18 +349,14 @@
     });
   });
 
-  function describeFiles(input, label, featureKey) {
-    if (!input || !input.files || !input.files.length) return;
-    selectFeature(featureKey, false);
-    var names = Array.prototype.slice.call(input.files).map(function (file) { return file.name; }).join(', ');
-    appendMessage('pending', label, names + ' preparado(s). Pendente: conectar upload real ao fluxo de miss\\u00e3o.');
-    if (window.setAtomicCoreState) window.setAtomicCoreState('action');
-    if (window.highlightAtomicAgents) window.highlightAtomicAgents(featureMap[featureKey].agents);
-    window.setTimeout(function () { if (window.resetAtomicCore) window.resetAtomicCore(); }, 2200);
-  }
-
-  if (attachmentInput) attachmentInput.addEventListener('change', function () { describeFiles(attachmentInput, 'ANEXOS', 'attach'); });
-  if (imageInput) imageInput.addEventListener('change', function () { describeFiles(imageInput, 'IMAGEM', 'image'); });
+  if (attachmentInput) attachmentInput.addEventListener('change', function () {
+    handleAttachmentFiles(attachmentInput.files);
+    attachmentInput.value = '';
+  });
+  if (imageInput) imageInput.addEventListener('change', function () {
+    handleImageFile(imageInput.files && imageInput.files[0]);
+    imageInput.value = '';
+  });
 
   var root = document.querySelector('[data-atomic-core]');
   if (!root) return;
