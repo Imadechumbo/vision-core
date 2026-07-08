@@ -3,13 +3,21 @@
 **Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode).**
 Leia isto DEPOIS de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, ANTES de editar qualquer código. Ver "PROTOCOLO DE REVEZAMENTO" no topo do `CLAUDE.md` para as regras completas.
 
-> Última atualização: 2026-07-08, por Claude Code (Sonnet 5) — fechou as 2 pendências do handoff anterior (destino do spec SF + gap dos mocks síncronos) e ligou PASS GOLD no Auto-Pilot.
+> Última atualização: 2026-07-08, por Claude Code (Sonnet 5) — auditoria de paridade legado vs. Next (`docs/PARITY_AUDIT.md`), diagnóstico apenas, nenhum código tocado.
+
+---
+
+## DECISÃO PENDENTE DO USUÁRIO — auditoria de paridade
+
+`docs/PARITY_AUDIT.md` (novo, commit `f6caed7e`) mapeou o que falta pro Next alcançar paridade com o front legado (`index.html`+`vision-core-bundle.*`). Resumo: **13 features já cobertas** (2 delas o Next já está à frente), **5 grupos com trabalho real pendente** (Auth, AI Provider Vault write, Tools Apply-Fix, 7 passos restantes de Software Factory, Deploy dropdown — estimativa ~6-7 turnos, excluindo Deploy que é decisão de escopo), **13 itens candidatos a não migrar** (código morto confirmado por evidência — tutorial zumbi, arquivo `vision-core-clean-runtime.js` de 312KB nunca carregado, painéis OSINT/OpenSquad estáticos, IDs duplicados, etc.).
+
+**Nenhum arquivo foi movido, deletado ou alterado nessa auditoria — é só diagnóstico.** A próxima sessão **não deve começar a cortar/portar nada da lista sem o usuário revisar `docs/PARITY_AUDIT.md` e dizer o que priorizar primeiro** (a ordem sugerida no documento — Auth por último, é a mais arriscada — é só uma sugestão, não uma decisão tomada). Se o usuário já respondeu isso em uma mensagem depois desta, essa resposta é a fonte de verdade, não este parágrafo.
 
 ---
 
 ## ESTADO ATUAL
 
-- **Commit local (`main`) = commit remoto (`origin/main`):** `649d7069` — `feat(next): liga PASS GOLD no Auto-Pilot/Modo Avancado (Software Factory, v38)`. **Já pushado.**
+- **Commit local (`main`) = commit remoto (`origin/main`):** `f6caed7e` — `docs: auditoria de paridade legado vs Next (diagnostico, sem mudanca de codigo)`. **Já pushado.**
 - **Cache-bust atual no código:** `?v=next-clean-38` (`frontend/vision-core-next.html`, CSS e JS).
 - **Deployado em produção (`https://visioncoreai.pages.dev`):** ainda `next-clean-31`. Código local segue vários passos à frente (Software Factory completo com PASS GOLD, pareamento de agente, etc.) — nada disso está no ar. Backend/EB também sem nenhuma mudança desta linha de trabalho deployada. **Não deployar (CF Pages nem EB) sem aprovação explícita do usuário.**
 - **Gate `AGENT_APPLY_ENABLED`:** `false` (fail-closed), local e em produção. **Intocado nesta sessão.** Não mudar sem aprovação escrita do usuário registrada aqui.
@@ -22,70 +30,65 @@ Leia isto DEPOIS de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, ANTE
 
 ## TAREFA EM ANDAMENTO
 
-Nenhuma — sessão fechada e pushada nesta fatia. Próxima sessão escolhe livremente entre as pendências abaixo.
+Nenhuma — auditoria fechada e pushada. Próxima sessão precisa da decisão do usuário sobre `docs/PARITY_AUDIT.md` antes de escolher a próxima pendência (ver seção no topo deste arquivo).
 
 ---
 
-## ARQUIVOS TOCADOS nesta sessão (Claude Code, 2026-07-08, 3ª continuação)
+## ARQUIVOS TOCADOS nesta sessão (Claude Code, 2026-07-08, 4ª continuação — auditoria de paridade)
 
-**Fatia 1 (commit `1348e233`):** decisão + gap de `vision-core-next-sf.spec.mjs`.
-- `tests/e2e/vision-core-next-sf.spec.mjs` — vira permanente; os 3 testes de geração reescritos pra usar `job_id`+polling (helper `mockAsyncSfEndpoints`) em vez do formato síncrono que o backend real nunca envia.
-- `CLAUDE.md` — checkpoint documentando a decisão e o critério pra decisões futuras equivalentes.
+**Só documentação — nenhum código tocado, por design da tarefa (diagnóstico).**
 
-**Fatia 2 (commit `649d7069`):** PASS GOLD ligado + 2º achado de contrato.
-- `frontend/assets/vision-core-next-clean.js` — `SF_GOLD_GATE_STEP` + `sfActiveSteps` (calculado por execução a partir de `sf_options.pass_gold`); `updateSfProgress`/`nextStep` passaram a usar `sfActiveSteps` em vez da constante `SF_STEPS`.
-- `frontend/vision-core-next.html` — cache-bust `v37` → `v38`.
-- `tests/e2e/vision-core-next-sf.spec.mjs` — mocks reescritos pra devolver `result` como string pura (não `{content:...}`/`{files:...}`), igual ao que `GET /api/sf/job/:id` de verdade retorna (`server.js:4449`: `result: job.result.result`, um desembrulho de nível que os mocks antigos não refletiam); 2 casos novos (6 passos com gold-gate, 5 passos sem quando desmarcado).
-- `CLAUDE.md` — checkpoint com os dois achados de contrato (o gap fechado herdado + o novo, achado durante a própria implementação do gold-gate).
+- `docs/PARITY_AUDIT.md` (novo, commit `f6caed7e`) — inventário completo do front legado vs. Next, feito via 2 agentes de investigação (Explore) em paralelo sobre `vision-core-bundle.js`/`vision-core-clean-runtime.js`/`vision-core-clean-state.js`/`index.html` e sobre os ~30 arquivos CSS de `assets/`, cruzado contra as 133 rotas reais de `backend/server.js`. Dois achados (billing UI, apply-fix reachability) verificados manualmente por mim depois, porque nenhum agente cobriu explicitamente.
+- `docs/CURRENT_HANDOFF.md` (este arquivo) — nova seção "DECISÃO PENDENTE DO USUÁRIO" no topo.
 
-Nada tocado em `backend/*` nesta sessão (só leitura, pra confirmar os contratos). `AGENT_APPLY_ENABLED` intocado.
+Nenhum arquivo de `frontend/`, `backend/`, ou `tests/` foi alterado. `AGENT_APPLY_ENABLED` intocado. Nada deployado.
 
 ---
 
 ## COMANDOS EXECUTADOS relevantes
 
 ```bash
-node --check frontend/assets/vision-core-next-clean.js
-node --check tests/e2e/vision-core-next-sf.spec.mjs
-npx playwright test tests/e2e/vision-core-next-agent-apply.spec.mjs tests/e2e/vision-core-next-sf.spec.mjs --reporter=list
-# => 9 passed
+# Mapeamento de rotas reais do backend (verdade-base pra cruzar contra o legado e o Next):
+grep -oE "app\.(get|post|put|delete|all)\('[^']+'" backend/server.js | sort -u
 
-# Verificação de contrato feita por leitura direta do backend, não assumida:
-grep -n "app.post('/api/sf/gold-gate'" -A 20 backend/server.js
-grep -n "app.get('/api/sf/job/:id'" -A 15 backend/server.js
+# O que o Next já chama hoje:
+grep -oE "'/api/[a-zA-Z0-9/_:.-]+'" frontend/assets/vision-core-next-clean.js | sort -u
 
-# Limpeza pós-teste (artefatos gerados, não commitar):
-git checkout -- docs/STRESS-TEST-ARCH-E2E-RESULTS.json test-results/.last-run.json
+# Achado estrutural do bundle CSS (verificado direto, não assumido):
+grep -n "stylesheet\|\.css" frontend/index.html
+# comentário no próprio arquivo: "vision-core-bundle.css — 26 CSS files concatenated in original import order"
+
+# 2 verificações que nenhum agente cobriu, feitas manualmente:
+grep -n "billing\|hotmart\|/api/billing" frontend/index.html      # confirma painel decorativo, sem fetch real
+grep -n "apply-fix\|applyFix" frontend/assets/vision-core-bundle.js  # confirma botão real, §135
 ```
+
+Os 2 agentes de investigação rodaram com Grep extensivamente sobre os arquivos legados — comandos deles não reproduzidos aqui (ver `docs/PARITY_AUDIT.md` pra evidência linha-a-linha de cada achado).
 
 ---
 
 ## TESTES FEITOS
 
-| Spec | Resultado |
-|------|-----------|
-| `tests/e2e/vision-core-next-agent-apply.spec.mjs` | 4/4 PASS (permanente, governança) |
-| `tests/e2e/vision-core-next-sf.spec.mjs` | 5/5 PASS (permanente desde esta sessão) |
-| `node --check` em todos os arquivos tocados | limpo |
-| Grep estático `innerHTML`/`insertAdjacentHTML`/`eval`/`document.write` | zero hits |
+Nenhum — tarefa era diagnóstico puro, sem mudança de código pra validar. Suíte Playwright permanece no estado da sessão anterior (9/9 PASS entre `agent-apply` + `sf`), não rerodada porque nada que ela cobre foi tocado.
 
 ---
 
 ## PRÓXIMO COMANDO RECOMENDADO
 
-Não há comando único — pendências alternativas, escolha livre da próxima sessão. Se for continuar o roadmap do Software Factory:
+Nenhum comando técnico — o próximo passo é o **usuário ler `docs/PARITY_AUDIT.md`** e decidir prioridade entre os 5 grupos da seção (b) do relatório. Depois disso:
 
 ```bash
-grep -n "app.post('/api/sf/project-files'\|app.post('/api/sf/generate-zip'\|app.post('/api/sf/fetch-url'" backend/server.js
+cat docs/PARITY_AUDIT.md   # se ainda não leu
 ```
 
-Pendências em ordem sugerida (não é decisão tomada):
-1. **Resto do roadmap "Software Factory completo":** `/api/sf/project-files` (é o endpoint real que popula `.files[]` — ainda não conectado a nenhuma UI), `/api/sf/generate-zip` (download do projeto gerado), `/api/sf/fetch-url` (contexto por URL no Auto-Pilot). Nenhum desses foi mapeado em detalhe ainda nesta linha de trabalho — antes de implementar, ler o handler real em `server.js` primeiro (mesma disciplina desta sessão: 2 achados de contrato reais só apareceram por ler o backend com atenção, não por assumir).
-2. **Vault-rollback** — ação destrutiva (sobrescreve `PROJECTS_DB`). Bug latente conhecido e não corrigido: não restaura `users`/`providers` mesmo salvos no snapshot (achado de sessão bem anterior, nunca revisitado). Se for implementar a UI, decidir primeiro se corrige o bug do legado ou só documenta.
-3. **Tools-apply-fix** (`/api/security/apply-fix`) — escreve em disco real com backup automático. Risco menor que Vault-rollback mas ainda é escrita real — merece guard de confirmação dupla, mesmo padrão do GitHub PR/`agent-apply`.
-4. **Settings/AI Provider Vault** (`/api/providers/save|delete|test`) — mexe com armazenamento de chave de API cifrada. UX própria necessária: nunca expor chave completa, só mascarada.
-5. **Autenticação/token** (`/api/auth/register|login`, OAuth Google/GitHub) — a mais sensível de todas, mexe com sessão de qualquer usuário. Token é HMAC caseiro sem endpoint de refresh (expira em 24h fixo). Não começar sem alinhamento explícito — maior risco de todo o roadmap restante.
-6. Quando (e só quando) o usuário decidir ligar `AGENT_APPLY_ENABLED=true` de verdade: revisitar persistência de `agentPairings` (SQLite/S3) antes — ver CLAUDE.md, checkpoint de pareamento, pendência já registrada lá.
+Pendências (a ordem no `PARITY_AUDIT.md` é sugestão, não decisão — ver seção "DECISÃO PENDENTE" no topo deste arquivo):
+1. **AI Provider Vault — salvar/testar/remover** (`/api/providers/save|delete|test`) — ~1 turno, padrão conhecido (mascarar chave).
+2. **Tools — Aplicar Fix** (`/api/security/apply-fix`) — ~1 turno, mesmo padrão de confirmação dupla já usado 2x (GitHub PR, agent-apply).
+3. **Software Factory — 7 passos restantes** (`project-files`, `generate-zip`, `fetch-url`, `patch-validator`, `context-snapshot`, `risk-assessor`, `rollback-planner`) — ~2 turnos, padrão `SF_STEPS`+`job_id`/polling já existe; ler cada handler real em `server.js` antes de conectar (2 achados de contrato reais nesta linha de trabalho só apareceram por fazer isso com cuidado).
+4. **Auth (registro/login/OAuth)** — ~2-3 turnos, a mais arriscada. Não começar sem alinhamento explícito.
+5. **Deploy dropdown** — bloqueado pela SPEC atual (seção 2, "Arquivos Proibidos"), decisão de escopo do usuário, não item de esforço.
+6. **13 itens candidatos a não migrar** (ver `PARITY_AUDIT.md` seção c) — não excluir nada sem aprovação explícita, mesmo os com evidência forte de serem código morto.
+7. Quando (e só quando) o usuário decidir ligar `AGENT_APPLY_ENABLED=true` de verdade: revisitar persistência de `agentPairings` (SQLite/S3) antes — ver CLAUDE.md, checkpoint de pareamento.
 
 ---
 
@@ -93,5 +96,6 @@ Pendências em ordem sugerida (não é decisão tomada):
 
 1. **[BAIXO] Deploy desatualizado.** Produção em `v31` (frontend), sem nada do backend desta linha de trabalho. Nada foi deployado (nem CF Pages nem EB) em nenhuma sessão até agora — avisar antes de qualquer teste manual em produção.
 2. **[BAIXO] `git push`/`git fetch` exigem `PowerShell` neste ambiente** — `Bash` não tem rede pra hosts externos, localhost funciona normal.
-3. **[BAIXO] CI bot colide com push do agente toda sessão até agora (4x)** — sempre um commit inofensivo em `docs/STRESS-TEST-*`/`docs/CI-LAST-RUN.md`. Rebase resolve sem conflito toda vez; `git stash`/`stash pop` necessário quando as deleções pré-existentes de `test-results/manual-verification-*` (não relacionadas a esta linha de trabalho, presentes desde antes da primeira sessão) bloqueiam o rebase.
+3. **[BAIXO] CI bot colide com push do agente toda sessão até agora (5x)** — sempre um commit inofensivo em `docs/STRESS-TEST-*`/`docs/CI-LAST-RUN.md`. Rebase/fast-forward resolve sem conflito toda vez; `git stash`/`stash pop` necessário quando as deleções pré-existentes de `test-results/manual-verification-*` (não relacionadas a esta linha de trabalho, presentes desde antes da primeira sessão) bloqueiam o rebase.
+4. **[INFO] `docs/PARITY_AUDIT.md` identificou `vision-core-clean-runtime.js` (312KB) como não carregado por nada.** Candidato forte a deleção, mas **não deletado nesta sessão** — a tarefa era diagnóstico puro. Não excluir sem o usuário confirmar depois de ler o relatório.
 4. **[INFO, não é risco] `/api/sf/project-files`, `/api/sf/generate-zip`, `/api/sf/fetch-url` existem no backend mas não têm handler lido/mapeado em detalhe ainda** — próxima sessão que for mexer no roadmap SF deve ler esses três primeiro (mesma disciplina que evitou 2 bugs reais nesta sessão), não assumir o contrato pelo nome.
