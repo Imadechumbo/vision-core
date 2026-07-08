@@ -204,7 +204,39 @@ Esta regra vale para todos os agentes (Codex, Claude Code, OpenCode, GitHub Copi
 
 ---
 
-## 10. Regras Duras (violação = bug garantido, já aconteceu mais de uma vez)
+## 11. FORA DE ESCOPO — decidido em 2026-07-08
+
+Itens que o Next **não vai implementar**, confirmados pelo usuário após auditoria de paridade (`docs/PARITY_AUDIT.md`). Evidências no relatório, linha-a-linha.
+
+### Categoria C — features legadas que não migram
+
+| Item | Motivo |
+|------|--------|
+| SF Console / página SF dedicada (`#vcSoftwareFactoryPage`/`#projectBuilder`) | Já planejada para deleção (Fase 3.3d). Causa tela em branco na aba "Modo Avançado". |
+| Tutorial `STEPS_SF` zumbi + `_sfArchitectSend`/`_sfRenderArchitectResponse`/`_sfSetArchitectMode` | Zero callers, comentado como morto pelos próprios autores do legado. |
+| `vision-core-clean-runtime.js` (312KB) | Fork abandonado — não carregado por nenhuma página oficial. |
+| `vision-core-clean-state.js` (arquivo standalone) | Conteúdo já existe dentro do `bundle.js` (byte-a-byte idêntico). |
+| `v297UniversalChat`/`v297ChatLog`/`v297FileInput` (DOM oculto) | Existem só para JS antigo não quebrar com `null`. |
+| Painel OSINT (SpiderFoot/Recon-ng/Maryam) | Badges estáticos, zero fetch, zero listener. §98-F. |
+| Painel OPENCLAW/OPENSQUAD | Painel estático. §98-F. |
+| `frontend/next.html` + `assets/vision-core-next.css` | Substituído pelo clean. Já excluído do pacote de deploy. |
+| IDs duplicados (`bar-hermes`/`val-*` em 2 painéis; `id="memory"` em 2 lugares) | Bug de markup do legado — Next não replica. |
+| Cadeia de hotfix CSS `v297`→`v298`-hotfixes (4 arquivos) | Dead weight por cascata. |
+| Diagrama "v33 orbit" (`#v33-t-*`, `#mcCore`) | Ancestral visual do Atomic Core — Next implementa do zero. |
+| Billing UI decorativa | Comentada como "Static roadmap display only" no próprio legado. |
+| Vault rollback UI | Legado nunca teve UI para `/api/vault/rollback/:id`. |
+
+### Categoria D — CSS órfão/só-legado
+
+19 arquivos CSS (cadeia de hotfix `v297`–`v298-final-hard-fix2` dentro dos 27 concatenados) não entram no Next. O Next já não depende de nenhum CSS legado (a SPEC proíbe importar `vision-core-bundle.css`). Nenhum trabalho de CSS pendente por causa desta auditoria.
+
+### Bloqueio de segurança — não reabrir sem pareamento real
+
+O pareamento por `agent_secret` (Fase 2b) e o gate `AGENT_APPLY_ENABLED=false` **não** estão na lista de corte — continuam implementados e verificados, mas o gate só será reaberto com (1) pareamento por agente/projeto/owner no backend e (2) aprovação humana registrada em `CURRENT_HANDOFF.md`. `agent_id` sozinho não é autenticação (hash não-secreto, rotas sem middleware de auth).
+
+---
+
+## 12. Regras Duras (violação = bug garantido, já aconteceu mais de uma vez)
 
 1. **Painel condicional que usa `hidden` no HTML nunca pode ter `display: X` puro no CSS — sempre `.classe:not([hidden]) { display: X }`.** CSS de autor com a mesma especificidade do atributo HTML `hidden` vence por ordem de declaração; o painel aparece mesmo escondido. Já corrigido 4x nesta frente (GitHub PR, Mission Patch, SF stage/log/progress/final) — é o bug mais repetido do projeto.
 2. **Nunca `innerHTML`/`insertAdjacentHTML`/`eval`/`document.write` nos arquivos Next.** Toda renderização de conteúdo vindo do backend usa `textContent`/`createTextNode`/`createElement`. Sem exceção, mesmo para HTML aparentemente confiável.
