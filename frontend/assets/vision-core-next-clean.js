@@ -16,19 +16,19 @@
   var activeFeature = 'chat';
 
   var featureMap = {
-    chat: { title: 'Chat', status: 'READY', agents: ['hermes'], text: 'Entrada principal pronta. A pr\u00f3xima etapa \u00e9 conectar o envio ao endpoint de chat sem importar o bundle legado.' },
-    missions: { title: 'Missions', status: 'READY', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Fluxo de miss\u00e3o preparado: diagn\u00f3stico, contexto, patch, seguran\u00e7a e autoriza\u00e7\u00e3o final.' },
-    factory: { title: 'Software Factory', status: 'PLACEHOLDER', agents: ['openclaw', 'pi', 'aegis'], text: 'Placeholder funcional para Auto-Pilot e Modo Avan\u00e7ado. Falta conectar os jobs SF desacoplados nesta nova UI.' },
-    timeline: { title: 'Timeline', status: 'PLACEHOLDER', agents: ['archivist'], text: 'Placeholder funcional para eventos de miss\u00e3o. Falta ler e escrever a timeline real via API nesta tela Next.' },
-    agents: { title: 'Agentes', status: 'READY', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Mapa visual dos agentes pronto. Falta ligar status real individual de cada agente ao HUD.' },
-    github: { title: 'GitHub', status: 'PLACEHOLDER', agents: ['github'], text: 'Placeholder funcional para PR e release. Falta conectar cria\u00e7\u00e3o de PR com repo/base branch no modelo minimalista.' },
-    vault: { title: 'Vault', status: 'PLACEHOLDER', agents: ['aegis', 'archivist'], text: 'Placeholder funcional para snapshot e rollback. Falta acoplar a API de Vault na UI Next.' },
-    metrics: { title: 'M\u00e9tricas', status: 'PLACEHOLDER', agents: ['goCore', 'aegis'], text: 'Placeholder funcional para m\u00e9tricas reais. Falta renderizar os endpoints de m\u00e9tricas no formato minimalista.' },
-    tools: { title: 'Tools', status: 'PLACEHOLDER', agents: ['scanner', 'patchEngine'], text: 'Placeholder funcional para ferramentas, dry-run, anexos e utilit\u00e1rios. Falta conectar comandos reais.' },
-    obsidian: { title: 'Obsidian', status: 'PLACEHOLDER', agents: ['archivist'], text: 'Placeholder funcional para mem\u00f3ria/Obsidian. Falta definir o conector desacoplado da UI legada.' },
-    settings: { title: 'Configura\u00e7\u00e3o de IA', status: 'PLACEHOLDER', agents: ['hermes'], text: 'Placeholder funcional para AI Provider Vault. Falta portar a tela de configura\u00e7\u00e3o sem reutilizar componentes legados.' },
-    attach: { title: 'Anexos', status: 'LOCAL', agents: ['scanner'], text: 'Seletor local de arquivos ativo. Falta enviar os arquivos para a miss\u00e3o real nesta nova camada.' },
-    image: { title: 'Leitura de print/imagem', status: 'LOCAL', agents: ['scanner', 'hermes'], text: 'Seletor local de imagem ativo. Falta conectar OCR/vis\u00e3o ou upload real ao fluxo de miss\u00e3o.' }
+    chat: { title: 'Chat', status: 'READY', agents: ['hermes'], text: 'Chat livre conectado ao endpoint real /api/chat.', actions: [{ label: 'Checar API', path: '/api/health' }] },
+    missions: { title: 'Missions', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Missões reais existem em /api/copilot e /api/run-live, mas execução consome quota e só será ligada com confirmação explícita.', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
+    factory: { title: 'Software Factory', status: 'MAPPED', agents: ['openclaw', 'pi', 'aegis'], text: 'Auto-Pilot e Modo Avançado serão portados sem bundle legado. Jobs SF permanecem bloqueados nesta etapa para evitar custo/API real acidental.', actions: [{ label: 'Planejador', path: '/api/health' }] },
+    timeline: { title: 'Timeline', status: 'SAFE READ', agents: ['archivist'], text: 'Timeline preparada para leitura real de missão.', actions: [{ label: 'Carregar timeline', path: '/api/mission/timeline' }] },
+    agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }] },
+    github: { title: 'GitHub', status: 'SAFE READ', agents: ['github'], text: 'Criação de PR é ação crítica e fica bloqueada até formulário + confirmação. Por enquanto, só status.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
+    vault: { title: 'Vault', status: 'SAFE READ', agents: ['aegis', 'archivist'], text: 'Snapshot e rollback escrevem estado; nesta etapa, somente listagem/consulta.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
+    metrics: { title: 'Métricas', status: 'SAFE READ', agents: ['goCore', 'aegis'], text: 'Métricas reais em modo leitura.', actions: [{ label: 'Resumo', path: '/api/metrics/summary' }, { label: 'Agentes', path: '/api/metrics/agents' }, { label: 'DORA', path: '/api/dora-metrics' }] },
+    tools: { title: 'Tools', status: 'SAFE READ', agents: ['scanner', 'patchEngine'], text: 'Ferramentas perigosas como apply-fix ficam bloqueadas. Primeiro passo: histórico e diagnóstico.', actions: [{ label: 'Histórico security', path: '/api/security/history' }] },
+    obsidian: { title: 'Obsidian', status: 'SAFE READ', agents: ['archivist'], text: 'Consulta de conector/memória sem escrita.', actions: [{ label: 'Status Obsidian', path: '/api/obsidian/status' }] },
+    settings: { title: 'Configuração de IA', status: 'SAFE READ', agents: ['hermes'], text: 'AI Provider Vault será portado com proteção de segredo. Por enquanto, só listagem sem expor chaves.', actions: [{ label: 'Providers', path: '/api/providers/list' }] },
+    attach: { title: 'Anexos', status: 'LOCAL', agents: ['scanner'], text: 'Seletor local ativo. Upload real ainda bloqueado até definir limite, tipo permitido e confirmação.' },
+    image: { title: 'Leitura de print/imagem', status: 'LOCAL', agents: ['scanner', 'hermes'], text: 'Seletor local de imagem ativo. Upload/OCR real ainda bloqueado por segurança.' }
   };
 
   function appendMessage(kind, title, text) {
@@ -68,6 +68,36 @@
     sidebarToggle.addEventListener('click', function () {
       var current = appShell && appShell.getAttribute('data-sidebar-state') === 'collapsed' ? 'collapsed' : 'expanded';
       setSidebarState(current === 'collapsed' ? 'expanded' : 'collapsed');
+    });
+  }
+
+  function renderFeatureActions(feature) {
+    if (!featureActions) return;
+    featureActions.textContent = '';
+    (feature.actions || []).forEach(function (action) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = action.label;
+      button.addEventListener('click', function () { runFeatureAction(action, feature); });
+      featureActions.appendChild(button);
+    });
+  }
+
+  function runFeatureAction(action, feature) {
+    if (!action || !action.path) return;
+    if (action.method && action.method !== 'GET') {
+      appendMessage('error', 'BLOQUEADO', 'Ação crítica bloqueada nesta etapa: ' + action.label);
+      return;
+    }
+    if (window.setAtomicCoreState) window.setAtomicCoreState('action');
+    if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
+    appendMessage('pending', feature.title.toUpperCase(), 'Consultando ' + action.path + '...');
+    apiRequest(action.path).then(function (data) {
+      appendMessage('assistant', action.label.toUpperCase(), summarizeResult(data));
+    }).catch(function (err) {
+      appendMessage('error', action.label.toUpperCase(), err && err.message ? err.message : String(err));
+    }).then(function () {
+      if (window.resetAtomicCore) window.resetAtomicCore();
     });
   }
 
@@ -113,12 +143,8 @@
   if (featureRun) {
     featureRun.addEventListener('click', function () {
       var feature = featureMap[activeFeature] || featureMap.chat;
-      if (window.setAtomicCoreState) window.setAtomicCoreState('action');
-      if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
-      appendMessage('pending', feature.title.toUpperCase(), feature.text);
-      window.setTimeout(function () {
-        if (window.resetAtomicCore) window.resetAtomicCore();
-      }, 2600);
+      var firstAction = feature.actions && feature.actions[0];
+      if (firstAction) runFeatureAction(firstAction, feature);
     });
   }
 
@@ -133,11 +159,36 @@
     resizePrompt();
   }
 
-  var CHAT_BACKEND_URL = 'https://visioncore-api-gateway.weiganlight.workers.dev';
+  var API_BASE_URL = 'https://visioncore-api-gateway.weiganlight.workers.dev';
+  var CHAT_BACKEND_URL = API_BASE_URL;
   var CHAT_TIMEOUT_MS = 45000;
 
   function getChatAuthToken() {
     try { return sessionStorage.getItem('vc_token') || localStorage.getItem('vision_token'); } catch (_) { return null; }
+  }
+
+  function apiRequest(path, options) {
+    var opts = options || {};
+    var headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+    var token = getChatAuthToken();
+    if (token) headers.Authorization = 'Bearer ' + token;
+    return fetch(API_BASE_URL + path, {
+      method: opts.method || 'GET',
+      headers: headers,
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    }).then(function (r) {
+      return r.text().then(function (text) {
+        var data = null;
+        try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { raw: text }; }
+        if (!r.ok) throw new Error((data && (data.error || data.message)) || ('HTTP ' + r.status));
+        return data;
+      });
+    });
+  }
+
+  function summarizeResult(data) {
+    var text = JSON.stringify(data, null, 2);
+    return text.length > 900 ? text.slice(0, 900) + '\n...' : text;
   }
 
   if (composer) {
@@ -239,7 +290,7 @@
   var state = 'idle';
   var highlighted = Object.create(null);
 
-  try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+  try { reduceMotion = new URLSearchParams(window.location.search).get('reduce') === '1'; } catch (_) { reduceMotion = false; }
 
   function toRad(deg) { return deg * Math.PI / 180; }
   function lerp(min, max, t) { return min + (max - min) * t; }
@@ -401,97 +452,48 @@
   root.setAttribute('data-glow', 'on');
   setAtomicCoreState('idle');
   selectFeature('chat', false);
-  if (!reduceMotion) raf = window.requestAnimationFrame(frame);
+  raf = window.requestAnimationFrame(frame);
 })();
 
 (function () {
   'use strict';
 
   var eyes = Array.prototype.slice.call(document.querySelectorAll('.vc-eye-logo')).map(function (logo) {
-    return { logo: logo, eye: logo.querySelector('.vc-eye'), pupil: logo.querySelector('.vc-pupil') };
-  }).filter(function (target) { return target.eye && target.pupil; });
+    return { logo: logo, trigger: logo.closest('.vc-side-brand, .vc-brand-lockup') || logo, eye: logo.querySelector('.vc-eye') };
+  }).filter(function (target) { return target.eye; });
   if (!eyes.length) return;
 
-  // prefers-reduced-motion only disables the ambient scheduler below - hover
-  // blink stays wired regardless, since it's a direct response to user input,
-  // not decorative/idle animation.
-  var reduceMotion = false;
-  try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
-
-  var atomicRoot = document.querySelector('[data-atomic-core]');
-  var BLINK_MS = 300;
-  var DOUBLE_BLINK_CHANCE = 0.2;
-  var DOUBLE_BLINK_GAP_MS = 250;
-  var MIN_DELAY_MS = 4000;
-  var MAX_DELAY_MS = 9000;
-  var HOVER_BLINK_MIN_GAP_MS = 400;
-  var timer = null;
+  var BLINK_MS = 420;
+  var HOVER_BLINK_MIN_GAP_MS = 650;
   var lastHoverBlink = new WeakMap();
 
-  function isIdle() {
-    return !atomicRoot || atomicRoot.getAttribute('data-state') !== 'action';
-  }
-
-  function blinkOnce(targets) {
-    (targets || eyes).forEach(function (target) {
-      target.eye.animate(
-        [
-          { transform: 'scaleY(1)' },
-          { transform: 'scaleY(0.12)', offset: 0.35 },
-          { transform: 'scaleY(0.12)', offset: 0.6 },
-          { transform: 'scaleY(1)' }
-        ],
-        { duration: BLINK_MS, easing: 'ease-in-out' }
-      );
-      target.pupil.animate(
-        [
-          { opacity: 1 },
-          { opacity: 0.2, offset: 0.35 },
-          { opacity: 0.2, offset: 0.6 },
-          { opacity: 1 }
-        ],
-        { duration: BLINK_MS, easing: 'ease-in-out' }
-      );
-    });
-  }
-
-  function scheduleNext() {
-    if (timer) { window.clearTimeout(timer); timer = null; }
-    if (reduceMotion || !isIdle()) return;
-    var delay = MIN_DELAY_MS + Math.random() * (MAX_DELAY_MS - MIN_DELAY_MS);
-    timer = window.setTimeout(function () {
-      timer = null;
-      if (!isIdle()) return;
-      blinkOnce();
-      if (Math.random() < DOUBLE_BLINK_CHANCE) {
-        window.setTimeout(function () {
-          if (isIdle()) blinkOnce();
-        }, DOUBLE_BLINK_GAP_MS);
-      }
-      scheduleNext();
-    }, delay);
-  }
-
-  if (!reduceMotion && atomicRoot && window.MutationObserver) {
-    new MutationObserver(function () {
-      if (isIdle()) {
-        if (!timer) scheduleNext();
-      } else if (timer) {
-        window.clearTimeout(timer);
-        timer = null;
-      }
-    }).observe(atomicRoot, { attributes: true, attributeFilter: ['data-state'] });
+  function blinkOnce(target) {
+    target.eye.classList.remove('is-blinking');
+    void target.eye.offsetWidth;
+    target.eye.classList.add('is-blinking');
+    window.setTimeout(function () { target.eye.classList.remove('is-blinking'); }, BLINK_MS + 40);
   }
 
   eyes.forEach(function (target) {
-    target.logo.addEventListener('mouseenter', function () {
+    var blinkedForHover = false;
+
+    function blinkOnHover() {
       var now = Date.now();
-      var last = lastHoverBlink.get(target.logo) || 0;
-      if (now - last < HOVER_BLINK_MIN_GAP_MS) return;
-      lastHoverBlink.set(target.logo, now);
-      blinkOnce([target]);
+      var last = lastHoverBlink.get(target.trigger) || 0;
+      if (blinkedForHover || now - last < HOVER_BLINK_MIN_GAP_MS) return;
+      blinkedForHover = true;
+      lastHoverBlink.set(target.trigger, now);
+      blinkOnce(target);
+    }
+
+    ['pointerenter', 'mouseenter', 'pointermove'].forEach(function (eventName) {
+      target.trigger.addEventListener(eventName, blinkOnHover);
+    });
+
+    ['pointerleave', 'mouseleave'].forEach(function (eventName) {
+      target.trigger.addEventListener(eventName, function () {
+        blinkedForHover = false;
+      });
     });
   });
-
-  if (!reduceMotion) scheduleNext();
 })();

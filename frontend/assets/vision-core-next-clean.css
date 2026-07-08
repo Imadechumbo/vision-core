@@ -249,6 +249,70 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.65;
 }
 
+
+.vc-feature-panel {
+  display: grid;
+  gap: 10px;
+  max-width: min(760px, 100%);
+  padding: 13px 15px;
+  border: 1px solid rgba(216, 180, 254, .12);
+  border-radius: var(--radius);
+  background: rgba(5, 5, 10, .54);
+}
+
+.vc-feature-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.vc-feature-head span {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid rgba(52, 211, 153, .22);
+  border-radius: 999px;
+  color: #86efac;
+  background: rgba(52, 211, 153, .08);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .1em;
+}
+
+.vc-feature-head strong {
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.vc-feature-panel p {
+  margin: 0;
+  color: #bdb4cf;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.vc-feature-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vc-feature-actions button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(216, 180, 254, .16);
+  border-radius: 999px;
+  color: #efe9ff;
+  background: rgba(18, 14, 28, .72);
+  font-size: 11px;
+  font-weight: 760;
+}
+
+.vc-feature-actions button:hover {
+  border-color: rgba(192, 132, 252, .44);
+}
 .vc-composer-actions {
   display: flex;
   flex-wrap: wrap;
@@ -436,14 +500,6 @@ a { color: inherit; text-decoration: none; }
   .vc-atomic-hud { position: absolute; width: 220px; top: 124px; right: 6px; opacity: .22; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    scroll-behavior: auto !important;
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: .01ms !important;
-  }
-}
 /* Vision Core original eye/orb mark adapted from the production v23-eye logo. */
 .vc-eye-logo {
   flex: 0 0 auto;
@@ -486,6 +542,8 @@ a { color: inherit; text-decoration: none; }
   background: radial-gradient(circle at 35% 30%, #fff 0 9%, #ddd6fe 10% 18%, #a855f7 38%, #5b21b6 72%, #090014 100%);
   box-shadow: 0 0 22px rgba(168, 85, 247, .95);
   transition: transform .25s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .vc-eye-logo-large .vc-pupil {
@@ -505,4 +563,51 @@ a { color: inherit; text-decoration: none; }
 .vc-app-shell[data-sidebar-state="collapsed"] .vc-pupil {
   width: 15px;
   height: 15px;
+}
+
+/* Eye blink: real lid elements, matching the old hover-close behavior. */
+.eye-lid-top,
+.eye-lid-bottom {
+  position: absolute;
+  left: 0;
+  z-index: 4;
+  width: 100%;
+  height: 50%;
+  background: #050507;
+  pointer-events: none;
+  transition: transform .46s cubic-bezier(.22, .61, .36, 1);
+  will-change: transform;
+}
+
+.eye-lid-top {
+  top: 0;
+  transform: translateY(-100%);
+  border-bottom: 1px solid rgba(255, 255, 255, .14);
+}
+
+.eye-lid-bottom {
+  bottom: 0;
+  transform: translateY(100%);
+  border-top: 1px solid rgba(255, 255, 255, .14);
+}
+
+.vc-eye.is-blinking .eye-lid-top,
+.vc-eye-logo:hover .eye-lid-top,
+.vc-side-brand:hover .eye-lid-top,
+.vc-brand-lockup:hover .eye-lid-top {
+  transform: translateY(0);
+}
+
+.vc-eye.is-blinking .eye-lid-bottom,
+.vc-eye-logo:hover .eye-lid-bottom,
+.vc-side-brand:hover .eye-lid-bottom,
+.vc-brand-lockup:hover .eye-lid-bottom {
+  transform: translateY(0);
+}
+
+.vc-eye-logo:hover .vc-eye,
+.vc-side-brand:hover .vc-eye,
+.vc-brand-lockup:hover .vc-eye,
+.vc-eye-logo:focus-visible .vc-eye {
+  box-shadow: 0 0 30px rgba(168, 85, 247, .76), 0 0 92px rgba(124, 58, 237, .32), inset 0 0 16px rgba(255, 255, 255, .08);
 }
