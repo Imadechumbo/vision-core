@@ -394,9 +394,28 @@
     return text.length > 900 ? text.slice(0, 900) + '\n...' : text;
   }
 
+  // parseHermesBlock — extrai JSON estruturado de resposta textual da LLM.
+  // Tolerante: hermesObj null nunca quebra a UI. Retorna {hermesObj, cleanText}.
+  function parseHermesBlock(text) {
+    if (!text) return { hermesObj: null, cleanText: '' };
+    var result = { hermesObj: null, cleanText: String(text) };
+    var fenceMatch = result.cleanText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+    var braceMatch = result.cleanText.match(/\{[\s\S]*?\}/);
+    var jsonStr = fenceMatch ? fenceMatch[1] : (braceMatch ? braceMatch[0] : null);
+    if (jsonStr) {
+      try {
+        result.hermesObj = JSON.parse(jsonStr);
+      } catch (_) {}
+    }
+    return result;
+  }
+
   // Quota/plano (item 16 da Etapa 1a) - badge informativo na sidebar,
   // GET /api/mission/quota, sem auth obrigatória (funciona anônimo tb).
   var quotaBadge = document.getElementById('vcQuotaBadge');
+  var hermesHint = document.getElementById('vcHermesHint');
+  var hintDiagnosis = document.getElementById('vcHintDiagnosis');
+  var hintActions = document.getElementById('vcHintActions');
   function loadQuotaBadge() {
     if (!quotaBadge) return;
     apiRequest('/api/mission/quota').then(function (data) {
@@ -1397,6 +1416,21 @@
         finish();
         if (data && typeof data.answer === 'string' && data.answer) {
           appendMessage('assistant', 'VISION CORE', data.answer);
+          var parsed = parseHermesBlock(data.answer);
+          if (parsed.hermesObj && (parsed.hermesObj.diagnosis || parsed.hermesObj.fix_type || parsed.hermesObj.patch || parsed.hermesObj.decisao)) {
+            if (hermesHint) hermesHint.hidden = false;
+            if (hintDiagnosis) hintDiagnosis.textContent = parsed.hermesObj.diagnosis || parsed.hermesObj.decisao || 'Diagnóstico estrutural disponível.';
+            if (hintActions) {
+              hintActions.textContent = '';
+              var goBtn = document.createElement('button');
+              goBtn.type = 'button';
+              goBtn.textContent = 'Ver detalhes nas Missões';
+              goBtn.addEventListener('click', function () { selectFeature('missions', true); });
+              hintActions.appendChild(goBtn);
+            }
+          } else {
+            if (hermesHint) hermesHint.hidden = true;
+          }
         } else {
           appendMessage('error', 'ERRO', 'Resposta do backend em formato inesperado (sem campo "answer").');
         }

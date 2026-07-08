@@ -41,6 +41,17 @@ Ou seja: pra apagar o legado por completo no futuro, a superfície real a consid
 
 **13 features/grupos já cobertos**, dos quais 2 são capacidades novas que o Next tem e o legado nunca teve.
 
+### (a2) ADICIONADO nesta sessão (2026-07-08, Etapas 1-5)
+
+| Feature | Endpoint(s) | Observação |
+|---|---|---|
+| Badge de conexão do agente (B-4) | `/api/agent/status` | Polling 10s, pausa em hidden. Estados: conectado/desconectado/erro. |
+| AI Provider Vault — salvar/testar/remover (B-5) | `/api/providers/save`, `/api/providers/test`, `/api/providers/delete`, `/api/providers/list` | Settings panel com máscara de chave. |
+| Rollback de snapshot (B-6) | `/api/vault/rollback/:snapshotId` | Painel Vault com lista + confirmação dupla. |
+| Histórico de missões + detalhe (B-2) | `/api/mission/timeline` | Lista, detail view, back button, estados vazio/erro. |
+| Evidence viewer (B-3) | (`evidence_receipt` dos entries da timeline) | Exibe evidência no detail da missão. |
+| parseHermesBlock + hint diagnóstico (B-1/5b-5c) | `/api/chat` | Parse tolerante, hint panel quando hermesObj tem diagnosis/fix_type/patch. |
+
 ---
 
 ### (b) FALTA no Next, tem valor real — endpoint vivo + UI reachable confirmada no legado
@@ -48,12 +59,11 @@ Ou seja: pra apagar o legado por completo no futuro, a superfície real a consid
 | Feature | Endpoint(s) | Evidência de que é real |
 |---|---|---|
 | Auth (registro/login/OAuth Google+GitHub) | `/api/auth/register`, `/api/auth/login`, `/api/auth/oauth/<provider>` | Botões com `addEventListener` real confirmados (`signupBtn`, `authBackdrop` etc.). **Mais sensível de todo o roadmap** — mexe com sessão de qualquer usuário; já registrado no HANDOFF como algo a não começar sem alinhamento explícito. |
-| AI Provider Vault — salvar/testar/remover | `/api/providers/save`, `/api/providers/test`, `/api/providers/delete` | `saveAiProviderBtn.addEventListener`/`testAiProviderBtn.addEventListener` confirmados no bundle. Next só tem `list` (leitura). |
 | Tools — Aplicar Fix (escrita real com backup) | `/api/security/apply-fix` | Confirmado por mim: bundle.js:6987 — comentário `§135: botão "Aplicar Fix"` + `fetch` real na linha seguinte. Escreve em disco — merece o mesmo padrão de confirmação dupla já usado em GitHub PR/agent-apply. |
-| Software Factory — passos restantes | `/api/sf/project-files`, `/api/sf/generate-zip`, `/api/sf/fetch-url`, `/api/sf/patch-validator`, `/api/sf/context-snapshot`, `/api/sf/risk-assessor`, `/api/sf/rollback-planner` | Todos mapeados em `SF_ENDPOINT_MAP` (bundle.js:10121-10128) com botões reais (`vcGenerateExportBtn`, `vcGenerateCommandPkgBtn`, etc.) — pipeline de 7-8 passos no legado, Next só tem 4 hoje. |
+| Software Factory — passos restantes | `/api/sf/project-files`, `/api/sf/generate-zip`, `/api/sf/fetch-url`, `/api/sf/patch-validator`, `/api/sf/context-snapshot`, `/api/sf/risk-assessor`, `/api/sf/rollback-planner` | Todos mapeados em `SF_ENDPOINT_MAP` (bundle.js:10121-10128) com botões reais (`vcGenerateExportBtn`, `vcGenerateCommandPkgBtn`, etc.) — pipeline de 7-8 passos no legado, Next tem 4 hoje. |
 | Deploy dropdown (ZIP/merge-PR/CF Pages/EB/Docker) | `/api/deploy/trigger`, `/api/deploy/merge-pr`, `/api/deploy/pages`, `/api/deploy/eb`, `/api/deploy/zip-release` | Real e reachable no legado (`§50`/`§51`). **Não é uma lacuna a fechar casualmente** — a SPEC do Next proíbe explicitamente scripts de deploy nesta fase (seção 2, "Arquivos Proibidos"). Fica registrado aqui como paridade pendente, mas é uma decisão de escopo do usuário, não um "esqueceram de fazer". |
 
-**5 grupos com trabalho real pendente** (excluindo a nota de escopo do deploy).
+**4 grupos com trabalho real pendente** (excluindo a nota de escopo do deploy). AI Provider Vault save/test/delete, Rollback, Missions History, Evidence viewer, Agent badge e Hermes diagnostic hint foram implementados nesta sessão (migrados para seção a).
 
 **Caso à parte — Vault rollback:** `/api/vault/rollback/:id` existe e funciona no backend, mas **nenhum lugar do frontend legado chama essa rota** — só `snapshot` é chamado, automaticamente, como parte do pipeline de missão. Não é uma lacuna de paridade (o legado também não tem essa UI); seria escopo novo, não restauração de algo que já existiu.
 
@@ -109,11 +119,11 @@ Nenhum arquivo depende de `@import` interno entre CSS (checado — só 2 `@impor
 **Estimativa honesta de turnos pro "falta de verdade" (item b, excluindo as 2 decisões de escopo):**
 
 - **Auth (registro/login/OAuth Google+GitHub):** 2–3 turnos. É o item mais arriscado do roadmap inteiro (mexe com sessão de qualquer usuário, token HMAC caseiro sem refresh) — o próprio HANDOFF já registra isso como "não começar sem alinhamento explícito". Não é um turno normal de feature, é o tipo de trabalho que pede confirmação extra em cada passo.
-- **AI Provider Vault — salvar/testar/remover:** 1 turno. Padrão já conhecido (mascarar chave, nunca expor completa), sem ação destrutiva.
-- **Tools — Aplicar Fix:** 1 turno. Mesmo padrão de confirmação dupla já usado 2x nesta frente (GitHub PR, agent-apply) — reuso de receita conhecida.
-- **Software Factory — 7 passos restantes:** 2 turnos. O padrão `SF_STEPS`/`job_id`+polling já existe e funciona (gold-gate levou menos de um turno inteiro pra ligar); o trabalho real é verificar o contrato de cada endpoint individualmente antes de conectar — 2 achados de contrato reais apareceram nesta sessão só de fazer isso com cuidado, então não vale acelerar.
+- **Tools — Aplicar Fix:** 1 turno. Mesmo padrão de confirmação dupla já usado 3x nesta frente (GitHub PR, agent-apply, vault rollback).
+- **Software Factory — 7 passos restantes:** 2 turnos. O padrão `SF_STEPS`/`job_id`+polling já existe e funciona; o trabalho real é verificar o contrato de cada endpoint individualmente antes de conectar.
+- **AI Provider Vault, Rollback, Missions History, Evidence, Agent Badge, Hermes hint — IMPLEMENTADOS nesta sessão (2026-07-08).**
 
-**Total: ~6–7 turnos** no ritmo e disciplina desta linha de trabalho até agora (fatia pequena, teste mockado + validação de contrato, commit+push por fatia). Deploy dropdown e Vault-rollback/Billing ficam de fora da conta — são decisões do usuário sobre se querem essas capacidades no Next, não itens de esforço a estimar.
+**Total: ~3–5 turnos** no ritmo e disciplina desta linha de trabalho (fatia pequena, teste mockado + validação de contrato, commit+push por fatia). Deploy dropdown e Vault-rollback/Billing ficam de fora da conta — são decisões do usuário sobre se querem essas capacidades no Next, não itens de esforço a estimar.
 
 ---
 
