@@ -14,6 +14,11 @@ rm -rf "$DEPLOY_DIR"
 mkdir -p "$DEPLOY_DIR"
 cp -r frontend/* "$DEPLOY_DIR/"
 rm -rf "$DEPLOY_DIR/downloads"
+# §~207: protótipos/debris que às vezes ficam soltos em frontend/ sem serem
+# parte do Next oficial — nunca devem ir pro pacote publicado.
+rm -f "$DEPLOY_DIR/_test_here.txt" "$DEPLOY_DIR/next.html" "$DEPLOY_DIR/atomic-core.html" \
+      "$DEPLOY_DIR/assets/atomic-core.css" "$DEPLOY_DIR/assets/atomic-core.js" \
+      "$DEPLOY_DIR/assets/vision-core-next.css" "$DEPLOY_DIR/assets/vision-core-next.js"
 echo "   Dir: $(du -sh "$DEPLOY_DIR" | cut -f1)  Files: $(find "$DEPLOY_DIR" -type f | wc -l)"
 
 echo "📤 Enviando para Cloudflare Pages..."
