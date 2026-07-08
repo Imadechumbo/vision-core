@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-41">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-41" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-42">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-42" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -184,6 +184,21 @@
             <div class="vc-vault-snapshots" id="vcVaultSnapshotList" aria-live="polite"></div>
             <div class="vc-vault-actions" id="vcVaultActions"></div>
             <p class="vc-vault-status" id="vcVaultStatus" aria-live="polite"></p>
+          </div>
+
+          <div class="vc-mission-history" id="vcMissionHistory" hidden>
+            <h4>Histórico de Missões</h4>
+            <div class="vc-mh-list" id="vcMissionHistoryList" aria-live="polite"></div>
+            <div class="vc-mh-detail" id="vcMissionDetail" hidden>
+              <h5 id="vcMissionDetailTitle"></h5>
+              <p id="vcMissionDetailMeta"></p>
+              <pre id="vcMissionDetailBody"></pre>
+              <div id="vcMissionDetailEvidence" hidden>
+                <h5>Evidência (Standard Method)</h5>
+                <pre id="vcMissionEvidenceBody"></pre>
+              </div>
+              <button type="button" id="vcMissionDetailBack">Voltar</button>
+            </div>
           </div>
         </section>
         <form class="vc-composer" id="vcComposer">

@@ -53,6 +53,15 @@
   var vaultSnapshotList = document.getElementById('vcVaultSnapshotList');
   var vaultActions = document.getElementById('vcVaultActions');
   var vaultStatus = document.getElementById('vcVaultStatus');
+  var missionHistory = document.getElementById('vcMissionHistory');
+  var missionHistoryList = document.getElementById('vcMissionHistoryList');
+  var missionDetail = document.getElementById('vcMissionDetail');
+  var missionDetailTitle = document.getElementById('vcMissionDetailTitle');
+  var missionDetailMeta = document.getElementById('vcMissionDetailMeta');
+  var missionDetailBody = document.getElementById('vcMissionDetailBody');
+  var missionDetailEvidence = document.getElementById('vcMissionDetailEvidence');
+  var missionEvidenceBody = document.getElementById('vcMissionEvidenceBody');
+  var missionDetailBack = document.getElementById('vcMissionDetailBack');
   var attachmentInput = document.getElementById('vcAttachmentInput');
   var imageInput = document.getElementById('vcImageInput');
   var activeFeature = 'chat';
@@ -158,6 +167,10 @@
     if (missionPatchForm) missionPatchForm.hidden = activeFeature !== 'missions';
     if (agentApplyForm) agentApplyForm.hidden = activeFeature !== 'missions';
     if (dryRunForm) dryRunForm.hidden = activeFeature !== 'missions';
+    if (missionHistory) {
+      missionHistory.hidden = activeFeature !== 'missions';
+      if (activeFeature === 'missions') loadMissionHistory();
+    }
     if (settingsPanel) {
       settingsPanel.hidden = activeFeature !== 'settings';
       if (activeFeature === 'settings') loadSettingsList();
@@ -1123,7 +1136,60 @@
     });
   }
 
-  // Vault — Rollback UI (B-6). Snapshot list + double confirmation.
+  // Mission History (B-2) — list + detail from /api/mission/timeline.
+  function loadMissionHistory() {
+    if (!missionHistoryList) return;
+    if (missionDetail) missionDetail.hidden = true;
+    if (missionHistoryList) missionHistoryList.hidden = false;
+    missionHistoryList.textContent = 'Carregando...';
+    apiRequest('/api/mission/timeline?limit=20').then(function (data) {
+      var entries = data && data.entries;
+      missionHistoryList.textContent = '';
+      if (!entries || !entries.length) {
+        missionHistoryList.textContent = 'Nenhuma missão registrada ainda.';
+        return;
+      }
+      entries.forEach(function (e, i) {
+        var item = document.createElement('div');
+        item.className = 'vc-mh-item';
+        var label = document.createElement('strong');
+        label.textContent = e.title || e.type || 'Missão';
+        var meta = document.createElement('span');
+        meta.textContent = (e.type || '') + (e.status ? ' [' + e.status + ']' : '');
+        item.appendChild(label);
+        item.appendChild(meta);
+        item.addEventListener('click', function () { showMissionDetail(e); });
+        missionHistoryList.appendChild(item);
+      });
+    }).catch(function () {
+      if (missionHistoryList) missionHistoryList.textContent = 'Erro ao carregar missões.';
+    });
+  }
+
+  function showMissionDetail(entry) {
+    if (!missionDetail || !missionHistoryList) return;
+    missionHistoryList.hidden = true;
+    missionDetail.hidden = false;
+    if (missionDetailTitle) missionDetailTitle.textContent = entry.title || entry.type || 'Missão';
+    if (missionDetailMeta) missionDetailMeta.textContent = (entry.type || '') + ' · ' + (entry.status || '') + (entry.steps_completed ? ' · ' + entry.steps_completed + ' passos' : '');
+    var bodyText = entry.summary || entry.input || entry.description || '';
+    if (missionDetailBody) missionDetailBody.textContent = bodyText;
+    if (missionEvidenceBody) missionEvidenceBody.textContent = '';
+    if (missionDetailEvidence) missionDetailEvidence.hidden = true;
+    // Extrai evidence_receipt se presente na entrada
+    if (entry.evidence_receipt || entry.evidence) {
+      var ev = entry.evidence_receipt || entry.evidence;
+      if (missionEvidenceBody) missionEvidenceBody.textContent = typeof ev === 'string' ? ev : JSON.stringify(ev, null, 2);
+      if (missionDetailEvidence) missionDetailEvidence.hidden = false;
+    }
+  }
+
+  if (missionDetailBack) {
+    missionDetailBack.addEventListener('click', function () {
+      if (missionDetail) missionDetail.hidden = true;
+      if (missionHistoryList) missionHistoryList.hidden = false;
+    });
+  }
   var vaultRollbackPending = null;
 
   function loadVaultSnapshots() {
