@@ -176,6 +176,22 @@ Arquivos oficiais da frente Next (não mexer em nada fora disso sem aprovação 
 
 Arquivos públicos a atualizar somente depois de validação local correspondente: `frontend/about.html`, `frontend/landing.html`.
 
+### SPEC OFICIAL — Vision Core Next Frontend
+
+A especificação completa do novo front paralelo está em `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`.
+
+**Regra:** antes de qualquer edição nos arquivos Next, leia a SPEC e este CLAUDE.md.
+
+**Arquivos do Next:**
+- `frontend/vision-core-next.html` — entrada
+- `frontend/assets/vision-core-next-clean.css` — CSS
+- `frontend/assets/vision-core-next-clean.js` — JS
+- `frontend/atomic-core.html` — protótipo Atomic Core
+- `frontend/assets/atomic-core.css`
+- `frontend/assets/atomic-core.js`
+
+**Não tocar:** `frontend/index.html`, `vision-core-bundle.*`, backend, worker gateway, endpoints destrutivos.
+
 Regras absolutas desta fase:
 1. Não fazer deploy sem aprovação manual explícita.
 2. Não fazer commit que misture escopos — commits isolados por mudança coesa e revertível.
@@ -336,7 +352,38 @@ d09cd7b5  feat   Executar Missao Caminho B / sf_dry_run_real (Etapa 1d Fase 2a)
 (novo)    fix    retoma Fase 2b do Codex: fecha gate AGENT_APPLY_ENABLED, corrige refreshAgentApplyStatus morto
 ```
 
-**Cache-bust atual:** `?v=next-clean-31` (`frontend/vision-core-next.html`, CSS e JS na mesma versão — sempre incrementar os 2 juntos).
+**Cache-bust atual:** ?v=next-clean-36 (frontend/vision-core-next.html, CSS e JS na mesma versao -- sempre incrementar os 2 juntos).
+
+### CHECKPOINT DE CONTINUIDADE -- OpenCode -> Codex, Software Factory Next v33 (2026-07-08)
+
+OpenCode iniciou a proxima fatia do front paralelo em frontend/vision-core-next.html + frontend/assets/vision-core-next-clean.js/css: a sidebar Software Factory agora abre uma secao propria #factory, escondendo o chat, com composer e Auto-Pilot inicial em 5 passos (mission-composer, deploy-blueprint, project_templates, mission_composer, worker_handoff). O cache-bust foi para next-clean-33.
+
+Codex retomou do ponto interrompido e fechou a validacao local sem rede real: node --check frontend/assets/vision-core-next-clean.js, node --check tests/e2e/vision-core-next-agent-apply.spec.mjs, node --check tests/e2e/vision-core-next-sf.spec.mjs, e npx playwright test tests/e2e/vision-core-next-agent-apply.spec.mjs tests/e2e/vision-core-next-sf.spec.mjs => 6/6 PASS.
+
+Bug real corrigido na retomada: .vc-sf-stage { display:grid } fazia o atributo HTML hidden perder efeito. Fix aplicado em frontend/assets/vision-core-next-clean.css: .vc-sf-stage:not([hidden]) { ... }. Regra reforcada: qualquer painel condicional novo no Next deve usar seletor :not([hidden]) quando o CSS define display.
+
+Governanca mantida: AGENT_APPLY_ENABLED=false continua fechado. Apply real via Vision Agent Local segue bloqueado ate existir pareamento/autorizacao real por agente/projeto/owner; agent_id sozinho nao autentica ninguem. Nenhum backend, legado, deploy script ou pagina publica foi tocado nesta retomada. Nenhum deploy feito: a SPEC atual exige aprovacao manual explicita para publicar.
+
+### CHECKPOINT DE CONTINUIDADE -- Software Factory Next v34 (2026-07-08)
+
+Codex continuou a fatia do SF Next adicionando Modo Avancado minimo e seguro no painel #factory: botoes Auto-Pilot/Modo Avancado, provider, modelo, Dry-run e PASS GOLD. A mudanca nao cria endpoint, nao toca backend e nao habilita execucao real. Cada etapa SF envia sf_options com mode/provider/model/dry_run/pass_gold e flags explicitas real_execution_allowed=false, deploy_allowed=false, writes_disk=false.
+
+Validacao local sem rede real: node --check frontend/assets/vision-core-next-clean.js; node --check tests/e2e/vision-core-next-sf.spec.mjs; grep estatico sem innerHTML/insertAdjacentHTML/eval, sem cache-bust antigo e sem gates reabertos; npx playwright test tests/e2e/vision-core-next-agent-apply.spec.mjs tests/e2e/vision-core-next-sf.spec.mjs => 7/7 PASS. Novo teste cobre Modo Avancado com endpoints mockados e confirma que as flags de escrita/deploy/execucao real seguem falsas.
+
+### CHECKPOINT DE CONTINUIDADE -- Software Factory Next v35 (2026-07-08)
+
+Codex adicionou log/status compacto do SF Next: #vcSfLog inicia hidden, aparece somente durante geracao e registra SAFE real_execution_allowed=false deploy_allowed=false writes_disk=false, modo/provider/modelo, endpoint+module por etapa, DONE/FAIL por modulo. Tudo renderizado com textContent/createElement, sem HTML dinamico.
+
+Bug real encontrado pelo E2E: .vc-sf-log { display:grid } e .vc-sf-progress { display:flex } sobrescreviam o atributo hidden, a mesma classe de problema ja vista em paineis condicionais. Fix aplicado com .vc-sf-log:not([hidden]) e .vc-sf-progress:not([hidden]). Regra reforcada: qualquer componente condicional novo que declare display no CSS deve usar :not([hidden]).
+
+Validacao local sem rede real: node --check frontend/assets/vision-core-next-clean.js; node --check tests/e2e/vision-core-next-sf.spec.mjs; grep estatico sem innerHTML/insertAdjacentHTML/eval, sem !important, sem cache-bust antigo e sem gates reabertos; npx playwright test tests/e2e/vision-core-next-agent-apply.spec.mjs tests/e2e/vision-core-next-sf.spec.mjs => 7/7 PASS.
+### CHECKPOINT DE CONTINUIDADE -- Software Factory Next v36 (2026-07-08)
+
+Codex fechou a fatia de preview final do SF Next: #vcSfFinal nasce hidden, aparece somente ao fim do Auto-Pilot/Modo Avancado, e mostra o contexto final consolidado em <pre> usando apenas textContent. Nao ha download, clipboard, escrita em disco, endpoint novo, deploy automatico ou chamada real extra; permanece somente a leitura do resultado mockado/retornado pelos endpoints SF ja chamados.
+
+Seguranca/governanca mantida: sf_options continua enviando real_execution_allowed=false, deploy_allowed=false e writes_disk=false; AGENT_APPLY_ENABLED segue fail-closed. CSS do painel usa .vc-sf-final:not([hidden]) para nao repetir o bug de hidden sobrescrito por display.
+
+Validacao local sem rede real: node --check frontend/assets/vision-core-next-clean.js; node --check tests/e2e/vision-core-next-sf.spec.mjs; grep estatico sem innerHTML/insertAdjacentHTML/eval, sem !important, sem cache-bust antigo e sem gates reabertos; npx playwright test tests/e2e/vision-core-next-agent-apply.spec.mjs tests/e2e/vision-core-next-sf.spec.mjs => 7/7 PASS. O teste novo confirma #vcSfFinal hidden no inicio e visivel com conteudo final apos Auto-Pilot e Modo Avancado.
 
 **Confirmação importante, vale para a sessão inteira (incluindo a sessão de 2026-07-08):** até a Fase 2a, as validações automatizadas foram **100% mockadas via `page.route()` do Playwright**. Em nenhum momento houve chamada real a GitHub (criação de PR), a um provider de LLM real (Anthropic/OpenRouter/etc.), ou ao Vision Agent Local dentro desses testes automatizados — o fluxo `sf_dry_run_real` só foi validado contra infraestrutura real depois, numa corrida manual explicitamente aprovada, descrita logo abaixo. A Fase 2b `v30` está fail-closed por governança: Playwright 3/3 PASS confirma que nem JSON válido + frase exata disparam POST enquanto o backend seguir com fila global sem binding por agente.
 

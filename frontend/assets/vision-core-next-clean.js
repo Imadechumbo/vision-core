@@ -45,7 +45,7 @@
   var featureMap = {
     chat: { title: 'Chat', status: 'READY', agents: ['hermes'], text: 'Chat livre conectado ao endpoint real /api/chat.', actions: [{ label: 'Checar API', path: '/api/health' }] },
     missions: { title: 'Missions', status: 'PATCH + DRY-RUN + APPLY BLOQUEADO', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Gerar Patch roda o pipeline real de diagnóstico + apply-patch, sem escrever nada sozinho — só gera diff para download. Dry-Run Real (abaixo) enfileira execução real no Vision Agent Local, em modo simulação (nunca escreve no disco). Apply-patch real via agente aparece abaixo, mas o botão fica bloqueado até existir token de pareamento real por agente (agent_id sozinho não autentica ninguém).', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
-    factory: { title: 'Software Factory', status: 'MAPPED', agents: ['openclaw', 'pi', 'aegis'], text: 'Auto-Pilot e Modo Avançado serão portados sem bundle legado. Jobs SF permanecem bloqueados nesta etapa para evitar custo/API real acidental.', actions: [{ label: 'Planejador', path: '/api/health' }] },
+    factory: { title: 'Software Factory', status: 'ATIVO', agents: ['openclaw', 'pi', 'hermes'], text: 'Descreva o projeto em linguagem simples. O Arquiteto analisa e gera a estrutura automaticamente via API real.', actions: [] },
     timeline: { title: 'Timeline', status: 'SAFE READ', agents: ['archivist'], text: 'Timeline preparada para leitura real de missão.', actions: [{ label: 'Carregar timeline', path: '/api/mission/timeline' }] },
     agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }, { label: 'Métricas agentes', path: '/api/metrics/agents' }] },
     github: { title: 'GitHub', status: 'PR c/ CONFIRMAÇÃO', agents: ['github'], text: 'Criação de PR real disponível abaixo — exige formulário completo + confirmação dupla antes de disparar.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
@@ -148,6 +148,15 @@
     } else {
       resetAgentApplyConfirm();
       resetDryRunConfirm();
+    }
+    var chatStage = document.querySelector('.vc-chat-stage');
+    var sfSection = document.getElementById('factory');
+    if (activeFeature === 'factory') {
+      if (chatStage) chatStage.style.display = 'none';
+      if (sfSection) sfSection.hidden = false;
+    } else {
+      if (chatStage) chatStage.style.display = '';
+      if (sfSection) sfSection.hidden = true;
     }
     if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
     if (announce) appendMessage('pending', feature.title.toUpperCase(), feature.text);
@@ -1241,6 +1250,243 @@
   setAtomicCoreState('idle');
   selectFeature('chat', false);
   if (!reduceMotion) raf = window.requestAnimationFrame(frame);
+
+  // ── Software Factory (Next) ───────────────────────────────────
+  var sfHistory = document.getElementById('vcSfHistory');
+  var sfProgress = document.getElementById('vcSfProgress');
+  var sfLog = document.getElementById('vcSfLog');
+  var sfFinal = document.getElementById('vcSfFinal');
+  var sfFinalBody = document.getElementById('vcSfFinalBody');
+  var sfComposer = document.getElementById('vcSfComposer');
+  var sfInput = document.getElementById('vcSfInput');
+  var sfModeButtons = Array.prototype.slice.call(document.querySelectorAll('[data-sf-mode]'));
+  var sfProvider = document.getElementById('vcSfProvider');
+  var sfModel = document.getElementById('vcSfModel');
+  var sfDryRun = document.getElementById('vcSfDryRun');
+  var sfPassGold = document.getElementById('vcSfPassGold');
+  var sfMode = 'auto';
+  var sfPollTimer = null;
+  var sfInFlight = false;
+  var sfFullContext = '';
+  var sfRunOptions = null;
+
+  var SF_STEPS = [
+    { label: '01 — Analisar projeto e sugerir stack',      module: 'project_builder',   endpoint: '/api/sf/mission-composer' },
+    { label: '02 — Preview de arquivos a criar',           module: 'export_preview',    endpoint: '/api/sf/deploy-blueprint' },
+    { label: '03 — Selecionar template',                   module: 'project_templates', endpoint: '/api/sf/mission-composer' },
+    { label: '04 — Compor missão SDDF',                    module: 'mission_composer',  endpoint: '/api/sf/mission-composer' },
+    { label: '05 — Gerar pacote para worker',              module: 'worker_handoff',    endpoint: '/api/sf/worker-handoff' }
+  ];
+
+  function sfExtractReadable(data) {
+    if (!data) return '';
+    if (typeof data === 'string') return data;
+    if (data.content) return data.content;
+    if (data.answer) return data.answer;
+    if (data.output) return data.output;
+    if (data.files) {
+      if (Array.isArray(data.files)) return data.files.map(function (f) { return f.path || f.name || f; }).join('\n');
+      return JSON.stringify(data.files, null, 2);
+    }
+    if (data.result && typeof data.result === 'object') return sfExtractReadable(data.result);
+    if (data.plan && data.plan.mission_summary) return data.plan.mission_summary;
+    return JSON.stringify(data, null, 2);
+  }
+
+  function appendSfMsg(role, text) {
+    if (!sfHistory) return null;
+    var item = document.createElement('div');
+    var label = document.createElement('span');
+    var body = document.createElement('p');
+    item.className = 'vc-sf-msg vc-sf-msg-' + role;
+    if (role === 'user') label.textContent = 'VOCE';
+    else if (role === 'error') label.textContent = 'ERRO';
+    else label.textContent = 'ARQUITETO';
+    body.textContent = text;
+    item.appendChild(label);
+    item.appendChild(body);
+    sfHistory.appendChild(item);
+    item.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    return item;
+  }
+
+  function appendSfLog(status, text) {
+    if (!sfLog) return;
+    sfLog.hidden = false;
+    var row = document.createElement('div');
+    row.className = 'vc-sf-log-row vc-sf-log-' + (status || 'info');
+    row.textContent = text;
+    sfLog.appendChild(row);
+    sfLog.scrollTop = sfLog.scrollHeight;
+  }
+
+  function updateSfProgress(idx, status) {
+    if (!sfProgress) return;
+    sfProgress.hidden = false;
+    var steps = sfProgress.querySelectorAll('.vc-sf-progress-step');
+    if (steps.length !== SF_STEPS.length) {
+      sfProgress.textContent = '';
+      SF_STEPS.forEach(function (s, i) {
+        var div = document.createElement('div');
+        div.className = 'vc-sf-progress-step';
+        div.textContent = '\u25CB ' + s.label;
+        sfProgress.appendChild(div);
+      });
+      steps = sfProgress.querySelectorAll('.vc-sf-progress-step');
+    }
+    steps.forEach(function (el, i) {
+      el.className = 'vc-sf-progress-step';
+      if (i < idx) { el.classList.add('vc-sf-progress-done'); el.textContent = '\u2713 ' + SF_STEPS[i].label; }
+      else if (i === idx) { el.classList.add(status === 'error' ? 'vc-sf-progress-error' : 'vc-sf-progress-active'); el.textContent = (status === 'error' ? '\u2717 ' : '\u25CF ') + SF_STEPS[i].label; }
+    });
+  }
+
+  function pollSfJob(jobId, cb) {
+    var pollCount = 0;
+    function poll() {
+      if (pollCount >= 90) { cb(new Error('Timeout 90s')); return; }
+      pollCount++;
+      apiRequest('/api/sf/job/' + encodeURIComponent(jobId)).then(function (data) {
+        if (data.status === 'done' || data.status === 'completed') cb(null, data.result || data);
+        else if (data.status === 'error') cb(new Error(data.error || 'Job error'));
+        else sfPollTimer = window.setTimeout(poll, 2000);
+      }).catch(function () { sfPollTimer = window.setTimeout(poll, 2000); });
+    }
+    poll();
+  }
+
+  function stopSfPoll() {
+    if (sfPollTimer) { window.clearTimeout(sfPollTimer); sfPollTimer = null; }
+  }
+
+  function setSfMode(mode) {
+    sfMode = mode === 'advanced' ? 'advanced' : 'auto';
+    sfModeButtons.forEach(function (btn) {
+      btn.setAttribute('aria-pressed', btn.getAttribute('data-sf-mode') === sfMode ? 'true' : 'false');
+    });
+  }
+
+  function readSfOptions() {
+    return {
+      mode: sfMode,
+      provider: sfProvider && sfProvider.value ? sfProvider.value : 'auto',
+      model: sfModel && sfModel.value ? sfModel.value.trim() : '',
+      dry_run: !sfDryRun || sfDryRun.checked,
+      pass_gold: !sfPassGold || sfPassGold.checked,
+      real_execution_allowed: false,
+      deploy_allowed: false,
+      writes_disk: false
+    };
+  }
+
+  function renderSfFinal() {
+    if (!sfFinal || !sfFinalBody) return;
+    sfFinalBody.textContent = sfFullContext.trim();
+    sfFinal.hidden = false;
+  }
+
+  function runSfAutoPilot(desc) {
+    if (sfInFlight) return;
+    sfInFlight = true;
+    sfFullContext = desc;
+    sfRunOptions = readSfOptions();
+    if (sfLog) { sfLog.textContent = ''; sfLog.hidden = false; }
+    if (sfFinal) sfFinal.hidden = true;
+    if (sfFinalBody) sfFinalBody.textContent = '';
+    appendSfLog('warn', 'SAFE real_execution_allowed=false deploy_allowed=false writes_disk=false');
+    appendSfLog('info', 'MODE ' + sfRunOptions.mode + ' provider=' + sfRunOptions.provider + ' model=' + (sfRunOptions.model || 'auto'));
+    if (sfInput) sfInput.disabled = true;
+    var submitBtn = sfComposer && sfComposer.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
+    appendSfMsg('user', desc);
+    updateSfProgress(0, 'active');
+
+    if (window.setAtomicCoreState) window.setAtomicCoreState('action');
+    if (window.startAtomicSequence) window.startAtomicSequence();
+
+    var idx = 0;
+    function nextStep() {
+      if (idx >= SF_STEPS.length) {
+        appendSfMsg('assistant', 'Projeto concluído!');
+        renderSfFinal();
+        finishSf();
+        return;
+      }
+      updateSfProgress(idx, 'active');
+      var step = SF_STEPS[idx];
+      var body = { description: desc, module: step.module, autopilot: true, step: idx, total_steps: SF_STEPS.length, sf_options: sfRunOptions || readSfOptions() };
+      appendSfLog('info', 'SEND ' + step.endpoint + ' module=' + step.module);
+      if (sfFullContext && idx > 0) body.full_context = sfFullContext.slice(0, 3000);
+      apiRequest(step.endpoint, { method: 'POST', body: body }).then(function (data) {
+        if (data && data.job_id) {
+          pollSfJob(data.job_id, function (err, result) {
+            if (err) {
+              updateSfProgress(idx, 'error');
+              appendSfLog('error', 'FAIL ' + step.module + ': ' + err.message);
+              appendSfMsg('error', step.label + ' falhou: ' + err.message);
+              finishSf();
+            } else {
+              updateSfProgress(idx, 'done');
+              appendSfLog('ok', 'DONE ' + step.module);
+              var text = sfExtractReadable(result);
+              if (text) {
+                sfFullContext += '\n\n[' + step.label + ']\n' + text.slice(0, 1500);
+                appendSfMsg('assistant', step.label + '\n\n' + text.slice(0, 2000));
+              }
+              idx++;
+              nextStep();
+            }
+          });
+        } else {
+          updateSfProgress(idx, 'done');
+          appendSfLog('ok', 'DONE ' + step.module);
+          var text = sfExtractReadable(data);
+          if (text) {
+            sfFullContext += '\n\n[' + step.label + ']\n' + text.slice(0, 1500);
+            appendSfMsg('assistant', step.label + '\n\n' + text.slice(0, 2000));
+          }
+          idx++;
+          nextStep();
+        }
+      }).catch(function (err) {
+        updateSfProgress(idx, 'error');
+        appendSfLog('error', 'FAIL ' + step.module + ': ' + (err && err.message ? err.message : String(err)));
+        appendSfMsg('error', step.label + ' falhou: ' + (err && err.message ? err.message : String(err)));
+        finishSf();
+      });
+    }
+    nextStep();
+  }
+
+  function finishSf() {
+    sfInFlight = false;
+    stopSfPoll();
+    sfRunOptions = null;
+    if (sfInput) sfInput.disabled = false;
+    var submitBtn = sfComposer && sfComposer.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = false;
+    if (window.resetAtomicCore) window.resetAtomicCore();
+  }
+
+  sfModeButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () { setSfMode(btn.getAttribute('data-sf-mode')); });
+  });
+
+  if (sfComposer) {
+    sfComposer.addEventListener('submit', function (event) {
+      event.preventDefault();
+      var text = sfInput ? sfInput.value.trim() : '';
+      if (!text || sfInFlight) return;
+      sfInput.value = '';
+      runSfAutoPilot(text);
+    });
+    if (sfInput) {
+      sfInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sfComposer.requestSubmit(); }
+      });
+    }
+  }
 })();
 
 (function () {
