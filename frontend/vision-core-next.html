@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-39">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-39" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-40">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-40" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -142,6 +142,40 @@
             </label>
             <div class="vc-dry-run-actions" id="vcDryRunActions"></div>
             <p class="vc-dry-run-status" id="vcDryRunStatus" aria-live="polite"></p>
+          </div>
+
+          <div class="vc-settings" id="vcSettingsPanel" hidden>
+            <h4>AI Provider Vault</h4>
+            <div class="vc-settings-form">
+              <label>Provider
+                <select id="vcSettingsProvider">
+                  <option value="openrouter">OpenRouter</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="groq">Groq</option>
+                  <option value="deepseek">DeepSeek</option>
+                  <option value="gemini">Gemini</option>
+                </select>
+              </label>
+              <label>API Key
+                <input type="password" id="vcSettingsApiKey" placeholder="sk-..." autocomplete="off">
+              </label>
+              <label>Modelo (opcional)
+                <input type="text" id="vcSettingsModel" placeholder="auto">
+              </label>
+              <label>Base URL (opcional)
+                <input type="text" id="vcSettingsBaseUrl" placeholder="https://...">
+              </label>
+              <div class="vc-settings-field-actions">
+                <button type="button" id="vcSettingsSaveBtn">Salvar</button>
+                <button type="button" id="vcSettingsTestBtn" hidden>Testar</button>
+                <button type="button" id="vcSettingsDeleteBtn" hidden>Excluir</button>
+              </div>
+              <p class="vc-settings-status" id="vcSettingsStatus" aria-live="polite"></p>
+            </div>
+            <div class="vc-settings-list">
+              <h5>Provedores Salvos</h5>
+              <div id="vcSettingsList" aria-live="polite"></div>
+            </div>
           </div>
         </section>
         <form class="vc-composer" id="vcComposer">

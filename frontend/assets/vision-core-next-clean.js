@@ -39,6 +39,16 @@
   var agentApplyConfirmInput = document.getElementById('vcAgentApplyConfirm');
   var agentApplyActionsEl = document.getElementById('vcAgentApplyActions');
   var agentApplyStatusEl = document.getElementById('vcAgentApplyStatus');
+  var settingsPanel = document.getElementById('vcSettingsPanel');
+  var settingsProvider = document.getElementById('vcSettingsProvider');
+  var settingsApiKey = document.getElementById('vcSettingsApiKey');
+  var settingsModel = document.getElementById('vcSettingsModel');
+  var settingsBaseUrl = document.getElementById('vcSettingsBaseUrl');
+  var settingsSaveBtn = document.getElementById('vcSettingsSaveBtn');
+  var settingsTestBtn = document.getElementById('vcSettingsTestBtn');
+  var settingsDeleteBtn = document.getElementById('vcSettingsDeleteBtn');
+  var settingsStatus = document.getElementById('vcSettingsStatus');
+  var settingsList = document.getElementById('vcSettingsList');
   var attachmentInput = document.getElementById('vcAttachmentInput');
   var imageInput = document.getElementById('vcImageInput');
   var activeFeature = 'chat';
@@ -54,7 +64,7 @@
     metrics: { title: 'Métricas', status: 'SAFE READ', agents: ['goCore', 'aegis'], text: 'Métricas reais em modo leitura.', actions: [{ label: 'Resumo', path: '/api/metrics/summary' }, { label: 'Agentes', path: '/api/metrics/agents' }, { label: 'DORA', path: '/api/dora-metrics' }, { label: 'Memória', path: '/api/metrics/memory' }] },
     tools: { title: 'Tools', status: 'SAFE READ', agents: ['scanner', 'patchEngine'], text: 'Ferramentas perigosas como apply-fix ficam bloqueadas. Primeiro passo: histórico e diagnóstico.', actions: [{ label: 'Histórico security', path: '/api/security/history' }, { label: 'Marketplace', path: '/api/tools/marketplace' }] },
     obsidian: { title: 'Obsidian', status: 'SAFE READ', agents: ['archivist'], text: 'Consulta de conector/memória sem escrita.', actions: [{ label: 'Status Obsidian', path: '/api/obsidian/status' }] },
-    settings: { title: 'Configuração de IA', status: 'SAFE READ', agents: ['hermes'], text: 'AI Provider Vault será portado com proteção de segredo. Por enquanto, só listagem sem expor chaves.', actions: [{ label: 'Providers', path: '/api/providers/list' }] },
+    settings: { title: 'Configuração de IA', status: 'VAULT ATIVO', agents: ['hermes'], text: 'AI Provider Vault — salve, teste e remova chaves de API. A chave nunca é exibida por completo.', actions: [] },
     attach: { title: 'Anexos', status: 'LOCAL', agents: ['scanner'], text: 'Seletor local ativo. Upload real ainda bloqueado até definir limite, tipo permitido e confirmação.' },
     image: { title: 'Leitura de print/imagem', status: 'LOCAL', agents: ['scanner', 'hermes'], text: 'Seletor local de imagem ativo. Upload/OCR real ainda bloqueado por segurança.' }
   };
@@ -144,6 +154,10 @@
     if (missionPatchForm) missionPatchForm.hidden = activeFeature !== 'missions';
     if (agentApplyForm) agentApplyForm.hidden = activeFeature !== 'missions';
     if (dryRunForm) dryRunForm.hidden = activeFeature !== 'missions';
+    if (settingsPanel) {
+      settingsPanel.hidden = activeFeature !== 'settings';
+      if (activeFeature === 'settings') loadSettingsList();
+    }
     if (activeFeature === 'missions') {
       refreshAgentApplyStatus();
     } else {
@@ -955,6 +969,151 @@
     });
   }
   renderDryRunActions();
+
+  // Settings — AI Provider Vault (salvar, testar, remover).
+  var settingsSelectedProvider = null;
+
+  function loadSettingsList() {
+    if (!settingsList) return;
+    apiRequest('/api/providers/list').then(function (data) {
+      var providers = data && data.providers;
+      settingsList.textContent = '';
+      if (!providers || !providers.length) {
+        settingsList.textContent = 'Nenhum provedor salvo ainda.';
+        return;
+      }
+      providers.forEach(function (p) {
+        var item = document.createElement('div');
+        item.className = 'vc-settings-item';
+        var name = document.createElement('strong');
+        name.textContent = p.provider;
+        var detail = document.createElement('span');
+        detail.textContent = p.api_key_masked ? p.api_key_masked : 'sem chave';
+        var badge = document.createElement('span');
+        badge.className = 'vc-settings-badge';
+        badge.textContent = p.status || 'untested';
+        var actRow = document.createElement('div');
+        actRow.className = 'vc-settings-item-actions';
+        var testBtn = document.createElement('button');
+        testBtn.type = 'button';
+        testBtn.textContent = 'Testar';
+        testBtn.addEventListener('click', function () { testProvider(p.provider, item); });
+        var loadBtn = document.createElement('button');
+        loadBtn.type = 'button';
+        loadBtn.textContent = 'Editar';
+        loadBtn.addEventListener('click', function () { loadProviderForm(p.provider); });
+        var delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.textContent = 'Excluir';
+        delBtn.addEventListener('click', function () { deleteProvider(p.provider); });
+        actRow.appendChild(testBtn);
+        actRow.appendChild(loadBtn);
+        actRow.appendChild(delBtn);
+        item.appendChild(name);
+        item.appendChild(document.createTextNode(' '));
+        item.appendChild(detail);
+        item.appendChild(badge);
+        item.appendChild(actRow);
+        settingsList.appendChild(item);
+      });
+    }).catch(function () {
+      if (settingsList) settingsList.textContent = 'Erro ao carregar lista de provedores.';
+    });
+  }
+
+  function loadProviderForm(provider) {
+    if (settingsProvider) settingsProvider.value = provider;
+    if (settingsApiKey) settingsApiKey.value = '';
+    if (settingsModel) settingsModel.value = '';
+    if (settingsBaseUrl) settingsBaseUrl.value = '';
+    settingsSelectedProvider = provider;
+    updateSettingsButtons(provider);
+    if (settingsStatus) settingsStatus.textContent = 'Editando ' + provider + ' — deixe a chave em branco para manter a existente.';
+  }
+
+  function updateSettingsButtons(provider) {
+    if (!settingsTestBtn || !settingsDeleteBtn) return;
+    settingsTestBtn.hidden = !provider;
+    settingsDeleteBtn.hidden = !provider;
+  }
+
+  function showSettingsStatus(msg, isError) {
+    if (settingsStatus) {
+      settingsStatus.textContent = msg;
+      settingsStatus.style.color = isError ? '#f87171' : '';
+    }
+  }
+
+  function saveProvider() {
+    var provider = settingsProvider ? settingsProvider.value.trim() : '';
+    if (!provider) { showSettingsStatus('Selecione um provider.', true); return; }
+    var apiKey = settingsApiKey ? settingsApiKey.value : '';
+    var model = settingsModel ? settingsModel.value.trim() : '';
+    var baseUrl = settingsBaseUrl ? settingsBaseUrl.value.trim() : '';
+    showSettingsStatus('Salvando...', false);
+    if (settingsSaveBtn) settingsSaveBtn.disabled = true;
+    apiRequest('/api/providers/save', {
+      method: 'POST',
+      body: { provider: provider, api_key: apiKey, model: model || undefined, base_url: baseUrl || undefined }
+    }).then(function (data) {
+      showSettingsStatus('Provedor salvo. Chave: ' + (data.api_key_masked || 'mantida'), false);
+      if (settingsApiKey) settingsApiKey.value = '';
+      settingsSelectedProvider = provider;
+      updateSettingsButtons(provider);
+      loadSettingsList();
+    }).catch(function (err) {
+      showSettingsStatus('Erro ao salvar: ' + (err && err.message ? err.message : String(err)), true);
+    }).then(function () {
+      if (settingsSaveBtn) settingsSaveBtn.disabled = false;
+    });
+  }
+
+  function testProvider(provider, itemEl) {
+    showSettingsStatus('Testando ' + provider + '...', false);
+    if (itemEl) {
+      var oldBadge = itemEl.querySelector('.vc-settings-badge');
+      if (oldBadge) oldBadge.textContent = 'testando...';
+    }
+    apiRequest('/api/providers/test', {
+      method: 'POST',
+      body: { provider: provider }
+    }).then(function (data) {
+      var msg = data.connected ? 'Conectado' : 'Falhou: ' + (data.status || 'desconhecido');
+      showSettingsStatus(provider + ': ' + msg, !data.connected);
+      loadSettingsList();
+    }).catch(function (err) {
+      showSettingsStatus('Erro ao testar: ' + (err && err.message ? err.message : String(err)), true);
+      loadSettingsList();
+    });
+  }
+
+  function deleteProvider(provider) {
+    if (!window.confirm('Excluir provider "' + provider + '"?')) return;
+    showSettingsStatus('Excluindo...', false);
+    apiRequest('/api/providers/delete', {
+      method: 'POST',
+      body: { provider: provider }
+    }).then(function () {
+      showSettingsStatus('Provedor excluído.', false);
+      if (settingsSelectedProvider === provider) {
+        settingsSelectedProvider = null;
+        updateSettingsButtons(null);
+        if (settingsProvider) settingsProvider.value = 'openrouter';
+        if (settingsApiKey) settingsApiKey.value = '';
+      }
+      loadSettingsList();
+    }).catch(function (err) {
+      showSettingsStatus('Erro ao excluir: ' + (err && err.message ? err.message : String(err)), true);
+    });
+  }
+
+  if (settingsSaveBtn) settingsSaveBtn.addEventListener('click', saveProvider);
+  if (settingsProvider) {
+    settingsProvider.addEventListener('change', function () {
+      settingsSelectedProvider = settingsProvider.value;
+      updateSettingsButtons(settingsProvider.value);
+    });
+  }
 
   // Anexos/print — mesmo formato do legado: arquivos de texto viram
   // "[Arquivo: nome]\nconteudo" prependado a message; imagem vai como

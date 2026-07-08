@@ -1131,3 +1131,89 @@ a { color: inherit; text-decoration: none; }
 .vc-eye-logo:focus-visible .vc-eye {
   box-shadow: 0 0 30px rgba(168, 85, 247, .76), 0 0 92px rgba(124, 58, 237, .32), inset 0 0 16px rgba(255, 255, 255, .08);
 }
+
+/* Settings / AI Provider Vault */
+.vc-settings:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.vc-settings h4 { margin: 0 0 4px; font-size: 16px; color: var(--text); }
+.vc-settings h5 { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+.vc-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 480px;
+}
+.vc-settings-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.vc-settings-form select,
+.vc-settings-form input {
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  font-size: 13px;
+}
+.vc-settings-field-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.vc-settings-field-actions button {
+  padding: 7px 16px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.vc-settings-field-actions button:disabled { opacity: .4; }
+.vc-settings-field-actions button:hover:not(:disabled) { background: rgba(255,255,255,.12); }
+.vc-settings-status { font-size: 12px; color: var(--muted); margin: 0; }
+.vc-settings-list { max-width: 600px; }
+.vc-settings-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.vc-settings-item strong { color: var(--text); min-width: 100px; }
+.vc-settings-item span { color: var(--muted); }
+.vc-settings-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(99,102,241,.15);
+  color: #a5b4fc;
+  text-transform: uppercase;
+  margin-left: auto;
+}
+.vc-settings-item-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: 8px;
+}
+.vc-settings-item-actions button {
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.vc-settings-item-actions button:hover { background: rgba(255,255,255,.07); color: var(--text); }
