@@ -3,14 +3,14 @@
 **Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode).**
 Leia isto DEPOIS de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, ANTES de editar qualquer código. Ver "PROTOCOLO DE REVEZAMENTO" no topo do `CLAUDE.md` para as regras completas.
 
-> Última atualização: 2026-07-08, por OpenCode — execução completa do plano de 6 etapas (Etapas 0 a 6).
+> Última atualização: 2026-07-08, por OpenCode — execução completa do plano de 6 etapas (Etapas 0 a 6) + Apply-Fix (Etapa 7).
 
 ---
 
 ## ESTADO ATUAL
 
-- **Commit local (`main`) = commit remoto (`origin/main`):** `d5575f56` — `feat(next): B-1 parseHermesBlock + hint diagnostico (5a-5d), atualiza PARITY_AUDIT`. **Pushado.**
-- **Cache-bust atual no código:** `?v=next-clean-43` (bump de 38→43 nesta sessão).
+- **Commit local (`main`) = commit remoto (`origin/main`):** `18833c4a` — `feat(tools): Apply Fix no Tools com confirmacao dupla`. **Pushado.**
+- **Cache-bust atual no código:** `?v=next-clean-44` (bump de 38→44 nesta sessão).
 - **Deployado em produção:** ainda `next-clean-31`. Nada desta sessão está no ar. **Não deployar sem aprovação explícita.**
 - **Gate `AGENT_APPLY_ENABLED`:** `false` (fail-closed). Intocado nesta sessão.
 - **Pareamento por `agent_secret`:** implementado e validado em sessão anterior. Intocado.
@@ -19,7 +19,7 @@ Leia isto DEPOIS de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, ANTE
 
 ---
 
-## O QUE FOI IMPLEMENTADO (Etapas 0-6, 2026-07-08)
+## O QUE FOI IMPLEMENTADO (Etapas 0-7, 2026-07-08)
 
 ### Etapa 0 — Corte de escopo oficializado
 - SPEC (`docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`): nova seção 11 "FORA DE ESCOPO" listando categorias C e D do PARITY_AUDIT.
@@ -61,21 +61,31 @@ Leia isto DEPOIS de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, ANTE
 - 5d: Specs mockados: texto livre, hermesObj válido, malformado, JSON sem diagnóstico, erro de rede.
 - Cache-bust: v43.
 
-### Etapa 6 — Fechamento
+### Etapa 6 — Fechamento do lote B
 - Todas as temp specs deletadas.
 - Permanent specs 9/9 PASS (agent-apply + sf).
 - `docs/PARITY_AUDIT.md` atualizado: itens B-4/B-5/B-6/B-2/B-3/B-1 movidos para seção (a). Pendências atualizadas: 4 grupos restantes (Auth, Apply-Fix, SF passos, Deploy).
-- HANDOFF atualizado (este arquivo).
-- Push final.
+
+### Etapa 7 (extra) — Tools: Apply-Fix
+- Painel `#vcApplyFixForm` no Tools feature com campos: file path, line, rule_id, after content, confirmation.
+- Dupla confirmação: "Preparar Apply Fix" → "APLICAR FIX em \<file\>".
+- POST `/api/security/apply-fix` com diff preview (before/after com destaque vermelho/verde).
+- Status text limpo no cancel.
+- Cache-bust: v44.
+- 5/5 temp spec PASS.
 
 ---
 
 ## ARQUIVOS TOCADOS
 
 ### Frontend Next (3 arquivos oficiais)
-- `frontend/vision-core-next.html` — agent badge, settings panel, vault rollback, mission history, hermes hint
-- `frontend/assets/vision-core-next-clean.js` — todos os B novos (~+600 linhas)
-- `frontend/assets/vision-core-next-clean.css` — CSS dos 5 novos painéis (~+200 linhas)
+- `frontend/vision-core-next.html` — agent badge, settings panel, vault rollback, mission history, hermes hint, apply-fix form
+- `frontend/assets/vision-core-next-clean.js` — todos os B novos + apply-fix handler (~+650 linhas)
+- `frontend/assets/vision-core-next-clean.css` — CSS dos 6 novos painéis (~+260 linhas)
+
+### Ferramentas de teste
+- `tests/e2e/preview-server.mjs` — servidor estático local com mock para apply-fix API
+- `tests/e2e/vision-core-next-apply-fix.spec.mjs` — temp spec: 5 testes do painel Apply-Fix
 
 ### Documentação
 - `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` — seção 11 "FORA DE ESCOPO"
@@ -91,7 +101,7 @@ Leia isto DEPOIS de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, ANTE
 ## PENDÊNCIAS RESTANTES (do PARITY_AUDIT)
 
 1. **Auth (registro/login/OAuth Google+GitHub)** — 2-3 turnos. Mais arriscado. Não começar sem alinhamento.
-2. **Tools — Aplicar Fix** (`/api/security/apply-fix`) — 1 turno. Mesmo padrão de confirmação dupla.
+2. ~~**Tools — Aplicar Fix** (`/api/security/apply-fix`) —~~ **CONCLUÍDO na Etapa 7.**
 3. **Software Factory — 7 passos restantes** (`project-files`, `generate-zip`, `fetch-url`, `patch-validator`, `context-snapshot`, `risk-assessor`, `rollback-planner`) — 2 turnos. Verificar cada handler real em server.js antes.
 4. **Deploy dropdown** — bloqueado pela SPEC (seção 2). Decisão de escopo.
 
@@ -99,7 +109,7 @@ Leia isto DEPOIS de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, ANTE
 
 ## RISCOS/ALERTAS ativos
 
-1. **[BAIXO] Deploy desatualizado.** Produção em `v31`, código local em `v43`. Nada desta sessão deployado.
+1. **[BAIXO] Deploy desatualizado.** Produção em `v31`, código local em `v44`. Nada desta sessão deployado.
 2. **[BAIXO] `git push` exige PowerShell** — Bash sem rede pra GitHub.
 3. **[BAIXO] CI bot colide com push** — rebase simples, sem conflito. `test-results/manual-verification-*` pode bloquear rebase (git stash).
 4. **[INFO] `AGENT_APPLY_ENABLED=false`** — intocado. Não reabrir sem (a) pareamento real por agente/projeto/owner e (b) aprovação humana registrada aqui.
@@ -109,7 +119,7 @@ Leia isto DEPOIS de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, ANTE
 ## TESTES FEITOS
 
 - **Permanent specs (commitados):** 9/9 PASS (`agent-apply` 4 + `sf` 5).
-- **Temp specs (criados e deletados):** agent-badge (5/5), settings (5/5), rollback (5/5), missions (5/5), hermes (6/6). Todos mockados, sem chamadas reais.
+- **Temp specs:** agent-badge (5/5), settings (5/5), rollback (5/5), missions (5/5), hermes (6/6), **apply-fix (5/5)**.
 - **Syntax check:** `node --check` limpo em todos os 3 arquivos JS tocados.
 
 ---
