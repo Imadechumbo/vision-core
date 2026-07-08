@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-40">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-40" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-41">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-41" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -176,6 +176,14 @@
               <h5>Provedores Salvos</h5>
               <div id="vcSettingsList" aria-live="polite"></div>
             </div>
+          </div>
+
+          <div class="vc-vault-rollback" id="vcVaultRollback" hidden>
+            <h4>Vault — Snapshots e Rollback</h4>
+            <p class="vc-vault-banner" role="alert">Rollback restaura o estado do banco de projetos (projects.json) para o snapshot selecionado. Ação destrutiva — o estado atual é sobrescrito.</p>
+            <div class="vc-vault-snapshots" id="vcVaultSnapshotList" aria-live="polite"></div>
+            <div class="vc-vault-actions" id="vcVaultActions"></div>
+            <p class="vc-vault-status" id="vcVaultStatus" aria-live="polite"></p>
           </div>
         </section>
         <form class="vc-composer" id="vcComposer">

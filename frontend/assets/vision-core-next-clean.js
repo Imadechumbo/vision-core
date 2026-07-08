@@ -49,6 +49,10 @@
   var settingsDeleteBtn = document.getElementById('vcSettingsDeleteBtn');
   var settingsStatus = document.getElementById('vcSettingsStatus');
   var settingsList = document.getElementById('vcSettingsList');
+  var vaultRollback = document.getElementById('vcVaultRollback');
+  var vaultSnapshotList = document.getElementById('vcVaultSnapshotList');
+  var vaultActions = document.getElementById('vcVaultActions');
+  var vaultStatus = document.getElementById('vcVaultStatus');
   var attachmentInput = document.getElementById('vcAttachmentInput');
   var imageInput = document.getElementById('vcImageInput');
   var activeFeature = 'chat';
@@ -60,7 +64,7 @@
     timeline: { title: 'Timeline', status: 'SAFE READ', agents: ['archivist'], text: 'Timeline preparada para leitura real de missão.', actions: [{ label: 'Carregar timeline', path: '/api/mission/timeline' }] },
     agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }, { label: 'Métricas agentes', path: '/api/metrics/agents' }] },
     github: { title: 'GitHub', status: 'PR c/ CONFIRMAÇÃO', agents: ['github'], text: 'Criação de PR real disponível abaixo — exige formulário completo + confirmação dupla antes de disparar.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
-    vault: { title: 'Vault', status: 'SAFE READ', agents: ['aegis', 'archivist'], text: 'Snapshot e rollback escrevem estado; nesta etapa, somente listagem/consulta.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
+    vault: { title: 'Vault', status: 'ROLLBACK DISPONÍVEL', agents: ['aegis', 'archivist'], text: 'Snapshots do banco de projetos e rollback. Rollback sobrescreve o estado atual — confirmação dupla obrigatória.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
     metrics: { title: 'Métricas', status: 'SAFE READ', agents: ['goCore', 'aegis'], text: 'Métricas reais em modo leitura.', actions: [{ label: 'Resumo', path: '/api/metrics/summary' }, { label: 'Agentes', path: '/api/metrics/agents' }, { label: 'DORA', path: '/api/dora-metrics' }, { label: 'Memória', path: '/api/metrics/memory' }] },
     tools: { title: 'Tools', status: 'SAFE READ', agents: ['scanner', 'patchEngine'], text: 'Ferramentas perigosas como apply-fix ficam bloqueadas. Primeiro passo: histórico e diagnóstico.', actions: [{ label: 'Histórico security', path: '/api/security/history' }, { label: 'Marketplace', path: '/api/tools/marketplace' }] },
     obsidian: { title: 'Obsidian', status: 'SAFE READ', agents: ['archivist'], text: 'Consulta de conector/memória sem escrita.', actions: [{ label: 'Status Obsidian', path: '/api/obsidian/status' }] },
@@ -157,6 +161,10 @@
     if (settingsPanel) {
       settingsPanel.hidden = activeFeature !== 'settings';
       if (activeFeature === 'settings') loadSettingsList();
+    }
+    if (vaultRollback) {
+      vaultRollback.hidden = activeFeature !== 'vault';
+      if (activeFeature === 'vault') { if (vaultStatus) vaultStatus.textContent = ''; loadVaultSnapshots(); }
     }
     if (activeFeature === 'missions') {
       refreshAgentApplyStatus();
@@ -1112,6 +1120,85 @@
     settingsProvider.addEventListener('change', function () {
       settingsSelectedProvider = settingsProvider.value;
       updateSettingsButtons(settingsProvider.value);
+    });
+  }
+
+  // Vault — Rollback UI (B-6). Snapshot list + double confirmation.
+  var vaultRollbackPending = null;
+
+  function loadVaultSnapshots() {
+    if (!vaultSnapshotList) return;
+    apiRequest('/api/vault/snapshots').then(function (data) {
+      var snapshots = data && data.snapshots;
+      vaultSnapshotList.textContent = '';
+      vaultRollbackPending = null;
+      renderVaultActions();
+      if (!snapshots || !snapshots.length) {
+        vaultSnapshotList.textContent = 'Nenhum snapshot disponível.';
+        return;
+      }
+      snapshots.forEach(function (s) {
+        var item = document.createElement('div');
+        item.className = 'vc-vault-item';
+        var label = document.createElement('strong');
+        label.textContent = s.label || s.id;
+        var meta = document.createElement('span');
+        meta.textContent = (s.project || '') + ' · ' + (s.created_at || '');
+        var actBtn = document.createElement('button');
+        actBtn.type = 'button';
+        actBtn.textContent = 'Rollback';
+        actBtn.addEventListener('click', function () {
+          vaultRollbackPending = s;
+          if (vaultStatus) vaultStatus.textContent = 'Rollback para "' + (s.label || s.id) + '" — confirme no botão abaixo.';
+          renderVaultActions();
+        });
+        item.appendChild(label);
+        item.appendChild(meta);
+        item.appendChild(actBtn);
+        vaultSnapshotList.appendChild(item);
+      });
+    }).catch(function () {
+      if (vaultSnapshotList) vaultSnapshotList.textContent = 'Erro ao carregar snapshots.';
+    });
+  }
+
+  function renderVaultActions() {
+    if (!vaultActions) return;
+    vaultActions.textContent = '';
+    if (!vaultRollbackPending) return;
+    var confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.textContent = 'Confirmar rollback para "' + (vaultRollbackPending.label || vaultRollbackPending.id) + '"';
+    confirmBtn.addEventListener('click', submitVaultRollback);
+    var cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.textContent = 'Cancelar';
+    cancelBtn.addEventListener('click', function () {
+      vaultRollbackPending = null;
+      if (vaultStatus) vaultStatus.textContent = '';
+      renderVaultActions();
+    });
+    vaultActions.appendChild(confirmBtn);
+    vaultActions.appendChild(cancelBtn);
+  }
+
+  function submitVaultRollback() {
+    if (!vaultRollbackPending) return;
+    var snapshotId = vaultRollbackPending.id;
+    var snapshotLabel = vaultRollbackPending.label || snapshotId;
+    if (vaultStatus) vaultStatus.textContent = 'Executando rollback...';
+    renderVaultActions();
+    if (window.setAtomicCoreState) window.setAtomicCoreState('action');
+    apiRequest('/api/vault/rollback/' + encodeURIComponent(snapshotId), { method: 'POST' }).then(function () {
+      vaultRollbackPending = null;
+      if (vaultStatus) vaultStatus.textContent = 'Rollback concluído: ' + snapshotLabel;
+      renderVaultActions();
+      loadVaultSnapshots();
+    }).catch(function (err) {
+      if (vaultStatus) vaultStatus.textContent = 'Erro no rollback: ' + (err && err.message ? err.message : String(err));
+      renderVaultActions();
+    }).then(function () {
+      if (window.resetAtomicCore) window.resetAtomicCore();
     });
   }
 
