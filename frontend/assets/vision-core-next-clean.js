@@ -12,6 +12,13 @@
   var featureStatus = document.getElementById('vcFeatureStatus');
   var featureActions = document.getElementById('vcFeatureActions');
   var featureRun = document.getElementById('vcFeatureRun');
+  var githubPrForm = document.getElementById('vcGithubPrForm');
+  var prRepoInput = document.getElementById('vcPrRepo');
+  var prBranchInput = document.getElementById('vcPrBranch');
+  var prTitleInput = document.getElementById('vcPrTitle');
+  var prBodyInput = document.getElementById('vcPrBody');
+  var prActionsEl = document.getElementById('vcPrActions');
+  var prStatusEl = document.getElementById('vcPrStatus');
   var attachmentInput = document.getElementById('vcAttachmentInput');
   var imageInput = document.getElementById('vcImageInput');
   var activeFeature = 'chat';
@@ -22,7 +29,7 @@
     factory: { title: 'Software Factory', status: 'MAPPED', agents: ['openclaw', 'pi', 'aegis'], text: 'Auto-Pilot e Modo Avançado serão portados sem bundle legado. Jobs SF permanecem bloqueados nesta etapa para evitar custo/API real acidental.', actions: [{ label: 'Planejador', path: '/api/health' }] },
     timeline: { title: 'Timeline', status: 'SAFE READ', agents: ['archivist'], text: 'Timeline preparada para leitura real de missão.', actions: [{ label: 'Carregar timeline', path: '/api/mission/timeline' }] },
     agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }, { label: 'Métricas agentes', path: '/api/metrics/agents' }] },
-    github: { title: 'GitHub', status: 'SAFE READ', agents: ['github'], text: 'Criação de PR é ação crítica e fica bloqueada até formulário + confirmação. Por enquanto, só status.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
+    github: { title: 'GitHub', status: 'PR c/ CONFIRMAÇÃO', agents: ['github'], text: 'Criação de PR real disponível abaixo — exige formulário completo + confirmação dupla antes de disparar.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
     vault: { title: 'Vault', status: 'SAFE READ', agents: ['aegis', 'archivist'], text: 'Snapshot e rollback escrevem estado; nesta etapa, somente listagem/consulta.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
     metrics: { title: 'Métricas', status: 'SAFE READ', agents: ['goCore', 'aegis'], text: 'Métricas reais em modo leitura.', actions: [{ label: 'Resumo', path: '/api/metrics/summary' }, { label: 'Agentes', path: '/api/metrics/agents' }, { label: 'DORA', path: '/api/dora-metrics' }, { label: 'Memória', path: '/api/metrics/memory' }] },
     tools: { title: 'Tools', status: 'SAFE READ', agents: ['scanner', 'patchEngine'], text: 'Ferramentas perigosas como apply-fix ficam bloqueadas. Primeiro passo: histórico e diagnóstico.', actions: [{ label: 'Histórico security', path: '/api/security/history' }, { label: 'Marketplace', path: '/api/tools/marketplace' }] },
@@ -112,9 +119,129 @@
     if (featureBody) featureBody.textContent = feature.text;
     if (featureStatus) featureStatus.textContent = feature.status;
     renderFeatureActions(feature);
+    if (githubPrForm) githubPrForm.hidden = activeFeature !== 'github';
+    if (activeFeature !== 'github') resetPrConfirm();
     if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
     if (announce) appendMessage('pending', feature.title.toUpperCase(), feature.text);
   }
+
+  // GitHub PR — ação real e irreversível (cria branch+commit+PR de verdade
+  // via /api/github/create-pr). NUNCA dispara sozinha: exige os 3 campos
+  // obrigatórios preenchidos + uma confirmação extra (segundo clique) antes
+  // do fetch real. Guard contra duplo-clique via prRequestInFlight.
+  var prConfirmPending = false;
+  var prRequestInFlight = false;
+
+  function prFieldsValid() {
+    return !!(prRepoInput && prBranchInput && prTitleInput &&
+      prRepoInput.value.trim() && prBranchInput.value.trim() && prTitleInput.value.trim());
+  }
+
+  function resetPrConfirm() {
+    prConfirmPending = false;
+    if (!prRequestInFlight) renderPrActions();
+  }
+
+  function renderPrActions() {
+    if (!prActionsEl) return;
+    prActionsEl.textContent = '';
+
+    if (prRequestInFlight) {
+      var busyBtn = document.createElement('button');
+      busyBtn.type = 'button';
+      busyBtn.disabled = true;
+      busyBtn.textContent = 'Criando PR...';
+      prActionsEl.appendChild(busyBtn);
+      return;
+    }
+
+    if (prConfirmPending) {
+      var confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.textContent = 'Confirmar criação de PR em ' + prRepoInput.value.trim();
+      confirmBtn.addEventListener('click', submitGithubPr);
+      var cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.textContent = 'Cancelar';
+      cancelBtn.addEventListener('click', function () {
+        prConfirmPending = false;
+        renderPrActions();
+      });
+      prActionsEl.appendChild(confirmBtn);
+      prActionsEl.appendChild(cancelBtn);
+      return;
+    }
+
+    var createBtn = document.createElement('button');
+    createBtn.type = 'button';
+    createBtn.textContent = 'Criar PR';
+    createBtn.disabled = !prFieldsValid();
+    createBtn.addEventListener('click', function () {
+      prConfirmPending = true;
+      renderPrActions();
+    });
+    prActionsEl.appendChild(createBtn);
+  }
+
+  function submitGithubPr() {
+    if (prRequestInFlight) return;
+    prRequestInFlight = true;
+    prConfirmPending = false;
+    renderPrActions();
+    if (prStatusEl) prStatusEl.textContent = '';
+
+    var repo = prRepoInput.value.trim();
+    var baseBranch = prBranchInput.value.trim() || 'main';
+    var title = prTitleInput.value.trim();
+    var prBody = prBodyInput ? prBodyInput.value.trim() : '';
+    var headBranch = 'vc-next-pr-' + Date.now();
+
+    if (window.setAtomicCoreState) window.setAtomicCoreState('action');
+    if (window.highlightAtomicAgents) window.highlightAtomicAgents(['github']);
+
+    apiRequest('/api/github/create-pr', {
+      method: 'POST',
+      body: { repo: repo, base_branch: baseBranch, head_branch: headBranch, title: title, body: prBody, files: [] }
+    }).then(function (data) {
+      prRequestInFlight = false;
+      renderPrActions();
+      var prUrl = data && (data.pr_url || data.url || (data.pr && data.pr.html_url));
+      if (prStatusEl) {
+        prStatusEl.textContent = '';
+        if (prUrl) {
+          prStatusEl.appendChild(document.createTextNode('PR criado: '));
+          var link = document.createElement('a');
+          link.href = prUrl;
+          link.textContent = prUrl;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          prStatusEl.appendChild(link);
+        } else {
+          prStatusEl.textContent = 'PR criado, mas a resposta não trouxe um link (' + summarizeResult(data) + ').';
+        }
+      }
+      if (prRepoInput) prRepoInput.value = '';
+      if (prBranchInput) prBranchInput.value = 'main';
+      if (prTitleInput) prTitleInput.value = '';
+      if (prBodyInput) prBodyInput.value = '';
+      renderPrActions();
+    }).catch(function (err) {
+      prRequestInFlight = false;
+      renderPrActions();
+      if (prStatusEl) prStatusEl.textContent = 'Erro ao criar PR: ' + (err && err.message ? err.message : String(err));
+    }).then(function () {
+      if (window.resetAtomicCore) window.resetAtomicCore();
+    });
+  }
+
+  [prRepoInput, prBranchInput, prTitleInput].forEach(function (el) {
+    if (!el) return;
+    el.addEventListener('input', function () {
+      if (!prRequestInFlight && !prConfirmPending) renderPrActions();
+    });
+  });
+
+  renderPrActions();
 
   var CHIP_PREFIX = {
     missions: 'Missão: ',

@@ -209,6 +209,12 @@ Mecanismo real atual (verificado no código): **pálpebras reais via elementos D
 
 **Risco de segurança aceito, não expandir escopo:** o token (`vc_token`/`vision_token`) fica em `sessionStorage`/`localStorage`, igual ao legado — exposto a roubo via XSS (qualquer script injetado no domínio lê o token diretamente, sem precisar de acesso a cookies `httpOnly`). Mitigação real seria migrar para cookie `httpOnly`+`secure`+`SameSite`, mas isso é mudança de arquitetura de auth no backend, fora do escopo desta frente Next — aceito como está, paridade com o comportamento já existente no legado, não uma regressão introduzida aqui.
 
+### GitHub PR — implementado com guard de confirmação dupla (item 8 da paridade, Etapa 1c)
+
+`POST /api/github/create-pr` (cria branch+commit+PR real — ação irreversível em serviço externo) agora tem uma UI própria dentro do painel "GitHub" (`#vcGithubPrForm`, abaixo do status SAFE READ), não no chat/chips. Nunca dispara sozinho: botão "Criar PR" fica desabilitado até `repo`+`branch`+`título` preenchidos (branch já vem com default `'main'`, editável); clicar não envia nada — só troca pra um segundo passo "Confirmar criação de PR em `<repo>`" + "Cancelar" (cancelar = zero requisições); só o clique em "Confirmar" dispara o `fetch` de verdade. Durante a requisição o botão vira "Criando PR..." desabilitado (guarda contra duplo-clique — testado, 1 clique rápido a mais durante o request não gera 2ª chamada). Sucesso mostra o link real do PR (`data.pr_url`) e limpa o formulário; erro (HTTP não-2xx ou rede) mostra mensagem legível no próprio formulário sem travar a UI, e reabilita o botão pro usuário tentar de novo.
+
+**Achado de bug corrigido durante a validação:** `.vc-github-pr { display: grid; }` no CSS sobrescrevia o atributo `hidden` do HTML (mesma especificidade autor-vs-UA, autor vence) — o painel de PR aparecia mesmo com o GitHub não sendo a aba ativa. Corrigido trocando o seletor para `.vc-github-pr:not([hidden])`.
+
 ### Padrão de trabalho desta sessão (seguir nas próximas)
 
 Baseline → implementação pequena e isolada → validação técnica (Playwright, **incluindo contexto `reducedMotion:'reduce'` explícito sempre que animação estiver envolvida** — `null`/omitido não são "neutros", caem no valor real do SO do host) → commit isolado com cache-bust incrementado → relatório → só então próxima etapa. **Screenshot headless não é confiável para validar animação em voo** (frame exato de uma transição rápida frequentemente não é capturado, mesmo com o DOM confirmando a mudança via `getBoundingClientRect`/computed style) — usar `recordVideo` do Playwright + extração de frames via ffmpeg (o binário empacotado pelo próprio Playwright, em `~/AppData/Local/ms-playwright/ffmpeg-*/`) quando precisar confirmar visualmente um efeito rápido.
@@ -217,7 +223,7 @@ Baseline → implementação pequena e isolada → validação técnica (Playwri
 
 ### Roadmap Etapas 2-7 — PENDENTE, não implementar sem conversa nova
 
-Paridade funcional alvo (mapeamento feito na Etapa 1a, implementação progressiva depois): anexos/leitura de print, executar missão real (`/api/run-live`/`/api/copilot`), Software Factory Auto-Pilot + modo avançado, configurações avançadas do SF, Agentes/GitHub/Vault/Métricas/Tools/Obsidian/Timeline reais, autenticação/token/quota/plano, logs/status/estados de missão.
+Paridade funcional alvo (mapeamento feito na Etapa 1a, implementação progressiva depois — ✅ = fechado): ✅ anexos/leitura de print (Etapa 1b), ✅ Agentes/Métricas/Timeline/Quota/Vault-leitura/Tools-leitura/Obsidian-leitura (Etapa 1b), ✅ GitHub PR com guard de confirmação dupla (Etapa 1c). Pendentes: executar missão real (`/api/run-live`/`/api/copilot`, dual-path complexo), Software Factory Auto-Pilot + modo avançado, configurações avançadas do SF, Vault-rollback, Tools-apply-fix, Settings/AI Provider Vault, autenticação/token/quota real (plano pago depende de login funcionando), logs/status/estados de missão do SF.
 
 Settings obrigatórios (Etapa 3): Atomic Core ligado/desligado, modo automático, reduzir movimento (override manual sobre o `matchMedia` real), glow on/off, intensidade visual (discreto/normal/ativo), persistência em `localStorage`.
 
@@ -233,7 +239,7 @@ Mapa inicial de endpoints a conectar/verificar (referência para a Etapa 1a, nã
 - Software Factory: `/api/sf/*`, jobs/polling e Gold Gate.
 - Segurança: `/api/aegis/validate`, `/api/security/*`.
 - Vault: `/api/vault/*`.
-- GitHub: `/api/github/create-pr`.
+- GitHub: `/api/github/create-pr` (✅ conectado, Etapa 1c — guard de confirmação dupla).
 - Memória/Timeline: `/api/memory/search`, `/api/archivist/learn`, `/api/mission/timeline`.
 - Auth/Billing/Quota: `/api/auth/*`, `/api/billing/status`, `/api/mission/quota`.
 - Métricas/Projetos/Deploy advisory: `/api/metrics/*`, `/api/projects`, `/api/deploy/pages`, `/api/deploy/eb`.
