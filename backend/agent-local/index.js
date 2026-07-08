@@ -14,6 +14,8 @@ const fs    = require('fs');
 const path  = require('path');
 const http  = require('http');
 const https = require('https');
+const os = require('os');
+const crypto = require('crypto');
 
 const WORKER_URL  = process.env.VC_WORKER || 'https://visioncore-api-gateway.weiganlight.workers.dev';
 const POLL_MS     = Number(process.env.VC_POLL_MS) || 3000;
@@ -22,6 +24,7 @@ const LOCAL_PORT  = Number(process.env.VC_PORT) || 7070;
 
 const projectRoot = path.resolve(process.argv[2] || process.cwd());
 const agentToken  = process.env.VC_TOKEN || '';
+const agentId = process.env.VC_AGENT_ID || ('agent_' + crypto.createHash('sha256').update(os.hostname() + '|' + projectRoot).digest('hex').slice(0, 12));
 
 console.log(`\n╔══════════════════════════════════════════╗`);
 console.log(`║   VISION AGENT LOCAL v${VERSION}              ║`);
@@ -155,7 +158,7 @@ async function poll() {
         const result = await executeMission(mission);
         await fetchJson(`${WORKER_URL}/api/agent/mission/result`, {
           method: 'POST',
-          body:   result
+          body:   Object.assign({ agent_id: agentId }, result)
         });
         console.log(`📤 Resultado enviado (ok=${result.ok})`);
       }

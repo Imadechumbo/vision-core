@@ -2364,15 +2364,29 @@ for (const [platform, meta] of Object.entries(_agentDownloadMeta)) {
 }
 /* §105: timestamp do ultimo poll real do Vision Agent Local (heartbeat OU /mission/pending) */
 let _agentLastSeenAt = 0;
+let _agentLastAgentId = null;
+function normalizeAgentId(value) {
+  const id = String(value || '').trim();
+  return /^[A-Za-z0-9._:-]{1,96}$/.test(id) ? id : '';
+}
+function getRequestAgentId(req, body) {
+  return normalizeAgentId((body && body.agent_id) || (req.query && req.query.agent_id) || (req.get && req.get('x-vision-agent-id')));
+}
 app.all('/api/agent/register', (req, res) => sendOk(res, { agent_id: makeId('agent'), status: 'registered', anti_stub: true }));
-app.all('/api/agent/heartbeat', (req, res) => { _agentLastSeenAt = Date.now(); return sendOk(res, { status: 'online', anti_stub: true }); });
+app.all('/api/agent/heartbeat', (req, res) => {
+  const body = normalizeBody(req);
+  const agentId = getRequestAgentId(req, body);
+  _agentLastSeenAt = Date.now();
+  if (agentId) _agentLastAgentId = agentId;
+  return sendOk(res, { status: 'online', agent_id: agentId || _agentLastAgentId, anti_stub: true });
+});
 app.all('/api/agent/report', (req, res) => sendOk(res, { received: true, pass_gold: Boolean(normalizeBody(req).pass_gold), anti_stub: true }));
 app.get('/api/agent/status', (req, res) => {
   /* §105: connected real (era hardcoded false antes) — agent considerado online se fez */
   /* poll em /mission/pending ou heartbeat nos ultimos 15s (3x o VC_POLL_MS padrao de 3000ms) */
   const lastSeenMsAgo = _agentLastSeenAt ? (Date.now() - _agentLastSeenAt) : null;
   const connected     = lastSeenMsAgo !== null && lastSeenMsAgo < 15000;
-  return sendOk(res, { connected, last_seen_ms_ago: lastSeenMsAgo, mode: connected ? 'connected' : 'download_ready', anti_stub: true });
+  return sendOk(res, { connected, last_seen_ms_ago: lastSeenMsAgo, agent_id: _agentLastAgentId, mode: connected ? 'connected' : 'download_ready', anti_stub: true });
 });
 
 /* GITHUB / TOOLS / METRICS */
@@ -3172,6 +3186,7 @@ const agentQueueDB = require('./agent-queue-db');
 app.post('/api/agent/mission/queue', (req, res) => {
   const body    = normalizeBody(req);
   const type    = body.type || 'general';
+  const agentId = getRequestAgentId(req, body);
   const mission = {
     id:        `mission_${Date.now()}_${Math.random().toString(16).slice(2,6)}`,
     input:     body.input || body.message || '',
@@ -3184,7 +3199,11 @@ app.post('/api/agent/mission/queue', (req, res) => {
     if (!body.file || !body.patch) {
       return res.status(400).json({ ok: false, error: 'apply_patch_requires_file_and_patch', time: now() });
     }
-    mission.file      = body.file;
+        if (!agentId) {
+      return res.status(400).json({ ok: false, error: 'agent_id_required_for_apply_patch', time: now() });
+    }
+    mission.agent_id = agentId;
+mission.file      = body.file;
     mission.patch     = body.patch;
     mission.fix_type  = body.fix_type  || 'code_patch';
     mission.diagnosis = body.diagnosis || '';
@@ -3195,7 +3214,11 @@ app.post('/api/agent/mission/queue', (req, res) => {
     if (!Array.isArray(body.files) || body.files.length === 0) {
       return res.status(400).json({ ok: false, error: 'apply_patch_multi_requires_files_array', time: now() });
     }
-    for (const f of body.files) {
+        if (!agentId) {
+      return res.status(400).json({ ok: false, error: 'agent_id_required_for_apply_patch_multi', time: now() });
+    }
+    mission.agent_id = agentId;
+for (const f of body.files) {
       if (!f || !f.file || !f.patch) {
         return res.status(400).json({ ok: false, error: 'apply_patch_multi_each_file_requires_file_and_patch', time: now() });
       }
@@ -3214,13 +3237,15 @@ app.post('/api/agent/mission/queue', (req, res) => {
     mission.target_path = body.target_path;
   }
   agentQueueDB.push(mission);
-  return sendOk(res, { mission_id: mission.id, queued: true, queue_length: agentQueueDB.length(), type: mission.type });
+  return sendOk(res, { mission_id: mission.id, queued: true, queue_length: agentQueueDB.length(), type: mission.type, agent_id: mission.agent_id || null });
 });
 
 app.get('/api/agent/mission/pending', (req, res) => {
+  const agentId = getRequestAgentId(req, null);
   _agentLastSeenAt = Date.now(); /* §105: todo poll real atualiza presenca p/ /api/agent/status */
-  const mission = agentQueueDB.shift();
-  return sendOk(res, { mission: mission || null, queue_remaining: agentQueueDB.length() });
+  if (agentId) _agentLastAgentId = agentId;
+  const mission = agentQueueDB.shiftForAgent ? agentQueueDB.shiftForAgent(agentId) : agentQueueDB.shift();
+  return sendOk(res, { mission: mission || null, queue_remaining: agentQueueDB.length(), agent_id: agentId || null });
 });
 
 app.post('/api/agent/mission/result', (req, res) => {

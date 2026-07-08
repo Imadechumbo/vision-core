@@ -32,13 +32,19 @@
   var dryRunTargetInput = document.getElementById('vcDryRunTargetPath');
   var dryRunActionsEl = document.getElementById('vcDryRunActions');
   var dryRunStatusEl = document.getElementById('vcDryRunStatus');
+  var agentApplyForm = document.getElementById('vcAgentApplyForm');
+  var agentApplyAgentIdInput = document.getElementById('vcAgentApplyAgentId');
+  var agentApplyPayloadInput = document.getElementById('vcAgentApplyPayload');
+  var agentApplyConfirmInput = document.getElementById('vcAgentApplyConfirm');
+  var agentApplyActionsEl = document.getElementById('vcAgentApplyActions');
+  var agentApplyStatusEl = document.getElementById('vcAgentApplyStatus');
   var attachmentInput = document.getElementById('vcAttachmentInput');
   var imageInput = document.getElementById('vcImageInput');
   var activeFeature = 'chat';
 
   var featureMap = {
     chat: { title: 'Chat', status: 'READY', agents: ['hermes'], text: 'Chat livre conectado ao endpoint real /api/chat.', actions: [{ label: 'Checar API', path: '/api/health' }] },
-    missions: { title: 'Missions', status: 'PATCH SEGURO + DRY-RUN', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Gerar Patch roda o pipeline real de diagnóstico + apply-patch, sem escrever nada sozinho — só gera diff para download. Dry-Run Real (abaixo) enfileira execução real no Vision Agent Local, em modo simulação (nunca escreve no disco). Apply-patch real via agente segue pendente.', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
+    missions: { title: 'Missions', status: 'PATCH + DRY-RUN + APPLY BLOQUEADO', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Gerar Patch roda o pipeline real de diagnóstico + apply-patch, sem escrever nada sozinho — só gera diff para download. Dry-Run Real (abaixo) enfileira execução real no Vision Agent Local, em modo simulação (nunca escreve no disco). Apply-patch real via agente aparece abaixo, mas o botão fica bloqueado até existir token de pareamento real por agente (agent_id sozinho não autentica ninguém).', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
     factory: { title: 'Software Factory', status: 'MAPPED', agents: ['openclaw', 'pi', 'aegis'], text: 'Auto-Pilot e Modo Avançado serão portados sem bundle legado. Jobs SF permanecem bloqueados nesta etapa para evitar custo/API real acidental.', actions: [{ label: 'Planejador', path: '/api/health' }] },
     timeline: { title: 'Timeline', status: 'SAFE READ', agents: ['archivist'], text: 'Timeline preparada para leitura real de missão.', actions: [{ label: 'Carregar timeline', path: '/api/mission/timeline' }] },
     agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }, { label: 'Métricas agentes', path: '/api/metrics/agents' }] },
@@ -135,8 +141,14 @@
     if (githubPrForm) githubPrForm.hidden = activeFeature !== 'github';
     if (activeFeature !== 'github') resetPrConfirm();
     if (missionPatchForm) missionPatchForm.hidden = activeFeature !== 'missions';
+    if (agentApplyForm) agentApplyForm.hidden = activeFeature !== 'missions';
     if (dryRunForm) dryRunForm.hidden = activeFeature !== 'missions';
-    if (activeFeature !== 'missions') resetDryRunConfirm();
+    if (activeFeature === 'missions') {
+      refreshAgentApplyStatus();
+    } else {
+      resetAgentApplyConfirm();
+      resetDryRunConfirm();
+    }
     if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
     if (announce) appendMessage('pending', feature.title.toUpperCase(), feature.text);
   }
@@ -500,6 +512,227 @@
   updateMissionButton();
 
   // Executar Missão — Caminho B / Fase 2a (item 4, dry-run real). POST
+  // Executar Missão — Caminho B, Fase 2b. Esta é a primeira ponte de UI para
+  // apply_patch/apply_patch_multi reais via Vision Agent Local. Diferente do
+  // dry-run, isto escreve no disco do ROOT em que o agente foi iniciado e cria
+  // commit local. Guardas: JSON explícito, allowlist de type, validação mínima,
+  // frase exata e segundo clique antes do POST real.
+  var AGENT_APPLY_CONFIRM_TEXT = 'APLICAR PATCH REAL';
+  // ponytail: gate fica false até existir um segredo de pareamento real entre
+  // usuário logado e Vision Agent Local — agent_id sozinho não autentica nada
+  // (é hash não-secreto de hostname+path, e /api/agent/mission/queue não tem
+  // auth), então habilitar isso hoje permite escrita real em disco de terceiro
+  // por qualquer chamador que adivinhe o agent_id. Ligar quando o backend
+  // exigir um token de pareamento por agente/projeto/owner.
+  var AGENT_APPLY_ENABLED = false;
+  var agentApplyConfirmPending = false;
+  var agentApplyRequestInFlight = false;
+  var agentApplyPolling = false;
+  var agentApplyPollTimer = null;
+  var agentApplyTimeoutTimer = null;
+  var agentApplyStartedAt = 0;
+
+  function parseAgentApplyPayload() {
+    if (!agentApplyPayloadInput) return { ok: false, error: 'payload ausente' };
+    var raw = agentApplyPayloadInput.value.trim();
+    if (!raw) return { ok: false, error: 'payload vazio' };
+    try {
+      var payload = JSON.parse(raw);
+      if (!payload || (payload.type !== 'apply_patch' && payload.type !== 'apply_patch_multi')) {
+        return { ok: false, error: 'type deve ser apply_patch ou apply_patch_multi' };
+      }
+      if (payload.type === 'apply_patch' && (!payload.file || !payload.patch)) {
+        return { ok: false, error: 'apply_patch exige file e patch' };
+      }
+      if (payload.type === 'apply_patch_multi') {
+        if (!Array.isArray(payload.files) || !payload.files.length) return { ok: false, error: 'apply_patch_multi exige files[]' };
+        for (var i = 0; i < payload.files.length; i++) {
+          if (!payload.files[i].file || !payload.files[i].patch) return { ok: false, error: 'cada item de files[] exige file e patch' };
+        }
+      }
+      return { ok: true, payload: payload };
+    } catch (err) {
+      return { ok: false, error: 'JSON inválido: ' + (err && err.message ? err.message : err) };
+    }
+  }
+
+  function getAgentApplyAgentId() {
+    return agentApplyAgentIdInput ? agentApplyAgentIdInput.value.trim() : '';
+  }
+
+  function agentApplyReady() {
+    if (!AGENT_APPLY_ENABLED || !getAgentApplyAgentId()) return false;
+    var parsed = parseAgentApplyPayload();
+    var confirmed = agentApplyConfirmInput && agentApplyConfirmInput.value.trim() === AGENT_APPLY_CONFIRM_TEXT;
+    return parsed.ok && confirmed;
+  }
+
+  function resetAgentApplyConfirm() {
+    agentApplyConfirmPending = false;
+    if (!agentApplyRequestInFlight && !agentApplyPolling) renderAgentApplyActions();
+  }
+
+  function renderAgentApplyActions() {
+    if (!agentApplyActionsEl) return;
+    agentApplyActionsEl.textContent = '';
+
+    if (agentApplyPolling) {
+      var cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.textContent = 'Parar acompanhamento';
+      cancelBtn.addEventListener('click', function () { stopAgentApplyPolling('cancel'); });
+      agentApplyActionsEl.appendChild(cancelBtn);
+      return;
+    }
+
+    if (agentApplyRequestInFlight) {
+      var busyBtn = document.createElement('button');
+      busyBtn.type = 'button';
+      busyBtn.disabled = true;
+      busyBtn.textContent = 'Enfileirando patch real...';
+      agentApplyActionsEl.appendChild(busyBtn);
+      return;
+    }
+
+    if (agentApplyConfirmPending) {
+      var confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.textContent = 'Confirmar e enfileirar patch real';
+      confirmBtn.addEventListener('click', submitAgentApply);
+      var backBtn = document.createElement('button');
+      backBtn.type = 'button';
+      backBtn.textContent = 'Cancelar';
+      backBtn.addEventListener('click', function () {
+        agentApplyConfirmPending = false;
+        renderAgentApplyActions();
+      });
+      agentApplyActionsEl.appendChild(confirmBtn);
+      agentApplyActionsEl.appendChild(backBtn);
+      return;
+    }
+
+    var parsed = parseAgentApplyPayload();
+    if (agentApplyStatusEl && !getAgentApplyAgentId()) {
+      agentApplyStatusEl.textContent = 'Informe o agent_id do Vision Agent conectado. A fila de escrita real é filtrada por este vínculo.';
+    }
+    var prepareBtn = document.createElement('button');
+    prepareBtn.type = 'button';
+    prepareBtn.textContent = AGENT_APPLY_ENABLED ? 'Preparar aplicação real' : 'Aplicação real bloqueada';
+    prepareBtn.disabled = !agentApplyReady();
+    prepareBtn.addEventListener('click', function () {
+      agentApplyConfirmPending = true;
+      if (agentApplyStatusEl) agentApplyStatusEl.textContent = 'Última barreira: confirme no próximo botão. O Vision Agent Local vai escrever e commitar no projeto dele.';
+      renderAgentApplyActions();
+    });
+    agentApplyActionsEl.appendChild(prepareBtn);
+
+    if (agentApplyStatusEl && agentApplyPayloadInput && agentApplyPayloadInput.value.trim() && !parsed.ok) {
+      agentApplyStatusEl.textContent = parsed.error;
+    }
+  }
+
+  function updateAgentApplyElapsedStatus(prefix) {
+    if (!agentApplyStatusEl) return;
+    var elapsedSec = Math.round((Date.now() - agentApplyStartedAt) / 1000);
+    agentApplyStatusEl.textContent = (prefix || 'Aguardando resultado do Vision Agent Local...') + ' (' + elapsedSec + 's decorridos)';
+  }
+
+  function pollAgentApplyOnce(missionId) {
+    if (!agentApplyPolling) return;
+    apiRequest('/api/agent/mission/result/' + missionId).then(function (data) {
+      if (!agentApplyPolling) return;
+      stopAgentApplyPolling('success', data);
+    }).catch(function (err) {
+      if (!agentApplyPolling) return;
+      var msg = err && err.message ? err.message : String(err);
+      if (msg === 'result_not_found') {
+        updateAgentApplyElapsedStatus();
+        return;
+      }
+      stopAgentApplyPolling('error', msg);
+    });
+  }
+
+  function startAgentApplyPolling(missionId) {
+    agentApplyPolling = true;
+    agentApplyStartedAt = Date.now();
+    renderAgentApplyActions();
+    updateAgentApplyElapsedStatus();
+    pollAgentApplyOnce(missionId);
+    agentApplyPollTimer = window.setInterval(function () { pollAgentApplyOnce(missionId); }, DRY_RUN_POLL_MS);
+    agentApplyTimeoutTimer = window.setTimeout(function () { stopAgentApplyPolling('timeout'); }, DRY_RUN_TIMEOUT_MS);
+  }
+
+  function stopAgentApplyPolling(reason, payload) {
+    if (agentApplyPollTimer) { window.clearInterval(agentApplyPollTimer); agentApplyPollTimer = null; }
+    if (agentApplyTimeoutTimer) { window.clearTimeout(agentApplyTimeoutTimer); agentApplyTimeoutTimer = null; }
+    var wasPolling = agentApplyPolling;
+    agentApplyPolling = false;
+    renderAgentApplyActions();
+    if (!wasPolling) return;
+    if (window.resetAtomicCore) window.resetAtomicCore();
+    if (!agentApplyStatusEl) return;
+    if (reason === 'success') {
+      agentApplyStatusEl.textContent = 'Patch real concluído: ' + summarizeResult(payload);
+    } else if (reason === 'timeout') {
+      agentApplyStatusEl.textContent = 'Tempo esgotado (5min). O job pode continuar rodando no agente; a UI parou de acompanhar.';
+    } else if (reason === 'cancel') {
+      agentApplyStatusEl.textContent = 'Acompanhamento cancelado. O job pode continuar rodando no agente; não há cancelamento remoto.';
+    } else {
+      agentApplyStatusEl.textContent = 'Erro na aplicação real: ' + (payload || 'falha desconhecida');
+    }
+  }
+
+  function submitAgentApply() {
+    if (agentApplyRequestInFlight) return;
+    var parsed = parseAgentApplyPayload();
+    if (!parsed.ok || !agentApplyReady()) {
+      if (agentApplyStatusEl) agentApplyStatusEl.textContent = parsed.error || 'Confirmação inválida.';
+      renderAgentApplyActions();
+      return;
+    }
+    agentApplyRequestInFlight = true;
+    agentApplyConfirmPending = false;
+    renderAgentApplyActions();
+    if (agentApplyStatusEl) agentApplyStatusEl.textContent = 'Enfileirando patch real...';
+
+    if (window.setAtomicCoreState) window.setAtomicCoreState('action');
+    if (window.startAtomicSequence) window.startAtomicSequence();
+
+    apiRequest('/api/agent/mission/queue', {
+      method: 'POST',
+      body: Object.assign({}, parsed.payload, { agent_id: getAgentApplyAgentId() })
+    }).then(function (data) {
+      agentApplyRequestInFlight = false;
+      var missionId = data && data.mission_id;
+      if (!missionId) throw new Error('Resposta sem mission_id.');
+      startAgentApplyPolling(missionId);
+    }).catch(function (err) {
+      agentApplyRequestInFlight = false;
+      if (agentApplyStatusEl) agentApplyStatusEl.textContent = 'Erro ao enfileirar patch real: ' + (err && err.message ? err.message : String(err));
+      renderAgentApplyActions();
+      if (window.resetAtomicCore) window.resetAtomicCore();
+    });
+  }
+
+  function refreshAgentApplyStatus() {
+    if (!agentApplyAgentIdInput) return;
+    apiRequest('/api/agent/status').then(function (data) {
+      if (data && data.connected && data.agent_id && !agentApplyAgentIdInput.value.trim()) {
+        agentApplyAgentIdInput.value = data.agent_id;
+        if (agentApplyStatusEl) agentApplyStatusEl.textContent = 'Agent conectado vinculado: ' + data.agent_id;
+        renderAgentApplyActions();
+      }
+    }).catch(function () {});
+  }
+
+  [agentApplyAgentIdInput, agentApplyPayloadInput, agentApplyConfirmInput].forEach(function (el) {
+    if (!el) return;
+    el.addEventListener('input', function () {
+      if (!agentApplyRequestInFlight && !agentApplyConfirmPending && !agentApplyPolling) renderAgentApplyActions();
+    });
+  });
+  renderAgentApplyActions();
   // /api/agent/mission/queue {type:'sf_dry_run_real', target_path} enfileira
   // um job real pro Vision Agent Local (processo externo) — o backend só
   // relay/valida, quem lê o target_path e roda a simulação em memória (nunca

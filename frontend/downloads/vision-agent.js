@@ -16,12 +16,14 @@ const path          = require('path');
 const https         = require('https');
 const http          = require('http');
 const os            = require('os');
+const crypto        = require('crypto');
 const { spawnSync } = require('child_process');
 
 const VERSION = '1.2';
 const WORKER  = process.env.VC_WORKER  || 'https://visioncore-api-gateway.weiganlight.workers.dev';
 const POLL_MS = Number(process.env.VC_POLL_MS) || 3000;
 const ROOT    = path.resolve(process.argv[2] || process.cwd());
+const AGENT_ID = process.env.VC_AGENT_ID || ('agent_' + crypto.createHash('sha256').update(os.hostname() + '|' + ROOT).digest('hex').slice(0, 12));
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
@@ -31,6 +33,7 @@ console.log('║   VISION AGENT LOCAL v' + VERSION + '             ║');
 console.log('╚══════════════════════════════════════════╝');
 console.log('Projeto : ' + ROOT);
 console.log('Worker  : ' + WORKER);
+console.log('Agent ID: ' + AGENT_ID);
 console.log('SDDF    : scan→hermes→patch→aegis→commit');
 console.log('');
 
@@ -1228,7 +1231,7 @@ async function sfDryRunRealMission(m) {
 
 /* ── Polling loop ─────────────────────────────────────────────── */
 function poll() {
-  httpRequest(WORKER + '/api/agent/mission/pending', {}, function(err, res) {
+  httpRequest(WORKER + '/api/agent/mission/pending?agent_id=' + encodeURIComponent(AGENT_ID), {}, function(err, res) {
     if (!err && res.body && res.body.mission) {
       var m = res.body.mission;
       console.log('[' + new Date().toLocaleTimeString() + '] Missão: ' + m.id);
@@ -1243,7 +1246,7 @@ function poll() {
       handler(m).then(function(result) {
         console.log('Ação  : ' + result.action);
         httpRequest(WORKER + '/api/agent/mission/result', {
-          method: 'POST', body: result
+          method: 'POST', body: Object.assign({ agent_id: AGENT_ID }, result)
         }, function(err2) {
           if (!err2) console.log('Enviado ✅\n');
           else       console.log('Erro ao enviar: ' + err2.message + '\n');
@@ -1273,7 +1276,7 @@ if (require.main === module) {
       'Access-Control-Allow-Origin':  '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
     });
-    res.end(JSON.stringify({ ok: true, version: VERSION, project: ROOT, worker: WORKER, sddf: 'compliant' }));
+    res.end(JSON.stringify({ ok: true, version: VERSION, agent_id: AGENT_ID, project: ROOT, worker: WORKER, sddf: 'compliant' }));
   });
   srv.on('error', function(e) { if (e.code === 'EADDRINUSE') { PORT++; srv.listen(PORT); } });
   srv.listen(PORT, function() {

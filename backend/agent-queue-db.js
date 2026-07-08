@@ -94,6 +94,25 @@ function shift() {
   return JSON.parse(payload);
 }
 
+function shiftForAgent(agentId) {
+  const normalizedAgentId = agentId ? String(agentId) : null;
+  const stmt = _db.prepare('SELECT rowid, payload FROM queue ORDER BY rowid ASC');
+  let selected = null;
+  while (stmt.step()) {
+    const [rowid, payload] = stmt.get();
+    const mission = JSON.parse(payload);
+    if (!mission.agent_id || mission.agent_id === normalizedAgentId) {
+      selected = { rowid, mission };
+      break;
+    }
+  }
+  stmt.free();
+  if (!selected) return null;
+
+  _db.run('DELETE FROM queue WHERE rowid = ?', [selected.rowid]);
+  _save();
+  return selected.mission;
+}
 function length() {
   const stmt = _db.prepare('SELECT COUNT(*) FROM queue');
   stmt.step();
@@ -121,4 +140,4 @@ function getResult(mission_id) {
   return JSON.parse(payload);
 }
 
-module.exports = { init, push, shift, length, storeResult, getResult };
+module.exports = { init, push, shift, shiftForAgent, length, storeResult, getResult };
