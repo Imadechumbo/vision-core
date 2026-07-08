@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-43">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-43" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-44">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-44" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -150,6 +150,33 @@
             </label>
             <div class="vc-dry-run-actions" id="vcDryRunActions"></div>
             <p class="vc-dry-run-status" id="vcDryRunStatus" aria-live="polite"></p>
+          </div>
+
+          <div class="vc-apply-fix" id="vcApplyFixForm" hidden>
+            <h4>Apply Fix — Aplicar correção em arquivo real</h4>
+            <p class="vc-apply-fix-banner" role="alert">Aplica a correção diretamente no arquivo do filesystem usando <code>/api/security/apply-fix</code>. Cria backup automático (<code>.bak-s135-*</code>). Confirmação dupla obrigatória.</p>
+            <label>Caminho do arquivo
+              <input type="text" id="vcApplyFixFile" placeholder="backend/server.js" autocomplete="off">
+            </label>
+            <label>Linha (1-indexed)
+              <input type="number" id="vcApplyFixLine" min="1" placeholder="42" autocomplete="off">
+            </label>
+            <label>Rule ID (opcional)
+              <input type="text" id="vcApplyFixRuleId" placeholder="ex: eqeqeq" autocomplete="off">
+            </label>
+            <label>Conteúdo substituto (after)
+              <textarea id="vcApplyFixContent" rows="4" placeholder="Linha corrigida que substituirá a original"></textarea>
+            </label>
+            <label>Confirmação
+              <input type="text" id="vcApplyFixConfirm" placeholder="Digite: APLICAR FIX" autocomplete="off">
+            </label>
+            <div class="vc-apply-fix-actions" id="vcApplyFixActions"></div>
+            <div class="vc-apply-fix-preview" id="vcApplyFixPreview" hidden>
+              <h5>Diff Preview</h5>
+              <pre id="vcApplyFixDiffBefore"></pre>
+              <pre id="vcApplyFixDiffAfter"></pre>
+            </div>
+            <p class="vc-apply-fix-status" id="vcApplyFixStatus" aria-live="polite"></p>
           </div>
 
           <div class="vc-settings" id="vcSettingsPanel" hidden>

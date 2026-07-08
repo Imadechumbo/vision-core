@@ -62,6 +62,17 @@
   var missionDetailEvidence = document.getElementById('vcMissionDetailEvidence');
   var missionEvidenceBody = document.getElementById('vcMissionEvidenceBody');
   var missionDetailBack = document.getElementById('vcMissionDetailBack');
+  var applyFixForm = document.getElementById('vcApplyFixForm');
+  var applyFixFile = document.getElementById('vcApplyFixFile');
+  var applyFixLine = document.getElementById('vcApplyFixLine');
+  var applyFixRuleId = document.getElementById('vcApplyFixRuleId');
+  var applyFixContent = document.getElementById('vcApplyFixContent');
+  var applyFixConfirm = document.getElementById('vcApplyFixConfirm');
+  var applyFixActionsEl = document.getElementById('vcApplyFixActions');
+  var applyFixPreview = document.getElementById('vcApplyFixPreview');
+  var applyFixDiffBefore = document.getElementById('vcApplyFixDiffBefore');
+  var applyFixDiffAfter = document.getElementById('vcApplyFixDiffAfter');
+  var applyFixStatus = document.getElementById('vcApplyFixStatus');
   var attachmentInput = document.getElementById('vcAttachmentInput');
   var imageInput = document.getElementById('vcImageInput');
   var activeFeature = 'chat';
@@ -75,7 +86,7 @@
     github: { title: 'GitHub', status: 'PR c/ CONFIRMAÇÃO', agents: ['github'], text: 'Criação de PR real disponível abaixo — exige formulário completo + confirmação dupla antes de disparar.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
     vault: { title: 'Vault', status: 'ROLLBACK DISPONÍVEL', agents: ['aegis', 'archivist'], text: 'Snapshots do banco de projetos e rollback. Rollback sobrescreve o estado atual — confirmação dupla obrigatória.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
     metrics: { title: 'Métricas', status: 'SAFE READ', agents: ['goCore', 'aegis'], text: 'Métricas reais em modo leitura.', actions: [{ label: 'Resumo', path: '/api/metrics/summary' }, { label: 'Agentes', path: '/api/metrics/agents' }, { label: 'DORA', path: '/api/dora-metrics' }, { label: 'Memória', path: '/api/metrics/memory' }] },
-    tools: { title: 'Tools', status: 'SAFE READ', agents: ['scanner', 'patchEngine'], text: 'Ferramentas perigosas como apply-fix ficam bloqueadas. Primeiro passo: histórico e diagnóstico.', actions: [{ label: 'Histórico security', path: '/api/security/history' }, { label: 'Marketplace', path: '/api/tools/marketplace' }] },
+    tools: { title: 'Tools', status: 'APPLY-FIX DISPONÍVEL', agents: ['scanner', 'patchEngine'], text: 'Apply Fix abaixo — aplica correção em arquivo real com backup automático. Confirmação dupla obrigatória.', actions: [{ label: 'Histórico security', path: '/api/security/history' }, { label: 'Marketplace', path: '/api/tools/marketplace' }] },
     obsidian: { title: 'Obsidian', status: 'SAFE READ', agents: ['archivist'], text: 'Consulta de conector/memória sem escrita.', actions: [{ label: 'Status Obsidian', path: '/api/obsidian/status' }] },
     settings: { title: 'Configuração de IA', status: 'VAULT ATIVO', agents: ['hermes'], text: 'AI Provider Vault — salve, teste e remova chaves de API. A chave nunca é exibida por completo.', actions: [] },
     attach: { title: 'Anexos', status: 'LOCAL', agents: ['scanner'], text: 'Seletor local ativo. Upload real ainda bloqueado até definir limite, tipo permitido e confirmação.' },
@@ -170,6 +181,10 @@
     if (missionHistory) {
       missionHistory.hidden = activeFeature !== 'missions';
       if (activeFeature === 'missions') loadMissionHistory();
+    }
+    if (applyFixForm) {
+      applyFixForm.hidden = activeFeature !== 'tools';
+      if (activeFeature !== 'tools') resetApplyFixConfirm();
     }
     if (settingsPanel) {
       settingsPanel.hidden = activeFeature !== 'settings';
@@ -315,6 +330,122 @@
   });
 
   renderPrActions();
+
+  // Apply Fix — /api/security/apply-fix com confirmação dupla
+  var applyFixConfirmPending = false;
+  var applyFixRequestInFlight = false;
+
+  function applyFixFieldsValid() {
+    return !!(applyFixFile && applyFixLine && applyFixContent &&
+      applyFixFile.value.trim() && applyFixLine.value.trim() && applyFixContent.value.trim());
+  }
+
+  function applyFixConfirmReady() {
+    return applyFixConfirm && applyFixConfirm.value.trim() === 'APLICAR FIX';
+  }
+
+  function resetApplyFixConfirm() {
+    applyFixConfirmPending = false;
+    if (!applyFixRequestInFlight) renderApplyFixActions();
+  }
+
+  function renderApplyFixActions() {
+    if (!applyFixActionsEl) return;
+    applyFixActionsEl.textContent = '';
+
+    if (applyFixRequestInFlight) {
+      var busyBtn = document.createElement('button');
+      busyBtn.type = 'button';
+      busyBtn.disabled = true;
+      busyBtn.textContent = 'Aplicando fix...';
+      applyFixActionsEl.appendChild(busyBtn);
+      return;
+    }
+
+    if (applyFixConfirmPending) {
+      var confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      confirmBtn.disabled = !applyFixConfirmReady();
+      confirmBtn.textContent = applyFixConfirmReady() ? 'APLICAR FIX em ' + applyFixFile.value.trim() : 'Digite: APLICAR FIX';
+      confirmBtn.addEventListener('click', submitApplyFix);
+      var cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.textContent = 'Cancelar';
+      cancelBtn.addEventListener('click', function () {
+        applyFixConfirmPending = false;
+        if (applyFixStatus) applyFixStatus.textContent = '';
+        renderApplyFixActions();
+      });
+      applyFixActionsEl.appendChild(confirmBtn);
+      applyFixActionsEl.appendChild(cancelBtn);
+      return;
+    }
+
+    var prepareBtn = document.createElement('button');
+    prepareBtn.type = 'button';
+    prepareBtn.textContent = 'Preparar Apply Fix';
+    prepareBtn.disabled = !applyFixFieldsValid();
+    prepareBtn.addEventListener('click', function () {
+      applyFixConfirmPending = true;
+      if (applyFixStatus) applyFixStatus.textContent = 'Confirme no próximo botão. O arquivo será alterado e um backup criado.';
+      renderApplyFixActions();
+    });
+    applyFixActionsEl.appendChild(prepareBtn);
+  }
+
+  function submitApplyFix() {
+    if (applyFixRequestInFlight) return;
+    if (!applyFixFieldsValid() || !applyFixConfirmReady()) {
+      if (applyFixStatus) applyFixStatus.textContent = 'Campos inválidos ou confirmação não digitada.';
+      renderApplyFixActions();
+      return;
+    }
+    applyFixRequestInFlight = true;
+    applyFixConfirmPending = false;
+    renderApplyFixActions();
+    if (applyFixStatus) applyFixStatus.textContent = '';
+    if (applyFixPreview) applyFixPreview.hidden = true;
+
+    if (window.setAtomicCoreState) window.setAtomicCoreState('action');
+    if (window.highlightAtomicAgents) window.highlightAtomicAgents(['patchEngine']);
+
+    apiRequest('/api/security/apply-fix', {
+      method: 'POST',
+      body: {
+        violation: { file: applyFixFile.value.trim(), line: Number(applyFixLine.value.trim()), rule_id: applyFixRuleId ? applyFixRuleId.value.trim() : '' },
+        fix: { after: applyFixContent.value }
+      }
+    }).then(function (data) {
+      applyFixRequestInFlight = false;
+      renderApplyFixActions();
+      if (applyFixStatus) applyFixStatus.textContent = 'Fix aplicado em ' + data.file + ':' + data.line + ' (backup: ' + data.backup_created + ')';
+      if (applyFixPreview && data.diff_preview) {
+        applyFixPreview.hidden = false;
+        if (applyFixDiffBefore) applyFixDiffBefore.textContent = '- ' + data.diff_preview.before;
+        if (applyFixDiffAfter) applyFixDiffAfter.textContent = '+ ' + data.diff_preview.after;
+      }
+      if (applyFixFile) applyFixFile.value = '';
+      if (applyFixLine) applyFixLine.value = '';
+      if (applyFixRuleId) applyFixRuleId.value = '';
+      if (applyFixContent) applyFixContent.value = '';
+      if (applyFixConfirm) applyFixConfirm.value = '';
+    }).catch(function (err) {
+      applyFixRequestInFlight = false;
+      renderApplyFixActions();
+      if (applyFixStatus) applyFixStatus.textContent = 'Erro ao aplicar fix: ' + (err && err.message ? err.message : String(err));
+    }).then(function () {
+      if (window.resetAtomicCore) window.resetAtomicCore();
+    });
+  }
+
+  [applyFixFile, applyFixLine, applyFixRuleId, applyFixContent, applyFixConfirm].forEach(function (el) {
+    if (!el) return;
+    el.addEventListener('input', function () {
+      if (!applyFixRequestInFlight && !applyFixConfirmPending) renderApplyFixActions();
+      if (applyFixConfirmPending) renderApplyFixActions();
+    });
+  });
+  renderApplyFixActions();
 
   var CHIP_PREFIX = {
     missions: 'Missão: ',

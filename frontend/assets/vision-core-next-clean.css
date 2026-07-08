@@ -665,6 +665,104 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.45;
 }
 
+/* Apply Fix (Tools) */
+.vc-apply-fix:not([hidden]) {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(216, 180, 254, .12);
+}
+.vc-apply-fix h4 {
+  margin: 0;
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.vc-apply-fix-banner {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(251,191,36,.3);
+  border-radius: var(--radius);
+  background: rgba(251,191,36,.07);
+  color: #fcd34d;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.vc-apply-fix-banner code { font-size: 11px; color: #fde68a; }
+.vc-apply-fix label {
+  display: grid;
+  gap: 4px;
+  color: #b7a9cd;
+  font-size: 11px;
+  font-weight: 700;
+}
+.vc-apply-fix input,
+.vc-apply-fix textarea {
+  border: 1px solid rgba(216, 180, 254, .16);
+  border-radius: var(--radius);
+  background: rgba(18, 14, 28, .72);
+  color: #fff;
+  font-size: 13px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+.vc-apply-fix-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.vc-apply-fix-actions button {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid rgba(216, 180, 254, .16);
+  border-radius: 999px;
+  color: #efe9ff;
+  background: rgba(18, 14, 28, .78);
+  font-size: 12px;
+  font-weight: 760;
+}
+.vc-apply-fix-actions button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+.vc-apply-fix-actions button:not(:disabled):hover {
+  border-color: rgba(192, 132, 252, .44);
+}
+.vc-apply-fix-preview:not([hidden]) {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(52,211,153,.25);
+  border-radius: var(--radius);
+  background: rgba(52,211,153,.05);
+}
+.vc-apply-fix-preview h5 {
+  margin: 0;
+  font-size: 11px;
+  color: var(--green);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.vc-apply-fix-preview pre {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: rgba(0,0,0,.2);
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+#vcApplyFixDiffBefore { color: #fca5a5; }
+#vcApplyFixDiffAfter { color: #86efac; }
+.vc-apply-fix-status {
+  margin: 0;
+  color: #bdb4cf;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .vc-composer-actions {
   display: flex;
   flex-wrap: wrap;
