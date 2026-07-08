@@ -7,6 +7,17 @@
 
 ---
 
+## PROTOCOLO DE REVEZAMENTO ENTRE AGENTES (Codex / Claude Code / OpenCode)
+
+**Vigente a partir de 2026-07-08.** Vision Core Next está sendo construído por múltiplos agentes revezando (cada um até seu próprio limite de uso), sem gate humano por etapa — o usuário só faz teste manual de aprovação no final. Isso só funciona se todo agente seguir isto:
+
+1. **Antes de começar, leia nesta ordem:** `CLAUDE.md` (este arquivo) → `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` (o que construir e regras duras de UI) → `docs/CURRENT_HANDOFF.md` (o que o agente anterior estava fazendo agora mesmo). Os três juntos substituem reconstruir contexto lendo `git log` inteiro.
+2. **Ao terminar uma etapa OU antes de bater o limite de uso, atualize os três arquivos.** `docs/CURRENT_HANDOFF.md` é obrigatório mesmo em parada abrupta — é o único documento que garante que o próximo agente não perde o fio. Se o processo for interrompido sem aviso, o handoff pode ficar desatualizado; o agente seguinte deve tratar isso como sinal de alerta, não como ausência de trabalho.
+3. **Toda tarefa pequena termina com:** arquivos alterados, testes feitos (comando + resultado), pendências, e o próximo comando recomendado (literal, copiável). **Commit sempre.** Nunca deixar a working tree suja entre tarefas, nunca deployar código que não foi commitado antes — essa combinação foi a causa raiz do incidente de 2026-07-08 (Codex reabriu `AGENT_APPLY_ENABLED` localmente, sem commit, e o gate ficou sem rede de segurança até a próxima sessão auditar o diff à mão).
+4. **Gates de segurança só mudam com aprovação do usuário registrada por escrito em `docs/CURRENT_HANDOFF.md`.** Isso vale para `AGENT_APPLY_ENABLED` e qualquer flag equivalente que decida entre leitura segura e escrita/execução real. `tests/e2e/vision-core-next-agent-apply.spec.mjs` é a trava de regressão desse gate especificamente — é o único spec desta frente que é permanente e commitado (todos os outros specs de validação seguem o padrão "roda e apaga"); ele **deve continuar passando em todo handoff**, e se um agente precisar tocá-lo, o motivo tem que estar explícito no handoff.
+
+---
+
 ## STACK & URLS
 
 | Componente | URL | Notas |
