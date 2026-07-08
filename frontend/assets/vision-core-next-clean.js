@@ -10,6 +10,7 @@
   var featureTitle = document.getElementById('vcFeatureTitle');
   var featureBody = document.getElementById('vcFeatureBody');
   var featureStatus = document.getElementById('vcFeatureStatus');
+  var featureActions = document.getElementById('vcFeatureActions');
   var featureRun = document.getElementById('vcFeatureRun');
   var attachmentInput = document.getElementById('vcAttachmentInput');
   var imageInput = document.getElementById('vcImageInput');
@@ -20,10 +21,10 @@
     missions: { title: 'Missions', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Missões reais existem em /api/copilot e /api/run-live, mas execução consome quota e só será ligada com confirmação explícita.', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
     factory: { title: 'Software Factory', status: 'MAPPED', agents: ['openclaw', 'pi', 'aegis'], text: 'Auto-Pilot e Modo Avançado serão portados sem bundle legado. Jobs SF permanecem bloqueados nesta etapa para evitar custo/API real acidental.', actions: [{ label: 'Planejador', path: '/api/health' }] },
     timeline: { title: 'Timeline', status: 'SAFE READ', agents: ['archivist'], text: 'Timeline preparada para leitura real de missão.', actions: [{ label: 'Carregar timeline', path: '/api/mission/timeline' }] },
-    agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }] },
+    agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }, { label: 'Métricas agentes', path: '/api/metrics/agents' }] },
     github: { title: 'GitHub', status: 'SAFE READ', agents: ['github'], text: 'Criação de PR é ação crítica e fica bloqueada até formulário + confirmação. Por enquanto, só status.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
     vault: { title: 'Vault', status: 'SAFE READ', agents: ['aegis', 'archivist'], text: 'Snapshot e rollback escrevem estado; nesta etapa, somente listagem/consulta.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
-    metrics: { title: 'Métricas', status: 'SAFE READ', agents: ['goCore', 'aegis'], text: 'Métricas reais em modo leitura.', actions: [{ label: 'Resumo', path: '/api/metrics/summary' }, { label: 'Agentes', path: '/api/metrics/agents' }, { label: 'DORA', path: '/api/dora-metrics' }] },
+    metrics: { title: 'Métricas', status: 'SAFE READ', agents: ['goCore', 'aegis'], text: 'Métricas reais em modo leitura.', actions: [{ label: 'Resumo', path: '/api/metrics/summary' }, { label: 'Agentes', path: '/api/metrics/agents' }, { label: 'DORA', path: '/api/dora-metrics' }, { label: 'Memória', path: '/api/metrics/memory' }] },
     tools: { title: 'Tools', status: 'SAFE READ', agents: ['scanner', 'patchEngine'], text: 'Ferramentas perigosas como apply-fix ficam bloqueadas. Primeiro passo: histórico e diagnóstico.', actions: [{ label: 'Histórico security', path: '/api/security/history' }] },
     obsidian: { title: 'Obsidian', status: 'SAFE READ', agents: ['archivist'], text: 'Consulta de conector/memória sem escrita.', actions: [{ label: 'Status Obsidian', path: '/api/obsidian/status' }] },
     settings: { title: 'Configuração de IA', status: 'SAFE READ', agents: ['hermes'], text: 'AI Provider Vault será portado com proteção de segredo. Por enquanto, só listagem sem expor chaves.', actions: [{ label: 'Providers', path: '/api/providers/list' }] },
@@ -110,6 +111,7 @@
     if (featureTitle) featureTitle.textContent = feature.title;
     if (featureBody) featureBody.textContent = feature.text;
     if (featureStatus) featureStatus.textContent = feature.status;
+    renderFeatureActions(feature);
     if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
     if (announce) appendMessage('pending', feature.title.toUpperCase(), feature.text);
   }
@@ -190,6 +192,22 @@
     var text = JSON.stringify(data, null, 2);
     return text.length > 900 ? text.slice(0, 900) + '\n...' : text;
   }
+
+  // Quota/plano (item 16 da Etapa 1a) - badge informativo na sidebar,
+  // GET /api/mission/quota, sem auth obrigatória (funciona anônimo tb).
+  var quotaBadge = document.getElementById('vcQuotaBadge');
+  function loadQuotaBadge() {
+    if (!quotaBadge) return;
+    apiRequest('/api/mission/quota').then(function (data) {
+      if (!data) return;
+      if (data.unlimited) {
+        quotaBadge.textContent = (data.plan || 'PRO').toUpperCase() + ' · missões ilimitadas';
+      } else if (typeof data.remaining === 'number') {
+        quotaBadge.textContent = (data.plan || 'FREE').toUpperCase() + ' · ' + data.remaining + ' missões restantes';
+      }
+    }).catch(function () { /* mantém texto padrão - badge informativo, falha nao é crítica */ });
+  }
+  loadQuotaBadge();
 
   // Anexos/print — mesmo formato do legado: arquivos de texto viram
   // "[Arquivo: nome]\nconteudo" prependado a message; imagem vai como
