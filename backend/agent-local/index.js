@@ -193,14 +193,19 @@ async function poll() {
   if (!polling) {
     polling = true;
     try {
-      const res = await fetchJson(`${WORKER_URL}/api/agent/mission/pending`);
-      if (res.status === 200 && res.body && res.body.mission) {
+      const res = await fetchJson(`${WORKER_URL}/api/agent/mission/pending?agent_id=${encodeURIComponent(agentId)}&agent_secret=${encodeURIComponent(agentSecret)}`);
+      if (res.status === 401) {
+        console.log('\n🔒 Pareamento rejeitado (401) — re-registrando...');
+        agentId = ''; agentSecret = '';
+        try { fs.unlinkSync(CREDENTIALS_PATH); } catch (_) {}
+        await ensurePairing();
+      } else if (res.status === 200 && res.body && res.body.mission) {
         const mission = res.body.mission;
         console.log(`\n📥 Missão: ${mission.id}`);
         const result = await executeMission(mission);
         await fetchJson(`${WORKER_URL}/api/agent/mission/result`, {
           method: 'POST',
-          body:   Object.assign({ agent_id: agentId }, result)
+          body:   Object.assign({ agent_id: agentId, agent_secret: agentSecret }, result)
         });
         console.log(`📤 Resultado enviado (ok=${result.ok})`);
       }

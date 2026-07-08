@@ -3273,8 +3273,17 @@ for (const f of body.files) {
   return sendOk(res, { mission_id: mission.id, queued: true, queue_length: agentQueueDB.length(), type: mission.type, agent_id: mission.agent_id || null });
 });
 
+/* §207: mesmo padrão do /mission/queue — quem reivindica um agent_id precisa provar posse
+   via agent_secret, senão qualquer chamador podia fazer polling com o agent_id de outra
+   pessoa e roubar/interceptar uma missão de escrita real endereçada a ela (ou postar um
+   resultado falso em nome dela). Missões sem dono (agent_id vazio) continuam anônimas —
+   não muda o comportamento já existente pra dry-run/general. */
 app.get('/api/agent/mission/pending', (req, res) => {
-  const agentId = getRequestAgentId(req, null);
+  const agentId     = getRequestAgentId(req, null);
+  const agentSecret = getRequestAgentSecret(req, null);
+  if (agentId && !verifyAgentSecret(agentId, agentSecret)) {
+    return res.status(401).json({ ok: false, error: 'agent_pairing_required', time: now() });
+  }
   _agentLastSeenAt = Date.now(); /* §105: todo poll real atualiza presenca p/ /api/agent/status */
   if (agentId) _agentLastAgentId = agentId;
   const mission = agentQueueDB.shiftForAgent ? agentQueueDB.shiftForAgent(agentId) : agentQueueDB.shift();
@@ -3284,7 +3293,15 @@ app.get('/api/agent/mission/pending', (req, res) => {
 app.post('/api/agent/mission/result', (req, res) => {
   const body = normalizeBody(req);
   if (!body.mission_id) return res.status(400).json({ ok: false, error: 'mission_id_required', time: now() });
-  agentQueueDB.storeResult(body.mission_id, { ...body, received_at: now() });
+  const agentId     = getRequestAgentId(req, body);
+  const agentSecret = getRequestAgentSecret(req, body);
+  if (agentId && !verifyAgentSecret(agentId, agentSecret)) {
+    return res.status(401).json({ ok: false, error: 'agent_pairing_required', time: now() });
+  }
+  /* §207: agent_secret nunca pode ir pro storage — GET /mission/result/:id é público, sem
+     auth, e devolveria o segredo em texto puro pra qualquer um que soubesse o mission_id. */
+  const { agent_secret, ...safeBody } = body;
+  agentQueueDB.storeResult(body.mission_id, { ...safeBody, received_at: now() });
   return sendOk(res, { received: true, mission_id: body.mission_id });
 });
 

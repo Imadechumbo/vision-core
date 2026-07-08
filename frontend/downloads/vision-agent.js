@@ -1272,7 +1272,15 @@ async function sfDryRunRealMission(m) {
 
 /* ── Polling loop ─────────────────────────────────────────────── */
 function poll() {
-  httpRequest(WORKER + '/api/agent/mission/pending?agent_id=' + encodeURIComponent(AGENT_ID), {}, function(err, res) {
+  var pendingUrl = WORKER + '/api/agent/mission/pending?agent_id=' + encodeURIComponent(AGENT_ID) +
+    '&agent_secret=' + encodeURIComponent(AGENT_SECRET);
+  httpRequest(pendingUrl, {}, function(err, res) {
+    if (!err && res.status === 401) {
+      console.log('[' + new Date().toLocaleTimeString() + '] Pareamento rejeitado (401) — re-registrando...');
+      AGENT_ID = ''; AGENT_SECRET = '';
+      try { fs.unlinkSync(CREDENTIALS_PATH); } catch (_) {}
+      return ensurePairing(function() { setTimeout(poll, POLL_MS); });
+    }
     if (!err && res.body && res.body.mission) {
       var m = res.body.mission;
       console.log('[' + new Date().toLocaleTimeString() + '] Missão: ' + m.id);
@@ -1287,7 +1295,7 @@ function poll() {
       handler(m).then(function(result) {
         console.log('Ação  : ' + result.action);
         httpRequest(WORKER + '/api/agent/mission/result', {
-          method: 'POST', body: Object.assign({ agent_id: AGENT_ID }, result)
+          method: 'POST', body: Object.assign({ agent_id: AGENT_ID, agent_secret: AGENT_SECRET }, result)
         }, function(err2) {
           if (!err2) console.log('Enviado ✅\n');
           else       console.log('Erro ao enviar: ' + err2.message + '\n');
