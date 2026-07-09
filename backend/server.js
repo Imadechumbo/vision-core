@@ -753,9 +753,15 @@ app.all('/api/auth/register', rateLimitMiddleware('register', 5, 60 * 60 * 1000)
   const body  = normalizeBody(req);
   const email = String(body.email || '').trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ ok: false, error: 'valid_email_required', time: now() });
-  // §145: gerar senha única por usuário quando frontend envia 'vc-user-auto' (fluxo só-email)
   const provided = String(body.password || '');
-  const rawPw = (provided && provided !== 'vc-user-auto' && provided.length >= 8)
+  // INCIDENTE-3: a credencial de fallback legada era tratada como marcador do fluxo
+  // só-email (§145) e acabou pública (achado do vc-secret-guard no bundle legado).
+  // Rejeição ativa e logada — nunca mais aceita como marcador válido. Ver CLAUDE.md.
+  if (provided === 'vc-user-auto') {
+    auditLog('auth_fallback_credential_rejected', req, { route: '/api/auth/register' });
+    return res.status(400).json({ ok: false, error: 'fallback_credential_rejected', time: now() });
+  }
+  const rawPw = (provided && provided.length >= 8)
     ? provided
     : crypto.randomBytes(8).toString('hex'); // 16 chars hex, único por usuário
   const db = readJsonFile(USERS_DB, { users: [] });
@@ -772,6 +778,15 @@ app.all('/api/auth/login', rateLimitMiddleware('login', 10, 15 * 60 * 1000), (re
   const body = normalizeBody(req);
   const email = String(body.email || '').trim().toLowerCase();
   const password = String(body.password || '');
+  // INCIDENTE-3: fecha o caminho de hash legado pré-§145 — contas antigas cujo
+  // password_hash foi gerado a partir da credencial de fallback pública não podem
+  // mais autenticar com ela. Seguro pra contas legítimas: desde §145 nenhuma conta
+  // nova pode ter esse valor como senha real (register já recusa o marcador
+  // acima), então nenhuma senha genuína jamais colide com esta rejeição.
+  if (password === 'vc-user-auto') {
+    auditLog('auth_fallback_credential_rejected', req, { route: '/api/auth/login' });
+    return res.status(400).json({ ok: false, error: 'fallback_credential_rejected', time: now() });
+  }
   const db = readJsonFile(USERS_DB, { users: [] });
   const user = db.users.find(u => u.email === email);
   if (!user || !verifyPassword(password, user.password_hash)) { auditLog('login_fail', req, { email }); return res.status(401).json({ ok: false, error: 'invalid_credentials', time: now() }); } // §154
