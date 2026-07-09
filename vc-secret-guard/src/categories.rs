@@ -14,6 +14,7 @@ pub enum Category {
     CredentialField,
     ConnectionString,
     HighEntropyBlob,
+    FallbackCredentialLiteral,
 }
 
 impl Category {
@@ -24,6 +25,7 @@ impl Category {
             Category::CredentialField => "credential_field",
             Category::ConnectionString => "connection_string",
             Category::HighEntropyBlob => "high_entropy_blob",
+            Category::FallbackCredentialLiteral => "fallback_credential_literal",
         }
     }
 }
@@ -43,6 +45,13 @@ pub struct CompiledRules {
     bearer_token: Regex,
     credential_field: Regex,
     connection_string: Regex,
+    fallback_or: Regex,
+    fallback_nullish: Regex,
+    fallback_ternary: Regex,
+    fallback_default_param: Regex,
+    credential_context: Regex,
+    value_quoted: Regex,
+    value_kv: Regex,
     entropy_min_len: usize,
     entropy_min_bits: f64,
 }
@@ -56,6 +65,12 @@ pub struct CompiledRules {
 /// de FORMATOS de prefixo conhecidos; nova entrada de provedor é uma linha
 /// aqui, não uma regra nova.
 const KNOWN_KEY_PREFIXES: &str = "sk|pk|ak|rk|gh|gl|xox";
+
+/// Palavras de sinal de contexto de credencial usadas pela categoria
+/// `fallback_credential_literal` (Fase 1.5, objetivo 1) — nome de
+/// variavel/campo/funcao proximo contendo qualquer uma delas. Mesma lista
+/// citada literalmente na autorizacao da fase.
+const CREDENTIAL_CONTEXT_WORDS: &str = "pw|pass|token|secret|key|auth";
 
 impl CompiledRules {
     pub fn compile(entropy_min_len: usize, entropy_min_bits: f64) -> CompiledRules {
@@ -78,6 +93,36 @@ impl CompiledRules {
             // shape: scheme://user:pass@host — only the password segment is
             // captured (the class of leak from the GitLab incident, spec §1).
             connection_string: Regex::new(r"\b[a-z]+://[^:\s/]+:([^@\s/]+)@[^\s/]+").unwrap(),
+            // INCIDENTE-3 shape (`x.getItem(...) || 'literal'`) — literal in
+            // `||`/`??`/ternary-else fallback position. These three require
+            // `credential_context` to also match somewhere on the line (see
+            // scan_line) — none of them carries its own context, unlike
+            // `fallback_default_param` below.
+            fallback_or: Regex::new(r#"\|\|\s*["']([^"'\s]{4,})["']"#).unwrap(),
+            fallback_nullish: Regex::new(r#"\?\?\s*["']([^"'\s]{4,})["']"#).unwrap(),
+            // `\s+` right after the lone `?` is what disambiguates a ternary
+            // from `??` (nullish coalescing has no space between the two
+            // `?` chars) — the regex crate has no lookahead to express this
+            // more directly.
+            fallback_ternary: Regex::new(r#"\?\s+[^:?]*:\s*["']([^"'\s]{4,})["']"#).unwrap(),
+            // shape: `<ident containing a context word> = "literal"` — the
+            // identifier itself carries the context, so this one is
+            // self-contained (no separate credential_context check needed).
+            fallback_default_param: Regex::new(&format!(
+                r#"(?i)\b(\w*(?:{CREDENTIAL_CONTEXT_WORDS})\w*)\s*=\s*["']([^"'\s]{{4,}})["']"#
+            ))
+            .unwrap(),
+            credential_context: Regex::new(&format!(
+                r"(?i)\b\w*(?:{CREDENTIAL_CONTEXT_WORDS})\w*\b"
+            ))
+            .unwrap(),
+            // Fase 1.5, objetivo 2: `high_entropy_blob` so considera token em
+            // "posicao de VALOR" — dentro de string literal, ou lado direito
+            // de `=`/`:` — nunca identificador solto (nome de funcao/
+            // variavel/propriedade em posicao de definicao/chamada nunca
+            // bate em nenhum dos dois).
+            value_quoted: Regex::new(r#"["']([^"'\n]{4,})["']"#).unwrap(),
+            value_kv: Regex::new(r"[:=]\s*([A-Za-z0-9._\-]{4,})").unwrap(),
             entropy_min_len,
             entropy_min_bits,
         }
@@ -121,17 +166,121 @@ impl CompiledRules {
                 });
             }
         }
-        for token in line.split(|c: char| !c.is_ascii_alphanumeric()) {
-            if looks_like_high_entropy_secret(token, self.entropy_min_len, self.entropy_min_bits) {
+
+        // fallback_credential_literal (Fase 1.5, objetivo 1) — INCIDENTE-3
+        // shape. `||`/`??`/ternario-else exigem sinal de contexto em
+        // qualquer lugar da linha; o parametro-default carrega o proprio
+        // sinal no identificador (self-contained).
+        //
+        // Achado de dogfood: checar a linha crua inteira falso-positivava
+        // pesado em valores de string tipo 'PASS_GOLD'/'PASS' (constantes de
+        // status do proprio projeto) so porque contem a substring "pass" —
+        // nada a ver com credencial. O sinal de contexto so pode vir de
+        // CODIGO (nome de variavel/campo/funcao), nunca do CONTEUDO de uma
+        // string — por isso o contexto e checado contra a linha com o
+        // interior de toda string literal apagado.
+        let context_line = strip_quoted_content(line);
+        if self.credential_context.is_match(&context_line) {
+            if let Some(caps) = self.fallback_or.captures(line) {
                 matches.push(RawMatch {
-                    category: Category::HighEntropyBlob,
-                    raw_secret: token.to_string(),
+                    category: Category::FallbackCredentialLiteral,
+                    raw_secret: caps[1].to_string(),
                 });
+            }
+            if let Some(caps) = self.fallback_nullish.captures(line) {
+                matches.push(RawMatch {
+                    category: Category::FallbackCredentialLiteral,
+                    raw_secret: caps[1].to_string(),
+                });
+            }
+            if let Some(caps) = self.fallback_ternary.captures(line) {
+                matches.push(RawMatch {
+                    category: Category::FallbackCredentialLiteral,
+                    raw_secret: caps[1].to_string(),
+                });
+            }
+        }
+        if let Some(caps) = self.fallback_default_param.captures(line) {
+            matches.push(RawMatch {
+                category: Category::FallbackCredentialLiteral,
+                raw_secret: caps[2].to_string(),
+            });
+        }
+
+        for region in self.value_position_regions(line) {
+            for token in region.split(|c: char| !c.is_ascii_alphanumeric()) {
+                if looks_like_high_entropy_secret(token, self.entropy_min_len, self.entropy_min_bits)
+                {
+                    matches.push(RawMatch {
+                        category: Category::HighEntropyBlob,
+                        raw_secret: token.to_string(),
+                    });
+                }
             }
         }
 
         matches
     }
+
+    /// Substrings da linha que estao em "posicao de VALOR" — conteudo de
+    /// string literal, ou o que vem depois de `=`/`:` (atribuicao/campo,
+    /// aspeado ou nao — cobre tanto JS/TS quanto `CHAVE=valor` de arquivo
+    /// `.env`). Um identificador puro (nome de funcao/variavel/propriedade
+    /// em posicao de definicao ou chamada) nunca cai em nenhuma das duas
+    /// formas.
+    fn value_position_regions<'a>(&self, line: &'a str) -> Vec<&'a str> {
+        let mut regions = Vec::new();
+        for caps in self.value_quoted.captures_iter(line) {
+            if let Some(m) = caps.get(1) {
+                regions.push(m.as_str());
+            }
+        }
+        for caps in self.value_kv.captures_iter(line) {
+            if let Some(m) = caps.get(1) {
+                regions.push(m.as_str());
+            }
+        }
+        regions
+    }
+}
+
+/// Replaces the interior of every quoted string with spaces, so
+/// `credential_context` only ever matches identifiers/keywords in actual
+/// code — never text that happens to live inside a string *value* (the
+/// `'PASS_GOLD'` false-positive class found in dogfood, spec Fase 1.5
+/// objetivo 1). Quote character itself is preserved so this doesn't shift
+/// byte offsets in a way that would matter for `is_match` (only used for
+/// a boolean context check, never for capture positions).
+fn strip_quoted_content(line: &str) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut in_quote: Option<char> = None;
+    for c in line.chars() {
+        match in_quote {
+            None => {
+                // backtick included: JS template literals are extremely
+                // common in this codebase (server.js). A `${expr}`
+                // sub-expression inside one is technically live code, but
+                // tracking that nested boundary is more machinery than a
+                // line-level heuristic warrants here — blanking the whole
+                // template literal errs toward fewer false positives
+                // (the goal of this objective), never toward missing a
+                // real bare-identifier context signal elsewhere on the line.
+                if c == '"' || c == '\'' || c == '`' {
+                    in_quote = Some(c);
+                }
+                out.push(c);
+            }
+            Some(q) => {
+                if c == q {
+                    in_quote = None;
+                    out.push(c);
+                } else {
+                    out.push(' ');
+                }
+            }
+        }
+    }
+    out
 }
 
 /// True for `${VAR}`, `$VAR`, `%VAR%` — CI/shell variable interpolation,
@@ -243,5 +392,107 @@ mod tests {
     fn clean_line_has_no_matches() {
         let hits = rules().scan_line("fn main() { println!(\"hello\"); }");
         assert!(hits.is_empty());
+    }
+
+    // ---- fallback_credential_literal (Fase 1.5, objetivo 1) ----
+
+    #[test]
+    fn fallback_credential_literal_detects_or_fallback_with_credential_context() {
+        let hits = rules().scan_line(
+            "const pw = localStorage.getItem('vc_user_pw_demo') || 'zzFallbackNotReal01';",
+        );
+        let hit = hits
+            .iter()
+            .find(|m| m.category == Category::FallbackCredentialLiteral)
+            .expect("deveria detectar fallback || com contexto de credencial");
+        assert_eq!(hit.raw_secret, "zzFallbackNotReal01");
+    }
+
+    #[test]
+    fn fallback_credential_literal_detects_nullish_coalescing_with_context() {
+        let hits =
+            rules().scan_line("const token = maybeToken ?? 'zzNullishFallbackNotReal02';");
+        assert!(hits
+            .iter()
+            .any(|m| m.category == Category::FallbackCredentialLiteral
+                && m.raw_secret == "zzNullishFallbackNotReal02"));
+    }
+
+    #[test]
+    fn fallback_credential_literal_detects_ternary_else_branch_with_context() {
+        let hits = rules().scan_line(
+            "const secretValue = hasOverride ? overrideValue : 'zzTernaryFallbackNotReal03';",
+        );
+        assert!(hits
+            .iter()
+            .any(|m| m.category == Category::FallbackCredentialLiteral
+                && m.raw_secret == "zzTernaryFallbackNotReal03"));
+    }
+
+    #[test]
+    fn fallback_credential_literal_detects_default_parameter_assignment() {
+        let hits = rules()
+            .scan_line("function loginFallback(authToken = 'zzDefaultParamNotReal04') {");
+        assert!(hits
+            .iter()
+            .any(|m| m.category == Category::FallbackCredentialLiteral
+                && m.raw_secret == "zzDefaultParamNotReal04"));
+    }
+
+    /// Instrucao explicita da autorizacao da Fase 1.5: a mesma forma (`||
+    /// 'literal'`) sem NENHUM sinal de contexto de credencial na linha nao
+    /// pode gerar finding.
+    #[test]
+    fn fallback_credential_literal_requires_context_or_fallback_without_credential_signal_is_not_flagged(
+    ) {
+        let hits = rules().scan_line("retry || 'default'");
+        assert!(!hits
+            .iter()
+            .any(|m| m.category == Category::FallbackCredentialLiteral));
+    }
+
+    /// Achado real de dogfood (`backend/server.js`, varias linhas): um
+    /// ternario tipo `status: x ? 'PASS_GOLD' : 'DONE'` disparava falso
+    /// positivo porque a STRING 'PASS_GOLD' contem a substring "pass" —
+    /// nada a ver com credencial (e' o nome do gate de validacao do
+    /// proprio produto). O sinal de contexto so pode vir de codigo (nome
+    /// de variavel/campo), nunca do conteudo de uma string. Trava de
+    /// regressao — nem `cond`/`state` (as unicas coisas fora de aspas)
+    /// contem nenhuma palavra de contexto.
+    #[test]
+    fn fallback_credential_literal_ignores_context_word_found_only_inside_a_string_value() {
+        let hits = rules().scan_line("const state = cond ? 'PASS_GOLD' : 'DONE';");
+        assert!(!hits
+            .iter()
+            .any(|m| m.category == Category::FallbackCredentialLiteral));
+    }
+
+    // ---- entropy value-position restriction (Fase 1.5, objetivo 2) ----
+
+    /// Achado real do dogfood da Fase 1: identificador de funcao camelCase
+    /// em posicao de DEFINICAO (nunca de valor) nao deve virar
+    /// high_entropy_blob so por aparecer numa linha comprida.
+    #[test]
+    fn bare_identifier_in_definition_position_is_never_entropy_flagged() {
+        let hits =
+            rules().scan_line("function passGoldCandidateFromResultAndEvidence(receipt) {");
+        assert!(!hits.iter().any(|m| m.category == Category::HighEntropyBlob));
+    }
+
+    /// O mesmo identificador em posicao de VALOR (ex.: referencia de funcao
+    /// atribuida a uma propriedade) ainda e suprimido — pelo penalizador de
+    /// forma de identificador (entropy.rs), nao pela posicao.
+    #[test]
+    fn identifier_shaped_value_in_value_position_is_still_not_entropy_flagged() {
+        let hits = rules().scan_line("handler: passGoldCandidateFromResultAndEvidence,");
+        assert!(!hits.iter().any(|m| m.category == Category::HighEntropyBlob));
+    }
+
+    /// Um blob de verdade (com digitos, sem forma de identificador) em
+    /// posicao de valor continua detectado normalmente.
+    #[test]
+    fn real_looking_blob_in_value_position_is_still_entropy_flagged() {
+        let hits = rules().scan_line("standalone = zK9mQ2xR7vT4wP8nL1sB6fH3cJ0aYdEgU5i");
+        assert!(hits.iter().any(|m| m.category == Category::HighEntropyBlob));
     }
 }

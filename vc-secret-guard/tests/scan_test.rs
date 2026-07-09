@@ -24,6 +24,7 @@ fn each_category_is_detected_in_its_dedicated_fixture() {
         "credential_field",
         "connection_string",
         "high_entropy_blob",
+        "fallback_credential_literal",
     ] {
         assert!(
             findings.iter().any(|f| f.category == expected),
@@ -100,6 +101,7 @@ fn known_raw_secrets_from_fixtures() -> Vec<&'static str> {
         "zzTestTokenNotReal99",
         "zK9mQ2xR7vT4wP8nL1sB6fH3cJ0aYdEgU5i",
         "N3xQ7pL2vR8tK5wJ9hF4sD6cG1bY0aZ",
+        "zzFallbackNotReal01",
     ]
 }
 
