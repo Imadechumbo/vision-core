@@ -126,6 +126,20 @@
   var applyFixStatus = document.getElementById('vcApplyFixStatus');
   var attachmentInput = document.getElementById('vcAttachmentInput');
   var imageInput = document.getElementById('vcImageInput');
+  var metricsPanel = document.getElementById('vcMetricsPanel');
+  var metricsSourceBadge = document.getElementById('vcMetricsSourceBadge');
+  var metricsError = document.getElementById('vcMetricsError');
+  var metricsErrorText = document.getElementById('vcMetricsErrorText');
+  var metricsRetry = document.getElementById('vcMetricsRetry');
+  var metricsRefresh = document.getElementById('vcMetricsRefresh');
+  var metricsSkel = document.getElementById('vcMetricsSkel');
+  var metricsBody = document.getElementById('vcMetricsBody');
+  var metricsAgentList = document.getElementById('vcMetricsAgentList');
+  var metricsTotal = document.getElementById('vcMetricsTotal');
+  var metricsDoraGrid = document.getElementById('vcMetricsDoraGrid');
+  var metricsConn = document.getElementById('vcMetricsConn');
+  var metricsRawToggle = document.getElementById('vcMetricsRawToggle');
+  var metricsRaw = document.getElementById('vcMetricsRaw');
   var activeFeature = 'chat';
 
   var featureMap = {
@@ -244,6 +258,10 @@
     if (vaultRollback) {
       vaultRollback.hidden = activeFeature !== 'vault';
       if (activeFeature === 'vault') { if (vaultStatus) vaultStatus.textContent = ''; loadVaultSnapshots(); }
+    }
+    if (metricsPanel) {
+      metricsPanel.hidden = activeFeature !== 'metrics';
+      if (activeFeature === 'metrics') startMetricsPolling(); else stopMetricsPolling();
     }
     if (activeFeature === 'missions') {
       refreshAgentApplyStatus();
@@ -647,11 +665,269 @@
 
   if (document.addEventListener) {
     document.addEventListener('visibilitychange', function () {
-      if (document.hidden) { stopAgentPolling(); }
-      else { startAgentPolling(); }
+      if (document.hidden) {
+        stopAgentPolling();
+        stopMetricsPolling();
+      } else {
+        startAgentPolling();
+        if (activeFeature === 'metrics') startMetricsPolling();
+      }
     });
   }
   startAgentPolling();
+
+  // Métricas — camada visual sobre os mesmos 3 endpoints já usados pela aba
+  // (item 1 da paridade legado, "Métricas — visual" em docs/LEGACY_DESIGN_
+  // REFERENCE.md): /api/metrics/agents, /api/dora-metrics, /api/agent/status.
+  // Backend intocado — os 3 endpoints já existem e já respondiam em produção.
+  // Polling só roda com a aba Métricas ativa E a página visível (>=10s,
+  // pausa em document.hidden — mesmo padrão do badge de conexão acima).
+  var METRICS_POLL_MS = 12000;
+  var metricsPollTimer = null;
+  var metricsLastResults = null; // último snapshot bem-sucedido (p/ toggle JSON bruto)
+
+  function humanizeMsAgo(ms) {
+    if (ms === null || ms === undefined) return 'nunca visto';
+    if (ms < 1000) return 'agora mesmo';
+    var s = Math.round(ms / 1000);
+    if (s < 60) return 'há ' + s + 's';
+    var m = Math.round(s / 60);
+    if (m < 60) return 'há ' + m + 'min';
+    var h = Math.round(m / 60);
+    return 'há ' + h + 'h';
+  }
+
+  function statusTier(status) {
+    if (status === 'ok') return 'ok';
+    if (status === 'binary_not_found' || status === 'PENDING_EVIDENCE') return 'warn';
+    return 'error';
+  }
+
+  function setMetricsRawText() {
+    if (!metricsRaw) return;
+    metricsRaw.textContent = metricsLastResults ? JSON.stringify(metricsLastResults, null, 2) : 'Sem dados carregados ainda.';
+  }
+
+  if (metricsRawToggle) {
+    metricsRawToggle.addEventListener('change', function () {
+      if (metricsRaw) metricsRaw.hidden = !metricsRawToggle.checked;
+      if (metricsRawToggle.checked) setMetricsRawText();
+    });
+  }
+
+  function renderMetricsAgents(agentsData) {
+    if (!metricsAgentList) return;
+    metricsAgentList.textContent = '';
+    var list = agentsData && Array.isArray(agentsData.agents) ? agentsData.agents : null;
+    if (!list) {
+      var failMsg = document.createElement('p');
+      failMsg.className = 'vc-metrics-empty';
+      failMsg.textContent = 'Falha ao carregar métricas de agentes.';
+      metricsAgentList.appendChild(failMsg);
+      if (metricsTotal) metricsTotal.textContent = '';
+      return;
+    }
+    if (!list.length) {
+      var emptyMsg = document.createElement('p');
+      emptyMsg.className = 'vc-metrics-empty';
+      emptyMsg.textContent = 'Nenhum agente reportado.';
+      metricsAgentList.appendChild(emptyMsg);
+      if (metricsTotal) metricsTotal.textContent = '';
+      return;
+    }
+    var numericCosts = list.filter(function (a) { return typeof a.cost_usd === 'number'; }).map(function (a) { return a.cost_usd; });
+    var maxCost = numericCosts.length ? Math.max.apply(null, numericCosts.map(Math.abs)) || 1 : 1;
+    list.forEach(function (agent) {
+      var row = document.createElement('div');
+      row.className = 'vc-metrics-agent-row';
+
+      var head = document.createElement('div');
+      head.className = 'vc-metrics-agent-head';
+      var dot = document.createElement('span');
+      dot.className = 'vc-metrics-status-dot vc-metrics-status-' + statusTier(agent.status);
+      var name = document.createElement('strong');
+      name.textContent = agent.name || '—';
+      var badge = document.createElement('span');
+      badge.className = 'vc-metrics-status-badge vc-metrics-status-' + statusTier(agent.status);
+      badge.textContent = agent.status || 'unknown';
+      head.appendChild(dot);
+      head.appendChild(name);
+      head.appendChild(badge);
+      row.appendChild(head);
+
+      if (agent.note) {
+        var note = document.createElement('p');
+        note.className = 'vc-metrics-agent-note';
+        note.textContent = agent.note;
+        row.appendChild(note);
+      }
+
+      if (Array.isArray(agent.active_providers) && agent.active_providers.length) {
+        var chips = document.createElement('div');
+        chips.className = 'vc-metrics-chips';
+        agent.active_providers.forEach(function (p) {
+          var chip = document.createElement('span');
+          chip.className = 'vc-metrics-chip';
+          chip.textContent = p;
+          chips.appendChild(chip);
+        });
+        row.appendChild(chips);
+      }
+
+      var costWrap = document.createElement('div');
+      costWrap.className = 'vc-metrics-cost';
+      if (typeof agent.cost_usd === 'number') {
+        var bar = document.createElement('div');
+        bar.className = 'vc-metrics-bar';
+        var fill = document.createElement('div');
+        fill.className = 'vc-metrics-bar-fill';
+        var pct = Math.min(100, Math.max(agent.cost_usd === 0 ? 0 : 4, (Math.abs(agent.cost_usd) / maxCost) * 100));
+        fill.style.width = pct + '%';
+        bar.appendChild(fill);
+        var costLabel = document.createElement('span');
+        costLabel.textContent = '$' + agent.cost_usd.toFixed(3);
+        costWrap.appendChild(bar);
+        costWrap.appendChild(costLabel);
+      } else {
+        var noCost = document.createElement('span');
+        noCost.className = 'vc-metrics-no-cost';
+        noCost.textContent = 'sem dados de custo';
+        costWrap.appendChild(noCost);
+      }
+      row.appendChild(costWrap);
+
+      metricsAgentList.appendChild(row);
+    });
+
+    if (metricsTotal) {
+      metricsTotal.textContent = '';
+      var totalLabel = document.createElement('strong');
+      totalLabel.textContent = 'TOTAL PIPELINE: ';
+      var totalValue = document.createElement('span');
+      totalValue.textContent = numericCosts.length
+        ? '$' + numericCosts.reduce(function (a, b) { return a + b; }, 0).toFixed(3)
+        : 'sem dados de custo';
+      metricsTotal.appendChild(totalLabel);
+      metricsTotal.appendChild(totalValue);
+    }
+  }
+
+  var DORA_FIELDS = [
+    { key: 'deployment_frequency', label: 'Deploy Frequency' },
+    { key: 'lead_time', label: 'Lead Time' },
+    { key: 'mttr', label: 'MTTR' },
+    { key: 'change_failure_rate', label: 'Change Failure Rate' },
+    { key: 'pass_gold_count_30d', label: 'PASS GOLD (30d)' },
+    { key: 'total_pass_gold', label: 'Total PASS GOLD' }
+  ];
+
+  function renderMetricsDora(dora) {
+    if (!metricsDoraGrid) return;
+    metricsDoraGrid.textContent = '';
+    if (!dora) {
+      var fail = document.createElement('p');
+      fail.className = 'vc-metrics-empty';
+      fail.textContent = 'Falha ao carregar DORA metrics.';
+      metricsDoraGrid.appendChild(fail);
+      return;
+    }
+    DORA_FIELDS.forEach(function (field) {
+      var card = document.createElement('div');
+      card.className = 'vc-metrics-dora-card';
+      var label = document.createElement('span');
+      label.className = 'vc-metrics-dora-label';
+      label.textContent = field.label;
+      var value = document.createElement('strong');
+      value.textContent = dora[field.key] !== undefined && dora[field.key] !== null ? String(dora[field.key]) : '—';
+      card.appendChild(label);
+      card.appendChild(value);
+      metricsDoraGrid.appendChild(card);
+    });
+  }
+
+  function renderMetricsConnectivity(status) {
+    if (!metricsConn) return;
+    metricsConn.textContent = '';
+    if (!status) {
+      var fail = document.createElement('p');
+      fail.className = 'vc-metrics-empty';
+      fail.textContent = 'Falha ao carregar conectividade.';
+      metricsConn.appendChild(fail);
+      return;
+    }
+    var row = document.createElement('div');
+    row.className = 'vc-metrics-conn-row';
+    var dot = document.createElement('span');
+    dot.className = 'vc-metrics-status-dot ' + (status.connected ? 'vc-metrics-status-ok' : 'vc-metrics-status-warn');
+    var text = document.createElement('span');
+    text.textContent = status.connected ? 'Conectado' : 'Desconectado';
+    row.appendChild(dot);
+    row.appendChild(text);
+    metricsConn.appendChild(row);
+
+    var meta = document.createElement('p');
+    meta.className = 'vc-metrics-conn-meta';
+    meta.textContent = 'Modo: ' + (status.mode || '—') + ' · Último sinal: ' + humanizeMsAgo(status.last_seen_ms_ago) +
+      (status.agent_id ? ' · agent_id: ' + status.agent_id : '') +
+      ' · anti_stub: ' + (status.anti_stub === true ? 'true' : 'false');
+    metricsConn.appendChild(meta);
+  }
+
+  function setMetricsLoading(loading) {
+    if (metricsSkel) metricsSkel.hidden = !loading;
+    if (loading && metricsBody) metricsBody.hidden = true;
+  }
+
+  function showMetricsError(show) {
+    if (metricsError) metricsError.hidden = !show;
+  }
+
+  function loadMetrics() {
+    if (!metricsPanel) return;
+    showMetricsError(false);
+    setMetricsLoading(true);
+    var results = { agents: null, dora: null, status: null };
+    var failures = 0;
+    var pending = 3;
+
+    function settle() {
+      pending -= 1;
+      if (pending > 0) return;
+      setMetricsLoading(false);
+      if (failures === 3) {
+        if (metricsSourceBadge) { metricsSourceBadge.textContent = 'FALLBACK LOCAL'; metricsSourceBadge.className = 'vc-metrics-source is-fallback'; }
+        showMetricsError(true);
+        if (metricsBody) metricsBody.hidden = true;
+        return;
+      }
+      if (metricsSourceBadge) { metricsSourceBadge.textContent = 'DADOS REAIS'; metricsSourceBadge.className = 'vc-metrics-source is-real'; }
+      metricsLastResults = results;
+      if (metricsBody) metricsBody.hidden = false;
+      renderMetricsAgents(results.agents);
+      renderMetricsDora(results.dora);
+      renderMetricsConnectivity(results.status);
+      if (metricsRawToggle && metricsRawToggle.checked) setMetricsRawText();
+    }
+
+    apiRequest('/api/metrics/agents').then(function (d) { results.agents = d; }).catch(function () { failures += 1; }).then(settle);
+    apiRequest('/api/dora-metrics').then(function (d) { results.dora = d; }).catch(function () { failures += 1; }).then(settle);
+    apiRequest('/api/agent/status').then(function (d) { results.status = d; }).catch(function () { failures += 1; }).then(settle);
+  }
+
+  if (metricsRetry) metricsRetry.addEventListener('click', loadMetrics);
+  if (metricsRefresh) metricsRefresh.addEventListener('click', loadMetrics);
+
+  function startMetricsPolling() {
+    stopMetricsPolling();
+    loadMetrics();
+    metricsPollTimer = window.setInterval(function () {
+      if (!document.hidden) loadMetrics();
+    }, METRICS_POLL_MS);
+  }
+
+  function stopMetricsPolling() {
+    if (metricsPollTimer) { window.clearInterval(metricsPollTimer); metricsPollTimer = null; }
+  }
 
   // Executar Missão — Caminho A (item 4 da paridade, Etapa 1d Fase 1).
   // Pipeline real de 2 chamadas, igual ao legado: (1) POST /api/chat

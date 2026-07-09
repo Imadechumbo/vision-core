@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-48">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-48" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-49">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-49" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -242,6 +242,51 @@
               </div>
               <button type="button" id="vcMissionDetailBack">Voltar</button>
             </div>
+          </div>
+
+          <div class="vc-metrics-panel" id="vcMetricsPanel" hidden>
+            <div class="vc-metrics-head">
+              <h4>Métricas dos Agentes</h4>
+              <div class="vc-metrics-head-actions">
+                <span class="vc-metrics-source" id="vcMetricsSourceBadge">UI LOCAL</span>
+                <button type="button" id="vcMetricsRefresh">Atualizar</button>
+                <label class="vc-metrics-raw-toggle">
+                  <input type="checkbox" id="vcMetricsRawToggle">
+                  Ver JSON bruto
+                </label>
+              </div>
+            </div>
+
+            <div class="vc-metrics-error" id="vcMetricsError" role="alert" hidden>
+              <p id="vcMetricsErrorText">Falha ao carregar métricas.</p>
+              <button type="button" id="vcMetricsRetry">Tentar novamente</button>
+            </div>
+
+            <div class="vc-metrics-skel" id="vcMetricsSkel" hidden>
+              <div class="vc-metrics-skel-row"></div>
+              <div class="vc-metrics-skel-row"></div>
+              <div class="vc-metrics-skel-row"></div>
+            </div>
+
+            <div class="vc-metrics-body" id="vcMetricsBody" hidden>
+              <section class="vc-metrics-section">
+                <h5>Agentes</h5>
+                <div class="vc-metrics-agent-list" id="vcMetricsAgentList" aria-live="polite"></div>
+                <div class="vc-metrics-total" id="vcMetricsTotal"></div>
+              </section>
+
+              <section class="vc-metrics-section">
+                <h5>DORA Metrics</h5>
+                <div class="vc-metrics-dora-grid" id="vcMetricsDoraGrid"></div>
+              </section>
+
+              <section class="vc-metrics-section">
+                <h5>Conectividade — Vision Agent Local</h5>
+                <div class="vc-metrics-conn" id="vcMetricsConn"></div>
+              </section>
+            </div>
+
+            <pre class="vc-metrics-raw" id="vcMetricsRaw" hidden></pre>
           </div>
         </section>
         <form class="vc-composer" id="vcComposer">
