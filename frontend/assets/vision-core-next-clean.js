@@ -1608,6 +1608,8 @@
   var AGENT_RADIUS = 120;
   var MAX_ANGLE_DRIFT = 12;
   var MAX_RADIAL_DRIFT = 2;
+  var REDUCE_PULSE_MS = 4200; // pulso lento sob reduced-motion — só opacidade/glow, nunca posição
+  var REDUCE_TICK_MS = 500;   // frequência de re-render do pulso — não é rAF, é setInterval deliberado
   var coreNode = root.querySelector('[data-atomic-core-node]');
   var reduceMotion = false;
   var state = 'idle';
@@ -1676,11 +1678,16 @@
 
   Agent.prototype.values = function (elapsed) {
     if (reduceMotion) {
-      // Posição/órbita ficam congeladas (acessibilidade), mas o glow ainda
-      // precisa refletir o estado real - é o único sinal visual de "action"
-      // disponível quando o loop de movimento está desligado.
+      // Posição/órbita ficam congeladas (acessibilidade — sem deslocamento,
+      // sem scale), mas nunca totalmente estáticas: um pulso lento de
+      // opacidade/glow (REDUCE_PULSE_MS, sem relação com posição) sinaliza
+      // "vivo" sem gatilho vestibular. Achado real em produção (2026-07-09):
+      // antes disso, sem o loop de rAF rodando, render() só era chamado nas
+      // transições de estado — entre elas o Atomic Core ficava 100% estático,
+      // lido como "quebrado" pelo usuário, não como "calmo".
+      var pulse = (Math.sin(elapsed / REDUCE_PULSE_MS * Math.PI * 2 + this.phase) + 1) / 2;
       var glowBase = state === 'action' ? 42 : 24;
-      return { angle: this.base, radius: AGENT_RADIUS, scale: 1, opacity: .9, glow: glowBase, layer: 4 };
+      return { angle: this.base, radius: AGENT_RADIUS, scale: 1, opacity: lerp(.78, .92, pulse), glow: lerp(glowBase * .82, glowBase, pulse), layer: 4 };
     }
     return state === 'action' ? this.actionValues(elapsed) : this.idleValues(elapsed);
   };
@@ -1719,6 +1726,12 @@
   function frame(now) {
     render(now - startTime);
     raf = window.requestAnimationFrame(frame);
+  }
+
+  var reduceTickTimer = null;
+  function reduceTick() {
+    render(performance.now() - startTime);
+    reduceTickTimer = window.setTimeout(reduceTick, REDUCE_TICK_MS);
   }
 
   function setAtomicCoreState(nextState) {
@@ -1775,7 +1788,16 @@
   root.setAttribute('data-glow', 'on');
   setAtomicCoreState('idle');
   selectFeature('chat', false);
-  if (!reduceMotion) raf = window.requestAnimationFrame(frame);
+  if (!reduceMotion) {
+    raf = window.requestAnimationFrame(frame);
+  } else {
+    // Sem rAF sob reduced-motion (evita a órbita/deslocamento contínuo), mas
+    // sem isso o Atomic Core fica 100% estático entre transições de estado —
+    // lido como "quebrado" em teste manual real, não como "calmo". Tick lento
+    // e deliberado (setInterval-like via setTimeout, não rAF) só pra aplicar
+    // o pulso de opacidade/glow definido em Agent.prototype.values().
+    reduceTickTimer = window.setTimeout(reduceTick, REDUCE_TICK_MS);
+  }
 
   // ── Software Factory (Next) ───────────────────────────────────
   var sfHistory = document.getElementById('vcSfHistory');
