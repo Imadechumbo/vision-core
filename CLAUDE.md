@@ -521,6 +521,18 @@ Nenhum outro problema encontrado na auditoria: todos os endpoints novos (`/api/p
 
 17/17 PASS na suíte permanente completa (4 agent-apply + 6 sf + 7 apply-fix) depois dos dois fixes.
 
+### Modo acelerado — verificação dos B-1..B-6 + conexão de `fetch-url` (v46, 2026-07-09)
+
+Sessão com autorização em bloco pra executar as ondas restantes do plano sem checkpoint intermediário. Como B-4/B-5/B-6/B-2/B-3/B-1 já tinham sido implementados pelo Codex (auditados na sessão anterior, ver checkpoint acima), o trabalho real desta sessão foi: (1) verificação funcional mais profunda de cada um (além da checagem de contrato/segurança já feita), (2) conectar `/api/sf/fetch-url`, o mais simples dos 3 endpoints SF que ainda faltavam.
+
+**Verificação funcional dos 6 itens (nenhum problema novo encontrado):** `parseHermesBlock` — `hermesObj===null` (texto livre ou JSON malformado) confirmado como nunca quebrando a UI, `parsed.hermesObj && (...)` sempre curto-circuita pro branch seguro, e o hint nunca auto-executa nada (só navega pra Missions). Badge do agente — `document.hidden` pausa o polling de verdade, sem animação a gatear (dot estático, só muda cor). AI Provider Vault — zero `localStorage`/`sessionStorage` tocando `api_key`, UI só exibe `api_key_masked` vindo do backend (`server.js:1981`). Vault Rollback — fluxo pending→confirm real. Missions History — estados vazio/carregando/erro todos presentes como texto real, não CSS escondendo undefined.
+
+**`fetch-url` conectado:** campo "Contexto de URL (opcional)" no composer do `#factory` (Auto-Pilot e Modo Avançado compartilham). Contrato reconfirmado antes de codar (`server.js:4485-4520` — síncrono, sem `job_id`, `{ok, content, url}` direto). Texto buscado vira prefixo de `sfFullContext`, incluído como `full_context` a partir do 2º passo da missão — reuso do mecanismo já existente pro contexto acumulado entre passos, nenhum código novo de propagação. Leitura, não escrita — sem confirmação dupla, só desabilita o botão durante o fetch. 3 testes novos (URL inválida nunca chama o endpoint; sucesso com contrato real verificado + `full_context` confirmado no payload; erro de rede não trava a missão). 20/20 PASS na suíte permanente completa. Cache-bust `v46`.
+
+**Decisão de parar aqui:** os 2 endpoints SF restantes (`project-files`, `generate-zip`) exigem um padrão de UI genuinamente novo (download de blob binário — `generate-zip` devolve um ZIP, não JSON) e uma lógica de payload mais pesada (`project-files` ramifica por complexidade em prompts longos, resultado em `data.files[]` em vez de `data.result`). Em vez de arriscar deixar isso pela metade no fim do orçamento de contexto do turno, a sessão fechou aqui com os contratos já verificados e documentados no HANDOFF, prontos pra próxima sessão implementar direto sem re-descoberta.
+
+`docs/PARITY_AUDIT.md` atualizado: 9 grupos migrados de (b) pra (a2) (Apply-Fix, 4 passos extra de SF, `fetch-url`, mais os 4 que o Codex já tinha migrado antes — badge, provider vault, rollback, missions/evidence, hermes hint). Categoria (b) real agora tem só 2 itens: Auth (não iniciado, mais arriscado do roadmap) e os 2 endpoints SF encadeados restantes. Estimativa honesta caiu de ~6-7 turnos pra ~3-4.
+
 ## PENDÊNCIAS IMEDIATAS / PRÓXIMA SESSÃO
 
 1. **Fase 3.3d** (acima) — remoção final da página legada SF. Único item pendente da Fase 3.

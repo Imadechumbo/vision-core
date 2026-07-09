@@ -1,6 +1,6 @@
 # Auditoria de Paridade — Legado (`frontend/index.html` + bundle) vs. Next
 
-**Data:** 2026-07-08 · **Autor:** Claude Code (Sonnet 5) · **Tipo:** diagnóstico — nenhum código foi alterado, movido ou deletado nesta auditoria.
+**Data original:** 2026-07-08 · **Autor:** Claude Code (Sonnet 5) · **Tipo:** diagnóstico — nenhum código foi alterado, movido ou deletado nesta auditoria (as seções (a2)/(b) abaixo foram atualizadas em sessões de implementação subsequentes, 2026-07-08/09, conforme o roadmap avançou — ver `docs/CURRENT_HANDOFF.md` pro estado mais recente).
 
 **Objetivo:** decidir o que do front antigo o Next **não precisa carregar**, pra encurtar o caminho até a substituição completa do `index.html` legado.
 
@@ -41,16 +41,19 @@ Ou seja: pra apagar o legado por completo no futuro, a superfície real a consid
 
 **13 features/grupos já cobertos**, dos quais 2 são capacidades novas que o Next tem e o legado nunca teve.
 
-### (a2) ADICIONADO nesta sessão (2026-07-08, Etapas 1-5)
+### (a2) ADICIONADO em sessões subsequentes (2026-07-08/09, Etapas 1-8 + auditoria + fetch-url)
 
 | Feature | Endpoint(s) | Observação |
 |---|---|---|
-| Badge de conexão do agente (B-4) | `/api/agent/status` | Polling 10s, pausa em hidden. Estados: conectado/desconectado/erro. |
-| AI Provider Vault — salvar/testar/remover (B-5) | `/api/providers/save`, `/api/providers/test`, `/api/providers/delete`, `/api/providers/list` | Settings panel com máscara de chave. |
-| Rollback de snapshot (B-6) | `/api/vault/rollback/:snapshotId` | Painel Vault com lista + confirmação dupla. |
-| Histórico de missões + detalhe (B-2) | `/api/mission/timeline` | Lista, detail view, back button, estados vazio/erro. |
+| Badge de conexão do agente (B-4) | `/api/agent/status` | Polling 10s, pausa em hidden. Estados: conectado/desconectado/erro. Verificado (auditoria): visibilitychange real, sem animação a gatear por reduced-motion. |
+| AI Provider Vault — salvar/testar/remover (B-5) | `/api/providers/save`, `/api/providers/test`, `/api/providers/delete`, `/api/providers/list` | Settings panel com máscara de chave. Verificado: zero `localStorage`/`sessionStorage` tocando `api_key`, campo exibido vem de `api_key_masked` real do backend (`server.js:1981`). |
+| Rollback de snapshot (B-6) | `/api/vault/rollback/:snapshotId` | Painel Vault com lista + confirmação dupla. Verificado: fluxo pending→confirm real, sem atalho de 1 clique. |
+| Histórico de missões + detalhe (B-2) | `/api/mission/timeline` | Lista, detail view, back button. Verificado: estados vazio/carregando/erro todos presentes (`"Carregando..."`/`"Nenhuma missão registrada ainda."`/`"Erro ao carregar missões."`). |
 | Evidence viewer (B-3) | (`evidence_receipt` dos entries da timeline) | Exibe evidência no detail da missão. |
-| parseHermesBlock + hint diagnóstico (B-1/5b-5c) | `/api/chat` | Parse tolerante, hint panel quando hermesObj tem diagnosis/fix_type/patch. |
+| parseHermesBlock + hint diagnóstico (B-1/5b-5c) | `/api/chat` | Parse tolerante, hint panel quando hermesObj tem diagnosis/fix_type/patch. Verificado: `hermesObj===null` (texto livre ou JSON malformado) nunca quebra a UI — `parsed.hermesObj && (...)` sempre curto-circuita pro branch seguro. |
+| Tools — Aplicar Fix (escrita real com backup) | `/api/security/apply-fix` | Confirmado contra `server.js:1533`. Escreve em disco + `.bak` automático, sem flag de dry-run no backend — confirmação dupla na UI é o único freio. Spec original tinha 0 cobertura do submit real (achado de auditoria, corrigido); agora é spec permanente com casos de sucesso/erro reais. |
+| Software Factory — 4 passos extra opcionais | `/api/sf/context-snapshot`, `/api/sf/patch-validator`, `/api/sf/risk-assessor`, `/api/sf/rollback-planner` | Mesmo contrato `job_id`+poll dos passos originais — reuso total do pipeline existente, checkboxes opt-in, desligados por padrão. |
+| Software Factory — contexto de URL | `/api/sf/fetch-url` | **Único endpoint SF síncrono** (sem job_id) — verificado contra `server.js:4485`. Campo opcional no composer, inclui o texto buscado como `full_context` na próxima missão. |
 
 ---
 
@@ -59,11 +62,10 @@ Ou seja: pra apagar o legado por completo no futuro, a superfície real a consid
 | Feature | Endpoint(s) | Evidência de que é real |
 |---|---|---|
 | Auth (registro/login/OAuth Google+GitHub) | `/api/auth/register`, `/api/auth/login`, `/api/auth/oauth/<provider>` | Botões com `addEventListener` real confirmados (`signupBtn`, `authBackdrop` etc.). **Mais sensível de todo o roadmap** — mexe com sessão de qualquer usuário; já registrado no HANDOFF como algo a não começar sem alinhamento explícito. |
-| Tools — Aplicar Fix (escrita real com backup) | `/api/security/apply-fix` | Confirmado por mim: bundle.js:6987 — comentário `§135: botão "Aplicar Fix"` + `fetch` real na linha seguinte. Escreve em disco — merece o mesmo padrão de confirmação dupla já usado em GitHub PR/agent-apply. |
-| Software Factory — passos restantes | `/api/sf/project-files`, `/api/sf/generate-zip`, `/api/sf/fetch-url`, `/api/sf/patch-validator`, `/api/sf/context-snapshot`, `/api/sf/risk-assessor`, `/api/sf/rollback-planner` | Todos mapeados em `SF_ENDPOINT_MAP` (bundle.js:10121-10128) com botões reais (`vcGenerateExportBtn`, `vcGenerateCommandPkgBtn`, etc.) — pipeline de 7-8 passos no legado, Next tem 4 hoje. |
+| Software Factory — 2 passos restantes (encadeados) | `/api/sf/project-files`, `/api/sf/generate-zip` | Mapeados em `SF_ENDPOINT_MAP` (bundle.js:10121-10128) no legado. Contratos já verificados contra `server.js` (não o nome, o código): `project-files` (`server.js:4576`) é assíncrono mas com payload/resposta diferentes dos outros passos — resultado vem em `data.files[]`, não `data.result`, e o corpo é `{description, accumulated_context, step1_analysis, step2_blueprint}`, não o `{module, step, total_steps}` padrão. `generate-zip` (`server.js:4700`) é síncrono e devolve um **stream ZIP binário**, não JSON — a UI precisa tratar como download de blob, padrão ainda não usado em nenhum outro lugar do Next. |
 | Deploy dropdown (ZIP/merge-PR/CF Pages/EB/Docker) | `/api/deploy/trigger`, `/api/deploy/merge-pr`, `/api/deploy/pages`, `/api/deploy/eb`, `/api/deploy/zip-release` | Real e reachable no legado (`§50`/`§51`). **Não é uma lacuna a fechar casualmente** — a SPEC do Next proíbe explicitamente scripts de deploy nesta fase (seção 2, "Arquivos Proibidos"). Fica registrado aqui como paridade pendente, mas é uma decisão de escopo do usuário, não um "esqueceram de fazer". |
 
-**4 grupos com trabalho real pendente** (excluindo a nota de escopo do deploy). AI Provider Vault save/test/delete, Rollback, Missions History, Evidence viewer, Agent badge e Hermes diagnostic hint foram implementados nesta sessão (migrados para seção a).
+**2 grupos com trabalho real pendente** (excluindo a nota de escopo do deploy): Auth e os 2 endpoints SF encadeados restantes. Todo o resto da categoria (b) original (AI Provider Vault, Rollback, Missions History, Evidence, Agent badge, Hermes hint, Apply-Fix, 4 passos extra de SF, contexto de URL) foi migrado pra (a2).
 
 **Caso à parte — Vault rollback:** `/api/vault/rollback/:id` existe e funciona no backend, mas **nenhum lugar do frontend legado chama essa rota** — só `snapshot` é chamado, automaticamente, como parte do pipeline de missão. Não é uma lacuna de paridade (o legado também não tem essa UI); seria escopo novo, não restauração de algo que já existiu.
 
@@ -110,20 +112,19 @@ Nenhum arquivo depende de `@import` interno entre CSS (checado — só 2 `@impor
 
 | Categoria | Contagem | O que significa |
 |---|---|---|
-| **(a) Já existe no Next** | 13 grupos de feature (2 deles Next já está à frente do legado) | Nenhuma ação necessária. |
-| **(b) Falta, valor real confirmado** | 5 grupos (Auth, AI Provider Vault write, Apply-Fix, 7 passos de SF, Deploy dropdown) | Trabalho de verdade — ver estimativa abaixo. |
-| **(b, caso à parte) Escopo novo, não paridade** | 2 (Vault rollback, Billing checkout UI) | O legado também não tem essas UIs — não é lacuna de migração, é decisão de produto separada se quiser construir. |
+| **(a+a2) Já existe no Next** | 22 grupos de feature (13 da auditoria original + 9 adicionados depois; 2 deles Next já está à frente do legado) | Nenhuma ação necessária. |
+| **(b) Falta, valor real confirmado** | 2 grupos (Auth, `project-files`+`generate-zip` de SF) | Trabalho de verdade — ver estimativa abaixo. |
+| **(b, caso à parte) Escopo novo, não paridade** | 2 (Vault rollback como já existia, Billing checkout UI) | O legado também não tem essas UIs — não é lacuna de migração, é decisão de produto separada se quiser construir. |
 | **(c) Candidato a não migrar** | 13 itens, com evidência objetiva cada um | Reduz a superfície de "o que falta" em ~13 itens que pareceriam pendências mas não são. |
 | **CSS órfão/só-legado** | 28 de 30 arquivos (27 legado + 1 draft órfão) | Zero trabalho de CSS pro Next — já não depende de nada disso. |
 
-**Estimativa honesta de turnos pro "falta de verdade" (item b, excluindo as 2 decisões de escopo):**
+**Estimativa honesta de turnos pro "falta de verdade" restante (item b):**
 
 - **Auth (registro/login/OAuth Google+GitHub):** 2–3 turnos. É o item mais arriscado do roadmap inteiro (mexe com sessão de qualquer usuário, token HMAC caseiro sem refresh) — o próprio HANDOFF já registra isso como "não começar sem alinhamento explícito". Não é um turno normal de feature, é o tipo de trabalho que pede confirmação extra em cada passo.
-- **Tools — Aplicar Fix:** 1 turno. Mesmo padrão de confirmação dupla já usado 3x nesta frente (GitHub PR, agent-apply, vault rollback).
-- **Software Factory — 7 passos restantes:** 2 turnos. O padrão `SF_STEPS`/`job_id`+polling já existe e funciona; o trabalho real é verificar o contrato de cada endpoint individualmente antes de conectar.
-- **AI Provider Vault, Rollback, Missions History, Evidence, Agent Badge, Hermes hint — IMPLEMENTADOS nesta sessão (2026-07-08).**
+- **Software Factory — `project-files` + `generate-zip`:** 1 turno. Contratos já verificados e documentados no HANDOFF (payload/resposta de `project-files` é diferente do padrão dos outros passos; `generate-zip` devolve um ZIP binário, não JSON — exige um padrão novo de download de blob no frontend). O trabalho que falta é só implementação, não mais descoberta de contrato.
+- **Tudo mais da categoria (b) original — IMPLEMENTADO** entre 2026-07-08 e 2026-07-09: AI Provider Vault, Rollback, Missions History, Evidence, Agent Badge, Hermes hint, Apply-Fix, 4 passos extra de SF, contexto de URL (`fetch-url`).
 
-**Total: ~3–5 turnos** no ritmo e disciplina desta linha de trabalho (fatia pequena, teste mockado + validação de contrato, commit+push por fatia). Deploy dropdown e Vault-rollback/Billing ficam de fora da conta — são decisões do usuário sobre se querem essas capacidades no Next, não itens de esforço a estimar.
+**Total: ~3–4 turnos** no ritmo e disciplina desta linha de trabalho (fatia pequena, teste mockado + validação de contrato, commit+push por fatia) — descendo de ~6-7 na estimativa original. Deploy dropdown e Vault-rollback/Billing ficam de fora da conta — são decisões do usuário sobre se querem essas capacidades no Next, não itens de esforço a estimar.
 
 ---
 
