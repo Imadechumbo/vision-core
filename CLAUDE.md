@@ -589,7 +589,7 @@ Quarta ocorrência real da mesma classe de risco: segredo/fallback sensível pre
 3. Testes/launchers locais que sobem backend real recebem `SESSION_SECRET` de teste/local explícito (`tools/tests/incident-3-auth-fallback.test.mjs`, `tools/tests/provider-vault-endpoints.test.mjs`, `tools/local-backend-runtime-launcher.mjs`, `tools/pi-harness.mjs`).
 4. Regressão permanente: `tools/tests/incident-4-session-secret.test.mjs` prova fail-closed para ausência/fallback público/segredo curto e boot OK com segredo forte explícito.
 
-**Operação:** antes de qualquer deploy EB desta mudança, configurar `SESSION_SECRET` forte no `vision-core-prod`. Rotacionar/definir esse segredo invalida sessões ativas; esperado e correto.
+**Operação:** `SESSION_SECRET` forte configurado no EB `vision-core-prod` em 2026-07-09 sem imprimir o valor. Verificado depois: `SESSION_SECRET_PRESENT_STRONG`, EB `Ready/Green`, Worker e EB direto com `/api/health` 200. Rotacionar/definir esse segredo invalida sessões ativas; esperado e correto.
 
 ## PENDÊNCIAS IMEDIATAS / PRÓXIMA SESSÃO
 

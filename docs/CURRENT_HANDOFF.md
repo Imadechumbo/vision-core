@@ -20,7 +20,7 @@ Mudanças aplicadas:
 
 Implicação operacional obrigatória antes de deploy EB: `SESSION_SECRET` precisa existir no ambiente `vision-core-prod` com valor forte e diferente do fallback público. Se for setado/rotacionado, todas as sessões antigas serão invalidadas; isso é esperado e correto.
 
-Nenhum deploy foi feito nesta Fase B.
+Operação pós-commit (2026-07-09, Codex): `SESSION_SECRET` foi configurado no EB `vision-core-prod` com valor forte gerado localmente e nunca impresso. Verificação read-only após estabilização: `SESSION_SECRET_PRESENT_STRONG`; EB `Ready/Green`; versão EB reportada `v109-725cfdcb71973b03963a7adcb43e3888b1808c58`; `/api/health` via Worker e EB direto retornou 200. Nenhum deploy manual de código foi iniciado nesta operação — o EB já reportava a versão do commit `725cfdcb` ao aplicar a configuração.
 
 ---
 
