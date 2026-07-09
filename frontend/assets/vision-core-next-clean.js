@@ -1791,10 +1791,15 @@
   var sfDryRun = document.getElementById('vcSfDryRun');
   var sfPassGold = document.getElementById('vcSfPassGold');
   var sfExtraInputs = Array.prototype.slice.call(document.querySelectorAll('[data-sf-extra-step]'));
+  var sfUrlContextInput = document.getElementById('vcSfUrlContext');
+  var sfUrlFetchBtn = document.getElementById('vcSfUrlFetchBtn');
+  var sfUrlStatus = document.getElementById('vcSfUrlStatus');
   var sfMode = 'auto';
   var sfPollTimer = null;
   var sfInFlight = false;
   var sfFullContext = '';
+  var sfUrlContext = '';
+  var sfUrlFetchInFlight = false;
   var sfRunOptions = null;
 
   var SF_STEPS = [
@@ -1907,6 +1912,47 @@
     });
   }
 
+  // Contexto de URL opcional (item 2 da pendencia "Software Factory completo",
+  // ver docs/CURRENT_HANDOFF.md) — POST /api/sf/fetch-url e sincrono (sem
+  // job_id), o backend busca o texto da URL informada e devolve
+  // {ok, content, url} direto (server.js:4485, verificado antes de codar).
+  // Leitura, nao escrita/execucao — nao precisa de confirmacao dupla, so
+  // desabilitar o botao durante o fetch e mostrar erro legivel se falhar.
+  function fetchSfUrlContext() {
+    if (sfUrlFetchInFlight || !sfUrlContextInput) return;
+    var url = sfUrlContextInput.value.trim();
+    if (!url || !/^https?:\/\//i.test(url)) {
+      if (sfUrlStatus) sfUrlStatus.textContent = 'Informe uma URL http(s) válida.';
+      return;
+    }
+    sfUrlFetchInFlight = true;
+    if (sfUrlFetchBtn) { sfUrlFetchBtn.disabled = true; sfUrlFetchBtn.textContent = 'Buscando...'; }
+    if (sfUrlStatus) sfUrlStatus.textContent = '';
+    apiRequest('/api/sf/fetch-url', { method: 'POST', body: { url: url } }).then(function (data) {
+      sfUrlContext = (data && data.content) ? String(data.content) : '';
+      if (sfUrlStatus) {
+        sfUrlStatus.textContent = sfUrlContext
+          ? 'Contexto capturado (' + sfUrlContext.length + ' caracteres) — será incluído na próxima geração.'
+          : 'URL respondeu, mas sem conteúdo de texto reconhecível.';
+      }
+    }).catch(function (err) {
+      sfUrlContext = '';
+      if (sfUrlStatus) sfUrlStatus.textContent = 'Erro ao buscar URL: ' + (err && err.message ? err.message : String(err));
+    }).then(function () {
+      sfUrlFetchInFlight = false;
+      if (sfUrlFetchBtn) { sfUrlFetchBtn.disabled = false; sfUrlFetchBtn.textContent = 'Buscar'; }
+    });
+  }
+
+  if (sfUrlContextInput) {
+    sfUrlContextInput.addEventListener('input', function () {
+      if (sfUrlFetchBtn) sfUrlFetchBtn.disabled = !sfUrlContextInput.value.trim();
+      sfUrlContext = ''; // URL mudou — contexto antigo não é mais válido pra ela
+      if (sfUrlStatus) sfUrlStatus.textContent = '';
+    });
+  }
+  if (sfUrlFetchBtn) sfUrlFetchBtn.addEventListener('click', fetchSfUrlContext);
+
   function readSfOptions() {
     var selectedExtraSteps = getSelectedSfExtraSteps();
     return {
@@ -1931,11 +1977,12 @@
   function runSfAutoPilot(desc) {
     if (sfInFlight) return;
     sfInFlight = true;
-    sfFullContext = desc;
+    sfFullContext = desc + (sfUrlContext ? '\n\n[Contexto de URL]\n' + sfUrlContext : '');
     sfRunOptions = readSfOptions();
     sfActiveSteps = SF_STEPS.concat(getSelectedSfExtraSteps());
     if (sfRunOptions.pass_gold) sfActiveSteps = sfActiveSteps.concat([SF_GOLD_GATE_STEP]);
     if (sfLog) { sfLog.textContent = ''; sfLog.hidden = false; }
+    if (sfUrlContext) appendSfLog('info', 'URL_CONTEXT incluído (' + sfUrlContext.length + ' chars)');
     if (sfFinal) sfFinal.hidden = true;
     if (sfFinalBody) sfFinalBody.textContent = '';
     appendSfLog('warn', 'SAFE real_execution_allowed=false deploy_allowed=false writes_disk=false');

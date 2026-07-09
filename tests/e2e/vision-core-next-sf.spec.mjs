@@ -105,6 +105,75 @@ test('Software Factory opens from sidebar and hides the chat stage', async ({ pa
   await expect(page.locator('#factory')).toBeHidden();
 });
 
+test('URL context: rejects invalid URL without calling fetch-url', async ({ page }) => {
+  let called = false;
+  await page.route(`${API}/api/sf/fetch-url`, async (route) => { called = true; await route.abort(); });
+
+  await page.goto(NEXT_URL);
+  await page.locator('[data-feature="factory"]').first().click();
+  await expect(page.locator('#vcSfUrlFetchBtn')).toBeDisabled();
+  await page.locator('#vcSfUrlContext').fill('not-a-url');
+  await page.locator('#vcSfUrlFetchBtn').click();
+  await expect(page.locator('#vcSfUrlStatus')).toContainText('URL http(s) válida');
+  expect(called).toBe(false);
+});
+
+test('URL context: fetches real contract shape and includes it in the next mission', async ({ page }) => {
+  let fetchedUrl = null;
+  await page.route(`${API}/api/sf/fetch-url`, async (route) => {
+    fetchedUrl = route.request().postDataJSON().url;
+    // POST /api/sf/fetch-url is synchronous — {ok, content, url}, no job_id
+    // (server.js:4485-4520, verified before writing this mock).
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, content: 'Documento de referência: usar arquitetura hexagonal.', url: fetchedUrl })
+    });
+  });
+  const { posts } = await mockAsyncSfEndpoints(page, {
+    'mission-composer': 'mission composer ok',
+    'deploy-blueprint': 'deploy blueprint ok',
+    'worker-handoff':   'worker handoff ok'
+  });
+
+  await page.goto(NEXT_URL);
+  await page.locator('[data-feature="factory"]').first().click();
+  await page.locator('#vcSfPassGold').uncheck();
+  await page.locator('#vcSfUrlContext').fill('https://exemplo.com/doc');
+  await page.locator('#vcSfUrlFetchBtn').click();
+  await expect(page.locator('#vcSfUrlStatus')).toContainText('Contexto capturado');
+  expect(fetchedUrl).toBe('https://exemplo.com/doc');
+
+  await page.locator('#vcSfInput').fill('um app seguindo o documento de referência');
+  await page.getByRole('button', { name: 'Gerar Projeto' }).click();
+  await expect(page.locator('#vcSfHistory')).toContainText('Projeto concluído!', { timeout: 10_000 });
+  await expect(page.locator('#vcSfLog')).toContainText('URL_CONTEXT incluído');
+  // full_context só vai a partir do 2o passo (idx > 0) — mesmo padrão já usado pro contexto acumulado de steps anteriores.
+  expect(posts[1].full_context).toContain('Documento de referência: usar arquitetura hexagonal.');
+});
+
+test('URL context: backend error surfaces a readable message, mission still works without it', async ({ page }) => {
+  await page.route(`${API}/api/sf/fetch-url`, async (route) => {
+    await route.fulfill({ status: 408, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'timeout' }) });
+  });
+  await mockAsyncSfEndpoints(page, {
+    'mission-composer': 'mission composer ok',
+    'deploy-blueprint': 'deploy blueprint ok',
+    'worker-handoff':   'worker handoff ok'
+  });
+
+  await page.goto(NEXT_URL);
+  await page.locator('[data-feature="factory"]').first().click();
+  await page.locator('#vcSfPassGold').uncheck();
+  await page.locator('#vcSfUrlContext').fill('https://exemplo.com/timeout');
+  await page.locator('#vcSfUrlFetchBtn').click();
+  await expect(page.locator('#vcSfUrlStatus')).toContainText('Erro ao buscar URL');
+
+  await page.locator('#vcSfInput').fill('um app mesmo sem o contexto da URL');
+  await page.getByRole('button', { name: 'Gerar Projeto' }).click();
+  await expect(page.locator('#vcSfHistory')).toContainText('Projeto concluído!', { timeout: 10_000 });
+});
+
 test('Software Factory Auto-Pilot runs six steps (5 + PASS GOLD default-on) via real job_id + polling contract', async ({ page }) => {
   const { posts, polls } = await mockAsyncSfEndpoints(page, {
     'mission-composer': 'mission composer ok',

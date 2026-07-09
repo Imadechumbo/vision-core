@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-45">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-45" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-46">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-46" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -293,6 +293,14 @@
             <label><input type="checkbox" data-sf-extra-step="patch-validator"> Patch Validator</label>
             <label><input type="checkbox" data-sf-extra-step="risk-assessor"> Risk Assessor</label>
             <label><input type="checkbox" data-sf-extra-step="rollback-planner"> Rollback Planner</label>
+          </div>
+          <div class="vc-sf-url-context" aria-label="Contexto de URL opcional">
+            <label for="vcSfUrlContext">Contexto de URL (opcional)</label>
+            <div class="vc-sf-url-row">
+              <input type="url" id="vcSfUrlContext" placeholder="https://exemplo.com/documento-de-referencia">
+              <button type="button" id="vcSfUrlFetchBtn" disabled>Buscar</button>
+            </div>
+            <p class="vc-sf-url-status" id="vcSfUrlStatus"></p>
           </div>
         </div>
         <div class="vc-sf-history" id="vcSfHistory" aria-live="polite"></div>
