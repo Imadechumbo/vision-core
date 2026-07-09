@@ -24,6 +24,8 @@ Operação pós-commit (2026-07-09, Codex): `SESSION_SECRET` foi configurado no 
 
 Validação de produção complementar (2026-07-09, Codex): o ZIP EB publicado para `v109-725cfdcb71973b03963a7adcb43e3888b1808c58` foi baixado de S3 e o `server.js` dentro dele contém tanto a rejeição do fallback legado do INCIDENTE-3 quanto o fail-closed de `SESSION_SECRET` do INCIDENTE-4. Teste vivo via `fetch` nativo contra Worker e EB direto: `POST /api/auth/login` com a credencial de fallback legada retorna `400 fallback_credential_rejected`, sem `token` e sem ecoar o valor na resposta. `POST /api/auth/register` não foi revalidado ao vivo nesta rodada porque os primeiros probes malformados consumiram o rate limit de registro do IP; o guard de register está confirmado no artefato publicado e já coberto pela regressão local permanente. Sem deploy novo nesta validação.
 
+Achado operacional pendente (2026-07-09, Codex): `https://visioncoreai.pages.dev/assets/vision-core-bundle.js` ainda contém a credencial de fallback legada, enquanto o bundle local `frontend/assets/vision-core-bundle.js` já não contém. Classificação: exposição pública residual por CF Pages atrasado, com backend já protegido contra autenticação por esse valor. Próxima ação recomendada, somente com aprovação explícita do usuário: `bash bin/deploy-pages.sh "incident-3 remove legacy auth fallback from public bundle"` e depois repetir a verificação pública (`INDEX_CONTAINS_FALLBACK=false`, `BUNDLE_CONTAINS_FALLBACK=false`). O script `bin/deploy-pages.sh` já remove os protótipos soltos (`next.html`, `atomic-core.html`, assets paralelos) do pacote publicado.
+
 ---
 
 ## Métricas Next — camada visual (2026-07-09, `next-clean-49`)
