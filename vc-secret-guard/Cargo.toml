@@ -1,0 +1,19 @@
+[package]
+name = "vc-secret-guard"
+version = "0.1.0"
+edition = "2021"
+description = "Local secret/leak detection core for Vision Core - Fase 1 (scan only)"
+publish = false
+
+[[bin]]
+name = "vc-secret-guard"
+path = "src/main.rs"
+
+[dependencies]
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+[profile.release]
+opt-level = 3
