@@ -212,6 +212,10 @@ Regras absolutas desta fase:
 6. Endpoints que escrevem em disco, criam PR, aplicam patch, fazem deploy, rodam execução real ou gastam API real exigem confirmação/guard claro antes de conectar.
 7. Função ainda não conectável com segurança vira placeholder que falha de forma VISÍVEL ("não implementado ainda") — nunca finge sucesso nem falha silenciosamente.
 
+### Política de herança visual — legado como referência, Next como implementação
+
+Catálogo completo em `docs/LEGACY_DESIGN_REFERENCE.md` (tela por tela: Métricas, Agentes, Software Factory, Landing, About — o que herdar, o que o Next já tem equivalente, o que está bloqueado). Resumo da política: o legado (`frontend/index.html` + `vision-core-bundle.js`) é **fonte de referência visual/UX apenas** — proibido copiar código dele (regra 4 acima já cobria isso; o doc formaliza o porquê, incluindo o achado do `vc-secret-guard` de uma credencial hardcoded real nesse bundle, destino ainda pendente com o usuário). Nenhuma feature nova nasce no legado — regra anti-novo-legado: se o Next precisa de algo que só existe lá, o caminho é reimplementar no Next, nunca linkar/embedar/estender o legado. Divergência consciente do Next em relação ao legado é permitida, desde que registrada no doc com o quê e o porquê.
+
 ### SPEC OFICIAL — vc-secret-guard (Rust)
 
 Nova feature oficial (2026-07-09). Núcleo local de detecção rápida de secrets/vazamentos, binário Rust independente do go-core, rodando na máquina do desenvolvedor (pre-commit/pre-push/watch) — motivado por 2 incidentes reais do projeto (token GitLab exposto em `git remote -v`; `agent_secret` vazando via endpoint público, ver seção "Pareamento por `agent_secret`" abaixo).

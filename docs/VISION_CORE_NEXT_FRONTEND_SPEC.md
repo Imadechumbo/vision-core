@@ -72,6 +72,7 @@ Estilo geral: **app de chat/IA tipo ChatGPT**.
 - Sem hero gigante
 - Sem excesso de painéis
 - Sidebar discreta e recolhível
+- Legado é referência visual/UX, nunca base de código a copiar — catálogo tela-a-tela e política completa em `docs/LEGACY_DESIGN_REFERENCE.md`
 
 ### Layout concreto
 ```
