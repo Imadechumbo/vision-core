@@ -591,6 +591,8 @@ Quarta ocorrência real da mesma classe de risco: segredo/fallback sensível pre
 
 **Operação:** `SESSION_SECRET` forte configurado no EB `vision-core-prod` em 2026-07-09 sem imprimir o valor. Verificado depois: `SESSION_SECRET_PRESENT_STRONG`, EB `Ready/Green`, Worker e EB direto com `/api/health` 200. Rotacionar/definir esse segredo invalida sessões ativas; esperado e correto.
 
+**Validação complementar em produção (2026-07-09):** o ZIP EB `v109-725cfdcb71973b03963a7adcb43e3888b1808c58` contém os guards do INCIDENTE-3 e INCIDENTE-4. `POST /api/auth/login` com a credencial de fallback legada retorna `400 fallback_credential_rejected` via Worker e EB direto, sem token e sem ecoar o valor. `POST /api/auth/register` ficou pendente de revalidação viva porque probes malformados consumiram temporariamente o rate limit de registro; o guard de register está confirmado no artefato publicado e coberto pela regressão local permanente.
+
 ## PENDÊNCIAS IMEDIATAS / PRÓXIMA SESSÃO
 
 1. **Fase 3.3d** (acima) — remoção final da página legada SF. Único item pendente da Fase 3.

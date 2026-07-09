@@ -22,6 +22,8 @@ Implicação operacional obrigatória antes de deploy EB: `SESSION_SECRET` preci
 
 Operação pós-commit (2026-07-09, Codex): `SESSION_SECRET` foi configurado no EB `vision-core-prod` com valor forte gerado localmente e nunca impresso. Verificação read-only após estabilização: `SESSION_SECRET_PRESENT_STRONG`; EB `Ready/Green`; versão EB reportada `v109-725cfdcb71973b03963a7adcb43e3888b1808c58`; `/api/health` via Worker e EB direto retornou 200. Nenhum deploy manual de código foi iniciado nesta operação — o EB já reportava a versão do commit `725cfdcb` ao aplicar a configuração.
 
+Validação de produção complementar (2026-07-09, Codex): o ZIP EB publicado para `v109-725cfdcb71973b03963a7adcb43e3888b1808c58` foi baixado de S3 e o `server.js` dentro dele contém tanto a rejeição do fallback legado do INCIDENTE-3 quanto o fail-closed de `SESSION_SECRET` do INCIDENTE-4. Teste vivo via `fetch` nativo contra Worker e EB direto: `POST /api/auth/login` com a credencial de fallback legada retorna `400 fallback_credential_rejected`, sem `token` e sem ecoar o valor na resposta. `POST /api/auth/register` não foi revalidado ao vivo nesta rodada porque os primeiros probes malformados consumiram o rate limit de registro do IP; o guard de register está confirmado no artefato publicado e já coberto pela regressão local permanente. Sem deploy novo nesta validação.
+
 ---
 
 ## Métricas Next — camada visual (2026-07-09, `next-clean-49`)
