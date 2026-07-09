@@ -2,7 +2,24 @@
 
 Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode). Leia depois de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, antes de editar código.
 
-> Última atualização: 2026-07-09, por Claude Code (Sonnet 5) — correção de direção de produto: a animação do Atomic Core é identidade visual da marca, não deve mais ser controlada pelo `prefers-reduced-motion` do sistema operacional. Redeployou (`v48`, verificado por fetch real antes de reportar). Sessão anterior: fix do Atomic Core congelando sob reduced-motion (`v47`).
+> Última atualização: 2026-07-09, por Claude Code (Sonnet 5) — **linha de trabalho nova, paralela ao Next**: spec oficial de `vc-secret-guard` (núcleo local de detecção de secrets em Rust), fase spec-only, zero implementação, zero deploy. Sessão anterior (Next): correção de direção de produto do Atomic Core (`v48`, animação = identidade visual, não controlada pelo SO).
+
+---
+
+## Sessão `vc-secret-guard` (spec-only) — 2026-07-09
+
+Nova feature oficial, **fase 0/6 (spec) fechada, nenhuma fase seguinte autorizada**. Motivada por 2 incidentes reais do projeto: token GitLab exposto em `git remote -v`, e `agent_secret` vazando via `GET /mission/result/:id` (já documentado e corrigido — ver seção "Pareamento por `agent_secret`" em `CLAUDE.md`).
+
+**Entregue nesta sessão (3 commits isolados, todos pushados):**
+1. `10e27403` — `docs/VC_SECRET_GUARD_RUST_SPEC.md`: spec completa. Arquitetura real do projeto verificada no código antes de escrever (não presumida) — `server.js`=gateway (`resolveGoBinary()` `server.js:2444`, `GET /api/go-core/health` `server.js:1612-1613`), `go-core`=safe core com Aegis (`internal/scanner/scanner.go`=read-only, `internal/patcher/supervised.go`=nunca automático, `internal/passgold`+`internal/passsecure`=contratos JSON com exit code, `internal/github/open_pr.go`=write-gate com 4 condições, `internal/mcpserver`=read-only por design, `internal/security/secrets/secrets.go`=regras `AEGIS_SECRET_001`…`010` já existentes). Decisão "Rust vs módulo Go" comparada honestamente dos dois lados (não só a favor da conclusão já tomada) — fronteira final: guard decide "isso pode entrar no git agora?" no momento local; Aegis decide "esse código está seguro pra ser promovido?" dentro de uma missão já em andamento sobre o projeto inteiro. Zero sobreposição. 5 categorias de detecção descritas por forma/heurística, nunca lista fixa de strings. Plano de 6 fases (0=spec/esta, 1=protótipo local, 2=hooks, 3=watch+evento JSON, 4=integração `server.js`/Next, 5=ponte `PASS SECURE`), cada uma com gate de saída próprio.
+2. `2da2be36` — `CLAUDE.md`: seção "SPEC OFICIAL — vc-secret-guard (Rust)" com link + resumo, inserida antes da seção "Atomic Core — APROVADO".
+3. `99bfc545` — Páginas públicas, **seguindo o padrão editorial já existente** (reportado antes de editar, não presumido): `frontend/about.html` ganhou `BLOCO 2.6: SECURITY LAB — vc-secret-guard`, mesma estrutura visual do `BLOCO 2.5: AGENTE ARQUITETO` (2 colunas, mesmo grid/card style), mas com badge `SPEC — NÃO IMPLEMENTADO` (vermelho) em vez de `LIVE — PREVIEW` (índigo) — honesto sobre zero código existir, seguindo a mesma disciplina que rege "O QUE OS TESTES REVELARAM" (nunca declarar resolvido sem teste real). `frontend/landing.html` ganhou 1 card `bn-card bn-low`/label `EM EVOLUÇÃO` na seção TRANSPARÊNCIA TÉCNICA, mesmo formato dos outros itens de roadmap ainda não resolvidos. **Confirmado por grep, zero string literal de padrão de detecção de secret em qualquer um dos dois arquivos** (só nomes de regra tipo `AEGIS_SECRET_001` como rótulo, nunca o padrão em si) — os poucos matches de `sk-`/`sk_test_`/etc. encontrados no grep de verificação são todos conteúdo pré-existente não relacionado a esta sessão (depoimentos antigos, ofuscados/fictícios como `sk-prod-abc123xyz789`).
+
+**Estrutura das páginas públicas, como relatado antes de editar (Tarefa 3 pedia isso explicitamente):** `about.html` já tinha um padrão de 3 tipos de bloco reaproveitados — blocos de feature "o que X faz hoje" (BLOCO 1/2/2.5, 2 colunas, badge de status), uma grade grande de depoimentos "O QUE OS TESTES REVELARAM" (card por bug real encontrado via teste real, nunca especulativo), e um roadmap "POTENCIAIS DE EVOLUÇÃO" (badge `ROADMAP — NÃO IMPLEMENTADO`, texto simples sem teste). Como `vc-secret-guard` tem uma spec formal completa (mais que um item de roadmap vago, mas menos que uma feature testada), a decisão foi criar um bloco de feature igual ao `BLOCO 2.5` só que com um badge honesto novo (`SPEC — NÃO IMPLEMENTADO`) — não usar a grade de depoimentos (reservada a bugs reais de testes reais) nem deixar só como item de `POTENCIAIS DE EVOLUÇÃO` (já tem spec, não é mais só ideia vaga). `landing.html` segue o padrão já documentado no próprio `CLAUDE.md` ("PADRÃO DE REGISTRO"): card `EM EVOLUÇÃO` até virar `RESOLVIDO — VX.X.X` com teste real certificando.
+
+**Validação:** suíte permanente completa (4 specs Next, 25/25 PASS) rodada de novo antes do commit final — nenhum dos 3 commits desta linha toca `frontend/vision-core-next.html`/`assets/vision-core-next-clean.*`, então era esperado zero impacto, confirmado. `node -e` confirmou os dois HTMLs públicos ainda são JS/texto válido (sem parse error introduzido). Nenhum deploy feito (páginas públicas exigem validação local antes, regra já existente no `CLAUDE.md`, e o usuário não pediu deploy nesta tarefa — só "commit por fatia... push... HANDOFF... PARE").
+
+**Zero Rust escrito. Zero backend (`server.js`/`go-core`) tocado. Zero deploy. Nenhuma fase além da 0 autorizada — próxima fase (protótipo local) exige nova conversa e aprovação explícita.**
 
 ---
 
@@ -24,7 +41,8 @@ O fix `v47` (sessão anterior) tinha o Atomic Core degradando automaticamente se
 
 ## Estado Atual
 
-- **Commit local = commit remoto (`origin/main`):** `ecf1fadc` — `feat(next): animacao do Atomic Core e identidade visual, nao controlada pelo SO (v48)`. Já pushado (rebase limpo sobre o commit do bot de CI `5b4ae1f6`, sem conflito).
+- **Commit local = commit remoto (`origin/main`):** `99bfc545` — `docs(public): registra vc-secret-guard nas paginas publicas (spec-only)`. Já pushado (rebase limpo sobre commits do bot de CI, sem conflito). Precedido por `2da2be36` (CLAUDE.md) e `10e27403` (spec) na mesma sessão — 3 fatias isoladas, todas docs-only.
+- **`vc-secret-guard`:** fase 0/6 (spec) fechada — `docs/VC_SECRET_GUARD_RUST_SPEC.md`. Zero Rust, zero backend tocado, zero deploy. Ver seção própria abaixo.
 - **Cache-bust atual:** `?v=next-clean-48` (HTML+CSS+JS, os três juntos).
 - **Produção (`https://visioncoreai.pages.dev`):** **`next-clean-48`**, deploy CF Pages, verificado por **fetch real via `node -e fetch(...)`** antes de reportar (não assumido) — hash `https://65c71559.visioncoreai.pages.dev` (status 200) e alias principal (status 200), os dois com `?v=next-clean-48`, `AGENT_APPLY_ENABLED=false` confirmado no JS servido, `window.VCMotion`/`vc_animation_mode`/`startMotionLoop` confirmados presentes, exatamente 2 ocorrências de leitura direta de `matchMedia('(prefers-reduced-motion: reduce)')` no JS servido (olho/blink protegido + dica de primeira visita — nenhuma leitura a mais, nenhuma a menos), CSS servido confirmado com `.vc-settings-motion`. **Backend EB não foi tocado.**
 - **`AGENT_APPLY_ENABLED=false`** e todas as travas `sf_options` (`real_execution_allowed`/`deploy_allowed`/`writes_disk`) continuam `false`.
@@ -46,9 +64,15 @@ Correção de direção de produto pedida pelo usuário (ver seção acima). Tra
 
 ---
 
-## Próxima etapa — únicos 2 itens reais restantes da categoria B
+## Próxima etapa
 
-### 1. Software Factory — `project-files` + `generate-zip` (contratos já verificados, prontos pra usar)
+### 0. `vc-secret-guard` — Fase 1 (protótipo local), só com aprovação explícita nova
+
+Spec fechada (`docs/VC_SECRET_GUARD_RUST_SPEC.md`, fase 0/6). Fase 1 = binário Rust mínimo, só `scan` (sem `watch`, sem hooks), rodando localmente contra o próprio Vision Core, nunca publicado/CI. Gate de saída da Fase 1 (definido na spec, §10): zero falso-positivo contra o repo real após allowlist configurada + zero falso-negativo contra casos sintéticos cobrindo as 5 categorias. **Não iniciar sem o usuário autorizar explicitamente esta fase especificamente** — é uma linha de trabalho nova (nova linguagem no projeto, novo binário), tratada com o mesmo rigor que Auth (item abaixo).
+
+### Itens restantes da categoria B (Vision Core Next)
+
+#### 1. Software Factory — `project-files` + `generate-zip` (contratos já verificados, prontos pra usar)
 
 | Endpoint | Linha | Tipo | Contrato |
 |---|---|---|---|
@@ -57,7 +81,7 @@ Correção de direção de produto pedida pelo usuário (ver seção acima). Tra
 
 Sugestão (não é decisão tomada): um só turno, os dois juntos — fazem sentido como par (gerar lista de arquivos → baixar como zip), não como features separadas.
 
-### 2. Auth (registro/login/OAuth Google+GitHub) — não iniciar sem alinhamento explícito
+#### 2. Auth (registro/login/OAuth Google+GitHub) — não iniciar sem alinhamento explícito
 
 Mais arriscado do roadmap inteiro — mexe com sessão de qualquer usuário, token HMAC caseiro sem endpoint de refresh. Repetido em pendências de múltiplas sessões anteriores. Continua precisando de decisão explícita do usuário antes de começar.
 
