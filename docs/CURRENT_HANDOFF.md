@@ -2,7 +2,7 @@
 
 Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode). Leia depois de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, antes de editar código.
 
-> Última atualização: 2026-07-09, por Claude Code (Sonnet 5) — **doc-only: `docs/LEGACY_DESIGN_REFERENCE.md`** oficializa a política de herança visual (legado=referência, Next=implementação do zero) e cataloga 5 telas do legado tela-a-tela. Zero código. Sessão anterior: `vc-secret-guard` Fase 1 (protótipo local em Rust, fechada).
+> Última atualização: 2026-07-09, por Claude Code (Sonnet 5) — **INCIDENTE-3, Fase B fechada**: backend rejeita a credencial de fallback legada em register/login, bundle legado não a envia mais, regressão permanente 12/12 PASS, runbook de dados legados entregue (ação pendente do usuário). Nenhum deploy feito. Ver seção "INCIDENTE-3" no fim deste documento. Sessão anterior: doc-only `docs/LEGACY_DESIGN_REFERENCE.md` (política de herança visual). Antes dela: `vc-secret-guard` Fase 1 (protótipo local em Rust, fechada).
 
 ---
 
@@ -269,3 +269,86 @@ Evidência:
 3. **Opção C — remoção frontend apenas:** não recomendada para ATIVA. Remover do bundle antes de invalidar o backend só esconde o problema; versões antigas continuam no histórico, cache e CDN, e o endpoint ainda aceitaria chamadas manuais.
 
 **Decisão pendente do usuário:** escolher a opção de Fase B. Nenhuma remediação foi aplicada nesta Fase A.
+
+---
+
+## INCIDENTE-3: Fase B (remediação) — fechada, 2026-07-09
+
+Aprovação explícita do usuário: opção (a) da Fase A (invalidação server-side primeiro), na ordem Passo 1→5 abaixo. Suíte permanente Next (25/25 PASS) confirmada como baseline antes de começar. `HEAD` batia com `4ce26eaf` esperado, tree limpo (só o ruído pré-existente já documentado). Nenhum deploy feito nesta Fase B — regra dura da sessão.
+
+### Passo 1 — Backend (commit `0d6eb8c7`, pós-rebase `3ebc0b9e`)
+
+`backend/server.js`:
+- `/api/auth/register`: se `password === '<credencial de fallback>'`, responde 400 `{ok:false, error:'fallback_credential_rejected'}` e chama `auditLog('auth_fallback_credential_rejected', req, {route:'/api/auth/register'})` — antes disso silenciosamente convertia em senha aleatória. Comportamento de senha ausente/vazia (fluxo só-email legítimo) **não mudou** — continua gerando senha aleatória, só o literal específico foi fechado.
+- `/api/auth/login`: mesmo padrão — `password === '<credencial de fallback>'` → 400 antes mesmo de chegar em `verifyPassword`, fechando o caminho de hash legado pré-§145. Seguro para contas legítimas: nenhuma conta pós-§145 pode ter esse literal como senha real (o register já recusa o marcador), então nenhuma senha genuína colide com esta rejeição — não houve necessidade de pausar para aprovação adicional de raio de impacto.
+
+### Passo 2 — Teste de regressão (commit `e4077a41`, pós-rebase mesma série)
+
+`tools/tests/incident-3-auth-fallback.test.mjs` — mesmo padrão de `tools/tests/provider-vault-endpoints.test.mjs` (sobe `backend/server.js` real, child process, porta isolada `18735`). 12/12 PASS:
+- register com o literal → 400 `fallback_credential_rejected`, sem eco do valor na resposta; registro real subsequente no mesmo email funciona (nenhuma conta fantasma presa).
+- seed de uma conta "legada" (hash construído localmente a partir do literal, mesmos parâmetros scrypt de `server.js`) → login com o literal → 400, sem token; senha errada comum no mesmo usuário → 401 normal (endpoint não quebrou).
+- auditLog grava a categoria+rota para as duas rotas; o literal nunca aparece no arquivo de audit log.
+- Backup/restore de `data/users.json` e `data/audit-log.json` ao redor do teste (mesmo cuidado do teste de providers com o vault file).
+
+### Passo 3 — Bundle (commit `3ebc0b9e`)
+
+`frontend/assets/vision-core-bundle.js`, diff cirúrgico (sem reformatar, sem tocar em mais nada):
+- `_pw145` (senha de registro) e `_loginPw` (senha de fallback de login): fallback trocado do literal público para string vazia — o backend já trata senha vazia gerando uma senha aleatória seguramente (comportamento preexistente, não mudou).
+- Removido o `else if` de retry final de login que reenviava o literal quando a primeira tentativa falhava; call site simplificado para `_doLogin(_loginPw, true)`.
+- Confirmado antes da mudança: `doAuth()` só é invocado por `signupBtn.addEventListener('click', doAuth)` e por Enter dentro do modal — nunca no carregamento da página raiz. Não houve necessidade de parar/reportar quebra de carregamento.
+
+### Passo 4 — Verificação com `vc-secret-guard scan`
+
+Binário `vc-secret-guard/target/debug/vc-secret-guard.exe` (Fase 1) já compilado, reutilizado sem nenhuma mudança de código (`git diff 4ce26eaf..HEAD -- .vc-secret-guard.toml vc-secret-guard/` vazio — zero entrada nova de allowlist, zero mudança no guard).
+
+- **Achado real, honesto:** o guard **nunca flagrou** a ocorrência em `vision-core-bundle.js` como *finding* estruturado — nem antes nem depois desta sessão (confirmado escaneando isoladamente uma cópia do `vision-core-bundle.js` de `4ce26eaf`, num diretório descartável, sem tocar o repo real). A forma usada no bundle (`localStorage.getItem(...) || 'literal'`) não bate com a heurística de `credential_field` (que reconhece `campo: 'literal'`, o padrão de `vision-core-clean-runtime.js:6301,6323`) nem cruza o limiar de `high_entropy_blob` (string curta, baixa entropia). A confirmação de que o literal existia em `vision-core-bundle.js` veio da investigação manual da Fase A (`rg`), não de um finding do scanner.
+- **Número bruto, antes/depois, pela fonte que de fato prova a remoção (`rg`/`grep` do literal em `vision-core-bundle.js`):** 7 ocorrências (linhas 10289, 10290, 10317, 10318, 10341, 10343, 10353) → **0 ocorrências**.
+- **Número bruto do scan estruturado, repo inteiro, com `.vc-secret-guard.toml` aplicado, pós-fix:** 1413 findings totais (1410 `high_entropy_blob`, 3 `credential_field`). Dos 3 `credential_field`: 2 são `vision-core-clean-runtime.js:6301,6323` (fork abandonado, fora do escopo desta Fase B, sem mudança) e 1 é `docs/CURRENT_HANDOFF.md:60` (o placeholder de redação `[REDACTED_LEGACY_AUTH_FALLBACK]` usado na Fase A para citar o achado sem repetir o valor — pré-existente a esta sessão, ironicamente parecido o suficiente com um campo de credencial para ser flagrado; não é o valor real, não corrigido aqui por estar fora do escopo dos Passos 1-3).
+- Não foi possível reproduzir um scan "antes" do repo inteiro com a mesma política (tentativa de `git worktree` no commit `4ce26eaf` falhou por limite de tamanho de caminho do Windows em arquivos de `tools/_archive/` — falha de ambiente, não relacionada a este incidente; descartado, não repetido). O número que realmente importa para "o achado sumiu" é o específico do arquivo-alvo (`vision-core-bundle.js`, 7→0), reportado acima com confiança total.
+
+### Passo 5 — Governança
+
+- `CLAUDE.md`: nova seção "INCIDENTE-3 — credencial de fallback legada em auth (2026-07-09, Fase B fechada)", mesmo formato/local da seção "Pareamento por `agent_secret`" (incidente 2).
+- `docs/VC_SECRET_GUARD_RUST_SPEC.md` §1 (motivação): item 3 adicionado à lista de incidentes reais, citando este como a primeira ocorrência detectada pela própria feature (com a nuance honesta de que o finding estruturado foi em `vision-core-clean-runtime.js`, não diretamente em `vision-core-bundle.js` — ver Passo 4).
+- Este documento (Fase B, presente seção).
+
+### AÇÃO PENDENTE DO USUÁRIO — runbook de contas legadas (Passo 1c)
+
+Este repositório **não tem acesso a dados de produção** (`data/` local só contém `agent-queue.sqlite`/snapshots de dev). O script abaixo foi escrito e testado contra um `users.json` sintético local (nunca contra dados reais) — quem precisa rodá-lo contra produção é o usuário, com acesso a S3/EB.
+
+**Script:** `tools/incident-3-legacy-account-scan.mjs <users.json> [--invalidate]` — duplica a mesma lógica scrypt/pbkdf2 de `hashPassword`/`verifyPassword` de `backend/server.js` (sem depender do processo do backend), varre `db.users`, e considera "afetada" qualquer conta cujo `password_hash` autentique com a credencial de fallback legada.
+
+**Runbook:**
+
+1. **Pré-condição:** confirmar se `AWS_S3_BUCKET` está de fato configurado no ambiente EB atual (`vision-core-prod`) — `CLAUDE.md` marca essa env var como "PENDENTE de reaplicar" desde a recriação do §206. Se estiver configurada, `users.json` vive em `s3://<bucket>/data/users.json`. Se não, os dados podem estar só no disco efêmero da instância (verificar via `eb ssh`) ou terem sido perdidos na recriação — validar isso é pré-requisito de qualquer passo abaixo, antes de assumir que o arquivo existe onde se espera.
+2. **Baixar uma cópia local** (nunca editar direto em produção):
+   ```
+   aws s3 cp s3://vision-core-data-prod/data/users.json ./users.prod.json
+   ```
+3. **Comando, modo leitura (não altera nada):**
+   ```
+   node tools/incident-3-legacy-account-scan.mjs ./users.prod.json
+   ```
+   **Resultado esperado:** lista de contas (id/email/criado_em/último_login) cujo hash autentica com a credencial de fallback. Código de saída `1` se houver alguma, `0` se nenhuma.
+4. **Comando, invalidação (força nova credencial desconhecida):**
+   ```
+   node tools/incident-3-legacy-account-scan.mjs ./users.prod.json --invalidate
+   ```
+   **Resultado esperado:** gera `./users.prod.json.bak-<timestamp>` (backup pré-mudança) e substitui o `password_hash` das contas afetadas por um segredo aleatório novo, nunca revelado. Essas contas deixam de responder à credencial de fallback (já rejeitada pelo backend, Passo 1) **e também deixam de responder a qualquer senha anteriormente conhecida** — não existe fluxo de "esqueci minha senha" hoje, então reintegrar essas contas exige um fluxo de reset ainda não construído ou suporte manual. Isso é o efeito esperado, não um bug.
+5. **Subir de volta para produção** (decisão separada do usuário, quando/se aplicar):
+   ```
+   aws s3 cp ./users.prod.json s3://vision-core-data-prod/data/users.json
+   ```
+   Isso não redeploya nem reinicia o EB — só atualiza a fonte de verdade no S3. Se o processo já tiver os dados antigos carregados, pode ser necessário um *restart* do ambiente (não um redeploy de código) para ele reler do S3 no próximo boot (`_s3LoadSync`) — confirmar esse comportamento com um teste controlado antes de assumir que basta subir o arquivo.
+6. **Rollback** (só se a invalidação causar problema operacional inesperado):
+   ```
+   cp ./users.prod.json.bak-<timestamp> ./users.prod.json
+   aws s3 cp ./users.prod.json s3://vision-core-data-prod/data/users.json   # se já tinha subido a versão invalidada
+   ```
+   Restaura os hashes originais — reabre a mesma exposição de dados, então só usar em caso de problema real, reavaliando antes de repetir.
+
+**Observação de escopo, repetida do CLAUDE.md:** mesmo depois de rodar `--invalidate`, enquanto o **backend em produção** não receber o fix do Passo 1, a rejeição ativa não está lá — o literal extraído de cache/histórico/CDN antigo continua funcionando contra o endpoint real até esse deploy acontecer. A invalidação de dados sozinha reduz a superfície (contas antigas sem o hash exposto), mas não fecha o code path; os dois precisam estar em produção para o incidente ficar de fato fechado.
+
+### Deploy — pendente de decisão do usuário
+
+Nenhum deploy foi feito nesta Fase B (nem backend/EB, nem CF Pages) — regra dura da sessão. O código está pronto no repo (`main`, commits `0d6eb8c7`/`e4077a41`/`3ebc0b9e`, pushados). **O deploy do backend é o que efetiva a correção** (fecha a aceitação do literal em produção); o deploy do bundle é secundário (só para de *enviar* o literal — o backend antigo continuaria aceitando-o de qualquer chamador direto até ser atualizado). Ambos ficam para quando o usuário decidir.
