@@ -2,7 +2,7 @@
 
 Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode). Leia depois de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, antes de editar código.
 
-> Última atualização: 2026-07-09, por Claude Code (Sonnet 5) — modo acelerado: verificou funcionalmente os 6 itens (B-1..B-6) já implementados pelo Codex, conectou `/api/sf/fetch-url`, reconciliou `docs/PARITY_AUDIT.md`. Parou antes de `project-files`/`generate-zip` — contratos já verificados, prontos pra próxima sessão.
+> Última atualização: 2026-07-09, por Claude Code (Sonnet 5) — deploy de sincronização CF Pages autorizado pelo usuário (`v46` no ar, hash `https://12cdec6e.visioncoreai.pages.dev`, travas de segurança verificadas ao vivo no JS servido). EB não tocado. Sessão anterior: verificou funcionalmente os 6 itens (B-1..B-6) já implementados pelo Codex, conectou `/api/sf/fetch-url`, reconciliou `docs/PARITY_AUDIT.md`.
 
 ---
 
@@ -10,7 +10,7 @@ Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode). Le
 
 - **Commit local = commit remoto (`origin/main`):** `30108978` — `feat(next): conecta /api/sf/fetch-url como contexto de URL opcional no SF (v46)`. Já pushado.
 - **Cache-bust atual:** `?v=next-clean-46` (HTML+CSS+JS, os três juntos).
-- **Produção (`https://visioncoreai.pages.dev`):** ainda `next-clean-31`, muitas versões atrás do local. Nada deployado (nem CF Pages nem EB) em nenhuma sessão desta linha de trabalho. Não deployar sem aprovação explícita.
+- **Produção (`https://visioncoreai.pages.dev`):** **`next-clean-46`, sincronizada com o local em 2026-07-09** — deploy CF Pages autorizado explicitamente pelo usuário (hash `https://12cdec6e.visioncoreai.pages.dev`), verificado ao vivo com `AGENT_APPLY_ENABLED=false` e `real_execution_allowed`/`deploy_allowed`/`writes_disk` todos `false` no JS servido, tanto no hash quanto no alias principal. **Backend EB não foi tocado** — deploy explicitamente restrito ao frontend (CF Pages), por instrução do usuário. Debris (`next.html`/`atomic-core.*`/etc.) reconfirmado sem vazar, mesmo padrão de sempre.
 - **`AGENT_APPLY_ENABLED=false`** e todas as travas `sf_options` (`real_execution_allowed`/`deploy_allowed`/`writes_disk`) continuam `false`. Confirmado por grep nesta sessão, intocado.
 - **3 specs permanentes, 20/20 PASS:** `vision-core-next-agent-apply.spec.mjs` (4), `vision-core-next-sf.spec.mjs` (9 — 3 novos casos de `fetch-url`), `vision-core-next-apply-fix.spec.mjs` (7).
 - **`docs/PARITY_AUDIT.md` reconciliado:** categoria (b) real caiu de 5 grupos pra 2 — só falta Auth e os 2 endpoints SF encadeados (`project-files`+`generate-zip`). Tudo mais que estava listado como pendente já foi implementado entre 2026-07-08 e 2026-07-09.
