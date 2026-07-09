@@ -425,6 +425,11 @@
         <p>O dry-run real (cards acima) sempre simulou só 1 arquivo por missão, mesmo batendo na mesma infraestrutura que o <code>apply_patch_multi</code> usa pra aplicação de verdade. Agora, quando o diagnóstico do LLM abrange 2+ arquivos, o Vision Agent Local simula cada um em memória com a mesma garantia tudo-ou-nada: se qualquer arquivo falhar, a leva inteira é descartada — sem nunca escrever no disco do projeto-alvo e sem nunca expor um diff parcial como se fosse válido. <code>backend/server.js</code> não precisou de nenhuma mudança.</p>
         <div class="bn-fix" style="color:var(--green)"><strong>Entregue:</strong> novo ramo em sfDryRunRealMission() + resolveTargetFileInRoot() (vision-agent.js) + renderSfDryRunResult()/renderSfDryRunPanel() atualizados no bundle. Certificado com 17/17 testes unitários + 29/29 E2E (5 cenários, incluindo regressão do formato single-file) + regressão completa de 16 suítes anteriores.</div>
       </div>
+      <div class="bn-card bn-low">
+        <div class="bn-header"><span class="bn-icon">🔒</span><div><div class="bn-label">EM EVOLUÇÃO</div><h3>vc-secret-guard — detecção de secrets antes do commit</h3></div></div>
+        <p>Núcleo local em Rust, independente do go-core, pra pegar credencial exposta (token em URL de git remote, secret vazando num corpo de resposta HTTP) no momento em que o desenvolvedor está prestes a commitar ou dar push — não numa auditoria manual depois do fato. Fronteira clara com o Scanner/Aegis do go-core: o guard decide se algo pode entrar no git agora; o Aegis valida o código já dentro de uma missão maior.</p>
+        <div class="bn-fix"><strong>Spec:</strong> docs/VC_SECRET_GUARD_RUST_SPEC.md — fase 0/6, spec aprovada, zero linha de Rust escrita ainda.</div>
+      </div>
     </div>
   </section>
 
