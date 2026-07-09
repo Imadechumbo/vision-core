@@ -593,7 +593,7 @@ Quarta ocorrência real da mesma classe de risco: segredo/fallback sensível pre
 
 **Validação complementar em produção (2026-07-09):** o ZIP EB `v109-725cfdcb71973b03963a7adcb43e3888b1808c58` contém os guards do INCIDENTE-3 e INCIDENTE-4. `POST /api/auth/login` com a credencial de fallback legada retorna `400 fallback_credential_rejected` via Worker e EB direto, sem token e sem ecoar o valor. `POST /api/auth/register` ficou pendente de revalidação viva porque probes malformados consumiram temporariamente o rate limit de registro; o guard de register está confirmado no artefato publicado e coberto pela regressão local permanente.
 
-**Pendência operacional CF Pages:** produção pública ainda serve `frontend/assets/vision-core-bundle.js` antigo contendo a credencial de fallback legada, enquanto o bundle local já está limpo. O backend já rejeita o valor, então a autenticação está bloqueada, mas a exposição residual no arquivo público só fecha após deploy CF Pages aprovado pelo usuário: `bash bin/deploy-pages.sh "incident-3 remove legacy auth fallback from public bundle"`; repetir a verificação pública depois.
+**Deploy CF Pages complementar (2026-07-09):** após aprovação do usuário via "continue", o bundle legado limpo foi publicado em `https://5859bb89.visioncoreai.pages.dev` e no alias principal `https://visioncoreai.pages.dev`. Verificação pública pós-deploy: `INDEX_CONTAINS_FALLBACK=false` e `BUNDLE_CONTAINS_FALLBACK=false` no preview e no alias principal. O backend já rejeitava o valor; este deploy fechou a exposição residual no arquivo público.
 
 ## PENDÊNCIAS IMEDIATAS / PRÓXIMA SESSÃO
 
