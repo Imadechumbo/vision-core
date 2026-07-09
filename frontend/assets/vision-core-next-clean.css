@@ -1073,7 +1073,31 @@ a { color: inherit; text-decoration: none; }
   font-weight: 780;
 }
 .vc-sf-mode button[aria-pressed="true"] { background: rgba(168, 85, 247, .24); color: #fff; }
-.vc-sf-controls .vc-sf-check {
+.vc-sf-extra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: #bdb4cf;
+  font-size: 11px;
+}
+.vc-sf-extra > span {
+  color: #958aa7;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.vc-sf-extra label {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid rgba(216, 180, 254, .12);
+  border-radius: 999px;
+  background: rgba(18, 14, 28, .42);
+}.vc-sf-controls .vc-sf-check {
   min-height: 34px;
   display: flex;
   align-items: center;

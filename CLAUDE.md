@@ -1,4 +1,4 @@
-# VISION CORE — CLAUDE.md
+﻿# VISION CORE — CLAUDE.md
 ## Documento central do projeto | Atualizado: 2026-07-06 (Fase 3 em andamento — 3.3a+3.3b+3.3c fechados)
 
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
@@ -363,7 +363,7 @@ d09cd7b5  feat   Executar Missao Caminho B / sf_dry_run_real (Etapa 1d Fase 2a)
 (novo)    fix    retoma Fase 2b do Codex: fecha gate AGENT_APPLY_ENABLED, corrige refreshAgentApplyStatus morto
 ```
 
-**Cache-bust atual:** ?v=next-clean-36 (frontend/vision-core-next.html, CSS e JS na mesma versao -- sempre incrementar os 2 juntos).
+**Cache-bust atual:** ?v=next-clean-45 (frontend/vision-core-next.html, CSS e JS na mesma versao -- sempre incrementar os 2 juntos).
 
 ### CHECKPOINT DE CONTINUIDADE -- OpenCode -> Codex, Software Factory Next v33 (2026-07-08)
 
@@ -500,6 +500,14 @@ Mapa inicial de endpoints a conectar/verificar (referência para a Etapa 1a, nã
 
 ---
 
+
+### Software Factory Next v45 -- 4 etapas extras opcionais (2026-07-08)
+
+Continuando a pendencia "Software Factory completo" pelo caminho mais seguro: foram conectados apenas os 4 endpoints SF que ja usam o mesmo contrato assíncrono dos passos existentes (`POST /api/sf/<step>` -> `{job_id}` -> `GET /api/sf/job/:id`): `context-snapshot`, `patch-validator`, `risk-assessor`, `rollback-planner`. Eles entram como checkboxes opcionais em `#factory`; por padrao ficam desligados, entao o fluxo antigo continua 5 passos + PASS GOLD. Quando marcados, entram antes do PASS GOLD e herdam as mesmas travas de governanca em `sf_options`: `real_execution_allowed:false`, `deploy_allowed:false`, `writes_disk:false`.
+
+**Contrato verificado antes de codar:** `backend/server.js` registra esses 4 nomes dentro de `SF_GENERATORS` e expõe `Object.keys(SF_GENERATORS).forEach` em `/api/sf/:key`; o poll correto continua singular (`/api/sf/job/:id`). Nenhum backend, legado, deploy script, pagina publica ou gate do Vision Agent foi tocado. `AGENT_APPLY_ENABLED=false` continua fail-closed.
+
+**Testes:** `node --check frontend/assets/vision-core-next-clean.js`, `node --check tests/e2e/vision-core-next-sf.spec.mjs`, varredura `rg` para `innerHTML/outerHTML/insertAdjacentHTML/eval/AGENT_APPLY_ENABLED=true/real_execution_allowed:true/deploy_allowed:true/writes_disk:true/!important`, e `npx playwright test tests/e2e/vision-core-next-agent-apply.spec.mjs tests/e2e/vision-core-next-sf.spec.mjs` => 10/10 PASS. Cache-bust `v45`. Nenhum deploy feito.
 ## PENDÊNCIAS IMEDIATAS / PRÓXIMA SESSÃO
 
 1. **Fase 3.3d** (acima) — remoção final da página legada SF. Único item pendente da Fase 3.

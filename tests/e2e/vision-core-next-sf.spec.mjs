@@ -1,4 +1,4 @@
-// @ts-check
+﻿// @ts-check
 /**
  * Vision Core Next - Software Factory smoke tests.
  * All API calls are mocked; no LLM/provider/backend/prod request is allowed.
@@ -62,6 +62,12 @@ function mockAsyncSfEndpoints(page, textByEndpoint) {
   if (textByEndpoint['deploy-blueprint']) {
     routes.push(page.route(`${API}/api/sf/deploy-blueprint`, (route) => queueJob(route, textByEndpoint['deploy-blueprint'])));
   }
+  const extraEndpointKeys = ['context-snapshot', 'patch-validator', 'risk-assessor', 'rollback-planner'];
+  for (const key of extraEndpointKeys) {
+    if (textByEndpoint[key]) {
+      routes.push(page.route(`${API}/api/sf/${key}`, (route) => queueJob(route, textByEndpoint[key])));
+    }
+  }
   if (textByEndpoint['gold-gate']) {
     routes.push(page.route(`${API}/api/sf/gold-gate`, (route) => queueJob(route, textByEndpoint['gold-gate'])));
   }
@@ -113,6 +119,50 @@ test('Software Factory Auto-Pilot runs six steps (5 + PASS GOLD default-on) via 
   expect(posts[5]).toMatchObject({ module: 'gold_gate', step: 5, total_steps: 6 });
 });
 
+test('Software Factory runs selected optional generator steps before PASS GOLD', async ({ page }) => {
+  const { posts, polls } = await mockAsyncSfEndpoints(page, {
+    'mission-composer': 'mission composer ok',
+    'deploy-blueprint': 'deploy blueprint ok',
+    'worker-handoff':   'worker handoff ok',
+    'context-snapshot': 'context snapshot ok',
+    'risk-assessor':    'risk assessor ok',
+    'gold-gate':        'GOLD GATE CHECKLIST\nVEREDICTO: PASS GOLD'
+  });
+
+  await page.goto(NEXT_URL);
+  await page.locator('[data-feature="factory"]').first().click();
+  await page.locator('[data-sf-extra-step="context-snapshot"]').check();
+  await page.locator('[data-sf-extra-step="risk-assessor"]').check();
+  await page.locator('#vcSfInput').fill('um app com snapshot de contexto e risco');
+  await page.getByRole('button', { name: 'Gerar Projeto' }).click();
+
+  await expect.poll(() => posts.length, { timeout: 10_000 }).toBe(8);
+  await expect(page.locator('#vcSfProgress')).toContainText('E1');
+  await expect(page.locator('#vcSfProgress')).toContainText('E3');
+  await expect(page.locator('#vcSfFinalBody')).toContainText('context snapshot ok');
+  await expect(page.locator('#vcSfFinalBody')).toContainText('risk assessor ok');
+  expect(posts).toHaveLength(8);
+  expect(polls).toHaveLength(8);
+  expect(posts.map((post) => post.module)).toEqual([
+    'project_builder',
+    'export_preview',
+    'project_templates',
+    'mission_composer',
+    'worker_handoff',
+    'context_snapshot',
+    'risk_assessor',
+    'gold_gate'
+  ]);
+  expect(posts[5]).toMatchObject({ module: 'context_snapshot', step: 5, total_steps: 8 });
+  expect(posts[6]).toMatchObject({ module: 'risk_assessor', step: 6, total_steps: 8 });
+  expect(posts[7]).toMatchObject({ module: 'gold_gate', step: 7, total_steps: 8 });
+  expect(posts[0].sf_options).toMatchObject({
+    extra_steps: ['context-snapshot', 'risk-assessor'],
+    real_execution_allowed: false,
+    deploy_allowed: false,
+    writes_disk: false
+  });
+});
 test('Software Factory skips gold-gate step when PASS GOLD is unchecked', async ({ page }) => {
   const { posts } = await mockAsyncSfEndpoints(page, {
     'mission-composer': 'mission composer ok',

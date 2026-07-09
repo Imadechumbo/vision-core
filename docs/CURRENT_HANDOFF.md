@@ -1,132 +1,53 @@
-# CURRENT HANDOFF — Vision Core Next
+﻿# CURRENT HANDOFF - Vision Core Next
 
-**Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode).**
-Leia isto DEPOIS de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, ANTES de editar qualquer código. Ver "PROTOCOLO DE REVEZAMENTO" no topo do `CLAUDE.md` para as regras completas.
+Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode). Leia depois de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, antes de editar codigo.
 
-> Última atualização: 2026-07-08, por OpenCode — execução completa do plano de 6 etapas (Etapas 0 a 6) + Apply-Fix (Etapa 7).
+> Ultima atualizacao: 2026-07-08, por Codex - Software Factory v45: 4 etapas extras opcionais.
 
----
+## Estado Atual
 
-## ESTADO ATUAL
+- Commit local: este commit - `feat(next): add optional SF extra steps`. Ainda nao pushado/deployado nesta retomada.
+- Cache-bust atual no codigo: `?v=next-clean-45` (`frontend/vision-core-next.html`, CSS e JS juntos).
+- Producao ainda estava em `next-clean-31` no ultimo checkpoint conhecido. Nao deployar sem aprovacao explicita.
+- `AGENT_APPLY_ENABLED=false` continua fail-closed. Nao reabrir sem aprovacao humana registrada.
+- `tests/e2e/vision-core-next-agent-apply.spec.mjs`: permanente, 4 testes. Guarda o gate de seguranca.
+- `tests/e2e/vision-core-next-sf.spec.mjs`: permanente, 6 testes. Guarda o SF em relay multiagente.
 
-- **Commit local (`main`) = commit remoto (`origin/main`):** `18833c4a` — `feat(tools): Apply Fix no Tools com confirmacao dupla`. **Pushado.**
-- **Cache-bust atual no código:** `?v=next-clean-44` (bump de 38→44 nesta sessão).
-- **Deployado em produção:** ainda `next-clean-31`. Nada desta sessão está no ar. **Não deployar sem aprovação explícita.**
-- **Gate `AGENT_APPLY_ENABLED`:** `false` (fail-closed). Intocado nesta sessão.
-- **Pareamento por `agent_secret`:** implementado e validado em sessão anterior. Intocado.
-- **`tests/e2e/vision-core-next-agent-apply.spec.mjs`:** permanente, 4/4 PASS. Guarda o gate de segurança.
-- **`tests/e2e/vision-core-next-sf.spec.mjs`:** permanente, 5/5 PASS. Superfície ativa de relay multiagente.
+## Implementado Ate Aqui
 
----
+- Etapas 0-7 mantidas do handoff anterior: corte de escopo, badge do agente, AI Provider Vault em Settings, Vault rollback, Missions/evidence, Hermes hint, specs permanentes, Apply-Fix em Tools.
+- Etapa 8 / v45: Software Factory ganhou 4 etapas extras opcionais no painel `#factory`:
+  - `context-snapshot`
+  - `patch-validator`
+  - `risk-assessor`
+  - `rollback-planner`
+- Esses 4 passos ficam desligados por padrao. Quando marcados, entram depois dos 5 passos base e antes do PASS GOLD.
+- O contrato foi verificado em `backend/server.js` antes de codar: os 4 estao em `SF_GENERATORS`, usam `POST /api/sf/:key` e poll singular `GET /api/sf/job/:id`.
+- Nenhum backend, legado (`frontend/index.html`, `vision-core-bundle.*`), deploy script ou pagina publica foi alterado.
 
-## O QUE FOI IMPLEMENTADO (Etapas 0-7, 2026-07-08)
+## Arquivos Tocados Nesta Retomada
 
-### Etapa 0 — Corte de escopo oficializado
-- SPEC (`docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`): nova seção 11 "FORA DE ESCOPO" listando categorias C e D do PARITY_AUDIT.
-- 19 CSS órfãos, SF Console, tutorial zumbi, OSINT, OPENCLAW/OPENSQUAD, IDs duplicados — Next não vai implementar.
-- Commit: `e03c4a69` → rebaseado + pushado.
+- `frontend/vision-core-next.html` - cache-bust v45 + checkboxes de etapas extras.
+- `frontend/assets/vision-core-next-clean.js` - `SF_EXTRA_STEPS`, selecao opt-in e inclusao em `sf_options.extra_steps`.
+- `frontend/assets/vision-core-next-clean.css` - estilo compacto das etapas extras, sem `!important`.
+- `tests/e2e/vision-core-next-sf.spec.mjs` - mocks dos 4 endpoints extras + teste de ordem/travas.
+- `CLAUDE.md`, `docs/CURRENT_HANDOFF.md`, `docs/CODEX_PROMPT.md` - continuidade atualizada.
 
-### Etapa 1 — B-4: Badge de conexão do agente
-- `#vcAgentBadge` no header, polling `/api/agent/status` a cada 10s.
-- Estados: `connected` (verde), `disconnected` (cinza), `error` (âmbar).
-- Pausa quando `document.hidden === true`, retoma ao ficar visível.
-- Zero innerHTML, `.vc-agent-badge:not([hidden])`, respeita reduced-motion.
-- Cache-bust: v39.
+## Testes Feitos
 
-### Etapa 2 — B-5: AI Provider Vault (Settings)
-- Painel `#vcSettingsPanel` com formulário de provider (select + api_key + modelo + base_url).
-- Salvar (`/api/providers/save`), testar (`/api/providers/test`), excluir (`/api/providers/delete`).
-- Chave mascarada (backend já retorna `api_key_masked`), input type="password".
-- Lista de provedores salvos ao abrir Settings.
-- Cache-bust: v40.
+- `node --check frontend/assets/vision-core-next-clean.js` => PASS.
+- `node --check tests/e2e/vision-core-next-sf.spec.mjs` => PASS.
+- `rg` de seguranca para `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `eval`, `AGENT_APPLY_ENABLED = true`, `real_execution_allowed: true`, `deploy_allowed: true`, `writes_disk: true`, `!important` => zero matches nos arquivos tocados/specs permanentes.
+- `npx playwright test tests/e2e/vision-core-next-agent-apply.spec.mjs tests/e2e/vision-core-next-sf.spec.mjs` => 10/10 PASS.
 
-### Etapa 3 — B-6: Rollback UI
-- Painel `#vcVaultRollback` dentro do Vault feature.
-- Lista de snapshots de `/api/vault/snapshots`.
-- Confirmação dupla antes de disparar `POST /api/vault/rollback/:snapshotId` (ação destrutiva — sobrescreve projects.json).
-- Cache-bust: v41.
+## Pendencias Restantes
 
-### Etapa 4 — B-2 + B-3: Missões + Evidence viewer
-- Painel `#vcMissionHistory` dentro do Missions feature.
-- Lista de missões de `/api/mission/timeline?limit=20`.
-- Detail view ao clicar (título, meta, summary/input, evidence_receipt se presente).
-- Botão "Voltar" restaura a lista.
-- Estados: vazio, carregando, erro.
-- Cache-bust: v42.
+1. Auth (registro/login/OAuth Google+GitHub) - mais arriscado; nao comecar sem alinhamento.
+2. Software Factory - 3 endpoints com contrato distinto: `project-files`, `generate-zip`, `fetch-url`. Verificar cada handler real em `backend/server.js` antes de qualquer UI.
+3. Deploy dropdown - bloqueado pela SPEC/secao de escopo; exige decisao explicita.
 
-### Etapa 5 — B-1: Chat + Hermes
-- 5a: Transporte de chat já existia (POST `/api/chat`, lê `data.answer`).
-- 5b: `parseHermesBlock()` — extrai JSON estruturado de resposta textual (fences ` ```json ``` ` ou `{...}` no texto livre). Tolerante: hermesObj `null` nunca quebra a UI.
-- 5c: Hint panel `#vcHermesHint` aparece quando resposta contém `diagnosis`/`fix_type`/`patch`/`decisao`. Botão "Ver detalhes nas Missões" navega para a aba Missions.
-- 5d: Specs mockados: texto livre, hermesObj válido, malformado, JSON sem diagnóstico, erro de rede.
-- Cache-bust: v43.
+## Proximo Comando Recomendado
 
-### Etapa 6 — Fechamento do lote B
-- Todas as temp specs deletadas.
-- Permanent specs 9/9 PASS (agent-apply + sf).
-- `docs/PARITY_AUDIT.md` atualizado: itens B-4/B-5/B-6/B-2/B-3/B-1 movidos para seção (a). Pendências atualizadas: 4 grupos restantes (Auth, Apply-Fix, SF passos, Deploy).
-
-### Etapa 7 (extra) — Tools: Apply-Fix
-- Painel `#vcApplyFixForm` no Tools feature com campos: file path, line, rule_id, after content, confirmation.
-- Dupla confirmação: "Preparar Apply Fix" → "APLICAR FIX em \<file\>".
-- POST `/api/security/apply-fix` com diff preview (before/after com destaque vermelho/verde).
-- Status text limpo no cancel.
-- Cache-bust: v44.
-- 5/5 temp spec PASS.
-
----
-
-## ARQUIVOS TOCADOS
-
-### Frontend Next (3 arquivos oficiais)
-- `frontend/vision-core-next.html` — agent badge, settings panel, vault rollback, mission history, hermes hint, apply-fix form
-- `frontend/assets/vision-core-next-clean.js` — todos os B novos + apply-fix handler (~+650 linhas)
-- `frontend/assets/vision-core-next-clean.css` — CSS dos 6 novos painéis (~+260 linhas)
-
-### Ferramentas de teste
-- `tests/e2e/preview-server.mjs` — servidor estático local com mock para apply-fix API
-- `tests/e2e/vision-core-next-apply-fix.spec.mjs` — temp spec: 5 testes do painel Apply-Fix
-
-### Documentação
-- `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` — seção 11 "FORA DE ESCOPO"
-- `docs/PARITY_AUDIT.md` — seções (a2) adicionada, (b) enxugada, estimativa revisada
-- `docs/CURRENT_HANDOFF.md` — este arquivo
-
-### Não alterado
-- `backend/server.js`, `frontend/index.html`, `vision-core-bundle.*`, `bin/deploy-pages.sh` — todos intocados
-- Debris de protótipos (`frontend/next.html`, `atomic-core.*`, `opencode.json`, etc.) — intocados
-
----
-
-## PENDÊNCIAS RESTANTES (do PARITY_AUDIT)
-
-1. **Auth (registro/login/OAuth Google+GitHub)** — 2-3 turnos. Mais arriscado. Não começar sem alinhamento.
-2. ~~**Tools — Aplicar Fix** (`/api/security/apply-fix`) —~~ **CONCLUÍDO na Etapa 7.**
-3. **Software Factory — 7 passos restantes** (`project-files`, `generate-zip`, `fetch-url`, `patch-validator`, `context-snapshot`, `risk-assessor`, `rollback-planner`) — 2 turnos. Verificar cada handler real em server.js antes.
-4. **Deploy dropdown** — bloqueado pela SPEC (seção 2). Decisão de escopo.
-
----
-
-## RISCOS/ALERTAS ativos
-
-1. **[BAIXO] Deploy desatualizado.** Produção em `v31`, código local em `v44`. Nada desta sessão deployado.
-2. **[BAIXO] `git push` exige PowerShell** — Bash sem rede pra GitHub.
-3. **[BAIXO] CI bot colide com push** — rebase simples, sem conflito. `test-results/manual-verification-*` pode bloquear rebase (git stash).
-4. **[INFO] `AGENT_APPLY_ENABLED=false`** — intocado. Não reabrir sem (a) pareamento real por agente/projeto/owner e (b) aprovação humana registrada aqui.
-
----
-
-## TESTES FEITOS
-
-- **Permanent specs (commitados):** 9/9 PASS (`agent-apply` 4 + `sf` 5).
-- **Temp specs:** agent-badge (5/5), settings (5/5), rollback (5/5), missions (5/5), hermes (6/6), **apply-fix (5/5)**.
-- **Syntax check:** `node --check` limpo em todos os 3 arquivos JS tocados.
-
----
-
-## PRÓXIMO COMANDO RECOMENDADO
-
-```bash
-# Ler o estado atual e planejar próxima etapa:
-cat docs/PARITY_AUDIT.md | head -60
+```powershell
+rg -n "project-files|generate-zip|fetch-url|app\.post\('/api/sf" backend/server.js
 ```

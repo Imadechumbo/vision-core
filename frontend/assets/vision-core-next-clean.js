@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   'use strict';
 
   var appShell = document.querySelector('.vc-app-shell');
@@ -1790,6 +1790,7 @@
   var sfModel = document.getElementById('vcSfModel');
   var sfDryRun = document.getElementById('vcSfDryRun');
   var sfPassGold = document.getElementById('vcSfPassGold');
+  var sfExtraInputs = Array.prototype.slice.call(document.querySelectorAll('[data-sf-extra-step]'));
   var sfMode = 'auto';
   var sfPollTimer = null;
   var sfInFlight = false;
@@ -1802,6 +1803,12 @@
     { label: '03 — Selecionar template',                   module: 'project_templates', endpoint: '/api/sf/mission-composer' },
     { label: '04 — Compor missão SDDF',                    module: 'mission_composer',  endpoint: '/api/sf/mission-composer' },
     { label: '05 — Gerar pacote para worker',              module: 'worker_handoff',    endpoint: '/api/sf/worker-handoff' }
+  ];
+  var SF_EXTRA_STEPS = [
+    { label: 'E1 — Context Snapshot', module: 'context_snapshot', endpoint: '/api/sf/context-snapshot', key: 'context-snapshot' },
+    { label: 'E2 — Patch Validator', module: 'patch_validator', endpoint: '/api/sf/patch-validator', key: 'patch-validator' },
+    { label: 'E3 — Risk Assessor', module: 'risk_assessor', endpoint: '/api/sf/risk-assessor', key: 'risk-assessor' },
+    { label: 'E4 — Rollback Planner', module: 'rollback_planner', endpoint: '/api/sf/rollback-planner', key: 'rollback-planner' }
   ];
   var SF_GOLD_GATE_STEP = { label: '06 — Validar PASS GOLD', module: 'gold_gate', endpoint: '/api/sf/gold-gate' };
   var sfActiveSteps = SF_STEPS;
@@ -1894,13 +1901,21 @@
     });
   }
 
+  function getSelectedSfExtraSteps() {
+    return SF_EXTRA_STEPS.filter(function (step) {
+      return sfExtraInputs.some(function (input) { return input.checked && input.getAttribute('data-sf-extra-step') === step.key; });
+    });
+  }
+
   function readSfOptions() {
+    var selectedExtraSteps = getSelectedSfExtraSteps();
     return {
       mode: sfMode,
       provider: sfProvider && sfProvider.value ? sfProvider.value : 'auto',
       model: sfModel && sfModel.value ? sfModel.value.trim() : '',
       dry_run: !sfDryRun || sfDryRun.checked,
       pass_gold: !sfPassGold || sfPassGold.checked,
+      extra_steps: selectedExtraSteps.map(function (step) { return step.key; }),
       real_execution_allowed: false,
       deploy_allowed: false,
       writes_disk: false
@@ -1918,7 +1933,8 @@
     sfInFlight = true;
     sfFullContext = desc;
     sfRunOptions = readSfOptions();
-    sfActiveSteps = sfRunOptions.pass_gold ? SF_STEPS.concat([SF_GOLD_GATE_STEP]) : SF_STEPS;
+    sfActiveSteps = SF_STEPS.concat(getSelectedSfExtraSteps());
+    if (sfRunOptions.pass_gold) sfActiveSteps = sfActiveSteps.concat([SF_GOLD_GATE_STEP]);
     if (sfLog) { sfLog.textContent = ''; sfLog.hidden = false; }
     if (sfFinal) sfFinal.hidden = true;
     if (sfFinalBody) sfFinalBody.textContent = '';
