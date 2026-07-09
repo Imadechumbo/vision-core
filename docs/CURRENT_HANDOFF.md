@@ -2,7 +2,69 @@
 
 Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode). Leia depois de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, antes de editar código.
 
-> Última atualização: 2026-07-09, por Claude Code (Sonnet 5) — **INCIDENTE-3, Fase B fechada**: backend rejeita a credencial de fallback legada em register/login, bundle legado não a envia mais, regressão permanente 12/12 PASS, runbook de dados legados entregue (ação pendente do usuário). Nenhum deploy feito. Ver seção "INCIDENTE-3" no fim deste documento. Sessão anterior: doc-only `docs/LEGACY_DESIGN_REFERENCE.md` (política de herança visual). Antes dela: `vc-secret-guard` Fase 1 (protótipo local em Rust, fechada).
+> Última atualização: 2026-07-09, por Claude Code (Sonnet 5) — **`vc-secret-guard` Fase 1.5 (refinamento de detecção) fechada**: categoria nova `fallback_credential_literal` (forma exata do INCIDENTE-3) + `high_entropy_blob` restrito a posição de valor e penalizado por forma de identificador de código. Dogfood: `high_entropy_blob` 1410→53 (96,2%), meta de <50 não batida honestamente (reportado, não forçado). Achados reais no dogfood, NÃO corrigidos (fora de escopo desta fase, backend intocado) — ver seção "vc-secret-guard Fase 1.5" abaixo. 14 novos testes (43→57), 57/57 PASS. Fase 2 (hooks) segue gated. Sessão anterior: **INCIDENTE-3, Fase B fechada** (backend rejeita a credencial de fallback legada em register/login, bundle legado não a envia mais, regressão permanente 12/12 PASS, runbook de dados legados entregue, ação pendente do usuário). Nenhum deploy feito nesta sessão nem na anterior. Ver seção "INCIDENTE-3" mais abaixo. Antes dela: doc-only `docs/LEGACY_DESIGN_REFERENCE.md`. Antes dessa: `vc-secret-guard` Fase 1 (protótipo local em Rust, fechada).
+
+---
+
+## `vc-secret-guard` Fase 1.5 (refinamento de detecção) — 2026-07-09
+
+Autorização explícita do usuário: Fase 1.5, refinamento de detecção — **não** é a Fase 2 (hooks locais seguem gated). Baseline verificado antes de começar: `HEAD` = `431b6e3a` = `origin/main`, suíte permanente Next 25/25 PASS, `cargo test` 43/43 PASS. Escopo desta sessão: só `vc-secret-guard/` (crate) e `docs/VC_SECRET_GUARD_RUST_SPEC.md`/`CLAUDE.md`/este HANDOFF. **Backend/go-core/frontend/Next intocados. Nenhum deploy. Nenhuma entrada nova em `.vc-secret-guard.toml`** (`git diff` do arquivo é vazio — confirmado antes de fechar a sessão).
+
+### Objetivo 1 — categoria nova `fallback_credential_literal`
+
+Lição do INCIDENTE-3 (Fase B, `docs/CURRENT_HANDOFF.md` acima): a ocorrência ativa no bundle real tinha a forma `localStorage.getItem(...) || 'literal'` e nenhuma heurística da Fase 1 batia nela. Implementado em `src/categories.rs`:
+
+- 4 formas: `expr || 'lit'`, `expr ?? 'lit'`, ternário `cond ? x : 'lit'`, e atribuição/parâmetro default `algoComContexto = 'lit'`.
+- As 3 primeiras exigem sinal de contexto de credencial (`pw`/`pass`/`token`/`secret`/`key`/`auth`, como substring de qualquer identificador — `\b\w*(?:...)\w*\b`) em qualquer lugar da linha; a 4ª é self-contained (o próprio identificador atribuído já carrega o sinal).
+- **Achado de dogfood durante a própria implementação, corrigido antes de fechar:** checar a linha crua inteira para o sinal de contexto falso-positivava pesado contra `'PASS_GOLD'`/`'PASS'` — constantes de status do próprio produto (o gate PASS GOLD) que contêm a substring "pass" sem ter nada a ver com credencial. Corrigido com `strip_quoted_content()`: o sinal de contexto só é procurado no "esqueleto de código" da linha, com o interior de toda string (`'...'`/`"..."`/`` `...` ``) apagado antes da checagem — reduziu esse achado de 118 para 82 ocorrências no dogfood do repo real (ver Objetivo 2 para o resto do relato de números).
+- Teste negativo explícito, exigido pela autorização: `"retry || 'default'"` (sem nenhum sinal de contexto) não gera finding — `fallback_credential_literal_requires_context_or_fallback_without_credential_signal_is_not_flagged`.
+- Fixture nova `tests/fixtures/fallback_credential_literal.txt` (forma do incidente, valor sintético — ver `tests/fixtures/README.md` para a justificativa anti-autoflagelo) + entrada em `each_category_is_detected_in_its_dedicated_fixture` + `known_raw_secrets_from_fixtures()` (invariante de masking coberto explicitamente para a categoria nova, como pedido).
+
+**Precisão remanescente, honesta:** as 82 ocorrências restantes no dogfood do repo real são dominadas por colisão de substring com o vocabulário do próprio produto (`pass_gold`/`PASS_GOLD` contém "pass" como identificador de código legítimo, não só dentro de string — `strip_quoted_content()` não ajuda aqui) e `data-key`/`S3_KEY` (atributos/variáveis de CI legítimos contendo "key"). Isso não foi endereçado com caso especial hardcoded (instrução explícita da autorização) — é o mesmo tipo de imprecisão de heurística de substring já documentado para `provider_key_prefix` na Fase 1, aqui herdado da lista de palavras-sinal exigida literalmente pela autorização desta fase.
+
+### Objetivo 2 — `high_entropy_blob` restrito a posição de valor + penalizado por forma de identificador
+
+Duas mudanças em `src/categories.rs`/`src/entropy.rs`:
+
+1. **Posição de valor:** em vez de tokenizar a linha inteira, só tokens dentro de string literal ou do lado direito de `=`/`:` (`value_position_regions()`, duas regexes novas: `value_quoted`/`value_kv`) entram no cálculo de entropia. Um identificador solto em posição de definição/chamada nunca cai em nenhuma das duas formas.
+2. **Penalização por forma de identificador** (`looks_like_code_identifier()`, `entropy.rs`): token sem nenhum dígito, dividido (por `_`/`-`/transição camelCase) em ≥2 segmentos "pronunciáveis" → tratado como identificador, não como blob. Presença de QUALQUER dígito anula a penalização imediatamente (um secret real quase sempre tem dígito). Ajustado duas vezes durante o dogfood, ambas generalizações — não caso especial de nenhuma string específica:
+   - `y` conta como vogal (`sync`/`try`/`by`) — sem isso, `sortProvidersByEffectivePriority` (achado real em `backend/server.js`) ainda flagrava por causa do segmento "By".
+   - Segmentos de até 4 caracteres são aceitos sem exigir vogal — abreviação curta (`Id`/`Db`/`Ok`/`Btn`/`Pkg`/`Tpl`/`Cfg`, e o prefixo `vc` do próprio projeto) é exatamente o comprimento onde "precisa de vogal" para de ser sinal confiável; regra sobre comprimento de segmento, não sobre nenhum prefixo específico.
+
+**Gate de aceite — não batido, reportado honestamente:**
+
+| Estágio | `high_entropy_blob` no dogfood real (mesma allowlist, zero entrada nova) |
+|---|---|
+| Antes (baseline, `431b6e3a`) | **1410** |
+| + posição de valor + penalização inicial (vogal sem `y`, só 2 chars sem vogal) | 126 |
+| + `y` conta como vogal | 70 |
+| + abreviação até 4 chars sem vogal | **53** |
+
+Meta da autorização era `<50`. **Não batida — 53, 3 acima da meta.** Breakdown exato dos 53 restantes (nenhum suprimido por allowlist):
+
+- **12** — literais sintéticos do próprio `vc-secret-guard` (`tests/scan_test.rs` 7, `src/entropy.rs` 3, `src/mask.rs` 2) — intencionais, mesma categoria de "ruído esperado" já registrada na Fase 1 para `categories.rs` (que já era allowlistado; estes três arquivos nunca foram).
+- **6** — achados REAIS, não falso-positivo, não corrigidos nesta sessão (ver subseção própria abaixo): `backend/.env` (`JWT_SECRET`, 3 ocorrências) e `backend/data/users.json` (`password_hash` de uma conta de teste, 3 ocorrências — é 1 hash salt:hash, capturado 2x pelo split em `:`, mais um dedup incidental).
+- **2** — `docs/VISUAL_GOLD_HARNESS_MANIFEST.json` (hash SHA-256 de conteúdo de arquivo, não é credencial — mesma classe já revisada na Fase 1 para `.vision-snapshots/*`, este arquivo especificamente não existia ou não foi amostrado naquela sessão).
+- **~33** — `git_head` (SHA de commit, público por definição) e `e2e_evidence_receipt_id` em artefatos de stress-test na raiz (`_s130_*`/`_s131_*`/`_s132_*`/`_s133_*`) e `.vision-snapshots/*` aninhado sob `backend/`/`go-core/` (`hash` de conteúdo — mesma classe já revisada na Fase 1, mas o padrão de allowlist raiz `.vision-snapshots/*` só bate em ocorrências na RAIZ do path relativo; a engine de glob deste crate é deliberadamente sem `**` recursivo — README.md já documenta essa limitação como escolha consciente — então não cobre `backend/.vision-snapshots/*`/`go-core/.vision-snapshots/*`. **Bug pré-existente do allowlist, não introduzido nesta sessão** — corrigir exigiria ou estender a engine de glob para `**` ou adicionar entradas novas ao `.vc-secret-guard.toml`, e a autorização desta sessão proíbe explicitamente as duas coisas sem decisão nova do usuário (mudar o glob muda silenciosamente o efeito do allowlist já existente; adicionar entradas é literalmente vedado). Decisão registrada como pendência, não corrigida.
+
+Não foi tentado forçar esses 3 restantes com supressão — a instrução era explícita ("se não alcançar <50 honestamente, reportar o número real"). Próximo passo real para fechar essa lacuna, se o usuário quiser: decidir entre estender o glob matcher (`policy.rs::glob_match`) para suportar `**`, ou adicionar entradas explícitas de allowlist para os dois diretórios `.vision-snapshots` aninhados — qualquer uma das duas fecha ~33 dos 53 de uma vez, sem tocar em nenhuma heurística de detecção.
+
+### Achados reais do dogfood — NÃO corrigidos, decisão do usuário
+
+Nenhum destes foi suprimido, allowlistado, ou corrigido — ficam visíveis no scan, igual ao padrão já estabelecido para o achado `vc-user-auto` na Fase 1.
+
+1. **`backend/server.js:379,396` — `SESSION_SECRET` sem valor no `.env` cai num literal hardcoded (`'vision-core-dev-session-secret-change-me'`).** `signSession()` (linha 378) é a função que assina TODOS os tokens de sessão emitidos por register/login/OAuth (confirmado por grep: `signSession` é chamado nas 4 rotas de auth). **`SESSION_SECRET` não aparece na tabela de env vars do EB em `CLAUDE.md`** (a tabela lista `PROVIDER_VAULT_SECRET` como configurado no §206, mas nunca menciona `SESSION_SECRET`) — não é possível confirmar a partir deste repositório se está configurado em produção. Se não estiver, qualquer pessoa com leitura deste repositório público (ou do histórico) pode forjar um token de sessão válido para qualquer usuário. Mesma classe de risco do INCIDENTE-3, potencialmente mais severa (forja de sessão completa, não só registro). **Ação pendente do usuário:** confirmar se `SESSION_SECRET` está configurado no ambiente EB real; se não estiver, isso é um INCIDENTE-4 candidato.
+2. **`backend/provider-vault-crypto.js:36` — `DEV_FALLBACK_SECRET = 'vision-core-dev-vault-secret-change-me'`.** Já é conhecido e documentado — `CLAUDE.md` (seção "AI PROVIDER VAULT") já registra `PROVIDER_VAULT_SECRET` como "configurado no §206... fallback dev hardcoded". Achado do guard bate com o achado já registrado — não é novidade, só confirma que o guard teria pego isso desde a Fase 1 se `high_entropy_blob` já tivesse essa precisão então.
+3. **`backend/data/users.json` está commitado no git** (`git ls-files` confirma), com 1 conta (`fix-test@visioncore.dev`, criada 2026-05-29, plano free) incluindo `password_hash` real (formato salt:hash do próprio `hashPassword()` do backend). Introduzido no commit `2405b901` (§48, mensagem não relacionada — "patch engine match engine 5 estrategias" — o arquivo entrou incidentalmente). `.gitignore` só exclui `backend/data/*.sqlite`, não `*.json`. Não é dado de produção real (S3 é a fonte de verdade documentada em `CLAUDE.md`), é resíduo de teste local de uma sessão antiga — mas é, tecnicamente, um hash de senha commitado no histórico público do repositório. **Ação pendente do usuário:** decidir se vale invalidar essa conta de teste (mesmo runbook de `tools/incident-3-legacy-account-scan.mjs` poderia ser adaptado, ou simplesmente remover o arquivo e adicionar `backend/data/*.json` ao `.gitignore` — nenhuma das duas foi feita nesta sessão, fora de escopo).
+4. **`backend/.env` (não commitado, confirmado gitignored) contém segredos reais locais** (`JWT_SECRET`, preços Stripe) — não é exposição de repositório, é exatamente o tipo de arquivo que a Fase 2 (hooks locais) existe para proteger antes do primeiro `git add` acidental. Confirma que a detecção funciona contra segredos reais, não só fixtures sintéticas.
+
+### Validação final
+
+`cargo test`: **57/57 PASS** (era 43/43 — 14 testes novos: 5 para `fallback_credential_literal` incluindo o teste negativo e o de falso-positivo de string, 3 para a restrição de posição de valor em `categories.rs`, 6 para a penalização de forma de identificador em `entropy.rs`). Suíte permanente Next (Playwright, formalidade — nada do Next foi tocado): **25/25 PASS**, rodada de novo antes do commit final. `git diff -- .vc-secret-guard.toml` vazio — confirmado zero entrada nova de allowlist. Nenhum valor real do INCIDENTE-3 aparece em nenhum arquivo tocado nesta sessão (só o valor sintético `zzFallbackNotReal01` na fixture nova).
+
+### Fase 2 (hooks locais) — segue gated, pergunta em aberto herdada da Fase 1
+
+Não iniciada nesta sessão (fora de escopo — autorização era explicitamente só Fase 1.5). Perguntas em aberto herdadas do handoff da Fase 1, ainda sem decisão: (a) se a heurística de `high_entropy_blob` deveria ficar ainda mais contextual antes de virar hook — parcialmente respondida nesta sessão (1410→53), mas a Fase 2 pode querer decidir se 53 é aceitável para um pre-commit hook real ou se vale fechar a lacuna do glob `**` primeiro; (b) o que fazer com achados reais como o `SESSION_SECRET`/`users.json` acima — decisão de produto separada do guard em si.
 
 ---
 
