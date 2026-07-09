@@ -128,6 +128,16 @@ O guard classifica achados por **categoria**, cada uma com sua própria família
 - **`high_entropy_blob`** — string contígua acima de um comprimento mínimo configurável com entropia de Shannon acima de um limiar configurável, como rede de segurança para formatos de credencial não cobertos pelas categorias acima.
 - **`connection_string`** — URIs com credencial embutida no formato `scheme://user:pass@host` (a classe exata do incidente §1 do GitLab).
 
+**Regex ilustrativo por categoria** (forma genérica da regra, nunca o literal de um provedor real — respeita a regra anti-autoflagelo da §7; comprimentos/charsets abaixo são exemplo de shape, não cópia de nenhuma regra real do `AEGIS_SECRET_*` do go-core nem de nenhum provedor específico):
+
+| Categoria | Regex ilustrativo (shape, não literal real) | O que a forma captura |
+|---|---|---|
+| `provider_key_prefix` | `\b[a-z]{2,5}-[A-Za-z0-9]{20,60}\b` | prefixo curto minúsculo + `-` + corpo alfanumérico longo — forma comum a vários provedores, sem citar nenhum prefixo real |
+| `bearer_token` | `(?i)authorization:\s*bearer\s+[A-Za-z0-9\-_.]{20,}` | header/valor Bearer com token de alta entropia logo em seguida |
+| `credential_field` | `(?i)\bapi_?key\b\s*[:=]\s*["'][^"'\s]{8,}["']` *(uma de várias — mesma forma se repete para `password`/`secret`/`token`/`private_key`)* | campo nomeado por convenção atribuído a literal de string, nunca a referência de variável de ambiente |
+| `high_entropy_blob` | *(não é regex — cálculo de entropia de Shannon sobre janelas de string ≥ comprimento mínimo configurável)* | qualquer blob de alta aleatoriedade não capturado pelas categorias acima |
+| `connection_string` | `\b[a-z]+://[^:\s/]+:[^@\s/]+@[^\s/]+` | `scheme://user:pass@host` — a classe exata do incidente do GitLab |
+
 **Allowlist configurável:** por caminho de arquivo (glob), por hash de linha (para permitir um falso positivo específico sem desabilitar a categoria inteira), e por categoria completa (para times que decidem não rodar `high_entropy_blob`, por exemplo, por causa de ruído). Vive num arquivo de policy versionável (`.vc-secret-guard.toml` ou equivalente), nunca hardcoded no binário.
 
 **Caminhos monitorados por padrão** (além do diff staged no modo hook): `.env` e variantes (`.env.local`, `.env.*`), arquivos de credencial nomeados convencionalmente (`auth.json`, `credentials.json`, `secrets.yml`), histórico de shell (`.bash_history`, `.zsh_history`, `PSReadLine` history no Windows) quando dentro do escopo de varredura explícita do usuário — nunca varredura automática de fora do diretório apontado.
