@@ -2,7 +2,33 @@
 
 Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode). Leia depois de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, antes de editar código.
 
-> Última atualização: 2026-07-09, por Claude Code (Sonnet 5) — **`vc-secret-guard` Fase 1 (protótipo local em Rust) autorizada e fechada**: crate real, só `scan`, 43/43 testes PASS, dogfood contra o próprio repo (1 achado real não-suprimido, 2 bugs de regex corrigidos). Sessão anterior: Fase 0 (spec-only). Sessão anterior a essa (Next): correção de direção de produto do Atomic Core (`v48`).
+> Última atualização: 2026-07-09, por Claude Code (Sonnet 5) — **doc-only: `docs/LEGACY_DESIGN_REFERENCE.md`** oficializa a política de herança visual (legado=referência, Next=implementação do zero) e cataloga 5 telas do legado tela-a-tela. Zero código. Sessão anterior: `vc-secret-guard` Fase 1 (protótipo local em Rust, fechada).
+
+---
+
+## Sessão doc-only — Política de herança visual + catálogo do legado — 2026-07-09
+
+Escopo: **nenhum código**. Só `docs/LEGACY_DESIGN_REFERENCE.md` (novo) + 1 seção curta em `CLAUDE.md` + 1 linha em `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` + este HANDOFF. Backend/go-core/frontend legado intocados, nenhum arquivo do Next tocado, nenhum deploy.
+
+### O que foi entregue
+
+`docs/LEGACY_DESIGN_REFERENCE.md`: política oficial (legado = fonte de referência visual/UX, proibido copiar código; nenhuma feature nova nasce no legado — regra anti-novo-legado; divergência consciente do Next é permitida se registrada) + catálogo de 5 telas, cada afirmação rastreada a `arquivo:linha` real (navegado no código-fonte estático, nada executado). Achados de precisão que corrigem presunções da tarefa original, registrados no próprio doc em vez de silenciosamente ignorados:
+
+- **A credencial hardcoded `vc-user-auto`** (achado do `vc-secret-guard` na sessão anterior) existe em **`vision-core-bundle.js`** (o bundle real, carregado por `index.html` em produção) — não só em `vision-core-clean-runtime.js` (fork abandonado, citado na tarefa original, mas que `VISION_CORE_NEXT_FRONTEND_SPEC.md` §11 já documentava como "não carregado por nenhuma página oficial"). As duas afirmações são compatíveis (o fork realmente não é carregado) mas a tarefa original conflava os dois arquivos como se fossem o mesmo — corrigido no doc, com os dois arquivo:linha citados.
+- **A frase "copiloto que não confia em si mesmo"** (citada na tarefa original) **não existe** no código — confirmado por busca em `landing.html`/`about.html`. A frase real mais próxima é `landing.html:94`: *"Não é chatbot. Não é copiloto."* — registrado no doc pra não propagar uma citação que não bate com a fonte.
+- **6 pilares na landing, não 3** — contagem verificada diretamente no DOM (`so-ia-grid compact-pillar-grid`, 6 `.so-ia-card`).
+- **A "tabela comparativa"** (ANTES E DEPOIS) não é um elemento `<table>` HTML — é um layout de 2 colunas (`.loop-comparison`) com 6 passos pareados. Descrito com precisão no doc, sem chamar de "tabela" o que não é uma.
+- **Software Factory no legado são DUAS UIs distintas**, não uma: (3a) geradores embutidos no chat + Auto-Pilot de 7 passos (`SF_AUTOPILOT_STEPS`), e (3b) a página standalone `#vcSoftwareFactoryPage`/`#projectBuilder` de 9 abas — que **já está decidida como "não será portada"** (`VISION_CORE_NEXT_FRONTEND_SPEC.md` §11, Categoria C, Fase 3.3d). O doc cataloga as duas separadamente para não reabrir por engano uma decisão já fechada.
+- **Dois sistemas de numeração "SF-01"…"SF-09" coexistem no legado, sem relação entre si**: um mapeia módulos da página 3b para a Spec Library de 120 specs (`SF_MODULE_SPEC_MAP`); outro (citado em `about.html:753`, §139) rotula os 8 `SF_GENERATORS` do backend. Documentado explicitamente pra próxima sessão não presumir que são a mesma lista.
+- **Contagem real de agentes no grid:** 11 cards (`backend`, `database`, `auth`, `upload_media`, `config`, `network`, `locator`, `security`, `validator`, `architect`, `memory`) — confirmado por contagem direta no DOM, não repetida de memória de sessões anteriores (que citavam "15 agentes" num contexto diferente, o catálogo completo de `/api/agents/catalog`, não necessariamente igual à contagem de cards estáticos no HTML).
+
+### Status de migração registrado (tabela completa no doc)
+
+Métricas e Agentes: dado já portado (SAFE READ, texto no chat via `featureMap`), visual (barras/chips/badge de cor/grid de cards/tri-state) não iniciado. Software Factory (3a): divergência consciente registrada — Next reimplementou do zero com Auto-Pilot 5+1 passos e UX de chat-log, não replica a sequência de 7 passos nem a UI do legado. `project-files`/`generate-zip`: não iniciado, sem bloqueio de backend (contrato já verificado em sessão anterior). Software Factory (3b), Landing, About: não serão portados — decisões já existentes (SPEC §7 e §11), não reabertas aqui.
+
+### Validação
+
+Suíte permanente Next: **25/25 PASS**, rodada antes de começar (confirma estado esperado do protocolo) e nenhum arquivo do Next foi tocado nesta sessão, então zero risco de regressão. `git status`/`git log -3` conferidos no início — `HEAD` batia com `c7a0994a` esperado, tree limpo (só o ruído pré-existente já documentado em sessões anteriores).
 
 ---
 
