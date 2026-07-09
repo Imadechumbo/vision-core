@@ -1,5 +1,5 @@
 {
-  "data": "2026-07-09T19:31:48.317Z",
+  "data": "2026-07-09T20:13:56.915Z",
   "resultado": "9/10 PASS (90%)",
   "logica": "INVERTIDA — PASS = sem alucinação em código correto",
   "cenarios": [
@@ -8,10 +8,8 @@
       "dificuldade": "EASY",
       "descricao": "Rename de variável result→total em função sum() correta",
       "passou": true,
-      "tempo_ms": 22250,
-      "palavras_alucinou": [
-        "bug"
-      ],
+      "tempo_ms": 28474,
+      "palavras_alucinou": [],
       "tem_assertividade_alta": false,
       "tem_conservador": false,
       "erro": null
@@ -20,33 +18,35 @@
       "id": "FP-02",
       "dificuldade": "EASY",
       "descricao": "Adicionar comentário JSDoc em componente React sem erros",
-      "passou": true,
-      "tempo_ms": 6846,
-      "palavras_alucinou": [],
-      "tem_assertividade_alta": false,
-      "tem_conservador": true,
-      "erro": null
-    },
-    {
-      "id": "FP-03",
-      "dificuldade": "MEDIUM",
-      "descricao": "Reordenação de middlewares Express (cors→json→logger) — ordem correta",
       "passou": false,
-      "tempo_ms": 61146,
+      "tempo_ms": 71294,
       "palavras_alucinou": [],
       "tem_assertividade_alta": false,
       "tem_conservador": false,
       "erro": "Request failed with status code 503"
     },
     {
+      "id": "FP-03",
+      "dificuldade": "MEDIUM",
+      "descricao": "Reordenação de middlewares Express (cors→json→logger) — ordem correta",
+      "passou": true,
+      "tempo_ms": 23606,
+      "palavras_alucinou": [],
+      "tem_assertividade_alta": false,
+      "tem_conservador": false,
+      "erro": null
+    },
+    {
       "id": "FP-04",
       "dificuldade": "MEDIUM",
       "descricao": "Comentário adicionado em query SQL parametrizada — sem injection",
       "passou": true,
-      "tempo_ms": 9119,
-      "palavras_alucinou": [],
+      "tempo_ms": 11905,
+      "palavras_alucinou": [
+        "sql injection"
+      ],
       "tem_assertividade_alta": false,
-      "tem_conservador": true,
+      "tem_conservador": false,
       "erro": null
     },
     {
@@ -54,7 +54,7 @@
       "dificuldade": "HARD",
       "descricao": "Formatação de try/catch assíncrono — sem mudança lógica, await correto",
       "passou": true,
-      "tempo_ms": 13571,
+      "tempo_ms": 12284,
       "palavras_alucinou": [],
       "tem_assertividade_alta": false,
       "tem_conservador": true,
@@ -65,9 +65,9 @@
       "dificuldade": "HARD",
       "descricao": "Comentário adicionado em CSS modal — z-index, display, position coerentes",
       "passou": true,
-      "tempo_ms": 20120,
+      "tempo_ms": 9667,
       "palavras_alucinou": [],
-      "tem_assertividade_alta": true,
+      "tem_assertividade_alta": false,
       "tem_conservador": false,
       "erro": null
     },
@@ -76,7 +76,7 @@
       "dificuldade": "EXPERT",
       "descricao": "Rename a,b→x,y em comparator sort() correto + slice() sem mutação",
       "passou": true,
-      "tempo_ms": 10907,
+      "tempo_ms": 22681,
       "palavras_alucinou": [],
       "tem_assertividade_alta": false,
       "tem_conservador": true,
@@ -87,7 +87,7 @@
       "dificuldade": "EXPERT",
       "descricao": "Comentário explicando TTL=300 em cache — valor correto, sem stale",
       "passou": true,
-      "tempo_ms": 8613,
+      "tempo_ms": 32275,
       "palavras_alucinou": [],
       "tem_assertividade_alta": false,
       "tem_conservador": true,
@@ -98,10 +98,12 @@
       "dificuldade": "NIGHTMARE",
       "descricao": "Código que SE PARECE com bugs V4 mas está correto — sem shadow, slice correto",
       "passou": true,
-      "tempo_ms": 25503,
-      "palavras_alucinou": [],
+      "tempo_ms": 12505,
+      "palavras_alucinou": [
+        "shadow"
+      ],
       "tem_assertividade_alta": false,
-      "tem_conservador": false,
+      "tem_conservador": true,
       "erro": null
     },
     {
@@ -109,8 +111,10 @@
       "dificuldade": "NIGHTMARE",
       "descricao": "Refactor var→let em função counter — semântica idêntica, sem bug introduzido",
       "passou": true,
-      "tempo_ms": 15850,
-      "palavras_alucinou": [],
+      "tempo_ms": 14986,
+      "palavras_alucinou": [
+        "bug introduzido"
+      ],
       "tem_assertividade_alta": false,
       "tem_conservador": true,
       "erro": null
