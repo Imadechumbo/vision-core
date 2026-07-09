@@ -28,6 +28,14 @@ async function mockAgentStatus(page, body = { ok: true, connected: false, agent_
   });
 }
 
+// vision-core-next.html also polls /api/mission/quota unconditionally on load
+// (sidebar badge) — unmocked, that's a real request to the production gateway
+// on every test. Confirmed empirically before adding this, not assumed.
+test.beforeEach(async ({ page }) => {
+  await page.route(`${API}/api/mission/quota`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, plan: 'free', remaining: 5 }) }));
+});
+
 async function openNext(page) {
   await page.goto(NEXT_URL);
   await page.locator('[data-feature="missions"]').first().click();

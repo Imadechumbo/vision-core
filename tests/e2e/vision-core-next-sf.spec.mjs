@@ -28,6 +28,18 @@ import path from 'node:path';
 const NEXT_URL = pathToFileURL(path.resolve('frontend/vision-core-next.html')).toString();
 const API = 'https://visioncore-api-gateway.weiganlight.workers.dev';
 
+// vision-core-next.html polls /api/agent/status (10s interval, header badge)
+// and /api/mission/quota (sidebar badge) unconditionally on load — every test
+// that goes to NEXT_URL must mock both or it leaks a real request to the
+// production gateway. Confirmed empirically (page.on('request') listener)
+// before adding this, not assumed.
+test.beforeEach(async ({ page }) => {
+  await page.route(`${API}/api/agent/status`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, connected: false }) }));
+  await page.route(`${API}/api/mission/quota`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, plan: 'free', remaining: 5 }) }));
+});
+
 function mockAsyncSfEndpoints(page, textByEndpoint) {
   const posts = [];
   const polls = [];
