@@ -10286,8 +10286,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
         if (resultEl) { resultEl.textContent = 'Conectando…'; resultEl.style.color = '#94a3b8'; }
         signupBtn.disabled = true;
 
-        /* §145: usar senha salva por email, ou fallback 'vc-user-auto' para usuários antigos */
-        var _pw145 = (function() { try { return localStorage.getItem('vc_user_pw_' + email) || 'vc-user-auto'; } catch(e) { return 'vc-user-auto'; } })();
+        /* INCIDENTE-3: fallback público removido — sem senha salva, registra só-email (backend gera senha aleatória) */
+        var _pw145 = (function() { try { return localStorage.getItem('vc_user_pw_' + email) || ''; } catch(e) { return ''; } })();
         fetch(BACKEND_URL + '/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -10314,8 +10314,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
               authBackdrop.setAttribute('aria-hidden', 'true');
             }, 2000);
           } else {
-            /* Fall back to login — §145-hotfix2: tenta senha salva, depois 'vc-user-auto' */
-            var _loginPw = (function() { try { return localStorage.getItem('vc_user_pw_' + email) || 'vc-user-auto'; } catch(e) { return 'vc-user-auto'; } })();
+            /* Fall back to login — INCIDENTE-3: só tenta a senha salva, sem fallback público */
+            var _loginPw = (function() { try { return localStorage.getItem('vc_user_pw_' + email) || ''; } catch(e) { return ''; } })();
             function _doLogin(pw, isFinal) {
               return fetch(BACKEND_URL + '/api/auth/login', {
                 method: 'POST',
@@ -10338,9 +10338,6 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                     authBackdrop.classList.remove('show');
                     authBackdrop.setAttribute('aria-hidden', 'true');
                   }, 2000);
-                } else if (!isFinal && pw !== 'vc-user-auto') {
-                  /* §145-hotfix2: primeira tentativa falhou — retry com senha legada */
-                  return _doLogin('vc-user-auto', true);
                 } else {
                   signupBtn.disabled = false;
                   if (resultEl) {
@@ -10350,7 +10347,8 @@ window.VISION_CORE_FINAL_STATE = Object.freeze({
                 }
               });
             }
-            return _doLogin(_loginPw, _loginPw === 'vc-user-auto');
+            /* INCIDENTE-3: removido o retry final com a credencial de fallback pública legada */
+            return _doLogin(_loginPw, true);
           }
         })
         .catch(function (err) {
