@@ -1169,7 +1169,11 @@ async function tryStartBackend(s) {
     _backendProcess = spawn(process.execPath, [serverPath], {
       cwd:      ROOT,
       stdio:    ['ignore', 'pipe', 'pipe'],
-      env:      { ...process.env, PORT: String(LOCAL_BACKEND_PORT) },
+      env:      {
+        ...process.env,
+        PORT: String(LOCAL_BACKEND_PORT),
+        SESSION_SECRET: process.env.SESSION_SECRET || 'pi-harness-runtime-session-secret-32chars-min',
+      },
       detached: false,
     });
     s.backendProcessStarted = true;

@@ -374,9 +374,19 @@ function revokeToken(jti) {
 
 function isTokenRevoked(jti) { return !!jti && _tokenBlacklist.has(jti); }
 
+function requireSessionSecret() {
+  const secret = String(process.env.SESSION_SECRET || '').trim();
+  const publicFallback = ['vision', 'core', 'dev', 'session', 'secret', 'change', 'me'].join('-');
+  if (!secret) throw new Error('SESSION_SECRET_REQUIRED');
+  if (secret === publicFallback) throw new Error('SESSION_SECRET_INSECURE_PUBLIC_FALLBACK');
+  if (Buffer.byteLength(secret, 'utf8') < 32) throw new Error('SESSION_SECRET_TOO_SHORT');
+  return secret;
+}
+
+const SESSION_SECRET = requireSessionSecret();
+
 // §152 — signSession: adiciona JTI + expiração 24h
 function signSession(payload) {
-  const secret = process.env.SESSION_SECRET || 'vision-core-dev-session-secret-change-me';
   const jti = crypto.randomBytes(16).toString('hex');
   const fullPayload = Object.assign({}, payload, {
     jti,
@@ -384,7 +394,7 @@ function signSession(payload) {
     exp: payload.exp || (Date.now() + 24 * 60 * 60 * 1000) // 24h padrão
   });
   const body = base64url(JSON.stringify(fullPayload));
-  const sig = crypto.createHmac('sha256', secret).update(body).digest('base64url');
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url');
   return `${body}.${sig}`;
 }
 
@@ -393,8 +403,7 @@ function verifySession(token) {
   try {
     if (!token || !String(token).includes('.')) return null;
     const [body, sig] = String(token).split('.');
-    const secret = process.env.SESSION_SECRET || 'vision-core-dev-session-secret-change-me';
-    const expected = crypto.createHmac('sha256', secret).update(body).digest('base64url');
+    const expected = crypto.createHmac('sha256', SESSION_SECRET).update(body).digest('base64url');
     if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
     const data = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
     if (data.exp && Date.now() > data.exp) return null;

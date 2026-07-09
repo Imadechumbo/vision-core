@@ -143,7 +143,12 @@ export async function launchLocalBackend(options = {}) {
   const nodeExec = process.execPath;
   const child = spawn(nodeExec, ['--no-deprecation', serverPath], {
     cwd:      resolve(root, 'backend'),
-    env:      { ...process.env, PORT: String(port), NODE_ENV: 'local' },
+    env:      {
+      ...process.env,
+      PORT: String(port),
+      NODE_ENV: 'local',
+      SESSION_SECRET: process.env.SESSION_SECRET || 'local-backend-runtime-session-secret-32chars-min',
+    },
     detached: false,
     stdio:    'ignore',
   });

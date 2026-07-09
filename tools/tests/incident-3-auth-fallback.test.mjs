@@ -70,7 +70,12 @@ const usersPreExistedContent = usersPreExisted ? readFileSync(USERS_FILE, 'utf8'
 const auditPreExisted = existsSync(AUDIT_FILE);
 const auditPreExistedContent = auditPreExisted ? readFileSync(AUDIT_FILE, 'utf8') : null;
 
-const childEnv = { ...process.env, PORT: String(PORT), AWS_S3_BUCKET: '' };
+const childEnv = {
+  ...process.env,
+  PORT: String(PORT),
+  AWS_S3_BUCKET: '',
+  SESSION_SECRET: 'incident-3-test-session-secret-32chars-min',
+};
 
 const child = spawn(process.execPath, ['--no-deprecation', 'backend/server.js'], {
   cwd: ROOT,

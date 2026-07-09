@@ -94,6 +94,7 @@ GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET
 OAUTH_REDIRECT_BASE=https://visioncore-api-gateway.weiganlight.workers.dev
 FRONTEND_URL=https://visioncoreai.pages.dev
 FREE_MISSION_LIMIT=5          # ausente no ambiente real — default hardcoded '5' em server.js, sem risco
+SESSION_SECRET                # obrigatório após INCIDENTE-4 — assina/valida sessões; sem fallback em produção
 PROVIDER_VAULT_SECRET         # configurado no §206 — cifra o AI Provider Vault (ver checkpoint abaixo)
 HOTMART_HOTTOK                # PENDENTE — não configurado ainda (§150)
 AWS_S3_BUCKET=vision-core-data-prod   # PENDENTE de reaplicar (§146)
@@ -577,6 +578,18 @@ Terceira ocorrência real de exposição de credencial no projeto (mesma classe 
 5. `vc-secret-guard scan` (Passo 4 de verificação): o literal já não aparecia em `vision-core-bundle.js` como *finding* estruturado antes desta sessão (a forma `x.getItem(...) || 'literal'` não bate com as heurísticas de `credential_field`/`high_entropy_blob` — só foi achado por leitura manual/`rg`, Fase A) — confirmado por busca literal que as 7 ocorrências em `vision-core-bundle.js` viraram 0. `vision-core-clean-runtime.js` (fork abandonado, fora de escopo desta Fase B) mantém as 2 ocorrências originais, sem mudança — esperado. Zero entrada nova em `.vc-secret-guard.toml`, zero mudança de código no `vc-secret-guard` em si.
 
 **Deploy: PENDENTE de decisão do usuário.** Nada foi deployado nesta Fase B (nem backend/EB, nem CF Pages) — regra dura da sessão. Enquanto o backend em produção não receber este fix, a rejeição não está ativa lá: o literal extraído de cache/histórico/CDN antigo continua funcionando contra o endpoint real até o deploy do **backend** acontecer — o deploy do bundle é secundário nesse sentido, quem efetivamente fecha a porta é o backend.
+
+### INCIDENTE-4 — SESSION_SECRET com fallback público (2026-07-09, Fase B Opção A)
+
+Quarta ocorrência real da mesma classe de risco: segredo/fallback sensível presente no código. Fase A confirmou que `signSession()` e `verifySession()` usavam fallback público simétrico quando `SESSION_SECRET` não estava setado, permitindo forjar sessão HMAC para qualquer `uid` real conhecido. Severidade alta se o EB estivesse sem `SESSION_SECRET`.
+
+**Fix aprovado pelo usuário (Opção A — fail-closed):**
+1. `backend/server.js`: `SESSION_SECRET` agora é obrigatório no boot via `requireSessionSecret()`. Ausente, igual ao fallback público conhecido, ou menor que 32 bytes → processo não sobe. `signSession()`/`verifySession()` usam somente o segredo validado em memória.
+2. `backend/.env.example`: documenta `SESSION_SECRET` como variável real obrigatória de auth/session; `JWT_SECRET` fica marcado como legado/não usado por `backend/server.js`.
+3. Testes/launchers locais que sobem backend real recebem `SESSION_SECRET` de teste/local explícito (`tools/tests/incident-3-auth-fallback.test.mjs`, `tools/tests/provider-vault-endpoints.test.mjs`, `tools/local-backend-runtime-launcher.mjs`, `tools/pi-harness.mjs`).
+4. Regressão permanente: `tools/tests/incident-4-session-secret.test.mjs` prova fail-closed para ausência/fallback público/segredo curto e boot OK com segredo forte explícito.
+
+**Operação:** antes de qualquer deploy EB desta mudança, configurar `SESSION_SECRET` forte no `vision-core-prod`. Rotacionar/definir esse segredo invalida sessões ativas; esperado e correto.
 
 ## PENDÊNCIAS IMEDIATAS / PRÓXIMA SESSÃO
 

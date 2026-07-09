@@ -6,6 +6,24 @@ Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode). Le
 
 ---
 
+## INCIDENTE-4: SESSION_SECRET — Fase B (Opção A aprovada, 2026-07-09)
+
+Aprovação explícita do usuário: **Opção A — fail-closed no boot**. A verificação read-only via AWS CLI local não retornou estado útil do EB, então a correção foi feita como hardening defensivo no código, sem assumir que produção já está segura.
+
+Mudanças aplicadas:
+
+- `backend/server.js`: `signSession()`/`verifySession()` não usam mais fallback público. O segredo de sessão agora é resolvido uma única vez no boot por `requireSessionSecret()`.
+- Boot fail-closed com erro explícito se `SESSION_SECRET` estiver ausente, for igual ao fallback público conhecido ou tiver menos de 32 bytes UTF-8. O valor do segredo nunca é impresso pelo código novo.
+- Testes/launchers locais que sobem `backend/server.js` real (`tools/tests/incident-3-auth-fallback.test.mjs`, `tools/tests/provider-vault-endpoints.test.mjs`, `tools/local-backend-runtime-launcher.mjs`, `tools/pi-harness.mjs`) passam `SESSION_SECRET` de teste/local explícito quando o ambiente não fornece um.
+- `backend/.env.example` agora documenta `SESSION_SECRET` como variável real obrigatória de auth/session e deixa `JWT_SECRET` marcado como legado/não usado por `backend/server.js`.
+- Regressão permanente nova: `tools/tests/incident-4-session-secret.test.mjs` prova que backend sem `SESSION_SECRET`, com fallback público ou com segredo curto morre antes de servir; com segredo forte explícito sobe e responde `/api/health`.
+
+Implicação operacional obrigatória antes de deploy EB: `SESSION_SECRET` precisa existir no ambiente `vision-core-prod` com valor forte e diferente do fallback público. Se for setado/rotacionado, todas as sessões antigas serão invalidadas; isso é esperado e correto.
+
+Nenhum deploy foi feito nesta Fase B.
+
+---
+
 ## Métricas Next — camada visual (2026-07-09, `next-clean-49`)
 
 Protocolo de revezamento seguido: baseline verificado antes de começar (`HEAD=1c3658d0`, batia com o esperado, tree limpo, suíte 25/25). Escopo 100% frontend Next — `frontend/vision-core-next.html` + `assets/vision-core-next-clean.{js,css}` + spec nova. **Backend, auth, go-core, INCIDENTE-3/4 e Atomic Core/olho não foram tocados.**

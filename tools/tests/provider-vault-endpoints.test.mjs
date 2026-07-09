@@ -57,7 +57,12 @@ const preExistedContent = preExisted ? readFileSync(VAULT_FILE, 'utf8') : null;
 // determinístico e, pior, pode disparar uma chamada real com uma chave paga
 // de verdade. O único provider com chave nesta suíte é o 'openai' fake que
 // o próprio teste salva no vault.
-const childEnv = { ...process.env, PORT: String(PORT), AWS_S3_BUCKET: '' };
+const childEnv = {
+  ...process.env,
+  PORT: String(PORT),
+  AWS_S3_BUCKET: '',
+  SESSION_SECRET: 'provider-vault-test-session-secret-32chars-min',
+};
 for (const prefix of ['OPENROUTER', 'OPENAI', 'ANTHROPIC', 'GROQ', 'DEEPSEEK', 'GEMINI']) {
   delete childEnv[`${prefix}_API_KEY`];
   delete childEnv[`${prefix}_API_KEY_2`];
