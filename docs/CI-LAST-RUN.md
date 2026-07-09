@@ -1,18 +1,18 @@
 # Vision Core — CI Last Run
 
-**Data:** 2026-07-09T21:05:46.768Z
-**Status:** ❌ FAIL (4 cenários)
-**Total:** 76/80 PASS (95%)
-**Run:** #230 | **Ref:** main | **SHA:** de7cc404
+**Data:** 2026-07-09T21:50:07.270Z
+**Status:** ✅ PASS GOLD
+**Total:** 80/80 PASS (100%)
+**Run:** #231 | **Ref:** main | **SHA:** 1c3658d0
 
 ## Resultados por suíte
 
 | Suíte | PASS | FAIL | Total |
 |-------|------|------|-------|
-| V1 | 9 | 1 | 10 |
+| V1 | 10 | 0 | 10 |
 | V2 | 15 | 0 | 15 |
-| V3 | 14 | 1 | 15 |
+| V3 | 15 | 0 | 15 |
 | V4 | 15 | 0 | 15 |
-| SF | 14 | 1 | 15 |
-| FP | 9 | 1 | 10 |
-| **Total** | **76** | **4** | **80** |
+| SF | 15 | 0 | 15 |
+| FP | 10 | 0 | 10 |
+| **Total** | **80** | **0** | **80** |
