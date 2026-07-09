@@ -1,6 +1,48 @@
 ﻿(function () {
   'use strict';
 
+  // ── Controle de animações do Vision Core (não do sistema operacional) ──
+  // Decisão de produto (2026-07-09): a animação do Atomic Core é identidade
+  // visual da marca. O VC tem controle próprio de acessibilidade (Settings →
+  // Animações) — o SO (prefers-reduced-motion) NÃO degrada a experiência por
+  // padrão. Default é sempre "full", independente do que o SO reportar.
+  // Fonte única de verdade: leia/decida sempre por aqui, nunca chame
+  // matchMedia('(prefers-reduced-motion...)') diretamente em outro lugar do
+  // código pra decidir o que animar (a única exceção legítima é a dica de
+  // primeira visita — isso é consciência de acessibilidade, não controle).
+  var VC_MOTION_KEY = 'vc_animation_mode'; // 'full' | 'reduced'
+  var vcMotionListeners = [];
+
+  function getAnimationMode() {
+    try {
+      var stored = window.localStorage.getItem(VC_MOTION_KEY);
+      if (stored === 'reduced' || stored === 'full') return stored;
+    } catch (_) {}
+    return 'full';
+  }
+
+  function isReducedMotion() {
+    return getAnimationMode() === 'reduced';
+  }
+
+  function setAnimationMode(mode) {
+    var next = mode === 'reduced' ? 'reduced' : 'full';
+    try { window.localStorage.setItem(VC_MOTION_KEY, next); } catch (_) {}
+    vcMotionListeners.forEach(function (cb) { try { cb(next); } catch (_) {} });
+    return next;
+  }
+
+  function onAnimationModeChange(cb) {
+    if (typeof cb === 'function') vcMotionListeners.push(cb);
+  }
+
+  window.VCMotion = {
+    getMode: getAnimationMode,
+    isReduced: isReducedMotion,
+    setMode: setAnimationMode,
+    onChange: onAnimationModeChange
+  };
+
   var appShell = document.querySelector('.vc-app-shell');
   var sidebarToggle = document.querySelector('[data-sidebar-toggle]');
   var composer = document.getElementById('vcComposer');
@@ -49,6 +91,15 @@
   var settingsDeleteBtn = document.getElementById('vcSettingsDeleteBtn');
   var settingsStatus = document.getElementById('vcSettingsStatus');
   var settingsList = document.getElementById('vcSettingsList');
+  var animationReducedCheckbox = document.getElementById('vcAnimationReduced');
+  if (animationReducedCheckbox) {
+    animationReducedCheckbox.checked = isReducedMotion();
+    animationReducedCheckbox.addEventListener('change', function () {
+      setAnimationMode(animationReducedCheckbox.checked ? 'reduced' : 'full');
+    });
+    // Reflete mudanças feitas por outra aba/janela (mesmo localStorage) sem reload.
+    onAnimationModeChange(function (mode) { animationReducedCheckbox.checked = mode === 'reduced'; });
+  }
   var vaultRollback = document.getElementById('vcVaultRollback');
   var vaultSnapshotList = document.getElementById('vcVaultSnapshotList');
   var vaultActions = document.getElementById('vcVaultActions');
@@ -1611,11 +1662,11 @@
   var REDUCE_PULSE_MS = 4200; // pulso lento sob reduced-motion — só opacidade/glow, nunca posição
   var REDUCE_TICK_MS = 500;   // frequência de re-render do pulso — não é rAF, é setInterval deliberado
   var coreNode = root.querySelector('[data-atomic-core-node]');
-  var reduceMotion = false;
+  // Fonte de verdade = VCMotion (controle do VC), não o SO diretamente —
+  // ver bloco no topo do arquivo. Default 'full', mesmo com o SO em reduce.
+  var reduceMotion = isReducedMotion();
   var state = 'idle';
   var highlighted = Object.create(null);
-
-  try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { reduceMotion = false; }
 
   function toRad(deg) { return deg * Math.PI / 180; }
   function lerp(min, max, t) { return min + (max - min) * t; }
@@ -1734,6 +1785,26 @@
     reduceTickTimer = window.setTimeout(reduceTick, REDUCE_TICK_MS);
   }
 
+  // Reinvocável — permite trocar de modo em tempo real (Settings → Animações)
+  // sem reload: para o loop atual (rAF ou tick) e inicia o outro.
+  function stopMotionLoop() {
+    if (raf) { window.cancelAnimationFrame(raf); raf = 0; }
+    if (reduceTickTimer) { window.clearTimeout(reduceTickTimer); reduceTickTimer = null; }
+  }
+
+  function startMotionLoop() {
+    stopMotionLoop();
+    if (!reduceMotion) {
+      raf = window.requestAnimationFrame(frame);
+    } else {
+      // Sem rAF sob modo reduzido (evita a órbita/deslocamento contínuo), mas
+      // sem isso o Atomic Core fica 100% estático entre transições de estado —
+      // lido como "quebrado", não "calmo". Tick lento e deliberado (não é
+      // rAF) só pra aplicar o pulso de opacidade/glow de Agent.prototype.values().
+      reduceTickTimer = window.setTimeout(reduceTick, REDUCE_TICK_MS);
+    }
+  }
+
   function setAtomicCoreState(nextState) {
     state = nextState === 'action' ? 'action' : 'idle';
     startTime = performance.now();
@@ -1788,16 +1859,33 @@
   root.setAttribute('data-glow', 'on');
   setAtomicCoreState('idle');
   selectFeature('chat', false);
-  if (!reduceMotion) {
-    raf = window.requestAnimationFrame(frame);
-  } else {
-    // Sem rAF sob reduced-motion (evita a órbita/deslocamento contínuo), mas
-    // sem isso o Atomic Core fica 100% estático entre transições de estado —
-    // lido como "quebrado" em teste manual real, não como "calmo". Tick lento
-    // e deliberado (setInterval-like via setTimeout, não rAF) só pra aplicar
-    // o pulso de opacidade/glow definido em Agent.prototype.values().
-    reduceTickTimer = window.setTimeout(reduceTick, REDUCE_TICK_MS);
-  }
+  startMotionLoop();
+
+  // Troca de modo ao vivo (Settings → Animações), sem reload.
+  onAnimationModeChange(function (mode) {
+    reduceMotion = mode === 'reduced';
+    startMotionLoop();
+    render(performance.now() - startTime);
+  });
+
+  // Dica de primeira visita (item 4, opcional): se o SO está com reduce
+  // ativo e o usuário nunca escolheu um modo no VC, avisa uma vez só que o
+  // padrão aqui é animação completa e onde mudar isso — consciência de
+  // acessibilidade, não imposição silenciosa. Único lugar do arquivo (fora
+  // do bloco VCMotion) que lê matchMedia diretamente, e só pra decidir se
+  // mostra o aviso — nunca pra decidir o que animar.
+  (function maybeShowMotionHint() {
+    var HINT_KEY = 'vc_motion_hint_shown';
+    try {
+      if (window.localStorage.getItem(HINT_KEY)) return;
+      if (window.localStorage.getItem(VC_MOTION_KEY)) return; // já escolheu, não precisa avisar
+      var osReduce = false;
+      try { osReduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+      if (!osReduce) return;
+      window.localStorage.setItem(HINT_KEY, '1');
+    } catch (_) { return; }
+    appendMessage('assistant', 'ACESSIBILIDADE', 'Seu sistema está com "reduzir movimento" ativado. O Vision Core usa animação completa por padrão — é identidade visual da marca, não fica preso à configuração do sistema. Pra reduzir, use Settings → Animações.');
+  })();
 
   // ── Software Factory (Next) ───────────────────────────────────
   var sfHistory = document.getElementById('vcSfHistory');

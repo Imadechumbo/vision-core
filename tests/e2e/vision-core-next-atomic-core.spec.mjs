@@ -1,42 +1,63 @@
 // @ts-check
 /**
  * Vision Core Next - Atomic Core idle animation (header widget, all pages).
- * No API calls involved beyond the baseline badge polling mocked below.
  *
- * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_HANDOFF.md):
- * real production bug found via manual test on 2026-07-09 — under
- * prefers-reduced-motion:reduce, the requestAnimationFrame loop that drives
- * Agent.place()/render() never started (see vision-core-next-clean.js,
- * `if (!reduceMotion) raf = requestAnimationFrame(frame)`), so render() only
- * ever ran once at page load and again on state transitions. Between those,
- * the widget sat 100% static — read as "broken", not "calm". A prior session
- * only ever validated reducedMotion:'reduce' (confirming glow survives
- * state transitions), never asserted that no-preference actually animates
- * continuously OR that reduce isn't fully frozen between transitions — that
- * one-sided coverage is exactly what let this regression ship undetected.
- * This spec asserts both directions explicitly.
+ * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_HANDOFF.md).
  *
- * IMPORTANT: `test.use({ reducedMotion: ... })` alone is NOT reliable for a
- * `file://` page — confirmed empirically (page.evaluate(() =>
- * matchMedia(...).matches) came back false even with reducedMotion:'reduce'
- * set via test.use). The fix is `page.emulateMedia({ reducedMotion })`
- * called explicitly BEFORE `page.goto()` — that's what actually takes effect
- * before the page's first script execution. Every future spec that depends
- * on prefers-reduced-motion for a file:// page must do the same; test.use()
- * is not sufficient by itself for this project's test setup.
+ * Product-direction correction (2026-07-09): the Atomic Core animation is
+ * BRAND IDENTITY. The OS `prefers-reduced-motion` preference no longer
+ * degrades it by default — the source of truth is the VC's own control
+ * (`window.VCMotion`, backed by `localStorage['vc_animation_mode']`,
+ * 'full' | 'reduced'). Default is always 'full', even when the OS reports
+ * reduce. Only when the user explicitly sets reduced mode (Settings →
+ * Animações, or programmatically via VCMotion.setMode) does the widget fall
+ * back to the v47 pulse-only behavior (opacity/glow pulse, frozen position —
+ * never fully static). This inverts the coupling from the previous session's
+ * fix, which read `matchMedia('(prefers-reduced-motion: reduce)')` directly.
+ *
+ * Served over a real http:// origin (a throwaway static server over
+ * frontend/), never file:// — required for localStorage set via
+ * `page.addInitScript` (VC control) and `page.emulateMedia` (OS signal) to
+ * combine reliably as two independent, real inputs, matching how a real
+ * browsing session behaves.
  */
 
 import { test, expect } from '@playwright/test';
-import { pathToFileURL } from 'node:url';
+import http from 'node:http';
+import fs from 'node:fs';
 import path from 'node:path';
 
-const NEXT_URL = pathToFileURL(path.resolve('frontend/vision-core-next.html')).toString();
+const ROOT = path.resolve('frontend');
 const API = 'https://visioncore-api-gateway.weiganlight.workers.dev';
 const AGENT_SELECTOR = '[data-agent="hermes"]';
 
+const MIME = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' };
+
+let server;
+let baseURL;
+
+test.beforeAll(async () => {
+  server = http.createServer((req, res) => {
+    const filePath = path.join(ROOT, decodeURIComponent(req.url.split('?')[0]));
+    fs.readFile(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end(); return; }
+      res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath)] || 'application/octet-stream' });
+      res.end(data);
+    });
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  baseURL = `http://127.0.0.1:${server.address().port}`;
+});
+
+test.afterAll(async () => {
+  await new Promise((resolve) => server.close(resolve));
+});
+
+const NEXT_URL = () => `${baseURL}/vision-core-next.html`;
+
 // vision-core-next.html polls /api/agent/status and /api/mission/quota
 // unconditionally on load (header/sidebar badges) — unmocked, both leak a
-// real request to the production gateway. Same fix as the other 3 permanent
+// real request to the production gateway. Same fix as the other permanent
 // specs (see docs/CURRENT_HANDOFF.md).
 test.beforeEach(async ({ page }) => {
   await page.route(`${API}/api/agent/status`, (route) =>
@@ -52,29 +73,72 @@ async function agentStyle(page) {
   }));
 }
 
-test('no-preference: agent position keeps moving continuously while idle', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.goto(NEXT_URL);
+test('default (no VC choice) + OS reduce emulated: orb still runs FULL — brand identity, not OS-controlled', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(NEXT_URL());
   const first = await agentStyle(page);
   await page.waitForTimeout(900);
   const second = await agentStyle(page);
-  expect(second.transform, 'position must change over time under no-preference (continuous orbit)').not.toBe(first.transform);
+  expect(second.transform, 'position must keep changing under OS reduce when VC control is at default (full)').not.toBe(first.transform);
 });
 
-test('reduce: position never moves (no deslocamento), but the widget is not frozen — glow/opacity still pulses', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto(NEXT_URL);
+test('default (no VC choice) + OS no-preference: orb runs FULL', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto(NEXT_URL());
+  const first = await agentStyle(page);
+  await page.waitForTimeout(900);
+  const second = await agentStyle(page);
+  expect(second.transform).not.toBe(first.transform);
+});
+
+test('VC control = reduced (localStorage) + OS no-preference: orb pulses only — VC choice wins over OS', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto(NEXT_URL());
   const t0 = await agentStyle(page);
-  await page.waitForTimeout(1600); // > REDUCE_TICK_MS (500ms) and a meaningful slice of REDUCE_PULSE_MS (4200ms)
+  await page.waitForTimeout(1600); // > REDUCE_TICK_MS (500ms) and a slice of REDUCE_PULSE_MS (4200ms)
   const t1 = await agentStyle(page);
 
-  expect(t1.transform, 'position must stay frozen under reduced-motion — no vestibular-triggering movement').toBe(t0.transform);
-  expect(t1.filter, 'glow/opacity must still change over time — a fully static widget reads as broken, not calm').not.toBe(t0.filter);
+  expect(t1.transform, 'position must stay frozen when VC control is reduced, regardless of OS').toBe(t0.transform);
+  expect(t1.filter, 'glow/opacity must still change — never fully static').not.toBe(t0.filter);
 });
 
-test('reduce: state transition (idle -> action -> idle) still reflects on data-state and glow, no crash', async ({ page }) => {
+test('live switch, no reload: toggling Settings checkbox flips full <-> reduced immediately', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto(NEXT_URL);
+  await page.goto(NEXT_URL());
+
+  // Starts full (default) despite OS reduce.
+  const full0 = await agentStyle(page);
+  await page.waitForTimeout(900);
+  const full1 = await agentStyle(page);
+  expect(full1.transform, 'starts in full motion by default').not.toBe(full0.transform);
+
+  // Switch to reduced via the real Settings checkbox — no reload.
+  await page.evaluate(() => {
+    var el = document.getElementById('vcAnimationReduced');
+    el.checked = true;
+    el.dispatchEvent(new Event('change'));
+  });
+  const r0 = await agentStyle(page);
+  await page.waitForTimeout(900);
+  const r1 = await agentStyle(page);
+  expect(r1.transform, 'position frozen immediately after switching to reduced, no reload').toBe(r0.transform);
+
+  // Switch back to full — resumes continuous motion immediately.
+  await page.evaluate(() => {
+    var el = document.getElementById('vcAnimationReduced');
+    el.checked = false;
+    el.dispatchEvent(new Event('change'));
+  });
+  const f0 = await agentStyle(page);
+  await page.waitForTimeout(900);
+  const f1 = await agentStyle(page);
+  expect(f1.transform, 'position resumes moving immediately after switching back to full, no reload').not.toBe(f0.transform);
+});
+
+test('VC control = reduced: state transition (idle -> action -> idle) still reflects on data-state and glow, no crash', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
+  await page.goto(NEXT_URL());
   const hud = page.locator('[data-atomic-core]');
   await expect(hud).toHaveAttribute('data-state', 'idle');
 
@@ -82,7 +146,7 @@ test('reduce: state transition (idle -> action -> idle) still reflects on data-s
   await page.evaluate(() => window.setAtomicCoreState('action'));
   await expect(hud).toHaveAttribute('data-state', 'action');
   const actionStyle = await agentStyle(page);
-  expect(actionStyle.filter, 'glow must reflect action state even under reduced-motion').not.toBe(idleStyle.filter);
+  expect(actionStyle.filter, 'glow must reflect action state even under reduced VC control').not.toBe(idleStyle.filter);
 
   await page.evaluate(() => window.resetAtomicCore());
   await expect(hud).toHaveAttribute('data-state', 'idle');
