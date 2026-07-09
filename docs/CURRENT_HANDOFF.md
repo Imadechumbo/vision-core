@@ -2,7 +2,7 @@
 
 Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode). Leia depois de `CLAUDE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`, antes de editar código.
 
-> Última atualização: 2026-07-09, por Claude Code (Sonnet 5) — **`vc-secret-guard` Fase 1.5 (refinamento de detecção) fechada**: categoria nova `fallback_credential_literal` (forma exata do INCIDENTE-3) + `high_entropy_blob` restrito a posição de valor e penalizado por forma de identificador de código. Dogfood: `high_entropy_blob` 1410→53 (96,2%), meta de <50 não batida honestamente (reportado, não forçado). Achados reais no dogfood, NÃO corrigidos (fora de escopo desta fase, backend intocado) — ver seção "vc-secret-guard Fase 1.5" abaixo. 14 novos testes (43→57), 57/57 PASS. Fase 2 (hooks) segue gated. Sessão anterior: **INCIDENTE-3, Fase B fechada** (backend rejeita a credencial de fallback legada em register/login, bundle legado não a envia mais, regressão permanente 12/12 PASS, runbook de dados legados entregue, ação pendente do usuário). Nenhum deploy feito nesta sessão nem na anterior. Ver seção "INCIDENTE-3" mais abaixo. Antes dela: doc-only `docs/LEGACY_DESIGN_REFERENCE.md`. Antes dessa: `vc-secret-guard` Fase 1 (protótipo local em Rust, fechada).
+> Última atualização: 2026-07-09, por Claude Code (Sonnet 5) — **INCIDENTE-4 (SESSION_SECRET), Fase A (investigação) fechada.** Achado do dogfood da Fase 1.5 (`vc-secret-guard`) investigado a fundo: `signSession()`/`verifySession()` são simétricas e caem no mesmo literal de fallback público quando `SESSION_SECRET` não está setado — quem conhece o literal e um `uid` real (um já está exposto em `backend/data/users.json`, commitado) forja uma sessão HMAC-válida de 24h para essa conta, sem senha, com acesso a rotas destrutivas (`DELETE /api/auth/me` — exclusão de conta LGPD) e de billing (`requireVisionAuth`: checkout/cancelamento/portal Stripe). 100% read-only — nenhum código alterado. Ver seção "INCIDENTE-4" abaixo. **Fase B (remediação) aguarda: (i) confirmação do usuário sobre `SESSION_SECRET` estar setado no EB real, (ii) aprovação da opção de remediação.** Sessão anterior: `vc-secret-guard` Fase 1.5 (refinamento de detecção) fechada — categoria nova `fallback_credential_literal` (forma exata do INCIDENTE-3) + `high_entropy_blob` restrito a posição de valor e penalizado por forma de identificador de código. Dogfood: `high_entropy_blob` 1410→53 (96,2%), meta de <50 não batida honestamente (reportado, não forçado). Achados reais no dogfood, NÃO corrigidos naquela fase (backend intocado) — ver seção "vc-secret-guard Fase 1.5" abaixo, achado nº1 daquela seção é a origem do INCIDENTE-4. 14 novos testes (43→57), 57/57 PASS. Fase 2 (hooks) segue gated. Antes dela: **INCIDENTE-3, Fase B fechada** (backend rejeita a credencial de fallback legada em register/login, bundle legado não a envia mais, regressão permanente 12/12 PASS, runbook de dados legados entregue, ação pendente do usuário). Ver seção "INCIDENTE-3" mais abaixo. Antes dela: doc-only `docs/LEGACY_DESIGN_REFERENCE.md`. Antes dessa: `vc-secret-guard` Fase 1 (protótipo local em Rust, fechada).
 
 ---
 
@@ -414,3 +414,89 @@ Este repositório **não tem acesso a dados de produção** (`data/` local só c
 ### Deploy — pendente de decisão do usuário
 
 Nenhum deploy foi feito nesta Fase B (nem backend/EB, nem CF Pages) — regra dura da sessão. O código está pronto no repo (`main`, commits `0d6eb8c7`/`e4077a41`/`3ebc0b9e`, pushados). **O deploy do backend é o que efetiva a correção** (fecha a aceitação do literal em produção); o deploy do bundle é secundário (só para de *enviar* o literal — o backend antigo continuaria aceitando-o de qualquer chamador direto até ser atualizado). Ambos ficam para quando o usuário decidir.
+
+---
+
+## INCIDENTE-4: SESSION_SECRET — investigação (Fase A, 2026-07-09)
+
+**Escopo desta seção:** investigação 100% read-only + registro de decisão pendente. Nenhum código, backend, go-core, bundle legado, Next, deploy script ou página pública foi alterado nesta fase — só este HANDOFF. O literal de fallback não é reproduzido aqui; referido como "o literal de fallback de `SESSION_SECRET`" (já visível em `backend/server.js:379,396` para quem tem o repo).
+
+### Baseline antes da investigação
+
+- HEAD verificado: `de7cc404 docs: vc-secret-guard Fase 1.5 fechada - governanca, spec e achados reais` — batia com o esperado.
+- `git log -3`: `de7cc404`, `5aba5e1c`, `c871b4a6`.
+- `git status`: só o ruído pré-existente já documentado em sessões anteriores (deleções em `test-results/`, untracked `docs/SOFTWARE_FACTORY_INFOGRAFICO.html`, protótipos `frontend/atomic-core.html`/`next.html`/assets paralelos, `opencode.json`) — nada novo, nada tocado.
+
+### 1. Mapa `signSession`/`verifySession` (file:line)
+
+- **`backend/server.js:378-389` — `signSession(payload)`.** Lê `const secret = process.env.SESSION_SECRET || 'vision-core-dev-session-secret-change-me'` (linha 379). Monta `fullPayload = {...payload, jti: crypto.randomBytes(16).toString('hex'), iat: Date.now(), exp: payload.exp || +24h}`, serializa em base64url, assina com `crypto.createHmac('sha256', secret)`. Retorna `${body}.${sig}`.
+- **`backend/server.js:392-404` — `verifySession(token)`.** Lê o **mesmo** `process.env.SESSION_SECRET || 'vision-core-dev-session-secret-change-me'` (linha 396) — **simétrico confirmado**: a mesma env var (com o mesmo fallback) assina e valida. Recalcula o HMAC sobre o `body` recebido e compara com `crypto.timingSafeEqual` (comparação em tempo constante — não há timing attack aqui, o problema é o segredo em si ser público). Só depois de validar a assinatura checa `data.exp` (expiração) e `data.jti` contra a blacklist (`isTokenRevoked`, linha 401).
+- **Todas as rotas que EMITEM token via `signSession({uid, exp})`** (confirmado por grep, só esses 2 campos em todo lugar):
+  - `POST /api/auth/register` — `server.js:772`
+  - `POST /api/auth/login` — `server.js:800`
+  - `GET /api/auth/oauth/google/callback` — `server.js:952`
+  - `GET /api/auth/oauth/github/callback` — `server.js:1026`
+- **Todas as rotas que VALIDAM via `verifySession`/`getAuthUser`** (`getAuthUser`, `server.js:405`, é a única função que chama `verifySession` fora de logout/delete — lê `Authorization: Bearer` ou cookie `vision_session`, valida, e busca `db.users.find(u => u.id === session.uid)`): `GET /api/auth/me` (866), `GET /api/account/me` (1034), `GET /api/mission/quota` (1285), `GET`/`POST /api/mission/timeline` (1295/1333), `GET /api/usage/quota` (2321), `GET /api/billing/status` (2341), e `requireVisionAuth` (middleware, `server.js:2128-2133`, também chama `getAuthUser` internamente) que gate as 6 rotas de billing Stripe (`POST /api/billing/create-checkout-session`, `GET /api/billing/customer`, `GET /api/billing/subscription`, `POST /api/billing/portal`, `POST /api/billing/cancel`, `POST /api/billing/reactivate` — `server.js:2248-2293`). Duas rotas chamam `verifySession` direto, sem passar por `getAuthUser` (mesmo secret, mesmo risco): `POST /api/auth/logout` (`server.js:2136`) e **`DELETE /api/auth/me`** (`server.js:2161-2180` — exclusão de conta real, LGPD).
+
+### 2. Impacto reconstituído de um token forjado
+
+**O payload que `signSession()` aceita é arbitrário** — quem controla o segredo (o literal de fallback, se `SESSION_SECRET` não estiver setado) pode montar `{body}.{sig}` inteiramente offline, sem tocar o servidor, para qualquer payload JSON que queira, incluindo um `uid` escolhido a dedo e um `exp` no futuro distante.
+
+**O que `verifySession()` confere além da assinatura:** só `exp` (expiração) e `jti` contra a blacklist local (que só contém tokens explicitamente revogados por logout/delete — um token forjado do zero nunca esteve nela). **Não há verificação de que o `uid` do payload corresponde a um usuário real na validação em si** — essa checagem só acontece depois, em `getAuthUser()`, que faz `db.users.find(u => u.id === session.uid)` e retorna `null` se não achar. Ou seja: um token com `uid` inventado (que não bate com nenhum usuário real) falha silenciosamente mais adiante (vira "não autenticado"), mas um token com um **`uid` de um usuário real** — mesmo que o atacante nunca soube a senha dessa conta — autentica como aquele usuário, com sucesso total.
+
+**Campos de privilégio (plano/role) NÃO são forjáveis diretamente:** `getAuthUser()` sempre busca o registro do usuário no banco (`db.users.find(...)`) e todo lugar que lê `.plan` (ex.: `server.js:2322`, billing status) lê do registro do banco, nunca de um campo dentro do payload do token — mesmo se o atacante colocar `{uid: 'x', plan: 'enterprise'}` no payload forjado, esse campo extra é ignorado. **Então a severidade não é "forjar qualquer privilégio arbitrário" — é "assumir a identidade completa de qualquer usuário real cujo `uid` o atacante conheça ou adivinhe", com todos os privilégios reais que essa conta específica já tem** (inclusive `enterprise` via SSO, se for o caso da conta escolhida).
+
+**A que dá acesso, concretamente (rotas confirmadas no mapa acima):**
+- Leitura: `/api/auth/me`, `/api/account/me`, `/api/mission/quota`, `/api/mission/timeline`, `/api/usage/quota`, `/api/billing/status`, `/api/billing/customer`, `/api/billing/subscription`.
+- **Ação destrutiva sem confirmação de senha:** `DELETE /api/auth/me` — deleta a conta da vítima (`server.js:2171`, remove do array `db.users` e persiste), gera `email_deleted` na resposta e loga `account_deleted` no audit log. Nenhuma segunda prova de identidade é exigida além do token.
+- **Billing real (Stripe):** `POST /api/billing/create-checkout-session`, `POST /api/billing/cancel`, `POST /api/billing/reactivate`, `POST /api/billing/portal` — todas atrás de `requireVisionAuth`, mesmo `getAuthUser`. Um atacante pode cancelar a assinatura paga de outra pessoa, ou abrir uma sessão de portal Stripe em nome dela.
+- `POST /api/auth/logout` — pode invalidar (revogar) o token real da vítima (nuisance/DoS de sessão), embora isso exija primeiro ter esse token, não o `uid`.
+
+**Como um `uid` real chegaria às mãos de um atacante:** `makeId('usr')` (`server.js:37-39`) gera `usr-<Date.now()>-<6 hex chars via Math.random>` — **não é criptograficamente aleatório** (`Math.random`, não `crypto.randomBytes`) e carrega só ~24 bits de entropia na parte aleatória, com um timestamp em ms previsível dentro de uma janela plausível (ex.: data de criação da conta, se conhecida). Isso por si só já seria fraco contra força bruta offline (o forjamento do HMAC é local, sem rate limit do servidor envolvido — só tentar validar o token forjado contra uma rota real sofreria rate limit, mas *gerar* candidatos não). Mais grave: **`backend/data/users.json` está commitado no git** (achado já registrado na seção "vc-secret-guard Fase 1.5" acima, item 3) com pelo menos 1 conta real (`fix-test@visioncore.dev`) cujo campo `id` (o `uid` exato) é público no histórico do repositório — um atacante não precisa nem adivinhar, só ler o arquivo. `publicUser()` (`server.js:304`) inclui `id` nas respostas de `/api/auth/register`/`/api/auth/login`/`/api/auth/me`, mas confirmado por grep que nenhum endpoint expõe o `id` de **outros** usuários a um terceiro (sem lista pública de usuários, sem leaderboard) — então essa via de exposição fica restrita ao próprio dono da conta e ao arquivo já commitado.
+
+**Severidade real: ALTA, condicional a `SESSION_SECRET` não estar setado em produção.** Não é "só sessão free" — é personificação completa de uma conta real específica (incluindo ação destrutiva de exclusão de conta e manipulação de billing Stripe), e já existe pelo menos um `uid` real vazado no próprio histórico do repositório que serviria como alvo imediato sem nenhuma adivinhação.
+
+### 3. Histórico git
+
+- O literal de fallback já existia, sem mudança de valor, em pelo menos os 3 commits mais antigos encontrados por `git log -S` sobre a string exata: `8a8f3708`, `ba5f9225`, `42c47349` (`fix(core): restore server runtime...`, `fix(core): remove backend-derived evidence receipts`, `chore(snapshot): preserve workspace before V5.2` — nenhum desses commits é sobre auth/sessão especificamente, sugerindo que o literal já vinha de antes desse ponto do histórico e só apareceu nesses diffs por reescritas de arquivo maiores). O comentário `// §152` em `signSession`/`verifySession` (linha 377/391) indica que a lógica de JTI+blacklist foi adicionada no §152, mas o padrão `env || fallback-literal` para `SESSION_SECRET` já existia antes disso, não foi introduzido no §152.
+- **`SESSION_SECRET` nunca aparece em nenhum `.ebextensions/` (a pasta não existe neste repo), nenhum workflow do GitHub Actions (`.github/` — grep vazio), nenhum `.env.example`** (raiz nem `backend/`).
+- **Achado relevante para a causa raiz:** `backend/.env.example` lista `JWT_SECRET` como "**Auth — OBRIGATÓRIO em produção**" — mas `JWT_SECRET` **não é lido em nenhum lugar de `backend/server.js`** (confirmado por grep: só aparece em `backend/package.json` como texto de um nome de script, `v41_env`, nunca `process.env.JWT_SECRET`). Ou seja: a documentação de ambiente do próprio projeto instrui a configurar um secret que o código não usa para assinar sessão, e nunca menciona o secret que de fato assina sessão (`SESSION_SECRET`). Quem provisionou o EB seguindo `.env.example` literalmente nunca teria motivo para saber que `SESSION_SECRET` precisa existir.
+- A tabela de env vars do EB em `CLAUDE.md` (seção "VARIÁVEIS DE AMBIENTE NO EB") lista `PROVIDER_VAULT_SECRET` como "configurado no §206" mas nunca lista `SESSION_SECRET` — consistente com o achado da Fase 1.5 que motivou esta investigação.
+
+### 4. O que é verificável a partir deste repo — e o que não é
+
+**Verificável aqui (feito nesta fase):** a existência do fallback no código-fonte, a simetria assinatura/validação, o mapa de rotas afetadas, a ausência de qualquer referência a `SESSION_SECRET` em arquivos de configuração/deploy do repo, e a presença de um `uid` real commitado em `backend/data/users.json`.
+
+**NÃO verificável a partir deste repo** (mesma limitação já registrada para o achado de `users.json` na Fase 1.5 e para o INCIDENTE-3): se `SESSION_SECRET` está de fato setado no ambiente EB real (`vision-core-prod`). Este checkout local não tem acesso a AWS/EB.
+
+**Procedimento exato — AÇÃO MINHA (do usuário) PENDENTE, não executável pelo agente:**
+
+1. **Via EB CLI** (se instalado e configurado com credenciais AWS):
+   ```
+   eb printenv vision-core-prod
+   ```
+   Procurar a linha `SESSION_SECRET = <valor>` na saída.
+
+2. **Via Console AWS** (alternativa sem CLI): AWS Console → Elastic Beanstalk → ambiente `vision-core-prod` → **Configuration** → categoria **Software** → seção **Environment properties** → procurar `SESSION_SECRET` na lista de variáveis.
+
+**Como interpretar cada resultado possível:**
+
+| Resultado | Interpretação |
+|---|---|
+| `SESSION_SECRET` **listado, com um valor que não é o literal de fallback** | Seguro — a assinatura de produção não usa o segredo público, forjar sessão exige adivinhar esse valor real (inviável). Nada a corrigir com urgência (a Fase B ainda vale como hardening defensivo — fail-closed é mais seguro que depender de "alguém lembrou de configurar", mas o risco imediato não existe). |
+| `SESSION_SECRET` **ausente da lista** | **INCIDENTE-4 confirmado ATIVO** — o backend real está assinando/validando sessão com o literal público, hoje. Qualquer sessão de qualquer usuário pode ser forjada por quem tiver o repo. Prioridade máxima para a Fase B. |
+| `SESSION_SECRET` **presente, mas com o mesmo valor do literal de fallback** (alguém "configurou" copiando o literal em vez de gerar um valor novo) | **Equivalente a ausente** — mesma exposição, só com uma falsa sensação de estar configurado. Prioridade máxima para a Fase B, e vale um alerta específico de que isso é tão perigoso quanto não configurar nada. |
+
+### 5. Precedente comparável: `PROVIDER_VAULT_SECRET`
+
+Mesmo formato `env || literal-hardcoded-'*-change-me'` existe em `backend/provider-vault-crypto.js:36,53` (`DEV_FALLBACK_SECRET = 'vision-core-dev-vault-secret-change-me'`), documentado no próprio arquivo (linhas 12-20) como tendo a mesma estratégia "já usada por `SESSION_SECRET` em `server.js`". **Diferença importante, para não presumir um precedente que não existe:** `PROVIDER_VAULT_SECRET` **não foi endurecido** — `CLAUDE.md` (seção "AI PROVIDER VAULT") ainda registra isso como limitação aberta ("fallback dev hardcoded"), e o próprio comentário no arquivo trata o fallback como aceito, não como um risco corrigido. Ou seja: **não existe hoje neste projeto nenhum precedente de "falha alto no boot sem secret configurado"** — a Fase B do INCIDENTE-4 (endurecer `SESSION_SECRET` para fail-closed) seria a **primeira vez** que esse padrão é implementado aqui, não uma reaplicação de algo já validado em produção. Vale considerar, quando a Fase B for aprovada, se o mesmo endurecimento deveria ser cogitado para `PROVIDER_VAULT_SECRET` depois — mas isso é decisão separada, fora do escopo desta investigação.
+
+### Opções de remediação (NÃO executadas nesta fase)
+
+1. **Opção A — fail-closed no boot (recomendada):** `signSession()`/`verifySession()` deixam de aceitar o literal — se `process.env.SESSION_SECRET` estiver ausente/vazio no momento do boot, o processo lança erro fatal e não sobe, em vez de assinar silenciosamente com o segredo público. É o pedido explícito já registrado na tarefa desta sessão para a Fase B. Efeito colateral esperado e aceito: setar/rotacionar `SESSION_SECRET` em produção invalida todas as sessões ativas (tokens antigos, assinados com o segredo anterior, deixam de validar) — isso derruba quem está logado, é o comportamento correto, não uma regressão.
+2. **Opção B — manter fallback, mas não previsível:** gerar um valor aleatório forte na primeira inicialização do processo (`crypto.randomBytes`) e persistir em disco local, só usado se `SESSION_SECRET` não estiver setado. Rejeitada como recomendação principal: em EB, disco de instância não é garantidamente persistente entre deploys/restarts (mesma classe de problema que motiva o padrão S3-como-fonte-de-verdade já usado para `users.json`/etc. no projeto) — um valor gerado e perdido a cada deploy teria o mesmo efeito prático da Opção A (invalida sessões a cada deploy), mas de forma menos explícita/auditável. Registrada aqui só como alternativa considerada, não como recomendação.
+3. **Opção C — não mudar o código, só documentar/alertar:** adicionar `SESSION_SECRET` à tabela de env vars obrigatórias do `CLAUDE.md`/`.env.example` sem mudar o comportamento de fallback no código. Rejeitada como insuficiente sozinha: não fecha o risco se alguém esquecer de configurar (o mesmo tipo de lacuna que causou o incidente) — documentação por si só já existia de forma adjacente (`.env.example` documentando `JWT_SECRET`, que nem é usado) e isso não impediu o problema.
+
+**Decisão pendente do usuário:** confirmar o estado real de `SESSION_SECRET` no EB (passo 4 acima) e aprovar a Opção A (ou outra) antes de qualquer código da Fase B ser escrito.
+
+---
