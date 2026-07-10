@@ -1774,6 +1774,7 @@
     });
   }
   var vaultRollbackPending = null;
+  var vaultRollbackRequestInFlight = false;
 
   function loadVaultSnapshots() {
     if (!vaultSnapshotList) return;
@@ -1814,6 +1815,16 @@
   function renderVaultActions() {
     if (!vaultActions) return;
     vaultActions.textContent = '';
+
+    if (vaultRollbackRequestInFlight) {
+      var busyBtn = document.createElement('button');
+      busyBtn.type = 'button';
+      busyBtn.disabled = true;
+      busyBtn.textContent = 'Aplicando rollback...';
+      vaultActions.appendChild(busyBtn);
+      return;
+    }
+
     if (!vaultRollbackPending) return;
     var confirmBtn = document.createElement('button');
     confirmBtn.type = 'button';
@@ -1832,18 +1843,22 @@
   }
 
   function submitVaultRollback() {
+    if (vaultRollbackRequestInFlight) return;
     if (!vaultRollbackPending) return;
     var snapshotId = vaultRollbackPending.id;
     var snapshotLabel = vaultRollbackPending.label || snapshotId;
+    vaultRollbackRequestInFlight = true;
     if (vaultStatus) vaultStatus.textContent = 'Executando rollback...';
     renderVaultActions();
     if (window.setAtomicCoreState) window.setAtomicCoreState('action');
     apiRequest('/api/vault/rollback/' + encodeURIComponent(snapshotId), { method: 'POST' }).then(function () {
+      vaultRollbackRequestInFlight = false;
       vaultRollbackPending = null;
       if (vaultStatus) vaultStatus.textContent = 'Rollback concluído: ' + snapshotLabel;
       renderVaultActions();
       loadVaultSnapshots();
     }).catch(function (err) {
+      vaultRollbackRequestInFlight = false;
       if (vaultStatus) vaultStatus.textContent = 'Erro no rollback: ' + (err && err.message ? err.message : String(err));
       renderVaultActions();
     }).then(function () {
