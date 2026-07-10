@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-49">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-49" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-50">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-50" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -33,6 +33,7 @@
         <a href="#vault" data-feature="vault"><i aria-hidden="true">V</i><span>Vault</span></a>
         <a href="#metrics" data-feature="metrics"><i aria-hidden="true">M</i><span>Métricas</span></a>
         <a href="#tools" data-feature="tools"><i aria-hidden="true">T</i><span>Tools</span></a>
+        <a href="#security" data-feature="security"><i aria-hidden="true">L</i><span>Security Lab</span></a>
         <a href="#obsidian" data-feature="obsidian"><i aria-hidden="true">O</i><span>Obsidian</span></a>
         <a href="#settings" data-feature="settings"><i aria-hidden="true">S</i><span>Settings</span></a>
       </nav>
@@ -54,6 +55,22 @@
         </div>
         <span class="vc-agent-badge" id="vcAgentBadge" role="status" aria-label="Status do agente local" data-state="disconnected"></span>
       </header>
+
+      <section class="vc-mission-input" id="vcMissionInput" aria-label="Mission Input seguro" data-collapsed="false">
+        <button type="button" class="vc-mission-input-toggle" id="vcMissionInputToggle" aria-expanded="true">
+          <span>Mission Input</span>
+          <i aria-hidden="true">-</i>
+        </button>
+        <div class="vc-mission-input-body" id="vcMissionInputBody">
+          <label for="vcMissionQuickInput">Objetivo
+            <textarea id="vcMissionQuickInput" rows="3" placeholder="Anote a missão sem executar nada"></textarea>
+          </label>
+          <div class="vc-mission-input-actions">
+            <button type="button" id="vcMissionQuickSend">Adicionar ao chat</button>
+          </div>
+          <p>Camada local segura. Não dispara missão, patch, deploy ou endpoint destrutivo.</p>
+        </div>
+      </section>
 
       <section class="vc-chat-stage" id="chat" aria-label="Chat Vision Core">
         <div class="vc-chat-intro">
@@ -84,6 +101,21 @@
           </div>
           <p id="vcFeatureBody">Entrada principal pronta.</p>
           <div class="vc-feature-actions" id="vcFeatureActions"></div>
+
+          <div class="vc-safe-status" id="vcSafeStatusPanel" hidden>
+            <h4>Status seguro</h4>
+            <div id="vcSafeStatusList" aria-live="polite"></div>
+          </div>
+
+          <div class="vc-secret-guard-card" id="vcSecretGuardCard" hidden>
+            <h4>Secret Guard</h4>
+            <div class="vc-secret-guard-grid">
+              <span>vc-secret-guard</span><strong>SPEC / PLANEJADO</strong>
+              <span>Rust core</span><strong>PLANEJADO</strong>
+              <span>Scanner integration</span><strong>FUTURA</strong>
+            </div>
+            <p>Governança visual apenas: nenhum binário Rust é executado por esta tela.</p>
+          </div>
 
           <div class="vc-github-pr" id="vcGithubPrForm" hidden>
             <h4>Criar Pull Request</h4>

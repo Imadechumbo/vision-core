@@ -140,6 +140,14 @@
   var metricsConn = document.getElementById('vcMetricsConn');
   var metricsRawToggle = document.getElementById('vcMetricsRawToggle');
   var metricsRaw = document.getElementById('vcMetricsRaw');
+  var safeStatusPanel = document.getElementById('vcSafeStatusPanel');
+  var safeStatusList = document.getElementById('vcSafeStatusList');
+  var secretGuardCard = document.getElementById('vcSecretGuardCard');
+  var missionInput = document.getElementById('vcMissionInput');
+  var missionInputToggle = document.getElementById('vcMissionInputToggle');
+  var missionInputToggleIcon = missionInputToggle ? missionInputToggle.querySelector('i') : null;
+  var missionQuickInput = document.getElementById('vcMissionQuickInput');
+  var missionQuickSend = document.getElementById('vcMissionQuickSend');
   var activeFeature = 'chat';
 
   var featureMap = {
@@ -152,6 +160,7 @@
     vault: { title: 'Vault', status: 'ROLLBACK DISPONÍVEL', agents: ['aegis', 'archivist'], text: 'Snapshots do banco de projetos e rollback. Rollback sobrescreve o estado atual — confirmação dupla obrigatória.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
     metrics: { title: 'Métricas', status: 'SAFE READ', agents: ['goCore', 'aegis'], text: 'Métricas reais em modo leitura.', actions: [{ label: 'Resumo', path: '/api/metrics/summary' }, { label: 'Agentes', path: '/api/metrics/agents' }, { label: 'DORA', path: '/api/dora-metrics' }, { label: 'Memória', path: '/api/metrics/memory' }] },
     tools: { title: 'Tools', status: 'APPLY-FIX DISPONÍVEL', agents: ['scanner', 'patchEngine'], text: 'Apply Fix abaixo — aplica correção em arquivo real com backup automático. Confirmação dupla obrigatória.', actions: [{ label: 'Histórico security', path: '/api/security/history' }, { label: 'Marketplace', path: '/api/tools/marketplace' }] },
+    security: { title: 'Security Lab', status: 'SAFE STATUS', agents: ['aegis', 'scanner'], text: 'Painel de governança do Secret Guard. Só faz leitura de status via GET e mostra fallback local quando um endpoint não existe.', actions: [{ label: 'Atualizar status seguro', kind: 'safe-status' }] },
     obsidian: { title: 'Obsidian', status: 'SAFE READ', agents: ['archivist'], text: 'Consulta de conector/memória sem escrita.', actions: [{ label: 'Status Obsidian', path: '/api/obsidian/status' }] },
     settings: { title: 'Configuração de IA', status: 'VAULT ATIVO', agents: ['hermes'], text: 'AI Provider Vault — salve, teste e remova chaves de API. A chave nunca é exibida por completo.', actions: [] },
     attach: { title: 'Anexos', status: 'LOCAL', agents: ['scanner'], text: 'Seletor local ativo. Upload real ainda bloqueado até definir limite, tipo permitido e confirmação.' },
@@ -198,6 +207,41 @@
     });
   }
 
+  function setMissionInputCollapsed(collapsed) {
+    if (!missionInput) return;
+    missionInput.setAttribute('data-collapsed', collapsed ? 'true' : 'false');
+    if (missionInputToggle) missionInputToggle.setAttribute('aria-expanded', String(!collapsed));
+    if (missionInputToggleIcon) missionInputToggleIcon.textContent = collapsed ? '+' : '-';
+    try { window.localStorage.setItem('vc_mission_input_collapsed', collapsed ? 'true' : 'false'); } catch (_) {}
+  }
+
+  try {
+    setMissionInputCollapsed(window.localStorage.getItem('vc_mission_input_collapsed') === 'true');
+  } catch (_) {
+    setMissionInputCollapsed(false);
+  }
+
+  if (missionInputToggle) {
+    missionInputToggle.addEventListener('click', function () {
+      var collapsed = missionInput && missionInput.getAttribute('data-collapsed') === 'true';
+      setMissionInputCollapsed(!collapsed);
+    });
+  }
+
+  if (missionQuickSend) {
+    missionQuickSend.addEventListener('click', function () {
+      var text = missionQuickInput ? missionQuickInput.value.trim() : '';
+      if (!text) return;
+      if (prompt) {
+        prompt.value = 'Missão: ' + text + (prompt.value.trim() ? '\n\n' + prompt.value.trim() : '');
+        resizePrompt();
+        prompt.focus();
+      }
+      appendMessage('pending', 'MISSION INPUT', 'Objetivo adicionado ao composer. Nada foi executado.');
+      if (missionQuickInput) missionQuickInput.value = '';
+    });
+  }
+
   function renderFeatureActions(feature) {
     if (!featureActions) return;
     featureActions.textContent = '';
@@ -211,6 +255,13 @@
   }
 
   function runFeatureAction(action, feature) {
+    if (action && action.kind === 'safe-status') {
+      if (window.setAtomicCoreState) window.setAtomicCoreState('action');
+      if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
+      loadSafeStatusPanel();
+      window.setTimeout(function () { if (window.resetAtomicCore) window.resetAtomicCore(); }, 900);
+      return;
+    }
     if (!action || !action.path) return;
     if (action.method && action.method !== 'GET') {
       appendMessage('error', 'BLOQUEADO', 'Ação crítica bloqueada nesta etapa: ' + action.label);
@@ -262,6 +313,13 @@
     if (metricsPanel) {
       metricsPanel.hidden = activeFeature !== 'metrics';
       if (activeFeature === 'metrics') startMetricsPolling(); else stopMetricsPolling();
+    }
+    if (safeStatusPanel) {
+      safeStatusPanel.hidden = activeFeature !== 'security';
+      if (activeFeature === 'security') loadSafeStatusPanel();
+    }
+    if (secretGuardCard) {
+      secretGuardCard.hidden = activeFeature !== 'security';
     }
     if (activeFeature === 'missions') {
       refreshAgentApplyStatus();
@@ -589,9 +647,57 @@
     });
   }
 
+  function safeStatusGet(path) {
+    return apiRequest(path, { method: 'GET' });
+  }
+
   function summarizeResult(data) {
     var text = JSON.stringify(data, null, 2);
     return text.length > 900 ? text.slice(0, 900) + '\n...' : text;
+  }
+
+  var SAFE_STATUS_ENDPOINTS = [
+    '/api/status',
+    '/api/queue/status',
+    '/api/agents/status',
+    '/api/jobs/latest',
+    '/api/heartbeat'
+  ];
+
+  function summarizeSafeStatus(data) {
+    if (!data) return 'sem payload';
+    if (typeof data.status === 'string') return data.status;
+    if (typeof data.state === 'string') return data.state;
+    if (typeof data.ok === 'boolean') return data.ok ? 'ok' : 'not ok';
+    return summarizeResult(data).replace(/\s+/g, ' ').slice(0, 140);
+  }
+
+  function renderSafeStatusRow(endpoint, state, detail) {
+    if (!safeStatusList) return;
+    var row = document.createElement('div');
+    var name = document.createElement('strong');
+    var text = document.createElement('span');
+    row.className = 'vc-safe-status-row';
+    row.setAttribute('data-state', state);
+    name.textContent = endpoint;
+    text.textContent = detail;
+    row.appendChild(name);
+    row.appendChild(text);
+    safeStatusList.appendChild(row);
+  }
+
+  function loadSafeStatusPanel() {
+    if (!safeStatusPanel || !safeStatusList) return;
+    safeStatusPanel.hidden = false;
+    safeStatusList.textContent = '';
+    renderSafeStatusRow('policy', 'ok', 'modo leitura: somente GET, sem patch, deploy ou missão paga');
+    SAFE_STATUS_ENDPOINTS.forEach(function (endpoint) {
+      safeStatusGet(endpoint).then(function (data) {
+        renderSafeStatusRow(endpoint, 'ok', summarizeSafeStatus(data));
+      }).catch(function () {
+        renderSafeStatusRow(endpoint, 'local', 'indisponível localmente — fallback visual seguro');
+      });
+    });
   }
 
   // parseHermesBlock — extrai JSON estruturado de resposta textual da LLM.

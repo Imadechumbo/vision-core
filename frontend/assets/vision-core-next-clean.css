@@ -201,7 +201,7 @@ a { color: inherit; text-decoration: none; }
   min-width: 0;
   min-height: 100vh;
   padding: 22px clamp(24px, 5vw, 72px) 34px;
-  padding-right: clamp(320px, 30vw, 455px);
+  padding-right: clamp(285px, 27vw, 405px);
 }
 
 .vc-header {
@@ -235,6 +235,93 @@ a { color: inherit; text-decoration: none; }
 .vc-brand-copy { min-width: 0; }
 .vc-brand-copy strong { font-size: 22px; }
 
+.vc-mission-input {
+  position: fixed;
+  top: 88px;
+  right: 28px;
+  z-index: 9;
+  width: min(286px, 22vw);
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(216, 180, 254, .14);
+  border-radius: var(--radius);
+  background: rgba(5, 5, 10, .46);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .22);
+  backdrop-filter: blur(16px);
+}
+
+.vc-mission-input-toggle {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  color: #e9ddff;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.vc-mission-input-toggle i { color: #c084fc; font-style: normal; }
+.vc-mission-input[data-collapsed="true"] { width: 176px; }
+.vc-mission-input[data-collapsed="true"] .vc-mission-input-body { display: none; }
+.vc-mission-input[data-collapsed="true"] .vc-mission-input-toggle i { transform: rotate(90deg); }
+
+.vc-mission-input-body {
+  display: grid;
+  gap: 8px;
+}
+
+.vc-mission-input label {
+  display: grid;
+  gap: 5px;
+  color: #b7a9cd;
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.vc-mission-input textarea {
+  width: 100%;
+  min-height: 70px;
+  max-height: 130px;
+  resize: vertical;
+  border: 1px solid rgba(216, 180, 254, .14);
+  border-radius: var(--radius);
+  padding: 8px 9px;
+  color: #fff;
+  background: rgba(18, 14, 28, .58);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.vc-mission-input-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.vc-mission-input-actions button {
+  min-height: 28px;
+  border: 1px solid rgba(52, 211, 153, .22);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: #d1fae5;
+  background: rgba(6, 78, 59, .14);
+  font-size: 10px;
+  font-weight: 780;
+}
+
+.vc-mission-input p {
+  margin: 0;
+  color: #958aa7;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .vc-chat-stage {
   width: min(940px, 100%);
   min-height: calc(100vh - 116px);
@@ -242,10 +329,11 @@ a { color: inherit; text-decoration: none; }
   grid-template-rows: auto minmax(260px, 1fr) auto;
   gap: 18px;
   margin: 0 auto;
-  padding-top: clamp(34px, 7vh, 72px);
+  padding-top: clamp(16px, 3vh, 34px);
+  padding-bottom: 24px;
 }
 
-.vc-chat-intro { max-width: 760px; text-align: left; }
+.vc-chat-intro { max-width: 680px; text-align: left; }
 .vc-kicker {
   margin: 0 0 12px;
   color: var(--violet-2);
@@ -257,17 +345,17 @@ a { color: inherit; text-decoration: none; }
 .vc-chat-intro h1 {
   margin: 0;
   color: #fff;
-  font-size: clamp(38px, 6vw, 74px);
-  line-height: .98;
+  font-size: clamp(28px, 3.4vw, 46px);
+  line-height: 1.04;
   letter-spacing: 0;
 }
 
 .vc-chat-intro p:not(.vc-kicker) {
   max-width: 670px;
-  margin: 18px 0 0;
+  margin: 12px 0 0;
   color: #bdb4cf;
-  font-size: 16px;
-  line-height: 1.65;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 
@@ -333,6 +421,60 @@ a { color: inherit; text-decoration: none; }
 
 .vc-feature-actions button:hover {
   border-color: rgba(192, 132, 252, .44);
+}
+
+.vc-safe-status:not([hidden]),
+.vc-secret-guard-card:not([hidden]) {
+  display: grid;
+  gap: 8px;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(216, 180, 254, .12);
+}
+
+.vc-safe-status h4,
+.vc-secret-guard-card h4 {
+  margin: 0;
+  color: #fff;
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.vc-safe-status-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 190px) 1fr;
+  gap: 8px;
+  align-items: center;
+  min-height: 28px;
+  color: #bdb4cf;
+  font-size: 11px;
+}
+
+.vc-safe-status-row strong {
+  color: #e9ddff;
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* ok = endpoint real respondeu; local = fallback (endpoint ausente/erro) —
+   nunca tratado como erro agressivo, só um estado visual mais discreto. */
+.vc-safe-status-row[data-state="ok"] strong { color: var(--green); }
+.vc-safe-status-row[data-state="local"] strong { color: #facc15; }
+
+.vc-secret-guard-grid {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) auto;
+  gap: 7px 12px;
+  color: #bdb4cf;
+  font-size: 12px;
+}
+
+.vc-secret-guard-grid strong {
+  color: #86efac;
+  font-size: 10px;
+  letter-spacing: .08em;
 }
 
 .vc-github-pr:not([hidden]) {
@@ -817,6 +959,9 @@ a { color: inherit; text-decoration: none; }
 
 .vc-composer {
   width: 100%;
+  position: sticky;
+  bottom: 18px;
+  z-index: 20;
   display: grid;
   gap: 12px;
   padding: 12px;
@@ -851,13 +996,13 @@ a { color: inherit; text-decoration: none; }
 
 .vc-atomic-hud {
   position: fixed;
-  top: 82px;
-  right: 34px;
+  top: 330px;
+  right: 24px;
   z-index: 8;
-  width: min(390px, 31vw);
+  width: min(300px, 23vw);
   aspect-ratio: 1;
   pointer-events: none;
-  opacity: .86;
+  opacity: .76;
   contain: layout paint;
 }
 
@@ -933,7 +1078,8 @@ a { color: inherit; text-decoration: none; }
 
 @media (max-width: 1180px) {
   .vc-main { padding-right: clamp(24px, 5vw, 72px); }
-  .vc-atomic-hud { width: 270px; top: 92px; right: 18px; opacity: .42; }
+  .vc-mission-input { top: 84px; right: 18px; width: 230px; opacity: .78; }
+  .vc-atomic-hud { width: 245px; top: 320px; right: 18px; opacity: .32; }
 }
 
 @media (max-width: 820px) {
@@ -946,8 +1092,21 @@ a { color: inherit; text-decoration: none; }
   .vc-main { padding: 16px; }
   .vc-header { align-items: flex-start; }
   .vc-brand-copy small { white-space: normal; line-height: 1.45; }
-  .vc-chat-stage { padding-top: 28px; }
-  .vc-atomic-hud { position: absolute; width: 220px; top: 124px; right: 6px; opacity: .22; }
+  .vc-mission-input {
+    position: static;
+    width: 100%;
+    margin: 10px 0;
+    opacity: 1;
+  }
+  .vc-chat-stage { padding-top: 14px; }
+  .vc-chat-intro h1 { font-size: clamp(26px, 9vw, 38px); }
+  .vc-safe-status-row { grid-template-columns: 1fr; }
+  /* Mission Input vira bloco estático em fluxo normal aqui (altura varia
+     bastante entre expandido/recolhido) — qualquer top:Npx fixo para o
+     Atomic Core sobrepõe o texto real em algum estado. Decorativo e
+     pointer-events:none por design, então "recolher em telas menores"
+     (permitido pela spec) é mais seguro que tentar acertar um offset. */
+  .vc-atomic-hud { display: none; }
 }
 
 /* Vision Core original eye/orb mark adapted from the production v23-eye logo. */
