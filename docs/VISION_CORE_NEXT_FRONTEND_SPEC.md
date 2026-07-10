@@ -41,6 +41,60 @@ graph TD
     JS -.nunca importa.-> LEGACY["vision-core-bundle.js<br/>(legado, só leitura p/ mapear comportamento)"]
 ```
 
+### Core Interaction Principle
+
+O Chat nunca pode ser deslocado da primeira posicao cognitiva da interface.
+
+A ordem principal do fluxo deve ser obrigatoriamente:
+
+1. Header
+2. Mission Input
+3. Conversation / Chat
+4. Composer
+5. Ferramentas contextuais
+
+Nunca inverter para um fluxo em que o usuario precise passar por `Mission -> Marketplace -> Vault -> Metrics -> ... -> Chat`. Isso quebra o fluxo cognitivo: o produto deixa de parecer um cockpit conversacional e vira uma pilha de paginas.
+
+**Mission Input = Command Center.** Ele nao e apenas um textarea. Tudo comeca nele: descrever uma missao, anexar contexto, acionar GitHub, ligar Factory, anexar Vault, chamar IA e executar. Ele deve conhecer automaticamente os contextos disponiveis (`Software Factory`, `GitHub`, `Vault`, `Metrics`, `Agents`, `Timeline`, `Security`, `Secret Guard`) para que o usuario nao precise navegar ate um modulo antes de iniciar uma tarefa.
+
+**Software Factory = modo operacional do chat, nao pagina.** Exemplo oficial: o usuario descreve "Implementar login OAuth", liga `Factory`, a conversa continua, a IA analisa, gera plano, executa, mostra logs e entrega resultado. O Factory entra como contexto/modo da conversa.
+
+**Vault = contexto, nao interrupcao.** Anexar snapshot deve enriquecer a conversa atual. Nunca abrir uma pagina Vault, executar algo fora do fluxo e obrigar o usuario a voltar ao chat.
+
+**Metrics = widgets vivos.** CPU, RAM, agentes, jobs, DORA e pipeline podem aparecer como widgets abaixo/ao lado do fluxo, mas nunca substituir a conversa principal.
+
+**Marketplace = drawer sob demanda.** Se o usuario pede "Instalar SpiderFoot", o Marketplace abre em drawer, instala, fecha e a conversa continua. Ele nao ocupa o espaco principal por padrao.
+
+**GitHub = contexto.** Repo, branch, PR e status entram como contexto ou painel lateral, nunca como pagina principal que toma o lugar do chat.
+
+**Atomic Core = permanente, mas nao empurra o chat.** Ele deve permanecer visivel quando houver espaco, sem deslocar o Chat para baixo e sem competir com o Mission Input.
+
+Layout oficial do fluxo:
+
+```text
+HEADER
+------------------------------
+MISSION INPUT
+------------------------------
+CHAT
+CHAT
+CHAT
+CHAT
+------------------------------
+COMPOSER
+[ Missao ] [ GitHub ] [ Factory ] [ Vault ] [ IA ] [ Executar ]
+------------------------------
+Widgets vivos:
+- Metrics
+- Jobs
+- Agents
+- Timeline
+- Security
+- Secret Guard
+```
+
+**Regra de ouro:** nenhuma nova funcionalidade pode alterar a posicao do Chat Principal. Toda nova feature deve ser integrada como contexto, drawer, painel lateral, widget, aba contextual, modal ou painel colapsavel. Nunca deslocar o fluxo principal da conversa.
+
 ### Arquivos oficiais (únicos que devem ser tocados sem aprovação explícita adicional)
 
 | Componente | Caminho |
@@ -158,7 +212,7 @@ Painéis de dados (Métricas, Security Lab) **não têm animação de entrada pr
 
 ## Estrutura HTML
 
-Um único `<div class="vc-app-shell" data-sidebar-state="expanded|collapsed">` com dois filhos: `<aside class="vc-sidebar">` (nav com `data-feature="chat|missions|factory|timeline|agents|github|vault|metrics|tools|security|obsidian|settings"`) e `<main class="vc-main">` contendo header, `<section class="vc-mission-input">` (flutuante), `<section class="vc-chat-stage">` (intro + `#vcChatStream` + `#vcFeaturePanel` com todos os sub-painéis condicionais dentro, cada um `hidden` por padrão) e `<form class="vc-composer">` fora do chat-stage. `<section class="vc-sf-stage" id="factory" hidden>` é irmã do chat-stage, trocada de visibilidade via `selectFeature('factory')` (esconde o chat, mostra o factory — único caso onde uma aba substitui o chat inteiro em vez de coexistir com ele no feature panel).
+Um único `<div class="vc-app-shell" data-sidebar-state="expanded|collapsed">` com dois filhos: `<aside class="vc-sidebar">` (nav com `data-feature="chat|missions|factory|timeline|agents|github|vault|metrics|tools|security|obsidian|settings"`) e `<main class="vc-main">` contendo header, `<section class="vc-mission-input">` (flutuante), `<section class="vc-chat-stage">` (intro + `#vcChatStream` + `#vcFeaturePanel` com todos os sub-painéis condicionais dentro, cada um `hidden` por padrão) e `<form class="vc-composer">` fora do chat-stage. O Software Factory deve coexistir como contexto/painel operacional da conversa; implementações antigas com `<section class="vc-sf-stage" id="factory" hidden>` substituindo o chat são consideradas dívida de layout e não devem ser repetidas.
 
 ## Estrutura CSS
 

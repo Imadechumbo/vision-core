@@ -70,9 +70,20 @@ test('Mission Input: "Adicionar ao chat" only rewrites the composer and appends 
   await page.locator('#vcMissionQuickSend').click();
 
   await expect(page.locator('#vcPrompt')).toHaveValue(/^Missão: validar governança sem executar nada/);
-  await expect(page.locator('.vc-message-pending').last()).toContainText('Objetivo adicionado ao composer. Nada foi executado.');
+  await expect(page.locator('.vc-message-pending').last()).toContainText('Objetivo adicionado ao composer e ao Software Factory. Nada foi executado.');
   await expect(page.locator('#vcMissionQuickInput')).toHaveValue('');
   expect(extraRequests).toBe(0);
+});
+
+test('Mission Input and Software Factory share the same mission text (single source of truth)', async ({ page }) => {
+  await page.goto(NEXT_URL);
+
+  await page.locator('#vcMissionQuickInput').fill('gerar API de checkout com Stripe');
+  await page.locator('#vcMissionQuickSend').click();
+
+  await page.locator('[data-feature="factory"]').first().click();
+  await expect(page.locator('#vcSfInput')).toHaveValue('gerar API de checkout com Stripe');
+  await expect(page.locator('.vc-chat-stage')).toBeVisible();
 });
 
 test('Security Lab: renders governance card with correct (non-mojibake) copy, hidden outside the tab', async ({ page }) => {

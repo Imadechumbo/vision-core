@@ -53,6 +53,7 @@
   var featureBody = document.getElementById('vcFeatureBody');
   var featureStatus = document.getElementById('vcFeatureStatus');
   var featureActions = document.getElementById('vcFeatureActions');
+  var featureClose = document.getElementById('vcFeatureClose');
   var featureRun = document.getElementById('vcFeatureRun');
   var githubPrForm = document.getElementById('vcGithubPrForm');
   var prRepoInput = document.getElementById('vcPrRepo');
@@ -137,6 +138,8 @@
   var metricsAgentList = document.getElementById('vcMetricsAgentList');
   var metricsTotal = document.getElementById('vcMetricsTotal');
   var metricsDoraGrid = document.getElementById('vcMetricsDoraGrid');
+  var metricsRuntimeGrid = document.getElementById('vcMetricsRuntimeGrid');
+  var metricsMemoryGrid = document.getElementById('vcMetricsMemoryGrid');
   var metricsConn = document.getElementById('vcMetricsConn');
   var metricsRawToggle = document.getElementById('vcMetricsRawToggle');
   var metricsRaw = document.getElementById('vcMetricsRaw');
@@ -149,6 +152,7 @@
   var missionQuickInput = document.getElementById('vcMissionQuickInput');
   var missionQuickSend = document.getElementById('vcMissionQuickSend');
   var activeFeature = 'chat';
+  var lastFeatureTrigger = null;
 
   var featureMap = {
     chat: { title: 'Chat', status: 'READY', agents: ['hermes'], text: 'Chat livre conectado ao endpoint real /api/chat.', actions: [{ label: 'Checar API', path: '/api/health' }] },
@@ -237,7 +241,8 @@
         resizePrompt();
         prompt.focus();
       }
-      appendMessage('pending', 'MISSION INPUT', 'Objetivo adicionado ao composer. Nada foi executado.');
+      if (sfInput) sfInput.value = text;
+      appendMessage('pending', 'MISSION INPUT', 'Objetivo adicionado ao composer e ao Software Factory. Nada foi executado.');
       if (missionQuickInput) missionQuickInput.value = '';
     });
   }
@@ -288,6 +293,7 @@
     if (featureTitle) featureTitle.textContent = feature.title;
     if (featureBody) featureBody.textContent = feature.text;
     if (featureStatus) featureStatus.textContent = feature.status;
+    if (featureClose) featureClose.hidden = activeFeature === 'chat';
     renderFeatureActions(feature);
     if (githubPrForm) githubPrForm.hidden = activeFeature !== 'github';
     if (activeFeature !== 'github') resetPrConfirm();
@@ -330,7 +336,7 @@
     var chatStage = document.querySelector('.vc-chat-stage');
     var sfSection = document.getElementById('factory');
     if (activeFeature === 'factory') {
-      if (chatStage) chatStage.style.display = 'none';
+      if (chatStage) chatStage.style.display = '';
       if (sfSection) sfSection.hidden = false;
     } else {
       if (chatStage) chatStage.style.display = '';
@@ -587,10 +593,14 @@
       event.preventDefault();
       var key = node.getAttribute('data-feature');
       var inComposer = !!node.closest('.vc-composer-actions');
+      lastFeatureTrigger = node;
       selectFeature(key, false);
       if (inComposer && prompt && CHIP_PREFIX[key]) {
         if (prompt.value.indexOf(CHIP_PREFIX[key]) !== 0) {
           prompt.value = CHIP_PREFIX[key] + prompt.value;
+        }
+        if (key === 'factory' && sfInput && !sfInput.value.trim()) {
+          sfInput.value = prompt.value.replace(/^Factory:\s*/i, '').trim();
         }
         resizePrompt();
         prompt.focus();
@@ -598,6 +608,17 @@
         prompt.setSelectionRange(len, len);
       }
     });
+  });
+
+  function closeContextPanel() {
+    if (activeFeature === 'chat') return;
+    selectFeature('chat', false);
+    if (lastFeatureTrigger && typeof lastFeatureTrigger.focus === 'function') lastFeatureTrigger.focus();
+  }
+
+  if (featureClose) featureClose.addEventListener('click', closeContextPanel);
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') closeContextPanel();
   });
 
   if (featureRun) {
@@ -782,10 +803,11 @@
   }
   startAgentPolling();
 
-  // Métricas — camada visual sobre os mesmos 3 endpoints já usados pela aba
+  // Métricas — camada visual sobre os endpoints de observabilidade já usados pela aba
   // (item 1 da paridade legado, "Métricas — visual" em docs/LEGACY_DESIGN_
-  // REFERENCE.md): /api/metrics/agents, /api/dora-metrics, /api/agent/status.
-  // Backend intocado — os 3 endpoints já existem e já respondiam em produção.
+  // REFERENCE.md): /api/metrics/agents, /api/metrics/summary,
+  // /api/metrics/memory, /api/dora-metrics, /api/agent/status.
+  // Backend intocado — os endpoints já existem e já respondiam em produção.
   // Polling só roda com a aba Métricas ativa E a página visível (>=10s,
   // pausa em document.hidden — mesmo padrão do badge de conexão acima).
   var METRICS_POLL_MS = 12000;
@@ -951,6 +973,59 @@
     });
   }
 
+  function appendMetricsInfoCard(parent, labelText, valueText) {
+    var card = document.createElement('div');
+    card.className = 'vc-metrics-info-card';
+    var label = document.createElement('span');
+    label.className = 'vc-metrics-info-label';
+    label.textContent = labelText;
+    var value = document.createElement('strong');
+    value.textContent = valueText === undefined || valueText === null || valueText === '' ? '—' : String(valueText);
+    card.appendChild(label);
+    card.appendChild(value);
+    parent.appendChild(card);
+  }
+
+  function renderMetricsRuntime(summary) {
+    if (!metricsRuntimeGrid) return;
+    metricsRuntimeGrid.textContent = '';
+    var runtime = summary && summary.runtime ? summary.runtime : null;
+    if (!runtime) {
+      var fail = document.createElement('p');
+      fail.className = 'vc-metrics-empty';
+      fail.textContent = 'Falha ao carregar runtime.';
+      metricsRuntimeGrid.appendChild(fail);
+      return;
+    }
+    appendMetricsInfoCard(metricsRuntimeGrid, 'CPU', runtime.cpu !== undefined ? runtime.cpu + '%' : null);
+    appendMetricsInfoCard(metricsRuntimeGrid, 'Memória', runtime.memory !== undefined ? runtime.memory + '%' : null);
+    appendMetricsInfoCard(metricsRuntimeGrid, 'Heap', runtime.heap !== undefined ? runtime.heap + '%' : null);
+    appendMetricsInfoCard(metricsRuntimeGrid, 'Uptime', runtime.uptime_s !== undefined ? runtime.uptime_s + 's' : null);
+    appendMetricsInfoCard(metricsRuntimeGrid, 'Node', runtime.node_version);
+    appendMetricsInfoCard(metricsRuntimeGrid, 'Platform', runtime.platform);
+  }
+
+  function renderMetricsMemory(memory) {
+    if (!metricsMemoryGrid) return;
+    metricsMemoryGrid.textContent = '';
+    if (!memory) {
+      var fail = document.createElement('p');
+      fail.className = 'vc-metrics-empty';
+      fail.textContent = 'Falha ao carregar memory layer.';
+      metricsMemoryGrid.appendChild(fail);
+      return;
+    }
+    appendMetricsInfoCard(metricsMemoryGrid, 'Escalações', memory.total_escalations);
+    appendMetricsInfoCard(metricsMemoryGrid, 'Memory capable', memory.memory_capable_entries);
+    appendMetricsInfoCard(metricsMemoryGrid, 'Legacy sem keywords', memory.legacy_entries_without_keywords);
+    appendMetricsInfoCard(metricsMemoryGrid, 'Última escalação', memory.last_escalation_at || 'sem eventos');
+    var providers = memory.by_provider && typeof memory.by_provider === 'object'
+      ? Object.keys(memory.by_provider).map(function (key) { return key + ': ' + memory.by_provider[key]; }).join(', ')
+      : '';
+    appendMetricsInfoCard(metricsMemoryGrid, 'Por provider', providers || 'sem eventos');
+    appendMetricsInfoCard(metricsMemoryGrid, 'Fonte', memory.data_source);
+  }
+
   function renderMetricsConnectivity(status) {
     if (!metricsConn) return;
     metricsConn.textContent = '';
@@ -992,15 +1067,15 @@
     if (!metricsPanel) return;
     showMetricsError(false);
     setMetricsLoading(true);
-    var results = { agents: null, dora: null, status: null };
+    var results = { agents: null, dora: null, summary: null, memory: null, status: null };
     var failures = 0;
-    var pending = 3;
+    var pending = 5;
 
     function settle() {
       pending -= 1;
       if (pending > 0) return;
       setMetricsLoading(false);
-      if (failures === 3) {
+      if (failures === 5) {
         if (metricsSourceBadge) { metricsSourceBadge.textContent = 'FALLBACK LOCAL'; metricsSourceBadge.className = 'vc-metrics-source is-fallback'; }
         showMetricsError(true);
         if (metricsBody) metricsBody.hidden = true;
@@ -1011,12 +1086,16 @@
       if (metricsBody) metricsBody.hidden = false;
       renderMetricsAgents(results.agents);
       renderMetricsDora(results.dora);
+      renderMetricsRuntime(results.summary);
+      renderMetricsMemory(results.memory);
       renderMetricsConnectivity(results.status);
       if (metricsRawToggle && metricsRawToggle.checked) setMetricsRawText();
     }
 
     apiRequest('/api/metrics/agents').then(function (d) { results.agents = d; }).catch(function () { failures += 1; }).then(settle);
     apiRequest('/api/dora-metrics').then(function (d) { results.dora = d; }).catch(function () { failures += 1; }).then(settle);
+    apiRequest('/api/metrics/summary').then(function (d) { results.summary = d; }).catch(function () { failures += 1; }).then(settle);
+    apiRequest('/api/metrics/memory').then(function (d) { results.memory = d; }).catch(function () { failures += 1; }).then(settle);
     apiRequest('/api/agent/status').then(function (d) { results.status = d; }).catch(function () { failures += 1; }).then(settle);
   }
 

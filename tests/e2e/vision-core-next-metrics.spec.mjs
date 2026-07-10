@@ -44,16 +44,22 @@ test.beforeEach(async ({ page }) => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, connected: false }) }));
   await page.route(`${API}/api/mission/quota`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, plan: 'free', remaining: 5 }) }));
+  await page.route(`${API}/api/metrics/summary`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(DEFAULT_SUMMARY) }));
+  await page.route(`${API}/api/metrics/memory`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(DEFAULT_MEMORY) }));
 });
 
 function fulfillJson(route, status, body) {
   return route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 }
 
-async function mockMetrics(page, { agents, dora, status } = {}) {
+async function mockMetrics(page, { agents, dora, summary, memory, status } = {}) {
   const routes = [];
   if (agents !== undefined) routes.push(page.route(`${API}/api/metrics/agents`, (r) => fulfillJson(r, 200, agents)));
   if (dora !== undefined) routes.push(page.route(`${API}/api/dora-metrics`, (r) => fulfillJson(r, 200, dora)));
+  if (summary !== undefined) routes.push(page.route(`${API}/api/metrics/summary`, (r) => fulfillJson(r, 200, summary)));
+  if (memory !== undefined) routes.push(page.route(`${API}/api/metrics/memory`, (r) => fulfillJson(r, 200, memory)));
   if (status !== undefined) routes.push(page.route(`${API}/api/agent/status`, (r) => fulfillJson(r, 200, status)));
   await Promise.all(routes);
 }
@@ -71,6 +77,21 @@ const EMPTY_DORA = {
 };
 
 const OFFLINE_STATUS = { ok: true, connected: false, last_seen_ms_ago: null, agent_id: null, mode: 'download_ready', anti_stub: true };
+const DEFAULT_SUMMARY = {
+  ok: true,
+  runtime: { cpu: 17, memory: 42, heap: 31, uptime_s: 120, node_version: 'v24.0.0', platform: 'win32' },
+  anti_stub: true
+};
+const DEFAULT_MEMORY = {
+  ok: true,
+  total_escalations: 2,
+  by_provider: { groq: 1, openrouter: 1 },
+  memory_capable_entries: 2,
+  legacy_entries_without_keywords: 0,
+  last_escalation_at: '2026-07-10T12:00:00.000Z',
+  data_source: '.vision-memory/hermes_low_confidence.jsonl',
+  anti_stub: true
+};
 
 async function openMetrics(page) {
   await page.goto(NEXT_URL);
@@ -108,6 +129,21 @@ test('(a) full payload renders agent cards, cost bars and DORA cards', async ({ 
       total_pass_gold: 40,
       anti_stub: true
     },
+    summary: {
+      ok: true,
+      runtime: { cpu: 8, memory: 55, heap: 34, uptime_s: 3600, node_version: 'v24.1.0', platform: 'linux' },
+      anti_stub: true
+    },
+    memory: {
+      ok: true,
+      total_escalations: 7,
+      by_provider: { anthropic: 3, groq: 4 },
+      memory_capable_entries: 6,
+      legacy_entries_without_keywords: 1,
+      last_escalation_at: '2026-07-10T10:30:00.000Z',
+      data_source: '.vision-memory/hermes_low_confidence.jsonl',
+      anti_stub: true
+    },
     status: { ok: true, connected: true, last_seen_ms_ago: 4000, agent_id: 'agent-abc', mode: 'connected', anti_stub: true }
   });
   await page.locator('[data-feature="metrics"]').click();
@@ -118,6 +154,10 @@ test('(a) full payload renders agent cards, cost bars and DORA cards', async ({ 
   await expect(page.locator('.vc-metrics-chip')).toHaveCount(2);
   await expect(page.locator('.vc-metrics-dora-card')).toHaveCount(6);
   await expect(page.locator('#vcMetricsDoraGrid')).toContainText('2.4h avg (últimas 10)');
+  await expect(page.locator('#vcMetricsRuntimeGrid')).toContainText('55%');
+  await expect(page.locator('#vcMetricsRuntimeGrid')).toContainText('v24.1.0');
+  await expect(page.locator('#vcMetricsMemoryGrid')).toContainText('anthropic: 3, groq: 4');
+  await expect(page.locator('#vcMetricsMemoryGrid')).toContainText('.vision-memory/hermes_low_confidence.jsonl');
   await expect(page.locator('#vcMetricsConn')).toContainText('Conectado');
   await expect(page.locator('#vcMetricsConn')).toContainText('agent_id: agent-abc');
 });
@@ -192,6 +232,10 @@ test('(e) total fetch failure shows fallback badge + retry; retry recovers real 
     attempt === 0 ? fulfillJson(route, 500, { ok: false, error: 'boom' }) : fulfillJson(route, 200, okAgents));
   await page.route(`${API}/api/dora-metrics`, (route) =>
     attempt === 0 ? fulfillJson(route, 500, { ok: false, error: 'boom' }) : fulfillJson(route, 200, EMPTY_DORA));
+  await page.route(`${API}/api/metrics/summary`, (route) =>
+    attempt === 0 ? fulfillJson(route, 500, { ok: false, error: 'boom' }) : fulfillJson(route, 200, DEFAULT_SUMMARY));
+  await page.route(`${API}/api/metrics/memory`, (route) =>
+    attempt === 0 ? fulfillJson(route, 500, { ok: false, error: 'boom' }) : fulfillJson(route, 200, DEFAULT_MEMORY));
   await page.route(`${API}/api/agent/status`, (route) =>
     attempt === 0 ? fulfillJson(route, 500, { ok: false, error: 'boom' }) : fulfillJson(route, 200, OFFLINE_STATUS));
 
@@ -221,6 +265,8 @@ test('(f) raw JSON toggle shows/hides the underlying payload as text', async ({ 
   await page.locator('#vcMetricsRawToggle').check();
   await expect(page.locator('#vcMetricsRaw')).toBeVisible();
   await expect(page.locator('#vcMetricsRaw')).toContainText('"name": "OpenClaw"');
+  await expect(page.locator('#vcMetricsRaw')).toContainText('"summary"');
+  await expect(page.locator('#vcMetricsRaw')).toContainText('"memory"');
   await page.locator('#vcMetricsRawToggle').uncheck();
   await expect(page.locator('#vcMetricsRaw')).toBeHidden();
 });

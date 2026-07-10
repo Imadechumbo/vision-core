@@ -372,6 +372,14 @@ a { color: inherit; text-decoration: none; }
 .vc-feature-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.vc-feature-head > div {
+  display: flex;
+  align-items: center;
   gap: 10px;
   min-width: 0;
 }
@@ -393,6 +401,17 @@ a { color: inherit; text-decoration: none; }
   font-size: 12px;
   letter-spacing: .08em;
   text-transform: uppercase;
+}
+
+.vc-feature-head button {
+  min-height: 28px;
+  border: 1px solid rgba(216, 180, 254, .14);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: #d8b4fe;
+  background: rgba(18, 14, 28, .62);
+  font-size: 10px;
+  font-weight: 780;
 }
 
 .vc-feature-panel p {
@@ -1177,15 +1196,18 @@ a { color: inherit; text-decoration: none; }
 /* ── Software Factory section (Next) ──────────────────────────── */
 .vc-sf-stage:not([hidden]) {
   width: min(940px, 100%);
-  min-height: calc(100vh - 116px);
+  min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(300px, 1fr) auto auto;
+  grid-template-rows: auto auto auto auto;
   gap: 16px;
-  margin: 0 auto;
-  padding-top: clamp(34px, 7vh, 72px);
+  margin: 0 auto 34px;
+  padding: 16px;
+  border: 1px solid rgba(216, 180, 254, .12);
+  border-radius: var(--radius);
+  background: rgba(5, 5, 10, .50);
 }
 .vc-sf-intro { max-width: 760px; }
-.vc-sf-intro h1 { margin: 0; color: #fff; font-size: clamp(28px, 4vw, 48px); }
+.vc-sf-intro h1 { margin: 0; color: #fff; font-size: clamp(20px, 2vw, 28px); }
 .vc-sf-intro p { max-width: 670px; margin: 10px 0 0; color: #bdb4cf; font-size: 14px; }
 .vc-sf-controls {
   display: flex;
@@ -1930,12 +1952,15 @@ a { color: inherit; text-decoration: none; }
 .vc-metrics-total strong { color: var(--text); }
 .vc-metrics-total span { color: var(--violet-2); font-weight: 700; }
 
-.vc-metrics-dora-grid {
+.vc-metrics-dora-grid,
+.vc-metrics-runtime-grid,
+.vc-metrics-memory-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 10px;
 }
-.vc-metrics-dora-card {
+.vc-metrics-dora-card,
+.vc-metrics-info-card {
   padding: 10px 12px;
   border: 1px solid rgba(255,255,255,.07);
   border-radius: var(--radius);
@@ -1943,8 +1968,10 @@ a { color: inherit; text-decoration: none; }
   flex-direction: column;
   gap: 4px;
 }
-.vc-metrics-dora-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.vc-metrics-dora-card strong { font-size: 13px; color: var(--text); }
+.vc-metrics-dora-label,
+.vc-metrics-info-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.vc-metrics-dora-card strong,
+.vc-metrics-info-card strong { font-size: 13px; color: var(--text); }
 
 .vc-metrics-conn-row { display: flex; align-items: center; gap: 8px; }
 .vc-metrics-conn-row span:last-child { font-size: 13px; color: var(--text); }

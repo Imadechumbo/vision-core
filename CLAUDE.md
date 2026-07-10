@@ -104,6 +104,8 @@ AWS_S3_BUCKET=vision-core-data-prod   # PENDENTE de reaplicar (§146)
 
 **Fallback de LLM (`callLLM()`):** OpenRouter → Anthropic → Groq → DeepSeek → Gemini → Cerebras (corrigido no §206 — `OPENAI_API_KEY` nunca existiu em produção). Todas as 27 env vars reais (chaves de LLM/OAuth/Stripe/Hotmart) foram migradas integralmente na recriação do EB (§206) — não listadas aqui por serem segredos.
 
+**vc-secret-guard `verify-cloud` (2026-07-10, WIP):** comando Rust read-only criado para auditar metadados de env vars do EB (`PROVIDER_VAULT_SECRET`, `SESSION_SECRET`, `JWT_SECRET` legado e variáveis de segurança correlatas), sem imprimir valores, prefixos, hashes ou amostras. Testes locais Rust passam; verificação viva do EB está bloqueada por falha TLS/trust store local da AWS CLI. Não usar `--no-verify-ssl`; corrigir TLS primeiro e rerodar o comando.
+
 ---
 
 ## DECISÕES DE ESCOPO FECHADAS (não reabrir sem novo motivo)
@@ -134,7 +136,7 @@ AWS_S3_BUCKET=vision-core-data-prod   # PENDENTE de reaplicar (§146)
 - SF dentro do mesmo cockpit: abas AUTO-PILOT / MODO AVANÇADO, chat estilo Claude com markdown+typewriter, geração assíncrona (job_id + polling) pra evitar timeout do Worker (10s).
 - Tutoriais contextuais por seção (T1 Geral, T2 Agent Local, T3/SF2 Software Factory, T4 Mission Control, T5 Agentes Extras, T6 PASS GOLD) — abrem só via botão manual, nunca automático (exceto T1 primeira visita).
 - Deploy dropdown: ZIP / PR GitHub / CF Pages / EB / Docker.
-- Execution Monitor + Mission Timeline + Métricas reais (não mockadas).
+- Execution Monitor + Mission Timeline + Métricas reais (não mockadas). Next `next-clean-53`: aba Métricas conecta agentes, DORA, runtime summary, memory layer e agent status; Core Interaction Principle (chat-first) auditado e fechado — nenhum painel (Factory/Vault/Métricas/Tools/GitHub/Security/Settings) esconde o chat; Mission Input e Software Factory compartilham a mesma missão (56/56 PASS, ver `docs/CURRENT_HANDOFF.md` seção "Missão chat-first").
 - Painel "AI API VAULT — Configuração Principal" — ver checkpoint AI PROVIDER VAULT abaixo.
 
 ---

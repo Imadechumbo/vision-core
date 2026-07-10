@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-51">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-51" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-53">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-53" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -96,8 +96,11 @@
 
         <section class="vc-feature-panel" id="vcFeaturePanel" aria-live="polite">
           <div class="vc-feature-head">
-            <span id="vcFeatureStatus">READY</span>
-            <strong id="vcFeatureTitle">Chat</strong>
+            <div>
+              <span id="vcFeatureStatus">READY</span>
+              <strong id="vcFeatureTitle">Chat</strong>
+            </div>
+            <button type="button" id="vcFeatureClose" aria-label="Fechar painel contextual" hidden>Fechar</button>
           </div>
           <p id="vcFeatureBody">Entrada principal pronta.</p>
           <div class="vc-feature-actions" id="vcFeatureActions"></div>
@@ -310,6 +313,16 @@
               <section class="vc-metrics-section">
                 <h5>DORA Metrics</h5>
                 <div class="vc-metrics-dora-grid" id="vcMetricsDoraGrid"></div>
+              </section>
+
+              <section class="vc-metrics-section">
+                <h5>Runtime</h5>
+                <div class="vc-metrics-runtime-grid" id="vcMetricsRuntimeGrid"></div>
+              </section>
+
+              <section class="vc-metrics-section">
+                <h5>Memory Layer</h5>
+                <div class="vc-metrics-memory-grid" id="vcMetricsMemoryGrid"></div>
               </section>
 
               <section class="vc-metrics-section">

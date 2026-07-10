@@ -86,14 +86,15 @@ function mockAsyncSfEndpoints(page, textByEndpoint) {
   return Promise.all(routes).then(() => ({ posts, polls }));
 }
 
-test('Software Factory opens from sidebar and hides the chat stage', async ({ page }) => {
+test('Software Factory opens as chat context without hiding the chat stage', async ({ page }) => {
   await page.goto(NEXT_URL);
   await expect(page.locator('.vc-chat-stage')).toBeVisible();
   await expect(page.locator('#factory')).toBeHidden();
 
   await page.locator('[data-feature="factory"]').first().click();
   await expect(page.locator('#factory')).toBeVisible();
-  await expect(page.locator('.vc-chat-stage')).toBeHidden();
+  await expect(page.locator('.vc-chat-stage')).toBeVisible();
+  await expect(page.locator('#vcComposer')).toBeVisible();
   await expect(page.locator('#vcSfComposer')).toBeVisible();
   await expect(page.locator('#vcSfLog')).toBeHidden();
   await expect(page.locator('#vcSfFinal')).toBeHidden();
