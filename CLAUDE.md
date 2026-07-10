@@ -1,6 +1,8 @@
 ﻿# VISION CORE — CLAUDE.md
 ## Documento central do projeto | Atualizado: 2026-07-06 (Fase 3 em andamento — 3.3a+3.3b+3.3c fechados)
 
+> **A PARTIR DE 2026-07-09: leia `docs/MASTER_SPEC.md` ANTES deste arquivo.** Consolidação arquitetural criou uma série de 10 documentos em `docs/` (`MASTER_SPEC.md` + `VISION_CORE_ARCHITECTURE.md`/`VISION_CORE_NEXT_FRONTEND_SPEC.md`/`VISION_CORE_BACKEND_SPEC.md`/`VC_SECRET_GUARD_RUST_SPEC.md`/`ATOMIC_CORE_SPEC.md`/`SOFTWARE_FACTORY_SPEC.md`/`UI_COMPONENT_LIBRARY.md`/`API_CONTRACT.md`/`ROADMAP.md`) que agora é a fonte de verdade de **arquitetura e vocabulário** (inclui um achado importante: o projeto tem duas camadas reais e distintas — produto/SaaS vs. governança interna de release — compartilhando nomes como `Hermes`/`PASS GOLD`/`Software Factory` com mecanismos diferentes; ver `VISION_CORE_ARCHITECTURE.md` seção "Duas Camadas"). Este `CLAUDE.md` e `docs/CURRENT_HANDOFF.md` continuam sendo a fonte de **estado operacional do dia-a-dia** — os dois não competem, cobrem coisas diferentes.
+>
 > **LEIA ESTE ARQUIVO COMPLETO ANTES DE QUALQUER AÇÃO.**
 > Contém o estado real do projeto: o que está implementado, o que falta, o que NÃO deve ser tocado.
 > Histórico técnico completo (causa raiz/fix/evidência de cada sessão passada) está em `CLAUDE_HISTORY.md` — consultar só para entender o "porquê" de algo já feito; não é leitura obrigatória.
@@ -594,6 +596,10 @@ Quarta ocorrência real da mesma classe de risco: segredo/fallback sensível pre
 **Validação complementar em produção (2026-07-09):** o ZIP EB `v109-725cfdcb71973b03963a7adcb43e3888b1808c58` contém os guards do INCIDENTE-3 e INCIDENTE-4. `POST /api/auth/login` com a credencial de fallback legada retorna `400 fallback_credential_rejected` via Worker e EB direto, sem token e sem ecoar o valor. `POST /api/auth/register` ficou pendente de revalidação viva porque probes malformados consumiram temporariamente o rate limit de registro; o guard de register está confirmado no artefato publicado e coberto pela regressão local permanente.
 
 **Deploy CF Pages complementar (2026-07-09):** após aprovação do usuário via "continue", o bundle legado limpo foi publicado em `https://5859bb89.visioncoreai.pages.dev` e no alias principal `https://visioncoreai.pages.dev`. Verificação pública pós-deploy: `INDEX_CONTAINS_FALLBACK=false` e `BUNDLE_CONTAINS_FALLBACK=false` no preview e no alias principal. O backend já rejeitava o valor; este deploy fechou a exposição residual no arquivo público.
+
+### App shell Next — Mission Input + Security Lab (2026-07-09, `next-clean-50`, UNCOMMITTED)
+
+Continuação do app estilo ChatGPT minimalista: Mission Input flutuante/colapsável no topo direito (100% local, nunca chama rede) e aba "Security Lab" com painel Safe Status (GET-only nos 5 endpoints que ainda não existem no backend — `server.js` confirma 404 via catch-all, fallback local é o comportamento real hoje) + card de governança do `vc-secret-guard` (SPEC/PLANEJADO, sem Rust executado). Sessão retomou ~320 linhas de WIP não commitado deixado por um agente anterior sem entrada de HANDOFF — corrigiu um mojibake real (3 linhas de texto) e um overlap real em mobile (Atomic Core sobrepondo o Mission Input em ≤820px, agora `display:none` nesse breakpoint). Spec permanente nova (5 testes), suíte Next completa 37/37 PASS. Detalhe completo, incluindo a divergência encontrada entre a tarefa e os arquivos reais (`-clean` vs. prototypes nunca versionados), em `docs/CURRENT_HANDOFF.md`. **Nada commitado, nada deployado — aguardando aprovação do usuário.**
 
 ## PENDÊNCIAS IMEDIATAS / PRÓXIMA SESSÃO
 

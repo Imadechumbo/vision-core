@@ -1,250 +1,318 @@
-# Vision Core Next — Frontend Spec
+# VISION CORE NEXT — Frontend Spec
 
-**Documento oficial da interface paralela**
+**Parte da série de arquitetura — leia `MASTER_SPEC.md` antes deste.**
 
-> Data: 2026-07-08
-> Status: Em desenvolvimento (paralelo ao index.html legado)
-> Próxima revisão: quando houver feature nova ou decisão de produto
+> Versão: 2.0.0 · Criado originalmente 2026-07-08, consolidado 2026-07-09
+> Esta versão substitui a v1 do mesmo arquivo (preservando 100% das regras duras e decisões de escopo dela) e adiciona: template padrão da série, diagramas, catálogo do que já existe hoje (a v1 só descrevia a intenção inicial; muito foi implementado desde então).
+> **Para o estado operacional exato de cada feature (o que a última sessão mexeu), consulte sempre `docs/CURRENT_HANDOFF.md` — este documento é a especificação estável, não muda a cada sessão.**
 
 ---
 
-## 1. Arquitetura Paralela
+## Resumo
 
-O novo frontend **não substitui** o `index.html` legado. É uma interface paralela, acessível por URL própria, sem conflito com produção.
+Vision Core Next é a interface paralela e ativa de reconstrução do frontend do Vision Core — um app operacional de chat/missão no estilo ChatGPT/Claude/Cursor, não uma landing page nem um dashboard denso. Roda ao lado do frontend legado (`index.html`) sem substituí-lo, acessível por URL própria, sem nenhum código do legado copiado ou importado.
 
-### Entrada oficial
+## Objetivo
 
-| Componente | Caminho | Cache-bust |
-|-----------|---------|-----------|
-| HTML | `frontend/vision-core-next.html` | `?v=next-clean-N` |
-| CSS | `frontend/assets/vision-core-next-clean.css` | sync com HTML |
-| JS | `frontend/assets/vision-core-next-clean.js` | sync com HTML |
+Paridade funcional progressiva com o legado, com rigor de segurança (nunca uma chamada destrutiva sem confirmação dupla), zero dívida herdada, e uma identidade visual coesa (minimalista, escura, sidebar colapsável, chat como centro).
 
-### Protótipo Atomic Core standalone
+## Escopo
+
+Tudo que roda em `frontend/vision-core-next.html` + `frontend/assets/vision-core-next-clean.{css,js}`. Cobre: layout, componentes, estados, eventos, integração com os endpoints reais do backend (via o Worker gateway), motion system, responsividade, acessibilidade.
+
+## Fora do escopo
+
+- `frontend/index.html`, `vision-core-bundle.{js,css}` — legado, produção, só referência visual (nunca copiar código).
+- `frontend/about.html`, `frontend/landing.html` — páginas públicas, só editadas após validação local correspondente.
+- `backend/`, `worker/src/index.js` — nenhuma mudança de backend nasce aqui.
+- `frontend/atomic-core.html` + `assets/atomic-core.{css,js}` — protótipo isolado do decágono, nunca commitado, não é a implementação oficial do Atomic Core (essa vive dentro de `vision-core-next-clean.js`, ver `ATOMIC_CORE_SPEC.md`).
+- `frontend/assets/vision-core-next.{css,js}` (sem `-clean`) — protótipo pré-clean, nunca editar. **Achado real de 2026-07-09:** uma tarefa chegou a listar esses nomes como "arquivos permitidos" por engano — confirmado por `git ls-files` que eles nunca foram versionados e não têm efeito nenhum na página real, que carrega só os arquivos `-clean`.
+
+---
+
+## Arquitetura
+
+```mermaid
+graph TD
+    ENTRY["frontend/vision-core-next.html<br/>entrada oficial"] --> CSS["assets/vision-core-next-clean.css<br/>?v=next-clean-N"]
+    ENTRY --> JS["assets/vision-core-next-clean.js<br/>?v=next-clean-N, mesmo N"]
+    JS --> API["API_BASE_URL fixo<br/>Worker Gateway CF"]
+    API --> EB["Backend EB<br/>backend/server.js"]
+    JS -.nunca importa.-> LEGACY["vision-core-bundle.js<br/>(legado, só leitura p/ mapear comportamento)"]
+```
+
+### Arquivos oficiais (únicos que devem ser tocados sem aprovação explícita adicional)
 
 | Componente | Caminho |
-|-----------|---------|
-| HTML | `frontend/atomic-core.html` |
-| CSS | `frontend/assets/atomic-core.css` |
-| JS | `frontend/assets/atomic-core.js` |
+|---|---|
+| HTML | `frontend/vision-core-next.html` |
+| CSS | `frontend/assets/vision-core-next-clean.css` |
+| JS | `frontend/assets/vision-core-next-clean.js` |
 
-### Pré-clean (protótipos antigos, não usar)
+Cache-bust `?v=next-clean-N` sempre sincronizado nos três lugares (`<link>`, `<script>` — o CSS/JS são o mesmo N do HTML que os referencia).
 
-| Arquivo | Status |
-|---------|--------|
-| `frontend/assets/vision-core-next.js` | Protótipo antigo — não editar |
-| `frontend/assets/vision-core-next.css` | Protótipo antigo — não editar |
+### Regra de segurança fundamental desta frente
 
----
+**Nesta fase, o Next só lê por padrão.** Toda ação que escreve, executa ou é irreversível passa por (a) formulário com validação de campos obrigatórios, (b) segundo clique de confirmação explícita ("Confirmar X" / "Cancelar"), (c) guard de double-click (botão desabilitado durante a requisição). Isso vale para GitHub PR, Vault Rollback, Apply-Fix, Dry-Run real, e está **bloqueado por padrão** (fail-closed) para `apply_patch`/`apply_patch_multi` reais via Vision Agent Local até existir pareamento real por agente/projeto/owner (ver seção "Bloqueio de segurança" abaixo).
 
-## 2. Arquivos Proibidos nesta Fase
-
-**NÃO ALTERAR EM HIPÓTESE ALGUMA:**
-
-### Frontend produção
-- `frontend/index.html`
-- `frontend/assets/vision-core-bundle.js`
-- `frontend/assets/vision-core-bundle.css`
-
-### Backend / Infra
-- `server.js` ou qualquer arquivo em `backend/`
-- `worker/src/index.js` (Cloudflare Worker Gateway)
-- Qualquer endpoint que escreva em disco
-- Qualquer endpoint destrutivo (DELETE, POST de escrita)
-- `bin/deploy-pages.sh`
-- Scripts de deploy do EB
-
-### Páginas públicas
-- `frontend/about.html`
-- `frontend/landing.html`
+| Permitido ✅ | Bloqueado ❌ |
+|---|---|
+| GET em endpoints de status/leitura | `apply_patch` real via Vision Agent Local (gate `AGENT_APPLY_ENABLED=false`) |
+| `POST /api/chat` (chat livre, sem quota) | POST destrutivo sem confirmação dupla |
+| `POST /api/sf/*` com job_id polling | Deploy (CF Pages, EB) a partir da UI |
+| `POST /api/github/create-pr` (confirmação dupla) | Missão paga (`/api/run-live`) |
+| `POST /api/vault/rollback/:id` (confirmação dupla) | Escrita em disco fora do fluxo de Apply-Fix confirmado |
+| `POST /api/security/apply-fix` (confirmação dupla) | — |
+| Anexo de arquivos (local apenas, sem upload real) | — |
 
 ---
 
-## 3. Direção Visual
+## Direção visual
 
-Estilo geral: **app de chat/IA tipo ChatGPT**.
+Estilo geral: **app de chat/IA**, inspirado em ChatGPT/Claude/Cursor/OpenCode/Linear.
 
-### Princípios
-- Minimalista — menos é mais
-- Escuro/cinza (dark mode nativo)
-- Chat como centro da experiência
-- Sem aparência de landing page
-- Sem hero gigante
-- Sem excesso de painéis
-- Sidebar discreta e recolhível
-- Legado é referência visual/UX, nunca base de código a copiar — catálogo tela-a-tela e política completa em `docs/LEGACY_DESIGN_REFERENCE.md`
+**Princípios:** minimalista · escuro/cinza nativo · chat como centro da experiência · sem aparência de landing page · sem hero gigante · sem excesso de painéis · sidebar discreta e recolhível · legado é referência visual/UX, nunca base de código (catálogo completo em `docs/LEGACY_DESIGN_REFERENCE.md`).
 
-### Layout concreto
 ```
-┌─────────────┬─────────────────────────────────────┬──────────┐
-│  Sidebar    │  Header (logo+eye+identidade)       │ Atomic   │
-│  colapsável │  ─────────────────────────────       │ Core     │
-│             │  Chat stream                         │ (canto   │
-│  C          │  (histórico de mensagens)            │  sup.    │
-│  h          │                                       │  dir.)   │
-│  a          │                                       │          │
-│  t          │                                       │          │
-│             │                                       │          │
-│  M          │                                       │          │
-│  i          │  ─────────────────────────────       │          │
-│  s          │  Composer fixo no rodapé             │          │
-│  s          │  [textarea + botões]                 │          │
-│  i          │                                       │          │
-│  o          └─────────────────────────────────────┘          │
-│  n          └─────────────────────────────────────┘          │
-│  s                                                     │
-│                                                       │
-│  F       (sidebar colapsada vira só ícones)           │
-│  a                                                    │
-│  c                                                    │
-│  t                                                    │
-│  o                                                    │
-│  r                                                    │
-│  y                                                    │
-└─────────────────────────────────────────────────────────┘
+┌─────────────┬───────────────────────────────────────┬──────────┐
+│  Sidebar    │  Header (logo+olho+identidade)         │ Mission  │
+│  colapsável │ ─────────────────────────────────────  │ Input    │
+│  (ícones ou │  Chat stream (histórico de mensagens)  │(flutuante│
+│  ícone+     │                                         │ topo dir)│
+│  label)     │                                         │          │
+│             │                                         │ Atomic   │
+│  C Chat     │ ─────────────────────────────────────  │ Core     │
+│  M Missions │  Feature panel contextual (status,      │(discreto,│
+│  F Factory  │  ações, formulários específicos da aba) │ canto sup│
+│  T Timeline │                                         │ direito) │
+│  A Agentes  │ ─────────────────────────────────────  │          │
+│  G GitHub   │  Composer fixo no rodapé                │          │
+│  V Vault    │  [textarea + chips de ação + Executar]  │          │
+│  M Métricas │                                         │          │
+│  T Tools    │                                         │          │
+│  L Security │                                         │          │
+│  O Obsidian │                                         │          │
+│  S Settings │                                         │          │
+└─────────────┴───────────────────────────────────────┴──────────┘
 ```
 
-### Elementos visuais
+### Tokens / tema
 
-| Elemento | Descrição |
-|----------|-----------|
-| Logo/olho | Pequeno no topo esquerdo, pisca no hover |
-| Sidebar | 252px expanded, 78px collapsed — só ícones |
-| Chat stream | Área central rolável, mensagens estilo card |
-| Composer | Fixo no rodapé, textarea expansível + chips |
-| Feature panel | Painel contextual aparece só quando necessário |
-| Atomic Core | Overlay discreto no canto superior direito |
+Todo o CSS usa um conjunto pequeno de variáveis `:root` em vez de valores soltos repetidos:
 
----
+```css
+--bg: #030207          /* fundo geral */
+--text: #f8f7ff         /* texto principal */
+--muted: #a8a1b8        /* texto secundário */
+--violet: #a855f7       /* acento primário */
+--violet-2: #c084fc     /* acento secundário */
+--cyan: #22d3ee         /* acento secundário 2 */
+--green: #34d399        /* estado ok/sucesso */
+--radius: 8px           /* raio de borda padrão */
+--sidebar-width: 252px  /* expandida — 78px quando colapsada */
+```
 
-## 4. Atomic Core
-
-Componente independente de identidade visual, sem função operacional.
-
-### Regras
-- **Sem botões Idle / Action / Glow** — estado é gerenciado automaticamente
-- **Idle automático** por padrão
-- **Action automático** quando houver job/agente ativo
-- **Glow individual** por agente via eventos (`highlightAtomicAgents`)
-- Agentes orbitam o CORE
-- **Não deve dominar a tela** — tamanho discreto
-
-### Agentes (10)
-1. Hermes
-2. PI Harness
-3. OpenClaw
-4. Scanner
-5. Patch Engine
-6. Aegis
-7. Go Core
-8. Pass Gold
-9. Archivist
-10. GitHub Agent
+Cores de estado semântico fora das variáveis raiz (por convenção do arquivo, repetidas como literal em cada bloco, não centralizadas): âmbar `#facc15`/`rgba(250,204,21,*)` para "atenção/pendente"; vermelho `#f87171`/`rgba(248,113,113,*)` para erro. `color-scheme: dark` é declarado explicitamente — não há tema claro implementado.
 
 ---
 
-## 5. Comportamento Seguro
+## Componentes (catálogo resumido — detalhe completo em `UI_COMPONENT_LIBRARY.md`)
 
-Nesta fase, o Next frontend **apenas lê**. Nada escreve, nada executa, nada deploya.
-
-### Permitido ✅
-- GET em endpoints de status/leitura
-- POST `/api/chat` (chat livre, sem quota)
-- POST `/api/sf/*` com job_id polling (leitura, geração orientada)
-- POST `/api/github/create-pr` (com confirmação dupla obrigatória)
-- Anexo de arquivos (local apenas, sem upload)
-
-### Bloqueado ❌
-- `apply_patch` real via Vision Agent Local
-- POST destrutivo (DELETE, PUT de escrita)
-- Deploy (CF Pages, EB)
-- Missão paga (`/api/run-live`)
-- Escrita em disco
-- Qualquer alteração no backend
-
----
-
-## 6. Layout Alvo (critérios de aceite)
-
-A interface será aceita quando:
-
-1. **Abrir em `/vision-core-next.html`** sem redirecionar para `index.html`
-2. **Não alterar `index.html`** nem bundles legados
-3. **Sidebar recolher** via botão toggle, persistindo estado
-4. **Chat for o foco visual** — maior área, primeiro plano
-5. **Atomic Core estiver pequeno/discreto** — ~360x360px, canto superior direito
-6. **Não houver botões Idle / Action / Glow** visíveis
-7. **Mission Input estiver discreto** — chips no composer, não painel fixo
-8. **Composer estiver fixo embaixo** — textarea + botões de ação
-9. **Não houver chamadas destrutivas** — nenhum POST/ DELETE que escreva sem confirmação
-10. **Não houver dependência de backend novo** — só endpoints já existentes no EB
+| Componente | Estado |
+|---|---|
+| Sidebar colapsável | EXISTENTE |
+| Composer fixo | EXISTENTE |
+| Mission Input flutuante | EXISTENTE |
+| Chat (mensagens usuário/sistema) | EXISTENTE |
+| Atomic Core (widget) | EXISTENTE |
+| Feature panel contextual por aba | EXISTENTE |
+| GitHub PR (formulário + confirmação dupla) | EXISTENTE |
+| Vault Rollback (confirmação dupla) | EXISTENTE |
+| Apply-Fix (confirmação dupla) | EXISTENTE |
+| Dry-Run real (confirmação dupla, polling, timeout 5min) | EXISTENTE |
+| Agent Apply (fail-closed, sempre desabilitado) | EXISTENTE — bloqueado por design |
+| Métricas (grid de agentes, DORA, conectividade) | EXISTENTE |
+| Security Lab (Safe Status + Secret Guard card) | EXISTENTE |
+| Software Factory Next (`#factory`, Auto-Pilot + Modo Avançado) | EXISTENTE |
+| Mission History (Timeline) | EXISTENTE |
+| Settings / AI Provider Vault | EXISTENTE |
+| Logo/olho (piscada) | EXISTENTE — protegido |
 
 ---
 
-## 7. O que o Next NÃO é
+## Logs inteligentes
 
-- Landing page promocional
-- Dashboard pesado com dezenas de cards
-- Substituição imediata do `index.html`
-- Prova de conceito descartável
+Nenhum log aparece por padrão. `#vcSfLog` (Software Factory) nasce `hidden` e só aparece durante geração ativa. O painel de Safe Status (Security Lab) só popula ao entrar na aba — nunca no load da página. Regra geral da frente: nenhum componente novo deve popular um log/painel de estado no `DOMContentLoaded` — sempre gatilho de navegação ou ação do usuário.
 
-## 8. O que o Next É
+## Status / Context Panel
 
-- Interface operacional de chat/agentes
-- Implementação paralela e segura
-- Evolutiva — cada etapa é testada antes de avançar
-- Pronta para validação antes de substituir produção
+O `#vcFeaturePanel` (dentro do chat stage) é o painel contextual único — muda de conteúdo conforme a aba ativa (`selectFeature(key)`), sempre com: título, badge de status textual (`READY`/`SAFE READ`/etc.), corpo descritivo, e ações específicas da aba (botões SAFE READ que despejam resumo no chat, ou formulários dedicados como GitHub PR/Vault/Apply-Fix/Dry-Run/Métricas/Security Lab).
 
----
+## Motion System
 
-## 9. Regra para Agentes
+Fonte de verdade **não é** o sistema operacional — é `window.VCMotion` (`getMode`/`isReduced`/`setMode`/`onChange`, backed por `localStorage['vc_animation_mode']`, `'full'|'reduced'`, default sempre `'full'`). Decisão de produto explícita (2026-07-09): "a animação é identidade visual da marca; o VC tem controle próprio de acessibilidade, o SO não degrada por padrão." Controle exposto em Settings → Animações. As únicas duas leituras diretas de `matchMedia('(prefers-reduced-motion...)')` no arquivo inteiro são: (1) o blink do olho/logo (área protegida, decisão de UX separada) e (2) a dica de primeira visita (só decide se mostra um aviso apontando pro Settings, nunca o que animar).
 
-> **Qualquer sessão que mexa no frontend DEVE ler este arquivo (`docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`) E `CLAUDE.md` E `docs/CURRENT_HANDOFF.md` antes de editar código.**
-
-Esta regra vale para todos os agentes (Codex, Claude Code, OpenCode, GitHub Copilot, etc.) em qualquer sessão futura — ver "PROTOCOLO DE REVEZAMENTO" no topo do `CLAUDE.md` para o processo completo. Para o estado de implementação **agora** (o que já foi feito, versão deployada, pendência ativa), consulte `docs/CURRENT_HANDOFF.md` — este arquivo é a especificação/intenção de produto, não muda a cada sessão; o HANDOFF é o snapshot que muda.
+Painéis de dados (Métricas, Security Lab) **não têm animação de entrada própria** — aparecem já no estado final, tanto em `full` quanto `reduced` — decisão deliberada de tratá-los como dashboard, não como identidade de marca.
 
 ---
 
-## 11. FORA DE ESCOPO — decidido em 2026-07-08
+## Estrutura HTML
 
-Itens que o Next **não vai implementar**, confirmados pelo usuário após auditoria de paridade (`docs/PARITY_AUDIT.md`). Evidências no relatório, linha-a-linha.
+Um único `<div class="vc-app-shell" data-sidebar-state="expanded|collapsed">` com dois filhos: `<aside class="vc-sidebar">` (nav com `data-feature="chat|missions|factory|timeline|agents|github|vault|metrics|tools|security|obsidian|settings"`) e `<main class="vc-main">` contendo header, `<section class="vc-mission-input">` (flutuante), `<section class="vc-chat-stage">` (intro + `#vcChatStream` + `#vcFeaturePanel` com todos os sub-painéis condicionais dentro, cada um `hidden` por padrão) e `<form class="vc-composer">` fora do chat-stage. `<section class="vc-sf-stage" id="factory" hidden>` é irmã do chat-stage, trocada de visibilidade via `selectFeature('factory')` (esconde o chat, mostra o factory — único caso onde uma aba substitui o chat inteiro em vez de coexistir com ele no feature panel).
 
-### Categoria C — features legadas que não migram
+## Estrutura CSS
 
-| Item | Motivo |
-|------|--------|
-| SF Console / página SF dedicada (`#vcSoftwareFactoryPage`/`#projectBuilder`) | Já planejada para deleção (Fase 3.3d). Causa tela em branco na aba "Modo Avançado". |
-| Tutorial `STEPS_SF` zumbi + `_sfArchitectSend`/`_sfRenderArchitectResponse`/`_sfSetArchitectMode` | Zero callers, comentado como morto pelos próprios autores do legado. |
-| `vision-core-clean-runtime.js` (312KB) | Fork abandonado — não carregado por nenhuma página oficial. |
-| `vision-core-clean-state.js` (arquivo standalone) | Conteúdo já existe dentro do `bundle.js` (byte-a-byte idêntico). |
-| `v297UniversalChat`/`v297ChatLog`/`v297FileInput` (DOM oculto) | Existem só para JS antigo não quebrar com `null`. |
-| Painel OSINT (SpiderFoot/Recon-ng/Maryam) | Badges estáticos, zero fetch, zero listener. §98-F. |
-| Painel OPENCLAW/OPENSQUAD | Painel estático. §98-F. |
-| `frontend/next.html` + `assets/vision-core-next.css` | Substituído pelo clean. Já excluído do pacote de deploy. |
-| IDs duplicados (`bar-hermes`/`val-*` em 2 painéis; `id="memory"` em 2 lugares) | Bug de markup do legado — Next não replica. |
-| Cadeia de hotfix CSS `v297`→`v298`-hotfixes (4 arquivos) | Dead weight por cascata. |
-| Diagrama "v33 orbit" (`#v33-t-*`, `#mcCore`) | Ancestral visual do Atomic Core — Next implementa do zero. |
-| Billing UI decorativa | Comentada como "Static roadmap display only" no próprio legado. |
-| Vault rollback UI | Legado nunca teve UI para `/api/vault/rollback/:id`. |
+Um arquivo único (`vision-core-next-clean.css`), organizado por bloco de componente na ordem em que aparecem no HTML, com `:root` no topo. **Regra dura não-negociável:** todo painel condicional que usa o atributo `hidden` no HTML precisa do seletor `.classe:not([hidden]) { display: X }` — nunca `.classe { display: X }` puro, porque CSS de autor com a mesma especificidade do atributo `hidden` vence por ordem de declaração e o painel aparece mesmo escondido. Bug real, já corrigido mais de 6 vezes nesta frente (GitHub PR, Mission Patch, SF stage/log/progress/final, Métricas body/error/skel, Safe Status/Secret Guard).
 
-### Categoria D — CSS órfão/só-legado
+## Arquitetura JS
 
-19 arquivos CSS (cadeia de hotfix `v297`–`v298-final-hard-fix2` dentro dos 27 concatenados) não entram no Next. O Next já não depende de nenhum CSS legado (a SPEC proíbe importar `vision-core-bundle.css`). Nenhum trabalho de CSS pendente por causa desta auditoria.
+Um único IIFE (`(function(){'use strict'; ... })()`) em `vision-core-next-clean.js` — todo o estado (`activeFeature`, timers de polling, flags de confirmação pendente) vive em `var` no escopo do IIFE, sem módulos ES/bundler. Funções declaradas com `function nome(){}` (hoisted) são chamadas de qualquer lugar do arquivo independente de ordem de declaração — padrão usado deliberadamente (`selectFeature()` chama `loadMetrics()`/`loadSafeStatusPanel()` definidas centenas de linhas depois). `window.AtomicCoreNext`/`window.VCMotion`/`window.startAtomicSequence` são a única API exposta globalmente, para o restante do arquivo e para testes.
 
-### Bloqueio de segurança — não reabrir sem pareamento real
+### Eventos
 
-O pareamento por `agent_secret` (Fase 2b) e o gate `AGENT_APPLY_ENABLED=false` **não** estão na lista de corte — continuam implementados e verificados, mas o gate só será reaberto com (1) pareamento por agente/projeto/owner no backend e (2) aprovação humana registrada em `CURRENT_HANDOFF.md`. `agent_id` sozinho não é autenticação (hash não-secreto, rotas sem middleware de auth).
+- Navegação: clique em `[data-feature]` → `selectFeature(key)` → troca `hidden` de todos os painéis + dispara `load*()` da aba se aplicável.
+- Composer: `submit` do `#vcComposer` → `POST /api/chat` com `AbortController` 45s; chips `[data-feature]` prefixam o textarea; `[data-quick="attach|image"]` abrem `<input type=file hidden>`.
+- Polling: `setInterval` por feature (badge do agente 10s, Métricas 12s), sempre pausado via `document.visibilitychange`/`document.hidden` e só ativo quando a aba correspondente está selecionada.
+
+### Renderização
+
+**Nunca `innerHTML`/`insertAdjacentHTML`/`eval`/`document.write`.** Toda renderização de conteúdo vindo do backend usa `textContent`/`createTextNode`/`createElement` — sem exceção, mesmo para HTML aparentemente confiável. Verificado por grep estático a cada sessão desta frente.
+
+### Lazy loading / performance
+
+Não há code-splitting nem lazy loading de módulos — um único CSS e um único JS carregados de uma vez (`defer`). Painéis condicionais (Métricas, Security Lab, Vault, etc.) não fazem fetch até a aba ser selecionada — isso é o único "lazy" real da frente (lazy de *dado*, não de *código*). Atomic Core usa `pointer-events: none` e `contain: layout paint` para não forçar reflow do resto da página.
 
 ---
 
-## 12. Regras Duras (violação = bug garantido, já aconteceu mais de uma vez)
+## Fluxos
 
-1. **Painel condicional que usa `hidden` no HTML nunca pode ter `display: X` puro no CSS — sempre `.classe:not([hidden]) { display: X }`.** CSS de autor com a mesma especificidade do atributo HTML `hidden` vence por ordem de declaração; o painel aparece mesmo escondido. Já corrigido 4x nesta frente (GitHub PR, Mission Patch, SF stage/log/progress/final) — é o bug mais repetido do projeto.
-2. **Nunca `innerHTML`/`insertAdjacentHTML`/`eval`/`document.write` nos arquivos Next.** Toda renderização de conteúdo vindo do backend usa `textContent`/`createTextNode`/`createElement`. Sem exceção, mesmo para HTML aparentemente confiável.
-3. **`reducedMotion: 'reduce'` explícito em todo teste Playwright que envolva animação** (Atomic Core, blink do olho). `null`/omitido não é neutro — cai no valor real do SO do host rodando o teste.
-4. **Todo endpoint que a UI chama precisa ser verificado contra o backend real (`grep` em `backend/server.js`), não assumido pelo nome.** Um mock de `page.route()` só espelha a URL que o frontend chama — se o frontend erra a URL (ex.: `/api/sf/jobs/:id` vs. a rota real `/api/sf/job/:id`), o teste passa mockado e falha 100% contra produção. Achado real em 2026-07-08.
-5. **Cache-bust do HTML/CSS/JS sempre incrementa junto** (`?v=next-clean-N` nos três, nunca só em um).
-6. **Gate de segurança (`AGENT_APPLY_ENABLED` e equivalentes futuros) só muda com aprovação humana registrada em `docs/CURRENT_HANDOFF.md`** — nunca por iniciativa própria de um agente, mesmo que pareça uma melhoria. `agent_id` sozinho **não é autenticação**: é um hash não-secreto (hostname+pasta) e nenhuma rota `/api/agent/mission/*` tem middleware de auth. Reabrir esse gate sem um pareamento real por agente/projeto/owner é uma vulnerabilidade real, não uma feature pronta.
-7. **Nunca commitar working tree sujo antes de terminar a sessão, nunca deployar código não commitado.** Ver "PROTOCOLO DE REVEZAMENTO" no `CLAUDE.md`.
-8. **Todo spec Playwright que faz `page.goto()` na página Next precisa mockar `/api/agent/status` e `/api/mission/quota`, mesmo que o teste não tenha nada a ver com nenhum dos dois.** Ambos disparam sozinhos, sem gate, em toda carga de página (badge do agente no header + badge de quota na sidebar) — um spec que não mocka os dois vaza uma chamada real pro gateway de produção a cada teste, sem quebrar a suíte (request não-mockado não falha o teste, só vaza silenciosamente). Achado real em 2026-07-08, confirmado com um listener `page.on('request')` antes de assumir — a garantia "100% mockado" de sessões anteriores não era inteiramente verdadeira desde que o badge de quota foi criado.
-9. **`test.use({ reducedMotion: ... })` sozinho NÃO é confiável pra uma página `file://` — use `page.emulateMedia({ reducedMotion })` explicitamente ANTES de `page.goto()`.** Achado real em 2026-07-09: com `test.use({reducedMotion:'reduce'})`, `window.matchMedia('(prefers-reduced-motion: reduce)').matches` voltava `false` dentro da página — o teste rodava sob a emulação errada sem avisar, e mascarou por sessões inteiras um bug real de produção (Atomic Core 100% congelado sob reduced-motion, ver checkpoint "Atomic Core — freeze sob reduced-motion" no `CLAUDE.md`). `page.emulateMedia()` chamado explicitamente antes do `goto()` é o único jeito confirmado empiricamente de garantir que a emulação vale já na primeira execução de script da página. Regra 3 (mais antiga, "reducedMotion explícito") continua valendo, mas "explícito" agora quer dizer isso especificamente, não só passar a opção pro `test.use()`.
+### Fluxo de navegação/renderização de aba
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant JS as vision-core-next-clean.js
+    participant DOM as DOM
+
+    U->>JS: clique em [data-feature="X"]
+    JS->>JS: selectFeature("X")
+    JS->>DOM: esconde todos os painéis condicionais
+    JS->>DOM: mostra só o painel de "X" (se existir)
+    alt aba tem load*() associado
+        JS->>JS: loadX() — fetch GET
+        JS-->>DOM: renderiza via textContent/createElement
+    end
+    alt aba tem polling
+        JS->>JS: startXPolling() — setInterval, gated por document.hidden
+    end
+```
+
+### Fluxo de ação irreversível (padrão dupla-confirmação)
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant JS as vision-core-next-clean.js
+    participant API as Backend real
+
+    U->>JS: preenche formulário
+    JS->>JS: valida campos obrigatórios (botão habilita)
+    U->>JS: clique 1 — "Criar/Aplicar/Rollback"
+    JS->>DOM: troca pra "Confirmar X" + "Cancelar"
+    alt usuário cancela
+        U->>JS: clique "Cancelar"
+        JS->>DOM: volta ao estado inicial, ZERO requisições
+    else usuário confirma
+        U->>JS: clique "Confirmar"
+        JS->>API: fetch real (POST)
+        JS->>DOM: botão vira "Aplicando..." desabilitado
+        API-->>JS: resposta
+        JS->>DOM: sucesso (limpa form) ou erro (mensagem legível, reabilita botão)
+    end
+```
+
+---
+
+## Responsividade
+
+Desktop-first, dois breakpoints:
+
+- `max-width: 1180px` — Mission Input encolhe (230px, opacidade .78), Atomic Core encolhe (245px, opacidade .32).
+- `max-width: 820px` — sidebar vira barra horizontal (`position:static`, `flex-direction:row`, scroll horizontal, só ícones — `.vc-sidebar-foot` some). Mission Input vira bloco estático em fluxo normal (largura 100%). **Atomic Core vira `display:none` neste breakpoint** — decisão deliberada (2026-07-09): como o Mission Input tem altura variável entre colapsado/expandido nesse modo, qualquer offset fixo pro Atomic Core sobrepõe o texto real em algum estado; como o Atomic Core é puramente decorativo (`pointer-events:none`), recolher é mais seguro que tentar acertar um offset — a spec já permitia "reduzir ou recolher em telas menores".
+
+## Acessibilidade
+
+`aria-label`, `aria-live="polite"` nos painéis dinâmicos (chat stream, listas de status), `aria-expanded` no toggle da sidebar e do Mission Input, `role="alert"` nos banners de erro/risco. Motion respeita `VCMotion` (ver seção Motion System) — não é gated pelo SO diretamente, mas o controle existe e é persistente.
+
+---
+
+## Bloqueio de segurança — Executar Missão Fase 2b (`apply_patch` real)
+
+**Estado: fail-closed por design, `AGENT_APPLY_ENABLED=false` no código.** A UI existe (documenta o payload esperado) mas o botão nunca chama `/api/agent/mission/queue`, mesmo com JSON válido + frase de confirmação exata. Motivo: `agent_id` sozinho não é autenticação (hash não-secreto de hostname+pasta, nenhuma rota `/api/agent/mission/*` tem middleware de auth por si só — o pareamento real via `agent_secret` existe desde 2026-07-08, mas o gate de UI continua fechado até decisão explícita do usuário reabri-lo). Regressão de gate: `tests/e2e/vision-core-next-agent-apply.spec.mjs` — **único spec desta frente que é permanente por guardar um gate de segurança**, deve continuar passando em todo handoff.
+
+## Fora de escopo — decidido em 2026-07-08 (categorias completas, não reabrir sem novo motivo)
+
+Confirmado pelo usuário após auditoria de paridade (`docs/PARITY_AUDIT.md`): SF Console legado (`#vcSoftwareFactoryPage`/`#projectBuilder`, planejado para deleção Fase 3.3d), tutorial `STEPS_SF` zumbi, `vision-core-clean-runtime.js` (fork abandonado, 312KB), `vision-core-clean-state.js` (duplicata byte-a-byte do bundle), painéis estáticos OSINT/OPENCLAW (§98-F, roadmap), Billing UI decorativa, Vault rollback UI do legado (nunca existiu). 19 arquivos CSS de hotfix legado (`v297`→`v298-final-hard-fix2`) não entram no Next.
+
+---
+
+## Regras Duras (violação = bug garantido, já aconteceu mais de uma vez)
+
+1. **`.classe:not([hidden])`, nunca `display:X` puro** em painel condicional com atributo `hidden`.
+2. **Nunca `innerHTML`/`insertAdjacentHTML`/`eval`/`document.write`.**
+3. **`page.emulateMedia({reducedMotion})` explícito ANTES de `page.goto()`** em todo teste Playwright com animação — `test.use({reducedMotion:...})` sozinho não é confiável em `file://`.
+4. **Todo endpoint chamado pela UI é verificado por `grep` direto em `backend/server.js`**, nunca assumido pelo nome.
+5. **Cache-bust sempre incrementa nos três lugares junto** (`?v=next-clean-N`).
+6. **Gate de segurança só muda com aprovação humana registrada em `docs/CURRENT_HANDOFF.md`.**
+7. **Nunca commitar working tree sujo; nunca deployar código não commitado.**
+8. **Todo spec Playwright que faz `page.goto()` na página Next mocka `/api/agent/status` e `/api/mission/quota`** — ambos disparam sozinhos, sem gate, em toda carga de página.
+9. **UTF-8 é verificado por leitura, não assumido** — achado real de 2026-07-09: texto novo com mojibake (`NÃ£o` em vez de `Não`) passou por `node --check` e testes sem ser pego (é um bug de conteúdo, não de sintaxe) — revisão visual/grep por `Ã[£§¡©³µª¢]` recomendado para todo texto em português adicionado.
+
+---
+
+## O que o Next NÃO é / O que É
+
+**NÃO é:** landing page promocional · dashboard pesado com dezenas de cards · substituição imediata do `index.html` · prova de conceito descartável.
+
+**É:** interface operacional de chat/agentes · implementação paralela e segura · evolutiva (cada etapa testada antes de avançar) · pronta para validação antes de substituir produção.
+
+---
+
+## Checklist de aceite (layout alvo)
+
+1. Abrir em `/vision-core-next.html` sem redirecionar para `index.html` — ✅
+2. Não alterar `index.html` nem bundles legados — ✅ (verificado a cada sessão via `git diff --stat`)
+3. Sidebar recolher via botão toggle, persistindo estado — ✅
+4. Chat é o foco visual — ✅
+5. Atomic Core pequeno/discreto (~300×300px desktop, `display:none` em mobile) — ✅
+6. Sem botões Idle/Action/Glow visíveis — ✅ (nunca existiram como controles)
+7. Mission Input discreto, flutuante, colapsável — ✅
+8. Composer fixo embaixo (`position:sticky; bottom:18px`) — ✅
+9. Nenhuma chamada destrutiva sem confirmação dupla — ✅
+10. Sem dependência de backend novo — ✅ (só endpoints já existentes no EB)
+
+## Pendências
+
+- `frontend/atomic-core.html` + assets paralelos: candidatos a limpeza/remoção formal (decisão do usuário, não urgente).
+- `/api/metrics/summary` e `/api/metrics/memory` (runtime CPU/memória, memory layer) não conectados na aba Métricas — fora do escopo pedido nas sessões até aqui.
+- `project-files` + `generate-zip` (Software Factory Next) — contrato já verificado, não implementado (ver `SOFTWARE_FACTORY_SPEC.md`).
+- Auth/registro/login/OAuth no Next — não iniciado, item mais sensível do roadmap (mexe com sessão real de qualquer usuário).
+
+## Próximos passos
+
+Ver `ROADMAP.md`, Fase 1 (Frontend).
+
+## Regra para agentes
+
+> Qualquer sessão que mexa no frontend deve ler `MASTER_SPEC.md` → este arquivo → `CLAUDE.md` → `docs/CURRENT_HANDOFF.md` antes de editar código.
+
+## Histórico
+
+| Data | Mudança |
+|---|---|
+| 2026-07-08 | v1 — spec inicial da direção visual, regras duras 1-8, fora de escopo. |
+| 2026-07-09 | v2 (este arquivo) — consolidado no template da série de 10 documentos; adiciona diagramas Mermaid, catálogo de componentes existentes, regra dura 9 (mojibake), seção Duas Camadas referenciada de `VISION_CORE_ARCHITECTURE.md`. Nenhuma regra da v1 foi removida. |
+
+## Controle de versão
+
+**2.0.0** — 2026-07-09

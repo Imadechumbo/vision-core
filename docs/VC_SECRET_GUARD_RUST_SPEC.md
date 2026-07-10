@@ -1,190 +1,217 @@
-# VC-SECRET-GUARD — Spec Rust (fase spec-only, zero implementação)
+# VC-SECRET-GUARD — Spec Rust
 
-> **Status:** SPEC — NÃO IMPLEMENTADO. Nenhuma linha de Rust escrita. Nenhum binário existe. Este documento é o contrato que qualquer implementação futura deve seguir, revisado e aprovado antes de qualquer código.
-> Ler junto com `CLAUDE.md` (seção "SPEC OFICIAL — vc-secret-guard") e `docs/CURRENT_HANDOFF.md` antes de iniciar qualquer trabalho nesta linha.
+**Parte da série de arquitetura — leia `MASTER_SPEC.md` e `VISION_CORE_ARCHITECTURE.md` antes deste.**
 
----
-
-## 1. Visão geral e motivação
-
-O Vision Core já teve três incidentes reais de exposição de credencial nesta base de código — nenhum causou dano em produção porque foi pego a tempo, mas os dois primeiros foram pegos *depois* do fato consumado (commit feito, ou endpoint já em produção), nunca *antes*:
-
-1. **Token de acesso ao GitLab exposto na saída de `git remote -v`.** Uma URL de remote com credencial embutida (`https://<user>:<token>@gitlab.com/...`) — padrão de configuração que qualquer `git remote -v`, `.git/config` copiado, ou log de CI expõe em texto plano para qualquer pessoa com acesso de leitura ao ambiente. Descoberto por inspeção manual, não por ferramenta.
-2. **`agent_secret` vazando de volta via `GET /mission/result/:id` (endpoint público, sem autenticação).** Documentado em detalhe em `CLAUDE.md` (seção "Pareamento por `agent_secret`"): `POST /mission/result` fazia `{...body, received_at: now()}` ao persistir, o que gravava o campo `agent_secret` dentro do resultado armazenado — e esse resultado é lido de volta por um endpoint sem autenticação nenhuma. Corrigido destruturando o campo fora do body antes de persistir. Pego por revisão de segurança manual durante uma sessão de validação, não por scan automatizado.
-3. **Credencial de fallback pública aceita por `/api/auth/register`/`/api/auth/login` e enviada pelo bundle legado real (`vision-core-bundle.js`).** Documentado em detalhe em `CLAUDE.md` (seção "INCIDENTE-3"). Diferente dos dois primeiros: esta foi a primeira ocorrência **detectada pela própria feature** — o dogfood da Fase 1 (`cargo test`/scan local contra o repo) flagrou o mesmo literal como `credential_field` em `vision-core-clean-runtime.js` (fork abandonado, sem tráfego real), achado que motivou a investigação que confirmou o mesmo literal também no bundle real carregado por `index.html` — aí sim ativo e explorável. Nuance honesta, registrada em vez de omitida: a heurística estruturada do guard não bateu na forma exata usada no bundle real (`x.getItem(...) || 'literal'`, diferente do padrão `campo: 'literal'` que `credential_field` reconhece) — a confirmação no bundle real foi por leitura manual (`rg`), não por um segundo finding do scanner. Corrigido: backend rejeita o literal explicitamente nos dois endpoints, bundle não o envia mais.
-
-Os três incidentes compartilham o mesmo padrão de causa raiz mais geral: **a credencial existia em algum estado do sistema (config local, corpo de resposta HTTP, bundle servido) antes de alguém — humano ou ferramenta — perceber.** O terceiro já foi pego em parte pela própria ferramenta antes da investigação humana confirmar o alcance real — a validação concreta de que vale a pena continuar investindo aqui — mas nenhum incidente ainda foi pego *antes* do commit/push/deploy acontecer. Nenhuma camada existente hoje neste projeto roda *antes* do commit, *antes* do push, ou continuamente no filesystem local para pegar isso no momento em que acontece, e não depois.
-
-**Motivação real:** `vc-secret-guard` é um núcleo local de detecção rápida de secrets/vazamentos — rodando na máquina do desenvolvedor, em `git hooks` e/ou modo `watch`, com a única missão de identificar essa classe de erro **antes do commit, antes do push, antes do dano** — não durante uma auditoria manual posterior, e não como parte do pipeline de validação de código do go-core (que já existe, mas resolve um problema adjacente e diferente — ver §3).
+> Versão: 2.0.0 · Criado originalmente 2026-07-09 (spec-only), Fase 1 e 1.5 fechadas na mesma data, consolidado no template da série em 2026-07-09
+> Esta versão preserva 100% do conteúdo técnico da v1 (arquitetura, categorias de detecção, limites de segurança, plano de fases) e adiciona os campos padrão da série (Resumo/Escopo/Diagrama/Checklist).
+> **Para o estado exato de cada fase (o que a última sessão testou), consulte `docs/CURRENT_HANDOFF.md`.**
 
 ---
 
-## 2. Arquitetura real do projeto (verificado no repositório, não presumido)
+## Resumo
 
-Vision Core hoje tem três peças reais em produção, mais uma quarta nova (spec-only) que este documento propõe:
+`vc-secret-guard` é um núcleo local de detecção rápida de segredos/vazamentos em Rust, independente do `go-core`, rodando na máquina do desenvolvedor (pre-commit/pre-push/watch) — a 4ª peça real do stack do Vision Core, ao lado do backend Node.js, do `go-core` e dos frontends. **Fase 1 e 1.5 (protótipo local + refinamento de detecção) fechadas** — crate real, 57/57 testes `cargo test`, dogfood contra o repo real. Fase 2 (hooks git) ainda não autorizada.
+
+## Objetivo
+
+Pegar a classe de erro "credencial existia em algum estado do sistema antes de alguém perceber" **antes do commit**, não em auditoria manual posterior. Motivado por 3 incidentes reais do projeto (ver seção "Motivação").
+
+## Escopo
+
+`vc-secret-guard/` (crate Rust), `.vc-secret-guard.toml` (allowlist), comando `scan` (implementado); `watch`/`install-hooks`/`report`/`policy` são stubs planejados.
+
+## Fora do escopo
+
+Não modifica código, não remedia automaticamente (nunca chama API de revogação nem reescreve histórico git sozinho), não substitui o Aegis do `go-core` (fronteira explícita na seção 3), não roda em CI ainda (toolchain Rust não configurado no GitHub Actions).
+
+---
+
+## 1. Motivação — 3 incidentes reais
+
+O Vision Core já teve três incidentes reais de exposição de credencial nesta base de código — nenhum causou dano em produção porque foi pego a tempo, mas os dois primeiros foram pegos *depois* do fato consumado:
+
+1. **Token de acesso ao GitLab exposto na saída de `git remote -v`.** Descoberto por inspeção manual, não por ferramenta.
+2. **`agent_secret` vazando de volta via `GET /mission/result/:id` (endpoint público, sem autenticação).** `POST /mission/result` fazia `{...body, received_at: now()}` ao persistir — o campo `agent_secret` ficava gravado no resultado, lido de volta sem autenticação. Corrigido destruturando o campo antes de persistir. Pego por revisão de segurança manual.
+3. **Credencial de fallback pública aceita por `/api/auth/register`/`/api/auth/login` e enviada pelo bundle legado real.** Primeira ocorrência **detectada pela própria feature** — o dogfood da Fase 1 flagrou o mesmo literal em `vision-core-clean-runtime.js` (fork abandonado), achado que motivou a investigação que confirmou o mesmo literal no bundle real (`vision-core-bundle.js`). Nuance honesta: a heurística estruturada não bateu na forma exata usada no bundle real (`x.getItem(...) || 'literal'`, diferente de `credential_field`) — a confirmação foi por leitura manual, não por finding do scanner. Corrigido em backend + bundle.
+
+**Motivação real:** identificar essa classe de erro antes do commit/push/deploy, não depois — nenhuma camada existente hoje roda continuamente no filesystem local nem no momento exato de um `git commit`.
+
+---
+
+## 2. Arquitetura real do projeto
+
+```mermaid
+graph LR
+    DEV[Máquina do desenvolvedor] --> GUARD[vc-secret-guard<br/>Rust, local, CLI]
+    GUARD -->|scan| FILES[Diff staged / arquivos alterados /<br/>.env, auth.json, histórico de shell]
+    GUARD -->|evento JSON, futuro| EB[backend/server.js<br/>via endpoint novo, não implementado]
+    EB -.futuro.-> PASSSECURE[go-core PASS SECURE]
+
+    subgraph "Peças reais do stack"
+        EB2[backend/server.js — gateway/API web]
+        GC[go-core — safe core com Aegis]
+        FE[frontend Next — cockpit web]
+        GUARD
+    end
+```
 
 | Peça | Papel | Onde vive |
 |---|---|---|
-| **`backend/server.js`** | Gateway/API web — Node.js Express. Recebe HTTP, autentica, orquestra chamadas de LLM (Hermes multi-provider), serve o frontend Next, faz health-check + shell-out para o binário go-core (`resolveGoBinary()`, `server.js:2444`; `GET /api/go-core/health`, `server.js:1612-1613`). | AWS Elastic Beanstalk |
-| **`go-core/`** | **Vision Core Go Safe Core** — o "núcleo seguro" do produto, escrito em Go, compilado para binário único (Windows+Linux). Não é um serviço web — é invocado como processo pelo Node. | Binário local + CI |
-| **`frontend/vision-core-next.html` + `assets/vision-core-next-clean.{js,css}`** | Cockpit web (Vision Core Next) — chat, missões, GitHub PR, Software Factory. Consome `server.js` via HTTP. | Cloudflare Pages |
-| **`vc-secret-guard`** *(proposto, spec-only)* | Binário local mínimo em Rust, independente dos três acima — roda na máquina do desenvolvedor, fora do ciclo de request HTTP e fora do processo go-core. | CLI local + git hooks |
+| `backend/server.js` | Gateway/API web — recebe HTTP, autentica, orquestra LLM | AWS Elastic Beanstalk |
+| `go-core/` | Safe Core — Aegis (scanner/patcher/passgold/passsecure), invocado como subprocesso | Binário local + CI |
+| `frontend/vision-core-next.html` + assets | Cockpit web — chat, missões, GitHub PR, Software Factory | Cloudflare Pages |
+| `vc-secret-guard` *(este documento)* | Binário local mínimo Rust, independente dos três acima | CLI local + git hooks |
 
-### go-core em detalhe (Aegis)
+### go-core em detalhe (Aegis, para a fronteira da seção 3)
 
-"Aegis" é o nome guarda-chuva para o subsistema de segurança/remediação dentro do go-core — não é um arquivo único, é um conjunto de módulos com responsabilidades estritamente separadas e proibições explícitas documentadas no próprio código:
-
-- **`go-core/internal/scanner/scanner.go`** — mapeia arquivos e stack do projeto. Comentário no próprio arquivo: *"Responsabilidade: ler o projeto. NUNCA altera arquivos"* — **read-only por design**, não por convenção.
-- **`go-core/internal/security/secrets/secrets.go`** — "VISION AEGIS CORE ENTERPRISE — Secrets Guard": regras `AEGIS_SECRET_001`…`AEGIS_SECRET_010` (chave AWS, secret AWS, token GitHub `ghp_`/`gho_`/etc., PAT fine-grained, chave Stripe `sk_live_`/`sk_test_`, entre outras). **Já existe hoje** e roda como parte do scan de projeto do Scanner/Aegis — ver §3 para a fronteira exata entre isso e `vc-secret-guard`.
-- **`go-core/internal/patcher/`** — aplica patch de código, mas **supervisionado, nunca automático**: `supervised.go` — *"Patch multi-arquivo só é executado se ApplyMode='supervised'. 'automatic' não existe nesta versão."* Exige snapshot prévio e rollback disponível.
-- **`go-core/internal/passgold/`** e **`go-core/internal/passsecure/`** — avaliam um conjunto de gates (`Gates`/`SecureGates`, `Evaluate()`) e retornam decisão `GOLD`/`FAIL` em JSON estruturado, mapeada para exit code do processo (0=GOLD, 2=FAIL). Não são flags soltas — são contratos JSON com schema em `go-core/contracts/`.
-- **`go-core/internal/github/`** — fluxo de PR com **write-gate explícito**: `open_pr.go` só abre PR real quando `PRPlan.CanOpenPR=true` **e** `VISION_GITHUB_WRITE=1` (opt-in por variável de ambiente) **e** `GITHUB_TOKEN` presente **e** `DryRun=false`. Comentário no código: *"V7.3 NEVER publishes status... NEVER merges... NEVER pushes."* Comportamento padrão é dry-run.
-- **`go-core/internal/mcpserver/`** — servidor MCP **read-only por design**: *"Package mcpserver implements a read-only local MCP control plane... No real execution via MCP (no patch, commit, push, PR, deploy)."* Toda tool mutante retorna erro (`blockedToolError`). Nem o status de PASS GOLD pode ser sintetizado via MCP — só lido, se já existir.
-
-Ou seja: o go-core inteiro é desenhado em torno de **validação e remediação supervisionada de código dentro de um projeto**, sempre com gate humano ou gate de contrato antes de qualquer escrita real — nunca é um processo contínuo rodando em background na máquina do desenvolvedor, e não tem noção de "hook de git local" ou "watch de filesystem em tempo real".
+- `go-core/internal/scanner/scanner.go` — read-only por design ("Responsabilidade: ler o projeto. NUNCA altera arquivos").
+- `go-core/internal/security/secrets/secrets.go` — regras `AEGIS_SECRET_001`…`010` (chave AWS, secret AWS, token GitHub, PAT fine-grained, chave Stripe, etc.) — já existe hoje, roda como parte do scan de projeto do Scanner/Aegis.
+- `go-core/internal/patcher/` — supervisionado, nunca automático.
+- `go-core/internal/passgold/`, `passsecure/` — gates JSON com exit code.
+- `go-core/internal/github/` — write-gate de 4 condições.
+- `go-core/internal/mcpserver/` — read-only por design.
 
 ---
 
 ## 3. Por que Rust e não um módulo do go-core
 
-Esta é a decisão de arquitetura central deste documento — comparação honesta, sem viés para a conclusão que já foi tomada.
+### A favor de um módulo Go
 
-### A favor de um módulo Go dentro do go-core
-
-- **Reuso real e imediato:** o go-core já tem `PASS SECURE`, o CLI (`cmd/vision-core/main.go`), os contratos JSON (`go-core/contracts/`), e — mais relevante — **já tem detecção de secrets** (`AEGIS_SECRET_001`…`010`). Um módulo novo herdaria toda essa infraestrutura de graça: schema JSON já definido, exit codes já definidos, testes de regressão já existentes cobrindo o go-core inteiro.
-- **Um binário a menos para o usuário instalar, atualizar e confiar.** Hoje o produto já pede que o usuário rode `go-core`. Pedir um segundo binário (Rust) é fricção de instalação real, não hipotética.
-- **Um único "vocabulário" de segurança** (regras `AEGIS_SECRET_*`) em vez de dois conjuntos de regras que podem divergir com o tempo.
+- Reuso imediato de `PASS SECURE`, CLI, contratos JSON, detecção de secrets já existente (`AEGIS_SECRET_001`…`010`).
+- Um binário a menos para instalar/atualizar/confiar.
+- Um único vocabulário de segurança (`AEGIS_SECRET_*`).
 
 ### A favor de um binário Rust separado
 
-- **Watcher de máxima performance, sem GC, sem runtime overhead.** O caso de uso central de `vc-secret-guard` é rodar em modo `watch` continuamente na máquina do desenvolvedor, em cada save de arquivo — isso é fundamentalmente um problema de "ficar ligado o tempo todo consumindo o mínimo possível de CPU/memória residente", não um problema de "rodar uma vez, produzir um relatório, sair". Rust é a escolha correta para esse perfil de carga (binário nativo, sem coletor de lixo, footprint de memória previsível).
-- **Binário isolado, sem dependência do go-core estar presente, saudável, ou na versão certa.** `vc-secret-guard` precisa funcionar mesmo em: (a) uma máquina onde o go-core nunca foi instalado; (b) um repositório que não é o Vision Core (ver §5 — hooks de git são por definição instalados em *qualquer* repositório do usuário, não só neste); (c) o momento exato de um `git commit`, onde adicionar uma dependência de "o binário Go precisa responder rápido" é um ponto de falha a mais no caminho crítico do fluxo de trabalho do desenvolvedor. Acoplar isso ao go-core significa que um go-core quebrado, ausente, ou em atualização trava o commit de qualquer repositório onde o hook está instalado — inaceitável para uma ferramenta de hook de git.
-- **Memória segura a nível de sistema para um binário que roda com acesso de leitura amplo ao filesystem** (histórico de shell, `.env`, logs) — Rust dá essa garantia sem runtime managed, o que importa quando o binário roda continuamente e sem supervisão humana constante (modo `watch`).
-- **Diferencial de produto real, não hipotético:** completar o stack com uma peça em Rust — ao lado de Node (gateway) e Go (safe core) — é, em si, um sinal de maturidade de engenharia que o produto pode comunicar honestamente (3 linguagens escolhidas por adequação ao problema, não por moda).
+- Watcher de máxima performance, sem GC, sem runtime overhead — caso de uso central é rodar em modo `watch` continuamente a cada save de arquivo.
+- Binário isolado, sem dependência do `go-core` estar presente/saudável — hooks de git são instalados em *qualquer* repositório do usuário, não só o Vision Core; acoplar ao `go-core` significaria que um `go-core` quebrado trava o commit de qualquer repo com o hook instalado.
+- Memória segura para um binário que roda com acesso de leitura amplo ao filesystem (histórico de shell, `.env`).
+- Diferencial de produto: 3 linguagens (Node/Go/Rust) escolhidas por adequação ao problema, não por moda.
 
 ### Fronteira de responsabilidade (não há sobreposição)
 
-| | `vc-secret-guard` | go-core Aegis (`security/secrets`) |
+| | `vc-secret-guard` | go-core Aegis |
 |---|---|---|
-| **Quando roda** | Pré-commit, pré-push, ou continuamente (`watch`) — no momento em que o secret é escrito ou está prestes a entrar no histórico do git | Como parte de um scan/missão de validação de código já em andamento (Scanner → Aegis → PASS GOLD) |
-| **O que examina** | Diff staged, arquivos alterados no filesystem, caminhos sensíveis conhecidos (`.env`, `auth.json`, histórico de shell) | O projeto inteiro, como parte do contexto de uma missão de correção/remediação |
-| **O que faz com o achado** | Bloqueia o commit/push (fail-closed) ou alerta em tempo real (`watch`) | Reporta como finding de segurança dentro do relatório de missão; pode alimentar decisão de PASS GOLD/PASS SECURE |
-| **Modifica código?** | Nunca — detecção pura | O Aegis em si não modifica (`scanner` é read-only); a remediação, quando existe, passa pelo `patcher` supervisionado — processo totalmente separado |
-| **Depende de quê** | Nada além do próprio binário e do filesystem local | Todo o pipeline go-core (scanner, contratos, gates) |
+| Quando roda | Pré-commit/pré-push/`watch` — no momento em que o secret entra no histórico | Como parte de um scan/missão de validação já em andamento |
+| O que examina | Diff staged, arquivos alterados, caminhos sensíveis conhecidos | O projeto inteiro, como contexto de uma missão |
+| O que faz com o achado | Bloqueia o commit/push ou alerta em tempo real | Reporta como finding dentro do relatório de missão; alimenta PASS GOLD/PASS SECURE |
+| Modifica código? | Nunca — detecção pura | Não (scanner é read-only); remediação passa pelo `patcher` supervisionado, processo separado |
+| Depende de quê | Nada além do próprio binário e filesystem local | Todo o pipeline go-core |
 
-**A fronteira em uma frase:** `vc-secret-guard` decide "isso pode entrar no git?" no momento em que a decisão é tomada pelo desenvolvedor; go-core Aegis decide "esse código está seguro o suficiente para ser promovido?" como parte de uma missão de validação mais ampla, depois que o código já existe no repositório.
+**Fronteira em uma frase:** `vc-secret-guard` decide "isso pode entrar no git?" no momento em que o desenvolvedor decide; go-core Aegis decide "esse código está seguro pra ser promovido?" como parte de uma missão mais ampla, depois que o código já existe no repositório.
 
-**Ponte entre os dois (futura, não desta fase):** o evento JSON que `vc-secret-guard` emite a cada detecção (ver §7) é desenhado para poder alimentar dois consumidores diferentes sem acoplamento: (1) `server.js`, que pode expor isso como alerta visível no Next (Missions/Security); (2) futuramente, o próprio `PASS SECURE` do go-core, que poderia considerar "há um alerta recente do guard local não resolvido" como um sinal adicional — sem que `vc-secret-guard` precise saber que o go-core existe, e sem que o go-core precise rodar o binário Rust.
+**Ponte futura (não desta fase):** o evento JSON emitido em `watch` pode alimentar (1) `server.js` — alerta visível no Next (Missions/Security) — e (2) futuramente `PASS SECURE` do go-core, sem que uma peça precise saber que a outra existe.
 
----
-
-## 4. Por que Rust para o núcleo local (vs. as alternativas descartadas)
+## 4. Por que Rust (vs. alternativas descartadas)
 
 | Linguagem | Veredito | Motivo |
 |---|---|---|
-| **Rust** | ✅ Escolhida | Binário único, sem runtime, sem GC — essencial para um watcher que fica ligado o tempo todo com footprint mínimo. Memória segura por padrão (sem classe inteira de bugs de segurança que seriam irônicos numa ferramenta *de* segurança). Ecossistema maduro para regex de alta performance (`regex` crate, engine compilada, sem backtracking catastrófico) e para hooks de filesystem (`notify` crate). |
-| **Python / PowerShell** | ❌ Só para protótipo, nunca para o binário final | Rápido de escrever, mas exige runtime instalado na máquina do usuário (interpretador Python, ou PowerShell — que nem está disponível por padrão fora de Windows). Testar a lógica de detecção rapidamente com um script descartável é aceitável durante o design; entregar isso como o produto final não é — cada usuário precisaria de um interpretador compatível, e um script interpretado rodando em `watch` contínuo tem overhead de startup e de execução que um binário nativo não tem. |
-| **C++** | ❌ Descartado | Resolveria o problema de performance/binário único tão bem quanto Rust, mas sem as garantias de memória segura — para um binário que roda continuamente, sem supervisão, com acesso de leitura amplo ao filesystem do usuário (incluindo arquivos historicamente sensíveis como `.bash_history`), o custo de manutenção e o risco de uma classe de bug (buffer overflow, use-after-free) que Rust elimina por construção não se justifica quando Rust entrega o mesmo binário nativo sem esse risco. |
+| **Rust** | ✅ Escolhida | Binário único sem runtime/GC, memória segura por padrão, `regex`/`notify` maduros. |
+| Python/PowerShell | ❌ Só protótipo | Exige runtime instalado; overhead de startup/execução inaceitável em `watch` contínuo. |
+| C++ | ❌ Descartado | Resolveria performance igual, sem as garantias de memória segura que Rust dá de graça. |
 
 ---
 
-## 5. Comandos planejados
-
-Interface de CLI única, subcomandos:
+## 5. Comandos (planejados vs. implementados)
 
 ```
-vc-secret-guard scan [--path <dir>] [--format json|text] [--policy <file>]
-  Varre um diretório (default: cwd) uma vez, imprime achados, sai com
-  código != 0 se algo foi encontrado (fail-closed por padrão).
-
-vc-secret-guard watch [--path <dir>] [--policy <file>]
-  Roda continuamente, observando mudanças no filesystem (via notify),
-  emitindo evento JSON por linha (JSONL) a cada achado novo — stdout ou
-  arquivo, configurável.
-
-vc-secret-guard install-hooks [--path <repo>]
-  Instala pre-commit e pre-push no repositório git local apontado
-  (default: cwd). Idempotente — não duplica hook já instalado, detecta
-  e avisa se já existe um hook de outra ferramenta no mesmo arquivo.
-
-vc-secret-guard report [--since <duration>] [--format json|md]
-  Lê o histórico de eventos já emitidos (local, no disco do usuário) e
-  produz um relatório agregado — não faz novo scan.
-
-vc-secret-guard policy [show|validate|init]
-  Mostra a policy efetiva (regras + allowlist + caminhos monitorados),
-  valida um arquivo de policy antes de usar, ou gera um policy inicial
-  default para o usuário customizar.
+vc-secret-guard scan [--path <dir>] [--format json|text] [--policy <file>]   EXISTENTE (Fase 1)
+vc-secret-guard watch [--path <dir>] [--policy <file>]                       PLANEJADO — stub, código 2
+vc-secret-guard install-hooks [--path <repo>]                                PLANEJADO — stub, código 2
+vc-secret-guard report [--since <duration>] [--format json|md]               PLANEJADO — stub, código 2
+vc-secret-guard policy [show|validate|init]                                  PLANEJADO — stub, código 2
 ```
 
----
+Stubs imprimem "planejado" e saem com código 2 — nunca fingem sucesso.
 
-## 6. Detecção por categorias (não lista fixa de strings mágicas)
+## 6. Detecção por categorias (nunca lista fixa de strings)
 
-O guard classifica achados por **categoria**, cada uma com sua própria família de regras — nunca uma lista fixa de "strings mágicas" hardcoded que precisa ser editada a cada novo provedor de API lançado no mercado. Estrutura conceitual (nomes de categoria, não implementação):
-
-- **`provider_key_prefix`** — prefixos conhecidos de chave de provedor de API (ex.: prefixo de 3-4 caracteres seguido de `_` e um token alfanumérico de comprimento típico do provedor). Regra por categoria, não por provedor individual — nova entrada de provedor é uma linha na tabela de prefixos, não uma regra nova.
-- **`bearer_token`** — padrões de header/valor `Authorization: Bearer <token>` capturados fora de contexto de teste/exemplo (heurística de proximidade textual: `bearer`/`authorization` + token de alta entropia nas proximidades).
-- **`credential_field`** — campos nomeados que convencionalmente carregam segredo (`password`, `secret`, `token`, `api_key`, `private_key`, variantes de case/snake/camel) atribuídos a um literal de string não-vazio, não a uma referência de variável de ambiente (`process.env.X`, `os.Getenv`, `$env:X` não disparam — só literal hardcoded dispara).
-- **`high_entropy_blob`** — string contígua acima de um comprimento mínimo configurável com entropia de Shannon acima de um limiar configurável, como rede de segurança para formatos de credencial não cobertos pelas categorias acima. **Fase 1.5** (§10): só considera um token quando ele está em **posição de VALOR** — dentro de string literal, ou do lado direito de `=`/`:` — nunca um identificador solto (nome de função/variável/propriedade em posição de definição ou chamada nunca cai em nenhuma das duas formas); e penaliza (exclui) tokens sem dígito que têm *forma* de identificador de código (camelCase/PascalCase/snake_case composto por segmentos pronunciáveis) — um secret real quase sempre tem dígito em algum lugar, o que anula essa penalização imediatamente.
-- **`connection_string`** — URIs com credencial embutida no formato `scheme://user:pass@host` (a classe exata do incidente §1 do GitLab).
-- **`fallback_credential_literal`** *(Fase 1.5)* — literal string usado como valor de fallback/default em posição de credencial: `expr || 'lit'`, `expr ?? 'lit'`, ternário `cond ? x : 'lit'`, ou parâmetro/atribuição default `algoComPw = 'lit'`. Exige sinal de contexto de credencial (nome de variável/campo/função contendo `pw`/`pass`/`token`/`secret`/`key`/`auth`) — o sinal só conta se vier de **código**, nunca do conteúdo de uma string literal na mesma linha (achado de dogfood: `'PASS_GOLD'`/`'PASS'`, constantes de status do próprio produto, continham a substring "pass" e disparavam falso positivo antes dessa distinção). Motivada diretamente pelo INCIDENTE-3 (`docs/CURRENT_HANDOFF.md`) — a forma real do incidente (`localStorage.getItem(...) || 'literal'`) não batia em nenhuma heurística anterior a esta fase.
-
-**Regex ilustrativo por categoria** (forma genérica da regra, nunca o literal de um provedor real — respeita a regra anti-autoflagelo da §7; comprimentos/charsets abaixo são exemplo de shape, não cópia de nenhuma regra real do `AEGIS_SECRET_*` do go-core nem de nenhum provedor específico):
-
-| Categoria | Regex ilustrativo (shape, não literal real) | O que a forma captura |
+| Categoria | Forma (shape, não literal real) | Estado |
 |---|---|---|
-| `provider_key_prefix` | `\b[a-z]{2,5}-[A-Za-z0-9]{20,60}\b` | prefixo curto minúsculo + `-` + corpo alfanumérico longo — forma comum a vários provedores, sem citar nenhum prefixo real |
-| `bearer_token` | `(?i)authorization:\s*bearer\s+[A-Za-z0-9\-_.]{20,}` | header/valor Bearer com token de alta entropia logo em seguida |
-| `credential_field` | `(?i)\bapi_?key\b\s*[:=]\s*["'][^"'\s]{8,}["']` *(uma de várias — mesma forma se repete para `password`/`secret`/`token`/`private_key`)* | campo nomeado por convenção atribuído a literal de string, nunca a referência de variável de ambiente |
-| `high_entropy_blob` | *(não é regex — cálculo de entropia de Shannon sobre janelas de string ≥ comprimento mínimo configurável, restrita a posição de valor desde a Fase 1.5)* | qualquer blob de alta aleatoriedade não capturado pelas categorias acima |
-| `connection_string` | `\b[a-z]+://[^:\s/]+:[^@\s/]+@[^\s/]+` | `scheme://user:pass@host` — a classe exata do incidente do GitLab |
-| `fallback_credential_literal` | `\|\|\s*["'][^"'\s]{4,}["']` *(uma de 4 formas — `||`/`??`/ternário-else/default; exige sinal de contexto de credencial em código, não em string)* | literal usado como fallback de credencial — a forma exata do INCIDENTE-3 |
+| `provider_key_prefix` | prefixo curto conhecido (`sk`/`pk`/`ak`/`rk`/`gh`/`gl`/`xox`) + corpo alfanumérico longo | EXISTENTE, tabela curada desde Fase 1 (corrigiu falso-positivo genérico demais) |
+| `bearer_token` | `authorization: bearer <token de alta entropia>` | EXISTENTE |
+| `credential_field` | campo nomeado por convenção (`password`/`secret`/`token`/`api_key`/`private_key`) atribuído a literal, nunca a `process.env.X` | EXISTENTE |
+| `high_entropy_blob` | entropia de Shannon acima de limiar, **restrito a posição de valor** (string literal ou lado direito de `=`/`:`) desde a Fase 1.5, penalizado por forma de identificador de código | EXISTENTE, refinado na Fase 1.5 |
+| `connection_string` | `scheme://user:pass@host`, exclui interpolação de variável (`${VAR}`/`$VAR`/`%VAR%`) | EXISTENTE, corrigiu falso-positivo de CI na Fase 1 |
+| `fallback_credential_literal` | `expr \|\| 'lit'` / `expr ?? 'lit'` / ternário-else / parâmetro-default, exige sinal de contexto de credencial em **código**, nunca em conteúdo de string | EXISTENTE, adicionada na Fase 1.5 (motivada pelo Incidente 3) |
 
-**Allowlist configurável:** por caminho de arquivo (glob), por hash de linha (para permitir um falso positivo específico sem desabilitar a categoria inteira), e por categoria completa (para times que decidem não rodar `high_entropy_blob`, por exemplo, por causa de ruído). Vive num arquivo de policy versionável (`.vc-secret-guard.toml` ou equivalente), nunca hardcoded no binário.
+**Allowlist configurável** por caminho (glob, sem `**` recursivo — limitação consciente documentada), hash de linha, ou categoria completa — `.vc-secret-guard.toml`, nunca hardcoded no binário.
 
-**Caminhos monitorados por padrão** (além do diff staged no modo hook): `.env` e variantes (`.env.local`, `.env.*`), arquivos de credencial nomeados convencionalmente (`auth.json`, `credentials.json`, `secrets.yml`), histórico de shell (`.bash_history`, `.zsh_history`, `PSReadLine` history no Windows) quando dentro do escopo de varredura explícita do usuário — nunca varredura automática de fora do diretório apontado.
-
----
+**Caminhos monitorados por padrão:** `.env`/`.env.*`, `auth.json`/`credentials.json`/`secrets.yml`, histórico de shell — sempre dentro do escopo explícito apontado pelo usuário, nunca varredura automática de fora do diretório.
 
 ## 7. Regra anti-autoflagelo
 
-Nenhuma página pública, nenhuma seção de marketing, e este próprio documento **não devem conter um padrão que o próprio scanner flagraria** como um secret real — isso incluiria, ironicamente, o produto detectando a si mesmo como incidente na primeira vez que rodasse contra este repositório.
+Nenhuma página pública, nenhum material de marketing, e este documento não contêm um padrão que o próprio scanner flagraria como secret real — todo exemplo usa ofuscação explícita (`sk-***`, `AKIA****************`), nunca um valor sintaticamente capturável pela própria regex.
 
-Regra prática: todo exemplo de padrão detectado neste documento e em qualquer material público usa **ofuscação explícita** — `sk-***`, `ghp_***`, `AKIA****************` — nunca um valor que sintaticamente passaria pela própria regex de detecção (comprimento certo, charset certo, apenas com os caracteres reais substituídos por `*`). Os exemplos concretos de regra na §6 acima descrevem a *forma* da categoria (prefixo, comprimento, contexto), nunca colam um literal capturável.
+## 8. Integração futura (não implementada)
 
----
-
-## 8. Integração futura (não desta fase)
-
-1. **Git hooks fail-closed:** `pre-commit` e `pre-push`, instalados via `install-hooks`. Fail-closed por padrão — se o guard encontra algo, o commit/push é bloqueado (exit code != 0), exigindo ação explícita do usuário (remover o secret, ou allowlist explícita se for falso positivo confirmado). Sem flag de "ignorar e continuar" trivial — a saída difícil é editar o allowlist versionado, não um `--force` de uma linha, para deixar rastro de auditoria de por que um bloqueio foi contornado.
-2. **Evento JSON → `server.js`:** o mesmo formato de evento emitido em `watch` (JSONL) pode ser enviado, opt-in e configurável, para um endpoint novo em `server.js` (não implementado, não desenhado nesta fase) — habilitando um alerta visível no Vision Core Next (painel de Missions/Security), sem que o backend precise rodar o binário Rust — só recebe e exibe o evento que a máquina do usuário já gerou localmente.
-3. **`PASS SECURE` do go-core**, no futuro, poderia considerar "há evento não resolvido do guard local" como sinal adicional de risco — arquitetura que permite isso sem acoplamento direto (ver §3, "Ponte entre os dois").
-
-Nenhum desses três pontos é implementado nesta fase — documentados aqui só para que a decisão de design de hoje (formato do evento JSON, por exemplo) já considere esses consumidores futuros sem se comprometer com eles agora.
-
----
+1. Git hooks fail-closed (`pre-commit`/`pre-push`) — Fase 2.
+2. Evento JSON → endpoint novo em `server.js` → alerta visível no Next — Fase 4.
+3. `PASS SECURE` do go-core considerando "evento não resolvido do guard local" como sinal adicional — Fase 5, pode concluir "não vale o acoplamento" e isso é saída válida.
 
 ## 9. Limites de segurança (obrigatórios, não negociáveis)
 
-1. **O guard NUNCA transmite o valor do secret detectado — em nenhum evento, em nenhum log, em nenhum lugar.** Todo evento/relatório carrega apenas: categoria da regra, caminho do arquivo, número da linha, e opcionalmente um hash truncado do valor (útil só para deduplicação/allowlist por hash — nunca reversível ao valor original). Isso vale para stdout, para o JSONL de `watch`, para o `report`, e para a futura integração com `server.js` (§8.2) — o secret real nunca sai da máquina onde foi encontrado.
-2. **Modo de emergência = orientar rotação/revogação, nunca automatizar isso.** Se o guard encontra um secret que já foi commitado (não só staged), a ação do produto é **instruir** o usuário sobre o próximo passo correto (revogar a credencial no provedor, reescrever histórico do git se necessário) — nunca chamar automaticamente uma API de revogação em nome do usuário, nunca reescrever histórico de git sozinho. Automação de remediação é uma decisão de produto separada, fora do escopo desta spec e desta fase.
-3. **Nenhuma telemetria de conteúdo por padrão.** Contagens agregadas (quantos achados, de qual categoria) podem eventualmente ser úteis para métricas de produto, mas isso é uma decisão explícita e opt-in futura — não parte do design padrão.
+1. **O guard NUNCA transmite o valor do secret detectado** — categoria, caminho, linha, hash truncado opcional (só para dedup/allowlist, nunca reversível).
+2. **Modo de emergência = orientar rotação/revogação, nunca automatizar** — nunca chama API de revogação nem reescreve histórico git sozinho.
+3. **Nenhuma telemetria de conteúdo por padrão** — contagens agregadas são decisão futura opt-in, não parte do design padrão.
 
 ---
 
-## 10. Critérios de aceite e plano por fases
+## Plano de fases e critérios de aceite
 
-Cada fase tem gate próprio — nenhuma fase começa sem a anterior estar fechada e aprovada.
+| Fase | Escopo | Gate de saída | Estado |
+|---|---|---|---|
+| 0 — Spec | Documento revisado e aprovado | Aprovação explícita registrada em HANDOFF | ✅ FECHADA |
+| 1 — Protótipo local | Binário Rust mínimo, só `scan`, categorias da seção 6, allowlist funcional | Zero falso-positivo no repo real pós-allowlist; zero falso-negativo em fixtures sintéticas das 5 categorias originais | ✅ FECHADA (2026-07-09) — 43/43 testes, dogfood 25657→1408 achados, 2 bugs de regex corrigidos |
+| 1.5 — Refinamento de detecção | Categoria `fallback_credential_literal` (motivada pelo Incidente 3) + `high_entropy_blob` restrito a posição de valor e penalizado por forma de identificador | Fixtures da Fase 1 continuam detectando; teste negativo explícito; dogfood honesto reportado | ✅ FECHADA (2026-07-09) — 57/57 testes, `high_entropy_blob` 1410→53 no dogfood (meta <50 não batida honestamente, reportado sem forçar supressão) |
+| 2 — Hooks locais | `install-hooks`, `pre-commit`/`pre-push` fail-closed, testado contra repo git descartável | Hook bloqueia commit com secret sintético; não bloqueia commit limpo; timeout definido e testado | PLANEJADO — não iniciada, exige nova aprovação explícita |
+| 3 — `watch` + evento JSON | Modo contínuo, JSONL sem valor de secret | Formato validado contra consumidor de teste; footprint CPU/memória medido | PLANEJADO |
+| 4 — Integração `server.js`/Next | Endpoint novo (opt-in), alerta visível no Next | Anti-stub real, degradação graciosa se o guard não estiver instalado | PLANEJADO — requer decisão explícita antes de começar |
+| 5 — Ponte PASS SECURE | Avaliação de acoplamento com go-core | Decisão de arquitetura documentada antes de qualquer código; "não vale o acoplamento" é saída válida | PLANEJADO |
 
-| Fase | Escopo | Gate de saída |
-|---|---|---|
-| **0 — Spec** *(esta fase)* | Este documento, revisado e aprovado pelo dono do produto. Zero código. | Aprovação explícita registrada em `docs/CURRENT_HANDOFF.md`. |
-| **1 — Protótipo local** | Binário Rust mínimo, só `scan` (sem `watch`, sem hooks). Rodando contra o próprio Vision Core localmente, nunca publicado, nunca em CI. Categorias da §6 implementadas, allowlist funcional. | Zero falso-positivo contra o próprio repo Vision Core depois de allowlist configurada; zero falso-negativo contra um conjunto de casos de teste sintéticos (secrets fake, nunca reais) cobrindo as 5 categorias. |
-| **1.5 — Refinamento de detecção** *(fechada 2026-07-09)* | Nascida de evidência real (INCIDENTE-3): categoria nova `fallback_credential_literal` (literal-como-fallback de credencial) + `high_entropy_blob` restrito a posição de valor e penalizado por forma de identificador de código. Sem hooks, sem `watch` — só refinamento das regras da Fase 1. | Todas as fixtures da Fase 1 continuam detectando (nenhum recuo); teste negativo explícito (fallback sem contexto de credencial não flagra); `high_entropy_blob` no dogfood do repo real, mesma allowlist (zero entrada nova): 1410 → 53 (96,2%) — meta de <50 não batida honestamente (relatado, não forçado; ver `docs/CURRENT_HANDOFF.md` para o breakdown exato dos 53 restantes). |
-| **2 — Hooks locais** | `install-hooks`, `pre-commit`/`pre-push` fail-closed, testado contra um repositório git de teste descartável (nunca o Vision Core real como cobaia de um hook que ainda pode ter bug). | Hook bloqueia commit de teste com secret sintético; hook não bloqueia commit limpo; hook não trava indefinidamente (timeout definido e testado). |
-| **3 — `watch` + evento JSON** | Modo contínuo, emissão de evento JSONL no formato definido na §9.1 (sem valor de secret, testado explicitamente). | Formato de evento validado contra um consumidor de teste (nunca `server.js` real nesta fase); footprint de CPU/memória em idle medido e documentado. |
-| **4 — Integração `server.js`/Next** | Endpoint novo em `server.js` para receber o evento (opt-in), alerta visível no Next. **Requer decisão explícita do usuário antes de começar** — mexe no backend, fora do padrão "zero-touch backend" das fases anteriores. | Endpoint com anti-stub real, alerta visível testado, sem alteração de comportamento quando o guard não está instalado/rodando (degradação graciosa). |
-| **5 — Ponte `PASS SECURE`** | Avaliação (não implementação garantida) de como um evento do guard poderia influenciar `PASS SECURE` do go-core. | Decisão de arquitetura documentada antes de qualquer código — pode concluir "não vale o acoplamento" e isso é uma saída válida. |
+**Nenhuma fase além da 1.5 está autorizada a começar.** Cada avanço exige autorização explícita registrada em sessão futura, protocolo de revezamento padrão (`CLAUDE.md`).
 
-**Nenhuma fase além da 0 está autorizada a começar por este documento.** Cada avanço de fase exige autorização explícita registrada em sessão futura, seguindo o mesmo protocolo de revezamento entre agentes já estabelecido para o resto do projeto (`CLAUDE.md`, seção "PROTOCOLO DE REVEZAMENTO ENTRE AGENTES").
+---
+
+## Achados reais do dogfood — não corrigidos, decisão do usuário pendente
+
+Nenhum destes foi suprimido/allowlistado/corrigido — permanecem visíveis no scan por decisão deliberada:
+
+1. **`frontend/assets/vision-core-clean-runtime.js:6301,6323`** — senha hardcoded (fork legado abandonado, já público antes desta sessão, comportamento pré-existente).
+2. **`backend/provider-vault-crypto.js:36`** — `DEV_FALLBACK_SECRET` hardcoded, já documentado em `VISION_CORE_BACKEND_SPEC.md`.
+3. **`backend/data/users.json` commitado no git** com `password_hash` real de uma conta de teste — resíduo local, não dado de produção, decisão de limpeza pendente.
+4. **`backend/.env` (gitignored) contém segredos reais locais** — confirma que a detecção funciona contra segredos reais, não só fixtures.
+5. **`SESSION_SECRET` sem valor caindo em fallback hardcoded** — este achado motivou o INCIDENTE-4, já corrigido (fail-closed) — ver `VISION_CORE_ARCHITECTURE.md`.
+
+---
+
+## Checklist de aceite deste documento
+
+- [x] Motivação com 3 incidentes reais e rastreáveis
+- [x] Fronteira explícita com go-core Aegis (sem sobreposição)
+- [x] Categorias de detecção descritas por forma, nunca lista fixa
+- [x] Limites de segurança não-negociáveis
+- [x] Plano de fases com estado real de cada uma
+- [x] Achados reais do dogfood registrados, não escondidos
+
+## Pendências
+
+- CI sem toolchain Rust — `cargo test` roda só localmente.
+- `high_entropy_blob`: 53 achados restantes no dogfood (meta era <50) — breakdown completo em `docs/CURRENT_HANDOFF.md`, maioria é limitação consciente do allowlist (sem glob `**` recursivo).
+- Fase 2 (hooks) sem data — aguardando aprovação.
+
+## Próximos passos
+
+Ver `ROADMAP.md`, Fase 4 (Secret Guard).
+
+## Histórico
+
+| Data | Mudança |
+|---|---|
+| 2026-07-09 | v1 — spec-only, Fase 0. |
+| 2026-07-09 | Fase 1 (protótipo local) e Fase 1.5 (refinamento) fechadas na mesma data. |
+| 2026-07-09 | v2 (este arquivo) — consolidado no template da série de 10 documentos. Nenhum conteúdo técnico da v1 removido. |
+
+## Controle de versão
+
+**2.0.0** — 2026-07-09

@@ -1,0 +1,187 @@
+# API CONTRACT — Vision Core Backend
+
+**Parte da série de arquitetura — leia `MASTER_SPEC.md` e `VISION_CORE_BACKEND_SPEC.md` antes deste.**
+
+> Versão: 1.0.0 · Criado: 2026-07-09
+> Fonte: leitura direta de `backend/server.js` (rotas reais) e `frontend/assets/vision-core-next-clean.js` (contratos confirmados por uso real). `docs/PARITY_AUDIT.md` confirma ~133 rotas reais em `server.js`, das quais ~25 são chamadas pelo Next hoje.
+
+---
+
+## Resumo
+
+Contrato dos endpoints reais do backend (`backend/server.js`), único processo Express. Envelope de resposta uniforme: `sendOk(res, payload)` → `{ok:true, ...payload, time: ISOString}`. Erro: `{ok:false, error:'code', message?, time}`, status HTTP correspondente.
+
+## Objetivo
+
+Documentar o formato real de request/response dos endpoints que o Vision Core Next consome, incluindo achados de contrato que já causaram bug real quando assumidos incorretamente — para que nenhum agente futuro repita o mesmo erro.
+
+## Escopo
+
+Os ~25 endpoints ativamente consumidos pelo Next + os endpoints de auth/billing que compõem o restante da API pública. **Não é exaustivo** — `server.js` tem ~133 rotas reais; o restante (rotas usadas só pelo frontend legado, scanner/hermes/obsidian/tools diversos) não está listado aqui, `grep` direto em `server.js` é a fonte de verdade para qualquer rota não citada.
+
+## Fora do escopo
+
+Endpoints da Camada 2 (governança interna) — não são HTTP, são scripts/CLI (`pi-harness.mjs`, `tools/real-validation/*`).
+
+---
+
+## Convenção de versionamento e compatibilidade
+
+**Não há versionamento de URL** (`/api/v1/...`) — um único namespace `/api/*`. Compatibilidade é mantida por convenção, não por contrato formal: mudar o formato de resposta de um endpoint já consumido pelo Next é tratado como mudança de contrato que exige atualizar o frontend na mesma sessão (nunca deploy de backend que quebra o Next em produção sem coordenação). Endpoint desconhecido → catch-all `app.all('/api/*', ...)` retorna `404 {ok:false, ...}`, nunca 500 silencioso.
+
+---
+
+## Auth
+
+| Método | Rota | Payload | Resposta | Erros conhecidos |
+|---|---|---|---|---|
+| POST | `/api/auth/register` | `{email, password?, name?}` | `{user, token, token_type:'session', persisted:true, generated_password?, anti_stub}` | `400 valid_email_required` · `400 fallback_credential_rejected` (INCIDENTE-3) · `409 email_already_registered` |
+| POST | `/api/auth/login` | `{email, password}` | `{user, token, token_type:'session', persisted:true, anti_stub}` | `400 fallback_credential_rejected` · `401 invalid_credentials` |
+| GET | `/api/auth/oauth/google` \| `/github` | — | redirect | — |
+| GET | `/api/auth/oauth/google/callback` \| `/github/callback` | query `code` | redirect com `#oauth-success&token=...` ou `#oauth-error=...` | — |
+| GET | `/api/auth/me` | Bearer/cookie | dados do usuário | `401` se sessão inválida |
+| DELETE | `/api/auth/me` | Bearer | `{message:'account_deleted', email_deleted, anti_stub}` | `401 unauthorized` — **ação irreversível (LGPD)** |
+| POST | `/api/auth/logout` | Bearer | revoga o JTI da sessão | — |
+| GET | `/api/auth/status` | — | status de auth | — |
+
+**Achado de contrato crítico (INCIDENTE-4):** `signSession()`/`verifySession()` exigem `SESSION_SECRET` real no ambiente — sem ele, o processo **recusa subir** (não há mais fallback público). Rotacionar o segredo invalida todas as sessões ativas.
+
+## Mission (Camada 1, produto)
+
+| Método | Rota | Payload | Resposta | Notas |
+|---|---|---|---|---|
+| POST | `/api/copilot` | — | — | `checkMissionQuota` (5/mês FREE) |
+| POST | `/api/run-live` | — | — | `checkMissionQuota` |
+| POST | `/api/chat` | `{message, mode, model, display_input}` | `{answer}` | Sem quota. `mode:'fix'` exige `[Arquivo: ...]` na mensagem (gate anti-alucinação, `BLOCKED_INPUT` sem isso) |
+| POST | `/api/chat/apply-patch` | `{file_content, file_path, fix_type, patch, diagnosis}` | `{diff_preview, ...}` | Aplica em memória, nunca escreve em disco sozinho |
+| GET | `/api/mission/quota` | — | `{plan, remaining}` ou `{unlimited:true}` | — |
+| GET/POST | `/api/mission/timeline` | — | `{entries:[...]}` | — |
+
+## Agent (Vision Agent Local, pareamento real)
+
+| Método | Rota | Payload | Resposta | Notas |
+|---|---|---|---|---|
+| POST | `/api/agent/register` | — | `{agent_id, agent_secret, status:'registered', anti_stub}` | Gera par novo a cada chamada |
+| POST | `/api/agent/heartbeat` | `{agent_id?}` | `{status:'online', agent_id, anti_stub}` | — |
+| GET | `/api/agent/status` | — | `{connected, last_seen_ms_ago, agent_id, mode:'connected'\|'download_ready', anti_stub}` | `connected=true` se heartbeat/poll nos últimos 15s |
+| POST | `/api/agent/mission/queue` | `{type, target_path?, agent_id?, agent_secret?}` | **`{ok, mission_id, ...}`** — não `job_id` | `sf_dry_run_real` exige `target_path` (400 sem isso). `apply_patch`/`apply_patch_multi` exigem `agent_id`+`agent_secret` pareados (401 `agent_pairing_required` sem isso) |
+| GET | `/api/agent/mission/pending` | — | fila filtrada por `agent_id` (`shiftForAgent`) | Exige `agent_secret` se `agent_id` reivindicado |
+| POST | `/api/agent/mission/result` | `{agent_id, agent_secret?, ...}` | — | `agent_secret` **nunca** persistido junto (corrigido pós-vazamento) |
+| GET | `/api/agent/mission/result/:id` | — | resultado ou `404 result_not_found` | **404 aqui NÃO é erro — é "ainda rodando"**, distinto de erro real de rede/5xx |
+
+## Métricas / Observabilidade
+
+| Método | Rota | Resposta | Notas |
+|---|---|---|---|
+| GET | `/api/metrics/agents` | `{agents:[{name, status, cost_usd, note?, active_providers?}], active_llm_providers, anti_stub}` | `cost_usd` sempre `null` hoje (nunca computado); `status` ∈ `ok`/`binary_not_found`/`PENDING_EVIDENCE`/`no_provider` |
+| GET | `/api/metrics/summary` | `{runtime:{cpu,memory,heap,uptime_s,node_version,...}}` | — |
+| GET | `/api/metrics/memory` | dados do memory layer (§72/§107) | — |
+| GET | `/api/dora-metrics` | `{deployment_frequency, lead_time, mttr, change_failure_rate, pass_gold_count_30d, total_pass_gold, data_source, anti_stub}` | Strings "sem dados X" **já vêm prontas do backend** — frontend não precisa re-derivar vazio |
+
+## Vault
+
+| Método | Rota | Payload | Resposta | Notas |
+|---|---|---|---|---|
+| POST | `/api/vault/snapshot` | `{label?, project?, triggered_by?}` | `{snapshot_id, created_at, label, anti_stub}` | — |
+| GET | `/api/vault/snapshots` | — | `{snapshots:[...]}` | — |
+| POST | `/api/vault/rollback/:snapshotId` | — | — | **Irreversível** — sobrescreve o estado atual |
+
+## GitHub
+
+| Método | Rota | Payload | Resposta | Notas |
+|---|---|---|---|---|
+| GET | `/api/github/status` | — | `{configured, policy}` | — |
+| POST | `/api/github/create-pr` | `{repo, branch, title, body?}` | `{pr_url, ...}` | **Irreversível** — cria branch+commit+PR real |
+
+## Software Factory
+
+Ver `SOFTWARE_FACTORY_SPEC.md` para o fluxo completo. Contrato resumido:
+
+| Método | Rota | Resposta | Achado de contrato |
+|---|---|---|---|
+| POST | `/api/sf/mission-composer` \| `deploy-blueprint` \| `worker-handoff` \| `context-snapshot` \| `patch-validator` \| `risk-assessor` \| `rollback-planner` \| `gold-gate` | `{job_id}` | **Sempre assíncrono** — nunca `{content}` direto |
+| GET | `/api/sf/job/:id` | `{status, result (string pura), provider}` | `result` já vem **desembrulhado** (`job.result.result`) — nunca objeto aninhado. `files` só existe pra `project-files`, nunca pros 8 módulos acima |
+| POST | `/api/sf/fetch-url` | `{ok, content, url}` | **Único endpoint SF síncrono, sem job_id** |
+| POST | `/api/sf/project-files` | `{job_id}` (assíncrono, payload/resposta diferentes — `{description, accumulated_context, step1_analysis, step2_blueprint}`) | resultado em `data.files[]`, não `data.result` |
+| POST | `/api/sf/generate-zip` | **Resposta binária ZIP**, síncrono | `Content-Type: application/zip` — frontend precisa `response.blob()`, não JSON |
+
+## Security / Tools
+
+| Método | Rota | Resposta | Notas |
+|---|---|---|---|
+| POST | `/api/security/apply-fix` | escreve arquivo real + backup `.bak-*` | **Irreversível** (mitigado por backup automático) |
+| GET/POST | `/api/security/history` | histórico de scans | — |
+| GET | `/api/tools/marketplace` | lista estática de ferramentas | — |
+
+## Providers (AI Vault)
+
+| Método | Rota | Notas |
+|---|---|---|
+| GET | `/api/providers`, `/api/providers/list` | Nunca retorna a chave completa — `maskProviderKey()` |
+| POST | `/api/providers/save`, `/test`, `/delete` | Cifrado AES-256-GCM em repouso |
+
+## Billing
+
+| Método | Rota | Auth | Notas |
+|---|---|---|---|
+| POST | `/api/billing/create-checkout-session`, `/portal`, `/cancel`, `/reactivate` | `requireVisionAuth` | Stripe real |
+| GET | `/api/billing/customer`, `/subscription`, `/card` | `requireVisionAuth` | — |
+| GET | `/api/billing/status`, `/api/billing/plans` | — | — |
+| POST | `/api/billing/hotmart-webhook` | HMAC obrigatório | — |
+| GET | `/api/usage/quota` | — | plano lido do banco, nunca do payload do token |
+
+## SSO / Enterprise
+
+| Método | Rota | Notas |
+|---|---|---|
+| GET/POST | `/api/sso/domains` | admin only |
+| DELETE | `/api/sso/domains/:domain` | admin only |
+
+## Saúde / diagnóstico
+
+| Método | Rota | Resposta |
+|---|---|---|
+| GET | `/api/health` | `{ok, version, contracts:{...}}` — `version` é string hardcoded desatualizada (cosmético) |
+| GET | `/api/readiness` | status de prontidão |
+| GET | `/api/go-core/health` | status do binário go-core |
+
+---
+
+## Padrão de erro / fallback
+
+| Situação | Resposta |
+|---|---|
+| Rota desconhecida | `404 {ok:false, error, time}` via catch-all `/api/*` |
+| Validação de campo falhou | `400 {ok:false, error:'code_especifico', time}` |
+| Não autenticado | `401 {ok:false, error:'unauthorized'|'not_authenticated', time}` |
+| Conflito (ex.: email já existe) | `409 {ok:false, error, time}` |
+| Erro interno | `500 {ok:false, error, message?, time}` |
+| Endpoint indisponível por falta de config | `503 {ok:false, available:false, mode:'adapter_not_configured', config_required:[...], time}` |
+
+**Nunca** um endpoint novo pode retornar `200 {ok:true}` sem `anti_stub:true` — convenção obrigatória da casa para nunca ter um endpoint indistinguível de um stub esquecido.
+
+---
+
+## Checklist de aceite
+
+- [x] Contratos com achados reais documentados (job_id vs mission_id, 404-como-pending, result desembrulhado)
+- [x] Ações irreversíveis marcadas explicitamente
+- [x] Não inventa nenhum endpoint — todos verificados por leitura ou por uso real confirmado no frontend
+
+## Pendências
+
+- Catálogo completo das ~108 rotas não listadas aqui (usadas só pelo legado ou por tooling interno) — não priorizado nesta consolidação, `grep` em `server.js` é a fonte viva.
+
+## Próximos passos
+
+`docs/GIT-PROVIDER-SPEC.md` propõe endpoints genéricos `/api/git/status`/`/api/git/pr` (PLANEJADO) para suportar múltiplos providers Git sem duplicar contrato por provider.
+
+## Histórico
+
+| Data | Mudança |
+|---|---|
+| 2026-07-09 | Criação — primeiro contrato de API consolidado. |
+
+## Controle de versão
+
+**1.0.0** — 2026-07-09
