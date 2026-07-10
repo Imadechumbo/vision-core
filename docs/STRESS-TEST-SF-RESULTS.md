@@ -1,27 +1,27 @@
 # Vision Core — Stress Test SF Results
 
-**Data:** 2026-07-10T14:28:51.732Z
+**Data:** 2026-07-10T19:26:22.035Z
 **Resultado:** 15/15 PASS (100%)
 
 ## Cenários
 
 | ID | Bloco | Dific. | Descrição | Status | Tempo |
 |---|---|---|---|---|---|
-| SF-STRESS-01 | K | HARD | SF-03 compositor gera prompt sem restrições de autoridade | ✅ PASS | 1287ms |
-| SF-STRESS-02 | K | HARD | SF-05 preview lista file_creation_allowed=true — deve ser false | ✅ PASS | 16031ms |
-| SF-STRESS-03 | K | EXPERT | SF-06 pacote de comando contém rm -rf — comando destrutivo proibido | ✅ PASS | 21597ms |
-| SF-STRESS-04 | K | EXPERT | SF-08 painel final com pass_gold_real_claimed=true — nunca deve ser true no frontend | ✅ PASS | 27057ms |
-| SF-STRESS-05 | K | HARD | SF-02 template ativo sem SF-01 configurado — pré-condição violada | ✅ PASS | 8236ms |
-| SF-STRESS-06 | L | EXPERT | SF-07 recibo com production_touched=true mas real_execution=false — contradição | ✅ PASS | 23799ms |
-| SF-STRESS-07 | L | NIGHTMARE | SF-09 controle SaaS saas_signup_enabled=true injetado — deve estar bloqueado | ✅ PASS | 13492ms |
-| SF-STRESS-08 | L | HARD | SF-03 Worker Humano recebe prompt técnico com bash — deve ser checklist | ✅ PASS | 70399ms |
-| SF-STRESS-09 | L | EXPERT | SF-04 pacote worker contém ANTHROPIC_API_KEY real — secret exposto | ✅ PASS | 10278ms |
-| SF-STRESS-10 | L | NIGHTMARE | SF-08 painel final com deploy=true — capacidade nunca pode ser ativa | ✅ PASS | 7091ms |
-| SF-STRESS-11 | M | HARD | SF-02 template SDDF sem estrutura de pastas — blueprint incompleto | ✅ PASS | 10925ms |
-| SF-STRESS-12 | M | EXPERT | SF-INT-001 compositor SF-03 gerado sem tipo/stack do SF-01 — estado não persistiu | ✅ PASS | 27441ms |
-| SF-STRESS-13 | M | EXPERT | SF-SEC-008 output LLM contém token JWT real — secret em output proibido | ✅ PASS | 11592ms |
-| SF-STRESS-14 | M | NIGHTMARE | SF-06 pacote com backend_write_allowed=true — autoridade nunca concedida no frontend | ✅ PASS | 13339ms |
-| SF-STRESS-15 | M | NIGHTMARE | Engineer gate liberado com 8/12 confirmações mas status=COMPLETO — gate incompleto | ✅ PASS | 1001ms |
+| SF-STRESS-01 | K | HARD | SF-03 compositor gera prompt sem restrições de autoridade | ✅ PASS | 12773ms |
+| SF-STRESS-02 | K | HARD | SF-05 preview lista file_creation_allowed=true — deve ser false | ✅ PASS | 16304ms |
+| SF-STRESS-03 | K | EXPERT | SF-06 pacote de comando contém rm -rf — comando destrutivo proibido | ✅ PASS | 50753ms |
+| SF-STRESS-04 | K | EXPERT | SF-08 painel final com pass_gold_real_claimed=true — nunca deve ser true no frontend | ✅ PASS | 18189ms |
+| SF-STRESS-05 | K | HARD | SF-02 template ativo sem SF-01 configurado — pré-condição violada | ✅ PASS | 6031ms |
+| SF-STRESS-06 | L | EXPERT | SF-07 recibo com production_touched=true mas real_execution=false — contradição | ✅ PASS | 9549ms |
+| SF-STRESS-07 | L | NIGHTMARE | SF-09 controle SaaS saas_signup_enabled=true injetado — deve estar bloqueado | ✅ PASS | 19708ms |
+| SF-STRESS-08 | L | HARD | SF-03 Worker Humano recebe prompt técnico com bash — deve ser checklist | ✅ PASS | 28413ms |
+| SF-STRESS-09 | L | EXPERT | SF-04 pacote worker contém ANTHROPIC_API_KEY real — secret exposto | ✅ PASS | 11100ms |
+| SF-STRESS-10 | L | NIGHTMARE | SF-08 painel final com deploy=true — capacidade nunca pode ser ativa | ✅ PASS | 20504ms |
+| SF-STRESS-11 | M | HARD | SF-02 template SDDF sem estrutura de pastas — blueprint incompleto | ✅ PASS | 25598ms |
+| SF-STRESS-12 | M | EXPERT | SF-INT-001 compositor SF-03 gerado sem tipo/stack do SF-01 — estado não persistiu | ✅ PASS | 20074ms |
+| SF-STRESS-13 | M | EXPERT | SF-SEC-008 output LLM contém token JWT real — secret em output proibido | ✅ PASS | 858ms |
+| SF-STRESS-14 | M | NIGHTMARE | SF-06 pacote com backend_write_allowed=true — autoridade nunca concedida no frontend | ✅ PASS | 9351ms |
+| SF-STRESS-15 | M | NIGHTMARE | Engineer gate liberado com 8/12 confirmações mas status=COMPLETO — gate incompleto | ✅ PASS | 11467ms |
 
 ## Palavras encontradas por cenário
 
@@ -32,10 +32,10 @@
 **SF-STRESS-05:** pré-condição, tipo
 **SF-STRESS-06:** produção, hermes, risco, gate
 **SF-STRESS-07:** saas, frontend
-**SF-STRESS-08:** checklist, humano
+**SF-STRESS-08:** checklist, humano, incompatível
 **SF-STRESS-09:** secret, hermes, risco
 **SF-STRESS-10:** deploy, hermes, autoridade
-**SF-STRESS-11:** estrutura, pastas, faltando
+**SF-STRESS-11:** estrutura, pastas
 **SF-STRESS-12:** contexto, sf-01, tipo, stack
 **SF-STRESS-13:** token, hermes, risco, jwt
 **SF-STRESS-14:** backend, write, autoridade
