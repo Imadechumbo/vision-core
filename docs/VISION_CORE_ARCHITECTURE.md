@@ -189,7 +189,7 @@ vision-core/
 
 ## Separação frontend/backend
 
-- **Frontend legado** (`index.html`): estático, sem chamadas de backend "por design" segundo `README.md` — mas na prática o bundle real (`vision-core-bundle.js`) faz chamadas reais a `/api/auth/*`, `/api/chat`, etc. (confirmado no INCIDENTE-3). Servido via Cloudflare Pages.
+- **Frontend legado** (`index.html`): estático, mas **não** livre de chamadas de backend — o bundle real (`vision-core-bundle.js`) faz chamadas reais a `/api/auth/*`, `/api/chat`, etc. (confirmado no INCIDENTE-3). `README.md` afirmava "no backend fetch calls by design" — corrigido em 2026-07-10 (ETAPA 4 de alinhamento README↔arquitetura). Servido via Cloudflare Pages.
 - **Frontend Next** (`vision-core-next.html`): também estático (Cloudflare Pages), mas chama o backend real via `API_BASE_URL` fixo (o Worker gateway) — nunca relativo à própria origem. Ver `VISION_CORE_NEXT_FRONTEND_SPEC.md`.
 - **Backend** (`backend/server.js`): único processo Express, todas as rotas `/api/*`, roda no AWS Elastic Beanstalk. Chama `go-core` via `resolveGoBinary()` como subprocesso para operações de segurança/scanner.
 - **Worker Gateway**: proxy Cloudflare Worker entre os frontends e o EB — existe por causa de CORS/roteamento de domínio, não adiciona lógica de negócio própria.

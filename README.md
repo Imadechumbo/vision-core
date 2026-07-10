@@ -2,13 +2,13 @@
 
 > **REGRA ABSOLUTA: SEM PASS GOLD REAL → não promove, não libera, não marca stable.**
 
-Full-stack AI mission execution platform. Go safe core + Node.js backend + Cloudflare frontend + Cloudflare Worker + Electron desktop agent. Governed by declarative PASS GOLD gates at every layer.
+Full-stack AI mission execution platform. Node.js backend (the real HTTP server) + Go safe core (a subprocess it invokes for scanning/patching/validation/security) + Cloudflare frontend + Cloudflare Worker + Electron desktop agent. Governed by declarative PASS GOLD gates at every layer.
 
----
+> **Correção de arquitetura (2026-07-10):** este README descrevia o Go safe core como se fosse o servidor principal do produto. Não é — `backend/server.js` (Node.js/Express) é o único processo que recebe HTTP e serve todas as rotas `/api/*`; `go-core` é um binário Go separado, invocado por `server.js` como subprocesso para operações específicas (scanner, patcher, validator, security), não um servidor autônomo. Ver `docs/VISION_CORE_BACKEND_SPEC.md` para o detalhe completo (parte da série de arquitetura em `docs/MASTER_SPEC.md`).
 
 ## What is Vision Core?
 
-Vision Core is a supervised software mission engine. It accepts natural-language mission inputs, runs them through a multi-stage Go safe core (scanner → hermes → fileops → snapshot → patcher → validator → rollback → security → passsecure → passgold → memory), and produces a PASS GOLD evidence receipt. No promotion happens without a verified `pass_gold: true` receipt.
+Vision Core is a supervised software mission engine. `backend/server.js` (Node.js/Express) is the real HTTP gateway — it receives the mission input, orchestrates LLM calls (Hermes), and invokes the Go safe core as a subprocess for specific safe operations (scanner → fileops → snapshot → patcher → validator → rollback → security → passsecure → passgold → memory). No promotion happens without a verified `pass_gold: true` receipt.
 
 Key properties:
 - **Declarative governance** — every release gate is a static contract (no runtime surprises)
@@ -23,29 +23,45 @@ Key properties:
 
 ```
 vision-core/
-├── go-core/           Go safe core V6.1 AEGIS — mission engine, PASS GOLD, security
-│   ├── cmd/vision-core/main.go
-│   └── internal/      50+ packages: scanner, patcher, validator, rollback, passgold, hermes ...
-│
 ├── backend/           Node.js V2.9.10 SaaS backend (Express, port 3000/8080)
-│   ├── server.js      Main server — self-healing config, CORS, PASS GOLD gate
+│   │                  THE real HTTP server — every /api/* route lives here.
+│   ├── server.js      Main server — auth, mission orchestration, self-healing
+│   │                  config, CORS, PASS GOLD gate. Invokes go-core as a
+│   │                  subprocess via resolveGoBinary() for safe-core ops.
 │   └── scripts/       validate-syntax.js, self-healing-config.js, validate-passgold.js
 │
-├── frontend/          Cloudflare Pages — static UI (no backend fetch calls by design)
-│   ├── index.html     Single HTML entry (2700+ lines)
-│   └── assets/        vision-core-bundle.css + vision-core-bundle.js (bundled)
+├── go-core/           Go safe core V6.1 AEGIS — NOT a standalone server.
+│   │                  A binary invoked by backend/server.js as a subprocess
+│   │                  for scanning/patching/validating/security-checking a
+│   │                  project. ~53 internal packages: ~16 are product-facing
+│   │                  (scanner, patcher, validator, rollback, passgold,
+│   │                  hermes...), the rest are an internal release-
+│   │                  governance framework for Vision Core's own deploys
+│   │                  (see "Duas Camadas" in docs/VISION_CORE_ARCHITECTURE.md).
+│   ├── cmd/vision-core/main.go
+│   └── internal/
 │
-├── worker/            Cloudflare Worker — edge proxy + auth
-├── desktop-agent/     Electron — local agent shell
+├── frontend/          Cloudflare Pages — two coexisting frontends
+│   ├── index.html     Legacy production entry (2700+ lines) — makes real
+│   │                  fetch() calls to backend/server.js (auth, chat, etc.),
+│   │                  contrary to what this README claimed before 2026-07-10
+│   ├── vision-core-next.html   Parallel Next frontend, active development
+│   └── assets/        vision-core-bundle.css/js (legacy) + vision-core-next-clean.css/js (Next)
 │
-├── tools/             Node.js governance modules (300+ .mjs files)
-│   ├── software-factory/   RTP chain + release contracts
+├── worker/            Cloudflare Worker — edge proxy between frontends and backend/server.js
+├── desktop-agent/     Electron — local agent shell (Vision Agent Local)
+├── vc-secret-guard/   Rust — local secret-detection CLI, independent of go-core
+│
+├── tools/             Node.js governance modules (300+ .mjs files) — mostly
+│   │                  the same internal release-governance framework as the
+│   │                  non-product go-core packages above, not product code
 │   ├── real-validation/    RV0–RV5 runtime smoke gates
 │   └── tests/              Pure node:assert test suites (1730+ tests)
 │
 ├── bin/               Compiled go-core binary (git-ignored)
 ├── setup.sh           Local setup script
-└── deploy.sh          Deploy script (--staging / --production)
+├── deploy.sh          Deploy script for Vision Core's OWN release (--staging / --production)
+└── bin/deploy-pages.sh  The script actually used day-to-day to publish the frontend to Cloudflare Pages
 ```
 
 ---
@@ -73,8 +89,8 @@ cd vision-core
 
 `setup.sh` will:
 1. Check Go + Node.js deps
-2. Build `bin/vision-core` from go-core
-3. Create `backend/.env` with a secure random JWT_SECRET
+2. Build `bin/vision-core` from go-core (a helper binary, not the server — see below)
+3. Create `backend/.env` with secure random `SESSION_SECRET` + `PROVIDER_VAULT_SECRET` (both required — `backend/server.js` fails closed and refuses to boot without them, see `docs/VISION_CORE_BACKEND_SPEC.md`) and a vestigial `JWT_SECRET` (kept for backward compatibility, never actually read by the backend)
 4. Run `npm install` in backend/
 5. Validate backend syntax + PASS GOLD
 6. Smoke-test the backend health endpoint
@@ -83,16 +99,7 @@ cd vision-core
 
 ## Running Locally
 
-### go-core (CLI)
-
-```bash
-# Self-test
-bin/vision-core mission --root "." --input "self-test"
-
-# Expected: pass_gold: true, evidence_receipt present
-```
-
-### Backend
+### Backend — the real server
 
 ```bash
 cd backend
@@ -100,6 +107,19 @@ node server.js
 # Server starts on PORT from .env (default 3000)
 # Health: GET http://localhost:3000/api/health
 # Status: GET http://localhost:3000/api/obsidian/status
+#
+# Requires SESSION_SECRET + PROVIDER_VAULT_SECRET in backend/.env (both
+# generated by setup.sh) — the process exits immediately with a clear error
+# if either is missing, the known-insecure public fallback, or under 32 bytes.
+```
+
+### go-core (CLI) — safe-core binary, invoked by the backend, not run standalone in normal use
+
+```bash
+# Self-test
+bin/vision-core mission --root "." --input "self-test"
+
+# Expected: pass_gold: true, evidence_receipt present
 ```
 
 ### Frontend
@@ -110,7 +130,7 @@ Open `frontend/index.html` directly in a browser, or serve via any static file s
 npx serve frontend/
 ```
 
-The frontend is a local-only UI — all state is in-memory. No backend calls by design.
+**Correction (2026-07-10):** contrary to what this README claimed before, the legacy frontend is *not* backend-call-free — `frontend/index.html` loads `assets/vision-core-bundle.js`, which makes real `fetch()` calls to the backend (auth, chat, missions, etc.) via the Worker gateway URL baked into the bundle, not to whatever `npx serve` happens to be running locally. Serving `frontend/` locally lets you view the static markup/styling, but real API calls from it will hit the deployed backend, not a local one — there's no environment-switching mechanism in the legacy bundle. The parallel `frontend/vision-core-next.html` (Next) has the same property (fixed `API_BASE_URL`, ver `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`).
 
 ---
 
