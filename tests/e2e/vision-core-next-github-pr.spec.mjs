@@ -38,13 +38,17 @@ test.beforeEach(async ({ page }) => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, plan: 'free', remaining: 5 }) }));
 });
 
+async function openGithubTab(page) {
+  await page.locator('a[data-feature="github"]').evaluate((el) => el.click());
+}
+
 async function openGithubPrWithFields(page, { repo = 'owner/repo', title = 'Fix bug' } = {}) {
   await page.goto(NEXT_URL);
   // "github" has both a sidebar nav link and a composer chip button sharing
   // the same [data-feature] attribute — scope to the sidebar link (same
   // ambiguity already documented in vision-core-next-vault-rollback.spec.mjs
   // for "vault").
-  await page.locator('a[data-feature="github"]').click();
+  await openGithubTab(page);
   await page.locator('#vcPrRepo').fill(repo);
   // #vcPrBranch already ships with value="main" in the HTML — prFieldsValid()
   // only needs repo+branch+title non-empty, so branch is valid untouched.
@@ -54,7 +58,7 @@ async function openGithubPrWithFields(page, { repo = 'owner/repo', title = 'Fix 
 test('panel hidden by default, visible only under the GitHub tab', async ({ page }) => {
   await page.goto(NEXT_URL);
   await expect(page.locator('#vcGithubPrForm')).toBeHidden();
-  await page.locator('a[data-feature="github"]').click();
+  await openGithubTab(page);
   await expect(page.locator('#vcGithubPrForm')).toBeVisible();
 });
 
@@ -62,7 +66,7 @@ test('create button disabled until repo+branch+title filled, confirm appears onl
   let prCalls = 0;
   await page.route(`${API}/api/github/create-pr`, (route) => { prCalls += 1; return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }); });
   await page.goto(NEXT_URL);
-  await page.locator('a[data-feature="github"]').click();
+  await openGithubTab(page);
 
   const createBtn = page.locator('#vcPrActions button', { hasText: 'Criar PR' });
   await expect(createBtn).toBeDisabled();

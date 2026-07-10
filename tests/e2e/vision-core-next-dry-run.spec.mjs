@@ -77,12 +77,14 @@ test('run button disabled until target path filled, confirm appears only after c
 
 test('fast double-click on confirm fires exactly one POST /api/agent/mission/queue and shows a disabled busy button', async ({ page }) => {
   let queueCalls = 0;
+  let releaseQueue;
+  const queueGate = new Promise((resolve) => { releaseQueue = resolve; });
   await page.route(`${API}/api/agent/mission/queue`, async (route) => {
     queueCalls += 1;
     // Hold the response open briefly so a genuinely fast second click lands
     // while the first request is still in flight — the real-world race the
     // dryRunRequestInFlight guard exists for.
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await queueGate;
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, mission_id: 'm-dry-1' }) });
   });
   // Once queued, the panel starts polling GET /api/agent/mission/result/:id
@@ -113,6 +115,7 @@ test('fast double-click on confirm fires exactly one POST /api/agent/mission/que
   const busyBtn = page.locator('#vcDryRunActions button', { hasText: 'Enfileirando...' });
   await expect(busyBtn).toBeVisible();
   await expect(busyBtn).toBeDisabled();
+  releaseQueue();
 
   // Success transitions into polling ("Cancelar acompanhamento"), then the
   // mocked result endpoint resolves it to a concluded status.
