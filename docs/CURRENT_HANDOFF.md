@@ -47,6 +47,15 @@ Contexto: o A2 ja estava implementado em commits anteriores, reconstruidos por h
 **Estado do A2 apos esta sessao:** fechado para o backlog Ponytail/Next. Nenhum codigo de produto foi alterado nesta etapa; so estabilizacao de spec e este registro de handoff.
 
 ---
+## Ponytail backlog - pausa segura antes do A3 (2026-07-10)
+
+Estado da retomada: A2 foi fechado e pushado (`e094bdd1`) depois da estabilizacao de specs em `10c08992`, com suite Next **55/55 PASS**. Ao iniciar A3, foi feita busca local pelo relatorio original Ponytail em `docs/`, `CLAUDE.md`, `AGENTS.md`, `README.md`, historico git e todos os anexos em `C:\Users\imadechumbo\.codex\attachments`.
+
+Resultado: o unico texto encontrado com a ordem `A2 -> A3 -> ...` e o prompt de execucao do backlog; ele nao contem a descricao dos achados A3/A4/M*. O relatorio original com as linhas "one finding per line" do `ponytail-audit` nao esta versionado nem anexado nesta sessao. Como o protocolo exige "releia o achado original do relatorio Ponytail antes de tocar em qualquer arquivo", continuar para A3 por inferencia seria inseguro.
+
+Proxima acao segura: fornecer/colar o relatorio original Ponytail com a lista A3/A4/A5/A7/A6/M1... ou autorizar explicitamente uma nova auditoria Ponytail como fonte de verdade substituta, gerando uma nova numeracao. Nenhum arquivo de produto foi tocado para A3.
+
+---
 ## Missão de 5 etapas — dogfood cleanup + SF files/zip + README + manual test plan (2026-07-10)
 
 Tarefa autorizada em bloco (5 etapas, commits pré-autorizados por etapa). Executada em sequência, cada etapa validada (suíte Playwright completa + `node --check`) antes do commit isolado correspondente.
