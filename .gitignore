@@ -15,6 +15,7 @@ backend/.env
 .vision-test/
 backend/memory/incidents/
 backend/data/*.sqlite
+backend/data/*.json
 
 bin/vision-core
 bin/vision-core.exe

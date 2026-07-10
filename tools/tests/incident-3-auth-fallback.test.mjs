@@ -75,6 +75,7 @@ const childEnv = {
   PORT: String(PORT),
   AWS_S3_BUCKET: '',
   SESSION_SECRET: 'incident-3-test-session-secret-32chars-min',
+  PROVIDER_VAULT_SECRET: 'incident-3-test-vault-secret-32chars-min',
 };
 
 const child = spawn(process.execPath, ['--no-deprecation', 'backend/server.js'], {

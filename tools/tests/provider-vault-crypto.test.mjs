@@ -7,7 +7,12 @@
  * "INCERTEZA CONHECIDA" documentada no arquivo: decriptar com a chave errada
  * (rotação de PROVIDER_VAULT_SECRET) deve degradar pra '' sem lançar exceção.
  */
-import pvc from '../../backend/provider-vault-crypto.js';
+// PROVIDER_VAULT_SECRET é fail-closed (limpeza de dogfood pós-INCIDENTE-4) —
+// o módulo lança no carregamento sem uma env var real. Precisa estar setada
+// ANTES do import; como um `import` estático é hoisted para antes de
+// qualquer outra linha do arquivo, isto exige import dinâmico.
+process.env.PROVIDER_VAULT_SECRET = 'provider-vault-crypto-test-secret-32chars-min';
+const pvc = (await import('../../backend/provider-vault-crypto.js')).default;
 const { encryptProviderKey, decryptProviderKey, maskProviderKey } = pvc;
 
 let passed = 0, failed = 0;
@@ -33,10 +38,13 @@ assert(decryptProviderKey(enc2, 'secret-A') === plain, 'segunda cifragem também
 // --- cenário de rotação de chave-mestra (INCERTEZA CONHECIDA no código-fonte) ---
 assert(decryptProviderKey(enc, 'secret-B') === '', 'decrypt com chave errada (rotação) degrada pra string vazia, não lança exceção');
 
-// --- fallback de secret quando nenhuma env var está setada ---
-delete process.env.PROVIDER_VAULT_SECRET;
-const encFallback = encryptProviderKey(plain);
-assert(decryptProviderKey(encFallback) === plain, 'sem PROVIDER_VAULT_SECRET no env, cai no fallback dev e ainda faz roundtrip');
+// --- sem secretOverride, usa PROVIDER_VAULT_SECRET do processo (fail-closed
+// desde a limpeza de dogfood pós-INCIDENTE-4 — sem essa env var real, o
+// módulo já teria lançado no import acima, então chegar aqui já prova que
+// não há fallback público silencioso) ---
+const encNoOverride = encryptProviderKey(plain);
+assert(decryptProviderKey(encNoOverride) === plain, 'sem secretOverride, usa PROVIDER_VAULT_SECRET do processo e faz roundtrip');
+assert(decryptProviderKey(encNoOverride, 'secret-A') === '', 'PROVIDER_VAULT_SECRET do processo é diferente de qualquer secretOverride de teste — nunca colidem');
 
 // --- cache da derivação KDF (Fase D.a): precisa continuar correto quando
 // múltiplos secrets diferentes são usados na mesma execução do processo —

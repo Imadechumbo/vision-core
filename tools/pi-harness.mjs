@@ -1173,6 +1173,7 @@ async function tryStartBackend(s) {
         ...process.env,
         PORT: String(LOCAL_BACKEND_PORT),
         SESSION_SECRET: process.env.SESSION_SECRET || 'pi-harness-runtime-session-secret-32chars-min',
+        PROVIDER_VAULT_SECRET: process.env.PROVIDER_VAULT_SECRET || 'pi-harness-runtime-vault-secret-32chars-min',
       },
       detached: false,
     });

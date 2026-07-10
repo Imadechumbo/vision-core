@@ -173,15 +173,15 @@ Nenhuma página pública, nenhum material de marketing, e este documento não co
 
 ---
 
-## Achados reais do dogfood — não corrigidos, decisão do usuário pendente
+## Achados reais do dogfood — status atual
 
-Nenhum destes foi suprimido/allowlistado/corrigido — permanecem visíveis no scan por decisão deliberada:
+Nenhum destes foi suprimido/allowlistado — os corrigidos abaixo permanecem visíveis no histórico deste documento por transparência, os pendentes continuam visíveis no scan por decisão deliberada:
 
-1. **`frontend/assets/vision-core-clean-runtime.js:6301,6323`** — senha hardcoded (fork legado abandonado, já público antes desta sessão, comportamento pré-existente).
-2. **`backend/provider-vault-crypto.js:36`** — `DEV_FALLBACK_SECRET` hardcoded, já documentado em `VISION_CORE_BACKEND_SPEC.md`.
-3. **`backend/data/users.json` commitado no git** com `password_hash` real de uma conta de teste — resíduo local, não dado de produção, decisão de limpeza pendente.
-4. **`backend/.env` (gitignored) contém segredos reais locais** — confirma que a detecção funciona contra segredos reais, não só fixtures.
-5. **`SESSION_SECRET` sem valor caindo em fallback hardcoded** — este achado motivou o INCIDENTE-4, já corrigido (fail-closed) — ver `VISION_CORE_ARCHITECTURE.md`.
+1. ~~`frontend/assets/vision-core-clean-runtime.js:6301,6323` — senha hardcoded~~ **CORRIGIDO** (limpeza de dogfood, sessão de 2026-07-10): literal neutralizado nos dois call sites (`password: 'vc-user-auto'` → `password: ''`, backend já gera senha aleatória para registro sem senha). Arquivo continua sem `<script>` real carregando-o em nenhuma página (confirmado — dead code), corrigido mesmo assim por ser fonte pública legível.
+2. ~~`backend/provider-vault-crypto.js:36` — `DEV_FALLBACK_SECRET` hardcoded~~ **CORRIGIDO** (mesma sessão): fail-closed aplicado, mesmo padrão do `SESSION_SECRET`/INCIDENTE-4 — ver `VISION_CORE_BACKEND_SPEC.md` seção "Configuração".
+3. ~~`backend/data/users.json` commitado no git~~ **CORRIGIDO** (mesma sessão): `git rm --cached` + `backend/data/*.json` no `.gitignore`. Histórico git **não foi reescrito** (decisão explícita do usuário — o hash permanece em commits antigos); ação de trocar/invalidar a senha real dessa conta de teste fica pendente do usuário, fora do alcance deste repositório.
+4. **`backend/.env` (gitignored) contém segredos reais locais** — não corrigido (não é exposição de repositório) — confirma que a detecção funciona contra segredos reais, não só fixtures.
+5. ~~`SESSION_SECRET` sem valor caindo em fallback hardcoded~~ **CORRIGIDO** (INCIDENTE-4, sessão anterior) — ver `VISION_CORE_ARCHITECTURE.md`.
 
 ---
 

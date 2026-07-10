@@ -148,6 +148,7 @@ export async function launchLocalBackend(options = {}) {
       PORT: String(port),
       NODE_ENV: 'local',
       SESSION_SECRET: process.env.SESSION_SECRET || 'local-backend-runtime-session-secret-32chars-min',
+      PROVIDER_VAULT_SECRET: process.env.PROVIDER_VAULT_SECRET || 'local-backend-runtime-vault-secret-32chars-min',
     },
     detached: false,
     stdio:    'ignore',

@@ -6298,7 +6298,7 @@
         fetch(BACKEND_URL + '/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email, password: 'vc-user-auto', name: '' })
+          body: JSON.stringify({ email: email, password: '', name: '' })
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
@@ -6320,7 +6320,7 @@
             return fetch(BACKEND_URL + '/api/auth/login', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: email, password: 'vc-user-auto' })
+              body: JSON.stringify({ email: email, password: '' })
             })
             .then(function (r2) { return r2.json(); })
             .then(function (d2) {

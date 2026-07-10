@@ -29,6 +29,10 @@ function baseEnv(port, sessionSecret) {
   const env = { ...process.env, PORT: String(port), AWS_S3_BUCKET: '' };
   delete env.SESSION_SECRET;
   if (sessionSecret !== undefined) env.SESSION_SECRET = sessionSecret;
+  // PROVIDER_VAULT_SECRET também é fail-closed (limpeza de dogfood pós-
+  // INCIDENTE-4) — sem isto, todo boot deste teste falharia por um motivo
+  // diferente do SESSION_SECRET que este arquivo está de fato testando.
+  env.PROVIDER_VAULT_SECRET = 'incident-4-test-vault-secret-32chars-min';
   return env;
 }
 

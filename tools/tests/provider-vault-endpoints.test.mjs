@@ -62,6 +62,7 @@ const childEnv = {
   PORT: String(PORT),
   AWS_S3_BUCKET: '',
   SESSION_SECRET: 'provider-vault-test-session-secret-32chars-min',
+  PROVIDER_VAULT_SECRET: 'provider-vault-test-vault-secret-32chars-min',
 };
 for (const prefix of ['OPENROUTER', 'OPENAI', 'ANTHROPIC', 'GROQ', 'DEEPSEEK', 'GEMINI']) {
   delete childEnv[`${prefix}_API_KEY`];

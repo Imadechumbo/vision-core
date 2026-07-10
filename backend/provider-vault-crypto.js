@@ -9,18 +9,17 @@ const crypto = require('crypto');
 // teste unitário real (roundtrip encrypt→decrypt) sem subir Express, S3 ou
 // qualquer outra parte do backend — ver tools/tests/provider-vault-crypto.test.mjs.
 //
-// PROVIDER_VAULT_SECRET — de onde vem HOJE:
-//   - Produção (EB): a env var NÃO existe em nenhum deploy ainda — igual ao
-//     estado do HOTMART_HOTTOK (§150 no CLAUDE.md): pendente, documentado,
-//     não bloqueia a feature. Até alguém adicionar PROVIDER_VAULT_SECRET nas
-//     env vars do EB, o código cai no fallback abaixo.
-//   - Fallback (dev/local, e produção até o env var real ser configurado):
-//     mesma estratégia já usada por SESSION_SECRET em server.js (~linha 376)
-//     — uma string hardcoded óbvia (*-change-me*) que funciona mas não
-//     deveria ficar em produção pra sempre.
-//   - Deliberadamente NÃO derivada de SESSION_SECRET/JWT existentes: são
-//     segredos de propósitos diferentes (sessão de auth vs. cifra de dado em
-//     repouso) — rotacionar um não pode acidentalmente destruir o outro.
+// PROVIDER_VAULT_SECRET — fail-closed desde a limpeza de resíduos de dogfood
+// que se seguiu ao INCIDENTE-4 (mesmo padrão de backend/server.js:377-386,
+// requireSessionSecret()): sem a env var real, forte e diferente do literal
+// de fallback conhecido, o módulo lança no carregamento — o processo não
+// sobe. Isso fecha o mesmo tipo de risco do SESSION_SECRET: antes desta
+// mudança, sem PROVIDER_VAULT_SECRET configurado em produção, qualquer
+// chave de API de LLM salva pela tela "Configuração Principal" era cifrada
+// com um segredo público conhecido, decifrável por qualquer leitor deste
+// repositório. Deliberadamente NÃO derivada de SESSION_SECRET/JWT: são
+// segredos de propósitos diferentes (sessão de auth vs. cifra de dado em
+// repouso) — rotacionar um não pode acidentalmente destruir o outro.
 //
 // INCERTEZA CONHECIDA — NÃO RESOLVIDA NESTA RODADA:
 //   Rotação de PROVIDER_VAULT_SECRET não tem solução aqui. Se o valor dessa
@@ -33,7 +32,22 @@ const crypto = require('crypto');
 //   propósito precisa descriptografar tudo com a chave antiga e re-salvar
 //   com a nova ANTES de trocar a env var em produção.
 // ---------------------------------------------------------------------------
-const DEV_FALLBACK_SECRET = 'vision-core-dev-vault-secret-change-me';
+// Valor histórico de fallback público — mantido só para o boot recusar
+// explicitamente esse literal específico (nunca mais usado como segredo de
+// verdade). Construído por concatenação, não como string literal única, pelo
+// mesmo motivo do publicFallback em requireSessionSecret().
+const KNOWN_INSECURE_FALLBACK = ['vision', 'core', 'dev', 'vault', 'secret', 'change', 'me'].join('-');
+
+function requireProviderVaultSecret() {
+  const secret = String(process.env.PROVIDER_VAULT_SECRET || '').trim();
+  if (!secret) throw new Error('PROVIDER_VAULT_SECRET_REQUIRED');
+  if (secret === KNOWN_INSECURE_FALLBACK) throw new Error('PROVIDER_VAULT_SECRET_INSECURE_PUBLIC_FALLBACK');
+  if (Buffer.byteLength(secret, 'utf8') < 32) throw new Error('PROVIDER_VAULT_SECRET_TOO_SHORT');
+  return secret;
+}
+
+const PROVIDER_VAULT_SECRET = requireProviderVaultSecret();
+
 // Salt fixo de propósito (não aleatório): a derivação precisa ser
 // determinística pra conseguir decriptar depois — um salt aleatório por
 // chamada tornaria toda decriptação futura impossível.
@@ -43,14 +57,15 @@ const KDF_SALT = 'vision-core-provider-vault-v1';
 // de LLM (não só quando alguém salva/testa pela tela) — sem isto, cada
 // request pagaria de novo o custo deliberadamente alto do scryptSync (mesmo
 // N=16384 do hash de senha, ~dezenas de ms). O que é seguro cachear é só a
-// CHAVE DERIVADA: ela depende unicamente de PROVIDER_VAULT_SECRET, que só
-// muda com restart do processo — não cacheia o ESTADO do vault (isso
-// continua sendo lido fresco de _providersStore a cada chamada, ver
-// provider-vault-routing.js). Map (não uma variável única) pra não quebrar
-// os testes que passam secretOverride diferentes na mesma execução.
+// CHAVE DERIVADA: ela depende unicamente do secret efetivo (override do
+// chamador, ou PROVIDER_VAULT_SECRET fixo do processo) — não cacheia o
+// ESTADO do vault (isso continua sendo lido fresco de _providersStore a cada
+// chamada, ver provider-vault-routing.js). Map (não uma variável única) pra
+// não quebrar os testes que passam secretOverride diferentes na mesma
+// execução.
 const _kdfKeyCache = new Map();
 function vaultEncryptionKey(secretOverride) {
-  const secret = secretOverride || process.env.PROVIDER_VAULT_SECRET || DEV_FALLBACK_SECRET;
+  const secret = secretOverride || PROVIDER_VAULT_SECRET;
   if (_kdfKeyCache.has(secret)) return _kdfKeyCache.get(secret);
   const key = crypto.scryptSync(secret, KDF_SALT, 32);
   _kdfKeyCache.set(secret, key);
@@ -90,5 +105,4 @@ module.exports = {
   decryptProviderKey,
   maskProviderKey,
   vaultEncryptionKey,
-  DEV_FALLBACK_SECRET,
 };
