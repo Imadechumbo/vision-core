@@ -248,7 +248,7 @@ Desktop-first, dois breakpoints:
 
 ## Bloqueio de segurança — Executar Missão Fase 2b (`apply_patch` real)
 
-**Estado: fail-closed por design, `AGENT_APPLY_ENABLED=false` no código.** A UI existe (documenta o payload esperado) mas o botão nunca chama `/api/agent/mission/queue`, mesmo com JSON válido + frase de confirmação exata. Motivo: `agent_id` sozinho não é autenticação (hash não-secreto de hostname+pasta, nenhuma rota `/api/agent/mission/*` tem middleware de auth por si só — o pareamento real via `agent_secret` existe desde 2026-07-08, mas o gate de UI continua fechado até decisão explícita do usuário reabri-lo). Regressão de gate: `tests/e2e/vision-core-next-agent-apply.spec.mjs` — **único spec desta frente que é permanente por guardar um gate de segurança**, deve continuar passando em todo handoff.
+**Estado: fail-closed por design, `AGENT_APPLY_ENABLED=false` no código.** A UI existe (documenta o payload esperado) mas o botão nunca chama `/api/agent/mission/queue`, mesmo com JSON válido + frase de confirmação exata. Motivo: `agent_id` sozinho não é autenticação (hash não-secreto de hostname+pasta, nenhuma rota `/api/agent/mission/*` tem middleware de auth por si só — o pareamento real via `agent_secret` existe desde 2026-07-08, mas o gate de UI continua fechado até decisão explícita do usuário reabri-lo). Regressão de gate: `tests/e2e/vision-core-next-agent-apply.spec.mjs` — **um de 7 specs permanentes desta frente** (`agent-apply`, `apply-fix`, `app-shell`, `atomic-core`, `metrics`, `sf`, `sf-project-files`), permanente por guardar um gate de segurança, deve continuar passando em todo handoff.
 
 ## Fora de escopo — decidido em 2026-07-08 (categorias completas, não reabrir sem novo motivo)
 
