@@ -27,6 +27,26 @@ Contexto: o commit `3d9ce5c3` (achado A1 da auditoria Ponytail) extraiu `renderC
 
 ---
 
+## Ponytail A2 - autorevisao critica do infografico de projeto SF (2026-07-10)
+
+Contexto: o A2 ja estava implementado em commits anteriores, reconstruidos por historico git: `d828f521` (`tools/project-infographic.mjs` + teste unitario), `a73134d2` (integracao best-effort no endpoint `POST /api/sf/project-files`) e `10929a45` (botao no bundle legado). Nesta rodada, o trabalho foi tratar o A2 pelo protocolo novo: investigacao, autorevisao critica, validacao completa e fechamento documentado, sem ampliar escopo.
+
+**Classificacao da autorevisao:** aprovado com ressalva de cobertura legada. O gerador e deterministico e puro (`tools/project-infographic.mjs`): nao faz I/O, nao chama LLM, nao faz fetch, escapa HTML antes de interpolar conteudo e retorna `null` quando o brief nao tem estrutura suficiente. A integracao em `backend/server.js` fica no ramo complexo de `project-files`, usa `await import('../tools/project-infographic.mjs')` dentro de `try/catch`, e degrada sem quebrar a geracao se o infografico falhar. Nao houve mudanca em auth, billing, rotas destrutivas, deploy, go-core ou gates de agente.
+
+**Ressalva registrada:** o commit historico `10929a45` tocou `frontend/assets/vision-core-bundle.js` (bundle legado) para expor o botao "Ver Infografico do Projeto"; a missao atual proibe mexer no legado sem decisao separada. Portanto esta rodada nao ajustou nem expandiu esse ponto. A cobertura permanente validada aqui cobre o gerador e o fluxo Next/SF oficial; a cobertura do botao legado fica como divida historica, nao como bloqueio do Vision Core Next.
+
+**Validacao desta rodada:**
+- `node --check tools/project-infographic.mjs`
+- `node --check tools/tests/project-infographic.test.mjs`
+- `node --no-deprecation tools/tests/project-infographic.test.mjs` -> **54/54 PASS**
+- `npx playwright test tests/e2e/vision-core-next-sf-project-files.spec.mjs` -> **6/6 PASS**
+- suite permanente Next explicita (10 specs) -> **55/55 PASS**
+
+**Correcao colateral necessaria para fechar com suite 100%:** duas specs recem-adicionadas no A1 estavam flaky em execucao completa, sem relacao funcional com o A2. Commit `10c08992` estabilizou somente testes: o Dry-Run agora segura a resposta por uma promise controlada pelo teste, e o spec GitHub PR abre a aba por clique DOM direto para evitar flake de actionability/scroll. Specs individuais e suite Next completa passaram depois do rebase e antes do push.
+
+**Estado do A2 apos esta sessao:** fechado para o backlog Ponytail/Next. Nenhum codigo de produto foi alterado nesta etapa; so estabilizacao de spec e este registro de handoff.
+
+---
 ## Missão de 5 etapas — dogfood cleanup + SF files/zip + README + manual test plan (2026-07-10)
 
 Tarefa autorizada em bloco (5 etapas, commits pré-autorizados por etapa). Executada em sequência, cada etapa validada (suíte Playwright completa + `node --check`) antes do commit isolado correspondente.
