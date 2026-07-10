@@ -340,6 +340,41 @@
     if (announce) appendMessage('pending', feature.title.toUpperCase(), feature.text);
   }
 
+  // Compartilhado pelos 5 painéis de ação irreversível (GitHub PR, Apply-Fix,
+  // Vault Rollback, Agent-Apply, Dry-Run): desenha o botão "Aplicando..."
+  // desabilitado (requisição em andamento) ou "Confirmar"+"Cancelar"
+  // (confirmação pendente) — o único trecho de fato idêntico entre os 5.
+  // Retorna true se desenhou algo, false se nenhum dos dois estados se
+  // aplica — o chamador então desenha seu próprio estado ocioso (que varia
+  // por painel: texto do botão, validação de campo, efeitos colaterais de
+  // status), sem tentar forçar uma forma única onde o comportamento diverge.
+  function renderConfirmOrBusy(container, opts) {
+    container.textContent = '';
+    if (opts.busy) {
+      var busyBtn = document.createElement('button');
+      busyBtn.type = 'button';
+      busyBtn.disabled = true;
+      busyBtn.textContent = opts.busyLabel;
+      container.appendChild(busyBtn);
+      return true;
+    }
+    if (opts.confirmPending) {
+      var confirmBtn = document.createElement('button');
+      confirmBtn.type = 'button';
+      if (opts.confirmDisabled) confirmBtn.disabled = true;
+      confirmBtn.textContent = opts.confirmLabel;
+      confirmBtn.addEventListener('click', opts.onConfirm);
+      var cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.textContent = 'Cancelar';
+      cancelBtn.addEventListener('click', opts.onCancel);
+      container.appendChild(confirmBtn);
+      container.appendChild(cancelBtn);
+      return true;
+    }
+    return false;
+  }
+
   // GitHub PR — ação real e irreversível (cria branch+commit+PR de verdade
   // via /api/github/create-pr). NUNCA dispara sozinha: exige os 3 campos
   // obrigatórios preenchidos + uma confirmação extra (segundo clique) antes
@@ -359,33 +394,14 @@
 
   function renderPrActions() {
     if (!prActionsEl) return;
-    prActionsEl.textContent = '';
-
-    if (prRequestInFlight) {
-      var busyBtn = document.createElement('button');
-      busyBtn.type = 'button';
-      busyBtn.disabled = true;
-      busyBtn.textContent = 'Criando PR...';
-      prActionsEl.appendChild(busyBtn);
-      return;
-    }
-
-    if (prConfirmPending) {
-      var confirmBtn = document.createElement('button');
-      confirmBtn.type = 'button';
-      confirmBtn.textContent = 'Confirmar criação de PR em ' + prRepoInput.value.trim();
-      confirmBtn.addEventListener('click', submitGithubPr);
-      var cancelBtn = document.createElement('button');
-      cancelBtn.type = 'button';
-      cancelBtn.textContent = 'Cancelar';
-      cancelBtn.addEventListener('click', function () {
-        prConfirmPending = false;
-        renderPrActions();
-      });
-      prActionsEl.appendChild(confirmBtn);
-      prActionsEl.appendChild(cancelBtn);
-      return;
-    }
+    if (renderConfirmOrBusy(prActionsEl, {
+      busy: prRequestInFlight,
+      busyLabel: 'Criando PR...',
+      confirmPending: prConfirmPending,
+      confirmLabel: 'Confirmar criação de PR em ' + prRepoInput.value.trim(),
+      onConfirm: submitGithubPr,
+      onCancel: function () { prConfirmPending = false; renderPrActions(); }
+    })) return;
 
     var createBtn = document.createElement('button');
     createBtn.type = 'button';
@@ -478,35 +494,19 @@
 
   function renderApplyFixActions() {
     if (!applyFixActionsEl) return;
-    applyFixActionsEl.textContent = '';
-
-    if (applyFixRequestInFlight) {
-      var busyBtn = document.createElement('button');
-      busyBtn.type = 'button';
-      busyBtn.disabled = true;
-      busyBtn.textContent = 'Aplicando fix...';
-      applyFixActionsEl.appendChild(busyBtn);
-      return;
-    }
-
-    if (applyFixConfirmPending) {
-      var confirmBtn = document.createElement('button');
-      confirmBtn.type = 'button';
-      confirmBtn.disabled = !applyFixConfirmReady();
-      confirmBtn.textContent = applyFixConfirmReady() ? 'APLICAR FIX em ' + applyFixFile.value.trim() : 'Digite: APLICAR FIX';
-      confirmBtn.addEventListener('click', submitApplyFix);
-      var cancelBtn = document.createElement('button');
-      cancelBtn.type = 'button';
-      cancelBtn.textContent = 'Cancelar';
-      cancelBtn.addEventListener('click', function () {
+    if (renderConfirmOrBusy(applyFixActionsEl, {
+      busy: applyFixRequestInFlight,
+      busyLabel: 'Aplicando fix...',
+      confirmPending: applyFixConfirmPending,
+      confirmDisabled: !applyFixConfirmReady(),
+      confirmLabel: applyFixConfirmReady() ? 'APLICAR FIX em ' + applyFixFile.value.trim() : 'Digite: APLICAR FIX',
+      onConfirm: submitApplyFix,
+      onCancel: function () {
         applyFixConfirmPending = false;
         if (applyFixStatus) applyFixStatus.textContent = '';
         renderApplyFixActions();
-      });
-      applyFixActionsEl.appendChild(confirmBtn);
-      applyFixActionsEl.appendChild(cancelBtn);
-      return;
-    }
+      }
+    })) return;
 
     var prepareBtn = document.createElement('button');
     prepareBtn.type = 'button';
@@ -1248,9 +1248,9 @@
 
   function renderAgentApplyActions() {
     if (!agentApplyActionsEl) return;
-    agentApplyActionsEl.textContent = '';
 
     if (agentApplyPolling) {
+      agentApplyActionsEl.textContent = '';
       var cancelBtn = document.createElement('button');
       cancelBtn.type = 'button';
       cancelBtn.textContent = 'Parar acompanhamento';
@@ -1259,31 +1259,14 @@
       return;
     }
 
-    if (agentApplyRequestInFlight) {
-      var busyBtn = document.createElement('button');
-      busyBtn.type = 'button';
-      busyBtn.disabled = true;
-      busyBtn.textContent = 'Enfileirando patch real...';
-      agentApplyActionsEl.appendChild(busyBtn);
-      return;
-    }
-
-    if (agentApplyConfirmPending) {
-      var confirmBtn = document.createElement('button');
-      confirmBtn.type = 'button';
-      confirmBtn.textContent = 'Confirmar e enfileirar patch real';
-      confirmBtn.addEventListener('click', submitAgentApply);
-      var backBtn = document.createElement('button');
-      backBtn.type = 'button';
-      backBtn.textContent = 'Cancelar';
-      backBtn.addEventListener('click', function () {
-        agentApplyConfirmPending = false;
-        renderAgentApplyActions();
-      });
-      agentApplyActionsEl.appendChild(confirmBtn);
-      agentApplyActionsEl.appendChild(backBtn);
-      return;
-    }
+    if (renderConfirmOrBusy(agentApplyActionsEl, {
+      busy: agentApplyRequestInFlight,
+      busyLabel: 'Enfileirando patch real...',
+      confirmPending: agentApplyConfirmPending,
+      confirmLabel: 'Confirmar e enfileirar patch real',
+      onConfirm: submitAgentApply,
+      onCancel: function () { agentApplyConfirmPending = false; renderAgentApplyActions(); }
+    })) return;
 
     var parsed = parseAgentApplyPayload();
     if (agentApplyStatusEl && !getAgentApplyAgentId()) {
@@ -1439,9 +1422,9 @@
 
   function renderDryRunActions() {
     if (!dryRunActionsEl) return;
-    dryRunActionsEl.textContent = '';
 
     if (dryRunPolling) {
+      dryRunActionsEl.textContent = '';
       var cancelWatchBtn = document.createElement('button');
       cancelWatchBtn.type = 'button';
       cancelWatchBtn.textContent = 'Cancelar acompanhamento';
@@ -1450,31 +1433,14 @@
       return;
     }
 
-    if (dryRunRequestInFlight) {
-      var busyBtn = document.createElement('button');
-      busyBtn.type = 'button';
-      busyBtn.disabled = true;
-      busyBtn.textContent = 'Enfileirando...';
-      dryRunActionsEl.appendChild(busyBtn);
-      return;
-    }
-
-    if (dryRunConfirmPending) {
-      var confirmBtn = document.createElement('button');
-      confirmBtn.type = 'button';
-      confirmBtn.textContent = 'Confirmar dry-run em ' + dryRunTargetInput.value.trim();
-      confirmBtn.addEventListener('click', submitDryRun);
-      var cancelBtn = document.createElement('button');
-      cancelBtn.type = 'button';
-      cancelBtn.textContent = 'Cancelar';
-      cancelBtn.addEventListener('click', function () {
-        dryRunConfirmPending = false;
-        renderDryRunActions();
-      });
-      dryRunActionsEl.appendChild(confirmBtn);
-      dryRunActionsEl.appendChild(cancelBtn);
-      return;
-    }
+    if (renderConfirmOrBusy(dryRunActionsEl, {
+      busy: dryRunRequestInFlight,
+      busyLabel: 'Enfileirando...',
+      confirmPending: dryRunConfirmPending,
+      confirmLabel: 'Confirmar dry-run em ' + dryRunTargetInput.value.trim(),
+      onConfirm: submitDryRun,
+      onCancel: function () { dryRunConfirmPending = false; renderDryRunActions(); }
+    })) return;
 
     var runBtn = document.createElement('button');
     runBtn.type = 'button';
@@ -1814,32 +1780,18 @@
 
   function renderVaultActions() {
     if (!vaultActions) return;
-    vaultActions.textContent = '';
-
-    if (vaultRollbackRequestInFlight) {
-      var busyBtn = document.createElement('button');
-      busyBtn.type = 'button';
-      busyBtn.disabled = true;
-      busyBtn.textContent = 'Aplicando rollback...';
-      vaultActions.appendChild(busyBtn);
-      return;
-    }
-
-    if (!vaultRollbackPending) return;
-    var confirmBtn = document.createElement('button');
-    confirmBtn.type = 'button';
-    confirmBtn.textContent = 'Confirmar rollback para "' + (vaultRollbackPending.label || vaultRollbackPending.id) + '"';
-    confirmBtn.addEventListener('click', submitVaultRollback);
-    var cancelBtn = document.createElement('button');
-    cancelBtn.type = 'button';
-    cancelBtn.textContent = 'Cancelar';
-    cancelBtn.addEventListener('click', function () {
-      vaultRollbackPending = null;
-      if (vaultStatus) vaultStatus.textContent = '';
-      renderVaultActions();
+    renderConfirmOrBusy(vaultActions, {
+      busy: vaultRollbackRequestInFlight,
+      busyLabel: 'Aplicando rollback...',
+      confirmPending: !!vaultRollbackPending,
+      confirmLabel: vaultRollbackPending ? 'Confirmar rollback para "' + (vaultRollbackPending.label || vaultRollbackPending.id) + '"' : '',
+      onConfirm: submitVaultRollback,
+      onCancel: function () {
+        vaultRollbackPending = null;
+        if (vaultStatus) vaultStatus.textContent = '';
+        renderVaultActions();
+      }
     });
-    vaultActions.appendChild(confirmBtn);
-    vaultActions.appendChild(cancelBtn);
   }
 
   function submitVaultRollback() {
