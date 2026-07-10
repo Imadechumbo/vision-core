@@ -2293,6 +2293,15 @@
   var sfUrlContext = '';
   var sfUrlFetchInFlight = false;
   var sfRunOptions = null;
+  var sfLastDescription = '';
+  var sfFilesBtn = document.getElementById('vcSfFilesBtn');
+  var sfFilesStatus = document.getElementById('vcSfFilesStatus');
+  var sfFilesList = document.getElementById('vcSfFilesList');
+  var sfZipActions = document.getElementById('vcSfZipActions');
+  var sfZipBtn = document.getElementById('vcSfZipBtn');
+  var sfGeneratedFiles = null;
+  var sfFilesInFlight = false;
+  var sfZipInFlight = false;
 
   var SF_STEPS = [
     { label: '01 — Analisar projeto e sugerir stack',      module: 'project_builder',   endpoint: '/api/sf/mission-composer' },
@@ -2469,6 +2478,7 @@
   function runSfAutoPilot(desc) {
     if (sfInFlight) return;
     sfInFlight = true;
+    sfLastDescription = desc;
     sfFullContext = desc + (sfUrlContext ? '\n\n[Contexto de URL]\n' + sfUrlContext : '');
     sfRunOptions = readSfOptions();
     sfActiveSteps = SF_STEPS.concat(getSelectedSfExtraSteps());
@@ -2477,6 +2487,13 @@
     if (sfUrlContext) appendSfLog('info', 'URL_CONTEXT incluído (' + sfUrlContext.length + ' chars)');
     if (sfFinal) sfFinal.hidden = true;
     if (sfFinalBody) sfFinalBody.textContent = '';
+    // Nova geração — descarta lista/ZIP de uma rodada anterior, senão o
+    // usuário poderia baixar um ZIP com arquivos de uma descrição antiga.
+    sfGeneratedFiles = null;
+    if (sfFilesList) { sfFilesList.textContent = ''; sfFilesList.hidden = true; }
+    if (sfZipActions) sfZipActions.hidden = true;
+    if (sfFilesStatus) sfFilesStatus.textContent = '';
+    if (sfFilesBtn) { sfFilesBtn.disabled = false; sfFilesBtn.textContent = 'Gerar Lista de Arquivos'; }
     appendSfLog('warn', 'SAFE real_execution_allowed=false deploy_allowed=false writes_disk=false');
     appendSfLog('info', 'MODE ' + sfRunOptions.mode + ' provider=' + sfRunOptions.provider + ' model=' + (sfRunOptions.model || 'auto'));
     if (sfInput) sfInput.disabled = true;
@@ -2552,6 +2569,106 @@
     if (submitBtn) submitBtn.disabled = false;
     if (window.resetAtomicCore) window.resetAtomicCore();
   }
+
+  // project-files + generate-zip (item 1 do roadmap "Software Factory
+  // completo", docs/ROADMAP.md Fase 3) — contrato verificado direto em
+  // backend/server.js antes de codar (server.js:4600, 4724), nunca assumido
+  // pelo nome:
+  //   - POST /api/sf/project-files é assíncrono como os outros módulos
+  //     (retorna {job_id}), mas o poll em GET /api/sf/job/:id devolve o
+  //     resultado em `files` (array de {name, content}), não em `result`
+  //     (que fica null pra este endpoint especificamente — server.js:4474,
+  //     comentário "§187 — project-files expõe files[]"). pollSfJob() já
+  //     lida com isso sem mudança: faz cb(null, data.result || data), e
+  //     como data.result é null aqui, cai no fallback `data` (a resposta
+  //     inteira do poll), que tem `.files` no nível certo.
+  //   - POST /api/sf/generate-zip é SÍNCRONO e devolve um ZIP binário
+  //     (Content-Type: application/zip), nunca JSON — primeiro fluxo do
+  //     Next tratando resposta binária. apiRequest() sempre faz r.json(),
+  //     então este endpoint usa fetch() direto + response.blob().
+  // sf_options não se aplica aqui (não é um dos 8 SF_GENERATORS) — o
+  // próprio contrato do endpoint já garante que é geração em memória para
+  // download, nunca escrita em disco real.
+  function renderSfFilesList(files) {
+    if (!sfFilesList) return;
+    sfFilesList.textContent = '';
+    files.forEach(function (f) {
+      var row = document.createElement('div');
+      row.className = 'vc-sf-file-row';
+      row.textContent = f && f.name ? f.name : '(sem nome)';
+      sfFilesList.appendChild(row);
+    });
+    sfFilesList.hidden = false;
+  }
+
+  function requestSfProjectFiles() {
+    if (sfFilesInFlight || !sfLastDescription) return;
+    sfFilesInFlight = true;
+    if (sfFilesBtn) { sfFilesBtn.disabled = true; sfFilesBtn.textContent = 'Gerando...'; }
+    if (sfFilesStatus) sfFilesStatus.textContent = '';
+    if (window.setAtomicCoreState) window.setAtomicCoreState('action');
+    if (window.highlightAtomicAgents) window.highlightAtomicAgents(['openclaw', 'hermes']);
+    var body = {
+      description: sfLastDescription,
+      accumulated_context: sfFullContext.slice(0, 2000)
+    };
+    apiRequest('/api/sf/project-files', { method: 'POST', body: body }).then(function (data) {
+      if (!data || !data.job_id) throw new Error('Resposta inesperada do servidor (sem job_id)');
+      return new Promise(function (resolve, reject) {
+        pollSfJob(data.job_id, function (err, result) {
+          if (err) reject(err); else resolve(result);
+        });
+      });
+    }).then(function (result) {
+      var files = result && result.files;
+      if (!files || !files.length) throw new Error('Nenhum arquivo foi gerado');
+      sfGeneratedFiles = files;
+      renderSfFilesList(files);
+      if (sfFilesStatus) sfFilesStatus.textContent = files.length + ' arquivo(s) gerado(s).';
+      if (sfZipActions) sfZipActions.hidden = false;
+    }).catch(function (err) {
+      if (sfFilesStatus) sfFilesStatus.textContent = 'Erro: ' + (err && err.message ? err.message : String(err));
+    }).then(function () {
+      sfFilesInFlight = false;
+      if (sfFilesBtn) { sfFilesBtn.disabled = false; sfFilesBtn.textContent = 'Gerar Lista de Arquivos'; }
+      if (window.resetAtomicCore) window.resetAtomicCore();
+    });
+  }
+
+  function requestSfZipDownload() {
+    if (sfZipInFlight || !sfGeneratedFiles || !sfGeneratedFiles.length) return;
+    sfZipInFlight = true;
+    if (sfZipBtn) { sfZipBtn.disabled = true; sfZipBtn.textContent = 'Baixando...'; }
+    if (sfFilesStatus) sfFilesStatus.textContent = '';
+    var headers = { 'Content-Type': 'application/json' };
+    var token = getChatAuthToken();
+    if (token) headers.Authorization = 'Bearer ' + token;
+    fetch(API_BASE_URL + '/api/sf/generate-zip', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ files: sfGeneratedFiles, project: sfLastDescription })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.blob();
+    }).then(function (blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'projeto-vision-core.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }).catch(function (err) {
+      if (sfFilesStatus) sfFilesStatus.textContent = 'Erro ao baixar ZIP: ' + (err && err.message ? err.message : String(err));
+    }).then(function () {
+      sfZipInFlight = false;
+      if (sfZipBtn) { sfZipBtn.disabled = false; sfZipBtn.textContent = 'Baixar ZIP'; }
+    });
+  }
+
+  if (sfFilesBtn) sfFilesBtn.addEventListener('click', requestSfProjectFiles);
+  if (sfZipBtn) sfZipBtn.addEventListener('click', requestSfZipDownload);
 
   sfModeButtons.forEach(function (btn) {
     btn.addEventListener('click', function () { setSfMode(btn.getAttribute('data-sf-mode')); });

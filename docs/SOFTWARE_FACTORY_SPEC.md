@@ -149,8 +149,8 @@ Toda chamada carrega `sf_options` com três flags **sempre falsas** nesta fase: 
 
 ## Pendências
 
-- `project-files` (`server.js:4576`, assíncrono, resposta em `data.files[]` — único endpoint SF que usa esse campo) e `generate-zip` (`server.js:4700`, síncrono, resposta binária ZIP) — contrato já verificado, não conectados no Next ainda. `generate-zip` seria o primeiro lugar do Next tratando resposta binária (blob download).
-- Página standalone legada (`#vcSoftwareFactoryPage`) — remoção pendente, Fase 3.3d.
+- ~~`project-files`/`generate-zip` não conectados~~ **CORRIGIDO (2026-07-10).** Botão "Gerar Lista de Arquivos" no painel `#vcSfFinal` chama `project-files` com `{description, accumulated_context}` (mapeados a partir de `sfLastDescription`/`sfFullContext` já existentes no fluxo Auto-Pilot — `step1_analysis`/`step2_blueprint` deliberadamente não enviados, o backend já degrada bem sem eles). Botão "Baixar ZIP" chama `generate-zip` e dispara download real via `<a download>`+blob — primeiro fluxo binário do Next, confirmado funcional por teste (`page.waitForEvent('download')`). Spec permanente nova `tests/e2e/vision-core-next-sf-project-files.spec.mjs` (6 testes). Cache-bust `next-clean-51`.
+- Página standalone legada (`#vcSoftwareFactoryPage`) — remoção **investigada e pausada** (2026-07-10): `initSoftwareFactoryPage()` tem um guard `if (!sfPage) return;` que gate-keeps a inicialização de partes AINDA VIVAS do painel embutido moderno (`#vcMissionSfPane` — chat send, chips, drawers, aprovação humana), não só da página legada em si. Deletar `#vcSoftwareFactoryPage` sem primeiro desacoplar esses inicializadores do guard quebraria funcionalidade real em produção. Ver `docs/CURRENT_HANDOFF.md` para o relato completo — decisão pendente do usuário sobre como prosseguir.
 
 ## Próximos passos
 

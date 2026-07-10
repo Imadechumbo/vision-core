@@ -295,7 +295,7 @@ Confirmado pelo usuário após auditoria de paridade (`docs/PARITY_AUDIT.md`): S
 
 - `frontend/atomic-core.html` + assets paralelos: candidatos a limpeza/remoção formal (decisão do usuário, não urgente).
 - `/api/metrics/summary` e `/api/metrics/memory` (runtime CPU/memória, memory layer) não conectados na aba Métricas — fora do escopo pedido nas sessões até aqui.
-- `project-files` + `generate-zip` (Software Factory Next) — contrato já verificado, não implementado (ver `SOFTWARE_FACTORY_SPEC.md`).
+- ~~`project-files` + `generate-zip` (Software Factory Next)~~ **CORRIGIDO (2026-07-10)** — ver `SOFTWARE_FACTORY_SPEC.md`.
 - Auth/registro/login/OAuth no Next — não iniciado, item mais sensível do roadmap (mexe com sessão real de qualquer usuário).
 
 ## Próximos passos

@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-50">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-50" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-51">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-51" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -394,6 +394,14 @@
         <section class="vc-sf-final" id="vcSfFinal" aria-label="Software Factory final package" hidden>
           <p class="vc-kicker">PACOTE FINAL</p>
           <pre id="vcSfFinalBody"></pre>
+          <div class="vc-sf-files-actions">
+            <button type="button" id="vcSfFilesBtn">Gerar Lista de Arquivos</button>
+            <span class="vc-sf-files-status" id="vcSfFilesStatus" aria-live="polite"></span>
+          </div>
+          <div class="vc-sf-files-list" id="vcSfFilesList" aria-label="Arquivos gerados" hidden></div>
+          <div class="vc-sf-files-actions" id="vcSfZipActions" hidden>
+            <button type="button" id="vcSfZipBtn">Baixar ZIP</button>
+          </div>
         </section>
         <form class="vc-sf-composer" id="vcSfComposer">
           <textarea id="vcSfInput" rows="3" placeholder="Ex: um app de delivery com React e Node.js..." spellcheck="false"></textarea>

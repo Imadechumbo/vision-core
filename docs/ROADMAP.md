@@ -59,7 +59,7 @@ gantt
 
 **Prioridade:** ALTA · **Estimativa:** contínua, sem data de conclusão definida.
 
-Pendências reais: Fase 3.3d (remoção final da página SF legada) · `project-files`+`generate-zip` (contrato já verificado) · `/api/metrics/summary`+`/api/metrics/memory` não conectados · Settings do Atomic Core (on/off, intensidade, Etapa 3) · Tutorial Smile (Etapa 4) · páginas públicas `about.html`/`landing.html` (Etapas 5-7) · Auth/registro/login/OAuth no Next (não iniciado).
+Pendências reais: Fase 3.3d (remoção final da página SF legada — **investigada e pausada em 2026-07-10 por risco real de regressão**, ver `SOFTWARE_FACTORY_SPEC.md`) · ~~`project-files`+`generate-zip`~~ **CORRIGIDO (2026-07-10)** · `/api/metrics/summary`+`/api/metrics/memory` não conectados · Settings do Atomic Core (on/off, intensidade, Etapa 3) · Tutorial Smile (Etapa 4) · páginas públicas `about.html`/`landing.html` (Etapas 5-7) · Auth/registro/login/OAuth no Next (não iniciado).
 
 ---
 
@@ -85,13 +85,13 @@ Pendências: `GitProviderAdapter` (GitLab, `PLANEJADO`, zero código ainda — "
 
 **Estado:** EXISTENTE (simulação) — ver `SOFTWARE_FACTORY_SPEC.md`.
 
-**Objetivos:** fechar os 2 endpoints SF restantes (`project-files`+`generate-zip`), decidir se/quando a feature sai do modo simulação-only.
+**Objetivos:** ~~fechar os 2 endpoints SF restantes~~ **CORRIGIDO (2026-07-10)** — `project-files`+`generate-zip` conectados, `tests/e2e/vision-core-next-sf-project-files.spec.mjs` (6 testes). Decidir se/quando a feature sai do modo simulação-only permanece em aberto.
 
 **Dependências:** Fase 1 (é uma feature do frontend Next).
 
-**Riscos:** `generate-zip` seria o primeiro fluxo do Next tratando resposta binária (blob) — padrão novo, não testado ainda nesta frente.
+**Riscos:** ~~`generate-zip` seria o primeiro fluxo do Next tratando resposta binária~~ — feito, confirmado funcional por teste real de download (`page.waitForEvent('download')`), sem surpresas.
 
-**Prioridade:** MÉDIA · **Estimativa:** ~1 sessão para os 2 endpoints (contrato já verificado).
+**Prioridade:** MÉDIA · **Estimativa:** concluído (2026-07-10).
 
 ---
 
