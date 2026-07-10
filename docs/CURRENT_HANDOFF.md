@@ -6,6 +6,27 @@ Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode). Le
 
 ---
 
+## Ponytail A1 — autorevisão crítica + cobertura de teste fechada para GitHub PR e Dry-Run (2026-07-10)
+
+Contexto: o commit `3d9ce5c3` (achado A1 da auditoria Ponytail) extraiu `renderConfirmOrBusy()`, compartilhado pelos 5 painéis de ação irreversível (GitHub PR, Apply-Fix, Vault Rollback, Agent-Apply, Dry-Run). O autor do commit foi instruído a fazer uma autorevisão cética e independente do próprio trabalho (releitura do diff do zero, sem presumir nada da sessão anterior), com uma exigência específica: verificar cobertura de teste real rodando cada spec individualmente, não só confiar na suíte completa passando.
+
+**Achado real da autorevisão:** a suíte permanente tinha 47/47 PASS, mas isso escondia uma lacuna — **`GET tests/e2e/*.spec.mjs` não continha nenhum spec cobrindo o painel GitHub PR nem o painel Dry-Run** (confirmado por grep pelos IDs reais do HTML — `vcPrRepo`/`vcGithubPrForm`/`vcDryRunTarget`/`vcDryRunActions` — zero ocorrências). Não é uma lacuna introduzida pelo A1: os dois painéis foram validados historicamente por specs temporários (padrão "roda e apaga" documentado em sessões anteriores deste HANDOFF), então nunca tiveram rede de segurança permanente. O A1 apenas herdou essa lacuna sem que ninguém a notasse antes de reportar "47/47 PASS" como evidência de segurança para os 5 painéis.
+
+**Também confirmado nessa autorevisão, com evidência forte (não presumida):**
+- `agentApplyReady()`, `parseAgentApplyPayload()`, `getAgentApplyAgentId()`, `getAgentApplyAgentSecret()` e `submitAgentApply()` inteira são **byte-a-byte idênticas** entre o commit anterior ao A1 e o A1 (`diff` vazio) — o gate `AGENT_APPLY_ENABLED=false` não foi tocado.
+- **Nota que fica registrada aqui, por pedido explícito:** enquanto `AGENT_APPLY_ENABLED=false`, o branch `confirmPending`/`busy`/`polling` de `renderConfirmOrBusy()` **é estruturalmente inalcançável no painel Agent-Apply** — `prepareBtn.disabled = !agentApplyReady()` é sempre `true` (já que `agentApplyReady()` curto-circuita em `!AGENT_APPLY_ENABLED`), e um botão `disabled` não dispara `click` nem por interação real nem por `.click()` programático. Os 4 testes de `vision-core-next-agent-apply.spec.mjs` só exercitam o branch idle (texto "Aplicação real bloqueada" + disabled) — nunca o confirm/busy/polling. Isso não é um bug: é o gate funcionando como desenhado. Mas significa que **nenhum teste, nem antes nem depois do A1, jamais verificou o branch confirm/busy/polling especificamente para este painel** — se o gate for reaberto no futuro (`AGENT_APPLY_ENABLED=true`), esse branch passa a ser alcançável pela primeira vez e vai precisar de cobertura própria nesse momento, não antes.
+
+**Resolução (mesma sessão, autorizada explicitamente pelo usuário):**
+- `tests/e2e/vision-core-next-github-pr.spec.mjs` (novo, 4 testes: painel escondido fora da aba GitHub; botão desabilitado até repo+título preenchidos + confirmar/cancelar sem disparar requisição; duplo-clique rápido no confirmar dispara exatamente 1 `POST /api/github/create-pr` e mostra botão "Criando PR..." desabilitado; erro reabilita o fluxo sem travar no busy).
+- `tests/e2e/vision-core-next-dry-run.spec.mjs` (novo, 4 testes: mesmo padrão, adaptado ao fluxo de fila+polling do Dry-Run — `POST /api/agent/mission/queue` seguido de `GET /api/agent/mission/result/:id` mockado para resolver rápido em vez de vazar polling real).
+- Os dois specs seguem o mesmo template de `tests/e2e/vision-core-next-vault-rollback.spec.mjs` (idle→confirm→cancel + 1 caso de busy com delay artificial de 300ms via `page.route` + duplo-clique síncrono via `page.evaluate` no mesmo nó DOM, técnica já documentada naquele spec).
+- **Sanity-check aplicado nos dois specs novos antes de aceitar como cobertura real:** quebrei deliberadamente `renderConfirmOrBusy()` (`busyBtn.disabled = false` em vez de `true`) e confirmei que os dois novos testes de duplo-clique falham contra o código quebrado, depois restaurei o código correto e confirmaram passar de novo — evidência de que os specs realmente testam o comportamento, não são decorativos.
+- Suíte permanente completa após a adição: **55/55 PASS** (47 anteriores + 8 novos).
+
+**Estado do A1 após esta sessão:** achado fechado. Nenhuma linha de `renderConfirmOrBusy()` ou de qualquer um dos 5 painéis foi alterada nesta etapa — só cobertura de teste foi adicionada e esta nota foi registrada.
+
+---
+
 ## Missão de 5 etapas — dogfood cleanup + SF files/zip + README + manual test plan (2026-07-10)
 
 Tarefa autorizada em bloco (5 etapas, commits pré-autorizados por etapa). Executada em sequência, cada etapa validada (suíte Playwright completa + `node --check`) antes do commit isolado correspondente.
