@@ -49,8 +49,15 @@ Escopo: componentes reais em `vision-core-next-clean.{css,js}`. Fora do escopo: 
 **Estrutura:** `<form class="vc-composer" id="vcComposer">` — `<textarea id="vcPrompt">` + `<div class="vc-composer-actions">` com chips (`Missão`/`Factory`/`GitHub`/`Vault`/`IA`/`Anexar`/`Print`) + botão `.vc-send[type=submit]` ("Executar").
 **Estados:** textarea auto-resize (`resizePrompt()`, max 180px). Botão de envio nunca desabilita por padrão (não há validação de campo vazio bloqueando o submit hoje).
 **Eventos:** `submit` → `POST /api/chat`; chips `[data-feature]` prefixam o texto e navegam pra aba; o chip `Factory` apenas seleciona o contexto, e a geração usa este mesmo texto quando o usuário confirma no painel Factory; `[data-quick="attach|image"]` abrem input de arquivo oculto.
-**Posição:** `position: sticky; bottom: 18px; z-index: 20`.
-**Checklist:** [x] fixo no rodapé · [x] Enter envia, Shift+Enter quebra linha (comportamento padrão de `<textarea>` em formulário, sem handler customizado que intercepte Enter).
+**Posição:** `position: sticky; bottom: 18px; z-index: 20`, mas fora de `.vc-chat-scroll` (ver abaixo) — desde `next-clean-59` o composer não fica mais na mesma rolagem que o stream/painel, então na prática nunca precisa "grudar" por cima de nada; o sticky continua só como rede de segurança.
+**Checklist:** [x] fixo no rodapé · [x] Enter envia, Shift+Enter quebra linha (comportamento padrão de `<textarea>` em formulário, sem handler customizado que intercepte Enter) · [x] nunca sobrepõe conteúdo de `#vcFeaturePanel` (bug real de produção, corrigido em `next-clean-59`, ver `docs/CURRENT_HANDOFF.md`).
+
+## Área de rolagem do chat (`.vc-chat-scroll`)
+
+**Objetivo:** isolar a rolagem do stream de mensagens + painel contextual (`#vcFeaturePanel`, com todos os seus sub-painéis condicionais) da posição do composer, para que um painel alto (ex.: gráficos de métricas) nunca fique visualmente atrás do composer sticky.
+**Estrutura:** `<div class="vc-chat-scroll" id="vcChatScroll">` envolve `#vcChatStream` + `#vcFeaturePanel` inteiro, como filho único do meio de `.vc-chat-stage` (agora `display:flex; flex-direction:column; height:calc(100vh - 116px)`, antes era CSS Grid com `min-height`). `overflow-y:auto` bounded pela altura do container pai.
+**Achado real que motivou a criação:** antes disso, `.vc-chat-stage` só tinha `min-height` (não `height`), então a página inteira crescia com o conteúdo e o `#vcComposer` sticky "grudava" no fundo da viewport assim que a página ficava mais alta que 1 tela — inclusive por cima de `#vcFeaturePanel`, que é o item anterior no fluxo. Isso só passou a importar na prática quando `#vcFeatureViz` ganhou gráficos altos o bastante para empurrar o painel pra dentro da faixa onde o composer gruda.
+**Efeito colateral corrigido junto:** `showFeatureViz()` (em `vision-core-next-clean.js`) chama `featureViz.scrollIntoView({block:'start'})` depois de renderizar o gráfico — sem isso, o gráfico fica fora da área visível da rolagem interna, exigindo scroll manual. A ordem de chamadas em `runFeatureAction()` importa: `appendMessage()` (que faz seu próprio `scrollIntoView`) precisa rodar ANTES de `renderFeatureActionViz()`, senão o scroll do gráfico é desfeito pelo scroll da mensagem.
 
 ## Chat
 

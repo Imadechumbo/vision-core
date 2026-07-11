@@ -300,6 +300,37 @@ test('(g) Agents safe-read renders charts instead of raw JSON as the main respon
   await expect(page.locator('.vc-message-assistant').last()).toContainText('2 agente(s) reportado(s). Veja o gráfico no painel.');
   await expect(page.locator('.vc-message-assistant').last()).not.toContainText('"agents"');
 
+  // Regression for the reported production bug: the whole chat history —
+  // not just the last message — must never contain the raw payload, and
+  // the donut/bar/ranking charts must actually be the reachable content,
+  // not just present-but-scrolled-out-of-view behind the sticky composer.
+  const chatText = await page.locator('#vcChatStream').innerText();
+  expect(chatText).not.toContain('"agents":[');
+  expect(chatText).not.toContain('{"ok":true');
+
+  await expect(page.locator('#vcFeatureViz')).toContainText('Custo por agente');
+  await expect(page.locator('#vcFeatureViz')).toContainText('Ranking de atividade');
+  await expect(page.locator('#vcFeatureViz .vc-donut-wrap')).toHaveCount(1);
+  await expect(page.locator('#vcFeatureViz .vc-bar-chart')).toHaveCount(3);
+
+  // #vcChatScroll is the internal scroll region (chat stream + feature
+  // panel) — #vcComposer sits outside it. Real bug found in production:
+  // the panel used to be part of the same unbounded page scroll as the
+  // sticky composer, so a tall #vcFeatureViz rendered partly BEHIND the
+  // composer box instead of above it. Assert the fix holds: either the
+  // chart is fully above the composer, or (as implemented) the chart's
+  // own scroll region has been scrolled so the chart's top is at/near the
+  // top of its viewport — i.e. actually visible without further scrolling.
+  const vizBox = await page.locator('#vcFeatureViz').boundingBox();
+  const scrollBox = await page.locator('#vcChatScroll').boundingBox();
+  const composerBox = await page.locator('#vcComposer').boundingBox();
+  expect(vizBox).not.toBeNull();
+  expect(scrollBox).not.toBeNull();
+  expect(composerBox).not.toBeNull();
+  const chartVisibleAtTop = Math.abs(vizBox.y - scrollBox.y) < 40;
+  const chartFullyAboveComposer = vizBox.y + vizBox.height <= composerBox.y;
+  expect(chartVisibleAtTop || chartFullyAboveComposer).toBe(true);
+
   // Section 17: raw JSON stays out of the main flow but is reachable behind
   // a diagnostic-only "Ver JSON bruto" toggle, same pattern as the Métricas
   // tab's #vcMetricsRawToggle.
@@ -308,6 +339,8 @@ test('(g) Agents safe-read renders charts instead of raw JSON as the main respon
   await page.locator('#vcFeatureViz .vc-metrics-raw-toggle input[type="checkbox"]').check();
   await expect(rawPre).toBeVisible();
   await expect(rawPre).toContainText('"Hermes RCA"');
+  await page.locator('#vcFeatureViz .vc-metrics-raw-toggle input[type="checkbox"]').uncheck();
+  await expect(rawPre).toBeHidden();
 });
 
 test('(h) Tools marketplace safe-read renders status charts', async ({ page }) => {

@@ -237,13 +237,28 @@ a { color: inherit; text-decoration: none; }
 
 .vc-chat-stage {
   width: min(940px, 100%);
-  min-height: calc(100vh - 116px);
-  display: grid;
-  grid-template-rows: auto minmax(260px, 1fr) auto;
+  height: calc(100vh - 116px);
+  display: flex;
+  flex-direction: column;
   gap: 18px;
   margin: 0 auto;
   padding-top: clamp(16px, 3vh, 34px);
   padding-bottom: 24px;
+  min-height: 0;
+}
+
+/* Scrolls internally (stream + all conditional panels) so the sticky
+   composer below never overlaps in-flow content — a tall #vcFeatureViz
+   (charts) used to push #vcFeaturePanel past the composer's sticky offset,
+   visually covering the panel's own body/actions with the composer box. */
+.vc-chat-scroll {
+  flex: 1 1 auto;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .vc-chat-intro { max-width: 680px; text-align: left; }

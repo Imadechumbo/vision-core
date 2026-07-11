@@ -238,8 +238,12 @@
     if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
     appendMessage('pending', feature.title.toUpperCase(), 'Consultando ' + action.path + '...');
     apiRequest(action.path).then(function (data) {
-      renderFeatureActionViz(action, data);
+      // Order matters: appendMessage() scrolls the new chat bubble into view
+      // itself — call it BEFORE renderFeatureActionViz() so the chart's own
+      // scrollIntoView() (inside showFeatureViz) runs last and wins, leaving
+      // the chart visible instead of snapping back to the chat message.
       appendMessage('assistant', action.label.toUpperCase(), summarizeResult(data));
+      renderFeatureActionViz(action, data);
     }).catch(function (err) {
       hideFeatureViz();
       appendMessage('error', action.label.toUpperCase(), err && err.message ? err.message : String(err));
@@ -674,6 +678,10 @@
     featureViz.appendChild(h);
     renderFn(featureViz);
     if (rawData !== undefined) featureViz.appendChild(buildJsonToggle(rawData));
+    // Charts render at the bottom of a combined chat+panel scroll region
+    // (#vcChatScroll) — without this, the user has to manually scroll past
+    // the message stream + panel header/actions to ever see them.
+    if (featureViz.scrollIntoView) featureViz.scrollIntoView({ block: 'start' });
   }
 
   function hideFeatureViz() {
