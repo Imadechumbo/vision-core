@@ -22,7 +22,7 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ next-clean-59 publicada e verificada ao vivo; next-clean-60 preparado localmente, deploy pendente
+✔ next-clean-60 publicada via `bash bin/deploy-pages.sh` (Tutorial Smile) — verificação ao vivo via curl bloqueada no shell local (cert revocation check), confirmado só pelo retorno de sucesso do wrangler
 
 Cache Bust
 next-clean-60
