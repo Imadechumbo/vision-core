@@ -21,7 +21,7 @@ Dar ao usuário uma prévia estruturada e auditável de como um projeto seria mo
 
 ## Fora do escopo
 
-A metodologia SDDF de desenvolvimento do próprio Vision Core (`docs/SDDF_SPEC.md`) — ver nota de escopo acima. A página standalone legada (`#vcSoftwareFactoryPage`/`#projectBuilder`) — já decidida para deleção (Fase 3.3d, `CLAUDE.md`), não documentada aqui como algo a preservar.
+A metodologia SDDF de desenvolvimento do próprio Vision Core (`docs/SDDF_SPEC.md`) — ver nota de escopo acima. A página standalone legada (`#vcSoftwareFactoryPage`/`#projectBuilder`) — não documentada aqui como algo a preservar e já ausente dos arquivos oficiais do Vision Core Next; referências restantes pertencem ao frontend legado.
 
 ---
 
@@ -154,7 +154,7 @@ Toda chamada carrega `sf_options` com três flags **sempre falsas** nesta fase: 
 ## Pendências
 
 - ~~`project-files`/`generate-zip` não conectados~~ **CORRIGIDO (2026-07-10).** Botão "Gerar Lista de Arquivos" no painel `#vcSfFinal` chama `project-files` com `{description, accumulated_context}` (mapeados a partir de `sfLastDescription`/`sfFullContext` já existentes no fluxo Auto-Pilot — `step1_analysis`/`step2_blueprint` deliberadamente não enviados, o backend já degrada bem sem eles). Botão "Baixar ZIP" chama `generate-zip` e dispara download real via `<a download>`+blob — primeiro fluxo binário do Next, confirmado funcional por teste (`page.waitForEvent('download')`). Spec permanente nova `tests/e2e/vision-core-next-sf-project-files.spec.mjs` (6 testes). Cache-bust `next-clean-51`.
-- Página standalone legada (`#vcSoftwareFactoryPage`) — remoção **investigada e pausada** (2026-07-10): `initSoftwareFactoryPage()` tem um guard `if (!sfPage) return;` que gate-keeps a inicialização de partes AINDA VIVAS do painel embutido moderno (`#vcMissionSfPane` — chat send, chips, drawers, aprovação humana), não só da página legada em si. Deletar `#vcSoftwareFactoryPage` sem primeiro desacoplar esses inicializadores do guard quebraria funcionalidade real em produção. Ver `docs/CURRENT_STATE.md` para o relato completo — decisão pendente do usuário sobre como prosseguir.
+- Página standalone legada (`#vcSoftwareFactoryPage`/`#projectBuilder`) — **fora da fila ativa do Next** (reconciliado em 2026-07-11): não existe em `frontend/vision-core-next.html` nem em `assets/vision-core-next-clean.{css,js}`. O acoplamento descrito na investigação de 2026-07-10 ainda é relevante se alguém for limpar `frontend/index.html`/bundles legados, mas isso exige autorização explícita porque não faz parte dos arquivos oficiais do Next.
 
 ## Próximos passos
 
