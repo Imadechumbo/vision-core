@@ -14,6 +14,8 @@ Vision Core Next é a interface paralela e ativa de reconstrução do frontend d
 
 Esta frente é governada por `ARCHITECTURAL PRINCIPLE-001` (Zero Legacy Debt) e `ARCHITECTURAL PRINCIPLE-002` (Specification First), registrados em `docs/DECISIONS.md`: o legado é referência funcional/histórica, e o Next implementa as specs oficiais sem portar dívida técnica.
 
+Direção de evolução vigente: ver `docs/DECISIONS.md` DECISION-019. O Next deve ser tratado como futuro frontend oficial do Vision Core; cada missão começa por comparação implementação × specs e prioriza arquitetura/UX antes de refinamentos visuais soltos.
+
 ## Objetivo
 
 Paridade funcional progressiva com o legado, com rigor de segurança (nunca uma chamada destrutiva sem confirmação dupla), zero dívida herdada, e uma identidade visual coesa (minimalista, escura, sidebar colapsável, chat como centro).

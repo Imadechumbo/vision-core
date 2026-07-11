@@ -11,6 +11,8 @@
 
 Roadmap técnico em 9 fases. **Nenhuma fase aqui é um compromisso de data** — são agrupamentos de pendências reais já registradas em algum lugar do projeto, organizadas por dependência e risco, não uma promessa de cronograma. Onde uma fase tem um documento fonte com número de decisão (`§NNN`), esse número é citado.
 
+Direção de produto vigente: Vision Core Next está na fase de consolidação como frontend oficial futuro (ver `docs/DECISIONS.md` DECISION-019). A escolha de próximas tarefas prioriza, nesta ordem: arquitetura, UX, Software Factory, Atomic Core, performance, observabilidade, segurança, documentação e refinamentos visuais.
+
 ## Objetivo
 
 Dar visibilidade de longo prazo sem inventar prazo. Toda entrada aqui é rastreável a uma pendência já registrada em `CLAUDE.md`/`docs/CURRENT_STATE.md`/uma spec — nada foi inventado para preencher a fase.
@@ -115,7 +117,7 @@ Pendências: `GitProviderAdapter` (GitLab, `PLANEJADO`, zero código ainda — "
 
 **Estado:** misto — parte EXISTENTE, parte bloqueada, parte IDEIA FUTURA.
 
-**Objetivos:** conectar o AI Provider Vault ao `sf-agent-orchestrator.mjs` (Fase D(b), decisão de arquitetura em aberto: MCP server fino vs. lib compartilhada); fechar o smoke test real do `SF-AGENT-ORCHESTRATOR` (Claude Agent SDK); ativar os Reserve Agents (Memory/Locator/Security/Validator/Architect — pré-registrados, não implementados, §200); máquina de 4 estados completa do Atomic Core (IDEIA FUTURA).
+**Objetivos:** conectar o AI Provider Vault ao `sf-agent-orchestrator.mjs` (Fase D(b), decisão de arquitetura em aberto: MCP server fino vs. lib compartilhada); fechar o smoke test real do `SF-AGENT-ORCHESTRATOR` (Claude Agent SDK); ativar os Reserve Agents (Memory/Locator/Security/Validator/Architect — pré-registrados, não implementados, §200); máquina de 4 estados completa do Atomic Core (IDEIA FUTURA); avaliar, quando o Software Factory estiver maduro, se `ARCHITECTURAL PRINCIPLE-003 — System Correcting Systems` deve virar princípio permanente. Até lá, AP-003 é apenas IDEIA FUTURA: toda melhoria deve, quando possível, aumentar a capacidade do Vision Core de analisar, validar, corrigir ou evoluir outros sistemas, incluindo ele próprio, sem autorizar execução automática nem reabrir gates.
 
 **Dependências:** `SF-AGENT-ORCHESTRATOR` Fase 2 está **pausada por limite de cota de API** — precisa de decisão humana (esperar reset ou usar `ANTHROPIC_API_KEY` própria).
 
