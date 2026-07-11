@@ -12,6 +12,8 @@
 
 Vision Core Next é a interface paralela e ativa de reconstrução do frontend do Vision Core — um app operacional de chat/missão no estilo ChatGPT/Claude/Cursor, não uma landing page nem um dashboard denso. Roda ao lado do frontend legado (`index.html`) sem substituí-lo, acessível por URL própria, sem nenhum código do legado copiado ou importado.
 
+Esta frente é governada por `ARCHITECTURAL PRINCIPLE-001` (Zero Legacy Debt) e `ARCHITECTURAL PRINCIPLE-002` (Specification First), registrados em `docs/DECISIONS.md`: o legado é referência funcional/histórica, e o Next implementa as specs oficiais sem portar dívida técnica.
+
 ## Objetivo
 
 Paridade funcional progressiva com o legado, com rigor de segurança (nunca uma chamada destrutiva sem confirmação dupla), zero dívida herdada, e uma identidade visual coesa (minimalista, escura, sidebar colapsável, chat como centro).

@@ -6,6 +6,20 @@ Formato: afirmação → **Por quê** → **Como aplicar**. Ordem: mais recente 
 
 ---
 
+## Princípios arquiteturais permanentes
+
+### ARCHITECTURAL PRINCIPLE-001 — Zero Legacy Debt
+Vision Core Next não é uma evolução incremental do frontend legado; é uma nova implementação baseada nas especificações oficiais.
+**Por quê:** o legado preserva conhecimento funcional e histórico, mas também carrega dívida técnica, hacks e decisões locais que não devem se tornar a base do Next.
+**Como aplicar:** usar o legado exclusivamente como referência funcional/histórica. Todo componente migrado para o Next precisa ser reimplementado, modular, documentado, testado, coeso e aderente às specs. Nenhum componente entra no Next apenas porque existia no legado; conhecimento é preservado, dívida técnica não é migrada.
+
+### ARCHITECTURAL PRINCIPLE-002 — Specification First
+As especificações oficiais são a fonte de verdade do Vision Core.
+**Por quê:** o projeto depende de múltiplos agentes trabalhando por revezamento; se código e specs divergem, cada agente passa a reconstruir a intenção do sistema por suposição.
+**Como aplicar:** o código deve implementar as specs, nunca o contrário por conveniência. Quando houver divergência, corrigir o código ou corrigir a spec com decisão explícita, mas nunca deixar ambos divergentes. Toda evolução relevante do Next começa pela spec aplicável e termina com documentação/teste coerentes.
+
+---
+
 ## Infraestrutura / Deploy
 
 ### DECISION-001 — Não migrar AWS → Alibaba Cloud
