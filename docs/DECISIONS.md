@@ -18,6 +18,11 @@ As especificações oficiais são a fonte de verdade do Vision Core.
 **Por quê:** o projeto depende de múltiplos agentes trabalhando por revezamento; se código e specs divergem, cada agente passa a reconstruir a intenção do sistema por suposição.
 **Como aplicar:** o código deve implementar as specs, nunca o contrário por conveniência. Quando houver divergência, corrigir o código ou corrigir a spec com decisão explícita, mas nunca deixar ambos divergentes. Toda evolução relevante do Next começa pela spec aplicável e termina com documentação/teste coerentes.
 
+### ARCHITECTURAL PRINCIPLE-003 — Evidence Before Change
+Nenhuma alteração arquitetural pode ser baseada em inferência apresentada como fato.
+**Por quê:** o Vision Core é mantido por múltiplos agentes e já acumulou divergências entre prompt, spec, teste, código e estado real. Sem evidência objetiva antes da mudança, o agente seguinte herda uma conclusão não verificável e pode transformar suposição em arquitetura.
+**Como aplicar:** toda decisão arquitetural precisa apontar pelo menos uma evidência objetiva: spec, código, teste, execução observável ou documentação oficial. Suposições devem ser marcadas como suposição. Se duas fontes normativas de mesma autoridade divergirem e não houver evidência suficiente para escolher o lado correto, parar e pedir decisão humana antes de implementar.
+
 ---
 
 ## Infraestrutura / Deploy
