@@ -2305,6 +2305,99 @@
   var sfGeneratedFiles = null;
   var sfFilesInFlight = false;
   var sfZipInFlight = false;
+  var sfAdvancedPanel = document.getElementById('vcSfAdvancedPanel');
+  var sfSuggestBtn = document.getElementById('vcSfSuggestBtn');
+  var sfAcceptStackBtn = document.getElementById('vcSfAcceptStackBtn');
+  var sfResetStackBtn = document.getElementById('vcSfResetStackBtn');
+  var sfMissionSummary = document.getElementById('vcSfMissionSummary');
+  var sfWarnings = document.getElementById('vcSfWarnings');
+  var sfSuggestion = document.getElementById('vcSfSuggestion');
+  var sfStackCatalog = document.getElementById('vcSfStackCatalog');
+  var sfStackGraph = document.getElementById('vcSfStackGraph');
+  var sfTechDetail = document.getElementById('vcSfTechDetail');
+  var sfAgentMatrix = document.getElementById('vcSfAgentMatrix');
+  var sfTimeline = document.getElementById('vcSfTimeline');
+  var sfTimelineDetail = document.getElementById('vcSfTimelineDetail');
+  var sfPreview = document.getElementById('vcSfPreview');
+  var sfLastSuggestionMission = '';
+  var sfSelectedTechId = '';
+  var sfSelectedTimelineId = 'discover';
+
+  var SF_STACK_CATALOG = [
+    { key: 'languages', label: 'Linguagens', role: 'base de linguagem', items: ['JavaScript', 'TypeScript', 'Python', 'Go', 'Rust', 'Java', 'C#', 'C++', 'PHP', 'Ruby', 'Kotlin', 'Swift', 'Dart'] },
+    { key: 'frontend', label: 'Frontend', role: 'interface de usuário', items: ['HTML/CSS/JS', 'React', 'Next.js', 'Vue', 'Nuxt', 'Angular', 'Svelte', 'SvelteKit', 'Solid', 'Astro', 'Tailwind', 'Bootstrap'] },
+    { key: 'backend', label: 'Backend', role: 'API e regras de negócio', items: ['Node.js', 'Express', 'Fastify', 'NestJS', 'FastAPI', 'Flask', 'Django', 'Gin', 'Fiber', 'Axum', 'Actix', 'Spring Boot', 'ASP.NET Core', 'Laravel'] },
+    { key: 'mobile', label: 'Mobile', role: 'aplicativo móvel', items: ['React Native', 'Flutter', 'Expo', 'Ionic'] },
+    { key: 'desktop', label: 'Desktop', role: 'aplicativo desktop', items: ['Electron', 'Tauri', '.NET Desktop', 'Qt', 'Flutter Desktop'] },
+    { key: 'database', label: 'Bancos', role: 'persistência', items: ['PostgreSQL', 'MySQL', 'MariaDB', 'SQLite', 'MongoDB', 'Redis', 'Supabase', 'Firebase', 'DynamoDB', 'Elasticsearch', 'Neo4j'] },
+    { key: 'infra', label: 'Infraestrutura', role: 'deploy e operação', items: ['Docker', 'Kubernetes', 'GitHub Actions', 'Cloudflare', 'AWS', 'Elastic Beanstalk', 'Lambda', 'S3', 'Railway', 'Render', 'Vercel', 'Netlify'] },
+    { key: 'security', label: 'Segurança', role: 'controle e proteção', items: ['OAuth', 'JWT', 'Session Auth', 'RBAC', 'Passkeys', 'Vault', 'VC Secret Guard', 'Secret scanning'] },
+    { key: 'ai', label: 'IA', role: 'inteligência e agentes', items: ['OpenAI', 'Anthropic', 'OpenRouter', 'Ollama', 'LangChain', 'LlamaIndex', 'RAG', 'Vector DB', 'Agent orchestration', 'MCP'] },
+    { key: 'tests', label: 'Testes', role: 'validação', items: ['Playwright', 'Vitest', 'Jest', 'Pytest', 'Go Test', 'Cargo Test', 'Cypress', 'Postman/Newman'] },
+    { key: 'observability', label: 'Observabilidade', role: 'telemetria', items: ['OpenTelemetry', 'Prometheus', 'Grafana', 'Sentry', 'Logs estruturados', 'DORA metrics'] }
+  ];
+
+  var SF_AGENT_BASE = [
+    { id: 'hermes', name: 'Hermes', role: 'supervisor lógico', state: 'REQUIRED' },
+    { id: 'pi', name: 'PI Harness', role: 'execução controlada', state: 'AUTO' },
+    { id: 'github', name: 'GitHub Agent', role: 'PR e release', state: 'AUTO' },
+    { id: 'archivist', name: 'Archivist', role: 'memória e handoff', state: 'AUTO' },
+    { id: 'openclaw', name: 'OpenClaw', role: 'orquestração', state: 'ON' },
+    { id: 'scanner', name: 'Scanner', role: 'contexto e validação', state: 'REQUIRED' },
+    { id: 'goCore', name: 'Go Core', role: 'runtime truth', state: 'REQUIRED' },
+    { id: 'aegis', name: 'Aegis', role: 'security gate', state: 'REQUIRED' },
+    { id: 'patchEngine', name: 'Patch Engine', role: 'patch controlado', state: 'AUTO' },
+    { id: 'passGold', name: 'Pass Gold', role: 'aprovação final', state: 'REQUIRED' }
+  ];
+
+  var SF_TIMELINE_BASE = [
+    { id: 'discover', number: '01', name: 'Descoberta e planejamento', agent: 'Hermes', status: 'READY', description: 'Interpreta a conversa principal e define premissas.', inputs: 'Mensagem do composer/chat', outputs: 'Resumo da missão, tamanho e risco', duration: '2-4 min', human: 'Revisar premissas' },
+    { id: 'architecture', number: '02', name: 'Arquitetura e stack', agent: 'OpenClaw', status: 'READY', description: 'Seleciona tecnologias do catálogo e valida compatibilidade.', inputs: 'Catálogo + sugestão local', outputs: 'Stack selecionada e avisos', duration: '3-6 min', human: 'Aceitar ou editar stack' },
+    { id: 'compose', number: '03', name: 'Composição da missão', agent: 'Hermes', status: 'NOT_STARTED', description: 'Monta o payload seguro para os módulos SF reais.', inputs: 'Stack, agentes e contexto', outputs: 'Prompt estruturado', duration: '1-3 min', human: 'Confirmar escopo' },
+    { id: 'preview', number: '04', name: 'Preview e validação', agent: 'Scanner', status: 'NOT_STARTED', description: 'Gera preview sem escrita em disco.', inputs: 'Payload SF', outputs: 'Plano e riscos', duration: '5-12 min', human: 'Revisar preview' },
+    { id: 'workers', number: '05', name: 'Pacotes para workers', agent: 'PI Harness', status: 'NOT_STARTED', description: 'Prepara handoff controlado para worker.', inputs: 'Blueprint aprovado', outputs: 'Pacote de worker', duration: '3-8 min', human: 'Aprovar próximo passo' },
+    { id: 'command', number: '06', name: 'Comando para criação real', agent: 'Patch Engine', status: 'WAITING_APPROVAL', description: 'Continua bloqueado para execução real nesta fase.', inputs: 'Confirmação humana', outputs: 'Comando seguro ou dry-run', duration: 'manual', human: 'Obrigatória' },
+    { id: 'receipt', number: '07', name: 'Execução e recibo', agent: 'Archivist', status: 'NOT_STARTED', description: 'Registra recibo e logs quando houver execução autorizada.', inputs: 'Resultado do worker', outputs: 'Recibo auditável', duration: '2-5 min', human: 'Revisar recibo' },
+    { id: 'validate', number: '08', name: 'Validação e entrega', agent: 'Pass Gold', status: 'NOT_STARTED', description: 'Consolida evidências, testes e gate final.', inputs: 'Logs e artefatos', outputs: 'PASS GOLD ou bloqueio', duration: '4-10 min', human: 'Aprovação final' },
+    { id: 'roadmap', number: '09', name: 'Roadmap e conectores', agent: 'GitHub Agent', status: 'NOT_STARTED', description: 'Sugere próximos conectores e PR quando seguro.', inputs: 'Entrega validada', outputs: 'Roadmap e PR opcional', duration: '2-4 min', human: 'Decidir publicação' }
+  ];
+
+  var sfCatalogIndex = {};
+  var sfAdvancedState = {
+    mission: '',
+    projectType: 'Indefinido',
+    size: 'Indefinido',
+    risk: 'baixo',
+    selectedStack: [],
+    suggestedStack: [],
+    agents: {},
+    timeline: SF_TIMELINE_BASE.map(function (step) { return Object.assign({}, step); }),
+    warnings: [],
+    assumptions: [],
+    status: 'idle'
+  };
+
+  function sfSlug(value) {
+    return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+
+  SF_STACK_CATALOG.forEach(function (category) {
+    category.items = category.items.map(function (label) {
+      var tech = {
+        id: category.key + '-' + sfSlug(label),
+        label: label,
+        category: category.key,
+        categoryLabel: category.label,
+        role: category.role,
+        compatible: [],
+        alternatives: [],
+        risk: 'baixo',
+        reason: category.role
+      };
+      sfCatalogIndex[tech.id] = tech;
+      return tech;
+    });
+  });
 
   var SF_STEPS = [
     { label: '01 — Analisar projeto e sugerir stack',      module: 'project_builder',   endpoint: '/api/sf/mission-composer' },
@@ -2337,6 +2430,96 @@
     return JSON.stringify(data, null, 2);
   }
 
+  function sfTechByLabel(label) {
+    var slug = sfSlug(label);
+    var found = null;
+    SF_STACK_CATALOG.some(function (category) {
+      return category.items.some(function (tech) {
+        if (sfSlug(tech.label) === slug) { found = tech; return true; }
+        return false;
+      });
+    });
+    return found;
+  }
+
+  function sfIds(labels) {
+    return labels.map(sfTechByLabel).filter(Boolean).map(function (tech) { return tech.id; });
+  }
+
+  function sfSelectedLabels() {
+    return sfAdvancedState.selectedStack.map(function (id) { return sfCatalogIndex[id]; }).filter(Boolean).map(function (tech) { return tech.label; });
+  }
+
+  function sfSuggestFromMission(mission) {
+    var text = String(mission || '').toLowerCase();
+    var type = 'Aplicação fullstack';
+    var size = 'Médio';
+    var risk = 'baixo';
+    var labels = ['TypeScript', 'React', 'Node.js', 'Fastify', 'PostgreSQL', 'Docker', 'GitHub Actions', 'Playwright', 'Vitest', 'Session Auth', 'VC Secret Guard', 'OpenTelemetry'];
+    var assumptions = ['Sugestão local determinística: nenhum endpoint novo foi chamado.', 'Dry-run e PASS GOLD permanecem ligados por padrão.'];
+
+    if (/landing|site institucional|p[aá]gina|portfolio/.test(text)) {
+      type = 'Landing page';
+      size = 'Pequeno';
+      labels = ['HTML/CSS/JS', 'Astro', 'Cloudflare', 'Playwright', 'GitHub Actions', 'DORA metrics'];
+    } else if (/api|backend|microservi|servi[cç]o/.test(text) && !/dashboard|frontend|painel/.test(text)) {
+      type = 'API backend';
+      labels = /go|golang/.test(text)
+        ? ['Go', 'Gin', 'PostgreSQL', 'Redis', 'Docker', 'GitHub Actions', 'Go Test', 'OpenTelemetry', 'VC Secret Guard']
+        : ['TypeScript', 'Node.js', 'Fastify', 'PostgreSQL', 'Redis', 'Docker', 'GitHub Actions', 'Vitest', 'OpenTelemetry', 'VC Secret Guard'];
+    } else if (/mobile|android|ios|app nativo/.test(text)) {
+      type = 'Aplicativo mobile';
+      labels = ['TypeScript', 'React Native', 'Expo', 'FastAPI', 'PostgreSQL', 'Docker', 'Playwright', 'OAuth', 'Sentry'];
+    } else if (/(^|[^a-z0-9])(ia|ai)([^a-z0-9]|$)|rag|agente|llm|vector|vetor/.test(text)) {
+      type = 'Sistema de IA/agentes';
+      risk = 'médio';
+      labels = ['Python', 'FastAPI', 'PostgreSQL', 'Redis', 'OpenAI', 'OpenRouter', 'RAG', 'Vector DB', 'Agent orchestration', 'Docker', 'Pytest', 'OpenTelemetry', 'VC Secret Guard'];
+    } else if (/saas|dashboard|painel|crm|checkout|pagamento|stripe|login|auth/.test(text)) {
+      type = 'SaaS fullstack';
+      labels = ['TypeScript', 'React', 'Node.js', 'Fastify', 'PostgreSQL', 'Docker', 'GitHub Actions', 'Playwright', 'Vitest', 'Session Auth', 'RBAC', 'VC Secret Guard', 'OpenTelemetry', 'Sentry'];
+    }
+
+    if (/mvp|simples|prot[oó]tipo/.test(text)) size = 'Pequeno';
+    if (/enterprise|alta disponibilidade|multi-tenant|legado|pagamento|stripe|billing|alto risco/.test(text)) risk = 'alto';
+    if (/enterprise|alta disponibilidade|multi-tenant/.test(text)) size = 'Grande';
+
+    return {
+      projectType: type,
+      risk: risk,
+      size: size,
+      suggestedStack: sfIds(labels),
+      assumptions: assumptions
+    };
+  }
+
+  function sfEvaluateWarnings(ids, meta) {
+    var labels = ids.map(function (id) { return sfCatalogIndex[id] && sfCatalogIndex[id].label; }).filter(Boolean);
+    var has = function (label) { return labels.indexOf(label) !== -1; };
+    var frontendCount = ['React', 'Vue', 'Angular', 'Svelte', 'Solid', 'Astro', 'Next.js', 'Nuxt', 'SvelteKit'].filter(has).length;
+    var warnings = [];
+    if (frontendCount > 1) warnings.push('Há múltiplos frameworks frontend concorrentes. Escolha um principal para reduzir custo de manutenção.');
+    if (has('React Native') && has('Electron')) warnings.push('React Native + Electron mistura mobile e desktop; mantenha ambos só com justificativa explícita.');
+    if (has('SQLite') && meta && meta.size === 'Grande') warnings.push('SQLite é frágil para arquitetura distribuída/enterprise. PostgreSQL é a alternativa segura.');
+    if (has('Kubernetes') && meta && meta.size === 'Pequeno') warnings.push('Kubernetes costuma ser excesso para MVP simples. Docker + Cloudflare/Railway resolve com menos operação.');
+    if (has('JWT') && has('Session Auth')) warnings.push('JWT e Session Auth juntos podem duplicar a estratégia de sessão. Defina um mecanismo principal.');
+    return warnings;
+  }
+
+  function sfAppend(parent, tag, className, text) {
+    if (!parent) return null;
+    var el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text != null) el.textContent = text;
+    parent.appendChild(el);
+    return el;
+  }
+
+  function sfRenderEmpty(parent, text) {
+    if (!parent) return;
+    parent.textContent = '';
+    sfAppend(parent, 'p', 'vc-sf-empty', text);
+  }
+
   function appendSfMsg(role, text) {
     if (!sfHistory) return null;
     var item = document.createElement('div');
@@ -2362,6 +2545,217 @@
     row.textContent = text;
     sfLog.appendChild(row);
     sfLog.scrollTop = sfLog.scrollHeight;
+  }
+
+  function sfRenderSummary() {
+    if (!sfMissionSummary) return;
+    sfMissionSummary.textContent = '';
+    [
+      ['Tipo', sfAdvancedState.projectType],
+      ['Tamanho', sfAdvancedState.size],
+      ['Risco', sfAdvancedState.risk],
+      ['Modo', sfMode === 'advanced' ? 'Avançado visual/editável' : 'Auto-Pilot']
+    ].forEach(function (pair) {
+      var item = sfAppend(sfMissionSummary, 'div', 'vc-sf-summary-item');
+      sfAppend(item, 'span', '', pair[0]);
+      sfAppend(item, 'strong', '', pair[1]);
+    });
+
+    if (!sfWarnings) return;
+    sfWarnings.textContent = '';
+    var warnings = sfAdvancedState.warnings.length ? sfAdvancedState.warnings : ['Sem incompatibilidade crítica detectada nesta seleção.'];
+    warnings.forEach(function (warning) { sfAppend(sfWarnings, 'div', 'vc-sf-warning', warning); });
+  }
+
+  function sfRenderSuggestion() {
+    if (!sfSuggestion) return;
+    sfSuggestion.textContent = '';
+    if (!sfAdvancedState.suggestedStack.length) {
+      sfRenderEmpty(sfSuggestion, 'Escreva uma missão no composer e peça uma sugestão.');
+      return;
+    }
+    var byCategory = {};
+    sfAdvancedState.suggestedStack.forEach(function (id) {
+      var tech = sfCatalogIndex[id];
+      if (!tech) return;
+      if (!byCategory[tech.categoryLabel]) byCategory[tech.categoryLabel] = [];
+      byCategory[tech.categoryLabel].push(tech.label);
+    });
+    Object.keys(byCategory).forEach(function (category) {
+      var item = sfAppend(sfSuggestion, 'div', 'vc-sf-suggestion-item');
+      sfAppend(item, 'strong', '', category);
+      sfAppend(item, 'span', '', byCategory[category].join(' + '));
+      sfAppend(item, 'p', '', 'SUGERIDO: compatível com ' + sfAdvancedState.projectType + '. Usuário pode aceitar, rejeitar ou editar.');
+    });
+  }
+
+  function sfRenderCatalog() {
+    if (!sfStackCatalog) return;
+    sfStackCatalog.textContent = '';
+    SF_STACK_CATALOG.forEach(function (category) {
+      var wrap = sfAppend(sfStackCatalog, 'section', 'vc-sf-catalog-category');
+      sfAppend(wrap, 'h4', '', category.label);
+      var items = sfAppend(wrap, 'div', 'vc-sf-catalog-items');
+      category.items.forEach(function (tech) {
+        var btn = sfAppend(items, 'button', 'vc-sf-tech-button', tech.label);
+        btn.type = 'button';
+        btn.setAttribute('data-tech-id', tech.id);
+        btn.setAttribute('aria-pressed', sfAdvancedState.selectedStack.indexOf(tech.id) !== -1 ? 'true' : 'false');
+        btn.setAttribute('data-suggested', sfAdvancedState.suggestedStack.indexOf(tech.id) !== -1 ? 'true' : 'false');
+      });
+    });
+  }
+
+  function sfRenderGraph() {
+    if (!sfStackGraph) return;
+    sfStackGraph.textContent = '';
+    if (!sfAdvancedState.selectedStack.length) {
+      sfRenderEmpty(sfStackGraph, 'Nenhuma tecnologia selecionada ainda.');
+      return;
+    }
+    var grouped = {};
+    sfAdvancedState.selectedStack.forEach(function (id) {
+      var tech = sfCatalogIndex[id];
+      if (!tech) return;
+      if (!grouped[tech.categoryLabel]) grouped[tech.categoryLabel] = [];
+      grouped[tech.categoryLabel].push(tech);
+    });
+    Object.keys(grouped).forEach(function (category) {
+      var group = sfAppend(sfStackGraph, 'div', 'vc-sf-graph-group');
+      sfAppend(group, 'h4', '', category);
+      grouped[category].forEach(function (tech) {
+        var row = sfAppend(group, 'div', 'vc-sf-graph-node');
+        row.setAttribute('data-tech-id', tech.id);
+        row.tabIndex = 0;
+        sfAppend(row, 'span', '', tech.label);
+        var remove = sfAppend(row, 'button', 'vc-sf-remove-tech', '×');
+        remove.type = 'button';
+        remove.setAttribute('aria-label', 'Remover ' + tech.label);
+        remove.setAttribute('data-remove-tech-id', tech.id);
+      });
+    });
+  }
+
+  function sfRenderTechDetail() {
+    if (!sfTechDetail) return;
+    sfTechDetail.textContent = '';
+    var tech = sfCatalogIndex[sfSelectedTechId] || sfCatalogIndex[sfAdvancedState.selectedStack[0]] || sfCatalogIndex[sfAdvancedState.suggestedStack[0]];
+    if (!tech) {
+      sfRenderEmpty(sfTechDetail, 'Selecione uma tecnologia para ver função, compatibilidade, risco e alternativas.');
+      return;
+    }
+    sfSelectedTechId = tech.id;
+    sfAppend(sfTechDetail, 'h4', '', tech.label);
+    sfAppend(sfTechDetail, 'p', '', 'Função: ' + tech.role + '. Compatível com a stack selecionada quando não houver warning acima.');
+    sfAppend(sfTechDetail, 'p', '', 'Risco: ' + tech.risk + '. Alternativas: outras opções em ' + tech.categoryLabel + '.');
+    sfAppend(sfTechDetail, 'p', '', 'Impacto no pipeline: entra no contexto do Arquiteto e no payload seguro do Software Factory.');
+  }
+
+  function sfRenderAgents() {
+    if (!sfAgentMatrix) return;
+    sfAgentMatrix.textContent = '';
+    SF_AGENT_BASE.forEach(function (agent) {
+      if (!sfAdvancedState.agents[agent.id]) sfAdvancedState.agents[agent.id] = agent.state;
+      var row = sfAppend(sfAgentMatrix, 'div', 'vc-sf-agent-row');
+      var copy = sfAppend(row, 'div', '');
+      sfAppend(copy, 'strong', '', agent.name);
+      sfAppend(copy, 'span', '', agent.role);
+      var btn = sfAppend(row, 'button', 'vc-sf-agent-state', sfAdvancedState.agents[agent.id]);
+      btn.type = 'button';
+      btn.setAttribute('data-agent-id', agent.id);
+      btn.setAttribute('data-state', sfAdvancedState.agents[agent.id]);
+      if (agent.state === 'REQUIRED' || agent.state === 'LOCKED') btn.disabled = true;
+    });
+  }
+
+  function sfRenderTimeline() {
+    if (!sfTimeline) return;
+    sfTimeline.textContent = '';
+    sfAdvancedState.timeline.forEach(function (step) {
+      var btn = sfAppend(sfTimeline, 'button', 'vc-sf-timeline-step');
+      btn.type = 'button';
+      btn.setAttribute('data-timeline-id', step.id);
+      btn.setAttribute('data-status', step.status);
+      btn.setAttribute('aria-selected', step.id === sfSelectedTimelineId ? 'true' : 'false');
+      sfAppend(btn, 'strong', '', step.number + ' ' + step.name);
+      sfAppend(btn, 'span', '', step.status + ' · ' + step.agent);
+    });
+    sfRenderTimelineDetail();
+  }
+
+  function sfRenderTimelineDetail() {
+    if (!sfTimelineDetail) return;
+    sfTimelineDetail.textContent = '';
+    var step = sfAdvancedState.timeline.filter(function (item) { return item.id === sfSelectedTimelineId; })[0] || sfAdvancedState.timeline[0];
+    if (!step) return;
+    sfAppend(sfTimelineDetail, 'h4', '', step.number + ' — ' + step.name);
+    sfAppend(sfTimelineDetail, 'p', '', step.description);
+    sfAppend(sfTimelineDetail, 'p', '', 'Agente principal: ' + step.agent + '. Entradas: ' + step.inputs + '. Saídas: ' + step.outputs + '.');
+    sfAppend(sfTimelineDetail, 'p', '', 'Status: ' + step.status + '. Duração estimada: ' + step.duration + '. Ação humana: ' + step.human + '.');
+  }
+
+  function sfRenderPreview() {
+    if (!sfPreview) return;
+    sfPreview.textContent = '';
+    var rows = [
+      ['Missão', sfAdvancedState.mission || 'Use o composer principal para definir a missão.'],
+      ['Stack selecionada', sfSelectedLabels().join(', ') || 'Nenhuma tecnologia selecionada.'],
+      ['Segurança', 'dry_run=true · pass_gold=' + (!sfPassGold || sfPassGold.checked) + ' · real_execution_allowed=false'],
+      ['Confirmação', 'Selecionar Factory ou montar timeline não executa nada. O botão de geração ainda exige ação humana.']
+    ];
+    rows.forEach(function (pair) {
+      var row = sfAppend(sfPreview, 'div', 'vc-sf-preview-row');
+      sfAppend(row, 'span', '', pair[0]);
+      sfAppend(row, 'strong', '', pair[1]);
+    });
+  }
+
+  function sfRenderAdvanced() {
+    sfAdvancedState.warnings = sfEvaluateWarnings(sfAdvancedState.selectedStack, sfAdvancedState);
+    sfRenderSummary();
+    sfRenderSuggestion();
+    sfRenderCatalog();
+    sfRenderGraph();
+    sfRenderTechDetail();
+    sfRenderAgents();
+    sfRenderTimeline();
+    sfRenderPreview();
+  }
+
+  function sfSuggestAdvanced(announce) {
+    var mission = readComposerMissionText();
+    sfAdvancedState.mission = mission;
+    var suggestion = sfSuggestFromMission(mission);
+    sfAdvancedState.projectType = suggestion.projectType;
+    sfAdvancedState.size = suggestion.size;
+    sfAdvancedState.risk = suggestion.risk;
+    sfAdvancedState.suggestedStack = suggestion.suggestedStack;
+    sfAdvancedState.assumptions = suggestion.assumptions;
+    if (!sfAdvancedState.selectedStack.length) sfAdvancedState.selectedStack = suggestion.suggestedStack.slice();
+    sfAdvancedState.timeline = SF_TIMELINE_BASE.map(function (step, idx) {
+      var copy = Object.assign({}, step);
+      if (idx === 0) copy.status = 'DONE';
+      else if (idx === 1) copy.status = 'ACTIVE';
+      else if (idx === 5) copy.status = 'WAITING_APPROVAL';
+      return copy;
+    });
+    sfRenderAdvanced();
+    if (announce && mission && sfLastSuggestionMission !== mission) {
+      sfLastSuggestionMission = mission;
+      appendMessage('assistant', 'ARQUITETO SF', 'Sugestão local criada para "' + mission + '": ' + sfAdvancedState.projectType + ' · stack: ' + sfSelectedLabels().join(', ') + '. Nada foi executado.');
+    }
+  }
+
+  function sfAcceptSuggestion() {
+    sfAdvancedState.selectedStack = sfAdvancedState.suggestedStack.slice();
+    sfSelectedTechId = sfAdvancedState.selectedStack[0] || '';
+    sfRenderAdvanced();
+  }
+
+  function sfResetSelection() {
+    sfAdvancedState.selectedStack = [];
+    sfSelectedTechId = '';
+    sfRenderAdvanced();
   }
 
   function updateSfProgress(idx, status) {
@@ -2408,6 +2802,8 @@
     sfModeButtons.forEach(function (btn) {
       btn.setAttribute('aria-pressed', btn.getAttribute('data-sf-mode') === sfMode ? 'true' : 'false');
     });
+    if (sfAdvancedPanel) sfAdvancedPanel.hidden = sfMode !== 'advanced';
+    if (sfMode === 'advanced') sfSuggestAdvanced(true);
   }
 
   function getSelectedSfExtraSteps() {
@@ -2466,6 +2862,10 @@
       dry_run: !sfDryRun || sfDryRun.checked,
       pass_gold: !sfPassGold || sfPassGold.checked,
       extra_steps: selectedExtraSteps.map(function (step) { return step.key; }),
+      stack: sfSelectedLabels(),
+      project_type: sfAdvancedState.projectType,
+      risk_level: sfAdvancedState.risk,
+      architect_source: sfMode === 'advanced' ? 'local_deterministic' : 'autopilot',
       real_execution_allowed: false,
       deploy_allowed: false,
       writes_disk: false
@@ -2526,6 +2926,18 @@
       updateSfProgress(idx, 'active');
       var step = sfActiveSteps[idx];
       var body = { description: desc, module: step.module, autopilot: true, step: idx, total_steps: sfActiveSteps.length, sf_options: sfRunOptions || readSfOptions() };
+      if (sfMode === 'advanced') {
+        body.architecture_preview = {
+          project_type: sfAdvancedState.projectType,
+          risk_level: sfAdvancedState.risk,
+          size: sfAdvancedState.size,
+          selected_stack: sfSelectedLabels(),
+          warnings: sfAdvancedState.warnings,
+          timeline: sfAdvancedState.timeline.map(function (item) { return { number: item.number, name: item.name, status: item.status, agent: item.agent }; }),
+          agents: sfAdvancedState.agents,
+          source: 'local_deterministic'
+        };
+      }
       appendSfLog('info', 'SEND ' + step.endpoint + ' module=' + step.module);
       if (sfFullContext && idx > 0) body.full_context = sfFullContext.slice(0, 3000);
       apiRequest(step.endpoint, { method: 'POST', body: body }).then(function (data) {
@@ -2677,10 +3089,71 @@
 
   if (sfFilesBtn) sfFilesBtn.addEventListener('click', requestSfProjectFiles);
   if (sfZipBtn) sfZipBtn.addEventListener('click', requestSfZipDownload);
+  if (sfSuggestBtn) sfSuggestBtn.addEventListener('click', function () { sfSuggestAdvanced(true); });
+  if (sfAcceptStackBtn) sfAcceptStackBtn.addEventListener('click', sfAcceptSuggestion);
+  if (sfResetStackBtn) sfResetStackBtn.addEventListener('click', sfResetSelection);
+  if (sfStackCatalog) {
+    sfStackCatalog.addEventListener('click', function (event) {
+      var btn = event.target && event.target.closest ? event.target.closest('[data-tech-id]') : null;
+      if (!btn) return;
+      var id = btn.getAttribute('data-tech-id');
+      var idx = sfAdvancedState.selectedStack.indexOf(id);
+      if (idx === -1) sfAdvancedState.selectedStack.push(id);
+      else sfAdvancedState.selectedStack.splice(idx, 1);
+      sfSelectedTechId = id;
+      sfRenderAdvanced();
+    });
+  }
+  if (sfStackGraph) {
+    sfStackGraph.addEventListener('click', function (event) {
+      var remove = event.target && event.target.closest ? event.target.closest('[data-remove-tech-id]') : null;
+      if (remove) {
+        var removeId = remove.getAttribute('data-remove-tech-id');
+        sfAdvancedState.selectedStack = sfAdvancedState.selectedStack.filter(function (id) { return id !== removeId; });
+        if (sfSelectedTechId === removeId) sfSelectedTechId = sfAdvancedState.selectedStack[0] || '';
+        sfRenderAdvanced();
+        return;
+      }
+      var node = event.target && event.target.closest ? event.target.closest('[data-tech-id]') : null;
+      if (node) {
+        sfSelectedTechId = node.getAttribute('data-tech-id');
+        sfRenderTechDetail();
+      }
+    });
+    sfStackGraph.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      var node = event.target && event.target.closest ? event.target.closest('[data-tech-id]') : null;
+      if (!node) return;
+      event.preventDefault();
+      sfSelectedTechId = node.getAttribute('data-tech-id');
+      sfRenderTechDetail();
+    });
+  }
+  if (sfAgentMatrix) {
+    sfAgentMatrix.addEventListener('click', function (event) {
+      var btn = event.target && event.target.closest ? event.target.closest('[data-agent-id]') : null;
+      if (!btn || btn.disabled) return;
+      var id = btn.getAttribute('data-agent-id');
+      var states = ['OFF', 'AUTO', 'ON'];
+      var current = sfAdvancedState.agents[id] || 'AUTO';
+      sfAdvancedState.agents[id] = states[(states.indexOf(current) + 1) % states.length] || 'AUTO';
+      sfRenderAgents();
+      sfRenderPreview();
+    });
+  }
+  if (sfTimeline) {
+    sfTimeline.addEventListener('click', function (event) {
+      var btn = event.target && event.target.closest ? event.target.closest('[data-timeline-id]') : null;
+      if (!btn) return;
+      sfSelectedTimelineId = btn.getAttribute('data-timeline-id');
+      sfRenderTimeline();
+    });
+  }
 
   sfModeButtons.forEach(function (btn) {
     btn.addEventListener('click', function () { setSfMode(btn.getAttribute('data-sf-mode')); });
   });
+  sfRenderAdvanced();
 
   if (sfComposer) {
     sfComposer.addEventListener('submit', function (event) {
@@ -2688,6 +3161,10 @@
       var text = readComposerMissionText();
       if (!text || sfInFlight) return;
       lastChatMissionText = text;
+      if (sfMode === 'advanced' && sfAdvancedState.mission !== text) {
+        sfAdvancedState.selectedStack = [];
+        sfSuggestAdvanced(false);
+      }
       appendMessage('user', 'VOCE', text);
       if (prompt) {
         prompt.value = '';

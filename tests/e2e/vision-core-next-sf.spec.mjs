@@ -295,6 +295,77 @@ test('Software Factory advanced mode sends explicit safe options only', async ({
     deploy_allowed: false,
     writes_disk: false
   });
+  expect(posts[0].sf_options.stack).toContain('React');
+  expect(posts[0].sf_options.stack).toContain('PostgreSQL');
+  expect(posts[0].architecture_preview).toMatchObject({
+    project_type: 'SaaS fullstack',
+    source: 'local_deterministic'
+  });
+  expect(posts[0].architecture_preview.timeline).toEqual(
+    expect.arrayContaining([expect.objectContaining({ name: 'Arquitetura e stack', agent: 'OpenClaw' })])
+  );
+});
+
+test('Advanced Architect suggests stack from composer and posts the suggestion to chat without auto-running', async ({ page }) => {
+  let missionComposerPosts = 0;
+  await page.route(`${API}/api/sf/mission-composer`, async (route) => {
+    missionComposerPosts += 1;
+    await route.abort();
+  });
+
+  await page.goto(NEXT_URL);
+  await page.locator('#vcPrompt').fill('quero um SaaS com login, dashboard e pagamentos');
+  await page.locator('[data-feature="factory"]').first().click();
+  await page.getByRole('button', { name: 'Modo Avancado' }).click();
+
+  await expect(page.locator('#vcSfAdvancedPanel')).toBeVisible();
+  await expect(page.locator('#vcSfMissionSummary')).toContainText('SaaS fullstack');
+  await expect(page.locator('#vcSfSuggestion')).toContainText('React');
+  await expect(page.locator('#vcSfSuggestion')).toContainText('PostgreSQL');
+  await expect(page.locator('#vcSfStackCatalog')).toContainText('Linguagens');
+  await expect(page.locator('#vcSfStackGraph')).toContainText('Session Auth');
+  await expect(page.locator('.vc-message-assistant').last()).toContainText('Nada foi executado.');
+  expect(missionComposerPosts).toBe(0);
+});
+
+test('Advanced stack graph is manually editable and reports compatibility warnings', async ({ page }) => {
+  await page.goto(NEXT_URL);
+  await page.locator('#vcPrompt').fill('MVP simples com uma interface web');
+  await page.locator('[data-feature="factory"]').first().click();
+  await page.getByRole('button', { name: 'Modo Avancado' }).click();
+  await page.getByRole('button', { name: 'Resetar seleção' }).click();
+
+  await expect(page.locator('#vcSfStackGraph')).toContainText('Nenhuma tecnologia selecionada');
+  await page.getByRole('button', { name: 'React', exact: true }).click();
+  await page.getByRole('button', { name: 'Vue', exact: true }).click();
+  await page.getByRole('button', { name: 'Kubernetes', exact: true }).click();
+
+  await expect(page.locator('#vcSfStackGraph')).toContainText('React');
+  await expect(page.locator('#vcSfStackGraph')).toContainText('Vue');
+  await expect(page.locator('#vcSfWarnings')).toContainText('múltiplos frameworks frontend');
+  await expect(page.locator('#vcSfWarnings')).toContainText('Kubernetes costuma ser excesso');
+
+  await page.locator('[data-remove-tech-id]').first().click();
+  await expect(page.locator('#vcSfPreview')).toContainText('Stack selecionada');
+});
+
+test('Advanced timeline and agent matrix are navigable without destructive execution', async ({ page }) => {
+  await page.goto(NEXT_URL);
+  await page.locator('#vcPrompt').fill('sistema de IA com RAG e agentes');
+  await page.locator('[data-feature="factory"]').first().click();
+  await page.getByRole('button', { name: 'Modo Avancado' }).click();
+
+  await expect(page.locator('#vcSfAgentMatrix')).toContainText('Aegis');
+  await expect(page.locator('#vcSfAgentMatrix')).toContainText('REQUIRED');
+  await expect(page.locator('#vcSfTimeline')).toContainText('06 Comando para criação real');
+  await page.locator('[data-timeline-id="command"]').click();
+  await expect(page.locator('#vcSfTimelineDetail')).toContainText('bloqueado para execução real');
+
+  const openClaw = page.locator('[data-agent-id="openclaw"]');
+  await expect(openClaw).toHaveText('ON');
+  await openClaw.click();
+  await expect(openClaw).toHaveText('OFF');
+  await expect(page.locator('#vcSfPreview')).toContainText('real_execution_allowed=false');
 });
 
 test('Software Factory follows async job_id polling without real network', async ({ page }) => {

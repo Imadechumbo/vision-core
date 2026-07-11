@@ -1,6 +1,6 @@
 # MANUAL TEST PLAN — Vision Core Next (sessão 2026-07-10)
 
-**Leia `docs/MASTER_SPEC.md` antes de qualquer coisa se ainda não leu.** Este documento cobre especificamente o que mudou na sessão de hoje: App Shell (Mission Input + Security Lab), Software Factory (project-files/generate-zip), e a limpeza de segurança de dogfood (`PROVIDER_VAULT_SECRET` fail-closed).
+**Leia `docs/MASTER_SPEC.md` antes de qualquer coisa se ainda não leu.** Este documento cobre especificamente o estado do Vision Core Next: App Shell sem Mission Input, Security Lab, Software Factory (Modo Avançado + project-files/generate-zip), e a limpeza de segurança de dogfood (`PROVIDER_VAULT_SECRET` fail-closed).
 
 ---
 
@@ -61,7 +61,7 @@ Se faltar `SESSION_SECRET`/`PROVIDER_VAULT_SECRET`, o processo morre imediatamen
 
 ---
 
-## Roteiro 1 — App Shell (Mission Input + Security Lab)
+## Roteiro 1 — App Shell (composer único + Security Lab)
 
 | # | Passo | Resultado esperado | Se falhar, reporte |
 |---|---|---|---|
@@ -75,11 +75,13 @@ Se faltar `SESSION_SECRET`/`PROVIDER_VAULT_SECRET`, o processo morre imediatamen
 
 | # | Passo | Resultado esperado | Se falhar, reporte |
 |---|---|---|---|
-| 2.1 | Clique "Software Factory" na sidebar. | Chat central some, painel `#factory` aparece: composer com textarea + botões Provider/Model/Dry-run/PASS GOLD. | — |
+| 2.1 | Clique "Software Factory" na sidebar. | Chat central continua visível; painel `#factory` aparece abaixo como contexto, sem textarea próprio de missão, com botões Provider/Model/Dry-run/PASS GOLD. | — |
 | 2.2 | Deixe PASS GOLD marcado (padrão). Digite uma descrição de projeto simples (ex.: "um blog com login"), clique "Gerar Projeto". | Log aparece (`#vcSfLog`) mostrando `SEND`/`DONE` pra cada um dos 6 passos (5 padrão + PASS GOLD). Barra de progresso mostra "06 — Validar PASS GOLD" no final. Painel "PACOTE FINAL" aparece com o contexto acumulado. **Isso é uma chamada real a um provider de LLM** — pode demorar 10-60s por passo. | Se travar num passo por mais de ~2min, ou se `sf_options` no request (Network tab) mostrar `real_execution_allowed:true`/`deploy_allowed:true`/`writes_disk:true` (deveriam ser sempre `false`) |
 | 2.3 | Desmarque PASS GOLD, gere de novo. | Só 5 passos rodam — o log nunca deve mostrar uma chamada a `/api/sf/gold-gate`. | Se o 6º passo rodar mesmo desmarcado |
 | 2.4 | Marque 1-2 checkboxes de gerador opcional (Context Snapshot, Patch Validator, Risk Assessor, Rollback Planner), gere. | Passos extras (E1-E4) aparecem no meio da sequência, antes do PASS GOLD. | — |
-| 2.5 | Clique "Modo Avançado", escolha um provider específico, gere. | `sf_options` no request mostra o provider escolhido, `mode:'advanced'`. | — |
+| 2.5 | Clique "Modo Avançado" com uma missão no composer principal. | Painel do Arquiteto aparece com interpretação, stack sugerida, catálogo, grafo, agentes, timeline e preview. Um card de sugestão aparece no chat. Nenhum endpoint SF é chamado só por selecionar o modo. | Se aparecer segundo chat/textarea de missão, ou se a geração iniciar automaticamente |
+| 2.5a | Aceite a sugestão, remova/adicione tecnologias no catálogo e navegue pela timeline. | Grafo e preview atualizam; warnings aparecem para combinações problemáticas; agentes críticos continuam bloqueados como REQUIRED. | Se Aegis/Scanner/PASS GOLD puderem ser desligados |
+| 2.5b | Escolha um provider específico e gere. | `sf_options` no request mostra o provider escolhido, `mode:'advanced'`, `stack:[...]`, e `architecture_preview`; `real_execution_allowed/deploy_allowed/writes_disk` continuam `false`. | Se qualquer flag segura vier `true` |
 | 2.6 | **Novo desta sessão:** depois que "PACOTE FINAL" aparecer, clique "Gerar Lista de Arquivos". | Botão vira "Gerando...", depois mostra uma lista de nomes de arquivo (ex.: `src/index.js`, `README.md`...) e o texto "N arquivo(s) gerado(s).". Botão "Baixar ZIP" aparece. | Se a lista nunca aparecer, ou se o status mostrar "Erro" persistente — capture a resposta de `/api/sf/project-files` no Network tab |
 | 2.7 | **Novo desta sessão:** clique "Baixar ZIP". | O navegador baixa um arquivo `projeto-vision-core.zip` de verdade (deve abrir/extrair normalmente). | Se nada baixar, ou se o arquivo baixado estiver corrompido/vazio |
 | 2.8 | Gere um projeto novo (descrição diferente) sem tocar em Gerar Lista de Arquivos. | O painel de lista de arquivos e o botão ZIP da geração anterior devem sumir — nunca deve ser possível baixar um ZIP de uma descrição antiga por engano. | Se a lista/ZIP da rodada anterior continuar visível após a nova geração começar |

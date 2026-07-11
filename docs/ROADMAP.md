@@ -85,7 +85,7 @@ Pendências: `GitProviderAdapter` (GitLab, `PLANEJADO`, zero código ainda — "
 
 **Estado:** EXISTENTE (simulação) — ver `SOFTWARE_FACTORY_SPEC.md`.
 
-**Objetivos:** ~~fechar os 2 endpoints SF restantes~~ **CORRIGIDO (2026-07-10)** — `project-files`+`generate-zip` conectados, `tests/e2e/vision-core-next-sf-project-files.spec.mjs` (6 testes). Decidir se/quando a feature sai do modo simulação-only permanece em aberto.
+**Objetivos:** ~~fechar os 2 endpoints SF restantes~~ **CORRIGIDO (2026-07-10)** — `project-files`+`generate-zip` conectados, `tests/e2e/vision-core-next-sf-project-files.spec.mjs` (6 testes). **Modo Avançado visual concluído localmente (2026-07-11):** Arquiteto determinístico, catálogo/grafo de stack, matriz de agentes, timeline e preview, ainda usando somente os endpoints SF existentes e simulação segura. Decidir se/quando a feature sai do modo simulação-only permanece em aberto.
 
 **Dependências:** Fase 1 (é uma feature do frontend Next).
 

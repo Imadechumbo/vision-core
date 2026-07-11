@@ -141,7 +141,7 @@ Ver seção "Status" acima (dot+badge) e "Chips" abaixo — não há uma badge g
 
 ## Software Factory (painéis)
 
-`.vc-sf-stage`, `.vc-sf-composer` (botão de execução, sem textarea próprio), `.vc-sf-progress`, `.vc-sf-log`, `.vc-sf-final` — ver `SOFTWARE_FACTORY_SPEC.md` para o fluxo completo.
+`.vc-sf-stage`, `.vc-sf-composer` (botão de execução, sem textarea próprio), `.vc-sf-progress`, `.vc-sf-log`, `.vc-sf-final` — ver `SOFTWARE_FACTORY_SPEC.md` para o fluxo completo. O Modo Avançado acrescenta `#vcSfAdvancedPanel` com blocos visuais vanilla: interpretação da missão, `StackCatalog`, `StackGraph`, matriz de agentes, timeline operacional e preview. Todos renderizam via `createElement`/`textContent`, sem chat paralelo e sem textarea de missão.
 
 ## Painéis (feature panel genérico)
 

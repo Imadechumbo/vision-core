@@ -184,7 +184,7 @@ Cores de estado semântico fora das variáveis raiz (por convenção do arquivo,
 | Agent Apply (fail-closed, sempre desabilitado) | EXISTENTE — bloqueado por design |
 | Métricas (grid de agentes, DORA, conectividade) | EXISTENTE |
 | Security Lab (Safe Status + Secret Guard card) | EXISTENTE |
-| Software Factory Next (`#factory`, Auto-Pilot + Modo Avançado) | EXISTENTE |
+| Software Factory Next (`#factory`, Auto-Pilot + Modo Avançado) | EXISTENTE — Arquiteto visual local, catálogo/grafo de stack, matriz de agentes, timeline e preview |
 | Mission History (Timeline) | EXISTENTE |
 | Settings / AI Provider Vault | EXISTENTE |
 | Logo/olho (piscada) | EXISTENTE — protegido |
@@ -209,7 +209,7 @@ Painéis de dados (Métricas, Security Lab) **não têm animação de entrada pr
 
 ## Estrutura HTML
 
-Um único `<div class="vc-app-shell" data-sidebar-state="expanded|collapsed">` com dois filhos: `<aside class="vc-sidebar">` (nav com `data-feature="chat|missions|factory|timeline|agents|github|vault|metrics|tools|security|obsidian|settings"`) e `<main class="vc-main">` contendo header, `<section class="vc-chat-stage">` (intro + `#vcChatStream` + `#vcFeaturePanel` com todos os sub-painéis condicionais dentro, cada um `hidden` por padrão) e `<form class="vc-composer">` fora do chat-stage. O Software Factory deve coexistir como contexto/painel operacional da conversa e ler a missão do composer/chat principal; não pode ter textarea próprio de missão.
+Um único `<div class="vc-app-shell" data-sidebar-state="expanded|collapsed">` com dois filhos: `<aside class="vc-sidebar">` (nav com `data-feature="chat|missions|factory|timeline|agents|github|vault|metrics|tools|security|obsidian|settings"`) e `<main class="vc-main">` contendo header, `<section class="vc-chat-stage">` (intro + `#vcChatStream` + `#vcFeaturePanel` com todos os sub-painéis condicionais dentro, cada um `hidden` por padrão) e `<form class="vc-composer">` fora do chat-stage. O Software Factory deve coexistir como contexto/painel operacional da conversa e ler a missão do composer/chat principal; não pode ter textarea próprio de missão. O Modo Avançado adiciona apenas painéis visuais/editáveis (`#vcSfAdvancedPanel`) de interpretação, stack, agentes, timeline e preview.
 
 ## Estrutura CSS
 

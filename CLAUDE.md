@@ -599,6 +599,10 @@ Quarta ocorrência real da mesma classe de risco: segredo/fallback sensível pre
 
 **Deploy CF Pages complementar (2026-07-09):** após aprovação do usuário via "continue", o bundle legado limpo foi publicado em `https://5859bb89.visioncoreai.pages.dev` e no alias principal `https://visioncoreai.pages.dev`. Verificação pública pós-deploy: `INDEX_CONTAINS_FALLBACK=false` e `BUNDLE_CONTAINS_FALLBACK=false` no preview e no alias principal. O backend já rejeitava o valor; este deploy fechou a exposição residual no arquivo público.
 
+### Software Factory Advanced — Arquiteto visual (`next-clean-55`, 2026-07-11)
+
+Modo Avançado do Software Factory evoluído sem backend novo: interpreta a missão do composer/chat principal com heurística local determinística, sugere stack a partir de catálogo declarativo, permite aceitar/editar/rejeitar tecnologias no grafo, mostra warnings de compatibilidade, matriz de agentes com críticos REQUIRED, timeline operacional navegável e preview seguro. A sugestão aparece no chat e no painel; selecionar Factory/Modo Avançado não executa nada. Ao gerar, o payload usa os endpoints SF existentes com `sf_options.stack` + `architecture_preview`, mantendo `real_execution_allowed:false`, `deploy_allowed:false`, `writes_disk:false`. Backend/EB não tocados.
+
 ### App shell Next — Mission Input removido + Security Lab (2026-07-11, `next-clean-54`)
 
 Decisão arquitetural final: o Mission Input flutuante/colapsável foi removido por completo do Vision Core Next. A área superior direita pertence ao Atomic Core; toda entrada de missão passa pelo composer/chat principal; o Software Factory lê a mesma missão do composer ao executar, sem textarea próprio e sem auto-execução ao selecionar Factory. Security Lab permanece como painel GET-only com fallback local seguro. Ver `docs/CURRENT_HANDOFF.md` para testes/deploy desta entrega.

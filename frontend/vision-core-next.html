@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-54">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-54" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-55">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-55" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -385,6 +385,64 @@
             <p class="vc-sf-url-status" id="vcSfUrlStatus"></p>
           </div>
         </div>
+
+        <section class="vc-sf-advanced" id="vcSfAdvancedPanel" aria-label="Modo Avancado do Software Factory" hidden>
+          <div class="vc-sf-advanced-head">
+            <div>
+              <p class="vc-kicker">ARQUITETO SF</p>
+              <h2>Modo Avancado</h2>
+              <p>O Arquiteto interpreta a missão do chat, sugere stack, agentes e timeline. Você revisa tudo antes de qualquer geração.</p>
+            </div>
+            <div class="vc-sf-advanced-actions">
+              <button type="button" id="vcSfSuggestBtn">Sugerir stack pelo Arquiteto</button>
+              <button type="button" id="vcSfAcceptStackBtn">Aceitar sugestão</button>
+              <button type="button" id="vcSfResetStackBtn">Resetar seleção</button>
+            </div>
+          </div>
+
+          <div class="vc-sf-advanced-grid">
+            <section class="vc-sf-architect-card" aria-label="Interpretação da missão">
+              <h3>Interpretação da missão</h3>
+              <div class="vc-sf-summary-grid" id="vcSfMissionSummary"></div>
+              <div class="vc-sf-warning-list" id="vcSfWarnings" aria-live="polite"></div>
+            </section>
+
+            <section class="vc-sf-architect-card" aria-label="Stack sugerida">
+              <h3>Stack sugerida pelo Arquiteto</h3>
+              <div class="vc-sf-suggestion" id="vcSfSuggestion"></div>
+            </section>
+
+            <section class="vc-sf-architect-card vc-sf-stack-catalog" aria-label="Catálogo de stacks">
+              <h3>Catálogo de stacks</h3>
+              <div class="vc-sf-catalog" id="vcSfStackCatalog"></div>
+            </section>
+
+            <section class="vc-sf-architect-card vc-sf-stack-graph" aria-label="Grafo de stack selecionada">
+              <h3>Grafo selecionável</h3>
+              <div class="vc-sf-graph" id="vcSfStackGraph"></div>
+              <div class="vc-sf-tech-detail" id="vcSfTechDetail"></div>
+            </section>
+          </div>
+
+          <div class="vc-sf-advanced-grid vc-sf-advanced-grid-bottom">
+            <section class="vc-sf-architect-card" aria-label="Matriz de agentes">
+              <h3>Agentes</h3>
+              <div class="vc-sf-agent-matrix" id="vcSfAgentMatrix"></div>
+            </section>
+
+            <section class="vc-sf-architect-card vc-sf-timeline-card" aria-label="Timeline operacional">
+              <h3>Timeline Claude SDK</h3>
+              <div class="vc-sf-timeline" id="vcSfTimeline"></div>
+              <div class="vc-sf-timeline-detail" id="vcSfTimelineDetail"></div>
+            </section>
+
+            <section class="vc-sf-architect-card" aria-label="Preview e confirmação">
+              <h3>Preview e confirmação</h3>
+              <div class="vc-sf-preview" id="vcSfPreview"></div>
+            </section>
+          </div>
+        </section>
+
         <div class="vc-sf-history" id="vcSfHistory" aria-live="polite"></div>
         <div class="vc-sf-progress" id="vcSfProgress" hidden></div>
         <div class="vc-sf-log" id="vcSfLog" aria-label="Software Factory execution log" hidden></div>

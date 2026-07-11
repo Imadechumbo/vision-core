@@ -9,7 +9,7 @@
 
 ## Resumo
 
-Software Factory é a feature do Vision Core que gera um projeto de software do zero a partir de uma descrição em linguagem natural, via Auto-Pilot (sequência automática de módulos) ou Modo Avançado (controle manual de provider/modelo/opções). **Hoje é simulação/preview** — nenhum módulo escreve em disco, executa código real ou faz deploy; toda chamada carrega flags explícitas de segurança sempre falsas.
+Software Factory é a feature do Vision Core que gera um projeto de software do zero a partir de uma descrição em linguagem natural, via Auto-Pilot (sequência automática de módulos) ou Modo Avançado (controle manual de provider/modelo/opções + Arquiteto visual de stack/timeline/agentes). **Hoje é simulação/preview** — nenhum módulo escreve em disco, executa código real ou faz deploy; toda chamada carrega flags explícitas de segurança sempre falsas.
 
 ## Objetivo
 
@@ -73,6 +73,10 @@ Cada passo: `POST /api/sf/<módulo>` retorna `{job_id, status:'pending'}` (nunca
 ## Planner
 
 `mission-composer` — primeiro passo de qualquer Auto-Pilot, monta o plano da missão a partir da descrição livre do usuário no composer/chat principal (+ contexto de URL opcional via `fetch-url`).
+
+## Modo Avançado / Arquiteto SF
+
+O Modo Avançado interpreta a missão que já está no composer/chat principal e monta uma sugestão local determinística (sem endpoint novo e sem custo de LLM) com `project_type`, `risk_level`, `size`, `recommended_stack`, `recommended_agents`, `recommended_timeline`, `warnings` e `assumptions`. A sugestão usa apenas tecnologias existentes no catálogo declarativo do frontend, aparece como card no chat e como painéis editáveis no Factory. O usuário pode aceitar tudo, resetar, adicionar/remover tecnologias, alternar agentes não-críticos e navegar pela timeline. Stack manual prevalece sobre a sugestão. O payload dos módulos SF recebe `architecture_preview` e `sf_options.stack`, mas as flags `real_execution_allowed:false`, `deploy_allowed:false` e `writes_disk:false` continuam invariantes.
 
 ## Executor
 

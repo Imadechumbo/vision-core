@@ -105,6 +105,8 @@ Ver `SOFTWARE_FACTORY_SPEC.md` para o fluxo completo. Contrato resumido:
 | POST | `/api/sf/project-files` | `{job_id}` (assíncrono, payload/resposta diferentes — `{description, accumulated_context, step1_analysis, step2_blueprint}`) | resultado em `data.files[]`, não `data.result` |
 | POST | `/api/sf/generate-zip` | **Resposta binária ZIP**, síncrono | `Content-Type: application/zip` — frontend precisa `response.blob()`, não JSON |
 
+O Arquiteto do Modo Avançado do Next não adiciona endpoint novo: a sugestão de stack/timeline/agentes é local determinística e entra nos POSTs SF existentes como contexto (`sf_options.stack` e `architecture_preview`). As flags de segurança continuam falsas.
+
 ## Security / Tools
 
 | Método | Rota | Resposta | Notas |
