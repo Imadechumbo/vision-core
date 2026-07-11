@@ -89,6 +89,8 @@ Fase 3.3d — desacoplar os inicializadores do painel Software Factory moderno (
 
 Deploy confirmado ao vivo em produção (`next-clean-59`, verificado sem mock contra o backend real)
 
+RC Security Gate local (2026-07-11): CORS backend deixou de refletir Origin arbitrária com credentials; `/api/providers/*` e `/api/sf/fetch-url` agora exigem sessão; `fetch-url` bloqueia SSRF para alvos locais/privados por protocolo, hostname, IP e DNS. `node --check`, teste estático `tools/tests/rc-security-hardening.test.mjs`, Playwright Next 69/69 e `cargo test` do `vc-secret-guard` passaram. Release ainda NÃO aprovado: `vc-secret-guard verify-cloud` segue bloqueado por `aws_eb_read_failed_sanitized`, sem validar EB ao vivo.
+
 ---
 
 # CONTEXTO PARA O PRÓXIMO AGENTE

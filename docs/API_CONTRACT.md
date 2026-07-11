@@ -112,7 +112,7 @@ Ver `SOFTWARE_FACTORY_SPEC.md` para o fluxo completo. Contrato resumido:
 |---|---|---|---|
 | POST | `/api/sf/mission-composer` \| `deploy-blueprint` \| `worker-handoff` \| `context-snapshot` \| `patch-validator` \| `risk-assessor` \| `rollback-planner` \| `gold-gate` | `{job_id}` | **Sempre assíncrono** — nunca `{content}` direto |
 | GET | `/api/sf/job/:id` | `{status, result (string pura), provider}` | `result` já vem **desembrulhado** (`job.result.result`) — nunca objeto aninhado. `files` só existe pra `project-files`, nunca pros 8 módulos acima |
-| POST | `/api/sf/fetch-url` | `{ok, content, url}` | **Único endpoint SF síncrono, sem job_id** |
+| POST | `/api/sf/fetch-url` | `{ok, content, url}` | **Único endpoint SF síncrono, sem job_id**. Exige sessão (`requireVisionAuth`) e bloqueia alvos locais/privados/link-local por protocolo, hostname, IP e resolução DNS antes do request. |
 | POST | `/api/sf/project-files` | `{job_id}` (assíncrono, payload/resposta diferentes — `{description, accumulated_context, step1_analysis, step2_blueprint}`) | resultado em `data.files[]`, não `data.result` |
 | POST | `/api/sf/generate-zip` | **Resposta binária ZIP**, síncrono | `Content-Type: application/zip` — frontend precisa `response.blob()`, não JSON |
 
@@ -130,8 +130,8 @@ O Arquiteto do Modo Avançado do Next não adiciona endpoint novo: a sugestão d
 
 | Método | Rota | Notas |
 |---|---|---|
-| GET | `/api/providers`, `/api/providers/list` | Nunca retorna a chave completa — `maskProviderKey()` |
-| POST | `/api/providers/save`, `/test`, `/delete` | Cifrado AES-256-GCM em repouso |
+| GET | `/api/providers`, `/api/providers/list` | Exige sessão (`requireVisionAuth`). Nunca retorna a chave completa — `maskProviderKey()` |
+| POST | `/api/providers/save`, `/test`, `/delete` | Exige sessão (`requireVisionAuth`). Cifrado AES-256-GCM em repouso |
 
 ## Billing
 

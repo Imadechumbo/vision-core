@@ -3,6 +3,8 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const dns = require('dns').promises;
+const net = require('net');
 const { scanConfig, applyConfigFixes, enforceConfigGold } = require('./vision_core/config/selfHealingConfig');
 const { runGoMission, streamGoMission, checkGoHealth, resolveGoBinary } = require('./src/runtime/goRunner');
 const { callHermes, readLowConfidenceLog, computeMemoryMetrics } = require('./hermes-rca');
@@ -153,15 +155,82 @@ async function archivistSave(key, value) {
   }
 }
 
+const ALLOWED_CORS_ORIGINS = new Set([
+  'https://visioncoreai.pages.dev',
+  'https://www.visioncoreai.pages.dev',
+  'http://localhost:5173',
+  'http://localhost:7070',
+  'http://localhost:8080',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:7070',
+  'http://127.0.0.1:8080'
+]);
+
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return false;
+  return ALLOWED_CORS_ORIGINS.has(origin) || /^https:\/\/[a-z0-9-]+\.visioncoreai\.pages\.dev$/.test(origin);
+}
+
+function isPrivateIp(address) {
+  if (!address) return true;
+  if (net.isIP(address) === 6) {
+    const v = address.toLowerCase();
+    return v === '::1' || v.startsWith('fc') || v.startsWith('fd') || v.startsWith('fe80:');
+  }
+  const parts = String(address).split('.').map(Number);
+  if (parts.length !== 4 || parts.some(n => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+  const [a, b] = parts;
+  return (
+    a === 10 ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 0) ||
+    (a >= 224)
+  );
+}
+
+async function assertPublicFetchTarget(parsedUrl) {
+  if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+    const err = new Error('invalid_protocol');
+    err.statusCode = 400;
+    throw err;
+  }
+  const hostname = parsedUrl.hostname.toLowerCase();
+  if (!hostname || hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    const err = new Error('private_target_blocked');
+    err.statusCode = 403;
+    throw err;
+  }
+  if (net.isIP(hostname)) {
+    if (isPrivateIp(hostname)) {
+      const err = new Error('private_target_blocked');
+      err.statusCode = 403;
+      throw err;
+    }
+    return { address: hostname, family: net.isIP(hostname) };
+  }
+  const addresses = await dns.lookup(hostname, { all: true, verbatim: false });
+  if (!addresses.length || addresses.some(entry => isPrivateIp(entry.address))) {
+    const err = new Error('private_target_blocked');
+    err.statusCode = 403;
+    throw err;
+  }
+  return addresses[0];
+}
+
 /* 1. CORS MANUAL BLINDADO — antes de parser/rotas */
 app.use((req, res, next) => {
-  const origin = req.headers.origin || '*';
+  const origin = String(req.headers.origin || '');
 
-  res.setHeader('Access-Control-Allow-Origin', origin === 'null' ? '*' : origin);
   res.setHeader('Vary', 'Origin');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (isAllowedCorsOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD');
-  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Vision-Token');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Vision-Token');
   res.setHeader('Access-Control-Max-Age', '86400');
 
   res.setHeader('X-Vision-Core-Version', '2.9.10-self-healing-config');
@@ -1807,13 +1876,17 @@ app.get('/api/run-live-stream', async (req, res) => {
   // Com '..', ia para o dir pai (e.g. Desktop/), causando scan de milhares de arquivos e timeout.
   const missionRoot = path.resolve(process.env.VISION_PROJECT_ROOT || ROOT || process.cwd());
 
-  res.writeHead(200, {
+  const streamHeaders = {
     'Content-Type':  'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache, no-transform',
     'Connection':    'keep-alive',
     'X-Accel-Buffering': 'no',
-    'Access-Control-Allow-Origin': req.headers.origin || '*',
-  });
+  };
+  const streamOrigin = String(req.headers.origin || '');
+  if (isAllowedCorsOrigin(streamOrigin)) {
+    streamHeaders['Access-Control-Allow-Origin'] = streamOrigin;
+  }
+  res.writeHead(200, streamHeaders);
 
   // Client desconectou antes de terminar
   let aborted = false;
@@ -1985,7 +2058,7 @@ app.get('/api/memory/patterns', (req, res) => sendOk(res, { patterns: fs.readdir
 /* stub morto removido em 2026-06-01 — duplicata causava dead code após primeira match Express */
 
 /* PROVIDERS */
-app.get('/api/providers', (req, res) => sendOk(res, { providers: providerList(), default: process.env.DEFAULT_AI_PROVIDER || 'auto' }));
+app.get('/api/providers', requireVisionAuth, (req, res) => sendOk(res, { providers: providerList(), default: process.env.DEFAULT_AI_PROVIDER || 'auto' }));
 
 // §<AI-VAULT-CONFIG-PRINCIPAL> — /save aceita atualização PARCIAL de
 // propósito: a tela de "Providers Configurados" reenvia só {provider,
@@ -1993,7 +2066,7 @@ app.get('/api/providers', (req, res) => sendOk(res, { providers: providerList(),
 // volta pro frontend depois de salva — só api_key_masked). Por isso, quando
 // body.api_key vem vazio, preservamos api_key_encrypted/api_key_masked
 // existentes em vez de apagar a chave já salva.
-app.all('/api/providers/save', (req, res) => {
+app.all('/api/providers/save', requireVisionAuth, (req, res) => {
   const body = normalizeBody(req);
   const provider = body.provider || 'auto';
   const existing = _providersStore[provider] || {};
@@ -2027,7 +2100,7 @@ app.all('/api/providers/save', (req, res) => {
 });
 
 // Nunca inclui api_key nem api_key_encrypted — só o indicador mascarado.
-app.get('/api/providers/list', (req, res) => {
+app.get('/api/providers/list', requireVisionAuth, (req, res) => {
   const list = Object.values(_providersStore)
     .map(p => ({
       provider:       p.provider,
@@ -2044,7 +2117,7 @@ app.get('/api/providers/list', (req, res) => {
   return sendOk(res, { providers: list, time: now() });
 });
 
-app.all('/api/providers/delete', (req, res) => {
+app.all('/api/providers/delete', requireVisionAuth, (req, res) => {
   const body = normalizeBody(req);
   const provider = body.provider || '';
   if (!provider || !_providersStore[provider]) {
@@ -2055,7 +2128,7 @@ app.all('/api/providers/delete', (req, res) => {
   return sendOk(res, { deleted: true, provider, providers_count: Object.keys(_providersStore).length });
 });
 
-app.all('/api/providers/test', async (req, res) => {
+app.all('/api/providers/test', requireVisionAuth, async (req, res) => {
   const body       = normalizeBody(req);
   const provider   = body.provider || 'auto';
   const vaultEntry = _providersStore[provider];
@@ -2129,7 +2202,7 @@ app.all('/api/providers/test', async (req, res) => {
     return sendOk(res, { provider, status: 'error', connected: false, error: err.message, latency_ms: Date.now()-t0, time: now() });
   }
 });
-app.all('/api/providers/default', (req, res) => sendOk(res, { default: normalizeBody(req).provider || process.env.DEFAULT_AI_PROVIDER || 'auto' }));
+app.all('/api/providers/default', requireVisionAuth, (req, res) => sendOk(res, { default: normalizeBody(req).provider || process.env.DEFAULT_AI_PROVIDER || 'auto' }));
 
 
 /* VISION CORE V4.3.1 ENTERPRISE BILLING ROUTES — real Stripe, mounted in primary runtime. */
@@ -4506,21 +4579,27 @@ Object.keys(SF_GENERATORS).forEach(key => {
 });
 
 // §164 — SF fetch-url: busca conteúdo de URL para contexto do Auto-Pilot
-app.post('/api/sf/fetch-url', (req, res) => {
+app.post('/api/sf/fetch-url', requireVisionAuth, async (req, res) => {
   const body = normalizeBody(req);
   const url = String(body.url || '').trim();
-  if (!url.startsWith('http')) {
-    return res.status(400).json({ ok: false, error: 'invalid_url', anti_stub: true });
-  }
   try {
     const parsed = new URL(url);
-    const isHttps = url.startsWith('https');
+    const resolvedTarget = await assertPublicFetchTarget(parsed);
+    const isHttps = parsed.protocol === 'https:';
     const mod = isHttps ? require('https') : require('http');
     const options = {
       hostname: parsed.hostname,
+      port: parsed.port || undefined,
       path: parsed.pathname + parsed.search,
       method: 'GET',
       headers: { 'User-Agent': 'VisionCore-SF/1.0', 'Accept': 'text/html,text/plain', 'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8' },
+      lookup: (_hostname, _opts, cb) => cb(null, resolvedTarget.address, resolvedTarget.family),
+    };
+    let settled = false;
+    const finish = (status, payload) => {
+      if (settled) return;
+      settled = true;
+      res.status(status).json(payload);
     };
     const httpReq = mod.request(options, (resp) => {
       let data = '';
@@ -4533,14 +4612,15 @@ app.post('/api/sf/fetch-url', (req, res) => {
           .replace(/\s+/g, ' ')
           .trim()
           .slice(0, 3000);
-        return res.json({ ok: true, content: text, url, anti_stub: true });
+        return finish(200, { ok: true, content: text, url, anti_stub: true });
       });
     });
-    httpReq.on('error', (e) => res.status(500).json({ ok: false, error: e.message, anti_stub: true }));
-    httpReq.setTimeout(8000, () => { httpReq.destroy(); res.status(408).json({ ok: false, error: 'timeout', anti_stub: true }); });
+    httpReq.on('error', (e) => finish(500, { ok: false, error: e.message, anti_stub: true }));
+    httpReq.setTimeout(8000, () => { finish(408, { ok: false, error: 'timeout', anti_stub: true }); httpReq.destroy(); });
     httpReq.end();
   } catch(e) {
-    return res.status(400).json({ ok: false, error: 'invalid_url', detail: e.message, anti_stub: true });
+    const status = e.statusCode || 400;
+    return res.status(status).json({ ok: false, error: e.message || 'invalid_url', anti_stub: true });
   }
 });
 
