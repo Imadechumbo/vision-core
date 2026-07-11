@@ -39,15 +39,13 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ Gráficos nativos completos: Agentes, DORA, Runtime, Memory, Conectividade, Software Factory, Security Lab
+✔ Tutorial Smile revisado (autorrevisão cética de trabalho herdado do Codex), 70/70 PASS, deployado como `next-clean-60` e confirmado visualmente ao vivo (screenshot real do modal aberto em produção)
 
-✔ Toggle "Ver JSON bruto" reutilizável fora da aba Métricas (Agentes/Tools/Security-history)
+✔ Regra de governança formalizada em `CLAUDE.md`: entregas do Next ganham seção própria "Trajetória Next" em `landing.html` (nunca misturadas na tabela V-number do legado) — commit `d2863326`
 
-✔ Bug de produção corrigido: composer sobrepondo `#vcFeaturePanel` (nova área de rolagem isolada `.vc-chat-scroll`)
+✔ Histórico público atualizado por acréscimo: 7 cards novos em `about.html` (chat-first, mission input único, SF Auto-Pilot/Avançado, Atomic Core, métricas nativas, Tutorial Smile, postura fail-closed) + tabela nova "Trajetória Next" em `landing.html` — commit `1df4600a`. Nenhuma entrada existente foi tocada; zero mojibake introduzido (ambos os arquivos já eram UTF-8 limpo).
 
-✔ Deploy `next-clean-59` confirmado ao vivo contra produção real (sem mock)
-
-✔ Documentação reestruturada — `CURRENT_STATE.md` compacto, `CHANGELOG_NEXT.md` novo, `docs/session_logs/` novo
+Tarefa concluída nesta sessão, sem interrupção por limite de contexto — não há handoff parcial a retomar.
 
 ---
 
@@ -57,8 +55,6 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 - AI Provider Vault Fase D(b) — conectar `sf-agent-orchestrator.mjs` ao vault (decisão de arquitetura em aberto)
 - SF-Agent-Orchestrator Fase 2 — bloqueado por cota de API, smoke test real incompleto
 - Settings do Atomic Core — ligado/desligado, glow on/off, intensidade visual (só "reduzir movimento" está implementado)
-- Tutorial Smile (Etapa 4, não iniciado)
-- Páginas públicas `about.html`/`landing.html` — atualização pendente de validação local
 - `vc-secret-guard` Fase 2 (hooks locais) — precisa nova aprovação explícita do usuário
 - `vc-secret-guard verify-cloud` — comando Rust read-only para auditar metadados de env vars do EB, testes locais Rust passam, mas a verificação viva do EB está bloqueada por falha TLS/trust store local da AWS CLI. Não usar `--no-verify-ssl`; corrigir TLS primeiro e rerodar.
 - INCIDENTE-3 (credencial de fallback legada) — guard de `/api/auth/login` já confirmado ao vivo em produção (EB `v109`, `400 fallback_credential_rejected`); guard de `/api/auth/register` confirmado só no artefato/regressão local (revalidação ao vivo ficou pendente por rate-limit durante o teste). Runbook `tools/incident-3-legacy-account-scan.mjs --invalidate` para contas legadas já existentes em produção é ação pendente do usuário (ver `docs/DECISIONS.md` DECISION-007)
