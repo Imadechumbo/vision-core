@@ -933,21 +933,23 @@ a { color: inherit; text-decoration: none; }
 }
 
 .vc-atomic-hud {
+  --atomic-core-size: min(300px, 23vw);
+  --atomic-safe-area: 36px;
   position: fixed;
-  top: 112px;
-  right: 24px;
+  top: calc(112px - var(--atomic-safe-area));
+  right: max(0px, calc(24px - var(--atomic-safe-area)));
   z-index: 8;
-  width: min(300px, 23vw);
+  width: calc(var(--atomic-core-size) + (var(--atomic-safe-area) * 2));
   aspect-ratio: 1;
   pointer-events: none;
   opacity: .76;
-  contain: layout paint;
+  contain: layout;
 }
 
 .vc-atomic-rings,
 .vc-core-node,
 .vc-agent { position: absolute; left: 50%; top: 50%; }
-.vc-atomic-rings { width: 100%; height: 100%; transform: translate(-50%, -50%); overflow: visible; }
+.vc-atomic-rings { width: var(--atomic-core-size); height: var(--atomic-core-size); transform: translate(-50%, -50%); overflow: visible; }
 .vc-atomic-ring { fill: none; stroke: rgba(250, 204, 21, .035); stroke-width: .75; }
 .vc-orbit-ring,
 .vc-orbit-decagon,
@@ -1016,7 +1018,7 @@ a { color: inherit; text-decoration: none; }
 
 @media (max-width: 1180px) {
   .vc-main { padding-right: clamp(24px, 5vw, 72px); }
-  .vc-atomic-hud { width: 245px; top: 112px; right: 18px; opacity: .42; }
+  .vc-atomic-hud { --atomic-core-size: 245px; --atomic-safe-area: 58px; top: calc(112px - var(--atomic-safe-area)); right: max(0px, calc(18px - var(--atomic-safe-area))); opacity: .42; }
 }
 
 @media (max-width: 820px) {

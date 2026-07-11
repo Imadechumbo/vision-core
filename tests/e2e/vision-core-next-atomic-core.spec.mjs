@@ -151,3 +151,49 @@ test('VC control = reduced: state transition (idle -> action -> idle) still refl
   await page.evaluate(() => window.resetAtomicCore());
   await expect(hud).toHaveAttribute('data-state', 'idle');
 });
+
+for (const viewport of [
+  { name: '1440x900', width: 1440, height: 900, visible: true },
+  { name: '1366x768', width: 1366, height: 768, visible: true },
+  { name: '1024x768', width: 1024, height: 768, visible: true },
+  { name: '820x1180', width: 820, height: 1180, visible: false },
+  { name: '390x844', width: 390, height: 844, visible: false }
+]) {
+  test(`Atomic Core layout is not clipped at ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
+    await page.goto(NEXT_URL());
+
+    const result = await page.evaluate(() => {
+      const hud = document.querySelector('[data-atomic-core]');
+      const hudRect = hud?.getBoundingClientRect();
+      if (!hud || !hudRect || hudRect.width === 0 || hudRect.height === 0) {
+        return { visible: false, failures: [] };
+      }
+
+      const tolerance = 1;
+      const selectors = [
+        ...Array.from(hud.querySelectorAll('[data-agent]')),
+        ...Array.from(hud.querySelectorAll('.vc-atomic-ring, .vc-orbit-ring, .vc-orbit-decagon, .vc-orbit-spokes line'))
+      ];
+      const failures = selectors.flatMap((el) => {
+        const rect = el.getBoundingClientRect();
+        const label = el.getAttribute('data-agent') || el.getAttribute('class') || el.tagName;
+        const parts = [];
+        if (rect.top < hudRect.top - tolerance) parts.push(`${label} top ${rect.top.toFixed(2)} < ${hudRect.top.toFixed(2)}`);
+        if (rect.bottom > hudRect.bottom + tolerance) parts.push(`${label} bottom ${rect.bottom.toFixed(2)} > ${hudRect.bottom.toFixed(2)}`);
+        if (rect.left < hudRect.left - tolerance) parts.push(`${label} left ${rect.left.toFixed(2)} < ${hudRect.left.toFixed(2)}`);
+        if (rect.right > hudRect.right + tolerance) parts.push(`${label} right ${rect.right.toFixed(2)} > ${hudRect.right.toFixed(2)}`);
+        return parts;
+      });
+      const style = getComputedStyle(hud);
+      if (style.contain.includes('paint')) failures.push('hud contain still includes paint');
+      if (hud.scrollHeight > hud.clientHeight + tolerance) failures.push(`scrollHeight ${hud.scrollHeight} > clientHeight ${hud.clientHeight}`);
+      if (hud.scrollWidth > hud.clientWidth + tolerance) failures.push(`scrollWidth ${hud.scrollWidth} > clientWidth ${hud.clientWidth}`);
+      return { visible: true, failures };
+    });
+
+    expect(result.visible).toBe(viewport.visible);
+    expect(result.failures).toEqual([]);
+  });
+}
