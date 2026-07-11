@@ -607,6 +607,10 @@ Modo Avançado do Software Factory evoluído sem backend novo: interpreta a miss
 
 Decisão arquitetural final: o Mission Input flutuante/colapsável foi removido por completo do Vision Core Next. A área superior direita pertence ao Atomic Core; toda entrada de missão passa pelo composer/chat principal; o Software Factory lê a mesma missão do composer ao executar, sem textarea próprio e sem auto-execução ao selecionar Factory. Security Lab permanece como painel GET-only com fallback local seguro. Ver `docs/CURRENT_HANDOFF.md` para testes/deploy desta entrega.
 
+## SISTEMA DE DOCUMENTAÇÃO (vigente a partir de 2026-07-11)
+
+`docs/CURRENT_HANDOFF.md` deixou de ser log crescente — agora é sempre pequeno (<200 linhas), formato fixo de blocos (ESTADO DO SISTEMA / IMPLEMENTAÇÕES DESTA SESSÃO / PENDÊNCIAS REAIS / PRÓXIMA PRIORIDADE / RISCOS CONHECIDOS / TESTES / CONTEXTO PARA O PRÓXIMO AGENTE), reflete só o estado atual. Histórico resumido por versão vive em `docs/CHANGELOG_NEXT.md` (um bloco curto por `next-clean-N`, nunca narrativa longa). Investigação/diff grande/log de terminal/experimento vai para `docs/session_logs/YYYY-MM-DD-nome.md` — nunca de volta pro handoff. Este `CLAUDE.md` continua sendo a memória permanente de arquitetura/decisões/regras duras, não muda de formato. Ao fechar qualquer sessão: atualizar `CURRENT_HANDOFF.md` + `CHANGELOG_NEXT.md`, criar um `session_logs/` novo se houve investigação/narrativa relevante, e só tocar este `CLAUDE.md` se houver regra arquitetural nova de verdade.
+
 ## PENDÊNCIAS IMEDIATAS / PRÓXIMA SESSÃO
 
 1. **Fase 3.3d** (acima) — remoção final da página legada SF. Único item pendente da Fase 3.
