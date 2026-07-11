@@ -68,7 +68,7 @@ Se faltar `SESSION_SECRET`/`PROVIDER_VAULT_SECRET`, o processo morre imediatamen
 | 1.1 | Abra `/vision-core-next.html`. Olhe o topo direito. | Painel "MISSION INPUT" flutuante, pequeno, semi-transparente, canto superior direito. Não compete visualmente com o chat central. | Screenshot + se o painel está ausente, sobrepondo o chat, ou opaco/grande demais |
 | 1.2 | Clique no toggle do Mission Input (`-`/`+`). | Colapsa para uma barra pequena; clique de novo expande de volta ao textarea completo. | Se não colapsar, ou se o estado não persistir após reload da página |
 | 1.3 | Digite um texto no Mission Input, clique "Adicionar ao chat". | O texto aparece no composer principal (textarea de baixo) prefixado com "Missão: ", e uma mensagem "Objetivo adicionado ao composer. Nada foi executado." aparece no chat. **Nenhuma requisição de rede deve disparar** (abra o DevTools → Network antes de clicar, confirme). | Se qualquer chamada de rede aparecer no Network, isso é uma regressão de segurança — reporte imediatamente |
-| 1.4 | Clique em "Security Lab" na sidebar. | Aba abre, mostra painel "Status seguro" (5 linhas: `/api/status`, `/api/queue/status`, `/api/agents/status`, `/api/jobs/latest`, `/api/heartbeat` — todas devem aparecer em âmbar "indisponível localmente" porque nenhum desses endpoints existe no backend real) + card "Secret Guard" (texto estático: `vc-secret-guard` SPEC/PLANEJADO, Rust core PLANEJADO, Scanner integration FUTURA). | Se algum texto aparecer com mojibake (`Ã£`, `Ã©` etc. em vez de acentos normais) ou se o painel não aparecer |
+| 1.4 | Clique em "Security Lab" na sidebar. | Aba abre, mostra painel "Status seguro" (5 linhas: `/api/status`, `/api/queue/status`, `/api/agents/status`, `/api/jobs/latest`, `/api/heartbeat` — todas devem aparecer em âmbar "indisponível localmente" porque nenhum desses endpoints existe no backend real) + card "Secret Guard" (texto estático: `vc-secret-guard` SPEC/PLANEJADO, Rust core PLANEJADO, Scanner integration FUTURA). **Novo (`next-clean-58`):** logo abaixo da lista, um donut "Cobertura de políticas de segurança", um gauge "Conformidade visual" e uma timeline "Últimas verificações" aparecem depois que as 5 checagens terminam. | Se algum texto aparecer com mojibake (`Ã£`, `Ã©` etc. em vez de acentos normais), se o painel não aparecer, ou se o donut/gauge/timeline não aparecerem depois das checagens |
 | 1.5 | Redimensione a janela do navegador pra largura de celular (~390px) ou use DevTools → device toolbar. | Mission Input vira bloco de largura total, ainda legível. Atomic Core (o widget orbital no canto) some completamente (`display:none`) — não deve sobrepor nada. | Screenshot se algo estiver sobreposto/ilegível |
 
 ## Roteiro 2 — Software Factory
@@ -85,14 +85,16 @@ Se faltar `SESSION_SECRET`/`PROVIDER_VAULT_SECRET`, o processo morre imediatamen
 | 2.6 | **Novo desta sessão:** depois que "PACOTE FINAL" aparecer, clique "Gerar Lista de Arquivos". | Botão vira "Gerando...", depois mostra uma lista de nomes de arquivo (ex.: `src/index.js`, `README.md`...) e o texto "N arquivo(s) gerado(s).". Botão "Baixar ZIP" aparece. | Se a lista nunca aparecer, ou se o status mostrar "Erro" persistente — capture a resposta de `/api/sf/project-files` no Network tab |
 | 2.7 | **Novo desta sessão:** clique "Baixar ZIP". | O navegador baixa um arquivo `projeto-vision-core.zip` de verdade (deve abrir/extrair normalmente). | Se nada baixar, ou se o arquivo baixado estiver corrompido/vazio |
 | 2.8 | Gere um projeto novo (descrição diferente) sem tocar em Gerar Lista de Arquivos. | O painel de lista de arquivos e o botão ZIP da geração anterior devem sumir — nunca deve ser possível baixar um ZIP de uma descrição antiga por engano. | Se a lista/ZIP da rodada anterior continuar visível após a nova geração começar |
+| 2.9 | **Novo (`next-clean-58`):** durante e depois de uma geração (2.2), observe o bloco logo abaixo da barra de progresso. | Um donut "Etapas — DONE / FAIL / BLOCKED", barras "Duração por etapa" e um gauge "Progresso do pipeline" (`N/total`) aparecem e atualizam a cada etapa concluída — não só no final. Se você interromper a rede/forçar um erro no meio (ex.: desligue o Wi-Fi por 1 passo), as etapas restantes devem aparecer como `blocked` no donut, nunca sumir silenciosamente. | Se o bloco nunca aparecer, ficar preso em 0/N, ou não refletir uma falha real |
 
 ## Roteiro 3 — Métricas
 
 | # | Passo | Resultado esperado | Se falhar, reporte |
 |---|---|---|---|
-| 3.1 | Clique "Métricas" na sidebar. | Painel carrega: grid de agentes (dot verde/âmbar/vermelho por status), linha "TOTAL PIPELINE", cards DORA, painel de conectividade. Badge de fonte mostra "DADOS REAIS" (verde) — os endpoints existem de verdade em produção. | Se o badge mostrar "FALLBACK LOCAL" persistentemente, o backend real pode estar fora do ar — verifique `https://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com/api/health` direto |
+| 3.1 | Clique "Métricas" na sidebar. | Painel carrega: agentes, DORA, runtime, memory layer e conectividade com gráficos nativos (barras, donut, gauge, sparkline/timeline) e texto complementar. Badge de fonte mostra "DADOS REAIS" (verde) quando os endpoints respondem. | Se o badge mostrar "FALLBACK LOCAL" persistentemente, o backend real pode estar fora do ar — verifique `https://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com/api/health` direto |
 | 3.2 | Observe os agentes com custo. | Agentes sem custo mostram "sem dados de custo" em itálico — **nunca** deve aparecer "$0" pra um agente sem dado real. | Se algum agente mostrar "$0" sem ter custo real |
-| 3.3 | Marque "Ver JSON bruto". | Um bloco de texto monoespaçado aparece com o payload combinado dos 3 endpoints. | — |
+| 3.3 | Marque "Ver JSON bruto". | Um bloco de texto monoespaçado aparece com o payload combinado para diagnóstico; ele fica oculto por padrão e nunca é o conteúdo principal. | — |
+| 3.4 | Clique "Agentes" → "Métricas agentes", "Tools" → "Marketplace" e "Tools" → "Histórico security". | Cada safe-read mostra resumo humano no chat e gráfico no painel contextual; não deve despejar JSON bruto como experiência principal. **Novo (`next-clean-58`):** abaixo do gráfico, um checkbox "Ver JSON bruto (diagnóstico)" revela um `<pre>` com o payload completo — some de novo ao desmarcar. | Se aparecer payload JSON cru no chat principal, ou se o checkbox de diagnóstico não existir/não funcionar |
 
 ## Roteiro 4 — Missions (Dry-Run com confirmação dupla)
 
@@ -137,7 +139,8 @@ Se faltar `SESSION_SECRET`/`PROVIDER_VAULT_SECRET`, o processo morre imediatamen
 | Data | Mudança |
 |---|---|
 | 2026-07-10 | Criação — cobre ETAPA 0-4 desta sessão (consolidação de docs, dogfood cleanup, project-files/generate-zip, README). |
+| 2026-07-11 | `next-clean-58` — passos novos para o gráfico de etapas do Software Factory (2.9), gráficos do Security Lab (1.4) e o toggle "Ver JSON bruto" nas ações safe-read fora da aba Métricas (3.4). |
 
 ## Controle de versão
 
-**1.0.0** — 2026-07-10
+**1.1.0** — 2026-07-11

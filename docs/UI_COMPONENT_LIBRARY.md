@@ -77,7 +77,9 @@ Documentado em `ATOMIC_CORE_SPEC.md` — não duplicado aqui.
 
 ## Métricas
 
-Documentado em detalhe no próprio painel — ver `VISION_CORE_ARCHITECTURE.md`/`API_CONTRACT.md` para os endpoints. Componentes: `.vc-metrics-agent-row`, `.vc-metrics-bar`/`.vc-metrics-bar-fill` (só renderiza com `cost_usd` numérico), `.vc-metrics-dora-grid`, `.vc-metrics-conn`, `.vc-metrics-source` (badge DADOS REAIS/FALLBACK LOCAL), toggle de JSON bruto.
+Documentado em detalhe no próprio painel — ver `VISION_CORE_ARCHITECTURE.md`/`API_CONTRACT.md` para os endpoints. Componentes: `.vc-metrics-agent-row`, `.vc-metrics-bar`/`.vc-metrics-bar-fill` (só renderiza com `cost_usd` numérico), `.vc-metric-chart` (SVG/CSS nativo para barra, donut, gauge, sparkline, timeline e empty state), `.vc-metrics-dora-grid`, `.vc-metrics-conn`, `.vc-metrics-source` (badge DADOS REAIS/FALLBACK LOCAL), toggle de JSON bruto. Regra: métrica estruturada tem gráfico; texto complementa; JSON bruto fica só em diagnóstico.
+
+O sistema de gráficos (`metricCharts.{bar,donut,gauge,sparkline,timeline,empty,legend}`, todo `createElement`/SVG nativo, sem lib externa) não é exclusivo da aba Métricas — é reutilizado em qualquer painel com dado estruturado: `#vcFeatureViz` (Agentes/Tools/Security-history safe-read, dentro do painel contextual do chat), `#vcSfFinalViz` (Software Factory — donut DONE/FAIL/BLOCKED + barras de duração por etapa + gauge de progresso, atualiza a cada etapa, não só no fim) e `#vcSafeStatusViz` (Security Lab — donut ok/fallback-local + gauge de conformidade visual + timeline das checagens). O toggle "Ver JSON bruto" (`.vc-metrics-raw-toggle` + `.vc-metrics-raw`, checkbox + `<pre>` inicialmente `hidden`) também é reutilizado fora da aba Métricas — `showFeatureViz(title, renderFn, rawData)` o injeta automaticamente quando um 3º argumento é passado.
 
 ## Status (dot + badge)
 

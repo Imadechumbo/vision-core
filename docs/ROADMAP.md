@@ -59,7 +59,7 @@ gantt
 
 **Prioridade:** ALTA · **Estimativa:** contínua, sem data de conclusão definida.
 
-Pendências reais: Fase 3.3d (remoção final da página SF legada — **investigada e pausada em 2026-07-10 por risco real de regressão**, ver `SOFTWARE_FACTORY_SPEC.md`) · ~~`project-files`+`generate-zip`~~ **CORRIGIDO (2026-07-10)** · ~~Mission Input separado no Next~~ **REMOVIDO (2026-07-11)** — composer/chat principal é a única entrada de missão · `/api/metrics/summary`+`/api/metrics/memory` não conectados · Settings do Atomic Core (on/off, intensidade, Etapa 3) · Tutorial Smile (Etapa 4) · páginas públicas `about.html`/`landing.html` (Etapas 5-7) · Auth/registro/login/OAuth no Next (não iniciado).
+Pendências reais: Fase 3.3d (remoção final da página SF legada — **investigada e pausada em 2026-07-10 por risco real de regressão**, ver `SOFTWARE_FACTORY_SPEC.md`) · ~~`project-files`+`generate-zip`~~ **CORRIGIDO (2026-07-10)** · ~~Mission Input separado no Next~~ **REMOVIDO (2026-07-11)** — composer/chat principal é a única entrada de missão · ~~visualização gráfica completa das métricas estruturadas do Next~~ **CORRIGIDO (2026-07-11, `next-clean-57`+`next-clean-58` — Métricas/Agentes/Tools/Security-history no `next-clean-57`, Software Factory + Security Lab + toggle JSON bruto em ações safe-read no `next-clean-58`)** · Settings do Atomic Core (on/off, intensidade, Etapa 3) · Tutorial Smile (Etapa 4) · páginas públicas `about.html`/`landing.html` (Etapas 5-7) · Auth/registro/login/OAuth no Next (não iniciado).
 
 ---
 
@@ -139,9 +139,9 @@ Pendências: `GitProviderAdapter` (GitLab, `PLANEJADO`, zero código ainda — "
 
 ## FASE 7 — Observabilidade
 
-**Estado:** EM IMPLEMENTAÇÃO — Métricas visual (Next) fechada nesta consolidação recente, DORA conectado.
+**Estado:** FECHADA — Métricas visual (Next) completa em `next-clean-57`+`next-clean-58`, DORA conectado.
 
-**Objetivos:** conectar `/api/metrics/summary` (runtime CPU/memória) e `/api/metrics/memory` (memory layer §72/§107) na aba Métricas do Next — hoje só `agents`/`dora-metrics`/`agent-status` estão visuais.
+**Objetivos:** ~~conectar `/api/metrics/summary` e `/api/metrics/memory`~~ **CORRIGIDO**. `next-clean-57` adiciona visualização gráfica SVG/CSS para agentes, DORA, runtime, memory layer, conectividade, Tools marketplace e Security history safe-read. `next-clean-58` fecha os 3 gaps restantes: Software Factory (donut DONE/FAIL/BLOCKED + duração por etapa + gauge de progresso), Security Lab (donut ok/fallback-local + gauge de conformidade + timeline das 6 checagens) e um toggle "Ver JSON bruto" reutilizável dentro de `#vcFeatureViz` para as ações safe-read (Agentes/Tools/Security-history) — JSON bruto permanece sempre atrás de toggle diagnóstico, nunca como conteúdo principal.
 
 **Dependências:** Fase 1.
 

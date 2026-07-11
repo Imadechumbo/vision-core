@@ -23,6 +23,15 @@ Os ~25 endpoints ativamente consumidos pelo Next + os endpoints de auth/billing 
 
 Endpoints da Camada 2 (governança interna) — não são HTTP, são scripts/CLI (`pi-harness.mjs`, `tools/real-validation/*`).
 
+### Contratos CLI relacionados (não HTTP)
+
+`vc-secret-guard verify-cloud --provider aws-eb ...` é um contrato de CLI,
+não um endpoint. Ele audita env vars do Elastic Beanstalk em modo read-only e
+só pode retornar metadados seguros: nome, presença, vazio/não-vazio, tamanho,
+mínimo, compliance, severidade e nota. Nunca retorna valor, prefixo, sufixo,
+hash, amostra, ou stderr bruto da AWS CLI. Códigos: `0` conforme, `1` achado
+crítico (ou warning com `--strict`), `2` erro operacional sanitizado.
+
 ---
 
 ## Convenção de versionamento e compatibilidade
@@ -77,6 +86,8 @@ Endpoints da Camada 2 (governança interna) — não são HTTP, são scripts/CLI
 | GET | `/api/metrics/summary` | `{runtime:{cpu,memory,heap,uptime_s,node_version,...}}` | — |
 | GET | `/api/metrics/memory` | dados do memory layer (§72/§107) | — |
 | GET | `/api/dora-metrics` | `{deployment_frequency, lead_time, mttr, change_failure_rate, pass_gold_count_30d, total_pass_gold, data_source, anti_stub}` | Strings "sem dados X" **já vêm prontas do backend** — frontend não precisa re-derivar vazio |
+
+No Vision Core Next, estes payloads estruturados devem ser visualizados graficamente primeiro (barra/donut/gauge/sparkline/timeline conforme o dado). JSON bruto fica oculto por padrão e serve somente a diagnóstico. Regra registrada: toda métrica estruturada (numérica, temporal, percentual, categórica ou comparativa) tem representação gráfica; texto puro complementa, nunca substitui; JSON bruto fica sempre atrás de toggle explícito ("Ver JSON bruto"), nunca como conteúdo principal. Esta regra se estende a `/api/tools/marketplace` e `/api/security/history` (consumidos via `#vcFeatureViz`), e aos endpoints `/api/sf/*` (via `#vcSfFinalViz`) — cobertura fechada em `next-clean-58`.
 
 ## Vault
 

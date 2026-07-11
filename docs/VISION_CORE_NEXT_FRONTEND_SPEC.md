@@ -62,6 +62,8 @@ Nunca inverter para um fluxo em que o usuario precise passar por `Mission -> Mar
 
 **Metrics = widgets vivos.** CPU, RAM, agentes, jobs, DORA e pipeline podem aparecer como widgets abaixo/ao lado do fluxo, mas nunca substituir a conversa principal.
 
+**Métricas estruturadas = gráfico primeiro.** Toda métrica numérica, temporal, percentual, categórica ou comparativa exposta no Next deve possuir representação gráfica apropriada (barra, donut, gauge, sparkline ou timeline). Texto puro é complemento; JSON bruto fica oculto por padrão e só pode aparecer em modo diagnóstico.
+
 **Marketplace = drawer sob demanda.** Se o usuario pede "Instalar SpiderFoot", o Marketplace abre em drawer, instala, fecha e a conversa continua. Ele nao ocupa o espaco principal por padrao.
 
 **GitHub = contexto.** Repo, branch, PR e status entram como contexto ou painel lateral, nunca como pagina principal que toma o lugar do chat.
@@ -182,7 +184,7 @@ Cores de estado semântico fora das variáveis raiz (por convenção do arquivo,
 | Apply-Fix (confirmação dupla) | EXISTENTE |
 | Dry-Run real (confirmação dupla, polling, timeout 5min) | EXISTENTE |
 | Agent Apply (fail-closed, sempre desabilitado) | EXISTENTE — bloqueado por design |
-| Métricas (grid de agentes, DORA, conectividade) | EXISTENTE |
+| Métricas (gráficos de agentes, DORA, runtime, memory layer, conectividade, Tools/Security safe-read) | EXISTENTE |
 | Security Lab (Safe Status + Secret Guard card) | EXISTENTE |
 | Software Factory Next (`#factory`, Auto-Pilot + Modo Avançado) | EXISTENTE — Arquiteto visual local, catálogo/grafo de stack, matriz de agentes, timeline e preview |
 | Mission History (Timeline) | EXISTENTE |
@@ -318,6 +320,7 @@ Confirmado pelo usuário após auditoria de paridade (`docs/PARITY_AUDIT.md`): S
 7. **Nunca commitar working tree sujo; nunca deployar código não commitado.**
 8. **Todo spec Playwright que faz `page.goto()` na página Next mocka `/api/agent/status` e `/api/mission/quota`** — ambos disparam sozinhos, sem gate, em toda carga de página.
 9. **UTF-8 é verificado por leitura, não assumido** — achado real de 2026-07-09: texto novo com mojibake (`NÃ£o` em vez de `Não`) passou por `node --check` e testes sem ser pego (é um bug de conteúdo, não de sintaxe) — revisão visual/grep por `Ã[£§¡©³µª¢]` recomendado para todo texto em português adicionado.
+10. **Toda métrica estruturada (numérica, temporal, percentual, categórica ou comparativa) deve ter representação gráfica apropriada** (`metricCharts.{bar,donut,gauge,sparkline,timeline}`), não só texto — regra fechada em `next-clean-58` depois de 3 gaps reais (Software Factory, Security Lab, ações safe-read fora da aba Métricas ainda despejando resumo textual/JSON sem gráfico). Texto puro complementa, nunca substitui. JSON bruto fica sempre atrás de um toggle explícito ("Ver JSON bruto", reutilizando `.vc-metrics-raw-toggle`/`.vc-metrics-raw`), nunca como conteúdo principal — inclusive fora da aba Métricas.
 
 ---
 

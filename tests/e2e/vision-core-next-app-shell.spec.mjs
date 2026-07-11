@@ -128,6 +128,12 @@ test('Security Lab: Safe Status panel issues GET-only requests to the fixed allo
 
   expect(seenMethods.every((m) => m === 'GET')).toBe(true);
   expect(seenMethods.length).toBe(SAFE_STATUS_PATHS.length);
+
+  const viz = page.locator('#vcSafeStatusViz');
+  await expect(viz.locator('.vc-metric-chart[aria-label]')).toHaveCount(3);
+  await expect(viz).toContainText('Cobertura de políticas de segurança');
+  await expect(viz).toContainText('Conformidade visual');
+  await expect(viz).toContainText('Últimas verificações');
 });
 
 test('Security Lab: missing status endpoints still render a calm, non-error fallback', async ({ page }) => {

@@ -153,6 +153,12 @@ test('(a) full payload renders agent cards, cost bars and DORA cards', async ({ 
   await expect(page.locator('.vc-metrics-bar-fill')).toHaveCount(2);
   await expect(page.locator('.vc-metrics-chip')).toHaveCount(2);
   await expect(page.locator('.vc-metrics-dora-card')).toHaveCount(6);
+  await expect(page.locator('#vcMetricsPanel .vc-metric-chart[aria-label]')).toHaveCount(17);
+  await expect(page.locator('#vcMetricsPanel')).toContainText('Status dos agentes');
+  await expect(page.locator('#vcMetricsPanel')).toContainText('Change failure rate');
+  await expect(page.locator('#vcMetricsPanel')).toContainText('Load average');
+  await expect(page.locator('#vcMetricsPanel')).toContainText('Entries memory layer');
+  await expect(page.locator('#vcMetricsPanel')).toContainText('Disponibilidade');
   await expect(page.locator('#vcMetricsDoraGrid')).toContainText('2.4h avg (últimas 10)');
   await expect(page.locator('#vcMetricsRuntimeGrid')).toContainText('55%');
   await expect(page.locator('#vcMetricsRuntimeGrid')).toContainText('v24.1.0');
@@ -177,6 +183,7 @@ test('(b) cost_usd null never becomes a bar or "$0" — honest "sem dados de cus
 
   await expect(page.locator('.vc-metrics-bar-fill')).toHaveCount(0);
   await expect(page.locator('.vc-metrics-no-cost')).toHaveText('sem dados de custo');
+  await expect(page.locator('#vcMetricsAgentList')).toContainText('Sem dados numéricos de custo');
   await expect(page.locator('#vcMetricsTotal')).toContainText('sem dados de custo');
   await expect(page.locator('.vc-metrics-agent-row')).not.toContainText('$0');
 });
@@ -219,6 +226,7 @@ test('(d) DORA "sem dados" strings render as honest empty state, not an error', 
   await expect(page.locator('#vcMetricsDoraGrid')).toContainText('sem dados PASS-GOLD');
   await expect(page.locator('#vcMetricsDoraGrid')).toContainText('sem deploy-log');
   await expect(page.locator('#vcMetricsDoraGrid')).toContainText('sem falhas registradas');
+  await expect(page.locator('#vcMetricsDoraGrid')).toContainText('DORA retornou só estados vazios honestos.');
   await expect(page.locator('#vcMetricsError')).toBeHidden();
   await expect(page.locator('.vc-metrics-empty')).toHaveText('Nenhum agente reportado.');
 });
@@ -269,4 +277,74 @@ test('(f) raw JSON toggle shows/hides the underlying payload as text', async ({ 
   await expect(page.locator('#vcMetricsRaw')).toContainText('"memory"');
   await page.locator('#vcMetricsRawToggle').uncheck();
   await expect(page.locator('#vcMetricsRaw')).toBeHidden();
+});
+
+test('(g) Agents safe-read renders charts instead of raw JSON as the main response', async ({ page }) => {
+  await page.goto(NEXT_URL);
+  await page.route(`${API}/api/metrics/agents`, (route) => fulfillJson(route, 200, {
+    ok: true,
+    agents: [
+      { name: 'Hermes RCA', status: 'ok', cost_usd: 0.2, active_providers: ['groq'] },
+      { name: 'Go Core', status: 'binary_not_found', cost_usd: null }
+    ],
+    active_llm_providers: ['groq'],
+    anti_stub: true
+  }));
+
+  await page.locator('[data-feature="agents"]').click();
+  await page.getByRole('button', { name: 'Métricas agentes' }).click();
+
+  await expect(page.locator('#vcFeatureViz')).toBeVisible();
+  await expect(page.locator('#vcFeatureViz .vc-metric-chart[aria-label]')).toHaveCount(4);
+  await expect(page.locator('#vcFeatureViz')).toContainText('Status dos agentes');
+  await expect(page.locator('.vc-message-assistant').last()).toContainText('2 agente(s) reportado(s). Veja o gráfico no painel.');
+  await expect(page.locator('.vc-message-assistant').last()).not.toContainText('"agents"');
+
+  // Section 17: raw JSON stays out of the main flow but is reachable behind
+  // a diagnostic-only "Ver JSON bruto" toggle, same pattern as the Métricas
+  // tab's #vcMetricsRawToggle.
+  const rawPre = page.locator('#vcFeatureViz pre.vc-metrics-raw');
+  await expect(rawPre).toBeHidden();
+  await page.locator('#vcFeatureViz .vc-metrics-raw-toggle input[type="checkbox"]').check();
+  await expect(rawPre).toBeVisible();
+  await expect(rawPre).toContainText('"Hermes RCA"');
+});
+
+test('(h) Tools marketplace safe-read renders status charts', async ({ page }) => {
+  await page.goto(NEXT_URL);
+  await page.route(`${API}/api/tools/marketplace`, (route) => fulfillJson(route, 200, {
+    ok: true,
+    tools: [
+      { id: 'portainer', name: 'Portainer', status: 'ready-adapter' },
+      { id: 'spiderfoot', name: 'SpiderFoot', status: 'osint-plugin-ready' }
+    ]
+  }));
+
+  await page.locator('[data-feature="tools"]').click();
+  await page.getByRole('button', { name: 'Marketplace' }).click();
+
+  await expect(page.locator('#vcFeatureViz')).toBeVisible();
+  await expect(page.locator('#vcFeatureViz')).toContainText('Tools por status');
+  await expect(page.locator('#vcFeatureViz .vc-metric-chart[aria-label]')).toHaveCount(2);
+});
+
+test('(i) Security history safe-read renders charts without leaking secrets', async ({ page }) => {
+  await page.goto(NEXT_URL);
+  await page.route(`${API}/api/security/history`, (route) => fulfillJson(route, 200, {
+    ok: true,
+    history: [
+      { type: 'scan', rule_id: 'no_secret_value', fixed: false, security_score: 80 },
+      { type: 'fix', rule_id: 'env_guard', fixed: true, security_score: 100 }
+    ],
+    total: 2,
+    anti_stub: true
+  }));
+
+  await page.locator('[data-feature="tools"]').click();
+  await page.getByRole('button', { name: 'Histórico security' }).click();
+
+  await expect(page.locator('#vcFeatureViz')).toBeVisible();
+  await expect(page.locator('#vcFeatureViz')).toContainText('Eventos fixados vs pendentes');
+  await expect(page.locator('#vcFeatureViz .vc-metric-chart[aria-label]')).toHaveCount(2);
+  await expect(page.locator('body')).not.toContainText('sk-');
 });

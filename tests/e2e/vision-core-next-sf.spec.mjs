@@ -201,6 +201,48 @@ test('Software Factory Auto-Pilot runs six steps (5 + PASS GOLD default-on) via 
   expect(posts[5]).toMatchObject({ module: 'gold_gate', step: 5, total_steps: 6 });
 });
 
+test('Software Factory renders a step chart (duration bar + DONE/FAIL/BLOCKED donut + progress gauge)', async ({ page }) => {
+  await mockAsyncSfEndpoints(page, {
+    'mission-composer': 'mission composer ok',
+    'deploy-blueprint': 'deploy blueprint ok',
+    'worker-handoff':   'worker handoff ok',
+    'gold-gate':        'GOLD GATE CHECKLIST\nVEREDICTO: PASS GOLD'
+  });
+
+  await page.goto(NEXT_URL);
+  await page.locator('[data-feature="factory"]').first().click();
+  await page.locator('#vcPrompt').fill('um app de tarefas com login e dashboard');
+  await page.getByRole('button', { name: 'Gerar Projeto com o composer' }).click();
+
+  await expect(page.locator('#vcSfHistory')).toContainText('Projeto concluído!', { timeout: 10_000 });
+  const viz = page.locator('#vcSfFinalViz');
+  await expect(viz).toBeVisible();
+  await expect(viz.locator('.vc-metric-chart[aria-label]')).toHaveCount(3);
+  await expect(viz).toContainText('Etapas — DONE / FAIL / BLOCKED');
+  await expect(viz).toContainText('Duração por etapa');
+  await expect(viz).toContainText('Progresso do pipeline');
+  await expect(viz).toContainText('6/6');
+});
+
+test('Software Factory step chart marks remaining steps BLOCKED on a mid-pipeline failure', async ({ page }) => {
+  await page.route(`${API}/api/sf/mission-composer`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, job_id: 'job-1' }) }));
+  await page.route(`${API}/api/sf/job/job-1`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, status: 'done', result: 'mission composer ok' }) }));
+  await page.route(`${API}/api/sf/deploy-blueprint`, (route) =>
+    route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'boom' }) }));
+
+  await page.goto(NEXT_URL);
+  await page.locator('[data-feature="factory"]').first().click();
+  await page.locator('#vcPrompt').fill('um app que vai falhar no meio do pipeline');
+  await page.getByRole('button', { name: 'Gerar Projeto com o composer' }).click();
+
+  const viz = page.locator('#vcSfFinalViz');
+  await expect(viz).toBeVisible();
+  await expect(viz).toContainText('1/6');
+  await expect(page.locator('#vcSfFinal')).toBeHidden();
+});
+
 test('Software Factory runs selected optional generator steps before PASS GOLD', async ({ page }) => {
   const { posts, polls } = await mockAsyncSfEndpoints(page, {
     'mission-composer': 'mission composer ok',

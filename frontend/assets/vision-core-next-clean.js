@@ -53,6 +53,7 @@
   var featureBody = document.getElementById('vcFeatureBody');
   var featureStatus = document.getElementById('vcFeatureStatus');
   var featureActions = document.getElementById('vcFeatureActions');
+  var featureViz = document.getElementById('vcFeatureViz');
   var featureClose = document.getElementById('vcFeatureClose');
   var featureRun = document.getElementById('vcFeatureRun');
   var githubPrForm = document.getElementById('vcGithubPrForm');
@@ -145,6 +146,7 @@
   var metricsRaw = document.getElementById('vcMetricsRaw');
   var safeStatusPanel = document.getElementById('vcSafeStatusPanel');
   var safeStatusList = document.getElementById('vcSafeStatusList');
+  var safeStatusViz = document.getElementById('vcSafeStatusViz');
   var secretGuardCard = document.getElementById('vcSecretGuardCard');
   var activeFeature = 'chat';
   var lastFeatureTrigger = null;
@@ -236,8 +238,10 @@
     if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
     appendMessage('pending', feature.title.toUpperCase(), 'Consultando ' + action.path + '...');
     apiRequest(action.path).then(function (data) {
+      renderFeatureActionViz(action, data);
       appendMessage('assistant', action.label.toUpperCase(), summarizeResult(data));
     }).catch(function (err) {
+      hideFeatureViz();
       appendMessage('error', action.label.toUpperCase(), err && err.message ? err.message : String(err));
     }).then(function () {
       if (window.resetAtomicCore) window.resetAtomicCore();
@@ -254,6 +258,7 @@
     if (featureBody) featureBody.textContent = feature.text;
     if (featureStatus) featureStatus.textContent = feature.status;
     if (featureClose) featureClose.hidden = activeFeature === 'chat';
+    hideFeatureViz();
     renderFeatureActions(feature);
     if (githubPrForm) githubPrForm.hidden = activeFeature !== 'github';
     if (activeFeature !== 'github') resetPrConfirm();
@@ -630,8 +635,51 @@
   }
 
   function summarizeResult(data) {
-    var text = JSON.stringify(data, null, 2);
-    return text.length > 900 ? text.slice(0, 900) + '\n...' : text;
+    if (!data) return 'Sem payload.';
+    if (Array.isArray(data.agents)) return data.agents.length + ' agente(s) reportado(s). Veja o gráfico no painel.';
+    if (Array.isArray(data.tools)) return data.tools.length + ' ferramenta(s) no marketplace. Veja o gráfico no painel.';
+    if (Array.isArray(data.history)) return data.history.length + ' evento(s) de segurança. Veja o gráfico no painel.';
+    if (data.runtime) return 'Snapshot runtime recebido: CPU, memória, heap e uptime visualizados na aba Métricas.';
+    if (data.connected !== undefined) return (data.connected ? 'Agente conectado.' : 'Agente desconectado.') + ' Modo: ' + (data.mode || '—') + '.';
+    if (data.deployment_frequency !== undefined) return 'DORA metrics recebidas. Cards e gráficos disponíveis na aba Métricas.';
+    if (data.ok === true) return 'Consulta concluída. Payload bruto fica restrito ao modo diagnóstico quando existir toggle.';
+    if (typeof data.status === 'string') return data.status;
+    return 'Consulta retornou dados estruturados.';
+  }
+
+  function buildJsonToggle(data) {
+    var label = document.createElement('label');
+    label.className = 'vc-metrics-raw-toggle';
+    var checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    var pre = document.createElement('pre');
+    pre.className = 'vc-metrics-raw';
+    pre.hidden = true;
+    pre.textContent = JSON.stringify(data, null, 2);
+    checkbox.addEventListener('change', function () { pre.hidden = !checkbox.checked; });
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(' Ver JSON bruto (diagnóstico)'));
+    var wrap = document.createDocumentFragment();
+    wrap.appendChild(label);
+    wrap.appendChild(pre);
+    return wrap;
+  }
+
+  function showFeatureViz(title, renderFn, rawData) {
+    if (!featureViz) return;
+    featureViz.textContent = '';
+    featureViz.hidden = false;
+    var h = document.createElement('h4');
+    h.textContent = title;
+    featureViz.appendChild(h);
+    renderFn(featureViz);
+    if (rawData !== undefined) featureViz.appendChild(buildJsonToggle(rawData));
+  }
+
+  function hideFeatureViz() {
+    if (!featureViz) return;
+    featureViz.textContent = '';
+    featureViz.hidden = true;
   }
 
   var SAFE_STATUS_ENDPOINTS = [
@@ -664,16 +712,56 @@
     safeStatusList.appendChild(row);
   }
 
+  function renderSafeStatusViz(results) {
+    if (!safeStatusViz) return;
+    safeStatusViz.textContent = '';
+    var counts = { ok: 0, local: 0 };
+    results.forEach(function (r) { counts[r.state] = (counts[r.state] || 0) + 1; });
+    safeStatusViz.appendChild(metricCharts.donut({
+      title: 'Cobertura de políticas de segurança',
+      data: [
+        { label: 'ok', value: counts.ok, color: '#34d399' },
+        { label: 'fallback local', value: counts.local, color: '#facc15' }
+      ],
+      emptyMessage: 'Nenhuma checagem concluída ainda.',
+      ariaLabel: 'Donut de cobertura das checagens de status seguro'
+    }));
+    safeStatusViz.appendChild(metricCharts.gauge({
+      title: 'Conformidade visual',
+      value: results.length ? (counts.ok / results.length * 100) : null,
+      max: 100,
+      emptyMessage: 'Sem checagens concluídas para calcular conformidade.',
+      ariaLabel: 'Gauge de conformidade visual das checagens de status seguro'
+    }));
+    safeStatusViz.appendChild(metricCharts.timeline({
+      title: 'Últimas verificações',
+      data: results.map(function (r) { return { tier: r.state === 'ok' ? 'ok' : 'warn', label: r.endpoint + ': ' + r.state }; }),
+      emptyMessage: 'Sem verificações registradas ainda.',
+      ariaLabel: 'Timeline das verificações de status seguro'
+    }));
+  }
+
   function loadSafeStatusPanel() {
     if (!safeStatusPanel || !safeStatusList) return;
     safeStatusPanel.hidden = false;
     safeStatusList.textContent = '';
+    if (safeStatusViz) safeStatusViz.textContent = '';
     renderSafeStatusRow('policy', 'ok', 'modo leitura: somente GET, sem patch, deploy ou missão paga');
+    var results = [{ state: 'ok', endpoint: 'policy' }];
+    var pending = SAFE_STATUS_ENDPOINTS.length;
+    function checkDone() {
+      pending--;
+      if (pending === 0) renderSafeStatusViz(results);
+    }
     SAFE_STATUS_ENDPOINTS.forEach(function (endpoint) {
       safeStatusGet(endpoint).then(function (data) {
         renderSafeStatusRow(endpoint, 'ok', summarizeSafeStatus(data));
+        results.push({ state: 'ok', endpoint: endpoint });
+        checkDone();
       }).catch(function () {
         renderSafeStatusRow(endpoint, 'local', 'indisponível localmente — fallback visual seguro');
+        results.push({ state: 'local', endpoint: endpoint });
+        checkDone();
       });
     });
   }
@@ -785,7 +873,331 @@
   function statusTier(status) {
     if (status === 'ok') return 'ok';
     if (status === 'binary_not_found' || status === 'PENDING_EVIDENCE') return 'warn';
+    if (status === 'pending' || status === 'download_ready') return 'warn';
+    if (status === 'offline' || status === 'unavailable') return 'error';
     return 'error';
+  }
+
+  function numberOrNull(value) {
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  }
+
+  function parseMetricNumber(value) {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value !== 'string') return null;
+    var match = value.replace(',', '.').match(/-?\d+(?:\.\d+)?/);
+    return match ? Number(match[0]) : null;
+  }
+
+  function chartColor(index) {
+    return ['#a855f7', '#22d3ee', '#34d399', '#facc15', '#fb7185', '#38bdf8'][index % 6];
+  }
+
+  function chartCard(opts) {
+    var card = document.createElement('div');
+    card.className = 'vc-metric-chart';
+    card.setAttribute('role', 'img');
+    card.setAttribute('aria-label', opts.ariaLabel || opts.title || 'Gráfico de métrica');
+    var h = document.createElement('h6');
+    h.textContent = opts.title || 'Métrica';
+    card.appendChild(h);
+    if (opts.description) {
+      var p = document.createElement('p');
+      p.className = 'vc-chart-desc';
+      p.textContent = opts.description;
+      card.appendChild(p);
+    }
+    return card;
+  }
+
+  function renderEmptyChart(opts) {
+    var card = chartCard(opts || {});
+    card.classList.add('vc-metric-chart-empty');
+    var msg = document.createElement('span');
+    msg.textContent = (opts && opts.emptyMessage) || 'Sem dado estruturado suficiente para gráfico.';
+    card.appendChild(msg);
+    return card;
+  }
+
+  function renderLegend(items) {
+    var legend = document.createElement('div');
+    legend.className = 'vc-chart-legend';
+    (items || []).forEach(function (item, index) {
+      var row = document.createElement('span');
+      var swatch = document.createElement('i');
+      swatch.style.background = item.color || chartColor(index);
+      row.appendChild(swatch);
+      row.appendChild(document.createTextNode(item.label + (item.value !== undefined ? ': ' + item.value : '')));
+      legend.appendChild(row);
+    });
+    return legend;
+  }
+
+  function renderBarChart(opts) {
+    var rows = (opts.data || []).filter(function (d) { return numberOrNull(d.value) !== null; });
+    if (!rows.length) return renderEmptyChart(opts);
+    var max = numberOrNull(opts.max);
+    if (max === null) {
+      max = Math.max.apply(null, rows.map(function (d) { return Math.abs(d.value); }));
+      if (!max) return renderEmptyChart(opts);
+    }
+    var card = chartCard(opts);
+    var list = document.createElement('div');
+    list.className = 'vc-bar-chart';
+    rows.forEach(function (d, index) {
+      var row = document.createElement('div');
+      row.className = 'vc-bar-row';
+      var label = document.createElement('span');
+      label.textContent = d.label;
+      var track = document.createElement('div');
+      track.className = 'vc-chart-track';
+      var fill = document.createElement('div');
+      fill.className = 'vc-chart-fill';
+      fill.style.width = Math.min(100, Math.max(2, Math.abs(d.value) / max * 100)) + '%';
+      fill.style.background = d.color || chartColor(index);
+      track.appendChild(fill);
+      var value = document.createElement('strong');
+      value.textContent = (d.display !== undefined ? d.display : d.value) + (opts.unit || '');
+      row.appendChild(label);
+      row.appendChild(track);
+      row.appendChild(value);
+      list.appendChild(row);
+    });
+    card.appendChild(list);
+    return card;
+  }
+
+  function renderDonutChart(opts) {
+    var rows = (opts.data || []).filter(function (d) { return numberOrNull(d.value) !== null && d.value > 0; });
+    if (!rows.length) return renderEmptyChart(opts);
+    var total = rows.reduce(function (sum, d) { return sum + d.value; }, 0);
+    var card = chartCard(opts);
+    var wrap = document.createElement('div');
+    wrap.className = 'vc-donut-wrap';
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 42 42');
+    var bg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    bg.setAttribute('cx', '21'); bg.setAttribute('cy', '21'); bg.setAttribute('r', '15.9');
+    bg.setAttribute('fill', 'none'); bg.setAttribute('stroke', 'rgba(255,255,255,.08)'); bg.setAttribute('stroke-width', '5');
+    svg.appendChild(bg);
+    var offset = 25;
+    rows.forEach(function (d, index) {
+      var pct = d.value / total * 100;
+      var seg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      seg.setAttribute('cx', '21'); seg.setAttribute('cy', '21'); seg.setAttribute('r', '15.9');
+      seg.setAttribute('fill', 'none'); seg.setAttribute('stroke', d.color || chartColor(index)); seg.setAttribute('stroke-width', '5');
+      seg.setAttribute('stroke-dasharray', pct + ' ' + (100 - pct));
+      seg.setAttribute('stroke-dashoffset', String(offset));
+      seg.setAttribute('pathLength', '100');
+      svg.appendChild(seg);
+      offset -= pct;
+    });
+    var center = document.createElement('strong');
+    center.textContent = String(total);
+    wrap.appendChild(svg);
+    wrap.appendChild(center);
+    card.appendChild(wrap);
+    card.appendChild(renderLegend(rows.map(function (d, i) { return { label: d.label, value: d.value, color: d.color || chartColor(i) }; })));
+    return card;
+  }
+
+  function renderGauge(opts) {
+    var value = numberOrNull(opts.value);
+    if (value === null) return renderEmptyChart(opts);
+    var max = numberOrNull(opts.max) || 100;
+    var pct = Math.min(100, Math.max(0, value / max * 100));
+    var card = chartCard(opts);
+    var gauge = document.createElement('div');
+    gauge.className = 'vc-gauge';
+    gauge.style.setProperty('--gauge-value', pct + '%');
+    gauge.style.setProperty('--gauge-color', opts.color || (pct > 85 ? '#f87171' : pct > 65 ? '#facc15' : '#34d399'));
+    var center = document.createElement('strong');
+    center.textContent = (opts.display !== undefined ? opts.display : Math.round(value)) + (opts.unit || '%');
+    gauge.appendChild(center);
+    card.appendChild(gauge);
+    return card;
+  }
+
+  function renderSparkline(opts) {
+    var values = (opts.data || []).map(numberOrNull).filter(function (v) { return v !== null; });
+    if (!values.length) return renderEmptyChart(opts);
+    var card = chartCard(opts);
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 120 40');
+    svg.classList.add('vc-sparkline');
+    var max = Math.max.apply(null, values);
+    var min = Math.min.apply(null, values);
+    var spread = max - min || 1;
+    var points = values.map(function (v, i) {
+      var x = values.length === 1 ? 60 : i / (values.length - 1) * 116 + 2;
+      var y = 38 - ((v - min) / spread * 34);
+      return x.toFixed(2) + ',' + y.toFixed(2);
+    }).join(' ');
+    var poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    poly.setAttribute('points', points);
+    poly.setAttribute('fill', 'none');
+    poly.setAttribute('stroke', opts.color || '#22d3ee');
+    poly.setAttribute('stroke-width', '2.2');
+    poly.setAttribute('stroke-linecap', 'round');
+    poly.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(poly);
+    card.appendChild(svg);
+    return card;
+  }
+
+  function renderTimeline(opts) {
+    var items = opts.data || [];
+    if (!items.length) return renderEmptyChart(opts);
+    var card = chartCard(opts);
+    var line = document.createElement('ol');
+    line.className = 'vc-chart-timeline';
+    items.forEach(function (item) {
+      var li = document.createElement('li');
+      var dot = document.createElement('i');
+      dot.className = 'vc-metrics-status-dot vc-metrics-status-' + (item.tier || 'warn');
+      var text = document.createElement('span');
+      text.textContent = item.label;
+      li.appendChild(dot);
+      li.appendChild(text);
+      line.appendChild(li);
+    });
+    card.appendChild(line);
+    return card;
+  }
+
+  var metricCharts = {
+    bar: renderBarChart,
+    donut: renderDonutChart,
+    gauge: renderGauge,
+    sparkline: renderSparkline,
+    timeline: renderTimeline,
+    empty: renderEmptyChart,
+    legend: renderLegend
+  };
+
+  function statusLabel(status) {
+    var tier = statusTier(status);
+    if (tier === 'ok') return 'ok';
+    if (status === 'binary_not_found') return 'warning';
+    if (status === 'PENDING_EVIDENCE' || status === 'pending') return 'pending';
+    if (status === 'download_ready') return 'offline';
+    return 'error';
+  }
+
+  function buildAgentCharts(list, activeProviders) {
+    var wrap = document.createElement('div');
+    wrap.className = 'vc-metric-chart-grid';
+    var statusCounts = {};
+    var providerCounts = {};
+    var numericCosts = [];
+    (list || []).forEach(function (agent) {
+      var label = statusLabel(agent.status || 'unknown');
+      statusCounts[label] = (statusCounts[label] || 0) + 1;
+      if (Array.isArray(agent.active_providers)) {
+        agent.active_providers.forEach(function (provider) { providerCounts[provider] = (providerCounts[provider] || 0) + 1; });
+      }
+      if (typeof agent.cost_usd === 'number') numericCosts.push(agent);
+    });
+    (activeProviders || []).forEach(function (provider) { providerCounts[provider] = providerCounts[provider] || 0; });
+    wrap.appendChild(metricCharts.donut({
+      title: 'Status dos agentes',
+      data: ['ok', 'warning', 'pending', 'error', 'offline'].map(function (key) { return { label: key, value: statusCounts[key] || 0 }; }),
+      emptyMessage: 'Nenhum agente reportado.',
+      ariaLabel: 'Donut de distribuição de status dos agentes'
+    }));
+    wrap.appendChild(metricCharts.bar({
+      title: 'Custo por agente',
+      data: numericCosts.map(function (agent) { return { label: agent.name || 'agente', value: agent.cost_usd, display: '$' + agent.cost_usd.toFixed(3) }; }),
+      emptyMessage: 'Sem dados numéricos de custo. Null não é tratado como zero.',
+      ariaLabel: 'Barras horizontais de custo por agente'
+    }));
+    wrap.appendChild(metricCharts.bar({
+      title: 'Providers ativos',
+      data: Object.keys(providerCounts).map(function (key) { return { label: key, value: providerCounts[key], display: providerCounts[key] + ' agente(s)' }; }),
+      emptyMessage: 'Nenhum provider ativo reportado.',
+      ariaLabel: 'Barras de providers ativos por agente'
+    }));
+    wrap.appendChild(metricCharts.bar({
+      title: 'Ranking de atividade',
+      description: 'Score visual derivado do status e providers reportados; não substitui telemetria real.',
+      data: (list || []).map(function (agent) {
+        var score = statusTier(agent.status) === 'ok' ? 2 : 1;
+        if (Array.isArray(agent.active_providers)) score += agent.active_providers.length;
+        return { label: agent.name || 'agente', value: score, display: score + ' pts' };
+      }),
+      emptyMessage: 'Sem agentes para ranquear.',
+      ariaLabel: 'Ranking visual de atividade dos agentes'
+    }));
+    return wrap;
+  }
+
+  function renderFeatureActionViz(action, data) {
+    if (!action || !data) return hideFeatureViz();
+    if (action.path === '/api/metrics/agents' && Array.isArray(data.agents)) {
+      showFeatureViz('Agentes — visualização segura', function (root) {
+        root.appendChild(buildAgentCharts(data.agents, data.active_llm_providers || []));
+      }, data);
+      return;
+    }
+    if (action.path === '/api/agent/status') {
+      showFeatureViz('Conectividade — visualização segura', function (root) {
+        root.appendChild(metricCharts.gauge({
+          title: 'Saúde do agente',
+          value: data.connected ? 100 : 0,
+          max: 100,
+          display: data.connected ? 'online' : 'offline',
+          unit: '',
+          ariaLabel: 'Indicador radial de conectividade do Vision Agent Local'
+        }));
+        root.appendChild(metricCharts.timeline({
+          title: 'Último heartbeat',
+          data: [{ tier: data.connected ? 'ok' : 'warn', label: 'Último sinal: ' + humanizeMsAgo(data.last_seen_ms_ago) }],
+          ariaLabel: 'Timeline de heartbeat do Vision Agent Local'
+        }));
+      }, data);
+      return;
+    }
+    if (action.path === '/api/tools/marketplace' && Array.isArray(data.tools)) {
+      var statusCounts = {};
+      data.tools.forEach(function (tool) { statusCounts[tool.status || 'unknown'] = (statusCounts[tool.status || 'unknown'] || 0) + 1; });
+      showFeatureViz('Tools — marketplace visual', function (root) {
+        root.appendChild(metricCharts.donut({
+          title: 'Tools por status',
+          data: Object.keys(statusCounts).map(function (key) { return { label: key, value: statusCounts[key] }; }),
+          ariaLabel: 'Donut de ferramentas por status'
+        }));
+        root.appendChild(metricCharts.bar({
+          title: 'Disponibilidade por adapter',
+          data: data.tools.map(function (tool) { return { label: tool.name || tool.id, value: tool.status === 'ready-adapter' ? 1 : 0, display: tool.status || 'unknown' }; }),
+          max: 1,
+          ariaLabel: 'Barras de disponibilidade das ferramentas'
+        }));
+      }, data);
+      return;
+    }
+    if (action.path === '/api/security/history' && Array.isArray(data.history)) {
+      var fixed = data.history.filter(function (event) { return event.fixed === true; }).length;
+      showFeatureViz('Security — histórico visual', function (root) {
+        root.appendChild(metricCharts.donut({
+          title: 'Eventos fixados vs pendentes',
+          data: [{ label: 'fixed', value: fixed }, { label: 'pending', value: Math.max(0, data.history.length - fixed) }],
+          emptyMessage: 'Sem eventos de segurança ainda.',
+          ariaLabel: 'Donut de eventos de segurança fixados e pendentes'
+        }));
+        root.appendChild(metricCharts.bar({
+          title: 'Score por evento',
+          data: data.history.slice(-8).map(function (event, index) {
+            var score = numberOrNull(event.security_score) || 0;
+            return { label: event.rule_id || event.type || ('evento ' + (index + 1)), value: score, display: score + '%' };
+          }),
+          max: 100,
+          emptyMessage: 'Sem score estruturado.',
+          ariaLabel: 'Barras de score de segurança por evento'
+        }));
+      }, data);
+      return;
+    }
+    hideFeatureViz();
   }
 
   function setMetricsRawText() {
@@ -822,6 +1234,7 @@
     }
     var numericCosts = list.filter(function (a) { return typeof a.cost_usd === 'number'; }).map(function (a) { return a.cost_usd; });
     var maxCost = numericCosts.length ? Math.max.apply(null, numericCosts.map(Math.abs)) || 1 : 1;
+    metricsAgentList.appendChild(buildAgentCharts(list, agentsData.active_llm_providers || []));
     list.forEach(function (agent) {
       var row = document.createElement('div');
       row.className = 'vc-metrics-agent-row';
@@ -928,6 +1341,38 @@
       card.appendChild(value);
       metricsDoraGrid.appendChild(card);
     });
+    var deploys = parseMetricNumber(dora.deployment_frequency);
+    var leadTime = parseMetricNumber(dora.lead_time);
+    var mttr = parseMetricNumber(dora.mttr);
+    var failureRate = parseMetricNumber(dora.change_failure_rate);
+    metricsDoraGrid.appendChild(metricCharts.gauge({
+      title: 'Change failure rate',
+      value: failureRate,
+      max: 100,
+      emptyMessage: 'Sem taxa numérica de falha para gauge.',
+      ariaLabel: 'Gauge de change failure rate'
+    }));
+    metricsDoraGrid.appendChild(metricCharts.bar({
+      title: 'DORA comparativo',
+      data: [
+        { label: 'deploys 30d', value: deploys, display: deploys !== null ? deploys : 'sem dados' },
+        { label: 'lead time h', value: leadTime, display: leadTime !== null ? leadTime + 'h' : 'sem dados' },
+        { label: 'MTTR min', value: mttr, display: mttr !== null ? mttr + 'min' : 'sem dados' },
+        { label: 'PASS GOLD 30d', value: numberOrNull(dora.pass_gold_count_30d), display: dora.pass_gold_count_30d !== undefined ? dora.pass_gold_count_30d : 'sem dados' },
+        { label: 'PASS GOLD total', value: numberOrNull(dora.total_pass_gold), display: dora.total_pass_gold !== undefined ? dora.total_pass_gold : 'sem dados' }
+      ],
+      emptyMessage: 'DORA retornou só estados vazios honestos.',
+      ariaLabel: 'Barras comparativas de DORA metrics'
+    }));
+    metricsDoraGrid.appendChild(metricCharts.timeline({
+      title: 'Pipeline DORA',
+      data: [
+        { tier: deploys ? 'ok' : 'warn', label: 'Deploy frequency: ' + String(dora.deployment_frequency || 'sem dados') },
+        { tier: leadTime ? 'ok' : 'warn', label: 'Lead time: ' + String(dora.lead_time || 'sem dados') },
+        { tier: mttr ? 'ok' : 'warn', label: 'MTTR: ' + String(dora.mttr || 'sem dados') }
+      ],
+      ariaLabel: 'Timeline textual de disponibilidade de DORA metrics'
+    }));
   }
 
   function appendMetricsInfoCard(parent, labelText, valueText) {
@@ -960,6 +1405,41 @@
     appendMetricsInfoCard(metricsRuntimeGrid, 'Uptime', runtime.uptime_s !== undefined ? runtime.uptime_s + 's' : null);
     appendMetricsInfoCard(metricsRuntimeGrid, 'Node', runtime.node_version);
     appendMetricsInfoCard(metricsRuntimeGrid, 'Platform', runtime.platform);
+    metricsRuntimeGrid.appendChild(metricCharts.gauge({
+      title: 'CPU',
+      value: numberOrNull(runtime.cpu),
+      max: 100,
+      ariaLabel: 'Gauge de uso de CPU'
+    }));
+    metricsRuntimeGrid.appendChild(metricCharts.gauge({
+      title: 'Memória',
+      value: numberOrNull(runtime.memory),
+      max: 100,
+      ariaLabel: 'Gauge de uso de memória'
+    }));
+    metricsRuntimeGrid.appendChild(metricCharts.bar({
+      title: 'Heap usado',
+      data: [{ label: 'heap', value: numberOrNull(runtime.heap), display: runtime.heap !== undefined ? runtime.heap + '%' : 'sem dados' }],
+      max: 100,
+      emptyMessage: 'Sem heap numérico.',
+      ariaLabel: 'Barra de heap usado'
+    }));
+    metricsRuntimeGrid.appendChild(metricCharts.sparkline({
+      title: 'Load average',
+      data: Array.isArray(runtime.load_avg) ? runtime.load_avg : [],
+      emptyMessage: 'Sem série temporal; backend retorna snapshot.',
+      ariaLabel: 'Linha de load average do snapshot runtime'
+    }));
+    metricsRuntimeGrid.appendChild(metricCharts.bar({
+      title: 'Requests e errors',
+      data: [
+        { label: 'requests', value: numberOrNull(runtime.requests), display: runtime.requests !== undefined ? runtime.requests : 'sem dados' },
+        { label: 'errors', value: numberOrNull(runtime.errors), display: runtime.errors !== undefined ? runtime.errors : 'sem dados' },
+        { label: 'latência', value: numberOrNull(runtime.latency_ms), display: runtime.latency_ms !== undefined ? runtime.latency_ms + 'ms' : 'sem dados' }
+      ],
+      emptyMessage: 'Backend atual não expõe requests/errors/latência no snapshot.',
+      ariaLabel: 'Barras de requests errors e latência quando disponíveis'
+    }));
   }
 
   function renderMetricsMemory(memory) {
@@ -981,6 +1461,32 @@
       : '';
     appendMetricsInfoCard(metricsMemoryGrid, 'Por provider', providers || 'sem eventos');
     appendMetricsInfoCard(metricsMemoryGrid, 'Fonte', memory.data_source);
+    metricsMemoryGrid.appendChild(metricCharts.donut({
+      title: 'Entries memory layer',
+      data: [
+        { label: 'memory capable', value: numberOrNull(memory.memory_capable_entries) || 0 },
+        { label: 'legacy sem keywords', value: numberOrNull(memory.legacy_entries_without_keywords) || 0 }
+      ],
+      emptyMessage: 'Sem entries de memória registradas.',
+      ariaLabel: 'Donut de entries memory capable e legadas'
+    }));
+    metricsMemoryGrid.appendChild(metricCharts.bar({
+      title: 'Escalações por provider',
+      data: memory.by_provider && typeof memory.by_provider === 'object'
+        ? Object.keys(memory.by_provider).map(function (key) { return { label: key, value: numberOrNull(memory.by_provider[key]) || 0 }; })
+        : [],
+      emptyMessage: 'Sem eventos por provider.',
+      ariaLabel: 'Barras de escalações por provider'
+    }));
+    metricsMemoryGrid.appendChild(metricCharts.gauge({
+      title: 'Hit rate visual',
+      value: (numberOrNull(memory.memory_capable_entries) !== null && numberOrNull(memory.total_escalations) !== null && memory.total_escalations > 0)
+        ? (memory.memory_capable_entries / memory.total_escalations * 100)
+        : null,
+      max: 100,
+      emptyMessage: 'Endpoint atual não expõe hits/misses diretos; usando entries capazes quando possível.',
+      ariaLabel: 'Gauge de hit rate visual do memory layer'
+    }));
   }
 
   function renderMetricsConnectivity(status) {
@@ -1009,6 +1515,22 @@
       (status.agent_id ? ' · agent_id: ' + status.agent_id : '') +
       ' · anti_stub: ' + (status.anti_stub === true ? 'true' : 'false');
     metricsConn.appendChild(meta);
+    metricsConn.appendChild(metricCharts.gauge({
+      title: 'Disponibilidade',
+      value: status.connected ? 100 : 0,
+      max: 100,
+      display: status.connected ? 'online' : 'offline',
+      unit: '',
+      ariaLabel: 'Gauge de disponibilidade do Vision Agent Local'
+    }));
+    metricsConn.appendChild(metricCharts.timeline({
+      title: 'Heartbeat',
+      data: [
+        { tier: status.connected ? 'ok' : 'warn', label: 'Modo: ' + (status.mode || '—') },
+        { tier: status.connected ? 'ok' : 'warn', label: 'Último sinal: ' + humanizeMsAgo(status.last_seen_ms_ago) }
+      ],
+      ariaLabel: 'Timeline de heartbeat e modo do Vision Agent Local'
+    }));
   }
 
   function setMetricsLoading(loading) {
@@ -2279,6 +2801,7 @@
   var sfLog = document.getElementById('vcSfLog');
   var sfFinal = document.getElementById('vcSfFinal');
   var sfFinalBody = document.getElementById('vcSfFinalBody');
+  var sfFinalViz = document.getElementById('vcSfFinalViz');
   var sfComposer = document.getElementById('vcSfComposer');
   var sfModeButtons = Array.prototype.slice.call(document.querySelectorAll('[data-sf-mode]'));
   var sfProvider = document.getElementById('vcSfProvider');
@@ -2292,6 +2815,7 @@
   var sfMode = 'auto';
   var sfPollTimer = null;
   var sfInFlight = false;
+  var sfStepMeta = [];
   var sfFullContext = '';
   var sfUrlContext = '';
   var sfUrlFetchInFlight = false;
@@ -2885,6 +3409,54 @@
     sfFinal.hidden = false;
   }
 
+  function renderSfStepChart() {
+    if (!sfFinalViz) return;
+    sfFinalViz.hidden = false;
+    sfFinalViz.textContent = '';
+    var counts = { done: 0, error: 0, blocked: 0, pending: 0 };
+    sfStepMeta.forEach(function (s) { counts[s.status] = (counts[s.status] || 0) + 1; });
+    sfFinalViz.appendChild(metricCharts.donut({
+      title: 'Etapas — DONE / FAIL / BLOCKED',
+      data: [
+        { label: 'done', value: counts.done, color: '#34d399' },
+        { label: 'error', value: counts.error, color: '#f87171' },
+        { label: 'blocked', value: counts.blocked, color: '#facc15' }
+      ],
+      emptyMessage: 'Nenhuma etapa concluída ainda.',
+      ariaLabel: 'Donut de etapas concluídas, com falha e bloqueadas do pipeline Software Factory'
+    }));
+    sfFinalViz.appendChild(metricCharts.bar({
+      title: 'Duração por etapa',
+      data: sfStepMeta.filter(function (s) { return s.duration_ms !== null; }).map(function (s) {
+        return { label: s.label, value: s.duration_ms, display: (s.duration_ms / 1000).toFixed(1) + 's' };
+      }),
+      emptyMessage: 'Sem etapas concluídas com tempo registrado.',
+      ariaLabel: 'Barras de duração por etapa do pipeline Software Factory'
+    }));
+    sfFinalViz.appendChild(metricCharts.gauge({
+      title: 'Progresso do pipeline',
+      value: sfStepMeta.length ? (counts.done / sfStepMeta.length * 100) : null,
+      max: 100,
+      display: counts.done + '/' + sfStepMeta.length,
+      unit: '',
+      emptyMessage: 'Pipeline ainda não iniciado.',
+      ariaLabel: 'Gauge de progresso percentual do pipeline Software Factory'
+    }));
+  }
+
+  function markSfStep(idx, status) {
+    var meta = sfStepMeta[idx];
+    if (!meta) return;
+    meta.status = status;
+    meta.duration_ms = meta.startedAt ? Date.now() - meta.startedAt : null;
+    if (status === 'error') {
+      for (var i = idx + 1; i < sfStepMeta.length; i++) {
+        if (sfStepMeta[i].status === 'pending') sfStepMeta[i].status = 'blocked';
+      }
+    }
+    renderSfStepChart();
+  }
+
   function runSfAutoPilot(desc) {
     if (sfInFlight) return;
     sfInFlight = true;
@@ -2893,6 +3465,8 @@
     sfRunOptions = readSfOptions();
     sfActiveSteps = SF_STEPS.concat(getSelectedSfExtraSteps());
     if (sfRunOptions.pass_gold) sfActiveSteps = sfActiveSteps.concat([SF_GOLD_GATE_STEP]);
+    sfStepMeta = sfActiveSteps.map(function (s) { return { label: s.label, status: 'pending', duration_ms: null, startedAt: null }; });
+    if (sfFinalViz) { sfFinalViz.textContent = ''; sfFinalViz.hidden = true; }
     if (sfLog) { sfLog.textContent = ''; sfLog.hidden = false; }
     if (sfUrlContext) appendSfLog('info', 'URL_CONTEXT incluído (' + sfUrlContext.length + ' chars)');
     if (sfFinal) sfFinal.hidden = true;
@@ -2924,6 +3498,7 @@
         return;
       }
       updateSfProgress(idx, 'active');
+      if (sfStepMeta[idx]) sfStepMeta[idx].startedAt = Date.now();
       var step = sfActiveSteps[idx];
       var body = { description: desc, module: step.module, autopilot: true, step: idx, total_steps: sfActiveSteps.length, sf_options: sfRunOptions || readSfOptions() };
       if (sfMode === 'advanced') {
@@ -2945,11 +3520,13 @@
           pollSfJob(data.job_id, function (err, result) {
             if (err) {
               updateSfProgress(idx, 'error');
+              markSfStep(idx, 'error');
               appendSfLog('error', 'FAIL ' + step.module + ': ' + err.message);
               appendSfMsg('error', step.label + ' falhou: ' + err.message);
               finishSf();
             } else {
               updateSfProgress(idx, 'done');
+              markSfStep(idx, 'done');
               appendSfLog('ok', 'DONE ' + step.module);
               var text = sfExtractReadable(result);
               if (text) {
@@ -2962,6 +3539,7 @@
           });
         } else {
           updateSfProgress(idx, 'done');
+          markSfStep(idx, 'done');
           appendSfLog('ok', 'DONE ' + step.module);
           var text = sfExtractReadable(data);
           if (text) {
@@ -2973,6 +3551,7 @@
         }
       }).catch(function (err) {
         updateSfProgress(idx, 'error');
+        markSfStep(idx, 'error');
         appendSfLog('error', 'FAIL ' + step.module + ': ' + (err && err.message ? err.message : String(err)));
         appendSfMsg('error', step.label + ' falhou: ' + (err && err.message ? err.message : String(err)));
         finishSf();
