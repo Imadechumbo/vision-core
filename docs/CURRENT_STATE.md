@@ -93,6 +93,8 @@ RC Security Gate local (2026-07-11): CORS backend deixou de refletir Origin arbi
 
 Governança arquitetural registrada (2026-07-11): `ARCHITECTURAL PRINCIPLE-001` (Zero Legacy Debt) e `ARCHITECTURAL PRINCIPLE-002` (Specification First) foram adicionados a `docs/DECISIONS.md` como princípios permanentes. `docs/ARCHITECTURE.md`, `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` e `docs/README_DOCUMENTATION.md` apontam para eles sem duplicar conteúdo. Sem código, sem deploy.
 
+Direção de produto registrada (2026-07-11): `docs/DECISIONS.md` DECISION-019 define que Vision Core Next agora deve ser evoluído como futuro frontend oficial, não como backlog solto de lacunas. Próximas tarefas devem começar por comparação implementação × specs e priorizar arquitetura → UX → Software Factory → Atomic Core → performance → observabilidade → segurança → documentação → refinamento visual. `ARCHITECTURAL PRINCIPLE-003 — System Correcting Systems` ficou apenas como IDEIA FUTURA em `docs/ROADMAP.md`, condicionada à maturidade do Software Factory; não é princípio ativo ainda. Sem código, sem deploy.
+
 ---
 
 # CONTEXTO PARA O PRÓXIMO AGENTE
@@ -102,3 +104,5 @@ O painel de Métricas e todas as visualizações gráficas do Next estão comple
 A partir de agora a documentação segue um sistema de continuidade: `CURRENT_STATE.md` (este arquivo) fica sempre pequeno e reflete só o estado atual; `docs/CHANGELOG_NEXT.md` guarda um bloco curto por versão; investigação/narrativa longa vai para `docs/session_logs/YYYY-MM-DD-nome.md`. Nunca copie logs de terminal, JSON completo ou diffs grandes de volta para este arquivo.
 
 Nenhuma pendência listada acima tem consenso de urgência — qualquer uma exige decisão do usuário antes de virar prioridade real, exceto a Fase 3.3d (já tem investigação e plano, só falta execução).
+
+Para a próxima missão no Next, aplicar DECISION-019 antes de escolher escopo: confirmar spec afetada, comparar contra a implementação real, escolher a melhoria de maior impacto pela ordem de prioridade registrada e evitar qualquer push/deploy automático sem pedido explícito.

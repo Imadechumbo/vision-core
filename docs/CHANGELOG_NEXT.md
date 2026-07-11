@@ -6,6 +6,12 @@ Formato: mais recente no topo.
 
 ---
 
+## Governança Next (2026-07-11)
+
+- DECISION-019 registrada: Vision Core Next passa à fase de produto oficial futuro, guiado por comparação implementação × specs e pela prioridade arquitetura → UX → Software Factory → Atomic Core → performance → observabilidade → segurança → documentação → refinamento visual
+- ROADMAP registra `ARCHITECTURAL PRINCIPLE-003 — System Correcting Systems` apenas como IDEIA FUTURA, condicionado à maturidade do Software Factory
+- Sem alteração de código, sem cache-bust, sem push/deploy automático
+
 ## next-clean-59 (2026-07-11)
 
 - Corrigido bug de produção: gráficos de Agentes não apareciam — causa raiz dupla (deploy nunca feito de `57`/`58` + `#vcComposer` sticky sobrepondo `#vcFeaturePanel`)

@@ -75,6 +75,11 @@ Um spec `tests/e2e/vision-core-next-*.spec.mjs` só é commitado permanentemente
 
 ## Frontend — Vision Core Next
 
+### DECISION-019 — Vision Core Next entra em fase de produto oficial
+Vision Core Next deixa de ser tratado como uma coleção de lacunas a fechar e passa a ser evoluído como o futuro frontend oficial do Vision Core.
+**Por quê:** depois das principais superfícies do cockpit Next existirem (chat, composer, Software Factory, Atomic Core, métricas, Security Lab, Vault/Tools/GitHub), o maior risco não é falta de UI pontual, é acumular decisões locais e virar um novo legado antes de substituir o antigo.
+**Como aplicar:** toda missão do Next começa comparando implementação real contra specs, depois escolhe a melhoria de maior impacto nesta ordem: arquitetura, UX, Software Factory, Atomic Core, performance, observabilidade, segurança, documentação, refinamento visual. Nunca copiar código legado; reimplementar de forma modular, documentada, testada e aderente aos princípios `ARCHITECTURAL PRINCIPLE-001` e `ARCHITECTURAL PRINCIPLE-002`. Push/deploy/merge continuam exigindo pedido explícito do usuário ou regra operacional já autorizada.
+
 ### DECISION-010 — Mission Input removido definitivamente
 O composer/chat principal é a única entrada de missão do Vision Core Next. Não existe textarea de missão separado — nem flutuante, nem dentro do Software Factory.
 **Por quê:** decisão arquitetural final — a área superior direita pertence ao Atomic Core; ter duas entradas de missão (Mission Input + composer) duplicava a interação sem ganho, e o Software Factory lendo a mesma missão do composer evita um segundo estado a sincronizar.
