@@ -1,9 +1,9 @@
-# VISION CORE ARCHITECTURE
+# ARCHITECTURE — Vision Core
 
-**Documento principal da série de arquitetura. Leia `MASTER_SPEC.md` antes deste, se ainda não leu.**
+**Documento principal da série de arquitetura (antigo `VISION_CORE_ARCHITECTURE.md`, renomeado 2026-07 na reestruturação de documentação — ver `docs/DECISIONS.md` DECISION-018). Leia `MASTER_SPEC.md` antes deste, se ainda não leu.**
 
 > Versão: 1.0.0 · Criado: 2026-07-09
-> Fonte: leitura direta de `CLAUDE.md`, `README.md`, `docs/CURRENT_HANDOFF.md`, `docs/SDDF_SPEC.md` (raiz), `docs/HERMES_MISSION_SUPERVISOR.md`, `docs/PI_HARNESS_AUTONOMOUS_MISSION_RUNNER.md`, `docs/PASS-GOLD-SPEC-INTERNA.md`, `docs/SECURITY-SPEC.md`, `docs/PARITY_AUDIT.md`, `docs/LEGACY_DESIGN_REFERENCE.md`, `docs/VC_SECRET_GUARD_RUST_SPEC.md`, e verificação direta da árvore de arquivos (`go-core/internal/`, `backend/package.json`, `worker/`, `desktop-agent/`).
+> Fonte: leitura direta de `CLAUDE.md`, `README.md`, `docs/CURRENT_STATE.md`, `docs/SDDF_SPEC.md` (raiz), `docs/HERMES_MISSION_SUPERVISOR.md`, `docs/PI_HARNESS_AUTONOMOUS_MISSION_RUNNER.md`, `docs/PASS-GOLD-SPEC-INTERNA.md`, `docs/SECURITY-SPEC.md`, `docs/PARITY_AUDIT.md`, `docs/LEGACY_DESIGN_REFERENCE.md`, `docs/VC_SECRET_GUARD_RUST_SPEC.md`, e verificação direta da árvore de arquivos (`go-core/internal/`, `backend/package.json`, `worker/`, `desktop-agent/`).
 
 ---
 
@@ -85,7 +85,7 @@ Um framework extenso — a maioria dos ~53 pacotes em `go-core/internal/` perten
 
 **Ferramenta compartilhada pelas duas camadas:** `pi-harness.mjs` (`tools/pi-harness.mjs`) é usado tanto como agente do pipeline de missão do usuário final (linha "PI Harness" em MÓDULOS ATIVOS, Camada 1) quanto como motor de evidência para o release do próprio Vision Core (D0-D8, Camada 2) — não é uma ambiguidade de nome, é a mesma ferramenta real cumprindo os dois papéis.
 
-**Nota de auditoria honesta:** esta consolidação leu exaustivamente o histórico operacional real do Vision Core Next (`CLAUDE.md`, `docs/CURRENT_HANDOFF.md` — dezenas de sessões, §53 a §200+) e **não encontrou nenhuma menção** a `deploy.sh --production`, `RTP chain`, `authorityreview` ou `pi-harness.mjs` sendo de fato executados nesse fluxo do dia-a-dia. A Camada 2 é real (código, testes e specs existem e são extensos — `npm test` no `package.json` raiz tem 100+ scripts `test:*`), mas sua integração operacional com o protocolo de revezamento de agentes documentado em `CLAUDE.md` **não está confirmada por esta auditoria** — é um gap de documentação real, registrado aqui em vez de resolvido por suposição. Quem for trabalhar na Camada 2 deve partir de `docs/SDDF_SPEC.md`/`docs/HERMES_MISSION_SUPERVISOR.md`/`docs/PI_HARNESS_AUTONOMOUS_MISSION_RUNNER.md` diretamente, não deste documento.
+**Nota de auditoria honesta:** esta consolidação leu exaustivamente o histórico operacional real do Vision Core Next (`CLAUDE.md`, `docs/CURRENT_STATE.md` — dezenas de sessões, §53 a §200+) e **não encontrou nenhuma menção** a `deploy.sh --production`, `RTP chain`, `authorityreview` ou `pi-harness.mjs` sendo de fato executados nesse fluxo do dia-a-dia. A Camada 2 é real (código, testes e specs existem e são extensos — `npm test` no `package.json` raiz tem 100+ scripts `test:*`), mas sua integração operacional com o protocolo de revezamento de agentes documentado em `CLAUDE.md` **não está confirmada por esta auditoria** — é um gap de documentação real, registrado aqui em vez de resolvido por suposição. Quem for trabalhar na Camada 2 deve partir de `docs/SDDF_SPEC.md`/`docs/HERMES_MISSION_SUPERVISOR.md`/`docs/PI_HARNESS_AUTONOMOUS_MISSION_RUNNER.md` diretamente, não deste documento.
 
 ---
 
@@ -100,7 +100,7 @@ A IA acelerou a criação de software, mas também criou um problema novo: códi
 1. **Nenhuma promoção sem evidência real.** `SEM PASS GOLD REAL → não promove, não libera, não marca stable` — regra absoluta repetida em `README.md`, `SDDF_SPEC.md` e `SOFTWARE_FACTORY_SPEC.md` (Camada 2), e espelhada na Camada 1 pelo score de `pass-gold-engine.js`.
 2. **Verificação nunca é feita só pelo mesmo LLM que gerou a mudança.** Segunda fonte de verdade sempre não-LLM (AST/Semgrep na Camada 1; hash SHA-256 determinístico + Firewall de regex na Camada 2).
 3. **Legado é referência visual, nunca base de código.** `frontend/index.html`/`vision-core-bundle.js` só podem ser lidos para mapear comportamento — nunca importados, colados ou linkados no Next. Ver `docs/LEGACY_DESIGN_REFERENCE.md`.
-4. **Gates de segurança só mudam com aprovação humana registrada por escrito** em `docs/CURRENT_HANDOFF.md` — nunca por iniciativa própria de um agente, mesmo que pareça melhoria.
+4. **Gates de segurança só mudam com aprovação humana registrada por escrito** em `docs/CURRENT_STATE.md` — nunca por iniciativa própria de um agente, mesmo que pareça melhoria.
 5. **Função insegura vira placeholder visível, nunca sucesso fingido.** "Não implementado ainda" é sempre preferível a uma UI que finge que uma ação insegura funcionou.
 6. **Fail-closed por padrão.** Ferramenta desconhecida = perigosa até prova em contrário (INCIDENTE-4/`SESSION_SECRET` é o exemplo mais recente: sem segredo configurado, o processo recusa subir, em vez de assinar sessões com um segredo público).
 
@@ -259,10 +259,10 @@ GitHub Actions roda a suíte Playwright + gera `docs/CI-LAST-RUN.md`/`STRESS-TES
 
 Vigente desde 2026-07-08, texto completo em `CLAUDE.md`. Resumo:
 
-1. Antes de começar: ler `CLAUDE.md` → spec relevante (esta série de 10) → `docs/CURRENT_HANDOFF.md`.
+1. Antes de começar: ler `CLAUDE.md` → spec relevante (esta série de 10) → `docs/CURRENT_STATE.md`.
 2. Ao terminar uma etapa ou antes de bater limite de uso: atualizar os três.
 3. Toda tarefa termina com: arquivos alterados, testes feitos (comando + resultado), pendências, próximo comando recomendado. Commit sempre — nunca deixar a working tree suja entre tarefas.
-4. Gates de segurança só mudam com aprovação humana registrada por escrito em `docs/CURRENT_HANDOFF.md`.
+4. Gates de segurança só mudam com aprovação humana registrada por escrito em `docs/CURRENT_STATE.md`.
 
 ## Boas práticas / regras obrigatórias (extrato — lista completa em `CLAUDE.md`)
 
@@ -276,9 +276,23 @@ Vigente desde 2026-07-08, texto completo em `CLAUDE.md`. Resumo:
 
 ---
 
+## Componentes em construção sem spec própria
+
+Dois componentes reais têm código no repositório mas ainda não têm um documento de spec dedicado — o detalhe abaixo era mantido em `CLAUDE.md` (seção "CHECKPOINTS EM ANDAMENTO") antes da reestruturação de documentação de 2026-07 e foi movido para cá por ser conteúdo de arquitetura, não de estado de sessão. Estado atual (bloqueado/em pausa/próxima ação) fica em `docs/CURRENT_STATE.md`, não aqui.
+
+### SF-Agent-Orchestrator (`tools/sf-agent-orchestrator.mjs`)
+
+Orquestra "montar projeto do zero" usando o **Claude Agent SDK** real (`@anthropic-ai/claude-agent-sdk`, instalado). Um agente "Hermes" no topo delega para subagents (`backend-agent`/`frontend-agent`) via hooks de governança (`PreToolUse`/`PostToolUse`/`SubagentStop`) reaproveitando `validateAgentOutput` de `mission-supervisor.mjs` (Camada 2). Bloqueio estrutural real encontrado nos smoke tests: sessão aninhada herdava toolset restrito via env vars `CLAUDE_*` — corrigido com `sanitizeSpawnEnv()` + isolamento de processo via `ProcessStartInfo`. A disciplina de integração de SDK externo usada aqui (commit isolado por peça, revisão adversarial, incerteza documentada no código, defaults fail-closed, gate de confirmação humana antes de gastar API real) é regra permanente — ver `docs/DECISIONS.md` DECISION-017.
+
+### AI Provider Vault ("Configuração Principal")
+
+Unifica os dois sistemas de credencial de LLM do produto (env vars do EB vs. a tela "AI API VAULT", antes desconectadas) numa fonte única. Persistência: o vault é um **override opcional** sobre env vars — só vale quando salvo pela tela, cifrado AES-256-GCM em repouso (`PROVIDER_VAULT_SECRET`). `callLLM()` consulta o vault a cada chamada (sem cache do estado `connected`, só a derivação da chave-mestra é cacheada) — vence sobre env var só quando `status==='connected'`. Limitação conhecida: `status:'connected'` não expira sozinho, sem TTL/verificação periódica — uma chave revogada no provedor continua "conectada" até teste manual novo. Conectar `tools/sf-agent-orchestrator.mjs` ao vault é decisão de arquitetura em aberto (MCP server fino vs. lib compartilhada `provider-vault-crypto.js`/`provider-vault-routing.js`) — não presumir sem conversa com o usuário.
+
+---
+
 ## Documentação
 
-Esta série de 10 documentos (`MASTER_SPEC.md` + 9) é a fonte de arquitetura. `CLAUDE.md`/`docs/CURRENT_HANDOFF.md` são o estado operacional vivo. `docs/SDDF_SPEC.md`, `docs/HERMES_MISSION_SUPERVISOR.md`, `docs/PI_HARNESS_AUTONOMOUS_MISSION_RUNNER.md` são a fonte canônica da Camada 2. `docs/LEGACY_DESIGN_REFERENCE.md` é a fonte de herança visual legado→Next. Os demais ~80 arquivos em `docs/` são specs de detalhe (`GIT-PROVIDER-SPEC.md`, `ENTERPRISE-SPEC.md`, `PENTEST-CHECKLIST.md`, `SF-SPEC-LIBRARY.md`) ou recibos de evidência datados de execuções passadas (`STRESS-TEST-*`, `real-local-patch-*`, `one-real-tag-*`) — não reescritos por esta consolidação, referenciados quando relevante.
+Esta série de 10 documentos (`MASTER_SPEC.md` + 9) é a fonte de arquitetura. `CLAUDE.md`/`docs/CURRENT_STATE.md` são o estado operacional vivo. `docs/SDDF_SPEC.md`, `docs/HERMES_MISSION_SUPERVISOR.md`, `docs/PI_HARNESS_AUTONOMOUS_MISSION_RUNNER.md` são a fonte canônica da Camada 2. `docs/LEGACY_DESIGN_REFERENCE.md` é a fonte de herança visual legado→Next. Os demais ~80 arquivos em `docs/` são specs de detalhe (`GIT-PROVIDER-SPEC.md`, `ENTERPRISE-SPEC.md`, `PENTEST-CHECKLIST.md`, `SF-SPEC-LIBRARY.md`) ou recibos de evidência datados de execuções passadas (`STRESS-TEST-*`, `real-local-patch-*`, `one-real-tag-*`) — não reescritos por esta consolidação, referenciados quando relevante.
 
 ---
 
@@ -307,7 +321,9 @@ Ver `ROADMAP.md`.
 | Data | Mudança |
 |---|---|
 | 2026-07-09 | Criação — primeira versão consolidada, substituindo a ausência de um documento de arquitetura único. |
+| 2026-07 | Renomeado de `VISION_CORE_ARCHITECTURE.md` para `ARCHITECTURE.md` (DECISION-018); ganhou a seção "Componentes em construção sem spec própria" (SF-Agent-Orchestrator, AI Provider Vault), migrada de `CLAUDE.md`. |
 
 ## Controle de versão
 
+**1.1.0** — 2026-07 (reestruturação de documentação)
 **1.0.0** — 2026-07-09

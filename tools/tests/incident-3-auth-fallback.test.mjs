@@ -9,7 +9,7 @@
  *        foi gerado a partir desse mesmo literal, pré-§145 (Passo 1b).
  *
  * O valor da credencial só existe aqui como literal de comparação/seed de teste
- * (o mesmo já hardcoded em produção há sessões, ver docs/CURRENT_HANDOFF.md) —
+ * (o mesmo já hardcoded em produção há sessões, ver docs/CURRENT_STATE.md) —
  * nunca é impresso; as asserções conferem status/código de erro, nunca o texto
  * de resposta bruto contendo o literal.
  *

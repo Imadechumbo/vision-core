@@ -5,13 +5,18 @@ Rust. **Fase 1 (protótipo local)** — só o comando `scan` é real; `watch`,
 `install-hooks`, `report` e `policy` são stubs deliberados (imprimem
 "planejado" e saem com código 2, nunca fingem sucesso).
 
+Missão pontual 2026-07-10: `verify-cloud` foi adicionado para auditoria
+read-only de env vars no AWS Elastic Beanstalk, sem imprimir valores, prefixos,
+hashes ou amostras de secrets.
+
 Contrato completo, motivação, e a fronteira com o `go-core` Aegis:
 `../docs/VC_SECRET_GUARD_RUST_SPEC.md` (raiz do repositório).
 
 Este crate é **independente** — não faz parte de nenhum workspace
 compartilhado com outra peça do Vision Core (Node `server.js`, `go-core`,
 frontend Next). Nenhuma dependência de rede, nenhum I/O além de ler arquivos
-do disco local.
+do disco local, exceto o comando explícito `verify-cloud`, que invoca a AWS
+CLI em modo read-only (`describe-configuration-settings`) quando solicitado.
 
 ---
 
@@ -79,6 +84,7 @@ entropia.
 
 ```
 vc-secret-guard scan [--path <dir>] [--format json|text] [--policy <file>]
+vc-secret-guard verify-cloud --provider aws-eb [--region <r>] [--application <app>] [--environment <env>] [--format json|text] [--strict] [--config <file>] [--no-color]
 ```
 
 - `--path <dir>` — default `.` (diretório atual).
@@ -90,6 +96,15 @@ vc-secret-guard scan [--path <dir>] [--format json|text] [--policy <file>]
 Exit codes: `0` = limpo, `1` = detecções encontradas, `2` = erro de execução
 (base para o fail-closed dos hooks de git na Fase 2, ainda não
 implementados).
+
+### `verify-cloud`
+
+Audita metadados de env vars do EB sem revelar nenhum valor: nome, presente,
+vazio, tamanho, mínimo, compliance, severidade e nota segura. Hoje cobre
+`PROVIDER_VAULT_SECRET`, `SESSION_SECRET`, `JWT_SECRET` (legado), e variáveis
+de segurança/boot relacionadas (`AWS_S3_BUCKET`, Hotmart, OAuth, Stripe e
+GitHub Agent). `--strict` faz warnings virarem exit code `1`; sem `--strict`,
+só `critical` falha. Erros da AWS CLI são sempre sanitizados.
 
 **Nenhum output deste binário — texto, JSON, log, ou mensagem de erro —
 contém o valor bruto de um secret detectado.** Só categoria, arquivo, linha,
@@ -112,5 +127,5 @@ JSON.
 
 **Nota sobre CI:** o CI existente do repositório (Playwright/Node) não tem
 toolchain Rust configurado nesta fase — `cargo test` roda hoje só
-localmente. Ver `docs/CURRENT_HANDOFF.md` para o registro dessa pendência
+localmente. Ver `docs/CURRENT_STATE.md` para o registro dessa pendência
 (não é uma gambiarra silenciosa: está documentada, não escondida).

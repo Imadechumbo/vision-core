@@ -37,7 +37,7 @@ vision-core/
 │   │                  (scanner, patcher, validator, rollback, passgold,
 │   │                  hermes...), the rest are an internal release-
 │   │                  governance framework for Vision Core's own deploys
-│   │                  (see "Duas Camadas" in docs/VISION_CORE_ARCHITECTURE.md).
+│   │                  (see "Duas Camadas" in docs/ARCHITECTURE.md).
 │   ├── cmd/vision-core/main.go
 │   └── internal/
 │

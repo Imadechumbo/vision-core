@@ -63,13 +63,15 @@ Se faltar `SESSION_SECRET`/`PROVIDER_VAULT_SECRET`, o processo morre imediatamen
 
 ## Roteiro 1 — App Shell (composer único + Security Lab)
 
+> **Correção de drift (reconciliação de 2026-07):** os passos 1.1-1.3 e 1.5 originais desta seção descreviam um painel "Mission Input" flutuante separado — removido definitivamente do Vision Core Next (`next-clean-54`, ver `docs/DECISIONS.md` DECISION-010). Reescritos abaixo para refletir o comportamento atual: o composer/chat principal é a única entrada de missão, sem painel paralelo.
+
 | # | Passo | Resultado esperado | Se falhar, reporte |
 |---|---|---|---|
-| 1.1 | Abra `/vision-core-next.html`. Olhe o topo direito. | Painel "MISSION INPUT" flutuante, pequeno, semi-transparente, canto superior direito. Não compete visualmente com o chat central. | Screenshot + se o painel está ausente, sobrepondo o chat, ou opaco/grande demais |
-| 1.2 | Clique no toggle do Mission Input (`-`/`+`). | Colapsa para uma barra pequena; clique de novo expande de volta ao textarea completo. | Se não colapsar, ou se o estado não persistir após reload da página |
-| 1.3 | Digite um texto no Mission Input, clique "Adicionar ao chat". | O texto aparece no composer principal (textarea de baixo) prefixado com "Missão: ", e uma mensagem "Objetivo adicionado ao composer. Nada foi executado." aparece no chat. **Nenhuma requisição de rede deve disparar** (abra o DevTools → Network antes de clicar, confirme). | Se qualquer chamada de rede aparecer no Network, isso é uma regressão de segurança — reporte imediatamente |
+| 1.1 | Abra `/vision-core-next.html`. Olhe o topo direito. | Só o Atomic Core (widget orbital discreto) no canto superior direito — nenhum painel/textarea de missão separado ali. Não compete visualmente com o chat central. | Screenshot + se qualquer painel/textarea de missão aparecer fora do composer principal |
+| 1.2 | Digite uma missão diretamente no composer (textarea do rodapé) e envie. | O texto vai direto para `POST /api/chat` — não existe passo intermediário de "adicionar ao chat" nem toggle de expandir/colapsar um painel separado. | Se aparecer qualquer painel/textarea de missão adicional além do composer |
+| 1.3 | *(passo removido — cobria um fluxo "Adicionar ao chat sem executar" de um painel que não existe mais; o composer sempre envia direto ao enviar.)* | — | — |
 | 1.4 | Clique em "Security Lab" na sidebar. | Aba abre, mostra painel "Status seguro" (5 linhas: `/api/status`, `/api/queue/status`, `/api/agents/status`, `/api/jobs/latest`, `/api/heartbeat` — todas devem aparecer em âmbar "indisponível localmente" porque nenhum desses endpoints existe no backend real) + card "Secret Guard" (texto estático: `vc-secret-guard` SPEC/PLANEJADO, Rust core PLANEJADO, Scanner integration FUTURA). **Novo (`next-clean-58`):** logo abaixo da lista, um donut "Cobertura de políticas de segurança", um gauge "Conformidade visual" e uma timeline "Últimas verificações" aparecem depois que as 5 checagens terminam. | Se algum texto aparecer com mojibake (`Ã£`, `Ã©` etc. em vez de acentos normais), se o painel não aparecer, ou se o donut/gauge/timeline não aparecerem depois das checagens |
-| 1.5 | Redimensione a janela do navegador pra largura de celular (~390px) ou use DevTools → device toolbar. | Mission Input vira bloco de largura total, ainda legível. Atomic Core (o widget orbital no canto) some completamente (`display:none`) — não deve sobrepor nada. | Screenshot se algo estiver sobreposto/ilegível |
+| 1.5 | Redimensione a janela do navegador pra largura de celular (~390px) ou use DevTools → device toolbar. | Composer vira bloco de largura total, ainda legível. Atomic Core (o widget orbital no canto) some completamente (`display:none`) — não deve sobrepor nada. | Screenshot se algo estiver sobreposto/ilegível |
 
 ## Roteiro 2 — Software Factory
 
@@ -125,13 +127,13 @@ Se faltar `SESSION_SECRET`/`PROVIDER_VAULT_SECRET`, o processo morre imediatamen
 - [ ] Roteiro 3 (Métricas) completo
 - [ ] Roteiro 4 (Dry-Run) completo, confirmação dupla funciona
 - [ ] Roteiro 5 (fail-closed) completo, backend local recusa subir sem os segredos
-- [ ] Nenhuma chamada de rede inesperada observada em nenhum passo "seguro" (1.3, 4.3)
+- [ ] Nenhuma chamada de rede inesperada observada em nenhum passo "seguro" (4.3)
 - [ ] `AGENT_APPLY_ENABLED` continua bloqueado (não faz parte deste roteiro, mas confirme visualmente que o painel de Agent Apply em Missions continua desabilitado)
 
 ## Se algo falhar
 
 1. Não tente corrigir você mesmo — anote: passo exato, resultado observado vs. esperado, screenshot se visual, conteúdo da aba Network se for chamada de API.
-2. Registre em `docs/CURRENT_HANDOFF.md` como achado pendente, ou peça pro próximo agente investigar com esse contexto.
+2. Registre em `docs/CURRENT_STATE.md` como achado pendente, ou peça pro próximo agente investigar com esse contexto.
 3. Nenhum achado deste roteiro deve virar deploy/commit de correção sem sua aprovação explícita — mesma regra de sempre.
 
 ## Histórico
@@ -140,7 +142,9 @@ Se faltar `SESSION_SECRET`/`PROVIDER_VAULT_SECRET`, o processo morre imediatamen
 |---|---|
 | 2026-07-10 | Criação — cobre ETAPA 0-4 desta sessão (consolidação de docs, dogfood cleanup, project-files/generate-zip, README). |
 | 2026-07-11 | `next-clean-58` — passos novos para o gráfico de etapas do Software Factory (2.9), gráficos do Security Lab (1.4) e o toggle "Ver JSON bruto" nas ações safe-read fora da aba Métricas (3.4). |
+| 2026-07 | Roteiro 1 (passos 1.1-1.3, 1.5) reescrito — descrevia um painel "Mission Input" flutuante já removido (`DECISION-010`); drift fechado na missão de reconciliação de specs. |
 
 ## Controle de versão
 
+**1.2.0** — 2026-07 (drift fechado)
 **1.1.0** — 2026-07-11

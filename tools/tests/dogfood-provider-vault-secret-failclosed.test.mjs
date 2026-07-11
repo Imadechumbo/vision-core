@@ -5,7 +5,7 @@
  * Limpeza de resíduos de dogfood pós-INCIDENTE-4: PROVIDER_VAULT_SECRET
  * tinha exatamente o mesmo padrão de risco que o SESSION_SECRET tinha antes
  * do INCIDENTE-4 (env var opcional, fallback público hardcoded se ausente) —
- * ver docs/CURRENT_HANDOFF.md e docs/VC_SECRET_GUARD_RUST_SPEC.md, achado do
+ * ver docs/CURRENT_STATE.md e docs/VC_SECRET_GUARD_RUST_SPEC.md, achado do
  * dogfood da Fase 1.5. Mesmo teste que tools/tests/incident-4-session-secret.test.mjs,
  * adaptado para este segredo: sobe backend/server.js como processo real e
  * prova que o boot falha antes de servir quando PROVIDER_VAULT_SECRET está

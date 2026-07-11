@@ -1,4 +1,8 @@
-﻿# CONTINUATION PROMPT - Vision Core Next (para Codex)
+﻿> **ARQUIVADO — obsoleto.** Prompt de continuação para o Codex, congelado em `next-clean-45` (2026-07-08). Seus "Pendentes Prioritários" (endpoints `project-files`/`generate-zip`/`fetch-url`) já foram todos fechados (ver `docs/CHANGELOG_NEXT.md` `next-clean-46`/`next-clean-51`) e duplicava `docs/CURRENT_STATE.md`. Movido para `archive/` na missão de reconciliação de specs (`docs/DECISIONS.md` DECISION-018) — nunca apagado, só sem valor operacional atual. Para o estado real, use `docs/CURRENT_STATE.md`.
+
+---
+
+# CONTINUATION PROMPT - Vision Core Next (para Codex)
 
 ## Estado Atual
 
@@ -14,7 +18,7 @@
 Leia nesta ordem antes de editar:
 1. `CLAUDE.md`
 2. `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md`
-3. `docs/CURRENT_HANDOFF.md`
+3. `docs/CURRENT_STATE.md`
 4. `git status --short`
 5. `npx playwright test tests/e2e/vision-core-next-agent-apply.spec.mjs tests/e2e/vision-core-next-sf.spec.mjs`
 

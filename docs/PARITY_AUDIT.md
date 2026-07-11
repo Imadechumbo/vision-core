@@ -1,6 +1,6 @@
 # Auditoria de Paridade — Legado (`frontend/index.html` + bundle) vs. Next
 
-**Data original:** 2026-07-08 · **Autor:** Claude Code (Sonnet 5) · **Tipo:** diagnóstico — nenhum código foi alterado, movido ou deletado nesta auditoria (as seções (a2)/(b) abaixo foram atualizadas em sessões de implementação subsequentes, 2026-07-08/09, conforme o roadmap avançou — ver `docs/CURRENT_HANDOFF.md` pro estado mais recente).
+**Data original:** 2026-07-08 · **Autor:** Claude Code (Sonnet 5) · **Tipo:** diagnóstico — nenhum código foi alterado, movido ou deletado nesta auditoria (as seções (a2)/(b) abaixo foram atualizadas em sessões de implementação subsequentes, 2026-07-08/09, conforme o roadmap avançou — ver `docs/CURRENT_STATE.md` pro estado mais recente).
 
 **Objetivo:** decidir o que do front antigo o Next **não precisa carregar**, pra encurtar o caminho até a substituição completa do `index.html` legado.
 

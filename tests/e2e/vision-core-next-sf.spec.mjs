@@ -3,7 +3,7 @@
  * Vision Core Next - Software Factory smoke tests.
  * All API calls are mocked; no LLM/provider/backend/prod request is allowed.
  *
- * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_HANDOFF.md):
+ * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_STATE.md):
  * Software Factory is being built across multiple agent handoffs (Codex/
  * OpenCode/Claude Code) with no per-step human review, same rationale as
  * vision-core-next-agent-apply.spec.mjs.

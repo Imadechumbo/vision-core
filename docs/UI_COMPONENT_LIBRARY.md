@@ -50,7 +50,7 @@ Escopo: componentes reais em `vision-core-next-clean.{css,js}`. Fora do escopo: 
 **Estados:** textarea auto-resize (`resizePrompt()`, max 180px). Botão de envio nunca desabilita por padrão (não há validação de campo vazio bloqueando o submit hoje).
 **Eventos:** `submit` → `POST /api/chat`; chips `[data-feature]` prefixam o texto e navegam pra aba; o chip `Factory` apenas seleciona o contexto, e a geração usa este mesmo texto quando o usuário confirma no painel Factory; `[data-quick="attach|image"]` abrem input de arquivo oculto.
 **Posição:** `position: sticky; bottom: 18px; z-index: 20`, mas fora de `.vc-chat-scroll` (ver abaixo) — desde `next-clean-59` o composer não fica mais na mesma rolagem que o stream/painel, então na prática nunca precisa "grudar" por cima de nada; o sticky continua só como rede de segurança.
-**Checklist:** [x] fixo no rodapé · [x] Enter envia, Shift+Enter quebra linha (comportamento padrão de `<textarea>` em formulário, sem handler customizado que intercepte Enter) · [x] nunca sobrepõe conteúdo de `#vcFeaturePanel` (bug real de produção, corrigido em `next-clean-59`, ver `docs/CURRENT_HANDOFF.md`).
+**Checklist:** [x] fixo no rodapé · [x] Enter envia, Shift+Enter quebra linha (comportamento padrão de `<textarea>` em formulário, sem handler customizado que intercepte Enter) · [x] nunca sobrepõe conteúdo de `#vcFeaturePanel` (bug real de produção, corrigido em `next-clean-59`, ver `docs/CURRENT_STATE.md`).
 
 ## Área de rolagem do chat (`.vc-chat-scroll`)
 
@@ -72,6 +72,18 @@ Escopo: componentes reais em `vision-core-next-clean.{css,js}`. Fora do escopo: 
 
 Documentado em `ATOMIC_CORE_SPEC.md` — não duplicado aqui.
 
+## Logo/olho (piscada)
+
+**Objetivo:** identidade de marca — o logo pisca, em resposta a hover e ambientalmente quando ocioso. **Área protegida** (mesmo padrão do Atomic Core): qualquer mudança de mecanismo ou visual exige aprovação explícita do usuário, mesmo pequena — ver `docs/DECISIONS.md` DECISION-013.
+**Estrutura:** pálpebras reais via elementos DOM (`.eye-lid-top`/`.eye-lid-bottom`, injetados dentro de `.vc-eye`) — não é `scaleY` do olho inteiro. Fecham via `transform: translateY()`, que nunca afeta layout/height — o bug histórico de altura mudando no hover é estruturalmente impossível nesta implementação.
+**Dois mecanismos coexistem:**
+1. **CSS puro `:hover`** em `.vc-eye-logo`/`.vc-side-brand`/`.vc-brand-lockup` — mantém as pálpebras fechadas enquanto o mouse permanece sobre o logo, sem JS.
+2. **Classe `.is-blinking` via JS** (`blinkOnce()`) — disparada em `pointerenter`/`mouseenter`/`pointermove`, debounce de 650ms por hover-session (`blinkedForHover` flag + `WeakMap`), usada tanto pelo hover quanto pela piscada ambiente.
+
+**Hover funciona sempre, incluindo sob `reduced` motion** — não é gated por `VCMotion`, é resposta direta à ação do usuário, não identidade animada ambiente.
+**Piscada ambiente:** intervalo 4–9s, só quando idle (checa `data-state` do Atomic Core via `isIdle()`), ~20% de chance de piscada dupla (+250ms de atraso). **Exceção à regra geral de motion:** desativada quando `matchMedia('(prefers-reduced-motion: reduce)')` do SO é verdadeiro — lido diretamente aqui, não via `window.VCMotion` (ver `docs/DECISIONS.md` DECISION-014, um dos únicos dois lugares do arquivo que leem o SO diretamente; decisão de UX separada da inversão de acoplamento do Atomic Core).
+**Checklist:** [x] altura do logo nunca muda no hover (estrutural, não CSS defensivo) · [x] hover funciona mesmo sob `prefers-reduced-motion` do SO · [x] piscada ambiente para sob `prefers-reduced-motion` real e só roda quando idle.
+
 ## Cards (DORA / linha de agente)
 
 **Objetivo:** exibir uma unidade de dado com label+valor.
@@ -84,7 +96,7 @@ Documentado em `ATOMIC_CORE_SPEC.md` — não duplicado aqui.
 
 ## Métricas
 
-Documentado em detalhe no próprio painel — ver `VISION_CORE_ARCHITECTURE.md`/`API_CONTRACT.md` para os endpoints. Componentes: `.vc-metrics-agent-row`, `.vc-metrics-bar`/`.vc-metrics-bar-fill` (só renderiza com `cost_usd` numérico), `.vc-metric-chart` (SVG/CSS nativo para barra, donut, gauge, sparkline, timeline e empty state), `.vc-metrics-dora-grid`, `.vc-metrics-conn`, `.vc-metrics-source` (badge DADOS REAIS/FALLBACK LOCAL), toggle de JSON bruto. Regra: métrica estruturada tem gráfico; texto complementa; JSON bruto fica só em diagnóstico.
+Documentado em detalhe no próprio painel — ver `ARCHITECTURE.md`/`API_CONTRACT.md` para os endpoints. Componentes: `.vc-metrics-agent-row`, `.vc-metrics-bar`/`.vc-metrics-bar-fill` (só renderiza com `cost_usd` numérico), `.vc-metric-chart` (SVG/CSS nativo para barra, donut, gauge, sparkline, timeline e empty state), `.vc-metrics-dora-grid`, `.vc-metrics-conn`, `.vc-metrics-source` (badge DADOS REAIS/FALLBACK LOCAL), toggle de JSON bruto. Regra: métrica estruturada tem gráfico; texto complementa; JSON bruto fica só em diagnóstico.
 
 O sistema de gráficos (`metricCharts.{bar,donut,gauge,sparkline,timeline,empty,legend}`, todo `createElement`/SVG nativo, sem lib externa) não é exclusivo da aba Métricas — é reutilizado em qualquer painel com dado estruturado: `#vcFeatureViz` (Agentes/Tools/Security-history safe-read, dentro do painel contextual do chat), `#vcSfFinalViz` (Software Factory — donut DONE/FAIL/BLOCKED + barras de duração por etapa + gauge de progresso, atualiza a cada etapa, não só no fim) e `#vcSafeStatusViz` (Security Lab — donut ok/fallback-local + gauge de conformidade visual + timeline das checagens). O toggle "Ver JSON bruto" (`.vc-metrics-raw-toggle` + `.vc-metrics-raw`, checkbox + `<pre>` inicialmente `hidden`) também é reutilizado fora da aba Métricas — `showFeatureViz(title, renderFn, rawData)` o injeta automaticamente quando um 3º argumento é passado.
 
@@ -93,7 +105,7 @@ O sistema de gráficos (`metricCharts.{bar,donut,gauge,sparkline,timeline,empty,
 **Objetivo:** comunicar estado semântico de forma compacta.
 **Estrutura:** `<span class="vc-X-status-dot vc-X-status-{tier}">` (círculo 8px) + `<span class="vc-X-status-badge vc-X-status-{tier}">` (pílula com texto). `tier` ∈ `ok`(verde)/`warn`(âmbar)/`error`(vermelho).
 **Regra de mapeamento (Métricas):** `ok`→verde; `binary_not_found`/`PENDING_EVIDENCE`→âmbar (semântica "aguardando prova", não "falhou" — herdada do legado); qualquer outro valor não-`ok`→vermelho.
-**Reuso de classe, cuidado:** a mesma classe `vc-metrics-status-warn` é usada tanto para status de agente quanto para "desconectado" no painel de conectividade — um seletor de teste/CSS que não escopar corretamente conta os dois juntos (bug de teste real, já corrigido, ver `docs/CURRENT_HANDOFF.md`).
+**Reuso de classe, cuidado:** a mesma classe `vc-metrics-status-warn` é usada tanto para status de agente quanto para "desconectado" no painel de conectividade — um seletor de teste/CSS que não escopar corretamente conta os dois juntos (bug de teste real, já corrigido, ver `docs/CURRENT_STATE.md`).
 
 ## Dialogs / Modais
 
@@ -189,7 +201,9 @@ Ver `ROADMAP.md`, Fase 1 (Frontend) — qualquer componente novo deve primeiro c
 | Data | Mudança |
 |---|---|
 | 2026-07-09 | Criação — primeiro catálogo formal dos componentes reais do Next. |
+| 2026-07 | Adicionada seção "Logo/olho (piscada)" — mecanismo (pálpebras DOM, hover CSS, `blinkOnce()`, piscada ambiente) existia só no archive pré-reestruturação, sem spec própria. Drift fechado na missão de reconciliação (`docs/DECISIONS.md` DECISION-018). |
 
 ## Controle de versão
 
+**1.1.0** — 2026-07 (drift fechado)
 **1.0.0** — 2026-07-09

@@ -80,4 +80,4 @@ Formato: mais recente no topo.
 
 | Data | Mudança |
 |---|---|
-| 2026-07-11 | Criação — reestruturação de documentação (`CURRENT_HANDOFF.md` compacto + este changelog + `docs/session_logs/`). Entradas anteriores a `next-clean-49` não reconstruídas retroativamente; consultar `docs/session_logs/2026-07-11-archive-pre-restructure-handoff.md` para o histórico completo até essa data. |
+| 2026-07-11 | Criação — reestruturação de documentação (`CURRENT_STATE.md` compacto + este changelog + `docs/session_logs/`). Entradas anteriores a `next-clean-49` não reconstruídas retroativamente; consultar `docs/session_logs/2026-07-11-archive-pre-restructure-handoff.md` para o histórico completo até essa data. |

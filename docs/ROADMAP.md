@@ -1,9 +1,9 @@
 # ROADMAP — Vision Core
 
-**Parte da série de arquitetura — leia `MASTER_SPEC.md` e `VISION_CORE_ARCHITECTURE.md` antes deste.**
+**Parte da série de arquitetura — leia `MASTER_SPEC.md` e `ARCHITECTURE.md` antes deste.**
 
 > Versão: 1.0.0 · Criado: 2026-07-09
-> Fonte: `CLAUDE.md` seção "PENDÊNCIAS IMEDIATAS", `docs/ENTERPRISE-SPEC.md`, `docs/PENTEST-CHECKLIST.md`, `docs/GIT-PROVIDER-SPEC.md`, `docs/CURRENT_HANDOFF.md`, e os 8 documentos-irmãos desta série (seção "Pendências"/"Próximos passos" de cada um).
+> Fonte: `CLAUDE.md` seção "PENDÊNCIAS IMEDIATAS", `docs/ENTERPRISE-SPEC.md`, `docs/PENTEST-CHECKLIST.md`, `docs/GIT-PROVIDER-SPEC.md`, `docs/CURRENT_STATE.md`, e os 8 documentos-irmãos desta série (seção "Pendências"/"Próximos passos" de cada um).
 
 ---
 
@@ -13,7 +13,7 @@ Roadmap técnico em 9 fases. **Nenhuma fase aqui é um compromisso de data** —
 
 ## Objetivo
 
-Dar visibilidade de longo prazo sem inventar prazo. Toda entrada aqui é rastreável a uma pendência já registrada em `CLAUDE.md`/`docs/CURRENT_HANDOFF.md`/uma spec — nada foi inventado para preencher a fase.
+Dar visibilidade de longo prazo sem inventar prazo. Toda entrada aqui é rastreável a uma pendência já registrada em `CLAUDE.md`/`docs/CURRENT_STATE.md`/uma spec — nada foi inventado para preencher a fase.
 
 ## Escopo / Fora do escopo
 
@@ -129,7 +129,7 @@ Pendências: `GitProviderAdapter` (GitLab, `PLANEJADO`, zero código ainda — "
 
 **Estado:** EXISTENTE — Vision Agent Local já é um app Electron real e distribuído (`desktop-agent/`, build scripts win/mac/linux, tray+logs+report viewer), instalado via `VisionAgentSetup.exe` (`frontend/downloads/`).
 
-**Objetivos:** esta consolidação não encontrou pendência registrada específica para o desktop agent além do que já está coberto pelo pareamento `agent_secret` (Fase 1, `VISION_CORE_ARCHITECTURE.md`).
+**Objetivos:** esta consolidação não encontrou pendência registrada específica para o desktop agent além do que já está coberto pelo pareamento `agent_secret` (Fase 1, `ARCHITECTURE.md`).
 
 **Nota honesta:** existem **duas implementações do agente local** no repositório — `desktop-agent/` (Electron completo) e `frontend/downloads/vision-agent.js` (script Node standalone) — ambas parecem servir o mesmo papel (Vision Agent Local, porta 7070). Esta auditoria não confirmou se são a mesma coisa empacotada de duas formas ou implementações paralelas divergentes — **gap de documentação real**, não resolvido por suposição.
 
@@ -149,7 +149,7 @@ Pendências: `GitProviderAdapter` (GitLab, `PLANEJADO`, zero código ainda — "
 
 **Prioridade:** BAIXA (visual, não bloqueante) · **Estimativa:** ~1 sessão.
 
-**Nota separada — Camada 2:** o framework de evidência interno (RTP chain, `tools/real-validation/`) é extenso e real, mas sua integração ao dia-a-dia do protocolo de revezamento **não está confirmada** (ver `VISION_CORE_ARCHITECTURE.md`) — se isso for uma prioridade real, precisa virar uma decisão de produto explícita antes de virar item de roadmap com prioridade.
+**Nota separada — Camada 2:** o framework de evidência interno (RTP chain, `tools/real-validation/`) é extenso e real, mas sua integração ao dia-a-dia do protocolo de revezamento **não está confirmada** (ver `ARCHITECTURE.md`) — se isso for uma prioridade real, precisa virar uma decisão de produto explícita antes de virar item de roadmap com prioridade.
 
 ---
 

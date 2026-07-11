@@ -4,7 +4,7 @@
 
 > Versão: 2.0.0 · Criado originalmente 2026-07-08, consolidado 2026-07-09
 > Esta versão substitui a v1 do mesmo arquivo (preservando 100% das regras duras e decisões de escopo dela) e adiciona: template padrão da série, diagramas, catálogo do que já existe hoje (a v1 só descrevia a intenção inicial; muito foi implementado desde então).
-> **Para o estado operacional exato de cada feature (o que a última sessão mexeu), consulte sempre `docs/CURRENT_HANDOFF.md` — este documento é a especificação estável, não muda a cada sessão.**
+> **Para o estado operacional exato de cada feature (o que a última sessão mexeu), consulte sempre `docs/CURRENT_STATE.md` — este documento é a especificação estável, não muda a cada sessão.**
 
 ---
 
@@ -316,7 +316,7 @@ Confirmado pelo usuário após auditoria de paridade (`docs/PARITY_AUDIT.md`): S
 3. **`page.emulateMedia({reducedMotion})` explícito ANTES de `page.goto()`** em todo teste Playwright com animação — `test.use({reducedMotion:...})` sozinho não é confiável em `file://`.
 4. **Todo endpoint chamado pela UI é verificado por `grep` direto em `backend/server.js`**, nunca assumido pelo nome.
 5. **Cache-bust sempre incrementa nos três lugares junto** (`?v=next-clean-N`).
-6. **Gate de segurança só muda com aprovação humana registrada em `docs/CURRENT_HANDOFF.md`.**
+6. **Gate de segurança só muda com aprovação humana registrada em `docs/CURRENT_STATE.md`.**
 7. **Nunca commitar working tree sujo; nunca deployar código não commitado.**
 8. **Todo spec Playwright que faz `page.goto()` na página Next mocka `/api/agent/status` e `/api/mission/quota`** — ambos disparam sozinhos, sem gate, em toda carga de página.
 9. **UTF-8 é verificado por leitura, não assumido** — achado real de 2026-07-09: texto novo com mojibake (`NÃ£o` em vez de `Não`) passou por `node --check` e testes sem ser pego (é um bug de conteúdo, não de sintaxe) — revisão visual/grep por `Ã[£§¡©³µª¢]` recomendado para todo texto em português adicionado.
@@ -360,14 +360,14 @@ Ver `ROADMAP.md`, Fase 1 (Frontend).
 
 ## Regra para agentes
 
-> Qualquer sessão que mexa no frontend deve ler `MASTER_SPEC.md` → este arquivo → `CLAUDE.md` → `docs/CURRENT_HANDOFF.md` antes de editar código.
+> Qualquer sessão que mexa no frontend deve ler `MASTER_SPEC.md` → este arquivo → `CLAUDE.md` → `docs/CURRENT_STATE.md` antes de editar código.
 
 ## Histórico
 
 | Data | Mudança |
 |---|---|
 | 2026-07-08 | v1 — spec inicial da direção visual, regras duras 1-8, fora de escopo. |
-| 2026-07-09 | v2 (este arquivo) — consolidado no template da série de 10 documentos; adiciona diagramas Mermaid, catálogo de componentes existentes, regra dura 9 (mojibake), seção Duas Camadas referenciada de `VISION_CORE_ARCHITECTURE.md`. Nenhuma regra da v1 foi removida. |
+| 2026-07-09 | v2 (este arquivo) — consolidado no template da série de 10 documentos; adiciona diagramas Mermaid, catálogo de componentes existentes, regra dura 9 (mojibake), seção Duas Camadas referenciada de `ARCHITECTURE.md`. Nenhuma regra da v1 foi removida. |
 
 ## Controle de versão
 

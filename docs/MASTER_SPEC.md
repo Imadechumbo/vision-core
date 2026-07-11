@@ -9,19 +9,19 @@
 
 ## Por que este documento existe
 
-O Vision Core é construído por múltiplos agentes de IA revezando entre si (cada um até seu próprio limite de uso/contexto), sem gate humano por etapa — o usuário só valida no final. Isso só funciona se todo agente partir da mesma base factual. Antes desta consolidação, a "fonte da verdade" estava espalhada de forma inconsistente entre `CLAUDE.md` (o estado real, dia-a-dia, do produto em produção), `docs/CURRENT_HANDOFF.md` (o snapshot da última sessão) e dezenas de specs avulsas — algumas descrevendo o produto real, outras descrevendo um framework de governança interna diferente, com sobreposição de nomes (`Hermes`, `PASS GOLD`, `Software Factory` significavam coisas diferentes em arquivos diferentes). Ver `VISION_CORE_ARCHITECTURE.md` seção "Duas Camadas" para o mapa completo dessa distinção.
+O Vision Core é construído por múltiplos agentes de IA revezando entre si (cada um até seu próprio limite de uso/contexto), sem gate humano por etapa — o usuário só valida no final. Isso só funciona se todo agente partir da mesma base factual. Antes desta consolidação, a "fonte da verdade" estava espalhada de forma inconsistente entre `CLAUDE.md` (o estado real, dia-a-dia, do produto em produção), `docs/CURRENT_STATE.md` (o snapshot da última sessão) e dezenas de specs avulsas — algumas descrevendo o produto real, outras descrevendo um framework de governança interna diferente, com sobreposição de nomes (`Hermes`, `PASS GOLD`, `Software Factory` significavam coisas diferentes em arquivos diferentes). Ver `ARCHITECTURE.md` seção "Duas Camadas" para o mapa completo dessa distinção.
 
-Estes 10 documentos (este + os 9 abaixo) são agora a **única fonte oficial de arquitetura e intenção de produto**. `CLAUDE.md` e `docs/CURRENT_HANDOFF.md` continuam existindo e continuam sendo lidos — mas para **estado operacional dia-a-dia** (o que a última sessão fez, o que está pendente agora), não para **arquitetura**. Se um documento de arquitetura e o `CLAUDE.md` divergirem sobre um fato de produto, o `CLAUDE.md`/`CURRENT_HANDOFF.md` vence para o *estado atual* (são atualizados a cada sessão); estes 10 documentos vencem para *intenção arquitetural e vocabulário* (não mudam a cada sessão, só quando há decisão de produto real).
+Estes 10 documentos (este + os 9 abaixo) são agora a **única fonte oficial de arquitetura e intenção de produto**. `CLAUDE.md` e `docs/CURRENT_STATE.md` continuam existindo e continuam sendo lidos — mas para **estado operacional dia-a-dia** (o que a última sessão fez, o que está pendente agora), não para **arquitetura**. Se um documento de arquitetura e o `CLAUDE.md` divergirem sobre um fato de produto, o `CLAUDE.md`/`CURRENT_STATE.md` vence para o *estado atual* (são atualizados a cada sessão); estes 10 documentos vencem para *intenção arquitetural e vocabulário* (não mudam a cada sessão, só quando há decisão de produto real).
 
 ---
 
 ## Ordem de leitura obrigatória
 
-Nenhum agente deve alterar código antes de completar esta ordem:
+**A partir da reestruturação de documentação de 2026-07 (`docs/DECISIONS.md` DECISION-018), o índice mestre com a ordem completa e o mapa de qual documento consultar quando é `docs/README_DOCUMENTATION.md` — leia-o primeiro.** Resumo (a ordem dentro desta série de 10 documentos, que é uma etapa daquela ordem completa):
 
 ```
 1.  MASTER_SPEC.md                        ← você está aqui
-2.  VISION_CORE_ARCHITECTURE.md           ← visão geral, as "Duas Camadas", pilares, fluxo
+2.  ARCHITECTURE.md                       ← visão geral, as "Duas Camadas", pilares, fluxo (renomeado de VISION_CORE_ARCHITECTURE.md)
 3.  VISION_CORE_NEXT_FRONTEND_SPEC.md     ← frontend ativo (única frente de UI em desenvolvimento)
 4.  VISION_CORE_BACKEND_SPEC.md           ← backend Node.js + go-core safe core
 5.  VC_SECRET_GUARD_RUST_SPEC.md          ← 4ª peça do stack (Rust, local, spec+protótipo)
@@ -31,14 +31,18 @@ Nenhum agente deve alterar código antes de completar esta ordem:
 9.  API_CONTRACT.md                       ← contrato de endpoints reais
 10. ROADMAP.md                            ← fases futuras, o que é ideia vs. compromisso
 
-Depois leia:
-11. CLAUDE.md                             ← estado operacional vivo, protocolo de revezamento
-12. docs/CURRENT_HANDOFF.md               ← o que a última sessão estava fazendo agora mesmo
+Antes desta série, leia o estado do momento:
+0a. docs/CURRENT_STATE.md                 ← o que a última sessão estava fazendo agora mesmo (renomeado de CURRENT_HANDOFF.md)
+0b. CLAUDE.md                             ← estado operacional vivo, protocolo de revezamento, regras permanentes
+
+Depois desta série, consulta sob demanda:
+11. docs/DECISIONS.md                     ← catálogo de decisões fechadas, não reabrir sem motivo novo
+12. docs/CHANGELOG_NEXT.md                ← histórico resumido por versão
 
 Só então altere código.
 ```
 
-**Por que essa ordem:** os 10 primeiros dão o mapa estável (o que o sistema É); os 2 últimos dão o estado do momento (o que está acontecendo AGORA). Ler na ordem inversa faz um agente confundir uma decisão de uma sessão específica com uma regra arquitetural permanente, ou vice-versa.
+**Por que essa ordem:** `CURRENT_STATE.md`/`CLAUDE.md` dão o estado do momento (o que está acontecendo AGORA); os 10 documentos desta série dão o mapa estável (o que o sistema É); `DECISIONS.md`/`CHANGELOG_NEXT.md` são consulta sob demanda. Ler fora dessa ordem faz um agente confundir uma decisão de uma sessão específica com uma regra arquitetural permanente, ou vice-versa.
 
 ---
 
@@ -46,7 +50,7 @@ Só então altere código.
 
 **Dentro do escopo:** os 9 arquivos listados abaixo, revisados/reescritos para eliminar contradição, marcar claramente o que é `EXISTENTE`/`EM IMPLEMENTAÇÃO`/`PLANEJADO`/`IDEIA FUTURA`, e referenciar-se cruzadamente.
 
-**Fora do escopo (não tocado por esta tarefa):** nenhum código-fonte, nenhum frontend, nenhum backend, nenhum deploy, nenhuma produção. `CLAUDE.md` e `docs/CURRENT_HANDOFF.md` recebem só uma nota curta apontando para esta consolidação — o conteúdo operacional deles não foi reescrito. Os demais ~80 arquivos em `docs/` (specs de governança interna, recibos de evidência de stress-test, checklists datados) não foram reescritos — são referenciados onde relevante, nunca duplicados.
+**Fora do escopo (não tocado por esta tarefa):** nenhum código-fonte, nenhum frontend, nenhum backend, nenhum deploy, nenhuma produção. `CLAUDE.md` e `docs/CURRENT_STATE.md` recebem só uma nota curta apontando para esta consolidação — o conteúdo operacional deles não foi reescrito. Os demais ~80 arquivos em `docs/` (specs de governança interna, recibos de evidência de stress-test, checklists datados) não foram reescritos — são referenciados onde relevante, nunca duplicados.
 
 ---
 
@@ -54,7 +58,7 @@ Só então altere código.
 
 | # | Documento | O que cobre | Estado predominante |
 |---|---|---|---|
-| 1 | [`VISION_CORE_ARCHITECTURE.md`](./VISION_CORE_ARCHITECTURE.md) | Missão, pilares, as "Duas Camadas" (produto vs. governança interna), fluxo operacional, segurança, deploy, boas práticas | EXISTENTE (produto) + EXISTENTE não-integrado (governança) |
+| 1 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Missão, pilares, as "Duas Camadas" (produto vs. governança interna), fluxo operacional, segurança, deploy, boas práticas | EXISTENTE (produto) + EXISTENTE não-integrado (governança) |
 | 2 | [`VISION_CORE_NEXT_FRONTEND_SPEC.md`](./VISION_CORE_NEXT_FRONTEND_SPEC.md) | Interface operacional paralela (chat/app, não landing/dashboard) | EM IMPLEMENTAÇÃO ativa |
 | 3 | [`VISION_CORE_BACKEND_SPEC.md`](./VISION_CORE_BACKEND_SPEC.md) | `backend/server.js` (Node.js/Express) + `go-core` (Go safe core) + Worker gateway | EXISTENTE |
 | 4 | [`VC_SECRET_GUARD_RUST_SPEC.md`](./VC_SECRET_GUARD_RUST_SPEC.md) | Núcleo local de detecção de segredos (Rust) | EM IMPLEMENTAÇÃO (Fase 1.5/6 fechada) |
@@ -81,10 +85,10 @@ Nenhum documento desta série usa essas quatro palavras para nada além de descr
 
 ## Regras que valem para toda a série de 10 documentos
 
-1. Nenhum documento pode contradizer outro. Onde dois arquivos pré-existentes descreviam a mesma palavra (`Hermes`, `PASS GOLD`, `Software Factory`) com significados diferentes, a série usa qualificadores explícitos (`Hermes (produto)` vs. `Hermes (metodologia)`) — ver `VISION_CORE_ARCHITECTURE.md`.
+1. Nenhum documento pode contradizer outro. Onde dois arquivos pré-existentes descreviam a mesma palavra (`Hermes`, `PASS GOLD`, `Software Factory`) com significados diferentes, a série usa qualificadores explícitos (`Hermes (produto)` vs. `Hermes (metodologia)`) — ver `ARCHITECTURE.md`.
 2. Nenhum documento inventa um endpoint, arquivo ou comportamento que não foi confirmado por leitura direta do código-fonte ou de uma spec já existente e citada.
-3. Toda alteração real de arquitetura (não esta consolidação, uma futura) atualiza o(s) documento(s) relevante(s) desta série **e** registra em `docs/CURRENT_HANDOFF.md` que a arquitetura mudou — os dois não podem divergir por mais de uma sessão.
-4. Gates de segurança (`AGENT_APPLY_ENABLED`, `SESSION_SECRET`, etc.) são de propriedade do `CLAUDE.md`/`CURRENT_HANDOFF.md` (estado operacional) — esta série de documentos os descreve, mas não é onde a aprovação humana para mudá-los fica registrada.
+3. Toda alteração real de arquitetura (não esta consolidação, uma futura) atualiza o(s) documento(s) relevante(s) desta série **e** registra em `docs/CURRENT_STATE.md` que a arquitetura mudou — os dois não podem divergir por mais de uma sessão.
+4. Gates de segurança (`AGENT_APPLY_ENABLED`, `SESSION_SECRET`, etc.) são de propriedade do `CLAUDE.md`/`CURRENT_STATE.md` (estado operacional) — esta série de documentos os descreve, mas não é onde a aprovação humana para mudá-los fica registrada.
 
 ---
 
@@ -93,3 +97,4 @@ Nenhum documento desta série usa essas quatro palavras para nada além de descr
 | Versão | Data | Mudança |
 |---|---|---|
 | 1.0.0 | 2026-07-09 | Criação inicial da série de 10 documentos, consolidando ~90 arquivos pré-existentes em `docs/` + `CLAUDE.md` + `README.md` numa arquitetura única e sem contradição. |
+| 1.1.0 | 2026-07 | Reestruturação de documentação em camadas: `VISION_CORE_ARCHITECTURE.md` renomeado para `ARCHITECTURE.md`; `CURRENT_HANDOFF.md` renomeado para `CURRENT_STATE.md`; novo `docs/DECISIONS.md` (catálogo de decisões) e `docs/README_DOCUMENTATION.md` (índice mestre, agora o ponto de entrada real); `CLAUDE.md` reduzido de 658 para ~190 linhas (narrativa de sessão movida para `docs/archive/`). Ver `docs/DECISIONS.md` DECISION-018. |

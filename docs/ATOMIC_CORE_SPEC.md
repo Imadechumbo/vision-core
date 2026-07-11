@@ -1,9 +1,9 @@
 # ATOMIC CORE SPEC
 
-**Parte da série de arquitetura — leia `MASTER_SPEC.md` e `VISION_CORE_ARCHITECTURE.md` antes deste.**
+**Parte da série de arquitetura — leia `MASTER_SPEC.md` e `ARCHITECTURE.md` antes deste.**
 
 > Versão: 1.0.0 · Criado: 2026-07-09
-> Fonte: `CLAUDE.md` seções "Atomic Core — APROVADO", "IDEIA REGISTRADA — Atomic Core", implementação real em `frontend/assets/vision-core-next-clean.js`/`.css`, `docs/SDDF_SPEC.md` §15 (ancestral visual), `docs/CURRENT_HANDOFF.md` (achados de sessão sobre reduced-motion).
+> Fonte: `CLAUDE.md` seções "Atomic Core — APROVADO", "IDEIA REGISTRADA — Atomic Core", implementação real em `frontend/assets/vision-core-next-clean.js`/`.css`, `docs/SDDF_SPEC.md` §15 (ancestral visual), `docs/CURRENT_STATE.md` (achados de sessão sobre reduced-motion).
 
 ---
 

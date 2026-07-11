@@ -2,7 +2,7 @@
 /**
  * Vision Core Next - Atomic Core idle animation (header widget, all pages).
  *
- * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_HANDOFF.md).
+ * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_STATE.md).
  *
  * Product-direction correction (2026-07-09): the Atomic Core animation is
  * BRAND IDENTITY. The OS `prefers-reduced-motion` preference no longer
@@ -58,7 +58,7 @@ const NEXT_URL = () => `${baseURL}/vision-core-next.html`;
 // vision-core-next.html polls /api/agent/status and /api/mission/quota
 // unconditionally on load (header/sidebar badges) — unmocked, both leak a
 // real request to the production gateway. Same fix as the other permanent
-// specs (see docs/CURRENT_HANDOFF.md).
+// specs (see docs/CURRENT_STATE.md).
 test.beforeEach(async ({ page }) => {
   await page.route(`${API}/api/agent/status`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, connected: false }) }));

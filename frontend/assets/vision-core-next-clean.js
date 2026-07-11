@@ -3345,7 +3345,7 @@
   }
 
   // Contexto de URL opcional (item 2 da pendencia "Software Factory completo",
-  // ver docs/CURRENT_HANDOFF.md) — POST /api/sf/fetch-url e sincrono (sem
+  // ver docs/CURRENT_STATE.md) — POST /api/sf/fetch-url e sincrono (sem
   // job_id), o backend busca o texto da URL informada e devolve
   // {ok, content, url} direto (server.js:4485, verificado antes de codar).
   // Leitura, nao escrita/execucao — nao precisa de confirmacao dupla, so

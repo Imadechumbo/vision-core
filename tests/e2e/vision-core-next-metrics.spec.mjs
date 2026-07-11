@@ -4,7 +4,7 @@
  * All API calls are mocked via page.route(); this spec must never touch the
  * real backend or any host outside localhost.
  *
- * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_HANDOFF.md):
+ * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_STATE.md):
  * same criterion as the other permanent Next specs — this surface is being
  * built across agent handoffs with no per-step human review.
  *

@@ -4,7 +4,7 @@
  * All API calls are mocked via page.route(); this spec must never touch the
  * real backend, GitHub, LLM providers, or any host outside localhost.
  *
- * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_HANDOFF.md):
+ * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_STATE.md):
  * this endpoint creates a real branch+commit+PR — irreversible per
  * API_CONTRACT.md ("Irreversível — cria branch+commit+PR real"). Double
  * confirmation in the UI is the only safety net, same tier as Apply-Fix /

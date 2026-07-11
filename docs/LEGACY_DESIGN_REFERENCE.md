@@ -15,13 +15,13 @@ frontend/assets/vision-core-bundle.js:10289-10290  var _pw145 = ... || 'vc-user-
 frontend/assets/vision-core-bundle.js:10318         var _loginPw = ... || 'vc-user-auto';
 ```
 
-(A mesma string também existe em `vision-core-clean-runtime.js:6301,6323` — o fork abandonado, sem tráfego real, mas com o mesmo literal.) Este é exatamente o achado real reportado, não suprimido, pelo `vc-secret-guard` na Fase 1 do dogfood (ver `docs/CURRENT_HANDOFF.md`, seção "Sessão `vc-secret-guard` Fase 1"). **Decisão de destino desta credencial (remover, rotacionar o padrão de conta demo, ou aceitar como está) permanece pendente com o usuário — este documento não a resolve, só a cita como motivo concreto para a regra abaixo.**
+(A mesma string também existe em `vision-core-clean-runtime.js:6301,6323` — o fork abandonado, sem tráfego real, mas com o mesmo literal.) Este é exatamente o achado real reportado, não suprimido, pelo `vc-secret-guard` na Fase 1 do dogfood (ver `docs/CURRENT_STATE.md`, seção "Sessão `vc-secret-guard` Fase 1"). **Decisão de destino desta credencial (remover, rotacionar o padrão de conta demo, ou aceitar como está) permanece pendente com o usuário — este documento não a resolve, só a cita como motivo concreto para a regra abaixo.**
 
 **PROIBIDO copiar código do legado.** Isso vale para HTML, CSS e JS — inclusive trechos "inofensivos" como um seletor CSS ou uma função utilitária pequena. O legado é o runtime a ser aposentado (`docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` já o trata como paralelo, não como base). Reimplementar do zero no Next, mesmo quando o resultado visual for idêntico, é a única forma aprovada de trazer algo do legado adiante.
 
 ### b) Nenhuma feature nova nasce na interface legada
 
-Toda implementação nova é no Next (`frontend/vision-core-next.html` + `assets/vision-core-next-clean.{js,css}`), do zero, limpa, com spec permanente no padrão da casa (ver `tests/e2e/vision-core-next-*.spec.mjs` — specs permanentes documentados em `docs/CURRENT_HANDOFF.md`).
+Toda implementação nova é no Next (`frontend/vision-core-next.html` + `assets/vision-core-next-clean.{js,css}`), do zero, limpa, com spec permanente no padrão da casa (ver `tests/e2e/vision-core-next-*.spec.mjs` — specs permanentes documentados em `docs/CURRENT_STATE.md`).
 
 **Regra anti-novo-legado:** se uma tela do Next precisar de algo que só existe no legado, o caminho é **reimplementar no Next** — nunca linkar, embedar (`<iframe>`, `import` de bundle) ou estender o legado para "emprestar" a feature. Isso vale mesmo sob pressão de prazo — um link temporário pro legado tende a nunca ser removido (o próprio `#vcSoftwareFactoryPage` legado, hoje marcado para deleção na Fase 3.3d, é um exemplo do padrão "provisório que virou permanente").
 
@@ -100,7 +100,7 @@ Nenhum dos dois é "a lista oficial de módulos SF" — são dois vocabulários 
 
 **O que o Next já tem equivalente (divergência consciente registrada, ver política (c)):** a "Software Factory Next" (checkpoints `v33`–`v46` em `CLAUDE.md`) já reimplementou boa parte do conceito **do zero, com UX própria**: seção `#factory`, Auto-Pilot de 5 passos + PASS GOLD como 6º passo opcional (não os mesmos 7 passos do legado), Modo Avançado, 4 geradores opcionais (`context-snapshot`/`patch-validator`/`risk-assessor`/`rollback-planner` — 4 dos 8 `SF_GENERATORS`), `fetch-url`. **Isto diverge de propósito** do fluxo 3a do legado — não é uma cópia com nomes trocados, é uma sequência e uma UX (log de chat, não abas numeradas) desenhadas do zero para o Next.
 
-**Bloqueado por backend:** nada novo — `project-files` (`server.js:4576`, assíncrono, resposta em `data.files[]`) e `generate-zip` (`server.js:4700`, síncrono, resposta binária ZIP) têm contrato já verificado (`docs/CURRENT_HANDOFF.md`, seção "Próxima etapa") mas ainda não conectados no Next — pendência de implementação, não de backend ausente.
+**Bloqueado por backend:** nada novo — `project-files` (`server.js:4576`, assíncrono, resposta em `data.files[]`) e `generate-zip` (`server.js:4700`, síncrono, resposta binária ZIP) têm contrato já verificado (`docs/CURRENT_STATE.md`, seção "Próxima etapa") mas ainda não conectados no Next — pendência de implementação, não de backend ausente.
 
 ---
 

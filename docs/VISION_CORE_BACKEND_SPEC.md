@@ -1,6 +1,6 @@
 # VISION CORE BACKEND SPEC
 
-**Parte da série de arquitetura — leia `MASTER_SPEC.md` e `VISION_CORE_ARCHITECTURE.md` antes deste.**
+**Parte da série de arquitetura — leia `MASTER_SPEC.md` e `ARCHITECTURE.md` antes deste.**
 
 > Versão: 1.0.0 · Criado: 2026-07-09
 > Fonte: leitura direta de `backend/server.js`, `backend/package.json`, `go-core/internal/` (listagem de pacotes), `worker/src/index.js` (existência), `CLAUDE.md` seção "STACK & URLS"/"VARIÁVEIS DE AMBIENTE"/"MÓDULOS ATIVOS".
@@ -9,7 +9,7 @@
 
 ## Resumo
 
-**O backend do Vision Core é Node.js (Express), não Go.** `backend/server.js` é o único processo servindo todas as rotas `/api/*`, rodando em AWS Elastic Beanstalk. `go-core` é um binário Go separado, invocado pelo backend como subprocesso para operações de segurança/scanner (Camada 1) e para um framework interno de governança de release (Camada 2) — ver `VISION_CORE_ARCHITECTURE.md` seção "Duas Camadas". Este documento cobre os dois, com a fronteira explícita.
+**O backend do Vision Core é Node.js (Express), não Go.** `backend/server.js` é o único processo servindo todas as rotas `/api/*`, rodando em AWS Elastic Beanstalk. `go-core` é um binário Go separado, invocado pelo backend como subprocesso para operações de segurança/scanner (Camada 1) e para um framework interno de governança de release (Camada 2) — ver `ARCHITECTURE.md` seção "Duas Camadas". Este documento cobre os dois, com a fronteira explícita.
 
 ## Objetivo
 
@@ -74,7 +74,7 @@ O próprio Worker cumpre o papel de gateway único de borda. Não há API Gatewa
 
 - **S3 (`AWS_S3_BUCKET=vision-core-data-prod`)** — fonte de verdade para `users.json`, `projects.json`, token blacklist, domínios SSO. O disco local do EB é apagado a cada deploy — nada crítico pode depender só dele.
 - **AI Provider Vault** — chaves de API de LLM cifradas AES-256-GCM em repouso (`provider-vault-crypto.js`), override opcional sobre env vars, só entra em jogo quando salvo pela tela de configuração.
-- **`backend/data/` local** — `agent-queue.sqlite` (fila de missões do agente local) + resíduo histórico (`users.json` local, achado de segurança conhecido — ver `VISION_CORE_ARCHITECTURE.md` incidentes).
+- **`backend/data/` local** — `agent-queue.sqlite` (fila de missões do agente local) + resíduo histórico (`users.json` local, achado de segurança conhecido — ver `ARCHITECTURE.md` incidentes).
 
 ## Auth
 
@@ -98,7 +98,7 @@ Dois mecanismos distintos, não confundir:
 
 ## Segurança
 
-Ver `VISION_CORE_ARCHITECTURE.md` seção "Segurança" para o histórico de incidentes. Resumo backend-específico: CORS restrito, headers de segurança (HSTS/CSP/X-Frame-Options) planejados §153 (ver `ROADMAP.md`), rate limiting já ativo nas rotas de auth, webhook Hotmart verificado por HMAC obrigatório.
+Ver `ARCHITECTURE.md` seção "Segurança" para o histórico de incidentes. Resumo backend-específico: CORS restrito, headers de segurança (HSTS/CSP/X-Frame-Options) planejados §153 (ver `ROADMAP.md`), rate limiting já ativo nas rotas de auth, webhook Hotmart verificado por HMAC obrigatório.
 
 ## Rate Limit
 
@@ -106,7 +106,7 @@ Ver `VISION_CORE_ARCHITECTURE.md` seção "Segurança" para o histórico de inci
 
 ## Configuração
 
-`.env` local (gitignored) + env vars reais no EB (27 chaves migradas na recriação do ambiente, §206 — não listadas por serem segredos). Nomes documentados em `VISION_CORE_ARCHITECTURE.md`/`CLAUDE.md`: `GOOGLE_CLIENT_ID`/`SECRET`, `GITHUB_CLIENT_ID`/`SECRET`, `OAUTH_REDIRECT_BASE`, `FRONTEND_URL`, `SESSION_SECRET` (obrigatório, sem fallback), `PROVIDER_VAULT_SECRET` (obrigatório, sem fallback — ver nota abaixo), `HOTMART_HOTTOK` (pendente), `AWS_S3_BUCKET` (pendente de reaplicar). `backend/.env.example` documenta `SESSION_SECRET` como obrigatório real; `JWT_SECRET` fica marcado como legado/não usado (dependência `jsonwebtoken` está no `package.json` mas o backend usa HMAC próprio, não essa lib).
+`.env` local (gitignored) + env vars reais no EB (27 chaves migradas na recriação do ambiente, §206 — não listadas por serem segredos). Nomes documentados em `ARCHITECTURE.md`/`CLAUDE.md`: `GOOGLE_CLIENT_ID`/`SECRET`, `GITHUB_CLIENT_ID`/`SECRET`, `OAUTH_REDIRECT_BASE`, `FRONTEND_URL`, `SESSION_SECRET` (obrigatório, sem fallback), `PROVIDER_VAULT_SECRET` (obrigatório, sem fallback — ver nota abaixo), `HOTMART_HOTTOK` (pendente), `AWS_S3_BUCKET` (pendente de reaplicar). `backend/.env.example` documenta `SESSION_SECRET` como obrigatório real; `JWT_SECRET` fica marcado como legado/não usado (dependência `jsonwebtoken` está no `package.json` mas o backend usa HMAC próprio, não essa lib).
 
 **`PROVIDER_VAULT_SECRET` — fail-closed (correção aplicada na limpeza de resíduos de dogfood pós-INCIDENTE-4).** Antes: `provider-vault-crypto.js` caía num `DEV_FALLBACK_SECRET` hardcoded (`'vision-core-dev-vault-secret-change-me'`) quando a env var não estava setada — mesma classe de risco do `SESSION_SECRET` pré-INCIDENTE-4, mas cifrando chaves de API de LLM em vez de assinar sessão. Agora `requireProviderVaultSecret()` (mesmo padrão de `requireSessionSecret()`, `backend/server.js:377-386`) lança no carregamento do módulo se a env var estiver ausente, for o literal de fallback conhecido, ou tiver menos de 32 bytes — `backend/server.js` requer `provider-vault-crypto.js` no topo do arquivo, então o processo inteiro não sobe sem `PROVIDER_VAULT_SECRET` real configurado. Regressão permanente: `tools/tests/dogfood-provider-vault-secret-failclosed.test.mjs` (mesmo padrão de `tools/tests/incident-4-session-secret.test.mjs`). **Implicação operacional:** `PROVIDER_VAULT_SECRET` precisa existir no EB `vision-core-prod` com valor forte antes do próximo deploy de backend — sem verificação feita nesta sessão se já está configurado lá (mesma limitação do INCIDENTE-4 original: sem acesso de escrita ao ambiente real a partir deste repo).
 
@@ -134,7 +134,7 @@ Binário compilado (Windows + Linux), `cmd/vision-core/main.go`, invocado como s
 
 ### Pacotes de governança interna (Camada 2)
 
-`authorityreview`, `authorizationmanifest`, `codeburn`, `contractregistry`, `dashboard`, `dryrun`, `evidencebinding`, `evidenceledger`, `executionadapter`, `executionrequest`, `executionresponse`, `executionruntime`, `executionverification`, `executorpreflight`, `finalauthorization`, `gateauthority`, `graphmemory`, `handoffpackage`, `impeccable`, `invocationboundary`, `isolatedruntime`, `policymatrix`, `promotioncontract`, `promotionfirewall`, `promotionsimulation`, `readiness`, `rehearsalrecorder`, `remediationharness`, `resultintake`, `safetyenvelope`, `sandboxadapter`, `sandboxauditreport`, `sandboxreadiness`, `sandboxtrace`, `sandboxtracepersistence`, `sandboxtracereplay`, `sovereigndecision`, `testfixtures`, `fileops`. Governam o release do próprio Vision Core — ver `VISION_CORE_ARCHITECTURE.md` seção "Duas Camadas" e `docs/HERMES_MISSION_SUPERVISOR.md`/`docs/PI_HARNESS_AUTONOMOUS_MISSION_RUNNER.md` para o detalhe mecânico. **Este documento não descreve cada pacote individualmente** — está fora do escopo desta série (ver `MASTER_SPEC.md`).
+`authorityreview`, `authorizationmanifest`, `codeburn`, `contractregistry`, `dashboard`, `dryrun`, `evidencebinding`, `evidenceledger`, `executionadapter`, `executionrequest`, `executionresponse`, `executionruntime`, `executionverification`, `executorpreflight`, `finalauthorization`, `gateauthority`, `graphmemory`, `handoffpackage`, `impeccable`, `invocationboundary`, `isolatedruntime`, `policymatrix`, `promotioncontract`, `promotionfirewall`, `promotionsimulation`, `readiness`, `rehearsalrecorder`, `remediationharness`, `resultintake`, `safetyenvelope`, `sandboxadapter`, `sandboxauditreport`, `sandboxreadiness`, `sandboxtrace`, `sandboxtracepersistence`, `sandboxtracereplay`, `sovereigndecision`, `testfixtures`, `fileops`. Governam o release do próprio Vision Core — ver `ARCHITECTURE.md` seção "Duas Camadas" e `docs/HERMES_MISSION_SUPERVISOR.md`/`docs/PI_HARNESS_AUTONOMOUS_MISSION_RUNNER.md` para o detalhe mecânico. **Este documento não descreve cada pacote individualmente** — está fora do escopo desta série (ver `MASTER_SPEC.md`).
 
 ---
 
@@ -155,7 +155,7 @@ Binário compilado (Windows + Linux), `cmd/vision-core/main.go`, invocado como s
 ## Pendências
 
 - Confirmar se `HOTMART_HOTTOK`/`AWS_S3_BUCKET` estão de fato configurados no EB atual (histórico marca como "pendente de reaplicar" desde a recriação do ambiente, §206/§146).
-- `backend/data/users.json` commitado no git com um hash de senha de teste — decisão de limpeza pendente do usuário (ver `VISION_CORE_ARCHITECTURE.md`).
+- `backend/data/users.json` commitado no git com um hash de senha de teste — decisão de limpeza pendente do usuário (ver `ARCHITECTURE.md`).
 - Headers de segurança (HSTS/CSP/X-Frame-Options) — §153, ver `ROADMAP.md`.
 
 ## Próximos passos

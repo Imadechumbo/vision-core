@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * INCIDENTE-3 — runbook de dados legados (ver CLAUDE.md e docs/CURRENT_HANDOFF.md).
+ * INCIDENTE-3 — runbook de dados legados (ver CLAUDE.md e docs/CURRENT_STATE.md).
  *
  * Identifica contas cujo password_hash autentica com a credencial de fallback
  * pública legada (pré-§145) e, opcionalmente, invalida essas contas gerando um
@@ -8,7 +8,7 @@
  *
  * Este script não acessa produção sozinho — ele opera sobre um arquivo
  * users.json local (baixado manualmente de onde a produção o mantiver hoje).
- * Ver "Runbook" em docs/CURRENT_HANDOFF.md para pré-condição/comando/resultado
+ * Ver "Runbook" em docs/CURRENT_STATE.md para pré-condição/comando/resultado
  * esperado/rollback completos.
  *
  * Uso:

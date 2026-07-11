@@ -1,10 +1,10 @@
 # VC-SECRET-GUARD — Spec Rust
 
-**Parte da série de arquitetura — leia `MASTER_SPEC.md` e `VISION_CORE_ARCHITECTURE.md` antes deste.**
+**Parte da série de arquitetura — leia `MASTER_SPEC.md` e `ARCHITECTURE.md` antes deste.**
 
 > Versão: 2.0.0 · Criado originalmente 2026-07-09 (spec-only), Fase 1 e 1.5 fechadas na mesma data, consolidado no template da série em 2026-07-09
 > Esta versão preserva 100% do conteúdo técnico da v1 (arquitetura, categorias de detecção, limites de segurança, plano de fases) e adiciona os campos padrão da série (Resumo/Escopo/Diagrama/Checklist).
-> **Para o estado exato de cada fase (o que a última sessão testou), consulte `docs/CURRENT_HANDOFF.md`.**
+> **Para o estado exato de cada fase (o que a última sessão testou), consulte `docs/CURRENT_STATE.md`.**
 
 ---
 
@@ -116,6 +116,7 @@ graph LR
 
 ```
 vc-secret-guard scan [--path <dir>] [--format json|text] [--policy <file>]   EXISTENTE (Fase 1)
+vc-secret-guard verify-cloud --provider aws-eb [...]                         EXISTENTE (missão pontual 2026-07-10, read-only)
 vc-secret-guard watch [--path <dir>] [--policy <file>]                       PLANEJADO — stub, código 2
 vc-secret-guard install-hooks [--path <repo>]                                PLANEJADO — stub, código 2
 vc-secret-guard report [--since <duration>] [--format json|md]               PLANEJADO — stub, código 2
@@ -123,6 +124,21 @@ vc-secret-guard policy [show|validate|init]                                  PLA
 ```
 
 Stubs imprimem "planejado" e saem com código 2 — nunca fingem sucesso.
+
+### `verify-cloud` (missão única autorizada em 2026-07-10)
+
+Comando read-only para verificar metadados de variáveis de ambiente no AWS
+Elastic Beanstalk. Ele chama apenas `describe-configuration-settings`, nunca
+`update-environment`, `setenv`, deploy, rollback, ou qualquer operação de
+escrita. Saída permitida: nome da variável, presença, vazio/não-vazio,
+tamanho, mínimo esperado, compliance, severidade e nota segura. Saída proibida:
+valor, prefixo, sufixo, hash, amostra, eco parcial, ou stderr bruto da AWS CLI.
+
+Variáveis mínimas cobertas: `PROVIDER_VAULT_SECRET`, `SESSION_SECRET` e
+`JWT_SECRET` (legado/não usado por `backend/server.js`). A política também
+verifica itens de segurança/configuração ligados ao boot ou superfície pública:
+`AWS_S3_BUCKET`, `HOTMART_HOTTOK`, OAuth, Stripe e `GITHUB_TOKEN`. `--strict`
+transforma warnings em exit code `1`; sem `--strict`, apenas `critical` falha.
 
 ## 6. Detecção por categorias (nunca lista fixa de strings)
 
@@ -181,7 +197,7 @@ Nenhum destes foi suprimido/allowlistado — os corrigidos abaixo permanecem vis
 2. ~~`backend/provider-vault-crypto.js:36` — `DEV_FALLBACK_SECRET` hardcoded~~ **CORRIGIDO** (mesma sessão): fail-closed aplicado, mesmo padrão do `SESSION_SECRET`/INCIDENTE-4 — ver `VISION_CORE_BACKEND_SPEC.md` seção "Configuração".
 3. ~~`backend/data/users.json` commitado no git~~ **CORRIGIDO** (mesma sessão): `git rm --cached` + `backend/data/*.json` no `.gitignore`. Histórico git **não foi reescrito** (decisão explícita do usuário — o hash permanece em commits antigos); ação de trocar/invalidar a senha real dessa conta de teste fica pendente do usuário, fora do alcance deste repositório.
 4. **`backend/.env` (gitignored) contém segredos reais locais** — não corrigido (não é exposição de repositório) — confirma que a detecção funciona contra segredos reais, não só fixtures.
-5. ~~`SESSION_SECRET` sem valor caindo em fallback hardcoded~~ **CORRIGIDO** (INCIDENTE-4, sessão anterior) — ver `VISION_CORE_ARCHITECTURE.md`.
+5. ~~`SESSION_SECRET` sem valor caindo em fallback hardcoded~~ **CORRIGIDO** (INCIDENTE-4, sessão anterior) — ver `ARCHITECTURE.md`.
 
 ---
 
@@ -197,7 +213,7 @@ Nenhum destes foi suprimido/allowlistado — os corrigidos abaixo permanecem vis
 ## Pendências
 
 - CI sem toolchain Rust — `cargo test` roda só localmente.
-- `high_entropy_blob`: 53 achados restantes no dogfood (meta era <50) — breakdown completo em `docs/CURRENT_HANDOFF.md`, maioria é limitação consciente do allowlist (sem glob `**` recursivo).
+- `high_entropy_blob`: 53 achados restantes no dogfood (meta era <50) — breakdown completo em `docs/CURRENT_STATE.md`, maioria é limitação consciente do allowlist (sem glob `**` recursivo).
 - Fase 2 (hooks) sem data — aguardando aprovação.
 
 ## Próximos passos

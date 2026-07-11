@@ -5,7 +5,7 @@
  * All API calls are mocked via page.route(); this spec must never touch the
  * real backend, Vision Agent Local, or any host outside localhost.
  *
- * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_HANDOFF.md):
+ * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_STATE.md):
  * this is the only panel of the 5 confirm/busy panels that queues a real job
  * for an external process (the Vision Agent Local) to execute — always in
  * simulation mode per SOFTWARE_FACTORY_SPEC.md, but still a real enqueue

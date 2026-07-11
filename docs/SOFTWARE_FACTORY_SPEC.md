@@ -1,9 +1,9 @@
 # SOFTWARE FACTORY SPEC (Produto)
 
-**Parte da série de arquitetura — leia `MASTER_SPEC.md` e `VISION_CORE_ARCHITECTURE.md` antes deste.**
+**Parte da série de arquitetura — leia `MASTER_SPEC.md` e `ARCHITECTURE.md` antes deste.**
 
 > Versão: 2.0.0 · Criado: 2026-07-09
-> **Nota de escopo importante:** este arquivo existia com outro conteúdo (metodologia de desenvolvimento do próprio Vision Core — Hermes-como-supervisor, TodoWrite, Subagent, Fork, SDDF) — isso é Camada 2 (ver `VISION_CORE_ARCHITECTURE.md`) e **continua coberto por `docs/SDDF_SPEC.md`** (raiz, 5401 linhas, não tocado nesta consolidação), que já era citado pelo arquivo original como fonte primária ("Referenciado por: SDDF_SPEC.md seção 16"). Este documento passa a descrever a **feature de produto** Software Factory — o que um usuário final vê e usa — consistente com o uso do termo em `CLAUDE.md` e no frontend Next.
+> **Nota de escopo importante:** este arquivo existia com outro conteúdo (metodologia de desenvolvimento do próprio Vision Core — Hermes-como-supervisor, TodoWrite, Subagent, Fork, SDDF) — isso é Camada 2 (ver `ARCHITECTURE.md`) e **continua coberto por `docs/SDDF_SPEC.md`** (raiz, 5401 linhas, não tocado nesta consolidação), que já era citado pelo arquivo original como fonte primária ("Referenciado por: SDDF_SPEC.md seção 16"). Este documento passa a descrever a **feature de produto** Software Factory — o que um usuário final vê e usa — consistente com o uso do termo em `CLAUDE.md` e no frontend Next.
 
 ---
 
@@ -92,7 +92,7 @@ O Modo Avançado interpreta a missão que já está no composer/chat principal e
 
 ## PASS GOLD (produto, Software Factory)
 
-`gold-gate` — 6º passo do Auto-Pilot, **ligado por padrão** (checkbox marcado), pode ser desmarcado (aí a sequência para em 5 passos e `gold-gate` nunca é chamado — verificado por teste, `route.abort()` se chamado indevidamente). Não confundir com o PASS GOLD do pipeline de missão de bug-fix (`pass-gold-engine.js`, score de 6 dimensões) — mesmo nome, gate diferente, aplicado a um contexto diferente (geração de projeto vs. correção de bug). Ver `VISION_CORE_ARCHITECTURE.md` seção "Duas Camadas" para o padrão geral de reuso de vocabulário no projeto.
+`gold-gate` — 6º passo do Auto-Pilot, **ligado por padrão** (checkbox marcado), pode ser desmarcado (aí a sequência para em 5 passos e `gold-gate` nunca é chamado — verificado por teste, `route.abort()` se chamado indevidamente). Não confundir com o PASS GOLD do pipeline de missão de bug-fix (`pass-gold-engine.js`, score de 6 dimensões) — mesmo nome, gate diferente, aplicado a um contexto diferente (geração de projeto vs. correção de bug). Ver `ARCHITECTURE.md` seção "Duas Camadas" para o padrão geral de reuso de vocabulário no projeto.
 
 ## Human Approval / Dry Run
 
@@ -131,7 +131,7 @@ sequenceDiagram
 
 ## Estados
 
-Mesmos estados de missão de `VISION_CORE_ARCHITECTURE.md` (`READY`/`MERGED`/`BLOCKED_INPUT`/`BLOCKED_DEPENDENCY`/`NEEDS_FIX`/`ABORTED`) aplicados a cada passo do pipeline — decididos server-side pelo módulo, refletidos como `DONE`/`FAIL` no log do frontend (`#vcSfLog`, oculto por padrão, só aparece durante geração ativa).
+Mesmos estados de missão de `ARCHITECTURE.md` (`READY`/`MERGED`/`BLOCKED_INPUT`/`BLOCKED_DEPENDENCY`/`NEEDS_FIX`/`ABORTED`) aplicados a cada passo do pipeline — decididos server-side pelo módulo, refletidos como `DONE`/`FAIL` no log do frontend (`#vcSfLog`, oculto por padrão, só aparece durante geração ativa).
 
 ## Segurança
 
@@ -154,7 +154,7 @@ Toda chamada carrega `sf_options` com três flags **sempre falsas** nesta fase: 
 ## Pendências
 
 - ~~`project-files`/`generate-zip` não conectados~~ **CORRIGIDO (2026-07-10).** Botão "Gerar Lista de Arquivos" no painel `#vcSfFinal` chama `project-files` com `{description, accumulated_context}` (mapeados a partir de `sfLastDescription`/`sfFullContext` já existentes no fluxo Auto-Pilot — `step1_analysis`/`step2_blueprint` deliberadamente não enviados, o backend já degrada bem sem eles). Botão "Baixar ZIP" chama `generate-zip` e dispara download real via `<a download>`+blob — primeiro fluxo binário do Next, confirmado funcional por teste (`page.waitForEvent('download')`). Spec permanente nova `tests/e2e/vision-core-next-sf-project-files.spec.mjs` (6 testes). Cache-bust `next-clean-51`.
-- Página standalone legada (`#vcSoftwareFactoryPage`) — remoção **investigada e pausada** (2026-07-10): `initSoftwareFactoryPage()` tem um guard `if (!sfPage) return;` que gate-keeps a inicialização de partes AINDA VIVAS do painel embutido moderno (`#vcMissionSfPane` — chat send, chips, drawers, aprovação humana), não só da página legada em si. Deletar `#vcSoftwareFactoryPage` sem primeiro desacoplar esses inicializadores do guard quebraria funcionalidade real em produção. Ver `docs/CURRENT_HANDOFF.md` para o relato completo — decisão pendente do usuário sobre como prosseguir.
+- Página standalone legada (`#vcSoftwareFactoryPage`) — remoção **investigada e pausada** (2026-07-10): `initSoftwareFactoryPage()` tem um guard `if (!sfPage) return;` que gate-keeps a inicialização de partes AINDA VIVAS do painel embutido moderno (`#vcMissionSfPane` — chat send, chips, drawers, aprovação humana), não só da página legada em si. Deletar `#vcSoftwareFactoryPage` sem primeiro desacoplar esses inicializadores do guard quebraria funcionalidade real em produção. Ver `docs/CURRENT_STATE.md` para o relato completo — decisão pendente do usuário sobre como prosseguir.
 
 ## Próximos passos
 

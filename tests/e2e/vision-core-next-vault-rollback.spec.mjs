@@ -4,7 +4,7 @@
  * All API calls are mocked via page.route(); this spec must never touch the
  * real backend, GitHub, LLM providers, or any host outside localhost.
  *
- * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_HANDOFF.md):
+ * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_STATE.md):
  * this endpoint overwrites the current projects.json state with a snapshot —
  * irreversible per API_CONTRACT.md ("Irreversível — sobrescreve o estado
  * atual"). Double confirmation in the UI is the only safety net, same tier
