@@ -10,6 +10,7 @@ Formato: mais recente no topo.
 
 - DECISION-019 registrada: Vision Core Next passa à fase de produto oficial futuro, guiado por comparação implementação × specs e pela prioridade arquitetura → UX → Software Factory → Atomic Core → performance → observabilidade → segurança → documentação → refinamento visual
 - ROADMAP registra `ARCHITECTURAL PRINCIPLE-003 — System Correcting Systems` apenas como IDEIA FUTURA, condicionado à maturidade do Software Factory
+- Reconciliação Fase 3.3d: `#vcSoftwareFactoryPage`/`#projectBuilder` não existem nos arquivos oficiais do Next; referências restantes são do frontend legado e não bloqueiam a frente Next
 - Sem alteração de código, sem cache-bust, sem push/deploy automático
 
 ## next-clean-59 (2026-07-11)

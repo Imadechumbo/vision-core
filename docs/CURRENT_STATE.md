@@ -29,7 +29,7 @@ next-clean-59
 
 Último Commit
 
-bf650f34
+ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Último Deploy
 
@@ -54,7 +54,6 @@ bf650f34
 # PENDÊNCIAS REAIS
 
 - Auth/registro/login/OAuth no Vision Core Next (não iniciado — login ainda depende do frontend legado)
-- Fase 3.3d — remoção da página Software Factory legada (investigada, pausada por risco real de regressão; refactor de desacoplamento ainda não iniciado)
 - AI Provider Vault Fase D(b) — conectar `sf-agent-orchestrator.mjs` ao vault (decisão de arquitetura em aberto)
 - SF-Agent-Orchestrator Fase 2 — bloqueado por cota de API, smoke test real incompleto
 - Settings do Atomic Core — ligado/desligado, glow on/off, intensidade visual (só "reduzir movimento" está implementado)
@@ -68,7 +67,7 @@ bf650f34
 
 # PRÓXIMA PRIORIDADE
 
-Fase 3.3d — desacoplar os inicializadores do painel Software Factory moderno (`#vcMissionSfPane`) do guard `if (!sfPage) return;` antes de remover a página legada `#vcSoftwareFactoryPage`/`#projectBuilder` (investigação completa em `docs/session_logs/`, refactor real ainda não começou).
+Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contra a implementação oficial (`frontend/vision-core-next.html` + `assets/vision-core-next-clean.*`) e escolher o maior ganho arquitetural/UX ainda pendente. O candidato mais sensível continua sendo Auth/registro/login/OAuth no Next, mas só deve começar com alinhamento explícito por mexer com sessão real.
 
 ---
 
@@ -95,6 +94,8 @@ Governança arquitetural registrada (2026-07-11): `ARCHITECTURAL PRINCIPLE-001` 
 
 Direção de produto registrada (2026-07-11): `docs/DECISIONS.md` DECISION-019 define que Vision Core Next agora deve ser evoluído como futuro frontend oficial, não como backlog solto de lacunas. Próximas tarefas devem começar por comparação implementação × specs e priorizar arquitetura → UX → Software Factory → Atomic Core → performance → observabilidade → segurança → documentação → refinamento visual. `ARCHITECTURAL PRINCIPLE-003 — System Correcting Systems` ficou apenas como IDEIA FUTURA em `docs/ROADMAP.md`, condicionada à maturidade do Software Factory; não é princípio ativo ainda. Sem código, sem deploy.
 
+Reconciliação Fase 3.3d (2026-07-11): grep confirmou que `#vcSoftwareFactoryPage`, `#projectBuilder`, `initSoftwareFactoryPage()` e `SF_MODULE_SECTION_MAP` não existem nos arquivos oficiais do Next (`frontend/vision-core-next.html`, `assets/vision-core-next-clean.css`, `assets/vision-core-next-clean.js`). As referências restantes vivem no frontend legado (`frontend/index.html`, bundles legados/CSS auxiliares) e em specs/testes legados. Portanto 3.3d não é mais próxima prioridade do Next; virou limpeza do legado, fora do escopo sem autorização explícita para tocar `index.html`/bundles.
+
 ---
 
 # CONTEXTO PARA O PRÓXIMO AGENTE
@@ -103,6 +104,6 @@ O painel de Métricas e todas as visualizações gráficas do Next estão comple
 
 A partir de agora a documentação segue um sistema de continuidade: `CURRENT_STATE.md` (este arquivo) fica sempre pequeno e reflete só o estado atual; `docs/CHANGELOG_NEXT.md` guarda um bloco curto por versão; investigação/narrativa longa vai para `docs/session_logs/YYYY-MM-DD-nome.md`. Nunca copie logs de terminal, JSON completo ou diffs grandes de volta para este arquivo.
 
-Nenhuma pendência listada acima tem consenso de urgência — qualquer uma exige decisão do usuário antes de virar prioridade real, exceto a Fase 3.3d (já tem investigação e plano, só falta execução).
+Nenhuma pendência listada acima tem consenso de urgência — qualquer uma exige decisão do usuário antes de virar prioridade real.
 
 Para a próxima missão no Next, aplicar DECISION-019 antes de escolher escopo: confirmar spec afetada, comparar contra a implementação real, escolher a melhoria de maior impacto pela ordem de prioridade registrada e evitar qualquer push/deploy automático sem pedido explícito.

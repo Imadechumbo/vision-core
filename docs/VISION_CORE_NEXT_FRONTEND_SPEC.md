@@ -309,7 +309,7 @@ Desktop-first, dois breakpoints:
 
 ## Fora de escopo — decidido em 2026-07-08 (categorias completas, não reabrir sem novo motivo)
 
-Confirmado pelo usuário após auditoria de paridade (`docs/PARITY_AUDIT.md`): SF Console legado (`#vcSoftwareFactoryPage`/`#projectBuilder`, planejado para deleção Fase 3.3d), tutorial `STEPS_SF` zumbi, `vision-core-clean-runtime.js` (fork abandonado, 312KB), `vision-core-clean-state.js` (duplicata byte-a-byte do bundle), painéis estáticos OSINT/OPENCLAW (§98-F, roadmap), Billing UI decorativa, Vault rollback UI do legado (nunca existiu). 19 arquivos CSS de hotfix legado (`v297`→`v298-final-hard-fix2`) não entram no Next.
+Confirmado pelo usuário após auditoria de paridade (`docs/PARITY_AUDIT.md`): SF Console legado (`#vcSoftwareFactoryPage`/`#projectBuilder`), tutorial `STEPS_SF` zumbi, `vision-core-clean-runtime.js` (fork abandonado, 312KB), `vision-core-clean-state.js` (duplicata byte-a-byte do bundle), painéis estáticos OSINT/OPENCLAW (§98-F, roadmap), Billing UI decorativa, Vault rollback UI do legado (nunca existiu). 19 arquivos CSS de hotfix legado (`v297`→`v298-final-hard-fix2`) não entram no Next. Reconciliação 2026-07-11: `#vcSoftwareFactoryPage`/`#projectBuilder` já não existem nos arquivos oficiais do Next; qualquer limpeza restante é do frontend legado e não deve tocar `index.html`/bundles sem autorização explícita.
 
 ---
 
