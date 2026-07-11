@@ -4,6 +4,13 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-60 (2026-07-11)
+
+- Tutorial Smile implementado no Vision Core Next como guia manual, sem autoabrir e sem importar overlay legado
+- Novo item `Smile` no menu lateral colapsavel; modal acessivel com X/ESC/Voltar/Proximo e assets oficiais do mascote
+- Composer continua sendo a unica entrada de missao; nenhum localStorage novo e nenhum endpoint novo
+- Teste permanente em `vision-core-next-app-shell.spec.mjs`
+
 ---
 
 ## Governança Next (2026-07-11)

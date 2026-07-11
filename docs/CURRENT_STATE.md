@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ next-clean-59 publicada e verificada ao vivo
+✔ next-clean-59 publicada e verificada ao vivo; next-clean-60 preparado localmente, deploy pendente
 
 Cache Bust
-next-clean-59
+next-clean-60
 
 Último Commit
 

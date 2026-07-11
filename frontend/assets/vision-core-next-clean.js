@@ -47,6 +47,15 @@
   var sidebarToggle = document.querySelector('[data-sidebar-toggle]');
   var composer = document.getElementById('vcComposer');
   var prompt = document.getElementById('vcPrompt');
+  var smileOpen = document.querySelector('[data-smile-open]');
+  var smileModal = document.getElementById('vcSmileModal');
+  var smileClose = document.getElementById('vcSmileClose');
+  var smileTitle = document.getElementById('vcSmileTitle');
+  var smileBody = document.getElementById('vcSmileBody');
+  var smileAvatar = document.getElementById('vcSmileAvatar');
+  var smileSteps = document.getElementById('vcSmileSteps');
+  var smilePrev = document.getElementById('vcSmilePrev');
+  var smileNext = document.getElementById('vcSmileNext');
   var stream = document.getElementById('vcChatStream');
   var featurePanel = document.getElementById('vcFeaturePanel');
   var featureTitle = document.getElementById('vcFeatureTitle');
@@ -206,6 +215,75 @@
     sidebarToggle.addEventListener('click', function () {
       var current = appShell && appShell.getAttribute('data-sidebar-state') === 'collapsed' ? 'collapsed' : 'expanded';
       setSidebarState(current === 'collapsed' ? 'expanded' : 'collapsed');
+    });
+  }
+
+  var smileStep = 0;
+  var smileGuide = [
+    {
+      title: 'Comece pelo chat',
+      body: 'Escreva a missao no composer principal. O mesmo texto alimenta chat, Missions e Software Factory.',
+      image: 'assets/mascote-reading-final.png'
+    },
+    {
+      title: 'Escolha o fluxo',
+      body: 'Use os chips Missao, Factory, GitHub, Vault ou IA para mudar o contexto sem criar outro campo de entrada.',
+      image: 'assets/mascote-idle-final.png'
+    },
+    {
+      title: 'Confirme antes de agir',
+      body: 'Acoes sensiveis continuam pedindo revisao humana. O Next prioriza chat-first e evidencia antes de mudanca.',
+      image: 'assets/mascote-reading-final.png'
+    }
+  ];
+
+  function renderSmileGuide() {
+    var step = smileGuide[smileStep] || smileGuide[0];
+    if (smileTitle) smileTitle.textContent = step.title;
+    if (smileBody) smileBody.textContent = step.body;
+    if (smileAvatar) smileAvatar.src = step.image;
+    if (smilePrev) smilePrev.disabled = smileStep === 0;
+    if (smileNext) smileNext.textContent = smileStep === smileGuide.length - 1 ? 'Fechar' : 'Proximo';
+    if (smileSteps) {
+      smileSteps.textContent = '';
+      smileGuide.forEach(function (_, index) {
+        var dot = document.createElement('span');
+        if (index === smileStep) dot.className = 'is-active';
+        smileSteps.appendChild(dot);
+      });
+    }
+  }
+
+  function openSmileGuide() {
+    if (!smileModal) return;
+    smileStep = 0;
+    renderSmileGuide();
+    smileModal.hidden = false;
+    if (smileClose) smileClose.focus();
+  }
+
+  function closeSmileGuide() {
+    if (!smileModal || smileModal.hidden) return;
+    smileModal.hidden = true;
+    if (smileOpen && typeof smileOpen.focus === 'function') smileOpen.focus();
+  }
+
+  if (smileOpen) smileOpen.addEventListener('click', openSmileGuide);
+  if (smileClose) smileClose.addEventListener('click', closeSmileGuide);
+  if (smilePrev) {
+    smilePrev.addEventListener('click', function () {
+      if (smileStep > 0) smileStep -= 1;
+      renderSmileGuide();
+    });
+  }
+  if (smileNext) {
+    smileNext.addEventListener('click', function () {
+      if (smileStep >= smileGuide.length - 1) {
+        closeSmileGuide();
+        return;
+      }
+      smileStep += 1;
+      renderSmileGuide();
     });
   }
 
@@ -584,7 +662,13 @@
 
   if (featureClose) featureClose.addEventListener('click', closeContextPanel);
   document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') closeContextPanel();
+    if (event.key === 'Escape') {
+      if (smileModal && !smileModal.hidden) {
+        closeSmileGuide();
+        return;
+      }
+      closeContextPanel();
+    }
   });
 
   if (featureRun) {

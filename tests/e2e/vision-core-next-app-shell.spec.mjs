@@ -41,6 +41,25 @@ test('composer is the only visible operational mission textarea, with Atomic Cor
   await expect(page.locator('textarea:visible')).toHaveCount(1);
 });
 
+test('Smile guide opens manually, navigates, closes, and keeps composer as the only mission input', async ({ page }) => {
+  await page.goto(NEXT_URL);
+  await expect(page.locator('#vcSmileModal')).toBeHidden();
+
+  await page.locator('[data-smile-open]').click();
+  await expect(page.locator('#vcSmileModal')).toBeVisible();
+  await expect(page.locator('#vcSmileTitle')).toHaveText('Comece pelo chat');
+  await expect(page.locator('#vcSmileBody')).toContainText('composer principal');
+  await expect(page.locator('textarea:visible')).toHaveCount(1);
+
+  await page.locator('#vcSmileNext').click();
+  await expect(page.locator('#vcSmileTitle')).toHaveText('Escolha o fluxo');
+  await page.locator('#vcSmilePrev').click();
+  await expect(page.locator('#vcSmileTitle')).toHaveText('Comece pelo chat');
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#vcSmileModal')).toBeHidden();
+});
+
 test('Software Factory uses the composer text without a second textarea or auto-run on selection', async ({ page }) => {
   let missionComposerPosts = 0;
   await page.route(`${API}/api/sf/mission-composer`, (route) => {
