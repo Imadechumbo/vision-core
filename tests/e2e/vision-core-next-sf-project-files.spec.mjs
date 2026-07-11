@@ -60,8 +60,8 @@ async function runToFinalPanel(page, description = 'um app de tarefas com login'
   await page.goto(NEXT_URL);
   await page.locator('[data-feature="factory"]').first().click();
   await page.locator('#vcSfPassGold').uncheck();
-  await page.locator('#vcSfInput').fill(description);
-  await page.getByRole('button', { name: 'Gerar Projeto' }).click();
+  await page.locator('#vcPrompt').fill(description);
+  await page.getByRole('button', { name: 'Gerar Projeto com o composer' }).click();
   await expect(page.locator('#vcSfFinal')).toBeVisible({ timeout: 10_000 });
 }
 
@@ -213,8 +213,8 @@ test('starting a new Auto-Pilot run resets a previous file list and hides the ZI
   await expect(page.locator('#vcSfZipActions')).toBeVisible({ timeout: 5_000 });
 
   // Segunda geração — reaproveita os mesmos mocks de core steps já registrados.
-  await page.locator('#vcSfInput').fill('segunda descrição, projeto diferente');
-  await page.getByRole('button', { name: 'Gerar Projeto' }).click();
+  await page.locator('#vcPrompt').fill('segunda descrição, projeto diferente');
+  await page.getByRole('button', { name: 'Gerar Projeto com o composer' }).click();
   await expect(page.locator('#vcSfFinal')).toBeVisible({ timeout: 10_000 });
 
   await expect(page.locator('#vcSfFilesList')).toBeHidden();

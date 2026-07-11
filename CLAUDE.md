@@ -136,7 +136,7 @@ AWS_S3_BUCKET=vision-core-data-prod   # PENDENTE de reaplicar (§146)
 - SF dentro do mesmo cockpit: abas AUTO-PILOT / MODO AVANÇADO, chat estilo Claude com markdown+typewriter, geração assíncrona (job_id + polling) pra evitar timeout do Worker (10s).
 - Tutoriais contextuais por seção (T1 Geral, T2 Agent Local, T3/SF2 Software Factory, T4 Mission Control, T5 Agentes Extras, T6 PASS GOLD) — abrem só via botão manual, nunca automático (exceto T1 primeira visita).
 - Deploy dropdown: ZIP / PR GitHub / CF Pages / EB / Docker.
-- Execution Monitor + Mission Timeline + Métricas reais (não mockadas). Next `next-clean-53`: aba Métricas conecta agentes, DORA, runtime summary, memory layer e agent status; Core Interaction Principle (chat-first) auditado e fechado — nenhum painel (Factory/Vault/Métricas/Tools/GitHub/Security/Settings) esconde o chat; Mission Input e Software Factory compartilham a mesma missão (56/56 PASS, ver `docs/CURRENT_HANDOFF.md` seção "Missão chat-first").
+- Execution Monitor + Mission Timeline + Métricas reais (não mockadas). Next `next-clean-54`: aba Métricas conecta agentes, DORA, runtime summary, memory layer e agent status; Core Interaction Principle (chat-first) auditado e fechado — nenhum painel (Factory/Vault/Métricas/Tools/GitHub/Security/Settings) esconde o chat; Mission Input separado foi removido da arquitetura Next e o composer/chat principal é a única entrada de missão.
 - Painel "AI API VAULT — Configuração Principal" — ver checkpoint AI PROVIDER VAULT abaixo.
 
 ---
@@ -599,9 +599,9 @@ Quarta ocorrência real da mesma classe de risco: segredo/fallback sensível pre
 
 **Deploy CF Pages complementar (2026-07-09):** após aprovação do usuário via "continue", o bundle legado limpo foi publicado em `https://5859bb89.visioncoreai.pages.dev` e no alias principal `https://visioncoreai.pages.dev`. Verificação pública pós-deploy: `INDEX_CONTAINS_FALLBACK=false` e `BUNDLE_CONTAINS_FALLBACK=false` no preview e no alias principal. O backend já rejeitava o valor; este deploy fechou a exposição residual no arquivo público.
 
-### App shell Next — Mission Input + Security Lab (2026-07-09, `next-clean-50`, UNCOMMITTED)
+### App shell Next — Mission Input removido + Security Lab (2026-07-11, `next-clean-54`)
 
-Continuação do app estilo ChatGPT minimalista: Mission Input flutuante/colapsável no topo direito (100% local, nunca chama rede) e aba "Security Lab" com painel Safe Status (GET-only nos 5 endpoints que ainda não existem no backend — `server.js` confirma 404 via catch-all, fallback local é o comportamento real hoje) + card de governança do `vc-secret-guard` (SPEC/PLANEJADO, sem Rust executado). Sessão retomou ~320 linhas de WIP não commitado deixado por um agente anterior sem entrada de HANDOFF — corrigiu um mojibake real (3 linhas de texto) e um overlap real em mobile (Atomic Core sobrepondo o Mission Input em ≤820px, agora `display:none` nesse breakpoint). Spec permanente nova (5 testes), suíte Next completa 37/37 PASS. Detalhe completo, incluindo a divergência encontrada entre a tarefa e os arquivos reais (`-clean` vs. prototypes nunca versionados), em `docs/CURRENT_HANDOFF.md`. **Nada commitado, nada deployado — aguardando aprovação do usuário.**
+Decisão arquitetural final: o Mission Input flutuante/colapsável foi removido por completo do Vision Core Next. A área superior direita pertence ao Atomic Core; toda entrada de missão passa pelo composer/chat principal; o Software Factory lê a mesma missão do composer ao executar, sem textarea próprio e sem auto-execução ao selecionar Factory. Security Lab permanece como painel GET-only com fallback local seguro. Ver `docs/CURRENT_HANDOFF.md` para testes/deploy desta entrega.
 
 ## PENDÊNCIAS IMEDIATAS / PRÓXIMA SESSÃO
 

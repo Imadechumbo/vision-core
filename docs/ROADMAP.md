@@ -59,7 +59,7 @@ gantt
 
 **Prioridade:** ALTA · **Estimativa:** contínua, sem data de conclusão definida.
 
-Pendências reais: Fase 3.3d (remoção final da página SF legada — **investigada e pausada em 2026-07-10 por risco real de regressão**, ver `SOFTWARE_FACTORY_SPEC.md`) · ~~`project-files`+`generate-zip`~~ **CORRIGIDO (2026-07-10)** · `/api/metrics/summary`+`/api/metrics/memory` não conectados · Settings do Atomic Core (on/off, intensidade, Etapa 3) · Tutorial Smile (Etapa 4) · páginas públicas `about.html`/`landing.html` (Etapas 5-7) · Auth/registro/login/OAuth no Next (não iniciado).
+Pendências reais: Fase 3.3d (remoção final da página SF legada — **investigada e pausada em 2026-07-10 por risco real de regressão**, ver `SOFTWARE_FACTORY_SPEC.md`) · ~~`project-files`+`generate-zip`~~ **CORRIGIDO (2026-07-10)** · ~~Mission Input separado no Next~~ **REMOVIDO (2026-07-11)** — composer/chat principal é a única entrada de missão · `/api/metrics/summary`+`/api/metrics/memory` não conectados · Settings do Atomic Core (on/off, intensidade, Etapa 3) · Tutorial Smile (Etapa 4) · páginas públicas `about.html`/`landing.html` (Etapas 5-7) · Auth/registro/login/OAuth no Next (não iniciado).
 
 ---
 

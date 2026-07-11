@@ -103,7 +103,7 @@ Fonte de verdade de movimento é `window.VCMotion` (ver `VISION_CORE_NEXT_FRONTE
 - **Modo `full`:** `requestAnimationFrame`, órbita em movimento contínuo, glow varia por estado.
 - **Modo `reduced`** (só quando o usuário escolhe explicitamente em Settings): posição/escala **congeladas** (zero deslocamento), mas glow/opacidade continuam pulsando lentamente (`REDUCE_PULSE_MS≈4200`, seno sobre o tempo decorrido) via `setTimeout` recorrente (`REDUCE_TICK_MS≈500ms`, bem mais barato que rAF) — **nunca 100% estático**. Achado real corrigido em 2026-07-09: antes desse fix, o widget congelava por completo sob `reduced` (nada disparava um novo `render()` no período ocioso) — lido pelo usuário como "quebrado", não "calmo".
 
-**Responsividade:** desktop 300×300px (`min(300px,23vw)`), `top:330px` (deslocado pra não colidir com o Mission Input), opacidade 0.76. Breakpoint 1180px: encolhe pra 245px, opacidade 0.32. Breakpoint 820px (mobile): **`display:none`** — decisão deliberada (ver `VISION_CORE_NEXT_FRONTEND_SPEC.md`), o Atomic Core é puramente decorativo (`pointer-events:none`) e a spec permite recolher em telas menores em vez de arriscar sobrepor conteúdo real.
+**Responsividade:** desktop 300×300px (`min(300px,23vw)`), área superior direita exclusiva do Atomic Core, opacidade 0.76. Breakpoint 1180px: encolhe pra 245px. Breakpoint 820px (mobile): **`display:none`** — decisão deliberada (ver `VISION_CORE_NEXT_FRONTEND_SPEC.md`), o Atomic Core é puramente decorativo (`pointer-events:none`) e a spec permite recolher em telas menores em vez de arriscar sobrepor conteúdo real.
 
 `contain: layout paint` no CSS — não força reflow do resto da página.
 

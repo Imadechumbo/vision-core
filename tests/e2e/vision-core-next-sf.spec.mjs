@@ -145,8 +145,8 @@ test('URL context: fetches real contract shape and includes it in the next missi
   await expect(page.locator('#vcSfUrlStatus')).toContainText('Contexto capturado');
   expect(fetchedUrl).toBe('https://exemplo.com/doc');
 
-  await page.locator('#vcSfInput').fill('um app seguindo o documento de referência');
-  await page.getByRole('button', { name: 'Gerar Projeto' }).click();
+  await page.locator('#vcPrompt').fill('um app seguindo o documento de referência');
+  await page.getByRole('button', { name: 'Gerar Projeto com o composer' }).click();
   await expect(page.locator('#vcSfHistory')).toContainText('Projeto concluído!', { timeout: 10_000 });
   await expect(page.locator('#vcSfLog')).toContainText('URL_CONTEXT incluído');
   // full_context só vai a partir do 2o passo (idx > 0) — mesmo padrão já usado pro contexto acumulado de steps anteriores.
@@ -170,8 +170,8 @@ test('URL context: backend error surfaces a readable message, mission still work
   await page.locator('#vcSfUrlFetchBtn').click();
   await expect(page.locator('#vcSfUrlStatus')).toContainText('Erro ao buscar URL');
 
-  await page.locator('#vcSfInput').fill('um app mesmo sem o contexto da URL');
-  await page.getByRole('button', { name: 'Gerar Projeto' }).click();
+  await page.locator('#vcPrompt').fill('um app mesmo sem o contexto da URL');
+  await page.getByRole('button', { name: 'Gerar Projeto com o composer' }).click();
   await expect(page.locator('#vcSfHistory')).toContainText('Projeto concluído!', { timeout: 10_000 });
 });
 
@@ -187,8 +187,8 @@ test('Software Factory Auto-Pilot runs six steps (5 + PASS GOLD default-on) via 
   await page.locator('[data-feature="factory"]').first().click();
   // PASS GOLD vem marcado por padrão no HTML — Auto-Pilot deve rodar o 6o passo sem o usuário mexer em nada.
   await expect(page.locator('#vcSfPassGold')).toBeChecked();
-  await page.locator('#vcSfInput').fill('um app de tarefas com login e dashboard');
-  await page.getByRole('button', { name: 'Gerar Projeto' }).click();
+  await page.locator('#vcPrompt').fill('um app de tarefas com login e dashboard');
+  await page.getByRole('button', { name: 'Gerar Projeto com o composer' }).click();
 
   await expect(page.locator('#vcSfHistory')).toContainText('Projeto concluído!', { timeout: 10_000 });
   await expect(page.locator('#vcSfProgress')).toContainText('06 — Validar PASS GOLD');
@@ -215,8 +215,8 @@ test('Software Factory runs selected optional generator steps before PASS GOLD',
   await page.locator('[data-feature="factory"]').first().click();
   await page.locator('[data-sf-extra-step="context-snapshot"]').check();
   await page.locator('[data-sf-extra-step="risk-assessor"]').check();
-  await page.locator('#vcSfInput').fill('um app com snapshot de contexto e risco');
-  await page.getByRole('button', { name: 'Gerar Projeto' }).click();
+  await page.locator('#vcPrompt').fill('um app com snapshot de contexto e risco');
+  await page.getByRole('button', { name: 'Gerar Projeto com o composer' }).click();
 
   await expect.poll(() => posts.length, { timeout: 10_000 }).toBe(8);
   await expect(page.locator('#vcSfProgress')).toContainText('E1');
@@ -257,8 +257,8 @@ test('Software Factory skips gold-gate step when PASS GOLD is unchecked', async 
   await page.goto(NEXT_URL);
   await page.locator('[data-feature="factory"]').first().click();
   await page.locator('#vcSfPassGold').uncheck();
-  await page.locator('#vcSfInput').fill('um app sem validacao de gold gate');
-  await page.getByRole('button', { name: 'Gerar Projeto' }).click();
+  await page.locator('#vcPrompt').fill('um app sem validacao de gold gate');
+  await page.getByRole('button', { name: 'Gerar Projeto com o composer' }).click();
 
   await expect(page.locator('#vcSfHistory')).toContainText('Projeto concluído!', { timeout: 10_000 });
   expect(posts).toHaveLength(5);
@@ -278,8 +278,8 @@ test('Software Factory advanced mode sends explicit safe options only', async ({
   await page.getByRole('button', { name: 'Modo Avancado' }).click();
   await page.locator('#vcSfProvider').selectOption('groq');
   await page.locator('#vcSfModel').fill('llama-test');
-  await page.locator('#vcSfInput').fill('um CRM interno com perfis e auditoria');
-  await page.getByRole('button', { name: 'Gerar Projeto' }).click();
+  await page.locator('#vcPrompt').fill('um CRM interno com perfis e auditoria');
+  await page.getByRole('button', { name: 'Gerar Projeto com o composer' }).click();
   await expect.poll(() => posts.length, { timeout: 10_000 }).toBe(6);
   await expect(page.locator('#vcSfLog')).toContainText('real_execution_allowed=false');
   await expect(page.locator('#vcSfLog')).toContainText('provider=groq');
@@ -307,8 +307,8 @@ test('Software Factory follows async job_id polling without real network', async
 
   await page.goto(NEXT_URL);
   await page.locator('[data-feature="factory"]').first().click();
-  await page.locator('#vcSfInput').fill('um app async com fila de geração');
-  await page.getByRole('button', { name: 'Gerar Projeto' }).click();
+  await page.locator('#vcPrompt').fill('um app async com fila de geração');
+  await page.getByRole('button', { name: 'Gerar Projeto com o composer' }).click();
 
   await expect(page.locator('#vcSfHistory')).toContainText('Projeto concluído!', { timeout: 10_000 });
   await expect(page.locator('#vcSfFinalBody')).toContainText('async handoff ok');

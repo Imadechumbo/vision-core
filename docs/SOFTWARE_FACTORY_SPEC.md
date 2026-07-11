@@ -40,7 +40,7 @@ Este documento usa os nomes reais dos módulos backend (`mission-composer`, etc.
 
 ```mermaid
 graph TD
-    U[Usuário] -->|descreve projeto| COMP[Composer #factory<br/>Auto-Pilot ou Modo Avançado]
+    U[Usuário] -->|descreve projeto| COMP[Composer principal/chat<br/>Factory selecionado]
     COMP --> S1["1. mission-composer<br/>Planner"]
     S1 --> S2["2. deploy-blueprint<br/>Executor"]
     S2 --> S3["3. worker-handoff<br/>Executor"]
@@ -72,7 +72,7 @@ Cada passo: `POST /api/sf/<módulo>` retorna `{job_id, status:'pending'}` (nunca
 
 ## Planner
 
-`mission-composer` — primeiro passo de qualquer Auto-Pilot, monta o plano da missão a partir da descrição livre do usuário (+ contexto de URL opcional via `fetch-url`).
+`mission-composer` — primeiro passo de qualquer Auto-Pilot, monta o plano da missão a partir da descrição livre do usuário no composer/chat principal (+ contexto de URL opcional via `fetch-url`).
 
 ## Executor
 
@@ -107,12 +107,12 @@ sequenceDiagram
     participant JS as vision-core-next-clean.js
     participant API as backend/server.js
 
-    U->>JS: descreve projeto + (opcional) URL de contexto
+    U->>JS: escreve projeto no composer principal + (opcional) URL de contexto
     opt URL preenchida
         JS->>API: POST /api/sf/fetch-url (síncrono)
         API-->>JS: {content} — vira prefixo do full_context
     end
-    U->>JS: clique "Gerar" (Auto-Pilot)
+    U->>JS: seleciona Factory e clica "Gerar" (sem auto-execução ao selecionar)
     loop para cada passo ativo (5 + opcionais + gold-gate)
         JS->>API: POST /api/sf/<módulo> {..., sf_options: real_execution_allowed:false, deploy_allowed:false, writes_disk:false}
         API-->>JS: {job_id}

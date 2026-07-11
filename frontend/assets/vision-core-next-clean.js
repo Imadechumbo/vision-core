@@ -146,13 +146,9 @@
   var safeStatusPanel = document.getElementById('vcSafeStatusPanel');
   var safeStatusList = document.getElementById('vcSafeStatusList');
   var secretGuardCard = document.getElementById('vcSecretGuardCard');
-  var missionInput = document.getElementById('vcMissionInput');
-  var missionInputToggle = document.getElementById('vcMissionInputToggle');
-  var missionInputToggleIcon = missionInputToggle ? missionInputToggle.querySelector('i') : null;
-  var missionQuickInput = document.getElementById('vcMissionQuickInput');
-  var missionQuickSend = document.getElementById('vcMissionQuickSend');
   var activeFeature = 'chat';
   var lastFeatureTrigger = null;
+  var lastChatMissionText = '';
 
   var featureMap = {
     chat: { title: 'Chat', status: 'READY', agents: ['hermes'], text: 'Chat livre conectado ao endpoint real /api/chat.', actions: [{ label: 'Checar API', path: '/api/health' }] },
@@ -208,42 +204,6 @@
     sidebarToggle.addEventListener('click', function () {
       var current = appShell && appShell.getAttribute('data-sidebar-state') === 'collapsed' ? 'collapsed' : 'expanded';
       setSidebarState(current === 'collapsed' ? 'expanded' : 'collapsed');
-    });
-  }
-
-  function setMissionInputCollapsed(collapsed) {
-    if (!missionInput) return;
-    missionInput.setAttribute('data-collapsed', collapsed ? 'true' : 'false');
-    if (missionInputToggle) missionInputToggle.setAttribute('aria-expanded', String(!collapsed));
-    if (missionInputToggleIcon) missionInputToggleIcon.textContent = collapsed ? '+' : '-';
-    try { window.localStorage.setItem('vc_mission_input_collapsed', collapsed ? 'true' : 'false'); } catch (_) {}
-  }
-
-  try {
-    setMissionInputCollapsed(window.localStorage.getItem('vc_mission_input_collapsed') === 'true');
-  } catch (_) {
-    setMissionInputCollapsed(false);
-  }
-
-  if (missionInputToggle) {
-    missionInputToggle.addEventListener('click', function () {
-      var collapsed = missionInput && missionInput.getAttribute('data-collapsed') === 'true';
-      setMissionInputCollapsed(!collapsed);
-    });
-  }
-
-  if (missionQuickSend) {
-    missionQuickSend.addEventListener('click', function () {
-      var text = missionQuickInput ? missionQuickInput.value.trim() : '';
-      if (!text) return;
-      if (prompt) {
-        prompt.value = 'Missão: ' + text + (prompt.value.trim() ? '\n\n' + prompt.value.trim() : '');
-        resizePrompt();
-        prompt.focus();
-      }
-      if (sfInput) sfInput.value = text;
-      appendMessage('pending', 'MISSION INPUT', 'Objetivo adicionado ao composer e ao Software Factory. Nada foi executado.');
-      if (missionQuickInput) missionQuickInput.value = '';
     });
   }
 
@@ -598,9 +558,6 @@
       if (inComposer && prompt && CHIP_PREFIX[key]) {
         if (prompt.value.indexOf(CHIP_PREFIX[key]) !== 0) {
           prompt.value = CHIP_PREFIX[key] + prompt.value;
-        }
-        if (key === 'factory' && sfInput && !sfInput.value.trim()) {
-          sfInput.value = prompt.value.replace(/^Factory:\s*/i, '').trim();
         }
         resizePrompt();
         prompt.focus();
@@ -1976,6 +1933,7 @@
       if (pendingAttachments.length) displayParts.push('[' + pendingAttachments.length + ' anexo(s): ' + pendingAttachments.map(function (a) { return a.name; }).join(', ') + ']');
       if (pendingImage) displayParts.push('[imagem: ' + pendingImage.name + ']');
       appendMessage('user', 'VOCE', displayParts.join('\n'));
+      if (text) lastChatMissionText = text;
 
       var imagePayload = pendingImage;
       pendingAttachments = [];
@@ -2322,7 +2280,6 @@
   var sfFinal = document.getElementById('vcSfFinal');
   var sfFinalBody = document.getElementById('vcSfFinalBody');
   var sfComposer = document.getElementById('vcSfComposer');
-  var sfInput = document.getElementById('vcSfInput');
   var sfModeButtons = Array.prototype.slice.call(document.querySelectorAll('[data-sf-mode]'));
   var sfProvider = document.getElementById('vcSfProvider');
   var sfModel = document.getElementById('vcSfModel');
@@ -2515,6 +2472,13 @@
     };
   }
 
+  function readComposerMissionText() {
+    var value = prompt ? prompt.value.trim() : '';
+    value = value.replace(/^(Factory|Missão):\s*/i, '').trim();
+    if (value) return value;
+    return lastChatMissionText.replace(/^(Factory|Missão):\s*/i, '').trim();
+  }
+
   function renderSfFinal() {
     if (!sfFinal || !sfFinalBody) return;
     sfFinalBody.textContent = sfFullContext.trim();
@@ -2542,7 +2506,6 @@
     if (sfFilesBtn) { sfFilesBtn.disabled = false; sfFilesBtn.textContent = 'Gerar Lista de Arquivos'; }
     appendSfLog('warn', 'SAFE real_execution_allowed=false deploy_allowed=false writes_disk=false');
     appendSfLog('info', 'MODE ' + sfRunOptions.mode + ' provider=' + sfRunOptions.provider + ' model=' + (sfRunOptions.model || 'auto'));
-    if (sfInput) sfInput.disabled = true;
     var submitBtn = sfComposer && sfComposer.querySelector('button[type="submit"]');
     if (submitBtn) submitBtn.disabled = true;
 
@@ -2610,7 +2573,6 @@
     sfInFlight = false;
     stopSfPoll();
     sfRunOptions = null;
-    if (sfInput) sfInput.disabled = false;
     var submitBtn = sfComposer && sfComposer.querySelector('button[type="submit"]');
     if (submitBtn) submitBtn.disabled = false;
     if (window.resetAtomicCore) window.resetAtomicCore();
@@ -2723,16 +2685,16 @@
   if (sfComposer) {
     sfComposer.addEventListener('submit', function (event) {
       event.preventDefault();
-      var text = sfInput ? sfInput.value.trim() : '';
+      var text = readComposerMissionText();
       if (!text || sfInFlight) return;
-      sfInput.value = '';
+      lastChatMissionText = text;
+      appendMessage('user', 'VOCE', text);
+      if (prompt) {
+        prompt.value = '';
+        resizePrompt();
+      }
       runSfAutoPilot(text);
     });
-    if (sfInput) {
-      sfInput.addEventListener('keydown', function (event) {
-        if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sfComposer.requestSubmit(); }
-      });
-    }
   }
 })();
 

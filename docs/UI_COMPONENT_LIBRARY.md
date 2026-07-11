@@ -45,23 +45,12 @@ Escopo: componentes reais em `vision-core-next-clean.{css,js}`. Fora do escopo: 
 
 ## Composer
 
-**Objetivo:** entrada principal de mensagem, sempre visível.
+**Objetivo:** entrada principal de mensagem e única entrada de missão, sempre visível.
 **Estrutura:** `<form class="vc-composer" id="vcComposer">` — `<textarea id="vcPrompt">` + `<div class="vc-composer-actions">` com chips (`Missão`/`Factory`/`GitHub`/`Vault`/`IA`/`Anexar`/`Print`) + botão `.vc-send[type=submit]` ("Executar").
 **Estados:** textarea auto-resize (`resizePrompt()`, max 180px). Botão de envio nunca desabilita por padrão (não há validação de campo vazio bloqueando o submit hoje).
-**Eventos:** `submit` → `POST /api/chat`; chips `[data-feature]` prefixam o texto e navegam pra aba; `[data-quick="attach|image"]` abrem input de arquivo oculto.
+**Eventos:** `submit` → `POST /api/chat`; chips `[data-feature]` prefixam o texto e navegam pra aba; o chip `Factory` apenas seleciona o contexto, e a geração usa este mesmo texto quando o usuário confirma no painel Factory; `[data-quick="attach|image"]` abrem input de arquivo oculto.
 **Posição:** `position: sticky; bottom: 18px; z-index: 20`.
 **Checklist:** [x] fixo no rodapé · [x] Enter envia, Shift+Enter quebra linha (comportamento padrão de `<textarea>` em formulário, sem handler customizado que intercepte Enter).
-
-## Mission Input
-
-**Objetivo:** anotar um objetivo sem disparar nada — camada 100% local.
-**Estrutura:** `<section class="vc-mission-input" data-collapsed="false">` — toggle + `<textarea>` + botão "Adicionar ao chat".
-**Estados:** `data-collapsed="true|false"`.
-**Eventos:** toggle alterna `data-collapsed` + ícone (`-`/`+`); "Adicionar ao chat" reescreve `#vcPrompt` (prefixo `"Missão: "`) e injeta uma mensagem local no chat — **nunca chama `fetch`** (verificado por teste, zero requisições extras).
-**Persistência:** `localStorage['vc_mission_input_collapsed']`.
-**Posição:** `position: fixed; top: 88px; right: 28px`, `backdrop-filter: blur(16px)` — transparente/discreto por design.
-**Responsividade:** vira bloco estático de largura 100% em `max-width:820px`.
-**Checklist:** [x] nunca dispara rede · [x] recolhe/expande · [x] não compete visualmente com o chat.
 
 ## Chat
 
@@ -152,7 +141,7 @@ Ver seção "Status" acima (dot+badge) e "Chips" abaixo — não há uma badge g
 
 ## Software Factory (painéis)
 
-`.vc-sf-stage` (seção irmã do chat, substitui-o quando ativa), `.vc-sf-composer`, `.vc-sf-progress`, `.vc-sf-log`, `.vc-sf-final` — ver `SOFTWARE_FACTORY_SPEC.md` para o fluxo completo.
+`.vc-sf-stage`, `.vc-sf-composer` (botão de execução, sem textarea próprio), `.vc-sf-progress`, `.vc-sf-log`, `.vc-sf-final` — ver `SOFTWARE_FACTORY_SPEC.md` para o fluxo completo.
 
 ## Painéis (feature panel genérico)
 

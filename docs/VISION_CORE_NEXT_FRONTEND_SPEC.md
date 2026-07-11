@@ -48,14 +48,13 @@ O Chat nunca pode ser deslocado da primeira posicao cognitiva da interface.
 A ordem principal do fluxo deve ser obrigatoriamente:
 
 1. Header
-2. Mission Input
-3. Conversation / Chat
-4. Composer
-5. Ferramentas contextuais
+2. Conversation / Chat
+3. Composer principal
+4. Ferramentas contextuais
 
 Nunca inverter para um fluxo em que o usuario precise passar por `Mission -> Marketplace -> Vault -> Metrics -> ... -> Chat`. Isso quebra o fluxo cognitivo: o produto deixa de parecer um cockpit conversacional e vira uma pilha de paginas.
 
-**Mission Input = Command Center.** Ele nao e apenas um textarea. Tudo comeca nele: descrever uma missao, anexar contexto, acionar GitHub, ligar Factory, anexar Vault, chamar IA e executar. Ele deve conhecer automaticamente os contextos disponiveis (`Software Factory`, `GitHub`, `Vault`, `Metrics`, `Agents`, `Timeline`, `Security`, `Secret Guard`) para que o usuario nao precise navegar ate um modulo antes de iniciar uma tarefa.
+**Mission Input removido da arquitetura Next.** A área superior direita pertence exclusivamente ao Atomic Core. A entrada de missão ocorre apenas pelo composer/chat principal. Nenhuma nova implementação pode reintroduzir painel, textarea ou estado paralelo de missão.
 
 **Software Factory = modo operacional do chat, nao pagina.** Exemplo oficial: o usuario descreve "Implementar login OAuth", liga `Factory`, a conversa continua, a IA analisa, gera plano, executa, mostra logs e entrega resultado. O Factory entra como contexto/modo da conversa.
 
@@ -67,14 +66,12 @@ Nunca inverter para um fluxo em que o usuario precise passar por `Mission -> Mar
 
 **GitHub = contexto.** Repo, branch, PR e status entram como contexto ou painel lateral, nunca como pagina principal que toma o lugar do chat.
 
-**Atomic Core = permanente, mas nao empurra o chat.** Ele deve permanecer visivel quando houver espaco, sem deslocar o Chat para baixo e sem competir com o Mission Input.
+**Atomic Core = permanente, mas nao empurra o chat.** Ele deve permanecer visivel quando houver espaco, sem deslocar o Chat para baixo e sem competir com o composer.
 
 Layout oficial do fluxo:
 
 ```text
 HEADER
-------------------------------
-MISSION INPUT
 ------------------------------
 CHAT
 CHAT
@@ -176,7 +173,7 @@ Cores de estado semântico fora das variáveis raiz (por convenção do arquivo,
 |---|---|
 | Sidebar colapsável | EXISTENTE |
 | Composer fixo | EXISTENTE |
-| Mission Input flutuante | EXISTENTE |
+| Mission Input flutuante | REMOVIDO — proibido reintroduzir |
 | Chat (mensagens usuário/sistema) | EXISTENTE |
 | Atomic Core (widget) | EXISTENTE |
 | Feature panel contextual por aba | EXISTENTE |
@@ -212,7 +209,7 @@ Painéis de dados (Métricas, Security Lab) **não têm animação de entrada pr
 
 ## Estrutura HTML
 
-Um único `<div class="vc-app-shell" data-sidebar-state="expanded|collapsed">` com dois filhos: `<aside class="vc-sidebar">` (nav com `data-feature="chat|missions|factory|timeline|agents|github|vault|metrics|tools|security|obsidian|settings"`) e `<main class="vc-main">` contendo header, `<section class="vc-mission-input">` (flutuante), `<section class="vc-chat-stage">` (intro + `#vcChatStream` + `#vcFeaturePanel` com todos os sub-painéis condicionais dentro, cada um `hidden` por padrão) e `<form class="vc-composer">` fora do chat-stage. O Software Factory deve coexistir como contexto/painel operacional da conversa; implementações antigas com `<section class="vc-sf-stage" id="factory" hidden>` substituindo o chat são consideradas dívida de layout e não devem ser repetidas.
+Um único `<div class="vc-app-shell" data-sidebar-state="expanded|collapsed">` com dois filhos: `<aside class="vc-sidebar">` (nav com `data-feature="chat|missions|factory|timeline|agents|github|vault|metrics|tools|security|obsidian|settings"`) e `<main class="vc-main">` contendo header, `<section class="vc-chat-stage">` (intro + `#vcChatStream` + `#vcFeaturePanel` com todos os sub-painéis condicionais dentro, cada um `hidden` por padrão) e `<form class="vc-composer">` fora do chat-stage. O Software Factory deve coexistir como contexto/painel operacional da conversa e ler a missão do composer/chat principal; não pode ter textarea próprio de missão.
 
 ## Estrutura CSS
 
@@ -291,12 +288,12 @@ sequenceDiagram
 
 Desktop-first, dois breakpoints:
 
-- `max-width: 1180px` — Mission Input encolhe (230px, opacidade .78), Atomic Core encolhe (245px, opacidade .32).
-- `max-width: 820px` — sidebar vira barra horizontal (`position:static`, `flex-direction:row`, scroll horizontal, só ícones — `.vc-sidebar-foot` some). Mission Input vira bloco estático em fluxo normal (largura 100%). **Atomic Core vira `display:none` neste breakpoint** — decisão deliberada (2026-07-09): como o Mission Input tem altura variável entre colapsado/expandido nesse modo, qualquer offset fixo pro Atomic Core sobrepõe o texto real em algum estado; como o Atomic Core é puramente decorativo (`pointer-events:none`), recolher é mais seguro que tentar acertar um offset — a spec já permitia "reduzir ou recolher em telas menores".
+- `max-width: 1180px` — Atomic Core encolhe e permanece na área superior direita sem cobrir chat/composer.
+- `max-width: 820px` — sidebar vira barra horizontal (`position:static`, `flex-direction:row`, scroll horizontal, só ícones — `.vc-sidebar-foot` some). **Atomic Core vira `display:none` neste breakpoint** — decisão deliberada: o Atomic Core é puramente decorativo (`pointer-events:none`) e recolher em telas menores é mais seguro que arriscar sobrepor chat/composer.
 
 ## Acessibilidade
 
-`aria-label`, `aria-live="polite"` nos painéis dinâmicos (chat stream, listas de status), `aria-expanded` no toggle da sidebar e do Mission Input, `role="alert"` nos banners de erro/risco. Motion respeita `VCMotion` (ver seção Motion System) — não é gated pelo SO diretamente, mas o controle existe e é persistente.
+`aria-label`, `aria-live="polite"` nos painéis dinâmicos (chat stream, listas de status), `aria-expanded` no toggle da sidebar, `role="alert"` nos banners de erro/risco. Motion respeita `VCMotion` (ver seção Motion System) — não é gated pelo SO diretamente, mas o controle existe e é persistente.
 
 ---
 
@@ -340,8 +337,8 @@ Confirmado pelo usuário após auditoria de paridade (`docs/PARITY_AUDIT.md`): S
 4. Chat é o foco visual — ✅
 5. Atomic Core pequeno/discreto (~300×300px desktop, `display:none` em mobile) — ✅
 6. Sem botões Idle/Action/Glow visíveis — ✅ (nunca existiram como controles)
-7. Mission Input discreto, flutuante, colapsável — ✅
-8. Composer fixo embaixo (`position:sticky; bottom:18px`) — ✅
+7. Mission Input separado não existe no DOM — ✅
+8. Composer fixo embaixo (`position:sticky; bottom:18px`) e é a única entrada de missão — ✅
 9. Nenhuma chamada destrutiva sem confirmação dupla — ✅
 10. Sem dependência de backend novo — ✅ (só endpoints já existentes no EB)
 
