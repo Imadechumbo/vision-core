@@ -966,6 +966,19 @@ a { color: inherit; text-decoration: none; }
   pointer-events: none;
   opacity: .76;
   contain: layout;
+  transition: opacity .32s ease, transform .32s ease;
+}
+
+/* Fase 1.5: recolhe só no Modo Avançado do Software Factory (colisão real
+   confirmada por screenshot contra a zona reservada acima) — nunca via
+   display:none, pra manter a transição suave; vc-no-transition aplica o
+   estado final sem animação sob reduced-motion (window.VCMotion). */
+.vc-atomic-hud.is-collapsed {
+  opacity: 0;
+  transform: scale(.85);
+}
+.vc-atomic-hud.vc-no-transition {
+  transition: none;
 }
 
 .vc-atomic-rings,

@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ next-clean-60 (Tutorial Smile) + histórico público (about.html/landing.html "Trajetória Next") publicados via `bash bin/deploy-pages.sh` — ambos confirmados ao vivo por screenshot Playwright real (não só retorno do wrangler)
+✔ next-clean-60 (Tutorial Smile) + histórico público (about.html/landing.html "Trajetória Next") publicados via `bash bin/deploy-pages.sh` — ambos confirmados ao vivo por screenshot Playwright real (não só retorno do wrangler). `next-clean-61` (Atomic Core auto-collapse) preparado localmente, deploy pendente de aprovação.
 
 Cache Bust
-next-clean-60
+next-clean-61
 
 Último Commit
 
@@ -39,13 +39,11 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ Tutorial Smile revisado (autorrevisão cética de trabalho herdado do Codex), 70/70 PASS, deployado como `next-clean-60` e confirmado visualmente ao vivo (screenshot real do modal aberto em produção)
+✔ Atomic Core: confirmado por código (Fase 1) que hoje não recolhe em nenhum painel — só encolhe/some por breakpoint de tela. Confirmado por screenshot que só o Modo Avançado do Software Factory tem colisão real contra a zona reservada do widget (Timeline/Métricas/Security Lab não, em estado vazio). Implementado (Fase 1.5, aprovado pelo usuário): recolhe automaticamente só nesse painel, override reversível em Settings → Atomic Core (`window.VCAtomicCollapse`, mesmo padrão de `window.VCMotion`). `next-clean-61`, 72/72 PASS, deploy pendente de aprovação.
 
-✔ Regra de governança formalizada em `CLAUDE.md`: entregas do Next ganham seção própria "Trajetória Next" em `landing.html` (nunca misturadas na tabela V-number do legado) — commit `d2863326`
+Sessão anterior (concluída, sem pendência): Tutorial Smile (`next-clean-60`) + histórico público about.html/landing.html — ver `docs/CHANGELOG_NEXT.md`.
 
-✔ Histórico público atualizado por acréscimo: 7 cards novos em `about.html` (chat-first, mission input único, SF Auto-Pilot/Avançado, Atomic Core, métricas nativas, Tutorial Smile, postura fail-closed) + tabela nova "Trajetória Next" em `landing.html` — commit `1df4600a`. Nenhuma entrada existente foi tocada; zero mojibake introduzido (ambos os arquivos já eram UTF-8 limpo).
-
-Tarefa concluída nesta sessão, sem interrupção por limite de contexto — não há handoff parcial a retomar.
+Pendente entre sessões: Auth email/senha no Next — escopo confirmado (só email/senha, zero backend; UI em Settings), aguardando Etapa 1 (mapear contrato `/api/auth/*` contra o Settings atual) antes de codar.
 
 ---
 

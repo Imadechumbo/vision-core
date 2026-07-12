@@ -43,6 +43,40 @@
     onChange: onAnimationModeChange
   };
 
+  // ── Preferência de recolhimento automático do Atomic Core ──
+  // Fase 1.5 (confirmado pelo usuário): o Atomic Core recolhe sozinho só no
+  // Modo Avançado do Software Factory — único painel com colisão real
+  // confirmada visualmente contra a zona reservada do widget. Nunca trava:
+  // Settings → Atomic Core deixa sempre visível. Mesmo padrão getMode/
+  // setMode/onChange + localStorage do VCMotion, sem novo mecanismo.
+  var VC_ATOMIC_COLLAPSE_KEY = 'vc_atomic_collapse_pref'; // 'auto' | 'always'
+  var vcAtomicCollapseListeners = [];
+
+  function getAtomicCollapsePref() {
+    try {
+      var stored = window.localStorage.getItem(VC_ATOMIC_COLLAPSE_KEY);
+      if (stored === 'auto' || stored === 'always') return stored;
+    } catch (_) {}
+    return 'auto';
+  }
+
+  function setAtomicCollapsePref(pref) {
+    var next = pref === 'always' ? 'always' : 'auto';
+    try { window.localStorage.setItem(VC_ATOMIC_COLLAPSE_KEY, next); } catch (_) {}
+    vcAtomicCollapseListeners.forEach(function (cb) { try { cb(next); } catch (_) {} });
+    return next;
+  }
+
+  function onAtomicCollapsePrefChange(cb) {
+    if (typeof cb === 'function') vcAtomicCollapseListeners.push(cb);
+  }
+
+  window.VCAtomicCollapse = {
+    getPref: getAtomicCollapsePref,
+    setPref: setAtomicCollapsePref,
+    onChange: onAtomicCollapsePrefChange
+  };
+
   var appShell = document.querySelector('.vc-app-shell');
   var sidebarToggle = document.querySelector('[data-sidebar-toggle]');
   var composer = document.getElementById('vcComposer');
@@ -110,6 +144,14 @@
     });
     // Reflete mudanças feitas por outra aba/janela (mesmo localStorage) sem reload.
     onAnimationModeChange(function (mode) { animationReducedCheckbox.checked = mode === 'reduced'; });
+  }
+  var atomicAlwaysVisibleCheckbox = document.getElementById('vcAtomicAlwaysVisible');
+  if (atomicAlwaysVisibleCheckbox) {
+    atomicAlwaysVisibleCheckbox.checked = getAtomicCollapsePref() === 'always';
+    atomicAlwaysVisibleCheckbox.addEventListener('change', function () {
+      setAtomicCollapsePref(atomicAlwaysVisibleCheckbox.checked ? 'always' : 'auto');
+    });
+    onAtomicCollapsePrefChange(function (pref) { atomicAlwaysVisibleCheckbox.checked = pref === 'always'; });
   }
   var vaultRollback = document.getElementById('vcVaultRollback');
   var vaultSnapshotList = document.getElementById('vcVaultSnapshotList');
@@ -390,6 +432,7 @@
       if (sfSection) sfSection.hidden = true;
     }
     if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
+    updateAtomicCollapseState();
     if (announce) appendMessage('pending', feature.title.toUpperCase(), feature.text);
   }
 
@@ -2826,6 +2869,16 @@
     return setAtomicCoreState('idle');
   }
 
+  // Fase 1.5: recolhe só no Modo Avançado do Software Factory (activeFeature
+  // e sfMode são lidos no momento da chamada, não na declaração — hoisted
+  // function, mesmo padrão do resto do arquivo). getAtomicCollapsePref()
+  // !== 'always' é o override manual do usuário (Settings → Atomic Core).
+  function updateAtomicCollapseState() {
+    var shouldCollapse = activeFeature === 'factory' && sfMode === 'advanced' && getAtomicCollapsePref() !== 'always';
+    root.classList.toggle('vc-no-transition', reduceMotion);
+    root.classList.toggle('is-collapsed', shouldCollapse);
+  }
+
   // Propagação EXECUTING da spec Atomic Core: Hermes acende primeiro (recebe
   // a missão), depois os agentes seguintes em sequência enquanto a resposta
   // não chega. Loop contínuo (não para sozinho) - quem inicia o ciclo do
@@ -2866,7 +2919,11 @@
     reduceMotion = mode === 'reduced';
     startMotionLoop();
     render(performance.now() - startTime);
+    updateAtomicCollapseState();
   });
+
+  // Troca de preferência ao vivo (Settings → Atomic Core), sem reload.
+  onAtomicCollapsePrefChange(function () { updateAtomicCollapseState(); });
 
   // Dica de primeira visita (item 4, opcional): se o SO está com reduce
   // ativo e o usuário nunca escolheu um modo no VC, avisa uma vez só que o
@@ -3420,6 +3477,7 @@
     });
     if (sfAdvancedPanel) sfAdvancedPanel.hidden = sfMode !== 'advanced';
     if (sfMode === 'advanced') sfSuggestAdvanced(true);
+    updateAtomicCollapseState();
   }
 
   function getSelectedSfExtraSteps() {

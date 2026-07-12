@@ -4,6 +4,13 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-61 (2026-07-11)
+
+- Atomic Core recolhe automaticamente só no Modo Avancado do Software Factory (colisao real confirmada por screenshot contra a zona reservada do widget) — nunca em Auto-Pilot ou outra aba
+- Override manual em Settings -> Atomic Core ("Manter sempre visivel"), mesmo padrao getMode/setMode/onChange + localStorage do `window.VCMotion` (`window.VCAtomicCollapse`, chave `vc_atomic_collapse_pref`)
+- Transicao via opacity/scale (nunca display:none), instantanea sob reduced-motion (`window.VCMotion.isReduced()`)
+- 2 testes novos em `vision-core-next-atomic-core.spec.mjs` (72/72 PASS na suite permanente do Next)
+
 ## next-clean-60 (2026-07-11)
 
 - Tutorial Smile implementado no Vision Core Next como guia manual, sem autoabrir e sem importar overlay legado

@@ -72,7 +72,7 @@ Nunca inverter para um fluxo em que o usuario precise passar por `Mission -> Mar
 
 **GitHub = contexto.** Repo, branch, PR e status entram como contexto ou painel lateral, nunca como pagina principal que toma o lugar do chat.
 
-**Atomic Core = permanente, mas nao empurra o chat.** Ele deve permanecer visivel quando houver espaco, sem deslocar o Chat para baixo e sem competir com o composer.
+**Atomic Core = permanente, mas nao empurra o chat.** Ele deve permanecer visivel quando houver espaco, sem deslocar o Chat para baixo e sem competir com o composer. **Excecao unica confirmada por colisao real (next-clean-61):** recolhe (opacity/scale, nunca `display:none`) automaticamente so no Modo Avancado do Software Factory, onde o grid de stack/matriz/timeline disputa a mesma zona reservada do widget. Nenhum outro painel recolhe o Atomic Core. Preferencia reversivel em Settings -> Atomic Core ("manter sempre visivel"), mesmo padrao getMode/setMode/onChange + localStorage de `window.VCMotion` (`window.VCAtomicCollapse`, chave `vc_atomic_collapse_pref`, default `'auto'`) — nunca trava permanente.
 
 Layout oficial do fluxo:
 
