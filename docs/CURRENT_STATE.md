@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-⚠ `next-clean-65` é o que está ao vivo agora (`visioncoreai.pages.dev`); `next-clean-66` (ancoragem real do Atomic Core + Métricas/SF Avançado largura total + legibilidade dos 9 nós) está commitado localmente e **ainda não deployado** — aguardando autorização explícita do usuário.
+✔ `next-clean-66` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo: cache-bust real servido (`?v=next-clean-66` no CSS e no JS), gap de ancoragem do Atomic Core = 0px contra a borda real de `.vc-main`, Métricas em 1012px (era cap de 720px), SF Modo Avançado em 1044px (era cap de 940px) — tudo medido diretamente em produção.
 
 Cache Bust
-next-clean-66 (local, não deployado) / next-clean-65 (produção)
+next-clean-66
 
 Último Commit
 
@@ -39,7 +39,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ `next-clean-66` — Atomic Core ancorado de verdade no canto superior direito real (achava um vão vazio antes: `align-self:flex-end` já encostava na borda de `#vcChatScroll`, mas essa coluna vivia dentro de `.vc-chat-stage` capado em `min(940px,100%)` centralizado, que não chegava na borda real de `.vc-main` — fix: `.vc-chat-stage` virou `width:100%`, seguro porque hero/mensagens/card de status já têm seu próprio `max-width`). Métricas e SF Modo Avançado ganham o mesmo `--wide` do Dashboard (`.vc-metrics-panel` saiu do cap de 720px, `.vc-sf-stage` só larga no Modo Avançado). Legibilidade dos 9 nós: achado real de que o drift orbital contínuo sobrepunha legendas em ~11% dos instantes (só visível varrendo tempo virtual via `page.clock`, não num screenshot isolado) — `max-width` de `span`/`small` de 96px→76px, `.vc-agent` 110px→92px, `MAX_ANGLE_DRIFT` 12°→3° (raio inalterado). "Custo por Agente sem gráfico"/"Ranking cortado" confirmados como falso-positivo (ausência real de dado; conteúdo abaixo da dobra, resolvido pela rolagem nativa do `next-clean-65`). 4 testes novos, **96/96 PASS, commitado, NÃO deployado — aguardando autorização explícita**.
+✔ `next-clean-66` — Atomic Core ancorado de verdade no canto superior direito real (achava um vão vazio antes: `align-self:flex-end` já encostava na borda de `#vcChatScroll`, mas essa coluna vivia dentro de `.vc-chat-stage` capado em `min(940px,100%)` centralizado, que não chegava na borda real de `.vc-main` — fix: `.vc-chat-stage` virou `width:100%`, seguro porque hero/mensagens/card de status já têm seu próprio `max-width`). Métricas e SF Modo Avançado ganham o mesmo `--wide` do Dashboard (`.vc-metrics-panel` saiu do cap de 720px, `.vc-sf-stage` só larga no Modo Avançado). Legibilidade dos 9 nós: achado real de que o drift orbital contínuo sobrepunha legendas em ~11% dos instantes (só visível varrendo tempo virtual via `page.clock`, não num screenshot isolado) — `max-width` de `span`/`small` de 96px→76px, `.vc-agent` 110px→92px, `MAX_ANGLE_DRIFT` 12°→3° (raio inalterado). "Custo por Agente sem gráfico"/"Ranking cortado" confirmados como falso-positivo (ausência real de dado; conteúdo abaixo da dobra, resolvido pela rolagem nativa do `next-clean-65`). 4 testes novos, **96/96 PASS, deployado e confirmado ao vivo em produção**.
 
 ✔ `next-clean-65` — remoção da rolagem interna duplicada (`#vcChatScroll` tinha `overflow-y:auto` próprio, gerava segunda barra de rolagem); regra dura #12 preservada via `ResizeObserver` no composer. 92/92 PASS, **deployado e confirmado ao vivo em produção**.
 
@@ -47,7 +47,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
 
-Todos os itens até `next-clean-65` estão deployados e confirmados ao vivo; `next-clean-66` está commitado e testado, mas aguarda autorização explícita para deploy. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
+Todos os itens até `next-clean-66` estão deployados e confirmados ao vivo. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
 
 ---
 
