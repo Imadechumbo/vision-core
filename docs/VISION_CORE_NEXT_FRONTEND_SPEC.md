@@ -72,7 +72,7 @@ Nunca inverter para um fluxo em que o usuario precise passar por `Mission -> Mar
 
 **GitHub = contexto.** Repo, branch, PR e status entram como contexto ou painel lateral, nunca como pagina principal que toma o lugar do chat.
 
-**Atomic Core = permanente, mas nao empurra o chat.** Ele deve permanecer visivel quando houver espaco, sem deslocar o Chat para baixo e sem competir com o composer.
+**Atomic Core = permanente, mas nao empurra o chat.** Ele deve permanecer visivel quando houver espaco, sem deslocar o Chat para baixo e sem competir com o composer. **Excecao unica confirmada por colisao real (next-clean-61):** recolhe (opacity/scale, nunca `display:none`) automaticamente so no Modo Avancado do Software Factory, onde o grid de stack/matriz/timeline disputa a mesma zona reservada do widget. Nenhum outro painel recolhe o Atomic Core. Preferencia reversivel em Settings -> Atomic Core ("manter sempre visivel"), mesmo padrao getMode/setMode/onChange + localStorage de `window.VCMotion` (`window.VCAtomicCollapse`, chave `vc_atomic_collapse_pref`, default `'auto'`) — nunca trava permanente.
 
 Layout oficial do fluxo:
 
@@ -193,6 +193,7 @@ Cores de estado semântico fora das variáveis raiz (por convenção do arquivo,
 | Software Factory Next (`#factory`, Auto-Pilot + Modo Avançado) | EXISTENTE — Arquiteto visual local, catálogo/grafo de stack, matriz de agentes, timeline e preview |
 | Mission History (Timeline) | EXISTENTE |
 | Settings / AI Provider Vault | EXISTENTE |
+| Settings / Conta (email/senha) | EXISTENTE — registro, login, logout; OAuth Google/GitHub NÃO incluído |
 | Logo/olho (piscada) | EXISTENTE — protegido |
 
 ---
@@ -216,6 +217,14 @@ Painéis de dados (Métricas, Security Lab) **não têm animação de entrada pr
 ## Estrutura HTML
 
 Um único `<div class="vc-app-shell" data-sidebar-state="expanded|collapsed">` com dois filhos: `<aside class="vc-sidebar">` (nav com `data-feature="chat|missions|factory|timeline|agents|github|vault|metrics|tools|security|obsidian|settings"`) e `<main class="vc-main">` contendo header, `<section class="vc-chat-stage">` (intro + `#vcChatStream` + `#vcFeaturePanel` com todos os sub-painéis condicionais dentro, cada um `hidden` por padrão) e `<form class="vc-composer">` fora do chat-stage. O Software Factory deve coexistir como contexto/painel operacional da conversa e ler a missão do composer/chat principal; não pode ter textarea próprio de missão. O Modo Avançado adiciona apenas painéis visuais/editáveis (`#vcSfAdvancedPanel`) de interpretação, stack, agentes, timeline e preview.
+
+### Tutorial Smile
+
+`#vcSmileModal` e o unico overlay/modal do Vision Core Next. Ele abre somente por clique em `[data-smile-open]`, usa X/ESC/Voltar/Proximo, renderiza passos estaticos via `textContent`, nao grava localStorage, nao chama backend e nao cria textarea/campo paralelo de missao. A entrada de missao continua exclusivamente no composer/chat principal.
+
+### Conta (email/senha)
+
+Painel dentro de Settings (`#vcAccountForm`/`#vcAccountLogged`), zero endpoint novo: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout` ja existiam em `backend/server.js`. Token vai em `localStorage['vision_token']` — o mesmo nome que `apiRequest()` ja lia antes de existir qualquer UI de login, e o mesmo que `Authorization: Bearer` anexa em toda chamada. O cookie `vision_session` que o backend tambem seta e ignorado de proposito (origem diferente do Worker Gateway, `SameSite=Lax`, nao confiavel via fetch cross-site). OAuth Google/GitHub **nao esta incluido**: o callback (`/api/auth/oauth/*/callback`) redireciona pro `FRONTEND_URL` raiz (legado), nao pro Next — exige mudanca de backend fora do escopo desta frente sem autorizacao explicita.
 
 ## Estrutura CSS
 
@@ -356,7 +365,7 @@ Confirmado pelo usuário após auditoria de paridade (`docs/PARITY_AUDIT.md`): S
 - `frontend/atomic-core.html` + assets paralelos: candidatos a limpeza/remoção formal (decisão do usuário, não urgente).
 - `/api/metrics/summary` e `/api/metrics/memory` (runtime CPU/memória, memory layer) não conectados na aba Métricas — fora do escopo pedido nas sessões até aqui.
 - ~~`project-files` + `generate-zip` (Software Factory Next)~~ **CORRIGIDO (2026-07-10)** — ver `SOFTWARE_FACTORY_SPEC.md`.
-- Auth/registro/login/OAuth no Next — não iniciado, item mais sensível do roadmap (mexe com sessão real de qualquer usuário).
+- ~~Auth email/senha no Next~~ **IMPLEMENTADO (2026-07-11, `next-clean-62`)** — registro/login/logout em Settings → Conta. OAuth Google/GitHub segue não iniciado: o callback do backend hoje redireciona pro legado, não pro Next — exige mudança de backend (fora do escopo desta frente sem autorização explícita), item mais sensível do roadmap por mexer com sessão real de qualquer usuário.
 
 ## Próximos passos
 

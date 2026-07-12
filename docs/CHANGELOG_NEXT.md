@@ -4,6 +4,27 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-62 (2026-07-11)
+
+- Auth email/senha no Next: Settings -> Conta com registro/login/logout, escopo confirmado (zero endpoint novo — `apiRequest()` ja anexa `Authorization: Bearer` a partir de `localStorage['vision_token']`)
+- OAuth Google/GitHub NAO incluido — o callback do backend hoje redireciona pro legado, nao pro Next; fica registrado como etapa futura condicionada a mudanca de backend
+- Achado corrigido no caminho: `.vc-settings-form`/`.vc-settings-field-actions` tinham `display:flex` puro sem `:not([hidden])` — bug real da regra dura ja documentada (CSS de autor vencia o atributo `hidden`), so nao tinha aparecido ainda porque nenhum elemento com essas classes usava `hidden` condicional antes do painel de Conta
+- 7 testes novos em `vision-core-next-account.spec.mjs` (79/79 PASS na suite permanente do Next)
+
+## next-clean-61 (2026-07-11)
+
+- Atomic Core recolhe automaticamente só no Modo Avancado do Software Factory (colisao real confirmada por screenshot contra a zona reservada do widget) — nunca em Auto-Pilot ou outra aba
+- Override manual em Settings -> Atomic Core ("Manter sempre visivel"), mesmo padrao getMode/setMode/onChange + localStorage do `window.VCMotion` (`window.VCAtomicCollapse`, chave `vc_atomic_collapse_pref`)
+- Transicao via opacity/scale (nunca display:none), instantanea sob reduced-motion (`window.VCMotion.isReduced()`)
+- 2 testes novos em `vision-core-next-atomic-core.spec.mjs` (72/72 PASS na suite permanente do Next)
+
+## next-clean-60 (2026-07-11)
+
+- Tutorial Smile implementado no Vision Core Next como guia manual, sem autoabrir e sem importar overlay legado
+- Novo item `Smile` no menu lateral colapsavel; modal acessivel com X/ESC/Voltar/Proximo e assets oficiais do mascote
+- Composer continua sendo a unica entrada de missao; nenhum localStorage novo e nenhum endpoint novo
+- Teste permanente em `vision-core-next-app-shell.spec.mjs`
+
 ---
 
 ## Governança Next (2026-07-11)

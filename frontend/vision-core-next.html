@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-59">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-59" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-62">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-62" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -36,6 +36,7 @@
         <a href="#security" data-feature="security"><i aria-hidden="true">L</i><span>Security Lab</span></a>
         <a href="#obsidian" data-feature="obsidian"><i aria-hidden="true">O</i><span>Obsidian</span></a>
         <a href="#settings" data-feature="settings"><i aria-hidden="true">S</i><span>Settings</span></a>
+        <button class="vc-nav-help" type="button" data-smile-open aria-haspopup="dialog"><i aria-hidden="true">?</i><span>Smile</span></button>
       </nav>
 
       <div class="vc-sidebar-foot">
@@ -240,6 +241,34 @@
                 <input type="checkbox" id="vcAnimationReduced">
                 Reduzir animações (mantém sinal visual de estado, sem movimento)
               </label>
+            </div>
+            <div class="vc-settings-motion">
+              <h5>Atomic Core</h5>
+              <p class="vc-settings-motion-copy">O Atomic Core recolhe sozinho no Modo Avançado do Software Factory pra não competir por espaço com o catálogo de stack. Mantenha sempre visível aqui se preferir ver os dois juntos.</p>
+              <label class="vc-settings-motion-toggle">
+                <input type="checkbox" id="vcAtomicAlwaysVisible">
+                Manter Atomic Core sempre visível (não recolher no Modo Avançado)
+              </label>
+            </div>
+            <div class="vc-settings-motion">
+              <h5>Conta</h5>
+              <p class="vc-settings-motion-copy" id="vcAccountCopy">Entre ou crie uma conta com email e senha. Google/GitHub ficam para uma etapa futura.</p>
+              <div class="vc-settings-form" id="vcAccountForm">
+                <label>Email
+                  <input type="email" id="vcAccountEmail" autocomplete="email">
+                </label>
+                <label>Senha
+                  <input type="password" id="vcAccountPassword" autocomplete="current-password">
+                </label>
+                <div class="vc-settings-field-actions">
+                  <button type="button" id="vcAccountLoginBtn">Entrar</button>
+                  <button type="button" id="vcAccountRegisterBtn">Criar conta</button>
+                </div>
+                <p class="vc-settings-status" id="vcAccountStatus" aria-live="polite"></p>
+              </div>
+              <div class="vc-settings-field-actions" id="vcAccountLogged" hidden>
+                <button type="button" id="vcAccountLogoutBtn">Sair</button>
+              </div>
             </div>
           </div>
 
@@ -471,6 +500,21 @@
       </section>
 
     </main>
+
+    <section class="vc-smile-modal" id="vcSmileModal" role="dialog" aria-modal="true" aria-labelledby="vcSmileTitle" aria-describedby="vcSmileBody" hidden>
+      <div class="vc-smile-card">
+        <button class="vc-smile-close" type="button" id="vcSmileClose" aria-label="Fechar Smile">X</button>
+        <img class="vc-smile-avatar" id="vcSmileAvatar" src="assets/mascote-reading-final.png" alt="">
+        <p class="vc-kicker">SMILE GUIDE</p>
+        <h2 id="vcSmileTitle">Comece pelo chat</h2>
+        <p id="vcSmileBody">Escreva a missao no composer principal. O Vision Core usa a mesma mensagem para chat, Missions e Software Factory.</p>
+        <div class="vc-smile-steps" id="vcSmileSteps" aria-label="Progresso do tutorial Smile"></div>
+        <div class="vc-smile-actions">
+          <button type="button" id="vcSmilePrev">Voltar</button>
+          <button type="button" id="vcSmileNext">Proximo</button>
+        </div>
+      </div>
+    </section>
 
     <section class="vc-atomic-hud" data-atomic-core data-state="idle" data-glow="on" aria-label="Atomic Core Vision Core">
       <svg class="vc-atomic-rings" viewBox="0 0 360 360" aria-hidden="true">

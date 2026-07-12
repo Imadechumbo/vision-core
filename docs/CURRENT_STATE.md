@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ next-clean-59 publicada e verificada ao vivo
+✔ next-clean-62 publicado via `bash bin/deploy-pages.sh` (bundle: next-clean-60 Tutorial Smile + next-clean-61 Atomic Core auto-collapse + next-clean-62 Auth email/senha), confirmado ao vivo por screenshot Playwright real contra produção: (1) Atomic Core recolhe no Modo Avançado do SF e reaparece ao voltar pro Auto-Pilot; (2) registro+logout+login rodados contra o backend real (não mockado) com conta de teste `qa-nextclean62-<timestamp>@example.com` — `POST /api/auth/register`, `/logout`, `/login` todos 200. Único 401 observado foi em `/api/providers/list` (AI Provider Vault, pré-existente, sem relação com esta entrega).
 
 Cache Bust
-next-clean-59
+next-clean-62
 
 Último Commit
 
@@ -33,32 +33,28 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Último Deploy
 
-4a28c390 (preview) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-59`
+9e967882 (preview) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-62`
 
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ Gráficos nativos completos: Agentes, DORA, Runtime, Memory, Conectividade, Software Factory, Security Lab
+✔ Atomic Core: confirmado por código (Fase 1) que hoje não recolhe em nenhum painel — só encolhe/some por breakpoint de tela. Confirmado por screenshot que só o Modo Avançado do Software Factory tem colisão real contra a zona reservada do widget (Timeline/Métricas/Security Lab não, em estado vazio). Implementado (Fase 1.5, aprovado pelo usuário): recolhe automaticamente só nesse painel, override reversível em Settings → Atomic Core (`window.VCAtomicCollapse`, mesmo padrão de `window.VCMotion`). `next-clean-61`, 72/72 PASS, **deployado e confirmado ao vivo**.
 
-✔ Toggle "Ver JSON bruto" reutilizável fora da aba Métricas (Agentes/Tools/Security-history)
+✔ Auth email/senha no Next: Settings → Conta (registro/login/logout), escopo confirmado pelo usuário (só email/senha, zero endpoint novo — `apiRequest()` já anexava `Authorization: Bearer` de `localStorage['vision_token']` antes de existir qualquer UI). OAuth Google/GitHub NÃO incluído — callback do backend redireciona pro legado, não pro Next; fica registrado como próxima etapa condicionada a mudança de backend. Achado corrigido no caminho: `.vc-settings-form`/`.vc-settings-field-actions` tinham `display:flex` sem `:not([hidden])` (bug real da regra dura já documentada, só não tinha aparecido porque nada usava `hidden` condicional nessas classes antes). `next-clean-62`, 79/79 PASS, **deployado e confirmado ao vivo contra o backend real** (register+logout+login, não mockado).
 
-✔ Bug de produção corrigido: composer sobrepondo `#vcFeaturePanel` (nova área de rolagem isolada `.vc-chat-scroll`)
+Sessão anterior (concluída, sem pendência): Tutorial Smile (`next-clean-60`) + histórico público about.html/landing.html — ver `docs/CHANGELOG_NEXT.md`.
 
-✔ Deploy `next-clean-59` confirmado ao vivo contra produção real (sem mock)
-
-✔ Documentação reestruturada — `CURRENT_STATE.md` compacto, `CHANGELOG_NEXT.md` novo, `docs/session_logs/` novo
+Pendência real restante: merge desta branch (`codex/next-chief-architect-governance`) para `main` — fora de escopo até autorização explícita (deploy de estático via CF Pages não exige merge, já foi feito direto da branch).
 
 ---
 
 # PENDÊNCIAS REAIS
 
-- Auth/registro/login/OAuth no Vision Core Next (não iniciado — login ainda depende do frontend legado)
+- OAuth Google/GitHub no Vision Core Next (email/senha já implementado, `next-clean-62`) — bloqueado por mudança de backend (callback hoje redireciona pro legado, não pro Next); login/registro seguem também disponíveis no frontend legado em paralelo
 - AI Provider Vault Fase D(b) — conectar `sf-agent-orchestrator.mjs` ao vault (decisão de arquitetura em aberto)
 - SF-Agent-Orchestrator Fase 2 — bloqueado por cota de API, smoke test real incompleto
 - Settings do Atomic Core — ligado/desligado, glow on/off, intensidade visual (só "reduzir movimento" está implementado)
-- Tutorial Smile (Etapa 4, não iniciado)
-- Páginas públicas `about.html`/`landing.html` — atualização pendente de validação local
 - `vc-secret-guard` Fase 2 (hooks locais) — precisa nova aprovação explícita do usuário
 - `vc-secret-guard verify-cloud` — comando Rust read-only para auditar metadados de env vars do EB, testes locais Rust passam, mas a verificação viva do EB está bloqueada por falha TLS/trust store local da AWS CLI. Não usar `--no-verify-ssl`; corrigir TLS primeiro e rerodar.
 - INCIDENTE-3 (credencial de fallback legada) — guard de `/api/auth/login` já confirmado ao vivo em produção (EB `v109`, `400 fallback_credential_rejected`); guard de `/api/auth/register` confirmado só no artefato/regressão local (revalidação ao vivo ficou pendente por rate-limit durante o teste). Runbook `tools/incident-3-legacy-account-scan.mjs --invalidate` para contas legadas já existentes em produção é ação pendente do usuário (ver `docs/DECISIONS.md` DECISION-007)
@@ -67,7 +63,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # PRÓXIMA PRIORIDADE
 
-Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contra a implementação oficial (`frontend/vision-core-next.html` + `assets/vision-core-next-clean.*`) e escolher o maior ganho arquitetural/UX ainda pendente. O candidato mais sensível continua sendo Auth/registro/login/OAuth no Next, mas só deve começar com alinhamento explícito por mexer com sessão real.
+Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contra a implementação oficial (`frontend/vision-core-next.html` + `assets/vision-core-next-clean.*`) e escolher o maior ganho arquitetural/UX ainda pendente. O candidato mais sensível que resta é OAuth Google/GitHub no Next (email/senha já fechado) — exige mudança de backend no callback e alinhamento explícito por mexer com sessão real.
 
 ---
 

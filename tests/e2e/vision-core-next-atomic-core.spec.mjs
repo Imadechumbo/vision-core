@@ -197,3 +197,61 @@ for (const viewport of [
     expect(result.failures).toEqual([]);
   });
 }
+
+// Fase 1.5 (confirmado pelo usuário 2026-07-11): o Atomic Core recolhe
+// sozinho só no Modo Avançado do Software Factory — único painel com
+// colisão real confirmada por screenshot contra a zona reservada do widget.
+// Nunca display:none (mataria a transição); is-collapsed via opacity/scale.
+test('collapses only in Software Factory Modo Avancado, never in Auto-Pilot or other tabs', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
+  await page.goto(NEXT_URL());
+  const hud = page.locator('[data-atomic-core]');
+
+  await expect(hud).not.toHaveClass(/is-collapsed/);
+
+  await page.locator('a[data-feature="factory"]').click();
+  await expect(hud, 'Auto-Pilot (default SF mode) must not collapse the widget').not.toHaveClass(/is-collapsed/);
+
+  await page.locator('[data-sf-mode="advanced"]').click();
+  await expect(hud, 'Modo Avancado must collapse the widget').toHaveClass(/is-collapsed/);
+
+  await page.locator('[data-sf-mode="auto"]').click();
+  await expect(hud, 'switching back to Auto-Pilot must restore the widget').not.toHaveClass(/is-collapsed/);
+
+  await page.locator('[data-sf-mode="advanced"]').click();
+  await expect(hud).toHaveClass(/is-collapsed/);
+  await page.locator('a[data-feature="chat"]').click();
+  await expect(hud, 'leaving Software Factory entirely must restore the widget').not.toHaveClass(/is-collapsed/);
+});
+
+test('Settings override "always visible" prevents the auto-collapse, live and persisted (window.VCAtomicCollapse)', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
+  await page.goto(NEXT_URL());
+  const hud = page.locator('[data-atomic-core]');
+
+  await page.evaluate(() => {
+    var el = document.getElementById('vcAtomicAlwaysVisible');
+    el.checked = true;
+    el.dispatchEvent(new Event('change'));
+  });
+  expect(await page.evaluate(() => window.VCAtomicCollapse.getPref())).toBe('always');
+
+  await page.locator('a[data-feature="factory"]').click();
+  await page.locator('[data-sf-mode="advanced"]').click();
+  await expect(hud, 'user override must prevent collapse even in Modo Avancado').not.toHaveClass(/is-collapsed/);
+
+  // Persists across reload — checkbox reflects it, still no collapse.
+  await page.reload();
+  await page.locator('a[data-feature="factory"]').click();
+  await page.locator('[data-sf-mode="advanced"]').click();
+  await expect(page.locator('#vcAtomicAlwaysVisible')).toBeChecked();
+  await expect(hud).not.toHaveClass(/is-collapsed/);
+
+  // Turning it back off restores auto-collapse immediately, no reload.
+  await page.evaluate(() => {
+    var el = document.getElementById('vcAtomicAlwaysVisible');
+    el.checked = false;
+    el.dispatchEvent(new Event('change'));
+  });
+  await expect(hud, 'unchecking override must re-apply auto-collapse immediately').toHaveClass(/is-collapsed/);
+});

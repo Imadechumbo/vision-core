@@ -759,6 +759,48 @@
           <div style="font-size:11px;color:#64748b">— protótipo interno (sf-agent-orchestrator.mjs), 72/72 testes automatizados (hooks + evidência), escrita real de arquivo: BLOQUEADA, não integrado a produção</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">💬</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O Vision Core Next parte de um princípio que o legado nunca teve como regra dura: o Chat não pode ser deslocado da primeira posição cognitiva da interface. Nenhuma feature nova — Software Factory, Vault, Métricas, GitHub — pode empurrar a conversa pra baixo ou virar uma página separada que o usuário precise 'voltar' pra sair. Todo componente novo entra como contexto, drawer, painel lateral, widget ou modal — nunca como desvio do fluxo principal de conversa."</div>
+          <div style="font-size:11px;color:#64748b">— Next, Core Interaction Principle, commit 686bd2c4, VISION_CORE_NEXT_FRONTEND_SPEC.md, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🧭</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O legado tinha campos de missão espalhados por páginas diferentes, cada um com seu próprio estado. No Next existe só um: o composer principal. <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>readComposerMissionText()</code> é a única função que lê a missão do usuário, e tanto o chat quanto o Software Factory (Auto-Pilot e Modo Avançado) chamam essa mesma função — nunca um segundo campo paralelo. O painel de Mission Input flutuante que ainda existia numa versão anterior do Next foi removido: era a última fonte paralela, e sua remoção fechou o Core Interaction Principle de vez."</div>
+          <div style="font-size:11px;color:#64748b">— Next, next-clean-54, tests/e2e/vision-core-next-app-shell.spec.mjs, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🛠️</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"No legado, o Software Factory era uma página separada (<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>#projectBuilder</code>) com fluxo próprio. No Next, ele é um modo operacional da própria conversa: o usuário liga 'Factory', descreve o objetivo no composer, e o Arquiteto local determinístico sugere stack, monta um grafo editável, matriz de agentes, timeline e preview — tudo local, sem nenhum endpoint novo. O Modo Avançado deixa o usuário aceitar, rejeitar ou editar cada sugestão manualmente antes de qualquer geração."</div>
+          <div style="font-size:11px;color:#64748b">— Next, next-clean-51/55, tests/e2e/vision-core-next-sf.spec.mjs, 14/14 PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">⚛️</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O Atomic Core não é uma animação decorativa presa num timer — <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>startAtomicSequence()</code> só é chamado a partir de eventos reais: submit do chat, ações do Software Factory, abertura de PR no GitHub. Sem ação real, o núcleo fica em idle. Dois bugs de produção reais encontrados e corrigidos nesse caminho: o núcleo congelava sob <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>reduced-motion</code> (a animação é identidade de marca, não decoração do SO — decisão registrada) e os agentes orbitais estavam sendo cortados por um <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>contain:layout paint</code> que nunca deveria ter recortado esse elemento."</div>
+          <div style="font-size:11px;color:#64748b">— Next, v47/v48, tests/e2e/vision-core-next-atomic-core.spec.mjs, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">📈</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O painel de Métricas do Next conecta 4 endpoints reais (<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/metrics/agents</code>, <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/metrics/summary</code>, <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/metrics/memory</code>, <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/dora-metrics</code>) e renderiza cada um como gráfico — barra, donut, gauge, sparkline ou timeline — com um módulo próprio em SVG/CSS puro, sem biblioteca externa. Antes, toda métrica estruturada virava um dump de JSON cru no chat. Um bug real apareceu no caminho: o composer <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>sticky</code> sobrepunha o gráfico recém-renderizado — corrigido isolando a rolagem do stream+painel numa área própria (<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>.vc-chat-scroll</code>) e chamando <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>scrollIntoView</code> depois de cada render."</div>
+          <div style="font-size:11px;color:#64748b">— Next, next-clean-57/58/59, tests/e2e/vision-core-next-metrics.spec.mjs, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">😊</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O Next não reaproveitou o overlay de tutorial do legado (<code style='background:#1e293b;padding:1px 5px;border-radius:3px'>#vcTutorialOverlay</code>, com suas chaves <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>vc_tutorial_*</code> de localStorage) — construiu um guia manual próprio do zero: <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>#vcSmileModal</code>, o único modal de toda a interface Next, aberto só por clique explícito, nunca sozinho. X, ESC, Voltar e Próximo cobrem toda a navegação; nenhum passo grava localStorage, chama backend, ou cria um segundo campo de missão paralelo ao composer."</div>
+          <div style="font-size:11px;color:#64748b">— Next, next-clean-60, tests/e2e/vision-core-next-app-shell.spec.mjs, PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔐</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Toda ação irreversível no Next segue o mesmo padrão: formulário validado, segundo clique de confirmação explícita ('Confirmar'/'Cancelar'), botão desabilitado durante a requisição — vale pra PR do GitHub, Vault Rollback, Apply-Fix e Dry-Run real. O caso mais rígido é o Agent Apply: o botão nunca chama <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/agent/mission/queue</code>, mesmo com JSON válido, <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>agent_id</code>, <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>agent_secret</code> e a frase de confirmação exata digitada certinha — <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>AGENT_APPLY_ENABLED=false</code> hardcoded, fail-closed por design, até existir pareamento real por agente/projeto/owner."</div>
+          <div style="font-size:11px;color:#64748b">— Next, VISION_CORE_NEXT_FRONTEND_SPEC.md "Bloqueio de segurança", tests/e2e/vision-core-next-agent-apply.spec.mjs, 4/4 PASS</div>
+        </div>
+
       </div>
 
     </div>

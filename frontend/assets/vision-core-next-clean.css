@@ -130,22 +130,27 @@ a { color: inherit; text-decoration: none; }
   gap: 5px;
 }
 
-.vc-nav a {
+.vc-nav a,
+.vc-nav-help {
   position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
   min-height: 38px;
   padding: 0 10px;
   border: 1px solid transparent;
   border-radius: var(--radius);
   color: #bdb5ca;
+  background: transparent;
   font-size: 13px;
   font-weight: 650;
+  text-align: left;
   white-space: nowrap;
 }
 
-.vc-nav i {
+.vc-nav i,
+.vc-nav-help i {
   flex: 0 0 auto;
   width: 24px;
   height: 24px;
@@ -161,7 +166,8 @@ a { color: inherit; text-decoration: none; }
 }
 
 .vc-nav a:hover,
-.vc-nav a.is-active {
+.vc-nav a.is-active,
+.vc-nav-help:hover {
   color: #fff;
   background: rgba(168, 85, 247, .11);
   border-color: rgba(216, 180, 254, .15);
@@ -195,7 +201,8 @@ a { color: inherit; text-decoration: none; }
 .vc-app-shell[data-sidebar-state="collapsed"] .vc-sidebar { align-items: center; padding-inline: 12px; }
 .vc-app-shell[data-sidebar-state="collapsed"] .vc-side-top { flex-direction: column; }
 .vc-app-shell[data-sidebar-state="collapsed"] .vc-sidebar-toggle span { transform: rotate(180deg); }
-.vc-app-shell[data-sidebar-state="collapsed"] .vc-nav a { justify-content: center; padding-inline: 8px; }
+.vc-app-shell[data-sidebar-state="collapsed"] .vc-nav a,
+.vc-app-shell[data-sidebar-state="collapsed"] .vc-nav-help { justify-content: center; padding-inline: 8px; }
 
 .vc-main {
   min-width: 0;
@@ -959,6 +966,19 @@ a { color: inherit; text-decoration: none; }
   pointer-events: none;
   opacity: .76;
   contain: layout;
+  transition: opacity .32s ease, transform .32s ease;
+}
+
+/* Fase 1.5: recolhe só no Modo Avançado do Software Factory (colisão real
+   confirmada por screenshot contra a zona reservada acima) — nunca via
+   display:none, pra manter a transição suave; vc-no-transition aplica o
+   estado final sem animação sob reduced-motion (window.VCMotion). */
+.vc-atomic-hud.is-collapsed {
+  opacity: 0;
+  transform: scale(.85);
+}
+.vc-atomic-hud.vc-no-transition {
+  transition: none;
 }
 
 .vc-atomic-rings,
@@ -1030,6 +1050,86 @@ a { color: inherit; text-decoration: none; }
 .vc-agent[data-agent="github"] { --agent-color: #38bdf8; }
 .vc-agent.is-highlighted i { box-shadow: 0 0 0 1px color-mix(in srgb, var(--agent-color) 70%, transparent), 0 0 24px color-mix(in srgb, var(--agent-color) 70%, transparent); }
 .vc-atomic-hud[data-state="action"] .vc-atomic-ring { stroke-opacity: .62; }
+
+.vc-smile-modal:not([hidden]) {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(3, 2, 7, .72);
+  backdrop-filter: blur(10px);
+}
+
+.vc-smile-card {
+  position: relative;
+  width: min(430px, 100%);
+  padding: 22px;
+  border: 1px solid rgba(216, 180, 254, .18);
+  border-radius: 8px;
+  background: rgba(10, 8, 18, .96);
+  box-shadow: 0 24px 90px rgba(0, 0, 0, .46);
+}
+
+.vc-smile-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 50%;
+  color: #f8f7ff;
+  background: rgba(255, 255, 255, .05);
+}
+
+.vc-smile-avatar {
+  width: 74px;
+  height: 74px;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.vc-smile-card h2 { margin: 4px 0 8px; font-size: 24px; }
+.vc-smile-card p { margin: 0; color: #cbc3d8; line-height: 1.55; }
+
+.vc-smile-steps {
+  display: flex;
+  gap: 6px;
+  margin-top: 18px;
+}
+
+.vc-smile-steps span {
+  width: 26px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .16);
+}
+
+.vc-smile-steps span.is-active { background: var(--violet-2); }
+
+.vc-smile-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.vc-smile-actions button {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(216, 180, 254, .16);
+  border-radius: 8px;
+  color: #f8f7ff;
+  background: rgba(168, 85, 247, .13);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.vc-smile-actions button:hover:not(:disabled),
+.vc-smile-close:hover { background: rgba(168, 85, 247, .2); }
+.vc-smile-actions button:disabled { opacity: .45; cursor: not-allowed; }
 
 @media (max-width: 1180px) {
   .vc-main { padding-right: clamp(24px, 5vw, 72px); }
@@ -1748,7 +1848,7 @@ a { color: inherit; text-decoration: none; }
 }
 .vc-settings h4 { margin: 0 0 4px; font-size: 16px; color: var(--text); }
 .vc-settings h5 { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
-.vc-settings-form {
+.vc-settings-form:not([hidden]) {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1770,7 +1870,7 @@ a { color: inherit; text-decoration: none; }
   color: var(--text);
   font-size: 13px;
 }
-.vc-settings-field-actions {
+.vc-settings-field-actions:not([hidden]) {
   display: flex;
   gap: 8px;
   margin-top: 4px;

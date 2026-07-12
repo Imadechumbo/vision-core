@@ -43,10 +43,53 @@
     onChange: onAnimationModeChange
   };
 
+  // ── Preferência de recolhimento automático do Atomic Core ──
+  // Fase 1.5 (confirmado pelo usuário): o Atomic Core recolhe sozinho só no
+  // Modo Avançado do Software Factory — único painel com colisão real
+  // confirmada visualmente contra a zona reservada do widget. Nunca trava:
+  // Settings → Atomic Core deixa sempre visível. Mesmo padrão getMode/
+  // setMode/onChange + localStorage do VCMotion, sem novo mecanismo.
+  var VC_ATOMIC_COLLAPSE_KEY = 'vc_atomic_collapse_pref'; // 'auto' | 'always'
+  var vcAtomicCollapseListeners = [];
+
+  function getAtomicCollapsePref() {
+    try {
+      var stored = window.localStorage.getItem(VC_ATOMIC_COLLAPSE_KEY);
+      if (stored === 'auto' || stored === 'always') return stored;
+    } catch (_) {}
+    return 'auto';
+  }
+
+  function setAtomicCollapsePref(pref) {
+    var next = pref === 'always' ? 'always' : 'auto';
+    try { window.localStorage.setItem(VC_ATOMIC_COLLAPSE_KEY, next); } catch (_) {}
+    vcAtomicCollapseListeners.forEach(function (cb) { try { cb(next); } catch (_) {} });
+    return next;
+  }
+
+  function onAtomicCollapsePrefChange(cb) {
+    if (typeof cb === 'function') vcAtomicCollapseListeners.push(cb);
+  }
+
+  window.VCAtomicCollapse = {
+    getPref: getAtomicCollapsePref,
+    setPref: setAtomicCollapsePref,
+    onChange: onAtomicCollapsePrefChange
+  };
+
   var appShell = document.querySelector('.vc-app-shell');
   var sidebarToggle = document.querySelector('[data-sidebar-toggle]');
   var composer = document.getElementById('vcComposer');
   var prompt = document.getElementById('vcPrompt');
+  var smileOpen = document.querySelector('[data-smile-open]');
+  var smileModal = document.getElementById('vcSmileModal');
+  var smileClose = document.getElementById('vcSmileClose');
+  var smileTitle = document.getElementById('vcSmileTitle');
+  var smileBody = document.getElementById('vcSmileBody');
+  var smileAvatar = document.getElementById('vcSmileAvatar');
+  var smileSteps = document.getElementById('vcSmileSteps');
+  var smilePrev = document.getElementById('vcSmilePrev');
+  var smileNext = document.getElementById('vcSmileNext');
   var stream = document.getElementById('vcChatStream');
   var featurePanel = document.getElementById('vcFeaturePanel');
   var featureTitle = document.getElementById('vcFeatureTitle');
@@ -93,6 +136,15 @@
   var settingsDeleteBtn = document.getElementById('vcSettingsDeleteBtn');
   var settingsStatus = document.getElementById('vcSettingsStatus');
   var settingsList = document.getElementById('vcSettingsList');
+  var accountCopy = document.getElementById('vcAccountCopy');
+  var accountForm = document.getElementById('vcAccountForm');
+  var accountEmail = document.getElementById('vcAccountEmail');
+  var accountPassword = document.getElementById('vcAccountPassword');
+  var accountLoginBtn = document.getElementById('vcAccountLoginBtn');
+  var accountRegisterBtn = document.getElementById('vcAccountRegisterBtn');
+  var accountLogoutBtn = document.getElementById('vcAccountLogoutBtn');
+  var accountLogged = document.getElementById('vcAccountLogged');
+  var accountStatus = document.getElementById('vcAccountStatus');
   var animationReducedCheckbox = document.getElementById('vcAnimationReduced');
   if (animationReducedCheckbox) {
     animationReducedCheckbox.checked = isReducedMotion();
@@ -101,6 +153,14 @@
     });
     // Reflete mudanças feitas por outra aba/janela (mesmo localStorage) sem reload.
     onAnimationModeChange(function (mode) { animationReducedCheckbox.checked = mode === 'reduced'; });
+  }
+  var atomicAlwaysVisibleCheckbox = document.getElementById('vcAtomicAlwaysVisible');
+  if (atomicAlwaysVisibleCheckbox) {
+    atomicAlwaysVisibleCheckbox.checked = getAtomicCollapsePref() === 'always';
+    atomicAlwaysVisibleCheckbox.addEventListener('change', function () {
+      setAtomicCollapsePref(atomicAlwaysVisibleCheckbox.checked ? 'always' : 'auto');
+    });
+    onAtomicCollapsePrefChange(function (pref) { atomicAlwaysVisibleCheckbox.checked = pref === 'always'; });
   }
   var vaultRollback = document.getElementById('vcVaultRollback');
   var vaultSnapshotList = document.getElementById('vcVaultSnapshotList');
@@ -209,6 +269,75 @@
     });
   }
 
+  var smileStep = 0;
+  var smileGuide = [
+    {
+      title: 'Comece pelo chat',
+      body: 'Escreva a missao no composer principal. O mesmo texto alimenta chat, Missions e Software Factory.',
+      image: 'assets/mascote-reading-final.png'
+    },
+    {
+      title: 'Escolha o fluxo',
+      body: 'Use os chips Missao, Factory, GitHub, Vault ou IA para mudar o contexto sem criar outro campo de entrada.',
+      image: 'assets/mascote-idle-final.png'
+    },
+    {
+      title: 'Confirme antes de agir',
+      body: 'Acoes sensiveis continuam pedindo revisao humana. O Next prioriza chat-first e evidencia antes de mudanca.',
+      image: 'assets/mascote-reading-final.png'
+    }
+  ];
+
+  function renderSmileGuide() {
+    var step = smileGuide[smileStep] || smileGuide[0];
+    if (smileTitle) smileTitle.textContent = step.title;
+    if (smileBody) smileBody.textContent = step.body;
+    if (smileAvatar) smileAvatar.src = step.image;
+    if (smilePrev) smilePrev.disabled = smileStep === 0;
+    if (smileNext) smileNext.textContent = smileStep === smileGuide.length - 1 ? 'Fechar' : 'Proximo';
+    if (smileSteps) {
+      smileSteps.textContent = '';
+      smileGuide.forEach(function (_, index) {
+        var dot = document.createElement('span');
+        if (index === smileStep) dot.className = 'is-active';
+        smileSteps.appendChild(dot);
+      });
+    }
+  }
+
+  function openSmileGuide() {
+    if (!smileModal) return;
+    smileStep = 0;
+    renderSmileGuide();
+    smileModal.hidden = false;
+    if (smileClose) smileClose.focus();
+  }
+
+  function closeSmileGuide() {
+    if (!smileModal || smileModal.hidden) return;
+    smileModal.hidden = true;
+    if (smileOpen && typeof smileOpen.focus === 'function') smileOpen.focus();
+  }
+
+  if (smileOpen) smileOpen.addEventListener('click', openSmileGuide);
+  if (smileClose) smileClose.addEventListener('click', closeSmileGuide);
+  if (smilePrev) {
+    smilePrev.addEventListener('click', function () {
+      if (smileStep > 0) smileStep -= 1;
+      renderSmileGuide();
+    });
+  }
+  if (smileNext) {
+    smileNext.addEventListener('click', function () {
+      if (smileStep >= smileGuide.length - 1) {
+        closeSmileGuide();
+        return;
+      }
+      smileStep += 1;
+      renderSmileGuide();
+    });
+  }
+
   function renderFeatureActions(feature) {
     if (!featureActions) return;
     featureActions.textContent = '';
@@ -279,7 +408,7 @@
     }
     if (settingsPanel) {
       settingsPanel.hidden = activeFeature !== 'settings';
-      if (activeFeature === 'settings') loadSettingsList();
+      if (activeFeature === 'settings') { loadSettingsList(); refreshAccountStatus(); }
     }
     if (vaultRollback) {
       vaultRollback.hidden = activeFeature !== 'vault';
@@ -312,6 +441,7 @@
       if (sfSection) sfSection.hidden = true;
     }
     if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
+    updateAtomicCollapseState();
     if (announce) appendMessage('pending', feature.title.toUpperCase(), feature.text);
   }
 
@@ -584,7 +714,13 @@
 
   if (featureClose) featureClose.addEventListener('click', closeContextPanel);
   document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') closeContextPanel();
+    if (event.key === 'Escape') {
+      if (smileModal && !smileModal.hidden) {
+        closeSmileGuide();
+        return;
+      }
+      closeContextPanel();
+    }
   });
 
   if (featureRun) {
@@ -2251,6 +2387,82 @@
     });
   }
 
+  // ── Conta (email/senha) — Settings → Conta ──────────────────────
+  // Escopo confirmado: só email/senha, zero endpoint novo (o apiRequest()
+  // já anexa Authorization: Bearer a partir de localStorage['vision_token'],
+  // linha ~700). OAuth Google/GitHub fica para etapa futura separada — o
+  // callback de hoje redireciona pro legado, não pro Next (ver
+  // docs/CURRENT_STATE.md). vision_session (cookie) é ignorado de propósito:
+  // vem de origem diferente (Worker Gateway) com SameSite=Lax, não confiável
+  // via fetch cross-site; o token no corpo da resposta é a fonte real.
+  var ACCOUNT_TOKEN_KEY = 'vision_token';
+  var ACCOUNT_DEFAULT_COPY = accountCopy ? accountCopy.textContent : '';
+
+  function showAccountStatus(msg, isError) {
+    if (!accountStatus) return;
+    accountStatus.textContent = msg;
+    accountStatus.style.color = isError ? '#f87171' : '';
+  }
+
+  function setAccountBusy(busy) {
+    if (accountLoginBtn) accountLoginBtn.disabled = busy;
+    if (accountRegisterBtn) accountRegisterBtn.disabled = busy;
+  }
+
+  function setAccountLoggedInUI(user) {
+    if (accountCopy) accountCopy.textContent = 'Logado como ' + (user && user.email ? user.email : '—') + '.';
+    if (accountForm) accountForm.hidden = true;
+    if (accountLogged) accountLogged.hidden = false;
+  }
+
+  function setAccountLoggedOutUI() {
+    if (accountCopy) accountCopy.textContent = ACCOUNT_DEFAULT_COPY;
+    if (accountForm) accountForm.hidden = false;
+    if (accountLogged) accountLogged.hidden = true;
+  }
+
+  function refreshAccountStatus() {
+    var token = null;
+    try { token = window.localStorage.getItem(ACCOUNT_TOKEN_KEY); } catch (_) {}
+    if (!token) { setAccountLoggedOutUI(); return; }
+    apiRequest('/api/auth/me').then(function (data) {
+      setAccountLoggedInUI(data.user);
+    }).catch(function () {
+      try { window.localStorage.removeItem(ACCOUNT_TOKEN_KEY); } catch (_) {}
+      setAccountLoggedOutUI();
+    });
+  }
+
+  function doAccountAuth(mode) {
+    var email = accountEmail ? accountEmail.value.trim() : '';
+    var password = accountPassword ? accountPassword.value : '';
+    if (!email || !password) { showAccountStatus('Email e senha são obrigatórios.', true); return; }
+    showAccountStatus(mode === 'register' ? 'Criando conta...' : 'Entrando...', false);
+    setAccountBusy(true);
+    apiRequest('/api/auth/' + mode, { method: 'POST', body: { email: email, password: password } }).then(function (data) {
+      try { window.localStorage.setItem(ACCOUNT_TOKEN_KEY, data.token); } catch (_) {}
+      if (accountPassword) accountPassword.value = '';
+      setAccountLoggedInUI(data.user);
+    }).catch(function (err) {
+      showAccountStatus('Erro: ' + (err && err.message ? err.message : String(err)), true);
+    }).then(function () {
+      setAccountBusy(false);
+    });
+  }
+
+  function doAccountLogout() {
+    apiRequest('/api/auth/logout', { method: 'POST' }).catch(function () {}).then(function () {
+      try { window.localStorage.removeItem(ACCOUNT_TOKEN_KEY); } catch (_) {}
+      if (accountEmail) accountEmail.value = '';
+      showAccountStatus('', false);
+      setAccountLoggedOutUI();
+    });
+  }
+
+  if (accountLoginBtn) accountLoginBtn.addEventListener('click', function () { doAccountAuth('login'); });
+  if (accountRegisterBtn) accountRegisterBtn.addEventListener('click', function () { doAccountAuth('register'); });
+  if (accountLogoutBtn) accountLogoutBtn.addEventListener('click', doAccountLogout);
+
   // Mission History (B-2) — list + detail from /api/mission/timeline.
   function loadMissionHistory() {
     if (!missionHistoryList) return;
@@ -2742,6 +2954,16 @@
     return setAtomicCoreState('idle');
   }
 
+  // Fase 1.5: recolhe só no Modo Avançado do Software Factory (activeFeature
+  // e sfMode são lidos no momento da chamada, não na declaração — hoisted
+  // function, mesmo padrão do resto do arquivo). getAtomicCollapsePref()
+  // !== 'always' é o override manual do usuário (Settings → Atomic Core).
+  function updateAtomicCollapseState() {
+    var shouldCollapse = activeFeature === 'factory' && sfMode === 'advanced' && getAtomicCollapsePref() !== 'always';
+    root.classList.toggle('vc-no-transition', reduceMotion);
+    root.classList.toggle('is-collapsed', shouldCollapse);
+  }
+
   // Propagação EXECUTING da spec Atomic Core: Hermes acende primeiro (recebe
   // a missão), depois os agentes seguintes em sequência enquanto a resposta
   // não chega. Loop contínuo (não para sozinho) - quem inicia o ciclo do
@@ -2782,7 +3004,11 @@
     reduceMotion = mode === 'reduced';
     startMotionLoop();
     render(performance.now() - startTime);
+    updateAtomicCollapseState();
   });
+
+  // Troca de preferência ao vivo (Settings → Atomic Core), sem reload.
+  onAtomicCollapsePrefChange(function () { updateAtomicCollapseState(); });
 
   // Dica de primeira visita (item 4, opcional): se o SO está com reduce
   // ativo e o usuário nunca escolheu um modo no VC, avisa uma vez só que o
@@ -3336,6 +3562,7 @@
     });
     if (sfAdvancedPanel) sfAdvancedPanel.hidden = sfMode !== 'advanced';
     if (sfMode === 'advanced') sfSuggestAdvanced(true);
+    updateAtomicCollapseState();
   }
 
   function getSelectedSfExtraSteps() {
