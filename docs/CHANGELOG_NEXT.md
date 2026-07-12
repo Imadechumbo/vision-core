@@ -4,6 +4,14 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-68 (2026-07-12)
+
+- Correção de efeito colateral do `next-clean-67`: o hero do chat (`#vcChatIntro`, "Como vamos mover o Vision Core hoje?") vazava pra todas as páginas — nunca tinha sido condicionado por `selectFeature()`, já que `.vc-chat-stage` nunca é escondido (necessário pro Atomic Core ficar sempre visível). Isso competia pelo mesmo espaço onde o widget ancora e empurrava o conteúdo real de cada aba (Security Lab, Missions, Métricas) pra baixo da dobra, dando a impressão de "página errada" mesmo com a sidebar mostrando a aba certa
+- Confirmado em produção antes do fix: `introVisible:true` em Security Lab/Missions/Métricas simultaneamente com a sidebar ativa nessas abas
+- Fix: `#vcChatIntro` escondido fora de `chat`/`factory` (Software Factory Auto-Pilot conta como "chat", mesmo critério já usado no resto do arquivo) — o Atomic Core em si não mudou, continua sempre visível
+- 1 teste novo (`vision-core-next-atomic-core.spec.mjs`: hero não vaza pra 8 páginas diferentes, continua em chat/factory)
+- 99/99 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
 ## next-clean-67 (2026-07-12)
 
 - Mudança de decisão do usuário: Atomic Core deixa de ser "escopado ao chat" (`next-clean-61`/`64`) e passa a ser elemento persistente global — visível em qualquer página/aba (Missions, Timeline, Métricas, Dashboard, Settings, Vault, Tools, Security Lab, GitHub). `outsideChat` removido de `updateAtomicCollapseState()`. Registrado como `DECISION-020` em `docs/DECISIONS.md` (substitui a regra anterior, não é reversão de bug)
