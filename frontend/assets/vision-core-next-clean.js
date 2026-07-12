@@ -132,6 +132,7 @@
   var appShell = document.querySelector('.vc-app-shell');
   var sidebarToggle = document.querySelector('[data-sidebar-toggle]');
   var composer = document.getElementById('vcComposer');
+  var chatScroll = document.getElementById('vcChatScroll');
   var prompt = document.getElementById('vcPrompt');
   var smileOpen = document.querySelector('[data-smile-open]');
   var smileModal = document.getElementById('vcSmileModal');
@@ -823,6 +824,22 @@
       }
     });
     resizePrompt();
+  }
+
+  // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md, achado 2026-07-12):
+  // #vcChatScroll parou de rolar por conta própria (rolagem real de página
+  // agora), então o composer (position:sticky) precisa de espaço reservado
+  // no fim do conteúdo pra não cobrir a última parte dele quando "gruda" no
+  // rodapé — regra dura #12 da spec, antes resolvida isolando o scroll,
+  // agora resolvida sincronizando padding-bottom com a altura real do
+  // composer (varia com o textarea/chips). ResizeObserver, não um valor
+  // fixo, porque o composer redimensiona (resizePrompt) e não há evento
+  // "de altura mudou" nativo mais simples que cubra os dois casos.
+  if (composer && chatScroll && window.ResizeObserver) {
+    var syncComposerSpace = new ResizeObserver(function () {
+      chatScroll.style.paddingBottom = (composer.offsetHeight + 24) + 'px';
+    });
+    syncComposerSpace.observe(composer);
   }
 
   var API_BASE_URL = 'https://visioncore-api-gateway.weiganlight.workers.dev';

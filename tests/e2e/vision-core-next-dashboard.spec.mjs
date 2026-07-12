@@ -90,3 +90,28 @@ test('refresh button reloads both Timeline and agent charts on demand', async ({
   await page.locator('#vcDashboardRefresh').click();
   await expect.poll(() => agentCalls).toBe(2);
 });
+
+// Regra dura #12 (VISION_CORE_NEXT_FRONTEND_SPEC.md): conteudo alto dentro de
+// #vcFeaturePanel nunca pode nascer escondido atras do #vcComposer sticky.
+// Reescrita apos ARCHITECTURAL PRINCIPLE-004 (2026-07-12): a garantia antes
+// vinha do overflow isolado de #vcChatScroll; agora vem do padding-bottom
+// sincronizado via ResizeObserver com a altura real do composer. O Dashboard
+// e o cenario real de conteudo alto (Timeline + 4 graficos) usado aqui como
+// prova.
+test('Dashboard tall content never renders hidden behind the sticky composer (regra dura #12)', async ({ page }) => {
+  await page.goto(NEXT_URL);
+  await page.locator('a[data-feature="dashboard"]').click();
+  await expect(page.locator('#vcDashboardAgents')).not.toBeEmpty();
+
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await page.waitForTimeout(150);
+
+  const overlap = await page.evaluate(() => {
+    const composer = document.getElementById('vcComposer');
+    const panel = document.getElementById('vcDashboardPanel');
+    const c = composer.getBoundingClientRect();
+    const p = panel.getBoundingClientRect();
+    return { composerTop: c.top, panelBottom: p.bottom, overlaps: !(c.top > p.bottom) };
+  });
+  expect(overlap.overlaps, `composer top (${overlap.composerTop}) must be at/after the dashboard content bottom (${overlap.panelBottom}), never covering it`).toBe(false);
+});

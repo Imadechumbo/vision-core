@@ -356,14 +356,14 @@ test('scrolls away with the chat content instead of staying pinned to the viewpo
   const hud = page.locator('[data-atomic-core]');
   const before = await hud.evaluate((el) => el.getBoundingClientRect().top);
 
-  await page.evaluate(() => {
-    const scrollEl = document.getElementById('vcChatScroll');
-    scrollEl.scrollTop = scrollEl.scrollHeight;
-  });
+  // ARCHITECTURAL PRINCIPLE-004 fix (2026-07-12): #vcChatScroll no longer
+  // has its own overflow -- the real page/document scrolls now, not an
+  // isolated inner container. See docs/DECISIONS.md.
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   await page.waitForTimeout(150);
   const after = await hud.evaluate((el) => el.getBoundingClientRect().top);
 
-  expect(after, 'must move out of the visible area when the chat is scrolled, unlike position:fixed').toBeLessThan(before - 100);
+  expect(after, 'must move out of the visible area when the page is scrolled, unlike position:fixed').toBeLessThan(before - 100);
 });
 
 test('hides outside the chat area (no space reserved), but Software Factory Auto-Pilot counts as chat', async ({ page }) => {
@@ -388,11 +388,13 @@ test('hides outside the chat area (no space reserved), but Software Factory Auto
 // Achado real da RCA adversarial (2026-07-12): a primeira versao usava
 // margin-right negativo pra "colar" o widget na borda direita, mas isso
 // empurrava os nos openclaw/scanner para alem da borda de #vcChatScroll
-// (overflow-x:hidden), cortando-os visualmente -- so descoberto medindo
-// getBoundingClientRect de cada agente contra o container, nao pela
+// (na epoca com overflow-x:hidden), cortando-os visualmente -- so descoberto
+// medindo getBoundingClientRect de cada agente contra o container, nao pela
 // screenshot isolada (que parecia correta na resolucao usada). Corrigido
-// removendo o margin-right negativo.
-test('no agent node is clipped by #vcChatScroll overflow-x:hidden', async ({ page }) => {
+// removendo o margin-right negativo. #vcChatScroll nao tem mais overflow
+// proprio (ver ARCHITECTURAL PRINCIPLE-004), mas o invariante geometrico
+// continua valendo: nenhum no de agente deve exceder o container.
+test('no agent node extends past the #vcChatScroll container edge', async ({ page }) => {
   await page.goto(NEXT_URL());
   const clipped = await page.evaluate(() => {
     const scrollRect = document.getElementById('vcChatScroll').getBoundingClientRect();

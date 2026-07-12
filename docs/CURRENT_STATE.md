@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ next-clean-64 publicado via `bash bin/deploy-pages.sh` e confirmado ao vivo por screenshot Playwright real contra produção: (1) `position:static` confirmado no elemento real; (2) scroll real de `#vcChatScroll` tira o widget de vista (top passa de 274 para -46); (3) zero nó de agente clipado (`getBoundingClientRect` contra o container); (4) Dashboard mostra dados reais de produção (6 agentes, providers `openrouter`/`groq`/`gemini`/`deepseek`, heartbeat "há 4h") em largura total.
+⚠ `next-clean-64` é o que está ao vivo agora (`visioncoreai.pages.dev`); `next-clean-65` (remoção da rolagem interna duplicada) está commitado localmente e **ainda não deployado** — aguardando autorização explícita do usuário (pedido original: "Não prosseguir para deploy/merge/push sem autorização").
 
 Cache Bust
-next-clean-64
+next-clean-65 (local, não deployado) / next-clean-64 (produção)
 
 Último Commit
 
@@ -47,9 +47,11 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 `next-clean-64`, 91/91 PASS (suíte permanente do Next), **deployado e confirmado ao vivo em produção**.
 
+✔ `next-clean-65` — remoção da rolagem interna duplicada (bug reportado pelo usuário contra `next-clean-64` ao vivo): `#vcChatScroll` tinha `overflow-y:auto` próprio, criando uma segunda barra de rolagem além da nativa da página. Confirmado por medição direta contra produção antes do fix (`hasOwnScroll:true` simultâneo em `#vcChatScroll` E em `html`). Removido `overflow-y`/`overflow-x` de `.vc-chat-scroll` e a `height` fixa de `.vc-chat-stage` (virou `min-height`) — a página real agora é a única superfície de rolagem. Regra dura #12 preservada via `ResizeObserver` (sincroniza `padding-bottom` do composer) + fallback estático em CSS. 2 testes reescritos + 1 novo (regressão da regra dura #12 usando o Dashboard como conteúdo alto real). **92/92 PASS, commitado, NÃO deployado — aguardando autorização explícita** (pedido original do usuário: "Não prosseguir para deploy/merge/push sem autorização").
+
 Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
 
-Todos os itens até `next-clean-64` estão deployados e confirmados ao vivo. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
+Todos os itens até `next-clean-64` estão deployados e confirmados ao vivo; `next-clean-65` está commitado e testado, mas aguarda autorização explícita para deploy. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
 
 ---
 
@@ -82,7 +84,7 @@ Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contr
 
 # TESTES
 
-82/82 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada isolada — confirmar de novo antes de declarar o Next concluído, ver `docs/ROADMAP.md`)
+92/92 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada isolada 2x seguidas — confirmar de novo antes de declarar o Next concluído, ver `docs/ROADMAP.md`)
 
 `node --check` OK
 
