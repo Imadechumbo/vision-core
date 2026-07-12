@@ -22,7 +22,7 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ next-clean-60 (Tutorial Smile) + histórico público (about.html/landing.html "Trajetória Next") publicados via `bash bin/deploy-pages.sh` — ambos confirmados ao vivo por screenshot Playwright real (não só retorno do wrangler). `next-clean-61` (Atomic Core auto-collapse) e `next-clean-62` (Auth email/senha) preparados localmente, deploy pendente de aprovação explícita (aguardando confirmação separada do usuário).
+✔ next-clean-62 publicado via `bash bin/deploy-pages.sh` (bundle: next-clean-60 Tutorial Smile + next-clean-61 Atomic Core auto-collapse + next-clean-62 Auth email/senha), confirmado ao vivo por screenshot Playwright real contra produção: (1) Atomic Core recolhe no Modo Avançado do SF e reaparece ao voltar pro Auto-Pilot; (2) registro+logout+login rodados contra o backend real (não mockado) com conta de teste `qa-nextclean62-<timestamp>@example.com` — `POST /api/auth/register`, `/logout`, `/login` todos 200. Único 401 observado foi em `/api/providers/list` (AI Provider Vault, pré-existente, sem relação com esta entrega).
 
 Cache Bust
 next-clean-62
@@ -33,17 +33,19 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Último Deploy
 
-4a28c390 (preview) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-59`
+9e967882 (preview) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-62`
 
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ Atomic Core: confirmado por código (Fase 1) que hoje não recolhe em nenhum painel — só encolhe/some por breakpoint de tela. Confirmado por screenshot que só o Modo Avançado do Software Factory tem colisão real contra a zona reservada do widget (Timeline/Métricas/Security Lab não, em estado vazio). Implementado (Fase 1.5, aprovado pelo usuário): recolhe automaticamente só nesse painel, override reversível em Settings → Atomic Core (`window.VCAtomicCollapse`, mesmo padrão de `window.VCMotion`). `next-clean-61`, 72/72 PASS, deploy pendente de aprovação.
+✔ Atomic Core: confirmado por código (Fase 1) que hoje não recolhe em nenhum painel — só encolhe/some por breakpoint de tela. Confirmado por screenshot que só o Modo Avançado do Software Factory tem colisão real contra a zona reservada do widget (Timeline/Métricas/Security Lab não, em estado vazio). Implementado (Fase 1.5, aprovado pelo usuário): recolhe automaticamente só nesse painel, override reversível em Settings → Atomic Core (`window.VCAtomicCollapse`, mesmo padrão de `window.VCMotion`). `next-clean-61`, 72/72 PASS, **deployado e confirmado ao vivo**.
 
-✔ Auth email/senha no Next: Settings → Conta (registro/login/logout), escopo confirmado pelo usuário (só email/senha, zero endpoint novo — `apiRequest()` já anexava `Authorization: Bearer` de `localStorage['vision_token']` antes de existir qualquer UI). OAuth Google/GitHub NÃO incluído — callback do backend redireciona pro legado, não pro Next; fica registrado como próxima etapa condicionada a mudança de backend. Achado corrigido no caminho: `.vc-settings-form`/`.vc-settings-field-actions` tinham `display:flex` sem `:not([hidden])` (bug real da regra dura já documentada, só não tinha aparecido porque nada usava `hidden` condicional nessas classes antes). `next-clean-62`, 79/79 PASS, deploy pendente de aprovação.
+✔ Auth email/senha no Next: Settings → Conta (registro/login/logout), escopo confirmado pelo usuário (só email/senha, zero endpoint novo — `apiRequest()` já anexava `Authorization: Bearer` de `localStorage['vision_token']` antes de existir qualquer UI). OAuth Google/GitHub NÃO incluído — callback do backend redireciona pro legado, não pro Next; fica registrado como próxima etapa condicionada a mudança de backend. Achado corrigido no caminho: `.vc-settings-form`/`.vc-settings-field-actions` tinham `display:flex` sem `:not([hidden])` (bug real da regra dura já documentada, só não tinha aparecido porque nada usava `hidden` condicional nessas classes antes). `next-clean-62`, 79/79 PASS, **deployado e confirmado ao vivo contra o backend real** (register+logout+login, não mockado).
 
 Sessão anterior (concluída, sem pendência): Tutorial Smile (`next-clean-60`) + histórico público about.html/landing.html — ver `docs/CHANGELOG_NEXT.md`.
+
+Pendência real restante: merge desta branch (`codex/next-chief-architect-governance`) para `main` — fora de escopo até autorização explícita (deploy de estático via CF Pages não exige merge, já foi feito direto da branch).
 
 ---
 
