@@ -255,3 +255,77 @@ test('Settings override "always visible" prevents the auto-collapse, live and pe
   });
   await expect(hud, 'unchecking override must re-apply auto-collapse immediately').toHaveClass(/is-collapsed/);
 });
+
+// ROADMAP.md "Settings do Atomic Core — ligado/desligado, intensidade visual".
+// "glow on/off" explicitamente excluido: VISION_CORE_NEXT_FRONTEND_SPEC.md
+// checklist item 6 ja fecha isso ("nunca existiram como controles").
+test('on/off toggle hides the widget everywhere (not just Modo Avancado), live and persisted (window.VCAtomicCore)', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
+  await page.goto(NEXT_URL());
+  const hud = page.locator('[data-atomic-core]');
+
+  await expect(hud).not.toHaveClass(/is-collapsed/);
+  await page.evaluate(() => {
+    var el = document.getElementById('vcAtomicEnabled');
+    el.checked = false;
+    el.dispatchEvent(new Event('change'));
+  });
+  await expect(hud, 'off must hide the widget on the chat home too, not only Modo Avancado').toHaveClass(/is-collapsed/);
+  expect(await page.evaluate(() => window.VCAtomicCore.getEnabled())).toBe('off');
+
+  // Persists across reload.
+  await page.reload();
+  await expect(page.locator('#vcAtomicEnabled')).not.toBeChecked();
+  await expect(hud).toHaveClass(/is-collapsed/);
+
+  // Turning back on restores it immediately, no reload.
+  await page.evaluate(() => {
+    var el = document.getElementById('vcAtomicEnabled');
+    el.checked = true;
+    el.dispatchEvent(new Event('change'));
+  });
+  await expect(hud, 'turning it back on must restore the widget immediately').not.toHaveClass(/is-collapsed/);
+});
+
+test('off wins over "always visible": widget stays hidden in Modo Avancado even with the override checked', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
+  await page.goto(NEXT_URL());
+  const hud = page.locator('[data-atomic-core]');
+
+  // Must actually be inside Modo Avancado, where "always visible" would
+  // otherwise keep the widget shown (autoCollapse alone would be false) --
+  // otherwise this test doesn't exercise the precedence conflict at all.
+  await page.locator('a[data-feature="factory"]').click();
+  await page.locator('[data-sf-mode="advanced"]').click();
+  await page.evaluate(() => {
+    document.getElementById('vcAtomicAlwaysVisible').checked = true;
+    document.getElementById('vcAtomicAlwaysVisible').dispatchEvent(new Event('change'));
+  });
+  await expect(hud, 'sanity check: "always visible" alone must keep it shown in Modo Avancado').not.toHaveClass(/is-collapsed/);
+
+  await page.evaluate(() => {
+    document.getElementById('vcAtomicEnabled').checked = false;
+    document.getElementById('vcAtomicEnabled').dispatchEvent(new Event('change'));
+  });
+  await expect(hud, 'widget-level off must win over the SF-Advanced-only override').toHaveClass(/is-collapsed/);
+});
+
+test('intensity slider sets --atomic-intensity and persists across reload (window.VCAtomicCore has no bearing on this)', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  const hud = page.locator('[data-atomic-core]');
+
+  const initial = await hud.evaluate((el) => getComputedStyle(el).getPropertyValue('--atomic-intensity').trim());
+  expect(initial).toBe('1');
+
+  await page.evaluate(() => {
+    var el = document.getElementById('vcAtomicIntensity');
+    el.value = '40';
+    el.dispatchEvent(new Event('input'));
+  });
+  await expect(hud).toHaveCSS('--atomic-intensity', '0.4');
+  expect(await page.evaluate(() => window.localStorage.getItem('vc_atomic_intensity'))).toBe('0.4');
+
+  await page.reload();
+  await expect(page.locator('#vcAtomicIntensity')).toHaveValue('40');
+  await expect(hud).toHaveCSS('--atomic-intensity', '0.4');
+});

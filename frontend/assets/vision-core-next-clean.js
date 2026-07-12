@@ -77,6 +77,58 @@
     onChange: onAtomicCollapsePrefChange
   };
 
+  // ── Preferência de visibilidade e intensidade do Atomic Core ──
+  // ROADMAP.md pedia também "glow on/off" — excluído por decisão de
+  // Specification First: VISION_CORE_NEXT_FRONTEND_SPEC.md checklist item 6
+  // já fecha isso ("Sem botões Idle/Action/Glow visíveis — nunca existiram
+  // como controles"). On/off aqui é do WIDGET inteiro (independente do
+  // auto-collapse do Modo Avançado), mesmo padrão getMode/setMode/onChange.
+  var VC_ATOMIC_ENABLED_KEY = 'vc_atomic_core_enabled'; // 'on' | 'off'
+  var vcAtomicEnabledListeners = [];
+
+  function getAtomicCoreEnabled() {
+    try {
+      var stored = window.localStorage.getItem(VC_ATOMIC_ENABLED_KEY);
+      if (stored === 'on' || stored === 'off') return stored;
+    } catch (_) {}
+    return 'on';
+  }
+
+  function setAtomicCoreEnabled(next) {
+    var value = next === 'off' ? 'off' : 'on';
+    try { window.localStorage.setItem(VC_ATOMIC_ENABLED_KEY, value); } catch (_) {}
+    vcAtomicEnabledListeners.forEach(function (cb) { try { cb(value); } catch (_) {} });
+    return value;
+  }
+
+  function onAtomicCoreEnabledChange(cb) {
+    if (typeof cb === 'function') vcAtomicEnabledListeners.push(cb);
+  }
+
+  window.VCAtomicCore = {
+    getEnabled: getAtomicCoreEnabled,
+    setEnabled: setAtomicCoreEnabled,
+    onChange: onAtomicCoreEnabledChange
+  };
+
+  var VC_ATOMIC_INTENSITY_KEY = 'vc_atomic_intensity'; // '0.4'..'1'
+
+  function getAtomicIntensity() {
+    try {
+      var stored = parseFloat(window.localStorage.getItem(VC_ATOMIC_INTENSITY_KEY));
+      if (stored >= 0.4 && stored <= 1) return stored;
+    } catch (_) {}
+    return 1;
+  }
+
+  function setAtomicIntensity(value) {
+    var next = Math.min(1, Math.max(0.4, Number(value) || 1));
+    try { window.localStorage.setItem(VC_ATOMIC_INTENSITY_KEY, String(next)); } catch (_) {}
+    var hud = document.querySelector('[data-atomic-core]');
+    if (hud) hud.style.setProperty('--atomic-intensity', next);
+    return next;
+  }
+
   var appShell = document.querySelector('.vc-app-shell');
   var sidebarToggle = document.querySelector('[data-sidebar-toggle]');
   var composer = document.getElementById('vcComposer');
@@ -161,6 +213,22 @@
       setAtomicCollapsePref(atomicAlwaysVisibleCheckbox.checked ? 'always' : 'auto');
     });
     onAtomicCollapsePrefChange(function (pref) { atomicAlwaysVisibleCheckbox.checked = pref === 'always'; });
+  }
+  var atomicEnabledCheckbox = document.getElementById('vcAtomicEnabled');
+  if (atomicEnabledCheckbox) {
+    atomicEnabledCheckbox.checked = getAtomicCoreEnabled() === 'on';
+    atomicEnabledCheckbox.addEventListener('change', function () {
+      setAtomicCoreEnabled(atomicEnabledCheckbox.checked ? 'on' : 'off');
+    });
+    onAtomicCoreEnabledChange(function (value) { atomicEnabledCheckbox.checked = value === 'on'; });
+  }
+  var atomicIntensityInput = document.getElementById('vcAtomicIntensity');
+  if (atomicIntensityInput) {
+    atomicIntensityInput.value = String(getAtomicIntensity() * 100);
+    setAtomicIntensity(getAtomicIntensity());
+    atomicIntensityInput.addEventListener('input', function () {
+      setAtomicIntensity(Number(atomicIntensityInput.value) / 100);
+    });
   }
   var vaultRollback = document.getElementById('vcVaultRollback');
   var vaultSnapshotList = document.getElementById('vcVaultSnapshotList');
@@ -2959,7 +3027,8 @@
   // function, mesmo padrão do resto do arquivo). getAtomicCollapsePref()
   // !== 'always' é o override manual do usuário (Settings → Atomic Core).
   function updateAtomicCollapseState() {
-    var shouldCollapse = activeFeature === 'factory' && sfMode === 'advanced' && getAtomicCollapsePref() !== 'always';
+    var autoCollapse = activeFeature === 'factory' && sfMode === 'advanced' && getAtomicCollapsePref() !== 'always';
+    var shouldCollapse = getAtomicCoreEnabled() === 'off' || autoCollapse;
     root.classList.toggle('vc-no-transition', reduceMotion);
     root.classList.toggle('is-collapsed', shouldCollapse);
   }
@@ -3009,6 +3078,7 @@
 
   // Troca de preferência ao vivo (Settings → Atomic Core), sem reload.
   onAtomicCollapsePrefChange(function () { updateAtomicCollapseState(); });
+  onAtomicCoreEnabledChange(function () { updateAtomicCollapseState(); });
 
   // Dica de primeira visita (item 4, opcional): se o SO está com reduce
   // ativo e o usuário nunca escolheu um modo no VC, avisa uma vez só que o

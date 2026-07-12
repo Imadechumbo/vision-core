@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ next-clean-62 publicado via `bash bin/deploy-pages.sh` (bundle: next-clean-60 Tutorial Smile + next-clean-61 Atomic Core auto-collapse + next-clean-62 Auth email/senha), confirmado ao vivo por screenshot Playwright real contra produção: (1) Atomic Core recolhe no Modo Avançado do SF e reaparece ao voltar pro Auto-Pilot; (2) registro+logout+login rodados contra o backend real (não mockado) com conta de teste `qa-nextclean62-<timestamp>@example.com` — `POST /api/auth/register`, `/logout`, `/login` todos 200. Único 401 observado foi em `/api/providers/list` (AI Provider Vault, pré-existente, sem relação com esta entrega).
+✔ next-clean-62 publicado via `bash bin/deploy-pages.sh` (bundle: next-clean-60 Tutorial Smile + next-clean-61 Atomic Core auto-collapse + next-clean-62 Auth email/senha), confirmado ao vivo por screenshot Playwright real contra produção: (1) Atomic Core recolhe no Modo Avançado do SF e reaparece ao voltar pro Auto-Pilot; (2) registro+logout+login rodados contra o backend real (não mockado) com conta de teste `qa-nextclean62-<timestamp>@example.com` — `POST /api/auth/register`, `/logout`, `/login` todos 200. Único 401 observado foi em `/api/providers/list` (AI Provider Vault, pré-existente, sem relação com esta entrega). `next-clean-63` (Atomic Core on/off + intensidade) preparado localmente, deploy pendente.
 
 Cache Bust
-next-clean-62
+next-clean-63 (local, não deployado — produção ainda serve next-clean-62)
 
 Último Commit
 
@@ -43,18 +43,20 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 ✔ Auth email/senha no Next: Settings → Conta (registro/login/logout), escopo confirmado pelo usuário (só email/senha, zero endpoint novo — `apiRequest()` já anexava `Authorization: Bearer` de `localStorage['vision_token']` antes de existir qualquer UI). OAuth Google/GitHub NÃO incluído — callback do backend redireciona pro legado, não pro Next; fica registrado como próxima etapa condicionada a mudança de backend. Achado corrigido no caminho: `.vc-settings-form`/`.vc-settings-field-actions` tinham `display:flex` sem `:not([hidden])` (bug real da regra dura já documentada, só não tinha aparecido porque nada usava `hidden` condicional nessas classes antes). `next-clean-62`, 79/79 PASS, **deployado e confirmado ao vivo contra o backend real** (register+logout+login, não mockado).
 
+✔ Settings do Atomic Core (on/off + intensidade): toggle "Mostrar Atomic Core" (widget inteiro, independente do auto-collapse do Modo Avançado) + slider de intensidade visual, `window.VCAtomicCore`/`--atomic-intensity`. "Glow on/off" do ROADMAP explicitamente NÃO implementado — contradizia `VISION_CORE_NEXT_FRONTEND_SPEC.md` checklist item 6, já fechado ("nunca existiram como controles"); Specification First aplicado. RCA adversarial encontrou e corrigiu 1 teste que não exercitava o cenário de conflito que afirmava provar. `next-clean-63`, 82/82 PASS, **não deployado ainda**.
+
 Sessão anterior (concluída, sem pendência): Tutorial Smile (`next-clean-60`) + histórico público about.html/landing.html — ver `docs/CHANGELOG_NEXT.md`.
 
-Pendência real restante: merge desta branch (`codex/next-chief-architect-governance`) para `main` — fora de escopo até autorização explícita (deploy de estático via CF Pages não exige merge, já foi feito direto da branch).
+Pendência real restante: merge desta branch (`codex/next-chief-architect-governance`) para `main` — feito localmente até o commit `fa685e78` (Auth, next-clean-62), mas a branch já avançou desde então (Atomic Core Settings, next-clean-63) e o merge local em `main` precisa ser refeito/atualizado antes do push; push pra `origin/main` continua fora de escopo até autorização explícita. Deploy de `next-clean-63` também pendente de aprovação.
 
 ---
 
 # PENDÊNCIAS REAIS
 
 - OAuth Google/GitHub no Vision Core Next (email/senha já implementado, `next-clean-62`) — bloqueado por mudança de backend (callback hoje redireciona pro legado, não pro Next); login/registro seguem também disponíveis no frontend legado em paralelo
+- Páginas públicas `about.html`/`landing.html` (Etapas 5-7) — escopo ainda indefinido, decisão de quando/o quê fica para quando chegar a vez (não é PARE E PERGUNTE, é ausência de spec concreta)
 - AI Provider Vault Fase D(b) — conectar `sf-agent-orchestrator.mjs` ao vault (decisão de arquitetura em aberto)
 - SF-Agent-Orchestrator Fase 2 — bloqueado por cota de API, smoke test real incompleto
-- Settings do Atomic Core — ligado/desligado, glow on/off, intensidade visual (só "reduzir movimento" está implementado)
 - `vc-secret-guard` Fase 2 (hooks locais) — precisa nova aprovação explícita do usuário
 - `vc-secret-guard verify-cloud` — comando Rust read-only para auditar metadados de env vars do EB, testes locais Rust passam, mas a verificação viva do EB está bloqueada por falha TLS/trust store local da AWS CLI. Não usar `--no-verify-ssl`; corrigir TLS primeiro e rerodar.
 - INCIDENTE-3 (credencial de fallback legada) — guard de `/api/auth/login` já confirmado ao vivo em produção (EB `v109`, `400 fallback_credential_rejected`); guard de `/api/auth/register` confirmado só no artefato/regressão local (revalidação ao vivo ficou pendente por rate-limit durante o teste). Runbook `tools/incident-3-legacy-account-scan.mjs --invalidate` para contas legadas já existentes em produção é ação pendente do usuário (ver `docs/DECISIONS.md` DECISION-007)
@@ -71,35 +73,29 @@ Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contr
 
 - Token de auth em `localStorage`/`sessionStorage` — exposto a XSS, risco aceito (paridade com o legado, não é regressão do Next)
 - `backend/data/users.json` tem hash de senha de teste no histórico git — ação de rotação pendente do usuário, fora do alcance deste repo
-- Login/registro real só existe no frontend legado — Next não tem fluxo de auth próprio ainda
-- Itens menores, não bloqueantes: boto3 bloqueado por certificado SSL local (Windows, mesma limitação histórica do node-gyp); `/api/health` retorna `version` hardcoded desatualizada (cosmético); ~1580 arquivos aparecem "modified" no `git status` por ruído CRLF/LF (`core.autocrlf` inconsistente, pré-existente, não é prioridade corrigir)
+- OAuth Google/GitHub só existe no frontend legado — Next tem email/senha (`next-clean-62`), mas não OAuth ainda
+- Itens menores, não bloqueantes: boto3 bloqueado por certificado SSL local (Windows, mesma limitação histórica do node-gyp); `/api/health` retorna `version` hardcoded desatualizada (cosmético); ruído CRLF/LF pré-existente no `git status` (`core.autocrlf` inconsistente, não é prioridade corrigir)
 
 ---
 
 # TESTES
 
-69/69 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`)
+82/82 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada isolada — confirmar de novo antes de declarar o Next concluído, ver `docs/ROADMAP.md`)
 
 `node --check` OK
 
-Deploy confirmado ao vivo em produção (`next-clean-59`, verificado sem mock contra o backend real)
+Suíte inteira do repo (incluindo specs do frontend legado) tem falhas conhecidas e pré-existentes por `#vcTutorialOverlay` interceptando cliques em `architect.spec.mjs`/`manual-verification.spec.mjs`/outros — confirmado por isolamento via `git stash` que não é regressão do Next, não bloqueia esta frente.
 
-RC Security Gate local (2026-07-11): CORS backend deixou de refletir Origin arbitrária com credentials; `/api/providers/*` e `/api/sf/fetch-url` agora exigem sessão; `fetch-url` bloqueia SSRF para alvos locais/privados por protocolo, hostname, IP e DNS. `node --check`, teste estático `tools/tests/rc-security-hardening.test.mjs`, Playwright Next 69/69 e `cargo test` do `vc-secret-guard` passaram. Release ainda NÃO aprovado: `vc-secret-guard verify-cloud` segue bloqueado por `aws_eb_read_failed_sanitized`, sem validar EB ao vivo.
+RC Security Gate (2026-07-11, ainda vigente): CORS backend deixou de refletir Origin arbitrária com credentials; `/api/providers/*` e `/api/sf/fetch-url` exigem sessão; `fetch-url` bloqueia SSRF local/privado. `vc-secret-guard verify-cloud` segue bloqueado por `aws_eb_read_failed_sanitized`, sem validar EB ao vivo — não é um item do Next, é backend/infra separado.
 
-Governança arquitetural registrada (2026-07-11): `ARCHITECTURAL PRINCIPLE-001` (Zero Legacy Debt), `ARCHITECTURAL PRINCIPLE-002` (Specification First) e `ARCHITECTURAL PRINCIPLE-003` (Evidence Before Change) vivem em `docs/DECISIONS.md` como princípios permanentes. `docs/ARCHITECTURE.md` e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` apontam para eles sem duplicar conteúdo. Sem código, sem deploy.
-
-Direção de produto registrada (2026-07-11): `docs/DECISIONS.md` DECISION-019 define que Vision Core Next agora deve ser evoluído como futuro frontend oficial, não como backlog solto de lacunas. Próximas tarefas devem começar por comparação implementação × specs e priorizar arquitetura → UX → Software Factory → Atomic Core → performance → observabilidade → segurança → documentação → refinamento visual. `System Correcting Systems` ficou apenas como IDEIA FUTURA em `docs/ROADMAP.md`, sem número reservado e condicionada à maturidade do Software Factory; não é princípio ativo ainda. Sem código, sem deploy.
-
-Reconciliação Fase 3.3d (2026-07-11): grep confirmou que `#vcSoftwareFactoryPage`, `#projectBuilder`, `initSoftwareFactoryPage()` e `SF_MODULE_SECTION_MAP` não existem nos arquivos oficiais do Next (`frontend/vision-core-next.html`, `assets/vision-core-next-clean.css`, `assets/vision-core-next-clean.js`). As referências restantes vivem no frontend legado (`frontend/index.html`, bundles legados/CSS auxiliares) e em specs/testes legados. Portanto 3.3d não é mais próxima prioridade do Next; virou limpeza do legado, fora do escopo sem autorização explícita para tocar `index.html`/bundles.
+Governança arquitetural (`docs/DECISIONS.md`): `ARCHITECTURAL PRINCIPLE-001` (Zero Legacy Debt), `-002` (Specification First) e `-003` (Evidence Before Change) são princípios permanentes ativos — aplicados nesta sessão para excluir "glow on/off" do escopo do Atomic Core Settings (contradizia checklist já fechado da spec).
 
 ---
 
 # CONTEXTO PARA O PRÓXIMO AGENTE
 
-O painel de Métricas e todas as visualizações gráficas do Next estão completas e deployadas (`next-clean-57`→`59`). Um bug de produção real (composer sticky sobrepondo o painel contextual) foi encontrado e corrigido nesta sessão — se qualquer painel novo dentro de `#vcFeaturePanel` crescer, ele já herda a rolagem isolada `.vc-chat-scroll`, sem precisar de tratamento especial.
+Backlog do Next (Fase 1 do ROADMAP) está com só 2 pendências reais restantes, nenhuma executável sem decisão externa: OAuth Google/GitHub (exige mudança de backend + autorização própria) e páginas públicas Etapas 5-7 (sem spec concreta ainda). Antes de assumir "nada mais a fazer", releia `docs/ROADMAP.md` Fase 1 e confirme por `grep` — não presuma.
 
-A partir de agora a documentação segue um sistema de continuidade: `CURRENT_STATE.md` (este arquivo) fica sempre pequeno e reflete só o estado atual; `docs/CHANGELOG_NEXT.md` guarda um bloco curto por versão; investigação/narrativa longa vai para `docs/session_logs/YYYY-MM-DD-nome.md`. Nunca copie logs de terminal, JSON completo ou diffs grandes de volta para este arquivo.
+Documentação segue sistema de continuidade: este arquivo fica pequeno e reflete só o estado atual; `docs/CHANGELOG_NEXT.md` guarda um bloco curto por versão; investigação/narrativa longa vai para `docs/session_logs/YYYY-MM-DD-nome.md`. Nunca copie logs de terminal, JSON completo ou diffs grandes de volta para este arquivo — achado real desta sessão: as seções TESTES/CONTEXTO tinham ficado stale por várias sessões (ainda citavam `next-clean-59`/"Next não tem auth") porque só as seções de topo eram atualizadas a cada entrega; revise o arquivo inteiro, não só a seção que parece relevante, ao fechar qualquer item.
 
-Nenhuma pendência listada acima tem consenso de urgência — qualquer uma exige decisão do usuário antes de virar prioridade real.
-
-Para a próxima missão no Next, aplicar DECISION-019 antes de escolher escopo: confirmar spec afetada, comparar contra a implementação real, escolher a melhoria de maior impacto pela ordem de prioridade registrada e evitar qualquer push/deploy automático sem pedido explícito.
+Para a próxima missão no Next, aplicar DECISION-019: confirmar spec afetada, comparar contra a implementação real, escolher a melhoria de maior impacto pela ordem de prioridade registrada e evitar qualquer push/deploy automático sem pedido explícito.
