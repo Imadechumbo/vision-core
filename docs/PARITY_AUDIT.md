@@ -57,15 +57,23 @@ Ou seja: pra apagar o legado por completo no futuro, a superfície real a consid
 
 ---
 
+### (a3) ADICIONADO em sessões subsequentes (2026-07-10/12 — status atualizado nesta revisão, ver `docs/CHANGELOG_NEXT.md` pra detalhe por versão)
+
+| Feature | Endpoint(s) | Observação |
+|---|---|---|
+| Software Factory — 2 passos restantes (encadeados) | `/api/sf/project-files`, `/api/sf/generate-zip` | **CORRIGIDO (2026-07-10)** — `tests/e2e/vision-core-next-sf-project-files.spec.mjs` (6 testes), incluindo o caso de download de blob real (`page.waitForEvent('download')`). Esta seção listava isso como pendente numa versão anterior deste documento; estava desatualizado, não o ROADMAP. |
+| Auth email/senha (registro/login/logout) | `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout` | **IMPLEMENTADO (`next-clean-62`)** — Settings → Conta, zero endpoint novo. Only a parte email/senha; ver (b) abaixo pro que falta. |
+| Tutorial Smile | — (sem endpoint, guia estático) | **IMPLEMENTADO (`next-clean-60`)** — não é migração do legado (o Next deliberadamente NÃO reaproveita `#vcTutorialOverlay`/localStorage `vc_tutorial_*`); é uma reimplementação própria, mais simples, manual (sem autoabrir). |
+| Atomic Core — auto-collapse + Settings (on/off, intensidade) | — (sem endpoint, visual) | **IMPLEMENTADO (`next-clean-61`/`63`)** — não é migração do "v33 orbit" do legado (item (c) abaixo já determina que o Atomic Core é reimplementado do zero); é evolução própria do Next. "Glow on/off" deliberadamente não incluído — contradiria checklist já fechado da spec (item 6). |
+
 ### (b) FALTA no Next, tem valor real — endpoint vivo + UI reachable confirmada no legado
 
 | Feature | Endpoint(s) | Evidência de que é real |
 |---|---|---|
-| Auth (registro/login/OAuth Google+GitHub) | `/api/auth/register`, `/api/auth/login`, `/api/auth/oauth/<provider>` | Botões com `addEventListener` real confirmados (`signupBtn`, `authBackdrop` etc.). **Mais sensível de todo o roadmap** — mexe com sessão de qualquer usuário; já registrado no HANDOFF como algo a não começar sem alinhamento explícito. |
-| Software Factory — 2 passos restantes (encadeados) | `/api/sf/project-files`, `/api/sf/generate-zip` | Mapeados em `SF_ENDPOINT_MAP` (bundle.js:10121-10128) no legado. Contratos já verificados contra `server.js` (não o nome, o código): `project-files` (`server.js:4576`) é assíncrono mas com payload/resposta diferentes dos outros passos — resultado vem em `data.files[]`, não `data.result`, e o corpo é `{description, accumulated_context, step1_analysis, step2_blueprint}`, não o `{module, step, total_steps}` padrão. `generate-zip` (`server.js:4700`) é síncrono e devolve um **stream ZIP binário**, não JSON — a UI precisa tratar como download de blob, padrão ainda não usado em nenhum outro lugar do Next. |
+| OAuth Google/GitHub | `/api/auth/oauth/<provider>`, `/api/auth/oauth/<provider>/callback` | Botões com `addEventListener` real confirmados no legado (`signupBtn`, `authBackdrop` etc.). Email/senha já portado (`next-clean-62`) — **este item ficou menor**: o bloqueio real hoje não é risco de sessão em geral, é específico — o callback do backend sempre redireciona pro `FRONTEND_URL` raiz (legado), nunca pra `vision-core-next.html`; portar OAuth exige mudar esse redirect no backend, fora do escopo desta frente sem autorização explícita própria. |
 | Deploy dropdown (ZIP/merge-PR/CF Pages/EB/Docker) | `/api/deploy/trigger`, `/api/deploy/merge-pr`, `/api/deploy/pages`, `/api/deploy/eb`, `/api/deploy/zip-release` | Real e reachable no legado (`§50`/`§51`). **Não é uma lacuna a fechar casualmente** — a SPEC do Next proíbe explicitamente scripts de deploy nesta fase (seção 2, "Arquivos Proibidos"). Fica registrado aqui como paridade pendente, mas é uma decisão de escopo do usuário, não um "esqueceram de fazer". |
 
-**2 grupos com trabalho real pendente** (excluindo a nota de escopo do deploy): Auth e os 2 endpoints SF encadeados restantes. Todo o resto da categoria (b) original (AI Provider Vault, Rollback, Missions History, Evidence, Agent badge, Hermes hint, Apply-Fix, 4 passos extra de SF, contexto de URL) foi migrado pra (a2).
+**1 grupo com trabalho real pendente** (excluindo a nota de escopo do deploy): OAuth Google/GitHub. Todo o resto da categoria (b) original (AI Provider Vault, Rollback, Missions History, Evidence, Agent badge, Hermes hint, Apply-Fix, 4 passos extra de SF, contexto de URL, project-files+generate-zip, Auth email/senha) foi migrado pra (a2)/(a3).
 
 **Caso à parte — Vault rollback:** `/api/vault/rollback/:id` existe e funciona no backend, mas **nenhum lugar do frontend legado chama essa rota** — só `snapshot` é chamado, automaticamente, como parte do pipeline de missão. Não é uma lacuna de paridade (o legado também não tem essa UI); seria escopo novo, não restauração de algo que já existiu.
 
@@ -110,21 +118,17 @@ Nenhum arquivo depende de `@import` interno entre CSS (checado — só 2 `@impor
 
 ## 3. Tabela-resumo
 
+**Atualizado em 2026-07-12** — seções (a3)/(b) revisadas contra `docs/ROADMAP.md`/`docs/CHANGELOG_NEXT.md` atuais; a versão anterior deste documento (2026-07-08/09) estava desatualizada e contradizia o ROADMAP em 1 ponto (`project-files`+`generate-zip`, já corrigido há duas versões).
+
 | Categoria | Contagem | O que significa |
 |---|---|---|
-| **(a+a2) Já existe no Next** | 22 grupos de feature (13 da auditoria original + 9 adicionados depois; 2 deles Next já está à frente do legado) | Nenhuma ação necessária. |
-| **(b) Falta, valor real confirmado** | 2 grupos (Auth, `project-files`+`generate-zip` de SF) | Trabalho de verdade — ver estimativa abaixo. |
+| **(a+a2+a3) Já existe no Next** | 26 grupos de feature (13 originais + 9 de 2026-07-08/09 + 4 de 2026-07-10/12: project-files+generate-zip, Auth email/senha, Tutorial Smile, Atomic Core auto-collapse/Settings) | Nenhuma ação necessária. |
+| **(b) Falta, valor real confirmado** | 1 grupo (OAuth Google/GitHub) | Bloqueado por mudança de backend no callback + autorização própria — não é mais um "turno normal", é PARE E PERGUNTE por definição. |
 | **(b, caso à parte) Escopo novo, não paridade** | 2 (Vault rollback como já existia, Billing checkout UI) | O legado também não tem essas UIs — não é lacuna de migração, é decisão de produto separada se quiser construir. |
 | **(c) Candidato a não migrar** | 13 itens, com evidência objetiva cada um | Reduz a superfície de "o que falta" em ~13 itens que pareceriam pendências mas não são. |
 | **CSS órfão/só-legado** | 28 de 30 arquivos (27 legado + 1 draft órfão) | Zero trabalho de CSS pro Next — já não depende de nada disso. |
 
-**Estimativa honesta de turnos pro "falta de verdade" restante (item b):**
-
-- **Auth (registro/login/OAuth Google+GitHub):** 2–3 turnos. É o item mais arriscado do roadmap inteiro (mexe com sessão de qualquer usuário, token HMAC caseiro sem refresh) — o próprio HANDOFF já registra isso como "não começar sem alinhamento explícito". Não é um turno normal de feature, é o tipo de trabalho que pede confirmação extra em cada passo.
-- **Software Factory — `project-files` + `generate-zip`:** 1 turno. Contratos já verificados e documentados no HANDOFF (payload/resposta de `project-files` é diferente do padrão dos outros passos; `generate-zip` devolve um ZIP binário, não JSON — exige um padrão novo de download de blob no frontend). O trabalho que falta é só implementação, não mais descoberta de contrato.
-- **Tudo mais da categoria (b) original — IMPLEMENTADO** entre 2026-07-08 e 2026-07-09: AI Provider Vault, Rollback, Missions History, Evidence, Agent Badge, Hermes hint, Apply-Fix, 4 passos extra de SF, contexto de URL (`fetch-url`).
-
-**Total: ~3–4 turnos** no ritmo e disciplina desta linha de trabalho (fatia pequena, teste mockado + validação de contrato, commit+push por fatia) — descendo de ~6-7 na estimativa original. Deploy dropdown e Vault-rollback/Billing ficam de fora da conta — são decisões do usuário sobre se querem essas capacidades no Next, não itens de esforço a estimar.
+**Trabalho real restante:** só OAuth Google/GitHub, e só depois de (1) decisão explícita do usuário sobre mudar o backend do callback e (2) autorização própria pra essa rota de auth — nenhum turno de implementação pode começar antes disso. Deploy dropdown e Vault-rollback/Billing ficam de fora da conta — são decisões do usuário sobre se querem essas capacidades no Next, não itens de esforço a estimar.
 
 ---
 
