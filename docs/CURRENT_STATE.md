@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-⚠ `next-clean-67` é o que está ao vivo agora (`visioncoreai.pages.dev`); `next-clean-68` (hero do chat deixou de vazar pra outras páginas) está commitado localmente e **ainda não deployado** — aguardando autorização explícita do usuário.
+✔ `next-clean-68` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real: cache-bust servido (`?v=next-clean-68` no CSS e no JS), `#vcChatIntro` escondido (`introHidden:true`) em Security Lab/Missions/Métricas com o painel real de cada aba visível, visível (`introHidden:false`) em Chat/Factory, Atomic Core sempre visível e ancorado em todas.
 
 Cache Bust
-next-clean-68 (local, não deployado) / next-clean-67 (produção)
+next-clean-68
 
 Último Commit
 
@@ -39,7 +39,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ `next-clean-68` — correção de efeito colateral do `next-clean-67`: o hero do chat (`#vcChatIntro`, "Como vamos mover o Vision Core hoje?") vazava pra todas as páginas — nunca tinha sido condicionado por `selectFeature()`, já que `.vc-chat-stage` nunca é escondido (necessário pro Atomic Core ficar sempre visível). Competia pelo espaço de ancoragem do widget e empurrava o conteúdo real de cada aba (Security Lab, Missions, Métricas) pra baixo da dobra. Confirmado em produção antes do fix: `introVisible:true` simultâneo com a sidebar ativa em Security Lab/Missions/Métricas. Fix: `#vcChatIntro` escondido fora de `chat`/`factory` (mesmo critério "conta como chat"). 1 teste novo, **99/99 PASS, commitado, NÃO deployado — aguardando autorização explícita**.
+✔ `next-clean-68` — correção de efeito colateral do `next-clean-67`: o hero do chat (`#vcChatIntro`, "Como vamos mover o Vision Core hoje?") vazava pra todas as páginas — nunca tinha sido condicionado por `selectFeature()`, já que `.vc-chat-stage` nunca é escondido (necessário pro Atomic Core ficar sempre visível). Competia pelo espaço de ancoragem do widget e empurrava o conteúdo real de cada aba (Security Lab, Missions, Métricas) pra baixo da dobra. Confirmado em produção antes do fix: `introVisible:true` simultâneo com a sidebar ativa em Security Lab/Missions/Métricas. Fix: `#vcChatIntro` escondido fora de `chat`/`factory` (mesmo critério "conta como chat"). 1 teste novo, **99/99 PASS, deployado e confirmado ao vivo em produção**.
 
 ✔ `next-clean-67` — mudança de decisão do usuário: Atomic Core deixa de ser "escopado ao chat" e passa a ser elemento persistente global, visível em qualquer página/aba. `outsideChat` removido de `updateAtomicCollapseState()`; registrado como `DECISION-020`. As 2 exceções que ainda escondem o widget continuam intactas: toggle "mostrar Atomic Core" em Settings e a colisão real do Modo Avançado do SF. 98/98 PASS, **deployado e confirmado ao vivo em produção**.
 
@@ -51,7 +51,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
 
-Todos os itens até `next-clean-67` estão deployados e confirmados ao vivo; `next-clean-68` está commitado e testado, mas aguarda autorização explícita para deploy. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
+Todos os itens até `next-clean-68` estão deployados e confirmados ao vivo. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
 
 ---
 
