@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-⚠ `next-clean-68` é o que está ao vivo agora (`visioncoreai.pages.dev`); `next-clean-69` (hero do chat removido por completo) está commitado localmente e **ainda não deployado** — aguardando autorização explícita do usuário.
+✔ `next-clean-69` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real: cache-bust servido (`?v=next-clean-69` no CSS e no JS), hero ausente (`introExists:false`, sem texto residual), Atomic Core visível/ancorado (`gap:0px`) perto do topo real da área de conteúdo.
 
 Cache Bust
-next-clean-69 (local, não deployado) / next-clean-68 (produção)
+next-clean-69
 
 Último Commit
 
@@ -39,7 +39,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ `next-clean-69` — remoção completa do hero do chat (`#vcChatIntro`/`.vc-chat-intro`, "Como vamos mover o Vision Core hoje?") por decisão do usuário, sem placeholder. HTML/CSS/JS relacionados removidos juntos (`.vc-kicker` mantido, classe compartilhada com SF/Arquiteto SF/Pacote Final/Smile Guide). Atomic Core sobe pro topo real da área de conteúdo; composer permanece ancorado perto do rodapé da viewport (comportamento pré-existente desde `next-clean-65`, `min-height:calc(100vh-116px)`, fora de escopo deste pedido — **relatado como observação, não como lacuna**). Software Factory Auto-Pilot também deixou de exibir o hero (era removido/escondido junto por contar como "chat") — nenhum teste dependia disso. 1 teste obsoleto reescrito, **99/99 PASS, commitado, NÃO deployado — aguardando autorização explícita**.
+✔ `next-clean-69` — remoção completa do hero do chat (`#vcChatIntro`/`.vc-chat-intro`, "Como vamos mover o Vision Core hoje?") por decisão do usuário, sem placeholder. HTML/CSS/JS relacionados removidos juntos (`.vc-kicker` mantido, classe compartilhada com SF/Arquiteto SF/Pacote Final/Smile Guide). Atomic Core sobe pro topo real da área de conteúdo; composer permanece ancorado perto do rodapé da viewport (comportamento pré-existente desde `next-clean-65`, `min-height:calc(100vh-116px)`, fora de escopo deste pedido — **relatado como observação, não como lacuna**). Software Factory Auto-Pilot também deixou de exibir o hero (era removido/escondido junto por contar como "chat") — nenhum teste dependia disso. 1 teste obsoleto reescrito, **99/99 PASS, deployado e confirmado ao vivo em produção**.
 
 ✔ `next-clean-68` — hero do chat escondido condicionalmente fora de `chat`/`factory` (efeito colateral do `next-clean-67`, hero vazava pra toda página). 99/99 PASS, **deployado e confirmado ao vivo em produção**.
 
@@ -53,7 +53,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
 
-Todos os itens até `next-clean-68` estão deployados e confirmados ao vivo; `next-clean-69` está commitado e testado, mas aguarda autorização explícita para deploy. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
+Todos os itens até `next-clean-69` estão deployados e confirmados ao vivo. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
 
 ---
 
