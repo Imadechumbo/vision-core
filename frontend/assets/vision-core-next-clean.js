@@ -136,6 +136,15 @@
   var settingsDeleteBtn = document.getElementById('vcSettingsDeleteBtn');
   var settingsStatus = document.getElementById('vcSettingsStatus');
   var settingsList = document.getElementById('vcSettingsList');
+  var accountCopy = document.getElementById('vcAccountCopy');
+  var accountForm = document.getElementById('vcAccountForm');
+  var accountEmail = document.getElementById('vcAccountEmail');
+  var accountPassword = document.getElementById('vcAccountPassword');
+  var accountLoginBtn = document.getElementById('vcAccountLoginBtn');
+  var accountRegisterBtn = document.getElementById('vcAccountRegisterBtn');
+  var accountLogoutBtn = document.getElementById('vcAccountLogoutBtn');
+  var accountLogged = document.getElementById('vcAccountLogged');
+  var accountStatus = document.getElementById('vcAccountStatus');
   var animationReducedCheckbox = document.getElementById('vcAnimationReduced');
   if (animationReducedCheckbox) {
     animationReducedCheckbox.checked = isReducedMotion();
@@ -399,7 +408,7 @@
     }
     if (settingsPanel) {
       settingsPanel.hidden = activeFeature !== 'settings';
-      if (activeFeature === 'settings') loadSettingsList();
+      if (activeFeature === 'settings') { loadSettingsList(); refreshAccountStatus(); }
     }
     if (vaultRollback) {
       vaultRollback.hidden = activeFeature !== 'vault';
@@ -2377,6 +2386,82 @@
       updateSettingsButtons(settingsProvider.value);
     });
   }
+
+  // ── Conta (email/senha) — Settings → Conta ──────────────────────
+  // Escopo confirmado: só email/senha, zero endpoint novo (o apiRequest()
+  // já anexa Authorization: Bearer a partir de localStorage['vision_token'],
+  // linha ~700). OAuth Google/GitHub fica para etapa futura separada — o
+  // callback de hoje redireciona pro legado, não pro Next (ver
+  // docs/CURRENT_STATE.md). vision_session (cookie) é ignorado de propósito:
+  // vem de origem diferente (Worker Gateway) com SameSite=Lax, não confiável
+  // via fetch cross-site; o token no corpo da resposta é a fonte real.
+  var ACCOUNT_TOKEN_KEY = 'vision_token';
+  var ACCOUNT_DEFAULT_COPY = accountCopy ? accountCopy.textContent : '';
+
+  function showAccountStatus(msg, isError) {
+    if (!accountStatus) return;
+    accountStatus.textContent = msg;
+    accountStatus.style.color = isError ? '#f87171' : '';
+  }
+
+  function setAccountBusy(busy) {
+    if (accountLoginBtn) accountLoginBtn.disabled = busy;
+    if (accountRegisterBtn) accountRegisterBtn.disabled = busy;
+  }
+
+  function setAccountLoggedInUI(user) {
+    if (accountCopy) accountCopy.textContent = 'Logado como ' + (user && user.email ? user.email : '—') + '.';
+    if (accountForm) accountForm.hidden = true;
+    if (accountLogged) accountLogged.hidden = false;
+  }
+
+  function setAccountLoggedOutUI() {
+    if (accountCopy) accountCopy.textContent = ACCOUNT_DEFAULT_COPY;
+    if (accountForm) accountForm.hidden = false;
+    if (accountLogged) accountLogged.hidden = true;
+  }
+
+  function refreshAccountStatus() {
+    var token = null;
+    try { token = window.localStorage.getItem(ACCOUNT_TOKEN_KEY); } catch (_) {}
+    if (!token) { setAccountLoggedOutUI(); return; }
+    apiRequest('/api/auth/me').then(function (data) {
+      setAccountLoggedInUI(data.user);
+    }).catch(function () {
+      try { window.localStorage.removeItem(ACCOUNT_TOKEN_KEY); } catch (_) {}
+      setAccountLoggedOutUI();
+    });
+  }
+
+  function doAccountAuth(mode) {
+    var email = accountEmail ? accountEmail.value.trim() : '';
+    var password = accountPassword ? accountPassword.value : '';
+    if (!email || !password) { showAccountStatus('Email e senha são obrigatórios.', true); return; }
+    showAccountStatus(mode === 'register' ? 'Criando conta...' : 'Entrando...', false);
+    setAccountBusy(true);
+    apiRequest('/api/auth/' + mode, { method: 'POST', body: { email: email, password: password } }).then(function (data) {
+      try { window.localStorage.setItem(ACCOUNT_TOKEN_KEY, data.token); } catch (_) {}
+      if (accountPassword) accountPassword.value = '';
+      setAccountLoggedInUI(data.user);
+    }).catch(function (err) {
+      showAccountStatus('Erro: ' + (err && err.message ? err.message : String(err)), true);
+    }).then(function () {
+      setAccountBusy(false);
+    });
+  }
+
+  function doAccountLogout() {
+    apiRequest('/api/auth/logout', { method: 'POST' }).catch(function () {}).then(function () {
+      try { window.localStorage.removeItem(ACCOUNT_TOKEN_KEY); } catch (_) {}
+      if (accountEmail) accountEmail.value = '';
+      showAccountStatus('', false);
+      setAccountLoggedOutUI();
+    });
+  }
+
+  if (accountLoginBtn) accountLoginBtn.addEventListener('click', function () { doAccountAuth('login'); });
+  if (accountRegisterBtn) accountRegisterBtn.addEventListener('click', function () { doAccountAuth('register'); });
+  if (accountLogoutBtn) accountLogoutBtn.addEventListener('click', doAccountLogout);
 
   // Mission History (B-2) — list + detail from /api/mission/timeline.
   function loadMissionHistory() {

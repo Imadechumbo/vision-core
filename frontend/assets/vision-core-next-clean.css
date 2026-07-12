@@ -1848,7 +1848,7 @@ a { color: inherit; text-decoration: none; }
 }
 .vc-settings h4 { margin: 0 0 4px; font-size: 16px; color: var(--text); }
 .vc-settings h5 { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
-.vc-settings-form {
+.vc-settings-form:not([hidden]) {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1870,7 +1870,7 @@ a { color: inherit; text-decoration: none; }
   color: var(--text);
   font-size: 13px;
 }
-.vc-settings-field-actions {
+.vc-settings-field-actions:not([hidden]) {
   display: flex;
   gap: 8px;
   margin-top: 4px;
