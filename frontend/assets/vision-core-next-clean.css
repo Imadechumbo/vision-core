@@ -247,11 +247,10 @@ a { color: inherit; text-decoration: none; }
    auto, centralizado dentro de .vc-main -- isso deixava o Atomic Core
    (align-self:flex-end DENTRO dessa coluna) encostado na borda direita da
    coluna de 940px, não na borda real da área de conteúdo, com uma faixa
-   vazia visível entre os dois. Largura total aqui é segura: hero
-   (.vc-chat-intro, 680px), bolhas de mensagem (.vc-message, 760px) e o
-   card de status (.vc-feature-panel, 760px) já têm seu próprio max-width
-   independente do stage -- só o Atomic Core usa a largura real do stage
-   pra se ancorar. */
+   vazia visível entre os dois. Largura total aqui é segura: bolhas de
+   mensagem (.vc-message, 760px) e o card de status (.vc-feature-panel,
+   760px) já têm seu próprio max-width independente do stage -- só o
+   Atomic Core usa a largura real do stage pra se ancorar. */
 .vc-chat-stage {
   width: 100%;
   display: flex;
@@ -279,7 +278,6 @@ a { color: inherit; text-decoration: none; }
   padding-bottom: 160px; /* fallback if ResizeObserver is unsupported/unavailable; JS keeps this in sync with the real composer height */
 }
 
-.vc-chat-intro { max-width: 680px; text-align: left; }
 .vc-kicker {
   margin: 0 0 12px;
   color: var(--violet-2);
@@ -287,23 +285,6 @@ a { color: inherit; text-decoration: none; }
   font-weight: 850;
   letter-spacing: .24em;
 }
-
-.vc-chat-intro h1 {
-  margin: 0;
-  color: #fff;
-  font-size: clamp(28px, 3.4vw, 46px);
-  line-height: 1.04;
-  letter-spacing: 0;
-}
-
-.vc-chat-intro p:not(.vc-kicker) {
-  max-width: 670px;
-  margin: 12px 0 0;
-  color: #bdb4cf;
-  font-size: 14px;
-  line-height: 1.55;
-}
-
 
 .vc-feature-panel {
   display: grid;
@@ -1169,7 +1150,6 @@ a { color: inherit; text-decoration: none; }
   .vc-header { align-items: flex-start; }
   .vc-brand-copy small { white-space: normal; line-height: 1.45; }
   .vc-chat-stage { padding-top: 14px; }
-  .vc-chat-intro h1 { font-size: clamp(26px, 9vw, 38px); }
   .vc-safe-status-row { grid-template-columns: 1fr; }
   .vc-atomic-hud { display: none; }
 }

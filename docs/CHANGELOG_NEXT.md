@@ -4,6 +4,15 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-69 (2026-07-12)
+
+- Remoção completa do hero do chat (`#vcChatIntro`/`.vc-chat-intro`, "VISION AI COMMAND" + "Como vamos mover o Vision Core hoje?" + parágrafo descritivo) por decisão do usuário — sem placeholder no lugar. Trajetória do elemento: vazou pra toda página em `next-clean-67` (efeito colateral do Atomic Core sempre visível), foi escondido condicionalmente fora de `chat`/`factory` em `next-clean-68`, removido de vez agora
+- HTML (`<div class="vc-chat-intro" id="vcChatIntro">`), CSS (`.vc-chat-intro`, `.vc-chat-intro h1`, `.vc-chat-intro p:not(.vc-kicker)`, override de media query) e JS (`chatIntroEl`, toggle em `selectFeature()`) removidos juntos — `.vc-kicker` mantido (classe compartilhada, ainda usada por Software Factory/Arquiteto SF/Pacote Final/Smile Guide)
+- Atomic Core sobe pro topo real da área de conteúdo (antes ficava abaixo do hero); composer permanece ancorado perto do rodapé da viewport — comportamento inalterado, pré-existente desde `next-clean-65` (`min-height:calc(100vh-116px)` em `.vc-chat-stage`, fora de escopo deste pedido)
+- Observação reportada: Software Factory Auto-Pilot também exibia o hero antes (contava como "chat") — como o elemento foi removido por completo (não só escondido), deixou de aparecer ali também. Nenhum teste dependia disso, nenhum tratamento especial foi necessário
+- 1 teste obsoleto reescrito (verificava visibilidade condicional do hero, que deixou de existir) — agora confirma ausência total do elemento + Atomic Core sem vão reservado no topo
+- 99/99 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
 ## next-clean-68 (2026-07-12)
 
 - Correção de efeito colateral do `next-clean-67`: o hero do chat (`#vcChatIntro`, "Como vamos mover o Vision Core hoje?") vazava pra todas as páginas — nunca tinha sido condicionado por `selectFeature()`, já que `.vc-chat-stage` nunca é escondido (necessário pro Atomic Core ficar sempre visível). Isso competia pelo mesmo espaço onde o widget ancora e empurrava o conteúdo real de cada aba (Security Lab, Missions, Métricas) pra baixo da dobra, dando a impressão de "página errada" mesmo com a sidebar mostrando a aba certa

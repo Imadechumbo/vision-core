@@ -263,7 +263,6 @@
   var dashboardAgents = document.getElementById('vcDashboardAgents');
   var dashboardRefresh = document.getElementById('vcDashboardRefresh');
   var chatStageEl = document.querySelector('.vc-chat-stage');
-  var chatIntroEl = document.getElementById('vcChatIntro');
   var metricsPanel = document.getElementById('vcMetricsPanel');
   var metricsSourceBadge = document.getElementById('vcMetricsSourceBadge');
   var metricsError = document.getElementById('vcMetricsError');
@@ -464,13 +463,6 @@
     document.querySelectorAll('[data-feature]').forEach(function (node) {
       node.classList.toggle('is-active', node.getAttribute('data-feature') === activeFeature);
     });
-    // Achado real (2026-07-12): o hero do chat (.vc-chat-intro) nunca foi
-    // condicionado por selectFeature() -- .vc-chat-stage nunca é escondido
-    // (Atomic Core precisa dele sempre visível, ver DECISION-020), mas o
-    // hero vazava junto pra toda página, competindo pelo mesmo espaço onde
-    // o widget deveria ancorar. Software Factory Auto-Pilot conta como
-    // "chat" (mesmo critério já usado no resto do arquivo), o resto não.
-    if (chatIntroEl) chatIntroEl.hidden = activeFeature !== 'chat' && activeFeature !== 'factory';
     if (featureTitle) featureTitle.textContent = feature.title;
     if (featureBody) featureBody.textContent = feature.text;
     if (featureStatus) featureStatus.textContent = feature.status;

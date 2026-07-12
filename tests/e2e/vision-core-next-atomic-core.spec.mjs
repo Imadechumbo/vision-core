@@ -425,33 +425,24 @@ test('stays visible on every page/tab, not just chat/Software Factory', async ({
   await expect(hud, 'Software Factory Auto-Pilot stays visible').not.toHaveClass(/is-collapsed/);
 });
 
-// Achado real (2026-07-12, next-clean-68): .vc-chat-intro (o hero "Como
-// vamos mover o Vision Core hoje?") nunca foi condicionado por
-// selectFeature() -- .vc-chat-stage nunca eh escondido (o Atomic Core
-// precisa dele sempre visivel, next-clean-67), entao o hero vazava pra
-// TODA pagina, competindo pelo mesmo espaco onde o widget deveria
-// ancorar e empurrando o conteudo real de cada aba (Security Lab,
-// Missions, Metricas) pra baixo da dobra, dando a falsa impressao de
-// pagina errada. Confirmado em producao antes do fix (introVisible:true
-// em Security Lab/Missions/Metricas). Fix: #vcChatIntro escondido fora
-// de chat/factory (Software Factory conta como "chat", mesmo criterio ja
-// usado no resto do arquivo).
-test('chat hero intro is scoped to chat/Software Factory, does not leak into other pages', async ({ page }) => {
+// Decisao do usuario (2026-07-12, next-clean-69): remove por completo o
+// hero do chat (.vc-chat-intro/#vcChatIntro, "Como vamos mover o Vision
+// Core hoje?"), introduzido condicional em next-clean-68 depois de vazar
+// pra toda pagina em next-clean-67. Sem substituto/placeholder -- o
+// composer deve subir pro topo real da area de conteudo, sem vao vazio
+// reservado no lugar do texto removido.
+test('chat hero intro no longer exists, composer sits near the top with no reserved gap', async ({ page }) => {
   await page.goto(NEXT_URL());
-  const intro = page.locator('#vcChatIntro');
+  await expect(page.locator('#vcChatIntro')).toHaveCount(0);
+  await expect(page.locator('.vc-chat-intro')).toHaveCount(0);
+  await expect(page.locator('body')).not.toContainText('Como vamos mover o Vision Core hoje');
 
-  await expect(intro, 'visible on chat home').toBeVisible();
-
-  for (const feature of ['security', 'missions', 'metrics', 'dashboard', 'vault', 'tools', 'settings', 'github']) {
-    await page.locator('a[data-feature="' + feature + '"]').click();
-    await expect(intro, 'hero intro must not leak into ' + feature).toBeHidden();
-  }
-
-  await page.locator('a[data-feature="factory"]').click();
-  await expect(intro, 'Software Factory Auto-Pilot still counts as chat, intro stays visible').toBeVisible();
-
-  await page.locator('a[data-feature="chat"]').click();
-  await expect(intro, 'intro reappears back on chat').toBeVisible();
+  const gapFromTop = await page.evaluate(() => {
+    const stage = document.querySelector('.vc-chat-stage');
+    const hud = document.querySelector('[data-atomic-core]');
+    return hud.getBoundingClientRect().top - stage.getBoundingClientRect().top;
+  });
+  expect(gapFromTop, 'Atomic Core (first content in the stage) should sit near the stage top, no leftover intro gap').toBeLessThan(80);
 });
 
 // Achado real da RCA adversarial (2026-07-12): a primeira versao usava
