@@ -23,6 +23,11 @@ Nenhuma alteração arquitetural pode ser baseada em inferência apresentada com
 **Por quê:** o Vision Core é mantido por múltiplos agentes e já acumulou divergências entre prompt, spec, teste, código e estado real. Sem evidência objetiva antes da mudança, o agente seguinte herda uma conclusão não verificável e pode transformar suposição em arquitetura.
 **Como aplicar:** toda decisão arquitetural precisa apontar pelo menos uma evidência objetiva: spec, código, teste, execução observável ou documentação oficial. Suposições devem ser marcadas como suposição. Se duas fontes normativas de mesma autoridade divergirem e não houver evidência suficiente para escolher o lado correto, parar e pedir decisão humana antes de implementar.
 
+### ARCHITECTURAL PRINCIPLE-004 — No Fixed Viewport Layout
+Nenhum componente de dashboard, gráfico, painel, monitor, timeline ou grid de módulos pode usar posicionamento fixo em relação à viewport (`position: fixed`, `sticky` com referência de scroll global, ou técnica equivalente que prenda o elemento à tela independente do scroll do container pai).
+**Por quê:** achado real (2026-07-12) — o Atomic Core usava `position: fixed` relativo à viewport inteira, reservando uma faixa permanente de `.vc-main` (`padding-right: clamp(285px,27vw,405px)`) mesmo fora do contexto de chat; isso comprime todo outro painel/dashboard que precise de largura real, forçando colunas estreitas sem necessidade.
+**Como aplicar:** todo componente visual novo deve (1) viver dentro do fluxo normal de scroll do container onde foi montado, nunca sobrepor nem ficar para trás quando o conteúdo ao redor rola; (2) ter largura responsiva ao espaço real do container, nunca comprimida por um elemento fixo concorrente; (3) quando fizer sentido (dashboards com múltiplos gráficos), ganhar painel de largura total dentro da própria SPA (`data-feature` dedicado, já que o Next não tem router de páginas separadas — ver `ARCHITECTURAL PRINCIPLE-001`), em vez de forçado como painel lateral secundário. Exceções permitidas: navegação global (header/sidebar) e UI transitória (modais, toasts, tooltips) — nunca dashboard de dados ou conteúdo analítico. Primeira aplicação: Atomic Core (`vision-core-next-clean.css`/`.js`, 2026-07-12).
+
 ---
 
 ## Infraestrutura / Deploy

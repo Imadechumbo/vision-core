@@ -329,3 +329,78 @@ test('intensity slider sets --atomic-intensity and persists across reload (windo
   await expect(page.locator('#vcAtomicIntensity')).toHaveValue('40');
   await expect(hud).toHaveCSS('--atomic-intensity', '0.4');
 });
+
+// ARCHITECTURAL PRINCIPLE-004 (No Fixed Viewport Layout, ver DECISIONS.md).
+// Achado real: position:absolute dentro de #vcChatScroll NAO rola com o
+// conteudo (offset e relativo ao padding-box, que nao se move) -- testado
+// e descartado antes deste commit. A solucao real e position:static
+// (align-self:flex-end no flex column), confirmada aqui via
+// getBoundingClientRect antes/depois do scroll, nao soh a leitura de CSS.
+test('lives in normal document flow (no fixed/absolute positioning tying it to the viewport)', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  const hud = page.locator('[data-atomic-core]');
+  const position = await hud.evaluate((el) => getComputedStyle(el).position);
+  expect(position, 'must never be fixed or absolute -- ties it to the viewport/padding-box instead of the real scroll flow').toBe('static');
+});
+
+test('scrolls away with the chat content instead of staying pinned to the viewport', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  await page.evaluate(() => {
+    const stream = document.getElementById('vcChatStream');
+    for (let i = 0; i < 25; i++) {
+      const p = document.createElement('p');
+      p.textContent = 'mensagem de teste ' + i;
+      stream.appendChild(p);
+    }
+  });
+  const hud = page.locator('[data-atomic-core]');
+  const before = await hud.evaluate((el) => el.getBoundingClientRect().top);
+
+  await page.evaluate(() => {
+    const scrollEl = document.getElementById('vcChatScroll');
+    scrollEl.scrollTop = scrollEl.scrollHeight;
+  });
+  await page.waitForTimeout(150);
+  const after = await hud.evaluate((el) => el.getBoundingClientRect().top);
+
+  expect(after, 'must move out of the visible area when the chat is scrolled, unlike position:fixed').toBeLessThan(before - 100);
+});
+
+test('hides outside the chat area (no space reserved), but Software Factory Auto-Pilot counts as chat', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  const hud = page.locator('[data-atomic-core]');
+
+  await expect(hud, 'visible on chat home').not.toHaveClass(/is-collapsed/);
+
+  await page.locator('a[data-feature="settings"]').click();
+  await expect(hud, 'must collapse outside the chat area (e.g. Settings)').toHaveClass(/is-collapsed/);
+
+  await page.locator('a[data-feature="chat"]').click();
+  await expect(hud, 'must reappear back on chat').not.toHaveClass(/is-collapsed/);
+
+  // Software Factory is documented as "modo operacional do chat, nao pagina"
+  // (VISION_CORE_NEXT_FRONTEND_SPEC.md) -- Auto-Pilot must stay visible,
+  // same guarantee as next-clean-61, not broken by this new rule.
+  await page.locator('a[data-feature="factory"]').click();
+  await expect(hud, 'Software Factory Auto-Pilot still counts as chat, must not collapse').not.toHaveClass(/is-collapsed/);
+});
+
+// Achado real da RCA adversarial (2026-07-12): a primeira versao usava
+// margin-right negativo pra "colar" o widget na borda direita, mas isso
+// empurrava os nos openclaw/scanner para alem da borda de #vcChatScroll
+// (overflow-x:hidden), cortando-os visualmente -- so descoberto medindo
+// getBoundingClientRect de cada agente contra o container, nao pela
+// screenshot isolada (que parecia correta na resolucao usada). Corrigido
+// removendo o margin-right negativo.
+test('no agent node is clipped by #vcChatScroll overflow-x:hidden', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  const clipped = await page.evaluate(() => {
+    const scrollRect = document.getElementById('vcChatScroll').getBoundingClientRect();
+    const tolerance = 1;
+    return Array.from(document.querySelectorAll('[data-agent]'))
+      .map((el) => ({ name: el.getAttribute('data-agent'), rect: el.getBoundingClientRect() }))
+      .filter(({ rect }) => rect.right > scrollRect.right + tolerance || rect.left < scrollRect.left - tolerance)
+      .map(({ name, rect }) => name + ' (right=' + rect.right.toFixed(1) + ' vs container ' + scrollRect.right.toFixed(1) + ')');
+  });
+  expect(clipped, 'no agent label should extend past the scroll container edge').toEqual([]);
+});

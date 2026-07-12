@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-63">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-63" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-64">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-64" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -32,6 +32,7 @@
         <a href="#github" data-feature="github"><i aria-hidden="true">G</i><span>GitHub</span></a>
         <a href="#vault" data-feature="vault"><i aria-hidden="true">V</i><span>Vault</span></a>
         <a href="#metrics" data-feature="metrics"><i aria-hidden="true">M</i><span>Métricas</span></a>
+        <a href="#dashboard" data-feature="dashboard"><i aria-hidden="true">D</i><span>Dashboard</span></a>
         <a href="#tools" data-feature="tools"><i aria-hidden="true">T</i><span>Tools</span></a>
         <a href="#security" data-feature="security"><i aria-hidden="true">L</i><span>Security Lab</span></a>
         <a href="#obsidian" data-feature="obsidian"><i aria-hidden="true">O</i><span>Obsidian</span></a>
@@ -65,6 +66,39 @@
         </div>
 
         <div class="vc-chat-scroll" id="vcChatScroll">
+        <section class="vc-atomic-hud" data-atomic-core data-state="idle" data-glow="on" aria-label="Atomic Core Vision Core">
+          <svg class="vc-atomic-rings" viewBox="0 0 360 360" aria-hidden="true">
+            <defs>
+              <radialGradient id="vcNextCoreGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#f5f3ff" stop-opacity="0.42"></stop>
+                <stop offset="46%" stop-color="#a855f7" stop-opacity="0.25"></stop>
+                <stop offset="100%" stop-color="#6d28d9" stop-opacity="0"></stop>
+              </radialGradient>
+            </defs>
+            <ellipse class="vc-atomic-ring vc-atomic-ring-a" cx="180" cy="180" rx="145" ry="46" transform="rotate(-28 180 180)"></ellipse>
+            <ellipse class="vc-atomic-ring vc-atomic-ring-b" cx="180" cy="180" rx="145" ry="46" transform="rotate(28 180 180)"></ellipse>
+            <ellipse class="vc-atomic-ring vc-atomic-ring-c" cx="180" cy="180" rx="130" ry="58" transform="rotate(86 180 180)"></ellipse>
+            <circle class="vc-orbit-ring vc-orbit-ring-main" cx="180" cy="180" r="120"></circle>
+            <circle class="vc-orbit-ring vc-orbit-ring-secondary" cx="180" cy="180" r="92"></circle>
+            <polygon class="vc-orbit-decagon" points="180,60 250.5,82.9 294.1,142.9 294.1,217.1 250.5,277.1 180,300 109.5,277.1 65.9,217.1 65.9,142.9 109.5,82.9"></polygon>
+            <g class="vc-orbit-spokes">
+              <line x1="180" y1="180" x2="180" y2="60"></line><line x1="180" y1="180" x2="250.5" y2="82.9"></line><line x1="180" y1="180" x2="294.1" y2="142.9"></line><line x1="180" y1="180" x2="294.1" y2="217.1"></line><line x1="180" y1="180" x2="250.5" y2="277.1"></line><line x1="180" y1="180" x2="180" y2="300"></line><line x1="180" y1="180" x2="109.5" y2="277.1"></line><line x1="180" y1="180" x2="65.9" y2="217.1"></line><line x1="180" y1="180" x2="65.9" y2="142.9"></line><line x1="180" y1="180" x2="109.5" y2="82.9"></line>
+            </g>
+            <circle class="vc-core-aura" cx="180" cy="180" r="58" fill="url(#vcNextCoreGlow)"></circle>
+          </svg>
+
+          <div class="vc-core-node" data-atomic-core-node><span aria-hidden="true">◌</span><strong>CORE</strong></div>
+          <div class="vc-agent" data-agent="pi"><i>PI</i><span>PI Harness</span><small>Mission Runner</small></div>
+          <div class="vc-agent" data-agent="hermes"><i>H</i><span>Hermes</span><small>Supervisor / RCA</small></div>
+          <div class="vc-agent" data-agent="openclaw"><i>OC</i><span>OpenClaw</span><small>Orchestrator</small></div>
+          <div class="vc-agent" data-agent="scanner"><i>SC</i><span>Scanner</span><small>Context Builder</small></div>
+          <div class="vc-agent" data-agent="patchEngine"><i>PE</i><span>Patch Engine</span><small>Exec. controlada</small></div>
+          <div class="vc-agent" data-agent="aegis"><i>AE</i><span>Aegis</span><small>Security Gate</small></div>
+          <div class="vc-agent" data-agent="goCore"><i>GO</i><span>Go Core</span><small>Runtime Truth</small></div>
+          <div class="vc-agent" data-agent="passGold"><i>PG</i><span>Pass Gold</span><small>Final Authority</small></div>
+          <div class="vc-agent" data-agent="archivist"><i>AR</i><span>Archivist</span><small>Memory Guard</small></div>
+          <div class="vc-agent" data-agent="github"><i>GH</i><span>GitHub Agent</span><small>PR / CI / Release</small></div>
+        </section>
         <div class="vc-chat-stream" id="vcChatStream" aria-live="polite">
           <article class="vc-message vc-message-system">
             <span>VISION CORE</span>
@@ -357,6 +391,24 @@
 
             <pre class="vc-metrics-raw" id="vcMetricsRaw" hidden></pre>
           </div>
+
+          <div class="vc-dashboard-panel" id="vcDashboardPanel" hidden>
+            <div class="vc-metrics-head">
+              <h4>Dashboard — largura total</h4>
+              <div class="vc-metrics-head-actions">
+                <button type="button" id="vcDashboardRefresh">Atualizar</button>
+              </div>
+            </div>
+            <p class="vc-dashboard-status" id="vcDashboardStatus" aria-live="polite">Carregando...</p>
+            <section class="vc-dashboard-section">
+              <h5>Timeline</h5>
+              <div class="vc-dashboard-timeline" id="vcDashboardTimeline"></div>
+            </section>
+            <section class="vc-dashboard-section">
+              <h5>Custo por Agente &amp; Ranking de Atividade</h5>
+              <div class="vc-dashboard-agents" id="vcDashboardAgents"></div>
+            </section>
+          </div>
         </section>
         </div>
         <form class="vc-composer" id="vcComposer">
@@ -524,39 +576,6 @@
       </div>
     </section>
 
-    <section class="vc-atomic-hud" data-atomic-core data-state="idle" data-glow="on" aria-label="Atomic Core Vision Core">
-      <svg class="vc-atomic-rings" viewBox="0 0 360 360" aria-hidden="true">
-        <defs>
-          <radialGradient id="vcNextCoreGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#f5f3ff" stop-opacity="0.42"></stop>
-            <stop offset="46%" stop-color="#a855f7" stop-opacity="0.25"></stop>
-            <stop offset="100%" stop-color="#6d28d9" stop-opacity="0"></stop>
-          </radialGradient>
-        </defs>
-        <ellipse class="vc-atomic-ring vc-atomic-ring-a" cx="180" cy="180" rx="145" ry="46" transform="rotate(-28 180 180)"></ellipse>
-        <ellipse class="vc-atomic-ring vc-atomic-ring-b" cx="180" cy="180" rx="145" ry="46" transform="rotate(28 180 180)"></ellipse>
-        <ellipse class="vc-atomic-ring vc-atomic-ring-c" cx="180" cy="180" rx="130" ry="58" transform="rotate(86 180 180)"></ellipse>
-        <circle class="vc-orbit-ring vc-orbit-ring-main" cx="180" cy="180" r="120"></circle>
-        <circle class="vc-orbit-ring vc-orbit-ring-secondary" cx="180" cy="180" r="92"></circle>
-        <polygon class="vc-orbit-decagon" points="180,60 250.5,82.9 294.1,142.9 294.1,217.1 250.5,277.1 180,300 109.5,277.1 65.9,217.1 65.9,142.9 109.5,82.9"></polygon>
-        <g class="vc-orbit-spokes">
-          <line x1="180" y1="180" x2="180" y2="60"></line><line x1="180" y1="180" x2="250.5" y2="82.9"></line><line x1="180" y1="180" x2="294.1" y2="142.9"></line><line x1="180" y1="180" x2="294.1" y2="217.1"></line><line x1="180" y1="180" x2="250.5" y2="277.1"></line><line x1="180" y1="180" x2="180" y2="300"></line><line x1="180" y1="180" x2="109.5" y2="277.1"></line><line x1="180" y1="180" x2="65.9" y2="217.1"></line><line x1="180" y1="180" x2="65.9" y2="142.9"></line><line x1="180" y1="180" x2="109.5" y2="82.9"></line>
-        </g>
-        <circle class="vc-core-aura" cx="180" cy="180" r="58" fill="url(#vcNextCoreGlow)"></circle>
-      </svg>
-
-      <div class="vc-core-node" data-atomic-core-node><span aria-hidden="true">◌</span><strong>CORE</strong></div>
-      <div class="vc-agent" data-agent="pi"><i>PI</i><span>PI Harness</span><small>Mission Runner</small></div>
-      <div class="vc-agent" data-agent="hermes"><i>H</i><span>Hermes</span><small>Supervisor / RCA</small></div>
-      <div class="vc-agent" data-agent="openclaw"><i>OC</i><span>OpenClaw</span><small>Orchestrator</small></div>
-      <div class="vc-agent" data-agent="scanner"><i>SC</i><span>Scanner</span><small>Context Builder</small></div>
-      <div class="vc-agent" data-agent="patchEngine"><i>PE</i><span>Patch Engine</span><small>Exec. controlada</small></div>
-      <div class="vc-agent" data-agent="aegis"><i>AE</i><span>Aegis</span><small>Security Gate</small></div>
-      <div class="vc-agent" data-agent="goCore"><i>GO</i><span>Go Core</span><small>Runtime Truth</small></div>
-      <div class="vc-agent" data-agent="passGold"><i>PG</i><span>Pass Gold</span><small>Final Authority</small></div>
-      <div class="vc-agent" data-agent="archivist"><i>AR</i><span>Archivist</span><small>Memory Guard</small></div>
-      <div class="vc-agent" data-agent="github"><i>GH</i><span>GitHub Agent</span><small>PR / CI / Release</small></div>
-    </section>
   </div>
 </body>
 </html>

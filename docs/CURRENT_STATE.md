@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ next-clean-63 publicado via `bash bin/deploy-pages.sh` (bundle: next-clean-60 Tutorial Smile + next-clean-61 Atomic Core auto-collapse + next-clean-62 Auth email/senha + next-clean-63 Atomic Core Settings on/off+intensidade), confirmado ao vivo por screenshot Playwright real contra produção: (1) Atomic Core recolhe no Modo Avançado do SF e reaparece ao voltar pro Auto-Pilot; (2) registro+logout+login rodados contra o backend real (não mockado); (3) toggle "Mostrar Atomic Core" some/reaparece o widget, slider de intensidade em 40% deixa o widget visivelmente translúcido, `--atomic-intensity: 0.4` confirmado via `getComputedStyle`.
+✔ next-clean-63 confirmado ao vivo em produção. `next-clean-64` (Atomic Core layout de fluxo normal + Dashboard) preparado localmente, **deploy pendente de aprovação explícita**.
 
 Cache Bust
-next-clean-63
+next-clean-64 (local, não deployado — produção ainda serve next-clean-63)
 
 Último Commit
 
@@ -39,15 +39,17 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ Atomic Core: confirmado por código (Fase 1) que hoje não recolhe em nenhum painel — só encolhe/some por breakpoint de tela. Confirmado por screenshot que só o Modo Avançado do Software Factory tem colisão real contra a zona reservada do widget (Timeline/Métricas/Security Lab não, em estado vazio). Implementado (Fase 1.5, aprovado pelo usuário): recolhe automaticamente só nesse painel, override reversível em Settings → Atomic Core (`window.VCAtomicCollapse`, mesmo padrão de `window.VCMotion`). `next-clean-61`, 72/72 PASS, **deployado e confirmado ao vivo**.
+✔ `ARCHITECTURAL PRINCIPLE-004 — No Fixed Viewport Layout` registrado em `docs/DECISIONS.md`: nenhum dashboard/painel/monitor pode usar `position:fixed`/`sticky` preso à viewport — achado real, o Atomic Core reservava `padding-right` global em `.vc-main` mesmo fora do chat, comprimindo qualquer outro painel de largura real.
 
-✔ Auth email/senha no Next: Settings → Conta (registro/login/logout), escopo confirmado pelo usuário (só email/senha, zero endpoint novo — `apiRequest()` já anexava `Authorization: Bearer` de `localStorage['vision_token']` antes de existir qualquer UI). OAuth Google/GitHub NÃO incluído — callback do backend redireciona pro legado, não pro Next; fica registrado como próxima etapa condicionada a mudança de backend. Achado corrigido no caminho: `.vc-settings-form`/`.vc-settings-field-actions` tinham `display:flex` sem `:not([hidden])` (bug real da regra dura já documentada, só não tinha aparecido porque nada usava `hidden` condicional nessas classes antes). `next-clean-62`, 79/79 PASS, **deployado e confirmado ao vivo contra o backend real** (register+logout+login, não mockado).
+✔ Atomic Core (primeira aplicação do princípio): saiu de `position:fixed` para viver dentro de `#vcChatScroll` (fluxo normal — rola junto com o chat, sai de vista ao rolar). Só aparece na aba `chat`; Software Factory Auto-Pilot conta como "chat" (spec já documentava isso como "modo do chat, não página") e continua visível, preservando a garantia de `next-clean-61`. **Achado real da RCA adversarial:** a primeira versão usava `margin-right` negativo pra encostar o widget na borda — isso cortava 2 nós de agente (`openclaw`, `scanner`) por `overflow-x:hidden` de `#vcChatScroll`, só detectável por `getBoundingClientRect()` contra o container, não pela screenshot isolada (que parecia correta). Corrigido antes do commit, virou regra dura #13 da spec.
 
-✔ Settings do Atomic Core (on/off + intensidade): toggle "Mostrar Atomic Core" (widget inteiro, independente do auto-collapse do Modo Avançado) + slider de intensidade visual, `window.VCAtomicCore`/`--atomic-intensity`. "Glow on/off" do ROADMAP explicitamente NÃO implementado — contradizia `VISION_CORE_NEXT_FRONTEND_SPEC.md` checklist item 6, já fechado ("nunca existiram como controles"); Specification First aplicado. RCA adversarial encontrou e corrigiu 1 teste que não exercitava o cenário de conflito que afirmava provar. `next-clean-63`, 82/82 PASS, **deployado e confirmado ao vivo em produção**, incluindo os 2 casos que tinham ficado sem cobertura de produção na primeira verificação: persistência da intensidade pós-reload real (`page.reload()`, `--atomic-intensity` continua `0.4` e o slider continua em `40`) e o conflito on/off-vs-sempre-visível dentro do Modo Avançado (com scroll pro topo pra confirmar visualmente que o widget some/aparece, não só via `classList`).
+✔ Nova página `Dashboard` (`data-feature="dashboard"`, largura total, quebra o cap de 940px do `.vc-chat-stage` só enquanto ativa): Timeline (reaproveita o heartbeat de Conectividade), Custo por Agente + Ranking de Atividade (reaproveita `buildAgentCharts()`, mesma função de Métricas → Agentes) — zero lógica de dado/cálculo nova, só container.
 
-Sessão anterior (concluída, sem pendência): Tutorial Smile (`next-clean-60`) + histórico público about.html/landing.html — ver `docs/CHANGELOG_NEXT.md`.
+`next-clean-64`, 90/90 PASS (suíte permanente do Next), **não deployado ainda** — aguardando aprovação.
 
-Todos os itens desta sessão (Tutorial Smile, histórico público, Atomic Core auto-collapse, Auth email/senha, Atomic Core Settings) estão deployados e confirmados ao vivo em produção, com evidência real (screenshot Playwright, não só retorno do deploy) para cada caso, incluindo os casos de borda (persistência, conflito de preferências). Pendência real restante: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir este commit de fechamento de lacuna — merge anterior foi até `7ba1debc`; push pra `origin/main` continua fora de escopo até autorização explícita.
+Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
+
+Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita. Deploy de `next-clean-64` também pendente de aprovação.
 
 ---
 

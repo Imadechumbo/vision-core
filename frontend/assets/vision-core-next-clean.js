@@ -256,6 +256,12 @@
   var applyFixStatus = document.getElementById('vcApplyFixStatus');
   var attachmentInput = document.getElementById('vcAttachmentInput');
   var imageInput = document.getElementById('vcImageInput');
+  var dashboardPanel = document.getElementById('vcDashboardPanel');
+  var dashboardStatus = document.getElementById('vcDashboardStatus');
+  var dashboardTimeline = document.getElementById('vcDashboardTimeline');
+  var dashboardAgents = document.getElementById('vcDashboardAgents');
+  var dashboardRefresh = document.getElementById('vcDashboardRefresh');
+  var chatStageEl = document.querySelector('.vc-chat-stage');
   var metricsPanel = document.getElementById('vcMetricsPanel');
   var metricsSourceBadge = document.getElementById('vcMetricsSourceBadge');
   var metricsError = document.getElementById('vcMetricsError');
@@ -289,6 +295,7 @@
     github: { title: 'GitHub', status: 'PR c/ CONFIRMAÇÃO', agents: ['github'], text: 'Criação de PR real disponível abaixo — exige formulário completo + confirmação dupla antes de disparar.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
     vault: { title: 'Vault', status: 'ROLLBACK DISPONÍVEL', agents: ['aegis', 'archivist'], text: 'Snapshots do banco de projetos e rollback. Rollback sobrescreve o estado atual — confirmação dupla obrigatória.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
     metrics: { title: 'Métricas', status: 'SAFE READ', agents: ['goCore', 'aegis'], text: 'Métricas reais em modo leitura.', actions: [{ label: 'Resumo', path: '/api/metrics/summary' }, { label: 'Agentes', path: '/api/metrics/agents' }, { label: 'DORA', path: '/api/dora-metrics' }, { label: 'Memória', path: '/api/metrics/memory' }] },
+    dashboard: { title: 'Dashboard', status: 'SAFE READ', agents: ['goCore', 'archivist'], text: 'Timeline, custo por agente e ranking de atividade em largura total — mesmos dados de Métricas/Conectividade, sem ficar comprimido em coluna estreita (ARCHITECTURAL PRINCIPLE-004).', actions: [] },
     tools: { title: 'Tools', status: 'APPLY-FIX DISPONÍVEL', agents: ['scanner', 'patchEngine'], text: 'Apply Fix abaixo — aplica correção em arquivo real com backup automático. Confirmação dupla obrigatória.', actions: [{ label: 'Histórico security', path: '/api/security/history' }, { label: 'Marketplace', path: '/api/tools/marketplace' }] },
     security: { title: 'Security Lab', status: 'SAFE STATUS', agents: ['aegis', 'scanner'], text: 'Painel de governança do Secret Guard. Só faz leitura de status via GET e mostra fallback local quando um endpoint não existe.', actions: [{ label: 'Atualizar status seguro', kind: 'safe-status' }] },
     obsidian: { title: 'Obsidian', status: 'SAFE READ', agents: ['archivist'], text: 'Consulta de conector/memória sem escrita.', actions: [{ label: 'Status Obsidian', path: '/api/obsidian/status' }] },
@@ -485,6 +492,14 @@
     if (metricsPanel) {
       metricsPanel.hidden = activeFeature !== 'metrics';
       if (activeFeature === 'metrics') startMetricsPolling(); else stopMetricsPolling();
+    }
+    // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): painel de largura
+    // total, quebra o cap de 940px do .vc-chat-stage só enquanto ativo.
+    if (dashboardPanel) {
+      dashboardPanel.hidden = activeFeature !== 'dashboard';
+      if (chatStageEl) chatStageEl.classList.toggle('vc-chat-stage--wide', activeFeature === 'dashboard');
+      if (featurePanel) featurePanel.classList.toggle('vc-feature-panel--wide', activeFeature === 'dashboard');
+      if (activeFeature === 'dashboard') loadDashboardPanel();
     }
     if (safeStatusPanel) {
       safeStatusPanel.hidden = activeFeature !== 'security';
@@ -1342,6 +1357,42 @@
     }));
     return wrap;
   }
+
+  // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): painel de largura total
+  // reaproveitando os mesmos componentes/endpoints já usados em Métricas
+  // (buildAgentCharts) e Conectividade (metricCharts.timeline de heartbeat)
+  // — nenhuma lógica de dado/cálculo nova, só um container próprio.
+  function loadDashboardPanel() {
+    if (dashboardStatus) dashboardStatus.textContent = 'Carregando...';
+    if (dashboardTimeline) dashboardTimeline.textContent = '';
+    if (dashboardAgents) dashboardAgents.textContent = '';
+
+    apiRequest('/api/agent/status').then(function (data) {
+      if (!dashboardTimeline) return;
+      dashboardTimeline.appendChild(metricCharts.timeline({
+        title: 'Último heartbeat',
+        data: [{ tier: data.connected ? 'ok' : 'warn', label: 'Último sinal: ' + humanizeMsAgo(data.last_seen_ms_ago) }],
+        ariaLabel: 'Timeline de heartbeat do Vision Agent Local'
+      }));
+    }).catch(function () {
+      if (!dashboardTimeline) return;
+      var p = document.createElement('p');
+      p.className = 'vc-metrics-empty';
+      p.textContent = 'Falha ao carregar timeline.';
+      dashboardTimeline.appendChild(p);
+    });
+
+    apiRequest('/api/metrics/agents').then(function (data) {
+      if (!dashboardAgents) return;
+      var list = Array.isArray(data.agents) ? data.agents : [];
+      dashboardAgents.appendChild(buildAgentCharts(list, data.active_llm_providers || []));
+      if (dashboardStatus) dashboardStatus.textContent = '';
+    }).catch(function (err) {
+      if (dashboardStatus) dashboardStatus.textContent = 'Falha ao carregar métricas de agentes: ' + (err && err.message ? err.message : String(err));
+    });
+  }
+
+  if (dashboardRefresh) dashboardRefresh.addEventListener('click', loadDashboardPanel);
 
   function renderFeatureActionViz(action, data) {
     if (!action || !data) return hideFeatureViz();
@@ -3026,9 +3077,19 @@
   // e sfMode são lidos no momento da chamada, não na declaração — hoisted
   // function, mesmo padrão do resto do arquivo). getAtomicCollapsePref()
   // !== 'always' é o override manual do usuário (Settings → Atomic Core).
+  // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): o widget agora vive
+  // dentro de #vcChatScroll (não mais position:fixed na viewport) — fora
+  // da aba chat ele não deve aparecer nem reservar espaço, então
+  // outsideChat força collapse incondicional (o override "sempre visível"
+  // continua restrito ao caso original, Modo Avançado do SF).
   function updateAtomicCollapseState() {
     var autoCollapse = activeFeature === 'factory' && sfMode === 'advanced' && getAtomicCollapsePref() !== 'always';
-    var shouldCollapse = getAtomicCoreEnabled() === 'off' || autoCollapse;
+    // Software Factory conta como "área do chat" (VISION_CORE_NEXT_FRONTEND_SPEC.md:
+    // "Software Factory = modo operacional do chat, nao pagina") — sua própria
+    // regra de collapse (autoCollapse, só no Modo Avançado) já cobre esse caso;
+    // não duplicar/contradizer isso aqui.
+    var outsideChat = activeFeature !== 'chat' && activeFeature !== 'factory';
+    var shouldCollapse = getAtomicCoreEnabled() === 'off' || autoCollapse || outsideChat;
     root.classList.toggle('vc-no-transition', reduceMotion);
     root.classList.toggle('is-collapsed', shouldCollapse);
   }
