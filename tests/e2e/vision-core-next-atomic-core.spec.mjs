@@ -406,3 +406,76 @@ test('no agent node extends past the #vcChatScroll container edge', async ({ pag
   });
   expect(clipped, 'no agent label should extend past the scroll container edge').toEqual([]);
 });
+
+// Achado real (2026-07-12, reportado em produção contra next-clean-64):
+// align-self:flex-end já encostava o widget na borda direita de
+// #vcChatScroll, mas #vcChatScroll (dentro de .vc-chat-stage, antes
+// min(940px,100%) centralizado) não chegava na borda real da área de
+// conteúdo -- o widget parecia flutuar no meio da tela, com um vão visível
+// até a borda real de .vc-main. Fix: .vc-chat-stage passou a ser width:100%
+// (hero/mensagens/card de status já tinham seu próprio max-width, não
+// esticam feio) -- o widget agora ancora na borda real, não na do cap
+// artificial de 940px.
+test('anchors flush against the real right edge of the content area, not just its own 940px-capped column', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(NEXT_URL());
+  const gap = await page.evaluate(() => {
+    const hud = document.querySelector('[data-atomic-core]');
+    const main = document.querySelector('.vc-main');
+    const hudRect = hud.getBoundingClientRect();
+    const mainRect = main.getBoundingClientRect();
+    const paddingRight = parseFloat(getComputedStyle(main).paddingRight);
+    return (mainRect.right - paddingRight) - hudRect.right;
+  });
+  expect(Math.abs(gap), 'HUD right edge must match .vc-main real content-right-edge, not float short of it').toBeLessThan(2);
+});
+
+// Achado real (2026-07-12): a legibilidade de "todos os 9 nós" não é
+// estática -- os agentes orbitam continuamente (drift de ângulo/raio,
+// brand identity). Screenshot único pegou "Scanner"/"Patch Engine" com a
+// legenda sobreposta pelo círculo vizinho. Fix: MAX_ANGLE_DRIFT reduzido
+// (12 -> 3) e largura de span/small reduzida (96px -> 76px, .vc-agent
+// 110px -> 92px) para caber no espaçamento real entre nós adjacentes
+// (~74px de distância entre centros a 36 graus / raio 120px). Verificado
+// varrendo tempo virtual (page.clock) por >1 período completo de cada
+// agente (configs vao de 50s a 90s) -- nenhum par adjacente pode ter
+// sobreposição 2D relevante (janela de tolerância pequena pra frestas de
+// caixa que não são colisão real de glifo).
+test('agent captions stay legible across the full idle orbit (no adjacent-pair overlap beyond a tiny tolerance)', async ({ page }) => {
+  await page.clock.install({ time: 0 });
+  await page.goto(NEXT_URL());
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  const ADJACENCY = [
+    ['pi', 'hermes'], ['hermes', 'openclaw'], ['openclaw', 'scanner'], ['scanner', 'patchEngine'],
+    ['patchEngine', 'aegis'], ['aegis', 'goCore'], ['goCore', 'passGold'], ['passGold', 'archivist'],
+    ['archivist', 'github'], ['github', 'pi']
+  ];
+  const offenders = [];
+  for (let ms = 0; ms <= 92000; ms += 4000) {
+    await page.clock.fastForward(4000);
+    const rects = await page.evaluate(() => {
+      const out = {};
+      document.querySelectorAll('[data-agent]').forEach((el) => {
+        const small = el.querySelector('small');
+        const span = el.querySelector('span');
+        const sr = small.getBoundingClientRect();
+        const pr = span.getBoundingClientRect();
+        out[el.getAttribute('data-agent')] = {
+          left: Math.min(sr.left, pr.left), right: Math.max(sr.right, pr.right),
+          top: Math.min(sr.top, pr.top), bottom: Math.max(sr.bottom, pr.bottom)
+        };
+      });
+      return out;
+    });
+    for (const [a, b] of ADJACENCY) {
+      const ra = rects[a], rb = rects[b];
+      const overlapX = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+      const overlapY = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+      if (overlapX > 12 && overlapY > 12) {
+        offenders.push(a + '/' + b + ' at ' + ms + 'ms (' + overlapX.toFixed(1) + 'x' + overlapY.toFixed(1) + 'px)');
+      }
+    }
+  }
+  expect(offenders, 'no adjacent agent pair should have a real (>12x12px) caption overlap at any sampled point in the orbit').toEqual([]);
+});

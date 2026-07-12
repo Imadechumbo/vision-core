@@ -433,3 +433,24 @@ test('Software Factory follows async job_id polling without real network', async
     writes_disk: false
   });
 });
+
+// ARCHITECTURAL PRINCIPLE-004 (achado real, 2026-07-12): .vc-sf-stage (grid
+// de 2-3 colunas do Modo Avancado) ficava preso a min(940px,100%) -- ganha
+// largura total só no Modo Avancado (Auto-Pilot fica igual, não precisa).
+test('Software Factory Modo Avancado ganha largura total, Auto-Pilot permanece em 940px', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(NEXT_URL);
+  await page.locator('[data-feature="factory"]').first().click();
+
+  await expect(page.locator('#factory')).not.toHaveClass(/vc-sf-stage--wide/);
+  const autoWidth = await page.locator('#factory').evaluate((el) => el.getBoundingClientRect().width);
+  expect(autoWidth, 'Auto-Pilot must stay at the 940px cap').toBeLessThanOrEqual(940);
+
+  await page.getByRole('button', { name: 'Modo Avancado' }).click();
+  await expect(page.locator('#factory')).toHaveClass(/vc-sf-stage--wide/);
+  const advancedWidth = await page.locator('#factory').evaluate((el) => el.getBoundingClientRect().width);
+  expect(advancedWidth, 'Modo Avancado must render wider than the 940px cap').toBeGreaterThan(940);
+
+  await page.getByRole('button', { name: 'Auto-Pilot' }).click();
+  await expect(page.locator('#factory')).not.toHaveClass(/vc-sf-stage--wide/);
+});

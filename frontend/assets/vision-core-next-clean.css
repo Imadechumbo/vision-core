@@ -243,12 +243,20 @@ a { color: inherit; text-decoration: none; }
 .vc-brand-copy { min-width: 0; }
 .vc-brand-copy strong { font-size: 22px; }
 
+/* Achado real (2026-07-12): .vc-chat-stage era min(940px,100%) + margin:0
+   auto, centralizado dentro de .vc-main -- isso deixava o Atomic Core
+   (align-self:flex-end DENTRO dessa coluna) encostado na borda direita da
+   coluna de 940px, não na borda real da área de conteúdo, com uma faixa
+   vazia visível entre os dois. Largura total aqui é segura: hero
+   (.vc-chat-intro, 680px), bolhas de mensagem (.vc-message, 760px) e o
+   card de status (.vc-feature-panel, 760px) já têm seu próprio max-width
+   independente do stage -- só o Atomic Core usa a largura real do stage
+   pra se ancorar. */
 .vc-chat-stage {
-  width: min(940px, 100%);
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 18px;
-  margin: 0 auto;
   padding-top: clamp(16px, 3vh, 34px);
   padding-bottom: 24px;
   min-height: calc(100vh - 116px);
@@ -1025,7 +1033,7 @@ a { color: inherit; text-decoration: none; }
 .vc-core-node strong { display: block; margin-top: 26px; font-size: 12px; letter-spacing: .16em; }
 
 .vc-agent {
-  width: 110px;
+  width: 92px;
   min-height: 70px;
   display: grid;
   justify-items: center;
@@ -1050,8 +1058,8 @@ a { color: inherit; text-decoration: none; }
   font-weight: 850;
 }
 
-.vc-agent span { color: color-mix(in srgb, var(--agent-color, #c4b5fd) 82%, #fff); font-size: 10px; font-weight: 850; text-transform: uppercase; }
-.vc-agent small { max-width: 96px; color: rgba(217, 211, 229, .62); font-size: 8px; font-weight: 700; line-height: 1.1; }
+.vc-agent span { max-width: 76px; color: color-mix(in srgb, var(--agent-color, #c4b5fd) 82%, #fff); font-size: 10px; font-weight: 850; text-transform: uppercase; line-height: 1.15; }
+.vc-agent small { max-width: 76px; color: rgba(217, 211, 229, .62); font-size: 8px; font-weight: 700; line-height: 1.1; }
 
 .vc-agent[data-agent="pi"] { --agent-color: #b86cff; }
 .vc-agent[data-agent="hermes"] { --agent-color: #34d399; }
@@ -1243,6 +1251,15 @@ a { color: inherit; text-decoration: none; }
   border: 1px solid rgba(216, 180, 254, .12);
   border-radius: var(--radius);
   background: rgba(5, 5, 10, .50);
+}
+/* ARCHITECTURAL PRINCIPLE-004 (achado real, 2026-07-12): o grid de 2-3
+   colunas do Modo Avançado (.vc-sf-advanced-grid) ficava espremido em
+   min(940px,100%) — ganha largura total só enquanto o Modo Avançado está
+   ativo (.vc-sf-intro/.vc-sf-advanced-head já têm seu próprio max-width,
+   não esticam feio). */
+.vc-sf-stage.vc-sf-stage--wide:not([hidden]) {
+  width: 100%;
+  margin: 0 0 34px;
 }
 .vc-sf-intro { max-width: 760px; }
 .vc-sf-intro h1 { margin: 0; color: #fff; font-size: clamp(20px, 2vw, 28px); }
@@ -2119,12 +2136,20 @@ a { color: inherit; text-decoration: none; }
 /* Métricas — camada visual sobre /api/metrics/agents, /api/dora-metrics,
    /api/agent/status (backend intocado). Sem animação de entrada — o painel
    aparece no estado final, mesmo fora de reduced-motion (não é identidade
-   de marca como o Atomic Core, é um dashboard de dados). */
+   de marca como o Atomic Core, é um dashboard de dados).
+   ARCHITECTURAL PRINCIPLE-004 (achado real, 2026-07-12): 720px era estreito
+   demais para os cards de gráfico (repeat(auto-fit, minmax(210px,1fr)))
+   caberem confortavelmente lado a lado — ganha largura total (mesmo
+   mecanismo --wide já usado pelo Dashboard) enquanto a aba está ativa. */
 .vc-metrics-panel:not([hidden]) {
   display: flex;
   flex-direction: column;
   gap: 16px;
   max-width: 720px;
+}
+.vc-feature-panel--wide .vc-metrics-panel:not([hidden]) {
+  max-width: none;
+  width: 100%;
 }
 
 /* ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): painel de largura total —

@@ -381,3 +381,25 @@ test('(i) Security history safe-read renders charts without leaking secrets', as
   await expect(page.locator('#vcFeatureViz .vc-metric-chart[aria-label]')).toHaveCount(2);
   await expect(page.locator('body')).not.toContainText('sk-');
 });
+
+// ARCHITECTURAL PRINCIPLE-004 (achado real, 2026-07-12): .vc-metrics-panel
+// tinha max-width:720px fixo — estreito demais para os 4 cards (Status,
+// Custo, Providers, Ranking) caberem lado a lado, "Custo por Agente"/
+// "Ranking de Atividade" ficavam sem espaço. Ganha o mesmo tratamento
+// --wide já usado pelo Dashboard, só enquanto a aba está ativa.
+test('(j) Métricas ganha largura total (mesmo mecanismo --wide do Dashboard), reverte ao sair', async ({ page }) => {
+  await mockMetrics(page, {
+    agents: { ok: true, agents: [{ name: 'hermes', status: 'ok', cost_usd: 0.42, active_providers: ['anthropic'] }], active_llm_providers: ['anthropic'] },
+    dora: EMPTY_DORA
+  });
+  await openMetrics(page);
+
+  await expect(page.locator('#vcFeaturePanel')).toHaveClass(/vc-feature-panel--wide/);
+  await expect(page.locator('.vc-chat-stage')).toHaveClass(/vc-chat-stage--wide/);
+  const wideWidth = await page.locator('.vc-metrics-panel').evaluate((el) => el.getBoundingClientRect().width);
+  expect(wideWidth, 'metrics panel must render wider than the old 720px cap').toBeGreaterThan(800);
+
+  await page.locator('a[data-feature="chat"]').click();
+  await expect(page.locator('#vcFeaturePanel')).not.toHaveClass(/vc-feature-panel--wide/);
+  await expect(page.locator('.vc-chat-stage')).not.toHaveClass(/vc-chat-stage--wide/);
+});

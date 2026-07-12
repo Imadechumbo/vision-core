@@ -498,10 +498,9 @@
     // total, quebra o cap de 940px do .vc-chat-stage só enquanto ativo.
     if (dashboardPanel) {
       dashboardPanel.hidden = activeFeature !== 'dashboard';
-      if (chatStageEl) chatStageEl.classList.toggle('vc-chat-stage--wide', activeFeature === 'dashboard');
-      if (featurePanel) featurePanel.classList.toggle('vc-feature-panel--wide', activeFeature === 'dashboard');
       if (activeFeature === 'dashboard') loadDashboardPanel();
     }
+    updateFeatureWidth();
     if (safeStatusPanel) {
       safeStatusPanel.hidden = activeFeature !== 'security';
       if (activeFeature === 'security') loadSafeStatusPanel();
@@ -2921,7 +2920,7 @@
   var CX = 180;
   var CY = 180;
   var AGENT_RADIUS = 120;
-  var MAX_ANGLE_DRIFT = 12;
+  var MAX_ANGLE_DRIFT = 3;
   var MAX_RADIAL_DRIFT = 2;
   var REDUCE_PULSE_MS = 4200; // pulso lento sob reduced-motion — só opacidade/glow, nunca posição
   var REDUCE_TICK_MS = 500;   // frequência de re-render do pulso — não é rAF, é setInterval deliberado
@@ -3109,6 +3108,20 @@
     var shouldCollapse = getAtomicCoreEnabled() === 'off' || autoCollapse || outsideChat;
     root.classList.toggle('vc-no-transition', reduceMotion);
     root.classList.toggle('is-collapsed', shouldCollapse);
+  }
+
+  // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): paineis densos ganham
+  // largura total só enquanto ativos -- Dashboard e Métricas (cards de
+  // gráfico espremidos no cap padrão) e Modo Avançado do Software Factory
+  // (grid de 2-3 colunas em .vc-sf-stage, seção própria, fora de
+  // #vcFeaturePanel/.vc-chat-stage). activeFeature/sfMode lidos no momento
+  // da chamada, mesmo padrão de updateAtomicCollapseState().
+  function updateFeatureWidth() {
+    var wide = activeFeature === 'dashboard' || activeFeature === 'metrics';
+    if (chatStageEl) chatStageEl.classList.toggle('vc-chat-stage--wide', wide);
+    if (featurePanel) featurePanel.classList.toggle('vc-feature-panel--wide', wide);
+    var sfSectionEl = document.getElementById('factory');
+    if (sfSectionEl) sfSectionEl.classList.toggle('vc-sf-stage--wide', activeFeature === 'factory' && sfMode === 'advanced');
   }
 
   // Propagação EXECUTING da spec Atomic Core: Hermes acende primeiro (recebe
@@ -3711,6 +3724,7 @@
     if (sfAdvancedPanel) sfAdvancedPanel.hidden = sfMode !== 'advanced';
     if (sfMode === 'advanced') sfSuggestAdvanced(true);
     updateAtomicCollapseState();
+    updateFeatureWidth();
   }
 
   function getSelectedSfExtraSteps() {

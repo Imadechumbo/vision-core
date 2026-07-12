@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ `next-clean-65` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo: cache-bust real servido (`?v=next-clean-65` no CSS e no JS), `#vcChatScroll` sem overflow próprio (`hasOwnScroll:false`) mesmo com conteúdo alto injetado, `html` como única superfície de rolagem (`htmlHasScroll:true`).
+⚠ `next-clean-65` é o que está ao vivo agora (`visioncoreai.pages.dev`); `next-clean-66` (ancoragem real do Atomic Core + Métricas/SF Avançado largura total + legibilidade dos 9 nós) está commitado localmente e **ainda não deployado** — aguardando autorização explícita do usuário.
 
 Cache Bust
-next-clean-65
+next-clean-66 (local, não deployado) / next-clean-65 (produção)
 
 Último Commit
 
@@ -39,19 +39,15 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ `ARCHITECTURAL PRINCIPLE-004 — No Fixed Viewport Layout` registrado em `docs/DECISIONS.md`: nenhum dashboard/painel/monitor pode usar `position:fixed`/`sticky` preso à viewport — achado real, o Atomic Core reservava `padding-right` global em `.vc-main` mesmo fora do chat, comprimindo qualquer outro painel de largura real.
+✔ `next-clean-66` — Atomic Core ancorado de verdade no canto superior direito real (achava um vão vazio antes: `align-self:flex-end` já encostava na borda de `#vcChatScroll`, mas essa coluna vivia dentro de `.vc-chat-stage` capado em `min(940px,100%)` centralizado, que não chegava na borda real de `.vc-main` — fix: `.vc-chat-stage` virou `width:100%`, seguro porque hero/mensagens/card de status já têm seu próprio `max-width`). Métricas e SF Modo Avançado ganham o mesmo `--wide` do Dashboard (`.vc-metrics-panel` saiu do cap de 720px, `.vc-sf-stage` só larga no Modo Avançado). Legibilidade dos 9 nós: achado real de que o drift orbital contínuo sobrepunha legendas em ~11% dos instantes (só visível varrendo tempo virtual via `page.clock`, não num screenshot isolado) — `max-width` de `span`/`small` de 96px→76px, `.vc-agent` 110px→92px, `MAX_ANGLE_DRIFT` 12°→3° (raio inalterado). "Custo por Agente sem gráfico"/"Ranking cortado" confirmados como falso-positivo (ausência real de dado; conteúdo abaixo da dobra, resolvido pela rolagem nativa do `next-clean-65`). 4 testes novos, **96/96 PASS, commitado, NÃO deployado — aguardando autorização explícita**.
 
-✔ Atomic Core (primeira aplicação do princípio): saiu de `position:fixed` para viver dentro de `#vcChatScroll` (fluxo normal — rola junto com o chat, sai de vista ao rolar). Só aparece na aba `chat`; Software Factory Auto-Pilot conta como "chat" (spec já documentava isso como "modo do chat, não página") e continua visível, preservando a garantia de `next-clean-61`. **Achado real da RCA adversarial:** a primeira versão usava `margin-right` negativo pra encostar o widget na borda — isso cortava 2 nós de agente (`openclaw`, `scanner`) por `overflow-x:hidden` de `#vcChatScroll`, só detectável por `getBoundingClientRect()` contra o container, não pela screenshot isolada (que parecia correta). Corrigido antes do commit, virou regra dura #13 da spec.
+✔ `next-clean-65` — remoção da rolagem interna duplicada (`#vcChatScroll` tinha `overflow-y:auto` próprio, gerava segunda barra de rolagem); regra dura #12 preservada via `ResizeObserver` no composer. 92/92 PASS, **deployado e confirmado ao vivo em produção**.
 
-✔ Nova página `Dashboard` (`data-feature="dashboard"`, largura total, quebra o cap de 940px do `.vc-chat-stage` só enquanto ativa): Timeline (reaproveita o heartbeat de Conectividade), Custo por Agente + Ranking de Atividade (reaproveita `buildAgentCharts()`, mesma função de Métricas → Agentes) — zero lógica de dado/cálculo nova, só container.
-
-`next-clean-64`, 91/91 PASS (suíte permanente do Next), **deployado e confirmado ao vivo em produção**.
-
-✔ `next-clean-65` — remoção da rolagem interna duplicada (bug reportado pelo usuário contra `next-clean-64` ao vivo): `#vcChatScroll` tinha `overflow-y:auto` próprio, criando uma segunda barra de rolagem além da nativa da página. Confirmado por medição direta contra produção antes do fix (`hasOwnScroll:true` simultâneo em `#vcChatScroll` E em `html`). Removido `overflow-y`/`overflow-x` de `.vc-chat-scroll` e a `height` fixa de `.vc-chat-stage` (virou `min-height`) — a página real agora é a única superfície de rolagem. Regra dura #12 preservada via `ResizeObserver` (sincroniza `padding-bottom` do composer) + fallback estático em CSS. 2 testes reescritos + 1 novo (regressão da regra dura #12 usando o Dashboard como conteúdo alto real). **92/92 PASS, deployado e confirmado ao vivo em produção.**
+✔ `next-clean-64` — `ARCHITECTURAL PRINCIPLE-004 — No Fixed Viewport Layout` (`docs/DECISIONS.md`); Atomic Core saiu de `position:fixed` pro fluxo normal; nova página `Dashboard` largura total. 91/91 PASS, **deployado e confirmado ao vivo em produção**.
 
 Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
 
-Todos os itens até `next-clean-65` estão deployados e confirmados ao vivo. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
+Todos os itens até `next-clean-65` estão deployados e confirmados ao vivo; `next-clean-66` está commitado e testado, mas aguarda autorização explícita para deploy. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
 
 ---
 
@@ -84,7 +80,7 @@ Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contr
 
 # TESTES
 
-92/92 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada isolada 2x seguidas — confirmar de novo antes de declarar o Next concluído, ver `docs/ROADMAP.md`)
+96/96 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada isolada 2x seguidas — confirmar de novo antes de declarar o Next concluído, ver `docs/ROADMAP.md`)
 
 `node --check` OK
 

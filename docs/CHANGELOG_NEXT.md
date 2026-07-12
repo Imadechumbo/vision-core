@@ -4,6 +4,15 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-66 (2026-07-12)
+
+- Atomic Core realmente ancorado no canto superior direito da área de conteúdo: `.vc-chat-stage` era `min(940px,100%)` centralizado (`margin:0 auto`) dentro de `.vc-main` — o widget já tinha `align-self:flex-end` (zero gap contra `#vcChatScroll`), mas essa coluna de 940px não chegava na borda real de `.vc-main`, deixando um vão visível. Fix: `.vc-chat-stage` virou `width:100%` — seguro porque hero (`.vc-chat-intro`, 680px), bolhas de mensagem (`.vc-message`, 760px) e o card de status (`.vc-feature-panel`, 760px) já têm seu próprio `max-width` independente do stage
+- Métricas e Software Factory Modo Avançado ganham o mesmo tratamento `--wide` já usado pelo Dashboard (`next-clean-64`): `.vc-metrics-panel` saiu do cap fixo de 720px (cards "Custo por Agente"/"Ranking de Atividade" ficavam espremidos), `.vc-sf-stage` ganha `--wide` só no Modo Avançado (Auto-Pilot permanece em 940px, sem mudança)
+- Legibilidade dos 9 nós de agente: achado real de que a animação orbital contínua (drift de ângulo/raio, `next-clean-6x` anteriores) fazia legendas de nós adjacentes se sobreporem em boa parte do ciclo (~11% dos instantes amostrados, pior caso 40x24px) — não visível num screenshot isolado, só varrendo tempo virtual (`page.clock`) por um período completo. Fix: `max-width` de `span`/`small` de 96px pra 76px, `.vc-agent` de 110px pra 92px, `MAX_ANGLE_DRIFT` de 12° pra 3° (raio inalterado, sem risco de reintroduzir clipping)
+- "Custo por Agente" sem gráfico e "Ranking de Atividade" cortado (reportados como possível bug): confirmado como dois falsos-positivos — o primeiro é ausência real de dado (`cost_usd` sempre null hoje, spec já documenta como "sem dados de custo" honesto); o segundo é conteúdo abaixo da dobra, resolvido pela rolagem nativa real da página (`next-clean-65`), não um bug de corte/overflow
+- 4 testes novos (`vision-core-next-atomic-core.spec.mjs`: ancoragem real + legibilidade em varredura de tempo virtual; `vision-core-next-metrics.spec.mjs`: Métricas largura total; `vision-core-next-sf.spec.mjs`: Modo Avançado largura total, Auto-Pilot inalterado)
+- 96/96 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
 ## next-clean-65 (2026-07-12)
 
 - Remoção da rolagem interna duplicada: bug real reportado em produção contra `next-clean-64` — `#vcChatScroll` tinha `overflow-y:auto` próprio, gerando uma segunda barra de rolagem competindo com a rolagem nativa da página. Confirmado por medição direta em produção antes do fix: `#vcChatScroll` com `hasOwnScroll:true` e `html` também com `hasOwnScroll:true` ao mesmo tempo (as duas rolagens ativas simultaneamente)
