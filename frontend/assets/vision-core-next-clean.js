@@ -3089,23 +3089,17 @@
     return setAtomicCoreState('idle');
   }
 
-  // Fase 1.5: recolhe só no Modo Avançado do Software Factory (activeFeature
-  // e sfMode são lidos no momento da chamada, não na declaração — hoisted
-  // function, mesmo padrão do resto do arquivo). getAtomicCollapsePref()
-  // !== 'always' é o override manual do usuário (Settings → Atomic Core).
-  // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): o widget agora vive
-  // dentro de #vcChatScroll (não mais position:fixed na viewport) — fora
-  // da aba chat ele não deve aparecer nem reservar espaço, então
-  // outsideChat força collapse incondicional (o override "sempre visível"
-  // continua restrito ao caso original, Modo Avançado do SF).
+  // Mudança de decisão do usuário (2026-07-12, substitui a regra "esconde
+  // fora do chat" de next-clean-61/64): Atomic Core é elemento persistente
+  // global, visível em qualquer página/aba. Só some em 2 casos: usuário
+  // desativou em Settings (getAtomicCoreEnabled()==='off'), ou a colisão
+  // real e já documentada do Modo Avançado do Software Factory
+  // (autoCollapse -- getAtomicCollapsePref()!=='always' é o override manual
+  // do usuário pra essa exceção especificamente). activeFeature/sfMode
+  // lidos no momento da chamada, mesmo padrão hoisted do resto do arquivo.
   function updateAtomicCollapseState() {
     var autoCollapse = activeFeature === 'factory' && sfMode === 'advanced' && getAtomicCollapsePref() !== 'always';
-    // Software Factory conta como "área do chat" (VISION_CORE_NEXT_FRONTEND_SPEC.md:
-    // "Software Factory = modo operacional do chat, nao pagina") — sua própria
-    // regra de collapse (autoCollapse, só no Modo Avançado) já cobre esse caso;
-    // não duplicar/contradizer isso aqui.
-    var outsideChat = activeFeature !== 'chat' && activeFeature !== 'factory';
-    var shouldCollapse = getAtomicCoreEnabled() === 'off' || autoCollapse || outsideChat;
+    var shouldCollapse = getAtomicCoreEnabled() === 'off' || autoCollapse;
     root.classList.toggle('vc-no-transition', reduceMotion);
     root.classList.toggle('is-collapsed', shouldCollapse);
   }

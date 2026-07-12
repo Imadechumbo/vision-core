@@ -120,6 +120,11 @@ O Atomic Core não lê mais `prefers-reduced-motion` do SO como fonte de verdade
 **Por quê:** o legado carrega dívida técnica e (achado real, INCIDENTE-3) já teve credencial hardcoded exposta. Regra anti-novo-legado: se o Next precisa de algo que só existe lá, o caminho é reimplementar, nunca estender o legado.
 **Como aplicar:** catálogo tela-por-tela do que herdar/o que já tem equivalente/o que está bloqueado vive em `docs/LEGACY_DESIGN_REFERENCE.md`. Divergência consciente do Next em relação ao legado é permitida, desde que registrada lá com o quê e o porquê.
 
+### DECISION-020 — Atomic Core é elemento persistente global (substitui a regra "escopado ao chat" da DECISION-013/next-clean-61)
+O widget Atomic Core não esconde mais fora da aba `chat`/Software Factory Auto-Pilot — fica visível em qualquer página/aba (Missions, Timeline, Métricas, Dashboard, Settings, Vault, Tools, Security Lab, GitHub). Mudança de decisão explícita do usuário (2026-07-12, `next-clean-67`), não um bug.
+**Por quê:** a regra anterior (`next-clean-61`, `outsideChat` em `updateAtomicCollapseState()`) era decisão de produto consciente na época, mas o usuário decidiu reverter — o widget deve funcionar como identidade visual persistente, não escopada a uma única aba.
+**Como aplicar:** as únicas 2 exceções que ainda escondem o widget continuam sendo (1) o toggle "mostrar Atomic Core" em Settings (`window.VCAtomicCore`, on/off explícito do usuário) e (2) a colisão real e já documentada do Modo Avançado do Software Factory (`next-clean-61`, não muda com esta decisão — grid de stack/matriz/timeline disputa a mesma zona do widget). Nenhuma outra página deve reintroduzir lógica de collapse condicional — ver `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` seção Atomic Core.
+
 ---
 
 ## Roadmap / escopo explicitamente fora de alcance

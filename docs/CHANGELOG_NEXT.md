@@ -4,6 +4,14 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-67 (2026-07-12)
+
+- Mudança de decisão do usuário: Atomic Core deixa de ser "escopado ao chat" (`next-clean-61`/`64`) e passa a ser elemento persistente global — visível em qualquer página/aba (Missions, Timeline, Métricas, Dashboard, Settings, Vault, Tools, Security Lab, GitHub). `outsideChat` removido de `updateAtomicCollapseState()`. Registrado como `DECISION-020` em `docs/DECISIONS.md` (substitui a regra anterior, não é reversão de bug)
+- As 2 únicas exceções que continuam escondendo o widget, inalteradas: toggle "mostrar Atomic Core" em Settings (`window.VCAtomicCore`) e a colisão real do Modo Avançado do Software Factory (`next-clean-61`)
+- Investigação do bug de ancoragem reportado no pedido (Print 4, "vão vazio" no Chat): **não reproduzido** — medido diretamente contra produção antes de codar, `next-clean-66` já entrega gap=0px. Nenhuma mudança de CSS de ancoragem foi necessária além do que já estava em produção; a ancoragem correta simplesmente se estende às páginas novas porque `.vc-chat-stage`/`#vcChatScroll` nunca são desmontados por `selectFeature()` (só o `#vcFeaturePanel` interno troca)
+- 1 teste reescrito (`hides outside the chat area...` → `stays visible on every page/tab...`) + 3 testes novos (`vision-core-next-atomic-core.spec.mjs`: toggle global funciona ao navegar entre páginas; ancoragem/no-clipping em Missions+Métricas+Dashboard)
+- 98/98 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
 ## next-clean-66 (2026-07-12)
 
 - Atomic Core realmente ancorado no canto superior direito da área de conteúdo: `.vc-chat-stage` era `min(940px,100%)` centralizado (`margin:0 auto`) dentro de `.vc-main` — o widget já tinha `align-self:flex-end` (zero gap contra `#vcChatScroll`), mas essa coluna de 940px não chegava na borda real de `.vc-main`, deixando um vão visível. Fix: `.vc-chat-stage` virou `width:100%` — seguro porque hero (`.vc-chat-intro`, 680px), bolhas de mensagem (`.vc-message`, 760px) e o card de status (`.vc-feature-panel`, 760px) já têm seu próprio `max-width` independente do stage

@@ -287,6 +287,38 @@ test('on/off toggle hides the widget everywhere (not just Modo Avancado), live a
   await expect(hud, 'turning it back on must restore the widget immediately').not.toHaveClass(/is-collapsed/);
 });
 
+// next-clean-67: agora que o widget aparece em qualquer aba, o toggle
+// "mostrar Atomic Core" precisa continuar valendo GLOBALMENTE -- ligar/
+// desligar enquanto o usuario esta numa pagina que nao e o chat, e o
+// estado deve se manter ao navegar entre paginas depois.
+test('"mostrar Atomic Core" toggle works globally across page navigation, not just on chat home', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  const hud = page.locator('[data-atomic-core]');
+
+  await page.locator('a[data-feature="missions"]').click();
+  await expect(hud, 'visible on Missions before toggling off').not.toHaveClass(/is-collapsed/);
+
+  await page.evaluate(() => {
+    var el = document.getElementById('vcAtomicEnabled');
+    el.checked = false;
+    el.dispatchEvent(new Event('change'));
+  });
+  await expect(hud, 'off must hide it immediately while on Missions').toHaveClass(/is-collapsed/);
+
+  await page.locator('a[data-feature="metrics"]').click();
+  await expect(hud, 'must stay hidden after navigating to Metrics').toHaveClass(/is-collapsed/);
+
+  await page.evaluate(() => {
+    var el = document.getElementById('vcAtomicEnabled');
+    el.checked = true;
+    el.dispatchEvent(new Event('change'));
+  });
+  await expect(hud, 'turning back on must restore it immediately while on Metrics').not.toHaveClass(/is-collapsed/);
+
+  await page.locator('a[data-feature="dashboard"]').click();
+  await expect(hud, 'stays visible after navigating to Dashboard').not.toHaveClass(/is-collapsed/);
+});
+
 test('off wins over "always visible": widget stays hidden in Modo Avancado even with the override checked', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
   await page.goto(NEXT_URL());
@@ -366,23 +398,31 @@ test('scrolls away with the chat content instead of staying pinned to the viewpo
   expect(after, 'must move out of the visible area when the page is scrolled, unlike position:fixed').toBeLessThan(before - 100);
 });
 
-test('hides outside the chat area (no space reserved), but Software Factory Auto-Pilot counts as chat', async ({ page }) => {
+// Mudança de decisão do usuário (2026-07-12, next-clean-67): substitui a
+// regra "esconde fora do chat" de next-clean-61/64. Atomic Core agora é
+// elemento persistente global -- visível em QUALQUER página/aba. As duas
+// únicas exceções que continuam escondendo o widget são o toggle off do
+// usuário (Settings) e a colisão real do Modo Avançado do SF (regressão
+// coberta em testes separados abaixo).
+test('stays visible on every page/tab, not just chat/Software Factory', async ({ page }) => {
   await page.goto(NEXT_URL());
   const hud = page.locator('[data-atomic-core]');
 
   await expect(hud, 'visible on chat home').not.toHaveClass(/is-collapsed/);
 
-  await page.locator('a[data-feature="settings"]').click();
-  await expect(hud, 'must collapse outside the chat area (e.g. Settings)').toHaveClass(/is-collapsed/);
+  for (const feature of ['settings', 'missions', 'metrics', 'dashboard', 'vault', 'tools', 'security', 'github']) {
+    await page.locator('a[data-feature="' + feature + '"]').click();
+    await expect(hud, 'must stay visible on ' + feature).not.toHaveClass(/is-collapsed/);
+  }
 
   await page.locator('a[data-feature="chat"]').click();
-  await expect(hud, 'must reappear back on chat').not.toHaveClass(/is-collapsed/);
+  await expect(hud, 'still visible back on chat').not.toHaveClass(/is-collapsed/);
 
-  // Software Factory is documented as "modo operacional do chat, nao pagina"
-  // (VISION_CORE_NEXT_FRONTEND_SPEC.md) -- Auto-Pilot must stay visible,
-  // same guarantee as next-clean-61, not broken by this new rule.
+  // Software Factory Auto-Pilot: already covered by the global rule above,
+  // kept as an explicit regression guard since it was the original
+  // exception carved out by next-clean-61.
   await page.locator('a[data-feature="factory"]').click();
-  await expect(hud, 'Software Factory Auto-Pilot still counts as chat, must not collapse').not.toHaveClass(/is-collapsed/);
+  await expect(hud, 'Software Factory Auto-Pilot stays visible').not.toHaveClass(/is-collapsed/);
 });
 
 // Achado real da RCA adversarial (2026-07-12): a primeira versao usava
@@ -428,6 +468,38 @@ test('anchors flush against the real right edge of the content area, not just it
     return (mainRect.right - paddingRight) - hudRect.right;
   });
   expect(Math.abs(gap), 'HUD right edge must match .vc-main real content-right-edge, not float short of it').toBeLessThan(2);
+});
+
+// next-clean-67: agora que o widget é visível em qualquer página, o
+// ancoramento e a ausência de corte precisam valer em páginas que não são
+// o chat também, não só na home -- .vc-chat-stage é o mesmo elemento
+// width:100% em toda página (nunca escondido pelo selectFeature()), então
+// a garantia deveria se manter, mas isso é o tipo de suposição que exige
+// medição real, não só leitura de CSS.
+test('anchor and no-clipping guarantees hold on non-chat pages too (Missions, Metrics, Dashboard)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(NEXT_URL());
+
+  for (const feature of ['missions', 'metrics', 'dashboard']) {
+    await page.locator('a[data-feature="' + feature + '"]').click();
+    await page.waitForTimeout(200);
+    const result = await page.evaluate(() => {
+      const hud = document.querySelector('[data-atomic-core]');
+      const main = document.querySelector('.vc-main');
+      const scrollRect = document.getElementById('vcChatScroll').getBoundingClientRect();
+      const hudRect = hud.getBoundingClientRect();
+      const mainRect = main.getBoundingClientRect();
+      const paddingRight = parseFloat(getComputedStyle(main).paddingRight);
+      const gap = (mainRect.right - paddingRight) - hudRect.right;
+      const tolerance = 1;
+      const clipped = Array.from(document.querySelectorAll('[data-agent]'))
+        .map((el) => el.getBoundingClientRect())
+        .filter((rect) => rect.right > scrollRect.right + tolerance || rect.left < scrollRect.left - tolerance);
+      return { gap, clippedCount: clipped.length };
+    });
+    expect(Math.abs(result.gap), feature + ': HUD must stay anchored to the real right edge').toBeLessThan(2);
+    expect(result.clippedCount, feature + ': no agent label should be clipped').toBe(0);
+  }
 });
 
 // Achado real (2026-07-12): a legibilidade de "todos os 9 nós" não é
