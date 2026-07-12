@@ -4,6 +4,13 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-63 (2026-07-12)
+
+- Settings do Atomic Core: toggle "Mostrar Atomic Core" (on/off do widget inteiro, independente do auto-collapse) + slider de intensidade visual (40%-100%), `window.VCAtomicCore`/`--atomic-intensity`, mesmo padrão getX/setX/onChange + localStorage do resto do arquivo
+- "glow on/off" do ROADMAP explicitamente NÃO implementado — contradizia decisão já fechada em `VISION_CORE_NEXT_FRONTEND_SPEC.md` checklist item 6 ("nunca existiram como controles")
+- Achado corrigido na autorrevisão (RCA): teste "off vence always-visible" não navegava pro Modo Avançado, não provava a precedência no único lugar em que ela importa — corrigido antes do commit
+- 3 testes novos em `vision-core-next-atomic-core.spec.mjs` (82/82 PASS na suíte permanente do Next)
+
 ## next-clean-62 (2026-07-11)
 
 - Auth email/senha no Next: Settings -> Conta com registro/login/logout, escopo confirmado (zero endpoint novo — `apiRequest()` ja anexa `Authorization: Bearer` a partir de `localStorage['vision_token']`)
