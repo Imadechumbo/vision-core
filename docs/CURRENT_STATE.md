@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-⚠ `next-clean-66` é o que está ao vivo agora (`visioncoreai.pages.dev`); `next-clean-67` (Atomic Core visível em qualquer página/aba — mudança de decisão, `DECISION-020`) está commitado localmente e **ainda não deployado** — aguardando autorização explícita do usuário.
+✔ `next-clean-67` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo: cache-bust real servido (`?v=next-clean-67` no CSS e no JS), Atomic Core visível (`is-collapsed:false`) em Chat/Missions/Métricas, ainda colapsa corretamente no Modo Avançado do SF — tudo medido diretamente em produção.
 
 Cache Bust
-next-clean-67 (local, não deployado) / next-clean-66 (produção)
+next-clean-67
 
 Último Commit
 
@@ -39,7 +39,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ `next-clean-67` — mudança de decisão do usuário: Atomic Core deixa de ser "escopado ao chat" e passa a ser elemento persistente global, visível em qualquer página/aba (Missions, Timeline, Métricas, Dashboard, Settings, Vault, Tools, Security Lab, GitHub). `outsideChat` removido de `updateAtomicCollapseState()`; registrado como `DECISION-020` (substitui a regra de `next-clean-61`, não é reversão de bug). As 2 exceções que ainda escondem o widget continuam intactas: toggle "mostrar Atomic Core" em Settings e a colisão real do Modo Avançado do SF. **Bug de ancoragem citado no pedido (vão vazio no Chat): investigado e não reproduzido** — medido contra produção antes de codar, `next-clean-66` já entregava gap=0px; nenhuma mudança de CSS de ancoragem foi necessária, a garantia simplesmente se estende às páginas novas porque `.vc-chat-stage`/`#vcChatScroll` nunca são desmontados por `selectFeature()`. 1 teste reescrito + 3 novos, **98/98 PASS, commitado, NÃO deployado — aguardando autorização explícita**.
+✔ `next-clean-67` — mudança de decisão do usuário: Atomic Core deixa de ser "escopado ao chat" e passa a ser elemento persistente global, visível em qualquer página/aba (Missions, Timeline, Métricas, Dashboard, Settings, Vault, Tools, Security Lab, GitHub). `outsideChat` removido de `updateAtomicCollapseState()`; registrado como `DECISION-020` (substitui a regra de `next-clean-61`, não é reversão de bug). As 2 exceções que ainda escondem o widget continuam intactas: toggle "mostrar Atomic Core" em Settings e a colisão real do Modo Avançado do SF. **Bug de ancoragem citado no pedido (vão vazio no Chat): investigado e não reproduzido** — medido contra produção antes de codar, `next-clean-66` já entregava gap=0px; nenhuma mudança de CSS de ancoragem foi necessária, a garantia simplesmente se estende às páginas novas porque `.vc-chat-stage`/`#vcChatScroll` nunca são desmontados por `selectFeature()`. 1 teste reescrito + 3 novos, **98/98 PASS, deployado e confirmado ao vivo em produção**.
 
 ✔ `next-clean-66` — Atomic Core ancorado de verdade no canto superior direito real (`.vc-chat-stage` virou `width:100%`, era `min(940px,100%)` centralizado). Métricas e SF Modo Avançado ganham `--wide`. Legibilidade dos 9 nós corrigida (drift orbital reduzido). 96/96 PASS, **deployado e confirmado ao vivo em produção**.
 
@@ -49,7 +49,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
 
-Todos os itens até `next-clean-66` estão deployados e confirmados ao vivo; `next-clean-67` está commitado e testado, mas aguarda autorização explícita para deploy. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
+Todos os itens até `next-clean-67` estão deployados e confirmados ao vivo. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
 
 ---
 
