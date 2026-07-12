@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ next-clean-63 confirmado ao vivo em produção. `next-clean-64` (Atomic Core layout de fluxo normal + Dashboard) preparado localmente, **deploy pendente de aprovação explícita**.
+✔ next-clean-64 publicado via `bash bin/deploy-pages.sh` e confirmado ao vivo por screenshot Playwright real contra produção: (1) `position:static` confirmado no elemento real; (2) scroll real de `#vcChatScroll` tira o widget de vista (top passa de 274 para -46); (3) zero nó de agente clipado (`getBoundingClientRect` contra o container); (4) Dashboard mostra dados reais de produção (6 agentes, providers `openrouter`/`groq`/`gemini`/`deepseek`, heartbeat "há 4h") em largura total.
 
 Cache Bust
-next-clean-64 (local, não deployado — produção ainda serve next-clean-63)
+next-clean-64
 
 Último Commit
 
@@ -33,7 +33,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Último Deploy
 
-049f8f0f (preview) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-63`
+747a7a2b (preview) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-64`
 
 ---
 
@@ -45,11 +45,11 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 ✔ Nova página `Dashboard` (`data-feature="dashboard"`, largura total, quebra o cap de 940px do `.vc-chat-stage` só enquanto ativa): Timeline (reaproveita o heartbeat de Conectividade), Custo por Agente + Ranking de Atividade (reaproveita `buildAgentCharts()`, mesma função de Métricas → Agentes) — zero lógica de dado/cálculo nova, só container.
 
-`next-clean-64`, 90/90 PASS (suíte permanente do Next), **não deployado ainda** — aguardando aprovação.
+`next-clean-64`, 91/91 PASS (suíte permanente do Next), **deployado e confirmado ao vivo em produção**.
 
 Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
 
-Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita. Deploy de `next-clean-64` também pendente de aprovação.
+Todos os itens até `next-clean-64` estão deployados e confirmados ao vivo. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
 
 ---
 
