@@ -22,7 +22,7 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ next-clean-60 publicada via `bash bin/deploy-pages.sh` (Tutorial Smile) — verificação ao vivo via curl bloqueada no shell local (cert revocation check), confirmado só pelo retorno de sucesso do wrangler
+✔ next-clean-60 (Tutorial Smile) + histórico público (about.html/landing.html "Trajetória Next") publicados via `bash bin/deploy-pages.sh` — ambos confirmados ao vivo por screenshot Playwright real (não só retorno do wrangler)
 
 Cache Bust
 next-clean-60
