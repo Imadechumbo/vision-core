@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-73">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-73" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-74">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-74" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -27,15 +27,28 @@
         <a class="is-active" href="#chat" data-feature="chat"><i aria-hidden="true">C</i><span>Chat</span></a>
         <a href="#missions" data-feature="missions"><i aria-hidden="true">M</i><span>Missions</span></a>
         <a href="#factory" data-feature="factory"><i aria-hidden="true">F</i><span>Software Factory</span></a>
-        <a href="#timeline" data-feature="timeline"><i aria-hidden="true">T</i><span>Timeline</span></a>
-        <a href="#agents" data-feature="agents"><i aria-hidden="true">A</i><span>Agentes</span></a>
         <a href="#github" data-feature="github"><i aria-hidden="true">G</i><span>GitHub</span></a>
         <a href="#vault" data-feature="vault"><i aria-hidden="true">V</i><span>Vault</span></a>
         <a href="#metrics" data-feature="metrics"><i aria-hidden="true">M</i><span>Métricas</span></a>
-        <a href="#dashboard" data-feature="dashboard"><i aria-hidden="true">D</i><span>Dashboard</span></a>
-        <a href="#tools" data-feature="tools"><i aria-hidden="true">T</i><span>Tools</span></a>
-        <a href="#security" data-feature="security"><i aria-hidden="true">L</i><span>Security Lab</span></a>
-        <a href="#obsidian" data-feature="obsidian"><i aria-hidden="true">O</i><span>Obsidian</span></a>
+
+        <details class="vc-nav-group" open>
+          <summary><i aria-hidden="true">&rsaquo;</i><span>Atividade</span></summary>
+          <div class="vc-nav-group-items">
+            <a href="#timeline" data-feature="timeline"><i aria-hidden="true">T</i><span>Timeline</span></a>
+            <a href="#agents" data-feature="agents"><i aria-hidden="true">A</i><span>Agentes</span></a>
+            <a href="#dashboard" data-feature="dashboard"><i aria-hidden="true">D</i><span>Dashboard</span></a>
+          </div>
+        </details>
+
+        <details class="vc-nav-group" open>
+          <summary><i aria-hidden="true">&rsaquo;</i><span>Avançado</span></summary>
+          <div class="vc-nav-group-items">
+            <a href="#tools" data-feature="tools"><i aria-hidden="true">T</i><span>Tools</span></a>
+            <a href="#security" data-feature="security"><i aria-hidden="true">L</i><span>Security Lab</span></a>
+            <a href="#obsidian" data-feature="obsidian"><i aria-hidden="true">O</i><span>Obsidian</span></a>
+          </div>
+        </details>
+
         <a href="#settings" data-feature="settings"><i aria-hidden="true">S</i><span>Settings</span></a>
         <button class="vc-nav-help" type="button" data-smile-open aria-haspopup="dialog"><i aria-hidden="true">?</i><span>Smile</span></button>
       </nav>
