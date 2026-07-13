@@ -125,6 +125,8 @@ Pendências: `GitProviderAdapter` (GitLab, `PLANEJADO`, zero código ainda — "
 
 **Prioridade:** BAIXA até a cota de API ser resolvida · **Estimativa:** indefinida.
 
+Pendências registradas (achado real, 2026-07-13 — discussão mapeando MCP e Fine-Tuning contra a arquitetura real do Next, não especulação genérica): **adoção de MCP nos conectores externos** (`PLANEJADO`, zero código ainda, sem escopo definido — decisão de arquitetura pendente de discussão futura, não é spec pronta pra implementar): avaliar migrar GitHub Agent (`/api/github/create-pr`), Obsidian (`/api/obsidian/status`, hoje só leitura) e a busca de "Contexto de URL" do Software Factory (hoje busca externa simples) de endpoints REST customizados no backend para servidores MCP; reduziria código de integração mantido manualmente em `server.js`, e Obsidian ganharia capacidade de escrita que hoje não tem · **fine-tuning para agentes de avaliação/geração** (`PLANEJADO`, zero código ainda, sem escopo definido — dependente inclusive de qual provedor/infra de fine-tuning seria usado, fora do escopo de decisão deste registro): avaliar fine-tuning de modelo(s) menor(es) para Gold Gate Checker (critérios SDDF/OWASP/LGPD hoje avaliados via prompt genérico reexplicado a cada chamada), Scanner/Patch Engine (diagnóstico de código repetitivo) e Mission Composer (geração de estrutura de projeto); ligação direta com a pendência já registrada **custo real por agente** (ver Fase 2 — não duplicar o registro de custo aqui, só referenciar) — fine-tuning é uma via possível de reduzir esse custo por chamada de LLM, além de melhorar consistência das avaliações.
+
 ---
 
 ## FASE 6 — Desktop
