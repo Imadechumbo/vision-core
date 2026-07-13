@@ -4,6 +4,14 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-72 (2026-07-13)
+
+- Bug real corrigido: composer/campo de missão principal não aparecia na página Software Factory (Auto-Pilot nem Modo Avançado) ao rolar até o fim — usuário chegou a digitar a missão no campo errado ("Contexto de URL") por não encontrar o campo certo
+- Causa raiz: `#factory` vivia como IRMÃO de `.vc-chat-stage` (depois do composer fechar), diferente de todo outro painel (`#vcFeaturePanel`: Métricas/Missions/Dashboard/etc., que vivem DENTRO do chat-stage, antes do composer). Isso deixava o composer preso ao fundo de uma `.vc-chat-stage` quase vazia (`min-height:calc(100vh-116px)`), com um vão vazio grande antes do conteúdo real do SF começar — confirmado com screenshot real de produção mostrando os dois blocos desconectados por ~260px de espaço vazio
+- Fix: `#factory` movido pra dentro de `.vc-chat-stage`, mesma posição de qualquer outro painel — `position:sticky` do composer volta a acompanhar o scroll real da página inteira. Zero mudança em lógica de geração de missão; nenhum outro painel tocado
+- 1 teste novo (confirma DOM nesting + composer permanece no viewport rolado até o fim, em Auto-Pilot e Modo Avançado; falha reproduzível contra a estrutura antiga via `git stash`, passa com o fix)
+- 103/103 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
 ## next-clean-71 (2026-07-13)
 
 - Investigação Fase 1 (Timeline estilo LionClaw): `GET /api/mission/timeline` é real e já usado hoje (Mission History/botão "Carregar timeline"), mas pipeline por estágios e custo por agente não têm NENHUM dado real no backend (não é "estrutura diferente", é ausência total — confirmado por leitura direta de `server.js` + request real contra produção). Achado crítico adicional: o Next nunca chamava `POST /api/mission/timeline` — só o frontend legado registrava runs, então a timeline de um usuário autenticado ficava sempre vazia mesmo após rodar missões reais dentro do Next

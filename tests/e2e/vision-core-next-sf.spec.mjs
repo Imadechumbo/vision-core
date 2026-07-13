@@ -106,6 +106,44 @@ test('Software Factory opens as chat context without hiding the chat stage', asy
   await expect(page.locator('#factory')).toBeHidden();
 });
 
+// Achado real (2026-07-13): #factory vivia como irmao de .vc-chat-stage,
+// depois do composer fechar -- todo outro painel (#vcFeaturePanel:
+// Metricas/Missions/Dashboard/etc.) vive DENTRO de .vc-chat-stage, ANTES
+// do composer. Isso deixava o composer preso ao fundo de uma
+// .vc-chat-stage quase vazia (min-height:calc(100vh-116px)), com um vao
+// vazio grande antes do conteudo real do Software Factory comecar -- ao
+// rolar ate o fim da pagina (Auto-Pilot ou Modo Avancado), o composer ja
+// tinha ficado pra tras, fora da tela (confirmado em producao antes do
+// fix). Fix: #factory move pra dentro de .vc-chat-stage, mesma posicao
+// de qualquer outro painel.
+test('composer stays reachable at the bottom of the viewport even scrolled to the end of a tall Software Factory page', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(NEXT_URL);
+  await page.locator('[data-feature="factory"]').first().click();
+
+  const composer = page.locator('#vcComposer');
+  await expect(composer).toBeVisible();
+  const factory = page.locator('#factory');
+
+  // #factory must live inside .vc-chat-stage (same as every other panel),
+  // not as a sibling after it.
+  const nestedInsideChatStage = await page.evaluate(() =>
+    !!document.querySelector('.vc-chat-stage #factory'));
+  expect(nestedInsideChatStage, '#factory must be nested inside .vc-chat-stage, same as #vcFeaturePanel').toBe(true);
+
+  for (const advanced of [false, true]) {
+    if (advanced) await page.getByRole('button', { name: 'Modo Avancado' }).click();
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(150);
+    const rect = await composer.evaluate((el) => el.getBoundingClientRect());
+    expect(rect.top, (advanced ? 'Modo Avancado' : 'Auto-Pilot') + ': composer top must stay within the viewport').toBeLessThan(900);
+    expect(rect.bottom, (advanced ? 'Modo Avancado' : 'Auto-Pilot') + ': composer bottom must stay within the viewport').toBeGreaterThan(0);
+  }
+
+  await page.locator('#vcPrompt').fill('criar uma landing page simples com um botao');
+  await expect(page.locator('#vcPrompt')).toHaveValue('criar uma landing page simples com um botao');
+});
+
 test('URL context: rejects invalid URL without calling fetch-url', async ({ page }) => {
   let called = false;
   await page.route(`${API}/api/sf/fetch-url`, async (route) => { called = true; await route.abort(); });

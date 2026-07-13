@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-71">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-71" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-72">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-72" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -405,6 +405,151 @@
           </div>
         </section>
         </div>
+
+        <!-- Achado real (2026-07-13): #factory vivia como IRMÃO de
+             .vc-chat-stage (depois do composer fechar), enquanto todo
+             outro painel (#vcFeaturePanel: Métricas/Missions/Dashboard/
+             etc.) vive DENTRO de .vc-chat-stage, ANTES do composer. Isso
+             deixava o composer preso ao fundo de uma .vc-chat-stage quase
+             vazia (min-height:calc(100vh-116px)) com um vão vazio grande
+             antes do conteúdo real do Software Factory começar -- ao
+             rolar até o fim da página em Auto-Pilot/Modo Avançado, o
+             composer já tinha ficado pra trás, fora da tela. Fix: #factory
+             move pra dentro de .vc-chat-stage, na mesma posição que
+             qualquer outro painel (conteúdo primeiro, composer por
+             último) -- mesmo comportamento sticky-no-fundo-da-página que
+             já funciona em Chat/Missions/Métricas/etc. -->
+        <section class="vc-sf-stage" id="factory" hidden>
+          <div class="vc-sf-intro">
+            <p class="vc-kicker">SOFTWARE FACTORY</p>
+            <h1>Gerar projeto do zero</h1>
+            <p>Descreva o projeto em linguagem simples. O Arquiteto analisa e gera a estrutura automaticamente.</p>
+          </div>
+          <div class="vc-sf-controls" aria-label="Software Factory mode">
+            <div class="vc-sf-mode" role="group" aria-label="Modo">
+              <button type="button" data-sf-mode="auto" aria-pressed="true">Auto-Pilot</button>
+              <button type="button" data-sf-mode="advanced" aria-pressed="false">Modo Avancado</button>
+            </div>
+            <label>
+              Provider
+              <select id="vcSfProvider">
+                <option value="auto">Auto</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="anthropic">Anthropic</option>
+                <option value="groq">Groq</option>
+                <option value="deepseek">DeepSeek</option>
+                <option value="gemini">Gemini</option>
+              </select>
+            </label>
+            <label>
+              Modelo
+              <input id="vcSfModel" type="text" placeholder="auto">
+            </label>
+            <label class="vc-sf-check">
+              <input id="vcSfDryRun" type="checkbox" checked>
+              Dry-run
+            </label>
+            <label class="vc-sf-check">
+              <input id="vcSfPassGold" type="checkbox" checked>
+              PASS GOLD
+            </label>
+            <div class="vc-sf-extra" aria-label="Etapas extras">
+              <span>Etapas extras</span>
+              <label><input type="checkbox" data-sf-extra-step="context-snapshot"> Context Snapshot</label>
+              <label><input type="checkbox" data-sf-extra-step="patch-validator"> Patch Validator</label>
+              <label><input type="checkbox" data-sf-extra-step="risk-assessor"> Risk Assessor</label>
+              <label><input type="checkbox" data-sf-extra-step="rollback-planner"> Rollback Planner</label>
+            </div>
+            <div class="vc-sf-url-context" aria-label="Contexto de URL opcional">
+              <label for="vcSfUrlContext">Contexto de URL (opcional)</label>
+              <div class="vc-sf-url-row">
+                <input type="url" id="vcSfUrlContext" placeholder="https://exemplo.com/documento-de-referencia">
+                <button type="button" id="vcSfUrlFetchBtn" disabled>Buscar</button>
+              </div>
+              <p class="vc-sf-url-status" id="vcSfUrlStatus"></p>
+            </div>
+          </div>
+
+          <section class="vc-sf-advanced" id="vcSfAdvancedPanel" aria-label="Modo Avancado do Software Factory" hidden>
+            <div class="vc-sf-advanced-head">
+              <div>
+                <p class="vc-kicker">ARQUITETO SF</p>
+                <h2>Modo Avancado</h2>
+                <p>O Arquiteto interpreta a missão do chat, sugere stack, agentes e timeline. Você revisa tudo antes de qualquer geração.</p>
+              </div>
+              <div class="vc-sf-advanced-actions">
+                <button type="button" id="vcSfSuggestBtn">Sugerir stack pelo Arquiteto</button>
+                <button type="button" id="vcSfAcceptStackBtn">Aceitar sugestão</button>
+                <button type="button" id="vcSfResetStackBtn">Resetar seleção</button>
+              </div>
+            </div>
+
+            <div class="vc-sf-advanced-grid">
+              <section class="vc-sf-architect-card" aria-label="Interpretação da missão">
+                <h3>Interpretação da missão</h3>
+                <div class="vc-sf-summary-grid" id="vcSfMissionSummary"></div>
+                <div class="vc-sf-warning-list" id="vcSfWarnings" aria-live="polite"></div>
+              </section>
+
+              <section class="vc-sf-architect-card" aria-label="Stack sugerida">
+                <h3>Stack sugerida pelo Arquiteto</h3>
+                <div class="vc-sf-suggestion" id="vcSfSuggestion"></div>
+              </section>
+
+              <section class="vc-sf-architect-card vc-sf-stack-catalog" aria-label="Catálogo de stacks">
+                <h3>Catálogo de stacks</h3>
+                <div class="vc-sf-catalog" id="vcSfStackCatalog"></div>
+              </section>
+
+              <section class="vc-sf-architect-card vc-sf-stack-graph" aria-label="Grafo de stack selecionada">
+                <h3>Grafo selecionável</h3>
+                <div class="vc-sf-graph" id="vcSfStackGraph"></div>
+                <div class="vc-sf-tech-detail" id="vcSfTechDetail"></div>
+              </section>
+            </div>
+
+            <div class="vc-sf-advanced-grid vc-sf-advanced-grid-bottom">
+              <section class="vc-sf-architect-card" aria-label="Matriz de agentes">
+                <h3>Agentes</h3>
+                <div class="vc-sf-agent-matrix" id="vcSfAgentMatrix"></div>
+              </section>
+
+              <section class="vc-sf-architect-card vc-sf-timeline-card" aria-label="Timeline operacional">
+                <h3>Timeline Claude SDK</h3>
+                <div class="vc-sf-timeline" id="vcSfTimeline"></div>
+                <div class="vc-sf-timeline-detail" id="vcSfTimelineDetail"></div>
+              </section>
+
+              <section class="vc-sf-architect-card" aria-label="Preview e confirmação">
+                <h3>Preview e confirmação</h3>
+                <div class="vc-sf-preview" id="vcSfPreview"></div>
+              </section>
+            </div>
+          </section>
+
+          <div class="vc-sf-history" id="vcSfHistory" aria-live="polite"></div>
+          <div class="vc-sf-progress" id="vcSfProgress" hidden></div>
+          <div class="vc-metric-chart-grid" id="vcSfFinalViz" hidden></div>
+          <div class="vc-sf-log" id="vcSfLog" aria-label="Software Factory execution log" hidden></div>
+          <section class="vc-sf-final" id="vcSfFinal" aria-label="Software Factory final package" hidden>
+            <p class="vc-kicker">PACOTE FINAL</p>
+            <pre id="vcSfFinalBody"></pre>
+            <div class="vc-sf-files-actions">
+              <button type="button" id="vcSfFilesBtn">Gerar Lista de Arquivos</button>
+              <span class="vc-sf-files-status" id="vcSfFilesStatus" aria-live="polite"></span>
+            </div>
+            <div class="vc-sf-files-list" id="vcSfFilesList" aria-label="Arquivos gerados" hidden></div>
+            <div class="vc-sf-files-actions" id="vcSfZipActions" hidden>
+              <button type="button" id="vcSfZipBtn">Baixar ZIP</button>
+            </div>
+          </section>
+          <form class="vc-sf-composer" id="vcSfComposer">
+            <div class="vc-sf-composer-actions">
+              <button type="submit">Gerar Projeto com o composer</button>
+            </div>
+          </form>
+        </section>
+
         <form class="vc-composer" id="vcComposer">
           <textarea id="vcPrompt" rows="1" placeholder="Descreva a missão, bug, stack ou objetivo..."></textarea>
           <input id="vcAttachmentInput" type="file" multiple hidden>
@@ -418,137 +563,6 @@
             <button type="button" data-quick="attach">Anexar</button>
             <button type="button" data-quick="image">Print</button>
             <button class="vc-send" type="submit">Executar</button>
-          </div>
-        </form>
-      </section>
-
-      <section class="vc-sf-stage" id="factory" hidden>
-        <div class="vc-sf-intro">
-          <p class="vc-kicker">SOFTWARE FACTORY</p>
-          <h1>Gerar projeto do zero</h1>
-          <p>Descreva o projeto em linguagem simples. O Arquiteto analisa e gera a estrutura automaticamente.</p>
-        </div>
-        <div class="vc-sf-controls" aria-label="Software Factory mode">
-          <div class="vc-sf-mode" role="group" aria-label="Modo">
-            <button type="button" data-sf-mode="auto" aria-pressed="true">Auto-Pilot</button>
-            <button type="button" data-sf-mode="advanced" aria-pressed="false">Modo Avancado</button>
-          </div>
-          <label>
-            Provider
-            <select id="vcSfProvider">
-              <option value="auto">Auto</option>
-              <option value="openrouter">OpenRouter</option>
-              <option value="anthropic">Anthropic</option>
-              <option value="groq">Groq</option>
-              <option value="deepseek">DeepSeek</option>
-              <option value="gemini">Gemini</option>
-            </select>
-          </label>
-          <label>
-            Modelo
-            <input id="vcSfModel" type="text" placeholder="auto">
-          </label>
-          <label class="vc-sf-check">
-            <input id="vcSfDryRun" type="checkbox" checked>
-            Dry-run
-          </label>
-          <label class="vc-sf-check">
-            <input id="vcSfPassGold" type="checkbox" checked>
-            PASS GOLD
-          </label>
-          <div class="vc-sf-extra" aria-label="Etapas extras">
-            <span>Etapas extras</span>
-            <label><input type="checkbox" data-sf-extra-step="context-snapshot"> Context Snapshot</label>
-            <label><input type="checkbox" data-sf-extra-step="patch-validator"> Patch Validator</label>
-            <label><input type="checkbox" data-sf-extra-step="risk-assessor"> Risk Assessor</label>
-            <label><input type="checkbox" data-sf-extra-step="rollback-planner"> Rollback Planner</label>
-          </div>
-          <div class="vc-sf-url-context" aria-label="Contexto de URL opcional">
-            <label for="vcSfUrlContext">Contexto de URL (opcional)</label>
-            <div class="vc-sf-url-row">
-              <input type="url" id="vcSfUrlContext" placeholder="https://exemplo.com/documento-de-referencia">
-              <button type="button" id="vcSfUrlFetchBtn" disabled>Buscar</button>
-            </div>
-            <p class="vc-sf-url-status" id="vcSfUrlStatus"></p>
-          </div>
-        </div>
-
-        <section class="vc-sf-advanced" id="vcSfAdvancedPanel" aria-label="Modo Avancado do Software Factory" hidden>
-          <div class="vc-sf-advanced-head">
-            <div>
-              <p class="vc-kicker">ARQUITETO SF</p>
-              <h2>Modo Avancado</h2>
-              <p>O Arquiteto interpreta a missão do chat, sugere stack, agentes e timeline. Você revisa tudo antes de qualquer geração.</p>
-            </div>
-            <div class="vc-sf-advanced-actions">
-              <button type="button" id="vcSfSuggestBtn">Sugerir stack pelo Arquiteto</button>
-              <button type="button" id="vcSfAcceptStackBtn">Aceitar sugestão</button>
-              <button type="button" id="vcSfResetStackBtn">Resetar seleção</button>
-            </div>
-          </div>
-
-          <div class="vc-sf-advanced-grid">
-            <section class="vc-sf-architect-card" aria-label="Interpretação da missão">
-              <h3>Interpretação da missão</h3>
-              <div class="vc-sf-summary-grid" id="vcSfMissionSummary"></div>
-              <div class="vc-sf-warning-list" id="vcSfWarnings" aria-live="polite"></div>
-            </section>
-
-            <section class="vc-sf-architect-card" aria-label="Stack sugerida">
-              <h3>Stack sugerida pelo Arquiteto</h3>
-              <div class="vc-sf-suggestion" id="vcSfSuggestion"></div>
-            </section>
-
-            <section class="vc-sf-architect-card vc-sf-stack-catalog" aria-label="Catálogo de stacks">
-              <h3>Catálogo de stacks</h3>
-              <div class="vc-sf-catalog" id="vcSfStackCatalog"></div>
-            </section>
-
-            <section class="vc-sf-architect-card vc-sf-stack-graph" aria-label="Grafo de stack selecionada">
-              <h3>Grafo selecionável</h3>
-              <div class="vc-sf-graph" id="vcSfStackGraph"></div>
-              <div class="vc-sf-tech-detail" id="vcSfTechDetail"></div>
-            </section>
-          </div>
-
-          <div class="vc-sf-advanced-grid vc-sf-advanced-grid-bottom">
-            <section class="vc-sf-architect-card" aria-label="Matriz de agentes">
-              <h3>Agentes</h3>
-              <div class="vc-sf-agent-matrix" id="vcSfAgentMatrix"></div>
-            </section>
-
-            <section class="vc-sf-architect-card vc-sf-timeline-card" aria-label="Timeline operacional">
-              <h3>Timeline Claude SDK</h3>
-              <div class="vc-sf-timeline" id="vcSfTimeline"></div>
-              <div class="vc-sf-timeline-detail" id="vcSfTimelineDetail"></div>
-            </section>
-
-            <section class="vc-sf-architect-card" aria-label="Preview e confirmação">
-              <h3>Preview e confirmação</h3>
-              <div class="vc-sf-preview" id="vcSfPreview"></div>
-            </section>
-          </div>
-        </section>
-
-        <div class="vc-sf-history" id="vcSfHistory" aria-live="polite"></div>
-        <div class="vc-sf-progress" id="vcSfProgress" hidden></div>
-        <div class="vc-metric-chart-grid" id="vcSfFinalViz" hidden></div>
-        <div class="vc-sf-log" id="vcSfLog" aria-label="Software Factory execution log" hidden></div>
-        <section class="vc-sf-final" id="vcSfFinal" aria-label="Software Factory final package" hidden>
-          <p class="vc-kicker">PACOTE FINAL</p>
-          <pre id="vcSfFinalBody"></pre>
-          <div class="vc-sf-files-actions">
-            <button type="button" id="vcSfFilesBtn">Gerar Lista de Arquivos</button>
-            <span class="vc-sf-files-status" id="vcSfFilesStatus" aria-live="polite"></span>
-          </div>
-          <div class="vc-sf-files-list" id="vcSfFilesList" aria-label="Arquivos gerados" hidden></div>
-          <div class="vc-sf-files-actions" id="vcSfZipActions" hidden>
-            <button type="button" id="vcSfZipBtn">Baixar ZIP</button>
-          </div>
-        </section>
-        <form class="vc-sf-composer" id="vcSfComposer">
-          <div class="vc-sf-composer-actions">
-            <button type="submit">Gerar Projeto com o composer</button>
           </div>
         </form>
       </section>
