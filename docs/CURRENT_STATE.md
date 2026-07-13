@@ -27,7 +27,7 @@ Deploy Produção
 `next-clean-74` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real contra `https://visioncoreai.pages.dev/vision-core-next.html`: cache-bust servido (`?v=next-clean-74` em CSS e JS, HTTP 200), menu lateral reorganizado presente (2 `.vc-nav-group`, rótulos "Atividade"/"Avançado", 7 itens fixos como filhos diretos de `.vc-nav`).
 
 Cache Bust
-next-clean-77 (local; next-clean-76 já publicado em produção)
+next-clean-77 (publicado em produção)
 
 Último Commit
 
@@ -40,7 +40,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
-✔ `next-clean-77` (local, aguardando validação/deploy desta rodada) — OAuth Google/GitHub no Vision Core Next: Settings → Conta agora tem botões Google/GitHub que chamam `/api/auth/oauth/{provider}?return_to=next`; backend preserva o legado por padrão e só retorna para `/vision-core-next.html` quando o `state` fechado marca `target:"next"` (sem open redirect por URL livre). O hash `#oauth-success&token=...` grava o mesmo `localStorage['vision_token']` do login email/senha; `#oauth-error=...` abre Settings com erro legível. Specs/docs atualizados.
+✔ `next-clean-77` — OAuth Google/GitHub no Vision Core Next: Settings → Conta agora tem botões Google/GitHub que chamam `/api/auth/oauth/{provider}?return_to=next`; backend preserva o legado por padrão e só retorna para `/vision-core-next.html` quando o `state` fechado marca `target:"next"` (sem open redirect por URL livre). O hash `#oauth-success&token=...` grava o mesmo `localStorage['vision_token']` do login email/senha; `#oauth-error=...` abre Settings com erro legível. **Deployado em produção**: Pages serve `next-clean-77`, EB `vision-core-prod` está em `v113-91e5ed3966c7b1486b7325d4a5e8952be3c93215` (`Ready/Green`), Worker OAuth decodifica `target:"next"` com `return_to=next` e `target:"legacy"` sem o parâmetro.
 
 ✔ `next-clean-76` — DECISION-021: Atomic Core + cabeçalho genérico escopados ao Chat; Software Factory Auto-Pilot continua com decágono; demais abas usam cabeçalho curto por papel. **Deployado em produção** e confirmado ao vivo em `visioncoreai.pages.dev` servindo cache-bust `next-clean-76`.
 
@@ -96,7 +96,7 @@ Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contr
 
 - Token de auth em `localStorage`/`sessionStorage` — exposto a XSS, risco aceito (paridade com o legado, não é regressão do Next)
 - `backend/data/users.json` tem hash de senha de teste no histórico git — ação de rotação pendente do usuário, fora do alcance deste repo
-- OAuth Google/GitHub no Next implementado localmente em `next-clean-77`; exige deploy frontend + backend para ficar ativo em produção
+- OAuth Google/GitHub no Next implementado e publicado em `next-clean-77`
 - Itens menores, não bloqueantes: boto3 bloqueado por certificado SSL local (Windows, mesma limitação histórica do node-gyp); `/api/health` retorna `version` hardcoded desatualizada (cosmético); ruído CRLF/LF pré-existente no `git status` (`core.autocrlf` inconsistente, não é prioridade corrigir)
 
 ---
