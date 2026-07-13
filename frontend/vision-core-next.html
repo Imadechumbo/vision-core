@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-75">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-75" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-76">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-76" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -59,7 +59,7 @@
 
     <main class="vc-main" id="top">
       <header class="vc-header">
-        <div class="vc-brand-lockup" aria-label="Vision Core">
+        <div class="vc-brand-lockup" id="vcBrandLockup" aria-label="Vision Core">
           <span class="vc-eye-logo vc-eye-logo-large" aria-hidden="true"><span class="vc-eye"><span class="vc-pupil"></span><span class="eye-lid-top"></span><span class="eye-lid-bottom"></span></span></span>
           <span class="vc-brand-copy">
             <strong>VISION CORE</strong>
@@ -67,6 +67,12 @@
           </span>
         </div>
         <span class="vc-agent-badge" id="vcAgentBadge" role="status" aria-label="Status do agente local" data-state="disconnected"></span>
+        <div class="vc-feature-head" id="vcPageHead" hidden aria-live="polite">
+          <div>
+            <span id="vcPageHeadStatus"></span>
+            <strong id="vcPageHeadTitle"></strong>
+          </div>
+        </div>
       </header>
 
       <section class="vc-chat-stage" id="chat" aria-label="Chat Vision Core">

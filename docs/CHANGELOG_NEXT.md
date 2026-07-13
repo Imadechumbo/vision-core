@@ -4,6 +4,13 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-76 (2026-07-13)
+
+- DECISION-021: Atomic Core e cabeçalho genérico ("VISION CORE" + tags/status do agente) voltam a ser escopados ao Chat; Software Factory Auto-Pilot continua contando como chat para o decágono, mas o cabeçalho da Factory é o cabeçalho curto de papel.
+- Demais abas usam `#vcPageHead`, reaproveitando `featureMap[key].title`/`.status`, sem copy nova e sem componente duplicado.
+- `updateAtomicCollapseState()` mantém os 2 motivos antigos de collapse (toggle do usuário e colisão real do SF Avançado) e adiciona só o escopo `!inChatOrFactory`.
+- Testes permanentes atualizados: 2 novos asserts no app shell e 3 regressões do Atomic Core reescritas para a regra nova.
+
 ## next-clean-75 (2026-07-13)
 
 - Proposta 2 implementada: Timeline e Dashboard deixam de existir como abas próprias no menu lateral

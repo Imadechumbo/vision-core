@@ -1,6 +1,7 @@
 // @ts-check
 /**
- * Vision Core Next - Atomic Core idle animation (header widget, all pages).
+ * Vision Core Next - Atomic Core idle animation (chat/Software Factory
+ * Auto-Pilot only since DECISION-021, 2026-07-13 -- see docs/DECISIONS.md).
  *
  * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_STATE.md).
  *
@@ -287,36 +288,37 @@ test('on/off toggle hides the widget everywhere (not just Modo Avancado), live a
   await expect(hud, 'turning it back on must restore the widget immediately').not.toHaveClass(/is-collapsed/);
 });
 
-// next-clean-67: agora que o widget aparece em qualquer aba, o toggle
-// "mostrar Atomic Core" precisa continuar valendo GLOBALMENTE -- ligar/
-// desligar enquanto o usuario esta numa pagina que nao e o chat, e o
-// estado deve se manter ao navegar entre paginas depois.
-test('"mostrar Atomic Core" toggle works globally across page navigation, not just on chat home', async ({ page }) => {
+// DECISION-021 (2026-07-13): o toggle "mostrar Atomic Core" continua valendo
+// GLOBALMENTE (persiste independente da aba), mas agora interage com um
+// segundo motivo de collapse -- estar fora de chat/factory. Ligar o toggle
+// enquanto numa aba fora desse escopo não tem efeito visível ali (já estava
+// escondido pela regra de aba), mas o estado do toggle em si continua
+// valendo quando o usuário volta pro chat.
+test('"mostrar Atomic Core" toggle persists globally across navigation, even while hidden by the chat-only scope', async ({ page }) => {
   await page.goto(NEXT_URL());
   const hud = page.locator('[data-atomic-core]');
 
-  await page.locator('a[data-feature="missions"]').click();
-  await expect(hud, 'visible on Missions before toggling off').not.toHaveClass(/is-collapsed/);
+  await expect(hud, 'visible on chat by default').not.toHaveClass(/is-collapsed/);
 
   await page.evaluate(() => {
     var el = document.getElementById('vcAtomicEnabled');
     el.checked = false;
     el.dispatchEvent(new Event('change'));
   });
-  await expect(hud, 'off must hide it immediately while on Missions').toHaveClass(/is-collapsed/);
+  await expect(hud, 'off must hide it immediately on chat').toHaveClass(/is-collapsed/);
 
-  await page.locator('a[data-feature="metrics"]').click();
-  await expect(hud, 'must stay hidden after navigating to Metrics').toHaveClass(/is-collapsed/);
+  await page.locator('a[data-feature="missions"]').click();
+  await expect(hud, 'stays collapsed on Missions -- hidden both by the toggle and by the chat-only scope').toHaveClass(/is-collapsed/);
 
   await page.evaluate(() => {
     var el = document.getElementById('vcAtomicEnabled');
     el.checked = true;
     el.dispatchEvent(new Event('change'));
   });
-  await expect(hud, 'turning back on must restore it immediately while on Metrics').not.toHaveClass(/is-collapsed/);
+  await expect(hud, 'turning back on while on Missions has no visible effect -- Missions is outside the chat/factory scope').toHaveClass(/is-collapsed/);
 
-  await page.locator('a[data-feature="github"]').click();
-  await expect(hud, 'stays visible after navigating to GitHub').not.toHaveClass(/is-collapsed/);
+  await page.locator('a[data-feature="chat"]').click();
+  await expect(hud, 'back on chat, the re-enabled toggle takes effect immediately').not.toHaveClass(/is-collapsed/);
 });
 
 test('off wins over "always visible": widget stays hidden in Modo Avancado even with the override checked', async ({ page }) => {
@@ -398,13 +400,11 @@ test('scrolls away with the chat content instead of staying pinned to the viewpo
   expect(after, 'must move out of the visible area when the page is scrolled, unlike position:fixed').toBeLessThan(before - 100);
 });
 
-// Mudança de decisão do usuário (2026-07-12, next-clean-67): substitui a
-// regra "esconde fora do chat" de next-clean-61/64. Atomic Core agora é
-// elemento persistente global -- visível em QUALQUER página/aba. As duas
-// únicas exceções que continuam escondendo o widget são o toggle off do
-// usuário (Settings) e a colisão real do Modo Avançado do SF (regressão
-// coberta em testes separados abaixo).
-test('stays visible on every page/tab, not just chat/Software Factory', async ({ page }) => {
+// DECISION-021 (2026-07-13, corrige PARCIALMENTE next-clean-67/DECISION-020):
+// Atomic Core volta a ser escopado a chat/Software Factory Auto-Pilot --
+// hidden (via .is-collapsed, nunca display:none) em qualquer outra aba. O
+// widget nunca foi removido do produto, só voltou a ser escopado.
+test('hidden outside chat/Software Factory Auto-Pilot -- visible only on those two (DECISION-021)', async ({ page }) => {
   await page.goto(NEXT_URL());
   const hud = page.locator('[data-atomic-core]');
 
@@ -412,15 +412,14 @@ test('stays visible on every page/tab, not just chat/Software Factory', async ({
 
   for (const feature of ['settings', 'missions', 'metrics', 'agents', 'vault', 'tools', 'security', 'github']) {
     await page.locator('a[data-feature="' + feature + '"]').click();
-    await expect(hud, 'must stay visible on ' + feature).not.toHaveClass(/is-collapsed/);
+    await expect(hud, 'must be hidden on ' + feature).toHaveClass(/is-collapsed/);
   }
 
   await page.locator('a[data-feature="chat"]').click();
-  await expect(hud, 'still visible back on chat').not.toHaveClass(/is-collapsed/);
+  await expect(hud, 'visible again back on chat').not.toHaveClass(/is-collapsed/);
 
-  // Software Factory Auto-Pilot: already covered by the global rule above,
-  // kept as an explicit regression guard since it was the original
-  // exception carved out by next-clean-61.
+  // Software Factory Auto-Pilot continua contando como chat-like -- critério
+  // que não mudou desde next-clean-61, não faz parte desta correção.
   await page.locator('a[data-feature="factory"]').click();
   await expect(hud, 'Software Factory Auto-Pilot stays visible').not.toHaveClass(/is-collapsed/);
 });
@@ -490,17 +489,15 @@ test('anchors flush against the real right edge of the content area, not just it
   expect(Math.abs(gap), 'HUD right edge must match .vc-main real content-right-edge, not float short of it').toBeLessThan(2);
 });
 
-// next-clean-67: agora que o widget é visível em qualquer página, o
-// ancoramento e a ausência de corte precisam valer em páginas que não são
-// o chat também, não só na home -- .vc-chat-stage é o mesmo elemento
-// width:100% em toda página (nunca escondido pelo selectFeature()), então
-// a garantia deveria se manter, mas isso é o tipo de suposição que exige
-// medição real, não só leitura de CSS.
-test('anchor and no-clipping guarantees hold on non-chat pages too (Missions, Metrics, Agents)', async ({ page }) => {
+// DECISION-021 (2026-07-13): agora que o widget só é visível em chat/Software
+// Factory Auto-Pilot, o ancoramento e a ausência de corte só precisam ser
+// garantidos onde ele de fato aparece -- testar em páginas onde fica
+// invisível (opacity:0 via .is-collapsed) não valida nada de real.
+test('anchor and no-clipping guarantees hold on every page where the widget is actually visible (chat, Software Factory Auto-Pilot)', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(NEXT_URL());
 
-  for (const feature of ['missions', 'metrics', 'agents']) {
+  for (const feature of ['chat', 'factory']) {
     await page.locator('a[data-feature="' + feature + '"]').click();
     await page.waitForTimeout(200);
     const result = await page.evaluate(() => {

@@ -148,6 +148,10 @@
   var featureTitle = document.getElementById('vcFeatureTitle');
   var featureBody = document.getElementById('vcFeatureBody');
   var featureStatus = document.getElementById('vcFeatureStatus');
+  var brandLockupEl = document.getElementById('vcBrandLockup');
+  var pageHeadEl = document.getElementById('vcPageHead');
+  var pageHeadTitleEl = document.getElementById('vcPageHeadTitle');
+  var pageHeadStatusEl = document.getElementById('vcPageHeadStatus');
   var featureActions = document.getElementById('vcFeatureActions');
   var featureViz = document.getElementById('vcFeatureViz');
   var featureClose = document.getElementById('vcFeatureClose');
@@ -462,6 +466,16 @@
     if (featureBody) featureBody.textContent = feature.text;
     if (featureStatus) featureStatus.textContent = feature.status;
     if (featureClose) featureClose.hidden = activeFeature === 'chat';
+    // DECISION-021: cabecalho generico (marca + status do agente) e o
+    // decagono so pertencem ao Chat -- qualquer outra aba mostra um
+    // cabecalho curto reaproveitando featureMap[key].title/.status (mesmo
+    // texto ja usado em #vcFeatureTitle/#vcFeatureStatus, nao inventa copy).
+    var isChatTab = activeFeature === 'chat';
+    if (brandLockupEl) brandLockupEl.hidden = !isChatTab;
+    if (agentBadgeEl) agentBadgeEl.hidden = !isChatTab;
+    if (pageHeadEl) pageHeadEl.hidden = isChatTab;
+    if (pageHeadTitleEl) pageHeadTitleEl.textContent = feature.title;
+    if (pageHeadStatusEl) pageHeadStatusEl.textContent = feature.status;
     hideFeatureViz();
     renderFeatureActions(feature);
     if (githubPrForm) githubPrForm.hidden = activeFeature !== 'github';
@@ -3067,17 +3081,22 @@
     return setAtomicCoreState('idle');
   }
 
-  // Mudança de decisão do usuário (2026-07-12, substitui a regra "esconde
-  // fora do chat" de next-clean-61/64): Atomic Core é elemento persistente
-  // global, visível em qualquer página/aba. Só some em 2 casos: usuário
-  // desativou em Settings (getAtomicCoreEnabled()==='off'), ou a colisão
-  // real e já documentada do Modo Avançado do Software Factory
-  // (autoCollapse -- getAtomicCollapsePref()!=='always' é o override manual
-  // do usuário pra essa exceção especificamente). activeFeature/sfMode
-  // lidos no momento da chamada, mesmo padrão hoisted do resto do arquivo.
+  // DECISION-021 (2026-07-13, corrige PARCIALMENTE a regra "persistente
+  // global" de next-clean-67/DECISION-020): Atomic Core volta a ser
+  // escopado a chat/Software Factory (Auto-Pilot conta como chat, critério
+  // que não mudou desde next-clean-61). Três motivos de colapso, nesta
+  // ordem de precedência: usuário desativou em Settings
+  // (getAtomicCoreEnabled()==='off'), a colisão real e já documentada do
+  // Modo Avançado do Software Factory (autoCollapse --
+  // getAtomicCollapsePref()!=='always' é o override manual do usuário pra
+  // essa exceção específica, inalterado por esta decisão), ou simplesmente
+  // estar fora de chat/factory (!inChatOrFactory, o motivo novo). activeFeature/
+  // sfMode lidos no momento da chamada, mesmo padrão hoisted do resto do
+  // arquivo.
   function updateAtomicCollapseState() {
+    var inChatOrFactory = activeFeature === 'chat' || activeFeature === 'factory';
     var autoCollapse = activeFeature === 'factory' && sfMode === 'advanced' && getAtomicCollapsePref() !== 'always';
-    var shouldCollapse = getAtomicCoreEnabled() === 'off' || autoCollapse;
+    var shouldCollapse = getAtomicCoreEnabled() === 'off' || autoCollapse || !inChatOrFactory;
     root.classList.toggle('vc-no-transition', reduceMotion);
     root.classList.toggle('is-collapsed', shouldCollapse);
   }

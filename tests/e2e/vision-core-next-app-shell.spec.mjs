@@ -155,6 +155,50 @@ test('Security Lab: Safe Status panel issues GET-only requests to the fixed allo
   await expect(viz).toContainText('Últimas verificações');
 });
 
+// DECISION-021 (2026-07-13): cabecalho generico ("VISION CORE" + tags de
+// versao + status do agente) so aparece em Chat -- qualquer outra aba mostra
+// um cabecalho curto reaproveitando featureMap[key].title/.status (mesmo
+// texto ja usado em #vcFeatureTitle/#vcFeatureStatus, nunca copy nova).
+test('generic header + Atomic Core only on chat; other tabs get a short role-specific header instead', async ({ page }) => {
+  await page.goto(NEXT_URL);
+
+  await expect(page.locator('#vcBrandLockup')).toBeVisible();
+  await expect(page.locator('#vcAgentBadge')).toBeVisible();
+  await expect(page.locator('#vcPageHead')).toBeHidden();
+
+  await page.locator('a[data-feature="missions"]').click();
+  await expect(page.locator('#vcBrandLockup')).toBeHidden();
+  await expect(page.locator('#vcAgentBadge')).toBeHidden();
+  await expect(page.locator('#vcPageHead')).toBeVisible();
+  await expect(page.locator('#vcPageHeadTitle')).toHaveText('Missions');
+  await expect(page.locator('#vcPageHeadStatus')).toHaveText('PATCH + DRY-RUN + APPLY BLOQUEADO');
+
+  await page.locator('[data-feature="metrics"]').click();
+  await expect(page.locator('#vcPageHeadTitle')).toHaveText('Métricas');
+  await expect(page.locator('#vcPageHeadStatus')).toHaveText('SAFE READ');
+
+  await page.locator('[data-feature="chat"]').click();
+  await expect(page.locator('#vcBrandLockup')).toBeVisible();
+  await expect(page.locator('#vcAgentBadge')).toBeVisible();
+  await expect(page.locator('#vcPageHead')).toBeHidden();
+});
+
+test('Software Factory Modo Avancado also gets the short role header (Atomic Core hidden there per DECISION-021)', async ({ page }) => {
+  await page.goto(NEXT_URL);
+  await page.locator('[data-feature="factory"]').first().click();
+
+  // Auto-Pilot: counts as chat-like for the Atomic Core (unchanged rule),
+  // but the header block itself is chat-only per DECISION-021 -- Factory
+  // gets the short role header in both SF modes.
+  await expect(page.locator('#vcBrandLockup')).toBeHidden();
+  await expect(page.locator('[data-atomic-core]')).not.toHaveClass(/is-collapsed/);
+  await expect(page.locator('#vcPageHeadTitle')).toHaveText('Software Factory');
+
+  await page.locator('[data-sf-mode="advanced"]').click();
+  await expect(page.locator('[data-atomic-core]')).toHaveClass(/is-collapsed/);
+  await expect(page.locator('#vcPageHeadTitle')).toHaveText('Software Factory');
+});
+
 test('Security Lab: missing status endpoints still render a calm, non-error fallback', async ({ page }) => {
   await page.goto(NEXT_URL);
   for (const p of SAFE_STATUS_PATHS) {
