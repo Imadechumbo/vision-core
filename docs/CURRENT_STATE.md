@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-⚠ `next-clean-72` é o que está ao vivo agora (`visioncoreai.pages.dev`); `next-clean-73` (Timeline auto-carrega missões, reaproveitando Mission History) está commitado localmente e **ainda não deployado** — aguardando autorização explícita do usuário.
+✔ `next-clean-73` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real: cache-bust servido (`?v=next-clean-73` no JS), teste end-to-end com conta real registrada em produção + missão real gravada via `POST /api/mission/timeline` — Timeline auto-carregou a missão real ao abrir a aba, sem nenhum clique, sem sobreposição do composer.
 
 Cache Bust
-next-clean-73 (local, não deployado) / next-clean-72 (produção)
+next-clean-73
 
 Último Commit
 
@@ -39,7 +39,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ `next-clean-73` — bug real diagnosticado e corrigido: aba Timeline não mostrava nenhuma missão. Round-trip `POST`→`GET /api/mission/timeline` confirmado funcionando perfeitamente contra produção real (conta de teste descartável) — causa 100% de renderização: `renderFeatureActionViz()`/`summarizeResult()` sem caso para `{entries:[...]}`, caindo no fallback genérico. Fix autorizado (opção a+b): Timeline auto-carrega ao abrir a aba, reaproveitando o widget já funcional de Missions → Mission History (`loadMissionHistory()`, mesmo `#vcMissionHistory`) — botão genérico removido. Achado da RCA: sem os formulários extras de Missions acima, o painel curto caía atrás do composer sticky (regra dura #12) só em Timeline — fix cirúrgico via `scrollIntoView` só nesse caminho, Missions idêntico e testado sem regressão. Novo arquivo de teste dedicado (4 testes), **107/107 PASS, commitado, NÃO deployado — aguardando autorização explícita**.
+✔ `next-clean-73` — bug real diagnosticado e corrigido: aba Timeline não mostrava nenhuma missão. Round-trip `POST`→`GET /api/mission/timeline` confirmado funcionando perfeitamente contra produção real (conta de teste descartável) — causa 100% de renderização: `renderFeatureActionViz()`/`summarizeResult()` sem caso para `{entries:[...]}`, caindo no fallback genérico. Fix autorizado (opção a+b): Timeline auto-carrega ao abrir a aba, reaproveitando o widget já funcional de Missions → Mission History (`loadMissionHistory()`, mesmo `#vcMissionHistory`) — botão genérico removido. Achado da RCA: sem os formulários extras de Missions acima, o painel curto caía atrás do composer sticky (regra dura #12) só em Timeline — fix cirúrgico via `scrollIntoView` só nesse caminho, Missions idêntico e testado sem regressão. Novo arquivo de teste dedicado (4 testes), **107/107 PASS, deployado e confirmado ao vivo em produção (teste end-to-end com conta real registrada + missão real gravada)**.
 
 ✔ `next-clean-72` — bug real corrigido: composer não aparecia na página Software Factory ao rolar até o fim (`#factory` vivia fora de `.vc-chat-stage`). 103/103 PASS, **deployado e confirmado ao vivo em produção**.
 
@@ -61,7 +61,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
 
-Todos os itens até `next-clean-72` estão deployados e confirmados ao vivo; `next-clean-73` está commitado e testado, mas aguarda autorização explícita para deploy. `main`/`origin/main` foram sincronizados até `next-clean-71` (merge + push autorizados explicitamente pelo usuário) — os commits de `next-clean-72`/`73` (nesta branch) ainda não foram levados pra `main`, pendência real até o usuário pedir.
+Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `main`/`origin/main` foram sincronizados até `next-clean-71` (merge + push autorizados explicitamente pelo usuário) — os commits de `next-clean-72`/`73` (nesta branch) ainda não foram levados pra `main`, pendência real até o usuário pedir.
 
 ---
 
