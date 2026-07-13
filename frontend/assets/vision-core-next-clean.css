@@ -2152,8 +2152,8 @@ a { color: inherit; text-decoration: none; }
    de marca como o Atomic Core, é um dashboard de dados).
    ARCHITECTURAL PRINCIPLE-004 (achado real, 2026-07-12): 720px era estreito
    demais para os cards de gráfico (repeat(auto-fit, minmax(210px,1fr)))
-   caberem confortavelmente lado a lado — ganha largura total (mesmo
-   mecanismo --wide já usado pelo Dashboard) enquanto a aba está ativa. */
+   caberem confortavelmente lado a lado — pode ganhar largura total via
+   botão local, reaproveitando o mesmo mecanismo --wide. */
 .vc-metrics-panel:not([hidden]) {
   display: flex;
   flex-direction: column;
@@ -2168,17 +2168,6 @@ a { color: inherit; text-decoration: none; }
 /* ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): painel de largura total —
    sem max-width, e .vc-chat-stage--wide (aplicada só enquanto esta aba está
    ativa) remove o cap de 940px do container pai. */
-.vc-dashboard-panel:not([hidden]) {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
-}
-.vc-dashboard-status { margin: 0; font-size: 12px; color: var(--muted); }
-.vc-dashboard-section h5 { margin: 0 0 10px; font-size: 13px; color: var(--text); }
-.vc-dashboard-timeline,
-.vc-dashboard-agents { display: flex; flex-direction: column; gap: 10px; }
-
 .vc-chat-stage.vc-chat-stage--wide { width: 100%; max-width: none; }
 .vc-metrics-head {
   display: flex;
@@ -2207,7 +2196,8 @@ a { color: inherit; text-decoration: none; }
 }
 .vc-metrics-source.is-real { border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.1); color: var(--green); }
 .vc-metrics-source.is-fallback { border-color: rgba(250,204,21,.4); background: rgba(250,204,21,.1); color: #facc15; }
-#vcMetricsRefresh {
+#vcMetricsRefresh,
+#vcMetricsWideToggle {
   padding: 6px 14px;
   border: 1px solid rgba(255,255,255,.12);
   border-radius: var(--radius);
@@ -2217,7 +2207,9 @@ a { color: inherit; text-decoration: none; }
   font-weight: 600;
   cursor: pointer;
 }
-#vcMetricsRefresh:hover { background: rgba(255,255,255,.12); }
+#vcMetricsRefresh:hover,
+#vcMetricsWideToggle:hover,
+#vcMetricsWideToggle[aria-pressed="true"] { background: rgba(255,255,255,.12); }
 .vc-metrics-raw-toggle {
   display: flex;
   align-items: center;

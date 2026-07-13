@@ -315,8 +315,8 @@ test('"mostrar Atomic Core" toggle works globally across page navigation, not ju
   });
   await expect(hud, 'turning back on must restore it immediately while on Metrics').not.toHaveClass(/is-collapsed/);
 
-  await page.locator('a[data-feature="dashboard"]').click();
-  await expect(hud, 'stays visible after navigating to Dashboard').not.toHaveClass(/is-collapsed/);
+  await page.locator('a[data-feature="github"]').click();
+  await expect(hud, 'stays visible after navigating to GitHub').not.toHaveClass(/is-collapsed/);
 });
 
 test('off wins over "always visible": widget stays hidden in Modo Avancado even with the override checked', async ({ page }) => {
@@ -410,7 +410,7 @@ test('stays visible on every page/tab, not just chat/Software Factory', async ({
 
   await expect(hud, 'visible on chat home').not.toHaveClass(/is-collapsed/);
 
-  for (const feature of ['settings', 'missions', 'metrics', 'dashboard', 'vault', 'tools', 'security', 'github']) {
+  for (const feature of ['settings', 'missions', 'metrics', 'agents', 'vault', 'tools', 'security', 'github']) {
     await page.locator('a[data-feature="' + feature + '"]').click();
     await expect(hud, 'must stay visible on ' + feature).not.toHaveClass(/is-collapsed/);
   }
@@ -496,11 +496,11 @@ test('anchors flush against the real right edge of the content area, not just it
 // width:100% em toda página (nunca escondido pelo selectFeature()), então
 // a garantia deveria se manter, mas isso é o tipo de suposição que exige
 // medição real, não só leitura de CSS.
-test('anchor and no-clipping guarantees hold on non-chat pages too (Missions, Metrics, Dashboard)', async ({ page }) => {
+test('anchor and no-clipping guarantees hold on non-chat pages too (Missions, Metrics, Agents)', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(NEXT_URL());
 
-  for (const feature of ['missions', 'metrics', 'dashboard']) {
+  for (const feature of ['missions', 'metrics', 'agents']) {
     await page.locator('a[data-feature="' + feature + '"]').click();
     await page.waitForTimeout(200);
     const result = await page.evaluate(() => {

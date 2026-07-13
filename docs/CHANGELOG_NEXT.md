@@ -4,6 +4,14 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-75 (2026-07-13)
+
+- Proposta 2 implementada: Timeline e Dashboard deixam de existir como abas próprias no menu lateral
+- Histórico de Missões permanece acessível dentro de Missions, usando o mesmo `#vcMissionHistory` + `/api/mission/timeline`
+- Métricas recebe o botão local "Largura total", reaproveitando `vc-chat-stage--wide`/`vc-feature-panel--wide` sem duplicar painel
+- Agentes foi mantido como aba própria: agrega status, catálogo e métricas de agentes em ações safe-read distintas, não é só layout duplicado de Métricas
+- Specs permanentes de Timeline/Dashboard reescritos para cobrir a fusão; specs de Métricas/Atomic Core ajustados para a nova navegação
+
 ## next-clean-73 (2026-07-13)
 
 - Bug real diagnosticado e corrigido: aba Timeline não mostrava nenhuma missão ao clicar "Carregar timeline", mesmo após rodar uma missão real completa no SF Auto-Pilot. Round-trip `POST`→`GET /api/mission/timeline` confirmado funcionando perfeitamente contra produção real (conta de teste descartável) — a causa era 100% de renderização: `renderFeatureActionViz()`/`summarizeResult()` não tinham nenhum caso para o formato `{entries:[...]}`, caindo sempre no texto de fallback genérico

@@ -257,11 +257,6 @@
   var applyFixStatus = document.getElementById('vcApplyFixStatus');
   var attachmentInput = document.getElementById('vcAttachmentInput');
   var imageInput = document.getElementById('vcImageInput');
-  var dashboardPanel = document.getElementById('vcDashboardPanel');
-  var dashboardStatus = document.getElementById('vcDashboardStatus');
-  var dashboardTimeline = document.getElementById('vcDashboardTimeline');
-  var dashboardAgents = document.getElementById('vcDashboardAgents');
-  var dashboardRefresh = document.getElementById('vcDashboardRefresh');
   var chatStageEl = document.querySelector('.vc-chat-stage');
   var metricsPanel = document.getElementById('vcMetricsPanel');
   var metricsSourceBadge = document.getElementById('vcMetricsSourceBadge');
@@ -269,6 +264,7 @@
   var metricsErrorText = document.getElementById('vcMetricsErrorText');
   var metricsRetry = document.getElementById('vcMetricsRetry');
   var metricsRefresh = document.getElementById('vcMetricsRefresh');
+  var metricsWideToggle = document.getElementById('vcMetricsWideToggle');
   var metricsSkel = document.getElementById('vcMetricsSkel');
   var metricsBody = document.getElementById('vcMetricsBody');
   var metricsAgentList = document.getElementById('vcMetricsAgentList');
@@ -286,17 +282,16 @@
   var activeFeature = 'chat';
   var lastFeatureTrigger = null;
   var lastChatMissionText = '';
+  var metricsWide = false;
 
   var featureMap = {
     chat: { title: 'Chat', status: 'READY', agents: ['hermes'], text: 'Chat livre conectado ao endpoint real /api/chat.', actions: [{ label: 'Checar API', path: '/api/health' }] },
     missions: { title: 'Missions', status: 'PATCH + DRY-RUN + APPLY BLOQUEADO', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Gerar Patch roda o pipeline real de diagnóstico + apply-patch, sem escrever nada sozinho — só gera diff para download. Dry-Run Real (abaixo) enfileira execução real no Vision Agent Local, em modo simulação (nunca escreve no disco). Apply-patch real via agente aparece abaixo, mas o botão fica bloqueado até existir token de pareamento real por agente (agent_id sozinho não autentica ninguém).', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
     factory: { title: 'Software Factory', status: 'ATIVO', agents: ['openclaw', 'pi', 'hermes'], text: 'Descreva o projeto em linguagem simples. O Arquiteto analisa e gera a estrutura automaticamente via API real.', actions: [] },
-    timeline: { title: 'Timeline', status: 'SAFE READ', agents: ['archivist'], text: 'Histórico real de missões carregado automaticamente ao abrir a aba (mesmos dados de Missions -> Histórico de Missões).', actions: [] },
     agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }, { label: 'Métricas agentes', path: '/api/metrics/agents' }] },
     github: { title: 'GitHub', status: 'PR c/ CONFIRMAÇÃO', agents: ['github'], text: 'Criação de PR real disponível abaixo — exige formulário completo + confirmação dupla antes de disparar.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
     vault: { title: 'Vault', status: 'ROLLBACK DISPONÍVEL', agents: ['aegis', 'archivist'], text: 'Snapshots do banco de projetos e rollback. Rollback sobrescreve o estado atual — confirmação dupla obrigatória.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
     metrics: { title: 'Métricas', status: 'SAFE READ', agents: ['goCore', 'aegis'], text: 'Métricas reais em modo leitura.', actions: [{ label: 'Resumo', path: '/api/metrics/summary' }, { label: 'Agentes', path: '/api/metrics/agents' }, { label: 'DORA', path: '/api/dora-metrics' }, { label: 'Memória', path: '/api/metrics/memory' }] },
-    dashboard: { title: 'Dashboard', status: 'SAFE READ', agents: ['goCore', 'archivist'], text: 'Timeline, custo por agente e ranking de atividade em largura total — mesmos dados de Métricas/Conectividade, sem ficar comprimido em coluna estreita (ARCHITECTURAL PRINCIPLE-004).', actions: [] },
     tools: { title: 'Tools', status: 'APPLY-FIX DISPONÍVEL', agents: ['scanner', 'patchEngine'], text: 'Apply Fix abaixo — aplica correção em arquivo real com backup automático. Confirmação dupla obrigatória.', actions: [{ label: 'Histórico security', path: '/api/security/history' }, { label: 'Marketplace', path: '/api/tools/marketplace' }] },
     security: { title: 'Security Lab', status: 'SAFE STATUS', agents: ['aegis', 'scanner'], text: 'Painel de governança do Secret Guard. Só faz leitura de status via GET e mostra fallback local quando um endpoint não existe.', actions: [{ label: 'Atualizar status seguro', kind: 'safe-status' }] },
     obsidian: { title: 'Obsidian', status: 'SAFE READ', agents: ['archivist'], text: 'Consulta de conector/memória sem escrita.', actions: [{ label: 'Status Obsidian', path: '/api/obsidian/status' }] },
@@ -474,20 +469,9 @@
     if (missionPatchForm) missionPatchForm.hidden = activeFeature !== 'missions';
     if (agentApplyForm) agentApplyForm.hidden = activeFeature !== 'missions';
     if (dryRunForm) dryRunForm.hidden = activeFeature !== 'missions';
-    // Achado real (2026-07-13): a aba Timeline usava um botão safe-read
-    // genérico ("Carregar timeline") sem nenhum caso de renderização em
-    // renderFeatureActionViz()/summarizeResult() para o formato real de
-    // /api/mission/timeline ({entries:[...]}) -- caía sempre no fallback
-    // textual genérico, mesmo com missões reais gravadas (round-trip
-    // POST->GET confirmado funcionando contra produção). Fix: reaproveita
-    // o MESMO widget já funcional de Missions -> Mission History
-    // (loadMissionHistory(), mesmo elemento DOM #vcMissionHistory) --
-    // carrega sozinho ao abrir a aba Timeline, sem exigir clique. Missions
-    // continua idêntico, sem nenhuma mudança de comportamento lá.
     if (missionHistory) {
-      missionHistory.hidden = activeFeature !== 'missions' && activeFeature !== 'timeline';
+      missionHistory.hidden = activeFeature !== 'missions';
       if (activeFeature === 'missions') loadMissionHistory();
-      if (activeFeature === 'timeline') loadMissionHistory(true);
     }
     if (applyFixForm) {
       applyFixForm.hidden = activeFeature !== 'tools';
@@ -504,12 +488,6 @@
     if (metricsPanel) {
       metricsPanel.hidden = activeFeature !== 'metrics';
       if (activeFeature === 'metrics') startMetricsPolling(); else stopMetricsPolling();
-    }
-    // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): painel de largura
-    // total, quebra o cap de 940px do .vc-chat-stage só enquanto ativo.
-    if (dashboardPanel) {
-      dashboardPanel.hidden = activeFeature !== 'dashboard';
-      if (activeFeature === 'dashboard') loadDashboardPanel();
     }
     updateFeatureWidth();
     if (safeStatusPanel) {
@@ -1385,42 +1363,6 @@
     return wrap;
   }
 
-  // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): painel de largura total
-  // reaproveitando os mesmos componentes/endpoints já usados em Métricas
-  // (buildAgentCharts) e Conectividade (metricCharts.timeline de heartbeat)
-  // — nenhuma lógica de dado/cálculo nova, só um container próprio.
-  function loadDashboardPanel() {
-    if (dashboardStatus) dashboardStatus.textContent = 'Carregando...';
-    if (dashboardTimeline) dashboardTimeline.textContent = '';
-    if (dashboardAgents) dashboardAgents.textContent = '';
-
-    apiRequest('/api/agent/status').then(function (data) {
-      if (!dashboardTimeline) return;
-      dashboardTimeline.appendChild(metricCharts.timeline({
-        title: 'Último heartbeat',
-        data: [{ tier: data.connected ? 'ok' : 'warn', label: 'Último sinal: ' + humanizeMsAgo(data.last_seen_ms_ago) }],
-        ariaLabel: 'Timeline de heartbeat do Vision Agent Local'
-      }));
-    }).catch(function () {
-      if (!dashboardTimeline) return;
-      var p = document.createElement('p');
-      p.className = 'vc-metrics-empty';
-      p.textContent = 'Falha ao carregar timeline.';
-      dashboardTimeline.appendChild(p);
-    });
-
-    apiRequest('/api/metrics/agents').then(function (data) {
-      if (!dashboardAgents) return;
-      var list = Array.isArray(data.agents) ? data.agents : [];
-      dashboardAgents.appendChild(buildAgentCharts(list, data.active_llm_providers || []));
-      if (dashboardStatus) dashboardStatus.textContent = '';
-    }).catch(function (err) {
-      if (dashboardStatus) dashboardStatus.textContent = 'Falha ao carregar métricas de agentes: ' + (err && err.message ? err.message : String(err));
-    });
-  }
-
-  if (dashboardRefresh) dashboardRefresh.addEventListener('click', loadDashboardPanel);
-
   function renderFeatureActionViz(action, data) {
     if (!action || !data) return hideFeatureViz();
     if (action.path === '/api/metrics/agents' && Array.isArray(data.agents)) {
@@ -1879,6 +1821,14 @@
 
   if (metricsRetry) metricsRetry.addEventListener('click', loadMetrics);
   if (metricsRefresh) metricsRefresh.addEventListener('click', loadMetrics);
+  if (metricsWideToggle) {
+    metricsWideToggle.addEventListener('click', function () {
+      metricsWide = !metricsWide;
+      metricsWideToggle.setAttribute('aria-pressed', String(metricsWide));
+      metricsWideToggle.textContent = metricsWide ? 'Largura normal' : 'Largura total';
+      updateFeatureWidth();
+    });
+  }
 
   function startMetricsPolling() {
     stopMetricsPolling();
@@ -3132,14 +3082,14 @@
     root.classList.toggle('is-collapsed', shouldCollapse);
   }
 
-  // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): paineis densos ganham
-  // largura total só enquanto ativos -- Dashboard e Métricas (cards de
-  // gráfico espremidos no cap padrão) e Modo Avançado do Software Factory
+  // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): paineis densos podem
+  // ganhar largura total sob demanda -- Métricas via botão local, e Modo
+  // Avançado do Software Factory
   // (grid de 2-3 colunas em .vc-sf-stage, seção própria, fora de
   // #vcFeaturePanel/.vc-chat-stage). activeFeature/sfMode lidos no momento
   // da chamada, mesmo padrão de updateAtomicCollapseState().
   function updateFeatureWidth() {
-    var wide = activeFeature === 'dashboard' || activeFeature === 'metrics';
+    var wide = activeFeature === 'metrics' && metricsWide;
     if (chatStageEl) chatStageEl.classList.toggle('vc-chat-stage--wide', wide);
     if (featurePanel) featurePanel.classList.toggle('vc-feature-panel--wide', wide);
     var sfSectionEl = document.getElementById('factory');

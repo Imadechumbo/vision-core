@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-74">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-74" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-75">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-75" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -34,9 +34,7 @@
         <details class="vc-nav-group" open>
           <summary><i aria-hidden="true">&rsaquo;</i><span>Atividade</span></summary>
           <div class="vc-nav-group-items">
-            <a href="#timeline" data-feature="timeline"><i aria-hidden="true">T</i><span>Timeline</span></a>
             <a href="#agents" data-feature="agents"><i aria-hidden="true">A</i><span>Agentes</span></a>
-            <a href="#dashboard" data-feature="dashboard"><i aria-hidden="true">D</i><span>Dashboard</span></a>
           </div>
         </details>
 
@@ -350,6 +348,7 @@
               <div class="vc-metrics-head-actions">
                 <span class="vc-metrics-source" id="vcMetricsSourceBadge">UI LOCAL</span>
                 <button type="button" id="vcMetricsRefresh">Atualizar</button>
+                <button type="button" id="vcMetricsWideToggle" aria-pressed="false">Largura total</button>
                 <label class="vc-metrics-raw-toggle">
                   <input type="checkbox" id="vcMetricsRawToggle">
                   Ver JSON bruto
@@ -399,23 +398,6 @@
             <pre class="vc-metrics-raw" id="vcMetricsRaw" hidden></pre>
           </div>
 
-          <div class="vc-dashboard-panel" id="vcDashboardPanel" hidden>
-            <div class="vc-metrics-head">
-              <h4>Dashboard — largura total</h4>
-              <div class="vc-metrics-head-actions">
-                <button type="button" id="vcDashboardRefresh">Atualizar</button>
-              </div>
-            </div>
-            <p class="vc-dashboard-status" id="vcDashboardStatus" aria-live="polite">Carregando...</p>
-            <section class="vc-dashboard-section">
-              <h5>Timeline</h5>
-              <div class="vc-dashboard-timeline" id="vcDashboardTimeline"></div>
-            </section>
-            <section class="vc-dashboard-section">
-              <h5>Custo por Agente &amp; Ranking de Atividade</h5>
-              <div class="vc-dashboard-agents" id="vcDashboardAgents"></div>
-            </section>
-          </div>
         </section>
         </div>
 

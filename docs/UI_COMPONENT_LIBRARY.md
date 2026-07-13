@@ -36,7 +36,7 @@ Escopo: componentes reais em `vision-core-next-clean.{css,js}`. Fora do escopo: 
 ## Sidebar
 
 **Objetivo:** navegação principal, colapsável, persistente entre sessões.
-**Estrutura:** `<aside class="vc-sidebar">` com `<nav>` de links `[data-feature="X"]`, cada um com ícone (`<i>`, 1 letra) + `<span>` label.
+**Estrutura:** `<aside class="vc-sidebar">` com links diretos `[data-feature="X"]`, grupos nativos `<details class="vc-nav-group">` e botao Smile (`data-smile-open`). Timeline e Dashboard nao sao itens de menu.
 **Estados:** `data-sidebar-state="expanded"|"collapsed"` em `.vc-app-shell` — expandida mostra ícone+label (252px), colapsada mostra só ícone (78px).
 **Eventos:** clique em `[data-sidebar-toggle]` alterna estado; clique em `[data-feature]` chama `selectFeature(key)`.
 **Persistência:** `localStorage['vc_next_sidebar_state']`.
@@ -96,7 +96,7 @@ Documentado em `ATOMIC_CORE_SPEC.md` — não duplicado aqui.
 
 ## Métricas
 
-Documentado em detalhe no próprio painel — ver `ARCHITECTURE.md`/`API_CONTRACT.md` para os endpoints. Componentes: `.vc-metrics-agent-row`, `.vc-metrics-bar`/`.vc-metrics-bar-fill` (só renderiza com `cost_usd` numérico), `.vc-metric-chart` (SVG/CSS nativo para barra, donut, gauge, sparkline, timeline e empty state), `.vc-metrics-dora-grid`, `.vc-metrics-conn`, `.vc-metrics-source` (badge DADOS REAIS/FALLBACK LOCAL), toggle de JSON bruto. Regra: métrica estruturada tem gráfico; texto complementa; JSON bruto fica só em diagnóstico.
+Documentado em detalhe no próprio painel — ver `ARCHITECTURE.md`/`API_CONTRACT.md` para os endpoints. Componentes: `.vc-metrics-agent-row`, `.vc-metrics-bar`/`.vc-metrics-bar-fill` (só renderiza com `cost_usd` numérico), `.vc-metric-chart` (SVG/CSS nativo para barra, donut, gauge, sparkline, timeline e empty state), `.vc-metrics-dora-grid`, `.vc-metrics-conn`, `.vc-metrics-source` (badge DADOS REAIS/FALLBACK LOCAL), toggle de JSON bruto e botao `#vcMetricsWideToggle` para largura total. Regra: métrica estruturada tem gráfico; texto complementa; JSON bruto fica só em diagnóstico.
 
 O sistema de gráficos (`metricCharts.{bar,donut,gauge,sparkline,timeline,empty,legend}`, todo `createElement`/SVG nativo, sem lib externa) não é exclusivo da aba Métricas — é reutilizado em qualquer painel com dado estruturado: `#vcFeatureViz` (Agentes/Tools/Security-history safe-read, dentro do painel contextual do chat), `#vcSfFinalViz` (Software Factory — donut DONE/FAIL/BLOCKED + barras de duração por etapa + gauge de progresso, atualiza a cada etapa, não só no fim) e `#vcSafeStatusViz` (Security Lab — donut ok/fallback-local + gauge de conformidade visual + timeline das checagens). O toggle "Ver JSON bruto" (`.vc-metrics-raw-toggle` + `.vc-metrics-raw`, checkbox + `<pre>` inicialmente `hidden`) também é reutilizado fora da aba Métricas — `showFeatureViz(title, renderFn, rawData)` o injeta automaticamente quando um 3º argumento é passado.
 
@@ -148,7 +148,7 @@ Ver seção "Status" acima (dot+badge) e "Chips" abaixo — não há uma badge g
 **Estrutura:** `<div class="vc-sf-log" id="vcSfLog" hidden>` — populado linha a linha durante a geração da Software Factory (`DONE módulo=X`/`FAIL módulo=X`).
 **Regra dura:** nasce `hidden`, nunca aparece vazio, só quando há evento real.
 
-## Timeline (Mission History)
+## Mission History
 
 **Objetivo:** histórico de missões navegável.
 **Estrutura:** `.vc-mission-history` — lista (`.vc-mh-item`, clicável) → detalhe (`.vc-mh-detail`, com `<pre>` pra corpo bruto + evidência, botão "Voltar").
