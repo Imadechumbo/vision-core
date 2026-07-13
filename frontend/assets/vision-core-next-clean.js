@@ -291,7 +291,7 @@
     chat: { title: 'Chat', status: 'READY', agents: ['hermes'], text: 'Chat livre conectado ao endpoint real /api/chat.', actions: [{ label: 'Checar API', path: '/api/health' }] },
     missions: { title: 'Missions', status: 'PATCH + DRY-RUN + APPLY BLOQUEADO', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Gerar Patch roda o pipeline real de diagnóstico + apply-patch, sem escrever nada sozinho — só gera diff para download. Dry-Run Real (abaixo) enfileira execução real no Vision Agent Local, em modo simulação (nunca escreve no disco). Apply-patch real via agente aparece abaixo, mas o botão fica bloqueado até existir token de pareamento real por agente (agent_id sozinho não autentica ninguém).', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
     factory: { title: 'Software Factory', status: 'ATIVO', agents: ['openclaw', 'pi', 'hermes'], text: 'Descreva o projeto em linguagem simples. O Arquiteto analisa e gera a estrutura automaticamente via API real.', actions: [] },
-    timeline: { title: 'Timeline', status: 'SAFE READ', agents: ['archivist'], text: 'Timeline preparada para leitura real de missão.', actions: [{ label: 'Carregar timeline', path: '/api/mission/timeline' }] },
+    timeline: { title: 'Timeline', status: 'SAFE READ', agents: ['archivist'], text: 'Histórico real de missões carregado automaticamente ao abrir a aba (mesmos dados de Missions -> Histórico de Missões).', actions: [] },
     agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }, { label: 'Métricas agentes', path: '/api/metrics/agents' }] },
     github: { title: 'GitHub', status: 'PR c/ CONFIRMAÇÃO', agents: ['github'], text: 'Criação de PR real disponível abaixo — exige formulário completo + confirmação dupla antes de disparar.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
     vault: { title: 'Vault', status: 'ROLLBACK DISPONÍVEL', agents: ['aegis', 'archivist'], text: 'Snapshots do banco de projetos e rollback. Rollback sobrescreve o estado atual — confirmação dupla obrigatória.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
@@ -474,9 +474,20 @@
     if (missionPatchForm) missionPatchForm.hidden = activeFeature !== 'missions';
     if (agentApplyForm) agentApplyForm.hidden = activeFeature !== 'missions';
     if (dryRunForm) dryRunForm.hidden = activeFeature !== 'missions';
+    // Achado real (2026-07-13): a aba Timeline usava um botão safe-read
+    // genérico ("Carregar timeline") sem nenhum caso de renderização em
+    // renderFeatureActionViz()/summarizeResult() para o formato real de
+    // /api/mission/timeline ({entries:[...]}) -- caía sempre no fallback
+    // textual genérico, mesmo com missões reais gravadas (round-trip
+    // POST->GET confirmado funcionando contra produção). Fix: reaproveita
+    // o MESMO widget já funcional de Missions -> Mission History
+    // (loadMissionHistory(), mesmo elemento DOM #vcMissionHistory) --
+    // carrega sozinho ao abrir a aba Timeline, sem exigir clique. Missions
+    // continua idêntico, sem nenhuma mudança de comportamento lá.
     if (missionHistory) {
-      missionHistory.hidden = activeFeature !== 'missions';
+      missionHistory.hidden = activeFeature !== 'missions' && activeFeature !== 'timeline';
       if (activeFeature === 'missions') loadMissionHistory();
+      if (activeFeature === 'timeline') loadMissionHistory(true);
     }
     if (applyFixForm) {
       applyFixForm.hidden = activeFeature !== 'tools';
@@ -2608,7 +2619,13 @@
   if (accountLogoutBtn) accountLogoutBtn.addEventListener('click', doAccountLogout);
 
   // Mission History (B-2) — list + detail from /api/mission/timeline.
-  function loadMissionHistory() {
+  // Achado real (2026-07-13): reaproveitado pela aba Timeline (next-clean-73)
+  // -- lá, sem os 3 formulários exclusivos de Missions acima dele, o painel
+  // nasce curto o bastante pra cair inteiro atrás do #vcComposer sticky (regra
+  // dura #12). scrollAfterLoad (só true vindo de Timeline) aplica o mesmo
+  // scrollIntoView({block:'start'}) já documentado na regra -- Missions nunca
+  // chama com esse parâmetro, comportamento lá continua idêntico ao de antes.
+  function loadMissionHistory(scrollAfterLoad) {
     if (!missionHistoryList) return;
     if (missionDetail) missionDetail.hidden = true;
     if (missionHistoryList) missionHistoryList.hidden = false;
@@ -2634,6 +2651,8 @@
       });
     }).catch(function () {
       if (missionHistoryList) missionHistoryList.textContent = 'Erro ao carregar missões.';
+    }).then(function () {
+      if (scrollAfterLoad && missionHistory && missionHistory.scrollIntoView) missionHistory.scrollIntoView({ block: 'start' });
     });
   }
 

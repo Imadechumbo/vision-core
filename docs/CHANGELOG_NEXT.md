@@ -4,6 +4,14 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-73 (2026-07-13)
+
+- Bug real diagnosticado e corrigido: aba Timeline não mostrava nenhuma missão ao clicar "Carregar timeline", mesmo após rodar uma missão real completa no SF Auto-Pilot. Round-trip `POST`→`GET /api/mission/timeline` confirmado funcionando perfeitamente contra produção real (conta de teste descartável) — a causa era 100% de renderização: `renderFeatureActionViz()`/`summarizeResult()` não tinham nenhum caso para o formato `{entries:[...]}`, caindo sempre no texto de fallback genérico
+- Autorizado pelo usuário: opção (a)+(b) combinadas — Timeline auto-carrega a lista ao abrir a aba (sem clique manual) reaproveitando o widget já funcional de Missions → Mission History (`loadMissionHistory()`, mesmo elemento `#vcMissionHistory`), em vez de reinventar a renderização. Botão genérico "Carregar timeline" removido (`featureMap.timeline.actions: []`)
+- Achado real da RCA adversarial: sem os 3 formulários exclusivos de Missions acima do histórico, o painel nasce curto o bastante pra cair inteiro atrás do `#vcComposer` sticky (regra dura #12) — só em Timeline, nunca em Missions (que sempre teve conteúdo suficiente acima). Fix cirúrgico: `loadMissionHistory(scrollAfterLoad)` chama `scrollIntoView({block:'start'})` só quando vem da aba Timeline — Missions continua com comportamento idêntico, testado e confirmado sem regressão
+- Novo arquivo de teste dedicado (`vision-core-next-timeline.spec.mjs`, 4 testes: auto-load sem clique, estado vazio honesto, sem sobreposição do composer, Missions sem regressão)
+- 107/107 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
 ## next-clean-72 (2026-07-13)
 
 - Bug real corrigido: composer/campo de missão principal não aparecia na página Software Factory (Auto-Pilot nem Modo Avançado) ao rolar até o fim — usuário chegou a digitar a missão no campo errado ("Contexto de URL") por não encontrar o campo certo

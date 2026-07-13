@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ `next-clean-72` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real: cache-bust servido (`?v=next-clean-72` no CSS e no JS), `#factory` confirmado aninhado dentro de `.vc-chat-stage`, composer visível na viewport mesmo rolado até o fim absoluto da página, texto digitado com sucesso.
+⚠ `next-clean-72` é o que está ao vivo agora (`visioncoreai.pages.dev`); `next-clean-73` (Timeline auto-carrega missões, reaproveitando Mission History) está commitado localmente e **ainda não deployado** — aguardando autorização explícita do usuário.
 
 Cache Bust
-next-clean-72
+next-clean-73 (local, não deployado) / next-clean-72 (produção)
 
 Último Commit
 
@@ -39,7 +39,9 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ `next-clean-72` — bug real corrigido: composer/campo de missão principal não aparecia na página Software Factory (Auto-Pilot nem Modo Avançado) ao rolar até o fim — usuário chegou a digitar a missão no campo errado ("Contexto de URL"). Causa raiz: `#factory` vivia como IRMÃO de `.vc-chat-stage` (depois do composer fechar), diferente de todo outro painel (`#vcFeaturePanel`, que vive DENTRO do chat-stage, antes do composer) — deixava o composer preso ao fundo de uma `.vc-chat-stage` quase vazia, com um vão vazio grande antes do conteúdo real do SF começar (confirmado com screenshot real de produção, ~260px de espaço vazio entre os dois blocos). Fix: `#factory` movido pra dentro de `.vc-chat-stage`, mesma posição de qualquer outro painel — `position:sticky` do composer volta a acompanhar o scroll real da página inteira. 1 teste novo (DOM nesting + composer no viewport rolado até o fim, Auto-Pilot e Modo Avançado; falha reproduzível contra a estrutura antiga via `git stash`), **103/103 PASS, deployado e confirmado ao vivo em produção**.
+✔ `next-clean-73` — bug real diagnosticado e corrigido: aba Timeline não mostrava nenhuma missão. Round-trip `POST`→`GET /api/mission/timeline` confirmado funcionando perfeitamente contra produção real (conta de teste descartável) — causa 100% de renderização: `renderFeatureActionViz()`/`summarizeResult()` sem caso para `{entries:[...]}`, caindo no fallback genérico. Fix autorizado (opção a+b): Timeline auto-carrega ao abrir a aba, reaproveitando o widget já funcional de Missions → Mission History (`loadMissionHistory()`, mesmo `#vcMissionHistory`) — botão genérico removido. Achado da RCA: sem os formulários extras de Missions acima, o painel curto caía atrás do composer sticky (regra dura #12) só em Timeline — fix cirúrgico via `scrollIntoView` só nesse caminho, Missions idêntico e testado sem regressão. Novo arquivo de teste dedicado (4 testes), **107/107 PASS, commitado, NÃO deployado — aguardando autorização explícita**.
+
+✔ `next-clean-72` — bug real corrigido: composer não aparecia na página Software Factory ao rolar até o fim (`#factory` vivia fora de `.vc-chat-stage`). 103/103 PASS, **deployado e confirmado ao vivo em produção**.
 
 ✔ `next-clean-71` — investigação Fase 1 da Timeline estilo LionClaw + conexão do SF Auto-Pilot ao `POST /api/mission/timeline`. 102/102 PASS, **deployado e confirmado ao vivo em produção**.
 
@@ -59,7 +61,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
 
-Todos os itens até `next-clean-72` estão deployados e confirmados ao vivo. `main`/`origin/main` foram sincronizados até `next-clean-71` (merge + push autorizados explicitamente pelo usuário) — o commit de `next-clean-72` (nesta branch) ainda não foi levado pra `main`, pendência real até o usuário pedir.
+Todos os itens até `next-clean-72` estão deployados e confirmados ao vivo; `next-clean-73` está commitado e testado, mas aguarda autorização explícita para deploy. `main`/`origin/main` foram sincronizados até `next-clean-71` (merge + push autorizados explicitamente pelo usuário) — os commits de `next-clean-72`/`73` (nesta branch) ainda não foram levados pra `main`, pendência real até o usuário pedir.
 
 ---
 
@@ -93,7 +95,7 @@ Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contr
 
 # TESTES
 
-103/103 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada isolada 2x seguidas — confirmar de novo antes de declarar o Next concluído, ver `docs/ROADMAP.md`)
+107/107 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada isolada 2x seguidas — confirmar de novo antes de declarar o Next concluído, ver `docs/ROADMAP.md`)
 
 `node --check` OK
 
