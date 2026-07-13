@@ -27,7 +27,7 @@ Deploy Produção
 `next-clean-74` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real contra `https://visioncoreai.pages.dev/vision-core-next.html`: cache-bust servido (`?v=next-clean-74` em CSS e JS, HTTP 200), menu lateral reorganizado presente (2 `.vc-nav-group`, rótulos "Atividade"/"Avançado", 7 itens fixos como filhos diretos de `.vc-nav`).
 
 Cache Bust
-next-clean-75 (local; producao ainda serve next-clean-74 ate novo deploy autorizado)
+next-clean-77 (local; next-clean-76 já publicado em produção)
 
 Último Commit
 
@@ -40,6 +40,10 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ `next-clean-77` (local, aguardando validação/deploy desta rodada) — OAuth Google/GitHub no Vision Core Next: Settings → Conta agora tem botões Google/GitHub que chamam `/api/auth/oauth/{provider}?return_to=next`; backend preserva o legado por padrão e só retorna para `/vision-core-next.html` quando o `state` fechado marca `target:"next"` (sem open redirect por URL livre). O hash `#oauth-success&token=...` grava o mesmo `localStorage['vision_token']` do login email/senha; `#oauth-error=...` abre Settings com erro legível. Specs/docs atualizados.
+
+✔ `next-clean-76` — DECISION-021: Atomic Core + cabeçalho genérico escopados ao Chat; Software Factory Auto-Pilot continua com decágono; demais abas usam cabeçalho curto por papel. **Deployado em produção** e confirmado ao vivo em `visioncoreai.pages.dev` servindo cache-bust `next-clean-76`.
+
 ✔ `next-clean-75` — Proposta 2 implementada: Timeline e Dashboard removidos como abas próprias. Histórico de Missões permanece em Missions; Métricas ganhou toggle local "Largura total" reaproveitando `vc-chat-stage--wide`/`vc-feature-panel--wide`; Agentes foi mantido como aba própria por agregar status, catálogo e métricas safe-read. Validado localmente: `node --check` OK, specs afetados 41/41 PASS, suíte permanente Next 102/102 PASS, screenshots locais em `artifacts/next-clean-75/`. Sem deploy.
 
 ✔ `next-clean-74` — investigação do menu lateral (14 itens, propósito real de cada um lido direto de `featureMap`/painéis/gates de auth) reportada e aprovada pelo usuário; implementada a Proposta 1 (das 3 propostas apresentadas): sidebar fixa (Chat/Missions/Software Factory/GitHub/Vault/Métricas/Settings) + grupos colapsáveis nativos `<details>`/`<summary>` (sem JS novo, ponytail rung 4) "Atividade" (Timeline/Agentes/Dashboard) e "Avançado" (Tools/Security Lab/Obsidian). Smile continua fora da lista de itens (é botão de ajuda). Só reorganização visual/estrutural — nenhuma rota, endpoint, painel ou `featureMap` alterado; clique em `[data-feature]` seguiu funcionando sem mudança de JS porque o listener já era genérico (`document.querySelectorAll('[data-feature]')`, independente de aninhamento no DOM). Validado localmente: 107/107 PASS (suíte `tests/e2e/vision-core-next-*.spec.mjs`, sem nenhuma alteração nos specs) + screenshot Playwright local confirmando os 2 grupos abertos por padrão e o toggle de colapso funcionando (`<details>.open` alterna corretamente). **Deployado em produção** (autorizado explicitamente pelo usuário) e reconfirmado ao vivo com Playwright real contra `visioncoreai.pages.dev` (cache-bust `?v=next-clean-74` HTTP 200, 2 grupos + 7 itens fixos presentes no DOM real). Proposta 2 (fundir Timeline/Dashboard como abas próprias) registrada como pendência em `docs/ROADMAP.md` Fase 1, condicionada a nova autorização.
@@ -72,7 +76,6 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 
 # PENDÊNCIAS REAIS
 
-- OAuth Google/GitHub no Vision Core Next (email/senha já implementado, `next-clean-62`) — bloqueado por mudança de backend (callback hoje redireciona pro legado, não pro Next); login/registro seguem também disponíveis no frontend legado em paralelo
 - Páginas públicas `about.html`/`landing.html` (Etapas 5-7) — escopo ainda indefinido, decisão de quando/o quê fica para quando chegar a vez (não é PARE E PERGUNTE, é ausência de spec concreta)
 - AI Provider Vault Fase D(b) — conectar `sf-agent-orchestrator.mjs` ao vault (decisão de arquitetura em aberto)
 - SF-Agent-Orchestrator Fase 2 — bloqueado por cota de API, smoke test real incompleto
@@ -93,14 +96,14 @@ Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contr
 
 - Token de auth em `localStorage`/`sessionStorage` — exposto a XSS, risco aceito (paridade com o legado, não é regressão do Next)
 - `backend/data/users.json` tem hash de senha de teste no histórico git — ação de rotação pendente do usuário, fora do alcance deste repo
-- OAuth Google/GitHub só existe no frontend legado — Next tem email/senha (`next-clean-62`), mas não OAuth ainda
+- OAuth Google/GitHub no Next implementado localmente em `next-clean-77`; exige deploy frontend + backend para ficar ativo em produção
 - Itens menores, não bloqueantes: boto3 bloqueado por certificado SSL local (Windows, mesma limitação histórica do node-gyp); `/api/health` retorna `version` hardcoded desatualizada (cosmético); ruído CRLF/LF pré-existente no `git status` (`core.autocrlf` inconsistente, não é prioridade corrigir)
 
 ---
 
 # TESTES
 
-102/102 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, confirmada localmente após `next-clean-75`)
+106/106 PASS após `next-clean-77` (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada localmente)
 
 `node --check` OK
 
@@ -114,7 +117,7 @@ Governança arquitetural (`docs/DECISIONS.md`): `ARCHITECTURAL PRINCIPLE-001` (Z
 
 # CONTEXTO PARA O PRÓXIMO AGENTE
 
-Backlog do Next (Fase 1 do ROADMAP) está com só 2 pendências reais restantes, nenhuma executável sem decisão externa: OAuth Google/GitHub (exige mudança de backend + autorização própria) e páginas públicas Etapas 5-7 (sem spec concreta ainda). Antes de assumir "nada mais a fazer", releia `docs/ROADMAP.md` Fase 1 e confirme por `grep` — não presuma.
+Backlog do Next (Fase 1 do ROADMAP) após `next-clean-77`: páginas públicas Etapas 5-7 seguem sem spec concreta; Timeline estilo LionClaw segue bloqueada por dado real ausente no backend (persistir estágios/custo real por agente). Antes de assumir "nada mais a fazer", releia `docs/ROADMAP.md` Fase 1 e confirme por `grep` — não presuma.
 
 Documentação segue sistema de continuidade: este arquivo fica pequeno e reflete só o estado atual; `docs/CHANGELOG_NEXT.md` guarda um bloco curto por versão; investigação/narrativa longa vai para `docs/session_logs/YYYY-MM-DD-nome.md`. Nunca copie logs de terminal, JSON completo ou diffs grandes de volta para este arquivo — achado real desta sessão: as seções TESTES/CONTEXTO tinham ficado stale por várias sessões (ainda citavam `next-clean-59`/"Next não tem auth") porque só as seções de topo eram atualizadas a cada entrega; revise o arquivo inteiro, não só a seção que parece relevante, ao fechar qualquer item.
 

@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-76">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-76" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-77">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-77" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -305,7 +305,7 @@
             </div>
             <div class="vc-settings-motion">
               <h5>Conta</h5>
-              <p class="vc-settings-motion-copy" id="vcAccountCopy">Entre ou crie uma conta com email e senha. Google/GitHub ficam para uma etapa futura.</p>
+              <p class="vc-settings-motion-copy" id="vcAccountCopy">Entre ou crie uma conta com email e senha, Google ou GitHub.</p>
               <div class="vc-settings-form" id="vcAccountForm">
                 <label>Email
                   <input type="email" id="vcAccountEmail" autocomplete="email">
@@ -316,6 +316,10 @@
                 <div class="vc-settings-field-actions">
                   <button type="button" id="vcAccountLoginBtn">Entrar</button>
                   <button type="button" id="vcAccountRegisterBtn">Criar conta</button>
+                </div>
+                <div class="vc-account-oauth" aria-label="Entrar com OAuth">
+                  <a id="vcGoogleOAuthBtn" href="#">Google</a>
+                  <a id="vcGithubOAuthBtn" href="#">GitHub</a>
                 </div>
                 <p class="vc-settings-status" id="vcAccountStatus" aria-live="polite"></p>
               </div>

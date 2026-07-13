@@ -4,6 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-77 (2026-07-13)
+
+- OAuth Google/GitHub implementado no Vision Core Next dentro de Settings → Conta, reaproveitando o mesmo `vision_token` do login email/senha.
+- Backend OAuth segue compatível com legado por padrão; `return_to=next` coloca um alvo fechado no `state` e o callback retorna para `/vision-core-next.html`, sem aceitar URL arbitrária.
+- Spec permanente de Conta atualizada para links OAuth, sucesso via `#oauth-success` e erro via `#oauth-error`.
+
 ## next-clean-76 (2026-07-13)
 
 - DECISION-021: Atomic Core e cabeçalho genérico ("VISION CORE" + tags/status do agente) voltam a ser escopados ao Chat; Software Factory Auto-Pilot continua contando como chat para o decágono, mas o cabeçalho da Factory é o cabeçalho curto de papel.

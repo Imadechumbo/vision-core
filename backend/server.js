@@ -951,6 +951,29 @@ app.get('/api/auth/me', (req, res) => {
 const OAUTH_REDIRECT_BASE = process.env.OAUTH_REDIRECT_BASE || 'https://visioncore-api-gateway.weiganlight.workers.dev';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://visioncoreai.pages.dev';
 
+function oauthFrontendBase() {
+  return String(FRONTEND_URL || '').replace(/\/+$/, '');
+}
+
+function buildOAuthState(req) {
+  const target = String(req.query.return_to || req.query.target || '').toLowerCase();
+  const safeTarget = (target === 'next' || target === 'vision-core-next' || target === '/vision-core-next.html') ? 'next' : 'legacy';
+  return Buffer.from(JSON.stringify({ target: safeTarget, nonce: makeId('st') })).toString('base64url');
+}
+
+function oauthRedirectTarget(state) {
+  if (!state) return `${oauthFrontendBase()}/`;
+  try {
+    const payload = JSON.parse(Buffer.from(String(state), 'base64url').toString('utf8'));
+    if (payload && payload.target === 'next') return `${oauthFrontendBase()}/vision-core-next.html`;
+  } catch (_) {}
+  return `${oauthFrontendBase()}/`;
+}
+
+function oauthRedirect(state, fragment) {
+  return `${oauthRedirectTarget(state)}#${fragment}`;
+}
+
 function httpsGet(url, headers = {}) {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
@@ -981,14 +1004,15 @@ app.get('/api/auth/oauth/google', (req, res) => {
     response_type: 'code',
     scope: 'openid email profile',
     access_type: 'offline',
-    prompt: 'select_account'
+    prompt: 'select_account',
+    state: buildOAuthState(req)
   });
   return res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
 });
 
 app.get('/api/auth/oauth/google/callback', async (req, res) => {
-  const { code, error } = req.query;
-  if (error || !code) return res.redirect(`${FRONTEND_URL}/#oauth-error=${error || 'no_code'}`);
+  const { code, error, state } = req.query;
+  if (error || !code) return res.redirect(oauthRedirect(state, `oauth-error=${encodeURIComponent(error || 'no_code')}`));
   try {
     const tokenResp = await httpsPost('https://oauth2.googleapis.com/token', {}, JSON.stringify({
       code,
@@ -999,13 +1023,13 @@ app.get('/api/auth/oauth/google/callback', async (req, res) => {
     }));
     if (!tokenResp.ok) {
       console.error('[oauth/google] token exchange failed:', tokenResp.text);
-      return res.redirect(`${FRONTEND_URL}/#oauth-error=token_exchange_failed`);
+      return res.redirect(oauthRedirect(state, 'oauth-error=token_exchange_failed'));
     }
     const tokenData = JSON.parse(tokenResp.text);
     // Decode ID token to get user info (no extra request needed)
     const idToken = tokenData.id_token;
     const payload = idToken ? JSON.parse(Buffer.from(idToken.split('.')[1], 'base64url').toString('utf8')) : null;
-    if (!payload || !payload.email) return res.redirect(`${FRONTEND_URL}/#oauth-error=no_email`);
+    if (!payload || !payload.email) return res.redirect(oauthRedirect(state, 'oauth-error=no_email'));
 
     const email = payload.email;
     const name = payload.name || email.split('@')[0];
@@ -1028,10 +1052,10 @@ app.get('/api/auth/oauth/google/callback', async (req, res) => {
     writeAndSyncS3(USERS_DB, db);
     auditLog('oauth_login', req, { email, provider: 'google' }); // §154
     const token = signSession({ uid: user.id, exp: Date.now() + 24 * 60 * 60 * 1000 });
-    return res.redirect(`${FRONTEND_URL}/#oauth-success&token=${encodeURIComponent(token)}&plan=${user.plan}&email=${encodeURIComponent(email)}`);
+    return res.redirect(oauthRedirect(state, `oauth-success&token=${encodeURIComponent(token)}&plan=${user.plan}&email=${encodeURIComponent(email)}`));
   } catch (err) {
     console.error('[oauth/google/callback]', err.message);
-    return res.redirect(`${FRONTEND_URL}/#oauth-error=${encodeURIComponent(err.message)}`);
+    return res.redirect(oauthRedirect(req.query.state, `oauth-error=${encodeURIComponent(err.message)}`));
   }
 });
 
@@ -1043,14 +1067,14 @@ app.get('/api/auth/oauth/github', (req, res) => {
     client_id: clientId,
     redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/oauth/github/callback`,
     scope: 'user:email',
-    state: makeId('st')
+    state: buildOAuthState(req)
   });
   return res.redirect(`https://github.com/login/oauth/authorize?${params}`);
 });
 
 app.get('/api/auth/oauth/github/callback', async (req, res) => {
-  const { code, error } = req.query;
-  if (error || !code) return res.redirect(`${FRONTEND_URL}/#oauth-error=${error || 'no_code'}`);
+  const { code, error, state } = req.query;
+  if (error || !code) return res.redirect(oauthRedirect(state, `oauth-error=${encodeURIComponent(error || 'no_code')}`));
   try {
     const tokenResp = await httpsPost('https://github.com/login/oauth/access_token',
       { 'Accept': 'application/json' },
@@ -1061,17 +1085,17 @@ app.get('/api/auth/oauth/github/callback', async (req, res) => {
         redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/oauth/github/callback`
       })
     );
-    if (!tokenResp.ok) return res.redirect(`${FRONTEND_URL}/#oauth-error=token_exchange_failed`);
+    if (!tokenResp.ok) return res.redirect(oauthRedirect(state, 'oauth-error=token_exchange_failed'));
     const tokenData = JSON.parse(tokenResp.text);
     const accessToken = tokenData.access_token;
-    if (!accessToken) return res.redirect(`${FRONTEND_URL}/#oauth-error=no_access_token`);
+    if (!accessToken) return res.redirect(oauthRedirect(state, 'oauth-error=no_access_token'));
 
     // Get GitHub user info
     const ghResp = await httpsGet('https://api.github.com/user', {
       'Authorization': `Bearer ${accessToken}`,
       'User-Agent': 'VisionCore/5.9'
     });
-    if (!ghResp.ok) return res.redirect(`${FRONTEND_URL}/#oauth-error=github_user_fetch_failed`);
+    if (!ghResp.ok) return res.redirect(oauthRedirect(state, 'oauth-error=github_user_fetch_failed'));
     const ghUser = JSON.parse(ghResp.text);
 
     let email = ghUser.email;
@@ -1087,7 +1111,7 @@ app.get('/api/auth/oauth/github/callback', async (req, res) => {
         email = primary ? primary.email : null;
       }
     }
-    if (!email) return res.redirect(`${FRONTEND_URL}/#oauth-error=no_email`);
+    if (!email) return res.redirect(oauthRedirect(state, 'oauth-error=no_email'));
 
     const name = ghUser.name || ghUser.login || email.split('@')[0];
     const db = readJsonFile(USERS_DB, { users: [] });
@@ -1102,10 +1126,10 @@ app.get('/api/auth/oauth/github/callback', async (req, res) => {
     writeAndSyncS3(USERS_DB, db);
     auditLog('oauth_login', req, { email, provider: 'github' }); // §154
     const token = signSession({ uid: user.id, exp: Date.now() + 24 * 60 * 60 * 1000 });
-    return res.redirect(`${FRONTEND_URL}/#oauth-success&token=${encodeURIComponent(token)}&plan=${user.plan}&email=${encodeURIComponent(email)}`);
+    return res.redirect(oauthRedirect(state, `oauth-success&token=${encodeURIComponent(token)}&plan=${user.plan}&email=${encodeURIComponent(email)}`));
   } catch (err) {
     console.error('[oauth/github/callback]', err.message);
-    return res.redirect(`${FRONTEND_URL}/#oauth-error=${encodeURIComponent(err.message)}`);
+    return res.redirect(oauthRedirect(req.query.state, `oauth-error=${encodeURIComponent(err.message)}`));
   }
 });
 

@@ -46,8 +46,8 @@ crítico (ou warning com `--strict`), `2` erro operacional sanitizado.
 |---|---|---|---|---|
 | POST | `/api/auth/register` | `{email, password?, name?}` | `{user, token, token_type:'session', persisted:true, generated_password?, anti_stub}` | `400 valid_email_required` · `400 fallback_credential_rejected` (INCIDENTE-3) · `409 email_already_registered` |
 | POST | `/api/auth/login` | `{email, password}` | `{user, token, token_type:'session', persisted:true, anti_stub}` | `400 fallback_credential_rejected` · `401 invalid_credentials` |
-| GET | `/api/auth/oauth/google` \| `/github` | — | redirect | — |
-| GET | `/api/auth/oauth/google/callback` \| `/github/callback` | query `code` | redirect com `#oauth-success&token=...` ou `#oauth-error=...` | — |
+| GET | `/api/auth/oauth/google` \| `/github` | query opcional `return_to=next` | redirect para provedor OAuth; `state` carrega alvo fechado (`next`/legado), nunca URL livre | — |
+| GET | `/api/auth/oauth/google/callback` \| `/github/callback` | query `code`, `state` | redirect com `#oauth-success&token=...` ou `#oauth-error=...`; se `state.target=next`, volta para `/vision-core-next.html` | — |
 | GET | `/api/auth/me` | Bearer/cookie | dados do usuário | `401` se sessão inválida |
 | DELETE | `/api/auth/me` | Bearer | `{message:'account_deleted', email_deleted, anti_stub}` | `401 unauthorized` — **ação irreversível (LGPD)** |
 | POST | `/api/auth/logout` | Bearer | revoga o JTI da sessão | — |
