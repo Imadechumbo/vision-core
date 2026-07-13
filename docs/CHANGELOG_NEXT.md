@@ -4,6 +4,73 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-71 (2026-07-13)
+
+- Investigação Fase 1 (Timeline estilo LionClaw): `GET /api/mission/timeline` é real e já usado hoje (Mission History/botão "Carregar timeline"), mas pipeline por estágios e custo por agente não têm NENHUM dado real no backend (não é "estrutura diferente", é ausência total — confirmado por leitura direta de `server.js` + request real contra produção). Achado crítico adicional: o Next nunca chamava `POST /api/mission/timeline` — só o frontend legado registrava runs, então a timeline de um usuário autenticado ficava sempre vazia mesmo após rodar missões reais dentro do Next
+- Item 1 implementado (autorizado pelo usuário após revisão da Fase 1): Software Factory Auto-Pilot agora chama `POST /api/mission/timeline` ao concluir com sucesso (mesmo payload/contrato do legado, backend intocado, verificado em `server.js:1411`). Best-effort — falha de rede nesse POST não afeta o fluxo de sucesso da missão. Não dispara em execuções incompletas/com erro
+- Itens 2 (persistir estágios por missão) e 3 (custo real por agente) registrados como pendência `PLANEJADO` em `docs/ROADMAP.md` Fase 2 — zero código ainda, exigem decisão de arquitetura própria (item 3 toca o núcleo de `callLLM()`)
+- 2 testes novos (`vision-core-next-sf.spec.mjs`: log da timeline no sucesso do Auto-Pilot + ausência de log em execução incompleta)
+- 102/102 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
+## next-clean-70 (2026-07-12)
+
+- Bug real corrigido: painel de Métricas colapsava/sumia periodicamente (~10-12s), reportado pelo usuário. Causa raiz encontrada por leitura de código: `loadMetrics()` chamava `setMetricsLoading(true)` (esconde `#vcMetricsBody`, mostra skeleton de 3 linhas) em TODA chamada, inclusive nos ticks automáticos de `startMetricsPolling()` (`METRICS_POLL_MS=12000`), mesmo já havendo dados válidos renderizados
+- Reproduzido e confirmado com evidência: mock instantâneo mascarava o bug (janela de "loading" durava poucos ms); com latência de rede simulada (~700ms), o código antigo mostrou 13 amostras com `#vcMetricsBody` escondido em ~26s de varredura (via `git stash` comparando antes/depois) — timestamps batendo exatamente com os ciclos de ~12s do polling
+- Fix: skeleton só aparece na primeira carga (`metricsLastResults === null`); refresh em segundo plano com dado prévio já na tela atualiza números/gráficos em silêncio, sem esconder nada. Zero mudança em lógica de dados/cálculo
+- Dashboard (`loadDashboardPanel()`) investigado como possível causa compartilhada — descartado: só roda no clique manual de "Atualizar" ou na abertura da aba, nunca em `setInterval` automático, não produz o sintoma "a cada ~10s" relatado
+- 1 teste novo com latência simulada, cobrindo 2 ciclos completos de polling — confirmado que falha de forma reproduzível contra o código antigo (via `git stash`) e passa com o fix
+- 100/100 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
+## next-clean-69 (2026-07-12)
+
+- Remoção completa do hero do chat (`#vcChatIntro`/`.vc-chat-intro`, "VISION AI COMMAND" + "Como vamos mover o Vision Core hoje?" + parágrafo descritivo) por decisão do usuário — sem placeholder no lugar. Trajetória do elemento: vazou pra toda página em `next-clean-67` (efeito colateral do Atomic Core sempre visível), foi escondido condicionalmente fora de `chat`/`factory` em `next-clean-68`, removido de vez agora
+- HTML (`<div class="vc-chat-intro" id="vcChatIntro">`), CSS (`.vc-chat-intro`, `.vc-chat-intro h1`, `.vc-chat-intro p:not(.vc-kicker)`, override de media query) e JS (`chatIntroEl`, toggle em `selectFeature()`) removidos juntos — `.vc-kicker` mantido (classe compartilhada, ainda usada por Software Factory/Arquiteto SF/Pacote Final/Smile Guide)
+- Atomic Core sobe pro topo real da área de conteúdo (antes ficava abaixo do hero); composer permanece ancorado perto do rodapé da viewport — comportamento inalterado, pré-existente desde `next-clean-65` (`min-height:calc(100vh-116px)` em `.vc-chat-stage`, fora de escopo deste pedido)
+- Observação reportada: Software Factory Auto-Pilot também exibia o hero antes (contava como "chat") — como o elemento foi removido por completo (não só escondido), deixou de aparecer ali também. Nenhum teste dependia disso, nenhum tratamento especial foi necessário
+- 1 teste obsoleto reescrito (verificava visibilidade condicional do hero, que deixou de existir) — agora confirma ausência total do elemento + Atomic Core sem vão reservado no topo
+- 99/99 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
+## next-clean-68 (2026-07-12)
+
+- Correção de efeito colateral do `next-clean-67`: o hero do chat (`#vcChatIntro`, "Como vamos mover o Vision Core hoje?") vazava pra todas as páginas — nunca tinha sido condicionado por `selectFeature()`, já que `.vc-chat-stage` nunca é escondido (necessário pro Atomic Core ficar sempre visível). Isso competia pelo mesmo espaço onde o widget ancora e empurrava o conteúdo real de cada aba (Security Lab, Missions, Métricas) pra baixo da dobra, dando a impressão de "página errada" mesmo com a sidebar mostrando a aba certa
+- Confirmado em produção antes do fix: `introVisible:true` em Security Lab/Missions/Métricas simultaneamente com a sidebar ativa nessas abas
+- Fix: `#vcChatIntro` escondido fora de `chat`/`factory` (Software Factory Auto-Pilot conta como "chat", mesmo critério já usado no resto do arquivo) — o Atomic Core em si não mudou, continua sempre visível
+- 1 teste novo (`vision-core-next-atomic-core.spec.mjs`: hero não vaza pra 8 páginas diferentes, continua em chat/factory)
+- 99/99 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
+## next-clean-67 (2026-07-12)
+
+- Mudança de decisão do usuário: Atomic Core deixa de ser "escopado ao chat" (`next-clean-61`/`64`) e passa a ser elemento persistente global — visível em qualquer página/aba (Missions, Timeline, Métricas, Dashboard, Settings, Vault, Tools, Security Lab, GitHub). `outsideChat` removido de `updateAtomicCollapseState()`. Registrado como `DECISION-020` em `docs/DECISIONS.md` (substitui a regra anterior, não é reversão de bug)
+- As 2 únicas exceções que continuam escondendo o widget, inalteradas: toggle "mostrar Atomic Core" em Settings (`window.VCAtomicCore`) e a colisão real do Modo Avançado do Software Factory (`next-clean-61`)
+- Investigação do bug de ancoragem reportado no pedido (Print 4, "vão vazio" no Chat): **não reproduzido** — medido diretamente contra produção antes de codar, `next-clean-66` já entrega gap=0px. Nenhuma mudança de CSS de ancoragem foi necessária além do que já estava em produção; a ancoragem correta simplesmente se estende às páginas novas porque `.vc-chat-stage`/`#vcChatScroll` nunca são desmontados por `selectFeature()` (só o `#vcFeaturePanel` interno troca)
+- 1 teste reescrito (`hides outside the chat area...` → `stays visible on every page/tab...`) + 3 testes novos (`vision-core-next-atomic-core.spec.mjs`: toggle global funciona ao navegar entre páginas; ancoragem/no-clipping em Missions+Métricas+Dashboard)
+- 98/98 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
+## next-clean-66 (2026-07-12)
+
+- Atomic Core realmente ancorado no canto superior direito da área de conteúdo: `.vc-chat-stage` era `min(940px,100%)` centralizado (`margin:0 auto`) dentro de `.vc-main` — o widget já tinha `align-self:flex-end` (zero gap contra `#vcChatScroll`), mas essa coluna de 940px não chegava na borda real de `.vc-main`, deixando um vão visível. Fix: `.vc-chat-stage` virou `width:100%` — seguro porque hero (`.vc-chat-intro`, 680px), bolhas de mensagem (`.vc-message`, 760px) e o card de status (`.vc-feature-panel`, 760px) já têm seu próprio `max-width` independente do stage
+- Métricas e Software Factory Modo Avançado ganham o mesmo tratamento `--wide` já usado pelo Dashboard (`next-clean-64`): `.vc-metrics-panel` saiu do cap fixo de 720px (cards "Custo por Agente"/"Ranking de Atividade" ficavam espremidos), `.vc-sf-stage` ganha `--wide` só no Modo Avançado (Auto-Pilot permanece em 940px, sem mudança)
+- Legibilidade dos 9 nós de agente: achado real de que a animação orbital contínua (drift de ângulo/raio, `next-clean-6x` anteriores) fazia legendas de nós adjacentes se sobreporem em boa parte do ciclo (~11% dos instantes amostrados, pior caso 40x24px) — não visível num screenshot isolado, só varrendo tempo virtual (`page.clock`) por um período completo. Fix: `max-width` de `span`/`small` de 96px pra 76px, `.vc-agent` de 110px pra 92px, `MAX_ANGLE_DRIFT` de 12° pra 3° (raio inalterado, sem risco de reintroduzir clipping)
+- "Custo por Agente" sem gráfico e "Ranking de Atividade" cortado (reportados como possível bug): confirmado como dois falsos-positivos — o primeiro é ausência real de dado (`cost_usd` sempre null hoje, spec já documenta como "sem dados de custo" honesto); o segundo é conteúdo abaixo da dobra, resolvido pela rolagem nativa real da página (`next-clean-65`), não um bug de corte/overflow
+- 4 testes novos (`vision-core-next-atomic-core.spec.mjs`: ancoragem real + legibilidade em varredura de tempo virtual; `vision-core-next-metrics.spec.mjs`: Métricas largura total; `vision-core-next-sf.spec.mjs`: Modo Avançado largura total, Auto-Pilot inalterado)
+- 96/96 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
+## next-clean-65 (2026-07-12)
+
+- Remoção da rolagem interna duplicada: bug real reportado em produção contra `next-clean-64` — `#vcChatScroll` tinha `overflow-y:auto` próprio, gerando uma segunda barra de rolagem competindo com a rolagem nativa da página. Confirmado por medição direta em produção antes do fix: `#vcChatScroll` com `hasOwnScroll:true` e `html` também com `hasOwnScroll:true` ao mesmo tempo (as duas rolagens ativas simultaneamente)
+- `.vc-chat-scroll` removeu `overflow-y`/`overflow-x`; `.vc-chat-stage` trocou `height` fixa por `min-height` — a página inteira agora é a única superfície de rolagem (`html`/`body`), consistente com `ARCHITECTURAL PRINCIPLE-004`
+- Regra dura #12 (nada nasce escondido atrás do `#vcComposer` sticky) preservada sem depender de scroll isolado: `ResizeObserver` no composer mantém `padding-bottom` de `.vc-chat-scroll` sincronizado com a altura real do composer + margem, com fallback estático (`padding-bottom:160px`) em CSS para navegadores sem `ResizeObserver`
+- 2 testes existentes reescritos (`vision-core-next-atomic-core.spec.mjs`: scroll da página real em vez de `#vcChatScroll.scrollTop`; renomeado o teste de clipping que não depende mais de `overflow-x:hidden`) + 1 teste novo de regressão da regra dura #12 usando o Dashboard como conteúdo alto real (`vision-core-next-dashboard.spec.mjs`)
+- 92/92 PASS na suíte permanente do Next, sem regressão
+
+## next-clean-64 (2026-07-12)
+
+- Novo princípio arquitetural permanente: `ARCHITECTURAL PRINCIPLE-004 — No Fixed Viewport Layout` (`docs/DECISIONS.md`) — nenhum dashboard/painel/monitor pode usar `position:fixed`/`sticky` preso à viewport
+- Atomic Core (primeira aplicação do princípio): saiu de `position:fixed` (reservava `padding-right` global em `.vc-main`) para viver dentro de `#vcChatScroll` em fluxo normal — rola junto com o chat e sai de vista; só aparece na aba `chat` (Software Factory Auto-Pilot conta como "chat", outras abas não)
+- Nova página `Dashboard` (`data-feature="dashboard"`, largura total): Timeline (heartbeat de Conectividade), Custo por Agente e Ranking de Atividade — reaproveita `buildAgentCharts()`/`metricCharts.timeline()` já existentes, zero lógica de dado nova
+- Achado real da RCA adversarial: `margin-right` negativo cortava 2 nós de agente (`openclaw`, `scanner`) por `overflow-x:hidden` de `#vcChatScroll` — só detectado por `getBoundingClientRect()` contra o container, não pela screenshot isolada; corrigido antes do commit, virou regra dura #13 da spec
+- 5 testes novos em `vision-core-next-atomic-core.spec.mjs` + 5 em `vision-core-next-dashboard.spec.mjs` (90/90 PASS na suíte permanente do Next)
+
 ## next-clean-63 (2026-07-12)
 
 - Settings do Atomic Core: toggle "Mostrar Atomic Core" (on/off do widget inteiro, independente do auto-collapse) + slider de intensidade visual (40%-100%), `window.VCAtomicCore`/`--atomic-intensity`, mesmo padrão getX/setX/onChange + localStorage do resto do arquivo

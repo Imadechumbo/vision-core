@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ next-clean-63 publicado via `bash bin/deploy-pages.sh` (bundle: next-clean-60 Tutorial Smile + next-clean-61 Atomic Core auto-collapse + next-clean-62 Auth email/senha + next-clean-63 Atomic Core Settings on/off+intensidade), confirmado ao vivo por screenshot Playwright real contra produção: (1) Atomic Core recolhe no Modo Avançado do SF e reaparece ao voltar pro Auto-Pilot; (2) registro+logout+login rodados contra o backend real (não mockado); (3) toggle "Mostrar Atomic Core" some/reaparece o widget, slider de intensidade em 40% deixa o widget visivelmente translúcido, `--atomic-intensity: 0.4` confirmado via `getComputedStyle`.
+✔ `next-clean-71` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real: cache-bust servido (`?v=next-clean-71` no CSS e no JS, confirmado com URL cache-busted própria após um instante de propagação de CDN), JS deployado contém `logSfMissionToTimeline`/POST `/api/mission/timeline`/`sf-autopilot-next` (verificado por leitura direta do arquivo servido), Software Factory carrega normalmente sem regressão visual.
 
 Cache Bust
-next-clean-63
+next-clean-71
 
 Último Commit
 
@@ -33,21 +33,31 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Último Deploy
 
-049f8f0f (preview) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-63`
+747a7a2b (preview) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-64`
 
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ Atomic Core: confirmado por código (Fase 1) que hoje não recolhe em nenhum painel — só encolhe/some por breakpoint de tela. Confirmado por screenshot que só o Modo Avançado do Software Factory tem colisão real contra a zona reservada do widget (Timeline/Métricas/Security Lab não, em estado vazio). Implementado (Fase 1.5, aprovado pelo usuário): recolhe automaticamente só nesse painel, override reversível em Settings → Atomic Core (`window.VCAtomicCollapse`, mesmo padrão de `window.VCMotion`). `next-clean-61`, 72/72 PASS, **deployado e confirmado ao vivo**.
+✔ `next-clean-71` — investigação Fase 1 da Timeline estilo LionClaw (pipeline por estágios, custo por agente, sprints): `GET /api/mission/timeline` é real, mas pipeline/sprint/custo não têm NENHUM dado no backend (confirmado por leitura de `server.js` + request real contra produção — não é "estrutura diferente", é ausência total). Achado crítico: o Next nunca chamava `POST /api/mission/timeline` — só o legado registrava runs do SF Auto-Pilot, timeline de usuário autenticado sempre vazia mesmo após missões reais no Next. Usuário autorizou implementar só esse item (conexão de escrita) e registrar os outros 2 (estágios persistidos, custo real por agente) como pendência de backend no roadmap — nenhuma UI especulativa foi construída. Fix: SF Auto-Pilot chama `POST /api/mission/timeline` no sucesso (mesmo contrato do legado, backend intocado), nunca em execução incompleta. 2 testes novos, **102/102 PASS, deployado e confirmado ao vivo em produção**.
 
-✔ Auth email/senha no Next: Settings → Conta (registro/login/logout), escopo confirmado pelo usuário (só email/senha, zero endpoint novo — `apiRequest()` já anexava `Authorization: Bearer` de `localStorage['vision_token']` antes de existir qualquer UI). OAuth Google/GitHub NÃO incluído — callback do backend redireciona pro legado, não pro Next; fica registrado como próxima etapa condicionada a mudança de backend. Achado corrigido no caminho: `.vc-settings-form`/`.vc-settings-field-actions` tinham `display:flex` sem `:not([hidden])` (bug real da regra dura já documentada, só não tinha aparecido porque nada usava `hidden` condicional nessas classes antes). `next-clean-62`, 79/79 PASS, **deployado e confirmado ao vivo contra o backend real** (register+logout+login, não mockado).
+✔ `next-clean-70` — bug real corrigido: painel de Métricas colapsava/sumia a cada ~10-12s. 100/100 PASS, **deployado e confirmado ao vivo em produção**.
 
-✔ Settings do Atomic Core (on/off + intensidade): toggle "Mostrar Atomic Core" (widget inteiro, independente do auto-collapse do Modo Avançado) + slider de intensidade visual, `window.VCAtomicCore`/`--atomic-intensity`. "Glow on/off" do ROADMAP explicitamente NÃO implementado — contradizia `VISION_CORE_NEXT_FRONTEND_SPEC.md` checklist item 6, já fechado ("nunca existiram como controles"); Specification First aplicado. RCA adversarial encontrou e corrigiu 1 teste que não exercitava o cenário de conflito que afirmava provar. `next-clean-63`, 82/82 PASS, **deployado e confirmado ao vivo em produção**.
+✔ `next-clean-69` — remoção completa do hero do chat (`#vcChatIntro`/`.vc-chat-intro`). 99/99 PASS, **deployado e confirmado ao vivo em produção**.
 
-Sessão anterior (concluída, sem pendência): Tutorial Smile (`next-clean-60`) + histórico público about.html/landing.html — ver `docs/CHANGELOG_NEXT.md`.
+✔ `next-clean-68` — hero do chat escondido condicionalmente fora de `chat`/`factory` (efeito colateral do `next-clean-67`, hero vazava pra toda página). 99/99 PASS, **deployado e confirmado ao vivo em produção**.
 
-Todos os itens desta sessão (Tutorial Smile, histórico público, Atomic Core auto-collapse, Auth email/senha, Atomic Core Settings) estão deployados e confirmados ao vivo. Pendência real restante: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir `476935fa`/`68bf9980` (Atomic Core Settings + refresh do parity audit) — merge anterior só ia até `fa685e78`; push pra `origin/main` continua fora de escopo até autorização explícita.
+✔ `next-clean-67` — Atomic Core vira elemento persistente global, visível em qualquer página/aba (`DECISION-020`). 98/98 PASS, **deployado e confirmado ao vivo em produção**.
+
+✔ `next-clean-66` — Atomic Core ancorado de verdade no canto superior direito real. Métricas e SF Modo Avançado ganham `--wide`. Legibilidade dos 9 nós corrigida. 96/96 PASS, **deployado e confirmado ao vivo em produção**.
+
+✔ `next-clean-65` — remoção da rolagem interna duplicada; regra dura #12 preservada via `ResizeObserver`. 92/92 PASS, **deployado e confirmado ao vivo em produção**.
+
+✔ `next-clean-64` — `ARCHITECTURAL PRINCIPLE-004 — No Fixed Viewport Layout`; Atomic Core saiu de `position:fixed`; nova página `Dashboard`. 91/91 PASS, **deployado e confirmado ao vivo em produção**.
+
+Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
+
+Todos os itens até `next-clean-71` estão deployados e confirmados ao vivo. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
 
 ---
 
@@ -60,6 +70,7 @@ Todos os itens desta sessão (Tutorial Smile, histórico público, Atomic Core a
 - `vc-secret-guard` Fase 2 (hooks locais) — precisa nova aprovação explícita do usuário
 - `vc-secret-guard verify-cloud` — comando Rust read-only para auditar metadados de env vars do EB, testes locais Rust passam, mas a verificação viva do EB está bloqueada por falha TLS/trust store local da AWS CLI. Não usar `--no-verify-ssl`; corrigir TLS primeiro e rerodar.
 - INCIDENTE-3 (credencial de fallback legada) — guard de `/api/auth/login` já confirmado ao vivo em produção (EB `v109`, `400 fallback_credential_rejected`); guard de `/api/auth/register` confirmado só no artefato/regressão local (revalidação ao vivo ficou pendente por rate-limit durante o teste). Runbook `tools/incident-3-legacy-account-scan.mjs --invalidate` para contas legadas já existentes em produção é ação pendente do usuário (ver `docs/DECISIONS.md` DECISION-007)
+- Timeline estilo LionClaw (pipeline por estágios + custo por agente) — bloqueada por dado real ausente no backend, ver `docs/ROADMAP.md` Fase 2 ("persistir estágios por missão"/"custo real por agente", ambos `PLANEJADO`)
 
 ---
 
@@ -80,7 +91,7 @@ Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contr
 
 # TESTES
 
-82/82 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada isolada — confirmar de novo antes de declarar o Next concluído, ver `docs/ROADMAP.md`)
+102/102 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada isolada 2x seguidas — confirmar de novo antes de declarar o Next concluído, ver `docs/ROADMAP.md`)
 
 `node --check` OK
 

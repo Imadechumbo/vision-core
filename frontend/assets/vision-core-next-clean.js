@@ -132,6 +132,7 @@
   var appShell = document.querySelector('.vc-app-shell');
   var sidebarToggle = document.querySelector('[data-sidebar-toggle]');
   var composer = document.getElementById('vcComposer');
+  var chatScroll = document.getElementById('vcChatScroll');
   var prompt = document.getElementById('vcPrompt');
   var smileOpen = document.querySelector('[data-smile-open]');
   var smileModal = document.getElementById('vcSmileModal');
@@ -256,6 +257,12 @@
   var applyFixStatus = document.getElementById('vcApplyFixStatus');
   var attachmentInput = document.getElementById('vcAttachmentInput');
   var imageInput = document.getElementById('vcImageInput');
+  var dashboardPanel = document.getElementById('vcDashboardPanel');
+  var dashboardStatus = document.getElementById('vcDashboardStatus');
+  var dashboardTimeline = document.getElementById('vcDashboardTimeline');
+  var dashboardAgents = document.getElementById('vcDashboardAgents');
+  var dashboardRefresh = document.getElementById('vcDashboardRefresh');
+  var chatStageEl = document.querySelector('.vc-chat-stage');
   var metricsPanel = document.getElementById('vcMetricsPanel');
   var metricsSourceBadge = document.getElementById('vcMetricsSourceBadge');
   var metricsError = document.getElementById('vcMetricsError');
@@ -289,6 +296,7 @@
     github: { title: 'GitHub', status: 'PR c/ CONFIRMAÇÃO', agents: ['github'], text: 'Criação de PR real disponível abaixo — exige formulário completo + confirmação dupla antes de disparar.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
     vault: { title: 'Vault', status: 'ROLLBACK DISPONÍVEL', agents: ['aegis', 'archivist'], text: 'Snapshots do banco de projetos e rollback. Rollback sobrescreve o estado atual — confirmação dupla obrigatória.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
     metrics: { title: 'Métricas', status: 'SAFE READ', agents: ['goCore', 'aegis'], text: 'Métricas reais em modo leitura.', actions: [{ label: 'Resumo', path: '/api/metrics/summary' }, { label: 'Agentes', path: '/api/metrics/agents' }, { label: 'DORA', path: '/api/dora-metrics' }, { label: 'Memória', path: '/api/metrics/memory' }] },
+    dashboard: { title: 'Dashboard', status: 'SAFE READ', agents: ['goCore', 'archivist'], text: 'Timeline, custo por agente e ranking de atividade em largura total — mesmos dados de Métricas/Conectividade, sem ficar comprimido em coluna estreita (ARCHITECTURAL PRINCIPLE-004).', actions: [] },
     tools: { title: 'Tools', status: 'APPLY-FIX DISPONÍVEL', agents: ['scanner', 'patchEngine'], text: 'Apply Fix abaixo — aplica correção em arquivo real com backup automático. Confirmação dupla obrigatória.', actions: [{ label: 'Histórico security', path: '/api/security/history' }, { label: 'Marketplace', path: '/api/tools/marketplace' }] },
     security: { title: 'Security Lab', status: 'SAFE STATUS', agents: ['aegis', 'scanner'], text: 'Painel de governança do Secret Guard. Só faz leitura de status via GET e mostra fallback local quando um endpoint não existe.', actions: [{ label: 'Atualizar status seguro', kind: 'safe-status' }] },
     obsidian: { title: 'Obsidian', status: 'SAFE READ', agents: ['archivist'], text: 'Consulta de conector/memória sem escrita.', actions: [{ label: 'Status Obsidian', path: '/api/obsidian/status' }] },
@@ -486,6 +494,13 @@
       metricsPanel.hidden = activeFeature !== 'metrics';
       if (activeFeature === 'metrics') startMetricsPolling(); else stopMetricsPolling();
     }
+    // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): painel de largura
+    // total, quebra o cap de 940px do .vc-chat-stage só enquanto ativo.
+    if (dashboardPanel) {
+      dashboardPanel.hidden = activeFeature !== 'dashboard';
+      if (activeFeature === 'dashboard') loadDashboardPanel();
+    }
+    updateFeatureWidth();
     if (safeStatusPanel) {
       safeStatusPanel.hidden = activeFeature !== 'security';
       if (activeFeature === 'security') loadSafeStatusPanel();
@@ -808,6 +823,22 @@
       }
     });
     resizePrompt();
+  }
+
+  // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md, achado 2026-07-12):
+  // #vcChatScroll parou de rolar por conta própria (rolagem real de página
+  // agora), então o composer (position:sticky) precisa de espaço reservado
+  // no fim do conteúdo pra não cobrir a última parte dele quando "gruda" no
+  // rodapé — regra dura #12 da spec, antes resolvida isolando o scroll,
+  // agora resolvida sincronizando padding-bottom com a altura real do
+  // composer (varia com o textarea/chips). ResizeObserver, não um valor
+  // fixo, porque o composer redimensiona (resizePrompt) e não há evento
+  // "de altura mudou" nativo mais simples que cubra os dois casos.
+  if (composer && chatScroll && window.ResizeObserver) {
+    var syncComposerSpace = new ResizeObserver(function () {
+      chatScroll.style.paddingBottom = (composer.offsetHeight + 24) + 'px';
+    });
+    syncComposerSpace.observe(composer);
   }
 
   var API_BASE_URL = 'https://visioncore-api-gateway.weiganlight.workers.dev';
@@ -1343,6 +1374,42 @@
     return wrap;
   }
 
+  // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): painel de largura total
+  // reaproveitando os mesmos componentes/endpoints já usados em Métricas
+  // (buildAgentCharts) e Conectividade (metricCharts.timeline de heartbeat)
+  // — nenhuma lógica de dado/cálculo nova, só um container próprio.
+  function loadDashboardPanel() {
+    if (dashboardStatus) dashboardStatus.textContent = 'Carregando...';
+    if (dashboardTimeline) dashboardTimeline.textContent = '';
+    if (dashboardAgents) dashboardAgents.textContent = '';
+
+    apiRequest('/api/agent/status').then(function (data) {
+      if (!dashboardTimeline) return;
+      dashboardTimeline.appendChild(metricCharts.timeline({
+        title: 'Último heartbeat',
+        data: [{ tier: data.connected ? 'ok' : 'warn', label: 'Último sinal: ' + humanizeMsAgo(data.last_seen_ms_ago) }],
+        ariaLabel: 'Timeline de heartbeat do Vision Agent Local'
+      }));
+    }).catch(function () {
+      if (!dashboardTimeline) return;
+      var p = document.createElement('p');
+      p.className = 'vc-metrics-empty';
+      p.textContent = 'Falha ao carregar timeline.';
+      dashboardTimeline.appendChild(p);
+    });
+
+    apiRequest('/api/metrics/agents').then(function (data) {
+      if (!dashboardAgents) return;
+      var list = Array.isArray(data.agents) ? data.agents : [];
+      dashboardAgents.appendChild(buildAgentCharts(list, data.active_llm_providers || []));
+      if (dashboardStatus) dashboardStatus.textContent = '';
+    }).catch(function (err) {
+      if (dashboardStatus) dashboardStatus.textContent = 'Falha ao carregar métricas de agentes: ' + (err && err.message ? err.message : String(err));
+    });
+  }
+
+  if (dashboardRefresh) dashboardRefresh.addEventListener('click', loadDashboardPanel);
+
   function renderFeatureActionViz(action, data) {
     if (!action || !data) return hideFeatureViz();
     if (action.path === '/api/metrics/agents' && Array.isArray(data.agents)) {
@@ -1754,10 +1821,19 @@
     if (metricsError) metricsError.hidden = !show;
   }
 
+  // Achado real (2026-07-12): loadMetrics() rodava tanto no load inicial
+  // quanto em CADA tick do polling automático (METRICS_POLL_MS, 12s) --
+  // setMetricsLoading(true) escondia metricsBody (todo o conteúdo real)
+  // e mostrava o skeleton a cada ciclo, mesmo já havendo dados válidos na
+  // tela, causando um "pisca/colapsa" visível a cada ~12s. Skeleton de
+  // loading só deve aparecer quando ainda não há nenhum dado renderizado
+  // (primeira carga) -- refresh em background com dado prévio já na tela
+  // deve atualizar os números/gráficos em silêncio, sem esconder nada.
   function loadMetrics() {
     if (!metricsPanel) return;
     showMetricsError(false);
-    setMetricsLoading(true);
+    var hasPriorData = metricsLastResults !== null;
+    if (!hasPriorData) setMetricsLoading(true);
     var results = { agents: null, dora: null, summary: null, memory: null, status: null };
     var failures = 0;
     var pending = 5;
@@ -2853,7 +2929,7 @@
   var CX = 180;
   var CY = 180;
   var AGENT_RADIUS = 120;
-  var MAX_ANGLE_DRIFT = 12;
+  var MAX_ANGLE_DRIFT = 3;
   var MAX_RADIAL_DRIFT = 2;
   var REDUCE_PULSE_MS = 4200; // pulso lento sob reduced-motion — só opacidade/glow, nunca posição
   var REDUCE_TICK_MS = 500;   // frequência de re-render do pulso — não é rAF, é setInterval deliberado
@@ -3022,15 +3098,33 @@
     return setAtomicCoreState('idle');
   }
 
-  // Fase 1.5: recolhe só no Modo Avançado do Software Factory (activeFeature
-  // e sfMode são lidos no momento da chamada, não na declaração — hoisted
-  // function, mesmo padrão do resto do arquivo). getAtomicCollapsePref()
-  // !== 'always' é o override manual do usuário (Settings → Atomic Core).
+  // Mudança de decisão do usuário (2026-07-12, substitui a regra "esconde
+  // fora do chat" de next-clean-61/64): Atomic Core é elemento persistente
+  // global, visível em qualquer página/aba. Só some em 2 casos: usuário
+  // desativou em Settings (getAtomicCoreEnabled()==='off'), ou a colisão
+  // real e já documentada do Modo Avançado do Software Factory
+  // (autoCollapse -- getAtomicCollapsePref()!=='always' é o override manual
+  // do usuário pra essa exceção especificamente). activeFeature/sfMode
+  // lidos no momento da chamada, mesmo padrão hoisted do resto do arquivo.
   function updateAtomicCollapseState() {
     var autoCollapse = activeFeature === 'factory' && sfMode === 'advanced' && getAtomicCollapsePref() !== 'always';
     var shouldCollapse = getAtomicCoreEnabled() === 'off' || autoCollapse;
     root.classList.toggle('vc-no-transition', reduceMotion);
     root.classList.toggle('is-collapsed', shouldCollapse);
+  }
+
+  // ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): paineis densos ganham
+  // largura total só enquanto ativos -- Dashboard e Métricas (cards de
+  // gráfico espremidos no cap padrão) e Modo Avançado do Software Factory
+  // (grid de 2-3 colunas em .vc-sf-stage, seção própria, fora de
+  // #vcFeaturePanel/.vc-chat-stage). activeFeature/sfMode lidos no momento
+  // da chamada, mesmo padrão de updateAtomicCollapseState().
+  function updateFeatureWidth() {
+    var wide = activeFeature === 'dashboard' || activeFeature === 'metrics';
+    if (chatStageEl) chatStageEl.classList.toggle('vc-chat-stage--wide', wide);
+    if (featurePanel) featurePanel.classList.toggle('vc-feature-panel--wide', wide);
+    var sfSectionEl = document.getElementById('factory');
+    if (sfSectionEl) sfSectionEl.classList.toggle('vc-sf-stage--wide', activeFeature === 'factory' && sfMode === 'advanced');
   }
 
   // Propagação EXECUTING da spec Atomic Core: Hermes acende primeiro (recebe
@@ -3633,6 +3727,7 @@
     if (sfAdvancedPanel) sfAdvancedPanel.hidden = sfMode !== 'advanced';
     if (sfMode === 'advanced') sfSuggestAdvanced(true);
     updateAtomicCollapseState();
+    updateFeatureWidth();
   }
 
   function getSelectedSfExtraSteps() {
@@ -3799,6 +3894,7 @@
       if (idx >= sfActiveSteps.length) {
         appendSfMsg('assistant', 'Projeto concluído!');
         renderSfFinal();
+        logSfMissionToTimeline(desc, sfActiveSteps.length, !!(sfRunOptions && sfRunOptions.pass_gold));
         finishSf();
         return;
       }
@@ -3872,6 +3968,32 @@
     var submitBtn = sfComposer && sfComposer.querySelector('button[type="submit"]');
     if (submitBtn) submitBtn.disabled = false;
     if (window.resetAtomicCore) window.resetAtomicCore();
+  }
+
+  // Achado real (2026-07-13): POST /api/mission/timeline (o endpoint que
+  // alimenta GET /api/mission/timeline, consumido por Missions -> Mission
+  // History e pelo botão "Carregar timeline" da aba Timeline) só era
+  // chamado pelo frontend legado -- o Next nunca registrava suas próprias
+  // execuções do Software Factory Auto-Pilot, então a timeline de um
+  // usuário autenticado ficava sempre vazia mesmo depois de rodar missões
+  // reais dentro do Next. Mesmo payload do legado (backend intocado,
+  // contrato verificado em server.js:1411). Best-effort: falha de rede
+  // aqui não deve afetar o fluxo de sucesso da missão (já concluída).
+  // Anônimo: o backend já no-opa silenciosamente (appendMissionTimeline
+  // exige userId), então chamar sem estar logado é seguro, não precisa
+  // checar auth antes.
+  function logSfMissionToTimeline(desc, stepsCompleted, passGold) {
+    apiRequest('/api/mission/timeline', {
+      method: 'POST',
+      body: {
+        type: 'sf-autopilot',
+        title: 'Auto-Pilot: ' + desc.slice(0, 60),
+        description: desc,
+        steps_completed: stepsCompleted,
+        source: 'sf-autopilot-next',
+        pass_gold: passGold
+      }
+    }).catch(function () { /* best-effort — missão já concluída independente disso */ });
   }
 
   // project-files + generate-zip (item 1 do roadmap "Software Factory

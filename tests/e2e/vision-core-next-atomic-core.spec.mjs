@@ -287,6 +287,38 @@ test('on/off toggle hides the widget everywhere (not just Modo Avancado), live a
   await expect(hud, 'turning it back on must restore the widget immediately').not.toHaveClass(/is-collapsed/);
 });
 
+// next-clean-67: agora que o widget aparece em qualquer aba, o toggle
+// "mostrar Atomic Core" precisa continuar valendo GLOBALMENTE -- ligar/
+// desligar enquanto o usuario esta numa pagina que nao e o chat, e o
+// estado deve se manter ao navegar entre paginas depois.
+test('"mostrar Atomic Core" toggle works globally across page navigation, not just on chat home', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  const hud = page.locator('[data-atomic-core]');
+
+  await page.locator('a[data-feature="missions"]').click();
+  await expect(hud, 'visible on Missions before toggling off').not.toHaveClass(/is-collapsed/);
+
+  await page.evaluate(() => {
+    var el = document.getElementById('vcAtomicEnabled');
+    el.checked = false;
+    el.dispatchEvent(new Event('change'));
+  });
+  await expect(hud, 'off must hide it immediately while on Missions').toHaveClass(/is-collapsed/);
+
+  await page.locator('a[data-feature="metrics"]').click();
+  await expect(hud, 'must stay hidden after navigating to Metrics').toHaveClass(/is-collapsed/);
+
+  await page.evaluate(() => {
+    var el = document.getElementById('vcAtomicEnabled');
+    el.checked = true;
+    el.dispatchEvent(new Event('change'));
+  });
+  await expect(hud, 'turning back on must restore it immediately while on Metrics').not.toHaveClass(/is-collapsed/);
+
+  await page.locator('a[data-feature="dashboard"]').click();
+  await expect(hud, 'stays visible after navigating to Dashboard').not.toHaveClass(/is-collapsed/);
+});
+
 test('off wins over "always visible": widget stays hidden in Modo Avancado even with the override checked', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
   await page.goto(NEXT_URL());
@@ -328,4 +360,214 @@ test('intensity slider sets --atomic-intensity and persists across reload (windo
   await page.reload();
   await expect(page.locator('#vcAtomicIntensity')).toHaveValue('40');
   await expect(hud).toHaveCSS('--atomic-intensity', '0.4');
+});
+
+// ARCHITECTURAL PRINCIPLE-004 (No Fixed Viewport Layout, ver DECISIONS.md).
+// Achado real: position:absolute dentro de #vcChatScroll NAO rola com o
+// conteudo (offset e relativo ao padding-box, que nao se move) -- testado
+// e descartado antes deste commit. A solucao real e position:static
+// (align-self:flex-end no flex column), confirmada aqui via
+// getBoundingClientRect antes/depois do scroll, nao soh a leitura de CSS.
+test('lives in normal document flow (no fixed/absolute positioning tying it to the viewport)', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  const hud = page.locator('[data-atomic-core]');
+  const position = await hud.evaluate((el) => getComputedStyle(el).position);
+  expect(position, 'must never be fixed or absolute -- ties it to the viewport/padding-box instead of the real scroll flow').toBe('static');
+});
+
+test('scrolls away with the chat content instead of staying pinned to the viewport', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  await page.evaluate(() => {
+    const stream = document.getElementById('vcChatStream');
+    for (let i = 0; i < 25; i++) {
+      const p = document.createElement('p');
+      p.textContent = 'mensagem de teste ' + i;
+      stream.appendChild(p);
+    }
+  });
+  const hud = page.locator('[data-atomic-core]');
+  const before = await hud.evaluate((el) => el.getBoundingClientRect().top);
+
+  // ARCHITECTURAL PRINCIPLE-004 fix (2026-07-12): #vcChatScroll no longer
+  // has its own overflow -- the real page/document scrolls now, not an
+  // isolated inner container. See docs/DECISIONS.md.
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await page.waitForTimeout(150);
+  const after = await hud.evaluate((el) => el.getBoundingClientRect().top);
+
+  expect(after, 'must move out of the visible area when the page is scrolled, unlike position:fixed').toBeLessThan(before - 100);
+});
+
+// Mudança de decisão do usuário (2026-07-12, next-clean-67): substitui a
+// regra "esconde fora do chat" de next-clean-61/64. Atomic Core agora é
+// elemento persistente global -- visível em QUALQUER página/aba. As duas
+// únicas exceções que continuam escondendo o widget são o toggle off do
+// usuário (Settings) e a colisão real do Modo Avançado do SF (regressão
+// coberta em testes separados abaixo).
+test('stays visible on every page/tab, not just chat/Software Factory', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  const hud = page.locator('[data-atomic-core]');
+
+  await expect(hud, 'visible on chat home').not.toHaveClass(/is-collapsed/);
+
+  for (const feature of ['settings', 'missions', 'metrics', 'dashboard', 'vault', 'tools', 'security', 'github']) {
+    await page.locator('a[data-feature="' + feature + '"]').click();
+    await expect(hud, 'must stay visible on ' + feature).not.toHaveClass(/is-collapsed/);
+  }
+
+  await page.locator('a[data-feature="chat"]').click();
+  await expect(hud, 'still visible back on chat').not.toHaveClass(/is-collapsed/);
+
+  // Software Factory Auto-Pilot: already covered by the global rule above,
+  // kept as an explicit regression guard since it was the original
+  // exception carved out by next-clean-61.
+  await page.locator('a[data-feature="factory"]').click();
+  await expect(hud, 'Software Factory Auto-Pilot stays visible').not.toHaveClass(/is-collapsed/);
+});
+
+// Decisao do usuario (2026-07-12, next-clean-69): remove por completo o
+// hero do chat (.vc-chat-intro/#vcChatIntro, "Como vamos mover o Vision
+// Core hoje?"), introduzido condicional em next-clean-68 depois de vazar
+// pra toda pagina em next-clean-67. Sem substituto/placeholder -- o
+// composer deve subir pro topo real da area de conteudo, sem vao vazio
+// reservado no lugar do texto removido.
+test('chat hero intro no longer exists, composer sits near the top with no reserved gap', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  await expect(page.locator('#vcChatIntro')).toHaveCount(0);
+  await expect(page.locator('.vc-chat-intro')).toHaveCount(0);
+  await expect(page.locator('body')).not.toContainText('Como vamos mover o Vision Core hoje');
+
+  const gapFromTop = await page.evaluate(() => {
+    const stage = document.querySelector('.vc-chat-stage');
+    const hud = document.querySelector('[data-atomic-core]');
+    return hud.getBoundingClientRect().top - stage.getBoundingClientRect().top;
+  });
+  expect(gapFromTop, 'Atomic Core (first content in the stage) should sit near the stage top, no leftover intro gap').toBeLessThan(80);
+});
+
+// Achado real da RCA adversarial (2026-07-12): a primeira versao usava
+// margin-right negativo pra "colar" o widget na borda direita, mas isso
+// empurrava os nos openclaw/scanner para alem da borda de #vcChatScroll
+// (na epoca com overflow-x:hidden), cortando-os visualmente -- so descoberto
+// medindo getBoundingClientRect de cada agente contra o container, nao pela
+// screenshot isolada (que parecia correta na resolucao usada). Corrigido
+// removendo o margin-right negativo. #vcChatScroll nao tem mais overflow
+// proprio (ver ARCHITECTURAL PRINCIPLE-004), mas o invariante geometrico
+// continua valendo: nenhum no de agente deve exceder o container.
+test('no agent node extends past the #vcChatScroll container edge', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  const clipped = await page.evaluate(() => {
+    const scrollRect = document.getElementById('vcChatScroll').getBoundingClientRect();
+    const tolerance = 1;
+    return Array.from(document.querySelectorAll('[data-agent]'))
+      .map((el) => ({ name: el.getAttribute('data-agent'), rect: el.getBoundingClientRect() }))
+      .filter(({ rect }) => rect.right > scrollRect.right + tolerance || rect.left < scrollRect.left - tolerance)
+      .map(({ name, rect }) => name + ' (right=' + rect.right.toFixed(1) + ' vs container ' + scrollRect.right.toFixed(1) + ')');
+  });
+  expect(clipped, 'no agent label should extend past the scroll container edge').toEqual([]);
+});
+
+// Achado real (2026-07-12, reportado em produção contra next-clean-64):
+// align-self:flex-end já encostava o widget na borda direita de
+// #vcChatScroll, mas #vcChatScroll (dentro de .vc-chat-stage, antes
+// min(940px,100%) centralizado) não chegava na borda real da área de
+// conteúdo -- o widget parecia flutuar no meio da tela, com um vão visível
+// até a borda real de .vc-main. Fix: .vc-chat-stage passou a ser width:100%
+// (hero/mensagens/card de status já tinham seu próprio max-width, não
+// esticam feio) -- o widget agora ancora na borda real, não na do cap
+// artificial de 940px.
+test('anchors flush against the real right edge of the content area, not just its own 940px-capped column', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(NEXT_URL());
+  const gap = await page.evaluate(() => {
+    const hud = document.querySelector('[data-atomic-core]');
+    const main = document.querySelector('.vc-main');
+    const hudRect = hud.getBoundingClientRect();
+    const mainRect = main.getBoundingClientRect();
+    const paddingRight = parseFloat(getComputedStyle(main).paddingRight);
+    return (mainRect.right - paddingRight) - hudRect.right;
+  });
+  expect(Math.abs(gap), 'HUD right edge must match .vc-main real content-right-edge, not float short of it').toBeLessThan(2);
+});
+
+// next-clean-67: agora que o widget é visível em qualquer página, o
+// ancoramento e a ausência de corte precisam valer em páginas que não são
+// o chat também, não só na home -- .vc-chat-stage é o mesmo elemento
+// width:100% em toda página (nunca escondido pelo selectFeature()), então
+// a garantia deveria se manter, mas isso é o tipo de suposição que exige
+// medição real, não só leitura de CSS.
+test('anchor and no-clipping guarantees hold on non-chat pages too (Missions, Metrics, Dashboard)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(NEXT_URL());
+
+  for (const feature of ['missions', 'metrics', 'dashboard']) {
+    await page.locator('a[data-feature="' + feature + '"]').click();
+    await page.waitForTimeout(200);
+    const result = await page.evaluate(() => {
+      const hud = document.querySelector('[data-atomic-core]');
+      const main = document.querySelector('.vc-main');
+      const scrollRect = document.getElementById('vcChatScroll').getBoundingClientRect();
+      const hudRect = hud.getBoundingClientRect();
+      const mainRect = main.getBoundingClientRect();
+      const paddingRight = parseFloat(getComputedStyle(main).paddingRight);
+      const gap = (mainRect.right - paddingRight) - hudRect.right;
+      const tolerance = 1;
+      const clipped = Array.from(document.querySelectorAll('[data-agent]'))
+        .map((el) => el.getBoundingClientRect())
+        .filter((rect) => rect.right > scrollRect.right + tolerance || rect.left < scrollRect.left - tolerance);
+      return { gap, clippedCount: clipped.length };
+    });
+    expect(Math.abs(result.gap), feature + ': HUD must stay anchored to the real right edge').toBeLessThan(2);
+    expect(result.clippedCount, feature + ': no agent label should be clipped').toBe(0);
+  }
+});
+
+// Achado real (2026-07-12): a legibilidade de "todos os 9 nós" não é
+// estática -- os agentes orbitam continuamente (drift de ângulo/raio,
+// brand identity). Screenshot único pegou "Scanner"/"Patch Engine" com a
+// legenda sobreposta pelo círculo vizinho. Fix: MAX_ANGLE_DRIFT reduzido
+// (12 -> 3) e largura de span/small reduzida (96px -> 76px, .vc-agent
+// 110px -> 92px) para caber no espaçamento real entre nós adjacentes
+// (~74px de distância entre centros a 36 graus / raio 120px). Verificado
+// varrendo tempo virtual (page.clock) por >1 período completo de cada
+// agente (configs vao de 50s a 90s) -- nenhum par adjacente pode ter
+// sobreposição 2D relevante (janela de tolerância pequena pra frestas de
+// caixa que não são colisão real de glifo).
+test('agent captions stay legible across the full idle orbit (no adjacent-pair overlap beyond a tiny tolerance)', async ({ page }) => {
+  await page.clock.install({ time: 0 });
+  await page.goto(NEXT_URL());
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  const ADJACENCY = [
+    ['pi', 'hermes'], ['hermes', 'openclaw'], ['openclaw', 'scanner'], ['scanner', 'patchEngine'],
+    ['patchEngine', 'aegis'], ['aegis', 'goCore'], ['goCore', 'passGold'], ['passGold', 'archivist'],
+    ['archivist', 'github'], ['github', 'pi']
+  ];
+  const offenders = [];
+  for (let ms = 0; ms <= 92000; ms += 4000) {
+    await page.clock.fastForward(4000);
+    const rects = await page.evaluate(() => {
+      const out = {};
+      document.querySelectorAll('[data-agent]').forEach((el) => {
+        const small = el.querySelector('small');
+        const span = el.querySelector('span');
+        const sr = small.getBoundingClientRect();
+        const pr = span.getBoundingClientRect();
+        out[el.getAttribute('data-agent')] = {
+          left: Math.min(sr.left, pr.left), right: Math.max(sr.right, pr.right),
+          top: Math.min(sr.top, pr.top), bottom: Math.max(sr.bottom, pr.bottom)
+        };
+      });
+      return out;
+    });
+    for (const [a, b] of ADJACENCY) {
+      const ra = rects[a], rb = rects[b];
+      const overlapX = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+      const overlapY = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+      if (overlapX > 12 && overlapY > 12) {
+        offenders.push(a + '/' + b + ' at ' + ms + 'ms (' + overlapX.toFixed(1) + 'x' + overlapY.toFixed(1) + 'px)');
+      }
+    }
+  }
+  expect(offenders, 'no adjacent agent pair should have a real (>12x12px) caption overlap at any sampled point in the orbit').toEqual([]);
 });

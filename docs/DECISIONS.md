@@ -23,6 +23,11 @@ Nenhuma alteração arquitetural pode ser baseada em inferência apresentada com
 **Por quê:** o Vision Core é mantido por múltiplos agentes e já acumulou divergências entre prompt, spec, teste, código e estado real. Sem evidência objetiva antes da mudança, o agente seguinte herda uma conclusão não verificável e pode transformar suposição em arquitetura.
 **Como aplicar:** toda decisão arquitetural precisa apontar pelo menos uma evidência objetiva: spec, código, teste, execução observável ou documentação oficial. Suposições devem ser marcadas como suposição. Se duas fontes normativas de mesma autoridade divergirem e não houver evidência suficiente para escolher o lado correto, parar e pedir decisão humana antes de implementar.
 
+### ARCHITECTURAL PRINCIPLE-004 — No Fixed Viewport Layout
+Nenhum componente de dashboard, gráfico, painel, monitor, timeline ou grid de módulos pode usar posicionamento fixo em relação à viewport (`position: fixed`, `sticky` com referência de scroll global, ou técnica equivalente que prenda o elemento à tela independente do scroll do container pai).
+**Por quê:** achado real (2026-07-12) — o Atomic Core usava `position: fixed` relativo à viewport inteira, reservando uma faixa permanente de `.vc-main` (`padding-right: clamp(285px,27vw,405px)`) mesmo fora do contexto de chat; isso comprime todo outro painel/dashboard que precise de largura real, forçando colunas estreitas sem necessidade.
+**Como aplicar:** todo componente visual novo deve (1) viver dentro do fluxo normal de scroll do container onde foi montado, nunca sobrepor nem ficar para trás quando o conteúdo ao redor rola; (2) ter largura responsiva ao espaço real do container, nunca comprimida por um elemento fixo concorrente; (3) quando fizer sentido (dashboards com múltiplos gráficos), ganhar painel de largura total dentro da própria SPA (`data-feature` dedicado, já que o Next não tem router de páginas separadas — ver `ARCHITECTURAL PRINCIPLE-001`), em vez de forçado como painel lateral secundário. Exceções permitidas: navegação global (header/sidebar) e UI transitória (modais, toasts, tooltips) — nunca dashboard de dados ou conteúdo analítico. Primeira aplicação: Atomic Core (`vision-core-next-clean.css`/`.js`, 2026-07-12).
+
 ---
 
 ## Infraestrutura / Deploy
@@ -114,6 +119,11 @@ O Atomic Core não lê mais `prefers-reduced-motion` do SO como fonte de verdade
 `frontend/index.html` + `vision-core-bundle.js` só podem ser lidos para mapear comportamento — nunca importados, linkados, embedados ou colados no Next.
 **Por quê:** o legado carrega dívida técnica e (achado real, INCIDENTE-3) já teve credencial hardcoded exposta. Regra anti-novo-legado: se o Next precisa de algo que só existe lá, o caminho é reimplementar, nunca estender o legado.
 **Como aplicar:** catálogo tela-por-tela do que herdar/o que já tem equivalente/o que está bloqueado vive em `docs/LEGACY_DESIGN_REFERENCE.md`. Divergência consciente do Next em relação ao legado é permitida, desde que registrada lá com o quê e o porquê.
+
+### DECISION-020 — Atomic Core é elemento persistente global (substitui a regra "escopado ao chat" da DECISION-013/next-clean-61)
+O widget Atomic Core não esconde mais fora da aba `chat`/Software Factory Auto-Pilot — fica visível em qualquer página/aba (Missions, Timeline, Métricas, Dashboard, Settings, Vault, Tools, Security Lab, GitHub). Mudança de decisão explícita do usuário (2026-07-12, `next-clean-67`), não um bug.
+**Por quê:** a regra anterior (`next-clean-61`, `outsideChat` em `updateAtomicCollapseState()`) era decisão de produto consciente na época, mas o usuário decidiu reverter — o widget deve funcionar como identidade visual persistente, não escopada a uma única aba.
+**Como aplicar:** as únicas 2 exceções que ainda escondem o widget continuam sendo (1) o toggle "mostrar Atomic Core" em Settings (`window.VCAtomicCore`, on/off explícito do usuário) e (2) a colisão real e já documentada do Modo Avançado do Software Factory (`next-clean-61`, não muda com esta decisão — grid de stack/matriz/timeline disputa a mesma zona do widget). Nenhuma outra página deve reintroduzir lógica de collapse condicional — ver `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` seção Atomic Core.
 
 ---
 
