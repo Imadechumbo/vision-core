@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-⚠ `next-clean-70` é o que está ao vivo agora (`visioncoreai.pages.dev`); `next-clean-71` (Next passa a registrar seus próprios runs do SF Auto-Pilot em `/api/mission/timeline`) está commitado localmente e **ainda não deployado** — aguardando autorização explícita do usuário.
+✔ `next-clean-71` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real: cache-bust servido (`?v=next-clean-71` no CSS e no JS, confirmado com URL cache-busted própria após um instante de propagação de CDN), JS deployado contém `logSfMissionToTimeline`/POST `/api/mission/timeline`/`sf-autopilot-next` (verificado por leitura direta do arquivo servido), Software Factory carrega normalmente sem regressão visual.
 
 Cache Bust
-next-clean-71 (local, não deployado) / next-clean-70 (produção)
+next-clean-71
 
 Último Commit
 
@@ -39,7 +39,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ `next-clean-71` — investigação Fase 1 da Timeline estilo LionClaw (pipeline por estágios, custo por agente, sprints): `GET /api/mission/timeline` é real, mas pipeline/sprint/custo não têm NENHUM dado no backend (confirmado por leitura de `server.js` + request real contra produção — não é "estrutura diferente", é ausência total). Achado crítico: o Next nunca chamava `POST /api/mission/timeline` — só o legado registrava runs do SF Auto-Pilot, timeline de usuário autenticado sempre vazia mesmo após missões reais no Next. Usuário autorizou implementar só esse item (conexão de escrita) e registrar os outros 2 (estágios persistidos, custo real por agente) como pendência de backend no roadmap — nenhuma UI especulativa foi construída. Fix: SF Auto-Pilot chama `POST /api/mission/timeline` no sucesso (mesmo contrato do legado, backend intocado), nunca em execução incompleta. 2 testes novos, **102/102 PASS, commitado, NÃO deployado — aguardando autorização explícita**.
+✔ `next-clean-71` — investigação Fase 1 da Timeline estilo LionClaw (pipeline por estágios, custo por agente, sprints): `GET /api/mission/timeline` é real, mas pipeline/sprint/custo não têm NENHUM dado no backend (confirmado por leitura de `server.js` + request real contra produção — não é "estrutura diferente", é ausência total). Achado crítico: o Next nunca chamava `POST /api/mission/timeline` — só o legado registrava runs do SF Auto-Pilot, timeline de usuário autenticado sempre vazia mesmo após missões reais no Next. Usuário autorizou implementar só esse item (conexão de escrita) e registrar os outros 2 (estágios persistidos, custo real por agente) como pendência de backend no roadmap — nenhuma UI especulativa foi construída. Fix: SF Auto-Pilot chama `POST /api/mission/timeline` no sucesso (mesmo contrato do legado, backend intocado), nunca em execução incompleta. 2 testes novos, **102/102 PASS, deployado e confirmado ao vivo em produção**.
 
 ✔ `next-clean-70` — bug real corrigido: painel de Métricas colapsava/sumia a cada ~10-12s. 100/100 PASS, **deployado e confirmado ao vivo em produção**.
 
@@ -57,7 +57,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
 
-Todos os itens até `next-clean-70` estão deployados e confirmados ao vivo; `next-clean-71` está commitado e testado, mas aguarda autorização explícita para deploy. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
+Todos os itens até `next-clean-71` estão deployados e confirmados ao vivo. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
 
 ---
 
