@@ -201,6 +201,67 @@ test('Software Factory Auto-Pilot runs six steps (5 + PASS GOLD default-on) via 
   expect(posts[5]).toMatchObject({ module: 'gold_gate', step: 5, total_steps: 6 });
 });
 
+// Achado real (2026-07-13): o Next nunca chamava POST /api/mission/timeline
+// -- só o frontend legado registrava runs do Auto-Pilot, então a Mission
+// History (Missions) e a aba Timeline sempre ficavam vazias mesmo depois
+// de rodar Auto-Pilot dentro do Next. Mesmo payload/contrato do legado
+// (verificado em backend/server.js:1411), disparado só no caminho de
+// sucesso (nunca em erro/step incompleto).
+test('Software Factory Auto-Pilot logs the completed run to POST /api/mission/timeline', async ({ page }) => {
+  const { posts } = await mockAsyncSfEndpoints(page, {
+    'mission-composer': 'mission composer ok',
+    'deploy-blueprint': 'deploy blueprint ok',
+    'worker-handoff':   'worker handoff ok',
+    'gold-gate':        'GOLD GATE CHECKLIST\nVEREDICTO: PASS GOLD'
+  });
+  const timelinePosts = [];
+  await page.route(`${API}/api/mission/timeline`, (route) => {
+    if (route.request().method() === 'POST') timelinePosts.push(route.request().postDataJSON());
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, logged: true, anti_stub: true }) });
+  });
+
+  await page.goto(NEXT_URL);
+  await page.locator('[data-feature="factory"]').first().click();
+  await page.locator('#vcPrompt').fill('um app de tarefas com login e dashboard');
+  await page.getByRole('button', { name: 'Gerar Projeto com o composer' }).click();
+  await expect(page.locator('#vcSfHistory')).toContainText('Projeto concluído!', { timeout: 10_000 });
+
+  expect(posts).toHaveLength(6);
+  expect(timelinePosts).toHaveLength(1);
+  expect(timelinePosts[0]).toMatchObject({
+    type: 'sf-autopilot',
+    description: 'um app de tarefas com login e dashboard',
+    steps_completed: 6,
+    source: 'sf-autopilot-next',
+    pass_gold: true
+  });
+  expect(timelinePosts[0].title).toContain('um app de tarefas com login e dashboard');
+});
+
+test('Software Factory does not log an incomplete run to the timeline (mid-pipeline failure)', async ({ page }) => {
+  let jobSeq = 0;
+  await page.route(`${API}/api/sf/mission-composer`, (route) => {
+    jobSeq += 1;
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, job_id: 'job-' + jobSeq }) });
+  });
+  await page.route(`${API}/api/sf/job/**`, (route) => {
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, status: 'error', error: 'boom' }) });
+  });
+  const timelinePosts = [];
+  await page.route(`${API}/api/mission/timeline`, (route) => {
+    if (route.request().method() === 'POST') timelinePosts.push(route.request().postDataJSON());
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, logged: true, anti_stub: true }) });
+  });
+
+  await page.goto(NEXT_URL);
+  await page.locator('[data-feature="factory"]').first().click();
+  await page.locator('#vcPrompt').fill('missao que vai falhar');
+  await page.getByRole('button', { name: 'Gerar Projeto com o composer' }).click();
+  await expect(page.locator('#vcSfHistory')).toContainText('falhou', { timeout: 10_000 });
+
+  expect(timelinePosts).toEqual([]);
+});
+
 test('Software Factory renders a step chart (duration bar + DONE/FAIL/BLOCKED donut + progress gauge)', async ({ page }) => {
   await mockAsyncSfEndpoints(page, {
     'mission-composer': 'mission composer ok',

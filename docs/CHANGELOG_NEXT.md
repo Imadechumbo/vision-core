@@ -4,6 +4,14 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-71 (2026-07-13)
+
+- Investigação Fase 1 (Timeline estilo LionClaw): `GET /api/mission/timeline` é real e já usado hoje (Mission History/botão "Carregar timeline"), mas pipeline por estágios e custo por agente não têm NENHUM dado real no backend (não é "estrutura diferente", é ausência total — confirmado por leitura direta de `server.js` + request real contra produção). Achado crítico adicional: o Next nunca chamava `POST /api/mission/timeline` — só o frontend legado registrava runs, então a timeline de um usuário autenticado ficava sempre vazia mesmo após rodar missões reais dentro do Next
+- Item 1 implementado (autorizado pelo usuário após revisão da Fase 1): Software Factory Auto-Pilot agora chama `POST /api/mission/timeline` ao concluir com sucesso (mesmo payload/contrato do legado, backend intocado, verificado em `server.js:1411`). Best-effort — falha de rede nesse POST não afeta o fluxo de sucesso da missão. Não dispara em execuções incompletas/com erro
+- Itens 2 (persistir estágios por missão) e 3 (custo real por agente) registrados como pendência `PLANEJADO` em `docs/ROADMAP.md` Fase 2 — zero código ainda, exigem decisão de arquitetura própria (item 3 toca o núcleo de `callLLM()`)
+- 2 testes novos (`vision-core-next-sf.spec.mjs`: log da timeline no sucesso do Auto-Pilot + ausência de log em execução incompleta)
+- 102/102 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
 ## next-clean-70 (2026-07-12)
 
 - Bug real corrigido: painel de Métricas colapsava/sumia periodicamente (~10-12s), reportado pelo usuário. Causa raiz encontrada por leitura de código: `loadMetrics()` chamava `setMetricsLoading(true)` (esconde `#vcMetricsBody`, mostra skeleton de 3 linhas) em TODA chamada, inclusive nos ticks automáticos de `startMetricsPolling()` (`METRICS_POLL_MS=12000`), mesmo já havendo dados válidos renderizados

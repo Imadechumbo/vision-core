@@ -3894,6 +3894,7 @@
       if (idx >= sfActiveSteps.length) {
         appendSfMsg('assistant', 'Projeto concluído!');
         renderSfFinal();
+        logSfMissionToTimeline(desc, sfActiveSteps.length, !!(sfRunOptions && sfRunOptions.pass_gold));
         finishSf();
         return;
       }
@@ -3967,6 +3968,32 @@
     var submitBtn = sfComposer && sfComposer.querySelector('button[type="submit"]');
     if (submitBtn) submitBtn.disabled = false;
     if (window.resetAtomicCore) window.resetAtomicCore();
+  }
+
+  // Achado real (2026-07-13): POST /api/mission/timeline (o endpoint que
+  // alimenta GET /api/mission/timeline, consumido por Missions -> Mission
+  // History e pelo botão "Carregar timeline" da aba Timeline) só era
+  // chamado pelo frontend legado -- o Next nunca registrava suas próprias
+  // execuções do Software Factory Auto-Pilot, então a timeline de um
+  // usuário autenticado ficava sempre vazia mesmo depois de rodar missões
+  // reais dentro do Next. Mesmo payload do legado (backend intocado,
+  // contrato verificado em server.js:1411). Best-effort: falha de rede
+  // aqui não deve afetar o fluxo de sucesso da missão (já concluída).
+  // Anônimo: o backend já no-opa silenciosamente (appendMissionTimeline
+  // exige userId), então chamar sem estar logado é seguro, não precisa
+  // checar auth antes.
+  function logSfMissionToTimeline(desc, stepsCompleted, passGold) {
+    apiRequest('/api/mission/timeline', {
+      method: 'POST',
+      body: {
+        type: 'sf-autopilot',
+        title: 'Auto-Pilot: ' + desc.slice(0, 60),
+        description: desc,
+        steps_completed: stepsCompleted,
+        source: 'sf-autopilot-next',
+        pass_gold: passGold
+      }
+    }).catch(function () { /* best-effort — missão já concluída independente disso */ });
   }
 
   // project-files + generate-zip (item 1 do roadmap "Software Factory
