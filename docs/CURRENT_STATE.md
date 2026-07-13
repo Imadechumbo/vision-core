@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-⚠ `next-clean-71` é o que está ao vivo agora (`visioncoreai.pages.dev`); `next-clean-72` (composer não aparecia na página Software Factory) está commitado localmente e **ainda não deployado** — aguardando autorização explícita do usuário.
+✔ `next-clean-72` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real: cache-bust servido (`?v=next-clean-72` no CSS e no JS), `#factory` confirmado aninhado dentro de `.vc-chat-stage`, composer visível na viewport mesmo rolado até o fim absoluto da página, texto digitado com sucesso.
 
 Cache Bust
-next-clean-72 (local, não deployado) / next-clean-71 (produção)
+next-clean-72
 
 Último Commit
 
@@ -39,7 +39,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ `next-clean-72` — bug real corrigido: composer/campo de missão principal não aparecia na página Software Factory (Auto-Pilot nem Modo Avançado) ao rolar até o fim — usuário chegou a digitar a missão no campo errado ("Contexto de URL"). Causa raiz: `#factory` vivia como IRMÃO de `.vc-chat-stage` (depois do composer fechar), diferente de todo outro painel (`#vcFeaturePanel`, que vive DENTRO do chat-stage, antes do composer) — deixava o composer preso ao fundo de uma `.vc-chat-stage` quase vazia, com um vão vazio grande antes do conteúdo real do SF começar (confirmado com screenshot real de produção, ~260px de espaço vazio entre os dois blocos). Fix: `#factory` movido pra dentro de `.vc-chat-stage`, mesma posição de qualquer outro painel — `position:sticky` do composer volta a acompanhar o scroll real da página inteira. 1 teste novo (DOM nesting + composer no viewport rolado até o fim, Auto-Pilot e Modo Avançado; falha reproduzível contra a estrutura antiga via `git stash`), **103/103 PASS, commitado, NÃO deployado — aguardando autorização explícita**.
+✔ `next-clean-72` — bug real corrigido: composer/campo de missão principal não aparecia na página Software Factory (Auto-Pilot nem Modo Avançado) ao rolar até o fim — usuário chegou a digitar a missão no campo errado ("Contexto de URL"). Causa raiz: `#factory` vivia como IRMÃO de `.vc-chat-stage` (depois do composer fechar), diferente de todo outro painel (`#vcFeaturePanel`, que vive DENTRO do chat-stage, antes do composer) — deixava o composer preso ao fundo de uma `.vc-chat-stage` quase vazia, com um vão vazio grande antes do conteúdo real do SF começar (confirmado com screenshot real de produção, ~260px de espaço vazio entre os dois blocos). Fix: `#factory` movido pra dentro de `.vc-chat-stage`, mesma posição de qualquer outro painel — `position:sticky` do composer volta a acompanhar o scroll real da página inteira. 1 teste novo (DOM nesting + composer no viewport rolado até o fim, Auto-Pilot e Modo Avançado; falha reproduzível contra a estrutura antiga via `git stash`), **103/103 PASS, deployado e confirmado ao vivo em produção**.
 
 ✔ `next-clean-71` — investigação Fase 1 da Timeline estilo LionClaw + conexão do SF Auto-Pilot ao `POST /api/mission/timeline`. 102/102 PASS, **deployado e confirmado ao vivo em produção**.
 
@@ -59,7 +59,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
 
-Todos os itens até `next-clean-71` estão deployados e confirmados ao vivo; `next-clean-72` está commitado e testado, mas aguarda autorização explícita para deploy. `main`/`origin/main` já foram sincronizados com todo o trabalho até `next-clean-71` (merge + push autorizados explicitamente pelo usuário) — pendência real agora é só levar o commit de `next-clean-72` (nesta branch) pra `main` quando o usuário pedir.
+Todos os itens até `next-clean-72` estão deployados e confirmados ao vivo. `main`/`origin/main` foram sincronizados até `next-clean-71` (merge + push autorizados explicitamente pelo usuário) — o commit de `next-clean-72` (nesta branch) ainda não foi levado pra `main`, pendência real até o usuário pedir.
 
 ---
 
