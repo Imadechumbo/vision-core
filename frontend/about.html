@@ -830,6 +830,32 @@
     </div>
 
 
+    <div style="max-width:1000px;margin:0 auto 48px" id="ia-aplicada-pratica">
+      <div style="margin-bottom:24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <h3 style="font-size:18px;font-weight:700;color:#fff;margin:0">IA APLICADA NA PRATICA</h3>
+        <div style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;color:#86efac;letter-spacing:1px">MAPA TECNICO REAL</div>
+      </div>
+      <p style="color:#94a3b8;font-size:14px;line-height:1.7;margin:0 0 18px">Esta secao mapeia onde a IA entra hoje no Vision Core e onde ela ainda nao entrou. MCP esta parcial e flagado; fine-tuning ainda nao treinou nenhum modelo; os dados usados sao metricas, timeline, snapshots e evidencias reais quando existem.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">LLMs</strong><br>Hermes e SF usam modelos base via fallback chain. Nenhum peso proprio foi ajustado.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Prompts</strong><br>RCA, avaliacao e geracao usam criterios explicitos e versionados no backend.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Agentes</strong><br>Hermes, OpenClaw, Aegis, PASS GOLD, Archivist e GitHub Agent dividem responsabilidade por missao.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Ferramentas</strong><br>Patch, PR, fetch-url e validadores conectam decisao de IA a efeitos reais, sempre com gates.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">MCP</strong><br>GitHub Agent tem adapter MCP opcional e flagado; REST segue default/fallback. Proximo candidato natural: SF fetch-url.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Contexto</strong><br>Scanner, arquivos, URL context e memoria alimentam a resposta com material real.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Gates</strong><br>PASS GOLD, Aegis e Go Core exigem evidencia; sem evidencia, o claim nao passa.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">MLOps</strong><br>Specs, handoff, testes, commits isolados e deploy verificavel documentam o ciclo.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Dados usados</strong><br>Timeline e metricas registram operacao real; custo por agente ainda e <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>null</code>.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Fine-tuning</strong><br>Dataset Hermes esta em curadoria: 0/360 exemplos utilizaveis, nenhum treino executado.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Seguranca</strong><br>Redaction, Aegis, secret guard e LGPD sao pre-condicoes antes de virar dataset.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Proximos gates</strong><br>Ativar MCP por conector; autorizar gravacao input+decisao+resultado; exportar JSONL redigido.</div>
+      </div>
+      <div style="margin-top:16px;background:#020617;border:1px solid rgba(245,158,11,.28);border-radius:14px;padding:18px;color:#cbd5e1;font-size:13px;line-height:1.7">
+        <strong style="color:#fbbf24">Limite honesto:</strong> a timeline persiste eventos simples, snapshots existem, e metricas de agentes existem; mas ainda faltam custo real por agente, estagios persistidos por missao e outcome completo para transformar exemplos Hermes em dataset de fine-tuning utilizavel.
+      </div>
+    </div>
+
+
     <!-- O que PASS GOLD significa -->
     <div style="max-width:900px;margin:0 auto 48px;background:linear-gradient(135deg,#0a0f1a,#111827);border:1px solid #f59e0b;border-radius:20px;padding:40px;position:relative;overflow:hidden">
       <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(245,158,11,0.08),transparent);border-radius:50%"></div>

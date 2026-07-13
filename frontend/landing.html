@@ -263,6 +263,40 @@
     </div>
   </section>
 
+  <section class="startup-section" id="ia-aplicada">
+    <p class="eyebrow">IA APLICADA NA PRATICA</p>
+    <h2>Mapa real de IA, MCP e dados — sem vender prototipo como entrega final.</h2>
+    <p class="section-lead">Vision Core usa IA em camadas: modelos base, prompts, agentes, contexto de codigo, gates e memoria operacional. O que esta ativo aparece como ativo; o que esta em curadoria, flag ou decisao pendente aparece com esse nome.</p>
+    <div class="so-ia-grid compact-pillar-grid">
+      <div class="so-ia-card"><h3>LLMs multi-provider</h3><p>Hermes e Software Factory usam modelos base via fallback chain. Nao ha modelo proprio treinado hoje.</p></div>
+      <div class="so-ia-card"><h3>Prompt engineering</h3><p>RCA, avaliacao e geracao usam prompts e criterios explicitos no backend para manter consistencia tecnica.</p></div>
+      <div class="so-ia-card"><h3>Agentes</h3><p>Hermes, OpenClaw, Aegis, PASS GOLD, Archivist e GitHub Agent dividem responsabilidade por missao.</p></div>
+      <div class="so-ia-card"><h3>Tool calling</h3><p>Patch Engine, PR, fetch-url e validadores conectam decisao de IA a ferramentas reais, sempre com gates de seguranca.</p></div>
+      <div class="so-ia-card"><h3>MCP</h3><p>GitHub Agent tem adapter MCP opcional e flagado; REST segue default e fallback. Proximo candidato natural: fetch-url do Software Factory, por ser leitura autenticada com guard SSRF.</p></div>
+      <div class="so-ia-card"><h3>RAG e contexto</h3><p>Scanner, arquivos, URL context e memoria montam material real antes da resposta, reduzindo chute fora do repo.</p></div>
+      <div class="so-ia-card"><h3>Avaliacao</h3><p>PASS GOLD, Aegis e Go Core exigem evidencia antes de promover mudanca. Evidencia ausente nao vira claim aprovado.</p></div>
+      <div class="so-ia-card"><h3>Governanca</h3><p>Specs, handoff, testes, commits isolados e deploy verificavel mantem a IA dentro de trilhos auditaveis.</p></div>
+      <div class="so-ia-card"><h3>Dados usados</h3><p>Metricas, timeline de missoes e snapshots alimentam observabilidade. Custo por agente ainda e <code>null</code>; nao e exibido como "$0".</p></div>
+      <div class="so-ia-card"><h3>Fine-tuning</h3><p>Sem pesos ajustados hoje. Export Hermes achou 0/360 exemplos utilizaveis; falta gravar input + decisao + resultado validado.</p></div>
+      <div class="so-ia-card"><h3>Seguranca</h3><p>Aegis, secret guard, redaction planejada e LGPD reduzem risco antes de transformar dados em dataset.</p></div>
+      <div class="so-ia-card"><h3>Cloud</h3><p>Cloudflare Pages, Worker Gateway e EB separam frontend, proxy e runtime backend; deploy de frontend nao altera EB.</p></div>
+    </div>
+
+    <div class="roadmap-table" style="overflow-x:auto;margin-top:24px">
+      <table class="roadmap-table">
+        <thead>
+          <tr><th>Area</th><th>Estado real hoje</th><th>Proximo gate</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>MCP</strong></td><td>GitHub Agent com adapter opcional e flagado; caminho ativo continua REST com fallback seguro.</td><td>Autorizar ativacao MCP real por conector e validar producao sem quebrar REST.</td></tr>
+          <tr><td><strong>SF fetch-url</strong></td><td>Endpoint read-only autenticado, com bloqueio SSRF local/privado/link-local. Melhor candidato a repetir o padrao adapter + fallback.</td><td>Definir servidor MCP alvo e manter o mesmo guard de seguranca no backend.</td></tr>
+          <tr><td><strong>Fine-tuning Hermes</strong></td><td>Hermes usa modelos base + prompts; dataset candidate ficou em 0/360 exemplos utilizaveis.</td><td>Autorizar gravacao do trio input, decisao e resultado durante missoes, com redaction e export JSONL.</td></tr>
+          <tr><td><strong>Dados</strong></td><td>Timeline persiste eventos simples; metricas de agentes existem, mas custo por agente segue <code>null</code>; snapshots existem sem outcome suficiente.</td><td>Persistir estagios por missao, custo real por agente e resultado validado antes de qualquer treino.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <!-- TIMELINE TÉCNICA DETALHADA -->
   <section class="startup-section" id="timeline-detail">
     <p class="eyebrow">ENTREGAS V2.9.10</p>
