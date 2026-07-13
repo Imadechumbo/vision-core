@@ -72,12 +72,13 @@ Nunca inverter para um fluxo em que o usuario precise passar por `Mission -> Mar
 
 **GitHub = contexto.** Repo, branch, PR e status entram como contexto ou painel lateral, nunca como pagina principal que toma o lugar do chat.
 
-**Atomic Core = elemento persistente global, visivel em qualquer pagina/aba.** Mudanca de decisao do usuario (2026-07-12, `next-clean-67`) que substitui a regra anterior ("escopado ao chat", `next-clean-61`/`64`): o widget nao esconde mais fora da aba `chat`/Software Factory Auto-Pilot — aparece em Missions, Metricas, Agentes, Settings, Vault, Tools, Security Lab, GitHub, igual. Desde `next-clean-64` (ARCHITECTURAL PRINCIPLE-004, ver `DECISIONS.md`), o widget vive dentro de `#vcChatScroll` (posicionamento normal de fluxo, nunca `position:fixed`/`absolute` presa a viewport); como `.vc-chat-stage`/`#vcChatScroll` nunca sao escondidos por `selectFeature()` (só o `#vcFeaturePanel` de cada aba troca por baixo), o widget continua visivel e ancorado sem mudanca estrutural nenhuma, só a logica de collapse mudou. Rola junto com o conteudo real da pagina e sai de vista como qualquer elemento normal, em vez de ficar preso na tela. **As 2 unicas excecoes que ainda escondem o widget:** (1) usuario desativa em Settings -> Atomic Core ("mostrar Atomic Core", `window.VCAtomicCore`, on/off do widget inteiro, vence sobre qualquer outra preferencia); (2) colisao real e ja documentada no Modo Avancado do Software Factory (`next-clean-61`, nao muda com esta decisao) — recolhe (opacity/scale, nunca `display:none`) automaticamente porque o grid de stack/matriz/timeline disputa a mesma zona do widget, com override reversivel "manter sempre visivel" (`window.VCAtomicCollapse`) especifico desse caso. Intensidade visual (`--atomic-intensity`) via Settings, mesmo padrao getMode/setMode/onChange + localStorage do resto do arquivo. **O hero do chat foi removido por completo em `next-clean-69`** (existia como `#vcChatIntro`/`.vc-chat-intro`, "Como vamos mover o Vision Core hoje?" — chegou a vazar pra toda pagina em `next-clean-67`, foi escondido condicionalmente em `next-clean-68`, e removido de vez por decisao do usuario). Sem placeholder no lugar — o widget e o restante do fluxo (chat-stream + composer) ocupam o espaco normalmente, sem vao reservado.
+**Atomic Core + cabecalho fixo = escopados ao Chat (DECISION-021, corrige PARCIALMENTE a decisao anterior de `next-clean-67`/DECISION-020).** O decagono e o bloco de cabecalho generico ("VISION CORE" + tags de versao + status do agente local, `#vcBrandLockup`/`#vcAgentBadge`) só aparecem na aba `chat`. O Atomic Core tambem conta Software Factory Auto-Pilot como chat (criterio que nao mudou desde `next-clean-61`); o cabecalho generico nao tem essa excecao — Software Factory (nos 2 modos) mostra o cabecalho curto igual as demais abas. Nas demais abas (Missions, Software Factory, GitHub, Vault, Metricas, Agentes, Tools, Security Lab, Obsidian, Settings), o topo da pagina mostra um cabecalho curto (`#vcPageHead`, mesma marcacao visual de `.vc-feature-head`) reaproveitando `featureMap[key].title`/`.status` — mesmo texto ja usado em `#vcFeatureTitle`/`#vcFeatureStatus`, nunca copy nova. Desde `next-clean-64` (ARCHITECTURAL PRINCIPLE-004, ver `DECISIONS.md`), o widget vive dentro de `#vcChatScroll` (posicionamento normal de fluxo, nunca `position:fixed`/`absolute` presa a viewport) — estrutura inalterada por esta decisao, só a logica de collapse ganhou um terceiro motivo (`!inChatOrFactory`, em `updateAtomicCollapseState()`). **As excecoes que escondem o widget quando ele estaria em escopo (chat/Auto-Pilot):** (1) usuario desativa em Settings -> Atomic Core ("mostrar Atomic Core", `window.VCAtomicCore`, on/off do widget inteiro, vence sobre qualquer outra preferencia); (2) colisao real e ja documentada no Modo Avancado do Software Factory (`next-clean-61`, inalterada por esta decisao) — recolhe (opacity/scale, nunca `display:none`) automaticamente porque o grid de stack/matriz/timeline disputa a mesma zona do widget, com override reversivel "manter sempre visivel" (`window.VCAtomicCollapse`) especifico desse caso. Intensidade visual (`--atomic-intensity`) via Settings, inalterada. **O hero do chat foi removido por completo em `next-clean-69`** (existia como `#vcChatIntro`/`.vc-chat-intro`, "Como vamos mover o Vision Core hoje?" — chegou a vazar pra toda pagina em `next-clean-67`, foi escondido condicionalmente em `next-clean-68`, e removido de vez por decisao do usuario). Sem placeholder no lugar — o widget e o restante do fluxo (chat-stream + composer) ocupam o espaco normalmente, sem vao reservado.
 
 Layout oficial do fluxo:
 
 ```text
-HEADER
+Chat:
+HEADER (VISION CORE + Atomic Core)
 ------------------------------
 CHAT
 CHAT
@@ -93,6 +94,10 @@ Widgets vivos:
 - Agents
 - Security
 - Secret Guard
+
+Outras abas (Missions, Software Factory, GitHub, Vault, Metricas, Agentes,
+Tools, Security Lab, Obsidian, Settings): cabecalho curto especifico do
+papel (#vcPageHead) no lugar do HEADER generico + Atomic Core (DECISION-021).
 ```
 
 **Regra de ouro:** nenhuma nova funcionalidade pode alterar a posicao do Chat Principal. Toda nova feature deve ser integrada como contexto, drawer, painel lateral, widget, aba contextual, modal ou painel colapsavel. Nunca deslocar o fluxo principal da conversa.
@@ -131,7 +136,8 @@ Estilo geral: **app de chat/IA**, inspirado em ChatGPT/Claude/Cursor/OpenCode/Li
 
 ```text
 Sidebar: Chat | Missions | Software Factory | GitHub | Vault | Metricas | Agentes | Tools | Security Lab | Obsidian | Settings | Smile
-Main: Header -> Atomic Core + Chat stream -> Feature panel contextual -> Composer
+Main (chat): Header + Atomic Core -> Chat stream -> Feature panel contextual -> Composer
+Main (outras abas): cabecalho curto do papel (#vcPageHead) -> Chat stream (mesma base) -> Feature panel contextual -> Composer
 Missions inclui Historico de Missoes.
 Metricas inclui o toggle "Largura total".
 Timeline e Dashboard nao existem como destinos separados.
@@ -350,6 +356,7 @@ Confirmado pelo usuário após auditoria de paridade (`docs/PARITY_AUDIT.md`): S
 8. Composer fixo embaixo (`position:sticky; bottom:18px`) e é a única entrada de missão — ✅
 9. Nenhuma chamada destrutiva sem confirmação dupla — ✅
 10. Sem dependência de backend novo — ✅ (só endpoints já existentes no EB)
+11. Atomic Core + cabeçalho genérico escopados ao Chat/SF Auto-Pilot; demais abas mostram cabeçalho curto por papel (`#vcPageHead`, DECISION-021) — ✅
 
 ## Pendências
 
