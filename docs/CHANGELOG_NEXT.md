@@ -4,6 +4,15 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-70 (2026-07-12)
+
+- Bug real corrigido: painel de Métricas colapsava/sumia periodicamente (~10-12s), reportado pelo usuário. Causa raiz encontrada por leitura de código: `loadMetrics()` chamava `setMetricsLoading(true)` (esconde `#vcMetricsBody`, mostra skeleton de 3 linhas) em TODA chamada, inclusive nos ticks automáticos de `startMetricsPolling()` (`METRICS_POLL_MS=12000`), mesmo já havendo dados válidos renderizados
+- Reproduzido e confirmado com evidência: mock instantâneo mascarava o bug (janela de "loading" durava poucos ms); com latência de rede simulada (~700ms), o código antigo mostrou 13 amostras com `#vcMetricsBody` escondido em ~26s de varredura (via `git stash` comparando antes/depois) — timestamps batendo exatamente com os ciclos de ~12s do polling
+- Fix: skeleton só aparece na primeira carga (`metricsLastResults === null`); refresh em segundo plano com dado prévio já na tela atualiza números/gráficos em silêncio, sem esconder nada. Zero mudança em lógica de dados/cálculo
+- Dashboard (`loadDashboardPanel()`) investigado como possível causa compartilhada — descartado: só roda no clique manual de "Atualizar" ou na abertura da aba, nunca em `setInterval` automático, não produz o sintoma "a cada ~10s" relatado
+- 1 teste novo com latência simulada, cobrindo 2 ciclos completos de polling — confirmado que falha de forma reproduzível contra o código antigo (via `git stash`) e passa com o fix
+- 100/100 PASS na suíte permanente do Next, rodada 2x seguidas, sem regressão
+
 ## next-clean-69 (2026-07-12)
 
 - Remoção completa do hero do chat (`#vcChatIntro`/`.vc-chat-intro`, "VISION AI COMMAND" + "Como vamos mover o Vision Core hoje?" + parágrafo descritivo) por decisão do usuário — sem placeholder no lugar. Trajetória do elemento: vazou pra toda página em `next-clean-67` (efeito colateral do Atomic Core sempre visível), foi escondido condicionalmente fora de `chat`/`factory` em `next-clean-68`, removido de vez agora

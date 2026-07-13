@@ -22,10 +22,10 @@ Chat
 ✔ OK
 
 Deploy Produção
-✔ `next-clean-69` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real: cache-bust servido (`?v=next-clean-69` no CSS e no JS), hero ausente (`introExists:false`, sem texto residual), Atomic Core visível/ancorado (`gap:0px`) perto do topo real da área de conteúdo.
+⚠ `next-clean-69` é o que está ao vivo agora (`visioncoreai.pages.dev`); `next-clean-70` (correção do colapso periódico do painel de Métricas) está commitado localmente e **ainda não deployado** — aguardando autorização explícita do usuário.
 
 Cache Bust
-next-clean-69
+next-clean-70 (local, não deployado) / next-clean-69 (produção)
 
 Último Commit
 
@@ -39,7 +39,9 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 
-✔ `next-clean-69` — remoção completa do hero do chat (`#vcChatIntro`/`.vc-chat-intro`, "Como vamos mover o Vision Core hoje?") por decisão do usuário, sem placeholder. HTML/CSS/JS relacionados removidos juntos (`.vc-kicker` mantido, classe compartilhada com SF/Arquiteto SF/Pacote Final/Smile Guide). Atomic Core sobe pro topo real da área de conteúdo; composer permanece ancorado perto do rodapé da viewport (comportamento pré-existente desde `next-clean-65`, `min-height:calc(100vh-116px)`, fora de escopo deste pedido — **relatado como observação, não como lacuna**). Software Factory Auto-Pilot também deixou de exibir o hero (era removido/escondido junto por contar como "chat") — nenhum teste dependia disso. 1 teste obsoleto reescrito, **99/99 PASS, deployado e confirmado ao vivo em produção**.
+✔ `next-clean-70` — bug real corrigido: painel de Métricas colapsava/sumia a cada ~10-12s (reportado pelo usuário). Causa raiz: `loadMetrics()` chamava `setMetricsLoading(true)` (esconde `#vcMetricsBody`, mostra skeleton) em TODA chamada, inclusive nos ticks automáticos de `startMetricsPolling()` (`METRICS_POLL_MS=12000`), mesmo já havendo dados válidos na tela. Reproduzido com latência simulada (~700ms) — mock instantâneo mascarava o bug; código antigo mostrou 13 amostras com body escondido em ~26s (via `git stash` antes/depois), batendo com o ciclo de 12s. Fix: skeleton só na primeira carga (`metricsLastResults === null`); refresh em segundo plano atualiza em silêncio. Dashboard investigado como possível causa compartilhada — descartado (só roda em clique manual/abertura de aba, nunca em `setInterval`). 1 teste novo (falha reproduzível contra código antigo, passa com fix), **100/100 PASS, commitado, NÃO deployado — aguardando autorização explícita**.
+
+✔ `next-clean-69` — remoção completa do hero do chat (`#vcChatIntro`/`.vc-chat-intro`). 99/99 PASS, **deployado e confirmado ao vivo em produção**.
 
 ✔ `next-clean-68` — hero do chat escondido condicionalmente fora de `chat`/`factory` (efeito colateral do `next-clean-67`, hero vazava pra toda página). 99/99 PASS, **deployado e confirmado ao vivo em produção**.
 
@@ -53,7 +55,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Sessões anteriores (concluídas, sem pendência): Tutorial Smile + histórico público (`next-clean-60`), Atomic Core auto-collapse (`next-clean-61`), Auth email/senha (`next-clean-62`), Atomic Core Settings on/off+intensidade (`next-clean-63`) — todos deployados e confirmados ao vivo, ver `docs/CHANGELOG_NEXT.md`.
 
-Todos os itens até `next-clean-69` estão deployados e confirmados ao vivo. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
+Todos os itens até `next-clean-69` estão deployados e confirmados ao vivo; `next-clean-70` está commitado e testado, mas aguarda autorização explícita para deploy. Pendência real: merge local desta branch (`codex/next-chief-architect-governance`) para `main` precisa ser atualizado pra incluir os commits desta etapa; push pra `origin/main` continua fora de escopo até autorização explícita.
 
 ---
 
@@ -86,7 +88,7 @@ Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contr
 
 # TESTES
 
-99/99 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada isolada 2x seguidas — confirmar de novo antes de declarar o Next concluído, ver `docs/ROADMAP.md`)
+100/100 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada isolada 2x seguidas — confirmar de novo antes de declarar o Next concluído, ver `docs/ROADMAP.md`)
 
 `node --check` OK
 

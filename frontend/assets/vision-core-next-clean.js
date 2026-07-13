@@ -1821,10 +1821,19 @@
     if (metricsError) metricsError.hidden = !show;
   }
 
+  // Achado real (2026-07-12): loadMetrics() rodava tanto no load inicial
+  // quanto em CADA tick do polling automático (METRICS_POLL_MS, 12s) --
+  // setMetricsLoading(true) escondia metricsBody (todo o conteúdo real)
+  // e mostrava o skeleton a cada ciclo, mesmo já havendo dados válidos na
+  // tela, causando um "pisca/colapsa" visível a cada ~12s. Skeleton de
+  // loading só deve aparecer quando ainda não há nenhum dado renderizado
+  // (primeira carga) -- refresh em background com dado prévio já na tela
+  // deve atualizar os números/gráficos em silêncio, sem esconder nada.
   function loadMetrics() {
     if (!metricsPanel) return;
     showMetricsError(false);
-    setMetricsLoading(true);
+    var hasPriorData = metricsLastResults !== null;
+    if (!hasPriorData) setMetricsLoading(true);
     var results = { agents: null, dora: null, summary: null, memory: null, status: null };
     var failures = 0;
     var pending = 5;

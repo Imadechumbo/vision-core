@@ -403,3 +403,56 @@ test('(j) Métricas ganha largura total (mesmo mecanismo --wide do Dashboard), r
   await expect(page.locator('#vcFeaturePanel')).not.toHaveClass(/vc-feature-panel--wide/);
   await expect(page.locator('.vc-chat-stage')).not.toHaveClass(/vc-chat-stage--wide/);
 });
+
+// Achado real (2026-07-12): loadMetrics() chamava setMetricsLoading(true)
+// (esconde #vcMetricsBody, mostra o skeleton) em TODA chamada, inclusive
+// nos ticks automáticos do polling (METRICS_POLL_MS=12000) -- mesmo já
+// havendo dados válidos na tela. Com latência de rede realista (~700ms
+// simulados aqui, contra o comportamento quase instantâneo de um mock
+// sem delay que mascara o bug), isso produzia um "pisca/colapsa"
+// visível a cada ~12s, reproduzido e confirmado contra o código antigo
+// via git stash antes do fix (13 amostras com body escondido em ~26s de
+// varredura). Fix: skeleton só aparece na primeira carga (sem dado
+// prévio); refreshes em segundo plano atualizam em silêncio.
+test('(k) painel não colapsa/pisca durante o polling automático em segundo plano (achado real, latência simulada)', async ({ page }) => {
+  await page.route(`${API}/api/agent/status`, async (route) => {
+    await new Promise((r) => setTimeout(r, 700));
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, connected: false }) });
+  });
+  await page.route(`${API}/api/mission/quota`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, plan: 'free', remaining: 5 }) }));
+  await page.route(`${API}/api/metrics/agents`, async (route) => {
+    await new Promise((r) => setTimeout(r, 700));
+    route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({
+        ok: true, agents: [{ name: 'hermes', status: 'ok', cost_usd: 0.42, active_providers: ['anthropic'] }], active_llm_providers: ['anthropic']
+      })
+    });
+  });
+  await page.route(`${API}/api/dora-metrics`, async (route) => {
+    await new Promise((r) => setTimeout(r, 700));
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY_DORA) });
+  });
+  await page.route(`${API}/api/metrics/summary`, async (route) => {
+    await new Promise((r) => setTimeout(r, 700));
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(DEFAULT_SUMMARY) });
+  });
+  await page.route(`${API}/api/metrics/memory`, async (route) => {
+    await new Promise((r) => setTimeout(r, 700));
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(DEFAULT_MEMORY) });
+  });
+
+  await page.goto(NEXT_URL);
+  await page.locator('a[data-feature="metrics"]').click();
+  await page.waitForTimeout(1500);
+  await expect(page.locator('#vcMetricsBody')).not.toBeHidden();
+
+  const collapsedSamples = [];
+  const start = Date.now();
+  while (Date.now() - start < 26000) {
+    const hidden = await page.evaluate(() => document.getElementById('vcMetricsBody').hidden);
+    if (hidden) collapsedSamples.push(Date.now() - start);
+    await page.waitForTimeout(300);
+  }
+  expect(collapsedSamples, 'metrics body must never hide during background polling once data has loaded (covers 2 full poll cycles)').toEqual([]);
+});
