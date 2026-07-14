@@ -42,6 +42,11 @@ Nenhum componente de dashboard, gráfico, painel, monitor, timeline ou grid de m
 
 ## Infraestrutura / Deploy
 
+### DECISION-028 — Rollback de Pages republica o artefato imutável anterior
+Rollback de Pages usa o diretório arquivado do último release aprovado, validado pelo `deployment-manifest.json`, sem checkout e sem rebuild. O Release Owner é accountable, Operações executa e Quality Gates pode exigir a reversão; produção continua exigindo autorização humana explícita para a execução.
+**Por quê:** reconstruir um commit antigo pode produzir bytes diferentes por ambiente ou dependências. Republicar o pacote já certificado mantém hash, evidência e tempo de recuperação verificáveis.
+**Como aplicar:** antes de qualquer cutover, arquivar RC e predecessor com manifesto e SHA-256; ensaiar ambos em preview isolado. Reverter imediatamente se o hash servido divergir, qualquer smoke crítico de raiz/auth/chat/projetos/SF falhar duas vezes consecutivas, surgir P0/P1 de segurança/integridade, taxa HTTP 5xx superar 2% por 5 minutos ou p95 superar 2× o baseline por 5 minutos. Nunca apagar o predecessor durante a janela de observação. Registrar início/fim, autoridade, hashes, URLs, correlation IDs e resultado dos smokes; na dúvida ou sem telemetria suficiente, fail-closed para o predecessor.
+
 ### DECISION-027 — Pacote Pages é construído somente por allowlist
 O pacote publicado pelo script manual contém exclusivamente os arquivos enumerados em `bin/pages-allowlist.txt` e um manifesto com tamanho e SHA-256 por arquivo; cópia ampla seguida de exclusões foi encerrada. Esta decisão substitui a DECISION-004.
 **Por quê:** uma blocklist só rejeita debris já conhecido, enquanto a allowlist torna inclusões revisáveis, reproduzíveis e fail-closed. O manifesto liga o conteúdo testado ao pacote preparado sem publicar nada.

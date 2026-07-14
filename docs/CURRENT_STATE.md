@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ ADR-006 aprovada como DECISION-028: rollback de Pages republica o artefato predecessor imutável, nunca faz rebuild; hash, smokes, P0/P1, 5xx e p95 têm thresholds objetivos; Release/Operações/Quality e autoridade humana de produção estão definidos; falta de telemetria falha para o predecessor. Nenhuma publicação foi executada. Backlog: 20/26 concluídos; OPS-001 desbloqueada, mas permanece operação externa fora desta tarefa sem deploy.
+
 ✔ IMP-007 concluída localmente (sem deploy): DECISION-027 substitui a antiga blocklist por `bin/pages-allowlist.txt`; builder stdlib gera pacote com exatamente 16 arquivos aprovados + manifesto, secret scan e SHA-256 por arquivo. Gate permanente 10/10 PASS, incluindo referências públicas; dois builds idênticos produziram package SHA-256 `0f58110f02efe382418f644e1e2ef22ad98f4cb691c7d7da87c1bb6a3b7a3a10`; downloads/debris excluídos; sintaxe Bash validada. Backlog: 19/26 concluídos; ADR-006 desbloqueada.
 
 ✔ TEST-004 aprovado sem mocks de endpoints: gate permanente `tests/e2e/vision-core-next-real-e2e.spec.mjs` 2/2 PASS em 3,2s; auth, projeto, conversa, pergunta exata sobre fine-tuning com recusa grounded, timeline, logs, agente, SF e ZIP passaram contra backend HTTP descartável real. Manifesto: 27 requests, 27 correlation IDs, zero interceptação e zero campo sensível; screenshot em `artifacts/next-rc-e2e/ui-critical.png`; suíte Next 124/124 PASS em 48,9s. Backlog: 18/26 concluídos; IMP-007 desbloqueado.

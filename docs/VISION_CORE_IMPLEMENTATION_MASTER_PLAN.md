@@ -28,13 +28,13 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | REL | 2 |
 | OPS | 4 |
 | Total | 26 |
-| Concluídos | 19 |
-| Pendentes | 7 |
-| Bloqueados por dependência | 6 |
+| Concluídos | 20 |
+| Pendentes | 6 |
+| Bloqueados por dependência | 5 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 71%; Desenvolvimento 100%; Certificação 100%; Release 50%; Operação 0%.
+Percentual concluído por trilha: Arquitetura 86%; Desenvolvimento 100%; Certificação 100%; Release 50%; Operação 0%.
 
 ## 4. Trilha A — ADRs
 
@@ -92,7 +92,7 @@ Percentual concluído por trilha: Arquitetura 71%; Desenvolvimento 100%; Certifi
 
 - **Objetivo/contexto/problema:** definir artefato anterior, thresholds e autoridade antes de ensaiar ou operar rollback.
 - **Alternativas:** rollback manual de Pages; alias para artefato anterior; rebuild do commit antigo.
-- **Decisão tomada:** **Proposto: republicação do artefato imutável anterior**, sem rebuild.
+- **Decisão tomada:** **Aprovado: republicação do artefato imutável anterior**, sem rebuild; thresholds, autoridade, evidência e fail-closed definidos na DECISION-028.
 - **Consequências/impacto:** rollback verificável por hash e independente da árvore local.
 - **Riscos:** artefato expirado ou incompatibilidade de backend.
 - **Revisão futura:** mudança de plataforma ou estratégia blue/green.
@@ -338,7 +338,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| ADR-007; REL-002; OPS-001–004 | ADR-006 | — | — | REL-001; ADR-001–005; IMP-001–009; TEST-001–004 |
+| ADR-007; REL-002; OPS-002–004 | OPS-001 | — | — | REL-001; ADR-001–006; IMP-001–009; TEST-001–004 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 
