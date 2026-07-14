@@ -1,0 +1,16 @@
+about.html
+index.html
+landing.html
+vision-core-next.html
+assets/infografico-decagono.png
+assets/infografico-loop.jpg
+assets/infografico-porque.jpg
+assets/mascote-idle-final.png
+assets/mascote-reading-final.png
+assets/style.css
+assets/v231-backend-agents.js
+assets/v582-sf-modules.js
+assets/vision-core-bundle.css
+assets/vision-core-bundle.js
+assets/vision-core-next-clean.css
+assets/vision-core-next-clean.js

@@ -42,6 +42,11 @@ Nenhum componente de dashboard, gráfico, painel, monitor, timeline ou grid de m
 
 ## Infraestrutura / Deploy
 
+### DECISION-027 — Pacote Pages é construído somente por allowlist
+O pacote publicado pelo script manual contém exclusivamente os arquivos enumerados em `bin/pages-allowlist.txt` e um manifesto com tamanho e SHA-256 por arquivo; cópia ampla seguida de exclusões foi encerrada. Esta decisão substitui a DECISION-004.
+**Por quê:** uma blocklist só rejeita debris já conhecido, enquanto a allowlist torna inclusões revisáveis, reproduzíveis e fail-closed. O manifesto liga o conteúdo testado ao pacote preparado sem publicar nada.
+**Como aplicar:** `bin/deploy-pages.sh` deve chamar `tools/build-pages-package.mjs`; qualquer novo asset público entra por revisão explícita da allowlist. O builder rejeita caminho inseguro, arquivo ausente e padrão de segredo antes de invocar Wrangler.
+
 ### DECISION-026 — Administração de deploy não pertence ao cockpit Next
 Deploy de Pages/Elastic Beanstalk e rollback pertencem a uma superfície operacional separada e controlada, nunca a toggles ou automação implícita dentro do cockpit Vision Core Next. Para o RC, os scripts e runbooks existentes continuam sendo a interface administrativa real; construir uma console nova não é requisito.
 **Por quê:** deploy altera produção e exige autoridade, confirmação e auditoria próprias. Reproduzir no Next os controles locais inseguros do legado misturaria uso do produto com operação irreversível sem oferecer um modelo de autorização adequado.
@@ -62,7 +67,7 @@ Deploy de frontend é sempre manual via `bash bin/deploy-pages.sh`.
 **Por quê:** runner allocation do GitLab falha para este projeto, causa não resolvida e não vale mais investigar.
 **Como aplicar:** nunca sugerir "configurar o CI do GitLab" como solução — está descartado.
 
-### DECISION-004 — Saneamento do pacote de deploy via `rm -f` explícito no script
+### DECISION-004 — Saneamento do pacote de deploy via `rm -f` explícito no script (substituída pela DECISION-027)
 Arquivos soltos de outras ferramentas (`next.html`, `atomic-core.html`, `_test_here.txt`, `assets/atomic-core.*`, `assets/vision-core-next.*`) são excluídos por linha `rm -f` explícita em `bin/deploy-pages.sh`, não movidos para outra pasta nem via `.cfpagesignore`.
 **Por quê:** `.cfpagesignore` não é um mecanismo real do Cloudflare Pages/Wrangler (confirmado — não documentado pela Cloudflare); teria sido repetir o erro do `agent_id` (DECISION-011): um mecanismo que parece resolver mas não resolve. Mover arquivos exigiria reescrever referências relativas e uma convenção de pasta nova — maior que o pedido.
 **Como aplicar:** cobre só os nomes de arquivo conhecidos hoje. Um debris novo com nome diferente não é pego automaticamente — não generalizar isso sem um segundo incidente confirmando o padrão (YAGNI).
