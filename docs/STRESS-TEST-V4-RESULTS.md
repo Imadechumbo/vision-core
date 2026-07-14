@@ -1,27 +1,27 @@
 # Vision Core — Stress Test V4 Results
 
-**Data:** 2026-07-13T23:29:07.860Z
+**Data:** 2026-07-14T03:57:44.674Z
 **Resultado:** 15/15 PASS (100%)
 
 ## Cenários
 
 | ID | Bloco | Dific. | Arquivo | Status | Tempo | Palavras encontradas |
 |---|---|---|---|---|---|---|
-| STRESS-41 | H | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 1507ms | selected, shadow, diversifyCollection, selected.push |
-| STRESS-42 | H | NIGHTMARE | backend/src/services/hermesService.js | ✅ PASS | 14294ms | slice, summarizeTrends, 0, 6 |
-| STRESS-43 | H | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 843ms | categoryMatch, ===, hardware |
-| STRESS-44 | H | NIGHTMARE | backend/src/services/hermesService.js | ✅ PASS | 16507ms | score, string, calculateRanking, + |
-| STRESS-45 | H | EXPERT | backend/src/services/feedService.js | ✅ PASS | 1241ms | sort, spread, items |
-| STRESS-46 | I | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 8866ms | await, readCache, Promise, getCache |
-| STRESS-47 | I | NIGHTMARE | backend/src/services/gameCoverService.js | ✅ PASS | 13149ms | allSettled, Promise.all, sourceResults |
-| STRESS-48 | I | EXPERT | backend/src/services/feedService.js | ✅ PASS | 1420ms | catch, error.message, status, ok |
-| STRESS-49 | I | EXPERT | backend/src/services/imageService.js | ✅ PASS | 12188ms | return, writeImageCache, then, persistImageCache |
-| STRESS-50 | I | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 987ms | await, persist, translationSession, fire |
-| STRESS-51 | J | NIGHTMARE | backend/src/services/gameCoverService.js | ✅ PASS | 11506ms | sourceTierFor, || 9, undefined, NaN |
-| STRESS-52 | J | EXPERT | backend/src/jobs/hermesCron.js | ✅ PASS | 855ms | jobStarted, const, shadow, cron |
-| STRESS-53 | J | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 13997ms | enrichedCount, módulo, compartilhado, hydrateMissingImages |
-| STRESS-54 | J | EXPERT | backend/src/services/feedService.js | ✅ PASS | 1301ms | push, spread, fetchedItems, withSeedFallback |
-| STRESS-55 | J | NIGHTMARE | backend/src/jobs/refreshScheduler.js | ✅ PASS | 34493ms | scheduledTask, stop, cron.schedule |
+| STRESS-41 | H | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 17750ms | selected, shadow, diversifyCollection, selected.push |
+| STRESS-42 | H | NIGHTMARE | backend/src/services/hermesService.js | ✅ PASS | 1398ms | slice, summarizeTrends, 0, 6 |
+| STRESS-43 | H | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 1345ms | categoryMatch, ===, hardware |
+| STRESS-44 | H | NIGHTMARE | backend/src/services/hermesService.js | ✅ PASS | 23307ms | score, string, + |
+| STRESS-45 | H | EXPERT | backend/src/services/feedService.js | ✅ PASS | 1657ms | sort, spread, items |
+| STRESS-46 | I | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 1295ms | await, readCache, Promise, getCache |
+| STRESS-47 | I | NIGHTMARE | backend/src/services/gameCoverService.js | ✅ PASS | 12999ms | allSettled, Promise.all, fulfilled, sourceResults |
+| STRESS-48 | I | EXPERT | backend/src/services/feedService.js | ✅ PASS | 1879ms | catch, error.message, status, ok |
+| STRESS-49 | I | EXPERT | backend/src/services/imageService.js | ✅ PASS | 19121ms | return, writeImageCache, then, persistImageCache |
+| STRESS-50 | I | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 1861ms | await, persist, translationSession, fire |
+| STRESS-51 | J | NIGHTMARE | backend/src/services/gameCoverService.js | ✅ PASS | 7093ms | sourceTierFor, || 9, undefined, NaN |
+| STRESS-52 | J | EXPERT | backend/src/jobs/hermesCron.js | ✅ PASS | 8855ms | jobStarted, const, shadow, cron |
+| STRESS-53 | J | NIGHTMARE | backend/src/services/feedService.js | ✅ PASS | 1218ms | enrichedCount, módulo, compartilhado, hydrateMissingImages |
+| STRESS-54 | J | EXPERT | backend/src/services/feedService.js | ✅ PASS | 14254ms | push, spread, fetchedItems, withSeedFallback |
+| STRESS-55 | J | NIGHTMARE | backend/src/jobs/refreshScheduler.js | ✅ PASS | 813ms | scheduledTask, stop, cron.schedule |
 
 ## Resumo
 
