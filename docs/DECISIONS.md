@@ -62,6 +62,11 @@ Arquivos soltos de outras ferramentas (`next.html`, `atomic-core.html`, `_test_h
 **Por quê:** `.cfpagesignore` não é um mecanismo real do Cloudflare Pages/Wrangler (confirmado — não documentado pela Cloudflare); teria sido repetir o erro do `agent_id` (DECISION-011): um mecanismo que parece resolver mas não resolve. Mover arquivos exigiria reescrever referências relativas e uma convenção de pasta nova — maior que o pedido.
 **Como aplicar:** cobre só os nomes de arquivo conhecidos hoje. Um debris novo com nome diferente não é pego automaticamente — não generalizar isso sem um segundo incidente confirmando o padrão (YAGNI).
 
+### DECISION-025 — Billing permanece fora do cockpit Next no RC
+Checkout, assinatura e administração financeira não ganham uma superfície no cockpit Vision Core Next durante o RC. Os endpoints reais existentes permanecem intactos; a ausência de UI é deliberada, não substituída por controles ornamentais.
+**Por quê:** billing é uma superfície sensível e não existe hoje um destino externo validado que o Next possa oferecer honestamente. Expor um link sem destino ou duplicar administração financeira dentro do cockpit aumentaria risco sem completar uma jornada real.
+**Como aplicar:** não alterar billing nem autenticação como parte do RC e não exibir link externo até existir uma URL válida configurada. Reavaliar somente quando billing se tornar capacidade central do cockpit ou houver jornada externa real aprovada.
+
 ---
 
 ## Governança de segurança (gates que só mudam com aprovação humana registrada)
