@@ -5,6 +5,7 @@
   "scripts": {
     "test:syntax": "node --no-deprecation tools/syntax-check.mjs",
     "test:gate-kit-unit": "node --no-deprecation tools/tests/gate-kit.test.mjs",
+    "test:chat-grounding-unit": "node --no-deprecation tools/tests/chat-grounding-contract.test.mjs",
     "test:authority": "node --no-deprecation tools/hermes/authority-harness.mjs",
     "test:fast": "npm run test:authority-unit",
     "test:authority-unit": "node --no-deprecation tools/tests/authority.test.mjs",

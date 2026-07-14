@@ -3253,7 +3253,14 @@ app.post('/api/chat', async (req, res) => {
         realDoc
       ].join('\n');
     } catch (_eGrounding) {
-      console.warn('[chat-grounding] doc real nao encontrado, respondendo sem grounding:', _eGrounding.message);
+      console.error('[chat-grounding] doc real ausente; resposta bloqueada para impedir alucinacao:', _eGrounding.message);
+      return res.status(503).json({
+        ok: false,
+        error: 'hermes_grounding_unavailable',
+        message: 'A documentação real do fine-tuning do Hermes não está disponível neste servidor. A resposta foi bloqueada para não inventar informações.',
+        anti_stub: true,
+        time: now()
+      });
     }
   }
 

@@ -7,6 +7,7 @@ on:
     paths:
       - "backend/**"
       - "docs/spec-library/**"
+      - "docs/HERMES_FINE_TUNING_DATASET.md"
   workflow_dispatch:
 
 concurrency:
@@ -40,8 +41,10 @@ jobs:
 
       - name: Generate deployment package
         run: |
-          # Copy spec-library into backend so EB has access at runtime
+          # Copy runtime docs into backend so EB has access at runtime
           cp -r docs/spec-library backend/spec-library
+          mkdir -p backend/docs
+          cp docs/HERMES_FINE_TUNING_DATASET.md backend/docs/HERMES_FINE_TUNING_DATASET.md
           cd backend
           zip -r ../deploy.zip . \
             --exclude "*.test.*" \
@@ -50,6 +53,7 @@ jobs:
             --exclude "*.log"
           echo "Package size: $(du -sh ../deploy.zip | cut -f1)"
           echo "Spec library files: $(ls spec-library/*.json | wc -l)"
+          unzip -l ../deploy.zip docs/HERMES_FINE_TUNING_DATASET.md | grep HERMES_FINE_TUNING_DATASET.md
 
       - name: Upload bundle to S3
         run: |
