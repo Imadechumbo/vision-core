@@ -27,7 +27,7 @@ Deploy Produção
 `next-clean-74` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real contra `https://visioncoreai.pages.dev/vision-core-next.html`: cache-bust servido (`?v=next-clean-74` em CSS e JS, HTTP 200), menu lateral reorganizado presente (2 `.vc-nav-group`, rótulos "Atividade"/"Avançado", 7 itens fixos como filhos diretos de `.vc-nav`).
 
 Cache Bust
-next-clean-79 (publicado em produção)
+next-clean-81 (publicado em produção)
 
 Último Commit
 
@@ -35,12 +35,14 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Último Deploy
 
-`d1e60d0b.visioncoreai.pages.dev` (preview) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-79`
+`4f22efc3.visioncoreai.pages.dev` (preview) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-81`
 
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 ✔ `next-clean-79` — DECISION-022: Atomic Core/decágono estritamente na aba Chat; Software Factory Auto-Pilot e Modo Avançado não contam mais como exceção. Cabeçalhos curtos fora de Chat agora são canônicos (`#vcPageHead`) e o header interno duplicado de `#vcFeaturePanel` fica oculto nesses contextos. Controle obsoleto "Manter Atomic Core sempre visível" removido; "Mostrar Atomic Core" e intensidade permanecem. Validado localmente: `node --check` OK, specs afetados 33/33 PASS, suíte permanente Next 106/106 PASS. Deployado em produção via `bin/deploy-pages.sh` e confirmado ao vivo servindo `next-clean-79`; screenshots Playwright reais em `%TEMP%\vision-core-next79-screens\`.
+
+✔ `next-clean-80`/`next-clean-81` — regressão visual do topo do Software Factory corrigida. `next-clean-80` removeu a caixa solta duplicada (`#vcFeaturePanel`) acima de `#factory`; validação de produção ainda revelou vão residual causado por `#vcChatScroll` vazio mantendo `min-height:260px`. `next-clean-81` colapsa `#vcChatScroll` somente em Factory; produção confirmada com gap 49px, `featurePanelHidden=true`, `scrollDisplay=none`, `sfTextCount=1`, Chat preservado com Atomic Core. Validado localmente: `node --check` OK, specs afetados 28/28 PASS, suíte permanente Next 106/106 PASS. Screenshots Playwright reais em `%TEMP%\vision-core-next81-screens\`.
 
 ✔ `next-clean-77` — OAuth Google/GitHub no Vision Core Next: Settings → Conta agora tem botões Google/GitHub que chamam `/api/auth/oauth/{provider}?return_to=next`; backend preserva o legado por padrão e só retorna para `/vision-core-next.html` quando o `state` fechado marca `target:"next"` (sem open redirect por URL livre). O hash `#oauth-success&token=...` grava o mesmo `localStorage['vision_token']` do login email/senha; `#oauth-error=...` abre Settings com erro legível. **Deployado em produção**: Pages serve `next-clean-77`, EB `vision-core-prod` está em `v113-91e5ed3966c7b1486b7325d4a5e8952be3c93215` (`Ready/Green`), Worker OAuth decodifica `target:"next"` com `return_to=next` e `target:"legacy"` sem o parâmetro.
 
@@ -105,7 +107,7 @@ Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contr
 
 # TESTES
 
-106/106 PASS após `next-clean-79` (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada localmente)
+106/106 PASS após `next-clean-81` (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada localmente)
 
 `node --check` OK
 
