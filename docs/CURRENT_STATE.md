@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ OPS-002 pronto até o gate produtivo: hashes do RC (`72e6a02c...`), package (`f4a4db9f...`) e predecessor (`76918f97...`) revalidados; ZIP tem 13 entradas, raiz e rota Next, sem bundle legado. A raiz pública foi verificada ainda no predecessor. Nenhum deploy em `main` foi executado. Estado permanece 23/26 até o cutover efetivo.
+
 ✔ ADR-007 aprovado na DECISION-029: Go Live publica diretamente, sem rebuild ou redirect, o ZIP imutável de REL-002; `index.html` é byte-idêntico ao Next, a rota explícita permanece, bundles legados ficam fora do RC e o predecessor é preservado para DECISION-028. Estado 23/26; OPS-002 Ready, aguardando apenas o gate humano da publicação produtiva.
 
 ✔ OPS-001 Succeeded sem produção: RC publicado somente na branch preview `rc1-rehearsal-20260714` (`31709674.visioncoreai.pages.dev`), manifesto remoto `f4a4db9f...` e smoke HTTP 7/7; navegador real confirmou raiz Next, composer visível e bundle legado ausente. O predecessor commitado foi republicado na mesma branch (`28c60fa9.visioncoreai.pages.dev`), manifesto remoto `85d8828197...` e smoke 7/7; navegador confirmou raiz legada restaurada. Rollback deploy 19,719s; com smoke 24,922s. Alias principal/produção intocados. Evidência em `artifacts/next-rc-release/release-evidence.json`; estado 22/26, ADR-007 Ready.

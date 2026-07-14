@@ -40,5 +40,14 @@
     "browser_predecessor": "title=VISION CORE V2.9.10 CLEAN FRONT; legacy script present; Next composer absent",
     "result": "Succeeded"
   },
+  "ops_002": {
+    "preflight": "PASS",
+    "rc_archive_sha256_verified": "72e6a02c56f0bca98375294cb53cf88cdb71f6c4db9ffe829790f3d8cf24b5b3",
+    "rc_package_sha256_verified": "f4a4db9f9eeb57f2122631bb8f5eaabab1d0f8b50479fc2e42ecd80642419926",
+    "predecessor_archive_sha256_verified": "76918f97d170df19f079cc12ccccde9efaa5254cd02491cd03e735aea2280680",
+    "rc_structure": "13 ZIP entries; index and explicit Next route present; legacy bundle absent",
+    "production_before_cutover": "legacy predecessor present; Next composer absent",
+    "status": "Awaiting explicit production authorization"
+  },
   "production_changed": false
 }

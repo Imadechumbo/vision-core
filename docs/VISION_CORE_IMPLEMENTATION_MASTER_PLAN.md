@@ -259,7 +259,8 @@ Comandos concretos só entram no runbook quando verificados contra as ferramenta
 - **Pré-requisitos:** ADR-007, REL-002 e OPS-001 aprovados; autorização explícita.
 - **Comandos:** somente runbook verificado; rebuild proibido.
 - **Rollback/riscos:** republicar artefato anterior; cache, links e indisponibilidade.
-- **Métricas/sucesso:** hash/cache corretos, raiz e smoke imediato verdes. **Status:** Backlog.
+- **Métricas/sucesso:** hash/cache corretos, raiz e smoke imediato verdes. **Status:** Ready — preflight selado; publicação produtiva não executada, aguardando autorização explícita.
+- **Evidência de preflight:** ZIP RC `72e6a02c...`, package `f4a4db9f...` e predecessor `76918f97...` revalidados; 13 entradas, raiz+rota Next presentes e bundle legado ausente; produção ainda serve o predecessor.
 
 ### OPS-003 — Monitoramento pós-release
 
@@ -340,7 +341,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| OPS-003–004 | OPS-002 | — | — | REL-001–002; ADR-001–007; IMP-001–009; TEST-001–004; OPS-001 |
+| OPS-003–004 | OPS-002 (preflight selado; gate humano) | — | — | REL-001–002; ADR-001–007; IMP-001–009; TEST-001–004; OPS-001 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 
