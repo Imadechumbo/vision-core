@@ -28,13 +28,13 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | REL | 2 |
 | OPS | 4 |
 | Total | 24 |
-| Concluídos | 8 |
-| Pendentes | 16 |
-| Bloqueados por dependência | 11 |
+| Concluídos | 9 |
+| Pendentes | 15 |
+| Bloqueados por dependência | 9 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 29%; Desenvolvimento 71%; Certificação 0%; Release 50%; Operação 0%.
+Percentual concluído por trilha: Arquitetura 43%; Desenvolvimento 71%; Certificação 0%; Release 50%; Operação 0%.
 
 ## 4. Trilha A — ADRs
 
@@ -62,7 +62,7 @@ Percentual concluído por trilha: Arquitetura 29%; Desenvolvimento 71%; Certific
 
 - **Objetivo/contexto/problema:** declarar se apply integra o RC; `AGENT_APPLY_ENABLED=false` é gate deliberado.
 - **Alternativas:** permanecer fechado; abrir com pairing atual; abrir após ownership durável.
-- **Decisão tomada:** **Proposto: permanecer fechado no RC**, conforme DECISION-005, salvo aprovação humana posterior.
+- **Decisão tomada:** **Aprovado: permanecer fechado no RC**, conforme DECISION-005. A autorização de execução contínua não altera gates de segurança.
 - **Consequências/impacto:** UI continua fail-closed; nenhuma execução destrutiva é requisito de substituição.
 - **Riscos:** abertura acidental ou expectativa de capacidade inexistente.
 - **Revisão futura:** somente com autenticação/ownership comprovados e aprovação registrada.
@@ -322,7 +322,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| ADR-006,007; IMP-007; TEST-001,004; REL-002; OPS-001–004 | ADR-003,004,005; IMP-006; TEST-002,003 | — | — | REL-001; ADR-001,002; IMP-001–005 |
+| ADR-006,007; IMP-007; TEST-004; REL-002; OPS-001–004 | ADR-004,005; IMP-006; TEST-001,002,003 | — | — | REL-001; ADR-001,002,003; IMP-001–005 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 

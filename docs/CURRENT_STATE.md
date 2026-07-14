@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ ADR-003 aprovada por reconciliação com DECISION-005: Apply real permanece fechado no RC; nenhuma flag mudou. `vision-core-next-agent-apply.spec.mjs` segue dentro da suíte verde 122/122. Backlog: 9/24 concluídos; TEST-001 desbloqueado.
+
 ✔ `next-clean-87` / IMP-005 implementada localmente (sem deploy): Chat bloqueia duplo submit e expõe Cancelar apenas sobre AbortController real; projeto tem retry explícito; Logs/SF reutilizam ações idempotentes e guards `InFlight`; nenhum cancelamento backend fictício. Testes: projetos/chat/logs/histórico 8/8 PASS; suíte permanente Next 122/122 PASS em 44,9s, sem retry. Backlog: 8/24 concluídos; TEST-002/003 estão Ready.
 
 ✔ `next-clean-86` / IMP-004 implementada localmente (sem deploy): helper único aplica `data-state=loading|empty|error|success` com texto/aria-live em projetos, logs, histórico de missões e geração/download SF. Testes: projetos/logs/histórico 7/7 PASS; projetos+SF 12/12 PASS; suíte permanente Next 121/121 PASS em 46,4s, sem retry. Backlog: 7/24 concluídos; IMP-005 desbloqueada.
