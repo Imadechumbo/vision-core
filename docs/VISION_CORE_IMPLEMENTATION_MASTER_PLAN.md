@@ -249,7 +249,7 @@ Comandos concretos só entram no runbook quando verificados contra as ferramenta
 - **Pré-requisitos:** ADR-006 aprovado, IMP-007 Done, preview isolado.
 - **Comandos:** os comandos oficiais de Pages registrados no runbook aprovado; alias principal proibido.
 - **Rollback/riscos:** cleanup do preview; risco de tocar produção por target errado.
-- **Métricas/sucesso:** hashes, URLs, tempo de reversão e dois smokes verdes. **Status:** Backlog.
+- **Métricas/sucesso:** hashes, URLs, tempo de reversão e dois smokes verdes. **Preparação:** runbook verificado em `docs/PAGES_RELEASE_RUNBOOK.md`; execução externa pendente. **Status:** Ready.
 
 ### OPS-002 — Cutover da raiz
 

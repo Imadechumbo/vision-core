@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+◐ OPS-001 preparado, não executado: `docs/PAGES_RELEASE_RUNBOOK.md` registra preparação local, guard que proíbe branches de produção, comandos oficiais de preview, smokes, evidência e reversão por republicação do predecessor. A documentação oficial confirma que preview não é alvo do rollback nativo de Pages; por isso o ensaio usa a mesma branch de preview com o pacote arquivado. Publicar o preview continua pendente e fora desta tarefa sem deploy.
+
 ✔ ADR-006 aprovada como DECISION-028: rollback de Pages republica o artefato predecessor imutável, nunca faz rebuild; hash, smokes, P0/P1, 5xx e p95 têm thresholds objetivos; Release/Operações/Quality e autoridade humana de produção estão definidos; falta de telemetria falha para o predecessor. Nenhuma publicação foi executada. Backlog: 20/26 concluídos; OPS-001 desbloqueada, mas permanece operação externa fora desta tarefa sem deploy.
 
 ✔ IMP-007 concluída localmente (sem deploy): DECISION-027 substitui a antiga blocklist por `bin/pages-allowlist.txt`; builder stdlib gera pacote com exatamente 16 arquivos aprovados + manifesto, secret scan e SHA-256 por arquivo. Gate permanente 10/10 PASS, incluindo referências públicas; dois builds idênticos produziram package SHA-256 `0f58110f02efe382418f644e1e2ef22ad98f4cb691c7d7da87c1bb6a3b7a3a10`; downloads/debris excluídos; sintaxe Bash validada. Backlog: 19/26 concluídos; ADR-006 desbloqueada.
