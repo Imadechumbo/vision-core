@@ -28,13 +28,13 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | REL | 2 |
 | OPS | 4 |
 | Total | 26 |
-| Concluídos | 20 |
-| Pendentes | 6 |
-| Bloqueados por dependência | 5 |
+| Concluídos | 21 |
+| Pendentes | 5 |
+| Bloqueados por dependência | 3 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 86%; Desenvolvimento 100%; Certificação 100%; Release 50%; Operação 0%.
+Percentual concluído por trilha: Arquitetura 86%; Desenvolvimento 100%; Certificação 100%; Release 100%; Operação 0%.
 
 ## 4. Trilha A — ADRs
 
@@ -237,7 +237,8 @@ DoR comum: ADR aplicável aprovado, contrato/spec suficiente, dependências Done
 - **Checklist:** suites verdes; manifest/secret scan; hash Git=artefato; notes; rollback pronto.
 - **Responsáveis:** Release R/A; Chief Architect C; Quality Gates C; Operações I.
 - **Artefatos/evidências:** RC, manifest, checksums e pacote de evidência.
-- **Aprovação:** checklist completo sem exceção oral. **Status:** Backlog.
+- **Aprovação:** checklist completo sem exceção oral. **Status:** Approved.
+- **Evidência:** RC imutável `artifacts/next-rc-release/vision-core-next-rc1.zip` SHA-256 `72e6a02c56f0bca98375294cb53cf88cdb71f6c4db9ffe829790f3d8cf24b5b3`; package SHA-256 `f4a4db9f9eeb57f2122631bb8f5eaabab1d0f8b50479fc2e42ecd80642419926`; 12 arquivos, raiz byte-idêntica ao Next e zero legado. Predecessor público capturado em arquivo separado; gates 11/11, 13/13, 59/59 e Next 124/124 sem retry.
 
 ## 8. Trilha E — Operações
 
@@ -338,7 +339,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| ADR-007; REL-002; OPS-002–004 | OPS-001 | — | — | REL-001; ADR-001–006; IMP-001–009; TEST-001–004 |
+| OPS-002–004 | OPS-001; ADR-007 | — | — | REL-001–002; ADR-001–006; IMP-001–009; TEST-001–004 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 

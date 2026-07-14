@@ -1,0 +1,29 @@
+{
+  "release_candidate": "vision-core-next-rc1",
+  "source_reference": "REL-002 commit containing this evidence",
+  "root_entry": "frontend/vision-core-next.html",
+  "rc": {
+    "archive": "vision-core-next-rc1.zip",
+    "archive_sha256": "72e6a02c56f0bca98375294cb53cf88cdb71f6c4db9ffe829790f3d8cf24b5b3",
+    "package_sha256": "f4a4db9f9eeb57f2122631bb8f5eaabab1d0f8b50479fc2e42ecd80642419926",
+    "published_files": 12,
+    "legacy_files": 0
+  },
+  "predecessor": {
+    "archive": "vision-core-predecessor-next-clean-82.zip",
+    "archive_sha256": "76918f97d170df19f079cc12ccccde9efaa5254cd02491cd03e735aea2280680",
+    "package_sha256": "85d8828197f14590ba51909735a274e4c76a91d50faee519f005df483ca8bbd8",
+    "source": "https://visioncoreai.pages.dev",
+    "captured_label": "next-clean-82-production-predecessor",
+    "published_files": 16
+  },
+  "gates": {
+    "pages_package": "11/11 PASS",
+    "agent_pairing": "13/13 PASS",
+    "performance": "59/59 PASS",
+    "next_e2e": "124/124 PASS; 2 workers; retries disabled; 50.7s",
+    "artifact_structure": "2/2 PASS",
+    "evidence_secret_scan": "PASS"
+  },
+  "production_changed": false
+}

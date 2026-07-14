@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "package_sha256": "f4a4db9f9eeb57f2122631bb8f5eaabab1d0f8b50479fc2e42ecd80642419926",
+  "files": [
+    {
+      "path": "about.html",
+      "bytes": 137644,
+      "sha256": "66d8854d826bdf4334598ef11ddeaaa34bee216d15ebb8175c45381fcaf3bd3e"
+    },
+    {
+      "path": "assets/infografico-decagono.png",
+      "bytes": 2153649,
+      "sha256": "8e8cda9c82e05874c6789f142e7a57faf8ebd4b6de1325f58b8c649d05f5bd4c"
+    },
+    {
+      "path": "assets/infografico-loop.jpg",
+      "bytes": 412002,
+      "sha256": "4b33026cbed3432f2c9c906a72c97aeda82d6296cde2319c18d0aabd7d595ad4"
+    },
+    {
+      "path": "assets/infografico-porque.jpg",
+      "bytes": 447505,
+      "sha256": "3e58f2bbd0d25c3fa024c7197327317aa7ec234a28727fb0024bb170b2086b5e"
+    },
+    {
+      "path": "assets/mascote-idle-final.png",
+      "bytes": 40959,
+      "sha256": "008a1f5a3fea5798323acb5117407c21254682a7e4ae62ee30995f841208baea"
+    },
+    {
+      "path": "assets/mascote-reading-final.png",
+      "bytes": 49708,
+      "sha256": "268a2a3417c97f20d3c2dd6e261521c1730d5c651e08c460219fb784207ab71c"
+    },
+    {
+      "path": "assets/style.css",
+      "bytes": 48456,
+      "sha256": "f2401f8b26c07bce17d5632f14d98b47858bf2e4ca7541c72801bc8d67e96476"
+    },
+    {
+      "path": "assets/vision-core-next-clean.css",
+      "bytes": 68809,
+      "sha256": "2a632ffbc4785caccbb1035682e962a941972f3c967b9801db73efe1eef5816d"
+    },
+    {
+      "path": "assets/vision-core-next-clean.js",
+      "bytes": 229685,
+      "sha256": "6d75d9ff0efe66ab919e941dafb29bbe3d3a2b56022bb44ae6b8bb3eccf66fff"
+    },
+    {
+      "path": "index.html",
+      "bytes": 37964,
+      "sha256": "322388210b8b4802ff5af7169e2f23f5e8a19dcec63e37531f7b2a3d0933b2eb"
+    },
+    {
+      "path": "landing.html",
+      "bytes": 66293,
+      "sha256": "51bc772c9328127e43e98bb21f9def364a6132b776cce321fa63ae46cc3c8661"
+    },
+    {
+      "path": "vision-core-next.html",
+      "bytes": 37964,
+      "sha256": "322388210b8b4802ff5af7169e2f23f5e8a19dcec63e37531f7b2a3d0933b2eb"
+    }
+  ]
+}

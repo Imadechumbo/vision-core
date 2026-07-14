@@ -31,16 +31,18 @@ export function buildPagesPackage({ source = resolve(ROOT, 'frontend'), output, 
   }
   rmSync(outputRoot, { recursive: true, force: true });
   mkdirSync(outputRoot, { recursive: true });
-  const entries = readAllowlist(allowlist).map((file) => {
-    const sourceFile = resolve(sourceRoot, file);
-    if (!sourceFile.startsWith(sourceRoot + sep)) throw new Error(`Path escaped frontend: ${file}`);
+  const publishedFiles = readAllowlist(allowlist).map((file) => [file, file]);
+  publishedFiles.push(['index.html', 'vision-core-next.html']);
+  const entries = publishedFiles.map(([publishedPath, sourcePath]) => {
+    const sourceFile = resolve(sourceRoot, sourcePath);
+    if (!sourceFile.startsWith(sourceRoot + sep)) throw new Error(`Path escaped frontend: ${sourcePath}`);
     const bytes = readFileSync(sourceFile);
-    if (SECRET_PATTERNS.some((pattern) => pattern.test(bytes.toString('utf8')))) throw new Error(`Secret-like value detected in ${file}`);
-    const destination = resolve(outputRoot, file);
+    if (SECRET_PATTERNS.some((pattern) => pattern.test(bytes.toString('utf8')))) throw new Error(`Secret-like value detected in ${sourcePath}`);
+    const destination = resolve(outputRoot, publishedPath);
     mkdirSync(dirname(destination), { recursive: true });
     copyFileSync(sourceFile, destination);
-    return { path: file, bytes: bytes.length, sha256: hash(bytes) };
-  });
+    return { path: publishedPath, bytes: bytes.length, sha256: hash(bytes) };
+  }).sort((a, b) => a.path.localeCompare(b.path));
   const packageSha256 = hash(entries.map(({ path, sha256 }) => `${path}\0${sha256}`).join('\n'));
   const manifest = { schema_version: 1, package_sha256: packageSha256, files: entries };
   writeFileSync(resolve(outputRoot, 'deployment-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);

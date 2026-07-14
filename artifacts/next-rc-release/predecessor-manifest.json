@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "source": "https://visioncoreai.pages.dev",
+  "captured_at": "2026-07-14",
+  "label": "next-clean-82-production-predecessor",
+  "package_sha256": "85d8828197f14590ba51909735a274e4c76a91d50faee519f005df483ca8bbd8",
+  "files": [
+    {
+      "path": "about.html",
+      "bytes": 137579,
+      "sha256": "c452b3cdd2823575226122b3bca743fdfaafcc7b5e4c94e28bd996441eea711c"
+    },
+    {
+      "path": "assets/infografico-decagono.png",
+      "bytes": 2153649,
+      "sha256": "8e8cda9c82e05874c6789f142e7a57faf8ebd4b6de1325f58b8c649d05f5bd4c"
+    },
+    {
+      "path": "assets/infografico-loop.jpg",
+      "bytes": 412002,
+      "sha256": "4b33026cbed3432f2c9c906a72c97aeda82d6296cde2319c18d0aabd7d595ad4"
+    },
+    {
+      "path": "assets/infografico-porque.jpg",
+      "bytes": 447505,
+      "sha256": "3e58f2bbd0d25c3fa024c7197327317aa7ec234a28727fb0024bb170b2086b5e"
+    },
+    {
+      "path": "assets/mascote-idle-final.png",
+      "bytes": 40959,
+      "sha256": "008a1f5a3fea5798323acb5117407c21254682a7e4ae62ee30995f841208baea"
+    },
+    {
+      "path": "assets/mascote-reading-final.png",
+      "bytes": 49708,
+      "sha256": "268a2a3417c97f20d3c2dd6e261521c1730d5c651e08c460219fb784207ab71c"
+    },
+    {
+      "path": "assets/style.css",
+      "bytes": 48456,
+      "sha256": "f2401f8b26c07bce17d5632f14d98b47858bf2e4ca7541c72801bc8d67e96476"
+    },
+    {
+      "path": "assets/v231-backend-agents.js",
+      "bytes": 4306,
+      "sha256": "1588ee0b3c7548175cc52a8da1b83648ac2b6772e8f950e934cacebcb3ae60ea"
+    },
+    {
+      "path": "assets/v582-sf-modules.js",
+      "bytes": 11339,
+      "sha256": "b89fbfe6faef621ceccceca1f349ceb358b674275991dcdcbd16413414e14f69"
+    },
+    {
+      "path": "assets/vision-core-bundle.css",
+      "bytes": 299626,
+      "sha256": "750f2a9fe6d5f64209513479398b0b28f7355928cdd3a3716c3273539f0eb26b"
+    },
+    {
+      "path": "assets/vision-core-bundle.js",
+      "bytes": 588478,
+      "sha256": "d1e3914f3aa340f8e6145d7acd5d16c3b8092d1a7f6d01e7f7234e7ba1af4f14"
+    },
+    {
+      "path": "assets/vision-core-next-clean.css",
+      "bytes": 67004,
+      "sha256": "5f44c598f528ae2220c1531ad8a4180cedafaf398ef097d5c907dfffcb2c9a10"
+    },
+    {
+      "path": "assets/vision-core-next-clean.js",
+      "bytes": 214487,
+      "sha256": "79dfb5a0c2207530264e7dc56e2c4622827334aa5373bbd5430c4182843cf075"
+    },
+    {
+      "path": "index.html",
+      "bytes": 172069,
+      "sha256": "964050a4009b4b5d34411f1099b8371a379038c273f80a1de49466e4f238fa50"
+    },
+    {
+      "path": "landing.html",
+      "bytes": 66062,
+      "sha256": "bbcc3a072263219d65f24850d29e55cd762afe4645fdcf0c0cad225d7a7ba06c"
+    },
+    {
+      "path": "vision-core-next.html",
+      "bytes": 36216,
+      "sha256": "2d237419a12042ffe6f2c44daeba52da724c8c501a300e94f4bf407274c5863a"
+    }
+  ]
+}

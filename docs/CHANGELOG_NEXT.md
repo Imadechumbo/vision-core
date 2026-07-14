@@ -4,6 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## RC1 (2026-07-14, não deployado)
+
+- REL-002 congelou o pacote allowlisted com a entrada oficial Next servindo também como raiz; bundles legados não entram no RC.
+- RC e predecessor público foram arquivados com manifestos e SHA-256; suíte Next 124/124 sem retry e gates de pacote, pairing e performance verdes.
+
 ## next-clean-90 (2026-07-14, não deployado)
 
 - Base da API passa a vir de meta explícita validada por origin; o documento oficial mantém o gateway de produção e não aceita override por query string.
