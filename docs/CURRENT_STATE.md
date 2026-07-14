@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ `next-clean-87` / IMP-005 implementada localmente (sem deploy): Chat bloqueia duplo submit e expõe Cancelar apenas sobre AbortController real; projeto tem retry explícito; Logs/SF reutilizam ações idempotentes e guards `InFlight`; nenhum cancelamento backend fictício. Testes: projetos/chat/logs/histórico 8/8 PASS; suíte permanente Next 122/122 PASS em 44,9s, sem retry. Backlog: 8/24 concluídos; TEST-002/003 estão Ready.
+
 ✔ `next-clean-86` / IMP-004 implementada localmente (sem deploy): helper único aplica `data-state=loading|empty|error|success` com texto/aria-live em projetos, logs, histórico de missões e geração/download SF. Testes: projetos/logs/histórico 7/7 PASS; projetos+SF 12/12 PASS; suíte permanente Next 121/121 PASS em 46,4s, sem retry. Backlog: 7/24 concluídos; IMP-005 desbloqueada.
 
 ✔ `next-clean-85` / IMP-003 implementada localmente (sem deploy): `request_id` uniforme em header/envelope, operation log allowlisted por owner/projeto, auth+paginação+filtros mission/job e aba Logs SAFE READ. O antigo `/api/logs/download` público agora retorna 410. Testes: backend real 23/23 PASS; UI projetos/conversas/logs 6/6 PASS; suíte permanente Next 120/120 PASS em 43,7s, sem retry. Backlog: 6/24 concluídos; IMP-004 desbloqueada.
@@ -109,7 +111,7 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 
 # PRÓXIMA PRIORIDADE
 
-Continuar pelo critical path com IMP-005 (retry/cancelamento coerentes); ADR-003/004/005 e IMP-006 também estão Ready. Comando inicial recomendado: `rg -n "AbortController|Retry|retry|Cancelar|inFlight|timeout" frontend/assets/vision-core-next-clean.js tests/e2e/vision-core-next-*`.
+Fechar a Onda 1 independente: ADR-003/004/005 e IMP-006 estão Ready; TEST-002/003 também podem certificar o baseline atual. Próximo item: ADR-003, formalizando no backlog a decisão já vigente DECISION-005 (Apply permanece fechado). Comando inicial recomendado: `rg -n "ADR-003|DECISION-005|AGENT_APPLY_ENABLED" docs backend frontend tests/e2e/vision-core-next-agent-apply.spec.mjs`.
 
 ---
 

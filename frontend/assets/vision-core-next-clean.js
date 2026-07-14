@@ -236,6 +236,7 @@
   var projectNameInput = document.getElementById('vcProjectName');
   var projectCreateBtn = document.getElementById('vcProjectCreate');
   var projectStatus = document.getElementById('vcProjectStatus');
+  var projectRetryBtn = document.getElementById('vcProjectRetry');
   var conversationSelect = document.getElementById('vcConversationSelect');
   var conversationNewBtn = document.getElementById('vcConversationNew');
   var conversationDeleteBtn = document.getElementById('vcConversationDelete');
@@ -245,6 +246,11 @@
   var logRefreshBtn = document.getElementById('vcLogRefresh');
   var logStatus = document.getElementById('vcLogStatus');
   var logList = document.getElementById('vcLogList');
+  var chatCancelBtn = document.getElementById('vcChatCancel');
+  var chatSendBtn = composer && composer.querySelector('.vc-send');
+  var chatController = null;
+  var chatRequestInFlight = false;
+  var chatCancelledByUser = false;
   var animationReducedCheckbox = document.getElementById('vcAnimationReduced');
   if (animationReducedCheckbox) {
     animationReducedCheckbox.checked = isReducedMotion();
@@ -2713,6 +2719,7 @@
   function setProjectStatus(message, isError) {
     var state = isError ? 'error' : (/carregando|criando/i.test(message) ? 'loading' : (/nenhum|entre/i.test(message) ? 'empty' : 'success'));
     setAsyncStatus(projectStatus, state, message);
+    if (projectRetryBtn) projectRetryBtn.hidden = !isError || !currentProjectUserId;
   }
 
   function loadOperationLogs() {
@@ -2930,6 +2937,7 @@
     }
   });
   if (projectCreateBtn) projectCreateBtn.addEventListener('click', createProject);
+  if (projectRetryBtn) projectRetryBtn.addEventListener('click', function () { loadProjects({ id: currentProjectUserId }); });
   if (projectNameInput) projectNameInput.addEventListener('keydown', function (event) {
     if (event.key === 'Enter') { event.preventDefault(); createProject(); }
   });
@@ -3153,8 +3161,13 @@
   if (composer) {
     composer.addEventListener('submit', function (event) {
       event.preventDefault();
+      if (chatRequestInFlight) return;
       var text = prompt ? prompt.value.trim() : '';
       if (!text && !pendingAttachments.length && !pendingImage) return;
+      chatRequestInFlight = true;
+      chatCancelledByUser = false;
+      if (chatSendBtn) chatSendBtn.disabled = true;
+      if (chatCancelBtn) chatCancelBtn.hidden = false;
 
       var attachmentsPrefix = pendingAttachments.map(function (a) {
         return '[Arquivo: ' + a.name + ']\n' + a.content;
@@ -3188,15 +3201,18 @@
       function finish() {
         if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
         if (window.resetAtomicCore) window.resetAtomicCore();
+        chatRequestInFlight = false;
+        chatController = null;
+        if (chatSendBtn) chatSendBtn.disabled = false;
+        if (chatCancelBtn) chatCancelBtn.hidden = true;
       }
 
       var token = getChatAuthToken();
       var headers = { 'Content-Type': 'application/json' };
       if (token) headers.Authorization = 'Bearer ' + token;
 
-      var controller = null;
-      try { controller = new AbortController(); } catch (_) {}
-      var timeoutId = controller ? window.setTimeout(function () { controller.abort(); }, CHAT_TIMEOUT_MS) : null;
+      try { chatController = new AbortController(); } catch (_) { chatController = null; }
+      var timeoutId = chatController ? window.setTimeout(function () { chatController.abort(); }, CHAT_TIMEOUT_MS) : null;
 
       var bodyPayload = { message: fullMessage, mode: 'vision-geral', model: 'auto', display_input: (text || null) };
       if (imagePayload) {
@@ -3209,7 +3225,7 @@
         method: 'POST',
         headers: headers,
         body: JSON.stringify(bodyPayload),
-        signal: controller ? controller.signal : undefined
+        signal: chatController ? chatController.signal : undefined
       }).then(function (r) {
         if (timeoutId) window.clearTimeout(timeoutId);
         if (!r.ok) {
@@ -3246,11 +3262,17 @@
         finish();
         var isAbort = err && err.name === 'AbortError';
         appendMessage('error', 'ERRO', isAbort
-          ? 'Tempo esgotado ao falar com o backend (45s). Tente novamente.'
+          ? (chatCancelledByUser ? 'Solicitação cancelada.' : 'Tempo esgotado ao falar com o backend (45s). Tente novamente.')
           : ('Erro de conexão: ' + (err && err.message ? err.message : err)));
       });
     });
   }
+
+  if (chatCancelBtn) chatCancelBtn.addEventListener('click', function () {
+    if (!chatRequestInFlight || !chatController) return;
+    chatCancelledByUser = true;
+    chatController.abort();
+  });
 
   document.querySelectorAll('[data-quick]').forEach(function (button) {
     button.addEventListener('click', function () {

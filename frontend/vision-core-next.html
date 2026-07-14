@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-86">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-86" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-87">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-87" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -74,6 +74,7 @@
           <input type="text" id="vcProjectName" placeholder="Novo projeto" maxlength="120" disabled>
           <button type="button" id="vcProjectCreate" disabled>Criar</button>
           <span id="vcProjectStatus" role="status" aria-live="polite">Entre para persistir projetos.</span>
+          <button type="button" id="vcProjectRetry" hidden>Tentar novamente</button>
           <label for="vcConversationSelect">Conversa</label>
           <select id="vcConversationSelect" disabled><option>Efêmera</option></select>
           <button type="button" id="vcConversationNew" disabled>Nova</button>
@@ -621,6 +622,7 @@
             <button type="button" data-feature="settings">IA</button>
             <button type="button" data-quick="attach">Anexar</button>
             <button type="button" data-quick="image">Print</button>
+            <button type="button" id="vcChatCancel" hidden>Cancelar</button>
             <button class="vc-send" type="submit">Executar</button>
           </div>
         </form>

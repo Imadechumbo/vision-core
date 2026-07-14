@@ -4,6 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-87 (2026-07-14, não deployado)
+
+- Chat ganhou cancelamento real via AbortController e guard contra duplo submit; botão só aparece durante a chamada.
+- Falha de leitura de projetos oferece retry idempotente; Logs reutiliza Atualizar; fluxos sem cancelamento backend não simulam a ação.
+
 ## next-clean-86 (2026-07-14, não deployado)
 
 - Projetos, histórico, logs e SF usam o mesmo contrato DOM `data-state=loading|empty|error|success`, mantendo copy e `aria-live`.

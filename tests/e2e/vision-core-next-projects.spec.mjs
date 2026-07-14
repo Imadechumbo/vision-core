@@ -60,14 +60,40 @@ test('create sends only the name and selects the returned project', async ({ pag
   expect(createBody).toEqual({ name: 'Projeto Novo' });
 });
 
-test('load failure is readable and retry remains possible through account refresh', async ({ page }) => {
+test('project load failure has an idempotent visible retry', async ({ page }) => {
+  let calls = 0;
   await page.route(`${API}/api/auth/me`, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, user: { id: 'u1', email: 'u1@example.com' } }) }));
-  await page.route(`${API}/api/projects`, route => route.fulfill({ status: 500, contentType: 'application/json', body: '{"ok":false,"error":"projects_unavailable"}' }));
+  await page.route(`${API}/api/projects`, route => {
+    calls++;
+    route.fulfill(calls === 1
+      ? { status: 500, contentType: 'application/json', body: '{"ok":false,"error":"projects_unavailable"}' }
+      : { status: 200, contentType: 'application/json', body: '{"ok":true,"projects":[{"id":"p1","name":"Recuperado","user_id":"u1"}]}' });
+  });
   await page.addInitScript(() => localStorage.setItem('vision_token', 'token-u1'));
   await page.goto(NEXT_URL);
   await expect(page.locator('#vcProjectStatus')).toContainText('projects_unavailable');
   await expect(page.locator('#vcProjectStatus')).toHaveAttribute('data-state', 'error');
   await expect(page.locator('#vcProjectCreate')).toBeEnabled();
+  await page.locator('#vcProjectRetry').click();
+  await expect(page.locator('#vcProjectSelect')).toHaveValue('p1');
+  await expect(page.locator('#vcProjectRetry')).toBeHidden();
+});
+
+test('chat blocks double submit and exposes real AbortController cancellation', async ({ page }) => {
+  let calls = 0;
+  await page.route(`${API}/api/chat`, async route => {
+    calls++;
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"answer":"tarde"}' });
+  });
+  await page.goto(NEXT_URL);
+  await page.locator('#vcPrompt').fill('cancelar esta chamada');
+  await page.locator('#vcComposer').evaluate(form => { form.requestSubmit(); form.requestSubmit(); });
+  await expect(page.locator('#vcChatCancel')).toBeVisible();
+  await page.locator('#vcChatCancel').click();
+  await expect(page.locator('#vcChatStream')).toContainText('Solicitação cancelada.');
+  await expect(page.locator('.vc-send')).toBeEnabled();
+  expect(calls).toBe(1);
 });
 
 test('conversation switch, persistence and deletion stay scoped to the active project', async ({ page }) => {

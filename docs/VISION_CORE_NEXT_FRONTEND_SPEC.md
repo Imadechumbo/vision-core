@@ -231,6 +231,10 @@ A aba `data-feature="logs"` mostra somente eventos estruturados de `/api/logs` p
 
 Projetos, conversas/logs, histórico e geração/download SF expõem `data-state="loading|empty|error|success"` no elemento de status, com `aria-live` preservado. Copy legível continua visível; cor nunca é o único indicador (`next-clean-86`).
 
+### Retry e cancelamento
+
+Leituras idempotentes expõem retry visível (projetos e Logs). O Chat bloqueia duplo submit e mostra `#vcChatCancel` somente enquanto seu `AbortController` real está ativo; cancelar reabilita o composer. Fluxos sem endpoint de cancelamento não fingem cancelar execução — polling de agente cancela apenas acompanhamento. Guards `*InFlight` continuam impedindo POST duplicado em SF e ações críticas (`next-clean-87`).
+
 ## Estrutura CSS
 
 Um arquivo único (`vision-core-next-clean.css`), organizado por bloco de componente na ordem em que aparecem no HTML, com `:root` no topo. **Regra dura não-negociável:** todo painel condicional que usa o atributo `hidden` no HTML precisa do seletor `.classe:not([hidden]) { display: X }` — nunca `.classe { display: X }` puro, porque CSS de autor com a mesma especificidade do atributo `hidden` vence por ordem de declaração e o painel aparece mesmo escondido. Bug real, já corrigido mais de 6 vezes nesta frente (GitHub PR, Mission Patch, SF stage/log/progress/final, Métricas body/error/skel, Safe Status/Secret Guard).
