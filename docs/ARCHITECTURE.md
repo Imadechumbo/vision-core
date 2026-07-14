@@ -97,7 +97,7 @@ A IA acelerou a criação de software, mas também criou um problema novo: códi
 
 ## Pilares
 
-Princípios arquiteturais permanentes vivem em `docs/DECISIONS.md`: `ARCHITECTURAL PRINCIPLE-001` (Zero Legacy Debt), `ARCHITECTURAL PRINCIPLE-002` (Specification First) e `ARCHITECTURAL PRINCIPLE-003` (Evidence Before Change). Eles governam qualquer evolução do Vision Core Next.
+Princípios arquiteturais permanentes vivem exclusivamente em `docs/DECISIONS.md` (`ARCHITECTURAL PRINCIPLE-001` a `-006`). Eles governam qualquer evolução do Vision Core Next; este documento não duplica suas definições.
 
 1. **Nenhuma promoção sem evidência real.** `SEM PASS GOLD REAL → não promove, não libera, não marca stable` — regra absoluta repetida em `README.md`, `SDDF_SPEC.md` e `SOFTWARE_FACTORY_SPEC.md` (Camada 2), e espelhada na Camada 1 pelo score de `pass-gold-engine.js`.
 2. **Verificação nunca é feita só pelo mesmo LLM que gerou a mudança.** Segunda fonte de verdade sempre não-LLM (AST/Semgrep na Camada 1; hash SHA-256 determinístico + Firewall de regex na Camada 2).

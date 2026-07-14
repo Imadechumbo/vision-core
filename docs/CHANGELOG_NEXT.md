@@ -4,6 +4,10 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## Governança — princípios arquiteturais permanentes (2026-07-14)
+
+- `ARCHITECTURAL PRINCIPLE-004` (Minimal Surface Area) e `-005` (Invisible Complexity) oficializados em `docs/DECISIONS.md`; No Fixed Viewport Layout foi preservado como `-006`.
+
 ## Backend — Hermes grounding fail-closed (2026-07-14, EB v116)
 
 - O workflow EB passou a empacotar e verificar `docs/HERMES_FINE_TUNING_DATASET.md`; ausência do documento retorna `503 hermes_grounding_unavailable` em vez de chamar a LLM sem grounding.
@@ -123,14 +127,14 @@ Formato: mais recente no topo.
 ## next-clean-65 (2026-07-12)
 
 - Remoção da rolagem interna duplicada: bug real reportado em produção contra `next-clean-64` — `#vcChatScroll` tinha `overflow-y:auto` próprio, gerando uma segunda barra de rolagem competindo com a rolagem nativa da página. Confirmado por medição direta em produção antes do fix: `#vcChatScroll` com `hasOwnScroll:true` e `html` também com `hasOwnScroll:true` ao mesmo tempo (as duas rolagens ativas simultaneamente)
-- `.vc-chat-scroll` removeu `overflow-y`/`overflow-x`; `.vc-chat-stage` trocou `height` fixa por `min-height` — a página inteira agora é a única superfície de rolagem (`html`/`body`), consistente com `ARCHITECTURAL PRINCIPLE-004`
+- `.vc-chat-scroll` removeu `overflow-y`/`overflow-x`; `.vc-chat-stage` trocou `height` fixa por `min-height` — a página inteira agora é a única superfície de rolagem (`html`/`body`), consistente com `ARCHITECTURAL PRINCIPLE-006`
 - Regra dura #12 (nada nasce escondido atrás do `#vcComposer` sticky) preservada sem depender de scroll isolado: `ResizeObserver` no composer mantém `padding-bottom` de `.vc-chat-scroll` sincronizado com a altura real do composer + margem, com fallback estático (`padding-bottom:160px`) em CSS para navegadores sem `ResizeObserver`
 - 2 testes existentes reescritos (`vision-core-next-atomic-core.spec.mjs`: scroll da página real em vez de `#vcChatScroll.scrollTop`; renomeado o teste de clipping que não depende mais de `overflow-x:hidden`) + 1 teste novo de regressão da regra dura #12 usando o Dashboard como conteúdo alto real (`vision-core-next-dashboard.spec.mjs`)
 - 92/92 PASS na suíte permanente do Next, sem regressão
 
 ## next-clean-64 (2026-07-12)
 
-- Novo princípio arquitetural permanente: `ARCHITECTURAL PRINCIPLE-004 — No Fixed Viewport Layout` (`docs/DECISIONS.md`) — nenhum dashboard/painel/monitor pode usar `position:fixed`/`sticky` preso à viewport
+- Novo princípio arquitetural permanente: `ARCHITECTURAL PRINCIPLE-006 — No Fixed Viewport Layout` (`docs/DECISIONS.md`; renumerado em 2026-07-14) — nenhum dashboard/painel/monitor pode usar `position:fixed`/`sticky` preso à viewport
 - Atomic Core (primeira aplicação do princípio): saiu de `position:fixed` (reservava `padding-right` global em `.vc-main`) para viver dentro de `#vcChatScroll` em fluxo normal — rola junto com o chat e sai de vista; só aparece na aba `chat` (Software Factory Auto-Pilot conta como "chat", outras abas não)
 - Nova página `Dashboard` (`data-feature="dashboard"`, largura total): Timeline (heartbeat de Conectividade), Custo por Agente e Ranking de Atividade — reaproveita `buildAgentCharts()`/`metricCharts.timeline()` já existentes, zero lógica de dado nova
 - Achado real da RCA adversarial: `margin-right` negativo cortava 2 nós de agente (`openclaw`, `scanner`) por `overflow-x:hidden` de `#vcChatScroll` — só detectado por `getBoundingClientRect()` contra o container, não pela screenshot isolada; corrigido antes do commit, virou regra dura #13 da spec

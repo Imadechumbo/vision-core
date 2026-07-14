@@ -9,21 +9,31 @@ Formato: afirmação → **Por quê** → **Como aplicar**. Ordem: mais recente 
 ## Princípios arquiteturais permanentes
 
 ### ARCHITECTURAL PRINCIPLE-001 — Zero Legacy Debt
-Vision Core Next não é uma evolução incremental do frontend legado; é uma nova implementação baseada nas especificações oficiais.
-**Por quê:** o legado preserva conhecimento funcional e histórico, mas também carrega dívida técnica, hacks e decisões locais que não devem se tornar a base do Next.
-**Como aplicar:** usar o legado exclusivamente como referência funcional/histórica. Todo componente migrado para o Next precisa ser reimplementado, modular, documentado, testado, coeso e aderente às specs. Nenhum componente entra no Next apenas porque existia no legado; conhecimento é preservado, dívida técnica não é migrada.
+Conhecimento é preservado. Dívida técnica nunca é migrada.
+**Por quê:** o legado existe apenas como referência funcional e histórica; seus componentes, fluxos, hacks e workarounds não são base técnica do Vision Core Next.
+**Como aplicar:** toda capacidade necessária deve ser reimplementada de forma limpa, modular, testável e alinhada às especificações oficiais. Nunca copiar, portar ou adaptar código ou workaround legado.
 
 ### ARCHITECTURAL PRINCIPLE-002 — Specification First
-As especificações oficiais são a fonte de verdade do Vision Core.
-**Por quê:** o projeto depende de múltiplos agentes trabalhando por revezamento; se código e specs divergem, cada agente passa a reconstruir a intenção do sistema por suposição.
-**Como aplicar:** o código deve implementar as specs, nunca o contrário por conveniência. Quando houver divergência, corrigir o código ou corrigir a spec com decisão explícita, mas nunca deixar ambos divergentes. Toda evolução relevante do Next começa pela spec aplicável e termina com documentação/teste coerentes.
+As especificações oficiais são a fonte normativa do Vision Core.
+**Por quê:** código e testes podem divergir da intenção registrada; alterar a spec por conveniência transforma comportamento acidental em arquitetura.
+**Como aplicar:** em divergência, presumir inicialmente que o código está incorreto. Testes são evidência executável, não autoridade superior. Uma spec só muda diante de erro, ambiguidade ou decisão arquitetural superveniente documentada antes da implementação que a motivou; nunca apenas para legitimar o comportamento atual.
 
 ### ARCHITECTURAL PRINCIPLE-003 — Evidence Before Change
-Nenhuma alteração arquitetural pode ser baseada em inferência apresentada como fato.
-**Por quê:** o Vision Core é mantido por múltiplos agentes e já acumulou divergências entre prompt, spec, teste, código e estado real. Sem evidência objetiva antes da mudança, o agente seguinte herda uma conclusão não verificável e pode transformar suposição em arquitetura.
-**Como aplicar:** toda decisão arquitetural precisa apontar pelo menos uma evidência objetiva: spec, código, teste, execução observável ou documentação oficial. Suposições devem ser marcadas como suposição. Se duas fontes normativas de mesma autoridade divergirem e não houver evidência suficiente para escolher o lado correto, parar e pedir decisão humana antes de implementar.
+Nenhuma alteração arquitetural pode ser baseada apenas em inferência.
+**Por quê:** sem evidência objetiva, uma hipótese pode atravessar revezamentos de agentes e virar arquitetura sem fundamento verificável.
+**Como aplicar:** toda decisão deve apontar ao menos uma especificação, trecho de código, teste, execução observável ou documentação oficial. Suposições são hipóteses, nunca fatos. Se fontes normativas equivalentes divergirem sem evidência suficiente, parar e obter decisão humana antes de implementar.
 
-### ARCHITECTURAL PRINCIPLE-004 — No Fixed Viewport Layout
+### ARCHITECTURAL PRINCIPLE-004 — Minimal Surface Area
+Toda capacidade deve existir na menor superfície coerente possível.
+**Por quê:** crescimento saudável aumenta capacidade, não abstrações, configurações, dependências, estados, componentes, endpoints, documentos ou fluxos sem benefício demonstrável.
+**Como aplicar:** preferir menos arquivos, estados, exceções, dependências, configurações e caminhos operacionais quando o mesmo resultado puder ser obtido sem reduzir segurança, acessibilidade, observabilidade, integridade ou clareza. Cada documento tem uma responsabilidade clara; cada componente, um motivo principal para mudar. Complexidade só é aceita com benefício arquitetural demonstrável.
+
+### ARCHITECTURAL PRINCIPLE-005 — Invisible Complexity
+O sistema pode ser complexo. A experiência nunca deve ser.
+**Por quê:** múltiplos agentes e subsistemas não devem transferir carga operacional desnecessária ao usuário.
+**Como aplicar:** manter complexidade interna, contextual e progressivamente revelada. A interface principal deve tornar imediatos conversar, iniciar uma missão, acompanhar agentes/progresso e acessar configurações; capacidades avançadas ficam contextuais, colapsadas ou em modo avançado quando não essenciais. Invisível não significa ocultar erros, riscos, estado crítico, consentimento ou ações irreversíveis: esses elementos devem permanecer explícitos e acionáveis. O produto deve transmitir simplicidade, velocidade, previsibilidade e confiança.
+
+### ARCHITECTURAL PRINCIPLE-006 — No Fixed Viewport Layout
 Nenhum componente de dashboard, gráfico, painel, monitor, timeline ou grid de módulos pode usar posicionamento fixo em relação à viewport (`position: fixed`, `sticky` com referência de scroll global, ou técnica equivalente que prenda o elemento à tela independente do scroll do container pai).
 **Por quê:** achado real (2026-07-12) — o Atomic Core usava `position: fixed` relativo à viewport inteira, reservando uma faixa permanente de `.vc-main` (`padding-right: clamp(285px,27vw,405px)`) mesmo fora do contexto de chat; isso comprime todo outro painel/dashboard que precise de largura real, forçando colunas estreitas sem necessidade.
 **Como aplicar:** todo componente visual novo deve (1) viver dentro do fluxo normal de scroll do container onde foi montado, nunca sobrepor nem ficar para trás quando o conteúdo ao redor rola; (2) ter largura responsiva ao espaço real do container, nunca comprimida por um elemento fixo concorrente; (3) quando fizer sentido (dashboards com múltiplos gráficos), ganhar painel de largura total dentro da própria SPA (`data-feature` dedicado, já que o Next não tem router de páginas separadas — ver `ARCHITECTURAL PRINCIPLE-001`), em vez de forçado como painel lateral secundário. Exceções permitidas: navegação global (header/sidebar) e UI transitória (modais, toasts, tooltips) — nunca dashboard de dados ou conteúdo analítico. Primeira aplicação: Atomic Core (`vision-core-next-clean.css`/`.js`, 2026-07-12).
