@@ -25,5 +25,20 @@
     "artifact_structure": "2/2 PASS",
     "evidence_secret_scan": "PASS"
   },
+  "ops_001": {
+    "preview_branch": "rc1-rehearsal-20260714",
+    "alias_url": "https://rc1-rehearsal-20260714.visioncoreai.pages.dev",
+    "rc_deployment_url": "https://31709674.visioncoreai.pages.dev",
+    "rc_package_sha256_served": "f4a4db9f9eeb57f2122631bb8f5eaabab1d0f8b50479fc2e42ecd80642419926",
+    "rc_smoke": "7/7 PASS; root Next; gateway health 200",
+    "predecessor_deployment_url": "https://28c60fa9.visioncoreai.pages.dev",
+    "predecessor_package_sha256_served": "85d8828197f14590ba51909735a274e4c76a91d50faee519f005df483ca8bbd8",
+    "predecessor_smoke": "7/7 PASS; root legacy predecessor",
+    "rollback_deploy_ms": 19719,
+    "rollback_with_smoke_ms": 24922,
+    "browser_rc": "title=Vision Core Next; composer visible; Next script loaded; legacy script absent",
+    "browser_predecessor": "title=VISION CORE V2.9.10 CLEAN FRONT; legacy script present; Next composer absent",
+    "result": "Succeeded"
+  },
   "production_changed": false
 }

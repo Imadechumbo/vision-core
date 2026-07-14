@@ -28,13 +28,13 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | REL | 2 |
 | OPS | 4 |
 | Total | 26 |
-| Concluídos | 21 |
-| Pendentes | 5 |
+| Concluídos | 22 |
+| Pendentes | 4 |
 | Bloqueados por dependência | 3 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 86%; Desenvolvimento 100%; Certificação 100%; Release 100%; Operação 0%.
+Percentual concluído por trilha: Arquitetura 86%; Desenvolvimento 100%; Certificação 100%; Release 100%; Operação 25%.
 
 ## 4. Trilha A — ADRs
 
@@ -250,7 +250,8 @@ Comandos concretos só entram no runbook quando verificados contra as ferramenta
 - **Pré-requisitos:** ADR-006 aprovado, IMP-007 Done, preview isolado.
 - **Comandos:** os comandos oficiais de Pages registrados no runbook aprovado; alias principal proibido.
 - **Rollback/riscos:** cleanup do preview; risco de tocar produção por target errado.
-- **Métricas/sucesso:** hashes, URLs, tempo de reversão e dois smokes verdes. **Preparação:** runbook verificado em `docs/PAGES_RELEASE_RUNBOOK.md`; execução externa pendente. **Status:** Ready.
+- **Métricas/sucesso:** hashes, URLs, tempo de reversão e dois smokes verdes. **Status:** Succeeded.
+- **Evidência:** branch isolada `rc1-rehearsal-20260714`; RC `31709674.visioncoreai.pages.dev` 7/7 e browser real verdes; predecessor `28c60fa9.visioncoreai.pages.dev` 7/7 e browser real verdes; alias terminou no predecessor; hashes servidos iguais aos manifestos; rollback+smoke 24,922s; produção intocada.
 
 ### OPS-002 — Cutover da raiz
 
@@ -339,7 +340,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| OPS-002–004 | OPS-001; ADR-007 | — | — | REL-001–002; ADR-001–006; IMP-001–009; TEST-001–004 |
+| OPS-002–004 | ADR-007 | — | — | REL-001–002; ADR-001–006; IMP-001–009; TEST-001–004; OPS-001 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 
