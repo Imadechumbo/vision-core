@@ -10,6 +10,8 @@ const { runGoMission, streamGoMission, checkGoHealth, resolveGoBinary } = requir
 const { callHermes, readLowConfidenceLog, computeMemoryMetrics } = require('./hermes-rca');
 const { encryptProviderKey, decryptProviderKey } = require('./provider-vault-crypto');
 const { resolveProviderKey, sortProvidersByEffectivePriority } = require('./provider-vault-routing');
+const { createGithubPullRequest } = require('./github-pr-adapter');
+const { appendHermesDecisionPair, updateHermesOutcome } = require('./hermes-dataset');
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
@@ -1526,6 +1528,8 @@ app.all('/api/hermes/analyze', async (req, res) => {
   const body = normalizeBody(req);
   const message = body.message || body.prompt || '';
   const mode = body.mode || 'debug';
+  const hermesUser = getAuthUser(req);
+  const hermesMissionId = body.mission_id || body.missionId || makeId('hermes');
 
   const localAnswer = [
     'Hermes RCA concluído.',
@@ -1549,16 +1553,49 @@ app.all('/api/hermes/analyze', async (req, res) => {
     }
   }
 
+  const rca = technical(message, mode) ? 'technical_runtime_or_contract_issue' : 'general_context';
+  let hermesDatasetId = null;
+  try {
+    const datasetEntry = appendHermesDecisionPair(MISSION_TIMELINE_PATH, {
+      userId: hermesUser ? hermesUser.id : null,
+      missionId: hermesMissionId,
+      source: 'hermes-analyze',
+      previewInput: message,
+      input: {
+        message,
+        mode,
+        prompt: body.prompt || null,
+        mission: body.mission || null
+      },
+      context: {
+        endpoint: '/api/hermes/analyze',
+        body_keys: Object.keys(body || {}).sort()
+      },
+      decision: {
+        diagnosis: answer,
+        raw: answer,
+        label: 'ANSWERED'
+      },
+      provider: llmProvider,
+      model: llmModel
+    });
+    hermesDatasetId = datasetEntry.id;
+  } catch (e) {
+    console.warn('[hermes/analyze] dataset append failed:', e.message);
+  }
+
   return sendOk(res, {
     endpoint: '/api/hermes/analyze',
     agent: 'Hermes',
     body_received: body,
-    rca: technical(message, mode) ? 'technical_runtime_or_contract_issue' : 'general_context',
-    root_cause: technical(message, mode) ? 'technical_runtime_or_contract_issue' : 'general_context',
+    rca,
+    root_cause: rca,
     confidence: llmProvider !== 'local' ? 97 : 94,
     answer,
     llm_provider: llmProvider,
     llm_model: llmModel,
+    mission_id: hermesMissionId,
+    hermes_dataset_id: hermesDatasetId,
     anti_stub: true
   });
 });
@@ -1771,6 +1808,19 @@ app.all('/api/run-live', checkMissionQuota, async (req, res) => {
         mission_id: payload.mission_id || null,
         status: payload.pass_gold === true ? 'PASS_GOLD' : (payload.status || (payload.ok === false ? 'FAIL' : 'DONE'))
       });
+    }
+    if (payload) {
+      try {
+        updateHermesOutcome(MISSION_TIMELINE_PATH, {
+          userId: _tlUser98e2 ? _tlUser98e2.id : null,
+          datasetId: body.hermes_dataset_id || body.hermesDatasetId || null,
+          missionId: body.hermes_mission_id || body.hermesMissionId || body.mission_id || payload.mission_id || null,
+          input,
+          payload
+        });
+      } catch (e) {
+        console.warn('[run-live] hermes dataset outcome update failed:', e.message);
+      }
     }
     return _origJson98e2(payload);
   };
@@ -3831,109 +3881,30 @@ app.post('/api/deploy/merge-pr', async (req, res) => {
   }
 });
 
-/* ── §64 /api/github/create-pr — cria branch + commits + PR do zero ──── */
+/* GitHub create-pr: REST por default, MCP opcional via adapter. */
 app.post('/api/github/create-pr', async (req, res) => {
   try {
-    const body        = normalizeBody(req);
-    const repo        = (body.repo        || '').trim();
-    const baseBranch  = (body.base_branch || '').trim();
-    const headBranch  = (body.head_branch || '').trim();
-    const title       = (body.title       || '').trim();
-    const prBody      = (body.body        || '').trim();
-    const files       = Array.isArray(body.files) ? body.files : [];
-
-    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-    if (!GITHUB_TOKEN) {
-      return res.status(500).json({ ok: false, error: 'GITHUB_TOKEN not configured', time: now() });
-    }
-    if (!repo || !baseBranch || !headBranch || !title) {
-      return res.status(400).json({ ok: false, error: 'repo, base_branch, head_branch e title são obrigatórios', time: now() });
-    }
-
-    const ghHeaders = {
-      'Authorization': `Bearer ${GITHUB_TOKEN}`,
-      'Accept': 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'vision-core-backend/3.0.0'
-    };
-
-    /* 1 — SHA da base_branch */
-    const refRes = await fetch(`https://api.github.com/repos/${repo}/git/ref/heads/${baseBranch}`, { headers: ghHeaders });
-    if (!refRes.ok) {
-      const e = await refRes.json().catch(() => ({}));
-      return res.status(refRes.status).json({ ok: false, error: 'base_branch_not_found', detail: e.message || refRes.status, time: now() });
-    }
-    const refData  = await refRes.json();
-    const baseSha  = refData.object.sha;
-
-    /* 2 — Criar head_branch (idempotente: ignora 422 "already exists") */
-    const createBranchRes = await fetch(`https://api.github.com/repos/${repo}/git/refs`, {
-      method: 'POST',
-      headers: { ...ghHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ref: `refs/heads/${headBranch}`, sha: baseSha })
+    const body = normalizeBody(req);
+    const result = await createGithubPullRequest({
+      repo:       (body.repo        || '').trim(),
+      baseBranch: (body.base_branch || '').trim(),
+      headBranch: (body.head_branch || '').trim(),
+      title:      (body.title       || '').trim(),
+      body:       (body.body        || '').trim(),
+      files:      Array.isArray(body.files) ? body.files : []
+    }, {
+      now,
+      githubToken: process.env.GITHUB_TOKEN
     });
-    if (!createBranchRes.ok && createBranchRes.status !== 422) {
-      const e = await createBranchRes.json().catch(() => ({}));
-      return res.status(createBranchRes.status).json({ ok: false, error: 'create_branch_failed', detail: e.message || createBranchRes.status, time: now() });
-    }
 
-    /* 3 — Commit de cada arquivo em files[] */
-    for (const file of files) {
-      if (!file.path || file.content === undefined) continue;
+    if (!result.ok) return res.status(result.status || 500).json(result);
 
-      /* Buscar sha atual do arquivo se já existir (necessário para update) */
-      let existingSha;
-      const existRes = await fetch(`https://api.github.com/repos/${repo}/contents/${file.path}?ref=${headBranch}`, { headers: ghHeaders });
-      if (existRes.ok) {
-        const existData = await existRes.json().catch(() => ({}));
-        existingSha = existData.sha;
-      }
-
-      const contentBase64 = Buffer.from(String(file.content), 'utf8').toString('base64');
-      const putPayload    = { message: title, content: contentBase64, branch: headBranch };
-      if (existingSha) putPayload.sha = existingSha;
-
-      const putRes = await fetch(`https://api.github.com/repos/${repo}/contents/${file.path}`, {
-        method: 'PUT',
-        headers: { ...ghHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify(putPayload)
-      });
-      if (!putRes.ok) {
-        const e = await putRes.json().catch(() => ({}));
-        return res.status(putRes.status).json({ ok: false, error: 'commit_file_failed', path: file.path, detail: e.message || putRes.status, time: now() });
-      }
-    }
-
-    /* 4 — Criar o PR */
-    const prRes = await fetch(`https://api.github.com/repos/${repo}/pulls`, {
-      method: 'POST',
-      headers: { ...ghHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title,
-        body:  prBody || `PR criado automaticamente pelo Vision Core\n\nBranch: \`${headBranch}\` → \`${baseBranch}\``,
-        head:  headBranch,
-        base:  baseBranch
-      })
-    });
-    if (!prRes.ok) {
-      const e = await prRes.json().catch(() => ({}));
-      return res.status(prRes.status).json({ ok: false, error: 'create_pr_failed', detail: e.message || prRes.status, time: now() });
-    }
-    const prData = await prRes.json();
-
-    console.log(`[§64] PR criado: ${prData.html_url} (branch: ${headBranch} → ${baseBranch})`);
-    return res.json({
-      ok:        true,
-      pr_url:    prData.html_url,
-      pr_number: prData.number,
-      branch:    headBranch,
-      files_committed: files.length,
-      time:      now()
-    });
+    console.log(`[github/create-pr] PR criado: ${result.pr_url} (branch: ${result.branch}, mode: ${result.mode || 'rest'})`);
+    return res.json(result);
 
   } catch (err) {
-    console.error('[§64] github/create-pr error:', err.message);
-    return res.status(500).json({ ok: false, error: 'create_pr_error', detail: err.message, time: now() });
+    console.error('[github/create-pr] error:', err.message);
+    return res.status(err.status || 500).json({ ok: false, error: err.code || 'create_pr_error', detail: err.message, time: now() });
   }
 });
 
