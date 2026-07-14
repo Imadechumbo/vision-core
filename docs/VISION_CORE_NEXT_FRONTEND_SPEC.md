@@ -221,6 +221,8 @@ Painel dentro de Settings (`#vcAccountForm`/`#vcAccountLogged`): `POST /api/auth
 
 O header contém um único controle compacto `#vcProjectSelect` + criação por `#vcProjectName`/`#vcProjectCreate`. Visitante vê somente “Temporário”, sem escrita no backend. Após autenticação, `GET /api/projects` popula o seletor e `POST /api/projects` envia apenas `{name}`; ownership nunca sai do browser. A seleção ativa usa `sessionStorage['vc_active_project']` com `{user_id, project_id}` e só é restaurada quando ambos ainda pertencem ao usuário retornado pela API. Estado vazio, falha de carga e reload são explícitos em `#vcProjectStatus` (DECISION-023, `next-clean-83`).
 
+O mesmo contexto contém `#vcConversationSelect`, Nova e Excluir. Para autenticados, conversas são listadas por projeto, reabertas no stream e mensagens visíveis são persistidas em ordem usuário→assistente; visitante continua efêmero. Trocar projeto recarrega somente suas conversas. Anexos/base64, prompt de sistema e bolhas transitórias nunca são enviados ao histórico (`next-clean-84`, DECISION-024).
+
 ## Estrutura CSS
 
 Um arquivo único (`vision-core-next-clean.css`), organizado por bloco de componente na ordem em que aparecem no HTML, com `:root` no topo. **Regra dura não-negociável:** todo painel condicional que usa o atributo `hidden` no HTML precisa do seletor `.classe:not([hidden]) { display: X }` — nunca `.classe { display: X }` puro, porque CSS de autor com a mesma especificidade do atributo `hidden` vence por ordem de declaração e o painel aparece mesmo escondido. Bug real, já corrigido mais de 6 vezes nesta frente (GitHub PR, Mission Patch, SF stage/log/progress/final, Métricas body/error/skel, Safe Status/Secret Guard).

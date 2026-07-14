@@ -236,6 +236,9 @@
   var projectNameInput = document.getElementById('vcProjectName');
   var projectCreateBtn = document.getElementById('vcProjectCreate');
   var projectStatus = document.getElementById('vcProjectStatus');
+  var conversationSelect = document.getElementById('vcConversationSelect');
+  var conversationNewBtn = document.getElementById('vcConversationNew');
+  var conversationDeleteBtn = document.getElementById('vcConversationDelete');
   var animationReducedCheckbox = document.getElementById('vcAnimationReduced');
   if (animationReducedCheckbox) {
     animationReducedCheckbox.checked = isReducedMotion();
@@ -2601,6 +2604,94 @@
   var ACCOUNT_DEFAULT_COPY = accountCopy ? accountCopy.textContent : '';
   var accountSkipNextRefresh = false;
   var currentProjectUserId = null;
+  var activeConversationId = null;
+
+  function clearConversationMessages() {
+    if (!stream) return;
+    stream.querySelectorAll('.vc-message:not(.vc-message-system)').forEach(function (message) { message.remove(); });
+  }
+
+  function resetConversationContext() {
+    activeConversationId = null;
+    if (conversationSelect) {
+      conversationSelect.textContent = '';
+      var option = document.createElement('option');
+      option.textContent = 'Efêmera';
+      conversationSelect.appendChild(option);
+      conversationSelect.disabled = true;
+    }
+    if (conversationNewBtn) conversationNewBtn.disabled = true;
+    if (conversationDeleteBtn) conversationDeleteBtn.disabled = true;
+  }
+
+  function openConversation(id) {
+    if (!id) { activeConversationId = null; clearConversationMessages(); return Promise.resolve(); }
+    return apiRequest('/api/chat/conversations/' + encodeURIComponent(id)).then(function (data) {
+      activeConversationId = id;
+      clearConversationMessages();
+      (data.conversation.messages || []).forEach(function (message) {
+        appendMessage(message.role === 'user' ? 'user' : 'assistant', message.role === 'user' ? 'VOCE' : 'VISION CORE', message.content);
+      });
+      if (conversationDeleteBtn) conversationDeleteBtn.disabled = false;
+    });
+  }
+
+  function loadConversations(projectId, preferredId) {
+    if (!projectId || !conversationSelect) return resetConversationContext();
+    conversationSelect.disabled = true;
+    if (conversationNewBtn) conversationNewBtn.disabled = true;
+    return apiRequest('/api/chat/conversations?project_id=' + encodeURIComponent(projectId)).then(function (data) {
+      var conversations = Array.isArray(data.conversations) ? data.conversations : [];
+      conversationSelect.textContent = '';
+      var empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = conversations.length ? 'Selecione' : 'Sem conversas';
+      conversationSelect.appendChild(empty);
+      conversations.forEach(function (conversation) {
+        var option = document.createElement('option');
+        option.value = conversation.id;
+        option.textContent = conversation.title;
+        conversationSelect.appendChild(option);
+      });
+      conversationSelect.disabled = false;
+      if (conversationNewBtn) conversationNewBtn.disabled = false;
+      var selected = preferredId || (conversations.some(function (item) { return item.id === activeConversationId; }) ? activeConversationId : '');
+      conversationSelect.value = selected;
+      if (selected) return openConversation(selected);
+      activeConversationId = null;
+      clearConversationMessages();
+      if (conversationDeleteBtn) conversationDeleteBtn.disabled = true;
+    }).catch(function (err) {
+      resetConversationContext();
+      setProjectStatus('Erro no histórico: ' + (err && err.message ? err.message : String(err)), true);
+    });
+  }
+
+  function createConversation(title, clear) {
+    if (!projectSelect || !projectSelect.value) return Promise.resolve(null);
+    return apiRequest('/api/chat/conversations', { method: 'POST', body: { project_id: projectSelect.value, title: title || 'Nova conversa' } }).then(function (data) {
+      activeConversationId = data.conversation.id;
+      if (clear) clearConversationMessages();
+      var option = document.createElement('option');
+      option.value = activeConversationId;
+      option.textContent = data.conversation.title;
+      conversationSelect.appendChild(option);
+      conversationSelect.value = activeConversationId;
+      conversationSelect.disabled = false;
+      if (conversationDeleteBtn) conversationDeleteBtn.disabled = false;
+      return activeConversationId;
+    });
+  }
+
+  function ensureConversation(title) {
+    return activeConversationId ? Promise.resolve(activeConversationId) : createConversation(String(title || 'Nova conversa').slice(0, 120), false);
+  }
+
+  function saveConversationMessage(conversationId, role, content) {
+    if (!conversationId || !content) return Promise.resolve();
+    return apiRequest('/api/chat/conversations/' + encodeURIComponent(conversationId) + '/messages', { method: 'POST', body: { role: role, content: content } })
+      .catch(function (err) { setProjectStatus('Histórico não salvo: ' + (err && err.message ? err.message : String(err)), true); });
+  }
 
   function setProjectStatus(message, isError) {
     if (!projectStatus) return;
@@ -2619,6 +2710,7 @@
     }
     if (projectNameInput) { projectNameInput.value = ''; projectNameInput.disabled = true; }
     if (projectCreateBtn) projectCreateBtn.disabled = true;
+    resetConversationContext();
     setProjectStatus('Entre para persistir projetos.', false);
   }
 
@@ -2646,6 +2738,7 @@
     if (projects.length) {
       saveActiveProject(user.id, projectSelect.value);
       setProjectStatus('', false);
+      loadConversations(projectSelect.value);
     } else {
       setProjectStatus('Nenhum projeto. Crie o primeiro.', false);
     }
@@ -2786,11 +2879,23 @@
   if (accountRegisterBtn) accountRegisterBtn.addEventListener('click', function () { doAccountAuth('register'); });
   if (accountLogoutBtn) accountLogoutBtn.addEventListener('click', doAccountLogout);
   if (projectSelect) projectSelect.addEventListener('change', function () {
-    if (currentProjectUserId && projectSelect.value) saveActiveProject(currentProjectUserId, projectSelect.value);
+    if (currentProjectUserId && projectSelect.value) {
+      saveActiveProject(currentProjectUserId, projectSelect.value);
+      loadConversations(projectSelect.value);
+    }
   });
   if (projectCreateBtn) projectCreateBtn.addEventListener('click', createProject);
   if (projectNameInput) projectNameInput.addEventListener('keydown', function (event) {
     if (event.key === 'Enter') { event.preventDefault(); createProject(); }
+  });
+  if (conversationSelect) conversationSelect.addEventListener('change', function () { openConversation(conversationSelect.value); });
+  if (conversationNewBtn) conversationNewBtn.addEventListener('click', function () { createConversation('Nova conversa', true); });
+  if (conversationDeleteBtn) conversationDeleteBtn.addEventListener('click', function () {
+    if (!activeConversationId || !window.confirm('Excluir esta conversa?')) return;
+    apiRequest('/api/chat/conversations/' + encodeURIComponent(activeConversationId), { method: 'DELETE' }).then(function () {
+      activeConversationId = null;
+      loadConversations(projectSelect.value);
+    });
   });
   setOAuthLinks();
   refreshAccountStatus();
@@ -3009,12 +3114,16 @@
       }).join('\n\n');
       var fullMessage = attachmentsPrefix ? (attachmentsPrefix + (text ? '\n\n' + text : '')) : text;
       if (!fullMessage) fullMessage = 'Analise esta imagem.';
+      var conversationPromise = currentProjectUserId && projectSelect && projectSelect.value
+        ? ensureConversation(text || 'Nova conversa')
+        : Promise.resolve(null);
 
       var displayParts = [];
       if (text) displayParts.push(text);
       if (pendingAttachments.length) displayParts.push('[' + pendingAttachments.length + ' anexo(s): ' + pendingAttachments.map(function (a) { return a.name; }).join(', ') + ']');
       if (pendingImage) displayParts.push('[imagem: ' + pendingImage.name + ']');
       appendMessage('user', 'VOCE', displayParts.join('\n'));
+      var persistedUserMessage = conversationPromise.then(function (id) { return saveConversationMessage(id, 'user', displayParts.join('\n')); });
       if (text) lastChatMissionText = text;
 
       var imagePayload = pendingImage;
@@ -3066,6 +3175,7 @@
         finish();
         if (data && typeof data.answer === 'string' && data.answer) {
           appendMessage('assistant', 'VISION CORE', data.answer);
+          persistedUserMessage.then(function () { return conversationPromise; }).then(function (id) { saveConversationMessage(id, 'assistant', data.answer); });
           var parsed = parseHermesBlock(data.answer);
           if (parsed.hermesObj && (parsed.hermesObj.diagnosis || parsed.hermesObj.fix_type || parsed.hermesObj.patch || parsed.hermesObj.decisao)) {
             if (hermesHint) hermesHint.hidden = false;

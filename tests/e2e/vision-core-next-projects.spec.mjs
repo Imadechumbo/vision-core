@@ -13,6 +13,7 @@ const API = 'https://visioncore-api-gateway.weiganlight.workers.dev';
 test.beforeEach(async ({ page }) => {
   await page.route(`${API}/api/agent/status`, route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"connected":false}' }));
   await page.route(`${API}/api/mission/quota`, route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"remaining":5}' }));
+  await page.route(`${API}/api/chat/conversations**`, route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"conversations":[]}' }));
 });
 
 test('visitor gets an ephemeral context and cannot create persisted projects', async ({ page }) => {
@@ -65,4 +66,34 @@ test('load failure is readable and retry remains possible through account refres
   await page.goto(NEXT_URL);
   await expect(page.locator('#vcProjectStatus')).toContainText('projects_unavailable');
   await expect(page.locator('#vcProjectCreate')).toBeEnabled();
+});
+
+test('conversation switch, persistence and deletion stay scoped to the active project', async ({ page }) => {
+  const messages = [];
+  await page.unroute(`${API}/api/chat/conversations**`);
+  await page.route(`${API}/api/auth/me`, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, user: { id: 'u1', email: 'u1@example.com' } }) }));
+  await page.route(`${API}/api/projects`, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, projects: [{ id: 'p1', name: 'Projeto', user_id: 'u1' }] }) }));
+  await page.route(`${API}/api/chat/conversations**`, async route => {
+    const url = new URL(route.request().url());
+    const method = route.request().method();
+    if (method === 'GET' && url.pathname.endsWith('/c1')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, conversation: { id: 'c1', messages } }) });
+    if (method === 'GET') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, conversations: [{ id: 'c1', title: 'Persistida', message_count: messages.length }] }) });
+    if (method === 'POST' && url.pathname.endsWith('/messages')) {
+      messages.push(JSON.parse(route.request().postData() || '{}'));
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"message":{"id":"m1"}}' });
+    }
+    if (method === 'DELETE') return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"deleted":true}' });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"conversation":{"id":"c2","title":"Nova conversa"}}' });
+  });
+  await page.route(`${API}/api/chat`, route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"answer":"Resposta persistida"}' }));
+  await page.addInitScript(() => localStorage.setItem('vision_token', 'token-u1'));
+  await page.goto(NEXT_URL);
+  await page.locator('#vcConversationSelect').selectOption('c1');
+  await page.locator('#vcPrompt').fill('Pergunta persistida');
+  await page.locator('#vcComposer').evaluate(form => form.requestSubmit());
+  await expect.poll(() => messages.length).toBe(2);
+  expect(messages.map(item => item.role)).toEqual(['user', 'assistant']);
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('#vcConversationDelete').click();
+  await expect(page.locator('#vcConversationSelect')).toHaveValue('');
 });

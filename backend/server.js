@@ -366,6 +366,7 @@ const crypto = require('crypto');
 const DB_ROOT = path.join(ROOT, 'data');
 const USERS_DB = path.join(DB_ROOT, 'users.json');
 const PROJECTS_DB = path.join(DB_ROOT, 'projects.json');
+const CHAT_CONVERSATIONS_DB = path.join(DB_ROOT, 'chat-conversations.json');
 const PROVIDERS_VAULT_FILE = path.join(DB_ROOT, 'ai-providers-vault.json');
 const VAULT_ROOT = path.join(MEMORY_ROOT, 'obsidian', 'VisionCoreVault');
 for (const dir of [DB_ROOT, VAULT_ROOT, path.join(VAULT_ROOT, 'Missions'), path.join(VAULT_ROOT, 'Incidents'), path.join(VAULT_ROOT, 'PASS-GOLD'), path.join(VAULT_ROOT, 'Projects')]) fs.mkdirSync(dir, { recursive: true });
@@ -1172,6 +1173,84 @@ app.post('/api/projects', (req, res) => {
   db.projects.push(project);
   writeAndSyncS3(PROJECTS_DB, db);
   return sendOk(res, { project, anti_stub: true });
+});
+
+// DECISION-024 — histórico autenticado, isolado por owner + projeto.
+function ownedProject(userId, projectId) {
+  const db = readJsonFile(PROJECTS_DB, { projects: [] });
+  return Array.isArray(db.projects) && db.projects.some(project => project.id === projectId && project.user_id === userId);
+}
+
+function readConversations() {
+  const db = readJsonFile(CHAT_CONVERSATIONS_DB, { conversations: [] });
+  const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+  db.conversations = (Array.isArray(db.conversations) ? db.conversations : []).filter(item => new Date(item.updated_at).getTime() >= cutoff);
+  return db;
+}
+
+app.get('/api/chat/conversations', (req, res) => {
+  const user = getAuthUser(req);
+  if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
+  const projectId = String(req.query.project_id || '');
+  if (!ownedProject(user.id, projectId)) return res.status(404).json({ ok: false, error: 'project_not_found', time: now() });
+  const db = readConversations();
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 100);
+  const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+  const owned = db.conversations.filter(item => item.user_id === user.id && item.project_id === projectId)
+    .map(({ messages, ...item }) => ({ ...item, message_count: messages.length }))
+    .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+  const conversations = owned.slice(offset, offset + limit);
+  return sendOk(res, { conversations, total: owned.length, next_offset: offset + conversations.length < owned.length ? offset + conversations.length : null, anti_stub: true });
+});
+
+app.post('/api/chat/conversations', (req, res) => {
+  const user = getAuthUser(req);
+  if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
+  const body = normalizeBody(req);
+  const projectId = String(body.project_id || '');
+  if (!ownedProject(user.id, projectId)) return res.status(404).json({ ok: false, error: 'project_not_found', time: now() });
+  const timestamp = now();
+  const conversation = { id: makeId('chat'), user_id: user.id, project_id: projectId, title: String(body.title || 'Nova conversa').trim().slice(0, 120) || 'Nova conversa', created_at: timestamp, updated_at: timestamp, messages: [] };
+  const db = readConversations();
+  db.conversations.push(conversation);
+  writeAndSyncS3(CHAT_CONVERSATIONS_DB, db);
+  return sendOk(res, { conversation: { ...conversation, messages: undefined }, anti_stub: true });
+});
+
+app.get('/api/chat/conversations/:id', (req, res) => {
+  const user = getAuthUser(req);
+  if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
+  const conversation = readConversations().conversations.find(item => item.id === req.params.id && item.user_id === user.id);
+  if (!conversation || !ownedProject(user.id, conversation.project_id)) return res.status(404).json({ ok: false, error: 'conversation_not_found', time: now() });
+  return sendOk(res, { conversation, anti_stub: true });
+});
+
+app.post('/api/chat/conversations/:id/messages', (req, res) => {
+  const user = getAuthUser(req);
+  if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
+  const body = normalizeBody(req);
+  if (!['user', 'assistant'].includes(body.role)) return res.status(400).json({ ok: false, error: 'message_role_invalid', time: now() });
+  const content = String(body.content || '').trim();
+  if (!content) return res.status(400).json({ ok: false, error: 'message_content_required', time: now() });
+  const db = readConversations();
+  const conversation = db.conversations.find(item => item.id === req.params.id && item.user_id === user.id);
+  if (!conversation || !ownedProject(user.id, conversation.project_id)) return res.status(404).json({ ok: false, error: 'conversation_not_found', time: now() });
+  const message = { id: makeId('msg'), role: body.role, content: content.slice(0, 20000), created_at: now() };
+  conversation.messages.push(message);
+  conversation.updated_at = message.created_at;
+  writeAndSyncS3(CHAT_CONVERSATIONS_DB, db);
+  return sendOk(res, { message, anti_stub: true });
+});
+
+app.delete('/api/chat/conversations/:id', (req, res) => {
+  const user = getAuthUser(req);
+  if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
+  const db = readConversations();
+  const index = db.conversations.findIndex(item => item.id === req.params.id && item.user_id === user.id);
+  if (index === -1) return res.status(404).json({ ok: false, error: 'conversation_not_found', time: now() });
+  db.conversations.splice(index, 1);
+  writeAndSyncS3(CHAT_CONVERSATIONS_DB, db);
+  return sendOk(res, { deleted: true, anti_stub: true });
 });
 
 // §150 — Verificação de autenticidade do webhook Hotmart
@@ -2335,6 +2414,9 @@ app.delete('/api/auth/me', (req, res) => {
     if (session.jti) revokeToken(session.jti); // §152: invalidar token antes de deletar
     db.users.splice(idx, 1);
     writeAndSyncS3(USERS_DB, db);
+    const conversationsDb = readConversations();
+    conversationsDb.conversations = conversationsDb.conversations.filter(item => item.user_id !== session.uid);
+    writeAndSyncS3(CHAT_CONVERSATIONS_DB, conversationsDb);
     auditLog('account_deleted', req, { email }); // §154
     console.log('[§159] conta deletada (LGPD):', email);
     return res.json({ ok: true, message: 'account_deleted', email_deleted: email, anti_stub: true });
@@ -4888,6 +4970,7 @@ if (S3_BUCKET) {
   console.log('[s3] §146 startup: loading from bucket', S3_BUCKET);
   _s3LoadSync(USERS_DB);
   _s3LoadSync(PROJECTS_DB);
+  _s3LoadSync(CHAT_CONVERSATIONS_DB);
   _s3LoadSync(BLACKLIST_FILE); // §152: blacklist do S3 antes de aceitar requests
   _s3LoadSync(SSO_DOMAINS_FILE); // §155: SSO domains do S3
   _s3LoadSync(PROVIDERS_VAULT_FILE); // AI Provider Vault: config principal do S3

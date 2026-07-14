@@ -64,6 +64,10 @@ crítico (ou warning com `--strict`), `2` erro operacional sanitizado.
 
 DECISION-023: o cliente nunca envia ownership. Visitante usa contexto efêmero no browser e não acessa `projects.json`.
 
+## Conversas
+
+Todas exigem sessão e revalidam owner + projeto (DECISION-024). `GET /api/chat/conversations?project_id=...&limit=50&offset=0` lista metadados com `total`/`next_offset`; `POST /api/chat/conversations` cria com `{project_id,title?}`; `GET|DELETE /api/chat/conversations/:id` abre/exclui; `POST /api/chat/conversations/:id/messages` aceita `{role:'user'|'assistant',content}`. O backend retém 90 dias e nunca recebe base64/anexo bruto por estas rotas.
+
 ## Mission (Camada 1, produto)
 
 | Método | Rota | Payload | Resposta | Notas |

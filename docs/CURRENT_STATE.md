@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ `next-clean-84` / IMP-002 implementada localmente (sem deploy): conversas autenticadas persistem no backend por owner + projeto, retenção 90 dias, paginação, listagem/reload/troca/exclusão e cascade LGPD. O header ganhou seletor/Nova/Excluir; visitante permanece efêmero; somente texto visível é salvo em ordem. Testes: backend real projetos+conversas 18/18 PASS; UI + Conta/OAuth 14/14 PASS; suíte permanente Next 119/119 PASS em 47,0s, sem retry. Backlog: 5/24 concluídos; IMP-003 desbloqueada.
+
 ✔ `next-clean-83` / IMP-001 implementada localmente (sem deploy): `/api/projects` agora exige sessão, deriva owner no backend, filtra por usuário e rejeita `user_id` do cliente. O Next ganhou seletor/criação global de projeto, contexto temporário para visitante, vazio/erro explícitos e seleção por usuário em `sessionStorage`. Testes: backend real 9/9 PASS; UI + Conta/OAuth 13/13 PASS; suíte permanente Next 118/118 PASS em 50,3s, sem retry. Backlog: 4/24 concluídos; IMP-002 desbloqueada.
 
 ✔ ADR-002 aprovada e registrada como DECISION-024: histórico autenticado terá backend como fonte única, escopo obrigatório por owner + projeto e retenção de 90 dias; visitante fica apenas na memória da aba. Timeline e Archivist não serão reaproveitados como conversa. Evidência real: o Next atual só mantém bolhas no DOM, `/api/chat` é mensagem isolada e o Archivist não possui isolamento por usuário/projeto. Backlog: 3/24 concluídos.
@@ -103,7 +105,7 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 
 # PRÓXIMA PRIORIDADE
 
-Continuar pelo critical path com IMP-002 (histórico/sessões por projeto conforme DECISION-024); ADR-003/004/005 e IMP-006 também estão Ready. Antes de implementar histórico, usar o `project_id` selecionado e validar ownership no backend. Comando inicial recomendado: `rg -n "api/chat|appendMessage|archivistSave|MISSION_TIMELINE_PATH|delete.*auth/me" backend/server.js frontend/assets/vision-core-next-clean.js docs/API_CONTRACT.md`.
+Continuar pelo critical path com IMP-003 (logs correlacionados); ADR-003/004/005 e IMP-006 também estão Ready. Comando inicial recomendado: `rg -n "request.?id|correlation|auditLog|console\\.(log|error)|logs|download" backend frontend/assets/vision-core-next-clean.js docs/API_CONTRACT.md`.
 
 ---
 

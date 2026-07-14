@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-83">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-83" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-84">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-84" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -73,6 +73,10 @@
           <input type="text" id="vcProjectName" placeholder="Novo projeto" maxlength="120" disabled>
           <button type="button" id="vcProjectCreate" disabled>Criar</button>
           <span id="vcProjectStatus" role="status" aria-live="polite">Entre para persistir projetos.</span>
+          <label for="vcConversationSelect">Conversa</label>
+          <select id="vcConversationSelect" disabled><option>Efêmera</option></select>
+          <button type="button" id="vcConversationNew" disabled>Nova</button>
+          <button type="button" id="vcConversationDelete" disabled>Excluir</button>
         </div>
         <div class="vc-feature-head" id="vcPageHead" hidden aria-live="polite">
           <div>

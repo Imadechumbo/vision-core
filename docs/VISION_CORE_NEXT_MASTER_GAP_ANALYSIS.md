@@ -94,7 +94,7 @@ Fórmula: excluem-se as 5 capacidades explicitamente descartáveis. Cada complet
 | CHAT-001 | Chat | texto | real | real | sim | E2E | ✅ Completo | API chat | — | Next JS:2070 |
 | CHAT-002 | Chat | imagem | real | real | sim | E2E | ✅ Completo | API chat/vision | — | Next JS:2887 |
 | CHAT-003 | Chat | apply em memória | real | real | sim | E2E | ✅ Completo | chat/apply-patch | — | Next JS:1980 |
-| CHAT-004 | Chat | histórico/sessões | real | não equivalente | sim | não | 🔴 Ausente | projetos+auth | P1 | legado JS:6319 |
+| CHAT-004 | Chat | histórico/sessões | real | real | sim | permanente | ✅ Completo | projetos+auth | — | DECISION-024; `next-clean-84` |
 | UX-001 | UX | shell/sidebar | real | real | sim | E2E | ✅ Completo | — | — | Next JS:408 |
 | UX-002 | UX | loading/erro/retry | real | irregular | sim | parcial | 🟡 Parcial | contratos API | P2 | Next JS:2057 |
 | UX-003 | UX | estados vazios | real | irregular | sim | parcial | 🟡 Parcial | dados | P3 | specs/E2E |

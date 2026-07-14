@@ -4,6 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-84 (2026-07-14, não deployado)
+
+- Conversas autenticadas persistem por owner + projeto, com retenção de 90 dias, reload, troca e exclusão; visitante permanece efêmero.
+- Header reutiliza o contexto compacto para selecionar/criar/excluir conversa; somente texto visível é salvo, em ordem usuário→assistente.
+
 ## next-clean-83 (2026-07-14, não deployado)
 
 - DECISION-023 implementada: `/api/projects` exige sessão, deriva owner no backend e isola listagem por usuário; `user_id` do cliente é rejeitado.

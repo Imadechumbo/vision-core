@@ -4,7 +4,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
 const ROOT = resolve(process.cwd());
-const FILES = ['users.json', 'projects.json', 'audit-log.json'].map(name => resolve(ROOT, 'data', name));
+const FILES = ['users.json', 'projects.json', 'chat-conversations.json', 'token-blacklist.json', 'audit-log.json'].map(name => resolve(ROOT, 'data', name));
 const backups = FILES.map(file => ({ file, existed: existsSync(file), content: existsSync(file) ? readFileSync(file, 'utf8') : null }));
 const PORT = 18736;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -81,6 +81,30 @@ try {
 
   const spoof = await request('/api/projects', { method: 'POST', token: tokenA, body: { name: 'Spoof', user_id: registerB.body.user.id } });
   assert(spoof.status === 400 && spoof.body.error === 'project_owner_not_assignable', 'user_id fornecido pelo cliente é rejeitado');
+
+  const anonymousChats = await request(`/api/chat/conversations?project_id=${createdA.body.project.id}`);
+  assert(anonymousChats.status === 401, 'histórico anônimo falha com 401');
+  const foreignProject = await request('/api/chat/conversations', { method: 'POST', token: tokenA, body: { project_id: createdB.body.project.id } });
+  assert(foreignProject.status === 404 && foreignProject.body.error === 'project_not_found', 'usuário A não cria conversa no projeto B');
+
+  const createdChat = await request('/api/chat/conversations', { method: 'POST', token: tokenA, body: { project_id: createdA.body.project.id, title: 'Conversa A' } });
+  const chatId = createdChat.body.conversation.id;
+  assert(createdChat.status === 200 && chatId, 'usuário A cria conversa no próprio projeto');
+  const savedMessage = await request(`/api/chat/conversations/${chatId}/messages`, { method: 'POST', token: tokenA, body: { role: 'user', content: 'mensagem visível' } });
+  assert(savedMessage.status === 200 && savedMessage.body.message.content === 'mensagem visível', 'mensagem textual é persistida');
+  const readA = await request(`/api/chat/conversations/${chatId}`, { token: tokenA });
+  const readB = await request(`/api/chat/conversations/${chatId}`, { token: tokenB });
+  assert(readA.body.conversation.messages.length === 1, 'owner lê as mensagens da conversa');
+  assert(readB.status === 404 && readB.body.error === 'conversation_not_found', 'outro usuário não lê a conversa');
+  const listChats = await request(`/api/chat/conversations?project_id=${createdA.body.project.id}`, { token: tokenA });
+  assert(listChats.body.conversations.length === 1 && listChats.body.conversations[0].message_count === 1, 'listagem traz somente metadados e contagem');
+  await request('/api/chat/conversations', { method: 'POST', token: tokenA, body: { project_id: createdA.body.project.id, title: 'Conversa A2' } });
+  const paged = await request(`/api/chat/conversations?project_id=${createdA.body.project.id}&limit=1&offset=1`, { token: tokenA });
+  assert(paged.body.conversations.length === 1 && paged.body.total === 2 && paged.body.next_offset === null, 'paginação retorna total e offset determinísticos');
+
+  const deletedAccount = await request('/api/auth/me', { method: 'DELETE', token: tokenA });
+  const conversationsAfterDelete = JSON.parse(readFileSync(resolve(ROOT, 'data', 'chat-conversations.json'), 'utf8')).conversations;
+  assert(deletedAccount.status === 200 && conversationsAfterDelete.every(item => item.user_id !== registerA.body.user.id), 'exclusão de conta remove todas as conversas do owner');
 } finally {
   child.kill();
   for (const backup of backups) {
