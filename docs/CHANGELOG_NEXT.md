@@ -4,6 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-79 (2026-07-13)
+
+- DECISION-022: Atomic Core passa a ser estritamente da aba Chat. A exceção anterior do Software Factory Auto-Pilot foi removida; Auto-Pilot e Modo Avançado agora usam somente o cabeçalho curto de papel.
+- Remove a duplicação visual de badge/título nas páginas com cabeçalho curto: `#vcPageHead` é o cabeçalho canônico fora de Chat, e o header interno de `#vcFeaturePanel` fica oculto nesses contextos.
+- O controle obsoleto "Manter Atomic Core sempre visível" saiu de Settings; o toggle "Mostrar Atomic Core" e a intensidade visual permanecem.
+
 ## next-clean-78 (2026-07-13)
 
 - Fix de regressão visual do `next-clean-76`: páginas com cabeçalho curto não reservam mais o espaço invisível do Atomic Core + `#vcChatStream`.

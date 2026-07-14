@@ -1,7 +1,7 @@
 // @ts-check
 /**
- * Vision Core Next - Atomic Core idle animation (chat/Software Factory
- * Auto-Pilot only since DECISION-021, 2026-07-13 -- see docs/DECISIONS.md).
+ * Vision Core Next - Atomic Core idle animation (Chat only since
+ * DECISION-022, 2026-07-13 -- see docs/DECISIONS.md).
  *
  * PERMANENT SPEC (not a temp validation spec — see docs/CURRENT_STATE.md).
  *
@@ -199,11 +199,10 @@ for (const viewport of [
   });
 }
 
-// Fase 1.5 (confirmado pelo usuário 2026-07-11): o Atomic Core recolhe
-// sozinho só no Modo Avançado do Software Factory — único painel com
-// colisão real confirmada por screenshot contra a zona reservada do widget.
-// Nunca display:none (mataria a transição); is-collapsed via opacity/scale.
-test('collapses only in Software Factory Modo Avancado, never in Auto-Pilot or other tabs', async ({ page }) => {
+// DECISION-022 (2026-07-13): Software Factory deixou de contar como Chat.
+// O widget ainda existe no DOM, mas fica colapsado e removido do layout por
+// CSS em qualquer aba que não seja Chat.
+test('Atomic Core is visible only on Chat, including no exception for Software Factory Auto-Pilot', async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
   await page.goto(NEXT_URL());
   const hud = page.locator('[data-atomic-core]');
@@ -211,50 +210,26 @@ test('collapses only in Software Factory Modo Avancado, never in Auto-Pilot or o
   await expect(hud).not.toHaveClass(/is-collapsed/);
 
   await page.locator('a[data-feature="factory"]').click();
-  await expect(hud, 'Auto-Pilot (default SF mode) must not collapse the widget').not.toHaveClass(/is-collapsed/);
+  await expect(hud, 'Auto-Pilot is no longer chat-like for the Atomic Core').toHaveClass(/is-collapsed/);
+  await expect(hud).toHaveCSS('display', 'none');
 
   await page.locator('[data-sf-mode="advanced"]').click();
-  await expect(hud, 'Modo Avancado must collapse the widget').toHaveClass(/is-collapsed/);
+  await expect(hud, 'Modo Avancado also stays outside the Atomic Core scope').toHaveClass(/is-collapsed/);
+  await expect(hud).toHaveCSS('display', 'none');
 
   await page.locator('[data-sf-mode="auto"]').click();
-  await expect(hud, 'switching back to Auto-Pilot must restore the widget').not.toHaveClass(/is-collapsed/);
-
-  await page.locator('[data-sf-mode="advanced"]').click();
-  await expect(hud).toHaveClass(/is-collapsed/);
+  await expect(hud, 'switching back to Auto-Pilot must not restore the widget').toHaveClass(/is-collapsed/);
   await page.locator('a[data-feature="chat"]').click();
-  await expect(hud, 'leaving Software Factory entirely must restore the widget').not.toHaveClass(/is-collapsed/);
+  await expect(hud, 'only Chat restores the widget').not.toHaveClass(/is-collapsed/);
+  await expect(hud).toHaveCSS('display', 'block');
 });
 
-test('Settings override "always visible" prevents the auto-collapse, live and persisted (window.VCAtomicCollapse)', async ({ page }) => {
-  await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
+test('obsolete Software Factory "always visible" control is gone, but Mostrar Atomic Core remains', async ({ page }) => {
   await page.goto(NEXT_URL());
-  const hud = page.locator('[data-atomic-core]');
-
-  await page.evaluate(() => {
-    var el = document.getElementById('vcAtomicAlwaysVisible');
-    el.checked = true;
-    el.dispatchEvent(new Event('change'));
-  });
-  expect(await page.evaluate(() => window.VCAtomicCollapse.getPref())).toBe('always');
-
-  await page.locator('a[data-feature="factory"]').click();
-  await page.locator('[data-sf-mode="advanced"]').click();
-  await expect(hud, 'user override must prevent collapse even in Modo Avancado').not.toHaveClass(/is-collapsed/);
-
-  // Persists across reload — checkbox reflects it, still no collapse.
-  await page.reload();
-  await page.locator('a[data-feature="factory"]').click();
-  await page.locator('[data-sf-mode="advanced"]').click();
-  await expect(page.locator('#vcAtomicAlwaysVisible')).toBeChecked();
-  await expect(hud).not.toHaveClass(/is-collapsed/);
-
-  // Turning it back off restores auto-collapse immediately, no reload.
-  await page.evaluate(() => {
-    var el = document.getElementById('vcAtomicAlwaysVisible');
-    el.checked = false;
-    el.dispatchEvent(new Event('change'));
-  });
-  await expect(hud, 'unchecking override must re-apply auto-collapse immediately').toHaveClass(/is-collapsed/);
+  await page.locator('a[data-feature="settings"]').click();
+  await expect(page.locator('#vcAtomicAlwaysVisible')).toHaveCount(0);
+  await expect(page.locator('#vcAtomicEnabled')).toBeVisible();
+  await expect(page.locator('#vcAtomicIntensity')).toBeVisible();
 });
 
 // ROADMAP.md "Settings do Atomic Core — ligado/desligado, intensidade visual".
@@ -288,12 +263,8 @@ test('on/off toggle hides the widget everywhere (not just Modo Avancado), live a
   await expect(hud, 'turning it back on must restore the widget immediately').not.toHaveClass(/is-collapsed/);
 });
 
-// DECISION-021 (2026-07-13): o toggle "mostrar Atomic Core" continua valendo
-// GLOBALMENTE (persiste independente da aba), mas agora interage com um
-// segundo motivo de collapse -- estar fora de chat/factory. Ligar o toggle
-// enquanto numa aba fora desse escopo não tem efeito visível ali (já estava
-// escondido pela regra de aba), mas o estado do toggle em si continua
-// valendo quando o usuário volta pro chat.
+// DECISION-022 (2026-07-13): o toggle "mostrar Atomic Core" continua valendo
+// globalmente, mas fora de Chat o widget segue invisível pelo escopo da aba.
 test('"mostrar Atomic Core" toggle persists globally across navigation, even while hidden by the chat-only scope', async ({ page }) => {
   await page.goto(NEXT_URL());
   const hud = page.locator('[data-atomic-core]');
@@ -315,33 +286,10 @@ test('"mostrar Atomic Core" toggle persists globally across navigation, even whi
     el.checked = true;
     el.dispatchEvent(new Event('change'));
   });
-  await expect(hud, 'turning back on while on Missions has no visible effect -- Missions is outside the chat/factory scope').toHaveClass(/is-collapsed/);
+  await expect(hud, 'turning back on while on Missions has no visible effect -- Missions is outside Chat').toHaveClass(/is-collapsed/);
 
   await page.locator('a[data-feature="chat"]').click();
   await expect(hud, 'back on chat, the re-enabled toggle takes effect immediately').not.toHaveClass(/is-collapsed/);
-});
-
-test('off wins over "always visible": widget stays hidden in Modo Avancado even with the override checked', async ({ page }) => {
-  await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
-  await page.goto(NEXT_URL());
-  const hud = page.locator('[data-atomic-core]');
-
-  // Must actually be inside Modo Avancado, where "always visible" would
-  // otherwise keep the widget shown (autoCollapse alone would be false) --
-  // otherwise this test doesn't exercise the precedence conflict at all.
-  await page.locator('a[data-feature="factory"]').click();
-  await page.locator('[data-sf-mode="advanced"]').click();
-  await page.evaluate(() => {
-    document.getElementById('vcAtomicAlwaysVisible').checked = true;
-    document.getElementById('vcAtomicAlwaysVisible').dispatchEvent(new Event('change'));
-  });
-  await expect(hud, 'sanity check: "always visible" alone must keep it shown in Modo Avancado').not.toHaveClass(/is-collapsed/);
-
-  await page.evaluate(() => {
-    document.getElementById('vcAtomicEnabled').checked = false;
-    document.getElementById('vcAtomicEnabled').dispatchEvent(new Event('change'));
-  });
-  await expect(hud, 'widget-level off must win over the SF-Advanced-only override').toHaveClass(/is-collapsed/);
 });
 
 test('intensity slider sets --atomic-intensity and persists across reload (window.VCAtomicCore has no bearing on this)', async ({ page }) => {
@@ -400,28 +348,21 @@ test('scrolls away with the chat content instead of staying pinned to the viewpo
   expect(after, 'must move out of the visible area when the page is scrolled, unlike position:fixed').toBeLessThan(before - 100);
 });
 
-// DECISION-021 (2026-07-13, corrige PARCIALMENTE next-clean-67/DECISION-020):
-// Atomic Core volta a ser escopado a chat/Software Factory Auto-Pilot --
-// hidden (via .is-collapsed, nunca display:none) em qualquer outra aba. O
-// widget nunca foi removido do produto, só voltou a ser escopado.
-test('hidden outside chat/Software Factory Auto-Pilot -- visible only on those two (DECISION-021)', async ({ page }) => {
+// DECISION-022 (2026-07-13): Atomic Core é Chat-only. O widget nunca foi
+// removido do produto, só perdeu a exceção antiga do Software Factory.
+test('hidden outside Chat, including Software Factory Auto-Pilot (DECISION-022)', async ({ page }) => {
   await page.goto(NEXT_URL());
   const hud = page.locator('[data-atomic-core]');
 
   await expect(hud, 'visible on chat home').not.toHaveClass(/is-collapsed/);
 
-  for (const feature of ['settings', 'missions', 'metrics', 'agents', 'vault', 'tools', 'security', 'github']) {
+  for (const feature of ['settings', 'missions', 'metrics', 'agents', 'vault', 'tools', 'security', 'github', 'factory']) {
     await page.locator('a[data-feature="' + feature + '"]').click();
     await expect(hud, 'must be hidden on ' + feature).toHaveClass(/is-collapsed/);
   }
 
   await page.locator('a[data-feature="chat"]').click();
   await expect(hud, 'visible again back on chat').not.toHaveClass(/is-collapsed/);
-
-  // Software Factory Auto-Pilot continua contando como chat-like -- critério
-  // que não mudou desde next-clean-61, não faz parte desta correção.
-  await page.locator('a[data-feature="factory"]').click();
-  await expect(hud, 'Software Factory Auto-Pilot stays visible').not.toHaveClass(/is-collapsed/);
 });
 
 // Decisao do usuario (2026-07-12, next-clean-69): remove por completo o
@@ -489,34 +430,29 @@ test('anchors flush against the real right edge of the content area, not just it
   expect(Math.abs(gap), 'HUD right edge must match .vc-main real content-right-edge, not float short of it').toBeLessThan(2);
 });
 
-// DECISION-021 (2026-07-13): agora que o widget só é visível em chat/Software
-// Factory Auto-Pilot, o ancoramento e a ausência de corte só precisam ser
-// garantidos onde ele de fato aparece -- testar em páginas onde fica
-// invisível (opacity:0 via .is-collapsed) não valida nada de real.
-test('anchor and no-clipping guarantees hold on every page where the widget is actually visible (chat, Software Factory Auto-Pilot)', async ({ page }) => {
+// DECISION-022 (2026-07-13): agora que o widget só é visível em Chat, o
+// ancoramento e a ausência de corte só precisam ser garantidos ali; testar em
+// páginas onde fica display:none não valida nada de real.
+test('anchor and no-clipping guarantees hold where the widget is actually visible (Chat)', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(NEXT_URL());
 
-  for (const feature of ['chat', 'factory']) {
-    await page.locator('a[data-feature="' + feature + '"]').click();
-    await page.waitForTimeout(200);
-    const result = await page.evaluate(() => {
-      const hud = document.querySelector('[data-atomic-core]');
-      const main = document.querySelector('.vc-main');
-      const scrollRect = document.getElementById('vcChatScroll').getBoundingClientRect();
-      const hudRect = hud.getBoundingClientRect();
-      const mainRect = main.getBoundingClientRect();
-      const paddingRight = parseFloat(getComputedStyle(main).paddingRight);
-      const gap = (mainRect.right - paddingRight) - hudRect.right;
-      const tolerance = 1;
-      const clipped = Array.from(document.querySelectorAll('[data-agent]'))
-        .map((el) => el.getBoundingClientRect())
-        .filter((rect) => rect.right > scrollRect.right + tolerance || rect.left < scrollRect.left - tolerance);
-      return { gap, clippedCount: clipped.length };
-    });
-    expect(Math.abs(result.gap), feature + ': HUD must stay anchored to the real right edge').toBeLessThan(2);
-    expect(result.clippedCount, feature + ': no agent label should be clipped').toBe(0);
-  }
+  const result = await page.evaluate(() => {
+    const hud = document.querySelector('[data-atomic-core]');
+    const main = document.querySelector('.vc-main');
+    const scrollRect = document.getElementById('vcChatScroll').getBoundingClientRect();
+    const hudRect = hud.getBoundingClientRect();
+    const mainRect = main.getBoundingClientRect();
+    const paddingRight = parseFloat(getComputedStyle(main).paddingRight);
+    const gap = (mainRect.right - paddingRight) - hudRect.right;
+    const tolerance = 1;
+    const clipped = Array.from(document.querySelectorAll('[data-agent]'))
+      .map((el) => el.getBoundingClientRect())
+      .filter((rect) => rect.right > scrollRect.right + tolerance || rect.left < scrollRect.left - tolerance);
+    return { gap, clippedCount: clipped.length };
+  });
+  expect(Math.abs(result.gap), 'HUD must stay anchored to the real right edge').toBeLessThan(2);
+  expect(result.clippedCount, 'no agent label should be clipped').toBe(0);
 });
 
 // Achado real (2026-07-12): a legibilidade de "todos os 9 nós" não é
