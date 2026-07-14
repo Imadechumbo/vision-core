@@ -461,6 +461,7 @@
   function selectFeature(key, announce) {
     var feature = featureMap[key] || featureMap.chat;
     activeFeature = featureMap[key] ? key : 'chat';
+    if (appShell) appShell.setAttribute('data-active-feature', activeFeature);
     document.querySelectorAll('[data-feature]').forEach(function (node) {
       node.classList.toggle('is-active', node.getAttribute('data-feature') === activeFeature);
     });
@@ -3754,6 +3755,7 @@
 
   function setSfMode(mode) {
     sfMode = mode === 'advanced' ? 'advanced' : 'auto';
+    if (appShell) appShell.setAttribute('data-sf-mode', sfMode);
     sfModeButtons.forEach(function (btn) {
       btn.setAttribute('aria-pressed', btn.getAttribute('data-sf-mode') === sfMode ? 'true' : 'false');
     });

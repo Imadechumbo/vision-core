@@ -1026,6 +1026,18 @@ a { color: inherit; text-decoration: none; }
   transition: none;
 }
 
+/* next-clean-78: DECISION-021 removeu Atomic Core/cabecalho grande das
+   abas fora de Chat, mas os blocos de Chat continuavam no fluxo e
+   reservavam ~650px invisiveis antes do painel real. Fora de Chat/Factory
+   eles saem do layout; Factory Auto-Pilot preserva o Atomic Core, e Modo
+   Avancado remove o espaco apenas quando o widget esta colapsado. */
+.vc-app-shell[data-active-feature]:not([data-active-feature="chat"]):not([data-active-feature="factory"]) .vc-atomic-hud,
+.vc-app-shell[data-active-feature]:not([data-active-feature="chat"]):not([data-active-feature="factory"]) #vcChatStream,
+.vc-app-shell[data-active-feature="factory"][data-sf-mode="advanced"] #vcChatStream,
+.vc-app-shell[data-active-feature="factory"][data-sf-mode="advanced"] .vc-atomic-hud.is-collapsed {
+  display: none;
+}
+
 .vc-atomic-rings,
 .vc-core-node,
 .vc-agent { position: absolute; left: 50%; top: 50%; }

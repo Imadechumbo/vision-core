@@ -4,6 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-78 (2026-07-13)
+
+- Fix de regressão visual do `next-clean-76`: páginas com cabeçalho curto não reservam mais o espaço invisível do Atomic Core + `#vcChatStream`.
+- Causa raiz medida: `.vc-atomic-hud.is-collapsed` só mudava `opacity/transform`, então seguia `display:block`; o chat stream também mantinha `min-height`. Missions/Métricas caíram de ~651px para ~49px entre cabeçalho curto e painel real.
+- `selectFeature()` expõe `data-active-feature`, `setSfMode()` expõe `data-sf-mode`, e o CSS remove do fluxo os blocos exclusivos do Chat fora de Chat/Factory. Factory Auto-Pilot preserva Atomic Core; Modo Avançado remove o espaço quando o widget está colapsado.
+
 ## next-clean-77 (2026-07-13)
 
 - OAuth Google/GitHub implementado no Vision Core Next dentro de Settings → Conta, reaproveitando o mesmo `vision_token` do login email/senha.

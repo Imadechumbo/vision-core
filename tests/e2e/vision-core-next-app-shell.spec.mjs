@@ -199,6 +199,56 @@ test('Software Factory Modo Avancado also gets the short role header (Atomic Cor
   await expect(page.locator('#vcPageHeadTitle')).toHaveText('Software Factory');
 });
 
+test('short-header pages do not reserve the old Atomic Core / chat intro vertical space', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(NEXT_URL);
+
+  await page.route(`${API}/api/metrics/agents`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, agents: [] }) }));
+  await page.route(`${API}/api/metrics/summary`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }));
+  await page.route(`${API}/api/dora-metrics`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }));
+  await page.route(`${API}/api/metrics/memory`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }));
+  await page.route(`${API}/api/vault/snapshots`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, snapshots: [] }) }));
+
+  async function gapFor(feature, advanced = false) {
+    await page.locator(`[data-feature="${feature}"]`).first().click();
+    if (advanced) await page.locator('[data-sf-mode="advanced"]').click();
+    await page.waitForTimeout(100);
+    return page.evaluate(() => {
+      const head = document.querySelector('#vcPageHead:not([hidden]), #vcBrandLockup:not([hidden])');
+      const panel = document.querySelector('#factory:not([hidden]), #vcFeaturePanel');
+      const atomic = document.querySelector('[data-atomic-core]');
+      const stream = document.querySelector('#vcChatStream');
+      return {
+        gap: Math.round(panel.getBoundingClientRect().top - head.getBoundingClientRect().bottom),
+        atomicDisplay: getComputedStyle(atomic).display,
+        streamDisplay: getComputedStyle(stream).display
+      };
+    });
+  }
+
+  for (const target of [
+    ['missions', false],
+    ['metrics', false],
+    ['vault', false],
+    ['factory', true]
+  ]) {
+    const result = await gapFor(target[0], target[1]);
+    expect(result.gap, `${target[0]} should start just below the short header`).toBeLessThanOrEqual(80);
+    expect(result.atomicDisplay, `${target[0]} should not keep invisible Atomic Core space`).toBe('none');
+    expect(result.streamDisplay, `${target[0]} should not keep invisible chat stream space`).toBe('none');
+  }
+
+  const chat = await gapFor('chat');
+  expect(chat.atomicDisplay).toBe('block');
+  expect(chat.streamDisplay).toBe('flex');
+  expect(chat.gap, 'Chat still owns the large Atomic Core/chat stream composition').toBeGreaterThan(250);
+});
+
 test('Security Lab: missing status endpoints still render a calm, non-error fallback', async ({ page }) => {
   await page.goto(NEXT_URL);
   for (const p of SAFE_STATUS_PATHS) {
