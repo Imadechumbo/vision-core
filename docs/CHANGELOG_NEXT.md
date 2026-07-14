@@ -4,6 +4,10 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-89 (2026-07-14, não deployado)
+
+- Composer e nome de projeto ganharam nomes acessíveis; o modal Smile contém Tab/Shift+Tab e continua restaurando foco no Escape.
+
 ## next-clean-88 (2026-07-14, não deployado)
 
 - Landing/About deixaram de anunciar jornadas de billing sem destino e conteúdo explicitamente não implementado não é mais exibido.

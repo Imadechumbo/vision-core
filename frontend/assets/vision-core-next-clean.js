@@ -910,6 +910,20 @@
 
   if (featureClose) featureClose.addEventListener('click', closeContextPanel);
   document.addEventListener('keydown', function (event) {
+    if (event.key === 'Tab' && smileModal && !smileModal.hidden) {
+      var modalFocusables = Array.from(smileModal.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+      if (modalFocusables.length) {
+        var firstModalControl = modalFocusables[0];
+        var lastModalControl = modalFocusables[modalFocusables.length - 1];
+        if (event.shiftKey && document.activeElement === firstModalControl) {
+          event.preventDefault();
+          lastModalControl.focus();
+        } else if (!event.shiftKey && document.activeElement === lastModalControl) {
+          event.preventDefault();
+          firstModalControl.focus();
+        }
+      }
+    }
     if (event.key === 'Escape') {
       if (smileModal && !smileModal.hidden) {
         closeSmileGuide();

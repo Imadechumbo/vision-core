@@ -28,13 +28,13 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | REL | 2 |
 | OPS | 4 |
 | Total | 25 |
-| Concluídos | 13 |
-| Pendentes | 12 |
-| Bloqueados por dependência | 9 |
+| Concluídos | 14 |
+| Pendentes | 11 |
+| Bloqueados por dependência | 8 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 71%; Desenvolvimento 75%; Certificação 25%; Release 50%; Operação 0%.
+Percentual concluído por trilha: Arquitetura 71%; Desenvolvimento 88%; Certificação 25%; Release 50%; Operação 0%.
 
 ## 4. Trilha A — ADRs
 
@@ -174,7 +174,7 @@ DoR comum: ADR aplicável aprovado, contrato/spec suficiente, dependências Done
 - **Arquivos candidatos/proibidos:** HTML/JS Next e testes afetados; redesign visual proibido.
 - **Dependências:** achado TEST-002. **Testes:** nomes por controle, Tab/Shift+Tab contidos, Escape restaura trigger e reduced motion.
 - **Rollback:** revert. **Estimativa/complexidade:** XS/baixa.
-- **Impacto:** fluxo completo por leitor de tela e teclado. **Status:** Ready.
+- **Impacto:** fluxo completo por leitor de tela e teclado. **Status:** Done (`next-clean-89`; auditoria 3/3 e regressão afetada 41/41).
 
 ## 6. Trilha C — Certificações
 
@@ -330,7 +330,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| ADR-006,007; IMP-007; TEST-002; REL-002; OPS-001–004 | IMP-008; TEST-003,004 | — | — | REL-001; ADR-001–005; IMP-001–006; TEST-001 |
+| ADR-006,007; IMP-007; REL-002; OPS-001–004 | TEST-002,003,004 | — | — | REL-001; ADR-001–005; IMP-001–006,008; TEST-001 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 

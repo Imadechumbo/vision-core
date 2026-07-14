@@ -71,7 +71,7 @@
         <div class="vc-project-context" aria-label="Projeto ativo">
           <label for="vcProjectSelect">Projeto</label>
           <select id="vcProjectSelect" disabled><option>Temporário</option></select>
-          <input type="text" id="vcProjectName" placeholder="Novo projeto" maxlength="120" disabled>
+          <input type="text" id="vcProjectName" aria-label="Nome do novo projeto" placeholder="Novo projeto" maxlength="120" disabled>
           <button type="button" id="vcProjectCreate" disabled>Criar</button>
           <span id="vcProjectStatus" role="status" aria-live="polite">Entre para persistir projetos.</span>
           <button type="button" id="vcProjectRetry" hidden>Tentar novamente</button>
@@ -611,7 +611,7 @@
         </section>
 
         <form class="vc-composer" id="vcComposer">
-          <textarea id="vcPrompt" rows="1" placeholder="Descreva a missão, bug, stack ou objetivo..."></textarea>
+          <textarea id="vcPrompt" rows="1" aria-label="Mensagem ou missão" placeholder="Descreva a missão, bug, stack ou objetivo..."></textarea>
           <input id="vcAttachmentInput" type="file" multiple hidden>
           <input id="vcImageInput" type="file" accept="image/*" hidden>
           <div class="vc-composer-actions">
