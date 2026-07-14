@@ -305,6 +305,10 @@ a { color: inherit; text-decoration: none; }
 .vc-operation-log-filters input,
 .vc-operation-log-filters button { min-height: 34px; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; background: rgba(13,10,22,.82); color: var(--text); padding: 0 9px; }
 .vc-operation-log-entry { display: grid; grid-template-columns: minmax(150px,1fr) minmax(100px,.6fr) minmax(180px,1fr); gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.08); font-size: 11px; }
+[data-state="loading"] { color: var(--muted); }
+[data-state="empty"] { color: #a99eb9; }
+[data-state="error"] { color: #f87171; }
+[data-state="success"] { color: var(--green); }
 
 .vc-brand-copy { min-width: 0; }
 .vc-brand-copy strong { font-size: 22px; }

@@ -22,6 +22,7 @@ test('visitor gets an ephemeral context and cannot create persisted projects', a
   await expect(page.locator('#vcProjectSelect')).toHaveText('Temporário');
   await expect(page.locator('#vcProjectCreate')).toBeDisabled();
   await expect(page.locator('#vcProjectStatus')).toContainText('Entre');
+  await expect(page.locator('#vcProjectStatus')).toHaveAttribute('data-state', 'empty');
 });
 
 test('authenticated reload lists projects and restores only the same user selection', async ({ page }) => {
@@ -65,6 +66,7 @@ test('load failure is readable and retry remains possible through account refres
   await page.addInitScript(() => localStorage.setItem('vision_token', 'token-u1'));
   await page.goto(NEXT_URL);
   await expect(page.locator('#vcProjectStatus')).toContainText('projects_unavailable');
+  await expect(page.locator('#vcProjectStatus')).toHaveAttribute('data-state', 'error');
   await expect(page.locator('#vcProjectCreate')).toBeEnabled();
 });
 
@@ -111,6 +113,23 @@ test('Logs is authenticated SAFE READ, filtered by project and renders only reda
   await page.locator('a[data-feature="logs"]').click();
   await expect(page.locator('#vcLogList')).toContainText('conversation.created');
   await expect(page.locator('#vcLogList')).toContainText('req-safe-123');
+  await expect(page.locator('#vcLogStatus')).toHaveAttribute('data-state', 'success');
   expect(requestedUrl).toContain('project_id=p1');
   await expect(page.locator('#vcLogList')).not.toContainText('u1@example.com');
+});
+
+test('Mission history exposes explicit empty and error states', async ({ page }) => {
+  let calls = 0;
+  await page.route(`${API}/api/mission/timeline**`, route => {
+    calls++;
+    route.fulfill(calls === 1
+      ? { status: 200, contentType: 'application/json', body: '{"ok":true,"entries":[]}' }
+      : { status: 500, contentType: 'application/json', body: '{"ok":false,"error":"timeline_unavailable"}' });
+  });
+  await page.goto(NEXT_URL);
+  await page.locator('a[data-feature="missions"]').click();
+  await expect(page.locator('#vcMissionHistoryList')).toHaveAttribute('data-state', 'empty');
+  await page.locator('a[data-feature="chat"]').click();
+  await page.locator('a[data-feature="missions"]').click();
+  await expect(page.locator('#vcMissionHistoryList')).toHaveAttribute('data-state', 'error');
 });

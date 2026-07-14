@@ -127,6 +127,7 @@ test('project-files failure (no files) surfaces a readable error, never a silent
 
   await page.locator('#vcSfFilesBtn').click();
   await expect(page.locator('#vcSfFilesStatus')).toContainText('Erro', { timeout: 5_000 });
+  await expect(page.locator('#vcSfFilesStatus')).toHaveAttribute('data-state', 'error');
   await expect(page.locator('#vcSfFilesList')).toBeHidden();
   await expect(page.locator('#vcSfZipActions')).toBeHidden();
   await expect(page.locator('#vcSfFilesBtn')).toBeEnabled();

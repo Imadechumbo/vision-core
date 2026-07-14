@@ -4,6 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-86 (2026-07-14, não deployado)
+
+- Projetos, histórico, logs e SF usam o mesmo contrato DOM `data-state=loading|empty|error|success`, mantendo copy e `aria-live`.
+- Reset vazio de uma nova rodada SF permanece distinto de geração em andamento.
+
 ## next-clean-85 (2026-07-14, não deployado)
 
 - Logs brutos públicos foram aposentados; endpoint autenticado retorna somente eventos allowlisted por owner/projeto com `request_id` e paginação.

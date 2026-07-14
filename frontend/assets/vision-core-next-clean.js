@@ -407,6 +407,12 @@
     return item;
   }
 
+  function setAsyncStatus(element, state, message) {
+    if (!element) return;
+    element.dataset.state = state;
+    element.textContent = message || '';
+  }
+
   function resizePrompt() {
     if (!prompt) return;
     prompt.style.height = 'auto';
@@ -2705,25 +2711,24 @@
   }
 
   function setProjectStatus(message, isError) {
-    if (!projectStatus) return;
-    projectStatus.textContent = message;
-    projectStatus.style.color = isError ? '#f87171' : '';
+    var state = isError ? 'error' : (/carregando|criando/i.test(message) ? 'loading' : (/nenhum|entre/i.test(message) ? 'empty' : 'success'));
+    setAsyncStatus(projectStatus, state, message);
   }
 
   function loadOperationLogs() {
     if (!logList || !logStatus) return;
     logList.textContent = '';
     if (!currentProjectUserId || !projectSelect || !projectSelect.value) {
-      logStatus.textContent = 'Entre e selecione um projeto para consultar logs.';
+      setAsyncStatus(logStatus, 'empty', 'Entre e selecione um projeto para consultar logs.');
       return;
     }
-    logStatus.textContent = 'Carregando...';
+    setAsyncStatus(logStatus, 'loading', 'Carregando...');
     var query = '?project_id=' + encodeURIComponent(projectSelect.value) + '&limit=50';
     if (logMissionId && logMissionId.value.trim()) query += '&mission_id=' + encodeURIComponent(logMissionId.value.trim());
     if (logJobId && logJobId.value.trim()) query += '&job_id=' + encodeURIComponent(logJobId.value.trim());
     apiRequest('/api/logs' + query).then(function (data) {
       var entries = Array.isArray(data.entries) ? data.entries : [];
-      logStatus.textContent = entries.length ? entries.length + ' evento(s).' : 'Nenhum evento para estes filtros.';
+      setAsyncStatus(logStatus, entries.length ? 'success' : 'empty', entries.length ? entries.length + ' evento(s).' : 'Nenhum evento para estes filtros.');
       entries.forEach(function (entry) {
         var row = document.createElement('div');
         row.className = 'vc-operation-log-entry';
@@ -2735,7 +2740,7 @@
         logList.appendChild(row);
       });
     }).catch(function (err) {
-      logStatus.textContent = 'Erro: ' + (err && err.message ? err.message : String(err));
+      setAsyncStatus(logStatus, 'error', 'Erro: ' + (err && err.message ? err.message : String(err)));
     });
   }
 
@@ -2952,12 +2957,12 @@
     if (!missionHistoryList) return;
     if (missionDetail) missionDetail.hidden = true;
     if (missionHistoryList) missionHistoryList.hidden = false;
-    missionHistoryList.textContent = 'Carregando...';
+    setAsyncStatus(missionHistoryList, 'loading', 'Carregando...');
     apiRequest('/api/mission/timeline?limit=20').then(function (data) {
       var entries = data && data.entries;
       missionHistoryList.textContent = '';
       if (!entries || !entries.length) {
-        missionHistoryList.textContent = 'Nenhuma missão registrada ainda.';
+        setAsyncStatus(missionHistoryList, 'empty', 'Nenhuma missão registrada ainda.');
         return;
       }
       entries.forEach(function (e, i) {
@@ -2972,8 +2977,9 @@
         item.addEventListener('click', function () { showMissionDetail(e); });
         missionHistoryList.appendChild(item);
       });
+      missionHistoryList.dataset.state = 'success';
     }).catch(function () {
-      if (missionHistoryList) missionHistoryList.textContent = 'Erro ao carregar missões.';
+      setAsyncStatus(missionHistoryList, 'error', 'Erro ao carregar missões.');
     }).then(function () {
       if (scrollAfterLoad && missionHistory && missionHistory.scrollIntoView) missionHistory.scrollIntoView({ block: 'start' });
     });
@@ -4307,7 +4313,7 @@
     sfGeneratedFiles = null;
     if (sfFilesList) { sfFilesList.textContent = ''; sfFilesList.hidden = true; }
     if (sfZipActions) sfZipActions.hidden = true;
-    if (sfFilesStatus) sfFilesStatus.textContent = '';
+    setAsyncStatus(sfFilesStatus, 'empty', '');
     if (sfFilesBtn) { sfFilesBtn.disabled = false; sfFilesBtn.textContent = 'Gerar Lista de Arquivos'; }
     appendSfLog('warn', 'SAFE real_execution_allowed=false deploy_allowed=false writes_disk=false');
     appendSfLog('info', 'MODE ' + sfRunOptions.mode + ' provider=' + sfRunOptions.provider + ' model=' + (sfRunOptions.model || 'auto'));
@@ -4462,7 +4468,7 @@
     if (sfFilesInFlight || !sfLastDescription) return;
     sfFilesInFlight = true;
     if (sfFilesBtn) { sfFilesBtn.disabled = true; sfFilesBtn.textContent = 'Gerando...'; }
-    if (sfFilesStatus) sfFilesStatus.textContent = '';
+    setAsyncStatus(sfFilesStatus, 'loading', 'Gerando arquivos...');
     if (window.setAtomicCoreState) window.setAtomicCoreState('action');
     if (window.highlightAtomicAgents) window.highlightAtomicAgents(['openclaw', 'hermes']);
     var body = {
@@ -4481,10 +4487,10 @@
       if (!files || !files.length) throw new Error('Nenhum arquivo foi gerado');
       sfGeneratedFiles = files;
       renderSfFilesList(files);
-      if (sfFilesStatus) sfFilesStatus.textContent = files.length + ' arquivo(s) gerado(s).';
+      setAsyncStatus(sfFilesStatus, 'success', files.length + ' arquivo(s) gerado(s).');
       if (sfZipActions) sfZipActions.hidden = false;
     }).catch(function (err) {
-      if (sfFilesStatus) sfFilesStatus.textContent = 'Erro: ' + (err && err.message ? err.message : String(err));
+      setAsyncStatus(sfFilesStatus, 'error', 'Erro: ' + (err && err.message ? err.message : String(err)));
     }).then(function () {
       sfFilesInFlight = false;
       if (sfFilesBtn) { sfFilesBtn.disabled = false; sfFilesBtn.textContent = 'Gerar Lista de Arquivos'; }
@@ -4496,7 +4502,7 @@
     if (sfZipInFlight || !sfGeneratedFiles || !sfGeneratedFiles.length) return;
     sfZipInFlight = true;
     if (sfZipBtn) { sfZipBtn.disabled = true; sfZipBtn.textContent = 'Baixando...'; }
-    if (sfFilesStatus) sfFilesStatus.textContent = '';
+    setAsyncStatus(sfFilesStatus, 'loading', 'Preparando ZIP...');
     var headers = { 'Content-Type': 'application/json' };
     var token = getChatAuthToken();
     if (token) headers.Authorization = 'Bearer ' + token;
@@ -4516,8 +4522,9 @@
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      setAsyncStatus(sfFilesStatus, 'success', 'ZIP pronto.');
     }).catch(function (err) {
-      if (sfFilesStatus) sfFilesStatus.textContent = 'Erro ao baixar ZIP: ' + (err && err.message ? err.message : String(err));
+      setAsyncStatus(sfFilesStatus, 'error', 'Erro ao baixar ZIP: ' + (err && err.message ? err.message : String(err)));
     }).then(function () {
       sfZipInFlight = false;
       if (sfZipBtn) { sfZipBtn.disabled = false; sfZipBtn.textContent = 'Baixar ZIP'; }
