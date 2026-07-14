@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ `next-clean-88` / IMP-006 implementada localmente (sem deploy): Landing/About não expõem mais links de billing sem destino nem blocos explicitamente não implementados; tabelas, grids e conteúdo técnico respeitam viewport de 375 px. Smoke temporário de links internos, assets, WIP visível e mobile: 4/4 PASS; inspeção local a 1280 px: `scrollWidth=1265`, zero offender; suíte permanente Next: 122/122 PASS em 49,2s. Backlog: 12/24 concluídos; TEST-001/002/003 estão Ready.
+
 ✔ ADR-005 aprovada e registrada como DECISION-026: administração de deploy fica em superfície operacional separada; no RC, scripts/runbooks existentes continuam sendo a interface real e o cockpit Next não ganha toggles de deploy. Nenhum deploy ou mudança de produção foi executado. Backlog: 11/24 concluídos.
 
 ✔ ADR-004 aprovada e registrada como DECISION-025: billing permanece fora do cockpit Next no RC; endpoints reais, autenticação e jornada financeira não mudaram; nenhum link ornamental será exibido sem destino externo válido. Backlog: 10/24 concluídos.

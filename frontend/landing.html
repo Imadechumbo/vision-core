@@ -26,6 +26,13 @@
     .roadmap-table td { padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,.05); color: #cbd5e1; }
     .roadmap-table tr.current td { background: rgba(34,197,94,.06); }
     .roadmap-table tr.planned td { color: #64748b; }
+    .table-scroll { display:block; max-width:100%; overflow-x:auto; }
+    .bottleneck-grid > *, .bn-card { min-width:0; overflow-wrap:anywhere; }
+    @media (max-width:760px) {
+      .landing-shell * { min-width:0; overflow-wrap:anywhere; }
+      .roadmap-table { table-layout:fixed; }
+      .roadmap-table th, .roadmap-table td { overflow-wrap:anywhere; }
+    }
     .chain-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; }
     .chain-step { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 6px; padding: 6px 12px; font-size: 12px; color: #e2e8f0; }
     .chain-arrow { color: #38bdf8; font-size: 14px; }
@@ -44,7 +51,6 @@
       <a class="btn agent-download" href="https://github.com/Imadechumbo/vision-core/releases/download/v1.0.0-agent/VisionAgentSetup.exe">BAIXAR AGENT</a>
       <a class="btn github" href="https://github.com/Imadechumbo/vision-core" target="_blank" rel="noopener">GITHUB</a>
       <a class="btn" href="#timeline">VER TRAJETÓRIA</a>
-      <a class="btn ghost" href="billing.html">BILLING</a>
     </div>
   </div>
 </header>
@@ -196,7 +202,7 @@
     <h2>Credibilidade vem de evolução, não promessa.</h2>
     <p class="section-lead">Do motor de fila ao SaaS full-stack com IA real, chat conectado e governança declarativa PASS GOLD.</p>
 
-    <div class="roadmap-table" style="overflow-x:auto">
+    <div class="table-scroll">
       <table class="roadmap-table">
         <thead>
           <tr><th>Versão</th><th>Status</th><th>Descrição</th></tr>
@@ -243,7 +249,7 @@
     <h2>Uma segunda interface, construída em paralelo — sem herdar dívida.</h2>
     <p class="section-lead">Vision Core Next roda ao lado do produto acima, com seu próprio versionamento (<code>next-clean-N</code>) e zero código copiado do legado. Não substitui a trajetória V4.4→V3.3.1 — é uma linha própria, validada etapa por etapa antes de qualquer promoção.</p>
 
-    <div class="roadmap-table" style="overflow-x:auto">
+    <div class="table-scroll">
       <table class="roadmap-table">
         <thead>
           <tr><th>Versão</th><th>Status</th><th>Descrição</th></tr>
@@ -282,7 +288,7 @@
       <div class="so-ia-card"><h3>Cloud</h3><p>Cloudflare Pages, Worker Gateway e EB separam frontend, proxy e runtime backend; deploy de frontend nao altera EB.</p></div>
     </div>
 
-    <div class="roadmap-table" style="overflow-x:auto;margin-top:24px">
+    <div class="table-scroll" style="margin-top:24px">
       <table class="roadmap-table">
         <thead>
           <tr><th>Area</th><th>Estado real hoje</th><th>Proximo gate</th></tr>

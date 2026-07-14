@@ -4,6 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-88 (2026-07-14, não deployado)
+
+- Landing/About deixaram de anunciar jornadas de billing sem destino e conteúdo explicitamente não implementado não é mais exibido.
+- Tabelas, grids e trechos técnicos foram limitados ao viewport móvel; link/assets/WIP e layout de 375 px passaram em smoke dedicado 4/4.
+
 ## next-clean-87 (2026-07-14, não deployado)
 
 - Chat ganhou cancelamento real via AbortController e guard contra duplo submit; botão só aparece durante a chamada.
