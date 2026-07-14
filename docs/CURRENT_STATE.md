@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ REL-001 do Engineering Executive Backlog V2 concluída: `e4eee79c` foi confirmado como ancestral do HEAD reconciliado; `codex/next-rc-baseline` foi criada em `origin` como referência revisável. Antes do push, todos os workflows foram inspecionados: deploys por `push` aceitam somente `main`, e Pages/mirror continuam com `if: false`. Nenhum PR, merge ou deploy foi executado. O dashboard e o Kanban de `docs/VISION_CORE_IMPLEMENTATION_MASTER_PLAN.md` agora registram 1/24 concluído e ADR-001/003/004/005 + IMP-006 em Ready.
+
 ✔ Regressão de grounding do Chat real corrigida e deployada no EB `v116-a8189457-hermes-grounding`: o workflow agora inclui e verifica o documento de grounding; ausência falha com 503. A frase exata reportada foi confirmada pelo composer público. Teste permanente e evidências: `docs/session_logs/2026-07-14-hermes-ui-grounding-regression.md`.
 
 ✔ `next-clean-79` — DECISION-022: Atomic Core/decágono estritamente na aba Chat; Software Factory Auto-Pilot e Modo Avançado não contam mais como exceção. Cabeçalhos curtos fora de Chat agora são canônicos (`#vcPageHead`) e o header interno duplicado de `#vcFeaturePanel` fica oculto nesses contextos. Controle obsoleto "Manter Atomic Core sempre visível" removido; "Mostrar Atomic Core" e intensidade permanecem. Validado localmente: `node --check` OK, specs afetados 33/33 PASS, suíte permanente Next 106/106 PASS. Deployado em produção via `bin/deploy-pages.sh` e confirmado ao vivo servindo `next-clean-79`; screenshots Playwright reais em `%TEMP%\vision-core-next79-screens\`.
@@ -95,7 +97,7 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 
 # PRÓXIMA PRIORIDADE
 
-Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contra a implementação oficial (`frontend/vision-core-next.html` + `assets/vision-core-next-clean.*`) e escolher o maior ganho arquitetural/UX ainda pendente. O candidato mais sensível que resta é OAuth Google/GitHub no Next (email/senha já fechado) — exige mudança de backend no callback e alinhamento explícito por mexer com sessão real.
+Executar a Onda 1 do `docs/VISION_CORE_IMPLEMENTATION_MASTER_PLAN.md`: ADR-001/003/004/005 e IMP-006 estão Ready após REL-001. Começar por ADR-001, confrontando contratos reais de `/api/projects` com as regras existentes de auth/ownership; não implementar IMP-001 antes da decisão registrada. Comando inicial recomendado: `rg -n "api/projects|project_id|projectId" backend frontend tests docs/API_CONTRACT.md docs/DECISIONS.md`.
 
 ---
 
@@ -109,6 +111,8 @@ Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contr
 ---
 
 # TESTES
+
+REL-001 (2026-07-14): ancestry `e4eee79c → HEAD` confirmado; hashes de `docs/DECISIONS.md` em worktree e HEAD idênticos; `git diff --check` sem erro; branch remota criada sem workflow de deploy aplicável; gate permanente `npx playwright test tests/e2e/vision-core-next-agent-apply.spec.mjs` 4/4 PASS.
 
 114/114 PASS após `next-clean-82` integrado sobre o histórico público `next-clean-81` (50,1s, sem retry). `node --check frontend/assets/vision-core-next-clean.js` PASS.
 

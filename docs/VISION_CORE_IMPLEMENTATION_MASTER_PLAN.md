@@ -28,13 +28,13 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | REL | 2 |
 | OPS | 4 |
 | Total | 24 |
-| Concluídos | 0 |
-| Pendentes | 24 |
-| Bloqueados por dependência | 23 |
+| Concluídos | 1 |
+| Pendentes | 23 |
+| Bloqueados por dependência | 18 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 0%; Desenvolvimento 0%; Certificação 0%; Release 0%; Operação 0%.
+Percentual concluído por trilha: Arquitetura 0%; Desenvolvimento 0%; Certificação 0%; Release 50%; Operação 0%.
 
 ## 4. Trilha A — ADRs
 
@@ -211,7 +211,8 @@ DoR comum: ADR aplicável aprovado, contrato/spec suficiente, dependências Done
 - **Checklist:** status limpo; 114/114+grounding já registrados; docs e hash iguais.
 - **Responsáveis:** Chief Architect A; Release R; Quality Gates C.
 - **Artefatos/evidências:** branch/tag, hash, diff e estado dos testes.
-- **Aprovação:** referência oficial aponta ao baseline sem alteração funcional. **Status:** Backlog.
+- **Aprovação:** referência oficial aponta ao baseline sem alteração funcional. **Status:** Approved.
+- **Evidência:** `e4eee79c` é ancestral de `codex/next-rc-baseline`; a referência remota `origin/codex/next-rc-baseline` foi criada em 2026-07-14 sem PR, merge ou deploy; workflows de deploy por push aceitam apenas `main` e os jobs de Pages/mirror permanecem desabilitados.
 
 ### REL-002 — Congelar e certificar RC
 
@@ -321,7 +322,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| REL-001; ADR-001–007; IMP-001–007; TEST-001–004; REL-002; OPS-001–004 | — | — | — | — |
+| ADR-002,006,007; IMP-001–005,007; TEST-001–004; REL-002; OPS-001–004 | ADR-001,003,004,005; IMP-006 | — | — | REL-001 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 
