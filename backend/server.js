@@ -3204,7 +3204,17 @@ app.post('/api/chat', async (req, res) => {
   let groundingAddendum = '';
   if (isHermesFineTuningQuestion) {
     try {
-      const realDoc = fs.readFileSync(path.join(ROOT, '..', 'docs', 'HERMES_FINE_TUNING_DATASET.md'), 'utf8');
+      // Dois candidatos: monorepo local (docs/ é irmão de backend/) e bundle
+      // deployado no EB (o zip só contém o conteúdo de backend/ — sem pasta
+      // docs/ irmã — então o deploy copia uma cópia pra backend/docs/, ver
+      // _deploy_hermes_grounding_eb.py). Achado real (2026-07-14): sem esse
+      // fallback, fs.readFileSync lançava ENOENT em produção, o catch
+      // engolia o erro, e o grounding nunca era aplicado — 4 respostas
+      // fabricadas seguidas antes de perceber que o problema era esse.
+      const localDocPath  = path.join(ROOT, '..', 'docs', 'HERMES_FINE_TUNING_DATASET.md');
+      const bundledDocPath = path.join(ROOT, 'docs', 'HERMES_FINE_TUNING_DATASET.md');
+      const docPath = fs.existsSync(localDocPath) ? localDocPath : bundledDocPath;
+      const realDoc = fs.readFileSync(docPath, 'utf8');
       groundingAddendum = [
         ``,
         `══════════════════════════════════════════════════════`,
@@ -3218,7 +3228,9 @@ app.post('/api/chat', async (req, res) => {
         ``,
         realDoc
       ].join('\n');
-    } catch (_eGrounding) { /* doc ausente nao deve quebrar o chat */ }
+    } catch (_eGrounding) {
+      console.warn('[chat-grounding] doc real nao encontrado, respondendo sem grounding:', _eGrounding.message);
+    }
   }
 
   /* 3-way systemPrompt:
