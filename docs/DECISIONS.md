@@ -42,6 +42,11 @@ Nenhum componente de dashboard, gráfico, painel, monitor, timeline ou grid de m
 
 ## Infraestrutura / Deploy
 
+### DECISION-026 — Administração de deploy não pertence ao cockpit Next
+Deploy de Pages/Elastic Beanstalk e rollback pertencem a uma superfície operacional separada e controlada, nunca a toggles ou automação implícita dentro do cockpit Vision Core Next. Para o RC, os scripts e runbooks existentes continuam sendo a interface administrativa real; construir uma console nova não é requisito.
+**Por quê:** deploy altera produção e exige autoridade, confirmação e auditoria próprias. Reproduzir no Next os controles locais inseguros do legado misturaria uso do produto com operação irreversível sem oferecer um modelo de autorização adequado.
+**Como aplicar:** o Next não exibe controles de deploy. Qualquer console futura exige owner, autenticação forte, confirmação auditável e decisão nova; até lá, usar apenas os scripts/runbooks aprovados e manter deploy manual.
+
 ### DECISION-001 — Não migrar AWS → Alibaba Cloud
 Backend Node.js/Elastic Beanstalk permanece na AWS.
 **Por quê:** não existe equivalente ao fluxo atual (zip→version→apontar ambiente→rollback 1 comando) para Node.js na Alibaba — Web+ descontinuado (2023), SAE não suporta Node.js, EDAS exige Kubernetes (ACK). Não é troca pontual, é adotar K8s como arquitetura nova. O problema real era billing, resolvido com upgrade pay-as-you-go da conta AWS.

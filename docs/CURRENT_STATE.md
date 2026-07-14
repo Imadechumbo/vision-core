@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ ADR-005 aprovada e registrada como DECISION-026: administração de deploy fica em superfície operacional separada; no RC, scripts/runbooks existentes continuam sendo a interface real e o cockpit Next não ganha toggles de deploy. Nenhum deploy ou mudança de produção foi executado. Backlog: 11/24 concluídos.
+
 ✔ ADR-004 aprovada e registrada como DECISION-025: billing permanece fora do cockpit Next no RC; endpoints reais, autenticação e jornada financeira não mudaram; nenhum link ornamental será exibido sem destino externo válido. Backlog: 10/24 concluídos.
 
 ✔ ADR-003 aprovada por reconciliação com DECISION-005: Apply real permanece fechado no RC; nenhuma flag mudou. `vision-core-next-agent-apply.spec.mjs` segue dentro da suíte verde 122/122. Backlog: 9/24 concluídos; TEST-001 desbloqueado.

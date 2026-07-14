@@ -28,13 +28,13 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | REL | 2 |
 | OPS | 4 |
 | Total | 24 |
-| Concluídos | 10 |
-| Pendentes | 14 |
+| Concluídos | 11 |
+| Pendentes | 13 |
 | Bloqueados por dependência | 9 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 57%; Desenvolvimento 71%; Certificação 0%; Release 50%; Operação 0%.
+Percentual concluído por trilha: Arquitetura 71%; Desenvolvimento 71%; Certificação 0%; Release 50%; Operação 0%.
 
 ## 4. Trilha A — ADRs
 
@@ -82,7 +82,7 @@ Percentual concluído por trilha: Arquitetura 57%; Desenvolvimento 71%; Certific
 
 - **Objetivo/contexto/problema:** decidir se Pages/EB pertence ao Next; legado contém automerge/autodeploy local inseguro.
 - **Alternativas:** cockpit; console administrativa separada; exclusão.
-- **Decisão tomada:** **Proposto: console separada**, nunca automação implícita no cockpit.
+- **Decisão tomada:** **Aprovado: superfície operacional separada**; no RC, scripts/runbooks existentes bastam e o cockpit não ganha controles de deploy (DECISION-026).
 - **Consequências/impacto:** Next não precisa reproduzir toggles legados; autoridade fica isolada.
 - **Riscos:** console inexistente precisa de owner ou exclusão formal.
 - **Revisão futura:** somente com modelo de autoridade e confirmação auditável.
@@ -322,7 +322,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| ADR-006,007; IMP-007; TEST-004; REL-002; OPS-001–004 | ADR-005; IMP-006; TEST-001,002,003 | — | — | REL-001; ADR-001–004; IMP-001–005 |
+| ADR-006,007; IMP-007; TEST-004; REL-002; OPS-001–004 | IMP-006; TEST-001,002,003 | — | — | REL-001; ADR-001–005; IMP-001–005 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 
