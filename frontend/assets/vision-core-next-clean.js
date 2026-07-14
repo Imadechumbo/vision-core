@@ -968,7 +968,18 @@
     syncComposerSpace.observe(composer);
   }
 
-  var API_BASE_URL = 'https://visioncore-api-gateway.weiganlight.workers.dev';
+  var DEFAULT_API_BASE_URL = 'https://visioncore-api-gateway.weiganlight.workers.dev';
+  function resolveApiBaseUrl() {
+    var meta = document.querySelector('meta[name="vc-api-base-url"]');
+    var candidate = meta ? String(meta.content || '').trim().replace(/\/$/, '') : '';
+    try {
+      var parsed = new URL(candidate);
+      if ((parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
+          !parsed.username && !parsed.password && parsed.origin === candidate) return parsed.origin;
+    } catch (_) {}
+    return DEFAULT_API_BASE_URL;
+  }
+  var API_BASE_URL = resolveApiBaseUrl();
   var CHAT_BACKEND_URL = API_BASE_URL;
   var CHAT_TIMEOUT_MS = 45000;
 

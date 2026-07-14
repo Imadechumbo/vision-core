@@ -4,6 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-90 (2026-07-14, não deployado)
+
+- Base da API passa a vir de meta explícita validada por origin; o documento oficial mantém o gateway de produção e não aceita override por query string.
+- O seam permite E2E contra backend descartável real sem interceptação de requests nem mutação de produção.
+
 ## next-clean-89 (2026-07-14, não deployado)
 
 - Composer e nome de projeto ganharam nomes acessíveis; o modal Smile contém Tab/Shift+Tab e continua restaurando foco no Escape.

@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ `next-clean-90` / IMP-009 implementada localmente (sem deploy): base da API vem de meta validada por origin; documento oficial mantém o gateway real, valor inválido cai no default e query string não controla o destino. Playwright temporário provou backend HTTP descartável real sem `page.route`: 2/2 PASS; suíte permanente Next 122/122 PASS em 49,1s. Backlog: 17/26 concluídos; TEST-004 desbloqueado.
+
 ⚠ Preparação de TEST-004 encontrou bloqueio de testabilidade: `API_BASE_URL` hardcoded só permite produção ou interceptação, e o gate proíbe ambos para o ambiente descartável. IMP-009 criado para override explícito por meta do documento, mantendo o gateway oficial como default e rejeitando valor inválido. Backlog ampliado para 26 itens: 16 concluídos.
 
 ✔ TEST-003 aprovado com gate permanente stdlib `tools/tests/next-performance-budget.test.mjs`: 59/59 PASS; carga inicial 385.551B sob budget 460.800B; HTML/CSS/JS/PNG sob limites individuais; SHA-256 registrado; p95 local máximo 32,70ms sob teto 100ms em 10 rounds íntegros.
