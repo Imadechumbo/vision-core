@@ -95,6 +95,68 @@
     return next;
   }
 
+  // ── Movimento customizável do Atomic Core (Idle/Action/Retorno) ──
+  // Mesmo padrão getX/setX/onChange + localStorage de VCMotion/VCAtomicCore
+  // acima, um trio por eixo. "Reduzir animações" (VCMotion) sempre vence —
+  // ver isReducedMotion() aplicado antes de qualquer um destes na leitura
+  // de valores (Agent.prototype.values). Nenhum destes altera MAX_ANGLE_DRIFT/
+  // MAX_RADIAL_DRIFT em si (regra dura de legibilidade, achado real: 12->3)
+  // — "Deriva" só reescala 0..1 sobre esse teto já validado, nunca acima.
+  function makeAtomicMotionPref(key, allowed, fallback) {
+    var listeners = [];
+    function get() {
+      try {
+        var stored = window.localStorage.getItem(key);
+        if (allowed.indexOf(stored) !== -1) return stored;
+      } catch (_) {}
+      return fallback;
+    }
+    function set(next) {
+      var value = allowed.indexOf(next) !== -1 ? next : fallback;
+      try { window.localStorage.setItem(key, value); } catch (_) {}
+      listeners.forEach(function (cb) { try { cb(value); } catch (_) {} });
+      return value;
+    }
+    function onChange(cb) { if (typeof cb === 'function') listeners.push(cb); }
+    return { getPref: get, setPref: set, onChange: onChange };
+  }
+
+  function makeAtomicMotionNumber(key, min, max, fallback) {
+    var listeners = [];
+    function get() {
+      try {
+        var stored = parseFloat(window.localStorage.getItem(key));
+        if (stored >= min && stored <= max) return stored;
+      } catch (_) {}
+      return fallback;
+    }
+    function set(value) {
+      var next = Math.min(max, Math.max(min, Number(value)));
+      if (!(next >= min)) next = fallback;
+      try { window.localStorage.setItem(key, String(next)); } catch (_) {}
+      listeners.forEach(function (cb) { try { cb(next); } catch (_) {} });
+      return next;
+    }
+    function onChange(cb) { if (typeof cb === 'function') listeners.push(cb); }
+    return { getValue: get, setValue: set, onChange: onChange };
+  }
+
+  var idleSpeedPref      = makeAtomicMotionNumber('vc_atomic_idle_speed', 0.4, 2.5, 1);
+  var idlePatternPref    = makeAtomicMotionPref('vc_atomic_idle_pattern', ['classic', 'pulse', 'drift'], 'classic');
+  var idleDriftPref      = makeAtomicMotionNumber('vc_atomic_idle_drift', 0, 1, 1); // 0..1 sobre o teto ja validado (MAX_ANGLE_DRIFT=3/MAX_RADIAL_DRIFT=2) — nunca acima de 1
+  var actionPatternPref  = makeAtomicMotionPref('vc_atomic_action_pattern', ['classic', 'wide', 'pulse'], 'classic');
+  var returnStylePref    = makeAtomicMotionPref('vc_atomic_return_style', ['none', 'fast', 'smooth'], 'none');
+  var returnDurationPref = makeAtomicMotionNumber('vc_atomic_return_duration', 200, 2500, 900);
+
+  window.VCAtomicMotion = {
+    idleSpeed: idleSpeedPref,
+    idlePattern: idlePatternPref,
+    idleDrift: idleDriftPref,
+    actionPattern: actionPatternPref,
+    returnStyle: returnStylePref,
+    returnDuration: returnDurationPref
+  };
+
   var appShell = document.querySelector('.vc-app-shell');
   var sidebarToggle = document.querySelector('[data-sidebar-toggle]');
   var composer = document.getElementById('vcComposer');
@@ -195,6 +257,58 @@
       setAtomicIntensity(Number(atomicIntensityInput.value) / 100);
     });
   }
+
+  // Movimento customizável do Atomic Core — mesmo padrão de wiring dos
+  // controles acima (valor inicial + listener + reflete onChange externo).
+  var idleSpeedInput = document.getElementById('vcAtomicIdleSpeed');
+  if (idleSpeedInput) {
+    idleSpeedInput.value = String(Math.round(idleSpeedPref.getValue() * 100));
+    idleSpeedInput.addEventListener('input', function () { idleSpeedPref.setValue(Number(idleSpeedInput.value) / 100); });
+    idleSpeedPref.onChange(function (v) { idleSpeedInput.value = String(Math.round(v * 100)); });
+  }
+  var idlePatternSelect = document.getElementById('vcAtomicIdlePattern');
+  var idleDriftRow = document.getElementById('vcAtomicIdleDriftRow');
+  var idleDriftInput = document.getElementById('vcAtomicIdleDrift');
+  function syncIdleDriftRow(pattern) { if (idleDriftRow) idleDriftRow.hidden = pattern !== 'drift'; }
+  if (idlePatternSelect) {
+    idlePatternSelect.value = idlePatternPref.getPref();
+    syncIdleDriftRow(idlePatternSelect.value);
+    idlePatternSelect.addEventListener('change', function () {
+      idlePatternPref.setPref(idlePatternSelect.value);
+      syncIdleDriftRow(idlePatternSelect.value);
+    });
+    idlePatternPref.onChange(function (v) { idlePatternSelect.value = v; syncIdleDriftRow(v); });
+  }
+  if (idleDriftInput) {
+    idleDriftInput.value = String(Math.round(idleDriftPref.getValue() * 100));
+    idleDriftInput.addEventListener('input', function () { idleDriftPref.setValue(Number(idleDriftInput.value) / 100); });
+    idleDriftPref.onChange(function (v) { idleDriftInput.value = String(Math.round(v * 100)); });
+  }
+  var actionPatternSelect = document.getElementById('vcAtomicActionPattern');
+  if (actionPatternSelect) {
+    actionPatternSelect.value = actionPatternPref.getPref();
+    actionPatternSelect.addEventListener('change', function () { actionPatternPref.setPref(actionPatternSelect.value); });
+    actionPatternPref.onChange(function (v) { actionPatternSelect.value = v; });
+  }
+  var returnStyleSelect = document.getElementById('vcAtomicReturnStyle');
+  var returnDurationRow = document.getElementById('vcAtomicReturnDurationRow');
+  var returnDurationInput = document.getElementById('vcAtomicReturnDuration');
+  function syncReturnDurationRow(styleValue) { if (returnDurationRow) returnDurationRow.hidden = styleValue === 'none'; }
+  if (returnStyleSelect) {
+    returnStyleSelect.value = returnStylePref.getPref();
+    syncReturnDurationRow(returnStyleSelect.value);
+    returnStyleSelect.addEventListener('change', function () {
+      returnStylePref.setPref(returnStyleSelect.value);
+      syncReturnDurationRow(returnStyleSelect.value);
+    });
+    returnStylePref.onChange(function (v) { returnStyleSelect.value = v; syncReturnDurationRow(v); });
+  }
+  if (returnDurationInput) {
+    returnDurationInput.value = String(returnDurationPref.getValue());
+    returnDurationInput.addEventListener('input', function () { returnDurationPref.setValue(Number(returnDurationInput.value)); });
+    returnDurationPref.onChange(function (v) { returnDurationInput.value = String(v); });
+  }
+
   var vaultRollback = document.getElementById('vcVaultRollback');
   var vaultSnapshotList = document.getElementById('vcVaultSnapshotList');
   var vaultActions = document.getElementById('vcVaultActions');
@@ -2968,24 +3082,82 @@
     this.node.style.setProperty('--agent-glow-color', this.glowColor);
   }
 
+  // Padrões de movimento Idle (Settings → Atomic Core → Padrão de movimento
+  // — Idle). "classic" é o comportamento original, byte a byte (driftScale
+  // fixo em 1) — nunca alterado, é o default. "pulse" zera todo drift
+  // angular/radial (posição na base fixa, só respiração de escala/glow) —
+  // o mais calmo dos 3, seguro por construção (drift=0). "drift" usa a
+  // MESMA amplitude-teto já validada contra sobreposição de legendas
+  // (MAX_ANGLE_DRIFT/MAX_RADIAL_DRIFT, achado real: reduzido de 12->3
+  // nesse teto) escalada por idleDriftPref (0..1, nunca > 1) — só o
+  // período/waveform mudam (mais lento, senoide única), nunca a amplitude
+  // máxima, então não pode reintroduzir a sobreposição já corrigida.
   Agent.prototype.idleValues = function (elapsed) {
-    var primary = Math.sin(elapsed / this.period * Math.PI * 2 + this.phase);
-    var secondary = Math.cos(elapsed / 14000 * Math.PI * 2 + this.phase * .73);
+    var te = elapsed * idleSpeedPref.getValue();
+    var pattern = idlePatternPref.getPref();
+    if (pattern === 'pulse') {
+      var depthWaveP = (Math.sin(te / this.depthPeriod * Math.PI * 2 + this.phase * 1.91) + 1) / 2;
+      return { angle: this.base, radius: AGENT_RADIUS, scale: lerp(1, 1.035, depthWaveP), opacity: lerp(.80, 1, depthWaveP), glow: lerp(16, 30, depthWaveP), layer: 4 };
+    }
+    if (pattern === 'drift') {
+      var driftScale = idleDriftPref.getValue();
+      var slowPeriod = this.period * 2.6;
+      var angleWaveD = Math.sin(te / slowPeriod * Math.PI * 2 + this.phase);
+      var radialWaveD = Math.sin(te / (this.radialPeriod * 2.2) * Math.PI * 2 + this.phase * 1.37);
+      var depthWaveD = (Math.sin(te / this.depthPeriod * Math.PI * 2 + this.phase * 1.91) + 1) / 2;
+      return { angle: this.base + toRad(angleWaveD * MAX_ANGLE_DRIFT * driftScale), radius: AGENT_RADIUS + radialWaveD * MAX_RADIAL_DRIFT * driftScale, scale: lerp(1, 1.02, depthWaveD), opacity: lerp(.82, .98, depthWaveD), glow: lerp(18, 28, depthWaveD), layer: 4 };
+    }
+    var primary = Math.sin(te / this.period * Math.PI * 2 + this.phase);
+    var secondary = Math.cos(te / 14000 * Math.PI * 2 + this.phase * .73);
     var angleWave = primary * .78 + secondary * .22;
-    var radialWave = Math.sin(elapsed / this.radialPeriod * Math.PI * 2 + this.phase * 1.37);
-    var depthWave = (Math.sin(elapsed / this.depthPeriod * Math.PI * 2 + this.phase * 1.91) + 1) / 2;
+    var radialWave = Math.sin(te / this.radialPeriod * Math.PI * 2 + this.phase * 1.37);
+    var depthWave = (Math.sin(te / this.depthPeriod * Math.PI * 2 + this.phase * 1.91) + 1) / 2;
     return { angle: this.base + toRad(angleWave * MAX_ANGLE_DRIFT), radius: AGENT_RADIUS + radialWave * MAX_RADIAL_DRIFT, scale: lerp(1, 1.02, depthWave), opacity: lerp(.82, .98, depthWave), glow: lerp(18, 28, depthWave), layer: 4 };
   };
 
+  // Padrões de movimento Action (Settings → Atomic Core → Padrão de
+  // movimento — Action). "classic" é o original (rx/ry inalterados).
+  // "wide" escala rx/ry (órbita maior, mesma trajetória). "pulse" abandona
+  // a elipse completa por um pulso rápido perto da posição base -- estado
+  // Action é transitório (dura só enquanto a missão roda) e não é coberto
+  // pela regra dura de legibilidade do Idle (essa é sobre órbita contínua
+  // de longa duração), mas o offset angular aqui é mantido conservador por
+  // precaução mesmo assim.
   Agent.prototype.actionValues = function (elapsed) {
+    var pattern = actionPatternPref.getPref();
+    if (pattern === 'pulse') {
+      var tp = elapsed / (this.actionPeriod * .35) * Math.PI * 2 * this.direction + this.phase;
+      var anglePulse = this.base + toRad(Math.sin(tp) * MAX_ANGLE_DRIFT * 1.4);
+      var pulseWave = (Math.sin(tp * 2) + 1) / 2;
+      return { angle: anglePulse, radius: AGENT_RADIUS * 1.05, scale: lerp(.9, 1.06, pulseWave), opacity: lerp(.85, 1, pulseWave), glow: 46 * (1 + Math.sin(tp * 3) * .15), layer: 6 };
+    }
+    var rx = this.rx, ry = this.ry;
+    if (pattern === 'wide') { rx = rx * 1.35; ry = ry * 1.35; }
     var t = elapsed / this.actionPeriod * Math.PI * 2 * this.direction + this.phase;
-    var ex = Math.cos(t) * this.rx;
-    var ey = Math.sin(t) * this.ry;
+    var ex = Math.cos(t) * rx;
+    var ey = Math.sin(t) * ry;
     var x = CX + ex * Math.cos(this.tilt) - ey * Math.sin(this.tilt);
     var y = CY + ex * Math.sin(this.tilt) + ey * Math.cos(this.tilt);
     var depthWave = (Math.sin(t + this.phase * .7) + 1) / 2;
     return { x: x, y: y, scale: lerp(.76, .94, depthWave), opacity: lerp(.78, 1, depthWave), glow: 42 * (1 + Math.sin(t * 2 + this.phase) * .1), layer: depthWave > .5 ? 9 : 3 };
   };
+
+  // Normaliza {angle,radius} ou {x,y} pro mesmo formato {x,y} -- usado pra
+  // capturar o snapshot de Action no início do Retorno e pra misturar com
+  // o alvo de Idle (mesma conversão que Agent.prototype.place já fazia
+  // inline, extraída aqui pra reuso).
+  function toXY(agent, value) {
+    if (typeof value.x === 'number') return value;
+    return { x: CX + Math.cos(value.angle) * value.radius, y: CY + Math.sin(value.angle) * value.radius, scale: value.scale, opacity: value.opacity, glow: value.glow, layer: value.layer };
+  }
+
+  function easeInOutQuad(p) { return p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; }
+
+  // Estado de Retorno (Action -> Idle): ver resetAtomicCore(). null quando
+  // não há transição em voo. Nunca ativa sob reduceMotion (prioridade
+  // máxima da acessibilidade — corte direto sempre, igual comportamento
+  // original).
+  var returning = null;
 
   Agent.prototype.values = function (elapsed) {
     if (reduceMotion) {
@@ -2999,6 +3171,20 @@
       var pulse = (Math.sin(elapsed / REDUCE_PULSE_MS * Math.PI * 2 + this.phase) + 1) / 2;
       var glowBase = state === 'action' ? 42 : 24;
       return { angle: this.base, radius: AGENT_RADIUS, scale: 1, opacity: lerp(.78, .92, pulse), glow: lerp(glowBase * .82, glowBase, pulse), layer: 4 };
+    }
+    if (returning) {
+      var p = (performance.now() - returning.startedAt) / returning.duration;
+      if (p < 1) {
+        var ease = easeInOutQuad(Math.max(0, Math.min(1, p)));
+        var from = returning.from[this.name];
+        var target = toXY(this, this.idleValues(elapsed));
+        return {
+          x: lerp(from.x, target.x, ease), y: lerp(from.y, target.y, ease),
+          scale: lerp(from.scale, target.scale, ease), opacity: lerp(from.opacity, target.opacity, ease),
+          glow: lerp(from.glow, target.glow, ease), layer: target.layer
+        };
+      }
+      returning = null;
     }
     return state === 'action' ? this.actionValues(elapsed) : this.idleValues(elapsed);
   };
@@ -3066,6 +3252,7 @@
   }
 
   function setAtomicCoreState(nextState) {
+    returning = null; // qualquer troca de estado cancela uma transição de Retorno em voo
     state = nextState === 'action' ? 'action' : 'idle';
     startTime = performance.now();
     root.setAttribute('data-state', state);
@@ -3080,9 +3267,26 @@
     return Object.keys(highlighted);
   }
 
+  // Retorno (Action -> Idle): por padrão ("Nenhum") é o corte direto
+  // original, byte a byte. "Rápido"/"Suave" capturam a posição exata de
+  // Action no instante da chamada (fromByAgent) e o novo alvo de Idle é
+  // interpolado ao longo de returnDurationPref ms (Agent.prototype.values),
+  // em vez de saltar direto pro cálculo de Idle em t=0. `data-state` vira
+  // "idle" imediatamente (semanticamente a missão já terminou, nenhum
+  // teste/consumidor externo deve notar diferença aí) -- só o blend visual
+  // que segue em voo por trás.
   function resetAtomicCore() {
     stopAtomicSequence();
     highlighted = Object.create(null);
+    var style = reduceMotion ? 'none' : returnStylePref.getPref();
+    if (style !== 'none' && state === 'action') {
+      var oldElapsed = performance.now() - startTime;
+      var fromByAgent = Object.create(null);
+      agents.forEach(function (agent) { fromByAgent[agent.name] = toXY(agent, agent.values(oldElapsed)); });
+      var next = setAtomicCoreState('idle');
+      returning = { startedAt: performance.now(), duration: returnDurationPref.getValue(), from: fromByAgent };
+      return next;
+    }
     return setAtomicCoreState('idle');
   }
 

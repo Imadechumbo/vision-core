@@ -82,6 +82,17 @@ Qualquer fluxo do Next que dispare uma ação (chat, GitHub PR, Apply-Fix, Dry-R
 | `idle` | 95%+ do tempo, padrão no load | Órbitas quase paradas, respiração/glow discretos, velocidades por agente nunca sincronizadas |
 | `action` | Missão/ação em andamento | Propagação sequencial de glow entre os 6 primeiros agentes do pipeline, 1.8s cada, em loop até `resetAtomicCore()` |
 
+## Movimento customizável (Settings → Atomic Core, `next-clean-82`)
+
+Pedido explícito do usuário, aprovado dentro da "Área protegida" abaixo. **Não é** a máquina de 4 estados conceituais da próxima seção — continua só `idle`/`action` no `data-state`; o que muda é (1) parâmetros ajustáveis dentro de `idle`/`action` e (2) uma transição visual interpolada entre os dois, sem novo estado semântico.
+
+- **Velocidade do Idle** (slider 40%-250%, default 100%) — multiplica o `elapsed` usado nas senoides de `idleValues()`; não altera amplitude, só a velocidade do ciclo.
+- **Padrão de movimento — Idle**: `classic` (original, default) · `pulse` (posição fixa na base, só respiração de escala/glow — zero drift) · `drift` (waveform mais lento/simples, amplitude escalada 0-100% por "Intensidade da deriva" — **teto sempre igual a `MAX_ANGLE_DRIFT`/`MAX_RADIAL_DRIFT` já validados contra sobreposição de legenda, nunca acima**).
+- **Padrão de movimento — Action**: `classic` (original, default) · `wide` (mesma elipse, `rx`/`ry` ×1.35) · `pulse` (pulso rápido perto da base em vez da elipse completa).
+- **Retorno (Action → Idle)**: `none` (corte direto, default — comportamento original byte a byte) · `fast`/`smooth` (captura a posição exata de Action no instante do `resetAtomicCore()` e interpola — `easeInOutQuad` — até o alvo de Idle ao longo de "Duração do Retorno" configurável, 200-2500ms). `data-state` vira `"idle"` imediatamente (nenhum consumidor externo nota diferença semântica); só o render visual continua em transição por trás.
+
+Todos os 6 valores em `window.VCAtomicMotion.{idleSpeed,idlePattern,idleDrift,actionPattern,returnStyle,returnDuration}` — mesmo padrão `getX/setX/onChange` + `localStorage` do resto do arquivo. "Reduzir animações" (`window.VCMotion`) sempre vence: nenhum destes 6 controles tem efeito visual sob `reduced` (posição congelada, só pulso de opacidade/glow, igual sempre foi).
+
 ## Estados conceituais — IDEIA FUTURA (não implementado)
 
 A máquina de 4 estados completa registrada em `CLAUDE.md` ("IDEIA REGISTRADA — Atomic Core") **ainda não existe** — hoje só há o binário `idle`/`action` acima:
@@ -122,6 +133,7 @@ O Atomic Core **nunca** é a fonte de verdade de nenhum dado — é sempre um es
 - [x] SVG+CSS/JS, nunca Canvas/Three.js/WebGL
 - [x] Idle automático por padrão, Action automático via evento real
 - [x] Glow individual por agente, funcional mesmo sob reduced-motion (nunca 100% estático)
+- [x] Movimento customizável (velocidade/padrão Idle, padrão Action, transição de Retorno) — defaults reproduzem o comportamento original byte a byte; "Reduzir animações" vence sempre; sliders de deriva nunca excedem o teto já validado contra sobreposição de legenda (`next-clean-82`)
 - [x] `resetAtomicCore()` sempre chamado ao fim de qualquer ciclo (sucesso/erro/timeout)
 - [x] Responsivo, recolhe em telas menores, nunca sobrepõe composer
 

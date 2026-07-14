@@ -27,7 +27,7 @@ Deploy Produção
 `next-clean-74` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real contra `https://visioncoreai.pages.dev/vision-core-next.html`: cache-bust servido (`?v=next-clean-74` em CSS e JS, HTTP 200), menu lateral reorganizado presente (2 `.vc-nav-group`, rótulos "Atividade"/"Avançado", 7 itens fixos como filhos diretos de `.vc-nav`).
 
 Cache Bust
-next-clean-81 (publicado em produção)
+next-clean-82 (integrado sobre o histórico público `next-clean-81`; deploy autorizado em 2026-07-14, aguardando confirmação ao vivo)
 
 Último Commit
 
@@ -41,6 +41,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
 ✔ `next-clean-79` — DECISION-022: Atomic Core/decágono estritamente na aba Chat; Software Factory Auto-Pilot e Modo Avançado não contam mais como exceção. Cabeçalhos curtos fora de Chat agora são canônicos (`#vcPageHead`) e o header interno duplicado de `#vcFeaturePanel` fica oculto nesses contextos. Controle obsoleto "Manter Atomic Core sempre visível" removido; "Mostrar Atomic Core" e intensidade permanecem. Validado localmente: `node --check` OK, specs afetados 33/33 PASS, suíte permanente Next 106/106 PASS. Deployado em produção via `bin/deploy-pages.sh` e confirmado ao vivo servindo `next-clean-79`; screenshots Playwright reais em `%TEMP%\vision-core-next79-screens\`.
+✔ `next-clean-82` — movimento customizável do Atomic Core integrado sobre `next-clean-81`: velocidade + padrão do Idle (Clássica/Pulso suave/Deriva), padrão do Action (Clássico/Órbita ampla/Pulso) e Retorno dedicado (`Nenhum`/`Rápido`/`Suave`). As 6 preferências persistem via `window.VCAtomicMotion`; Deriva respeita o teto seguro já validado e "Reduzir animações" mantém prioridade máxima. Deploy autorizado em 2026-07-14; confirmação ao vivo pendente.
 
 ✔ `next-clean-80`/`next-clean-81` — regressão visual do topo do Software Factory corrigida. `next-clean-80` removeu a caixa solta duplicada (`#vcFeaturePanel`) acima de `#factory`; validação de produção ainda revelou vão residual causado por `#vcChatScroll` vazio mantendo `min-height:260px`. `next-clean-81` colapsa `#vcChatScroll` somente em Factory; produção confirmada com gap 49px, `featurePanelHidden=true`, `scrollDisplay=none`, `sfTextCount=1`, Chat preservado com Atomic Core. Validado localmente: `node --check` OK, specs afetados 28/28 PASS, suíte permanente Next 106/106 PASS. Screenshots Playwright reais em `%TEMP%\vision-core-next81-screens\`.
 
@@ -107,7 +108,7 @@ Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contr
 
 # TESTES
 
-106/106 PASS após `next-clean-81` (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada localmente)
+114/114 PASS após `next-clean-82` na base original; revalidação sobre o histórico público `next-clean-81` em andamento. Flake de timing pré-existente em `vision-core-next-account.spec.mjs` passa no retry automático.
 
 `node --check` OK
 
