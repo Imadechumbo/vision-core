@@ -23,18 +23,18 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | Indicador | Valor |
 |---|---:|
 | ADR | 7 |
-| IMP | 8 |
+| IMP | 9 |
 | TEST | 4 |
 | REL | 2 |
 | OPS | 4 |
-| Total | 25 |
+| Total | 26 |
 | Concluídos | 16 |
-| Pendentes | 9 |
-| Bloqueados por dependência | 8 |
+| Pendentes | 10 |
+| Bloqueados por dependência | 9 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 71%; Desenvolvimento 88%; Certificação 75%; Release 50%; Operação 0%.
+Percentual concluído por trilha: Arquitetura 71%; Desenvolvimento 78%; Certificação 75%; Release 50%; Operação 0%.
 
 ## 4. Trilha A — ADRs
 
@@ -176,6 +176,14 @@ DoR comum: ADR aplicável aprovado, contrato/spec suficiente, dependências Done
 - **Rollback:** revert. **Estimativa/complexidade:** XS/baixa.
 - **Impacto:** fluxo completo por leitor de tela e teclado. **Status:** Done (`next-clean-89`; auditoria 3/3 e regressão afetada 41/41).
 
+### IMP-009 — Permitir backend descartável sem interceptação
+
+- **Objetivo/motivação:** TEST-004 não pode alcançar backend local real porque o gateway de produção está hardcoded; interceptar requests violaria o próprio gate.
+- **Arquivos candidatos/proibidos:** HTML/JS Next e teste; troca silenciosa do default de produção ou query param público proibidos.
+- **Dependências:** preparação TEST-004. **Testes:** default permanece gateway oficial; override explícito por meta do documento; URL inválida cai no default.
+- **Rollback:** revert. **Estimativa/complexidade:** XS/baixa.
+- **Impacto:** E2E local honesto e reproduzível sem tocar produção. **Status:** Ready.
+
 ## 6. Trilha C — Certificações
 
 ### TEST-001 — Fila e pairing de agentes
@@ -205,7 +213,7 @@ DoR comum: ADR aplicável aprovado, contrato/spec suficiente, dependências Done
 ### TEST-004 — E2E crítico sem mocks
 
 - **Objetivo/escopo:** auth, chat grounded, projetos, histórico, SF→ZIP, timeline, logs e agentes.
-- **Pré-requisitos/ferramentas:** ADR-003/004/005, IMP-002/003/005 e TEST-001; Playwright+ambiente descartável.
+- **Pré-requisitos/ferramentas:** ADR-003/004/005, IMP-002/003/005/009 e TEST-001; Playwright+ambiente descartável.
 - **Esperado/aprovação:** endpoints-alvo sem interceptação, dados isolados e cleanup; 100% verde.
 - **Falha:** mock, secret, flake não explicado ou correção embutida no teste.
 - **Evidências:** screenshots, correlation IDs, resultados e manifesto de rede. **Status:** Backlog.
@@ -330,7 +338,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| ADR-006,007; IMP-007; REL-002; OPS-001–004 | TEST-004 | — | — | REL-001; ADR-001–005; IMP-001–006,008; TEST-001–003 |
+| ADR-006,007; IMP-007; TEST-004; REL-002; OPS-001–004 | IMP-009 | — | — | REL-001; ADR-001–005; IMP-001–006,008; TEST-001–003 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 

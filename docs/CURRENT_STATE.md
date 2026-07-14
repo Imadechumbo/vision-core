@@ -40,7 +40,9 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
-✔ TEST-003 aprovado com gate permanente stdlib `tools/tests/next-performance-budget.test.mjs`: 59/59 PASS; carga inicial 385.551B sob budget 460.800B; HTML/CSS/JS/PNG sob limites individuais; SHA-256 registrado; p95 local máximo 32,70ms sob teto 100ms em 10 rounds íntegros. Backlog: 16/25 concluídos.
+⚠ Preparação de TEST-004 encontrou bloqueio de testabilidade: `API_BASE_URL` hardcoded só permite produção ou interceptação, e o gate proíbe ambos para o ambiente descartável. IMP-009 criado para override explícito por meta do documento, mantendo o gateway oficial como default e rejeitando valor inválido. Backlog ampliado para 26 itens: 16 concluídos.
+
+✔ TEST-003 aprovado com gate permanente stdlib `tools/tests/next-performance-budget.test.mjs`: 59/59 PASS; carga inicial 385.551B sob budget 460.800B; HTML/CSS/JS/PNG sob limites individuais; SHA-256 registrado; p95 local máximo 32,70ms sob teto 100ms em 10 rounds íntegros.
 
 ✔ TEST-002 aprovado após correção separada IMP-008: auditoria temporária 3/3 PASS (IDs/nomes acessíveis, foco contido+restaurado, reduced motion prioritário) e regressão afetada 41/41 PASS. Spec temporário removido conforme DECISION-009. Backlog: 15/25 concluídos.
 
