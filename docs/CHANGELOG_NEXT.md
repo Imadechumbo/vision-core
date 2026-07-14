@@ -4,6 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-80 (2026-07-14)
+
+- Fix de regressão visual no Software Factory após `next-clean-79`: o `#vcFeaturePanel` genérico ainda aparecia acima do painel próprio `#factory`, repetindo `featureMap.factory.text` numa caixa solta e empurrando o conteúdo real para baixo.
+- Causa raiz: `selectFeature()` escondia cabeçalho interno/Atomic Core fora de Chat, mas nunca escondia o painel contextual genérico quando o destino já tinha painel próprio completo (`#factory`).
+- Fix: `#vcFeaturePanel` fica `hidden` somente em Software Factory; `#factory` começa logo abaixo do cabeçalho curto. Demais abas continuam usando o painel contextual normal.
+
 ## next-clean-79 (2026-07-13)
 
 - DECISION-022: Atomic Core passa a ser estritamente da aba Chat. A exceção anterior do Software Factory Auto-Pilot foi removida; Auto-Pilot e Modo Avançado agora usam somente o cabeçalho curto de papel.

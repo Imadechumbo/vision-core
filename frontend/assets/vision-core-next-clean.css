@@ -336,6 +336,7 @@ a { color: inherit; text-decoration: none; }
   border-radius: var(--radius);
   background: rgba(5, 5, 10, .54);
 }
+#vcFeaturePanel[hidden] { display: none; }
 
 /* ARCHITECTURAL PRINCIPLE-004 (ver DECISIONS.md): Dashboard precisa da
    largura total do .vc-chat-stage--wide — sem isso, o próprio

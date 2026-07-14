@@ -437,6 +437,7 @@
     if (pageHeadEl) pageHeadEl.hidden = isChatTab;
     if (pageHeadTitleEl) pageHeadTitleEl.textContent = feature.title;
     if (pageHeadStatusEl) pageHeadStatusEl.textContent = feature.status;
+    if (featurePanel) featurePanel.hidden = activeFeature === 'factory';
     hideFeatureViz();
     renderFeatureActions(feature);
     if (githubPrForm) githubPrForm.hidden = activeFeature !== 'github';
