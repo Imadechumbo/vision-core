@@ -10,7 +10,7 @@ Frontend Next
 ✔ OK
 
 Backend
-⚠ `v115-712cf4dd...` está Ready/Green, mas o pacote omitiu `docs/HERMES_FINE_TUNING_DATASET.md`; perguntas sobre fine-tuning do Hermes voltaram a ficar sem grounding. Correção commitada, aguardando autorização de deploy EB.
+✔ `v116-a8189457-hermes-grounding` Ready/Green; pacote inclui o documento real e falha fechado se ele faltar.
 
 Software Factory
 ✔ OK (simulação/preview por design — nenhum módulo escreve em disco ou executa real)
@@ -19,7 +19,7 @@ Atomic Core
 ✔ OK
 
 Chat
-⚠ UI pública reproduz alucinação na frase exata "sobre o fine tuning do hermes no vision core?". RCA e correção em `docs/session_logs/2026-07-14-hermes-ui-grounding-regression.md`; sem deploy ainda.
+✔ UI pública testada pela navegação real com a frase exata "sobre o fine tuning do hermes no vision core?"; resposta grounded confirmada. Evidência em `artifacts/hermes-ui-grounded-v116.png`.
 
 Deploy Produção
 ✔ `next-clean-73` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real: cache-bust servido (`?v=next-clean-73` no JS), teste end-to-end com conta real registrada em produção + missão real gravada via `POST /api/mission/timeline` — Timeline auto-carregou a missão real ao abrir a aba, sem nenhum clique, sem sobreposição do composer.
@@ -42,7 +42,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
-✔ Regressão de grounding do Chat real diagnosticada e corrigida localmente (**não deployada**): o deploy EB `v115-712cf4dd...` posterior ao `v5.9.64b` continha o detector no `server.js`, mas o workflow genérico não empacotava `docs/HERMES_FINE_TUNING_DATASET.md`; o `catch` voltava silenciosamente à LLM sem grounding. Workflow agora copia e verifica o documento no ZIP; backend responde `503 hermes_grounding_unavailable` se o arquivo faltar; teste permanente cobre frase exata, payload da UI, Gateway `no-store`, pacote e fail-closed. Evidência completa no session log. Deploy EB e screenshot corrigida da UI pública aguardam autorização explícita.
+✔ Regressão de grounding do Chat real diagnosticada, corrigida e deployada em `v116-a8189457-hermes-grounding`: o deploy EB `v115-712cf4dd...` posterior ao `v5.9.64b` continha o detector no `server.js`, mas o workflow genérico não empacotava `docs/HERMES_FINE_TUNING_DATASET.md`; o `catch` voltava silenciosamente à LLM sem grounding. Workflow agora copia e verifica o documento no ZIP; backend responde `503 hermes_grounding_unavailable` se o arquivo faltar; teste permanente cobre frase exata, payload da UI, Gateway `no-store`, pacote e fail-closed. Gateway e UI pública confirmados grounded com a frase exata; screenshot em `artifacts/hermes-ui-grounded-v116.png`.
 
 ✔ `next-clean-82` (**não deployado ainda**) — movimento customizável do Atomic Core (Settings → Atomic Core), pedido do usuário: velocidade + padrão do Idle (Clássica/Pulso suave/Deriva), padrão do Action (Clássico/Órbita ampla/Pulso), e um novo estado de Retorno dedicado (Action→Idle, hoje era corte direto puro — `Nenhum`/`Rápido`/`Suave` com interpolação real via `easeInOutQuad`). Investigação prévia confirmou: Idle/Action são senoides puras por agente (`Agent.prototype.idleValues/actionValues`), Retorno era `setAtomicCoreState('idle')` sem transição nenhuma. 6 novos valores em `window.VCAtomicMotion.{idleSpeed,idlePattern,idleDrift,actionPattern,returnStyle,returnDuration}`, mesmo padrão getX/setX/onChange+localStorage do resto do arquivo; defaults (`classic`/`classic`/`none`) reproduzem o comportamento original byte a byte. Teto de segurança: "Deriva" nunca excede `MAX_ANGLE_DRIFT`/`MAX_RADIAL_DRIFT` já validados contra sobreposição de legenda (achado histórico: 12→3) — o slider de intensidade só escala 0-100% desse teto, nunca acima; `makeAtomicMotionNumber()` clampa matematicamente. "Reduzir animações" continua vencendo sempre (nenhum dos 6 controles tem efeito sob `reduced`). CSS usa especificidade de ID pras 2 linhas condicionais (`#vcAtomicIdleDriftRow[hidden]`/`#vcAtomicReturnDurationRow[hidden]`), regra dura #13. Validado: **114/114 PASS** (suíte completa + 8 testes novos: padrões distintos, slider de velocidade determinístico via `page.clock`, Retorno "Suave" de fato em transição multi-frame vs "Nenhum" instantâneo, teto do slider de deriva, reduce-motion vencendo, persistência das 6 chaves, painel Settings com defaults corretos) + screenshots Playwright locais confirmando os 4 controles (incluindo as 2 linhas condicionais aparecendo ao trocar preset). `docs/ATOMIC_CORE_SPEC.md` atualizado (checklist + seção nova, explicitamente distinta da "máquina de 4 estados" ainda IDEIA FUTURA). Sem deploy — aguardando autorização.
 

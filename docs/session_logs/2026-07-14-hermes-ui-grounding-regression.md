@@ -14,7 +14,7 @@ O EB estava em `v115-712cf4dd227ffa20294befccb2129a1853ec2612`, publicado depois
 - Mesmo POST direto no EB: resposta inventou `hermes-large-v2`, `config/hermes.yaml`, `evidence_cache_enabled` e outros contratos inexistentes.
 - Navegação pela UI pública, preenchendo o composer e clicando Executar: resposta inventou `learning_rate`, `epochs`, `batch_size` e um diff de configuração.
 
-## Correção local, ainda não deployada
+## Correção
 
 - `.github/workflows/deploy-backend-eb.yml`: mudanças no documento agora disparam o workflow; o arquivo é copiado para `backend/docs/` e sua presença é verificada dentro de `deploy.zip`.
 - `backend/server.js`: ausência do documento retorna `503 hermes_grounding_unavailable`, com mensagem honesta e `anti_stub: true`; a LLM não é chamada sem grounding.
@@ -27,6 +27,9 @@ O EB estava em `v115-712cf4dd227ffa20294befccb2129a1853ec2612`, publicado depois
 - Suíte Next: 114/114 PASS em 1,4 min.
 - `npm run test:quick`: avançou até `test:local-launcher-unit`, onde parou por `unsettled top-level await`, falha preexistente de Node 24 já registrada e não relacionada ao patch.
 
-## Pendência
+## Deploy e confirmação ponta a ponta
 
-Deploy EB exige autorização explícita. Só depois dele é possível cumprir honestamente o aceite final de screenshot da UI pública mostrando resposta grounded; antes do deploy, produção continua reproduzindo a falha.
+- Versão EB: `v116-a8189457-hermes-grounding`, estado final `Ready/Green`.
+- Gateway com a frase exata: HTTP 200, `CF-Cache-Status: DYNAMIC`, `Cache-Control: no-store`; resposta informa honestamente que nenhum treinamento foi implementado e não contém as invenções reportadas.
+- UI pública: página aberta no navegador, pergunta digitada no composer e enviada pelo botão Executar. Resposta cita apenas os artefatos reais do dataset e diz explicitamente que não há job/comando de treinamento.
+- Screenshot: `artifacts/hermes-ui-grounded-v116.png`.

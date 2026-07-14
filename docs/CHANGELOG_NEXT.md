@@ -4,11 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
-## Backend — Hermes grounding fail-closed (2026-07-14, aguardando deploy)
+## Backend — Hermes grounding fail-closed (2026-07-14, deployado em v116)
 
 - RCA: `v115` substituiu o deploy especial `v5.9.64b`; o bundle continha o detector, mas não o documento usado em runtime, reabrindo alucinações pela UI real.
 - Workflow EB passa a empacotar e verificar `docs/HERMES_FINE_TUNING_DATASET.md`; ausência do documento agora retorna `503 hermes_grounding_unavailable` em vez de chamar a LLM sem grounding.
 - Teste permanente cobre a frase exata reportada, payload real do Next, política `no-store` do Gateway e contrato do artefato. Detalhes em `docs/session_logs/2026-07-14-hermes-ui-grounding-regression.md`.
+- Produção confirmada `Ready/Green`; teste pelo composer da UI pública retornou somente fatos do dataset real.
 
 ## next-clean-77 (2026-07-13)
 
