@@ -128,6 +128,15 @@ Um spec `tests/e2e/vision-core-next-*.spec.mjs` só é commitado permanentemente
 
 ---
 
+## Software Factory / Engenharia
+
+### DECISION-030 — Software Factory é o ambiente oficial de engenharia
+O Vision Core terá um único ambiente integrado de engenharia: o Software Factory. Não haverá produto paralelo chamado "Vision Codex"; capacidades de workspace, sandbox, timeline, Git, revisão de diff, testes, Ponytail/Quality Gates, release, observabilidade e coordenação multiagente serão incorporadas progressivamente ao Software Factory.
+**Por quê:** concepção, arquitetura, especificação, implementação, revisão, testes, auditoria, Git, release e deploy formam um único ciclo de vida. Separá-lo em outro produto duplicaria navegação, estado e governança, contrariando Zero Legacy Debt, Specification First, Evidence Before Change, Minimal Surface Area e Invisible Complexity.
+**Como aplicar:** tratar o Software Factory como raiz arquitetural das capacidades `Architect`, `Workspace`, `Sandbox`, `Timeline`, `Git Manager`, `Diff Review`, `Test Runner`, `Ponytail`, `Quality Gates`, `Release Manager`, `Claude SDK` e `Multi-Agent Orchestrator`, sempre sobre estado compartilhado e com gates preservados. Esta decisão registra somente direção: não autoriza implementação, não cria backlog e não define prioridade. Cada capacidade futura exige spec e item próprios antes de qualquer mudança.
+
+---
+
 ## Frontend — Vision Core Next
 
 ### DECISION-019 — Vision Core Next entra em fase de produto oficial
