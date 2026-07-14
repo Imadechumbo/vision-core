@@ -9,6 +9,7 @@ Formato: mais recente no topo.
 - REL-002 congelou o pacote allowlisted com a entrada oficial Next servindo também como raiz; bundles legados não entram no RC.
 - RC e predecessor público foram arquivados com manifestos e SHA-256; suíte Next 124/124 sem retry e gates de pacote, pairing e performance verdes.
 - OPS-001 publicou e reverteu o RC somente em preview; os dois manifestos e smokes 7/7 coincidiram, com rollback completo em 24,922s e produção intocada.
+- ADR-007/DECISION-029 aprovou o cutover direto do RC imutável na raiz, sem rebuild, redirect ou bundles legados.
 
 ## next-clean-90 (2026-07-14, não deployado)
 

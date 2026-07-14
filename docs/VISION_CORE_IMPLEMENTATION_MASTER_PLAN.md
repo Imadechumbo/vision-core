@@ -28,13 +28,13 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | REL | 2 |
 | OPS | 4 |
 | Total | 26 |
-| Concluídos | 22 |
-| Pendentes | 4 |
+| Concluídos | 23 |
+| Pendentes | 3 |
 | Bloqueados por dependência | 3 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 86%; Desenvolvimento 100%; Certificação 100%; Release 100%; Operação 25%.
+Percentual concluído por trilha: Arquitetura 100%; Desenvolvimento 100%; Certificação 100%; Release 100%; Operação 25%.
 
 ## 4. Trilha A — ADRs
 
@@ -102,7 +102,7 @@ Percentual concluído por trilha: Arquitetura 86%; Desenvolvimento 100%; Certifi
 
 - **Objetivo/contexto/problema:** definir como a raiz deixa o legado sem trocar o artefato certificado.
 - **Alternativas:** substituir `index.html`; redirect; alias/roteamento progressivo.
-- **Decisão tomada:** **Proposto: raiz serve diretamente o mesmo artefato RC**, mantendo artefato legado para rollback durante a janela.
+- **Decisão tomada:** **Aprovado: raiz serve diretamente o mesmo artefato RC**, sem rebuild ou redirect; `index.html` é byte-idêntico ao Next, a rota explícita permanece e o predecessor fica arquivado durante a observação (DECISION-029).
 - **Consequências/impacto:** zero dependência runtime do bundle antigo; smoke e cache tornam-se gates.
 - **Riscos:** cache, links profundos e divergência entre preview/alias.
 - **Revisão futura:** suporte de traffic splitting ou nova plataforma.
@@ -340,7 +340,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| OPS-002–004 | ADR-007 | — | — | REL-001–002; ADR-001–006; IMP-001–009; TEST-001–004; OPS-001 |
+| OPS-003–004 | OPS-002 | — | — | REL-001–002; ADR-001–007; IMP-001–009; TEST-001–004; OPS-001 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 

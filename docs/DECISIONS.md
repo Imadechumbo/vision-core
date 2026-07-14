@@ -42,6 +42,11 @@ Nenhum componente de dashboard, gráfico, painel, monitor, timeline ou grid de m
 
 ## Infraestrutura / Deploy
 
+### DECISION-029 — Cutover publica o RC imutável diretamente na raiz
+O Go Live publica sem rebuild o artefato aprovado em REL-002; seu `index.html` é byte-idêntico a `vision-core-next.html`, que permanece como rota compatível, e nenhum bundle legado integra o RC.
+**Por quê:** preview e rollback de OPS-001 provaram os mesmos bytes e smokes em Pages. Redirect ou reconstrução criariam um segundo caminho não certificado sem benefício.
+**Como aplicar:** validar o SHA-256 do ZIP antes de extrair e publicar na branch `main`; manter o predecessor imutável disponível durante a observação e republicá-lo conforme DECISION-028 se qualquer threshold falhar. A publicação produtiva continua exigindo autorização humana explícita.
+
 ### DECISION-028 — Rollback de Pages republica o artefato imutável anterior
 Rollback de Pages usa o diretório arquivado do último release aprovado, validado pelo `deployment-manifest.json`, sem checkout e sem rebuild. O Release Owner é accountable, Operações executa e Quality Gates pode exigir a reversão; produção continua exigindo autorização humana explícita para a execução.
 **Por quê:** reconstruir um commit antigo pode produzir bytes diferentes por ambiente ou dependências. Republicar o pacote já certificado mantém hash, evidência e tempo de recuperação verificáveis.
