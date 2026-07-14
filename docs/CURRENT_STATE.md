@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ TEST-002 aprovado após correção separada IMP-008: auditoria temporária 3/3 PASS (IDs/nomes acessíveis, foco contido+restaurado, reduced motion prioritário) e regressão afetada 41/41 PASS. Spec temporário removido conforme DECISION-009. Backlog: 15/25 concluídos.
+
 ✔ `next-clean-89` / IMP-008 implementada localmente (sem deploy): `#vcProjectName` e `#vcPrompt` têm nomes acessíveis; modal Smile contém Tab/Shift+Tab e Escape restaura foco ao trigger. Auditoria temporária 3/3 PASS; regressão App Shell + Atomic Core 41/41 PASS. Backlog: 14/25 concluídos; TEST-002 pronto para recertificação.
 
 ⚠ TEST-002 falhou de forma reproduzível (2 tentativas): `#vcProjectName` e `#vcPrompt` não têm nome acessível e Tab escapa de `#vcSmileModal`; reduced motion passou. IMP-008 foi criado como correção XS separada antes da recertificação. Backlog ampliado de 24 para 25 itens: 13 concluídos.
