@@ -29,7 +29,7 @@ Deploy Produção
 **Backend EB** `v5.9.64b-hermes-grounding-fix` publicado (autorizado explicitamente pelo usuário, `_deploy_hermes_grounding_eb.py`) e confirmado ao vivo em produção: `/api/chat` responde de forma grounded e consistente a perguntas sobre fine-tuning do Hermes (ver "Implementações desta sessão"). Ambiente `vision-core-prod` `Ready`/`Green`.
 
 Cache Bust
-next-clean-76 (local; producao (frontend CF Pages) ainda serve next-clean-74 ate novo deploy autorizado — backend EB é ciclo de deploy independente, já atualizado acima)
+next-clean-77 (nesta branch/histórico do `main`). **Achado da reconciliação (2026-07-14):** verificação ao vivo contra `visioncoreai.pages.dev` mostrou cache-bust real `next-clean-81` — há deploys adicionais (78-81) feitos fora do histórico rastreado nesta branch (provável branch paralela `codex/next-public-history`), ainda não mesclados em `main`. Comportamento de `next-clean-76` (Atomic Core/cabeçalho escopados ao chat) confirmado presente no que está ao vivo.
 
 Último Commit
 
@@ -48,7 +48,9 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 ✔ Fase 2 MCP/Fine-Tuning/DOC pública (**não deployado, não pushado**) — GitHub Agent ganhou `backend/github-pr-adapter.js`: REST continua default em `/api/github/create-pr`; MCP fica atrás de `GITHUB_MCP_ENABLED=1` ou `GITHUB_PR_MODE=mcp`, usando toolset mínimo `repos,pull_requests`/tools `get_file_contents,create_pull_request`, com fallback REST quando `files[]` exige commit/update. Dataset Hermes: schema `docs/HERMES_FINE_TUNING_DATASET.md` + exportador local `tools/export-hermes-dataset.mjs`; curadoria atual gerou **0/360 exemplos utilizáveis** (sem input+decisão Hermes+outcome real suficientes), logo nenhum fine-tuning foi iniciado. Páginas públicas `frontend/landing.html` e `frontend/about.html` receberam seção "IA Aplicada na Prática" com 12 tópicos e estado honesto de MCP/Fine-Tuning. Validação: `node --check` OK, `github-pr-adapter` **4/4 PASS**, export Hermes **0/360**, `vision-core-next-github-pr.spec.mjs` **4/4 PASS**, `npm run test:quick` **65/65 subcomandos PASS**. Durante a suíte, duas correções pequenas de harness foram necessárias: fechamento de socket em `tools/tests/local-backend-runtime-launcher.test.mjs` e detecção explícita de `stub:true`/`mock:true` em `tools/run-live-mission-contract.mjs`.
 
-✔ `next-clean-76` (**não deployado ainda**) — DECISION-021 (corrige PARCIALMENTE DECISION-020/next-clean-67): Atomic Core + cabeçalho genérico ("VISION CORE" + tags + status do agente) voltam a ser escopados só ao Chat (Software Factory Auto-Pilot continua contando como chat pro decágono, critério inalterado; o cabeçalho genérico não tem essa exceção — Factory mostra o cabeçalho curto nos 2 modos). Demais abas mostram `#vcPageHead`, cabeçalho curto reaproveitando `featureMap[key].title`/`.status` (mesmo texto já usado em `#vcFeatureTitle`/`#vcFeatureStatus`, nenhuma copy nova). `updateAtomicCollapseState()` ganhou 1 linha (`!inChatOrFactory`) somada aos 2 motivos de collapse já existentes, inalterados. CSS usa especificidade de ID (`#vcBrandLockup[hidden]` etc.) pra vencer `display` das classes, per regra dura #13. 3 testes de `vision-core-next-atomic-core.spec.mjs` que verificavam a regra antiga ("sempre visível em toda página") foram reescritos pra validar a nova; 2 testes novos adicionados em `vision-core-next-app-shell.spec.mjs`. Validado localmente: **104/104 PASS** (suíte completa `tests/e2e/vision-core-next-*.spec.mjs`, rodada 2x seguidas) + screenshots Playwright locais confirmando os 4 critérios de aceitação (chat com decágono+cabeçalho completo; Missions/Métricas/SF-Avançado sem decágono com cabeçalho curto; SF Auto-Pilot com decágono visível). `docs/DECISIONS.md` (DECISION-021) e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` atualizados. Sem deploy — aguardando autorização.
+✔ `next-clean-77` — OAuth Google/GitHub no Vision Core Next: Settings → Conta agora tem botões Google/GitHub que chamam `/api/auth/oauth/{provider}?return_to=next`; backend preserva o legado por padrão e só retorna para `/vision-core-next.html` quando o `state` fechado marca `target:"next"` (sem open redirect por URL livre). O hash `#oauth-success&token=...` grava o mesmo `localStorage['vision_token']` do login email/senha; `#oauth-error=...` abre Settings com erro legível. **Deployado em produção**: Pages serve `next-clean-77`, EB `vision-core-prod` está em `v113-91e5ed3966c7b1486b7325d4a5e8952be3c93215` (`Ready/Green`), Worker OAuth decodifica `target:"next"` com `return_to=next` e `target:"legacy"` sem o parâmetro.
+
+✔ `next-clean-76` — DECISION-021 (corrige PARCIALMENTE DECISION-020/next-clean-67): Atomic Core + cabeçalho genérico ("VISION CORE" + tags + status do agente) voltam a ser escopados só ao Chat (Software Factory Auto-Pilot continua contando como chat pro decágono, critério inalterado; o cabeçalho genérico não tem essa exceção — Factory mostra o cabeçalho curto nos 2 modos). Demais abas mostram `#vcPageHead`, cabeçalho curto reaproveitando `featureMap[key].title`/`.status` (mesmo texto já usado em `#vcFeatureTitle`/`#vcFeatureStatus`, nenhuma copy nova). `updateAtomicCollapseState()` ganhou 1 linha (`!inChatOrFactory`) somada aos 2 motivos de collapse já existentes, inalterados. CSS usa especificidade de ID (`#vcBrandLockup[hidden]` etc.) pra vencer `display` das classes, per regra dura #13. 3 testes de `vision-core-next-atomic-core.spec.mjs` que verificavam a regra antiga ("sempre visível em toda página") foram reescritos pra validar a nova; 2 testes novos adicionados em `vision-core-next-app-shell.spec.mjs`. Validado localmente: **104/104 PASS** + screenshots Playwright locais confirmando os 4 critérios de aceitação (chat com decágono+cabeçalho completo; Missions/Métricas/SF-Avançado sem decágono com cabeçalho curto; SF Auto-Pilot com decágono visível). `docs/DECISIONS.md` (DECISION-021) e `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` atualizados. **Deployado em produção** (confirmado ao vivo em `visioncoreai.pages.dev` — ver achado da reconciliação em "Cache Bust" acima: comportamento presente no que está ao vivo, embora o deploy em si tenha corrido fora do histórico desta branch).
 
 ✔ `next-clean-75` — Proposta 2 implementada: Timeline e Dashboard removidos como abas próprias. Histórico de Missões permanece em Missions; Métricas ganhou toggle local "Largura total" reaproveitando `vc-chat-stage--wide`/`vc-feature-panel--wide`; Agentes foi mantido como aba própria por agregar status, catálogo e métricas safe-read. Validado localmente: `node --check` OK, specs afetados 41/41 PASS, suíte permanente Next 102/102 PASS, screenshots locais em `artifacts/next-clean-75/`. Sem deploy.
 
@@ -82,7 +84,6 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 
 # PENDÊNCIAS REAIS
 
-- OAuth Google/GitHub no Vision Core Next (email/senha já implementado, `next-clean-62`) — bloqueado por mudança de backend (callback hoje redireciona pro legado, não pro Next); login/registro seguem também disponíveis no frontend legado em paralelo
 - Páginas públicas `about.html`/`landing.html` (Etapas 5-7) — escopo ainda indefinido, decisão de quando/o quê fica para quando chegar a vez (não é PARE E PERGUNTE, é ausência de spec concreta)
 - AI Provider Vault Fase D(b) — conectar `sf-agent-orchestrator.mjs` ao vault (decisão de arquitetura em aberto)
 - SF-Agent-Orchestrator Fase 2 — bloqueado por cota de API, smoke test real incompleto
@@ -95,7 +96,7 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 
 # PRÓXIMA PRIORIDADE
 
-Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contra a implementação oficial (`frontend/vision-core-next.html` + `assets/vision-core-next-clean.*`) e escolher o maior ganho arquitetural/UX ainda pendente. O candidato mais sensível que resta é OAuth Google/GitHub no Next (email/senha já fechado) — exige mudança de backend no callback e alinhamento explícito por mexer com sessão real.
+Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contra a implementação oficial (`frontend/vision-core-next.html` + `assets/vision-core-next-clean.*`) e escolher o maior ganho arquitetural/UX ainda pendente. OAuth Google/GitHub já foi implementado e publicado (`next-clean-77`) — deixou de ser pendência. **Achado real (2026-07-14):** produção já está em cache-bust `next-clean-81` via deploys que não passaram pelo histórico desta branch — antes de assumir qualquer próxima prioridade, confirmar com o usuário o que os itens 78-81 cobrem e reconciliar branches.
 
 ---
 
@@ -103,14 +104,14 @@ Próxima missão no Next deve seguir DECISION-019: comparar a spec afetada contr
 
 - Token de auth em `localStorage`/`sessionStorage` — exposto a XSS, risco aceito (paridade com o legado, não é regressão do Next)
 - `backend/data/users.json` tem hash de senha de teste no histórico git — ação de rotação pendente do usuário, fora do alcance deste repo
-- OAuth Google/GitHub só existe no frontend legado — Next tem email/senha (`next-clean-62`), mas não OAuth ainda
+- OAuth Google/GitHub no Next implementado e publicado em `next-clean-77`
 - Itens menores, não bloqueantes: boto3 bloqueado por certificado SSL local (Windows, mesma limitação histórica do node-gyp); `/api/health` retorna `version` hardcoded desatualizada (cosmético); ruído CRLF/LF pré-existente no `git status` (`core.autocrlf` inconsistente, não é prioridade corrigir)
 
 ---
 
 # TESTES
 
-104/104 PASS (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, confirmada localmente após `next-clean-76`, rodada 2x seguidas — 2 flakes de timing pré-existentes e não relacionados observados numa rodada isolada, `vision-core-next-account.spec.mjs:88` e `vision-core-next-dry-run.spec.mjs:78`, ambos passam no retry automático do Playwright e reproduzem igual no `git stash` da baseline anterior)
+106/106 PASS após `next-clean-77` (suíte permanente `tests/e2e/vision-core-next-*.spec.mjs`, rodada localmente). Sessão anterior (`next-clean-76`, antes do merge com o OAuth) tinha confirmado 104/104 PASS rodado 2x seguidas — 2 flakes de timing pré-existentes e não relacionados observados numa rodada isolada, `vision-core-next-account.spec.mjs:88` e `vision-core-next-dry-run.spec.mjs:78`, ambos passam no retry automático do Playwright e reproduzem igual no `git stash` da baseline anterior; revalidar contagem exata depois deste merge.
 
 `node --check` OK
 
@@ -124,7 +125,7 @@ Governança arquitetural (`docs/DECISIONS.md`): `ARCHITECTURAL PRINCIPLE-001` (Z
 
 # CONTEXTO PARA O PRÓXIMO AGENTE
 
-Backlog do Next (Fase 1 do ROADMAP) está com só 2 pendências reais restantes, nenhuma executável sem decisão externa: OAuth Google/GitHub (exige mudança de backend + autorização própria) e páginas públicas Etapas 5-7 (sem spec concreta ainda). Antes de assumir "nada mais a fazer", releia `docs/ROADMAP.md` Fase 1 e confirme por `grep` — não presuma.
+Backlog do Next (Fase 1 do ROADMAP) após `next-clean-77`: páginas públicas Etapas 5-7 seguem sem spec concreta; Timeline estilo LionClaw segue bloqueada por dado real ausente no backend (persistir estágios/custo real por agente). Antes de assumir "nada mais a fazer", releia `docs/ROADMAP.md` Fase 1 e confirme por `grep` — não presuma.
 
 Documentação segue sistema de continuidade: este arquivo fica pequeno e reflete só o estado atual; `docs/CHANGELOG_NEXT.md` guarda um bloco curto por versão; investigação/narrativa longa vai para `docs/session_logs/YYYY-MM-DD-nome.md`. Nunca copie logs de terminal, JSON completo ou diffs grandes de volta para este arquivo — achado real desta sessão: as seções TESTES/CONTEXTO tinham ficado stale por várias sessões (ainda citavam `next-clean-59`/"Next não tem auth") porque só as seções de topo eram atualizadas a cada entrega; revise o arquivo inteiro, não só a seção que parece relevante, ao fechar qualquer item.
 

@@ -4,11 +4,9 @@
  * All API calls are mocked via page.route(); this spec must never touch the
  * real backend or any host outside localhost.
  *
- * PERMANENT SPEC: scope confirmed 2026-07-11 as email/senha only (register,
- * login, logout) — zero new backend endpoint (apiRequest() already attaches
- * Authorization: Bearer from localStorage['vision_token']). OAuth Google/
- * GitHub is a separate future step, blocked on a backend redirect-target
- * change (see docs/CURRENT_STATE.md) — this spec covers none of that.
+ * PERMANENT SPEC: email/senha + OAuth Google/GitHub. OAuth is a full-page
+ * redirect that must return to Next with #oauth-success/#oauth-error and reuse
+ * the same localStorage['vision_token'] contract as email/senha.
  */
 
 import { test, expect } from '@playwright/test';
@@ -34,6 +32,8 @@ test('Conta shows the login/register form by default, no token stored', async ({
   await openSettings(page);
   await expect(page.locator('#vcAccountForm')).toBeVisible();
   await expect(page.locator('#vcAccountLogged')).toBeHidden();
+  await expect(page.locator('#vcGoogleOAuthBtn')).toHaveAttribute('href', `${API}/api/auth/oauth/google?return_to=next`);
+  await expect(page.locator('#vcGithubOAuthBtn')).toHaveAttribute('href', `${API}/api/auth/oauth/github?return_to=next`);
   expect(await page.evaluate(() => window.localStorage.getItem('vision_token'))).toBeNull();
 });
 
@@ -126,4 +126,29 @@ test('missing email or password: shows validation message, never calls the backe
 
   await expect(page.locator('#vcAccountStatus')).toHaveText(/obrigat/i);
   expect(called).toBe(false);
+});
+
+test('OAuth success hash stores the token, opens Settings, and cleans the URL hash', async ({ page }) => {
+  await page.route(`${API}/api/auth/me`, (route) =>
+    route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'not_authenticated' }) }));
+  await page.goto(`${NEXT_URL}#oauth-success&token=tok-oauth&plan=free&email=oauth%40example.com`);
+
+  await expect(page.locator('a[data-feature="settings"]')).toHaveClass(/is-active/);
+  await expect(page.locator('#vcAccountLogged')).toBeVisible();
+  await expect(page.locator('#vcAccountCopy')).toHaveText('Logado como oauth@example.com.');
+  await expect(page.locator('#vcAccountStatus')).toHaveText('OAuth conectado com sucesso.');
+  expect(await page.evaluate(() => window.localStorage.getItem('vision_token'))).toBe('tok-oauth');
+  expect(await page.evaluate(() => window.location.hash)).toBe('');
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.localStorage.getItem('vision_token'))).toBe('tok-oauth');
+});
+
+test('OAuth error hash opens Settings, shows a readable message, and never stores a token', async ({ page }) => {
+  await page.goto(`${NEXT_URL}#oauth-error=access_denied`);
+
+  await expect(page.locator('a[data-feature="settings"]')).toHaveClass(/is-active/);
+  await expect(page.locator('#vcAccountForm')).toBeVisible();
+  await expect(page.locator('#vcAccountStatus')).toHaveText(/OAuth falhou: access_denied/);
+  expect(await page.evaluate(() => window.localStorage.getItem('vision_token'))).toBeNull();
+  expect(await page.evaluate(() => window.location.hash)).toBe('');
 });

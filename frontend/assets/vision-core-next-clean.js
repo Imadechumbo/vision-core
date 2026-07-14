@@ -202,6 +202,8 @@
   var accountLogoutBtn = document.getElementById('vcAccountLogoutBtn');
   var accountLogged = document.getElementById('vcAccountLogged');
   var accountStatus = document.getElementById('vcAccountStatus');
+  var googleOAuthBtn = document.getElementById('vcGoogleOAuthBtn');
+  var githubOAuthBtn = document.getElementById('vcGithubOAuthBtn');
   var animationReducedCheckbox = document.getElementById('vcAnimationReduced');
   if (animationReducedCheckbox) {
     animationReducedCheckbox.checked = isReducedMotion();
@@ -493,7 +495,11 @@
     }
     if (settingsPanel) {
       settingsPanel.hidden = activeFeature !== 'settings';
-      if (activeFeature === 'settings') { loadSettingsList(); refreshAccountStatus(); }
+      if (activeFeature === 'settings') {
+        loadSettingsList();
+        if (accountSkipNextRefresh) accountSkipNextRefresh = false;
+        else refreshAccountStatus();
+      }
     }
     if (vaultRollback) {
       vaultRollback.hidden = activeFeature !== 'vault';
@@ -2506,16 +2512,15 @@
     });
   }
 
-  // ── Conta (email/senha) — Settings → Conta ──────────────────────
-  // Escopo confirmado: só email/senha, zero endpoint novo (o apiRequest()
-  // já anexa Authorization: Bearer a partir de localStorage['vision_token'],
-  // linha ~700). OAuth Google/GitHub fica para etapa futura separada — o
-  // callback de hoje redireciona pro legado, não pro Next (ver
-  // docs/CURRENT_STATE.md). vision_session (cookie) é ignorado de propósito:
-  // vem de origem diferente (Worker Gateway) com SameSite=Lax, não confiável
-  // via fetch cross-site; o token no corpo da resposta é a fonte real.
+  // ── Conta (email/senha + OAuth) — Settings → Conta ──────────────
+  // Next usa a mesma fonte de verdade já existente: localStorage['vision_token'].
+  // OAuth passa por redirect de página inteira e volta com #oauth-success
+  // quando iniciado com return_to=next. vision_session (cookie) é ignorado de
+  // propósito: vem de origem diferente (Worker Gateway) com SameSite=Lax, não
+  // confiável via fetch cross-site; o token no hash/corpo é a fonte real.
   var ACCOUNT_TOKEN_KEY = 'vision_token';
   var ACCOUNT_DEFAULT_COPY = accountCopy ? accountCopy.textContent : '';
+  var accountSkipNextRefresh = false;
 
   function showAccountStatus(msg, isError) {
     if (!accountStatus) return;
@@ -2526,6 +2531,15 @@
   function setAccountBusy(busy) {
     if (accountLoginBtn) accountLoginBtn.disabled = busy;
     if (accountRegisterBtn) accountRegisterBtn.disabled = busy;
+  }
+
+  function buildOAuthUrl(provider) {
+    return API_BASE_URL + '/api/auth/oauth/' + provider + '?return_to=next';
+  }
+
+  function setOAuthLinks() {
+    if (googleOAuthBtn) googleOAuthBtn.href = buildOAuthUrl('google');
+    if (githubOAuthBtn) githubOAuthBtn.href = buildOAuthUrl('github');
   }
 
   function setAccountLoggedInUI(user) {
@@ -2578,9 +2592,40 @@
     });
   }
 
+  function cleanOAuthHash() {
+    if (!window.history || !window.history.replaceState) return;
+    window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+  }
+
+  function handleOAuthHash() {
+    var hash = String(window.location.hash || '').replace(/^#/, '');
+    if (!hash || hash.indexOf('oauth-') !== 0) return false;
+    var success = hash.indexOf('oauth-success') === 0;
+    var query = success ? hash.replace(/^oauth-success&?/, '') : hash.replace(/^oauth-error=?/, 'error=');
+    var params = new URLSearchParams(query);
+    if (success) {
+      var token = params.get('token');
+      if (token) {
+        try { window.localStorage.setItem(ACCOUNT_TOKEN_KEY, token); } catch (_) {}
+        accountSkipNextRefresh = true;
+        selectFeature('settings');
+        setAccountLoggedInUI({ email: params.get('email') || '' });
+        showAccountStatus('OAuth conectado com sucesso.', false);
+      } else {
+        showAccountStatus('OAuth retornou sem token.', true);
+      }
+    } else {
+      showAccountStatus('OAuth falhou: ' + (params.get('error') || hash.replace(/^oauth-error=?/, '') || 'erro_desconhecido'), true);
+      selectFeature('settings');
+    }
+    cleanOAuthHash();
+    return true;
+  }
+
   if (accountLoginBtn) accountLoginBtn.addEventListener('click', function () { doAccountAuth('login'); });
   if (accountRegisterBtn) accountRegisterBtn.addEventListener('click', function () { doAccountAuth('register'); });
   if (accountLogoutBtn) accountLogoutBtn.addEventListener('click', doAccountLogout);
+  setOAuthLinks();
 
   // Mission History (B-2) — list + detail from /api/mission/timeline.
   // Achado real (2026-07-13): reaproveitado pela aba Timeline (next-clean-73)
@@ -3147,7 +3192,7 @@
 
   root.setAttribute('data-glow', 'on');
   setAtomicCoreState('idle');
-  selectFeature('chat', false);
+  if (!handleOAuthHash()) selectFeature('chat', false);
   startMotionLoop();
 
   // Troca de modo ao vivo (Settings → Animações), sem reload.

@@ -184,7 +184,7 @@ Cores de estado semântico fora das variáveis raiz (por convenção do arquivo,
 | Software Factory Next (`#factory`, Auto-Pilot + Modo Avançado) | EXISTENTE — Arquiteto visual local, catálogo/grafo de stack, matriz de agentes, timeline e preview |
 | Mission History | EXISTENTE dentro de Missions — Timeline não é destino de navegação separado |
 | Settings / AI Provider Vault | EXISTENTE |
-| Settings / Conta (email/senha) | EXISTENTE — registro, login, logout; OAuth Google/GitHub NÃO incluído |
+| Settings / Conta (email/senha + OAuth) | EXISTENTE — registro, login, logout, Google, GitHub |
 | Logo/olho (piscada) | EXISTENTE — protegido |
 
 ---
@@ -215,7 +215,7 @@ Um único `<div class="vc-app-shell" data-sidebar-state="expanded|collapsed">` c
 
 ### Conta (email/senha)
 
-Painel dentro de Settings (`#vcAccountForm`/`#vcAccountLogged`), zero endpoint novo: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout` ja existiam em `backend/server.js`. Token vai em `localStorage['vision_token']` — o mesmo nome que `apiRequest()` ja lia antes de existir qualquer UI de login, e o mesmo que `Authorization: Bearer` anexa em toda chamada. O cookie `vision_session` que o backend tambem seta e ignorado de proposito (origem diferente do Worker Gateway, `SameSite=Lax`, nao confiavel via fetch cross-site). OAuth Google/GitHub **nao esta incluido**: o callback (`/api/auth/oauth/*/callback`) redireciona pro `FRONTEND_URL` raiz (legado), nao pro Next — exige mudanca de backend fora do escopo desta frente sem autorizacao explicita.
+Painel dentro de Settings (`#vcAccountForm`/`#vcAccountLogged`): `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout`, e OAuth Google/GitHub via `GET /api/auth/oauth/{provider}?return_to=next`. Token vai em `localStorage['vision_token']` — o mesmo nome que `apiRequest()` ja lia antes de existir qualquer UI de login, e o mesmo que `Authorization: Bearer` anexa em toda chamada. O cookie `vision_session` que o backend tambem seta e ignorado de proposito (origem diferente do Worker Gateway, `SameSite=Lax`, nao confiavel via fetch cross-site). O callback OAuth segue compatível com legado por padrão; quando o fluxo e iniciado pelo Next, `state` carrega apenas um alvo fechado (`next`, nunca URL livre) e o retorno vai para `/vision-core-next.html#oauth-success&token=...` ou `#oauth-error=...`, reaproveitando a mesma fonte de verdade do login email/senha.
 
 ## Estrutura CSS
 
@@ -363,7 +363,8 @@ Confirmado pelo usuário após auditoria de paridade (`docs/PARITY_AUDIT.md`): S
 - `frontend/atomic-core.html` + assets paralelos: candidatos a limpeza/remoção formal (decisão do usuário, não urgente).
 - `/api/metrics/summary` e `/api/metrics/memory` (runtime CPU/memória, memory layer) não conectados na aba Métricas — fora do escopo pedido nas sessões até aqui.
 - ~~`project-files` + `generate-zip` (Software Factory Next)~~ **CORRIGIDO (2026-07-10)** — ver `SOFTWARE_FACTORY_SPEC.md`.
-- ~~Auth email/senha no Next~~ **IMPLEMENTADO (2026-07-11, `next-clean-62`)** — registro/login/logout em Settings → Conta. OAuth Google/GitHub segue não iniciado: o callback do backend hoje redireciona pro legado, não pro Next — exige mudança de backend (fora do escopo desta frente sem autorização explícita), item mais sensível do roadmap por mexer com sessão real de qualquer usuário.
+- ~~Auth email/senha no Next~~ **IMPLEMENTADO (2026-07-11, `next-clean-62`)** — registro/login/logout em Settings → Conta.
+- ~~OAuth Google/GitHub no Next~~ **IMPLEMENTADO (2026-07-13, `next-clean-77`)** — botões em Settings → Conta, callback backend direcionável para `/vision-core-next.html` via `state` fechado (`return_to=next`), mesmo `vision_token` do login email/senha.
 
 ## Próximos passos
 
