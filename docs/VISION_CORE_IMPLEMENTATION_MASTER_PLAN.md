@@ -208,7 +208,7 @@ DoR comum: ADR aplicável aprovado, contrato/spec suficiente, dependências Done
 - **Pré-requisitos/ferramentas:** IMP-004; medição local controlada/stdlib.
 - **Esperado/aprovação:** baseline e limites aprovados, sem regressão no candidato.
 - **Falha:** threshold sem medição ou bundle acima do limite.
-- **Evidências:** `tools/tests/next-performance-budget.test.mjs` 59/59; 385.551B/460.800B, SHA-256 por asset e p95 local máximo 32,70ms/100ms. **Status:** Approved.
+- **Evidências:** `tools/tests/next-performance-budget.test.mjs` 59/59; 386.166B/460.800B, SHA-256 por asset e p95 local máximo 34,24ms/100ms. **Status:** Approved.
 
 ### TEST-004 — E2E crítico sem mocks
 
@@ -216,7 +216,7 @@ DoR comum: ADR aplicável aprovado, contrato/spec suficiente, dependências Done
 - **Pré-requisitos/ferramentas:** ADR-003/004/005, IMP-002/003/005/009 e TEST-001; Playwright+ambiente descartável.
 - **Esperado/aprovação:** endpoints-alvo sem interceptação, dados isolados e cleanup; 100% verde.
 - **Falha:** mock, secret, flake não explicado ou correção embutida no teste.
-- **Evidências:** gate permanente `tests/e2e/vision-core-next-real-e2e.spec.mjs` 2/2 PASS em 3,2s; suíte Next 124/124 PASS em 48,9s; screenshot `artifacts/next-rc-e2e/ui-critical.png`; manifesto com 27 requests, 27 correlation IDs, zero interceptação e zero campo sensível; dados restaurados no cleanup. **Status:** Approved.
+- **Evidências:** gate permanente `tests/e2e/vision-core-next-real-e2e.spec.mjs` 2/2 PASS em 3,2s; auditoria final Next 124/124 PASS em 59,6s com 2 workers e retries desativados; screenshot `artifacts/next-rc-e2e/ui-critical.png`; manifesto com 27 requests, 27 correlation IDs, zero interceptação e zero campo sensível; dados restaurados no cleanup. **Status:** Approved.
 
 ## 7. Trilha D — Release
 

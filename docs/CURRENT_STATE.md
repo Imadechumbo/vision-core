@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ Auditoria final segura em `2432dcde`: Next 124/124 PASS em 59,6s com 2 workers e `--retries=0`; pairing 13/13; performance 59/59 (386.166B/460.800B, p95 máximo 34,24ms/100ms); pacote Pages 10/10. A primeira execução sob 6 workers recuperou 2 timeouts por retry; reprodução isolada 35/35 e suíte integral limitada a 2 workers passaram sem retry, caracterizando contenção do ambiente, não regressão funcional. Worktree restaurada após artefatos gerados. Estado: 20/26 concluídos; os 6 restantes dependem de OPS-001 externo e da cadeia REL-002→ADR-007→OPS-002/003/004. Próximo passo autorizado apenas em tarefa com operação externa: executar `docs/PAGES_RELEASE_RUNBOOK.md` numa branch de preview não produtiva.
+
 ◐ OPS-001 preparado, não executado: `docs/PAGES_RELEASE_RUNBOOK.md` registra preparação local, guard que proíbe branches de produção, comandos oficiais de preview, smokes, evidência e reversão por republicação do predecessor. A documentação oficial confirma que preview não é alvo do rollback nativo de Pages; por isso o ensaio usa a mesma branch de preview com o pacote arquivado. Publicar o preview continua pendente e fora desta tarefa sem deploy.
 
 ✔ ADR-006 aprovada como DECISION-028: rollback de Pages republica o artefato predecessor imutável, nunca faz rebuild; hash, smokes, P0/P1, 5xx e p95 têm thresholds objetivos; Release/Operações/Quality e autoridade humana de produção estão definidos; falta de telemetria falha para o predecessor. Nenhuma publicação foi executada. Backlog: 20/26 concluídos; OPS-001 desbloqueada, mas permanece operação externa fora desta tarefa sem deploy.
@@ -52,7 +54,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 ⚠ Preparação de TEST-004 encontrou bloqueio de testabilidade: `API_BASE_URL` hardcoded só permite produção ou interceptação, e o gate proíbe ambos para o ambiente descartável. IMP-009 criado para override explícito por meta do documento, mantendo o gateway oficial como default e rejeitando valor inválido. Backlog ampliado para 26 itens: 16 concluídos.
 
-✔ TEST-003 aprovado com gate permanente stdlib `tools/tests/next-performance-budget.test.mjs`: 59/59 PASS; carga inicial 385.551B sob budget 460.800B; HTML/CSS/JS/PNG sob limites individuais; SHA-256 registrado; p95 local máximo 32,70ms sob teto 100ms em 10 rounds íntegros.
+✔ TEST-003 aprovado com gate permanente stdlib `tools/tests/next-performance-budget.test.mjs`: 59/59 PASS; carga inicial 386.166B sob budget 460.800B; HTML/CSS/JS/PNG sob limites individuais; SHA-256 registrado; p95 local máximo 34,24ms sob teto 100ms em 10 rounds íntegros.
 
 ✔ TEST-002 aprovado após correção separada IMP-008: auditoria temporária 3/3 PASS (IDs/nomes acessíveis, foco contido+restaurado, reduced motion prioritário) e regressão afetada 41/41 PASS. Spec temporário removido conforme DECISION-009. Backlog: 15/25 concluídos.
 
