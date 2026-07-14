@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ ADR-002 aprovada e registrada como DECISION-024: histórico autenticado terá backend como fonte única, escopo obrigatório por owner + projeto e retenção de 90 dias; visitante fica apenas na memória da aba. Timeline e Archivist não serão reaproveitados como conversa. Evidência real: o Next atual só mantém bolhas no DOM, `/api/chat` é mensagem isolada e o Archivist não possui isolamento por usuário/projeto. Backlog: 3/24 concluídos.
+
 ✔ ADR-001 aprovada e registrada como DECISION-023: projetos persistidos são autenticados, têm ownership derivado exclusivamente da sessão e seleção explícita no Next; visitante fica efêmero e não entra em `projects.json`. Evidência real: `GET /api/projects` atual expõe todo o banco sem auth e `POST` confia em `body.user_id`; a correção ficou corretamente separada em IMP-001. Backlog: 2/24 concluídos; ADR-002 e IMP-001 desbloqueados.
 
 ✔ REL-001 do Engineering Executive Backlog V2 concluída: `e4eee79c` foi confirmado como ancestral do HEAD reconciliado; `codex/next-rc-baseline` foi criada em `origin` como referência revisável. Antes do push, todos os workflows foram inspecionados: deploys por `push` aceitam somente `main`, e Pages/mirror continuam com `if: false`. Nenhum PR, merge ou deploy foi executado. O dashboard e o Kanban de `docs/VISION_CORE_IMPLEMENTATION_MASTER_PLAN.md` agora registram 1/24 concluído e ADR-001/003/004/005 + IMP-006 em Ready.
@@ -99,7 +101,7 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 
 # PRÓXIMA PRIORIDADE
 
-Continuar a Onda 1 do `docs/VISION_CORE_IMPLEMENTATION_MASTER_PLAN.md`: ADR-002/003/004/005 e IMP-001/006 estão Ready. Próximo item: ADR-002, mapeando armazenamento real de chat/sessões e retenção antes de qualquer implementação. Comando inicial recomendado: `rg -n "chat/history|conversation|session|messages|localStorage" backend frontend/assets/vision-core-next-clean.js docs/API_CONTRACT.md docs/DECISIONS.md`.
+Continuar a Onda 1 do `docs/VISION_CORE_IMPLEMENTATION_MASTER_PLAN.md`: ADR-003/004/005 e IMP-001/006 estão Ready. Próximo item no critical path: IMP-001, corrigindo primeiro o contrato inseguro de `/api/projects` e depois integrando seleção/criação no Next conforme DECISION-023. Comando inicial recomendado: `rg -n "app\\.(get|post).*api/projects|account/me|apiRequest|vcAccount" backend/server.js frontend/assets/vision-core-next-clean.js tests/e2e`.
 
 ---
 

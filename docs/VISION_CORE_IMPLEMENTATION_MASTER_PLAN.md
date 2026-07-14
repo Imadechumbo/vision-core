@@ -28,13 +28,13 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | REL | 2 |
 | OPS | 4 |
 | Total | 24 |
-| Concluídos | 2 |
-| Pendentes | 22 |
+| Concluídos | 3 |
+| Pendentes | 21 |
 | Bloqueados por dependência | 16 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 14%; Desenvolvimento 0%; Certificação 0%; Release 50%; Operação 0%.
+Percentual concluído por trilha: Arquitetura 29%; Desenvolvimento 0%; Certificação 0%; Release 50%; Operação 0%.
 
 ## 4. Trilha A — ADRs
 
@@ -52,7 +52,7 @@ Percentual concluído por trilha: Arquitetura 14%; Desenvolvimento 0%; Certifica
 
 - **Objetivo/contexto/problema:** definir sessão, mensagem, retenção, visitante e autenticado sem copiar o fallback localStorage/backend legado.
 - **Alternativas:** local-only; backend-only; híbrido com sincronização explícita.
-- **Decisão tomada:** **Proposto** — backend como fonte para autenticados e sessão efêmera explícita para visitantes; confirmar retenção.
+- **Decisão tomada:** **Aprovado** — backend como fonte única por owner + projeto para autenticados; memória da aba para visitantes; retenção inicial de 90 dias (DECISION-024).
 - **Consequências/impacto:** histórico por projeto, paginação e logout previsíveis.
 - **Riscos:** PII, duplicação e retenção indevida.
 - **Revisão futura:** mudança regulatória ou suporte offline real.
@@ -322,7 +322,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| ADR-006,007; IMP-002–005,007; TEST-001–004; REL-002; OPS-001–004 | ADR-002,003,004,005; IMP-001,006 | — | — | REL-001; ADR-001 |
+| ADR-006,007; IMP-002–005,007; TEST-001–004; REL-002; OPS-001–004 | ADR-003,004,005; IMP-001,006 | — | — | REL-001; ADR-001,002 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 
