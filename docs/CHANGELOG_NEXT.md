@@ -4,6 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-91 (2026-07-14, não deployado)
+
+- Estado vazio do Chat ganhou onboarding compacto com fluxo do produto, Free/Pro/Enterprise sem billing fictício, OAuth Google real e início da primeira missão pelo composer existente.
+- Item Smile virou Tutorial; o modal existente agora cobre 13 passos, foco/teclado, pular, não mostrar novamente e reinício em Settings.
+- Texto estreito `Entre para persistir projetos` foi substituído por `Projeto temporário`; após login, o onboarding reflete a conta real.
+
 ## RC1 (2026-07-14, não deployado)
 
 - REL-002 congelou o pacote allowlisted com a entrada oficial Next servindo também como raiz; bundles legados não entram no RC.

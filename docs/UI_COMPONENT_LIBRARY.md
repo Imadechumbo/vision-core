@@ -36,7 +36,7 @@ Escopo: componentes reais em `vision-core-next-clean.{css,js}`. Fora do escopo: 
 ## Sidebar
 
 **Objetivo:** navegação principal, colapsável, persistente entre sessões.
-**Estrutura:** `<aside class="vc-sidebar">` com links diretos `[data-feature="X"]`, grupos nativos `<details class="vc-nav-group">` e botao Smile (`data-smile-open`). Timeline e Dashboard nao sao itens de menu.
+**Estrutura:** `<aside class="vc-sidebar">` com links diretos `[data-feature="X"]`, grupos nativos `<details class="vc-nav-group">` e botao Tutorial (`data-smile-open`). Timeline e Dashboard nao sao itens de menu.
 **Estados:** `data-sidebar-state="expanded"|"collapsed"` em `.vc-app-shell` — expandida mostra ícone+label (252px), colapsada mostra só ícone (78px).
 **Eventos:** clique em `[data-sidebar-toggle]` alterna estado; clique em `[data-feature]` chama `selectFeature(key)`.
 **Persistência:** `localStorage['vc_next_sidebar_state']`.
@@ -63,6 +63,14 @@ Escopo: componentes reais em `vision-core-next-clean.{css,js}`. Fora do escopo: 
 
 **Objetivo:** área de mensagens central.
 **Estrutura:** `<div class="vc-chat-stream" id="vcChatStream">` — cada mensagem é `<article class="vc-message vc-message-{kind}">` (`kind` ∈ `system`/`user`/`assistant`/`pending`/`error`).
+
+### Estado vazio do Chat
+
+**Estrutura:** `#vcChatOnboarding` reutiliza o estado de `#vcChatStream`, o composer e o OAuth existente. Aparece apenas no Chat sem mensagens reais e sem missao/tutorial ativo; planos sao informativos e nao implementam billing.
+
+### Modal Tutorial
+
+**Estrutura:** `#vcSmileModal` reaproveitado como tutorial acessivel de 13 passos, aberto por `[data-smile-open]`. Foco fica contido, Escape fecha e o trigger recebe o foco de volta. A preferencia minima e `localStorage['vc_tutorial_hidden']`, removida por `#vcTutorialRestart` em Settings.
 **Estados/alinhamento:** `.vc-message-user { align-self: flex-end }` (direita) — demais tipos alinhados à esquerda (default do flex).
 **Eventos:** `appendMessage(kind, title, text)` retorna o elemento (permite removê-lo depois, usado pro indicador "Pensando...").
 **Acessibilidade:** `aria-live="polite"` no stream.

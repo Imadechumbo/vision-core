@@ -135,7 +135,7 @@ Estilo geral: **app de chat/IA**, inspirado em ChatGPT/Claude/Cursor/OpenCode/Li
 **Princípios:** minimalista · escuro/cinza nativo · chat como centro da experiência · sem aparência de landing page · sem hero gigante · sem excesso de painéis · sidebar discreta e recolhível · legado é referência visual/UX, nunca base de código (catálogo completo em `docs/LEGACY_DESIGN_REFERENCE.md`).
 
 ```text
-Sidebar: Chat | Missions | Software Factory | GitHub | Vault | Metricas | Agentes | Tools | Security Lab | Obsidian | Settings | Smile
+Sidebar: Chat | Missions | Software Factory | GitHub | Vault | Metricas | Agentes | Tools | Security Lab | Obsidian | Settings | Tutorial
 Main (chat): Header + Atomic Core -> Chat stream -> Feature panel contextual -> Composer
 Main (outras abas): cabecalho curto do papel (#vcPageHead) -> Chat stream (mesma base) -> Feature panel contextual -> Composer
 Missions inclui Historico de Missoes.
@@ -209,9 +209,11 @@ Painéis de dados (Métricas, Security Lab) **não têm animação de entrada pr
 
 Um único `<div class="vc-app-shell" data-sidebar-state="expanded|collapsed">` com dois filhos: `<aside class="vc-sidebar">` (nav com `data-feature="chat|missions|factory|agents|github|vault|metrics|tools|security|obsidian|settings"`) e `<main class="vc-main">` contendo header, `<section class="vc-chat-stage">` (`#vcChatStream` + `#vcFeaturePanel` com todos os sub-painéis condicionais dentro, cada um `hidden` por padrão + `#factory`, Software Factory, também dentro do chat-stage — ver regra dura #17 — + `<form class="vc-composer">` como último filho). O Software Factory deve coexistir como contexto/painel operacional da conversa e ler a missão do composer/chat principal; não pode ter textarea próprio de missão. O Modo Avançado adiciona apenas painéis visuais/editáveis (`#vcSfAdvancedPanel`) de interpretação, stack, agentes, timeline e preview.
 
-### Tutorial Smile
+### Estado vazio e tutorial
 
-`#vcSmileModal` e o unico overlay/modal do Vision Core Next. Ele abre somente por clique em `[data-smile-open]`, usa X/ESC/Voltar/Proximo, renderiza passos estaticos via `textContent`, nao grava localStorage, nao chama backend e nao cria textarea/campo paralelo de missao. A entrada de missao continua exclusivamente no composer/chat principal.
+`#vcChatOnboarding` ocupa de forma compacta o estado vazio do Chat e sai do layout quando existe mensagem real, missao em curso, tutorial aberto ou outra aba ativa. Reutiliza o composer, o contrato OAuth Google e o estado de conta existentes; Free e o unico plano selecionado, Pro e apenas informativo e Enterprise fica `Em breve`, sem preco, checkout ou billing inventado.
+
+`#vcSmileModal` continua sendo o unico overlay/modal do Vision Core Next, agora apresentado como Tutorial. Seus 13 passos estaticos usam `textContent`, X/ESC/Pular/Voltar/Proximo, foco contido e restaurado. `localStorage['vc_tutorial_hidden']` guarda somente "Nao mostrar novamente"; Settings remove essa preferencia em "Reiniciar tutorial". O modal nao chama backend e nao cria campo paralelo de missao.
 
 ### Conta (email/senha)
 

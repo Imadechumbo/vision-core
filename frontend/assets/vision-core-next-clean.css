@@ -1159,9 +1159,31 @@ a { color: inherit; text-decoration: none; }
   backdrop-filter: blur(10px);
 }
 
+.vc-chat-onboarding:not([hidden]) {
+  width: min(720px, calc(100% - 24px));
+  margin: 18px auto 8px;
+  padding: 20px;
+  border: 1px solid rgba(216,180,254,.16);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(28,18,45,.72), rgba(8,7,14,.88));
+}
+.vc-chat-onboarding h1 { margin: 4px 0 8px; font-size: clamp(20px, 3vw, 30px); }
+.vc-chat-onboarding > p { margin: 0 0 14px; color: #bdb4cf; }
+.vc-onboarding-plans { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.vc-onboarding-plans article { display: grid; gap: 5px; padding: 12px; border: 1px solid rgba(255,255,255,.09); border-radius: 10px; }
+.vc-onboarding-plans article.is-selected { border-color: rgba(168,85,247,.7); background: rgba(168,85,247,.09); }
+.vc-onboarding-plans span, .vc-onboarding-plans small { color: #9d94aa; font-size: 11px; line-height: 1.4; }
+.vc-onboarding-account { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.vc-onboarding-account p { margin: 0; color: #bdb4cf; font-size: 12px; }
+.vc-onboarding-account a, .vc-onboarding-actions button { padding: 9px 13px; border: 1px solid rgba(216,180,254,.18); border-radius: 9px; color: #fff; background: rgba(168,85,247,.14); font-size: 12px; font-weight: 800; }
+.vc-onboarding-actions { display: flex; gap: 8px; margin-top: 14px; }
+.vc-tutorial-counter { font-size: 12px; color: #a78bfa !important; }
+.vc-tutorial-preference { display: flex; gap: 8px; align-items: center; margin-top: 14px; color: #bdb4cf; font-size: 12px; }
+
 .vc-smile-card {
   position: relative;
   width: min(430px, 100%);
+  min-width: 0;
   padding: 22px;
   border: 1px solid rgba(216, 180, 254, .18);
   border-radius: 8px;
@@ -1198,7 +1220,8 @@ a { color: inherit; text-decoration: none; }
 }
 
 .vc-smile-steps span {
-  width: 26px;
+  flex: 1 1 0;
+  min-width: 0;
   height: 4px;
   border-radius: 999px;
   background: rgba(255, 255, 255, .16);
@@ -1208,6 +1231,7 @@ a { color: inherit; text-decoration: none; }
 
 .vc-smile-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 20px;
@@ -1247,6 +1271,14 @@ a { color: inherit; text-decoration: none; }
   .vc-chat-stage { padding-top: 14px; }
   .vc-safe-status-row { grid-template-columns: 1fr; }
   .vc-atomic-hud { display: none; }
+  .vc-onboarding-plans { grid-template-columns: 1fr; }
+  .vc-onboarding-account { align-items: stretch; flex-direction: column; }
+}
+
+@media (max-width: 420px) {
+  .vc-chat-onboarding:not([hidden]) { width: 100%; margin-top: 8px; padding: 14px; }
+  .vc-onboarding-actions { flex-direction: column; }
+  .vc-smile-card { max-height: calc(100vh - 24px); overflow-y: auto; }
 }
 
 /* Vision Core original eye/orb mark adapted from the production v23-eye logo. */

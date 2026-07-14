@@ -162,7 +162,7 @@
   var composer = document.getElementById('vcComposer');
   var chatScroll = document.getElementById('vcChatScroll');
   var prompt = document.getElementById('vcPrompt');
-  var smileOpen = document.querySelector('[data-smile-open]');
+  var smileOpeners = document.querySelectorAll('[data-smile-open]');
   var smileModal = document.getElementById('vcSmileModal');
   var smileClose = document.getElementById('vcSmileClose');
   var smileTitle = document.getElementById('vcSmileTitle');
@@ -171,6 +171,14 @@
   var smileSteps = document.getElementById('vcSmileSteps');
   var smilePrev = document.getElementById('vcSmilePrev');
   var smileNext = document.getElementById('vcSmileNext');
+  var tutorialCounter = document.getElementById('vcTutorialCounter');
+  var tutorialNoShow = document.getElementById('vcTutorialNoShow');
+  var tutorialSkip = document.getElementById('vcTutorialSkip');
+  var tutorialRestart = document.getElementById('vcTutorialRestart');
+  var chatOnboarding = document.getElementById('vcChatOnboarding');
+  var onboardingStart = document.getElementById('vcOnboardingStart');
+  var onboardingGoogle = document.getElementById('vcOnboardingGoogle');
+  var onboardingAccountCopy = document.getElementById('vcOnboardingAccountCopy');
   var stream = document.getElementById('vcChatStream');
   var featurePanel = document.getElementById('vcFeaturePanel');
   var featureTitle = document.getElementById('vcFeatureTitle');
@@ -409,6 +417,7 @@
     item.appendChild(label);
     item.appendChild(body);
     stream.appendChild(item);
+    updateChatOnboarding();
     item.scrollIntoView({ block: 'end', behavior: 'smooth' });
     return item;
   }
@@ -445,29 +454,36 @@
   }
 
   var smileStep = 0;
+  var tutorialReturnFocus = null;
+  var TUTORIAL_HIDDEN_KEY = 'vc_tutorial_hidden';
   var smileGuide = [
-    {
-      title: 'Comece pelo chat',
-      body: 'Escreva a missao no composer principal. O mesmo texto alimenta chat, Missions e Software Factory.',
-      image: 'assets/mascote-reading-final.png'
-    },
-    {
-      title: 'Escolha o fluxo',
-      body: 'Use os chips Missao, Factory, GitHub, Vault ou IA para mudar o contexto sem criar outro campo de entrada.',
-      image: 'assets/mascote-idle-final.png'
-    },
-    {
-      title: 'Confirme antes de agir',
-      body: 'Acoes sensiveis continuam pedindo revisao humana. O Next prioriza chat-first e evidencia antes de mudanca.',
-      image: 'assets/mascote-reading-final.png'
-    }
+    ['Bem-vindo ao Vision Core Next', 'Um ambiente integrado para conversar, construir e validar software.'],
+    ['Chat principal', 'O Chat é a primeira interação e mantém o contexto do trabalho.'],
+    ['Projetos e persistência', 'Entre para salvar projetos, conversas e histórico.'],
+    ['Composer e primeira missão', 'Descreva o objetivo no único campo de missão do produto.'],
+    ['Software Factory', 'Arquitetura, implementação e validação acontecem no mesmo ambiente.'],
+    ['Missões', 'Acompanhe execução, patches e evidências com gates explícitos.'],
+    ['Timeline', 'Consulte o histórico contínuo da engenharia por projeto.'],
+    ['Agentes', 'Agentes especializados compartilham o mesmo estado e autoridade.'],
+    ['Atomic Core', 'O núcleo mostra Idle, Action e Retorno durante uma missão.'],
+    ['GitHub', 'Revise integrações e prepare mudanças sem ações implícitas.'],
+    ['Vault e segurança', 'Segredos, snapshots e rollback mantêm confirmação humana.'],
+    ['Métricas, logs e Settings', 'Observe o sistema e ajuste preferências de forma explícita.'],
+    ['Iniciar primeira missão', 'Feche o tutorial e descreva o que deseja construir.']
   ];
+
+  function updateChatOnboarding() {
+    if (!chatOnboarding || !stream) return;
+    var hasConversation = !!stream.querySelector('.vc-message-user');
+    chatOnboarding.hidden = activeFeature !== 'chat' || hasConversation || chatRequestInFlight || (smileModal && !smileModal.hidden);
+  }
 
   function renderSmileGuide() {
     var step = smileGuide[smileStep] || smileGuide[0];
-    if (smileTitle) smileTitle.textContent = step.title;
-    if (smileBody) smileBody.textContent = step.body;
-    if (smileAvatar) smileAvatar.src = step.image;
+    if (smileTitle) smileTitle.textContent = step[0];
+    if (smileBody) smileBody.textContent = step[1];
+    if (smileAvatar) smileAvatar.src = smileStep % 2 ? 'assets/mascote-idle-final.png' : 'assets/mascote-reading-final.png';
+    if (tutorialCounter) tutorialCounter.textContent = (smileStep + 1) + ' / ' + smileGuide.length;
     if (smilePrev) smilePrev.disabled = smileStep === 0;
     if (smileNext) smileNext.textContent = smileStep === smileGuide.length - 1 ? 'Fechar' : 'Proximo';
     if (smileSteps) {
@@ -480,21 +496,26 @@
     }
   }
 
-  function openSmileGuide() {
+  function openSmileGuide(event) {
     if (!smileModal) return;
+    tutorialReturnFocus = event && event.currentTarget ? event.currentTarget : document.activeElement;
+    if (tutorialNoShow) try { tutorialNoShow.checked = window.localStorage.getItem(TUTORIAL_HIDDEN_KEY) === '1'; } catch (_) {}
     smileStep = 0;
     renderSmileGuide();
     smileModal.hidden = false;
+    updateChatOnboarding();
     if (smileClose) smileClose.focus();
   }
 
   function closeSmileGuide() {
     if (!smileModal || smileModal.hidden) return;
+    if (tutorialNoShow && tutorialNoShow.checked) try { window.localStorage.setItem(TUTORIAL_HIDDEN_KEY, '1'); } catch (_) {}
     smileModal.hidden = true;
-    if (smileOpen && typeof smileOpen.focus === 'function') smileOpen.focus();
+    updateChatOnboarding();
+    if (tutorialReturnFocus && typeof tutorialReturnFocus.focus === 'function') tutorialReturnFocus.focus();
   }
 
-  if (smileOpen) smileOpen.addEventListener('click', openSmileGuide);
+  smileOpeners.forEach(function (opener) { opener.addEventListener('click', openSmileGuide); });
   if (smileClose) smileClose.addEventListener('click', closeSmileGuide);
   if (smilePrev) {
     smilePrev.addEventListener('click', function () {
@@ -560,6 +581,7 @@
     var feature = featureMap[key] || featureMap.chat;
     activeFeature = featureMap[key] ? key : 'chat';
     if (appShell) appShell.setAttribute('data-active-feature', activeFeature);
+    updateChatOnboarding();
     document.querySelectorAll('[data-feature]').forEach(function (node) {
       node.classList.toggle('is-active', node.getAttribute('data-feature') === activeFeature);
     });
@@ -979,6 +1001,27 @@
     } catch (_) {}
     return DEFAULT_API_BASE_URL;
   }
+  if (tutorialSkip) tutorialSkip.addEventListener('click', closeSmileGuide);
+  if (tutorialRestart) tutorialRestart.addEventListener('click', function (event) {
+    try { window.localStorage.removeItem(TUTORIAL_HIDDEN_KEY); } catch (_) {}
+    if (tutorialNoShow) tutorialNoShow.checked = false;
+    openSmileGuide(event);
+  });
+  if (onboardingStart) onboardingStart.addEventListener('click', function () { if (prompt) prompt.focus(); });
+  if (onboardingGoogle) onboardingGoogle.addEventListener('click', function () {
+    if (onboardingAccountCopy) onboardingAccountCopy.textContent = 'Redirecionando para o Google...';
+  });
+  document.addEventListener('keydown', function (event) {
+    if (!smileModal || smileModal.hidden) return;
+    if (event.key === 'Escape') { event.preventDefault(); closeSmileGuide(); return; }
+    if (event.key !== 'Tab') return;
+    var focusable = Array.from(smileModal.querySelectorAll('button:not(:disabled), input:not(:disabled)'));
+    if (!focusable.length) return;
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
   var API_BASE_URL = resolveApiBaseUrl();
   var CHAT_BACKEND_URL = API_BASE_URL;
   var CHAT_TIMEOUT_MS = 45000;
@@ -2657,6 +2700,7 @@
   function clearConversationMessages() {
     if (!stream) return;
     stream.querySelectorAll('.vc-message:not(.vc-message-system)').forEach(function (message) { message.remove(); });
+    updateChatOnboarding();
   }
 
   function resetConversationContext() {
@@ -2742,7 +2786,7 @@
   }
 
   function setProjectStatus(message, isError) {
-    var state = isError ? 'error' : (/carregando|criando/i.test(message) ? 'loading' : (/nenhum|entre/i.test(message) ? 'empty' : 'success'));
+    var state = isError ? 'error' : (/carregando|criando/i.test(message) ? 'loading' : (/nenhum|entre|temporário/i.test(message) ? 'empty' : 'success'));
     setAsyncStatus(projectStatus, state, message);
     if (projectRetryBtn) projectRetryBtn.hidden = !isError || !currentProjectUserId;
   }
@@ -2788,7 +2832,7 @@
     if (projectNameInput) { projectNameInput.value = ''; projectNameInput.disabled = true; }
     if (projectCreateBtn) projectCreateBtn.disabled = true;
     resetConversationContext();
-    setProjectStatus('Entre para persistir projetos.', false);
+    setProjectStatus('Projeto temporário', false);
   }
 
   function saveActiveProject(userId, projectId) {
@@ -2868,12 +2912,15 @@
   function setOAuthLinks() {
     if (googleOAuthBtn) googleOAuthBtn.href = buildOAuthUrl('google');
     if (githubOAuthBtn) githubOAuthBtn.href = buildOAuthUrl('github');
+    if (onboardingGoogle) onboardingGoogle.href = buildOAuthUrl('google');
   }
 
   function setAccountLoggedInUI(user) {
     if (accountCopy) accountCopy.textContent = 'Logado como ' + (user && user.email ? user.email : '—') + '.';
     if (accountForm) accountForm.hidden = true;
     if (accountLogged) accountLogged.hidden = false;
+    if (onboardingAccountCopy) onboardingAccountCopy.textContent = 'Conectado como ' + (user && (user.name || user.email) ? (user.name || user.email) : 'usuário') + '.';
+    if (onboardingGoogle) onboardingGoogle.hidden = true;
     loadProjects(user);
   }
 
@@ -2881,6 +2928,8 @@
     if (accountCopy) accountCopy.textContent = ACCOUNT_DEFAULT_COPY;
     if (accountForm) accountForm.hidden = false;
     if (accountLogged) accountLogged.hidden = true;
+    if (onboardingAccountCopy) onboardingAccountCopy.textContent = 'Entre para salvar projetos, conversas e histórico.';
+    if (onboardingGoogle) onboardingGoogle.hidden = false;
     setVisitorProjectContext();
   }
 
@@ -3190,6 +3239,7 @@
       var text = prompt ? prompt.value.trim() : '';
       if (!text && !pendingAttachments.length && !pendingImage) return;
       chatRequestInFlight = true;
+      updateChatOnboarding();
       chatCancelledByUser = false;
       if (chatSendBtn) chatSendBtn.disabled = true;
       if (chatCancelBtn) chatCancelBtn.hidden = false;
@@ -3227,6 +3277,7 @@
         if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
         if (window.resetAtomicCore) window.resetAtomicCore();
         chatRequestInFlight = false;
+        updateChatOnboarding();
         chatController = null;
         if (chatSendBtn) chatSendBtn.disabled = false;
         if (chatCancelBtn) chatCancelBtn.hidden = true;

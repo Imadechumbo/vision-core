@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ Onboarding/Auth/Tutorial do estado vazio implementado localmente, sem deploy: Chat vazio ganhou apresentação compacta, planos honestos e CTA para o composer; Google reutiliza `/api/auth/oauth/google?return_to=next`; o status vertical do header virou `Projeto temporário`; Smile foi renomeado Tutorial e o modal existente evoluiu para 13 passos com foco preso, Escape, pular, preferência persistida e reinício em Settings. Nenhum billing, endpoint, store ou produto paralelo foi criado. Gates: pacote 11/11, pairing 13/13, performance 59/59 (393.913B; p95 máximo 33,73ms), Next 127/127 sem retry. Screenshots em `artifacts/next-onboarding/`.
+
 ✔ OPS-002 pronto até o gate produtivo: hashes do RC (`72e6a02c...`), package (`f4a4db9f...`) e predecessor (`76918f97...`) revalidados; ZIP tem 13 entradas, raiz e rota Next, sem bundle legado. A raiz pública foi verificada ainda no predecessor. Nenhum deploy em `main` foi executado. Estado permanece 23/26 até o cutover efetivo.
 
 ✔ ADR-007 aprovado na DECISION-029: Go Live publica diretamente, sem rebuild ou redirect, o ZIP imutável de REL-002; `index.html` é byte-idêntico ao Next, a rota explícita permanece, bundles legados ficam fora do RC e o predecessor é preservado para DECISION-028. Estado 23/26; OPS-002 Ready, aguardando apenas o gate humano da publicação produtiva.

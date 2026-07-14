@@ -41,23 +41,72 @@ test('composer is the only visible operational mission textarea, with Atomic Cor
   await expect(page.locator('textarea:visible')).toHaveCount(1);
 });
 
-test('Smile guide opens manually, navigates, closes, and keeps composer as the only mission input', async ({ page }) => {
+test('Tutorial opens manually, exposes 13 steps, navigates, closes, and keeps composer as the only mission input', async ({ page }) => {
   await page.goto(NEXT_URL);
   await expect(page.locator('#vcSmileModal')).toBeHidden();
+  await expect(page.getByText('Smile', { exact: true })).toHaveCount(0);
+  await expect(page.locator('[data-smile-open]').first()).toContainText('Tutorial');
 
-  await page.locator('[data-smile-open]').click();
+  await page.locator('[data-smile-open]').first().click();
   await expect(page.locator('#vcSmileModal')).toBeVisible();
-  await expect(page.locator('#vcSmileTitle')).toHaveText('Comece pelo chat');
-  await expect(page.locator('#vcSmileBody')).toContainText('composer principal');
+  await expect(page.locator('#vcSmileTitle')).toHaveText('Bem-vindo ao Vision Core Next');
+  await expect(page.locator('#vcTutorialCounter')).toHaveText('1 / 13');
+  await expect(page.locator('#vcSmileSteps span')).toHaveCount(13);
   await expect(page.locator('textarea:visible')).toHaveCount(1);
 
   await page.locator('#vcSmileNext').click();
-  await expect(page.locator('#vcSmileTitle')).toHaveText('Escolha o fluxo');
+  await expect(page.locator('#vcSmileTitle')).toHaveText('Chat principal');
+  await expect(page.locator('#vcTutorialCounter')).toHaveText('2 / 13');
   await page.locator('#vcSmilePrev').click();
-  await expect(page.locator('#vcSmileTitle')).toHaveText('Comece pelo chat');
+  await expect(page.locator('#vcSmileTitle')).toHaveText('Bem-vindo ao Vision Core Next');
 
   await page.keyboard.press('Escape');
   await expect(page.locator('#vcSmileModal')).toBeHidden();
+  await expect(page.locator('[data-smile-open]').first()).toBeFocused();
+});
+
+test('empty chat onboarding uses real OAuth, honest plans, and leaves after first message', async ({ page }) => {
+  await page.route(`${API}/api/chat`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer: 'Resposta grounded.' }) }));
+  await page.goto(NEXT_URL);
+  const onboarding = page.locator('#vcChatOnboarding');
+  await expect(onboarding).toBeVisible();
+  await page.evaluate(() => window.localStorage.removeItem('vc_motion_os_hint_seen'));
+  await page.reload();
+  await expect(onboarding).toBeVisible();
+  await expect(page.locator('#vcOnboardingGoogle')).toHaveAttribute('href', `${API}/api/auth/oauth/google?return_to=next`);
+  await expect(onboarding).toContainText('5 missões por mês');
+  await expect(onboarding).toContainText('Em breve');
+  await expect(onboarding).not.toContainText(/R\$|US\$|checkout/i);
+  await page.locator('#vcOnboardingStart').click();
+  await expect(page.locator('#vcPrompt')).toBeFocused();
+  await page.locator('#vcPrompt').fill('Primeira missão');
+  await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
+  await expect(onboarding).toBeHidden();
+});
+
+test('tutorial preference persists and Settings restarts it', async ({ page }) => {
+  await page.goto(NEXT_URL);
+  await page.locator('[data-smile-open]').first().click();
+  await page.locator('#vcTutorialNoShow').check();
+  await page.locator('#vcTutorialSkip').click();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('vc_tutorial_hidden'))).toBe('1');
+  await page.locator('a[data-feature="settings"]').click();
+  await page.locator('#vcTutorialRestart').click();
+  await expect(page.locator('#vcSmileModal')).toBeVisible();
+  await expect(page.locator('#vcTutorialNoShow')).not.toBeChecked();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('vc_tutorial_hidden'))).toBe(null);
+});
+
+test('onboarding and tutorial remain bounded at 375px and hidden leaves layout', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(NEXT_URL);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  const before = await page.locator('#vcChatOnboarding').evaluate((el) => el.getBoundingClientRect().height);
+  expect(before).toBeGreaterThan(0);
+  await page.locator('[data-smile-open]').first().click();
+  await expect(page.locator('#vcChatOnboarding')).toBeHidden();
+  expect(await page.locator('#vcChatOnboarding').evaluate((el) => el.getBoundingClientRect().height)).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
 test('Software Factory uses the composer text without a second textarea or auto-run on selection', async ({ page }) => {

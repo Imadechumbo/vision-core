@@ -50,7 +50,7 @@
         </details>
 
         <a href="#settings" data-feature="settings"><i aria-hidden="true">S</i><span>Settings</span></a>
-        <button class="vc-nav-help" type="button" data-smile-open aria-haspopup="dialog"><i aria-hidden="true">?</i><span>Smile</span></button>
+        <button class="vc-nav-help" type="button" data-smile-open aria-haspopup="dialog"><i aria-hidden="true">?</i><span>Tutorial</span></button>
       </nav>
 
       <div class="vc-sidebar-foot">
@@ -74,7 +74,7 @@
           <select id="vcProjectSelect" disabled><option>Temporário</option></select>
           <input type="text" id="vcProjectName" aria-label="Nome do novo projeto" placeholder="Novo projeto" maxlength="120" disabled>
           <button type="button" id="vcProjectCreate" disabled>Criar</button>
-          <span id="vcProjectStatus" role="status" aria-live="polite">Entre para persistir projetos.</span>
+          <span id="vcProjectStatus" role="status" aria-live="polite">Projeto temporário</span>
           <button type="button" id="vcProjectRetry" hidden>Tentar novamente</button>
           <label for="vcConversationSelect">Conversa</label>
           <select id="vcConversationSelect" disabled><option>Efêmera</option></select>
@@ -123,6 +123,24 @@
           <div class="vc-agent" data-agent="passGold"><i>PG</i><span>Pass Gold</span><small>Final Authority</small></div>
           <div class="vc-agent" data-agent="archivist"><i>AR</i><span>Archivist</span><small>Memory Guard</small></div>
           <div class="vc-agent" data-agent="github"><i>GH</i><span>GitHub Agent</span><small>PR / CI / Release</small></div>
+        </section>
+        <section class="vc-chat-onboarding" id="vcChatOnboarding" aria-labelledby="vcOnboardingTitle">
+          <p class="vc-kicker">VISION CORE NEXT</p>
+          <h1 id="vcOnboardingTitle">Engenharia guiada por evidências.</h1>
+          <p>Detecta → entende → corrige → valida → protege → aprende.</p>
+          <div class="vc-onboarding-plans" aria-label="Planos">
+            <article class="is-selected" aria-label="Plano Free selecionado"><strong>FREE</strong><span>5 missões por mês · 1 projeto · sem cartão</span><small>Plano selecionado</small></article>
+            <article><strong>PRO</strong><span>Missões ilimitadas · GitHub e Quality Gates</span><small>Consulte a disponibilidade</small></article>
+            <article><strong>ENTERPRISE</strong><span>Multi-projeto · workers · SSO</span><small>Em breve</small></article>
+          </div>
+          <div class="vc-onboarding-account" id="vcOnboardingAccount">
+            <p id="vcOnboardingAccountCopy">Entre para salvar projetos, conversas e histórico.</p>
+            <a id="vcOnboardingGoogle" href="#">Continuar com Google</a>
+          </div>
+          <div class="vc-onboarding-actions">
+            <button type="button" id="vcOnboardingStart">Iniciar primeira missão</button>
+            <button type="button" data-smile-open>Ver tutorial</button>
+          </div>
         </section>
         <div class="vc-chat-stream" id="vcChatStream" aria-live="polite">
           <article class="vc-message vc-message-system">
@@ -382,6 +400,9 @@
               <div class="vc-settings-field-actions" id="vcAccountLogged" hidden>
                 <button type="button" id="vcAccountLogoutBtn">Sair</button>
               </div>
+              <div class="vc-settings-field-actions">
+                <button type="button" id="vcTutorialRestart">Reiniciar tutorial</button>
+              </div>
             </div>
           </div>
 
@@ -633,13 +654,16 @@
 
     <section class="vc-smile-modal" id="vcSmileModal" role="dialog" aria-modal="true" aria-labelledby="vcSmileTitle" aria-describedby="vcSmileBody" hidden>
       <div class="vc-smile-card">
-        <button class="vc-smile-close" type="button" id="vcSmileClose" aria-label="Fechar Smile">X</button>
+        <button class="vc-smile-close" type="button" id="vcSmileClose" aria-label="Fechar tutorial">X</button>
         <img class="vc-smile-avatar" id="vcSmileAvatar" src="assets/mascote-reading-final.png" alt="">
-        <p class="vc-kicker">SMILE GUIDE</p>
-        <h2 id="vcSmileTitle">Comece pelo chat</h2>
-        <p id="vcSmileBody">Escreva a missao no composer principal. O Vision Core usa a mesma mensagem para chat, Missions e Software Factory.</p>
-        <div class="vc-smile-steps" id="vcSmileSteps" aria-label="Progresso do tutorial Smile"></div>
+        <p class="vc-kicker">TUTORIAL</p>
+        <p class="vc-tutorial-counter" id="vcTutorialCounter" aria-live="polite">1 / 13</p>
+        <h2 id="vcSmileTitle">Bem-vindo ao Vision Core Next</h2>
+        <p id="vcSmileBody">Conheça o ambiente antes da primeira missão.</p>
+        <div class="vc-smile-steps" id="vcSmileSteps" aria-hidden="true"></div>
+        <label class="vc-tutorial-preference"><input type="checkbox" id="vcTutorialNoShow"> Não mostrar novamente</label>
         <div class="vc-smile-actions">
+          <button type="button" id="vcTutorialSkip">Pular tutorial</button>
           <button type="button" id="vcSmilePrev">Voltar</button>
           <button type="button" id="vcSmileNext">Proximo</button>
         </div>

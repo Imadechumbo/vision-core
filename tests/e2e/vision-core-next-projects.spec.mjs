@@ -21,7 +21,7 @@ test('visitor gets an ephemeral context and cannot create persisted projects', a
   await expect(page.locator('#vcProjectSelect')).toBeDisabled();
   await expect(page.locator('#vcProjectSelect')).toHaveText('Temporário');
   await expect(page.locator('#vcProjectCreate')).toBeDisabled();
-  await expect(page.locator('#vcProjectStatus')).toContainText('Entre');
+  await expect(page.locator('#vcProjectStatus')).toHaveText('Projeto temporário');
   await expect(page.locator('#vcProjectStatus')).toHaveAttribute('data-state', 'empty');
 });
 
