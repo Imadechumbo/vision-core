@@ -21,6 +21,8 @@ test.beforeEach(async ({ page }) => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, connected: false }) }));
   await page.route(`${API}/api/mission/quota`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, plan: 'free', remaining: 5 }) }));
+  await page.route(`${API}/api/projects`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, projects: [] }) }));
 });
 
 async function openSettings(page) {
@@ -130,7 +132,7 @@ test('missing email or password: shows validation message, never calls the backe
 
 test('OAuth success hash stores the token, opens Settings, and cleans the URL hash', async ({ page }) => {
   await page.route(`${API}/api/auth/me`, (route) =>
-    route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'not_authenticated' }) }));
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, user: { id: 'u-oauth', email: 'oauth@example.com', plan: 'free' } }) }));
   await page.goto(`${NEXT_URL}#oauth-success&token=tok-oauth&plan=free&email=oauth%40example.com`);
 
   await expect(page.locator('a[data-feature="settings"]')).toHaveClass(/is-active/);

@@ -1142,24 +1142,33 @@ app.get('/api/account/me', (req, res) => {
   return sendOk(res, { user: publicUser(user), projects: projectsDb.projects.filter(p => p.user_id === user.id), anti_stub: true });
 });
 
-// §142 — GET /api/projects (sem auth — projetos por sessão/anônimos)
+// DECISION-023 — projetos persistidos são sempre isolados pelo owner da sessão.
 app.get('/api/projects', (req, res) => {
+  const user = getAuthUser(req);
+  if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
   try {
     const db = readJsonFile(PROJECTS_DB, { projects: [] });
-    return sendOk(res, { projects: Array.isArray(db.projects) ? db.projects : [], anti_stub: true });
+    const projects = Array.isArray(db.projects) ? db.projects.filter(p => p.user_id === user.id) : [];
+    return sendOk(res, { projects, anti_stub: true });
   } catch (err) {
     return sendOk(res, { projects: [], anti_stub: true });
   }
 });
 
-// §142 — POST /api/projects
+// DECISION-023 — o cliente nunca escolhe ownership.
 app.post('/api/projects', (req, res) => {
+  const user = getAuthUser(req);
+  if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
   const body = normalizeBody(req);
   const name = (body.name || '').trim();
   if (!name) return res.status(400).json({ ok: false, error: 'project_name_required', time: now() });
+  if (name.length > 120) return res.status(400).json({ ok: false, error: 'project_name_too_long', time: now() });
+  if (Object.prototype.hasOwnProperty.call(body, 'user_id')) {
+    return res.status(400).json({ ok: false, error: 'project_owner_not_assignable', time: now() });
+  }
   const db = readJsonFile(PROJECTS_DB, { projects: [] });
   if (!Array.isArray(db.projects)) db.projects = [];
-  const project = { id: 'proj_' + Date.now(), name, created_at: now(), user_id: body.user_id || 'anonymous' };
+  const project = { id: makeId('proj'), name, created_at: now(), user_id: user.id };
   db.projects.push(project);
   writeAndSyncS3(PROJECTS_DB, db);
   return sendOk(res, { project, anti_stub: true });

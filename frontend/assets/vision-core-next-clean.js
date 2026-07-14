@@ -232,6 +232,10 @@
   var accountStatus = document.getElementById('vcAccountStatus');
   var googleOAuthBtn = document.getElementById('vcGoogleOAuthBtn');
   var githubOAuthBtn = document.getElementById('vcGithubOAuthBtn');
+  var projectSelect = document.getElementById('vcProjectSelect');
+  var projectNameInput = document.getElementById('vcProjectName');
+  var projectCreateBtn = document.getElementById('vcProjectCreate');
+  var projectStatus = document.getElementById('vcProjectStatus');
   var animationReducedCheckbox = document.getElementById('vcAnimationReduced');
   if (animationReducedCheckbox) {
     animationReducedCheckbox.checked = isReducedMotion();
@@ -2593,8 +2597,88 @@
   // propósito: vem de origem diferente (Worker Gateway) com SameSite=Lax, não
   // confiável via fetch cross-site; o token no hash/corpo é a fonte real.
   var ACCOUNT_TOKEN_KEY = 'vision_token';
+  var ACTIVE_PROJECT_KEY = 'vc_active_project';
   var ACCOUNT_DEFAULT_COPY = accountCopy ? accountCopy.textContent : '';
   var accountSkipNextRefresh = false;
+  var currentProjectUserId = null;
+
+  function setProjectStatus(message, isError) {
+    if (!projectStatus) return;
+    projectStatus.textContent = message;
+    projectStatus.style.color = isError ? '#f87171' : '';
+  }
+
+  function setVisitorProjectContext() {
+    currentProjectUserId = null;
+    if (projectSelect) {
+      projectSelect.textContent = '';
+      var option = document.createElement('option');
+      option.textContent = 'Temporário';
+      projectSelect.appendChild(option);
+      projectSelect.disabled = true;
+    }
+    if (projectNameInput) { projectNameInput.value = ''; projectNameInput.disabled = true; }
+    if (projectCreateBtn) projectCreateBtn.disabled = true;
+    setProjectStatus('Entre para persistir projetos.', false);
+  }
+
+  function saveActiveProject(userId, projectId) {
+    try { window.sessionStorage.setItem(ACTIVE_PROJECT_KEY, JSON.stringify({ user_id: userId, project_id: projectId })); } catch (_) {}
+  }
+
+  function renderProjects(user, projects, preferredId) {
+    if (!projectSelect || !user) return;
+    currentProjectUserId = user.id;
+    projectSelect.textContent = '';
+    projects.forEach(function (project) {
+      var option = document.createElement('option');
+      option.value = project.id;
+      option.textContent = project.name;
+      projectSelect.appendChild(option);
+    });
+    projectSelect.disabled = projects.length === 0;
+    if (projectNameInput) projectNameInput.disabled = false;
+    if (projectCreateBtn) projectCreateBtn.disabled = false;
+    var stored = null;
+    try { stored = JSON.parse(window.sessionStorage.getItem(ACTIVE_PROJECT_KEY) || 'null'); } catch (_) {}
+    var candidate = preferredId || (stored && stored.user_id === user.id ? stored.project_id : null);
+    if (candidate && projects.some(function (project) { return project.id === candidate; })) projectSelect.value = candidate;
+    if (projects.length) {
+      saveActiveProject(user.id, projectSelect.value);
+      setProjectStatus('', false);
+    } else {
+      setProjectStatus('Nenhum projeto. Crie o primeiro.', false);
+    }
+  }
+
+  function loadProjects(user, preferredId) {
+    if (!user || !user.id) return setVisitorProjectContext();
+    currentProjectUserId = user.id;
+    if (projectSelect) projectSelect.disabled = true;
+    if (projectCreateBtn) projectCreateBtn.disabled = true;
+    setProjectStatus('Carregando projetos...', false);
+    apiRequest('/api/projects').then(function (data) {
+      renderProjects(user, Array.isArray(data.projects) ? data.projects : [], preferredId);
+    }).catch(function (err) {
+      if (projectNameInput) projectNameInput.disabled = false;
+      if (projectCreateBtn) projectCreateBtn.disabled = false;
+      setProjectStatus('Erro ao carregar: ' + (err && err.message ? err.message : String(err)), true);
+    });
+  }
+
+  function createProject() {
+    var name = projectNameInput ? projectNameInput.value.trim() : '';
+    if (!name || !currentProjectUserId) return;
+    if (projectCreateBtn) projectCreateBtn.disabled = true;
+    setProjectStatus('Criando projeto...', false);
+    apiRequest('/api/projects', { method: 'POST', body: { name: name } }).then(function (data) {
+      if (projectNameInput) projectNameInput.value = '';
+      loadProjects({ id: currentProjectUserId }, data.project && data.project.id);
+    }).catch(function (err) {
+      if (projectCreateBtn) projectCreateBtn.disabled = false;
+      setProjectStatus('Erro ao criar: ' + (err && err.message ? err.message : String(err)), true);
+    });
+  }
 
   function showAccountStatus(msg, isError) {
     if (!accountStatus) return;
@@ -2620,12 +2704,14 @@
     if (accountCopy) accountCopy.textContent = 'Logado como ' + (user && user.email ? user.email : '—') + '.';
     if (accountForm) accountForm.hidden = true;
     if (accountLogged) accountLogged.hidden = false;
+    loadProjects(user);
   }
 
   function setAccountLoggedOutUI() {
     if (accountCopy) accountCopy.textContent = ACCOUNT_DEFAULT_COPY;
     if (accountForm) accountForm.hidden = false;
     if (accountLogged) accountLogged.hidden = true;
+    setVisitorProjectContext();
   }
 
   function refreshAccountStatus() {
@@ -2683,8 +2769,8 @@
         try { window.localStorage.setItem(ACCOUNT_TOKEN_KEY, token); } catch (_) {}
         accountSkipNextRefresh = true;
         selectFeature('settings');
-        setAccountLoggedInUI({ email: params.get('email') || '' });
         showAccountStatus('OAuth conectado com sucesso.', false);
+        refreshAccountStatus();
       } else {
         showAccountStatus('OAuth retornou sem token.', true);
       }
@@ -2699,7 +2785,15 @@
   if (accountLoginBtn) accountLoginBtn.addEventListener('click', function () { doAccountAuth('login'); });
   if (accountRegisterBtn) accountRegisterBtn.addEventListener('click', function () { doAccountAuth('register'); });
   if (accountLogoutBtn) accountLogoutBtn.addEventListener('click', doAccountLogout);
+  if (projectSelect) projectSelect.addEventListener('change', function () {
+    if (currentProjectUserId && projectSelect.value) saveActiveProject(currentProjectUserId, projectSelect.value);
+  });
+  if (projectCreateBtn) projectCreateBtn.addEventListener('click', createProject);
+  if (projectNameInput) projectNameInput.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') { event.preventDefault(); createProject(); }
+  });
   setOAuthLinks();
+  refreshAccountStatus();
 
   // Mission History (B-2) — list + detail from /api/mission/timeline.
   // Achado real (2026-07-13): reaproveitado pela aba Timeline (next-clean-73)

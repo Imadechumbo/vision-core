@@ -55,6 +55,15 @@ crítico (ou warning com `--strict`), `2` erro operacional sanitizado.
 
 **Achado de contrato crítico (INCIDENTE-4):** `signSession()`/`verifySession()` exigem `SESSION_SECRET` real no ambiente — sem ele, o processo **recusa subir** (não há mais fallback público). Rotacionar o segredo invalida todas as sessões ativas.
 
+## Projetos
+
+| Método | Rota | Auth/Payload | Resposta | Erros conhecidos |
+|---|---|---|---|---|
+| GET | `/api/projects` | Bearer/cookie obrigatório | `{projects:[...], anti_stub}` somente do owner autenticado | `401 not_authenticated` |
+| POST | `/api/projects` | Bearer/cookie + `{name}` | `{project, anti_stub}`; `user_id` vem exclusivamente da sessão | `400 project_name_required` · `400 project_name_too_long` · `400 project_owner_not_assignable` · `401 not_authenticated` |
+
+DECISION-023: o cliente nunca envia ownership. Visitante usa contexto efêmero no browser e não acessa `projects.json`.
+
 ## Mission (Camada 1, produto)
 
 | Método | Rota | Payload | Resposta | Notas |

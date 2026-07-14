@@ -122,7 +122,7 @@ Fórmula: excluem-se as 5 capacidades explicitamente descartáveis. Cada complet
 | AUTH-002 | Auth | OAuth | real | real | sim | E2E | ✅ Completo | providers OAuth | — | Next JS:2651 |
 | AUTH-003 | Conta | billing/account | real | ausente | decisão | não | 🔴 Ausente | auth+produto | P1 | legado JS:1975 |
 | API-001 | Providers | CRUD/test | real | real | sim | E2E | ✅ Completo | vault | — | Next JS:2489 |
-| DATA-001 | Dados | projetos CRUD | real | ausente | sim | não | 🔴 Ausente | auth | P1 | legado JS:10443 |
+| DATA-001 | Dados | projetos CRUD | real | real | sim | permanente | ✅ Completo | auth | — | DECISION-023; `next-clean-83` |
 | DATA-002 | Dados | preferências reload | real | real | sim | E2E | ✅ Completo | localStorage | — | Next JS:18-275 |
 | DEPLOY-001 | Operação | Pages/EB deploy | real | ausente | decisão | não | 🔴 Ausente | auth+gates | P1 | legado JS:9085 |
 | DEPLOY-002 | Release | cutover/rollback | legado na raiz | paralelo | sim | não | 🟡 Parcial | baseline+deploy | P0 | deploy script |

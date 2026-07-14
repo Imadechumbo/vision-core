@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ `next-clean-83` / IMP-001 implementada localmente (sem deploy): `/api/projects` agora exige sessão, deriva owner no backend, filtra por usuário e rejeita `user_id` do cliente. O Next ganhou seletor/criação global de projeto, contexto temporário para visitante, vazio/erro explícitos e seleção por usuário em `sessionStorage`. Testes: backend real 9/9 PASS; UI + Conta/OAuth 13/13 PASS; suíte permanente Next 118/118 PASS em 50,3s, sem retry. Backlog: 4/24 concluídos; IMP-002 desbloqueada.
+
 ✔ ADR-002 aprovada e registrada como DECISION-024: histórico autenticado terá backend como fonte única, escopo obrigatório por owner + projeto e retenção de 90 dias; visitante fica apenas na memória da aba. Timeline e Archivist não serão reaproveitados como conversa. Evidência real: o Next atual só mantém bolhas no DOM, `/api/chat` é mensagem isolada e o Archivist não possui isolamento por usuário/projeto. Backlog: 3/24 concluídos.
 
 ✔ ADR-001 aprovada e registrada como DECISION-023: projetos persistidos são autenticados, têm ownership derivado exclusivamente da sessão e seleção explícita no Next; visitante fica efêmero e não entra em `projects.json`. Evidência real: `GET /api/projects` atual expõe todo o banco sem auth e `POST` confia em `body.user_id`; a correção ficou corretamente separada em IMP-001. Backlog: 2/24 concluídos; ADR-002 e IMP-001 desbloqueados.
@@ -101,7 +103,7 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 
 # PRÓXIMA PRIORIDADE
 
-Continuar a Onda 1 do `docs/VISION_CORE_IMPLEMENTATION_MASTER_PLAN.md`: ADR-003/004/005 e IMP-001/006 estão Ready. Próximo item no critical path: IMP-001, corrigindo primeiro o contrato inseguro de `/api/projects` e depois integrando seleção/criação no Next conforme DECISION-023. Comando inicial recomendado: `rg -n "app\\.(get|post).*api/projects|account/me|apiRequest|vcAccount" backend/server.js frontend/assets/vision-core-next-clean.js tests/e2e`.
+Continuar pelo critical path com IMP-002 (histórico/sessões por projeto conforme DECISION-024); ADR-003/004/005 e IMP-006 também estão Ready. Antes de implementar histórico, usar o `project_id` selecionado e validar ownership no backend. Comando inicial recomendado: `rg -n "api/chat|appendMessage|archivistSave|MISSION_TIMELINE_PATH|delete.*auth/me" backend/server.js frontend/assets/vision-core-next-clean.js docs/API_CONTRACT.md`.
 
 ---
 
@@ -117,6 +119,8 @@ Continuar a Onda 1 do `docs/VISION_CORE_IMPLEMENTATION_MASTER_PLAN.md`: ADR-003/
 # TESTES
 
 REL-001 (2026-07-14): ancestry `e4eee79c → HEAD` confirmado; hashes de `docs/DECISIONS.md` em worktree e HEAD idênticos; `git diff --check` sem erro; branch remota criada sem workflow de deploy aplicável; gate permanente `npx playwright test tests/e2e/vision-core-next-agent-apply.spec.mjs` 4/4 PASS.
+
+IMP-001 / `next-clean-83` (2026-07-14): `node --check` backend/frontend PASS; `node tools/tests/project-ownership.test.mjs` 9/9 PASS; specs direcionados 13/13 PASS; suíte permanente `vision-core-next-*` 118/118 PASS (50,3s, 4 workers, sem retry).
 
 114/114 PASS após `next-clean-82` integrado sobre o histórico público `next-clean-81` (50,1s, sem retry). `node --check frontend/assets/vision-core-next-clean.js` PASS.
 

@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-82">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-82" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-83">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-83" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -67,6 +67,13 @@
           </span>
         </div>
         <span class="vc-agent-badge" id="vcAgentBadge" role="status" aria-label="Status do agente local" data-state="disconnected"></span>
+        <div class="vc-project-context" aria-label="Projeto ativo">
+          <label for="vcProjectSelect">Projeto</label>
+          <select id="vcProjectSelect" disabled><option>Temporário</option></select>
+          <input type="text" id="vcProjectName" placeholder="Novo projeto" maxlength="120" disabled>
+          <button type="button" id="vcProjectCreate" disabled>Criar</button>
+          <span id="vcProjectStatus" role="status" aria-live="polite">Entre para persistir projetos.</span>
+        </div>
         <div class="vc-feature-head" id="vcPageHead" hidden aria-live="polite">
           <div>
             <span id="vcPageHeadStatus"></span>
