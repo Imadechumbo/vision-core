@@ -253,7 +253,45 @@
           <tr><td><strong>next-clean-51/55</strong></td><td>✅ <strong>Software Factory</strong></td><td>Auto-Pilot + Modo Avançado como modo operacional da conversa (não página separada): Arquiteto local determinístico, catálogo/grafo de stack editável, matriz de agentes, timeline e preview — sem endpoint novo. 14/14 testes.</td></tr>
           <tr><td><strong>v47/v48</strong></td><td>✅ <strong>Atomic Core</strong></td><td>Widget de identidade visual ligado a eventos reais (chat, Software Factory, GitHub) — nunca decoração em timer. Dois bugs corrigidos: congelamento sob reduced-motion e clipping dos agentes orbitais.</td></tr>
           <tr><td><strong>next-clean-57/58/59</strong></td><td>✅ <strong>Métricas nativas</strong></td><td>4 endpoints reais (agentes, resumo, memória, DORA) renderizados em gráfico (barra/donut/gauge/sparkline/timeline), módulo SVG/CSS próprio sem lib externa. Bug de produção corrigido: composer sticky sobrepondo o gráfico recém-renderizado.</td></tr>
-          <tr class="current"><td><strong>next-clean-60</strong></td><td>✅ <strong>Tutorial Smile</strong></td><td>Guia manual próprio (<code>#vcSmileModal</code>), sem reaproveitar overlay/localStorage do tutorial legado. Abre só por clique explícito, nunca sozinho — X/ESC/Voltar/Próximo cobrem toda a navegação.</td></tr>
+          <tr><td><strong>next-clean-60</strong></td><td>✅ <strong>Tutorial Smile</strong></td><td>Guia manual próprio (<code>#vcSmileModal</code>), sem reaproveitar overlay/localStorage do tutorial legado. Abre só por clique explícito, nunca sozinho — X/ESC/Voltar/Próximo cobrem toda a navegação.</td></tr>
+          <tr><td><strong>next-clean-71/73</strong></td><td>✅ <strong>Timeline real</strong></td><td>Histórico de Missions e logs da Software Factory passam pelo mesmo fluxo, com renderização corrigida para o contrato <code>{entries}</code>. Timeline deixa de depender de mock visual e volta a refletir missões reais.</td></tr>
+          <tr><td><strong>next-clean-75</strong></td><td>✅ <strong>Navegação fundida</strong></td><td>Timeline e Dashboard deixam de existir como abas independentes: Histórico de Missões vive em Missions, Métricas ganha alternância de largura total, e Agentes permanece separado por ter papel operacional próprio.</td></tr>
+          <tr><td><strong>next-clean-76</strong></td><td>✅ <strong>Atomic Core no Chat</strong></td><td>Decágono e cabeçalho completo ficam escopados ao Chat; as demais abas exibem cabeçalhos curtos do próprio papel da tela. A regra preserva identidade sem transformar todo painel em área visual do Chat.</td></tr>
+          <tr class="current"><td><strong>next-clean-77</strong></td><td>✅ <strong>OAuth Next</strong></td><td>Login Google/GitHub integrado ao painel Account do Next com <code>return_to=next</code>, <code>state.target</code> fechado no backend e o mesmo <code>vision_token</code> do cockpit. Smoke em produção validou callback Next e fallback legado.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="startup-section" id="ia-aplicada">
+    <p class="eyebrow">IA APLICADA NA PRATICA</p>
+    <h2>Mapa real de IA, MCP e dados — sem vender prototipo como entrega final.</h2>
+    <p class="section-lead">Vision Core usa IA em camadas: modelos base, prompts, agentes, contexto de codigo, gates e memoria operacional. O que esta ativo aparece como ativo; o que esta em curadoria, flag ou decisao pendente aparece com esse nome.</p>
+    <div class="so-ia-grid compact-pillar-grid">
+      <div class="so-ia-card"><h3>LLMs multi-provider</h3><p>Hermes e Software Factory usam modelos base via fallback chain. Nao ha modelo proprio treinado hoje.</p></div>
+      <div class="so-ia-card"><h3>Prompt engineering</h3><p>RCA, avaliacao e geracao usam prompts e criterios explicitos no backend para manter consistencia tecnica.</p></div>
+      <div class="so-ia-card"><h3>Agentes</h3><p>Hermes, OpenClaw, Aegis, PASS GOLD, Archivist e GitHub Agent dividem responsabilidade por missao.</p></div>
+      <div class="so-ia-card"><h3>Tool calling</h3><p>Patch Engine, PR, fetch-url e validadores conectam decisao de IA a ferramentas reais, sempre com gates de seguranca.</p></div>
+      <div class="so-ia-card"><h3>MCP</h3><p>GitHub Agent tem adapter MCP opcional e flagado; REST segue default e fallback. Proximo candidato natural: fetch-url do Software Factory, por ser leitura autenticada com guard SSRF.</p></div>
+      <div class="so-ia-card"><h3>RAG e contexto</h3><p>Scanner, arquivos, URL context e memoria montam material real antes da resposta, reduzindo chute fora do repo.</p></div>
+      <div class="so-ia-card"><h3>Avaliacao</h3><p>PASS GOLD, Aegis e Go Core exigem evidencia antes de promover mudanca. Evidencia ausente nao vira claim aprovado.</p></div>
+      <div class="so-ia-card"><h3>Governanca</h3><p>Specs, handoff, testes, commits isolados e deploy verificavel mantem a IA dentro de trilhos auditaveis.</p></div>
+      <div class="so-ia-card"><h3>Dados usados</h3><p>Metricas, timeline de missoes e snapshots alimentam observabilidade. Custo por agente ainda e <code>null</code>; nao e exibido como "$0".</p></div>
+      <div class="so-ia-card"><h3>Fine-tuning</h3><p>Sem pesos ajustados hoje. Export Hermes achou 0/360 exemplos utilizaveis; falta gravar input + decisao + resultado validado.</p></div>
+      <div class="so-ia-card"><h3>Seguranca</h3><p>Aegis, secret guard, redaction planejada e LGPD reduzem risco antes de transformar dados em dataset.</p></div>
+      <div class="so-ia-card"><h3>Cloud</h3><p>Cloudflare Pages, Worker Gateway e EB separam frontend, proxy e runtime backend; deploy de frontend nao altera EB.</p></div>
+    </div>
+
+    <div class="roadmap-table" style="overflow-x:auto;margin-top:24px">
+      <table class="roadmap-table">
+        <thead>
+          <tr><th>Area</th><th>Estado real hoje</th><th>Proximo gate</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>MCP</strong></td><td>GitHub Agent com adapter opcional e flagado; caminho ativo continua REST com fallback seguro.</td><td>Autorizar ativacao MCP real por conector e validar producao sem quebrar REST.</td></tr>
+          <tr><td><strong>SF fetch-url</strong></td><td>Endpoint read-only autenticado, com bloqueio SSRF local/privado/link-local. Melhor candidato a repetir o padrao adapter + fallback.</td><td>Definir servidor MCP alvo e manter o mesmo guard de seguranca no backend.</td></tr>
+          <tr><td><strong>Fine-tuning Hermes</strong></td><td>Hermes usa modelos base + prompts; dataset candidate ficou em 0/360 exemplos utilizaveis.</td><td>Autorizar gravacao do trio input, decisao e resultado durante missoes, com redaction e export JSONL.</td></tr>
+          <tr><td><strong>Dados</strong></td><td>Timeline persiste eventos simples; metricas de agentes existem, mas custo por agente segue <code>null</code>; snapshots existem sem outcome suficiente.</td><td>Persistir estagios por missao, custo real por agente e resultado validado antes de qualquer treino.</td></tr>
         </tbody>
       </table>
     </div>

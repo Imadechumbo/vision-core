@@ -4,12 +4,33 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
-## Backend — Hermes grounding fail-closed (2026-07-14, deployado em v116)
+## Backend — Hermes grounding fail-closed (2026-07-14, EB v116)
 
-- RCA: `v115` substituiu o deploy especial `v5.9.64b`; o bundle continha o detector, mas não o documento usado em runtime, reabrindo alucinações pela UI real.
-- Workflow EB passa a empacotar e verificar `docs/HERMES_FINE_TUNING_DATASET.md`; ausência do documento agora retorna `503 hermes_grounding_unavailable` em vez de chamar a LLM sem grounding.
-- Teste permanente cobre a frase exata reportada, payload real do Next, política `no-store` do Gateway e contrato do artefato. Detalhes em `docs/session_logs/2026-07-14-hermes-ui-grounding-regression.md`.
-- Produção confirmada `Ready/Green`; teste pelo composer da UI pública retornou somente fatos do dataset real.
+- O workflow EB passou a empacotar e verificar `docs/HERMES_FINE_TUNING_DATASET.md`; ausência do documento retorna `503 hermes_grounding_unavailable` em vez de chamar a LLM sem grounding.
+- A frase exata reportada foi validada pelo composer da UI pública. Evidências em `docs/session_logs/2026-07-14-hermes-ui-grounding-regression.md`.
+
+## next-clean-81 (2026-07-14)
+
+- Segundo fix da regressão do topo do Software Factory: além de esconder o painel genérico duplicado, `#vcChatScroll` agora também sai do layout somente em Factory.
+- Causa raiz final medida em produção após `next-clean-80`: `#factory` é irmão de `#vcChatScroll`; mesmo vazio, `#vcChatScroll` mantinha `min-height:260px`, criando o vão entre o cabeçalho curto e o painel real.
+
+## next-clean-80 (2026-07-14)
+
+- Fix de regressão visual no Software Factory após `next-clean-79`: o `#vcFeaturePanel` genérico ainda aparecia acima do painel próprio `#factory`, repetindo `featureMap.factory.text` numa caixa solta e empurrando o conteúdo real para baixo.
+- Causa raiz: `selectFeature()` escondia cabeçalho interno/Atomic Core fora de Chat, mas nunca escondia o painel contextual genérico quando o destino já tinha painel próprio completo (`#factory`).
+- Fix: `#vcFeaturePanel` fica `hidden` somente em Software Factory; `#factory` começa logo abaixo do cabeçalho curto. Demais abas continuam usando o painel contextual normal.
+
+## next-clean-79 (2026-07-13)
+
+- DECISION-022: Atomic Core passa a ser estritamente da aba Chat. A exceção anterior do Software Factory Auto-Pilot foi removida; Auto-Pilot e Modo Avançado agora usam somente o cabeçalho curto de papel.
+- Remove a duplicação visual de badge/título nas páginas com cabeçalho curto: `#vcPageHead` é o cabeçalho canônico fora de Chat, e o header interno de `#vcFeaturePanel` fica oculto nesses contextos.
+- O controle obsoleto "Manter Atomic Core sempre visível" saiu de Settings; o toggle "Mostrar Atomic Core" e a intensidade visual permanecem.
+
+## next-clean-78 (2026-07-13)
+
+- Fix de regressão visual do `next-clean-76`: páginas com cabeçalho curto não reservam mais o espaço invisível do Atomic Core + `#vcChatStream`.
+- Causa raiz medida: `.vc-atomic-hud.is-collapsed` só mudava `opacity/transform`, então seguia `display:block`; o chat stream também mantinha `min-height`. Missions/Métricas caíram de ~651px para ~49px entre cabeçalho curto e painel real.
+- `selectFeature()` expõe `data-active-feature`, `setSfMode()` expõe `data-sf-mode`, e o CSS remove do fluxo os blocos exclusivos do Chat fora de Chat/Factory. Factory Auto-Pilot preserva Atomic Core; Modo Avançado remove o espaço quando o widget está colapsado.
 
 ## next-clean-77 (2026-07-13)
 

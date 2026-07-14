@@ -796,6 +796,30 @@
         </div>
 
         <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">📜</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"A Timeline do Next não precisava de uma nova fonte de dados: ela precisava parar de renderizar o formato errado. Reaproveitamos o histórico real de Missions, corrigimos o contrato <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>{entries}</code> e mantivemos os logs da Software Factory entrando no mesmo trilho, com prova local e smoke em produção."</div>
+          <div style="font-size:11px;color:#64748b">— Next, next-clean-71/73, Mission History + Timeline, 107/107 PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🧭</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Timeline e Dashboard pareciam abas novas, mas eram os mesmos dados de Missions e Métricas com outra moldura. A correção removeu os destinos duplicados, manteve Agentes como superfície própria e colocou a largura total dentro de Métricas como alternância, sem duplicar componente."</div>
+          <div style="font-size:11px;color:#64748b">— Next, next-clean-75, navegação fundida, 102/102 PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">⚛️</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O Atomic Core estava certo como identidade, mas errado como presença global. A regra foi refinada: decágono e cabeçalho completo vivem no Chat; as demais abas ganham cabeçalhos curtos do próprio papel da tela. O produto preserva o símbolo sem transformar toda página em cockpit visual."</div>
+          <div style="font-size:11px;color:#64748b">— Next, next-clean-76, DECISION-021, 104/104 PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔑</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"OAuth já existia no backend, mas o Next ainda não participava do fluxo. A integração fechou Google/GitHub no painel Account com <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>return_to=next</code>, <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>state.target</code> fechado no backend e o mesmo token do cockpit; o smoke de produção ainda encontrou um refresh que apagava o token, corrigido com teste permanente."</div>
+          <div style="font-size:11px;color:#64748b">— Next, next-clean-77, OAuth Google/GitHub, 106/106 PASS</div>
+        </div>
+
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
           <div style="font-size:28px;margin-bottom:10px">🔐</div>
           <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Toda ação irreversível no Next segue o mesmo padrão: formulário validado, segundo clique de confirmação explícita ('Confirmar'/'Cancelar'), botão desabilitado durante a requisição — vale pra PR do GitHub, Vault Rollback, Apply-Fix e Dry-Run real. O caso mais rígido é o Agent Apply: o botão nunca chama <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>/api/agent/mission/queue</code>, mesmo com JSON válido, <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>agent_id</code>, <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>agent_secret</code> e a frase de confirmação exata digitada certinha — <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>AGENT_APPLY_ENABLED=false</code> hardcoded, fail-closed por design, até existir pareamento real por agente/projeto/owner."</div>
           <div style="font-size:11px;color:#64748b">— Next, VISION_CORE_NEXT_FRONTEND_SPEC.md "Bloqueio de segurança", tests/e2e/vision-core-next-agent-apply.spec.mjs, 4/4 PASS</div>
@@ -803,6 +827,32 @@
 
       </div>
 
+    </div>
+
+
+    <div style="max-width:1000px;margin:0 auto 48px" id="ia-aplicada-pratica">
+      <div style="margin-bottom:24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <h3 style="font-size:18px;font-weight:700;color:#fff;margin:0">IA APLICADA NA PRATICA</h3>
+        <div style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;color:#86efac;letter-spacing:1px">MAPA TECNICO REAL</div>
+      </div>
+      <p style="color:#94a3b8;font-size:14px;line-height:1.7;margin:0 0 18px">Esta secao mapeia onde a IA entra hoje no Vision Core e onde ela ainda nao entrou. MCP esta parcial e flagado; fine-tuning ainda nao treinou nenhum modelo; os dados usados sao metricas, timeline, snapshots e evidencias reais quando existem.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">LLMs</strong><br>Hermes e SF usam modelos base via fallback chain. Nenhum peso proprio foi ajustado.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Prompts</strong><br>RCA, avaliacao e geracao usam criterios explicitos e versionados no backend.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Agentes</strong><br>Hermes, OpenClaw, Aegis, PASS GOLD, Archivist e GitHub Agent dividem responsabilidade por missao.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Ferramentas</strong><br>Patch, PR, fetch-url e validadores conectam decisao de IA a efeitos reais, sempre com gates.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">MCP</strong><br>GitHub Agent tem adapter MCP opcional e flagado; REST segue default/fallback. Proximo candidato natural: SF fetch-url.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Contexto</strong><br>Scanner, arquivos, URL context e memoria alimentam a resposta com material real.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Gates</strong><br>PASS GOLD, Aegis e Go Core exigem evidencia; sem evidencia, o claim nao passa.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">MLOps</strong><br>Specs, handoff, testes, commits isolados e deploy verificavel documentam o ciclo.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Dados usados</strong><br>Timeline e metricas registram operacao real; custo por agente ainda e <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>null</code>.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Fine-tuning</strong><br>Dataset Hermes esta em curadoria: 0/360 exemplos utilizaveis, nenhum treino executado.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Seguranca</strong><br>Redaction, Aegis, secret guard e LGPD sao pre-condicoes antes de virar dataset.</div>
+        <div style="background:#0a0f1a;border:1px solid rgba(99,102,241,.24);border-radius:12px;padding:18px;color:#94a3b8;font-size:13px;line-height:1.6"><strong style="color:#e2e8f0">Proximos gates</strong><br>Ativar MCP por conector; autorizar gravacao input+decisao+resultado; exportar JSONL redigido.</div>
+      </div>
+      <div style="margin-top:16px;background:#020617;border:1px solid rgba(245,158,11,.28);border-radius:14px;padding:18px;color:#cbd5e1;font-size:13px;line-height:1.7">
+        <strong style="color:#fbbf24">Limite honesto:</strong> a timeline persiste eventos simples, snapshots existem, e metricas de agentes existem; mas ainda faltam custo real por agente, estagios persistidos por missao e outcome completo para transformar exemplos Hermes em dataset de fine-tuning utilizavel.
+      </div>
     </div>
 
 

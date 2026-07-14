@@ -155,7 +155,7 @@ test('Security Lab: Safe Status panel issues GET-only requests to the fixed allo
   await expect(viz).toContainText('Últimas verificações');
 });
 
-// DECISION-021 (2026-07-13): cabecalho generico ("VISION CORE" + tags de
+// DECISION-022 (2026-07-13): cabecalho generico ("VISION CORE" + tags de
 // versao + status do agente) so aparece em Chat -- qualquer outra aba mostra
 // um cabecalho curto reaproveitando featureMap[key].title/.status (mesmo
 // texto ja usado em #vcFeatureTitle/#vcFeatureStatus, nunca copy nova).
@@ -183,20 +183,84 @@ test('generic header + Atomic Core only on chat; other tabs get a short role-spe
   await expect(page.locator('#vcPageHead')).toBeHidden();
 });
 
-test('Software Factory Modo Avancado also gets the short role header (Atomic Core hidden there per DECISION-021)', async ({ page }) => {
+test('Software Factory gets the short role header and no Atomic Core in both modes (DECISION-022)', async ({ page }) => {
   await page.goto(NEXT_URL);
   await page.locator('[data-feature="factory"]').first().click();
 
-  // Auto-Pilot: counts as chat-like for the Atomic Core (unchanged rule),
-  // but the header block itself is chat-only per DECISION-021 -- Factory
-  // gets the short role header in both SF modes.
   await expect(page.locator('#vcBrandLockup')).toBeHidden();
-  await expect(page.locator('[data-atomic-core]')).not.toHaveClass(/is-collapsed/);
+  await expect(page.locator('[data-atomic-core]')).toHaveClass(/is-collapsed/);
   await expect(page.locator('#vcPageHeadTitle')).toHaveText('Software Factory');
+  await expect(page.locator('#vcFeaturePanel')).toBeHidden();
+  await expect(page.locator('#factory')).toBeVisible();
 
   await page.locator('[data-sf-mode="advanced"]').click();
   await expect(page.locator('[data-atomic-core]')).toHaveClass(/is-collapsed/);
   await expect(page.locator('#vcPageHeadTitle')).toHaveText('Software Factory');
+  await expect(page.locator('#vcFeaturePanel')).toBeHidden();
+  await expect(page.locator('#factory')).toBeVisible();
+});
+
+test('short-header pages do not reserve the old Atomic Core / chat intro vertical space', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(NEXT_URL);
+
+  await page.route(`${API}/api/metrics/agents`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, agents: [] }) }));
+  await page.route(`${API}/api/metrics/summary`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }));
+  await page.route(`${API}/api/dora-metrics`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }));
+  await page.route(`${API}/api/metrics/memory`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) }));
+  await page.route(`${API}/api/vault/snapshots`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, snapshots: [] }) }));
+
+  async function gapFor(feature, advanced = false) {
+    await page.locator(`[data-feature="${feature}"]`).first().click();
+    if (advanced) await page.locator('[data-sf-mode="advanced"]').click();
+    await page.waitForTimeout(100);
+    return page.evaluate(() => {
+      const head = document.querySelector('#vcPageHead:not([hidden]), #vcBrandLockup:not([hidden])');
+      const panel = document.querySelector('#factory:not([hidden]), #vcFeaturePanel:not([hidden])');
+      const atomic = document.querySelector('[data-atomic-core]');
+      const stream = document.querySelector('#vcChatStream');
+      const scroll = document.querySelector('#vcChatScroll');
+      const featurePanel = document.querySelector('#vcFeaturePanel');
+      return {
+        gap: Math.round(panel.getBoundingClientRect().top - head.getBoundingClientRect().bottom),
+        atomicDisplay: getComputedStyle(atomic).display,
+        streamDisplay: getComputedStyle(stream).display,
+        scrollDisplay: getComputedStyle(scroll).display,
+        featurePanelHidden: featurePanel.hidden,
+        internalHeadDisplay: getComputedStyle(document.querySelector('#vcFeaturePanel > .vc-feature-head')).display
+      };
+    });
+  }
+
+  for (const target of [
+    ['missions', false],
+    ['tools', false],
+    ['metrics', false],
+    ['vault', false],
+    ['factory', false],
+    ['factory', true]
+  ]) {
+    const result = await gapFor(target[0], target[1]);
+    expect(result.gap, `${target[0]} should start just below the short header`).toBeLessThanOrEqual(80);
+    expect(result.atomicDisplay, `${target[0]} should not keep invisible Atomic Core space`).toBe('none');
+    expect(result.streamDisplay, `${target[0]} should not keep invisible chat stream space`).toBe('none');
+    expect(result.internalHeadDisplay, `${target[0]} should not duplicate the short header inside the panel`).toBe('none');
+    expect(result.featurePanelHidden, `${target[0]} generic feature panel visibility`).toBe(target[0] === 'factory');
+    expect(result.scrollDisplay, `${target[0]} scroll container visibility`).toBe(target[0] === 'factory' ? 'none' : 'flex');
+  }
+
+  const chat = await gapFor('chat');
+  expect(chat.atomicDisplay).toBe('block');
+  expect(chat.streamDisplay).toBe('flex');
+  expect(chat.scrollDisplay).toBe('flex');
+  expect(chat.featurePanelHidden).toBe(false);
+  expect(chat.internalHeadDisplay).not.toBe('none');
+  expect(chat.gap, 'Chat still owns the large Atomic Core/chat stream composition').toBeGreaterThan(250);
 });
 
 test('Security Lab: missing status endpoints still render a calm, non-error fallback', async ({ page }) => {

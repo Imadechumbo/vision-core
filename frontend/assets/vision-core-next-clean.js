@@ -43,46 +43,12 @@
     onChange: onAnimationModeChange
   };
 
-  // ── Preferência de recolhimento automático do Atomic Core ──
-  // Fase 1.5 (confirmado pelo usuário): o Atomic Core recolhe sozinho só no
-  // Modo Avançado do Software Factory — único painel com colisão real
-  // confirmada visualmente contra a zona reservada do widget. Nunca trava:
-  // Settings → Atomic Core deixa sempre visível. Mesmo padrão getMode/
-  // setMode/onChange + localStorage do VCMotion, sem novo mecanismo.
-  var VC_ATOMIC_COLLAPSE_KEY = 'vc_atomic_collapse_pref'; // 'auto' | 'always'
-  var vcAtomicCollapseListeners = [];
-
-  function getAtomicCollapsePref() {
-    try {
-      var stored = window.localStorage.getItem(VC_ATOMIC_COLLAPSE_KEY);
-      if (stored === 'auto' || stored === 'always') return stored;
-    } catch (_) {}
-    return 'auto';
-  }
-
-  function setAtomicCollapsePref(pref) {
-    var next = pref === 'always' ? 'always' : 'auto';
-    try { window.localStorage.setItem(VC_ATOMIC_COLLAPSE_KEY, next); } catch (_) {}
-    vcAtomicCollapseListeners.forEach(function (cb) { try { cb(next); } catch (_) {} });
-    return next;
-  }
-
-  function onAtomicCollapsePrefChange(cb) {
-    if (typeof cb === 'function') vcAtomicCollapseListeners.push(cb);
-  }
-
-  window.VCAtomicCollapse = {
-    getPref: getAtomicCollapsePref,
-    setPref: setAtomicCollapsePref,
-    onChange: onAtomicCollapsePrefChange
-  };
-
   // ── Preferência de visibilidade e intensidade do Atomic Core ──
   // ROADMAP.md pedia também "glow on/off" — excluído por decisão de
   // Specification First: VISION_CORE_NEXT_FRONTEND_SPEC.md checklist item 6
   // já fecha isso ("Sem botões Idle/Action/Glow visíveis — nunca existiram
-  // como controles"). On/off aqui é do WIDGET inteiro (independente do
-  // auto-collapse do Modo Avançado), mesmo padrão getMode/setMode/onChange.
+  // como controles"). On/off aqui é do WIDGET inteiro, mesmo padrão
+  // getMode/setMode/onChange.
   var VC_ATOMIC_ENABLED_KEY = 'vc_atomic_core_enabled'; // 'on' | 'off'
   var vcAtomicEnabledListeners = [];
 
@@ -274,14 +240,6 @@
     });
     // Reflete mudanças feitas por outra aba/janela (mesmo localStorage) sem reload.
     onAnimationModeChange(function (mode) { animationReducedCheckbox.checked = mode === 'reduced'; });
-  }
-  var atomicAlwaysVisibleCheckbox = document.getElementById('vcAtomicAlwaysVisible');
-  if (atomicAlwaysVisibleCheckbox) {
-    atomicAlwaysVisibleCheckbox.checked = getAtomicCollapsePref() === 'always';
-    atomicAlwaysVisibleCheckbox.addEventListener('change', function () {
-      setAtomicCollapsePref(atomicAlwaysVisibleCheckbox.checked ? 'always' : 'auto');
-    });
-    onAtomicCollapsePrefChange(function (pref) { atomicAlwaysVisibleCheckbox.checked = pref === 'always'; });
   }
   var atomicEnabledCheckbox = document.getElementById('vcAtomicEnabled');
   if (atomicEnabledCheckbox) {
@@ -575,6 +533,7 @@
   function selectFeature(key, announce) {
     var feature = featureMap[key] || featureMap.chat;
     activeFeature = featureMap[key] ? key : 'chat';
+    if (appShell) appShell.setAttribute('data-active-feature', activeFeature);
     document.querySelectorAll('[data-feature]').forEach(function (node) {
       node.classList.toggle('is-active', node.getAttribute('data-feature') === activeFeature);
     });
@@ -582,7 +541,7 @@
     if (featureBody) featureBody.textContent = feature.text;
     if (featureStatus) featureStatus.textContent = feature.status;
     if (featureClose) featureClose.hidden = activeFeature === 'chat';
-    // DECISION-021: cabecalho generico (marca + status do agente) e o
+    // DECISION-022: cabecalho generico (marca + status do agente) e o
     // decagono so pertencem ao Chat -- qualquer outra aba mostra um
     // cabecalho curto reaproveitando featureMap[key].title/.status (mesmo
     // texto ja usado em #vcFeatureTitle/#vcFeatureStatus, nao inventa copy).
@@ -592,6 +551,7 @@
     if (pageHeadEl) pageHeadEl.hidden = isChatTab;
     if (pageHeadTitleEl) pageHeadTitleEl.textContent = feature.title;
     if (pageHeadStatusEl) pageHeadStatusEl.textContent = feature.status;
+    if (featurePanel) featurePanel.hidden = activeFeature === 'factory';
     hideFeatureViz();
     renderFeatureActions(feature);
     if (githubPrForm) githubPrForm.hidden = activeFeature !== 'github';
@@ -3330,22 +3290,11 @@
     return setAtomicCoreState('idle');
   }
 
-  // DECISION-021 (2026-07-13, corrige PARCIALMENTE a regra "persistente
-  // global" de next-clean-67/DECISION-020): Atomic Core volta a ser
-  // escopado a chat/Software Factory (Auto-Pilot conta como chat, critério
-  // que não mudou desde next-clean-61). Três motivos de colapso, nesta
-  // ordem de precedência: usuário desativou em Settings
-  // (getAtomicCoreEnabled()==='off'), a colisão real e já documentada do
-  // Modo Avançado do Software Factory (autoCollapse --
-  // getAtomicCollapsePref()!=='always' é o override manual do usuário pra
-  // essa exceção específica, inalterado por esta decisão), ou simplesmente
-  // estar fora de chat/factory (!inChatOrFactory, o motivo novo). activeFeature/
-  // sfMode lidos no momento da chamada, mesmo padrão hoisted do resto do
-  // arquivo.
+  // DECISION-022 (2026-07-13): Atomic Core é estritamente da aba Chat. A
+  // exceção antiga do Software Factory deixou de existir; o toggle de
+  // Settings só controla o widget quando ele está dentro do escopo.
   function updateAtomicCollapseState() {
-    var inChatOrFactory = activeFeature === 'chat' || activeFeature === 'factory';
-    var autoCollapse = activeFeature === 'factory' && sfMode === 'advanced' && getAtomicCollapsePref() !== 'always';
-    var shouldCollapse = getAtomicCoreEnabled() === 'off' || autoCollapse || !inChatOrFactory;
+    var shouldCollapse = getAtomicCoreEnabled() === 'off' || activeFeature !== 'chat';
     root.classList.toggle('vc-no-transition', reduceMotion);
     root.classList.toggle('is-collapsed', shouldCollapse);
   }
@@ -3408,7 +3357,6 @@
   });
 
   // Troca de preferência ao vivo (Settings → Atomic Core), sem reload.
-  onAtomicCollapsePrefChange(function () { updateAtomicCollapseState(); });
   onAtomicCoreEnabledChange(function () { updateAtomicCollapseState(); });
 
   // Dica de primeira visita (item 4, opcional): se o SO está com reduce
@@ -3958,6 +3906,7 @@
 
   function setSfMode(mode) {
     sfMode = mode === 'advanced' ? 'advanced' : 'auto';
+    if (appShell) appShell.setAttribute('data-sf-mode', sfMode);
     sfModeButtons.forEach(function (btn) {
       btn.setAttribute('aria-pressed', btn.getAttribute('data-sf-mode') === sfMode ? 'true' : 'false');
     });
