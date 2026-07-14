@@ -1,0 +1,143 @@
+{
+  "api_origin": "http://127.0.0.1:18740",
+  "intercepted_routes": 0,
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/api/mission/quota"
+    },
+    {
+      "method": "GET",
+      "path": "/api/agent/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/providers/list"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/conversations"
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat/conversations"
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat"
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat/conversations/chat-1784052982878-e9943b/messages"
+    },
+    {
+      "method": "POST",
+      "path": "/api/mission/timeline"
+    },
+    {
+      "method": "POST",
+      "path": "/api/agent/register"
+    },
+    {
+      "method": "GET",
+      "path": "/api/agent/mission/pending"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission/timeline"
+    },
+    {
+      "method": "GET",
+      "path": "/api/agent/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/logs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission/quota"
+    },
+    {
+      "method": "GET",
+      "path": "/api/agent/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects"
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/conversations"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission/quota"
+    },
+    {
+      "method": "GET",
+      "path": "/api/agent/status"
+    },
+    {
+      "method": "POST",
+      "path": "/api/sf/project-files"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sf/job/sfj-1784052986091-8bf08d"
+    },
+    {
+      "method": "POST",
+      "path": "/api/sf/generate-zip"
+    }
+  ],
+  "request_ids": [
+    "1671b74a-b221-4c08-a639-1b626e0c1601",
+    "cca362e1-8d0a-4e96-9aeb-e31acf59f0df",
+    "52e305e7-7655-4920-8aa4-9692e1e26ae9",
+    "8e6555f6-7aba-49bd-9bd5-ad263134af49",
+    "0be152ef-ba2d-46ab-9e80-6bb08f8ab797",
+    "404224ce-c1db-41e0-bd82-83fa09583030",
+    "d028fc9c-1d8d-436a-adfc-74ac9fa5a6f6",
+    "1125e3ed-7c78-4914-9c36-02401460b7c5",
+    "dd6a0d4a-f7ae-4db0-b555-a07421175d66",
+    "00499e5b-0050-4cb7-ae5c-5ccd520f43b6",
+    "806a5792-00f2-49bf-a308-66ce04ce0870",
+    "2c597b44-73aa-42cf-8b9e-b2cc4f39db2a",
+    "80510e1b-a3f0-45db-a53b-a0f2be5f7b91",
+    "858cf97c-3eef-45c3-a9bc-3761d7e84072",
+    "664b6c33-dfaa-4d7a-9f25-af985bb25816",
+    "995f5723-dd67-4153-867a-02f752b07993",
+    "da0badbf-fa0e-47bb-b09a-9baf7d1d3f43",
+    "30afb494-33d5-4df0-8057-afa96ed5b4c1",
+    "b081a668-68b7-4c25-a743-4d1ee220f823",
+    "7b98d8c9-4c16-42e0-83e8-b433e271463c",
+    "2572477e-820c-490e-9b9a-0fc0cee8db9b",
+    "c777f523-85a5-47d1-be2d-520c076d487a",
+    "d98ad7af-aeaf-4797-99fa-fa3367a5ca68",
+    "27b84707-f6c8-4db3-9eb8-4b7de93bb5d6",
+    "ec8b1aee-0690-4dbc-9d98-ab66ecc9fce8",
+    "1a0df568-adc3-4c93-b61b-0847d5b6ba27",
+    "88f3036f-4436-4216-847d-3acf1b066553"
+  ]
+}

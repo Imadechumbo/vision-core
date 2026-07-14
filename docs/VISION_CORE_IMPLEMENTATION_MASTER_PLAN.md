@@ -28,13 +28,13 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | REL | 2 |
 | OPS | 4 |
 | Total | 26 |
-| Concluídos | 17 |
-| Pendentes | 9 |
-| Bloqueados por dependência | 8 |
+| Concluídos | 18 |
+| Pendentes | 8 |
+| Bloqueados por dependência | 7 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 71%; Desenvolvimento 89%; Certificação 75%; Release 50%; Operação 0%.
+Percentual concluído por trilha: Arquitetura 71%; Desenvolvimento 89%; Certificação 100%; Release 50%; Operação 0%.
 
 ## 4. Trilha A — ADRs
 
@@ -216,7 +216,7 @@ DoR comum: ADR aplicável aprovado, contrato/spec suficiente, dependências Done
 - **Pré-requisitos/ferramentas:** ADR-003/004/005, IMP-002/003/005/009 e TEST-001; Playwright+ambiente descartável.
 - **Esperado/aprovação:** endpoints-alvo sem interceptação, dados isolados e cleanup; 100% verde.
 - **Falha:** mock, secret, flake não explicado ou correção embutida no teste.
-- **Evidências:** screenshots, correlation IDs, resultados e manifesto de rede. **Status:** Backlog.
+- **Evidências:** gate permanente `tests/e2e/vision-core-next-real-e2e.spec.mjs` 2/2 PASS em 3,2s; suíte Next 124/124 PASS em 48,9s; screenshot `artifacts/next-rc-e2e/ui-critical.png`; manifesto com 27 requests, 27 correlation IDs, zero interceptação e zero campo sensível; dados restaurados no cleanup. **Status:** Approved.
 
 ## 7. Trilha D — Release
 
@@ -338,7 +338,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| ADR-006,007; IMP-007; REL-002; OPS-001–004 | TEST-004 | — | — | REL-001; ADR-001–005; IMP-001–006,008,009; TEST-001–003 |
+| ADR-006,007; REL-002; OPS-001–004 | IMP-007 | — | — | REL-001; ADR-001–005; IMP-001–006,008,009; TEST-001–004 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 
