@@ -28,13 +28,13 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | REL | 2 |
 | OPS | 4 |
 | Total | 24 |
-| Concluídos | 12 |
-| Pendentes | 12 |
-| Bloqueados por dependência | 9 |
+| Concluídos | 13 |
+| Pendentes | 11 |
+| Bloqueados por dependência | 8 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 71%; Desenvolvimento 86%; Certificação 0%; Release 50%; Operação 0%.
+Percentual concluído por trilha: Arquitetura 71%; Desenvolvimento 86%; Certificação 25%; Release 50%; Operação 0%.
 
 ## 4. Trilha A — ADRs
 
@@ -176,7 +176,7 @@ DoR comum: ADR aplicável aprovado, contrato/spec suficiente, dependências Done
 - **Pré-requisitos/ferramentas:** ADR-003 aprovado; ambiente descartável; Node/HTTP harness.
 - **Esperado/aprovação:** 401 sem secret, round-trip com par e isolamento; todos passam.
 - **Falha:** missão cross-agent, secret em evidência ou ação destrutiva.
-- **Evidências:** request IDs redigidos, resultados e cleanup. **Status:** Backlog.
+- **Evidências:** `tools/tests/agent-pairing.test.mjs` 13/13; 401 sem/troca de secret, isolamento A/B, round-trip, redação e cleanup do SQLite. **Status:** Approved.
 
 ### TEST-002 — Acessibilidade transversal
 
@@ -322,7 +322,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| ADR-006,007; IMP-007; TEST-004; REL-002; OPS-001–004 | TEST-001,002,003 | — | — | REL-001; ADR-001–005; IMP-001–006 |
+| ADR-006,007; IMP-007; REL-002; OPS-001–004 | TEST-002,003,004 | — | — | REL-001; ADR-001–005; IMP-001–006; TEST-001 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 
