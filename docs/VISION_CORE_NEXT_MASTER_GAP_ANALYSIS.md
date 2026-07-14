@@ -115,7 +115,7 @@ Fórmula: excluem-se as 5 capacidades explicitamente descartáveis. Cada complet
 | FILE-003 | Arquivos | download ZIP | real | real | sim | E2E | ✅ Completo | generate-zip | — | Next JS:4248 |
 | OBS-001 | Obs | timeline | real | real | sim | E2E | ✅ Completo | auth | — | mission timeline |
 | OBS-002 | Obs | métricas/gráficos | real | real | sim | E2E | ✅ Completo | metrics API | — | metrics tests |
-| OBS-003 | Obs | logs/download | real | ausente | sim | não | 🔴 Ausente | auth+logging | P1 | legado JS:1873 |
+| OBS-003 | Obs | logs correlacionados | bruto inseguro | real/redigido | sim | permanente | ✅ Completo | auth+projeto | — | `next-clean-85` |
 | SEC-001 | Segurança | Secret Guard/Lab | real | real | sim | E2E | ✅ Completo | security API | — | apply/history |
 | SEC-002 | Segurança | fail-closed | parcial | real | sim | permanente | ✅ Completo | pairing | — | DECISION-005-009 |
 | AUTH-001 | Auth | login/registro/logout | real | real | sim | E2E | ✅ Completo | sessão | — | Next JS:2673 |

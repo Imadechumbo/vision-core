@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-84">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-84" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-85">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-85" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -35,6 +35,7 @@
           <summary><i aria-hidden="true">&rsaquo;</i><span>Atividade</span></summary>
           <div class="vc-nav-group-items">
             <a href="#agents" data-feature="agents"><i aria-hidden="true">A</i><span>Agentes</span></a>
+            <a href="#logs" data-feature="logs"><i aria-hidden="true">L</i><span>Logs</span></a>
           </div>
         </details>
 
@@ -162,6 +163,16 @@
               <span>Scanner integration</span><strong>FUTURA</strong>
             </div>
             <p>Governança visual apenas: nenhum binário Rust é executado por esta tela.</p>
+          </div>
+
+          <div class="vc-operation-logs" id="vcOperationLogs" hidden>
+            <div class="vc-operation-log-filters">
+              <label>Mission ID <input type="text" id="vcLogMissionId" autocomplete="off"></label>
+              <label>Job ID <input type="text" id="vcLogJobId" autocomplete="off"></label>
+              <button type="button" id="vcLogRefresh">Atualizar</button>
+            </div>
+            <p id="vcLogStatus" aria-live="polite"></p>
+            <div id="vcLogList"></div>
           </div>
 
           <div class="vc-github-pr" id="vcGithubPrForm" hidden>

@@ -223,6 +223,10 @@ O header contém um único controle compacto `#vcProjectSelect` + criação por 
 
 O mesmo contexto contém `#vcConversationSelect`, Nova e Excluir. Para autenticados, conversas são listadas por projeto, reabertas no stream e mensagens visíveis são persistidas em ordem usuário→assistente; visitante continua efêmero. Trocar projeto recarrega somente suas conversas. Anexos/base64, prompt de sistema e bolhas transitórias nunca são enviados ao histórico (`next-clean-84`, DECISION-024).
 
+### Logs SAFE READ
+
+A aba `data-feature="logs"` mostra somente eventos estruturados de `/api/logs` para o projeto ativo, com filtros opcionais de mission/job e `request_id` visível. Renderiza por `textContent`; não exibe payload bruto, identidade, IP/UA nem oferece download de stdout (`next-clean-85`).
+
 ## Estrutura CSS
 
 Um arquivo único (`vision-core-next-clean.css`), organizado por bloco de componente na ordem em que aparecem no HTML, com `:root` no topo. **Regra dura não-negociável:** todo painel condicional que usa o atributo `hidden` no HTML precisa do seletor `.classe:not([hidden]) { display: X }` — nunca `.classe { display: X }` puro, porque CSS de autor com a mesma especificidade do atributo `hidden` vence por ordem de declaração e o painel aparece mesmo escondido. Bug real, já corrigido mais de 6 vezes nesta frente (GitHub PR, Mission Patch, SF stage/log/progress/final, Métricas body/error/skel, Safe Status/Secret Guard).

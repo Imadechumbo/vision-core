@@ -299,6 +299,13 @@ a { color: inherit; text-decoration: none; }
 .vc-project-context :disabled { opacity: .5; cursor: not-allowed; }
 .vc-project-context span { max-width: 150px; line-height: 1.25; }
 
+.vc-operation-logs:not([hidden]) { display: grid; gap: 10px; }
+.vc-operation-log-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.vc-operation-log-filters label { display: grid; gap: 4px; color: var(--muted); font-size: 11px; }
+.vc-operation-log-filters input,
+.vc-operation-log-filters button { min-height: 34px; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; background: rgba(13,10,22,.82); color: var(--text); padding: 0 9px; }
+.vc-operation-log-entry { display: grid; grid-template-columns: minmax(150px,1fr) minmax(100px,.6fr) minmax(180px,1fr); gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.08); font-size: 11px; }
+
 .vc-brand-copy { min-width: 0; }
 .vc-brand-copy strong { font-size: 22px; }
 

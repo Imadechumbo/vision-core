@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ `next-clean-85` / IMP-003 implementada localmente (sem deploy): `request_id` uniforme em header/envelope, operation log allowlisted por owner/projeto, auth+paginação+filtros mission/job e aba Logs SAFE READ. O antigo `/api/logs/download` público agora retorna 410. Testes: backend real 23/23 PASS; UI projetos/conversas/logs 6/6 PASS; suíte permanente Next 120/120 PASS em 43,7s, sem retry. Backlog: 6/24 concluídos; IMP-004 desbloqueada.
+
 ✔ `next-clean-84` / IMP-002 implementada localmente (sem deploy): conversas autenticadas persistem no backend por owner + projeto, retenção 90 dias, paginação, listagem/reload/troca/exclusão e cascade LGPD. O header ganhou seletor/Nova/Excluir; visitante permanece efêmero; somente texto visível é salvo em ordem. Testes: backend real projetos+conversas 18/18 PASS; UI + Conta/OAuth 14/14 PASS; suíte permanente Next 119/119 PASS em 47,0s, sem retry. Backlog: 5/24 concluídos; IMP-003 desbloqueada.
 
 ✔ `next-clean-83` / IMP-001 implementada localmente (sem deploy): `/api/projects` agora exige sessão, deriva owner no backend, filtra por usuário e rejeita `user_id` do cliente. O Next ganhou seletor/criação global de projeto, contexto temporário para visitante, vazio/erro explícitos e seleção por usuário em `sessionStorage`. Testes: backend real 9/9 PASS; UI + Conta/OAuth 13/13 PASS; suíte permanente Next 118/118 PASS em 50,3s, sem retry. Backlog: 4/24 concluídos; IMP-002 desbloqueada.
@@ -105,7 +107,7 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 
 # PRÓXIMA PRIORIDADE
 
-Continuar pelo critical path com IMP-003 (logs correlacionados); ADR-003/004/005 e IMP-006 também estão Ready. Comando inicial recomendado: `rg -n "request.?id|correlation|auditLog|console\\.(log|error)|logs|download" backend frontend/assets/vision-core-next-clean.js docs/API_CONTRACT.md`.
+Continuar pelo critical path com IMP-004 (estados loading/vazio/erro/sucesso uniformes em projetos, histórico, logs e SF); ADR-003/004/005 e IMP-006 também estão Ready. Comando inicial recomendado: `rg -n "Carregando|Nenhum|Erro:|set.*Loading|Status" frontend/assets/vision-core-next-clean.js tests/e2e/vision-core-next-*`.
 
 ---
 

@@ -97,3 +97,20 @@ test('conversation switch, persistence and deletion stay scoped to the active pr
   await page.locator('#vcConversationDelete').click();
   await expect(page.locator('#vcConversationSelect')).toHaveValue('');
 });
+
+test('Logs is authenticated SAFE READ, filtered by project and renders only redacted fields', async ({ page }) => {
+  let requestedUrl = '';
+  await page.route(`${API}/api/auth/me`, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, user: { id: 'u1', email: 'u1@example.com' } }) }));
+  await page.route(`${API}/api/projects`, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, projects: [{ id: 'p1', name: 'Projeto', user_id: 'u1' }] }) }));
+  await page.route(`${API}/api/logs**`, route => {
+    requestedUrl = route.request().url();
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, entries: [{ ts: '2026-07-14T12:00:00Z', event: 'conversation.created', status: 'ok', request_id: 'req-safe-123' }] }) });
+  });
+  await page.addInitScript(() => localStorage.setItem('vision_token', 'token-u1'));
+  await page.goto(NEXT_URL);
+  await page.locator('a[data-feature="logs"]').click();
+  await expect(page.locator('#vcLogList')).toContainText('conversation.created');
+  await expect(page.locator('#vcLogList')).toContainText('req-safe-123');
+  expect(requestedUrl).toContain('project_id=p1');
+  await expect(page.locator('#vcLogList')).not.toContainText('u1@example.com');
+});

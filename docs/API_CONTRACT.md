@@ -11,6 +11,8 @@
 
 Contrato dos endpoints reais do backend (`backend/server.js`), único processo Express. Envelope de resposta uniforme: `sendOk(res, payload)` → `{ok:true, ...payload, time: ISOString}`. Erro: `{ok:false, error:'code', message?, time}`, status HTTP correspondente.
 
+Toda resposta expõe `X-Request-ID`; envelopes `sendOk` incluem `request_id`. Um `X-Request-ID` recebido só é preservado se corresponder a `[a-zA-Z0-9._-]{8,96}`, senão o backend gera UUID.
+
 ## Objetivo
 
 Documentar o formato real de request/response dos endpoints que o Vision Core Next consome, incluindo achados de contrato que já causaram bug real quando assumidos incorretamente — para que nenhum agente futuro repita o mesmo erro.
@@ -67,6 +69,10 @@ DECISION-023: o cliente nunca envia ownership. Visitante usa contexto efêmero n
 ## Conversas
 
 Todas exigem sessão e revalidam owner + projeto (DECISION-024). `GET /api/chat/conversations?project_id=...&limit=50&offset=0` lista metadados com `total`/`next_offset`; `POST /api/chat/conversations` cria com `{project_id,title?}`; `GET|DELETE /api/chat/conversations/:id` abre/exclui; `POST /api/chat/conversations/:id/messages` aceita `{role:'user'|'assistant',content}`. O backend retém 90 dias e nunca recebe base64/anexo bruto por estas rotas.
+
+## Logs correlacionados
+
+`GET /api/logs?project_id=...&mission_id?&job_id?&limit=50&offset=0` exige auth e ownership. Retorna apenas `id,ts,request_id,project_id,mission_id,job_id,event,status`, sem `user_id`, email, IP, UA ou payload. `/api/logs/download` retorna `410 raw_log_download_retired`.
 
 ## Mission (Camada 1, produto)
 

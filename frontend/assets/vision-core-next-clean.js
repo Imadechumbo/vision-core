@@ -239,6 +239,12 @@
   var conversationSelect = document.getElementById('vcConversationSelect');
   var conversationNewBtn = document.getElementById('vcConversationNew');
   var conversationDeleteBtn = document.getElementById('vcConversationDelete');
+  var operationLogs = document.getElementById('vcOperationLogs');
+  var logMissionId = document.getElementById('vcLogMissionId');
+  var logJobId = document.getElementById('vcLogJobId');
+  var logRefreshBtn = document.getElementById('vcLogRefresh');
+  var logStatus = document.getElementById('vcLogStatus');
+  var logList = document.getElementById('vcLogList');
   var animationReducedCheckbox = document.getElementById('vcAnimationReduced');
   if (animationReducedCheckbox) {
     animationReducedCheckbox.checked = isReducedMotion();
@@ -374,6 +380,7 @@
     missions: { title: 'Missions', status: 'PATCH + DRY-RUN + APPLY BLOQUEADO', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Gerar Patch roda o pipeline real de diagnóstico + apply-patch, sem escrever nada sozinho — só gera diff para download. Dry-Run Real (abaixo) enfileira execução real no Vision Agent Local, em modo simulação (nunca escreve no disco). Apply-patch real via agente aparece abaixo, mas o botão fica bloqueado até existir token de pareamento real por agente (agent_id sozinho não autentica ninguém).', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
     factory: { title: 'Software Factory', status: 'ATIVO', agents: ['openclaw', 'pi', 'hermes'], text: 'Descreva o projeto em linguagem simples. O Arquiteto analisa e gera a estrutura automaticamente via API real.', actions: [] },
     agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }, { label: 'Métricas agentes', path: '/api/metrics/agents' }] },
+    logs: { title: 'Logs', status: 'SAFE READ', agents: ['archivist'], text: 'Eventos operacionais redigidos e correlacionados por projeto.', actions: [] },
     github: { title: 'GitHub', status: 'PR c/ CONFIRMAÇÃO', agents: ['github'], text: 'Criação de PR real disponível abaixo — exige formulário completo + confirmação dupla antes de disparar.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
     vault: { title: 'Vault', status: 'ROLLBACK DISPONÍVEL', agents: ['aegis', 'archivist'], text: 'Snapshots do banco de projetos e rollback. Rollback sobrescreve o estado atual — confirmação dupla obrigatória.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
     metrics: { title: 'Métricas', status: 'SAFE READ', agents: ['goCore', 'aegis'], text: 'Métricas reais em modo leitura.', actions: [{ label: 'Resumo', path: '/api/metrics/summary' }, { label: 'Agentes', path: '/api/metrics/agents' }, { label: 'DORA', path: '/api/dora-metrics' }, { label: 'Memória', path: '/api/metrics/memory' }] },
@@ -597,6 +604,10 @@
     }
     if (secretGuardCard) {
       secretGuardCard.hidden = activeFeature !== 'security';
+    }
+    if (operationLogs) {
+      operationLogs.hidden = activeFeature !== 'logs';
+      if (activeFeature === 'logs') loadOperationLogs();
     }
     if (activeFeature === 'missions') {
       refreshAgentApplyStatus();
@@ -2699,6 +2710,35 @@
     projectStatus.style.color = isError ? '#f87171' : '';
   }
 
+  function loadOperationLogs() {
+    if (!logList || !logStatus) return;
+    logList.textContent = '';
+    if (!currentProjectUserId || !projectSelect || !projectSelect.value) {
+      logStatus.textContent = 'Entre e selecione um projeto para consultar logs.';
+      return;
+    }
+    logStatus.textContent = 'Carregando...';
+    var query = '?project_id=' + encodeURIComponent(projectSelect.value) + '&limit=50';
+    if (logMissionId && logMissionId.value.trim()) query += '&mission_id=' + encodeURIComponent(logMissionId.value.trim());
+    if (logJobId && logJobId.value.trim()) query += '&job_id=' + encodeURIComponent(logJobId.value.trim());
+    apiRequest('/api/logs' + query).then(function (data) {
+      var entries = Array.isArray(data.entries) ? data.entries : [];
+      logStatus.textContent = entries.length ? entries.length + ' evento(s).' : 'Nenhum evento para estes filtros.';
+      entries.forEach(function (entry) {
+        var row = document.createElement('div');
+        row.className = 'vc-operation-log-entry';
+        [entry.ts, entry.event + ' · ' + entry.status, entry.request_id].forEach(function (value) {
+          var span = document.createElement('span');
+          span.textContent = value || '—';
+          row.appendChild(span);
+        });
+        logList.appendChild(row);
+      });
+    }).catch(function (err) {
+      logStatus.textContent = 'Erro: ' + (err && err.message ? err.message : String(err));
+    });
+  }
+
   function setVisitorProjectContext() {
     currentProjectUserId = null;
     if (projectSelect) {
@@ -2897,6 +2937,7 @@
       loadConversations(projectSelect.value);
     });
   });
+  if (logRefreshBtn) logRefreshBtn.addEventListener('click', loadOperationLogs);
   setOAuthLinks();
   refreshAccountStatus();
 

@@ -62,7 +62,7 @@ function normalizeBody(req) {
 }
 
 function sendOk(res, payload = {}) {
-  return res.status(200).json({ ok: true, ...payload, time: now() });
+  return res.status(200).json({ ok: true, ...payload, request_id: res.locals.requestId || null, time: now() });
 }
 
 function normalizeEvidenceReceipt(result) {
@@ -224,6 +224,10 @@ async function assertPublicFetchTarget(parsedUrl) {
 
 /* 1. CORS MANUAL BLINDADO — antes de parser/rotas */
 app.use((req, res, next) => {
+  const incomingRequestId = String(req.headers['x-request-id'] || '');
+  req.requestId = /^[a-zA-Z0-9._-]{8,96}$/.test(incomingRequestId) ? incomingRequestId : crypto.randomUUID();
+  res.locals.requestId = req.requestId;
+  res.setHeader('X-Request-ID', req.requestId);
   const origin = String(req.headers.origin || '');
 
   res.setHeader('Vary', 'Origin');
@@ -232,7 +236,8 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Vision-Token');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-Vision-Token, X-Request-ID');
+  res.setHeader('Access-Control-Expose-Headers', 'X-Request-ID');
   res.setHeader('Access-Control-Max-Age', '86400');
 
   res.setHeader('X-Vision-Core-Version', '2.9.10-self-healing-config');
@@ -367,6 +372,7 @@ const DB_ROOT = path.join(ROOT, 'data');
 const USERS_DB = path.join(DB_ROOT, 'users.json');
 const PROJECTS_DB = path.join(DB_ROOT, 'projects.json');
 const CHAT_CONVERSATIONS_DB = path.join(DB_ROOT, 'chat-conversations.json');
+const OPERATION_LOG_DB = path.join(DB_ROOT, 'operation-log.json');
 const PROVIDERS_VAULT_FILE = path.join(DB_ROOT, 'ai-providers-vault.json');
 const VAULT_ROOT = path.join(MEMORY_ROOT, 'obsidian', 'VisionCoreVault');
 for (const dir of [DB_ROOT, VAULT_ROOT, path.join(VAULT_ROOT, 'Missions'), path.join(VAULT_ROOT, 'Incidents'), path.join(VAULT_ROOT, 'PASS-GOLD'), path.join(VAULT_ROOT, 'Projects')]) fs.mkdirSync(dir, { recursive: true });
@@ -584,6 +590,26 @@ function _s3PutAsync(localPath, data) {
 function writeAndSyncS3(localPath, data) {
   writeJsonFile(localPath, data);
   _s3PutAsync(localPath, data);
+}
+
+function operationLog(req, userId, event) {
+  try {
+    const db = readJsonFile(OPERATION_LOG_DB, { entries: [] });
+    db.entries.push({
+      id: makeId('log'),
+      ts: now(),
+      request_id: req.requestId,
+      user_id: userId,
+      project_id: event.project_id || null,
+      mission_id: event.mission_id || null,
+      job_id: event.job_id || null,
+      event: String(event.event || 'operation').slice(0, 80),
+      status: String(event.status || 'ok').slice(0, 24)
+    });
+    const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    db.entries = db.entries.filter(entry => new Date(entry.ts).getTime() >= cutoff).slice(-10000);
+    writeAndSyncS3(OPERATION_LOG_DB, db);
+  } catch (error) { console.warn('[operation-log] write failed:', error.message); }
 }
 
 // §154 — Audit log: registra ação crítica com ts/ip/ua/action + extra
@@ -1172,6 +1198,7 @@ app.post('/api/projects', (req, res) => {
   const project = { id: makeId('proj'), name, created_at: now(), user_id: user.id };
   db.projects.push(project);
   writeAndSyncS3(PROJECTS_DB, db);
+  operationLog(req, user.id, { project_id: project.id, event: 'project.created' });
   return sendOk(res, { project, anti_stub: true });
 });
 
@@ -1214,6 +1241,7 @@ app.post('/api/chat/conversations', (req, res) => {
   const db = readConversations();
   db.conversations.push(conversation);
   writeAndSyncS3(CHAT_CONVERSATIONS_DB, db);
+  operationLog(req, user.id, { project_id: projectId, event: 'conversation.created' });
   return sendOk(res, { conversation: { ...conversation, messages: undefined }, anti_stub: true });
 });
 
@@ -1239,6 +1267,7 @@ app.post('/api/chat/conversations/:id/messages', (req, res) => {
   conversation.messages.push(message);
   conversation.updated_at = message.created_at;
   writeAndSyncS3(CHAT_CONVERSATIONS_DB, db);
+  operationLog(req, user.id, { project_id: conversation.project_id, event: `message.${body.role}.saved` });
   return sendOk(res, { message, anti_stub: true });
 });
 
@@ -1248,8 +1277,9 @@ app.delete('/api/chat/conversations/:id', (req, res) => {
   const db = readConversations();
   const index = db.conversations.findIndex(item => item.id === req.params.id && item.user_id === user.id);
   if (index === -1) return res.status(404).json({ ok: false, error: 'conversation_not_found', time: now() });
-  db.conversations.splice(index, 1);
+  const [deleted] = db.conversations.splice(index, 1);
   writeAndSyncS3(CHAT_CONVERSATIONS_DB, db);
+  operationLog(req, user.id, { project_id: deleted.project_id, event: 'conversation.deleted' });
   return sendOk(res, { deleted: true, anti_stub: true });
 });
 
@@ -2820,34 +2850,26 @@ app.get('/api/dora-metrics', async (req, res) => {
   }
 });
 app.get('/api/pass-gold/score', (req, res) => sendOk(res, { final: 100, status: 'PENDING_EVIDENCE', pass_gold: false, promotion_allowed: false, pass_gold_reason: 'evidence receipt required from Go Core' }));
+app.get('/api/logs', (req, res) => {
+  const user = getAuthUser(req);
+  if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', request_id: req.requestId, time: now() });
+  const projectId = String(req.query.project_id || '');
+  if (!ownedProject(user.id, projectId)) return res.status(404).json({ ok: false, error: 'project_not_found', request_id: req.requestId, time: now() });
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 100);
+  const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+  const missionId = String(req.query.mission_id || '');
+  const jobId = String(req.query.job_id || '');
+  const db = readJsonFile(OPERATION_LOG_DB, { entries: [] });
+  const owned = (Array.isArray(db.entries) ? db.entries : []).filter(entry =>
+    entry.user_id === user.id && entry.project_id === projectId &&
+    (!missionId || entry.mission_id === missionId) && (!jobId || entry.job_id === jobId)
+  ).sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
+  const entries = owned.slice(offset, offset + limit).map(({ user_id, ...entry }) => entry);
+  return sendOk(res, { entries, total: owned.length, next_offset: offset + entries.length < owned.length ? offset + entries.length : null, anti_stub: true });
+});
+
 app.get('/api/logs/download', (req, res) => {
-  const logCandidates = [
-    '/var/log/nodejs/nodejs.log',
-    path.join(ROOT, 'backend', 'server.stdout.log'),
-    path.join(ROOT, 'backend', 'server.stderr.log'),
-    path.join(ROOT, 'ci-full.log')
-  ];
-  for (const logPath of logCandidates) {
-    if (fs.existsSync(logPath)) {
-      try {
-        const content = fs.readFileSync(logPath, 'utf8');
-        const lines = content.split('\n');
-        const tail = lines.slice(-500).join('\n');
-        res.setHeader('Content-Disposition', `attachment; filename="vision-core-${Date.now()}.log"`);
-        return res.type('text/plain').send(tail);
-      } catch {}
-    }
-  }
-  // No log file found — return server metadata
-  return res.type('text/plain').send([
-    `VISION CORE V2.9.10 LOG`,
-    `Generated: ${now()}`,
-    `Node: ${process.version}`,
-    `Uptime: ${process.uptime().toFixed(0)}s`,
-    `PID: ${process.pid}`,
-    `Memory: ${JSON.stringify(process.memoryUsage())}`,
-    `Note: no log file found — set stdout redirect on EB for persistent logs`
-  ].join('\n'));
+  return res.status(410).json({ ok: false, error: 'raw_log_download_retired', replacement: '/api/logs', request_id: req.requestId, anti_stub: true, time: now() });
 });
 
 /* BAD PATH ALIAS */
@@ -4971,6 +4993,7 @@ if (S3_BUCKET) {
   _s3LoadSync(USERS_DB);
   _s3LoadSync(PROJECTS_DB);
   _s3LoadSync(CHAT_CONVERSATIONS_DB);
+  _s3LoadSync(OPERATION_LOG_DB);
   _s3LoadSync(BLACKLIST_FILE); // §152: blacklist do S3 antes de aceitar requests
   _s3LoadSync(SSO_DOMAINS_FILE); // §155: SSO domains do S3
   _s3LoadSync(PROVIDERS_VAULT_FILE); // AI Provider Vault: config principal do S3

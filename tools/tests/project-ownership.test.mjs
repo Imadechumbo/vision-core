@@ -4,7 +4,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 
 const ROOT = resolve(process.cwd());
-const FILES = ['users.json', 'projects.json', 'chat-conversations.json', 'token-blacklist.json', 'audit-log.json'].map(name => resolve(ROOT, 'data', name));
+const FILES = ['users.json', 'projects.json', 'chat-conversations.json', 'operation-log.json', 'token-blacklist.json', 'audit-log.json'].map(name => resolve(ROOT, 'data', name));
 const backups = FILES.map(file => ({ file, existed: existsSync(file), content: existsSync(file) ? readFileSync(file, 'utf8') : null }));
 const PORT = 18736;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -101,6 +101,16 @@ try {
   await request('/api/chat/conversations', { method: 'POST', token: tokenA, body: { project_id: createdA.body.project.id, title: 'Conversa A2' } });
   const paged = await request(`/api/chat/conversations?project_id=${createdA.body.project.id}&limit=1&offset=1`, { token: tokenA });
   assert(paged.body.conversations.length === 1 && paged.body.total === 2 && paged.body.next_offset === null, 'paginação retorna total e offset determinísticos');
+
+  const anonymousLogs = await request(`/api/logs?project_id=${createdA.body.project.id}`);
+  const logsA = await request(`/api/logs?project_id=${createdA.body.project.id}&limit=2`, { token: tokenA });
+  const logsB = await request(`/api/logs?project_id=${createdA.body.project.id}`, { token: tokenB });
+  assert(anonymousLogs.status === 401, 'logs anônimos falham com 401');
+  assert(logsB.status === 404, 'outro usuário não consulta logs do projeto A');
+  assert(logsA.body.entries.length === 2 && logsA.body.total >= 4 && Number.isInteger(logsA.body.next_offset), 'logs têm paginação e correlação por projeto');
+  assert(logsA.body.entries.every(entry => entry.request_id && !('user_id' in entry) && !('email' in entry) && !('ip' in entry) && !('ua' in entry)), 'resposta de logs usa allowlist redigida');
+  const rawLogs = await request('/api/logs/download', { token: tokenA });
+  assert(rawLogs.status === 410 && rawLogs.body.error === 'raw_log_download_retired', 'download bruto foi encerrado');
 
   const deletedAccount = await request('/api/auth/me', { method: 'DELETE', token: tokenA });
   const conversationsAfterDelete = JSON.parse(readFileSync(resolve(ROOT, 'data', 'chat-conversations.json'), 'utf8')).conversations;

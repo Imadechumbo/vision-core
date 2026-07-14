@@ -4,6 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-85 (2026-07-14, não deployado)
+
+- Logs brutos públicos foram aposentados; endpoint autenticado retorna somente eventos allowlisted por owner/projeto com `request_id` e paginação.
+- Nova aba Logs SAFE READ filtra por mission/job e nunca renderiza payload, identidade, IP/UA ou stdout.
+
 ## next-clean-84 (2026-07-14, não deployado)
 
 - Conversas autenticadas persistem por owner + projeto, com retenção de 90 dias, reload, troca e exclusão; visitante permanece efêmero.
