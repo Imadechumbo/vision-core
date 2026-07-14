@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-77">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-77" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-82">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-82" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -301,6 +301,42 @@
               <label class="vc-settings-motion-toggle">
                 Intensidade visual
                 <input type="range" id="vcAtomicIntensity" min="40" max="100" step="10" value="100">
+              </label>
+              <label class="vc-settings-motion-toggle">
+                Velocidade do Idle
+                <input type="range" id="vcAtomicIdleSpeed" min="40" max="250" step="5" value="100">
+              </label>
+              <label class="vc-settings-motion-toggle">
+                Padrão de movimento — Idle
+                <select id="vcAtomicIdlePattern">
+                  <option value="classic">Clássica</option>
+                  <option value="pulse">Pulso suave</option>
+                  <option value="drift">Deriva</option>
+                </select>
+              </label>
+              <label class="vc-settings-motion-toggle" id="vcAtomicIdleDriftRow" hidden>
+                Intensidade da deriva
+                <input type="range" id="vcAtomicIdleDrift" min="0" max="100" step="5" value="100">
+              </label>
+              <label class="vc-settings-motion-toggle">
+                Padrão de movimento — Action
+                <select id="vcAtomicActionPattern">
+                  <option value="classic">Clássico</option>
+                  <option value="wide">Órbita ampla</option>
+                  <option value="pulse">Pulso</option>
+                </select>
+              </label>
+              <label class="vc-settings-motion-toggle">
+                Estilo de Retorno (Action → Idle)
+                <select id="vcAtomicReturnStyle">
+                  <option value="none">Nenhum (corte direto)</option>
+                  <option value="fast">Rápido</option>
+                  <option value="smooth">Suave</option>
+                </select>
+              </label>
+              <label class="vc-settings-motion-toggle" id="vcAtomicReturnDurationRow" hidden>
+                Duração do Retorno (ms)
+                <input type="range" id="vcAtomicReturnDuration" min="200" max="2500" step="100" value="900">
               </label>
             </div>
             <div class="vc-settings-motion">

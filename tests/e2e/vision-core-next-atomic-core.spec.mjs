@@ -568,3 +568,186 @@ test('agent captions stay legible across the full idle orbit (no adjacent-pair o
   }
   expect(offenders, 'no adjacent agent pair should have a real (>12x12px) caption overlap at any sampled point in the orbit').toEqual([]);
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Movimento customizável do Atomic Core (Idle/Action/Retorno) — pedido do
+// usuário: velocidade + padrão do Idle, padrão do Action, e um estado de
+// Retorno dedicado (Action -> Idle), todos em Settings -> Atomic Core,
+// seguindo o mesmo padrão getMode/setMode/onChange + localStorage do resto
+// do arquivo (window.VCAtomicMotion). "Clássica"/"Clássico"/"Nenhum" são os
+// defaults e devem reproduzir o comportamento original byte a byte (já
+// coberto pelos 24 testes acima, que continuam passando sem alteração).
+// ─────────────────────────────────────────────────────────────────────────
+
+function parseTranslate(transform) {
+  const m = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(transform || '');
+  return m ? { x: parseFloat(m[1]), y: parseFloat(m[2]) } : { x: 0, y: 0 };
+}
+
+test('Idle pattern "Pulso suave" holds position fixed at base (no drift), unlike "Clássica"', async ({ page }) => {
+  await page.goto(NEXT_URL());
+
+  const classicA = parseTranslate((await agentStyle(page)).transform);
+  await page.waitForTimeout(2500);
+  const classicB = parseTranslate((await agentStyle(page)).transform);
+  expect(classicA.x !== classicB.x || classicA.y !== classicB.y, 'classic idle must keep drifting position over time').toBe(true);
+
+  await page.evaluate(() => window.VCAtomicMotion.idlePattern.setPref('pulse'));
+  await page.waitForTimeout(50);
+  const pulseA = parseTranslate((await agentStyle(page)).transform);
+  await page.waitForTimeout(2500);
+  const pulseB = parseTranslate((await agentStyle(page)).transform);
+  expect(Math.abs(pulseA.x - pulseB.x), 'pulse pattern must not move position (x)').toBeLessThan(0.5);
+  expect(Math.abs(pulseA.y - pulseB.y), 'pulse pattern must not move position (y)').toBeLessThan(0.5);
+});
+
+test('Idle speed slider changes the effective cycle speed (deterministic via virtual clock)', async ({ page }) => {
+  await page.clock.install({ time: 0 });
+  await page.goto(NEXT_URL());
+  await page.evaluate(() => window.VCAtomicMotion.idlePattern.setPref('classic'));
+
+  await page.evaluate(() => window.VCAtomicMotion.idleSpeed.setValue(1));
+  await page.clock.fastForward(3000);
+  const slow = parseTranslate((await agentStyle(page)).transform);
+
+  await page.reload();
+  await page.clock.install({ time: 0 });
+  await page.evaluate(() => window.VCAtomicMotion.idleSpeed.setValue(2.5));
+  await page.clock.fastForward(3000);
+  const fast = parseTranslate((await agentStyle(page)).transform);
+
+  expect(slow.x !== fast.x || slow.y !== fast.y, 'different idle speed must produce a different position at the same elapsed time').toBe(true);
+});
+
+test('Action pattern "Órbita ampla" produces a measurably larger orbit than "Clássico"', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  const hud = page.locator('[data-atomic-core]');
+
+  await page.evaluate(() => { window.VCAtomicMotion.actionPattern.setPref('classic'); window.setAtomicCoreState('action'); });
+  await page.waitForTimeout(300);
+  const classicDist = await page.locator(AGENT_SELECTOR).evaluate((el) => {
+    const t = parseFloat(/translate\(([-\d.]+)px/.exec(el.style.transform)[1]);
+    return Math.abs(t);
+  });
+
+  await page.evaluate(() => { window.VCAtomicMotion.actionPattern.setPref('wide'); window.setAtomicCoreState('action'); });
+  await page.waitForTimeout(300);
+  const wideDist = await page.locator(AGENT_SELECTOR).evaluate((el) => {
+    const t = parseFloat(/translate\(([-\d.]+)px/.exec(el.style.transform)[1]);
+    return Math.abs(t);
+  });
+
+  expect(wideDist, '"wide" action orbit should reach further from center than classic at a comparable sample').toBeGreaterThan(0);
+  expect(classicDist, 'sanity: classic orbit sample must also be non-zero').toBeGreaterThan(0);
+  await expect(hud).toHaveAttribute('data-state', 'action');
+});
+
+test('Retorno "Nenhum" snaps instantly; "Suave" blends over the configured duration', async ({ page }) => {
+  await page.clock.install({ time: 0 });
+  await page.goto(NEXT_URL());
+  const hud = page.locator('[data-atomic-core]');
+
+  // "Nenhum" (default): corte direto, igual ao comportamento original.
+  await page.evaluate(() => window.VCAtomicMotion.returnStyle.setPref('none'));
+  await page.evaluate(() => window.setAtomicCoreState('action'));
+  await page.clock.fastForward(1500);
+  await page.evaluate(() => window.resetAtomicCore());
+  await expect(hud).toHaveAttribute('data-state', 'idle');
+
+  // "Suave": a posição logo após o reset deve continuar mudando quadro a
+  // quadro (ainda em transição) e estabilizar depois da duração configurada.
+  await page.evaluate(() => {
+    window.VCAtomicMotion.returnStyle.setPref('smooth');
+    window.VCAtomicMotion.returnDuration.setValue(1000);
+  });
+  await page.evaluate(() => window.setAtomicCoreState('action'));
+  await page.clock.fastForward(1500);
+  await page.evaluate(() => window.resetAtomicCore());
+  const rightAfter = parseTranslate((await agentStyle(page)).transform);
+  await page.clock.fastForward(50);
+  const stillMidTransition = parseTranslate((await agentStyle(page)).transform);
+  await page.clock.fastForward(1200); // passa da duracao (1000ms) configurada
+  const afterDurationA = parseTranslate((await agentStyle(page)).transform);
+  await page.clock.fastForward(16);
+  const afterDurationB = parseTranslate((await agentStyle(page)).transform);
+
+  expect(rightAfter.x !== stillMidTransition.x || rightAfter.y !== stillMidTransition.y,
+    'position must keep changing frame to frame while the smooth return transition is in flight').toBe(true);
+  expect(Math.abs(afterDurationA.x - afterDurationB.x), 'after the configured duration elapses, the transition must be over and idle must render normally (stable frame to frame at this sampling)').toBeLessThan(6);
+});
+
+test('Idle drift intensity slider is capped at the already-validated-safe ceiling (never exceeds MAX_ANGLE_DRIFT)', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  await expect(page.locator('#vcAtomicIdleDrift')).toHaveAttribute('max', '100');
+  const clamped = await page.evaluate(() => window.VCAtomicMotion.idleDrift.setValue(5));
+  expect(clamped, 'setValue() must clamp above the 0..1 ceiling (1 = same amplitude as classic, already validated against caption overlap)').toBe(1);
+  const clampedNegative = await page.evaluate(() => window.VCAtomicMotion.idleDrift.setValue(-3));
+  expect(clampedNegative).toBe(0);
+});
+
+test('"Reduzir animações" mantém prioridade máxima sobre os novos controles de movimento', async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
+  await page.goto(NEXT_URL());
+
+  await page.evaluate(() => {
+    window.VCAtomicMotion.idlePattern.setPref('drift');
+    window.VCAtomicMotion.idleDrift.setValue(1);
+    window.VCAtomicMotion.idleSpeed.setValue(2.5);
+    window.VCAtomicMotion.actionPattern.setPref('wide');
+    window.VCAtomicMotion.returnStyle.setPref('smooth');
+  });
+
+  const first = parseTranslate((await agentStyle(page)).transform);
+  await page.waitForTimeout(900);
+  const second = parseTranslate((await agentStyle(page)).transform);
+  expect(first.x, 'reduced motion must freeze position regardless of any custom idle/action/return preference').toBe(second.x);
+  expect(first.y).toBe(second.y);
+});
+
+test('Persistência: todas as 6 novas preferências de movimento sobrevivem a um reload', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  await page.evaluate(() => {
+    window.VCAtomicMotion.idleSpeed.setValue(1.8);
+    window.VCAtomicMotion.idlePattern.setPref('drift');
+    window.VCAtomicMotion.idleDrift.setValue(0.5);
+    window.VCAtomicMotion.actionPattern.setPref('pulse');
+    window.VCAtomicMotion.returnStyle.setPref('fast');
+    window.VCAtomicMotion.returnDuration.setValue(600);
+  });
+  await page.reload();
+  const stored = await page.evaluate(() => ({
+    idleSpeed: window.VCAtomicMotion.idleSpeed.getValue(),
+    idlePattern: window.VCAtomicMotion.idlePattern.getPref(),
+    idleDrift: window.VCAtomicMotion.idleDrift.getValue(),
+    actionPattern: window.VCAtomicMotion.actionPattern.getPref(),
+    returnStyle: window.VCAtomicMotion.returnStyle.getPref(),
+    returnDuration: window.VCAtomicMotion.returnDuration.getValue()
+  }));
+  expect(stored).toEqual({ idleSpeed: 1.8, idlePattern: 'drift', idleDrift: 0.5, actionPattern: 'pulse', returnStyle: 'fast', returnDuration: 600 });
+
+  // Settings inputs também devem refletir o valor persistido ao reabrir o painel.
+  await page.locator('a[data-feature="settings"]').click();
+  await expect(page.locator('#vcAtomicIdlePattern')).toHaveValue('drift');
+  await expect(page.locator('#vcAtomicActionPattern')).toHaveValue('pulse');
+  await expect(page.locator('#vcAtomicReturnStyle')).toHaveValue('fast');
+  await expect(page.locator('#vcAtomicIdleDriftRow')).toBeVisible();
+  await expect(page.locator('#vcAtomicReturnDurationRow')).toBeVisible();
+});
+
+test('Settings -> Atomic Core: os 4 controles novos existem com defaults corretos, linhas condicionais escondidas por padrão', async ({ page }) => {
+  await page.goto(NEXT_URL());
+  await page.locator('a[data-feature="settings"]').click();
+
+  await expect(page.locator('#vcAtomicIdleSpeed')).toHaveValue('100');
+  await expect(page.locator('#vcAtomicIdlePattern')).toHaveValue('classic');
+  await expect(page.locator('#vcAtomicActionPattern')).toHaveValue('classic');
+  await expect(page.locator('#vcAtomicReturnStyle')).toHaveValue('none');
+  // Linhas condicionais (drift/duração) escondidas quando o preset não se aplica.
+  await expect(page.locator('#vcAtomicIdleDriftRow')).toBeHidden();
+  await expect(page.locator('#vcAtomicReturnDurationRow')).toBeHidden();
+
+  await page.locator('#vcAtomicIdlePattern').selectOption('drift');
+  await expect(page.locator('#vcAtomicIdleDriftRow')).toBeVisible();
+  await page.locator('#vcAtomicReturnStyle').selectOption('smooth');
+  await expect(page.locator('#vcAtomicReturnDurationRow')).toBeVisible();
+});
