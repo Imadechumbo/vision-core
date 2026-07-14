@@ -4,6 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-81 (2026-07-14)
+
+- Segundo fix da regressão do topo do Software Factory: além de esconder o painel genérico duplicado, `#vcChatScroll` agora também sai do layout somente em Factory.
+- Causa raiz final medida em produção após `next-clean-80`: `#factory` é irmão de `#vcChatScroll`; mesmo vazio, `#vcChatScroll` mantinha `min-height:260px`, criando o vão entre o cabeçalho curto e o painel real.
+
 ## next-clean-80 (2026-07-14)
 
 - Fix de regressão visual no Software Factory após `next-clean-79`: o `#vcFeaturePanel` genérico ainda aparecia acima do painel próprio `#factory`, repetindo `featureMap.factory.text` numa caixa solta e empurrando o conteúdo real para baixo.

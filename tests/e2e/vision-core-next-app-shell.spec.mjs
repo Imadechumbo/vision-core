@@ -221,14 +221,16 @@ test('short-header pages do not reserve the old Atomic Core / chat intro vertica
     await page.waitForTimeout(100);
     return page.evaluate(() => {
       const head = document.querySelector('#vcPageHead:not([hidden]), #vcBrandLockup:not([hidden])');
-      const panel = document.querySelector('#factory:not([hidden]), #vcFeaturePanel');
+      const panel = document.querySelector('#factory:not([hidden]), #vcFeaturePanel:not([hidden])');
       const atomic = document.querySelector('[data-atomic-core]');
       const stream = document.querySelector('#vcChatStream');
+      const scroll = document.querySelector('#vcChatScroll');
       const featurePanel = document.querySelector('#vcFeaturePanel');
       return {
         gap: Math.round(panel.getBoundingClientRect().top - head.getBoundingClientRect().bottom),
         atomicDisplay: getComputedStyle(atomic).display,
         streamDisplay: getComputedStyle(stream).display,
+        scrollDisplay: getComputedStyle(scroll).display,
         featurePanelHidden: featurePanel.hidden,
         internalHeadDisplay: getComputedStyle(document.querySelector('#vcFeaturePanel > .vc-feature-head')).display
       };
@@ -249,11 +251,13 @@ test('short-header pages do not reserve the old Atomic Core / chat intro vertica
     expect(result.streamDisplay, `${target[0]} should not keep invisible chat stream space`).toBe('none');
     expect(result.internalHeadDisplay, `${target[0]} should not duplicate the short header inside the panel`).toBe('none');
     expect(result.featurePanelHidden, `${target[0]} generic feature panel visibility`).toBe(target[0] === 'factory');
+    expect(result.scrollDisplay, `${target[0]} scroll container visibility`).toBe(target[0] === 'factory' ? 'none' : 'flex');
   }
 
   const chat = await gapFor('chat');
   expect(chat.atomicDisplay).toBe('block');
   expect(chat.streamDisplay).toBe('flex');
+  expect(chat.scrollDisplay).toBe('flex');
   expect(chat.featurePanelHidden).toBe(false);
   expect(chat.internalHeadDisplay).not.toBe('none');
   expect(chat.gap, 'Chat still owns the large Atomic Core/chat stream composition').toBeGreaterThan(250);
