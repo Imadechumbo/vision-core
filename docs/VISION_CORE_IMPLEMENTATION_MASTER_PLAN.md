@@ -23,18 +23,18 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | Indicador | Valor |
 |---|---:|
 | ADR | 7 |
-| IMP | 7 |
+| IMP | 8 |
 | TEST | 4 |
 | REL | 2 |
 | OPS | 4 |
-| Total | 24 |
+| Total | 25 |
 | Concluídos | 13 |
-| Pendentes | 11 |
-| Bloqueados por dependência | 8 |
+| Pendentes | 12 |
+| Bloqueados por dependência | 9 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 71%; Desenvolvimento 86%; Certificação 25%; Release 50%; Operação 0%.
+Percentual concluído por trilha: Arquitetura 71%; Desenvolvimento 75%; Certificação 25%; Release 50%; Operação 0%.
 
 ## 4. Trilha A — ADRs
 
@@ -168,6 +168,14 @@ DoR comum: ADR aplicável aprovado, contrato/spec suficiente, dependências Done
 - **Rollback:** reverter script. **Estimativa/complexidade:** M/média.
 - **Impacto:** supply chain determinística e menos debris. **Status:** Todo.
 
+### IMP-008 — Corrigir nomes acessíveis e contenção de foco
+
+- **Objetivo/motivação:** fechar achados reproduzidos por TEST-002: composer/projeto sem nome acessível e foco escapando do modal Smile.
+- **Arquivos candidatos/proibidos:** HTML/JS Next e testes afetados; redesign visual proibido.
+- **Dependências:** achado TEST-002. **Testes:** nomes por controle, Tab/Shift+Tab contidos, Escape restaura trigger e reduced motion.
+- **Rollback:** revert. **Estimativa/complexidade:** XS/baixa.
+- **Impacto:** fluxo completo por leitor de tela e teclado. **Status:** Ready.
+
 ## 6. Trilha C — Certificações
 
 ### TEST-001 — Fila e pairing de agentes
@@ -184,7 +192,7 @@ DoR comum: ADR aplicável aprovado, contrato/spec suficiente, dependências Done
 - **Pré-requisitos/ferramentas:** IMP-004; Playwright/axe ou mecanismo aprovado e roteiro de teclado.
 - **Esperado/aprovação:** zero violações críticas; fluxo completo por teclado.
 - **Falha:** suppressions globais, foco perdido ou motion ignorado.
-- **Evidências:** relatório por selector e checklist manual. **Status:** Backlog.
+- **Evidências:** auditoria temporária: reduced motion 1/1; falhas reproduzidas 2x em `#vcProjectName`, `#vcPrompt` e trap do `#vcSmileModal`. **Status:** Failed; depende de IMP-008 e recertificação.
 
 ### TEST-003 — Budget de performance
 
@@ -322,7 +330,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| ADR-006,007; IMP-007; REL-002; OPS-001–004 | TEST-002,003,004 | — | — | REL-001; ADR-001–005; IMP-001–006; TEST-001 |
+| ADR-006,007; IMP-007; TEST-002; REL-002; OPS-001–004 | IMP-008; TEST-003,004 | — | — | REL-001; ADR-001–005; IMP-001–006; TEST-001 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 

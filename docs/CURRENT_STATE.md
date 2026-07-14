@@ -40,7 +40,9 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
-✔ TEST-001 aprovado com gate permanente de segurança `tools/tests/agent-pairing.test.mjs`: backend real isolado 13/13 PASS; queue/result retornam 401 sem secret ou com secret cruzado, agente B não consome missão A, par correto completa round-trip, status reflete polling e nenhuma evidência persiste/expõe `agent_secret`. SQLite restaurado no cleanup; nenhum apply foi executado. Backlog: 13/24 concluídos; TEST-004 desbloqueado.
+⚠ TEST-002 falhou de forma reproduzível (2 tentativas): `#vcProjectName` e `#vcPrompt` não têm nome acessível e Tab escapa de `#vcSmileModal`; reduced motion passou. IMP-008 foi criado como correção XS separada antes da recertificação. Backlog ampliado de 24 para 25 itens: 13 concluídos.
+
+✔ TEST-001 aprovado com gate permanente de segurança `tools/tests/agent-pairing.test.mjs`: backend real isolado 13/13 PASS; queue/result retornam 401 sem secret ou com secret cruzado, agente B não consome missão A, par correto completa round-trip, status reflete polling e nenhuma evidência persiste/expõe `agent_secret`. SQLite restaurado no cleanup; nenhum apply foi executado. TEST-004 desbloqueado.
 
 ✔ `next-clean-88` / IMP-006 implementada localmente (sem deploy): Landing/About não expõem mais links de billing sem destino nem blocos explicitamente não implementados; tabelas, grids e conteúdo técnico respeitam viewport de 375 px. Smoke temporário de links internos, assets, WIP visível e mobile: 4/4 PASS; inspeção local a 1280 px: `scrollWidth=1265`, zero offender; suíte permanente Next: 122/122 PASS em 49,2s. Backlog: 12/24 concluídos; TEST-001/002/003 estão Ready.
 
