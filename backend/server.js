@@ -3191,14 +3191,45 @@ app.post('/api/chat', async (req, res) => {
       : `\n\nVOCÊ ESTÁ RECEBENDO UMA IMAGEM. Descreva o conteúdo visual com detalhes técnicos. Identifique elementos, textos visíveis, erros de UI, layout, ou qualquer anomalia. Responda em português brasileiro.`
     : '';
 
+  /* Grounding real contra alucinação de arquitetura própria (achado real,
+     2026-07-14): basePrompt não tem NENHUM fato sobre a arquitetura real do
+     Vision Core (schema de dataset, endpoints internos, etc) — só descreve
+     como agir sobre código DO USUÁRIO. Perguntas sobre a arquitetura do
+     próprio produto (ex: "fine-tuning do Hermes") não têm grounding nenhum,
+     e o mesmo prompt gerou 2 respostas divergentes e igualmente inventadas
+     pra a mesma pergunta em sessões diferentes. "Não alucine" no prompt não
+     é suficiente pra esse tipo de pergunta — a mitigação real é injetar o
+     trecho literal do doc real em vez de deixar o modelo gerar livremente. */
+  const isHermesFineTuningQuestion = /fine[\s-]?tun|hermes[^.?!]*trein|trein\w*[^.?!]*hermes|hermes[\s_-]?(trainer|weights|rules)|dataset\s+do\s+hermes|hermes[^.?!]*dataset/i.test(message);
+  let groundingAddendum = '';
+  if (isHermesFineTuningQuestion) {
+    try {
+      const realDoc = fs.readFileSync(path.join(ROOT, '..', 'docs', 'HERMES_FINE_TUNING_DATASET.md'), 'utf8');
+      groundingAddendum = [
+        ``,
+        `══════════════════════════════════════════════════════`,
+        `GROUNDING REAL — FINE-TUNING DO HERMES (ANTI-ALUCINAÇÃO)`,
+        `══════════════════════════════════════════════════════`,
+        ``,
+        `A pergunta do usuário é sobre a arquitetura REAL do próprio Vision Core, não sobre código do usuário.`,
+        `Responda EXCLUSIVAMENTE com base no trecho real abaixo, extraído ao vivo de docs/HERMES_FINE_TUNING_DATASET.md.`,
+        `PROIBIDO inventar nomes de arquivo, comandos CLI, flags, endpoints ou formatos de config que não estejam neste trecho.`,
+        `Se a pergunta pedir algo que este trecho não cobre (ex: comando para rodar o treinamento em si), diga explicitamente que isso ainda não existe/não foi implementado — não invente um.`,
+        ``,
+        realDoc
+      ].join('\n');
+    } catch (_eGrounding) { /* doc ausente nao deve quebrar o chat */ }
+  }
+
   /* 3-way systemPrompt:
      1. hybrid  (image + file + fix): basePrompt + visionAddendum (includes hermesDecisionMatrix)
      2. image-only: basePrompt + visionAddendum (visual description)
      3. code-only: basePrompt + fixModeInstructions (hermesDecisionMatrix)
-     + §53: diffInstruction53 appended when [DIFF] block present (all paths) */
+     + §53: diffInstruction53 appended when [DIFF] block present (all paths)
+     + grounding real appended quando a pergunta é sobre fine-tuning do Hermes */
   const systemPrompt = (hasImage
     ? basePrompt + visionAddendum
-    : basePrompt + fixModeInstructions) + diffInstruction53;
+    : basePrompt + fixModeInstructions) + diffInstruction53 + groundingAddendum;
 
   /* ── §34: ensureHermesJson — re-prompt se mode=fix retornou texto livre ── */
   /* Chama callFn(extractPrompt) com o diagnóstico já gerado como contexto.   */
