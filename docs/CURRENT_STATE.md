@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ TEST-003 aprovado com gate permanente stdlib `tools/tests/next-performance-budget.test.mjs`: 59/59 PASS; carga inicial 385.551B sob budget 460.800B; HTML/CSS/JS/PNG sob limites individuais; SHA-256 registrado; p95 local máximo 32,70ms sob teto 100ms em 10 rounds íntegros. Backlog: 16/25 concluídos.
+
 ✔ TEST-002 aprovado após correção separada IMP-008: auditoria temporária 3/3 PASS (IDs/nomes acessíveis, foco contido+restaurado, reduced motion prioritário) e regressão afetada 41/41 PASS. Spec temporário removido conforme DECISION-009. Backlog: 15/25 concluídos.
 
 ✔ `next-clean-89` / IMP-008 implementada localmente (sem deploy): `#vcProjectName` e `#vcPrompt` têm nomes acessíveis; modal Smile contém Tab/Shift+Tab e Escape restaura foco ao trigger. Auditoria temporária 3/3 PASS; regressão App Shell + Atomic Core 41/41 PASS. Backlog: 14/25 concluídos; TEST-002 pronto para recertificação.
