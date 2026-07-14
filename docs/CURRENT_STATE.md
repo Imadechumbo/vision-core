@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ ADR-001 aprovada e registrada como DECISION-023: projetos persistidos são autenticados, têm ownership derivado exclusivamente da sessão e seleção explícita no Next; visitante fica efêmero e não entra em `projects.json`. Evidência real: `GET /api/projects` atual expõe todo o banco sem auth e `POST` confia em `body.user_id`; a correção ficou corretamente separada em IMP-001. Backlog: 2/24 concluídos; ADR-002 e IMP-001 desbloqueados.
+
 ✔ REL-001 do Engineering Executive Backlog V2 concluída: `e4eee79c` foi confirmado como ancestral do HEAD reconciliado; `codex/next-rc-baseline` foi criada em `origin` como referência revisável. Antes do push, todos os workflows foram inspecionados: deploys por `push` aceitam somente `main`, e Pages/mirror continuam com `if: false`. Nenhum PR, merge ou deploy foi executado. O dashboard e o Kanban de `docs/VISION_CORE_IMPLEMENTATION_MASTER_PLAN.md` agora registram 1/24 concluído e ADR-001/003/004/005 + IMP-006 em Ready.
 
 ✔ Regressão de grounding do Chat real corrigida e deployada no EB `v116-a8189457-hermes-grounding`: o workflow agora inclui e verifica o documento de grounding; ausência falha com 503. A frase exata reportada foi confirmada pelo composer público. Teste permanente e evidências: `docs/session_logs/2026-07-14-hermes-ui-grounding-regression.md`.
@@ -97,7 +99,7 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 
 # PRÓXIMA PRIORIDADE
 
-Executar a Onda 1 do `docs/VISION_CORE_IMPLEMENTATION_MASTER_PLAN.md`: ADR-001/003/004/005 e IMP-006 estão Ready após REL-001. Começar por ADR-001, confrontando contratos reais de `/api/projects` com as regras existentes de auth/ownership; não implementar IMP-001 antes da decisão registrada. Comando inicial recomendado: `rg -n "api/projects|project_id|projectId" backend frontend tests docs/API_CONTRACT.md docs/DECISIONS.md`.
+Continuar a Onda 1 do `docs/VISION_CORE_IMPLEMENTATION_MASTER_PLAN.md`: ADR-002/003/004/005 e IMP-001/006 estão Ready. Próximo item: ADR-002, mapeando armazenamento real de chat/sessões e retenção antes de qualquer implementação. Comando inicial recomendado: `rg -n "chat/history|conversation|session|messages|localStorage" backend frontend/assets/vision-core-next-clean.js docs/API_CONTRACT.md docs/DECISIONS.md`.
 
 ---
 

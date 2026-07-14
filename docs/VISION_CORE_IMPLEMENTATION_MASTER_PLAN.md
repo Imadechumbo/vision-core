@@ -28,13 +28,13 @@ Fluxo permitido: `ADR → IMP → TEST → REL → OPS`. Uma falha de TEST cria 
 | REL | 2 |
 | OPS | 4 |
 | Total | 24 |
-| Concluídos | 1 |
-| Pendentes | 23 |
-| Bloqueados por dependência | 18 |
+| Concluídos | 2 |
+| Pendentes | 22 |
+| Bloqueados por dependência | 16 |
 | Critical Path | 17 itens |
 | Paralelizáveis | 13 itens (54%) |
 
-Percentual concluído por trilha: Arquitetura 0%; Desenvolvimento 0%; Certificação 0%; Release 50%; Operação 0%.
+Percentual concluído por trilha: Arquitetura 14%; Desenvolvimento 0%; Certificação 0%; Release 50%; Operação 0%.
 
 ## 4. Trilha A — ADRs
 
@@ -42,7 +42,7 @@ Percentual concluído por trilha: Arquitetura 0%; Desenvolvimento 0%; Certifica�
 
 - **Objetivo/contexto/problema:** definir identidade, ownership, CRUD e seleção de projeto antes de integrar `/api/projects`; hoje o backend existe e o Next não possui contexto normativo.
 - **Alternativas:** contexto global; projeto explícito por sessão; projeto implícito por missão.
-- **Decisão tomada:** **Proposto** — projeto explícito, autenticado e selecionável; confirmar antes de aprovar.
+- **Decisão tomada:** **Aprovado** — projeto explícito, autenticado e selecionável; ownership derivado somente da sessão. Visitante permanece efêmero e não sincronizado (DECISION-023).
 - **Consequências/impacto:** histórico, timeline e logs ganham `project_id`; UI precisa de vazio/erro/reload; elimina estado ad hoc.
 - **Riscos:** cross-project leak e seleção stale.
 - **Revisão futura:** quando multi-tenant ou compartilhamento exigir novo modelo.
@@ -322,7 +322,7 @@ Bloqueios entre trilhas: REL-001 abre A/B; ADRs abrem IMP/TEST; TEST-004 abre IM
 
 | Backlog | Ready | Doing | Review | Done |
 |---|---|---|---|---|
-| ADR-002,006,007; IMP-001–005,007; TEST-001–004; REL-002; OPS-001–004 | ADR-001,003,004,005; IMP-006 | — | — | REL-001 |
+| ADR-006,007; IMP-002–005,007; TEST-001–004; REL-002; OPS-001–004 | ADR-002,003,004,005; IMP-001,006 | — | — | REL-001; ADR-001 |
 
 Nenhum item é marcado Done apenas porque sua capacidade predecessora existe; este backlog mede o trabalho de substituição a partir da V2.
 
