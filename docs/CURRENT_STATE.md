@@ -27,7 +27,7 @@ Deploy Produção
 `next-clean-74` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real contra `https://visioncoreai.pages.dev/vision-core-next.html`: cache-bust servido (`?v=next-clean-74` em CSS e JS, HTTP 200), menu lateral reorganizado presente (2 `.vc-nav-group`, rótulos "Atividade"/"Avançado", 7 itens fixos como filhos diretos de `.vc-nav`).
 
 Cache Bust
-next-clean-93 (publicado em produção em 2026-07-14; alias principal e deployment `d70e8686.visioncoreai.pages.dev` confirmados servindo o cache-bust novo)
+next-clean-94 (publicado em produção em 2026-07-14; alias principal e deployment `f89b860c.visioncoreai.pages.dev` confirmados servindo o cache-bust novo)
 
 Último Commit
 
@@ -35,12 +35,12 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Último Deploy
 
-`d70e8686.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-93`
+`f89b860c.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-94`
 
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
-✔ `next-clean-94` implementado localmente, sem deploy: Atomic Core reduzido para até 260px e reposicionado como indicador `sticky` limitado por `#vcChatScroll`, acima do composer e responsivo até 390px. O Chat agora usa estado central `requesting → revealing → settling → idle`; `/api/chat` permanece JSON completo e a UI faz progressive reveal em grupos de palavras, mantendo Action até o último bloco. Erro, timeout, cancelamento, troca de rota e unload convergem pelo mesmo Retorno. `aria-live` fica suspenso durante a revelação e `VCMotion=reduced` apresenta tudo imediatamente. Teste dirigido Atomic Core/Chat: 34/34 PASS; App Shell + Atomic: 54/54 PASS; suíte permanente Next: 140/140 PASS em 57,0s, 4 workers, sem retry; Pages 11/11; performance 59/59 (406.602B, p95 máximo 42,13ms); pairing 13/13; security hardening PASS; `node --check` e `git diff --check` PASS.
+✔ `next-clean-94` publicado em produção a partir de `5353cfdb`: Atomic Core reduzido para até 260px e reposicionado como indicador `sticky` limitado por `#vcChatScroll`, acima do composer e responsivo até 390px. O Chat agora usa estado central `requesting → revealing → settling → idle`; `/api/chat` permanece JSON completo e a UI faz progressive reveal em grupos de palavras, mantendo Action até o último bloco. Erro, timeout, cancelamento, troca de rota e unload convergem pelo mesmo Retorno. Package SHA-256 `0081f95f7a86a2ebbf3065ced0427f9da5008db1ae1d05d2773c5b859b459351`; deployment `https://f89b860c.visioncoreai.pages.dev`. Alias, raiz, rotas Next, assets e manifesto confirmados por hashes; navegador real confirmou Hero/Core/composer sem sobreposição, assets `next-clean-94` e console limpo. Teste dirigido Atomic Core/Chat: 34/34 PASS; App Shell + Atomic: 54/54 PASS; suíte permanente Next: 140/140 PASS em 57,0s, 4 workers, sem retry; Pages 11/11; performance 59/59 (406.602B, p95 máximo 42,13ms); pairing 13/13; security hardening PASS; `node --check` e `git diff --check` PASS.
 
 ✔ `next-clean-93` publicado em produção: menu de usuário nativo e persistente no header reutiliza conta/Settings e `POST /api/auth/logout`; logout local é imediato, limpa token, Workspace/conversa/mensagens e restaura a Hero visitante com Google. Os três planos são cards inteiramente selecionáveis; PRO/Enterprise comunicam disponibilidade/interesse sem request, checkout ou backend fictício. Commit `b1d5b1f6`; package SHA-256 `663bfaa27f14b06ea8435799ff97cd8ad92ddcbbbe2eccbd4cd708e3f657e5a8`; deployment `https://d70e8686.visioncoreai.pages.dev`. Gates: dirigido 40/40; Pages 11/11; pairing 13/13; performance 59/59 (402.866B, p95 máximo 31,85ms); Next 137/137 sem retry em 49,1s. Smoke HTTP confirmou raiz, rota canônica, assets e manifesto; navegador real confirmou Hero/planos e seleção PRO sem envio de dados.
 

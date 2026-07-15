@@ -4,11 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
-## next-clean-94 (2026-07-14, não deployado)
+## next-clean-94 (2026-07-14, produção)
 
 - Atomic Core virou indicador periférico `sticky` do Chat, até 260px no desktop e reduzido no mobile, sempre limitado pela conversa e acima do composer.
 - Chat ganhou estado central `requesting/revealing/settling/idle`; Action permanece ativo até o fim da apresentação visual e erros/cancelamentos usam o mesmo Retorno.
 - Como `/api/chat` entrega JSON completo, a resposta usa progressive reveal local em grupos naturais — não streaming real — com acessibilidade controlada e resposta integral preservada.
+- Publicado a partir de `5353cfdb` em `f89b860c.visioncoreai.pages.dev`; package SHA-256 `0081f95f7a86a2ebbf3065ced0427f9da5008db1ae1d05d2773c5b859b459351`. Alias, raiz, rotas Next, bundles e cache-bust foram confirmados por hash e navegador real.
 
 ## next-clean-93 (2026-07-14, produção)
 
