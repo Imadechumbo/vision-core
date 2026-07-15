@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="vc-api-base-url" content="https://visioncore-api-gateway.weiganlight.workers.dev">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-90">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-90" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-92">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-92" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -68,12 +68,12 @@
           </span>
         </div>
         <span class="vc-agent-badge" id="vcAgentBadge" role="status" aria-label="Status do agente local" data-state="disconnected"></span>
-        <div class="vc-project-context" aria-label="Projeto ativo">
-          <label for="vcProjectSelect">Projeto</label>
-          <select id="vcProjectSelect" disabled><option>Temporário</option></select>
-          <input type="text" id="vcProjectName" aria-label="Nome do novo projeto" placeholder="Novo projeto" maxlength="120" disabled>
+        <div class="vc-project-context" aria-label="Workspace atual">
+          <label for="vcProjectSelect">Workspace</label>
+          <select id="vcProjectSelect" disabled><option>Workspace temporário</option></select>
+          <input type="text" id="vcProjectName" aria-label="Nome do novo Workspace" placeholder="Novo Workspace" maxlength="120" disabled>
           <button type="button" id="vcProjectCreate" disabled>Criar</button>
-          <span id="vcProjectStatus" role="status" aria-live="polite">Projeto temporário</span>
+          <span id="vcProjectStatus" role="status" aria-live="polite">Workspace temporário</span>
           <button type="button" id="vcProjectRetry" hidden>Tentar novamente</button>
           <label for="vcConversationSelect">Conversa</label>
           <select id="vcConversationSelect" disabled><option>Efêmera</option></select>
@@ -124,30 +124,37 @@
           <div class="vc-agent" data-agent="archivist"><i>AR</i><span>Archivist</span><small>Memory Guard</small></div>
           <div class="vc-agent" data-agent="github"><i>GH</i><span>GitHub Agent</span><small>PR / CI / Release</small></div>
         </section>
-        <section class="vc-chat-onboarding" id="vcChatOnboarding" aria-labelledby="vcOnboardingTitle">
+        <section class="vc-chat-onboarding" id="vcChatOnboarding" aria-labelledby="vcOnboardingTitle" aria-live="polite">
           <p class="vc-kicker">VISION CORE NEXT</p>
           <h1 id="vcOnboardingTitle">Engenharia guiada por evidências.</h1>
-          <p>Detecta → entende → corrige → valida → protege → aprende.</p>
+          <p id="vcOnboardingLead">Detecta → entende → corrige → valida → protege → aprende.</p>
+          <div id="vcHeroVisitor">
           <div class="vc-onboarding-plans" aria-label="Planos">
-            <article class="is-selected" aria-label="Plano Free selecionado"><strong>FREE</strong><span>5 missões por mês · 1 projeto · sem cartão</span><small>Plano selecionado</small></article>
+            <article class="is-selected" aria-label="Plano Free selecionado"><strong>FREE</strong><span>5 missões por mês · 1 Workspace · sem cartão</span><small>Plano selecionado</small></article>
             <article><strong>PRO</strong><span>Missões ilimitadas · GitHub e Quality Gates</span><small>Consulte a disponibilidade</small></article>
-            <article><strong>ENTERPRISE</strong><span>Multi-projeto · workers · SSO</span><small>Em breve</small></article>
+            <article><strong>ENTERPRISE</strong><span>Multi-Workspace · workers · SSO</span><small>Em breve</small></article>
           </div>
           <div class="vc-onboarding-account" id="vcOnboardingAccount">
-            <p id="vcOnboardingAccountCopy">Entre para salvar projetos, conversas e histórico.</p>
+            <p id="vcOnboardingAccountCopy">Entre para salvar Workspaces, conversas e histórico.</p>
             <a id="vcOnboardingGoogle" href="#">Continuar com Google</a>
           </div>
           <div class="vc-onboarding-actions">
             <button type="button" id="vcOnboardingStart">Iniciar primeira missão</button>
             <button type="button" data-smile-open>Ver tutorial</button>
           </div>
+          </div>
+          <div class="vc-hero-auth" id="vcHeroAuthenticated" hidden>
+            <div class="vc-hero-recent" id="vcHeroRecent" hidden aria-label="Workspaces recentes"></div>
+            <div class="vc-onboarding-actions">
+              <button type="button" id="vcHeroCreateWorkspace">Criar primeiro Workspace</button>
+              <button type="button" id="vcHeroContinueWorkspace" hidden>Continuar Workspace</button>
+              <button type="button" id="vcHeroNewMission">Iniciar primeira missão</button>
+              <button type="button" data-smile-open>Ver tutorial</button>
+            </div>
+          </div>
         </section>
         </div>
         <div class="vc-chat-stream" id="vcChatStream" aria-live="polite">
-          <article class="vc-message vc-message-system">
-            <span>VISION CORE</span>
-            <p>Interface limpa inicializada. O Atomic Core entra em Action automaticamente durante uma missão e volta para Idle ao concluir.</p>
-          </article>
           <div class="vc-hermes-hint" id="vcHermesHint" hidden>
             <div class="vc-hint-header">
               <span class="vc-hint-icon">!</span>

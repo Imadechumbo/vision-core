@@ -4,6 +4,13 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-92 (2026-07-14, não deployado)
+
+- Hero do Chat agora deriva quatro estados mutuamente exclusivos: visitante, conta sem Workspace, conta com Workspaces reais e trabalho iniciado; neste último, `hidden` remove toda a Hero do layout.
+- Nomenclatura visual do contexto de trabalho passou a Workspace sem renomear endpoints, propriedades ou ownership internos de projetos.
+- Conta autenticada reutiliza nome, seleção persistida, até três Workspaces recentes e os fluxos existentes de criação/conversa; nenhuma store, autenticação ou área de projetos paralela foi criada.
+- Cobertura permanente inclui os cinco viewports normativos e corrigiu o wrap do contexto no header a 1366 px.
+
 ## next-clean-91 (2026-07-14, não deployado)
 
 - Hero inicial passou a usar a faixa superior inteira: onboarding à esquerda e Atomic Core intacto à direita; mobile usa uma coluna e o histórico substitui o onboarding após a primeira mensagem.

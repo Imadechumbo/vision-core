@@ -179,6 +179,14 @@
   var onboardingStart = document.getElementById('vcOnboardingStart');
   var onboardingGoogle = document.getElementById('vcOnboardingGoogle');
   var onboardingAccountCopy = document.getElementById('vcOnboardingAccountCopy');
+  var onboardingTitle = document.getElementById('vcOnboardingTitle');
+  var onboardingLead = document.getElementById('vcOnboardingLead');
+  var heroVisitor = document.getElementById('vcHeroVisitor');
+  var heroAuthenticated = document.getElementById('vcHeroAuthenticated');
+  var heroRecent = document.getElementById('vcHeroRecent');
+  var heroCreateWorkspace = document.getElementById('vcHeroCreateWorkspace');
+  var heroContinueWorkspace = document.getElementById('vcHeroContinueWorkspace');
+  var heroNewMission = document.getElementById('vcHeroNewMission');
   var stream = document.getElementById('vcChatStream');
   var featurePanel = document.getElementById('vcFeaturePanel');
   var featureTitle = document.getElementById('vcFeatureTitle');
@@ -394,7 +402,7 @@
     missions: { title: 'Missions', status: 'PATCH + DRY-RUN + APPLY BLOQUEADO', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Gerar Patch roda o pipeline real de diagnóstico + apply-patch, sem escrever nada sozinho — só gera diff para download. Dry-Run Real (abaixo) enfileira execução real no Vision Agent Local, em modo simulação (nunca escreve no disco). Apply-patch real via agente aparece abaixo, mas o botão fica bloqueado até existir token de pareamento real por agente (agent_id sozinho não autentica ninguém).', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
     factory: { title: 'Software Factory', status: 'ATIVO', agents: ['openclaw', 'pi', 'hermes'], text: 'Descreva o projeto em linguagem simples. O Arquiteto analisa e gera a estrutura automaticamente via API real.', actions: [] },
     agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }, { label: 'Métricas agentes', path: '/api/metrics/agents' }] },
-    logs: { title: 'Logs', status: 'SAFE READ', agents: ['archivist'], text: 'Eventos operacionais redigidos e correlacionados por projeto.', actions: [] },
+    logs: { title: 'Logs', status: 'SAFE READ', agents: ['archivist'], text: 'Eventos operacionais redigidos e correlacionados por Workspace.', actions: [] },
     github: { title: 'GitHub', status: 'PR c/ CONFIRMAÇÃO', agents: ['github'], text: 'Criação de PR real disponível abaixo — exige formulário completo + confirmação dupla antes de disparar.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
     vault: { title: 'Vault', status: 'ROLLBACK DISPONÍVEL', agents: ['aegis', 'archivist'], text: 'Snapshots do banco de projetos e rollback. Rollback sobrescreve o estado atual — confirmação dupla obrigatória.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
     metrics: { title: 'Métricas', status: 'SAFE READ', agents: ['goCore', 'aegis'], text: 'Métricas reais em modo leitura.', actions: [{ label: 'Resumo', path: '/api/metrics/summary' }, { label: 'Agentes', path: '/api/metrics/agents' }, { label: 'DORA', path: '/api/dora-metrics' }, { label: 'Memória', path: '/api/metrics/memory' }] },
@@ -459,11 +467,11 @@
   var smileGuide = [
     ['Bem-vindo ao Vision Core Next', 'Um ambiente integrado para conversar, construir e validar software.'],
     ['Chat principal', 'O Chat é a primeira interação e mantém o contexto do trabalho.'],
-    ['Projetos e persistência', 'Entre para salvar projetos, conversas e histórico.'],
+    ['Workspace e persistência', 'Entre para salvar Workspaces, conversas e histórico.'],
     ['Composer e primeira missão', 'Descreva o objetivo no único campo de missão do produto.'],
     ['Software Factory', 'Arquitetura, implementação e validação acontecem no mesmo ambiente.'],
     ['Missões', 'Acompanhe execução, patches e evidências com gates explícitos.'],
-    ['Timeline', 'Consulte o histórico contínuo da engenharia por projeto.'],
+    ['Timeline', 'Consulte o histórico contínuo da engenharia por Workspace.'],
     ['Agentes', 'Agentes especializados compartilham o mesmo estado e autoridade.'],
     ['Atomic Core', 'O núcleo mostra Idle, Action e Retorno durante uma missão.'],
     ['GitHub', 'Revise integrações e prepare mudanças sem ações implícitas.'],
@@ -472,10 +480,61 @@
     ['Iniciar primeira missão', 'Feche o tutorial e descreva o que deseja construir.']
   ];
 
+  var currentAccountUser = null;
+  var currentProjects = [];
+
+  function deriveChatHeroState() {
+    if (activeFeature !== 'chat' || chatRequestInFlight || (stream && stream.querySelector('.vc-message-user')) || (smileModal && !smileModal.hidden)) return 'work';
+    if (!currentAccountUser) return 'visitor';
+    return currentProjects.length ? 'workspaces' : 'empty';
+  }
+
+  function firstName(user) {
+    var source = String((user && (user.name || user.email)) || 'usuário').trim().split('@')[0].split(/\s+/)[0];
+    return source ? source.charAt(0).toUpperCase() + source.slice(1) : 'Usuário';
+  }
+
+  function renderHeroRecent() {
+    if (!heroRecent) return;
+    heroRecent.textContent = '';
+    var selectedId = projectSelect ? projectSelect.value : '';
+    var recentProjects = currentProjects.filter(function (project) { return project.id === selectedId; })
+      .concat(currentProjects.filter(function (project) { return project.id !== selectedId; }));
+    recentProjects.slice(0, 3).forEach(function (project) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = project.name;
+      button.addEventListener('click', function () {
+        if (projectSelect) projectSelect.value = project.id;
+        saveActiveProject(currentProjectUserId, project.id);
+        loadConversations(project.id);
+      });
+      heroRecent.appendChild(button);
+    });
+    heroRecent.hidden = currentProjects.length === 0;
+  }
+
   function updateChatOnboarding() {
     if (!chatOnboarding || !stream) return;
-    var hasConversation = !!stream.querySelector('.vc-message-user');
-    chatOnboarding.hidden = activeFeature !== 'chat' || hasConversation || chatRequestInFlight || (smileModal && !smileModal.hidden);
+    var state = deriveChatHeroState();
+    chatOnboarding.dataset.state = state;
+    chatOnboarding.hidden = state === 'work';
+    if (state === 'work') return;
+    var visitor = state === 'visitor';
+    if (heroVisitor) heroVisitor.hidden = !visitor;
+    if (heroAuthenticated) heroAuthenticated.hidden = visitor;
+    if (visitor) {
+      if (onboardingTitle) onboardingTitle.textContent = 'Engenharia guiada por evidências.';
+      if (onboardingLead) onboardingLead.textContent = 'Detecta → entende → corrige → valida → protege → aprende.';
+      return;
+    }
+    var hasWorkspaces = state === 'workspaces';
+    if (onboardingTitle) onboardingTitle.textContent = 'Bem-vindo, ' + firstName(currentAccountUser) + '.';
+    if (onboardingLead) onboardingLead.textContent = hasWorkspaces ? 'Continue seu projeto.' : 'Seu workspace está pronto.';
+    if (heroCreateWorkspace) heroCreateWorkspace.hidden = hasWorkspaces;
+    if (heroContinueWorkspace) heroContinueWorkspace.hidden = !hasWorkspaces;
+    if (heroNewMission) heroNewMission.textContent = hasWorkspaces ? 'Nova missão' : 'Iniciar primeira missão';
+    renderHeroRecent();
   }
 
   function renderSmileGuide() {
@@ -599,7 +658,7 @@
     if (pageHeadEl) pageHeadEl.hidden = isChatTab;
     if (pageHeadTitleEl) pageHeadTitleEl.textContent = feature.title;
     if (pageHeadStatusEl) pageHeadStatusEl.textContent = feature.status;
-    if (featurePanel) featurePanel.hidden = activeFeature === 'factory';
+    if (featurePanel) featurePanel.hidden = activeFeature === 'factory' || activeFeature === 'chat';
     hideFeatureViz();
     renderFeatureActions(feature);
     if (githubPrForm) githubPrForm.hidden = activeFeature !== 'github';
@@ -1008,6 +1067,15 @@
     openSmileGuide(event);
   });
   if (onboardingStart) onboardingStart.addEventListener('click', function () { if (prompt) prompt.focus(); });
+  if (heroCreateWorkspace) heroCreateWorkspace.addEventListener('click', function () { if (projectNameInput) projectNameInput.focus(); });
+  if (heroContinueWorkspace) heroContinueWorkspace.addEventListener('click', function () {
+    if (projectSelect && projectSelect.value) loadConversations(projectSelect.value);
+    if (prompt) prompt.focus();
+  });
+  if (heroNewMission) heroNewMission.addEventListener('click', function () {
+    if (currentProjects.length && conversationNewBtn && !conversationNewBtn.disabled) conversationNewBtn.click();
+    if (prompt) prompt.focus();
+  });
   if (onboardingGoogle) onboardingGoogle.addEventListener('click', function () {
     if (onboardingAccountCopy) onboardingAccountCopy.textContent = 'Redirecionando para o Google...';
   });
@@ -2795,7 +2863,7 @@
     if (!logList || !logStatus) return;
     logList.textContent = '';
     if (!currentProjectUserId || !projectSelect || !projectSelect.value) {
-      setAsyncStatus(logStatus, 'empty', 'Entre e selecione um projeto para consultar logs.');
+      setAsyncStatus(logStatus, 'empty', 'Entre e selecione um Workspace para consultar logs.');
       return;
     }
     setAsyncStatus(logStatus, 'loading', 'Carregando...');
@@ -2822,17 +2890,19 @@
 
   function setVisitorProjectContext() {
     currentProjectUserId = null;
+    currentProjects = [];
     if (projectSelect) {
       projectSelect.textContent = '';
       var option = document.createElement('option');
-      option.textContent = 'Temporário';
+      option.textContent = 'Workspace temporário';
       projectSelect.appendChild(option);
       projectSelect.disabled = true;
     }
     if (projectNameInput) { projectNameInput.value = ''; projectNameInput.disabled = true; }
     if (projectCreateBtn) projectCreateBtn.disabled = true;
     resetConversationContext();
-    setProjectStatus('Projeto temporário', false);
+    setProjectStatus('Workspace temporário', false);
+    updateChatOnboarding();
   }
 
   function saveActiveProject(userId, projectId) {
@@ -2842,6 +2912,7 @@
   function renderProjects(user, projects, preferredId) {
     if (!projectSelect || !user) return;
     currentProjectUserId = user.id;
+    currentProjects = projects.slice();
     projectSelect.textContent = '';
     projects.forEach(function (project) {
       var option = document.createElement('option');
@@ -2861,8 +2932,9 @@
       setProjectStatus('', false);
       loadConversations(projectSelect.value);
     } else {
-      setProjectStatus('Nenhum projeto. Crie o primeiro.', false);
+      setProjectStatus('Nenhum Workspace. Crie o primeiro.', false);
     }
+    updateChatOnboarding();
   }
 
   function loadProjects(user, preferredId) {
@@ -2870,7 +2942,7 @@
     currentProjectUserId = user.id;
     if (projectSelect) projectSelect.disabled = true;
     if (projectCreateBtn) projectCreateBtn.disabled = true;
-    setProjectStatus('Carregando projetos...', false);
+    setProjectStatus('Carregando Workspaces...', false);
     apiRequest('/api/projects').then(function (data) {
       renderProjects(user, Array.isArray(data.projects) ? data.projects : [], preferredId);
     }).catch(function (err) {
@@ -2884,7 +2956,7 @@
     var name = projectNameInput ? projectNameInput.value.trim() : '';
     if (!name || !currentProjectUserId) return;
     if (projectCreateBtn) projectCreateBtn.disabled = true;
-    setProjectStatus('Criando projeto...', false);
+    setProjectStatus('Criando Workspace...', false);
     apiRequest('/api/projects', { method: 'POST', body: { name: name } }).then(function (data) {
       if (projectNameInput) projectNameInput.value = '';
       loadProjects({ id: currentProjectUserId }, data.project && data.project.id);
@@ -2916,19 +2988,20 @@
   }
 
   function setAccountLoggedInUI(user) {
+    currentAccountUser = user;
     if (accountCopy) accountCopy.textContent = 'Logado como ' + (user && user.email ? user.email : '—') + '.';
     if (accountForm) accountForm.hidden = true;
     if (accountLogged) accountLogged.hidden = false;
-    if (onboardingAccountCopy) onboardingAccountCopy.textContent = 'Conectado como ' + (user && (user.name || user.email) ? (user.name || user.email) : 'usuário') + '.';
-    if (onboardingGoogle) onboardingGoogle.hidden = true;
+    updateChatOnboarding();
     loadProjects(user);
   }
 
   function setAccountLoggedOutUI() {
+    currentAccountUser = null;
     if (accountCopy) accountCopy.textContent = ACCOUNT_DEFAULT_COPY;
     if (accountForm) accountForm.hidden = false;
     if (accountLogged) accountLogged.hidden = true;
-    if (onboardingAccountCopy) onboardingAccountCopy.textContent = 'Entre para salvar projetos, conversas e histórico.';
+    if (onboardingAccountCopy) onboardingAccountCopy.textContent = 'Entre para salvar Workspaces, conversas e histórico.';
     if (onboardingGoogle) onboardingGoogle.hidden = false;
     setVisitorProjectContext();
   }

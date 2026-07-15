@@ -144,6 +144,39 @@ test('onboarding and tutorial remain bounded at 375px and hidden leaves layout',
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
+for (const viewport of [
+  { width: 375, height: 667 },
+  { width: 390, height: 844 },
+  { width: 768, height: 1024 },
+  { width: 1366, height: 768 },
+  { width: 1920, height: 1080 }
+]) {
+  test(`empty-chat Hero remains usable at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto(NEXT_URL);
+    const layout = await page.evaluate(() => {
+      const onboarding = document.querySelector('#vcChatOnboarding').getBoundingClientRect();
+      const atomic = document.querySelector('[data-atomic-core]');
+      const atomicRect = atomic.getBoundingClientRect();
+      const composer = document.querySelector('#vcComposer').getBoundingClientRect();
+      return {
+        overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        onboardingLeft: onboarding.left,
+        onboardingRight: onboarding.right,
+        viewportWidth: document.documentElement.clientWidth,
+        atomicVisible: getComputedStyle(atomic).display !== 'none',
+        overlapsAtomic: onboarding.left < atomicRect.right && onboarding.right > atomicRect.left && onboarding.top < atomicRect.bottom && onboarding.bottom > atomicRect.top,
+        composerWidth: composer.width
+      };
+    });
+    expect(layout.overflow).toBe(false);
+    expect(layout.onboardingLeft).toBeGreaterThanOrEqual(0);
+    expect(layout.onboardingRight).toBeLessThanOrEqual(layout.viewportWidth);
+    expect(layout.composerWidth).toBeGreaterThan(0);
+    if (layout.atomicVisible) expect(layout.overlapsAtomic).toBe(false);
+  });
+}
+
 test('Software Factory uses the composer text without a second textarea or auto-run on selection', async ({ page }) => {
   let missionComposerPosts = 0;
   await page.route(`${API}/api/sf/mission-composer`, (route) => {
@@ -305,7 +338,7 @@ test('short-header pages do not reserve the old Atomic Core / chat intro vertica
     await page.waitForTimeout(100);
     return page.evaluate(() => {
       const head = document.querySelector('#vcPageHead:not([hidden]), #vcBrandLockup:not([hidden])');
-      const panel = document.querySelector('#factory:not([hidden]), #vcFeaturePanel:not([hidden])');
+      const panel = document.querySelector('#factory:not([hidden]), #vcFeaturePanel:not([hidden]), #vcChatHero:not([hidden])');
       const atomic = document.querySelector('[data-atomic-core]');
       const stream = document.querySelector('#vcChatStream');
       const scroll = document.querySelector('#vcChatScroll');
@@ -342,9 +375,8 @@ test('short-header pages do not reserve the old Atomic Core / chat intro vertica
   expect(chat.atomicDisplay).toBe('block');
   expect(chat.streamDisplay).toBe('flex');
   expect(chat.scrollDisplay).toBe('flex');
-  expect(chat.featurePanelHidden).toBe(false);
-  expect(chat.internalHeadDisplay).not.toBe('none');
-  expect(chat.gap, 'Chat still owns the large Atomic Core/chat stream composition').toBeGreaterThan(250);
+  expect(chat.featurePanelHidden).toBe(true);
+  expect(chat.gap, 'Chat Hero should start directly below the short header').toBeLessThanOrEqual(80);
 });
 
 test('Security Lab: missing status endpoints still render a calm, non-error fallback', async ({ page }) => {

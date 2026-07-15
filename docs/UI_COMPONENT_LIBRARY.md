@@ -66,7 +66,7 @@ Escopo: componentes reais em `vision-core-next-clean.{css,js}`. Fora do escopo: 
 
 ### Estado vazio do Chat
 
-**Estrutura:** `#vcChatHero` agrupa `#vcChatOnboarding` e o Atomic Core numa unica faixa superior responsiva. O onboarding reutiliza o estado de `#vcChatStream`, o composer e o OAuth existente; aparece apenas no Chat sem mensagens reais e sem missao/tutorial ativo. Planos sao informativos e nao implementam billing. Ao surgir a primeira mensagem, o onboarding usa `hidden` e o historico ocupa seu lugar no fluxo.
+**Estrutura:** `#vcChatHero` agrupa `#vcChatOnboarding` e o Atomic Core numa unica faixa superior responsiva. `deriveChatHeroState()` escolhe somente `visitor`, `empty`, `workspaces` ou `work`; os estados autenticados reutilizam conta, `/api/projects`, seleção e conversas reais. Planos e Google aparecem apenas para visitante. Ao surgir mensagem/request/tutorial, `hidden` remove a Hero e o histórico ocupa seu lugar no fluxo.
 
 ### Modal Tutorial
 
@@ -74,7 +74,7 @@ Escopo: componentes reais em `vision-core-next-clean.{css,js}`. Fora do escopo: 
 **Estados/alinhamento:** `.vc-message-user { align-self: flex-end }` (direita) — demais tipos alinhados à esquerda (default do flex).
 **Eventos:** `appendMessage(kind, title, text)` retorna o elemento (permite removê-lo depois, usado pro indicador "Pensando...").
 **Acessibilidade:** `aria-live="polite"` no stream.
-**Checklist:** [x] usuário à direita, sistema/assistente à esquerda · [x] rolagem automática (`scrollIntoView`) · [x] estado inicial discreto (1 mensagem de sistema, sem tom promocional).
+**Checklist:** [x] usuário à direita, sistema/assistente à esquerda · [x] rolagem automática (`scrollIntoView`) · [x] Chat inicia vazio, sem mensagem técnica artificial.
 
 ## Atomic Core
 
