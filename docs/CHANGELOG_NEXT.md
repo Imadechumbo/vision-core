@@ -4,11 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
-## next-clean-99 (2026-07-15, não deployado)
+## next-clean-99 (2026-07-15, produção)
 
 - A zona exclusiva do Atomic Core ganhou controle nativo e acessível para recolher/restaurar o painel; fechado, o Grid amplia estruturalmente a coluna textual e mantém o HUD montado, preservando Action/Idle/Settling.
 - A preferência dura somente na aba via `sessionStorage`; Settings não expõe mais “Mostrar Atomic Core”, enquanto intensidade e os seis ajustes de movimento permanecem inalterados.
 - Validação real em 1440×900: coluna textual `760px → 894,62px → 760px`, Core restaurado com `154,38px` e console sem erros. Suíte Next 140/140; Chat + Atomic 54/54; Pages 11/11.
+- Publicado a partir de `9f981cf9` em `cd0ce822.visioncoreai.pages.dev`; package SHA-256 `57bb42e740c6e37224aa8dc933540d1403fc2a1dd77efd3e7a5b759641ac37ee`. Deployment imutável e alias principal confirmados servindo o cache-bust novo; smoke produtivo validou recolhimento/restauração e console limpo.
 
 ## next-clean-98 (2026-07-15, produção)
 
