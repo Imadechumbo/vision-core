@@ -61,6 +61,21 @@ a { color: inherit; text-decoration: none; }
   --atomic-scale: .337;
   border-right: 0;
   border-left: 1px solid rgba(255, 255, 255, .07);
+  /* Achado real (2026-07-15) -- agentes "piscando": herdar height:100vh da
+     .vc-sidebar base (mais align-self:stretch, padrão de item de grid)
+     fazia a rail inteira ocupar a viewport inteira. Uma position:sticky
+     do tamanho da tela inteira contendo os 10 agentes animando todo
+     frame força a composição a tratar a caixa inteira como região suja a
+     cada frame, não só os ~224px que realmente mudam -- confirmado
+     isolando: só encolher essa caixa (independente de sticky/static)
+     devolve o frame rate normal; contain/will-change no HUD ou no painel
+     não resolveram sozinhos. align-self:end + height:auto encolhe a caixa
+     pro próprio conteúdo (rótulo + toggle + painel de 224px); bottom:0
+     mantém ancorado no canto inferior, onde o HUD já vive visualmente. */
+  align-self: end;
+  height: auto;
+  top: auto;
+  bottom: 0;
 }
 
 .vc-atomic-sidebar .vc-side-top { justify-content: space-between; }
@@ -272,6 +287,13 @@ a { color: inherit; text-decoration: none; }
   min-height: 100vh;
   padding: 22px clamp(24px, 5vw, 72px) 34px;
 }
+/* Achado real (2026-07-15): esse padding-right era calibrado pra quando
+   .vc-main era a última coluna (2 colunas, direto contra a borda/scrollbar
+   real) -- com a sidebar direita do Atomic Core como 3ª coluna, ele sobra
+   como vão morto entre o texto e a rail (a própria rail já tem padding e
+   borda, não precisa desse respiro extra). Só reduz quando a rail está de
+   fato ocupando espaço (aba Chat). */
+.vc-app-shell[data-active-feature="chat"] .vc-main { padding-right: 16px; }
 
 .vc-header {
   min-height: 64px;
@@ -1070,6 +1092,15 @@ a { color: inherit; text-decoration: none; }
   border-radius: 14px;
   background: rgba(8, 7, 13, .82);
   box-shadow: 0 22px 70px rgba(0, 0, 0, .35);
+  /* contain:paint (achado real, 2026-07-15 -- agentes "piscando"): a rail
+     do Atomic Core agora fica no canto inferior direito, perto/atrás do
+     composer -- o backdrop-filter precisa reamostrar o que está atrás
+     dele, e com o HUD animando 10 agentes todo frame ali perto, essa
+     reamostragem custou caro o bastante pra derrubar o frame rate pela
+     metade em teste controlado (A/B isolando só essa propriedade). paint
+     containment isola o composer da necessidade de reagir a mudanças de
+     pintura fora da própria caixa. */
+  contain: paint;
   backdrop-filter: blur(18px);
 }
 
