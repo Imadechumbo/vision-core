@@ -453,6 +453,7 @@ test('uses the approved peripheral scale while preserving the safe right edge on
       return {
         scale: Number.parseFloat(getComputedStyle(hud).scale),
         coreWidth: rect.width,
+        textRatio: messageColumn.width / chat.width,
         safeRightGap: chat.right - rect.right,
         messageEdgeDelta: Math.abs(user.right - assistant.right),
         userInsideColumn: user.right <= messageColumn.right + 1,
@@ -465,15 +466,19 @@ test('uses the approved peripheral scale while preserving the safe right edge on
       };
     });
     expect(geometry.scale).toBeCloseTo(viewport.expectedScale, 2);
-    // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados
-    // via margin-right negativo em .vc-atomic-hud, pra dentro do padding
-    // externo de .vc-main -- ainda com folga generosa antes da scrollbar.
-    expect(geometry.safeRightGap, 'the scaled HUD must stay a bounded distance inside the Chat edge').toBeGreaterThanOrEqual(-12);
-    expect(geometry.safeRightGap, 'the work-state HUD must stay close to the peripheral edge').toBeLessThanOrEqual(-4);
+    const expectedRightGap = viewport.width === 1440 ? -16 : -8;
+    expect(geometry.safeRightGap, 'the work-state HUD must keep its responsive peripheral advance').toBeGreaterThanOrEqual(expectedRightGap - 1);
+    expect(geometry.safeRightGap, 'the work-state HUD must keep its responsive peripheral advance').toBeLessThanOrEqual(expectedRightGap + 1);
     expect(geometry.messageEdgeDelta, 'user and assistant bubbles must share the same text-column right edge').toBeLessThanOrEqual(1);
     expect(geometry.userInsideColumn).toBe(true);
     expect(geometry.assistantInsideColumn).toBe(true);
     expect(geometry.messageToCoreGap, 'the shared message column must not enter the Atomic Core region').toBeGreaterThanOrEqual(0);
+    if (viewport.width === 1440) {
+      expect(geometry.textRatio).toBeGreaterThanOrEqual(.69);
+      expect(geometry.textRatio).toBeLessThanOrEqual(.70);
+      expect(geometry.messageToCoreGap).toBeGreaterThanOrEqual(22);
+      expect(geometry.messageToCoreGap).toBeLessThanOrEqual(26);
+    }
     expect(geometry.coreIntersectsUser).toBe(false);
     expect(geometry.coreIntersectsAssistant).toBe(false);
     expect(geometry.coreIntersectsComposer, 'Atomic Core must not intersect the composer').toBe(false);
@@ -764,8 +769,8 @@ test('chat stays in Action through progressive reveal, then passes through settl
   await expect(page.locator('.vc-app-shell')).toHaveAttribute('data-chat-activity', 'requesting');
   await expect(page.locator('[data-atomic-core]')).toHaveAttribute('data-state', 'action');
   await expect(page.locator('.vc-app-shell')).toHaveAttribute('data-chat-activity', 'revealing');
+  await expect.poll(() => page.locator('.vc-message-assistant p').textContent().then((text) => text.length)).toBeGreaterThan(0);
   const partial = await page.locator('.vc-message-assistant p').textContent();
-  expect(partial.length).toBeGreaterThan(0);
   expect(partial.length).toBeLessThan(answer.length);
   await expect(page.locator('#vcChatStream')).toHaveAttribute('aria-live', 'off');
   await expect(page.locator('.vc-message-assistant p')).toHaveText(answer);
@@ -829,6 +834,5 @@ test('sticky Core never overlaps the composer after scrolling a long conversatio
     return { coreBottom: core.bottom, coreRight: core.right, composerTop: composer.top, chatRight: chat.right };
   });
   expect(geometry.coreBottom).toBeLessThanOrEqual(geometry.composerTop - 20);
-  // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados.
-  expect(geometry.coreRight).toBeLessThanOrEqual(geometry.chatRight + 9);
+  expect(geometry.coreRight).toBeLessThanOrEqual(geometry.chatRight + 17);
 });
