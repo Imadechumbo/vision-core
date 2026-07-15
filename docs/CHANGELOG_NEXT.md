@@ -4,11 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
-## next-clean-109 (2026-07-15, não deployado)
+## next-clean-109 (2026-07-15, produção)
 
 - No Chat ativo, HUD avançou até restarem `12,36px` antes da scrollbar real (`clientWidth`), dentro do intervalo seguro 8–16px; zero legendas cortadas ou overflow.
 - A coluna textual avançou junto para `755,89px`/`73,48%`, preservando o vão texto→HUD em `23,99px`; Hero e mobile não mudaram.
 - Atomic + App Shell 55/55 após reprodução isolada de uma variação temporal; suíte Next final 141/141 sem retry; Pages 11/11.
+- Publicado a partir de `79c49341` em `d1cba7bf.visioncoreai.pages.dev`; package SHA-256 `0586a538a36f713ab27e828a36fdf82292cbcf2c54a7496788ff03db0c1b2d5c`. Alias produtivo confirmou `12,36px`, zero clipping/overflow e console limpo.
 
 ## next-clean-108 (2026-07-15, produção)
 
