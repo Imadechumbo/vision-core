@@ -39,15 +39,15 @@ Deploy Produção
 `next-clean-74` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real contra `https://visioncoreai.pages.dev/vision-core-next.html`: cache-bust servido (`?v=next-clean-74` em CSS e JS, HTTP 200), menu lateral reorganizado presente (2 `.vc-nav-group`, rótulos "Atividade"/"Avançado", 7 itens fixos como filhos diretos de `.vc-nav`).
 
 Cache Bust
-next-clean-109 (2026-07-15; alias principal e deployment `d1cba7bf.visioncoreai.pages.dev` confirmados servindo o cache-bust novo)
+next-clean-110 (2026-07-15; alias principal e deployment `29153481.visioncoreai.pages.dev` confirmados servindo o cache-bust novo)
 
 Último Commit
 
-`be04fa96` em `codex/next-rc-baseline` (local e `origin` sincronizados) — cherry-pick de `d14243bd` (`atomic-core-2x-hub-tuning`) sobre `03d1034b`, aplicado na worktree `vision-core-hermes-ui-rca` após confirmar que ambas as worktrees estavam limpas, e push direto pro origin. Cadeia completa da sessão em `atomic-core-2x-hub-tuning`: `57722b8b` (fix overlap/posição/parallax/perf) → `04d19509` (cache-bust 105) → `36df3b22` (redistribuição de colunas) → `d14243bd` (cache-bust 106); cada um cherry-picked em sequência pra `codex/next-rc-baseline` como `47f082bf` → `2d1c1956` → `03d1034b` → `be04fa96`.
+`21aab023` em `codex/next-rc-baseline` (local e `origin` sincronizados). Achado real: Codex tinha commitado e deployado `next-clean-107`/`108`/`109` (6 commits: `9a793b36`→`52e58387`) diretamente nesta worktree — não no padrão de sempre (`atomic-core-2x-hub-tuning` → cherry-pick) — e ficou 6 commits à frente do `origin` sem push antes de bater o limite de uso, com a refatoração de sidebar seguinte 100% editada em disco e não commitada. Retomado nesta mesma worktree (sem replicar em `atomic-core-2x-hub-tuning`, já que o trabalho nasceu aqui): verificado, corrigidos 4 bugs reais, commitado como `21aab023`, e os 7 commits (6 do Codex + 1 desta sessão) pushados juntos pro origin numa única operação.
 
 Último Deploy
 
-`d1cba7bf.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-109`
+`29153481.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-110` (package SHA-256 `cb98ab4f962208397d0099b8a01db1b5baf00ecd46dc74a5a42ab7bb9a9faba2`)
 
 ---
 
