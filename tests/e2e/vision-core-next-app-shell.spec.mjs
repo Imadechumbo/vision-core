@@ -102,53 +102,55 @@ test('all SaaS plans are selectable and unavailable plans stay honest without ne
   expect(writes).toBe(0);
 });
 
-test('empty-chat Hero starts below the header, shares the top row with Atomic Core, and composer stays at the viewport bottom', async ({ page }) => {
+test('empty-chat Hero starts below the header while Atomic Core lives in the independent right sidebar', async ({ page }) => {
   await page.goto(NEXT_URL);
   const layout = await page.evaluate(() => {
     const header = document.querySelector('.vc-header').getBoundingClientRect();
     const hero = document.querySelector('#vcChatHero').getBoundingClientRect();
     const onboarding = document.querySelector('#vcChatOnboarding').getBoundingClientRect();
-    const atomic = document.querySelector('[data-atomic-core]').getBoundingClientRect();
+    const atomic = document.querySelector('[data-atomic-core]');
+    const rail = document.querySelector('#vcAtomicSidebar').getBoundingClientRect();
     const composer = document.querySelector('#vcComposer').getBoundingClientRect();
     return {
       gap: hero.top - header.bottom,
       onboardingTop: onboarding.top,
-      atomicTop: atomic.top,
+      atomicParent: atomic.parentElement.id,
+      railWidth: rail.width,
       composerBottomGap: window.innerHeight - composer.bottom,
       internalBuildCopy: document.querySelector('.vc-brand-copy small')?.textContent || ''
     };
   });
   expect(layout.gap).toBeLessThanOrEqual(40);
-  expect(Math.abs(layout.onboardingTop - layout.atomicTop)).toBeLessThanOrEqual(110);
+  expect(layout.atomicParent).toBe('vcAtomicCorePanel');
+  expect(layout.railWidth).toBeCloseTo(252, 0);
   expect(layout.composerBottomGap).toBeGreaterThanOrEqual(0);
   expect(layout.composerBottomGap).toBeLessThanOrEqual(24);
   expect(layout.internalBuildCopy).toBe('');
 });
 
-test('desktop Hero uses the approved 68/30 proportion, 42px gap, and safe right shift', async ({ page }) => {
+test('desktop shell uses exact 252px left/right sidebars with a fluid center', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(NEXT_URL);
   const layout = await page.evaluate(() => {
-    const hero = document.querySelector('#vcChatHero').getBoundingClientRect();
-    const card = document.querySelector('#vcChatOnboarding').getBoundingClientRect();
-    const atomic = document.querySelector('.vc-chat-hero [data-atomic-core]').getBoundingClientRect();
+    const shell = document.querySelector('.vc-app-shell');
+    const left = document.querySelector('.vc-sidebar:not(.vc-atomic-sidebar)').getBoundingClientRect();
+    const right = document.querySelector('#vcAtomicSidebar').getBoundingClientRect();
+    const main = document.querySelector('.vc-main').getBoundingClientRect();
     return {
-      cardRatio: card.width / hero.width,
-      atomicRatio: atomic.width / hero.width,
-      visualGap: atomic.left - card.right,
-      atomicRightOffset: atomic.right - hero.right,
-      viewportSafety: window.innerWidth - atomic.right
+      columns: getComputedStyle(shell).gridTemplateColumns,
+      leftWidth: left.width,
+      rightWidth: right.width,
+      centerWidth: main.width,
+      total: left.width + main.width + right.width,
+      clientWidth: document.documentElement.clientWidth
     };
   });
-  expect(layout.cardRatio).toBeGreaterThanOrEqual(.67);
-  expect(layout.cardRatio).toBeLessThanOrEqual(.69);
-  expect(layout.atomicRatio).toBeGreaterThanOrEqual(.29);
-  expect(layout.atomicRatio).toBeLessThanOrEqual(.31);
-  expect(layout.visualGap).toBeGreaterThanOrEqual(40);
-  expect(layout.visualGap).toBeLessThanOrEqual(44);
-  expect(layout.atomicRightOffset).toBeGreaterThanOrEqual(23);
-  expect(layout.atomicRightOffset).toBeLessThanOrEqual(25);
-  expect(layout.viewportSafety).toBeGreaterThanOrEqual(40);
+  expect(layout.leftWidth).toBeCloseTo(252, 0);
+  expect(layout.rightWidth).toBeCloseTo(252, 0);
+  expect(layout.centerWidth).toBeGreaterThan(0);
+  expect(layout.total).toBeCloseTo(layout.clientWidth, 0);
+  expect(layout.columns.split(' ')[0]).toBe('252px');
+  expect(layout.columns.split(' ')[2]).toBe('252px');
 });
 
 test('tutorial preference persists and Settings restarts it', async ({ page }) => {

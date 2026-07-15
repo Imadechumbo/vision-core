@@ -189,6 +189,11 @@ O decágono (Atomic Core) aparece somente quando `activeFeature === 'chat'`. Sof
 **Por quê:** decisão explícita do usuário (2026-07-13, `next-clean-79`) — a exceção "Software Factory Auto-Pilot conta como chat" mantinha peso visual numa área que agora deve ser operacional e compacta. O Atomic Core continua no produto, mas sem exceções fora do Chat real.
 **Como aplicar:** `updateAtomicCollapseState()` deve colapsar por `getAtomicCoreEnabled()==='off' || activeFeature !== 'chat'`. A regra antiga de auto-collapse do Modo Avançado e o controle "manter sempre visível" ficaram obsoletos; o toggle "Mostrar Atomic Core" permanece e só tem efeito visual quando o usuário volta ao Chat. Fora de Chat, `#vcChatStream` e `.vc-atomic-hud` saem do layout por CSS. O cabeçalho curto `#vcPageHead` é o cabeçalho canônico das abas não-Chat; o header interno `#vcFeaturePanel > .vc-feature-head` deve ficar oculto nessas abas para não duplicar badge/título.
 
+### DECISION-031 — Atomic Core usa sidebar direita canônica, não proporção fluida
+O Chat possui uma sidebar direita com as mesmas larguras da navegação esquerda: 252px expandida e 78px recolhida. O Atomic Core é dimensionado para caber na área interna dessa rail e fica ancorado no canto inferior direito; mensagens e composer ocupam exclusivamente a coluna central.
+**Por quê:** o grid anterior recalculava coluna textual, zona do HUD, margens negativas e offsets conforme viewport e altura da resposta, exigindo reajustes manuais sucessivos e produzindo vãos variáveis. Duas rails de largura canônica tornam a geometria previsível.
+**Como aplicar:** `.vc-app-shell` usa três colunas (`--sidebar-width`, centro `1fr`, `--atomic-sidebar-width`). A rail direita reutiliza `.vc-sidebar`, `.vc-side-top` e `.vc-sidebar-toggle`, persiste estado próprio em `vc_atomic_sidebar_state` e nunca adota largura derivada do HUD. O HUD escala para no máximo 224px e ancora em `right:0; bottom:0` dentro do painel. São proibidos novos `minmax()` proporcionais para o HUD, margens negativas, parallax de scroll e compensações vinculadas ao tamanho da resposta. Detalhes normativos em `docs/ATOMIC_CORE_SPEC.md`.
+
 ---
 
 ## Roadmap / escopo explicitamente fora de alcance
