@@ -40,15 +40,15 @@ Deploy Produção
 `next-clean-74` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real contra `https://visioncoreai.pages.dev/vision-core-next.html`: cache-bust servido (`?v=next-clean-74` em CSS e JS, HTTP 200), menu lateral reorganizado presente (2 `.vc-nav-group`, rótulos "Atividade"/"Avançado", 7 itens fixos como filhos diretos de `.vc-nav`).
 
 Cache Bust
-next-clean-110 (2026-07-15; alias principal e deployment `29153481.visioncoreai.pages.dev` confirmados servindo o cache-bust novo)
+next-clean-111 (2026-07-15; alias principal e deployment `4bb3063d.visioncoreai.pages.dev` confirmados servindo o cache-bust novo — reconfirmado numa 2ª rodada limpa após a 1ª leitura bater valores antigos, provável propagação de edge do CDN ainda em andamento no primeiro request)
 
 Último Commit
 
-`21aab023` em `codex/next-rc-baseline` (local e `origin` sincronizados). Achado real: Codex tinha commitado e deployado `next-clean-107`/`108`/`109` (6 commits: `9a793b36`→`52e58387`) diretamente nesta worktree — não no padrão de sempre (`atomic-core-2x-hub-tuning` → cherry-pick) — e ficou 6 commits à frente do `origin` sem push antes de bater o limite de uso, com a refatoração de sidebar seguinte 100% editada em disco e não commitada. Retomado nesta mesma worktree (sem replicar em `atomic-core-2x-hub-tuning`, já que o trabalho nasceu aqui): verificado, corrigidos 4 bugs reais, commitado como `21aab023`, e os 7 commits (6 do Codex + 1 desta sessão) pushados juntos pro origin numa única operação.
+`ad81d305` em `codex/next-rc-baseline` (local e `origin` sincronizados) — fix do vão texto→sidebar (`.vc-main` padding-right) e do flicker dos agentes (causa raiz: `.vc-atomic-sidebar` herdava `height:100vh`, uma `position:sticky` do tamanho da viewport inteira com o HUD animando dentro força custo de composição proporcional à caixa inteira; mais `backdrop-filter` do composer reamostrando o HUD animado por perto). Cadeia da sessão anterior preservada: `9a793b36`→`52e58387` (Codex, 6 commits) → `21aab023` (sidebar completa) → `a01867ed` (docs) → `ad81d305` (este fix).
 
 Último Deploy
 
-`29153481.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-110` (package SHA-256 `cb98ab4f962208397d0099b8a01db1b5baf00ecd46dc74a5a42ab7bb9a9faba2`)
+`4bb3063d.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-111` (package SHA-256 `4f1363913ecd854eee37690913f4609da507bcc727547aa8b65119e311ea2d7c`)
 
 ---
 
