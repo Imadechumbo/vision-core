@@ -1320,7 +1320,15 @@ a { color: inherit; text-decoration: none; }
   /* --atomic-core-size/--atomic-safe-area na .vc-chat-scroll (não na
      .vc-atomic-hud) pra que o calc() de largura de coluna em
      .vc-chat-content enxergue o mesmo valor deste breakpoint — ver
-     comentário na declaração base em .vc-chat-scroll. */
+     comentário na declaração base em .vc-chat-scroll.
+     NÃO tentar encolher core-size/safe-area por vw aqui: a órbita dos
+     agentes no JS (AGENT_RADIUS/rx/ry) é calibrada em pixels absolutos
+     pra exatamente 490+116, e qualquer um dos dois vars menor do que
+     isso faz os agentes vazarem da própria caixa do hud (achado real,
+     2026-07-15 — ver tests/e2e/vision-core-next-atomic-core.spec.mjs
+     "not clipped at 1024x768"). Overflow do hud pra fora de
+     #vcChatScroll em larguras ~1024px permanece um problema conhecido,
+     não resolvido nesta sessão — ver diagnóstico entregue ao usuário. */
   .vc-chat-scroll { --atomic-core-size: 490px; --atomic-safe-area: 116px; }
   .vc-atomic-hud { opacity: calc(.42 * var(--atomic-intensity)); }
 }
@@ -1346,7 +1354,12 @@ a { color: inherit; text-decoration: none; }
   .vc-safe-status-row { grid-template-columns: 1fr; }
   .vc-chat-scroll { --atomic-core-size: 490px; --atomic-safe-area: 116px; }
   .vc-atomic-hud {
-    top: calc(100vh - var(--vc-composer-height, 112px) - 190px);
+    /* Buffer derivado da altura real pintada (unscaled * scale abaixo)
+       + 20px de folga, em vez de um número solto: achado real
+       (2026-07-15) o 190px fixo era calibrado pro hud pré-2x (~103px
+       pintado) e ficou menor que a altura pintada atual (~206px),
+       deixando o hud encostar/sobrepor o composer. */
+    top: calc(100vh - var(--vc-composer-height, 112px) - ((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * .285) - 20px);
     margin-right: 0;
     margin-left: calc(100% - (var(--atomic-core-size) + (var(--atomic-safe-area) * 2)));
     opacity: calc(.48 * var(--atomic-intensity));
@@ -1358,7 +1371,12 @@ a { color: inherit; text-decoration: none; }
   .vc-chat-hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "onboarding"; }
   .vc-chat-hero .vc-atomic-hud { display: none; }
   .vc-chat-content { grid-template-columns: minmax(0, 1fr) 112px; column-gap: 10px; }
-  .vc-atomic-core-zone { padding-bottom: calc(var(--vc-composer-height, 112px) + 70px); }
+  /* Mesmo raciocínio do buffer do top acima: 70px fixo era menor que a
+     altura pintada atual do hud (achado real, 2026-07-15) — em conversa
+     curta (sem scroll ainda), é este padding-bottom, não o top do
+     sticky, que decide a posição de descanso do hud (align-self:flex-end
+     dentro da zona), e ele encostava/sobrepunha o composer. */
+  .vc-atomic-core-zone { padding-bottom: calc(var(--vc-composer-height, 112px) + ((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * .285) + 20px); }
   .vc-onboarding-plans { grid-template-columns: 1fr; }
   .vc-onboarding-account { align-items: stretch; flex-direction: column; }
 }
