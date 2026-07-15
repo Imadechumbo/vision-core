@@ -50,7 +50,14 @@
     "predecessor_archive_sha256_verified": "76918f97d170df19f079cc12ccccde9efaa5254cd02491cd03e735aea2280680",
     "rc_structure": "13 ZIP entries; index and explicit Next route present; legacy bundle absent",
     "production_before_cutover": "legacy predecessor present; Next composer absent",
-    "status": "Certified and explicitly authorized for production"
+    "production_deployment_url": "https://20abd0f1.visioncoreai.pages.dev",
+    "production_alias": "https://visioncoreai.pages.dev",
+    "production_package_sha256_served": "945aedb748be84c4deb53fbe973edae76e86db027ea56ca52e7dd35012f13290",
+    "production_smoke": "8/8 PASS; root and /vision-core-next byte-identical to certified Next HTML",
+    "production_browser": "Hero visitor visible; Workspace label; composer visible; next-clean-92 CSS/JS; technical header absent",
+    "production_screenshot": "production-hero-rc2.png",
+    "published_source_commit": "eaddb98af2d14749a1b10d284a8a2fe11322f8e7",
+    "status": "Succeeded"
   },
-  "production_changed": false
+  "production_changed": true
 }

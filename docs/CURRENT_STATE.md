@@ -27,7 +27,7 @@ Deploy Produção
 `next-clean-74` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real contra `https://visioncoreai.pages.dev/vision-core-next.html`: cache-bust servido (`?v=next-clean-74` em CSS e JS, HTTP 200), menu lateral reorganizado presente (2 `.vc-nav-group`, rótulos "Atividade"/"Avançado", 7 itens fixos como filhos diretos de `.vc-nav`).
 
 Cache Bust
-next-clean-82 (publicado em produção em 2026-07-14 sobre o histórico público `next-clean-81`; alias principal e preview `dba2577b.visioncoreai.pages.dev` confirmados servindo o cache-bust novo)
+next-clean-92 (RC2 publicado em produção em 2026-07-14; alias principal e deployment `20abd0f1.visioncoreai.pages.dev` confirmados servindo o cache-bust novo)
 
 Último Commit
 
@@ -35,11 +35,13 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Último Deploy
 
-`dba2577b.visioncoreai.pages.dev` (preview) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-82`
+`20abd0f1.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-92`
 
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ RC2/OPS-002 concluído em produção: o pacote certificado do commit `eaddb98a` foi publicado em `https://20abd0f1.visioncoreai.pages.dev` e no alias `https://visioncoreai.pages.dev`. RC SHA-256 `9a905d495f1e6470b104aa501f1232cc8c5b5d8236830d345bef957a3132df7a`; package SHA-256 público `945aedb748be84c4deb53fbe973edae76e86db027ea56ca52e7dd35012f13290`. Gates: Pages 11/11, Playwright 135/135, performance 59/59, acessibilidade 59/59, segurança 13/13 + secret scan, Ponytail `Lean already. Ship.`. Smoke produtivo 8/8; raiz e `/vision-core-next` byte-idênticas ao RC; navegador real confirmou Hero contextual, Workspace, composer e `next-clean-92`. Evidência em `artifacts/next-rc-release/release-evidence.json` e `production-hero-rc2.png`.
+
 ✔ `next-clean-92` implementado localmente, sem deploy: uma função deriva os quatro estados oficiais da Hero; visitante mantém planos/OAuth, contas autenticadas reutilizam Workspaces e conversas reais, e trabalho iniciado remove a Hero sem espaço residual. A UI usa Workspace sem mudar `/api/projects` nem identificadores internos, limita recentes a três com o último ativo primeiro e preserva Atomic Core/composer. Um overflow real de 7 px a 1366 px foi corrigido com wrap responsivo. Gates finais: sintaxe PASS; dirigido 38/38; pacote 11/11; pairing 13/13; performance 59/59 (398.613B, p95 máximo 35,79ms); Next 135/135 sem retry em 50,8s.
 
 ✔ Hero Area do Chat ajustada localmente, sem deploy: onboarding e Atomic Core agora compartilham a primeira faixa responsiva, eliminando o vazio superior sem alterar o componente Atomic; composer permanece sticky no rodapé e a primeira mensagem remove o onboarding do fluxo. O header principal perdeu a copy interna `V2.9.10 • FULLSTACK • SAAS • HERMES • PASS GOLD`, mantendo logo/nome, agente, projeto e conversa. Gates: App Shell 14/14 em desktop e 375px; pacote 11/11; pairing 13/13; performance 59/59 (394.166B, p95 máximo 29,03ms); Next 128/128 sem retry em 44,7s.

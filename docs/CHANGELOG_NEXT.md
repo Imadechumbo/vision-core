@@ -4,6 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## RC2 / next-clean-92 (2026-07-14, produção)
+
+- RC2 certificado a partir de `eaddb98a` e publicado na raiz e rota explícita do Pages; package SHA-256 `945aedb748be84c4deb53fbe973edae76e86db027ea56ca52e7dd35012f13290`.
+- Produção validada por manifesto, hashes, smoke HTTP 8/8 e navegador real: Hero contextual visível, Workspace, composer e cache-bust `next-clean-92` confirmados.
+
 ## next-clean-92 (2026-07-14, não deployado)
 
 - Hero do Chat agora deriva quatro estados mutuamente exclusivos: visitante, conta sem Workspace, conta com Workspaces reais e trabalho iniciado; neste último, `hidden` remove toda a Hero do layout.
