@@ -259,7 +259,6 @@
     chatContent.classList.toggle('is-atomic-panel-collapsed', collapsed);
     atomicPanelToggle.setAttribute('aria-expanded', String(!collapsed));
     atomicPanelToggle.setAttribute('aria-label', collapsed ? 'Expandir painel do Atomic Core' : 'Recolher painel do Atomic Core');
-    atomicPanelToggle.textContent = collapsed ? 'Expandir Core' : 'Recolher Core';
     try { window.sessionStorage.setItem(VC_ATOMIC_PANEL_KEY, collapsed ? '1' : '0'); } catch (_) {}
   }
   if (atomicPanelToggle) {
@@ -3539,9 +3538,9 @@
 
   var CX = 180;
   var CY = 180;
-  var AGENT_RADIUS = 120;
+  var AGENT_RADIUS = 240;
   var MAX_ANGLE_DRIFT = 3;
-  var MAX_RADIAL_DRIFT = 2;
+  var MAX_RADIAL_DRIFT = 4;
   var REDUCE_PULSE_MS = 4200; // pulso lento sob reduced-motion — só opacidade/glow, nunca posição
   var REDUCE_TICK_MS = 500;   // frequência de re-render do pulso — não é rAF, é setInterval deliberado
   var coreNode = root.querySelector('[data-atomic-core-node]');
@@ -3561,16 +3560,16 @@
   }
 
   var configs = {
-    pi:          { angle: -90, period: 78, radial: 62, depth: 16, action: 5.8, direction:  1, rx: 143, ry: 42, tilt: -30, phase: .10, glowColor: '#b86cff', glowWeight: .90 },
-    hermes:      { angle: -54, period: 66, radial: 71, depth: 18, action: 7.4, direction: -1, rx: 136, ry: 54, tilt:  28, phase: .82, glowColor: '#34d399', glowWeight: .90 },
-    openclaw:    { angle: -18, period: 88, radial: 57, depth: 15, action: 4.6, direction:  1, rx: 148, ry: 38, tilt:  78, phase: 1.54, glowColor: '#3b82f6', glowWeight: .75 },
-    scanner:     { angle:  18, period: 59, radial: 84, depth: 19, action: 6.7, direction: -1, rx: 128, ry: 60, tilt: -72, phase: 2.26, glowColor: '#22d3ee', glowWeight: .75 },
-    patchEngine: { angle:  54, period: 74, radial: 68, depth: 17, action: 5.1, direction:  1, rx: 140, ry: 48, tilt:  12, phase: 2.98, glowColor: '#d946ef', glowWeight: .65 },
-    aegis:       { angle:  90, period: 90, radial: 73, depth: 20, action: 8.8, direction: -1, rx: 132, ry: 66, tilt:  54, phase: 3.70, glowColor: '#facc15', glowWeight: .75 },
-    goCore:      { angle: 126, period: 81, radial: 64, depth: 14, action: 6.0, direction:  1, rx: 146, ry: 44, tilt: -54, phase: 4.42, glowColor: '#f59e0b', glowWeight: .63 },
-    passGold:    { angle: 162, period: 69, radial: 79, depth: 18, action: 7.9, direction: -1, rx: 126, ry: 58, tilt:  86, phase: 5.14, glowColor: '#fb7185', glowWeight: .62 },
-    archivist:   { angle: 198, period: 84, radial: 60, depth: 16, action: 4.2, direction:  1, rx: 142, ry: 40, tilt:  38, phase: 5.86, glowColor: '#0f766e', glowWeight: .64 },
-    github:      { angle: 234, period: 50, radial: 88, depth: 15, action: 8.5, direction: -1, rx: 134, ry: 62, tilt: -12, phase: 6.58, glowColor: '#38bdf8', glowWeight: .65 }
+    pi:          { angle: -90, period: 78, radial: 62, depth: 16, action: 5.8, direction:  1, rx: 286, ry: 84, tilt: -30, phase: .10, glowColor: '#b86cff', glowWeight: .90 },
+    hermes:      { angle: -54, period: 66, radial: 71, depth: 18, action: 7.4, direction: -1, rx: 272, ry: 108, tilt:  28, phase: .82, glowColor: '#34d399', glowWeight: .90 },
+    openclaw:    { angle: -18, period: 88, radial: 57, depth: 15, action: 4.6, direction:  1, rx: 296, ry: 76, tilt:  78, phase: 1.54, glowColor: '#3b82f6', glowWeight: .75 },
+    scanner:     { angle:  18, period: 59, radial: 84, depth: 19, action: 6.7, direction: -1, rx: 256, ry: 120, tilt: -72, phase: 2.26, glowColor: '#22d3ee', glowWeight: .75 },
+    patchEngine: { angle:  54, period: 74, radial: 68, depth: 17, action: 5.1, direction:  1, rx: 280, ry: 96, tilt:  12, phase: 2.98, glowColor: '#d946ef', glowWeight: .65 },
+    aegis:       { angle:  90, period: 90, radial: 73, depth: 20, action: 8.8, direction: -1, rx: 264, ry: 132, tilt:  54, phase: 3.70, glowColor: '#facc15', glowWeight: .75 },
+    goCore:      { angle: 126, period: 81, radial: 64, depth: 14, action: 6.0, direction:  1, rx: 292, ry: 88, tilt: -54, phase: 4.42, glowColor: '#f59e0b', glowWeight: .63 },
+    passGold:    { angle: 162, period: 69, radial: 79, depth: 18, action: 7.9, direction: -1, rx: 252, ry: 116, tilt:  86, phase: 5.14, glowColor: '#fb7185', glowWeight: .62 },
+    archivist:   { angle: 198, period: 84, radial: 60, depth: 16, action: 4.2, direction:  1, rx: 284, ry: 80, tilt:  38, phase: 5.86, glowColor: '#0f766e', glowWeight: .64 },
+    github:      { angle: 234, period: 50, radial: 88, depth: 15, action: 8.5, direction: -1, rx: 268, ry: 124, tilt: -12, phase: 6.58, glowColor: '#38bdf8', glowWeight: .65 }
   };
 
   function Agent(node, config) {

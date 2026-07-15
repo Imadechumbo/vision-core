@@ -983,18 +983,8 @@ a { color: inherit; text-decoration: none; }
   gap: 8px;
 }
 .vc-atomic-core-panel { display: contents; }
-.vc-atomic-panel-toggle {
-  align-self: flex-start;
-  border: 1px solid rgba(192,132,252,.3);
-  border-radius: 999px;
-  padding: 6px 9px;
-  color: #d8cdea;
-  background: rgba(18,14,28,.82);
-  font: 700 11px/1.2 inherit;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.vc-atomic-panel-toggle:focus-visible { outline: 2px solid #c084fc; outline-offset: 2px; }
+.vc-atomic-toggle { align-self: flex-start; }
+.vc-atomic-toggle[aria-expanded="false"] span { transform: rotate(180deg); }
 .vc-chat-content.is-atomic-panel-collapsed .vc-atomic-core-zone { min-width: auto; }
 .vc-chat-content.is-atomic-panel-collapsed #vcAtomicCorePanel { display: none; }
 
@@ -1077,8 +1067,8 @@ a { color: inherit; text-decoration: none; }
    A coluna vazia da Hero reserva espaço no estado inicial; as margens
    compensam a caixa no fluxo sem aproximá-la do composer. */
 .vc-atomic-hud {
-  --atomic-core-size: min(260px, 20vw);
-  --atomic-safe-area: 36px;
+  --atomic-core-size: min(520px, 40vw);
+  --atomic-safe-area: 72px;
   --atomic-intensity: 1;
   position: sticky;
   top: calc(100vh - var(--vc-composer-height, 112px) - var(--atomic-core-size) - 70px);
@@ -1134,8 +1124,8 @@ a { color: inherit; text-decoration: none; }
 .vc-orbit-spokes { opacity: .65; }
 
 .vc-core-node {
-  width: 84px;
-  height: 84px;
+  width: 168px;
+  height: 168px;
   display: grid;
   place-items: center;
   transform: translate(-50%, -50%);
@@ -1147,15 +1137,15 @@ a { color: inherit; text-decoration: none; }
   text-align: center;
 }
 
-.vc-core-node span { display: block; margin-bottom: -22px; color: rgba(245, 243, 255, .76); font-size: 26px; }
-.vc-core-node strong { display: block; margin-top: 26px; font-size: 12px; letter-spacing: .16em; }
+.vc-core-node span { display: block; margin-bottom: -44px; color: rgba(245, 243, 255, .76); font-size: 52px; }
+.vc-core-node strong { display: block; margin-top: 52px; font-size: 24px; letter-spacing: .16em; }
 
 .vc-agent {
-  width: 92px;
-  min-height: 70px;
+  width: 184px;
+  min-height: 140px;
   display: grid;
   justify-items: center;
-  gap: 3px;
+  gap: 6px;
   transform: translate(-50%, -50%);
   color: var(--agent-color, #c4b5fd);
   text-align: center;
@@ -1163,8 +1153,8 @@ a { color: inherit; text-decoration: none; }
 }
 
 .vc-agent i {
-  width: 38px;
-  height: 38px;
+  width: 76px;
+  height: 76px;
   display: grid;
   place-items: center;
   border: 1px solid color-mix(in srgb, var(--agent-color, #c4b5fd) 48%, transparent);
@@ -1172,12 +1162,12 @@ a { color: inherit; text-decoration: none; }
   background: color-mix(in srgb, var(--agent-color, #c4b5fd) 13%, rgba(4, 4, 10, .94));
   box-shadow: inset 0 0 16px color-mix(in srgb, var(--agent-color, #c4b5fd) 15%, transparent);
   font-style: normal;
-  font-size: 10px;
+  font-size: 20px;
   font-weight: 850;
 }
 
-.vc-agent span { max-width: 76px; color: color-mix(in srgb, var(--agent-color, #c4b5fd) 82%, #fff); font-size: 10px; font-weight: 850; text-transform: uppercase; line-height: 1.15; }
-.vc-agent small { max-width: 76px; color: rgba(217, 211, 229, .62); font-size: 8px; font-weight: 700; line-height: 1.1; }
+.vc-agent span { max-width: 152px; color: color-mix(in srgb, var(--agent-color, #c4b5fd) 82%, #fff); font-size: 20px; font-weight: 850; text-transform: uppercase; line-height: 1.15; }
+.vc-agent small { max-width: 152px; color: rgba(217, 211, 229, .62); font-size: 16px; font-weight: 700; line-height: 1.1; }
 
 .vc-agent[data-agent="pi"] { --agent-color: #b86cff; }
 .vc-agent[data-agent="hermes"] { --agent-color: #34d399; }
@@ -1317,7 +1307,7 @@ a { color: inherit; text-decoration: none; }
 .vc-smile-actions button:disabled { opacity: .45; cursor: not-allowed; }
 
 @media (max-width: 1180px) {
-  .vc-atomic-hud { --atomic-core-size: 245px; --atomic-safe-area: 58px; opacity: calc(.42 * var(--atomic-intensity)); }
+  .vc-atomic-hud { --atomic-core-size: 490px; --atomic-safe-area: 116px; opacity: calc(.42 * var(--atomic-intensity)); }
 }
 
 @media (max-width: 1400px) {
@@ -1340,8 +1330,8 @@ a { color: inherit; text-decoration: none; }
   .vc-chat-stage { padding-top: 14px; }
   .vc-safe-status-row { grid-template-columns: 1fr; }
   .vc-atomic-hud {
-    --atomic-core-size: 245px;
-    --atomic-safe-area: 58px;
+    --atomic-core-size: 490px;
+    --atomic-safe-area: 116px;
     top: calc(100vh - var(--vc-composer-height, 112px) - 190px);
     margin-right: 0;
     margin-left: calc(100% - (var(--atomic-core-size) + (var(--atomic-safe-area) * 2)));
