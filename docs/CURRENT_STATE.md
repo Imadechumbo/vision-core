@@ -40,6 +40,8 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
+✔ Hero Area do Chat ajustada localmente, sem deploy: onboarding e Atomic Core agora compartilham a primeira faixa responsiva, eliminando o vazio superior sem alterar o componente Atomic; composer permanece sticky no rodapé e a primeira mensagem remove o onboarding do fluxo. O header principal perdeu a copy interna `V2.9.10 • FULLSTACK • SAAS • HERMES • PASS GOLD`, mantendo logo/nome, agente, projeto e conversa. Gates: App Shell 14/14 em desktop e 375px; pacote 11/11; pairing 13/13; performance 59/59 (394.166B, p95 máximo 29,03ms); Next 128/128 sem retry em 44,7s.
+
 ✔ Onboarding/Auth/Tutorial do estado vazio implementado localmente, sem deploy: Chat vazio ganhou apresentação compacta, planos honestos e CTA para o composer; Google reutiliza `/api/auth/oauth/google?return_to=next`; o status vertical do header virou `Projeto temporário`; Smile foi renomeado Tutorial e o modal existente evoluiu para 13 passos com foco preso, Escape, pular, preferência persistida e reinício em Settings. Nenhum billing, endpoint, store ou produto paralelo foi criado. Gates: pacote 11/11, pairing 13/13, performance 59/59 (393.913B; p95 máximo 33,73ms), Next 127/127 sem retry. Screenshots em `artifacts/next-onboarding/`.
 
 ✔ OPS-002 pronto até o gate produtivo: hashes do RC (`72e6a02c...`), package (`f4a4db9f...`) e predecessor (`76918f97...`) revalidados; ZIP tem 13 entradas, raiz e rota Next, sem bundle legado. A raiz pública foi verificada ainda no predecessor. Nenhum deploy em `main` foi executado. Estado permanece 23/26 até o cutover efetivo.

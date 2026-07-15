@@ -211,7 +211,9 @@ Um único `<div class="vc-app-shell" data-sidebar-state="expanded|collapsed">` c
 
 ### Estado vazio e tutorial
 
-`#vcChatOnboarding` ocupa de forma compacta o estado vazio do Chat e sai do layout quando existe mensagem real, missao em curso, tutorial aberto ou outra aba ativa. Reutiliza o composer, o contrato OAuth Google e o estado de conta existentes; Free e o unico plano selecionado, Pro e apenas informativo e Enterprise fica `Em breve`, sem preco, checkout ou billing inventado.
+`#vcChatHero` usa a primeira faixa do Chat em grid: `#vcChatOnboarding` ocupa a area livre e o Atomic Core preserva sua posicao a direita, sem uma linha vazia acima. No mobile, a regra existente oculta o Atomic e o onboarding usa toda a largura. O onboarding sai do layout quando existe mensagem real, missao em curso, tutorial aberto ou outra aba ativa; o historico assume o fluxo e o composer permanece sticky na parte inferior. Reutiliza o composer, o contrato OAuth Google e o estado de conta existentes; Free e o unico plano selecionado, Pro e apenas informativo e Enterprise fica `Em breve`, sem preco, checkout ou billing inventado.
+
+O header principal do Chat contem somente logo/nome Vision Core, status do agente, projeto e conversa. Versao, stack, SaaS, Hermes e PASS GOLD nao aparecem nesse header; informacao de build pertence apenas a superficies tecnicas.
 
 `#vcSmileModal` continua sendo o unico overlay/modal do Vision Core Next, agora apresentado como Tutorial. Seus 13 passos estaticos usam `textContent`, X/ESC/Pular/Voltar/Proximo, foco contido e restaurado. `localStorage['vc_tutorial_hidden']` guarda somente "Nao mostrar novamente"; Settings remove essa preferencia em "Reiniciar tutorial". O modal nao chama backend e nao cria campo paralelo de missao.
 

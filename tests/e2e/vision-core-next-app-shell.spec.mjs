@@ -82,6 +82,30 @@ test('empty chat onboarding uses real OAuth, honest plans, and leaves after firs
   await page.locator('#vcPrompt').fill('Primeira missão');
   await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
   await expect(onboarding).toBeHidden();
+  await expect(page.locator('.vc-message-user')).toContainText('Primeira missão');
+});
+
+test('empty-chat Hero starts below the header, shares the top row with Atomic Core, and composer stays at the viewport bottom', async ({ page }) => {
+  await page.goto(NEXT_URL);
+  const layout = await page.evaluate(() => {
+    const header = document.querySelector('.vc-header').getBoundingClientRect();
+    const hero = document.querySelector('#vcChatHero').getBoundingClientRect();
+    const onboarding = document.querySelector('#vcChatOnboarding').getBoundingClientRect();
+    const atomic = document.querySelector('[data-atomic-core]').getBoundingClientRect();
+    const composer = document.querySelector('#vcComposer').getBoundingClientRect();
+    return {
+      gap: hero.top - header.bottom,
+      onboardingTop: onboarding.top,
+      atomicTop: atomic.top,
+      composerBottomGap: window.innerHeight - composer.bottom,
+      internalBuildCopy: document.querySelector('.vc-brand-copy small')?.textContent || ''
+    };
+  });
+  expect(layout.gap).toBeLessThanOrEqual(40);
+  expect(Math.abs(layout.onboardingTop - layout.atomicTop)).toBeLessThanOrEqual(80);
+  expect(layout.composerBottomGap).toBeGreaterThanOrEqual(0);
+  expect(layout.composerBottomGap).toBeLessThanOrEqual(24);
+  expect(layout.internalBuildCopy).toBe('');
 });
 
 test('tutorial preference persists and Settings restarts it', async ({ page }) => {
@@ -101,6 +125,17 @@ test('onboarding and tutorial remain bounded at 375px and hidden leaves layout',
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto(NEXT_URL);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  const mobileLayout = await page.evaluate(() => {
+    const header = document.querySelector('.vc-header').getBoundingClientRect();
+    const hero = document.querySelector('#vcChatHero').getBoundingClientRect();
+    const onboarding = document.querySelector('#vcChatOnboarding').getBoundingClientRect();
+    const composer = document.querySelector('#vcComposer').getBoundingClientRect();
+    return { gap: hero.top - header.bottom, onboardingWidth: onboarding.width, viewport: document.documentElement.clientWidth, composerBottomGap: window.innerHeight - composer.bottom };
+  });
+  expect(mobileLayout.gap).toBeLessThanOrEqual(40);
+  expect(mobileLayout.onboardingWidth).toBeLessThanOrEqual(mobileLayout.viewport);
+  expect(mobileLayout.composerBottomGap).toBeGreaterThanOrEqual(0);
+  expect(mobileLayout.composerBottomGap).toBeLessThanOrEqual(24);
   const before = await page.locator('#vcChatOnboarding').evaluate((el) => el.getBoundingClientRect().height);
   expect(before).toBeGreaterThan(0);
   await page.locator('[data-smile-open]').first().click();

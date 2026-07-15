@@ -66,7 +66,7 @@ Escopo: componentes reais em `vision-core-next-clean.{css,js}`. Fora do escopo: 
 
 ### Estado vazio do Chat
 
-**Estrutura:** `#vcChatOnboarding` reutiliza o estado de `#vcChatStream`, o composer e o OAuth existente. Aparece apenas no Chat sem mensagens reais e sem missao/tutorial ativo; planos sao informativos e nao implementam billing.
+**Estrutura:** `#vcChatHero` agrupa `#vcChatOnboarding` e o Atomic Core numa unica faixa superior responsiva. O onboarding reutiliza o estado de `#vcChatStream`, o composer e o OAuth existente; aparece apenas no Chat sem mensagens reais e sem missao/tutorial ativo. Planos sao informativos e nao implementam billing. Ao surgir a primeira mensagem, o onboarding usa `hidden` e o historico ocupa seu lugar no fluxo.
 
 ### Modal Tutorial
 

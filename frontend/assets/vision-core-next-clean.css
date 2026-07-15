@@ -1160,13 +1160,23 @@ a { color: inherit; text-decoration: none; }
 }
 
 .vc-chat-onboarding:not([hidden]) {
-  width: min(720px, calc(100% - 24px));
-  margin: 18px auto 8px;
+  grid-area: onboarding;
+  width: 100%;
+  margin: 0;
   padding: 20px;
   border: 1px solid rgba(216,180,254,.16);
   border-radius: 14px;
   background: linear-gradient(145deg, rgba(28,18,45,.72), rgba(8,7,14,.88));
 }
+.vc-chat-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "onboarding atomic";
+  align-items: center;
+  gap: clamp(18px, 3vw, 42px);
+  width: 100%;
+}
+.vc-chat-hero .vc-atomic-hud { grid-area: atomic; }
 .vc-chat-onboarding h1 { margin: 4px 0 8px; font-size: clamp(20px, 3vw, 30px); }
 .vc-chat-onboarding > p { margin: 0 0 14px; color: #bdb4cf; }
 .vc-onboarding-plans { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
@@ -1271,12 +1281,13 @@ a { color: inherit; text-decoration: none; }
   .vc-chat-stage { padding-top: 14px; }
   .vc-safe-status-row { grid-template-columns: 1fr; }
   .vc-atomic-hud { display: none; }
+  .vc-chat-hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "onboarding"; }
   .vc-onboarding-plans { grid-template-columns: 1fr; }
   .vc-onboarding-account { align-items: stretch; flex-direction: column; }
 }
 
 @media (max-width: 420px) {
-  .vc-chat-onboarding:not([hidden]) { width: 100%; margin-top: 8px; padding: 14px; }
+  .vc-chat-onboarding:not([hidden]) { width: 100%; padding: 14px; }
   .vc-onboarding-actions { flex-direction: column; }
   .vc-smile-card { max-height: calc(100vh - 24px); overflow-y: auto; }
 }

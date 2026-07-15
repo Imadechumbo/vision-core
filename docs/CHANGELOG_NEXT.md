@@ -6,6 +6,8 @@ Formato: mais recente no topo.
 
 ## next-clean-91 (2026-07-14, não deployado)
 
+- Hero inicial passou a usar a faixa superior inteira: onboarding à esquerda e Atomic Core intacto à direita; mobile usa uma coluna e o histórico substitui o onboarding após a primeira mensagem.
+- Header principal agora mostra apenas marca, agente, projeto e conversa; versão/stack/SaaS/Hermes/PASS GOLD foram removidos dessa superfície.
 - Estado vazio do Chat ganhou onboarding compacto com fluxo do produto, Free/Pro/Enterprise sem billing fictício, OAuth Google real e início da primeira missão pelo composer existente.
 - Item Smile virou Tutorial; o modal existente agora cobre 13 passos, foco/teclado, pular, não mostrar novamente e reinício em Settings.
 - Texto estreito `Entre para persistir projetos` foi substituído por `Projeto temporário`; após login, o onboarding reflete a conta real.
