@@ -438,7 +438,7 @@
   }
 
   var chatActivityState = 'idle';
-  var cancelProgressiveReveal = null;
+  var revealController = { status: 'idle', cancel: null };
 
   function setChatActivityState(next) {
     chatActivityState = next;
@@ -464,31 +464,34 @@
     var previousLive = stream.getAttribute('aria-live');
     stream.setAttribute('aria-live', 'off');
     var visibleResponse = '';
-    var revealProgress = 0;
-    var stepSize = characters.length > 4000 ? 8 : characters.length > 1800 ? 6 : 4;
+    var revealIndex = 0;
+    var stepSize = characters.length > 1800 ? 4 : 3;
+    var baseDelay = characters.length > 4000 ? 18 : 22;
     var timer = null;
+    revealController.status = 'revealing';
     return new Promise(function (resolve, reject) {
       function finish(error) {
         if (timer) window.clearTimeout(timer);
-        cancelProgressiveReveal = null;
+        revealController.status = error ? 'cancelled' : 'complete';
+        revealController.cancel = null;
         stream.setAttribute('aria-live', previousLive || 'polite');
         if (error) reject(error); else resolve(item);
       }
-      cancelProgressiveReveal = function () {
+      revealController.cancel = function () {
         var error = new Error('Progressive reveal cancelled');
         error.name = 'AbortError';
         finish(error);
       };
       function reveal() {
-        var end = Math.min(characters.length, revealProgress + stepSize);
-        visibleResponse += characters.slice(revealProgress, end).join('');
+        var end = Math.min(characters.length, revealIndex + stepSize);
+        visibleResponse += characters.slice(revealIndex, end).join('');
         body.textContent = visibleResponse;
-        revealProgress = end;
-        if (revealProgress >= characters.length) return finish();
-        var last = characters[revealProgress - 1] || '';
-        timer = window.setTimeout(reveal, /[.!?\n]/.test(last) ? 80 : /[,;:]/.test(last) ? 32 : 16);
+        revealIndex = end;
+        if (revealIndex >= characters.length) return finish();
+        var last = characters[revealIndex - 1] || '';
+        timer = window.setTimeout(reveal, baseDelay + (/[.!?\n]/.test(last) ? 90 : /[,;:]/.test(last) ? 45 : 0));
       }
-      timer = window.setTimeout(reveal, 16);
+      timer = window.setTimeout(reveal, baseDelay);
     });
   }
 
@@ -707,7 +710,7 @@
   function selectFeature(key, announce) {
     var feature = featureMap[key] || featureMap.chat;
     activeFeature = featureMap[key] ? key : 'chat';
-    if (activeFeature !== 'chat' && cancelProgressiveReveal) cancelProgressiveReveal();
+    if (activeFeature !== 'chat' && revealController.cancel) revealController.cancel();
     if (appShell) appShell.setAttribute('data-active-feature', activeFeature);
     updateChatOnboarding();
     document.querySelectorAll('[data-feature]').forEach(function (node) {
@@ -3520,12 +3523,12 @@
     if (!chatRequestInFlight) return;
     chatCancelledByUser = true;
     if (chatController) chatController.abort();
-    if (cancelProgressiveReveal) cancelProgressiveReveal();
+    if (revealController.cancel) revealController.cancel();
   });
 
   window.addEventListener('beforeunload', function () {
     if (chatController) chatController.abort();
-    if (cancelProgressiveReveal) cancelProgressiveReveal();
+    if (revealController.cancel) revealController.cancel();
   });
 
   document.querySelectorAll('[data-quick]').forEach(function (button) {

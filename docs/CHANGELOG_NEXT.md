@@ -4,6 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-97 (2026-07-15, não deployado)
+
+- Pergunta e resposta agora compartilham uma única coluna textual; a pergunta continua alinhada à direita dentro dela, sem avançar sobre a região reservada ao Atomic Core.
+- Reveal usa 3 caracteres/22ms por padrão, pausas adicionais reais em pontuação, aceleração limitada a 4 caracteres/18ms em textos longos e controlador/status explícitos.
+- Atomic Core passa a `.62` no desktop e `.38` no mobile, periférico e contido na borda direita do Chat.
+
 ## next-clean-96 (2026-07-15, não deployado)
 
 - Atomic Core recebeu a redução final de aproximadamente 15% sobre `next-clean-95`, com escala `.73` no desktop e `.45` no mobile; a origem deslocada aproxima o estado de trabalho da borda direita sem escapar do Chat.

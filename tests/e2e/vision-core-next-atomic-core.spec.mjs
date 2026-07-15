@@ -443,8 +443,8 @@ test('anchors flush against the real right edge of the content area, not just it
 test('uses the approved peripheral scale while preserving the safe right edge on desktop and mobile', async ({ page }) => {
   await page.route(`${API}/api/chat`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer: 'posição periférica '.repeat(80) }) }));
   for (const viewport of [
-    { width: 1440, height: 900, expectedScale: 0.73 },
-    { width: 390, height: 844, expectedScale: 0.45 }
+    { width: 1440, height: 900, expectedScale: 0.62 },
+    { width: 390, height: 844, expectedScale: 0.38 }
   ]) {
     await page.setViewportSize(viewport);
     await page.goto(NEXT_URL());
@@ -455,14 +455,20 @@ test('uses the approved peripheral scale while preserving the safe right edge on
       const hud = document.querySelector('[data-atomic-core]');
       const chat = document.getElementById('vcChatScroll').getBoundingClientRect();
       const rect = hud.getBoundingClientRect();
+      const user = document.querySelector('.vc-message-user').getBoundingClientRect();
+      const assistant = document.querySelector('.vc-message-assistant').getBoundingClientRect();
       return {
         scale: Number.parseFloat(getComputedStyle(hud).scale),
-        safeRightGap: chat.right - rect.right
+        safeRightGap: chat.right - rect.right,
+        messageEdgeDelta: Math.abs(user.right - assistant.right),
+        messageToCoreGap: rect.left - user.right
       };
     });
     expect(geometry.scale).toBeCloseTo(viewport.expectedScale, 2);
     expect(geometry.safeRightGap, 'the scaled HUD must remain inside the Chat edge').toBeGreaterThanOrEqual(0);
     expect(geometry.safeRightGap, 'the work-state HUD must stay close to the peripheral edge').toBeLessThanOrEqual(6);
+    expect(geometry.messageEdgeDelta, 'user and assistant bubbles must share the same text-column right edge').toBeLessThanOrEqual(1);
+    expect(geometry.messageToCoreGap, 'the shared message column must not enter the Atomic Core region').toBeGreaterThanOrEqual(0);
   }
 });
 
@@ -751,7 +757,7 @@ test('chat stays in Action through progressive reveal, then passes through settl
   await expect(page.locator('#vcChatStream')).toHaveAttribute('aria-live', 'off');
   await expect(page.locator('.vc-message-assistant p')).toHaveText(answer);
   const revealFrames = await page.evaluate(() => window.__revealFrames);
-  expect(revealFrames[0].length, 'the first visible update must be a small character group').toBeLessThanOrEqual(4);
+  expect(revealFrames[0].length, 'the first visible update must be a small character group').toBeLessThanOrEqual(3);
   expect(revealFrames.length, 'the response must cross many visibly distinct DOM updates').toBeGreaterThan(20);
   expect(revealFrames.at(-1).at - revealFrames[0].at, 'the reveal must yield across perceptible browser frames').toBeGreaterThan(500);
   expect(revealFrames.every((frame) => frame.coreState === 'action'), 'Atomic Core must remain in Action for every visible reveal update').toBe(true);
