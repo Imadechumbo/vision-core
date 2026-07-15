@@ -417,9 +417,15 @@ test('anchors flush against the real right edge of the content area, not just it
 
 test('uses the approved peripheral scale while preserving the safe right edge on desktop and mobile', async ({ page }) => {
   await page.route(`${API}/api/chat`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer: 'posição periférica '.repeat(80) }) }));
+  // expectedPaintedWidth = (--atomic-core-size + --atomic-safe-area*2) * scale
+  // pra cada breakpoint, após o resize 2x (achado real, 2026-07-15):
+  // previousWidth/25% aqui media a redução de escala de uma refatoração
+  // anterior e sempre bate ~-50% agora, porque o 2x (deliberado, aprovado
+  // pelo usuário) veio DEPOIS e é maior, não menor, que aquele baseline —
+  // não é uma regressão, é o teste comparando contra um "antes" obsoleto.
   for (const viewport of [
-    { width: 1440, height: 900, expectedScale: 0.465, previousWidth: 205.84 },
-    { width: 390, height: 844, expectedScale: 0.285, previousWidth: 137.18 }
+    { width: 1440, height: 900, expectedScale: 0.465, expectedPaintedWidth: (520 + 72 * 2) * 0.465 },
+    { width: 390, height: 844, expectedScale: 0.285, expectedPaintedWidth: (490 + 116 * 2) * 0.285 }
   ]) {
     await page.setViewportSize(viewport);
     await page.goto(NEXT_URL());
@@ -461,7 +467,7 @@ test('uses the approved peripheral scale while preserving the safe right edge on
     expect(geometry.coreIntersectsAssistant).toBe(false);
     expect(geometry.coreIntersectsComposer, 'Atomic Core must not intersect the composer').toBe(false);
     expect(geometry.coreParent).toBe('vcAtomicCorePanel');
-    expect((1 - geometry.coreWidth / viewport.previousWidth) * 100).toBeCloseTo(25, 0);
+    expect(geometry.coreWidth).toBeCloseTo(viewport.expectedPaintedWidth, 0);
   }
 });
 

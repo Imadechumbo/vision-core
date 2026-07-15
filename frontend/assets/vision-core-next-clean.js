@@ -3538,9 +3538,17 @@
 
   var CX = 180;
   var CY = 180;
-  var AGENT_RADIUS = 240;
+  // Camada intermediária de breakpoint (821-1180px, achado real 2026-07-15):
+  // --atomic-core-size cai pra 400px nessa faixa (ver vision-core-next-clean.css
+  // @media 1180/821) porque 490px não cabe nos ~670px disponíveis. AGENT_RADIUS/
+  // rx/ry abaixo são calibrados em pixels absolutos pra 490px (valor "2x" cheio
+  // de desktop/mobile) — sem esse fator, os agentes vazam da própria caixa do
+  // hud nessa faixa (o CSS scale nunca afeta layout/pixels do JS). Checado uma
+  // vez no load, não precisa ser responsivo a resize nesta fase.
+  var ORBIT_SCALE = (window.matchMedia && window.matchMedia('(min-width: 821px) and (max-width: 1180px)').matches) ? (400 / 490) : 1;
+  var AGENT_RADIUS = 240 * ORBIT_SCALE;
   var MAX_ANGLE_DRIFT = 3;
-  var MAX_RADIAL_DRIFT = 4;
+  var MAX_RADIAL_DRIFT = 4 * ORBIT_SCALE;
   var REDUCE_PULSE_MS = 4200; // pulso lento sob reduced-motion — só opacidade/glow, nunca posição
   var REDUCE_TICK_MS = 500;   // frequência de re-render do pulso — não é rAF, é setInterval deliberado
   var coreNode = root.querySelector('[data-atomic-core-node]');
@@ -3560,16 +3568,16 @@
   }
 
   var configs = {
-    pi:          { angle: -90, period: 78, radial: 62, depth: 16, action: 5.8, direction:  1, rx: 286, ry: 84, tilt: -30, phase: .10, glowColor: '#b86cff', glowWeight: .90 },
-    hermes:      { angle: -54, period: 66, radial: 71, depth: 18, action: 7.4, direction: -1, rx: 272, ry: 108, tilt:  28, phase: .82, glowColor: '#34d399', glowWeight: .90 },
-    openclaw:    { angle: -18, period: 88, radial: 57, depth: 15, action: 4.6, direction:  1, rx: 296, ry: 76, tilt:  78, phase: 1.54, glowColor: '#3b82f6', glowWeight: .75 },
-    scanner:     { angle:  18, period: 59, radial: 84, depth: 19, action: 6.7, direction: -1, rx: 256, ry: 120, tilt: -72, phase: 2.26, glowColor: '#22d3ee', glowWeight: .75 },
-    patchEngine: { angle:  54, period: 74, radial: 68, depth: 17, action: 5.1, direction:  1, rx: 280, ry: 96, tilt:  12, phase: 2.98, glowColor: '#d946ef', glowWeight: .65 },
-    aegis:       { angle:  90, period: 90, radial: 73, depth: 20, action: 8.8, direction: -1, rx: 264, ry: 132, tilt:  54, phase: 3.70, glowColor: '#facc15', glowWeight: .75 },
-    goCore:      { angle: 126, period: 81, radial: 64, depth: 14, action: 6.0, direction:  1, rx: 292, ry: 88, tilt: -54, phase: 4.42, glowColor: '#f59e0b', glowWeight: .63 },
-    passGold:    { angle: 162, period: 69, radial: 79, depth: 18, action: 7.9, direction: -1, rx: 252, ry: 116, tilt:  86, phase: 5.14, glowColor: '#fb7185', glowWeight: .62 },
-    archivist:   { angle: 198, period: 84, radial: 60, depth: 16, action: 4.2, direction:  1, rx: 284, ry: 80, tilt:  38, phase: 5.86, glowColor: '#0f766e', glowWeight: .64 },
-    github:      { angle: 234, period: 50, radial: 88, depth: 15, action: 8.5, direction: -1, rx: 268, ry: 124, tilt: -12, phase: 6.58, glowColor: '#38bdf8', glowWeight: .65 }
+    pi:          { angle: -90, period: 78, radial: 62, depth: 16, action: 5.8, direction:  1, rx: 286 * ORBIT_SCALE, ry: 84 * ORBIT_SCALE, tilt: -30, phase: .10, glowColor: '#b86cff', glowWeight: .90 },
+    hermes:      { angle: -54, period: 66, radial: 71, depth: 18, action: 7.4, direction: -1, rx: 272 * ORBIT_SCALE, ry: 108 * ORBIT_SCALE, tilt:  28, phase: .82, glowColor: '#34d399', glowWeight: .90 },
+    openclaw:    { angle: -18, period: 88, radial: 57, depth: 15, action: 4.6, direction:  1, rx: 296 * ORBIT_SCALE, ry: 76 * ORBIT_SCALE, tilt:  78, phase: 1.54, glowColor: '#3b82f6', glowWeight: .75 },
+    scanner:     { angle:  18, period: 59, radial: 84, depth: 19, action: 6.7, direction: -1, rx: 256 * ORBIT_SCALE, ry: 120 * ORBIT_SCALE, tilt: -72, phase: 2.26, glowColor: '#22d3ee', glowWeight: .75 },
+    patchEngine: { angle:  54, period: 74, radial: 68, depth: 17, action: 5.1, direction:  1, rx: 280 * ORBIT_SCALE, ry: 96 * ORBIT_SCALE, tilt:  12, phase: 2.98, glowColor: '#d946ef', glowWeight: .65 },
+    aegis:       { angle:  90, period: 90, radial: 73, depth: 20, action: 8.8, direction: -1, rx: 264 * ORBIT_SCALE, ry: 132 * ORBIT_SCALE, tilt:  54, phase: 3.70, glowColor: '#facc15', glowWeight: .75 },
+    goCore:      { angle: 126, period: 81, radial: 64, depth: 14, action: 6.0, direction:  1, rx: 292 * ORBIT_SCALE, ry: 88 * ORBIT_SCALE, tilt: -54, phase: 4.42, glowColor: '#f59e0b', glowWeight: .63 },
+    passGold:    { angle: 162, period: 69, radial: 79, depth: 18, action: 7.9, direction: -1, rx: 252 * ORBIT_SCALE, ry: 116 * ORBIT_SCALE, tilt:  86, phase: 5.14, glowColor: '#fb7185', glowWeight: .62 },
+    archivist:   { angle: 198, period: 84, radial: 60, depth: 16, action: 4.2, direction:  1, rx: 284 * ORBIT_SCALE, ry: 80 * ORBIT_SCALE, tilt:  38, phase: 5.86, glowColor: '#0f766e', glowWeight: .64 },
+    github:      { angle: 234, period: 50, radial: 88, depth: 15, action: 8.5, direction: -1, rx: 268 * ORBIT_SCALE, ry: 124 * ORBIT_SCALE, tilt: -12, phase: 6.58, glowColor: '#38bdf8', glowWeight: .65 }
   };
 
   function Agent(node, config) {

@@ -989,6 +989,15 @@ a { color: inherit; text-decoration: none; }
 .vc-atomic-core-zone {
   position: relative;
   min-width: 0;
+  /* height explícita = altura PINTADA (core-size+safearea*2 * escala do
+     hud), não a altura de layout do hud (que o CSS scale nunca reduz —
+     achado real 2026-07-15). Sem isso, .vc-chat-content (align-items:end)
+     dimensiona a linha inteira do grid pela altura NÃO escalada do hud
+     (664px), empurrando a posição de descanso do hud pra baixo do
+     composer sticky quando a resposta do assistente é curta/normal.
+     overflow:visible (padrão) deixa o hud pintado (menor) continuar
+     aparecendo normalmente acima dessa altura menor declarada. */
+  height: calc((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * .465);
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
@@ -1316,20 +1325,19 @@ a { color: inherit; text-decoration: none; }
 .vc-smile-close:hover { background: rgba(168, 85, 247, .2); }
 .vc-smile-actions button:disabled { opacity: .45; cursor: not-allowed; }
 
-@media (max-width: 1180px) {
-  /* --atomic-core-size/--atomic-safe-area na .vc-chat-scroll (não na
-     .vc-atomic-hud) pra que o calc() de largura de coluna em
-     .vc-chat-content enxergue o mesmo valor deste breakpoint — ver
-     comentário na declaração base em .vc-chat-scroll.
-     NÃO tentar encolher core-size/safe-area por vw aqui: a órbita dos
-     agentes no JS (AGENT_RADIUS/rx/ry) é calibrada em pixels absolutos
-     pra exatamente 490+116, e qualquer um dos dois vars menor do que
-     isso faz os agentes vazarem da própria caixa do hud (achado real,
-     2026-07-15 — ver tests/e2e/vision-core-next-atomic-core.spec.mjs
-     "not clipped at 1024x768"). Overflow do hud pra fora de
-     #vcChatScroll em larguras ~1024px permanece um problema conhecido,
-     não resolvido nesta sessão — ver diagnóstico entregue ao usuário. */
-  .vc-chat-scroll { --atomic-core-size: 490px; --atomic-safe-area: 116px; }
+@media (max-width: 1180px) and (min-width: 821px) {
+  /* Camada intermediária (achado real, 2026-07-15): o valor "2x" pleno
+     (490+116) não cabe nos ~670px disponíveis nessa faixa de largura —
+     ver docs do bug em tests/e2e/…atomic-core.spec.mjs "sticky Core
+     never overlaps…". Reduzido pra 400+95 (fator .8163 sobre 490/116),
+     maior que o original (245/58) e menor que o 2x pleno — cabe com
+     folga (~80px) nos ~670px disponíveis. AGENT_RADIUS/rx/ry no JS
+     escalam pelo MESMO fator só nessa faixa de viewport (ver
+     ORBIT_SCALE em vision-core-next-clean.js), senão os agentes vazam
+     da caixa do hud (não usar core-size/safe-area menor sem escalar a
+     órbita junto). ≤820px continua com 490/116 fixo (bloco próprio
+     abaixo, já corrigido pelo buffer de altura pintada). */
+  .vc-chat-scroll { --atomic-core-size: 400px; --atomic-safe-area: 95px; }
   .vc-atomic-hud { opacity: calc(.42 * var(--atomic-intensity)); }
 }
 
@@ -1370,13 +1378,26 @@ a { color: inherit; text-decoration: none; }
   .vc-atomic-hud .vc-agent small { display: none; }
   .vc-chat-hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "onboarding"; }
   .vc-chat-hero .vc-atomic-hud { display: none; }
-  .vc-chat-content { grid-template-columns: minmax(0, 1fr) 112px; column-gap: 10px; }
+  /* Coluna 2 = largura pintada real do hud (achado real, 2026-07-15): o
+     112px fixo era menor que os ~206px que o hud realmente ocupa depois
+     do scale .285, então o margin-left negativo (abaixo) fazia o hud
+     pintado vazar pra esquerda por cima da coluna de mensagens — some
+     mais que o esperado só quando a mensagem/resposta é longa o
+     suficiente pra encostar (align-self:flex-end removido do
+     .vc-message-user deixou isso mais fácil de acontecer, já que a bolha
+     do usuário passou a ocupar a largura cheia da coluna também). */
+  .vc-chat-content { grid-template-columns: minmax(0, 1fr) calc((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * .285); column-gap: 10px; }
   /* Mesmo raciocínio do buffer do top acima: 70px fixo era menor que a
      altura pintada atual do hud (achado real, 2026-07-15) — em conversa
      curta (sem scroll ainda), é este padding-bottom, não o top do
      sticky, que decide a posição de descanso do hud (align-self:flex-end
      dentro da zona), e ele encostava/sobrepunha o composer. */
-  .vc-atomic-core-zone { padding-bottom: calc(var(--vc-composer-height, 112px) + ((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * .285) + 20px); }
+  .vc-atomic-core-zone {
+    /* Mesma correção de height explícita da regra base, só que com a
+       escala .285 deste breakpoint (achado real, 2026-07-15). */
+    height: calc((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * .285);
+    padding-bottom: calc(var(--vc-composer-height, 112px) + ((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * .285) + 20px);
+  }
   .vc-onboarding-plans { grid-template-columns: 1fr; }
   .vc-onboarding-account { align-items: stretch; flex-direction: column; }
 }
