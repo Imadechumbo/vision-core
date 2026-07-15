@@ -17,6 +17,7 @@ Software Factory
 
 Atomic Core
 
+✔ `next-clean-96` concluído localmente, sem deploy: Atomic Core reduzido mais 15% e aproximado da borda direita; progressive reveal corrigido na causa raiz (3 palavras/12ms) para grupos de 4 caracteres/16ms, pausas de pontuação e aceleração moderada em respostas extensas. A resposta integral nunca substitui o trecho parcial antes do fim e o Core permanece em Action em todas as atualizações visíveis. Teste dirigido 35/35 PASS; suíte permanente Next 141/141 PASS em 55,8s, 4 workers, sem retry; Pages 11/11; `node --check` e `git diff --check` PASS.
 ✔ `next-clean-95` ajustado localmente, sem deploy: escala visual uniforme de `.86` no desktop e `.53` no mobile, ancorada à direita. O centro aparente se desloca cerca de 25 px para a direita sem alterar posição vertical, órbitas, glow, Idle, Action, Retorno ou progressive reveal. Teste dirigido Atomic Core 35/35 PASS; suíte permanente Next 141/141 PASS em 55,2s, 4 workers, sem retry; Pages 11/11; `node --check` e `git diff --check` PASS.
 ✔ OK
 

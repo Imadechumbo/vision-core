@@ -4,6 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-96 (2026-07-15, não deployado)
+
+- Atomic Core recebeu a redução final de aproximadamente 15% sobre `next-clean-95`, com escala `.73` no desktop e `.45` no mobile; a origem deslocada aproxima o estado de trabalho da borda direita sem escapar do Chat.
+- Revelação local deixou de inserir três palavras a cada 12 ms e passou a apresentar grupos pequenos de caracteres em timers reais, com pausas de pontuação e aceleração moderada apenas para respostas extensas.
+- Resposta integral, trecho visível e progresso permanecem separados; Action cobre todas as atualizações visíveis e só então passa por Settling para Idle.
+
 ## next-clean-95 (2026-07-15, não deployado)
 
 - Atomic Core reduzido uniformemente em 14% no desktop e aproximadamente 15% no mobile, com origem de escala na borda direita para deslocar o centro visual cerca de 25 px sem cortar órbitas, glow ou agentes.

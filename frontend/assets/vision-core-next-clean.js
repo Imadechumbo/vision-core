@@ -455,14 +455,17 @@
     var item = appendMessage('assistant', title, '');
     if (!item) return Promise.resolve(null);
     var body = item.querySelector('p');
-    var chunks = String(text).match(/\S+\s*/g) || [String(text)];
-    if (getAnimationMode() === 'reduced' || chunks.length < 2) {
-      body.textContent = text;
+    var rawResponse = String(text);
+    var characters = Array.from(rawResponse);
+    if (getAnimationMode() === 'reduced' || characters.length < 2) {
+      body.textContent = rawResponse;
       return Promise.resolve(item);
     }
     var previousLive = stream.getAttribute('aria-live');
     stream.setAttribute('aria-live', 'off');
-    var index = 0;
+    var visibleResponse = '';
+    var revealProgress = 0;
+    var stepSize = characters.length > 4000 ? 8 : characters.length > 1800 ? 6 : 4;
     var timer = null;
     return new Promise(function (resolve, reject) {
       function finish(error) {
@@ -477,14 +480,15 @@
         finish(error);
       };
       function reveal() {
-        var end = Math.min(chunks.length, index + 3);
-        body.textContent += chunks.slice(index, end).join('');
-        index = end;
-        if (index >= chunks.length) return finish();
-        var last = chunks[index - 1] || '';
-        timer = window.setTimeout(reveal, /[.!?]\s*$/.test(last) ? 34 : /[,;:]\s*$/.test(last) ? 22 : 12);
+        var end = Math.min(characters.length, revealProgress + stepSize);
+        visibleResponse += characters.slice(revealProgress, end).join('');
+        body.textContent = visibleResponse;
+        revealProgress = end;
+        if (revealProgress >= characters.length) return finish();
+        var last = characters[revealProgress - 1] || '';
+        timer = window.setTimeout(reveal, /[.!?\n]/.test(last) ? 80 : /[,;:]/.test(last) ? 32 : 16);
       }
-      reveal();
+      timer = window.setTimeout(reveal, 16);
     });
   }
 

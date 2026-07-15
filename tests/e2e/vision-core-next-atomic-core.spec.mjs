@@ -441,12 +441,16 @@ test('anchors flush against the real right edge of the content area, not just it
 });
 
 test('uses the approved peripheral scale while preserving the safe right edge on desktop and mobile', async ({ page }) => {
+  await page.route(`${API}/api/chat`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer: 'posição periférica '.repeat(80) }) }));
   for (const viewport of [
-    { width: 1440, height: 900, expectedScale: 0.86 },
-    { width: 390, height: 844, expectedScale: 0.53 }
+    { width: 1440, height: 900, expectedScale: 0.73 },
+    { width: 390, height: 844, expectedScale: 0.45 }
   ]) {
     await page.setViewportSize(viewport);
     await page.goto(NEXT_URL());
+    await page.locator('#vcPrompt').fill('Medir posição do Core');
+    await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
+    await expect(page.locator('#vcChatHero')).toBeHidden();
     const geometry = await page.evaluate(() => {
       const hud = document.querySelector('[data-atomic-core]');
       const chat = document.getElementById('vcChatScroll').getBoundingClientRect();
@@ -458,6 +462,7 @@ test('uses the approved peripheral scale while preserving the safe right edge on
     });
     expect(geometry.scale).toBeCloseTo(viewport.expectedScale, 2);
     expect(geometry.safeRightGap, 'the scaled HUD must remain inside the Chat edge').toBeGreaterThanOrEqual(0);
+    expect(geometry.safeRightGap, 'the work-state HUD must stay close to the peripheral edge').toBeLessThanOrEqual(6);
   }
 });
 
@@ -727,6 +732,13 @@ test('chat stays in Action through progressive reveal, then passes through settl
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer }) });
   });
   await page.goto(NEXT_URL());
+  await page.evaluate(() => {
+    window.__revealFrames = [];
+    new MutationObserver(() => {
+      const body = document.querySelector('.vc-message-assistant p');
+      if (body && body.textContent) window.__revealFrames.push({ length: body.textContent.length, at: performance.now(), coreState: document.querySelector('[data-atomic-core]').dataset.state });
+    }).observe(document.getElementById('vcChatStream'), { childList: true, characterData: true, subtree: true });
+  });
   await page.locator('#vcPrompt').fill('Teste progressivo');
   await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
 
@@ -738,6 +750,11 @@ test('chat stays in Action through progressive reveal, then passes through settl
   expect(partial.length).toBeLessThan(answer.length);
   await expect(page.locator('#vcChatStream')).toHaveAttribute('aria-live', 'off');
   await expect(page.locator('.vc-message-assistant p')).toHaveText(answer);
+  const revealFrames = await page.evaluate(() => window.__revealFrames);
+  expect(revealFrames[0].length, 'the first visible update must be a small character group').toBeLessThanOrEqual(4);
+  expect(revealFrames.length, 'the response must cross many visibly distinct DOM updates').toBeGreaterThan(20);
+  expect(revealFrames.at(-1).at - revealFrames[0].at, 'the reveal must yield across perceptible browser frames').toBeGreaterThan(500);
+  expect(revealFrames.every((frame) => frame.coreState === 'action'), 'Atomic Core must remain in Action for every visible reveal update').toBe(true);
   await expect(page.locator('.vc-app-shell')).toHaveAttribute('data-chat-activity', 'settling');
   await expect(page.locator('[data-atomic-core]')).toHaveAttribute('data-state', 'idle');
   await expect(page.locator('.vc-app-shell')).toHaveAttribute('data-chat-activity', 'idle');
