@@ -4,10 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
-## next-clean-93 (2026-07-14, não deployado)
+## next-clean-93 (2026-07-14, produção)
 
 - Conta autenticada ganhou menu persistente no header com nome/inicial, Minha conta, Configurações e logout pelo endpoint oficial; sair limpa o contexto visual e restaura imediatamente a Hero visitante.
 - Free, Pro e Enterprise são selecionáveis; Pro e Enterprise oferecem ações honestas de interesse/demonstração sem checkout, request ou persistência fictícia.
+- Publicado a partir de `b1d5b1f6` em `d70e8686.visioncoreai.pages.dev`; package SHA-256 `663bfaa27f14b06ea8435799ff97cd8ad92ddcbbbe2eccbd4cd708e3f657e5a8`. Alias principal, rota canônica, redirect legado e cache-bust foram confirmados por HTTP e navegador real.
 
 ## RC2 / next-clean-92 (2026-07-14, produção)
 

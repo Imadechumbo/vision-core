@@ -27,7 +27,7 @@ Deploy Produção
 `next-clean-74` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real contra `https://visioncoreai.pages.dev/vision-core-next.html`: cache-bust servido (`?v=next-clean-74` em CSS e JS, HTTP 200), menu lateral reorganizado presente (2 `.vc-nav-group`, rótulos "Atividade"/"Avançado", 7 itens fixos como filhos diretos de `.vc-nav`).
 
 Cache Bust
-next-clean-92 (RC2 publicado em produção em 2026-07-14; alias principal e deployment `20abd0f1.visioncoreai.pages.dev` confirmados servindo o cache-bust novo)
+next-clean-93 (publicado em produção em 2026-07-14; alias principal e deployment `d70e8686.visioncoreai.pages.dev` confirmados servindo o cache-bust novo)
 
 Último Commit
 
@@ -35,12 +35,12 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Último Deploy
 
-`20abd0f1.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-92`
+`d70e8686.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-93`
 
 ---
 
 # IMPLEMENTAÇÕES DESTA SESSÃO
-✔ `next-clean-93` implementado localmente, sem deploy: menu de usuário nativo e persistente no header reutiliza conta/Settings e `POST /api/auth/logout`; logout local é imediato, limpa token, Workspace/conversa/mensagens e restaura a Hero visitante com Google. Os três planos são cards inteiramente selecionáveis; PRO/Enterprise comunicam disponibilidade/interesse sem request, checkout ou backend fictício. Gates: dirigido 40/40; Pages 11/11; pairing 13/13; performance 59/59 (402.866B, p95 máximo 31,85ms); Next 137/137 sem retry em 49,1s.
+✔ `next-clean-93` publicado em produção: menu de usuário nativo e persistente no header reutiliza conta/Settings e `POST /api/auth/logout`; logout local é imediato, limpa token, Workspace/conversa/mensagens e restaura a Hero visitante com Google. Os três planos são cards inteiramente selecionáveis; PRO/Enterprise comunicam disponibilidade/interesse sem request, checkout ou backend fictício. Commit `b1d5b1f6`; package SHA-256 `663bfaa27f14b06ea8435799ff97cd8ad92ddcbbbe2eccbd4cd708e3f657e5a8`; deployment `https://d70e8686.visioncoreai.pages.dev`. Gates: dirigido 40/40; Pages 11/11; pairing 13/13; performance 59/59 (402.866B, p95 máximo 31,85ms); Next 137/137 sem retry em 49,1s. Smoke HTTP confirmou raiz, rota canônica, assets e manifesto; navegador real confirmou Hero/planos e seleção PRO sem envio de dados.
 
 ✔ RC2/OPS-002 concluído em produção: o pacote certificado do commit `eaddb98a` foi publicado em `https://20abd0f1.visioncoreai.pages.dev` e no alias `https://visioncoreai.pages.dev`. RC SHA-256 `9a905d495f1e6470b104aa501f1232cc8c5b5d8236830d345bef957a3132df7a`; package SHA-256 público `945aedb748be84c4deb53fbe973edae76e86db027ea56ca52e7dd35012f13290`. Gates: Pages 11/11, Playwright 135/135, performance 59/59, acessibilidade 59/59, segurança 13/13 + secret scan, Ponytail `Lean already. Ship.`. Smoke produtivo 8/8; raiz e `/vision-core-next` byte-idênticas ao RC; navegador real confirmou Hero contextual, Workspace, composer e `next-clean-92`. Evidência em `artifacts/next-rc-release/release-evidence.json` e `production-hero-rc2.png`.
 
