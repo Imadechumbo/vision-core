@@ -4,6 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-98 (2026-07-15, não deployado)
+
+- Chat de trabalho agora usa Grid estrutural com coluna de mensagens e zona exclusiva do Atomic Core; pergunta e resposta vivem no mesmo wrapper e o Core migra da Hero diretamente para sua zona.
+- Core teve redução visual real de 25% sobre `next-clean-97` (`205,84px → 154,38px` em 1440×900) e ficou alinhado à borda interna direita (`0px` de distância medida), sem margem calculada contra a largura da página.
+- Progressive reveal e sua cadência não foram alterados.
+
 ## next-clean-97 (2026-07-15, não deployado)
 
 - Pergunta e resposta agora compartilham uma única coluna textual; a pergunta continua alinhada à direita dentro dela, sem avançar sobre a região reservada ao Atomic Core.

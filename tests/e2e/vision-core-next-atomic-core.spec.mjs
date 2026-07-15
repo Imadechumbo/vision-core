@@ -443,32 +443,50 @@ test('anchors flush against the real right edge of the content area, not just it
 test('uses the approved peripheral scale while preserving the safe right edge on desktop and mobile', async ({ page }) => {
   await page.route(`${API}/api/chat`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer: 'posição periférica '.repeat(80) }) }));
   for (const viewport of [
-    { width: 1440, height: 900, expectedScale: 0.62 },
-    { width: 390, height: 844, expectedScale: 0.38 }
+    { width: 1440, height: 900, expectedScale: 0.465, previousWidth: 205.84 },
+    { width: 390, height: 844, expectedScale: 0.285, previousWidth: 137.18 }
   ]) {
     await page.setViewportSize(viewport);
     await page.goto(NEXT_URL());
     await page.locator('#vcPrompt').fill('Medir posição do Core');
     await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
     await expect(page.locator('#vcChatHero')).toBeHidden();
+    await expect(page.locator('.vc-message-assistant')).toBeVisible();
     const geometry = await page.evaluate(() => {
       const hud = document.querySelector('[data-atomic-core]');
       const chat = document.getElementById('vcChatScroll').getBoundingClientRect();
+      const messageColumn = document.getElementById('vcMessageColumn').getBoundingClientRect();
       const rect = hud.getBoundingClientRect();
       const user = document.querySelector('.vc-message-user').getBoundingClientRect();
       const assistant = document.querySelector('.vc-message-assistant').getBoundingClientRect();
+      const composer = document.getElementById('vcComposer').getBoundingClientRect();
+      const intersects = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
       return {
         scale: Number.parseFloat(getComputedStyle(hud).scale),
+        coreWidth: rect.width,
         safeRightGap: chat.right - rect.right,
         messageEdgeDelta: Math.abs(user.right - assistant.right),
-        messageToCoreGap: rect.left - user.right
+        userInsideColumn: user.right <= messageColumn.right + 1,
+        assistantInsideColumn: assistant.right <= messageColumn.right + 1,
+        messageToCoreGap: rect.left - user.right,
+        coreIntersectsUser: intersects(rect, user),
+        coreIntersectsAssistant: intersects(rect, assistant),
+        coreIntersectsComposer: intersects(rect, composer),
+        coreParent: hud.parentElement.id
       };
     });
     expect(geometry.scale).toBeCloseTo(viewport.expectedScale, 2);
     expect(geometry.safeRightGap, 'the scaled HUD must remain inside the Chat edge').toBeGreaterThanOrEqual(0);
     expect(geometry.safeRightGap, 'the work-state HUD must stay close to the peripheral edge').toBeLessThanOrEqual(6);
     expect(geometry.messageEdgeDelta, 'user and assistant bubbles must share the same text-column right edge').toBeLessThanOrEqual(1);
+    expect(geometry.userInsideColumn).toBe(true);
+    expect(geometry.assistantInsideColumn).toBe(true);
     expect(geometry.messageToCoreGap, 'the shared message column must not enter the Atomic Core region').toBeGreaterThanOrEqual(0);
+    expect(geometry.coreIntersectsUser).toBe(false);
+    expect(geometry.coreIntersectsAssistant).toBe(false);
+    expect(geometry.coreIntersectsComposer, 'Atomic Core must not intersect the composer').toBe(false);
+    expect(geometry.coreParent).toBe('vcAtomicCoreZone');
+    expect((1 - geometry.coreWidth / viewport.previousWidth) * 100).toBeCloseTo(25, 0);
   }
 });
 

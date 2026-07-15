@@ -964,12 +964,29 @@ a { color: inherit; text-decoration: none; }
 }
 
 
+.vc-chat-content {
+  display: grid;
+  grid-template-columns: minmax(0, 760px) minmax(160px, 1fr);
+  column-gap: 16px;
+  align-items: end;
+  width: 100%;
+}
+
+.vc-message-column { min-width: 0; }
+.vc-atomic-core-zone {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
 .vc-chat-stream {
   display: flex;
   flex-direction: column;
   gap: 14px;
   justify-content: end;
-  width: min(760px, calc(100% - clamp(210px, 22vw, 280px)));
+  width: 100%;
   min-height: 230px;
   padding-bottom: 6px;
 }
@@ -1049,14 +1066,15 @@ a { color: inherit; text-decoration: none; }
   position: sticky;
   top: calc(100vh - var(--vc-composer-height, 112px) - var(--atomic-core-size) - 70px);
   align-self: flex-end;
+  flex: 0 0 auto;
   z-index: 8;
-  margin: calc(-1 * (var(--atomic-core-size) - 18px)) 10px -38px auto;
+  margin: 0;
   width: calc(var(--atomic-core-size) + (var(--atomic-safe-area) * 2));
   aspect-ratio: 1;
   pointer-events: none;
   opacity: calc(.76 * var(--atomic-intensity));
-  scale: .62;
-  transform-origin: calc(100% + 24px) center;
+  scale: .465;
+  transform-origin: right bottom;
   contain: layout;
   transition: opacity .32s ease, transform .32s ease;
 }
@@ -1311,14 +1329,15 @@ a { color: inherit; text-decoration: none; }
     margin-right: 0;
     margin-left: calc(100% - (var(--atomic-core-size) + (var(--atomic-safe-area) * 2)));
     opacity: calc(.48 * var(--atomic-intensity));
-    scale: .38;
+    scale: .285;
     transform-origin: right bottom;
   }
   .vc-atomic-hud .vc-agent span,
   .vc-atomic-hud .vc-agent small { display: none; }
   .vc-chat-hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "onboarding"; }
   .vc-chat-hero .vc-atomic-hud { display: none; }
-  .vc-chat-stream { width: min(620px, calc(100% - clamp(120px, 38vw, 145px))); }
+  .vc-chat-content { grid-template-columns: minmax(0, 1fr) 112px; column-gap: 10px; }
+  .vc-atomic-core-zone { padding-bottom: calc(var(--vc-composer-height, 112px) + 70px); }
   .vc-onboarding-plans { grid-template-columns: 1fr; }
   .vc-onboarding-account { align-items: stretch; flex-direction: column; }
 }

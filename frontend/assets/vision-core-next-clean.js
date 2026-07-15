@@ -188,6 +188,7 @@
   var heroContinueWorkspace = document.getElementById('vcHeroContinueWorkspace');
   var heroNewMission = document.getElementById('vcHeroNewMission');
   var stream = document.getElementById('vcChatStream');
+  var atomicCoreZone = document.getElementById('vcAtomicCoreZone');
   var featurePanel = document.getElementById('vcFeaturePanel');
   var featureTitle = document.getElementById('vcFeatureTitle');
   var featureBody = document.getElementById('vcFeatureBody');
@@ -584,8 +585,8 @@
     var state = deriveChatHeroState();
     var atomicCore = document.querySelector('[data-atomic-core]');
     var chatHero = document.getElementById('vcChatHero');
-    if (atomicCore && chatHero && chatScroll) {
-      if (state === 'work') chatScroll.insertBefore(atomicCore, stream);
+    if (atomicCore && chatHero && atomicCoreZone) {
+      if (state === 'work') atomicCoreZone.appendChild(atomicCore);
       else chatHero.insertBefore(atomicCore, chatOnboarding);
     }
     chatOnboarding.dataset.state = state;
