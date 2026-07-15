@@ -382,7 +382,11 @@ test('no agent node extends past the #vcChatScroll container edge', async ({ pag
   await page.goto(NEXT_URL());
   const clipped = await page.evaluate(() => {
     const scrollRect = document.getElementById('vcChatScroll').getBoundingClientRect();
-    const tolerance = 1;
+    // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados
+    // via margin-right negativo em .vc-atomic-hud -- tolerância cobre esse
+    // deslocamento intencional, não é regressão de clipping (#vcChatScroll
+    // não tem overflow próprio desde ARCHITECTURAL PRINCIPLE-004).
+    const tolerance = 9;
     return Array.from(document.querySelectorAll('[data-agent]'))
       .map((el) => ({ name: el.getAttribute('data-agent'), rect: el.getBoundingClientRect() }))
       .filter(({ rect }) => rect.right > scrollRect.right + tolerance || rect.left < scrollRect.left - tolerance)
@@ -411,8 +415,12 @@ test('anchors flush against the real right edge of the content area, not just it
     const paddingRight = parseFloat(getComputedStyle(main).paddingRight);
     return (mainRect.right - paddingRight) - hudRect.right;
   });
-  expect(gap, 'HUD keeps a small safe distance from the real content edge/scrollbar').toBeGreaterThanOrEqual(0);
-  expect(gap).toBeLessThanOrEqual(12);
+  // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados via
+  // margin-right negativo, pra dentro do padding externo de .vc-main
+  // (mínimo 24px em telas estreitas) -- ainda com folga generosa antes da
+  // scrollbar real. -12 dá tolerância pequena sobre o -8 exato.
+  expect(gap, 'HUD stays a bounded distance inside .vc-main padding, safely short of the scrollbar').toBeGreaterThanOrEqual(-12);
+  expect(gap).toBeLessThanOrEqual(4);
 });
 
 test('uses the approved peripheral scale while preserving the safe right edge on desktop and mobile', async ({ page }) => {
@@ -457,8 +465,11 @@ test('uses the approved peripheral scale while preserving the safe right edge on
       };
     });
     expect(geometry.scale).toBeCloseTo(viewport.expectedScale, 2);
-    expect(geometry.safeRightGap, 'the scaled HUD must remain inside the Chat edge').toBeGreaterThanOrEqual(0);
-    expect(geometry.safeRightGap, 'the work-state HUD must stay close to the peripheral edge').toBeLessThanOrEqual(6);
+    // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados
+    // via margin-right negativo em .vc-atomic-hud, pra dentro do padding
+    // externo de .vc-main -- ainda com folga generosa antes da scrollbar.
+    expect(geometry.safeRightGap, 'the scaled HUD must stay a bounded distance inside the Chat edge').toBeGreaterThanOrEqual(-12);
+    expect(geometry.safeRightGap, 'the work-state HUD must stay close to the peripheral edge').toBeLessThanOrEqual(-4);
     expect(geometry.messageEdgeDelta, 'user and assistant bubbles must share the same text-column right edge').toBeLessThanOrEqual(1);
     expect(geometry.userInsideColumn).toBe(true);
     expect(geometry.assistantInsideColumn).toBe(true);
@@ -486,14 +497,17 @@ test('anchor and no-clipping guarantees hold where the widget is actually visibl
     const mainRect = main.getBoundingClientRect();
     const paddingRight = parseFloat(getComputedStyle(main).paddingRight);
     const gap = (mainRect.right - paddingRight) - hudRect.right;
-    const tolerance = 1;
+    // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados.
+    const tolerance = 9;
     const clipped = Array.from(document.querySelectorAll('[data-agent]'))
       .map((el) => el.getBoundingClientRect())
       .filter((rect) => rect.right > scrollRect.right + tolerance || rect.left < scrollRect.left - tolerance);
     return { gap, clippedCount: clipped.length };
   });
-  expect(result.gap, 'HUD must stay near the real right edge without touching the scrollbar').toBeGreaterThanOrEqual(0);
-  expect(result.gap).toBeLessThanOrEqual(12);
+  // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados,
+  // ver teste "anchors flush against the real right edge" acima.
+  expect(result.gap, 'HUD must stay a bounded distance inside .vc-main padding, safely short of the scrollbar').toBeGreaterThanOrEqual(-12);
+  expect(result.gap).toBeLessThanOrEqual(4);
   expect(result.clippedCount, 'no agent label should be clipped').toBe(0);
 });
 
@@ -810,5 +824,6 @@ test('sticky Core never overlaps the composer after scrolling a long conversatio
     return { coreBottom: core.bottom, coreRight: core.right, composerTop: composer.top, chatRight: chat.right };
   });
   expect(geometry.coreBottom).toBeLessThanOrEqual(geometry.composerTop - 20);
-  expect(geometry.coreRight).toBeLessThanOrEqual(geometry.chatRight);
+  // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados.
+  expect(geometry.coreRight).toBeLessThanOrEqual(geometry.chatRight + 9);
 });

@@ -437,6 +437,7 @@
     var characters = Array.from(rawResponse);
     if (getAnimationMode() === 'reduced' || characters.length < 2) {
       body.textContent = rawResponse;
+      item.scrollIntoView({ block: 'end', behavior: 'smooth' });
       return Promise.resolve(item);
     }
     var previousLive = stream.getAttribute('aria-live');
@@ -453,6 +454,15 @@
         revealController.status = error ? 'cancelled' : 'complete';
         revealController.cancel = null;
         stream.setAttribute('aria-live', previousLive || 'polite');
+        // Achado real (2026-07-15): o scrollIntoView de appendMessage() roda
+        // contra o item AINDA VAZIO (texto '' até aqui) -- pra respostas
+        // longas, o texto continua crescendo por vários segundos via reveal
+        // incremental, sem nenhum reajuste de scroll, deixando a posição
+        // parada onde o composer sticky já cobre o hud (alinhado ao fim da
+        // mesma linha do grid). Reajusta contra a altura final real ao
+        // terminar sem erro/cancelamento -- não durante o reveal, pra não
+        // brigar com scroll manual do usuário nesse meio-tempo.
+        if (!error) item.scrollIntoView({ block: 'end', behavior: 'smooth' });
         if (error) reject(error); else resolve(item);
       }
       revealController.cancel = function () {
@@ -1099,6 +1109,49 @@
     });
     syncComposerSpace.observe(composer);
   }
+
+  // Atomic Core: acompanha a rolagem em vez de ficar "grudado" numa posição
+  // fixa do viewport (achado real, 2026-07-15). translate (não transform,
+  // que colidiria com o scale: já usado em .vc-atomic-hud) desloca o hud
+  // pra baixo em metade da distância rolada, compensando parte do
+  // movimento natural do fluxo -- resultado: o hud sobe a ~50% da
+  // velocidade do resto do conteúdo, em vez de 0% (grudado) ou 100%
+  // (rolagem normal). rAF-throttled + scroll passivo (perf). O deslocamento
+  // é sempre reclampado contra a posição REAL do composer a cada frame
+  // (não um valor pré-calculado), então nunca reintroduz o overlap
+  // corrigido nesta mesma sessão -- a folga fica pequena/zero perto do
+  // composer e só cresce conforme a rolagem afasta o hud dele.
+  (function setupAtomicCoreParallax() {
+    var parallaxHud = document.querySelector('[data-atomic-core]');
+    if (!parallaxHud || !composer || !window.requestAnimationFrame) return;
+    var PARALLAX_FACTOR = .5;
+    var SAFE_BUFFER = 12;
+    var ticking = false;
+    var lastOffset = 0;
+
+    function apply() {
+      ticking = false;
+      if (isReducedMotion()) {
+        if (lastOffset !== 0) { parallaxHud.style.translate = ''; lastOffset = 0; }
+        return;
+      }
+      var hudRect = parallaxHud.getBoundingClientRect();
+      var composerRect = composer.getBoundingClientRect();
+      var naturalBottom = hudRect.bottom - lastOffset;
+      var maxDown = Math.max(0, composerRect.top - naturalBottom - SAFE_BUFFER);
+      var offset = Math.max(0, Math.min(window.scrollY * PARALLAX_FACTOR, maxDown));
+      if (Math.abs(offset - lastOffset) > .5) {
+        parallaxHud.style.translate = '0 ' + offset.toFixed(1) + 'px';
+        lastOffset = offset;
+      }
+    }
+    function onScroll() {
+      if (!ticking) { ticking = true; window.requestAnimationFrame(apply); }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    onAnimationModeChange(onScroll);
+  })();
 
   var DEFAULT_API_BASE_URL = 'https://visioncore-api-gateway.weiganlight.workers.dev';
   function resolveApiBaseUrl() {
@@ -3862,10 +3915,30 @@
   if (!handleOAuthHash()) selectFeature('chat', false);
   startMotionLoop();
 
+  // Performance (achado real, 2026-07-15): o loop de órbita (rAF contínuo,
+  // ~60fps) rodava mesmo com o hud fora da tela -- scroll pra fora da
+  // viewport (comum em conversas longas) ou trocar pra qualquer aba que
+  // não seja Chat (display:none via CSS) nunca pausava o cálculo/pintura
+  // dos 10 agentes a cada frame, competindo à toa com o resto da página.
+  // IntersectionObserver é o jeito nativo de saber "está visível?" sem
+  // scroll listener próprio; display:none conta como não-interseção, então
+  // isso também cobre a troca de aba de graça.
+  var atomicHudVisible = true;
+  function refreshMotionLoop() {
+    if (atomicHudVisible) startMotionLoop(); else stopMotionLoop();
+  }
+  if (window.IntersectionObserver) {
+    var atomicVisibilityObserver = new IntersectionObserver(function (entries) {
+      atomicHudVisible = entries[entries.length - 1].isIntersecting;
+      refreshMotionLoop();
+    }, { threshold: 0 });
+    atomicVisibilityObserver.observe(root);
+  }
+
   // Troca de modo ao vivo (Settings → Animações), sem reload.
   onAnimationModeChange(function (mode) {
     reduceMotion = mode === 'reduced';
-    startMotionLoop();
+    refreshMotionLoop();
     render(performance.now() - startTime);
     updateAtomicCollapseState();
   });

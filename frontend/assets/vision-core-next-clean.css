@@ -362,6 +362,7 @@ a { color: inherit; text-decoration: none; }
      sobrescrevendo direto nela pros breakpoints menores. */
   --atomic-core-size: min(520px, 40vw);
   --atomic-safe-area: 72px;
+  --atomic-scale: .465;
   flex: 1 1 auto;
   min-height: 260px;
   display: flex;
@@ -1025,6 +1026,18 @@ a { color: inherit; text-decoration: none; }
   border: 1px solid rgba(255, 255, 255, .08);
   border-radius: var(--radius);
   background: rgba(9, 8, 16, .58);
+  /* Root cause do hub "espremido" atrás do composer em respostas longas
+     (achado real, 2026-07-15): appendMessage() chama scrollIntoView({block:
+     "end"}) na mensagem nova, que não sabe nada sobre o composer sticky por
+     cima — o texto (e o hud, alinhado ao fim da mesma linha do grid) fica
+     de repouso exatamente atrás dele, sem precisar de scroll algum. scroll-
+     margin-bottom é o mecanismo nativo do browser pra isso (respeitado por
+     scrollIntoView): reserva o mesmo espaço vertical que já protege o fim
+     do #vcChatScroll (altura do composer) mais a altura PINTADA do hud
+     (--atomic-core-size/--atomic-safe-area/--atomic-scale, já únicas por
+     breakpoint), então o alvo do scroll nunca pousa embaixo de nenhum dos
+     dois. */
+  scroll-margin-bottom: calc(var(--vc-composer-height, 112px) + ((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * var(--atomic-scale)) + 24px);
 }
 
 .vc-message span {
@@ -1085,8 +1098,14 @@ a { color: inherit; text-decoration: none; }
 
 /* Indicador periférico do Chat: sticky é limitado por #vcChatScroll e
    acompanha a rolagem única da página sem escapar para o viewport global.
-   A coluna vazia da Hero reserva espaço no estado inicial; as margens
-   compensam a caixa no fluxo sem aproximá-la do composer. */
+   Por cima disso, setupAtomicCoreParallax() (vision-core-next-clean.js,
+   achado real 2026-07-15) soma um translate que cresce com o scroll --
+   sticky sozinho garante "sempre visível/nunca sobre o composer" (tirar
+   o sticky quebra isso pra conversas longas, testado e revertido); o
+   translate é só o que faz o hud deixar de parecer 100% grudado numa
+   posição fixa da tela. A coluna vazia da Hero reserva espaço no estado
+   inicial; as margens compensam a caixa no fluxo sem aproximá-la do
+   composer. */
 .vc-atomic-hud {
   --atomic-intensity: 1;
   position: sticky;
@@ -1094,7 +1113,12 @@ a { color: inherit; text-decoration: none; }
   align-self: flex-end;
   flex: 0 0 auto;
   z-index: 8;
-  margin: 0;
+  /* Leve ajuste pra direita (achado real, 2026-07-15): o hud já encostava
+     (gap 0) na borda de conteúdo real de .vc-main -- margin-right negativo
+     empurra a caixa alinhada (align-self:flex-end) pra dentro do padding
+     externo de .vc-main (mínimo 24px em telas estreitas), com folga
+     confortável antes da scrollbar real. */
+  margin: 0 -8px 0 0;
   width: calc(var(--atomic-core-size) + (var(--atomic-safe-area) * 2));
   aspect-ratio: 1;
   pointer-events: none;
@@ -1233,7 +1257,10 @@ a { color: inherit; text-decoration: none; }
   position: static;
   grid-area: atomic;
   align-self: start;
-  margin: calc(-1 * var(--atomic-safe-area)) 0 0;
+  /* Mesmo leve ajuste -8px da regra base (achado real, 2026-07-15) --
+     sem isso o hub "pula" de posição ao sair do estado Hero pro primeiro
+     envio de mensagem. */
+  margin: calc(-1 * var(--atomic-safe-area)) -8px 0 0;
   transform-origin: right center;
 }
 .vc-chat-onboarding h1 { margin: 4px 0 8px; font-size: clamp(20px, 3vw, 30px); }
@@ -1360,7 +1387,7 @@ a { color: inherit; text-decoration: none; }
   .vc-brand-copy small { white-space: normal; line-height: 1.45; }
   .vc-chat-stage { padding-top: 14px; }
   .vc-safe-status-row { grid-template-columns: 1fr; }
-  .vc-chat-scroll { --atomic-core-size: 490px; --atomic-safe-area: 116px; }
+  .vc-chat-scroll { --atomic-core-size: 490px; --atomic-safe-area: 116px; --atomic-scale: .285; }
   .vc-atomic-hud {
     /* Buffer derivado da altura real pintada (unscaled * scale abaixo)
        + 20px de folga, em vez de um número solto: achado real
@@ -1368,7 +1395,13 @@ a { color: inherit; text-decoration: none; }
        pintado) e ficou menor que a altura pintada atual (~206px),
        deixando o hud encostar/sobrepor o composer. */
     top: calc(100vh - var(--vc-composer-height, 112px) - ((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * .285) - 20px);
-    margin-right: 0;
+    /* justify-content:flex-end (regra base de .vc-atomic-core-zone) ancora
+       a borda direita da CAIXA EXTERNA (margin box) na borda direita do
+       container -- margin-left só controla quanto a caixa (maior que a
+       coluna) vaza pra esquerda, nunca a posição direita. margin-right
+       negativo é o único jeito real de repetir aqui o mesmo leve ajuste
+       pra direita da regra base (achado real, 2026-07-15). */
+    margin-right: -8px;
     margin-left: calc(100% - (var(--atomic-core-size) + (var(--atomic-safe-area) * 2)));
     opacity: calc(.48 * var(--atomic-intensity));
     scale: .285;
@@ -1387,16 +1420,10 @@ a { color: inherit; text-decoration: none; }
      .vc-message-user deixou isso mais fácil de acontecer, já que a bolha
      do usuário passou a ocupar a largura cheia da coluna também). */
   .vc-chat-content { grid-template-columns: minmax(0, 1fr) calc((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * .285); column-gap: 10px; }
-  /* Mesmo raciocínio do buffer do top acima: 70px fixo era menor que a
-     altura pintada atual do hud (achado real, 2026-07-15) — em conversa
-     curta (sem scroll ainda), é este padding-bottom, não o top do
-     sticky, que decide a posição de descanso do hud (align-self:flex-end
-     dentro da zona), e ele encostava/sobrepunha o composer. */
   .vc-atomic-core-zone {
     /* Mesma correção de height explícita da regra base, só que com a
        escala .285 deste breakpoint (achado real, 2026-07-15). */
     height: calc((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * .285);
-    padding-bottom: calc(var(--vc-composer-height, 112px) + ((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * .285) + 20px);
   }
   .vc-onboarding-plans { grid-template-columns: 1fr; }
   .vc-onboarding-account { align-items: stretch; flex-direction: column; }
