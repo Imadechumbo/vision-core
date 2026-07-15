@@ -4,11 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
-## next-clean-107 (2026-07-15, não deployado)
+## next-clean-107 (2026-07-15, produção)
 
 - Hero inicial compensa a caixa não escalada do Atomic Core: card `68,21%`, HUD pintado `30,02%` e gap visual `42,24px` a 1440×900.
 - HUD da Hero avançou 16px à direita, mantendo `63,36px` até a viewport; Grid de conversa, escala, animações e comportamento não mudaram.
 - Navegador real local sem overflow/erros. App Shell 21/21; Atomic Core 34/34; suíte Next 141/141; Pages 11/11.
+- Publicado a partir de `9a793b36` em `e486d7de.visioncoreai.pages.dev`; package SHA-256 `1ae93fdadc3224dcd9957437b8456ad8ab252fa92187062f25fefd3b6299ce1b`. Alias principal confirmou as mesmas proporções, sem overflow ou erros de console.
 
 ## next-clean-99 (2026-07-15, produção)
 
