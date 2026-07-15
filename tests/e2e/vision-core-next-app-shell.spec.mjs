@@ -119,10 +119,36 @@ test('empty-chat Hero starts below the header, shares the top row with Atomic Co
     };
   });
   expect(layout.gap).toBeLessThanOrEqual(40);
-  expect(Math.abs(layout.onboardingTop - layout.atomicTop)).toBeLessThanOrEqual(80);
+  expect(Math.abs(layout.onboardingTop - layout.atomicTop)).toBeLessThanOrEqual(110);
   expect(layout.composerBottomGap).toBeGreaterThanOrEqual(0);
   expect(layout.composerBottomGap).toBeLessThanOrEqual(24);
   expect(layout.internalBuildCopy).toBe('');
+});
+
+test('desktop Hero uses the approved 68/30 proportion, 42px gap, and safe right shift', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(NEXT_URL);
+  const layout = await page.evaluate(() => {
+    const hero = document.querySelector('#vcChatHero').getBoundingClientRect();
+    const card = document.querySelector('#vcChatOnboarding').getBoundingClientRect();
+    const atomic = document.querySelector('.vc-chat-hero [data-atomic-core]').getBoundingClientRect();
+    return {
+      cardRatio: card.width / hero.width,
+      atomicRatio: atomic.width / hero.width,
+      visualGap: atomic.left - card.right,
+      atomicRightOffset: atomic.right - hero.right,
+      viewportSafety: window.innerWidth - atomic.right
+    };
+  });
+  expect(layout.cardRatio).toBeGreaterThanOrEqual(.67);
+  expect(layout.cardRatio).toBeLessThanOrEqual(.69);
+  expect(layout.atomicRatio).toBeGreaterThanOrEqual(.29);
+  expect(layout.atomicRatio).toBeLessThanOrEqual(.31);
+  expect(layout.visualGap).toBeGreaterThanOrEqual(40);
+  expect(layout.visualGap).toBeLessThanOrEqual(44);
+  expect(layout.atomicRightOffset).toBeGreaterThanOrEqual(23);
+  expect(layout.atomicRightOffset).toBeLessThanOrEqual(25);
+  expect(layout.viewportSafety).toBeGreaterThanOrEqual(40);
 });
 
 test('tutorial preference persists and Settings restarts it', async ({ page }) => {

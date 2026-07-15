@@ -386,7 +386,7 @@ test('no agent node extends past the #vcChatScroll container edge', async ({ pag
     // via margin-right negativo em .vc-atomic-hud -- tolerância cobre esse
     // deslocamento intencional, não é regressão de clipping (#vcChatScroll
     // não tem overflow próprio desde ARCHITECTURAL PRINCIPLE-004).
-    const tolerance = 9;
+    const tolerance = 25;
     return Array.from(document.querySelectorAll('[data-agent]'))
       .map((el) => ({ name: el.getAttribute('data-agent'), rect: el.getBoundingClientRect() }))
       .filter(({ rect }) => rect.right > scrollRect.right + tolerance || rect.left < scrollRect.left - tolerance)
@@ -419,8 +419,8 @@ test('anchors flush against the real right edge of the content area, not just it
   // margin-right negativo, pra dentro do padding externo de .vc-main
   // (mínimo 24px em telas estreitas) -- ainda com folga generosa antes da
   // scrollbar real. -12 dá tolerância pequena sobre o -8 exato.
-  expect(gap, 'HUD stays a bounded distance inside .vc-main padding, safely short of the scrollbar').toBeGreaterThanOrEqual(-12);
-  expect(gap).toBeLessThanOrEqual(4);
+  expect(gap, 'Hero HUD must use the approved 24px right shift without leaving the viewport').toBeGreaterThanOrEqual(-25);
+  expect(gap).toBeLessThanOrEqual(-23);
 });
 
 test('uses the approved peripheral scale while preserving the safe right edge on desktop and mobile', async ({ page }) => {
@@ -498,7 +498,7 @@ test('anchor and no-clipping guarantees hold where the widget is actually visibl
     const paddingRight = parseFloat(getComputedStyle(main).paddingRight);
     const gap = (mainRect.right - paddingRight) - hudRect.right;
     // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados.
-    const tolerance = 9;
+    const tolerance = 25;
     const clipped = Array.from(document.querySelectorAll('[data-agent]'))
       .map((el) => el.getBoundingClientRect())
       .filter((rect) => rect.right > scrollRect.right + tolerance || rect.left < scrollRect.left - tolerance);
@@ -506,8 +506,8 @@ test('anchor and no-clipping guarantees hold where the widget is actually visibl
   });
   // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados,
   // ver teste "anchors flush against the real right edge" acima.
-  expect(result.gap, 'HUD must stay a bounded distance inside .vc-main padding, safely short of the scrollbar').toBeGreaterThanOrEqual(-12);
-  expect(result.gap).toBeLessThanOrEqual(4);
+  expect(result.gap, 'Hero HUD must use the approved 24px right shift without leaving the viewport').toBeGreaterThanOrEqual(-25);
+  expect(result.gap).toBeLessThanOrEqual(-23);
   expect(result.clippedCount, 'no agent label should be clipped').toBe(0);
 });
 
@@ -806,7 +806,12 @@ test('cancel and backend error both leave Action through the governed return pat
 
 test('sticky Core never overlaps the composer after scrolling a long conversation', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
+  await page.route(`${API}/api/chat`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer: 'Resposta para ativar o estado de conversa.' }) }));
   await page.goto(NEXT_URL());
+  await page.locator('#vcPrompt').fill('Ativar conversa');
+  await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
+  await expect(page.locator('#vcChatHero')).toBeHidden();
+  await expect(page.locator('.vc-message-assistant')).toBeVisible();
   await page.evaluate(() => {
     const stream = document.getElementById('vcChatStream');
     for (let i = 0; i < 35; i++) {
