@@ -4,11 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
-## next-clean-98 (2026-07-15, não deployado)
+## next-clean-98 (2026-07-15, produção)
 
 - Chat de trabalho agora usa Grid estrutural com coluna de mensagens e zona exclusiva do Atomic Core; pergunta e resposta vivem no mesmo wrapper e o Core migra da Hero diretamente para sua zona.
 - Core teve redução visual real de 25% sobre `next-clean-97` (`205,84px → 154,38px` em 1440×900) e ficou alinhado à borda interna direita (`0px` de distância medida), sem margem calculada contra a largura da página.
 - Progressive reveal e sua cadência não foram alterados.
+- Publicado a partir de `b2e10dad` em `720b833d.visioncoreai.pages.dev`; package SHA-256 `77b7cd44906ef74ef934edc60cd04d3f8f6c75bbee57bc50423a9b53c7f2b606`. Deployment imutável e alias principal confirmados servindo o cache-bust novo.
 
 ## next-clean-97 (2026-07-15, não deployado)
 

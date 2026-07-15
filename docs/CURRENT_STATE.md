@@ -17,7 +17,7 @@ Software Factory
 
 Atomic Core
 
-✔ `next-clean-98` concluído localmente, sem deploy: layout de trabalho substituiu compensações de largura por Grid real (`#vcMessageColumn` + `#vcAtomicCoreZone`). Core migra da Hero para a zona exclusiva, reduzido 25% sobre `next-clean-97` (`205,84px → 154,38px` em 1440×900), alinhado à borda direita interna; progressive reveal intocado. Screenshot real local em `artifacts/next-clean-98/chat-layout-validation.png`. Medidas: coluna `left=324/right=1084`, pergunta `right=1084`, resposta `right=1084`, Core `left=1213,62/right=1368`, composer `top=727`; zero interseções. Chat + Atomic 55/55 PASS; Pages 11/11; `node --check` e `git diff --check` PASS.
+✔ `next-clean-98` publicado em produção a partir de `b2e10dad`: layout de trabalho substituiu compensações de largura por Grid real (`#vcMessageColumn` + `#vcAtomicCoreZone`). Core migra da Hero para a zona exclusiva, reduzido 25% sobre `next-clean-97` (`205,84px → 154,38px` em 1440×900), alinhado à borda direita interna; progressive reveal intocado. Screenshot real local em `artifacts/next-clean-98/chat-layout-validation.png`. Medidas: coluna `left=324/right=1084`, pergunta `right=1084`, resposta `right=1084`, Core `left=1213,62/right=1368`, composer `top=727`; zero interseções. Chat + Atomic 55/55 PASS; Pages 11/11; `node --check` e `git diff --check` PASS. Package SHA-256 `77b7cd44906ef74ef934edc60cd04d3f8f6c75bbee57bc50423a9b53c7f2b606`; deployment `https://720b833d.visioncoreai.pages.dev`; alias principal e navegador real confirmaram `next-clean-98`, Grid ativo e console limpo.
 ✔ `next-clean-97` concluído localmente, sem deploy: Chat ganhou coluna textual única reservando a região periférica do Atomic Core; pergunta e resposta terminam no mesmo eixo sem colisão em desktop/mobile. Core reduzido para `.62`/`.38`. Reveal desacelerado para 3 caracteres/22ms, com controlador/status explícitos e pausas reais de pontuação. Navegador real confirmou diferença de eixo ≤1px, zero invasão da região do Core e margem direita de 0–6px. Testes dirigidos 7/7 PASS; suíte permanente Next 141/141 PASS em 55,9s, 4 workers, sem retry; Pages 11/11; `node --check` e `git diff --check` PASS.
 ✔ `next-clean-96` concluído localmente, sem deploy: Atomic Core reduzido mais 15% e aproximado da borda direita; progressive reveal corrigido na causa raiz (3 palavras/12ms) para grupos de 4 caracteres/16ms, pausas de pontuação e aceleração moderada em respostas extensas. A resposta integral nunca substitui o trecho parcial antes do fim e o Core permanece em Action em todas as atualizações visíveis. Teste dirigido 35/35 PASS; suíte permanente Next 141/141 PASS em 55,8s, 4 workers, sem retry; Pages 11/11; `node --check` e `git diff --check` PASS.
 ✔ `next-clean-95` ajustado localmente, sem deploy: escala visual uniforme de `.86` no desktop e `.53` no mobile, ancorada à direita. O centro aparente se desloca cerca de 25 px para a direita sem alterar posição vertical, órbitas, glow, Idle, Action, Retorno ou progressive reveal. Teste dirigido Atomic Core 35/35 PASS; suíte permanente Next 141/141 PASS em 55,2s, 4 workers, sem retry; Pages 11/11; `node --check` e `git diff --check` PASS.
@@ -32,7 +32,7 @@ Deploy Produção
 `next-clean-74` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real contra `https://visioncoreai.pages.dev/vision-core-next.html`: cache-bust servido (`?v=next-clean-74` em CSS e JS, HTTP 200), menu lateral reorganizado presente (2 `.vc-nav-group`, rótulos "Atividade"/"Avançado", 7 itens fixos como filhos diretos de `.vc-nav`).
 
 Cache Bust
-next-clean-94 (publicado em produção em 2026-07-14; alias principal e deployment `f89b860c.visioncoreai.pages.dev` confirmados servindo o cache-bust novo)
+next-clean-98 (publicado em produção em 2026-07-15; alias principal e deployment `720b833d.visioncoreai.pages.dev` confirmados servindo o cache-bust novo)
 
 Último Commit
 
@@ -40,7 +40,7 @@ ver `git log -1 --oneline` (pode haver commit local ainda não pushado)
 
 Último Deploy
 
-`f89b860c.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-94`
+`720b833d.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-98`
 
 ---
 
