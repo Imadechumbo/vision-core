@@ -974,11 +974,35 @@ a { color: inherit; text-decoration: none; }
 
 .vc-chat-content {
   display: grid;
-  /* Coluna 2 = largura real do hud (flex-shrink:0, nunca encolhe) + botão de
-     toggle (32px) + gap (8px) — não usar auto/1fr aqui: o algoritmo de grid
-     comprime auto abaixo do max-content quando o espaço total é apertado,
-     o que deixa o toggle pra fora da zona (achado real, ver diagnóstico). */
-  grid-template-columns: minmax(0, 760px) minmax(0, calc(var(--atomic-core-size) + (var(--atomic-safe-area) * 2) + 40px));
+  /* Redistribuição de colunas (achado real, 2026-07-15): nenhuma das duas
+     usa fr, então quando a soma dos dois max excede o espaço real
+     disponível o grid divide o déficit IGUALMENTE entre elas, não pelo
+     tamanho de cada max -- a col.1 (texto) ficava presa a ~514px em telas
+     comuns (1440px) mesmo com teto de 760px, porque a col.2 reservava
+     704px (largura do LAYOUT não-escalado do hud, 664px, + toggle 32px +
+     gap 8px) quando o hud pintado (depois do scale) só usa ~309px daquilo.
+     overflow:visible em toda a cadeia + pointer-events:none no hud
+     permitem reservar só o que é realmente pintado (mais toggle/gap/folga)
+     sem mover o hub -- justify-content:flex-end (.vc-atomic-core-zone)
+     ancora na borda direita do grid, que não muda.
+     1fr (sem teto) na col.1, não minmax(0, 900px): com a col.2 bem menor
+     agora, duas faixas fixas que somam menos que o disponível deixavam
+     sobra não reclamada por nenhuma track -- como o grid empacota as
+     tracks a partir do início (esquerda), essa sobra "vazava" como um
+     vão à direita da col.2, afastando o hub da borda real em telas
+     largas (achado real, mesma sessão -- min(900px, 1fr) também não
+     funciona: fr não é válido dentro de min()/calc(), quebra a track
+     list inteira). 1fr faz a col.1 absorver toda a sobra sempre,
+     mantendo a col.2 (e o hub) sempre encostada na borda direita real;
+     não há teto de leitura (.vc-message usa max-width:100%, acompanha a
+     coluna). Piso de 220px na col.1 (em vez de 0): sem isso, na faixa
+     intermediária 821-1180px (achado real, mesma sessão) a col.2 (não-fr,
+     min 0 mas sempre reclama seu calc() inteiro primeiro) deixava só a
+     sobra genuína pra col.1 -- caía de 239px (comportamento antigo,
+     coincidência do split 50/50 quando nenhuma coluna era fr) pra 140px,
+     bolha estreita demais. 220px é só piso de segurança pra telas
+     comuns (1280px+) nunca chegam perto disso. */
+  grid-template-columns: minmax(220px, 1fr) minmax(0, calc(((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * var(--atomic-scale)) + 32px + 8px + 24px));
   column-gap: 16px;
   align-items: end;
   width: 100%;
@@ -1021,7 +1045,13 @@ a { color: inherit; text-decoration: none; }
 }
 
 .vc-message {
-  max-width: min(760px, 100%);
+  /* Sem teto fixo (achado real, 2026-07-15): a col.1 de .vc-chat-content já
+     é limitada pela reserva fixa da col.2 (hud) -- um max-width fixo aqui
+     deixava um vão vazio visível entre o fim da bolha e o início do hub em
+     telas largas (col.1 oferece mais espaço do que o teto usava), violando
+     a regra dura "sem vão vazio" pedida. 100% acompanha exatamente o que o
+     grid já calculou. */
+  max-width: 100%;
   padding: 14px 16px;
   border: 1px solid rgba(255, 255, 255, .08);
   border-radius: var(--radius);
