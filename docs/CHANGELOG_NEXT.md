@@ -4,6 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-109 (2026-07-15, não deployado)
+
+- No Chat ativo, HUD avançou até restarem `12,36px` antes da scrollbar real (`clientWidth`), dentro do intervalo seguro 8–16px; zero legendas cortadas ou overflow.
+- A coluna textual avançou junto para `755,89px`/`73,48%`, preservando o vão texto→HUD em `23,99px`; Hero e mobile não mudaram.
+- Atomic + App Shell 55/55 após reprodução isolada de uma variação temporal; suíte Next final 141/141 sem retry; Pages 11/11.
+
 ## next-clean-108 (2026-07-15, produção)
 
 - Conversa ativa redistribui o Grid para a coluna textual ocupar `69,21%` em 1440×900 (`711,89px`, antes `639,89px`/`62,21%`).

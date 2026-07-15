@@ -455,6 +455,7 @@ test('uses the approved peripheral scale while preserving the safe right edge on
         coreWidth: rect.width,
         textRatio: messageColumn.width / chat.width,
         safeRightGap: chat.right - rect.right,
+        viewportRightGap: document.documentElement.clientWidth - rect.right,
         messageEdgeDelta: Math.abs(user.right - assistant.right),
         userInsideColumn: user.right <= messageColumn.right + 1,
         assistantInsideColumn: assistant.right <= messageColumn.right + 1,
@@ -466,7 +467,7 @@ test('uses the approved peripheral scale while preserving the safe right edge on
       };
     });
     expect(geometry.scale).toBeCloseTo(viewport.expectedScale, 2);
-    const expectedRightGap = viewport.width === 1440 ? -16 : -8;
+    const expectedRightGap = viewport.width === 1440 ? -60 : -8;
     expect(geometry.safeRightGap, 'the work-state HUD must keep its responsive peripheral advance').toBeGreaterThanOrEqual(expectedRightGap - 1);
     expect(geometry.safeRightGap, 'the work-state HUD must keep its responsive peripheral advance').toBeLessThanOrEqual(expectedRightGap + 1);
     expect(geometry.messageEdgeDelta, 'user and assistant bubbles must share the same text-column right edge').toBeLessThanOrEqual(1);
@@ -474,10 +475,12 @@ test('uses the approved peripheral scale while preserving the safe right edge on
     expect(geometry.assistantInsideColumn).toBe(true);
     expect(geometry.messageToCoreGap, 'the shared message column must not enter the Atomic Core region').toBeGreaterThanOrEqual(0);
     if (viewport.width === 1440) {
-      expect(geometry.textRatio).toBeGreaterThanOrEqual(.69);
-      expect(geometry.textRatio).toBeLessThanOrEqual(.70);
+      expect(geometry.textRatio).toBeGreaterThanOrEqual(.73);
+      expect(geometry.textRatio).toBeLessThanOrEqual(.74);
       expect(geometry.messageToCoreGap).toBeGreaterThanOrEqual(22);
       expect(geometry.messageToCoreGap).toBeLessThanOrEqual(26);
+      expect(geometry.viewportRightGap).toBeGreaterThanOrEqual(8);
+      expect(geometry.viewportRightGap).toBeLessThanOrEqual(16);
     }
     expect(geometry.coreIntersectsUser).toBe(false);
     expect(geometry.coreIntersectsAssistant).toBe(false);
@@ -834,5 +837,5 @@ test('sticky Core never overlaps the composer after scrolling a long conversatio
     return { coreBottom: core.bottom, coreRight: core.right, composerTop: composer.top, chatRight: chat.right };
   });
   expect(geometry.coreBottom).toBeLessThanOrEqual(geometry.composerTop - 20);
-  expect(geometry.coreRight).toBeLessThanOrEqual(geometry.chatRight + 17);
+  expect(geometry.coreRight).toBeLessThanOrEqual(geometry.chatRight + 61);
 });

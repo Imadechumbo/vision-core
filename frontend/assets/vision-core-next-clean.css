@@ -974,10 +974,9 @@ a { color: inherit; text-decoration: none; }
 
 .vc-chat-content {
   display: grid;
-  /* Coluna 2 reserva só a largura pintada do HUD, menos o avanço periférico
-     de 8px. A coluna textual absorve todo o restante; o gap estrutural de
-     16px e a folga pintada somam ~24px em 1440x900. */
-  grid-template-columns: minmax(220px, 1fr) minmax(0, calc(((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * var(--atomic-scale)) - 8px));
+  /* Coluna 2 compensa o avanço periférico de 52px; a coluna textual absorve
+     o restante e preserva ~24px até o HUD pintado em 1440x900. */
+  grid-template-columns: minmax(220px, 1fr) minmax(0, calc(((var(--atomic-core-size) + var(--atomic-safe-area) * 2) * var(--atomic-scale)) - 52px));
   column-gap: 16px;
   align-items: end;
   width: 100%;
@@ -1118,9 +1117,9 @@ a { color: inherit; text-decoration: none; }
   align-self: flex-end;
   flex: 0 0 auto;
   z-index: 8;
-  /* Avanço periférico de 16px dentro do padding externo de .vc-main,
-     preservando folga confortável antes da scrollbar real. */
-  margin: 0 -16px 0 0;
+  /* Avanço calibrado contra a viewport: ~12px antes da scrollbar em
+     1440x900. Hero (-24px) e mobile (-8px) têm overrides próprios. */
+  margin: 0 -60px 0 0;
   width: calc(var(--atomic-core-size) + (var(--atomic-safe-area) * 2));
   aspect-ratio: 1;
   pointer-events: none;
