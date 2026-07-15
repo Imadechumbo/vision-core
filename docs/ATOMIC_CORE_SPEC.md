@@ -124,7 +124,13 @@ Fonte de verdade de movimento é `window.VCMotion` (ver `VISION_CORE_NEXT_FRONTE
 - **Modo `full`:** `requestAnimationFrame`, órbita em movimento contínuo, glow varia por estado.
 - **Modo `reduced`** (só quando o usuário escolhe explicitamente em Settings): posição/escala **congeladas** (zero deslocamento), mas glow/opacidade continuam pulsando lentamente (`REDUCE_PULSE_MS≈4200`, seno sobre o tempo decorrido) via `setTimeout` recorrente (`REDUCE_TICK_MS≈500ms`, bem mais barato que rAF) — **nunca 100% estático**. Achado real corrigido em 2026-07-09: antes desse fix, o widget congelava por completo sob `reduced` (nada disparava um novo `render()` no período ocioso) — lido pelo usuário como "quebrado", não "calmo".
 
-**Responsividade:** em estado de trabalho, `#vcChatContent` é um Grid estrutural composto por `#vcMessageColumn` e `#vcAtomicCoreZone`; o mesmo DOM do Core migra da Hero para essa zona exclusiva, sem sobreposição livre ou margem calculada contra o widget. Desktop mantém a caixa orbital de até 260px, reduzida visualmente para 46,5% e ancorada à extremidade interna direita da zona. Até 820px, o Core fica oculto enquanto a Hero vazia está aberta; ao iniciar trabalho, migra para a mesma zona, reduz visualmente para 28,5%, oculta legendas secundárias e reserva distância vertical do composer. Não usa `position:fixed`, não cria segunda rolagem e não cobre mensagens ou composer.
+### Sidebar direita canônica (`next-clean-110`)
+
+O Atomic Core vive permanentemente em `#vcAtomicSidebar`, uma terceira coluna do `.vc-app-shell`, independente da Hero, das mensagens e do composer. A largura é a mesma da navegação esquerda: **252px expandida** e **78px recolhida**, usando as variáveis `--sidebar-width`/`--atomic-sidebar-width`, a mesma classe `.vc-sidebar-toggle` e a mesma transição de grid de 220ms. O estado próprio persiste em `localStorage['vc_atomic_sidebar_state']` (`expanded|collapsed`); recolher uma sidebar não recolhe a outra.
+
+Regra permanente: **a sidebar nunca cresce para acomodar o HUD**. A área interna disponível é 224px (252px menos 14px de padding em cada lado); o HUD conserva a órbita canônica e escala o conjunto inteiro para no máximo essa largura. Ele fica absolutamente ancorado em `right:0; bottom:0` dentro de `#vcAtomicCorePanel`, enquanto a própria sidebar usa o comportamento sticky já compartilhado pela navegação. Não existem margens negativas, parallax de scroll, compensações proporcionais ou segunda coluna em `#vcChatContent`.
+
+O Chat é a única aba que reserva a sidebar direita, preservando DECISION-022. Fora do Chat, a terceira coluna mede 0 e a rail sai do layout. Até 820px, a rail nasce recolhida em 78px; quando expandida por escolha explícita, aparece como rail fixa à direita sem alterar a largura semântica de 252px. Mensagens e composer vivem exclusivamente na coluna central e nunca calculam sua geometria a partir do HUD.
 
 `contain: layout paint` no CSS — não força reflow do resto da página.
 
@@ -168,7 +174,8 @@ Ver `ROADMAP.md`, Fase 1 (Frontend) e Fase 5 (IA/experiência).
 |---|---|
 | 2026-07-09 (v47/v48) | Correção de acoplamento de reduced-motion, depois inversão completa (SO nunca degrada por padrão, `VCMotion` como fonte de verdade). |
 | 2026-07-09 | Criação deste documento consolidado. |
+| 2026-07-15 | Sidebar direita canônica 252/78px; HUD dimensionado para a rail e removido do grid fluido do Chat. |
 
 ## Controle de versão
 
-**1.0.0** — 2026-07-09
+**1.1.0** — 2026-07-15

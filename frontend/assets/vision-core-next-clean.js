@@ -155,7 +155,6 @@
   var heroNewMission = document.getElementById('vcHeroNewMission');
   var stream = document.getElementById('vcChatStream');
   var chatContent = document.getElementById('vcChatContent');
-  var atomicCoreZone = document.getElementById('vcAtomicCoreZone');
   var atomicCorePanel = document.getElementById('vcAtomicCorePanel');
   var atomicPanelToggle = document.getElementById('vcAtomicPanelToggle');
   var featurePanel = document.getElementById('vcFeaturePanel');
@@ -253,17 +252,20 @@
     // Reflete mudanças feitas por outra aba/janela (mesmo localStorage) sem reload.
     onAnimationModeChange(function (mode) { animationReducedCheckbox.checked = mode === 'reduced'; });
   }
-  var VC_ATOMIC_PANEL_KEY = 'vc_atomic_panel_collapsed';
+  var VC_ATOMIC_PANEL_KEY = 'vc_atomic_sidebar_state';
   function setAtomicPanelCollapsed(collapsed) {
-    if (!chatContent || !atomicPanelToggle) return;
-    chatContent.classList.toggle('is-atomic-panel-collapsed', collapsed);
+    if (!appShell || !atomicPanelToggle) return;
+    appShell.setAttribute('data-atomic-sidebar-state', collapsed ? 'collapsed' : 'expanded');
     atomicPanelToggle.setAttribute('aria-expanded', String(!collapsed));
-    atomicPanelToggle.setAttribute('aria-label', collapsed ? 'Expandir painel do Atomic Core' : 'Recolher painel do Atomic Core');
-    try { window.sessionStorage.setItem(VC_ATOMIC_PANEL_KEY, collapsed ? '1' : '0'); } catch (_) {}
+    atomicPanelToggle.setAttribute('aria-label', collapsed ? 'Expandir sidebar do Atomic Core' : 'Recolher sidebar do Atomic Core');
+    try { window.localStorage.setItem(VC_ATOMIC_PANEL_KEY, collapsed ? 'collapsed' : 'expanded'); } catch (_) {}
   }
   if (atomicPanelToggle) {
     var atomicPanelCollapsed = false;
-    try { atomicPanelCollapsed = window.sessionStorage.getItem(VC_ATOMIC_PANEL_KEY) === '1'; } catch (_) {}
+    try {
+      var storedAtomicSidebar = window.localStorage.getItem(VC_ATOMIC_PANEL_KEY);
+      atomicPanelCollapsed = storedAtomicSidebar ? storedAtomicSidebar === 'collapsed' : window.matchMedia('(max-width: 820px)').matches;
+    } catch (_) { atomicPanelCollapsed = false; }
     setAtomicPanelCollapsed(atomicPanelCollapsed);
     atomicPanelToggle.addEventListener('click', function () {
       setAtomicPanelCollapsed(atomicPanelToggle.getAttribute('aria-expanded') === 'true');
@@ -571,11 +573,7 @@
     if (!chatOnboarding || !stream) return;
     var state = deriveChatHeroState();
     var atomicCore = document.querySelector('[data-atomic-core]');
-    var chatHero = document.getElementById('vcChatHero');
-    if (atomicCore && chatHero && atomicCoreZone) {
-      if (state === 'work') atomicCorePanel.appendChild(atomicCore);
-      else chatHero.insertBefore(atomicCore, chatOnboarding);
-    }
+    if (atomicCore && atomicCorePanel && atomicCore.parentElement !== atomicCorePanel) atomicCorePanel.appendChild(atomicCore);
     chatOnboarding.dataset.state = state;
     chatOnboarding.hidden = state === 'work';
     if (state === 'work') return;
@@ -1109,49 +1107,6 @@
     });
     syncComposerSpace.observe(composer);
   }
-
-  // Atomic Core: acompanha a rolagem em vez de ficar "grudado" numa posição
-  // fixa do viewport (achado real, 2026-07-15). translate (não transform,
-  // que colidiria com o scale: já usado em .vc-atomic-hud) desloca o hud
-  // pra baixo em metade da distância rolada, compensando parte do
-  // movimento natural do fluxo -- resultado: o hud sobe a ~50% da
-  // velocidade do resto do conteúdo, em vez de 0% (grudado) ou 100%
-  // (rolagem normal). rAF-throttled + scroll passivo (perf). O deslocamento
-  // é sempre reclampado contra a posição REAL do composer a cada frame
-  // (não um valor pré-calculado), então nunca reintroduz o overlap
-  // corrigido nesta mesma sessão -- a folga fica pequena/zero perto do
-  // composer e só cresce conforme a rolagem afasta o hud dele.
-  (function setupAtomicCoreParallax() {
-    var parallaxHud = document.querySelector('[data-atomic-core]');
-    if (!parallaxHud || !composer || !window.requestAnimationFrame) return;
-    var PARALLAX_FACTOR = .5;
-    var SAFE_BUFFER = 12;
-    var ticking = false;
-    var lastOffset = 0;
-
-    function apply() {
-      ticking = false;
-      if (isReducedMotion()) {
-        if (lastOffset !== 0) { parallaxHud.style.translate = ''; lastOffset = 0; }
-        return;
-      }
-      var hudRect = parallaxHud.getBoundingClientRect();
-      var composerRect = composer.getBoundingClientRect();
-      var naturalBottom = hudRect.bottom - lastOffset;
-      var maxDown = Math.max(0, composerRect.top - naturalBottom - SAFE_BUFFER);
-      var offset = Math.max(0, Math.min(window.scrollY * PARALLAX_FACTOR, maxDown));
-      if (Math.abs(offset - lastOffset) > .5) {
-        parallaxHud.style.translate = '0 ' + offset.toFixed(1) + 'px';
-        lastOffset = offset;
-      }
-    }
-    function onScroll() {
-      if (!ticking) { ticking = true; window.requestAnimationFrame(apply); }
-    }
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    onAnimationModeChange(onScroll);
-  })();
 
   var DEFAULT_API_BASE_URL = 'https://visioncore-api-gateway.weiganlight.workers.dev';
   function resolveApiBaseUrl() {
@@ -3591,14 +3546,8 @@
 
   var CX = 180;
   var CY = 180;
-  // Camada intermediária de breakpoint (821-1180px, achado real 2026-07-15):
-  // --atomic-core-size cai pra 400px nessa faixa (ver vision-core-next-clean.css
-  // @media 1180/821) porque 490px não cabe nos ~670px disponíveis. AGENT_RADIUS/
-  // rx/ry abaixo são calibrados em pixels absolutos pra 490px (valor "2x" cheio
-  // de desktop/mobile) — sem esse fator, os agentes vazam da própria caixa do
-  // hud nessa faixa (o CSS scale nunca afeta layout/pixels do JS). Checado uma
-  // vez no load, não precisa ser responsivo a resize nesta fase.
-  var ORBIT_SCALE = (window.matchMedia && window.matchMedia('(min-width: 821px) and (max-width: 1180px)').matches) ? (400 / 490) : 1;
+  // A órbita é estável; a sidebar direita dimensiona o HUD completo para caber.
+  var ORBIT_SCALE = 1;
   var AGENT_RADIUS = 240 * ORBIT_SCALE;
   var MAX_ANGLE_DRIFT = 3;
   var MAX_RADIAL_DRIFT = 4 * ORBIT_SCALE;

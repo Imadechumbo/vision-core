@@ -235,25 +235,26 @@ test('obsolete Atomic Core visibility controls are gone and motion controls rema
   await expect(page.locator('#vcAtomicActionPattern')).toBeVisible();
 });
 
-test('Atomic Core panel collapses structurally, restores, and persists for the tab', async ({ page }) => {
+test('Atomic Core sidebar collapses to 78px, restores to 252px, and persists', async ({ page }) => {
   await page.goto(NEXT_URL());
   await page.locator('#vcPrompt').fill('Validar painel colapsável');
   await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
   await expect(page.locator('.vc-message-assistant')).toBeVisible();
-  const grid = page.locator('#vcChatContent');
+  const shell = page.locator('.vc-app-shell');
+  const rail = page.locator('#vcAtomicSidebar');
   const toggle = page.locator('#vcAtomicPanelToggle');
   const panel = page.locator('#vcAtomicCorePanel');
-  const before = await page.locator('#vcMessageColumn').evaluate((el) => el.getBoundingClientRect().width);
+  await expect(rail).toHaveCSS('width', '252px');
 
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await expect(toggle).toHaveAttribute('aria-controls', 'vcAtomicCorePanel');
   await toggle.click();
-  await expect(grid).toHaveClass(/is-atomic-panel-collapsed/);
+  await expect(shell).toHaveAttribute('data-atomic-sidebar-state', 'collapsed');
+  await expect(rail).toHaveCSS('width', '78px');
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await expect(toggle).toHaveAttribute('aria-label', 'Expandir painel do Atomic Core');
+  await expect(toggle).toHaveAttribute('aria-label', 'Expandir sidebar do Atomic Core');
   await expect(panel).toBeHidden();
-  expect(await page.locator('#vcMessageColumn').evaluate((el) => el.getBoundingClientRect().width)).toBeGreaterThan(before);
-  expect(await page.evaluate(() => sessionStorage.getItem('vc_atomic_panel_collapsed'))).toBe('1');
+  expect(await page.evaluate(() => localStorage.getItem('vc_atomic_sidebar_state'))).toBe('collapsed');
 
   await page.reload();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -261,10 +262,11 @@ test('Atomic Core panel collapses structurally, restores, and persists for the t
   await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
   await expect(page.locator('.vc-message-assistant')).toBeVisible();
   await toggle.click();
-  await expect(grid).not.toHaveClass(/is-atomic-panel-collapsed/);
-  await expect(toggle).toHaveAttribute('aria-label', 'Recolher painel do Atomic Core');
+  await expect(shell).toHaveAttribute('data-atomic-sidebar-state', 'expanded');
+  await expect(rail).toHaveCSS('width', '252px');
+  await expect(toggle).toHaveAttribute('aria-label', 'Recolher sidebar do Atomic Core');
   await expect(panel.locator('[data-atomic-core]')).toBeVisible();
-  expect(await page.evaluate(() => sessionStorage.getItem('vc_atomic_panel_collapsed'))).toBe('0');
+  expect(await page.evaluate(() => localStorage.getItem('vc_atomic_sidebar_state'))).toBe('expanded');
 });
 
 test('intensity slider sets --atomic-intensity and persists across reload', async ({ page }) => {
@@ -293,15 +295,23 @@ test('intensity slider sets --atomic-intensity and persists across reload', asyn
 // e descartado antes deste commit. A solucao real e position:sticky
 // limitado por #vcChatScroll, confirmada aqui via
 // getBoundingClientRect antes/depois do scroll, nao soh a leitura de CSS.
-test('uses container-scoped sticky positioning, never fixed/absolute viewport positioning', async ({ page }) => {
+test('uses absolute bottom anchoring inside the sticky right sidebar', async ({ page }) => {
   await page.route(`${API}/api/chat`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer: 'resposta em andamento '.repeat(30) }) }));
   await page.goto(NEXT_URL());
   await page.locator('#vcPrompt').fill('Ativar');
   await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
   await expect(page.locator('.vc-app-shell')).toHaveAttribute('data-chat-activity', 'revealing');
   const hud = page.locator('[data-atomic-core]');
-  const position = await hud.evaluate((el) => getComputedStyle(el).position);
-  expect(position, 'sticky remains bounded by the real chat container').toBe('sticky');
+  const geometry = await page.evaluate(() => {
+    const hud = document.querySelector('[data-atomic-core]');
+    const panel = document.getElementById('vcAtomicCorePanel');
+    const rail = document.getElementById('vcAtomicSidebar');
+    return { hudPosition: getComputedStyle(hud).position, railPosition: getComputedStyle(rail).position, parent: hud.parentElement.id, bottomGap: panel.getBoundingClientRect().bottom - hud.getBoundingClientRect().bottom };
+  });
+  expect(geometry.hudPosition).toBe('absolute');
+  expect(geometry.railPosition).toBe('sticky');
+  expect(geometry.parent).toBe('vcAtomicCorePanel');
+  expect(Math.abs(geometry.bottomGap)).toBeLessThanOrEqual(1);
 });
 
 test('remains visible in the lower chat corner while the conversation scrolls', async ({ page }) => {
@@ -378,15 +388,11 @@ test('chat hero intro no longer exists, composer sits near the top with no reser
 // removendo o margin-right negativo. #vcChatScroll nao tem mais overflow
 // proprio (ver ARCHITECTURAL PRINCIPLE-004), mas o invariante geometrico
 // continua valendo: nenhum no de agente deve exceder o container.
-test('no agent node extends past the #vcChatScroll container edge', async ({ page }) => {
+test('no agent node extends past the fixed Atomic Core sidebar', async ({ page }) => {
   await page.goto(NEXT_URL());
   const clipped = await page.evaluate(() => {
-    const scrollRect = document.getElementById('vcChatScroll').getBoundingClientRect();
-    // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados
-    // via margin-right negativo em .vc-atomic-hud -- tolerância cobre esse
-    // deslocamento intencional, não é regressão de clipping (#vcChatScroll
-    // não tem overflow próprio desde ARCHITECTURAL PRINCIPLE-004).
-    const tolerance = 25;
+    const scrollRect = document.getElementById('vcAtomicSidebar').getBoundingClientRect();
+    const tolerance = 1;
     return Array.from(document.querySelectorAll('[data-agent]'))
       .map((el) => ({ name: el.getAttribute('data-agent'), rect: el.getBoundingClientRect() }))
       .filter(({ rect }) => rect.right > scrollRect.right + tolerance || rect.left < scrollRect.left - tolerance)
@@ -404,26 +410,25 @@ test('no agent node extends past the #vcChatScroll container edge', async ({ pag
 // (hero/mensagens/card de status já tinham seu próprio max-width, não
 // esticam feio) -- o widget agora ancora na borda real, não na do cap
 // artificial de 940px.
-test('anchors flush against the real right edge of the content area, not just its own 940px-capped column', async ({ page }) => {
+test('right sidebar is flush with the viewport and the HUD fits its 224px inner panel', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(NEXT_URL());
   const gap = await page.evaluate(() => {
     const hud = document.querySelector('[data-atomic-core]');
-    const main = document.querySelector('.vc-main');
+    const rail = document.getElementById('vcAtomicSidebar');
+    const panel = document.getElementById('vcAtomicCorePanel');
     const hudRect = hud.getBoundingClientRect();
-    const mainRect = main.getBoundingClientRect();
-    const paddingRight = parseFloat(getComputedStyle(main).paddingRight);
-    return (mainRect.right - paddingRight) - hudRect.right;
+    const railRect = rail.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    return { railWidth: railRect.width, viewportGap: document.documentElement.clientWidth - railRect.right, hudWidth: hudRect.width, fits: hudRect.left >= panelRect.left - 1 && hudRect.right <= panelRect.right + 1 && hudRect.top >= panelRect.top - 1 && hudRect.bottom <= panelRect.bottom + 1 };
   });
-  // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados via
-  // margin-right negativo, pra dentro do padding externo de .vc-main
-  // (mínimo 24px em telas estreitas) -- ainda com folga generosa antes da
-  // scrollbar real. -12 dá tolerância pequena sobre o -8 exato.
-  expect(gap, 'Hero HUD must use the approved 24px right shift without leaving the viewport').toBeGreaterThanOrEqual(-25);
-  expect(gap).toBeLessThanOrEqual(-23);
+  expect(gap.railWidth).toBeCloseTo(252, 0);
+  expect(Math.abs(gap.viewportGap)).toBeLessThanOrEqual(1);
+  expect(gap.hudWidth).toBeLessThanOrEqual(224);
+  expect(gap.fits).toBe(true);
 });
 
-test('uses the approved peripheral scale while preserving the safe right edge on desktop and mobile', async ({ page }) => {
+test('fixed sidebar keeps message width independent and scales the HUD to fit', async ({ page }) => {
   await page.route(`${API}/api/chat`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer: 'posição periférica '.repeat(80) }) }));
   // expectedPaintedWidth = (--atomic-core-size + --atomic-safe-area*2) * scale
   // pra cada breakpoint, após o resize 2x (achado real, 2026-07-15):
@@ -431,10 +436,7 @@ test('uses the approved peripheral scale while preserving the safe right edge on
   // anterior e sempre bate ~-50% agora, porque o 2x (deliberado, aprovado
   // pelo usuário) veio DEPOIS e é maior, não menor, que aquele baseline —
   // não é uma regressão, é o teste comparando contra um "antes" obsoleto.
-  for (const viewport of [
-    { width: 1440, height: 900, expectedScale: 0.465, expectedPaintedWidth: (520 + 72 * 2) * 0.465 },
-    { width: 390, height: 844, expectedScale: 0.285, expectedPaintedWidth: (490 + 116 * 2) * 0.285 }
-  ]) {
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 1366, height: 768 }]) {
     await page.setViewportSize(viewport);
     await page.goto(NEXT_URL());
     await page.locator('#vcPrompt').fill('Medir posição do Core');
@@ -453,69 +455,50 @@ test('uses the approved peripheral scale while preserving the safe right edge on
       return {
         scale: Number.parseFloat(getComputedStyle(hud).scale),
         coreWidth: rect.width,
-        textRatio: messageColumn.width / chat.width,
-        safeRightGap: chat.right - rect.right,
-        viewportRightGap: document.documentElement.clientWidth - rect.right,
+        messageWidth: messageColumn.width,
+        railWidth: document.getElementById('vcAtomicSidebar').getBoundingClientRect().width,
         messageEdgeDelta: Math.abs(user.right - assistant.right),
         userInsideColumn: user.right <= messageColumn.right + 1,
         assistantInsideColumn: assistant.right <= messageColumn.right + 1,
-        messageToCoreGap: rect.left - user.right,
         coreIntersectsUser: intersects(rect, user),
         coreIntersectsAssistant: intersects(rect, assistant),
         coreIntersectsComposer: intersects(rect, composer),
         coreParent: hud.parentElement.id
       };
     });
-    expect(geometry.scale).toBeCloseTo(viewport.expectedScale, 2);
-    const expectedRightGap = viewport.width === 1440 ? -60 : -8;
-    expect(geometry.safeRightGap, 'the work-state HUD must keep its responsive peripheral advance').toBeGreaterThanOrEqual(expectedRightGap - 1);
-    expect(geometry.safeRightGap, 'the work-state HUD must keep its responsive peripheral advance').toBeLessThanOrEqual(expectedRightGap + 1);
+    expect(geometry.scale).toBeCloseTo(.337, 2);
+    expect(geometry.railWidth).toBeCloseTo(252, 0);
     expect(geometry.messageEdgeDelta, 'user and assistant bubbles must share the same text-column right edge').toBeLessThanOrEqual(1);
     expect(geometry.userInsideColumn).toBe(true);
     expect(geometry.assistantInsideColumn).toBe(true);
-    expect(geometry.messageToCoreGap, 'the shared message column must not enter the Atomic Core region').toBeGreaterThanOrEqual(0);
-    if (viewport.width === 1440) {
-      expect(geometry.textRatio).toBeGreaterThanOrEqual(.73);
-      expect(geometry.textRatio).toBeLessThanOrEqual(.74);
-      expect(geometry.messageToCoreGap).toBeGreaterThanOrEqual(22);
-      expect(geometry.messageToCoreGap).toBeLessThanOrEqual(26);
-      expect(geometry.viewportRightGap).toBeGreaterThanOrEqual(8);
-      expect(geometry.viewportRightGap).toBeLessThanOrEqual(16);
-    }
     expect(geometry.coreIntersectsUser).toBe(false);
     expect(geometry.coreIntersectsAssistant).toBe(false);
     expect(geometry.coreIntersectsComposer, 'Atomic Core must not intersect the composer').toBe(false);
     expect(geometry.coreParent).toBe('vcAtomicCorePanel');
-    expect(geometry.coreWidth).toBeCloseTo(viewport.expectedPaintedWidth, 0);
+    expect(geometry.coreWidth).toBeLessThanOrEqual(224);
   }
 });
 
 // DECISION-022 (2026-07-13): agora que o widget só é visível em Chat, o
 // ancoramento e a ausência de corte só precisam ser garantidos ali; testar em
 // páginas onde fica display:none não valida nada de real.
-test('anchor and no-clipping guarantees hold where the widget is actually visible (Chat)', async ({ page }) => {
+test('anchor and no-clipping guarantees hold inside the right sidebar', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(NEXT_URL());
 
   const result = await page.evaluate(() => {
     const hud = document.querySelector('[data-atomic-core]');
-    const main = document.querySelector('.vc-main');
-    const scrollRect = document.getElementById('vcChatScroll').getBoundingClientRect();
+    const scrollRect = document.getElementById('vcAtomicSidebar').getBoundingClientRect();
     const hudRect = hud.getBoundingClientRect();
-    const mainRect = main.getBoundingClientRect();
-    const paddingRight = parseFloat(getComputedStyle(main).paddingRight);
-    const gap = (mainRect.right - paddingRight) - hudRect.right;
-    // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados.
-    const tolerance = 25;
+    const gap = scrollRect.right - hudRect.right;
+    const tolerance = 1;
     const clipped = Array.from(document.querySelectorAll('[data-agent]'))
       .map((el) => el.getBoundingClientRect())
       .filter((rect) => rect.right > scrollRect.right + tolerance || rect.left < scrollRect.left - tolerance);
     return { gap, clippedCount: clipped.length };
   });
-  // Leve ajuste pra direita (achado real, 2026-07-15): -8px deliberados,
-  // ver teste "anchors flush against the real right edge" acima.
-  expect(result.gap, 'Hero HUD must use the approved 24px right shift without leaving the viewport').toBeGreaterThanOrEqual(-25);
-  expect(result.gap).toBeLessThanOrEqual(-23);
+  expect(result.gap).toBeGreaterThanOrEqual(0);
+  expect(result.gap).toBeLessThanOrEqual(15);
   expect(result.clippedCount, 'no agent label should be clipped').toBe(0);
 });
 
@@ -812,7 +795,7 @@ test('cancel and backend error both leave Action through the governed return pat
   await expect(page.locator('[data-atomic-core]')).toHaveAttribute('data-state', 'idle');
 });
 
-test('sticky Core never overlaps the composer after scrolling a long conversation', async ({ page }) => {
+test('right-sidebar Core stays independent from short and long conversations', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.route(`${API}/api/chat`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer: 'Resposta para ativar o estado de conversa.' }) }));
   await page.goto(NEXT_URL());
@@ -833,9 +816,11 @@ test('sticky Core never overlaps the composer after scrolling a long conversatio
   const geometry = await page.evaluate(() => {
     const core = document.querySelector('[data-atomic-core]').getBoundingClientRect();
     const composer = document.getElementById('vcComposer').getBoundingClientRect();
-    const chat = document.getElementById('vcChatScroll').getBoundingClientRect();
-    return { coreBottom: core.bottom, coreRight: core.right, composerTop: composer.top, chatRight: chat.right };
+    const rail = document.getElementById('vcAtomicSidebar').getBoundingClientRect();
+    const intersects = core.left < composer.right && core.right > composer.left && core.top < composer.bottom && core.bottom > composer.top;
+    return { coreBottom: core.bottom, railBottom: rail.bottom, railWidth: rail.width, intersects };
   });
-  expect(geometry.coreBottom).toBeLessThanOrEqual(geometry.composerTop - 20);
-  expect(geometry.coreRight).toBeLessThanOrEqual(geometry.chatRight + 61);
+  expect(geometry.intersects).toBe(false);
+  expect(Math.abs(geometry.railBottom - geometry.coreBottom)).toBeLessThanOrEqual(21);
+  expect(geometry.railWidth).toBeCloseTo(252, 0);
 });
