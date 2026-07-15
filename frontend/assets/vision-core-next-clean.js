@@ -145,7 +145,7 @@
   var idlePatternPref    = makeAtomicMotionPref('vc_atomic_idle_pattern', ['classic', 'pulse', 'drift'], 'classic');
   var idleDriftPref      = makeAtomicMotionNumber('vc_atomic_idle_drift', 0, 1, 1); // 0..1 sobre o teto ja validado (MAX_ANGLE_DRIFT=3/MAX_RADIAL_DRIFT=2) — nunca acima de 1
   var actionPatternPref  = makeAtomicMotionPref('vc_atomic_action_pattern', ['classic', 'wide', 'pulse'], 'classic');
-  var returnStylePref    = makeAtomicMotionPref('vc_atomic_return_style', ['none', 'fast', 'smooth'], 'none');
+  var returnStylePref    = makeAtomicMotionPref('vc_atomic_return_style', ['none', 'fast', 'smooth'], 'smooth');
   var returnDurationPref = makeAtomicMotionNumber('vc_atomic_return_duration', 200, 2500, 900);
 
   window.VCAtomicMotion = {
@@ -437,6 +437,57 @@
     return item;
   }
 
+  var chatActivityState = 'idle';
+  var cancelProgressiveReveal = null;
+
+  function setChatActivityState(next) {
+    chatActivityState = next;
+    if (appShell) appShell.setAttribute('data-chat-activity', next);
+    if (next === 'requesting' || next === 'revealing') {
+      if (window.setAtomicCoreState) window.setAtomicCoreState('action');
+    } else if (next === 'settling' || next === 'error') {
+      if (window.resetAtomicCore) window.resetAtomicCore();
+    }
+    return chatActivityState;
+  }
+
+  function appendProgressiveMessage(title, text) {
+    var item = appendMessage('assistant', title, '');
+    if (!item) return Promise.resolve(null);
+    var body = item.querySelector('p');
+    var chunks = String(text).match(/\S+\s*/g) || [String(text)];
+    if (getAnimationMode() === 'reduced' || chunks.length < 2) {
+      body.textContent = text;
+      return Promise.resolve(item);
+    }
+    var previousLive = stream.getAttribute('aria-live');
+    stream.setAttribute('aria-live', 'off');
+    var index = 0;
+    var timer = null;
+    return new Promise(function (resolve, reject) {
+      function finish(error) {
+        if (timer) window.clearTimeout(timer);
+        cancelProgressiveReveal = null;
+        stream.setAttribute('aria-live', previousLive || 'polite');
+        if (error) reject(error); else resolve(item);
+      }
+      cancelProgressiveReveal = function () {
+        var error = new Error('Progressive reveal cancelled');
+        error.name = 'AbortError';
+        finish(error);
+      };
+      function reveal() {
+        var end = Math.min(chunks.length, index + 3);
+        body.textContent += chunks.slice(index, end).join('');
+        index = end;
+        if (index >= chunks.length) return finish();
+        var last = chunks[index - 1] || '';
+        timer = window.setTimeout(reveal, /[.!?]\s*$/.test(last) ? 34 : /[,;:]\s*$/.test(last) ? 22 : 12);
+      }
+      reveal();
+    });
+  }
+
   function setAsyncStatus(element, state, message) {
     if (!element) return;
     element.dataset.state = state;
@@ -524,6 +575,12 @@
   function updateChatOnboarding() {
     if (!chatOnboarding || !stream) return;
     var state = deriveChatHeroState();
+    var atomicCore = document.querySelector('[data-atomic-core]');
+    var chatHero = document.getElementById('vcChatHero');
+    if (atomicCore && chatHero && chatScroll) {
+      if (state === 'work') chatScroll.insertBefore(atomicCore, stream);
+      else chatHero.insertBefore(atomicCore, chatOnboarding);
+    }
     chatOnboarding.dataset.state = state;
     chatOnboarding.hidden = state === 'work';
     if (state === 'work') return;
@@ -646,6 +703,7 @@
   function selectFeature(key, announce) {
     var feature = featureMap[key] || featureMap.chat;
     activeFeature = featureMap[key] ? key : 'chat';
+    if (activeFeature !== 'chat' && cancelProgressiveReveal) cancelProgressiveReveal();
     if (appShell) appShell.setAttribute('data-active-feature', activeFeature);
     updateChatOnboarding();
     document.querySelectorAll('[data-feature]').forEach(function (node) {
@@ -1052,6 +1110,7 @@
   if (composer && chatScroll && window.ResizeObserver) {
     var syncComposerSpace = new ResizeObserver(function () {
       chatScroll.style.paddingBottom = (composer.offsetHeight + 24) + 'px';
+      chatScroll.style.setProperty('--vc-composer-height', composer.offsetHeight + 'px');
     });
     syncComposerSpace.observe(composer);
   }
@@ -3365,19 +3424,26 @@
       prompt.value = '';
       resizePrompt();
 
-      if (window.setAtomicCoreState) window.setAtomicCoreState('action');
+      setChatActivityState('requesting');
       if (window.startAtomicSequence) window.startAtomicSequence();
 
       var thinkingEl = appendMessage('pending', 'VISION CORE', 'Pensando...');
 
-      function finish() {
+      function finish(finalState) {
         if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
-        if (window.resetAtomicCore) window.resetAtomicCore();
-        chatRequestInFlight = false;
-        updateChatOnboarding();
-        chatController = null;
-        if (chatSendBtn) chatSendBtn.disabled = false;
-        if (chatCancelBtn) chatCancelBtn.hidden = true;
+        setChatActivityState(finalState === 'error' ? 'error' : 'settling');
+        var settleMs = getAnimationMode() === 'reduced' ? 0 : Math.max(800, Math.min(1300, returnDurationPref.getValue()));
+        return new Promise(function (resolve) {
+          window.setTimeout(function () {
+            setChatActivityState('idle');
+            chatRequestInFlight = false;
+            updateChatOnboarding();
+            chatController = null;
+            if (chatSendBtn) chatSendBtn.disabled = false;
+            if (chatCancelBtn) chatCancelBtn.hidden = true;
+            resolve();
+          }, settleMs);
+        });
       }
 
       var token = getChatAuthToken();
@@ -3408,43 +3474,54 @@
         }
         return r.json();
       }).then(function (data) {
-        finish();
+        if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
         if (data && typeof data.answer === 'string' && data.answer) {
-          appendMessage('assistant', 'VISION CORE', data.answer);
-          persistedUserMessage.then(function () { return conversationPromise; }).then(function (id) { saveConversationMessage(id, 'assistant', data.answer); });
-          var parsed = parseHermesBlock(data.answer);
-          if (parsed.hermesObj && (parsed.hermesObj.diagnosis || parsed.hermesObj.fix_type || parsed.hermesObj.patch || parsed.hermesObj.decisao)) {
-            if (hermesHint) hermesHint.hidden = false;
-            if (hintDiagnosis) hintDiagnosis.textContent = parsed.hermesObj.diagnosis || parsed.hermesObj.decisao || 'Diagnóstico estrutural disponível.';
-            if (hintActions) {
-              hintActions.textContent = '';
-              var goBtn = document.createElement('button');
-              goBtn.type = 'button';
-              goBtn.textContent = 'Ver detalhes nas Missões';
-              goBtn.addEventListener('click', function () { selectFeature('missions', true); });
-              hintActions.appendChild(goBtn);
+          setChatActivityState('revealing');
+          return appendProgressiveMessage('VISION CORE', data.answer).then(function () {
+            persistedUserMessage.then(function () { return conversationPromise; }).then(function (id) { saveConversationMessage(id, 'assistant', data.answer); });
+            var parsed = parseHermesBlock(data.answer);
+            if (parsed.hermesObj && (parsed.hermesObj.diagnosis || parsed.hermesObj.fix_type || parsed.hermesObj.patch || parsed.hermesObj.decisao)) {
+              if (hermesHint) hermesHint.hidden = false;
+              if (hintDiagnosis) hintDiagnosis.textContent = parsed.hermesObj.diagnosis || parsed.hermesObj.decisao || 'Diagnóstico estrutural disponível.';
+              if (hintActions) {
+                hintActions.textContent = '';
+                var goBtn = document.createElement('button');
+                goBtn.type = 'button';
+                goBtn.textContent = 'Ver detalhes nas Missões';
+                goBtn.addEventListener('click', function () { selectFeature('missions', true); });
+                hintActions.appendChild(goBtn);
+              }
+            } else {
+              if (hermesHint) hermesHint.hidden = true;
             }
-          } else {
-            if (hermesHint) hermesHint.hidden = true;
-          }
+            return finish('success');
+          });
         } else {
           appendMessage('error', 'ERRO', 'Resposta do backend em formato inesperado (sem campo "answer").');
+          return finish('error');
         }
       }).catch(function (err) {
         if (timeoutId) window.clearTimeout(timeoutId);
-        finish();
+        if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
         var isAbort = err && err.name === 'AbortError';
         appendMessage('error', 'ERRO', isAbort
           ? (chatCancelledByUser ? 'Solicitação cancelada.' : 'Tempo esgotado ao falar com o backend (45s). Tente novamente.')
           : ('Erro de conexão: ' + (err && err.message ? err.message : err)));
+        return finish('error');
       });
     });
   }
 
   if (chatCancelBtn) chatCancelBtn.addEventListener('click', function () {
-    if (!chatRequestInFlight || !chatController) return;
+    if (!chatRequestInFlight) return;
     chatCancelledByUser = true;
-    chatController.abort();
+    if (chatController) chatController.abort();
+    if (cancelProgressiveReveal) cancelProgressiveReveal();
+  });
+
+  window.addEventListener('beforeunload', function () {
+    if (chatController) chatController.abort();
+    if (cancelProgressiveReveal) cancelProgressiveReveal();
   });
 
   document.querySelectorAll('[data-quick]').forEach(function (button) {

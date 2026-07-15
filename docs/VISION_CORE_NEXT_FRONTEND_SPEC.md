@@ -211,7 +211,7 @@ Um único `<div class="vc-app-shell" data-sidebar-state="expanded|collapsed">` c
 
 ### Estado vazio e tutorial
 
-`#vcChatHero` usa a primeira faixa do Chat em grid: `#vcChatOnboarding` ocupa a area livre e o Atomic Core preserva sua posicao a direita, sem uma linha vazia acima. `deriveChatHeroState()` e a unica derivacao e aplica a precedencia trabalho iniciado > autenticado com Workspaces > autenticado sem Workspace > visitante. O visitante ve planos informativos e OAuth Google real; autenticados veem o primeiro nome e os fluxos reais de criacao, selecao e conversa, com no maximo tres Workspaces reais recentes. Mensagem real, request em curso, tutorial aberto ou outra aba produzem o estado `work`, cujo `hidden` remove integralmente a Hero do layout. No mobile, o Atomic fica oculto, o onboarding usa toda a largura e o composer permanece sticky.
+`#vcChatHero` usa a primeira faixa do Chat em grid: `#vcChatOnboarding` ocupa a área livre e reserva a coluna periférica do Atomic Core, sem uma linha vazia acima. `deriveChatHeroState()` é a única derivação e aplica a precedência trabalho iniciado > autenticado com Workspaces > autenticado sem Workspace > visitante. O visitante vê planos informativos e OAuth Google real; autenticados veem o primeiro nome e os fluxos reais de criação, seleção e conversa, com no máximo três Workspaces reais recentes. Mensagem real, request em curso, tutorial aberto ou outra aba produzem o estado `work`, cujo `hidden` remove integralmente a Hero do layout. No mobile vazio, o Atomic fica recolhido para o onboarding usar toda a largura; em Action, reaparece reduzido na conversa e o composer permanece sticky.
 
 Free, Pro e Enterprise são selecionáveis por botões com `aria-pressed`. Free permanece padrão e conduz ao OAuth/Workspace existentes. Sem checkout ou canal comercial real, Pro e Enterprise apenas registram a seleção visual e informam explicitamente que nenhum dado foi enviado; não existe request, persistência ou sucesso fictício.
 
@@ -321,11 +321,17 @@ sequenceDiagram
 Desktop-first, dois breakpoints:
 
 - `max-width: 1180px` — Atomic Core encolhe e permanece na área superior direita sem cobrir chat/composer.
-- `max-width: 820px` — sidebar vira barra horizontal (`position:static`, `flex-direction:row`, scroll horizontal, só ícones — `.vc-sidebar-foot` some). **Atomic Core vira `display:none` neste breakpoint** — decisão deliberada: o Atomic Core é puramente decorativo (`pointer-events:none`) e recolher em telas menores é mais seguro que arriscar sobrepor chat/composer.
+- `max-width: 820px` — sidebar vira barra horizontal (`position:static`, `flex-direction:row`, scroll horizontal, só ícones — `.vc-sidebar-foot` some). O Atomic Core fica recolhido na Hero vazia; durante trabalho reduz para 62% da escala, omite legendas secundárias e mantém distância dinâmica do composer. Continua `pointer-events:none` e limitado ao Chat.
 
 ## Acessibilidade
 
 `aria-label`, `aria-live="polite"` nos painéis dinâmicos (chat stream, listas de status), `aria-expanded` no toggle da sidebar, `role="alert"` nos banners de erro/risco. Motion respeita `VCMotion` (ver seção Motion System) — não é gated pelo SO diretamente, mas o controle existe e é persistente.
+
+### Chat progressivo e Atomic Core
+
+O contrato oficial `POST /api/chat` retorna JSON completo, sem stream. O frontend pode revelar `answer` progressivamente em grupos naturais, mas deve documentar e tratar isso como **progressive reveal**, nunca streaming real. A resposta integral permanece a fonte de persistência e parsing. O fluxo central é `requesting → revealing → settling → idle`; o Atomic Core permanece em Action durante `requesting` e `revealing`, retorna suavemente em `settling` e nunca deriva estado de timers dispersos. Erro, timeout, cancelamento, troca de rota e unload encerram o trabalho ativo pelo mesmo caminho. Durante a revelação, leitores de tela não recebem mutação por caractere; `VCMotion=reduced` apresenta a resposta completa imediatamente.
+
+No Chat, o Atomic Core é um indicador periférico `sticky` limitado por `#vcChatScroll`, próximo ao canto inferior direito e acima do composer. Ele não é `fixed`, não pertence ao viewport global, não cria scroll interno e reduz escala/detalhe em viewports estreitos.
 
 ---
 
@@ -376,7 +382,7 @@ Confirmado pelo usuário após auditoria de paridade (`docs/PARITY_AUDIT.md`): S
 2. Não alterar `index.html` nem bundles legados — ✅ (verificado a cada sessão via `git diff --stat`)
 3. Sidebar recolher via botão toggle, persistindo estado — ✅
 4. Chat é o foco visual — ✅
-5. Atomic Core pequeno/discreto (~300×300px desktop, `display:none` em mobile) — ✅
+5. Atomic Core pequeno/discreto (até 260px desktop, reduzido e simplificado no mobile) — ✅
 6. Sem botões Idle/Action/Glow visíveis — ✅ (nunca existiram como controles)
 7. Mission Input separado não existe no DOM — ✅
 8. Composer fixo embaixo (`position:sticky; bottom:18px`) e é a única entrada de missão — ✅

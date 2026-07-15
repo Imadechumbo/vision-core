@@ -53,9 +53,12 @@ Cores por agente (`--agent-color`, CSS): `pi:#b86cff` · `hermes:#34d399` · `op
 ```mermaid
 stateDiagram-v2
     [*] --> Idle: load da página
-    Idle --> Action: startAtomicSequence() no submit do chat
-    Action --> Action: propagação sequencial de glow<br/>Hermes→PIHarness→OpenClaw→Scanner→PatchEngine→Aegis<br/>1.8s por agente, em loop
-    Action --> Idle: resetAtomicCore()<br/>(sucesso, erro OU timeout — sempre um dos três)
+    Idle --> Requesting: submit real do chat
+    Requesting --> Revealing: JSON completo recebido
+    Revealing --> Settling: último bloco renderizado
+    Requesting --> Settling: erro, timeout ou cancelamento
+    Revealing --> Settling: cancelamento ou troca de rota
+    Settling --> Idle: retorno visual concluído
 ```
 
 **Implementação real:** SVG + CSS transform/opacity + `requestAnimationFrame` — **nunca** Canvas/Three.js/WebGL. `data-state="idle"|"action"` em `[data-atomic-core]`, instância única no DOM (sem duplicação hero/sidebar).
@@ -79,8 +82,15 @@ Qualquer fluxo do Next que dispare uma ação (chat, GitHub PR, Apply-Fix, Dry-R
 
 | Estado | Quando | Comportamento visual |
 |---|---|---|
-| `idle` | 95%+ do tempo, padrão no load | Órbitas quase paradas, respiração/glow discretos, velocidades por agente nunca sincronizadas |
-| `action` | Missão/ação em andamento | Propagação sequencial de glow entre os 6 primeiros agentes do pipeline, 1.8s cada, em loop até `resetAtomicCore()` |
+| `idle` | Sistema disponível, padrão no load | Órbitas lentas, respiração/glow discretos, velocidades por agente nunca sincronizadas |
+| `action` | Chat em `requesting` ou `revealing` | Órbitas aceleradas e propagação sequencial de glow até o último bloco visível |
+| `settling` | Resposta concluída, erro ou cancelamento | Estado semântico do Chat que dispara o Retorno Action → Idle antes de liberar novo submit |
+
+## Chat e apresentação progressiva (`next-clean-94`)
+
+`/api/chat` continua retornando JSON completo; os SSE reais do backend pertencem a outros contratos. O Next não chama isso de streaming: preserva `data.answer` integral e aplica **progressive reveal somente na UI**, em grupos de palavras, após a resposta HTTP. O estado único `data-chat-activity="requesting|revealing|settling|idle|error"` dirige o Atomic Core. Assim, Action só termina depois do último conteúdo renderizado, nunca apenas no fim do fetch.
+
+Durante a revelação, `#vcChatStream` usa `aria-live="off"`; ao concluir, restaura `polite`, evitando anúncio por caractere. O modo `VCMotion=reduced` revela a resposta inteira imediatamente. Cancelamento, timeout, erro, navegação para outra área e unload encerram fetch/reveal e passam pelo mesmo Retorno governado.
 
 ## Movimento customizável (Settings → Atomic Core, `next-clean-82`)
 
@@ -114,7 +124,7 @@ Fonte de verdade de movimento é `window.VCMotion` (ver `VISION_CORE_NEXT_FRONTE
 - **Modo `full`:** `requestAnimationFrame`, órbita em movimento contínuo, glow varia por estado.
 - **Modo `reduced`** (só quando o usuário escolhe explicitamente em Settings): posição/escala **congeladas** (zero deslocamento), mas glow/opacidade continuam pulsando lentamente (`REDUCE_PULSE_MS≈4200`, seno sobre o tempo decorrido) via `setTimeout` recorrente (`REDUCE_TICK_MS≈500ms`, bem mais barato que rAF) — **nunca 100% estático**. Achado real corrigido em 2026-07-09: antes desse fix, o widget congelava por completo sob `reduced` (nada disparava um novo `render()` no período ocioso) — lido pelo usuário como "quebrado", não "calmo".
 
-**Responsividade:** desktop 300×300px (`min(300px,23vw)`), área superior direita exclusiva do Atomic Core, opacidade 0.76. Breakpoint 1180px: encolhe pra 245px. Breakpoint 820px (mobile): **`display:none`** — decisão deliberada (ver `VISION_CORE_NEXT_FRONTEND_SPEC.md`), o Atomic Core é puramente decorativo (`pointer-events:none`) e a spec permite recolher em telas menores em vez de arriscar sobrepor conteúdo real.
+**Responsividade:** desktop usa até 260px (redução de ~13% sobre os 300px anteriores) e `position:sticky` limitado por `#vcChatScroll`, no canto inferior direito da área visível da conversa, sempre acima do composer. Breakpoint 1180px: 245px. Até 820px, fica oculto enquanto a Hero vazia está aberta; ao iniciar trabalho, o mesmo DOM migra para a conversa, reduz visualmente para 62%, oculta legendas secundárias e permanece periférico. Não usa `position:fixed`, não cria segunda rolagem e não cobre o composer.
 
 `contain: layout paint` no CSS — não força reflow do resto da página.
 

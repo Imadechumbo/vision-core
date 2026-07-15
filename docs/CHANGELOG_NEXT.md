@@ -4,6 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-94 (2026-07-14, não deployado)
+
+- Atomic Core virou indicador periférico `sticky` do Chat, até 260px no desktop e reduzido no mobile, sempre limitado pela conversa e acima do composer.
+- Chat ganhou estado central `requesting/revealing/settling/idle`; Action permanece ativo até o fim da apresentação visual e erros/cancelamentos usam o mesmo Retorno.
+- Como `/api/chat` entrega JSON completo, a resposta usa progressive reveal local em grupos naturais — não streaming real — com acessibilidade controlada e resposta integral preservada.
+
 ## next-clean-93 (2026-07-14, produção)
 
 - Conta autenticada ganhou menu persistente no header com nome/inicial, Minha conta, Configurações e logout pelo endpoint oficial; sair limpa o contexto visual e restaura imediatamente a Hero visitante.

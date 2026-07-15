@@ -1037,20 +1037,19 @@ a { color: inherit; text-decoration: none; }
   box-shadow: 0 0 20px rgba(168, 85, 247, .25);
 }
 
-/* ARCHITECTURAL PRINCIPLE-004 (No Fixed Viewport Layout, ver DECISIONS.md):
-   vive no fluxo normal de #vcChatScroll (position:static — nunca fixed
-   nem absolute, que não rola de verdade dentro de um container com
-   overflow: o offset de position:absolute é relativo ao padding-box, que
-   não se move quando o conteúdo rola por dentro dele; testado e
-   confirmado com getBoundingClientRect antes/depois do scroll). Alinhado
-   à direita via align-self dentro do flex column do container pai. */
+/* Indicador periférico do Chat: sticky é limitado por #vcChatScroll e
+   acompanha a rolagem única da página sem escapar para o viewport global.
+   A coluna vazia da Hero reserva espaço no estado inicial; as margens
+   compensam a caixa no fluxo sem aproximá-la do composer. */
 .vc-atomic-hud {
-  --atomic-core-size: min(300px, 23vw);
+  --atomic-core-size: min(260px, 20vw);
   --atomic-safe-area: 36px;
   --atomic-intensity: 1;
+  position: sticky;
+  top: calc(100vh - var(--vc-composer-height, 112px) - var(--atomic-core-size) - 70px);
   align-self: flex-end;
   z-index: 8;
-  margin: calc(-1 * var(--atomic-safe-area)) 0 0 0;
+  margin: calc(-1 * (var(--atomic-core-size) - 18px)) 10px -38px auto;
   width: calc(var(--atomic-core-size) + (var(--atomic-safe-area) * 2));
   aspect-ratio: 1;
   pointer-events: none;
@@ -1183,7 +1182,12 @@ a { color: inherit; text-decoration: none; }
   gap: clamp(18px, 3vw, 42px);
   width: 100%;
 }
-.vc-chat-hero .vc-atomic-hud { grid-area: atomic; align-self: start; }
+.vc-chat-hero .vc-atomic-hud {
+  position: static;
+  grid-area: atomic;
+  align-self: start;
+  margin: calc(-1 * var(--atomic-safe-area)) 0 0;
+}
 .vc-chat-onboarding h1 { margin: 4px 0 8px; font-size: clamp(20px, 3vw, 30px); }
 .vc-chat-onboarding > p { margin: 0 0 14px; color: #bdb4cf; }
 .vc-onboarding-plans { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
@@ -1296,8 +1300,20 @@ a { color: inherit; text-decoration: none; }
   .vc-brand-copy small { white-space: normal; line-height: 1.45; }
   .vc-chat-stage { padding-top: 14px; }
   .vc-safe-status-row { grid-template-columns: 1fr; }
-  .vc-atomic-hud { display: none; }
+  .vc-atomic-hud {
+    --atomic-core-size: 245px;
+    --atomic-safe-area: 58px;
+    top: calc(100vh - var(--vc-composer-height, 112px) - 190px);
+    margin-right: 0;
+    margin-left: calc(100% - (var(--atomic-core-size) + (var(--atomic-safe-area) * 2)));
+    opacity: calc(.48 * var(--atomic-intensity));
+    scale: .62;
+    transform-origin: right bottom;
+  }
+  .vc-atomic-hud .vc-agent span,
+  .vc-atomic-hud .vc-agent small { display: none; }
   .vc-chat-hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "onboarding"; }
+  .vc-chat-hero .vc-atomic-hud { display: none; }
   .vc-onboarding-plans { grid-template-columns: 1fr; }
   .vc-onboarding-account { align-items: stretch; flex-direction: column; }
 }

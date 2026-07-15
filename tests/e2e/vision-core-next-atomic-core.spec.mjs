@@ -315,18 +315,26 @@ test('intensity slider sets --atomic-intensity and persists across reload (windo
 // ARCHITECTURAL PRINCIPLE-004 (No Fixed Viewport Layout, ver DECISIONS.md).
 // Achado real: position:absolute dentro de #vcChatScroll NAO rola com o
 // conteudo (offset e relativo ao padding-box, que nao se move) -- testado
-// e descartado antes deste commit. A solucao real e position:static
-// (align-self:flex-end no flex column), confirmada aqui via
+// e descartado antes deste commit. A solucao real e position:sticky
+// limitado por #vcChatScroll, confirmada aqui via
 // getBoundingClientRect antes/depois do scroll, nao soh a leitura de CSS.
-test('lives in normal document flow (no fixed/absolute positioning tying it to the viewport)', async ({ page }) => {
+test('uses container-scoped sticky positioning, never fixed/absolute viewport positioning', async ({ page }) => {
+  await page.route(`${API}/api/chat`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer: 'resposta em andamento '.repeat(30) }) }));
   await page.goto(NEXT_URL());
+  await page.locator('#vcPrompt').fill('Ativar');
+  await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
+  await expect(page.locator('.vc-app-shell')).toHaveAttribute('data-chat-activity', 'revealing');
   const hud = page.locator('[data-atomic-core]');
   const position = await hud.evaluate((el) => getComputedStyle(el).position);
-  expect(position, 'must never be fixed or absolute -- ties it to the viewport/padding-box instead of the real scroll flow').toBe('static');
+  expect(position, 'sticky remains bounded by the real chat container').toBe('sticky');
 });
 
-test('scrolls away with the chat content instead of staying pinned to the viewport', async ({ page }) => {
+test('remains visible in the lower chat corner while the conversation scrolls', async ({ page }) => {
+  await page.route(`${API}/api/chat`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer: 'resposta em andamento '.repeat(80) }) }));
   await page.goto(NEXT_URL());
+  await page.locator('#vcPrompt').fill('Ativar');
+  await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
+  await expect(page.locator('.vc-app-shell')).toHaveAttribute('data-chat-activity', 'revealing');
   await page.evaluate(() => {
     const stream = document.getElementById('vcChatStream');
     for (let i = 0; i < 25; i++) {
@@ -345,7 +353,8 @@ test('scrolls away with the chat content instead of staying pinned to the viewpo
   await page.waitForTimeout(150);
   const after = await hud.evaluate((el) => el.getBoundingClientRect().top);
 
-  expect(after, 'must move out of the visible area when the page is scrolled, unlike position:fixed').toBeLessThan(before - 100);
+  expect(after, 'sticky Core must remain visible while the page scrolls through chat content').toBeGreaterThanOrEqual(0);
+  expect(after).toBeLessThan(900);
 });
 
 // DECISION-022 (2026-07-13): Atomic Core é Chat-only. O widget nunca foi
@@ -379,10 +388,10 @@ test('chat hero intro no longer exists, composer sits near the top with no reser
 
   const gapFromTop = await page.evaluate(() => {
     const stage = document.querySelector('.vc-chat-stage');
-    const hud = document.querySelector('[data-atomic-core]');
-    return hud.getBoundingClientRect().top - stage.getBoundingClientRect().top;
+    const onboarding = document.getElementById('vcChatOnboarding');
+    return onboarding.getBoundingClientRect().top - stage.getBoundingClientRect().top;
   });
-  expect(gapFromTop, 'Atomic Core (first content in the stage) should sit near the stage top, no leftover intro gap').toBeLessThan(80);
+  expect(gapFromTop, 'onboarding should sit near the stage top with no leftover intro gap').toBeLessThan(80);
 });
 
 // Achado real da RCA adversarial (2026-07-12): a primeira versao usava
@@ -427,7 +436,8 @@ test('anchors flush against the real right edge of the content area, not just it
     const paddingRight = parseFloat(getComputedStyle(main).paddingRight);
     return (mainRect.right - paddingRight) - hudRect.right;
   });
-  expect(Math.abs(gap), 'HUD right edge must match .vc-main real content-right-edge, not float short of it').toBeLessThan(2);
+  expect(gap, 'HUD keeps a small safe distance from the real content edge/scrollbar').toBeGreaterThanOrEqual(0);
+  expect(gap).toBeLessThanOrEqual(12);
 });
 
 // DECISION-022 (2026-07-13): agora que o widget só é visível em Chat, o
@@ -451,7 +461,8 @@ test('anchor and no-clipping guarantees hold where the widget is actually visibl
       .filter((rect) => rect.right > scrollRect.right + tolerance || rect.left < scrollRect.left - tolerance);
     return { gap, clippedCount: clipped.length };
   });
-  expect(Math.abs(result.gap), 'HUD must stay anchored to the real right edge').toBeLessThan(2);
+  expect(result.gap, 'HUD must stay near the real right edge without touching the scrollbar').toBeGreaterThanOrEqual(0);
+  expect(result.gap).toBeLessThanOrEqual(12);
   expect(result.clippedCount, 'no agent label should be clipped').toBe(0);
 });
 
@@ -677,13 +688,84 @@ test('Settings -> Atomic Core: os 4 controles novos existem com defaults correto
   await expect(page.locator('#vcAtomicIdleSpeed')).toHaveValue('100');
   await expect(page.locator('#vcAtomicIdlePattern')).toHaveValue('classic');
   await expect(page.locator('#vcAtomicActionPattern')).toHaveValue('classic');
-  await expect(page.locator('#vcAtomicReturnStyle')).toHaveValue('none');
+  await expect(page.locator('#vcAtomicReturnStyle')).toHaveValue('smooth');
   // Linhas condicionais (drift/duração) escondidas quando o preset não se aplica.
   await expect(page.locator('#vcAtomicIdleDriftRow')).toBeHidden();
-  await expect(page.locator('#vcAtomicReturnDurationRow')).toBeHidden();
+  await expect(page.locator('#vcAtomicReturnDurationRow')).toBeVisible();
 
   await page.locator('#vcAtomicIdlePattern').selectOption('drift');
   await expect(page.locator('#vcAtomicIdleDriftRow')).toBeVisible();
   await page.locator('#vcAtomicReturnStyle').selectOption('smooth');
   await expect(page.locator('#vcAtomicReturnDurationRow')).toBeVisible();
+});
+
+test('chat stays in Action through progressive reveal, then passes through settling before Idle', async ({ page }) => {
+  const answer = 'Resposta progressiva com palavras suficientes para observar a revelação em andamento.\n\n- item preservado\n\n```js\nconst ok = true;\n``` ' + 'conteúdo '.repeat(45);
+  await page.route(`${API}/api/chat`, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer }) });
+  });
+  await page.goto(NEXT_URL());
+  await page.locator('#vcPrompt').fill('Teste progressivo');
+  await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
+
+  await expect(page.locator('.vc-app-shell')).toHaveAttribute('data-chat-activity', 'requesting');
+  await expect(page.locator('[data-atomic-core]')).toHaveAttribute('data-state', 'action');
+  await expect(page.locator('.vc-app-shell')).toHaveAttribute('data-chat-activity', 'revealing');
+  const partial = await page.locator('.vc-message-assistant p').textContent();
+  expect(partial.length).toBeGreaterThan(0);
+  expect(partial.length).toBeLessThan(answer.length);
+  await expect(page.locator('#vcChatStream')).toHaveAttribute('aria-live', 'off');
+  await expect(page.locator('.vc-message-assistant p')).toHaveText(answer);
+  await expect(page.locator('.vc-app-shell')).toHaveAttribute('data-chat-activity', 'settling');
+  await expect(page.locator('[data-atomic-core]')).toHaveAttribute('data-state', 'idle');
+  await expect(page.locator('.vc-app-shell')).toHaveAttribute('data-chat-activity', 'idle');
+  await expect(page.locator('#vcChatStream')).toHaveAttribute('aria-live', 'polite');
+});
+
+test('cancel and backend error both leave Action through the governed return path', async ({ page }) => {
+  await page.route(`${API}/api/chat`, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer: 'tarde demais' }) });
+  });
+  await page.goto(NEXT_URL());
+  await page.locator('#vcPrompt').fill('Cancelar');
+  await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
+  await expect(page.locator('[data-atomic-core]')).toHaveAttribute('data-state', 'action');
+  await page.locator('#vcChatCancel').click();
+  await expect(page.locator('.vc-message-error')).toContainText('Solicitação cancelada.');
+  await expect(page.locator('.vc-app-shell')).toHaveAttribute('data-chat-activity', 'idle');
+  await expect(page.locator('[data-atomic-core]')).toHaveAttribute('data-state', 'idle');
+
+  await page.unroute(`${API}/api/chat`);
+  await page.route(`${API}/api/chat`, (route) => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'falha_controlada' }) }));
+  await page.locator('#vcPrompt').fill('Falhar');
+  await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
+  await expect(page.locator('[data-atomic-core]')).toHaveAttribute('data-state', 'action');
+  await expect(page.locator('.vc-message-error').filter({ hasText: 'falha_controlada' })).toHaveCount(1);
+  await expect(page.locator('.vc-app-shell')).toHaveAttribute('data-chat-activity', 'idle');
+  await expect(page.locator('[data-atomic-core]')).toHaveAttribute('data-state', 'idle');
+});
+
+test('sticky Core never overlaps the composer after scrolling a long conversation', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto(NEXT_URL());
+  await page.evaluate(() => {
+    const stream = document.getElementById('vcChatStream');
+    for (let i = 0; i < 35; i++) {
+      const article = document.createElement('article');
+      article.className = 'vc-message';
+      article.textContent = 'Mensagem longa ' + i + ' '.repeat(80);
+      stream.appendChild(article);
+    }
+    window.scrollTo(0, document.documentElement.scrollHeight);
+  });
+  const geometry = await page.evaluate(() => {
+    const core = document.querySelector('[data-atomic-core]').getBoundingClientRect();
+    const composer = document.getElementById('vcComposer').getBoundingClientRect();
+    const chat = document.getElementById('vcChatScroll').getBoundingClientRect();
+    return { coreBottom: core.bottom, coreRight: core.right, composerTop: composer.top, chatRight: chat.right };
+  });
+  expect(geometry.coreBottom).toBeLessThanOrEqual(geometry.composerTop - 20);
+  expect(geometry.coreRight).toBeLessThanOrEqual(geometry.chatRight);
 });
