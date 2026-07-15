@@ -4,6 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-95 (2026-07-15, não deployado)
+
+- Atomic Core reduzido uniformemente em 14% no desktop e aproximadamente 15% no mobile, com origem de escala na borda direita para deslocar o centro visual cerca de 25 px sem cortar órbitas, glow ou agentes.
+- Posicionamento vertical, estados Idle/Action/Retorno e sincronização com a apresentação progressiva permanecem inalterados.
+
 ## next-clean-94 (2026-07-14, produção)
 
 - Atomic Core virou indicador periférico `sticky` do Chat, até 260px no desktop e reduzido no mobile, sempre limitado pela conversa e acima do composer.

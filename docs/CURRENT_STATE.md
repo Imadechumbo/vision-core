@@ -16,6 +16,8 @@ Software Factory
 ✔ OK (simulação/preview por design — nenhum módulo escreve em disco ou executa real)
 
 Atomic Core
+
+✔ `next-clean-95` ajustado localmente, sem deploy: escala visual uniforme de `.86` no desktop e `.53` no mobile, ancorada à direita. O centro aparente se desloca cerca de 25 px para a direita sem alterar posição vertical, órbitas, glow, Idle, Action, Retorno ou progressive reveal. Teste dirigido Atomic Core 35/35 PASS; suíte permanente Next 141/141 PASS em 55,2s, 4 workers, sem retry; Pages 11/11; `node --check` e `git diff --check` PASS.
 ✔ OK
 
 Chat

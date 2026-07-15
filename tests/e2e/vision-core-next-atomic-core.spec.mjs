@@ -440,6 +440,27 @@ test('anchors flush against the real right edge of the content area, not just it
   expect(gap).toBeLessThanOrEqual(12);
 });
 
+test('uses the approved peripheral scale while preserving the safe right edge on desktop and mobile', async ({ page }) => {
+  for (const viewport of [
+    { width: 1440, height: 900, expectedScale: 0.86 },
+    { width: 390, height: 844, expectedScale: 0.53 }
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto(NEXT_URL());
+    const geometry = await page.evaluate(() => {
+      const hud = document.querySelector('[data-atomic-core]');
+      const chat = document.getElementById('vcChatScroll').getBoundingClientRect();
+      const rect = hud.getBoundingClientRect();
+      return {
+        scale: Number.parseFloat(getComputedStyle(hud).scale),
+        safeRightGap: chat.right - rect.right
+      };
+    });
+    expect(geometry.scale).toBeCloseTo(viewport.expectedScale, 2);
+    expect(geometry.safeRightGap, 'the scaled HUD must remain inside the Chat edge').toBeGreaterThanOrEqual(0);
+  }
+});
+
 // DECISION-022 (2026-07-13): agora que o widget só é visível em Chat, o
 // ancoramento e a ausência de corte só precisam ser garantidos ali; testar em
 // páginas onde fica display:none não valida nada de real.
