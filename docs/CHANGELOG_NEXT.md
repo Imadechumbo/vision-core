@@ -4,11 +4,12 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
-## next-clean-108 (2026-07-15, não deployado)
+## next-clean-108 (2026-07-15, produção)
 
 - Conversa ativa redistribui o Grid para a coluna textual ocupar `69,21%` em 1440×900 (`711,89px`, antes `639,89px`/`62,21%`).
 - Vão texto→HUD caiu de `87,99px` para `23,99px`; HUD avançou mais 8px à direita, mantendo `71,36px` até viewport/scrollbar e zero interseções com mensagem, toggle ou composer.
 - Hero, escala e animações não mudaram. Atomic 34/34; Next 141/141 sem retry; Pages 11/11; navegador real local sem overflow/erros.
+- Publicado a partir de `98884116` em `5914f5ed.visioncoreai.pages.dev`; package SHA-256 `2fded1b2fb84126ad4bb3882773bb41dd3e1e8e58220c124f4c10d6ce28ed8fc`. Alias produtivo confirmou a mesma geometria e console limpo.
 
 ## next-clean-107 (2026-07-15, produção)
 
