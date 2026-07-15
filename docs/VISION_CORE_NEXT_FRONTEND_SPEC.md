@@ -213,6 +213,8 @@ Um único `<div class="vc-app-shell" data-sidebar-state="expanded|collapsed">` c
 
 `#vcChatHero` usa a primeira faixa do Chat em grid: `#vcChatOnboarding` ocupa a area livre e o Atomic Core preserva sua posicao a direita, sem uma linha vazia acima. `deriveChatHeroState()` e a unica derivacao e aplica a precedencia trabalho iniciado > autenticado com Workspaces > autenticado sem Workspace > visitante. O visitante ve planos informativos e OAuth Google real; autenticados veem o primeiro nome e os fluxos reais de criacao, selecao e conversa, com no maximo tres Workspaces reais recentes. Mensagem real, request em curso, tutorial aberto ou outra aba produzem o estado `work`, cujo `hidden` remove integralmente a Hero do layout. No mobile, o Atomic fica oculto, o onboarding usa toda a largura e o composer permanece sticky.
 
+Free, Pro e Enterprise são selecionáveis por botões com `aria-pressed`. Free permanece padrão e conduz ao OAuth/Workspace existentes. Sem checkout ou canal comercial real, Pro e Enterprise apenas registram a seleção visual e informam explicitamente que nenhum dado foi enviado; não existe request, persistência ou sucesso fictício.
+
 O header principal do Chat contem somente logo/nome Vision Core, status do agente, Workspace e conversa. Versao, stack, SaaS, Hermes e PASS GOLD nao aparecem nesse header; informacao de build pertence apenas a superficies tecnicas.
 
 `#vcSmileModal` continua sendo o unico overlay/modal do Vision Core Next, agora apresentado como Tutorial. Seus 13 passos estaticos usam `textContent`, X/ESC/Pular/Voltar/Proximo, foco contido e restaurado. `localStorage['vc_tutorial_hidden']` guarda somente "Nao mostrar novamente"; Settings remove essa preferencia em "Reiniciar tutorial". O modal nao chama backend e nao cria campo paralelo de missao.
@@ -220,6 +222,8 @@ O header principal do Chat contem somente logo/nome Vision Core, status do agent
 ### Conta (email/senha)
 
 Painel dentro de Settings (`#vcAccountForm`/`#vcAccountLogged`): `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout`, e OAuth Google/GitHub via `GET /api/auth/oauth/{provider}?return_to=next`. Token vai em `localStorage['vision_token']` — o mesmo nome que `apiRequest()` ja lia antes de existir qualquer UI de login, e o mesmo que `Authorization: Bearer` anexa em toda chamada. O cookie `vision_session` que o backend tambem seta e ignorado de proposito (origem diferente do Worker Gateway, `SameSite=Lax`, nao confiavel via fetch cross-site). O callback OAuth segue compatível com legado por padrão; quando o fluxo e iniciado pelo Next, `state` carrega apenas um alvo fechado (`next`, nunca URL livre) e o retorno vai para `/vision-core-next.html#oauth-success&token=...` ou `#oauth-error=...`, reaproveitando a mesma fonte de verdade do login email/senha.
+
+`#vcUserMenu` permanece no header enquanto autenticado, inclusive após a Hero sair do layout. É um `<details>` nativo com nome/inicial, Minha conta, Configurações e Sair. As duas primeiras ações reutilizam Settings; Sair chama o mesmo `doAccountLogout()`, limpa imediatamente token e contexto visual e restaura o estado visitante, sem fluxo de auth paralelo.
 
 ### Contexto de Workspace
 

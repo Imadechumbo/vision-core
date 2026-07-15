@@ -248,6 +248,13 @@
   var accountStatus = document.getElementById('vcAccountStatus');
   var googleOAuthBtn = document.getElementById('vcGoogleOAuthBtn');
   var githubOAuthBtn = document.getElementById('vcGithubOAuthBtn');
+  var userMenu = document.getElementById('vcUserMenu');
+  var userAvatar = document.getElementById('vcUserAvatar');
+  var userName = document.getElementById('vcUserName');
+  var userAccount = document.getElementById('vcUserAccount');
+  var userSettings = document.getElementById('vcUserSettings');
+  var userLogout = document.getElementById('vcUserLogout');
+  var planStatus = document.getElementById('vcPlanStatus');
   var projectSelect = document.getElementById('vcProjectSelect');
   var projectNameInput = document.getElementById('vcProjectName');
   var projectCreateBtn = document.getElementById('vcProjectCreate');
@@ -1078,6 +1085,14 @@
   });
   if (onboardingGoogle) onboardingGoogle.addEventListener('click', function () {
     if (onboardingAccountCopy) onboardingAccountCopy.textContent = 'Redirecionando para o Google...';
+  });
+  document.querySelectorAll('[data-plan]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var plan = button.getAttribute('data-plan');
+      document.querySelectorAll('[data-plan]').forEach(function (item) { item.setAttribute('aria-pressed', String(item === button)); });
+      document.querySelectorAll('[data-plan-card]').forEach(function (card) { card.classList.toggle('is-selected', card.getAttribute('data-plan-card') === plan); });
+      if (planStatus) planStatus.textContent = plan === 'free' ? 'Free selecionado. Continue com Google para criar seu Workspace.' : plan === 'pro' ? 'Interesse no PRO selecionado. Disponível em breve; nenhum dado foi enviado.' : 'Demonstração Enterprise selecionada. Canal de vendas disponível em breve; nenhum dado foi enviado.';
+    });
   });
   document.addEventListener('keydown', function (event) {
     if (!smileModal || smileModal.hidden) return;
@@ -2992,6 +3007,10 @@
     if (accountCopy) accountCopy.textContent = 'Logado como ' + (user && user.email ? user.email : '—') + '.';
     if (accountForm) accountForm.hidden = true;
     if (accountLogged) accountLogged.hidden = false;
+    var displayName = String((user && (user.name || user.email)) || 'Usuário').split('@')[0];
+    if (userName) userName.textContent = displayName;
+    if (userAvatar) userAvatar.textContent = firstName(user).charAt(0);
+    if (userMenu) userMenu.hidden = false;
     updateChatOnboarding();
     loadProjects(user);
   }
@@ -3001,8 +3020,11 @@
     if (accountCopy) accountCopy.textContent = ACCOUNT_DEFAULT_COPY;
     if (accountForm) accountForm.hidden = false;
     if (accountLogged) accountLogged.hidden = true;
+    if (userMenu) { userMenu.hidden = true; userMenu.removeAttribute('open'); }
     if (onboardingAccountCopy) onboardingAccountCopy.textContent = 'Entre para salvar Workspaces, conversas e histórico.';
     if (onboardingGoogle) onboardingGoogle.hidden = false;
+    try { window.sessionStorage.removeItem(ACTIVE_PROJECT_KEY); } catch (_) {}
+    clearConversationMessages();
     setVisitorProjectContext();
   }
 
@@ -3036,12 +3058,11 @@
   }
 
   function doAccountLogout() {
-    apiRequest('/api/auth/logout', { method: 'POST' }).catch(function () {}).then(function () {
-      try { window.localStorage.removeItem(ACCOUNT_TOKEN_KEY); } catch (_) {}
-      if (accountEmail) accountEmail.value = '';
-      showAccountStatus('', false);
-      setAccountLoggedOutUI();
-    });
+    apiRequest('/api/auth/logout', { method: 'POST' }).catch(function () {});
+    try { window.localStorage.removeItem(ACCOUNT_TOKEN_KEY); } catch (_) {}
+    if (accountEmail) accountEmail.value = '';
+    showAccountStatus('', false);
+    setAccountLoggedOutUI();
   }
 
   function cleanOAuthHash() {
@@ -3077,6 +3098,9 @@
   if (accountLoginBtn) accountLoginBtn.addEventListener('click', function () { doAccountAuth('login'); });
   if (accountRegisterBtn) accountRegisterBtn.addEventListener('click', function () { doAccountAuth('register'); });
   if (accountLogoutBtn) accountLogoutBtn.addEventListener('click', doAccountLogout);
+  if (userAccount) userAccount.addEventListener('click', function () { if (userMenu) userMenu.removeAttribute('open'); selectFeature('settings'); });
+  if (userSettings) userSettings.addEventListener('click', function () { if (userMenu) userMenu.removeAttribute('open'); selectFeature('settings'); });
+  if (userLogout) userLogout.addEventListener('click', doAccountLogout);
   if (projectSelect) projectSelect.addEventListener('change', function () {
     if (currentProjectUserId && projectSelect.value) {
       saveActiveProject(currentProjectUserId, projectSelect.value);

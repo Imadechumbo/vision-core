@@ -4,6 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-93 (2026-07-14, não deployado)
+
+- Conta autenticada ganhou menu persistente no header com nome/inicial, Minha conta, Configurações e logout pelo endpoint oficial; sair limpa o contexto visual e restaura imediatamente a Hero visitante.
+- Free, Pro e Enterprise são selecionáveis; Pro e Enterprise oferecem ações honestas de interesse/demonstração sem checkout, request ou persistência fictícia.
+
 ## RC2 / next-clean-92 (2026-07-14, produção)
 
 - RC2 certificado a partir de `eaddb98a` e publicado na raiz e rota explícita do Pages; package SHA-256 `945aedb748be84c4deb53fbe973edae76e86db027ea56ca52e7dd35012f13290`.

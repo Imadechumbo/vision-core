@@ -75,7 +75,7 @@ test('empty chat onboarding uses real OAuth, honest plans, and leaves after firs
   await expect(onboarding).toBeVisible();
   await expect(page.locator('#vcOnboardingGoogle')).toHaveAttribute('href', `${API}/api/auth/oauth/google?return_to=next`);
   await expect(onboarding).toContainText('5 missões por mês');
-  await expect(onboarding).toContainText('Em breve');
+  await expect(onboarding).toContainText('Disponível em breve');
   await expect(onboarding).not.toContainText(/R\$|US\$|checkout/i);
   await page.locator('#vcOnboardingStart').click();
   await expect(page.locator('#vcPrompt')).toBeFocused();
@@ -83,6 +83,23 @@ test('empty chat onboarding uses real OAuth, honest plans, and leaves after firs
   await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
   await expect(onboarding).toBeHidden();
   await expect(page.locator('.vc-message-user')).toContainText('Primeira missão');
+});
+
+test('all SaaS plans are selectable and unavailable plans stay honest without network or checkout', async ({ page }) => {
+  let writes = 0;
+  page.on('request', request => { if (request.method() !== 'GET') writes += 1; });
+  await page.goto(NEXT_URL);
+
+  await expect(page.locator('[data-plan]')).toHaveCount(3);
+  await expect(page.locator('[data-plan="free"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('[data-plan="pro"]').click();
+  await expect(page.locator('[data-plan-card="pro"]')).toHaveClass(/is-selected/);
+  await expect(page.locator('#vcPlanStatus')).toContainText('nenhum dado foi enviado');
+  await page.locator('[data-plan="enterprise"]').click();
+  await expect(page.locator('[data-plan-card="enterprise"]')).toHaveClass(/is-selected/);
+  await expect(page.locator('#vcPlanStatus')).toContainText('Canal de vendas disponível em breve');
+  await expect(page.locator('#vcChatOnboarding')).not.toContainText(/checkout|R\$|US\$/i);
+  expect(writes).toBe(0);
 });
 
 test('empty-chat Hero starts below the header, shares the top row with Atomic Core, and composer stays at the viewport bottom', async ({ page }) => {

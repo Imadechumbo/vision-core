@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="vc-api-base-url" content="https://visioncore-api-gateway.weiganlight.workers.dev">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-92">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-92" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-93">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-93" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded">
@@ -80,6 +80,14 @@
           <button type="button" id="vcConversationNew" disabled>Nova</button>
           <button type="button" id="vcConversationDelete" disabled>Excluir</button>
         </div>
+        <details class="vc-user-menu" id="vcUserMenu" hidden>
+          <summary><span id="vcUserAvatar" aria-hidden="true">U</span><span id="vcUserName">Usuário</span></summary>
+          <div class="vc-user-dropdown">
+            <button type="button" id="vcUserAccount">Minha conta</button>
+            <button type="button" id="vcUserSettings">Configurações</button>
+            <button type="button" id="vcUserLogout">Sair</button>
+          </div>
+        </details>
         <div class="vc-feature-head" id="vcPageHead" hidden aria-live="polite">
           <div>
             <span id="vcPageHeadStatus"></span>
@@ -130,10 +138,11 @@
           <p id="vcOnboardingLead">Detecta → entende → corrige → valida → protege → aprende.</p>
           <div id="vcHeroVisitor">
           <div class="vc-onboarding-plans" aria-label="Planos">
-            <article class="is-selected" aria-label="Plano Free selecionado"><strong>FREE</strong><span>5 missões por mês · 1 Workspace · sem cartão</span><small>Plano selecionado</small></article>
-            <article><strong>PRO</strong><span>Missões ilimitadas · GitHub e Quality Gates</span><small>Consulte a disponibilidade</small></article>
-            <article><strong>ENTERPRISE</strong><span>Multi-Workspace · workers · SSO</span><small>Em breve</small></article>
+            <button type="button" class="vc-plan-card is-selected" data-plan-card="free" data-plan="free" aria-pressed="true"><strong>FREE</strong><span>5 missões por mês · 1 Workspace · sem cartão</span><small>Plano padrão · Selecionar Free</small></button>
+            <button type="button" class="vc-plan-card" data-plan-card="pro" data-plan="pro" aria-pressed="false"><strong>PRO</strong><span>Missões ilimitadas · GitHub e Quality Gates</span><small>Tenho interesse · Disponível em breve</small></button>
+            <button type="button" class="vc-plan-card" data-plan-card="enterprise" data-plan="enterprise" aria-pressed="false"><strong>ENTERPRISE</strong><span>Multi-Workspace · workers · SSO</span><small>Solicitar demonstração · Canal em breve</small></button>
           </div>
+          <p class="vc-plan-status" id="vcPlanStatus" role="status" aria-live="polite">Free selecionado.</p>
           <div class="vc-onboarding-account" id="vcOnboardingAccount">
             <p id="vcOnboardingAccountCopy">Entre para salvar Workspaces, conversas e histórico.</p>
             <a id="vcOnboardingGoogle" href="#">Continuar com Google</a>

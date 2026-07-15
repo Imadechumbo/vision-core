@@ -85,6 +85,53 @@ test('already has a token on load: calls /api/auth/me and renders logged-in stat
 
   await expect(page.locator('#vcAccountLogged')).toBeVisible();
   await expect(page.locator('#vcAccountCopy')).toHaveText('Logado como existente@example.com.');
+  await expect(page.locator('#vcUserMenu')).toBeVisible();
+  await expect(page.locator('#vcUserName')).toHaveText('existente');
+  await expect(page.locator('#vcUserAvatar')).toHaveText('E');
+});
+
+test('persistent user menu opens Settings and official logout immediately restores the visitor Hero', async ({ page }) => {
+  let logoutCalled = false;
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route(`${API}/api/auth/me`, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, user: { id: 'u1', name: 'Imadechumbo', email: 'owner@example.com', plan: 'free' } }) }));
+  await page.route(`${API}/api/auth/logout`, async route => {
+    logoutCalled = true;
+    await new Promise(resolve => setTimeout(resolve, 500));
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, message: 'logged_out' }) });
+  });
+  await page.route(`${API}/api/chat`, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, answer: 'Resposta.' }) }));
+  await page.addInitScript(() => {
+    localStorage.setItem('vision_token', 'tok-existing');
+    sessionStorage.setItem('vc_active_project', JSON.stringify({ user_id: 'u1', project_id: 'old' }));
+  });
+  await page.goto(NEXT_URL);
+
+  await expect(page.locator('#vcUserMenu')).toBeVisible();
+  await expect(page.locator('#vcUserName')).toHaveText('Imadechumbo');
+  await page.locator('#vcPrompt').fill('Mensagem autenticada');
+  await page.locator('#vcComposer').evaluate(form => form.requestSubmit());
+  await expect(page.locator('#vcChatOnboarding')).toBeHidden();
+  await expect(page.locator('#vcUserMenu')).toBeVisible();
+
+  await page.locator('#vcUserMenu summary').click();
+  await expect(page.locator('#vcUserAccount')).toBeVisible();
+  await expect(page.locator('#vcUserSettings')).toBeVisible();
+  await expect(page.locator('#vcUserLogout')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  await page.locator('#vcUserSettings').click();
+  await expect(page.locator('a[data-feature="settings"]')).toHaveClass(/is-active/);
+  await page.locator('a[data-feature="chat"]').click();
+  await page.locator('#vcUserMenu summary').click();
+  await page.locator('#vcUserLogout').click();
+
+  await expect(page.locator('#vcUserMenu')).toBeHidden();
+  await expect(page.locator('#vcChatOnboarding')).toBeVisible();
+  await expect(page.locator('#vcChatOnboarding')).toHaveAttribute('data-state', 'visitor');
+  await expect(page.locator('#vcOnboardingGoogle')).toBeVisible();
+  await expect(page.locator('.vc-message-user')).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('vision_token'))).toBeNull();
+  expect(await page.evaluate(() => sessionStorage.getItem('vc_active_project'))).toBeNull();
+  await expect.poll(() => logoutCalled).toBe(true);
 });
 
 test('expired/invalid stored token: /api/auth/me fails, falls back to logged-out state and clears the token', async ({ page }) => {

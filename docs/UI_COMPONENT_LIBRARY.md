@@ -67,6 +67,11 @@ Escopo: componentes reais em `vision-core-next-clean.{css,js}`. Fora do escopo: 
 ### Estado vazio do Chat
 
 **Estrutura:** `#vcChatHero` agrupa `#vcChatOnboarding` e o Atomic Core numa unica faixa superior responsiva. `deriveChatHeroState()` escolhe somente `visitor`, `empty`, `workspaces` ou `work`; os estados autenticados reutilizam conta, `/api/projects`, seleção e conversas reais. Planos e Google aparecem apenas para visitante. Ao surgir mensagem/request/tutorial, `hidden` remove a Hero e o histórico ocupa seu lugar no fluxo.
+**Planos:** os três cards usam botões com `aria-pressed` e seleção local. Free conduz ao OAuth existente; Pro/Enterprise mostram disponibilidade honesta em `#vcPlanStatus` e nunca chamam checkout ou backend inexistente.
+
+### Menu de usuário
+
+**Estrutura:** `#vcUserMenu` é um `<details>` nativo do header, visível somente com conta autenticada e independente da Hero. Minha conta/Configurações abrem Settings; Sair reutiliza `doAccountLogout()` e o contrato oficial.
 
 ### Modal Tutorial
 
