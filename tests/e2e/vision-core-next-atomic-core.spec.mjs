@@ -224,75 +224,50 @@ test('Atomic Core is visible only on Chat, including no exception for Software F
   await expect(hud).toHaveCSS('display', 'block');
 });
 
-test('obsolete Software Factory "always visible" control is gone, but Mostrar Atomic Core remains', async ({ page }) => {
+test('obsolete Atomic Core visibility controls are gone and motion controls remain', async ({ page }) => {
   await page.goto(NEXT_URL());
   await page.locator('a[data-feature="settings"]').click();
   await expect(page.locator('#vcAtomicAlwaysVisible')).toHaveCount(0);
-  await expect(page.locator('#vcAtomicEnabled')).toBeVisible();
+  await expect(page.locator('#vcAtomicEnabled')).toHaveCount(0);
+  await expect(page.getByText('Mostrar Atomic Core', { exact: true })).toHaveCount(0);
   await expect(page.locator('#vcAtomicIntensity')).toBeVisible();
+  await expect(page.locator('#vcAtomicIdleSpeed')).toBeVisible();
+  await expect(page.locator('#vcAtomicActionPattern')).toBeVisible();
 });
 
-// ROADMAP.md "Settings do Atomic Core — ligado/desligado, intensidade visual".
-// "glow on/off" explicitamente excluido: VISION_CORE_NEXT_FRONTEND_SPEC.md
-// checklist item 6 ja fecha isso ("nunca existiram como controles").
-test('on/off toggle hides the widget everywhere (not just Modo Avancado), live and persisted (window.VCAtomicCore)', async ({ page }) => {
-  await page.addInitScript(() => window.localStorage.setItem('vc_animation_mode', 'reduced'));
+test('Atomic Core panel collapses structurally, restores, and persists for the tab', async ({ page }) => {
   await page.goto(NEXT_URL());
-  const hud = page.locator('[data-atomic-core]');
+  await page.locator('#vcPrompt').fill('Validar painel colapsável');
+  await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
+  await expect(page.locator('.vc-message-assistant')).toBeVisible();
+  const grid = page.locator('#vcChatContent');
+  const toggle = page.locator('#vcAtomicPanelToggle');
+  const panel = page.locator('#vcAtomicCorePanel');
+  const before = await page.locator('#vcMessageColumn').evaluate((el) => el.getBoundingClientRect().width);
 
-  await expect(hud).not.toHaveClass(/is-collapsed/);
-  await page.evaluate(() => {
-    var el = document.getElementById('vcAtomicEnabled');
-    el.checked = false;
-    el.dispatchEvent(new Event('change'));
-  });
-  await expect(hud, 'off must hide the widget on the chat home too, not only Modo Avancado').toHaveClass(/is-collapsed/);
-  expect(await page.evaluate(() => window.VCAtomicCore.getEnabled())).toBe('off');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(toggle).toHaveAttribute('aria-controls', 'vcAtomicCorePanel');
+  await toggle.click();
+  await expect(grid).toHaveClass(/is-atomic-panel-collapsed/);
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(toggle).toHaveAttribute('aria-label', 'Expandir painel do Atomic Core');
+  await expect(panel).toBeHidden();
+  expect(await page.locator('#vcMessageColumn').evaluate((el) => el.getBoundingClientRect().width)).toBeGreaterThan(before);
+  expect(await page.evaluate(() => sessionStorage.getItem('vc_atomic_panel_collapsed'))).toBe('1');
 
-  // Persists across reload.
   await page.reload();
-  await expect(page.locator('#vcAtomicEnabled')).not.toBeChecked();
-  await expect(hud).toHaveClass(/is-collapsed/);
-
-  // Turning back on restores it immediately, no reload.
-  await page.evaluate(() => {
-    var el = document.getElementById('vcAtomicEnabled');
-    el.checked = true;
-    el.dispatchEvent(new Event('change'));
-  });
-  await expect(hud, 'turning it back on must restore the widget immediately').not.toHaveClass(/is-collapsed/);
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await page.locator('#vcPrompt').fill('Validar restauração do painel');
+  await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
+  await expect(page.locator('.vc-message-assistant')).toBeVisible();
+  await toggle.click();
+  await expect(grid).not.toHaveClass(/is-atomic-panel-collapsed/);
+  await expect(toggle).toHaveAttribute('aria-label', 'Recolher painel do Atomic Core');
+  await expect(panel.locator('[data-atomic-core]')).toBeVisible();
+  expect(await page.evaluate(() => sessionStorage.getItem('vc_atomic_panel_collapsed'))).toBe('0');
 });
 
-// DECISION-022 (2026-07-13): o toggle "mostrar Atomic Core" continua valendo
-// globalmente, mas fora de Chat o widget segue invisível pelo escopo da aba.
-test('"mostrar Atomic Core" toggle persists globally across navigation, even while hidden by the chat-only scope', async ({ page }) => {
-  await page.goto(NEXT_URL());
-  const hud = page.locator('[data-atomic-core]');
-
-  await expect(hud, 'visible on chat by default').not.toHaveClass(/is-collapsed/);
-
-  await page.evaluate(() => {
-    var el = document.getElementById('vcAtomicEnabled');
-    el.checked = false;
-    el.dispatchEvent(new Event('change'));
-  });
-  await expect(hud, 'off must hide it immediately on chat').toHaveClass(/is-collapsed/);
-
-  await page.locator('a[data-feature="missions"]').click();
-  await expect(hud, 'stays collapsed on Missions -- hidden both by the toggle and by the chat-only scope').toHaveClass(/is-collapsed/);
-
-  await page.evaluate(() => {
-    var el = document.getElementById('vcAtomicEnabled');
-    el.checked = true;
-    el.dispatchEvent(new Event('change'));
-  });
-  await expect(hud, 'turning back on while on Missions has no visible effect -- Missions is outside Chat').toHaveClass(/is-collapsed/);
-
-  await page.locator('a[data-feature="chat"]').click();
-  await expect(hud, 'back on chat, the re-enabled toggle takes effect immediately').not.toHaveClass(/is-collapsed/);
-});
-
-test('intensity slider sets --atomic-intensity and persists across reload (window.VCAtomicCore has no bearing on this)', async ({ page }) => {
+test('intensity slider sets --atomic-intensity and persists across reload', async ({ page }) => {
   await page.goto(NEXT_URL());
   const hud = page.locator('[data-atomic-core]');
 
@@ -485,7 +460,7 @@ test('uses the approved peripheral scale while preserving the safe right edge on
     expect(geometry.coreIntersectsUser).toBe(false);
     expect(geometry.coreIntersectsAssistant).toBe(false);
     expect(geometry.coreIntersectsComposer, 'Atomic Core must not intersect the composer').toBe(false);
-    expect(geometry.coreParent).toBe('vcAtomicCoreZone');
+    expect(geometry.coreParent).toBe('vcAtomicCorePanel');
     expect((1 - geometry.coreWidth / viewport.previousWidth) * 100).toBeCloseTo(25, 0);
   }
 });

@@ -43,40 +43,6 @@
     onChange: onAnimationModeChange
   };
 
-  // ── Preferência de visibilidade e intensidade do Atomic Core ──
-  // ROADMAP.md pedia também "glow on/off" — excluído por decisão de
-  // Specification First: VISION_CORE_NEXT_FRONTEND_SPEC.md checklist item 6
-  // já fecha isso ("Sem botões Idle/Action/Glow visíveis — nunca existiram
-  // como controles"). On/off aqui é do WIDGET inteiro, mesmo padrão
-  // getMode/setMode/onChange.
-  var VC_ATOMIC_ENABLED_KEY = 'vc_atomic_core_enabled'; // 'on' | 'off'
-  var vcAtomicEnabledListeners = [];
-
-  function getAtomicCoreEnabled() {
-    try {
-      var stored = window.localStorage.getItem(VC_ATOMIC_ENABLED_KEY);
-      if (stored === 'on' || stored === 'off') return stored;
-    } catch (_) {}
-    return 'on';
-  }
-
-  function setAtomicCoreEnabled(next) {
-    var value = next === 'off' ? 'off' : 'on';
-    try { window.localStorage.setItem(VC_ATOMIC_ENABLED_KEY, value); } catch (_) {}
-    vcAtomicEnabledListeners.forEach(function (cb) { try { cb(value); } catch (_) {} });
-    return value;
-  }
-
-  function onAtomicCoreEnabledChange(cb) {
-    if (typeof cb === 'function') vcAtomicEnabledListeners.push(cb);
-  }
-
-  window.VCAtomicCore = {
-    getEnabled: getAtomicCoreEnabled,
-    setEnabled: setAtomicCoreEnabled,
-    onChange: onAtomicCoreEnabledChange
-  };
-
   var VC_ATOMIC_INTENSITY_KEY = 'vc_atomic_intensity'; // '0.4'..'1'
 
   function getAtomicIntensity() {
@@ -96,7 +62,7 @@
   }
 
   // ── Movimento customizável do Atomic Core (Idle/Action/Retorno) ──
-  // Mesmo padrão getX/setX/onChange + localStorage de VCMotion/VCAtomicCore
+  // Mesmo padrão getX/setX/onChange + localStorage de VCMotion
   // acima, um trio por eixo. "Reduzir animações" (VCMotion) sempre vence —
   // ver isReducedMotion() aplicado antes de qualquer um destes na leitura
   // de valores (Agent.prototype.values). Nenhum destes altera MAX_ANGLE_DRIFT/
@@ -188,7 +154,10 @@
   var heroContinueWorkspace = document.getElementById('vcHeroContinueWorkspace');
   var heroNewMission = document.getElementById('vcHeroNewMission');
   var stream = document.getElementById('vcChatStream');
+  var chatContent = document.getElementById('vcChatContent');
   var atomicCoreZone = document.getElementById('vcAtomicCoreZone');
+  var atomicCorePanel = document.getElementById('vcAtomicCorePanel');
+  var atomicPanelToggle = document.getElementById('vcAtomicPanelToggle');
   var featurePanel = document.getElementById('vcFeaturePanel');
   var featureTitle = document.getElementById('vcFeatureTitle');
   var featureBody = document.getElementById('vcFeatureBody');
@@ -284,13 +253,22 @@
     // Reflete mudanças feitas por outra aba/janela (mesmo localStorage) sem reload.
     onAnimationModeChange(function (mode) { animationReducedCheckbox.checked = mode === 'reduced'; });
   }
-  var atomicEnabledCheckbox = document.getElementById('vcAtomicEnabled');
-  if (atomicEnabledCheckbox) {
-    atomicEnabledCheckbox.checked = getAtomicCoreEnabled() === 'on';
-    atomicEnabledCheckbox.addEventListener('change', function () {
-      setAtomicCoreEnabled(atomicEnabledCheckbox.checked ? 'on' : 'off');
+  var VC_ATOMIC_PANEL_KEY = 'vc_atomic_panel_collapsed';
+  function setAtomicPanelCollapsed(collapsed) {
+    if (!chatContent || !atomicPanelToggle) return;
+    chatContent.classList.toggle('is-atomic-panel-collapsed', collapsed);
+    atomicPanelToggle.setAttribute('aria-expanded', String(!collapsed));
+    atomicPanelToggle.setAttribute('aria-label', collapsed ? 'Expandir painel do Atomic Core' : 'Recolher painel do Atomic Core');
+    atomicPanelToggle.textContent = collapsed ? 'Expandir Core' : 'Recolher Core';
+    try { window.sessionStorage.setItem(VC_ATOMIC_PANEL_KEY, collapsed ? '1' : '0'); } catch (_) {}
+  }
+  if (atomicPanelToggle) {
+    var atomicPanelCollapsed = false;
+    try { atomicPanelCollapsed = window.sessionStorage.getItem(VC_ATOMIC_PANEL_KEY) === '1'; } catch (_) {}
+    setAtomicPanelCollapsed(atomicPanelCollapsed);
+    atomicPanelToggle.addEventListener('click', function () {
+      setAtomicPanelCollapsed(atomicPanelToggle.getAttribute('aria-expanded') === 'true');
     });
-    onAtomicCoreEnabledChange(function (value) { atomicEnabledCheckbox.checked = value === 'on'; });
   }
   var atomicIntensityInput = document.getElementById('vcAtomicIntensity');
   if (atomicIntensityInput) {
@@ -586,7 +564,7 @@
     var atomicCore = document.querySelector('[data-atomic-core]');
     var chatHero = document.getElementById('vcChatHero');
     if (atomicCore && chatHero && atomicCoreZone) {
-      if (state === 'work') atomicCoreZone.appendChild(atomicCore);
+      if (state === 'work') atomicCorePanel.appendChild(atomicCore);
       else chatHero.insertBefore(atomicCore, chatOnboarding);
     }
     chatOnboarding.dataset.state = state;
@@ -3821,11 +3799,9 @@
     return setAtomicCoreState('idle');
   }
 
-  // DECISION-022 (2026-07-13): Atomic Core é estritamente da aba Chat. A
-  // exceção antiga do Software Factory deixou de existir; o toggle de
-  // Settings só controla o widget quando ele está dentro do escopo.
+  // DECISION-022 (2026-07-13): Atomic Core é estritamente da aba Chat.
   function updateAtomicCollapseState() {
-    var shouldCollapse = getAtomicCoreEnabled() === 'off' || activeFeature !== 'chat';
+    var shouldCollapse = activeFeature !== 'chat';
     root.classList.toggle('vc-no-transition', reduceMotion);
     root.classList.toggle('is-collapsed', shouldCollapse);
   }
@@ -3886,9 +3862,6 @@
     render(performance.now() - startTime);
     updateAtomicCollapseState();
   });
-
-  // Troca de preferência ao vivo (Settings → Atomic Core), sem reload.
-  onAtomicCoreEnabledChange(function () { updateAtomicCollapseState(); });
 
   // Dica de primeira visita (item 4, opcional): se o SO está com reduce
   // ativo e o usuário nunca escolheu um modo no VC, avisa uma vez só que o
