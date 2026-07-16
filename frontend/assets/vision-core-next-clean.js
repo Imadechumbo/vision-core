@@ -3345,17 +3345,27 @@
     var timelineHost = document.getElementById('vcAtomicSidebarTimeline');
     if (!metricsHost && !timelineHost) return;
     if (metricsHost) {
-      apiRequest('/api/dora-metrics').then(function (dora) {
+      Promise.all([
+        apiRequest('/api/dora-metrics').catch(function () { return null; }),
+        apiRequest('/api/mission/quota').catch(function () { return null; })
+      ]).then(function (results) {
+        var dora = results[0];
+        var quota = results[1];
         metricsHost.textContent = '';
-        if (!dora) return;
-        [
-          { key: 'deployment_frequency', label: 'Deploys' },
-          { key: 'mttr', label: 'MTTR' },
-          { key: 'pass_gold_count_30d', label: 'PASS GOLD (30d)' }
-        ].forEach(function (field) {
-          metricsHost.appendChild(buildMetricCard({ label: field.label, value: dora[field.key] }));
-        });
-      }).catch(function () {});
+        if (dora) {
+          [
+            { key: 'deployment_frequency', label: 'Deploys' },
+            { key: 'mttr', label: 'MTTR' },
+            { key: 'pass_gold_count_30d', label: 'PASS GOLD (30d)' },
+            { key: 'change_failure_rate', label: 'Change failure rate' }
+          ].forEach(function (field) {
+            metricsHost.appendChild(buildMetricCard({ label: field.label, value: dora[field.key] }));
+          });
+        }
+        if (quota && typeof quota.used === 'number' && typeof quota.limit === 'number') {
+          metricsHost.appendChild(buildMetricCard({ label: 'Missões (30d)', value: quota.used + '/' + quota.limit }));
+        }
+      });
     }
     if (timelineHost) {
       apiRequest('/api/mission/timeline?limit=5').then(function (data) {
