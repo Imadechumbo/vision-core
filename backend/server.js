@@ -1450,6 +1450,34 @@ function logMission(userId, type) {
    diferentes no mesmo bucket) — fica so no localStorage do navegador. ── */
 const MISSION_TIMELINE_PATH = path.join(DB_ROOT, 'mission-timeline.json');
 
+// §ROADMAP-Fase2 "persistir estágios por missão" — stages[] é opcional e só
+// preenchido hoje pelo SF Auto-Pilot (client já mede started_at/duration_ms
+// reais em sfStepMeta, ver vision-core-next-clean.js). Os outros 2 callers
+// de appendMissionTimeline (/api/run-live, /api/chat) nunca mandam stages —
+// devem continuar gravando exatamente como antes, sem o campo.
+const MISSION_STAGE_STATUSES = ['pending', 'done', 'error', 'blocked'];
+const MISSION_STAGE_MAX_COUNT = 12; // SF_STEPS(5) + extras(4) + gold-gate(1) com folga
+
+function isIsoDateString(value) {
+  return typeof value === 'string' && !Number.isNaN(new Date(value).getTime());
+}
+
+function sanitizeMissionStages(rawStages) {
+  if (!Array.isArray(rawStages)) return null;
+  const sanitized = rawStages.slice(0, MISSION_STAGE_MAX_COUNT).map(stage => {
+    if (!stage || typeof stage !== 'object') return null;
+    const name = typeof stage.name === 'string' ? stage.name.trim().slice(0, 60) : '';
+    if (!name) return null;
+    return {
+      name,
+      status: MISSION_STAGE_STATUSES.includes(stage.status) ? stage.status : 'pending',
+      started_at: isIsoDateString(stage.started_at) ? stage.started_at : null,
+      completed_at: isIsoDateString(stage.completed_at) ? stage.completed_at : null
+    };
+  }).filter(Boolean);
+  return sanitized.length ? sanitized : null;
+}
+
 function appendMissionTimeline(userId, entry) {
   if (!userId) return;
   try {
@@ -1464,7 +1492,8 @@ function appendMissionTimeline(userId, entry) {
       status: entry.status || (entry.pass_gold ? 'PASS_GOLD' : 'DONE'),
       pass_gold: entry.pass_gold === true,
       agent: entry.agent || null,
-      mission_id: entry.mission_id || null
+      mission_id: entry.mission_id || null,
+      stages: sanitizeMissionStages(entry.stages)
     });
     // Manter no maximo 90 dias e 500 entradas globais (arquivo nao cresce sem limite)
     const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
@@ -1564,7 +1593,8 @@ app.post('/api/mission/timeline', (req, res) => {
       steps_completed: body.steps_completed || 0,
       source:          body.source          || 'sf-autopilot',
       pass_gold:       body.pass_gold       || false,
-      status:          body.pass_gold ? 'PASS_GOLD' : 'DONE'
+      status:          body.pass_gold ? 'PASS_GOLD' : 'DONE',
+      stages:          body.stages           || null
     };
     appendMissionTimeline(user ? user.id : null, entry);
     return sendOk(res, { ok: true, logged: true, anti_stub: true });
