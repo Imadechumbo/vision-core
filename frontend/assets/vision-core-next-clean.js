@@ -341,6 +341,8 @@
   var missionDetailTitle = document.getElementById('vcMissionDetailTitle');
   var missionDetailMeta = document.getElementById('vcMissionDetailMeta');
   var missionDetailBody = document.getElementById('vcMissionDetailBody');
+  var missionDetailPipeline = document.getElementById('vcMissionDetailPipeline');
+  var missionDetailPipelineBody = document.getElementById('vcMissionDetailPipelineBody');
   var missionDetailEvidence = document.getElementById('vcMissionDetailEvidence');
   var missionEvidenceBody = document.getElementById('vcMissionEvidenceBody');
   var missionDetailBack = document.getElementById('vcMissionDetailBack');
@@ -3391,6 +3393,32 @@
     }
   }
 
+  // docs/ROADMAP.md Fase 2 "persistir estágios por missão" — traduz o
+  // module técnico persistido (project_builder/export_preview/... — ver
+  // sfStepMetaToStages) pro label amigável que o usuário já vê no Auto-Pilot
+  // (SF_STEPS/SF_EXTRA_STEPS/SF_GOLD_GATE_STEP), sem inventar rótulo novo.
+  function sfModuleLabel(moduleName) {
+    var all = SF_STEPS.concat(SF_EXTRA_STEPS, [SF_GOLD_GATE_STEP]);
+    var found = null;
+    all.some(function (s) { if (s.module === moduleName) { found = s; return true; } return false; });
+    return found ? found.label : moduleName;
+  }
+
+  function stageToPipelineStep(stage, idx) {
+    var duration = null;
+    if (stage.started_at && stage.completed_at) {
+      var ms = new Date(stage.completed_at).getTime() - new Date(stage.started_at).getTime();
+      if (!isNaN(ms) && ms >= 0) duration = (ms / 1000).toFixed(1) + 's';
+    }
+    return {
+      id: stage.name,
+      number: ('0' + (idx + 1)).slice(-2),
+      name: sfModuleLabel(stage.name),
+      description: duration || (stage.started_at ? 'em andamento' : 'pendente'),
+      status: stage.status
+    };
+  }
+
   function showMissionDetail(entry) {
     if (!missionDetail || !missionHistoryList) return;
     missionHistoryList.hidden = true;
@@ -3399,6 +3427,20 @@
     if (missionDetailMeta) missionDetailMeta.textContent = (entry.type || '') + ' · ' + (entry.status || '') + (entry.steps_completed ? ' · ' + entry.steps_completed + ' passos' : '');
     var bodyText = entry.summary || entry.input || entry.description || '';
     if (missionDetailBody) missionDetailBody.textContent = bodyText;
+    if (missionDetailPipelineBody) missionDetailPipelineBody.textContent = '';
+    if (missionDetailPipeline) missionDetailPipeline.hidden = true;
+    // Só renderiza com stages reais persistidos (hoje só o SF Auto-Pilot
+    // manda) — nunca fabrica um pipeline vazio pra entradas de /api/chat ou
+    // /api/run-live, que não têm esse dado.
+    if (Array.isArray(entry.stages) && entry.stages.length && window.vcComponents && vcComponents.pipeline) {
+      if (missionDetailPipelineBody) {
+        missionDetailPipelineBody.appendChild(vcComponents.pipeline({
+          steps: entry.stages.map(stageToPipelineStep),
+          orientation: 'horizontal'
+        }));
+      }
+      if (missionDetailPipeline) missionDetailPipeline.hidden = false;
+    }
     if (missionEvidenceBody) missionEvidenceBody.textContent = '';
     if (missionDetailEvidence) missionDetailEvidence.hidden = true;
     // Extrai evidence_receipt se presente na entrada
