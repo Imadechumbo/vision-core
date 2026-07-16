@@ -198,8 +198,13 @@ test('Logs is authenticated SAFE READ, filtered by project and renders only reda
 });
 
 test('Mission history exposes explicit empty and error states', async ({ page }) => {
+  // limit=5 is the right-sidebar's own compact fetch (renderAtomicSidebarExtras,
+  // fires on every Chat-tab entry) — kept separate from the Missions tab's own
+  // limit=20 call sequence below so it doesn't shift call counts.
+  await page.route(`${API}/api/mission/timeline?limit=5`, route =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"entries":[]}' }));
   let calls = 0;
-  await page.route(`${API}/api/mission/timeline**`, route => {
+  await page.route(`${API}/api/mission/timeline?limit=20`, route => {
     calls++;
     route.fulfill(calls === 1
       ? { status: 200, contentType: 'application/json', body: '{"ok":true,"entries":[]}' }

@@ -127,7 +127,11 @@ test('real UI covers auth, project, grounded refusal, history, logs and agent st
 
   await page.locator('a[data-feature="missions"]').click();
   await expect(page.locator('#vcMissionHistoryList')).toHaveAttribute('data-state', 'success');
-  await expect(page.locator('#vcMissionHistoryList')).toContainText('Missão [DONE]');
+  // achado real: /api/mission/timeline nunca persiste type/title (só
+  // input/summary/status) — o rótulo agora mostra o summary de verdade
+  // ("timeline sem mock") em vez do fallback genérico "Missão" de antes.
+  await expect(page.locator('#vcMissionHistoryList')).toContainText('timeline sem mock');
+  await expect(page.locator('#vcMissionHistoryList')).toContainText('[DONE]');
   await page.locator('a[data-feature="logs"]').click();
   await expect(page.locator('#vcLogList')).toContainText(/project|conversation/i);
   await page.reload();

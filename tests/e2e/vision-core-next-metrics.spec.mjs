@@ -152,7 +152,7 @@ test('(a) full payload renders agent cards, cost bars and DORA cards', async ({ 
   await expect(page.locator('.vc-metrics-agent-row')).toHaveCount(2);
   await expect(page.locator('.vc-metrics-bar-fill')).toHaveCount(2);
   await expect(page.locator('.vc-metrics-chip')).toHaveCount(2);
-  await expect(page.locator('.vc-metrics-dora-card')).toHaveCount(6);
+  await expect(page.locator('#vcMetricsDoraGrid .vc-metric-card')).toHaveCount(6);
   await expect(page.locator('#vcMetricsPanel .vc-metric-chart[aria-label]')).toHaveCount(17);
   await expect(page.locator('#vcMetricsPanel')).toContainText('Status dos agentes');
   await expect(page.locator('#vcMetricsPanel')).toContainText('Change failure rate');

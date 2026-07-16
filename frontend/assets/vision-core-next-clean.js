@@ -711,6 +711,7 @@
     // cabecalho curto reaproveitando featureMap[key].title/.status (mesmo
     // texto ja usado em #vcFeatureTitle/#vcFeatureStatus, nao inventa copy).
     var isChatTab = activeFeature === 'chat';
+    if (isChatTab) renderAtomicSidebarExtras();
     if (brandLockupEl) brandLockupEl.hidden = !isChatTab;
     if (agentBadgeEl) agentBadgeEl.hidden = !isChatTab;
     if (pageHeadEl) pageHeadEl.hidden = isChatTab;
@@ -1634,6 +1635,131 @@
     legend: renderLegend
   };
 
+  // Reusable stat components (sidebar direita + Missions + Métricas).
+  // Ver docs/UI_COMPONENT_LIBRARY.md e docs/ATOMIC_CORE_SPEC.md.
+  function buildMetricCard(m) {
+    var card = document.createElement('div');
+    card.className = 'vc-metric-card';
+    if (m.tier) card.dataset.tier = m.tier;
+    var label = document.createElement('span');
+    label.className = 'vc-metric-card-label';
+    label.textContent = m.label;
+    var value = document.createElement('strong');
+    value.className = 'vc-metric-card-value';
+    value.textContent = (m.value !== undefined && m.value !== null) ? String(m.value) : '—';
+    card.appendChild(label);
+    card.appendChild(value);
+    if (m.hint) {
+      var hint = document.createElement('span');
+      hint.className = 'vc-metric-card-hint';
+      hint.textContent = m.hint;
+      card.appendChild(hint);
+    }
+    return card;
+  }
+
+  function buildMetricCardGrid(cards) {
+    var grid = document.createElement('div');
+    grid.className = 'vc-metric-card-grid';
+    (cards || []).forEach(function (m) { grid.appendChild(buildMetricCard(m)); });
+    return grid;
+  }
+
+  function buildTimeline(items, opts) {
+    opts = opts || {};
+    if (!items || !items.length) {
+      var empty = document.createElement('p');
+      empty.className = 'vc-timeline-empty';
+      empty.textContent = opts.emptyLabel || 'Nada registrado ainda.';
+      return empty;
+    }
+    var list = document.createElement('ol');
+    list.className = 'vc-timeline';
+    items.forEach(function (it) {
+      var li = document.createElement('li');
+      li.className = 'vc-timeline-item';
+      li.dataset.status = it.status || 'pending';
+      var dot = document.createElement('span');
+      dot.className = 'vc-timeline-item-dot';
+      var body = document.createElement('div');
+      body.className = 'vc-timeline-item-body';
+      var head = document.createElement('div');
+      head.className = 'vc-timeline-item-head';
+      var title = document.createElement('strong');
+      title.textContent = it.title || '—';
+      head.appendChild(title);
+      var parsedTs = it.ts ? new Date(it.ts).getTime() : NaN;
+      if (!isNaN(parsedTs)) {
+        var time = document.createElement('time');
+        time.textContent = humanizeMsAgo(Date.now() - parsedTs);
+        head.appendChild(time);
+      }
+      body.appendChild(head);
+      if (it.meta) {
+        var meta = document.createElement('span');
+        meta.className = 'vc-timeline-item-meta';
+        meta.textContent = it.meta;
+        body.appendChild(meta);
+      }
+      li.appendChild(dot);
+      li.appendChild(body);
+      if (typeof opts.onSelect === 'function') {
+        li.style.cursor = 'pointer';
+        li.addEventListener('click', function () { opts.onSelect(it); });
+      }
+      list.appendChild(li);
+    });
+    return list;
+  }
+
+  function buildPipeline(opts) {
+    opts = opts || {};
+    var list = document.createElement('ol');
+    list.className = 'vc-pipeline vc-pipeline--' + (opts.orientation === 'horizontal' ? 'horizontal' : 'vertical');
+    (opts.steps || []).forEach(function (step) {
+      var li = document.createElement('li');
+      li.className = 'vc-pipeline-step';
+      li.dataset.status = step.status || 'pending';
+      if (opts.selectedId && step.id === opts.selectedId) li.setAttribute('aria-selected', 'true');
+      var num = document.createElement('span');
+      num.className = 'vc-pipeline-step-num';
+      num.textContent = step.number || '';
+      var body = document.createElement('span');
+      body.className = 'vc-pipeline-step-body';
+      var name = document.createElement('strong');
+      name.textContent = step.name || '';
+      body.appendChild(name);
+      if (step.agent) {
+        var meta = document.createElement('span');
+        meta.className = 'vc-pipeline-step-meta';
+        meta.textContent = step.agent;
+        body.appendChild(meta);
+      }
+      if (step.description) {
+        var desc = document.createElement('p');
+        desc.className = 'vc-pipeline-step-desc';
+        desc.textContent = step.description;
+        body.appendChild(desc);
+      }
+      li.appendChild(num);
+      li.appendChild(body);
+      if (typeof opts.onSelect === 'function') {
+        li.style.cursor = 'pointer';
+        li.addEventListener('click', function () { opts.onSelect(step); });
+      }
+      list.appendChild(li);
+    });
+    return list;
+  }
+
+  var vcComponents = {
+    metricCard: buildMetricCard,
+    metricCardGrid: buildMetricCardGrid,
+    timeline: buildTimeline,
+    pipeline: buildPipeline
+  };
+  window.vcComponents = vcComponents;
+
   function statusLabel(status) {
     var tier = statusTier(status);
     if (tier === 'ok') return 'ok';
@@ -1889,16 +2015,7 @@
       return;
     }
     DORA_FIELDS.forEach(function (field) {
-      var card = document.createElement('div');
-      card.className = 'vc-metrics-dora-card';
-      var label = document.createElement('span');
-      label.className = 'vc-metrics-dora-label';
-      label.textContent = field.label;
-      var value = document.createElement('strong');
-      value.textContent = dora[field.key] !== undefined && dora[field.key] !== null ? String(dora[field.key]) : '—';
-      card.appendChild(label);
-      card.appendChild(value);
-      metricsDoraGrid.appendChild(card);
+      metricsDoraGrid.appendChild(buildMetricCard({ label: field.label, value: dora[field.key] }));
     });
     var deploys = parseMetricNumber(dora.deployment_frequency);
     var leadTime = parseMetricNumber(dora.lead_time);
@@ -3184,6 +3301,13 @@
   // dura #12). scrollAfterLoad (só true vindo de Timeline) aplica o mesmo
   // scrollIntoView({block:'start'}) já documentado na regra -- Missions nunca
   // chama com esse parâmetro, comportamento lá continua idêntico ao de antes.
+  // Achado real: entradas vindas do Hermes/PatchEngine só preenchem summary
+  // (nunca title/type, que só o POST do SF Auto-Pilot envia) — sem esse
+  // fallback, toda missão fora do SF caía no rótulo genérico "Missão".
+  function missionEntryTitle(e) {
+    return e.title || e.type || e.summary || 'Missão';
+  }
+
   function loadMissionHistory(scrollAfterLoad) {
     if (!missionHistoryList) return;
     if (missionDetail) missionDetail.hidden = true;
@@ -3196,18 +3320,16 @@
         setAsyncStatus(missionHistoryList, 'empty', 'Nenhuma missão registrada ainda.');
         return;
       }
-      entries.forEach(function (e, i) {
-        var item = document.createElement('div');
-        item.className = 'vc-mh-item';
-        var label = document.createElement('strong');
-        label.textContent = e.title || e.type || 'Missão';
-        var meta = document.createElement('span');
-        meta.textContent = (e.type || '') + (e.status ? ' [' + e.status + ']' : '');
-        item.appendChild(label);
-        item.appendChild(meta);
-        item.addEventListener('click', function () { showMissionDetail(e); });
-        missionHistoryList.appendChild(item);
-      });
+      missionHistoryList.appendChild(buildTimeline(entries.map(function (e) {
+        return {
+          id: e.id,
+          ts: e.ts,
+          title: missionEntryTitle(e),
+          meta: (e.type || '') + (e.status ? ' [' + e.status + ']' : ''),
+          status: (e.status === 'DONE' || e.status === 'PASS_GOLD') ? 'done' : 'pending',
+          _entry: e
+        };
+      }), { onSelect: function (it) { showMissionDetail(it._entry); } }));
       missionHistoryList.dataset.state = 'success';
     }).catch(function () {
       setAsyncStatus(missionHistoryList, 'error', 'Erro ao carregar missões.');
@@ -3216,11 +3338,54 @@
     });
   }
 
+  // Extras da sidebar direita (DECISION-031 estende com métricas DORA reais +
+  // últimas missões). Não mexe em #vcAtomicCorePanel (área protegida do HUD).
+  function renderAtomicSidebarExtras() {
+    var metricsHost = document.getElementById('vcAtomicSidebarMetrics');
+    var timelineHost = document.getElementById('vcAtomicSidebarTimeline');
+    if (!metricsHost && !timelineHost) return;
+    if (metricsHost) {
+      apiRequest('/api/dora-metrics').then(function (dora) {
+        metricsHost.textContent = '';
+        if (!dora) return;
+        [
+          { key: 'deployment_frequency', label: 'Deploys' },
+          { key: 'mttr', label: 'MTTR' },
+          { key: 'pass_gold_count_30d', label: 'PASS GOLD (30d)' }
+        ].forEach(function (field) {
+          metricsHost.appendChild(buildMetricCard({ label: field.label, value: dora[field.key] }));
+        });
+      }).catch(function () {});
+    }
+    if (timelineHost) {
+      apiRequest('/api/mission/timeline?limit=5').then(function (data) {
+        timelineHost.textContent = '';
+        var entries = data && data.entries;
+        if (!entries || !entries.length) {
+          var empty = document.createElement('p');
+          empty.className = 'vc-timeline-empty';
+          empty.textContent = 'Nenhuma missão registrada ainda.';
+          timelineHost.appendChild(empty);
+          return;
+        }
+        timelineHost.appendChild(buildTimeline(entries.map(function (e) {
+          return {
+            id: e.id,
+            ts: e.ts,
+            title: missionEntryTitle(e),
+            meta: e.agent || e.source || '',
+            status: (e.status === 'DONE' || e.status === 'PASS_GOLD') ? 'done' : 'pending'
+          };
+        })));
+      }).catch(function () {});
+    }
+  }
+
   function showMissionDetail(entry) {
     if (!missionDetail || !missionHistoryList) return;
     missionHistoryList.hidden = true;
     missionDetail.hidden = false;
-    if (missionDetailTitle) missionDetailTitle.textContent = entry.title || entry.type || 'Missão';
+    if (missionDetailTitle) missionDetailTitle.textContent = missionEntryTitle(entry);
     if (missionDetailMeta) missionDetailMeta.textContent = (entry.type || '') + ' · ' + (entry.status || '') + (entry.steps_completed ? ' · ' + entry.steps_completed + ' passos' : '');
     var bodyText = entry.summary || entry.input || entry.description || '';
     if (missionDetailBody) missionDetailBody.textContent = bodyText;
