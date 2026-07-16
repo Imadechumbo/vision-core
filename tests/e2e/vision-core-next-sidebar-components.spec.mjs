@@ -67,16 +67,23 @@ test.beforeEach(async ({ page }) => {
   await page.route(`${API}/api/agent/status`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, connected: false }) }));
   await page.route(`${API}/api/mission/quota`, (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, plan: 'free', remaining: 5 }) }));
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, plan: 'free', used: 2, limit: 5, remaining: 3, authenticated: true, anti_stub: true }) }));
   await page.route(`${API}/api/dora-metrics`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(DORA_FIXTURE) }));
   await page.route(`${API}/api/mission/timeline*`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MISSIONS_FIXTURE) }));
 });
 
-test('sidebar extras render real DORA metric cards and mission timeline on Chat', async ({ page }) => {
+test('sidebar extras render real DORA metric cards, mission quota and mission timeline on Chat', async ({ page }) => {
   await page.goto(NEXT_URL());
-  await expect(page.locator('#vcAtomicSidebarMetrics .vc-metric-card')).toHaveCount(3);
+  // 4 DORA cards (Deploys/MTTR/PASS GOLD 30d/Change failure rate) + 1 mission-quota card.
+  await expect(page.locator('#vcAtomicSidebarMetrics .vc-metric-card')).toHaveCount(5);
+  // Labels render uppercase via CSS text-transform — compare case-insensitively.
+  const metricsText = (await page.locator('#vcAtomicSidebarMetrics').innerText()).toLowerCase();
+  expect(metricsText).toContain('change failure rate');
+  expect(metricsText).toContain('5%');
+  expect(metricsText).toContain('missões (30d)');
+  expect(metricsText).toContain('2/5');
   await expect(page.locator('#vcAtomicSidebarTimeline .vc-timeline-item')).toHaveCount(2);
   const text = await page.locator('#vcAtomicSidebarTimeline').innerText();
   expect(text).toContain('Corrigido overflow no composer');
@@ -117,7 +124,18 @@ test('metric card and timeline builders degrade honestly on empty/failed data, n
   await page.route(`${API}/api/mission/timeline*`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ entries: [], count: 0, authenticated: true, anti_stub: true }) }));
   await page.goto(NEXT_URL());
-  await expect(page.locator('#vcAtomicSidebarMetrics .vc-metric-card')).toHaveCount(3);
+  await expect(page.locator('#vcAtomicSidebarMetrics .vc-metric-card')).toHaveCount(5);
   await expect(page.locator('#vcAtomicSidebarTimeline .vc-timeline-item')).toHaveCount(0);
   await expect(page.locator('#vcAtomicSidebarTimeline .vc-timeline-empty')).toBeVisible();
+});
+
+test('mission-quota card is skipped, not fabricated, when the plan has no numeric used/limit (PRO/Enterprise)', async ({ page }) => {
+  await page.unroute(`${API}/api/mission/quota`);
+  await page.route(`${API}/api/mission/quota`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, plan: 'pro', used: null, limit: null, unlimited: true, anti_stub: true }) }));
+  await page.goto(NEXT_URL());
+  // 4 DORA cards only — no "null/null" quota card fabricated from a missing field.
+  await expect(page.locator('#vcAtomicSidebarMetrics .vc-metric-card')).toHaveCount(4);
+  const metricsText = await page.locator('#vcAtomicSidebarMetrics').innerText();
+  expect(metricsText).not.toContain('null');
 });
