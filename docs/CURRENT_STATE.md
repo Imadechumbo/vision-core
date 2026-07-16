@@ -10,7 +10,7 @@ Frontend Next
 ✔ OK
 
 Backend
-✔ OK — EB `v116-a8189457-hermes-grounding`, Ready/Green; grounding Hermes fail-closed confirmado pela UI pública.
+✔ OK — EB `v5.9.65-mission-stages`, Ready/Green; grounding Hermes fail-closed confirmado pela UI pública. `mission-timeline.json` agora persiste `stages[]` real por missão do SF Auto-Pilot (docs/ROADMAP.md Fase 2, "persistir estágios por missão") — `appendMissionTimeline()`/`POST /api/mission/timeline` aceitam o campo opcional, sanitizado (`sanitizeMissionStages()`: status allowlist pending/done/error/blocked, máx 12 itens, name capado em 60 chars, datas inválidas viram null); os outros 2 callers (`/api/chat`, `/api/run-live`) não mandam stages e continuam gravando `stages:null`, confirmado sem quebra por chamada real (incluindo Go Core real via `/api/run-live`) em `tools/tests/mission-timeline-stages.test.mjs` (22/22 PASS) e reconfirmado ao vivo em produção pós-deploy (POST com stage malformado sanitizado corretamente, conta de teste descartável removida). `vcComponents.pipeline()` continua **sem call site** — só o dado agora existe; conectar a UI é decisão separada do usuário. Deploy: script novo `_deploy_mission_stages_eb.py` (mesmo padrão dos anteriores — zip base `vision-core-v5.9.64b-hermes-grounding-fix.zip` com `server.js` trocado, assertions de regressão do grounding + das novas funções).
 
 Software Factory
 ✔ OK (simulação/preview por design — nenhum módulo escreve em disco ou executa real)
@@ -43,15 +43,19 @@ Deploy Produção
 `next-clean-74` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real contra `https://visioncoreai.pages.dev/vision-core-next.html`: cache-bust servido (`?v=next-clean-74` em CSS e JS, HTTP 200), menu lateral reorganizado presente (2 `.vc-nav-group`, rótulos "Atividade"/"Avançado", 7 itens fixos como filhos diretos de `.vc-nav`).
 
 Cache Bust
-next-clean-114 (2026-07-16; alias principal e deployment `949675ad.visioncoreai.pages.dev` confirmados servindo o cache-bust novo via `Invoke-WebRequest` do PowerShell — `curl` falha neste sandbox por erro de revocation check TLS/schannel)
+next-clean-115 (2026-07-16; alias principal confirmado servindo o cache-bust novo via `Invoke-WebRequest` do PowerShell — `curl` falha neste sandbox por erro de revocation check TLS/schannel; 1ª leitura bateu cache de edge stale, propagou em ~5s no polling)
 
 Último Commit
 
-`298e4b6c` em `codex/next-rc-baseline` (local e `origin` sincronizados) — cherry-pick de `fd7a34f6` (`atomic-core-2x-hub-tuning`): cards de missão/DORA + fix `flex-shrink`, ver seção Atomic Core acima. Antes desse commit, a branch levou os 15 commits reais do `next-clean-107` ao `next-clean-113` (`9a793b36` → `eb60eda2`) sincronizados de `codex/next-rc-baseline` pra `atomic-core-2x-hub-tuning` via `git cherry`/cherry-pick, zero conflito.
+`2c718439` em `codex/next-rc-baseline` (local e `origin` sincronizados) — cherry-pick de `5335e4fc` (`atomic-core-2x-hub-tuning`): persistência real de `stages[]` em `mission-timeline.json` (backend + frontend), ver seção Backend acima. Antes desse commit: `298e4b6c` (cherry-pick de `fd7a34f6`, cards de missão/DORA + fix `flex-shrink`, ver seção Atomic Core) e os 15 commits reais do `next-clean-107` ao `next-clean-113` (`9a793b36` → `eb60eda2`) sincronizados via `git cherry`/cherry-pick, zero conflito.
 
-Último Deploy
+Último Deploy EB
 
-`949675ad.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-114` — HTML com `?v=next-clean-114`, JS com os textos exatos "Missões (30d)"/"Change failure rate", CSS com `flex-shrink:0` no seletor do painel HUD, todos verificados direto no bundle público servido.
+`v5.9.65-mission-stages`, Ready/Green, confirmado ao vivo contra `http://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com` (conta de teste descartável registrada, POST/GET `/api/mission/timeline` real com stage malformado sanitizado corretamente, conta removida depois via `DELETE /api/auth/me`).
+
+Último Deploy Pages
+
+`df0728c5.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-115` — HTML com `?v=next-clean-115`, JS com `sfStepMetaToStages`/`module: s.module`/`stages: stages` no bundle público servido (1ª leitura do alias bateu cache de edge stale — comprimento de bytes diferente do deployment específico —, propagou em ~5s de polling).
 
 ---
 
@@ -193,7 +197,7 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 - `vc-secret-guard` Fase 2 (hooks locais) — precisa nova aprovação explícita do usuário
 - `vc-secret-guard verify-cloud` — comando Rust read-only para auditar metadados de env vars do EB, testes locais Rust passam, mas a verificação viva do EB está bloqueada por falha TLS/trust store local da AWS CLI. Não usar `--no-verify-ssl`; corrigir TLS primeiro e rerodar.
 - INCIDENTE-3 (credencial de fallback legada) — guard de `/api/auth/login` já confirmado ao vivo em produção (EB `v109`, `400 fallback_credential_rejected`); guard de `/api/auth/register` confirmado só no artefato/regressão local (revalidação ao vivo ficou pendente por rate-limit durante o teste). Runbook `tools/incident-3-legacy-account-scan.mjs --invalidate` para contas legadas já existentes em produção é ação pendente do usuário (ver `docs/DECISIONS.md` DECISION-007)
-- Timeline estilo LionClaw (pipeline por estágios + custo por agente) — bloqueada por dado real ausente no backend, ver `docs/ROADMAP.md` Fase 2 ("persistir estágios por missão"/"custo real por agente", ambos `PLANEJADO`)
+- Timeline estilo LionClaw (pipeline por estágios + custo por agente) — "persistir estágios por missão" **implementado e ao vivo em produção** (2026-07-16, `v5.9.65-mission-stages`): `stages[]` real por missão do SF Auto-Pilot em `mission-timeline.json`, ver seção Backend. "custo real por agente" segue `PLANEJADO`, zero código (`ROADMAP.md` Fase 2) — exige `callLLM()` capturar tokens, maior risco por tocar núcleo compartilhado. `vcComponents.pipeline()` segue **sem call site**: dado existe, UI não foi conectada (decisão separada do usuário)
 
 ---
 
@@ -238,7 +242,7 @@ Governança arquitetural (`docs/DECISIONS.md`): `ARCHITECTURAL PRINCIPLE-001` a 
 
 # CONTEXTO PARA O PRÓXIMO AGENTE
 
-Backlog do Next (Fase 1 do ROADMAP) após `next-clean-77`: páginas públicas Etapas 5-7 seguem sem spec concreta; Timeline estilo LionClaw segue bloqueada por dado real ausente no backend (persistir estágios/custo real por agente). Antes de assumir "nada mais a fazer", releia `docs/ROADMAP.md` Fase 1 e confirme por `grep` — não presuma.
+Backlog do Next (Fase 1 do ROADMAP) após `next-clean-77`: páginas públicas Etapas 5-7 seguem sem spec concreta. Timeline estilo LionClaw: "persistir estágios por missão" resolvido (`v5.9.65-mission-stages`, ver PENDÊNCIAS REAIS); "custo real por agente" segue bloqueado (`callLLM()` sem captura de tokens); `vcComponents.pipeline()` construído mas sem call site — conectar é decisão do usuário, não presumir prioridade. Antes de assumir "nada mais a fazer", releia `docs/ROADMAP.md` Fase 1/2 e confirme por `grep` — não presuma.
 
 Documentação segue sistema de continuidade: este arquivo fica pequeno e reflete só o estado atual; `docs/CHANGELOG_NEXT.md` guarda um bloco curto por versão; investigação/narrativa longa vai para `docs/session_logs/YYYY-MM-DD-nome.md`. Nunca copie logs de terminal, JSON completo ou diffs grandes de volta para este arquivo — achado real desta sessão: as seções TESTES/CONTEXTO tinham ficado stale por várias sessões (ainda citavam `next-clean-59`/"Next não tem auth") porque só as seções de topo eram atualizadas a cada entrega; revise o arquivo inteiro, não só a seção que parece relevante, ao fechar qualquer item.
 
