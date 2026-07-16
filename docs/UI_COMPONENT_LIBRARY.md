@@ -2,7 +2,7 @@
 
 **Parte da série de arquitetura — leia `MASTER_SPEC.md` e `VISION_CORE_NEXT_FRONTEND_SPEC.md` antes deste.**
 
-> Versão: 1.0.0 · Criado: 2026-07-09
+> Versão: 1.1.0 · Criado: 2026-07-09 · Atualizado: 2026-07-15 (window.vcComponents: metricCard/timeline/pipeline)
 > Fonte: leitura direta de `frontend/vision-core-next.html` + `assets/vision-core-next-clean.{css,js}`. Todo componente aqui listado é `EXISTENTE` salvo aviso contrário — nenhum é aspiracional.
 
 ---
@@ -97,11 +97,14 @@ Documentado em `ATOMIC_CORE_SPEC.md` — não duplicado aqui.
 **Piscada ambiente:** intervalo 4–9s, só quando idle (checa `data-state` do Atomic Core via `isIdle()`), ~20% de chance de piscada dupla (+250ms de atraso). **Exceção à regra geral de motion:** desativada quando `matchMedia('(prefers-reduced-motion: reduce)')` do SO é verdadeiro — lido diretamente aqui, não via `window.VCMotion` (ver `docs/DECISIONS.md` DECISION-014, um dos únicos dois lugares do arquivo que leem o SO diretamente; decisão de UX separada da inversão de acoplamento do Atomic Core).
 **Checklist:** [x] altura do logo nunca muda no hover (estrutural, não CSS defensivo) · [x] hover funciona mesmo sob `prefers-reduced-motion` do SO · [x] piscada ambiente para sob `prefers-reduced-motion` real e só roda quando idle.
 
-## Cards (DORA / linha de agente)
+## Cards / Timeline / Pipeline (`window.vcComponents`, desde `next-clean-113`)
 
-**Objetivo:** exibir uma unidade de dado com label+valor.
-**Estrutura real:** `.vc-metrics-dora-card` (label pequeno + valor grande) e `.vc-metrics-agent-row` (dot+badge+nome+nota+chips+barra). **Não existe um componente genérico `<Card>` reutilizável** — cada painel define seu próprio card inline, seguindo o mesmo padrão visual (borda `rgba(255,255,255,.07)`, `var(--radius)`).
-**Checklist:** [x] padrão visual consistente entre painéis, mesmo sem componente compartilhado formal.
+**Objetivo:** exibir uma unidade de dado com label+valor, uma lista vertical de eventos com status, ou etapas numeradas conectadas por linha — reutilizável entre a sidebar direita, Missions e Métricas (não é exclusivo de nenhuma feature).
+**Existe um componente genérico agora:** `window.vcComponents = { metricCard, metricCardGrid, timeline, pipeline }` (builders `createElement`, sem lib externa, mesmo padrão do `metricCharts`). CSS em `.vc-metric-card(-grid)`, `.vc-timeline(-item)`, `.vc-pipeline(--vertical|--horizontal, -step)`.
+- `metricCard({label, value, tier?, hint?})` — generaliza o antigo `.vc-metrics-dora-card`; usado por `renderMetricsDora` e pelos 3 cards DORA do `#vcAtomicSidebarExtras`. `.vc-metrics-agent-row` (dot+badge+nome+nota+chips+barra) **não** foi migrado — forma diferente demais de um card label+valor pra caber sem abstração forçada.
+- `timeline(items, {onSelect?, emptyLabel?})` — mapeia direto de `/api/mission/timeline` (`status:'DONE'|'PASS_GOLD'` vira `'done'`, mais nada — não fabrica item `'active'`/`'pending'` que os dados reais não têm). Usado por `loadMissionHistory` (Missions, 20 itens) e pelo `#vcAtomicSidebarExtras` (sidebar direita, 5 itens compactos, sem clique).
+- `pipeline({steps, orientation:'vertical'|'horizontal', selectedId?, onSelect?})` — **construído mas sem call site real ainda**. Não há hoje persistência de estágios por missão nem custo real por agente no backend (`cost_usd` é `null` hardcoded em `/api/metrics/agents`; ver `ROADMAP.md` Fase 2, "persistir estágios por missão"). Sidebar/Missions não recebem Pipeline até esse dado existir — preencher com dado fake violaria a regra anti-stub (`CLAUDE.md`). Pronto pra conectar assim que `mission-timeline.json` ganhar `stages[]`.
+**Checklist:** [x] mesma paleta de status usada em `statusTier()` (ok/warn/error) mais um bucket visual `pending` (`var(--muted)`, não é resultado, é ausência de início) · [x] nenhum dos três builders fabrica estado que o backend não forneceu.
 
 ## Tables
 
