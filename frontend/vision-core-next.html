@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="vc-api-base-url" content="https://visioncore-api-gateway.weiganlight.workers.dev">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-112">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-112" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-113">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-113" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded" data-atomic-sidebar-state="expanded">
@@ -673,6 +673,16 @@
       <div class="vc-side-top">
         <span class="vc-side-copy"><strong>ATOMIC CORE</strong><small>STATUS DO AGENTE</small></span>
         <button type="button" class="vc-sidebar-toggle" id="vcAtomicPanelToggle" data-atomic-sidebar-toggle aria-expanded="true" aria-controls="vcAtomicCorePanel" aria-label="Recolher sidebar do Atomic Core"><span aria-hidden="true">›</span></button>
+      </div>
+      <div class="vc-atomic-sidebar-extras" id="vcAtomicSidebarExtras">
+        <div>
+          <h3>Métricas</h3>
+          <div class="vc-metric-card-grid" id="vcAtomicSidebarMetrics"></div>
+        </div>
+        <div>
+          <h3>Atividade recente</h3>
+          <div id="vcAtomicSidebarTimeline"></div>
+        </div>
       </div>
       <div class="vc-atomic-core-panel" id="vcAtomicCorePanel"></div>
     </aside>

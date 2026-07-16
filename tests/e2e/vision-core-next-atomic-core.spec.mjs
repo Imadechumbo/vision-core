@@ -65,6 +65,13 @@ test.beforeEach(async ({ page }) => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, connected: false }) }));
   await page.route(`${API}/api/mission/quota`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, plan: 'free', remaining: 5 }) }));
+  // renderAtomicSidebarExtras (right-sidebar metric cards + timeline) also
+  // fires unconditionally on every Chat-tab entry — same unmocked-leak risk
+  // already documented above for agent/status + mission/quota.
+  await page.route(`${API}/api/dora-metrics`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ deployment_frequency: null, mttr: null, pass_gold_count_30d: null }) }));
+  await page.route(`${API}/api/mission/timeline*`, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ entries: [], count: 0, authenticated: false, anti_stub: true }) }));
 });
 
 async function agentStyle(page) {

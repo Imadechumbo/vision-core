@@ -45,11 +45,14 @@ test('Missions still loads and exposes Mission History automatically', async ({ 
 
   await page.locator('a[data-feature="missions"]').click();
   await expect(page.locator('#vcMissionHistory')).toBeVisible();
-  await expect(page.locator('.vc-mh-item')).toHaveCount(1);
-  await expect(page.locator('.vc-mh-item')).toContainText('Auto-Pilot: app de tarefas');
-  await expect(page.locator('.vc-mh-item')).toContainText('PASS_GOLD');
+  // scoped to #vcMissionHistoryList — the right sidebar also renders a
+  // compact .vc-timeline-item copy of the same real data (renderAtomicSidebarExtras).
+  const missionItems = page.locator('#vcMissionHistoryList .vc-timeline-item');
+  await expect(missionItems).toHaveCount(1);
+  await expect(missionItems).toContainText('Auto-Pilot: app de tarefas');
+  await expect(missionItems).toContainText('PASS_GOLD');
 
-  await page.locator('.vc-mh-item').click();
+  await missionItems.click();
   await expect(page.locator('#vcMissionDetail')).toBeVisible();
   await expect(page.locator('#vcMissionDetailTitle')).toContainText('Auto-Pilot: app de tarefas');
 
