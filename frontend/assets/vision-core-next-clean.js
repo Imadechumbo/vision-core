@@ -3738,8 +3738,29 @@
     }
   }
 
+  // Achado real (2026-07-15) -- agentes "piscando" mesmo com a sidebar
+  // direita em 100vh (exigência de produto, não negociável): testadas 8
+  // técnicas de containment/layer-promotion (contain:strict no painel,
+  // contain:paint na sidebar inteira, translateZ(0), content-visibility,
+  // isolation:isolate, sticky aninhado) via A/B intercalado com o baseline
+  // pré-sidebar -- nenhuma melhora além do que .vc-composer{contain:paint}
+  // (achado da sessão anterior) já entrega sozinho; contain:strict no
+  // composer quebra visualmente (textarea/botões colapsam) e foi
+  // descartado. O que resolveu: reduzir a frequência de escrita de estilo
+  // do loop pela metade (~30fps em vez de 60fps) -- o custo caro
+  // acontece perto do backdrop-filter do composer a cada escrita, então
+  // menos escritas por segundo = menos chance de estourar o orçamento de
+  // frame. Medido: volta a ~16.7ms/frame, essencialmente igual ao
+  // baseline sem sidebar, em rodadas intercaladas repetidas. 30fps
+  // permanece visualmente suave pra uma órbita lenta/decorativa como
+  // essa -- nunca usar isso pra animação rápida/responsiva a input.
+  var FRAME_INTERVAL_MS = 32;
+  var lastFrameTime = 0;
   function frame(now) {
-    render(now - startTime);
+    if (now - lastFrameTime >= FRAME_INTERVAL_MS) {
+      lastFrameTime = now;
+      render(now - startTime);
+    }
     raf = window.requestAnimationFrame(frame);
   }
 
