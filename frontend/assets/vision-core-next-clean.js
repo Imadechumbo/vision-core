@@ -4780,7 +4780,7 @@
     sfRunOptions = readSfOptions();
     sfActiveSteps = SF_STEPS.concat(getSelectedSfExtraSteps());
     if (sfRunOptions.pass_gold) sfActiveSteps = sfActiveSteps.concat([SF_GOLD_GATE_STEP]);
-    sfStepMeta = sfActiveSteps.map(function (s) { return { label: s.label, status: 'pending', duration_ms: null, startedAt: null }; });
+    sfStepMeta = sfActiveSteps.map(function (s) { return { label: s.label, module: s.module, status: 'pending', duration_ms: null, startedAt: null }; });
     if (sfFinalViz) { sfFinalViz.textContent = ''; sfFinalViz.hidden = true; }
     if (sfLog) { sfLog.textContent = ''; sfLog.hidden = false; }
     if (sfUrlContext) appendSfLog('info', 'URL_CONTEXT incluído (' + sfUrlContext.length + ' chars)');
@@ -4809,7 +4809,7 @@
       if (idx >= sfActiveSteps.length) {
         appendSfMsg('assistant', 'Projeto concluído!');
         renderSfFinal();
-        logSfMissionToTimeline(desc, sfActiveSteps.length, !!(sfRunOptions && sfRunOptions.pass_gold));
+        logSfMissionToTimeline(desc, sfActiveSteps.length, !!(sfRunOptions && sfRunOptions.pass_gold), sfStepMetaToStages());
         finishSf();
         return;
       }
@@ -4897,7 +4897,25 @@
   // Anônimo: o backend já no-opa silenciosamente (appendMissionTimeline
   // exige userId), então chamar sem estar logado é seguro, não precisa
   // checar auth antes.
-  function logSfMissionToTimeline(desc, stepsCompleted, passGold) {
+  // docs/ROADMAP.md Fase 2 "persistir estágios por missão": sfStepMeta já
+  // media started_at/duration_ms reais por passo (startedAt setado em
+  // nextStep(), duration_ms setado em markSfStep()) — só faltava mandar pro
+  // backend. Nomes seguem step.module (project_builder/export_preview/
+  // project_templates/mission_composer/worker_handoff/gold_gate — já
+  // existem em SF_STEPS/SF_GOLD_GATE_STEP/SF_EXTRA_STEPS), rastreáveis até
+  // o endpoint /api/sf/<module> real, nunca um rótulo inventado.
+  function sfStepMetaToStages() {
+    return sfStepMeta.map(function (s) {
+      return {
+        name: s.module || s.label,
+        status: s.status,
+        started_at: s.startedAt ? new Date(s.startedAt).toISOString() : null,
+        completed_at: (s.startedAt && s.duration_ms !== null) ? new Date(s.startedAt + s.duration_ms).toISOString() : null
+      };
+    });
+  }
+
+  function logSfMissionToTimeline(desc, stepsCompleted, passGold, stages) {
     apiRequest('/api/mission/timeline', {
       method: 'POST',
       body: {
@@ -4906,7 +4924,8 @@
         description: desc,
         steps_completed: stepsCompleted,
         source: 'sf-autopilot-next',
-        pass_gold: passGold
+        pass_gold: passGold,
+        stages: stages
       }
     }).catch(function () { /* best-effort — missão já concluída independente disso */ });
   }

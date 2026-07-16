@@ -274,6 +274,19 @@ test('Software Factory Auto-Pilot logs the completed run to POST /api/mission/ti
     pass_gold: true
   });
   expect(timelinePosts[0].title).toContain('um app de tarefas com login e dashboard');
+
+  // docs/ROADMAP.md Fase 2 "persistir estágios por missão" — sfStepMeta real
+  // (started_at/duration_ms medidos durante o run) agora viaja no POST.
+  const stages = timelinePosts[0].stages;
+  expect(stages).toHaveLength(6);
+  expect(stages.map((s) => s.name)).toEqual([
+    'project_builder', 'export_preview', 'project_templates', 'mission_composer', 'worker_handoff', 'gold_gate'
+  ]);
+  for (const stage of stages) {
+    expect(stage.status).toBe('done');
+    expect(new Date(stage.started_at).getTime()).not.toBeNaN();
+    expect(new Date(stage.completed_at).getTime()).toBeGreaterThanOrEqual(new Date(stage.started_at).getTime());
+  }
 });
 
 test('Software Factory does not log an incomplete run to the timeline (mid-pipeline failure)', async ({ page }) => {
