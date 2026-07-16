@@ -41,15 +41,15 @@ Deploy Produção
 `next-clean-74` publicado via `bash bin/deploy-pages.sh` (autorizado explicitamente pelo usuário) e confirmado ao vivo com screenshot Playwright real contra `https://visioncoreai.pages.dev/vision-core-next.html`: cache-bust servido (`?v=next-clean-74` em CSS e JS, HTTP 200), menu lateral reorganizado presente (2 `.vc-nav-group`, rótulos "Atividade"/"Avançado", 7 itens fixos como filhos diretos de `.vc-nav`).
 
 Cache Bust
-next-clean-111 (2026-07-15; alias principal e deployment `4bb3063d.visioncoreai.pages.dev` confirmados servindo o cache-bust novo — reconfirmado numa 2ª rodada limpa após a 1ª leitura bater valores antigos, provável propagação de edge do CDN ainda em andamento no primeiro request)
+next-clean-112 (2026-07-15; alias principal e deployment `f66d3ff2.visioncoreai.pages.dev` confirmados servindo o cache-bust novo — reconfirmado no navegador real pelo usuário após a correção do flicker)
 
 Último Commit
 
-`ad81d305` em `codex/next-rc-baseline` (local e `origin` sincronizados) — fix do vão texto→sidebar (`.vc-main` padding-right) e do flicker dos agentes (causa raiz: `.vc-atomic-sidebar` herdava `height:100vh`, uma `position:sticky` do tamanho da viewport inteira com o HUD animando dentro força custo de composição proporcional à caixa inteira; mais `backdrop-filter` do composer reamostrando o HUD animado por perto). Cadeia da sessão anterior preservada: `9a793b36`→`52e58387` (Codex, 6 commits) → `21aab023` (sidebar completa) → `a01867ed` (docs) → `ad81d305` (este fix).
+`b67f3918` em `codex/next-rc-baseline` (local e `origin` sincronizados) — restaura `.vc-atomic-sidebar` para `height:100vh` (reverte o encolhimento do `next-clean-111`, rejeitado pelo usuário) e resolve o flicker dos agentes reduzindo a frequência de escrita de estilo do loop de órbita de 60fps para ~30fps, sem depender de encolher a sidebar. Cadeia da sessão preservada: `9a793b36`→`52e58387` (Codex, 6 commits) → `21aab023` (sidebar completa) → `a01867ed` (docs) → `ad81d305` (fix gap+flicker, `next-clean-111`, depois parcialmente revertido) → `b67f3918` (este fix, `next-clean-112`).
 
 Último Deploy
 
-`4bb3063d.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-111` (package SHA-256 `4f1363913ecd854eee37690913f4609da507bcc727547aa8b65119e311ea2d7c`)
+`f66d3ff2.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados servindo `next-clean-112` (package SHA-256 `02cbe013d79194a53f751d46d619c9df4a584f540e1b637f34722b754214bbeb`), validado visualmente no navegador real pelo usuário (sidebar 100vh + órbita sem flicker).
 
 ---
 
@@ -211,6 +211,8 @@ Fechar a Onda 1 independente: ADR-003/004/005 e IMP-006 estão Ready; TEST-002/0
 ---
 
 # TESTES
+
+Sidebar direita do Atomic Core, DECISION-031 (`next-clean-110`→`112`, 2026-07-15): `vision-core-next-atomic-core.spec.mjs` 34/34 + `vision-core-next-app-shell.spec.mjs` 21/21 + suíte Next completa 141/141 PASS, sem retry, confirmado em cada uma das 3 etapas (retomada do Codex, fix gap+flicker, restauração 100vh+throttle 30fps). Validação visual com Playwright (desktop/mobile, expandido/colapsado) em cada etapa; medição real de frame timing via CDP (`Tracing`/`Profiler`) com metodologia A/B intercalada confirmou 16.67-16.78ms/frame no estado final, igual ao baseline pré-sidebar. Confirmado ao vivo no navegador de produção pelo usuário.
 
 Composer-overlap fix + posição/scroll/perf + redistribuição de colunas (2026-07-15): `tests/e2e/vision-core-next-atomic-core.spec.mjs` 34/34 PASS em cada uma das 2 etapas da sessão (rodado nas duas worktrees, `vision-core` e `vision-core-hermes-ui-rca`); suíte ampla `vision-core-next-*.spec.mjs` limpa módulo 2 falhas pré-existentes não relacionadas; `node --check` OK em todos os arquivos JS alterados.
 
