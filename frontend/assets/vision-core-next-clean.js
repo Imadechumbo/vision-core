@@ -1725,7 +1725,9 @@
       if (opts.selectedId && step.id === opts.selectedId) li.setAttribute('aria-selected', 'true');
       var num = document.createElement('span');
       num.className = 'vc-pipeline-step-num';
-      num.textContent = step.number || '';
+      num.textContent = step.status === 'done' ? '✓'
+        : (step.status === 'error' || step.status === 'blocked') ? '✕'
+        : (step.number || '');
       var body = document.createElement('span');
       body.className = 'vc-pipeline-step-body';
       var name = document.createElement('strong');
@@ -3410,12 +3412,17 @@
       var ms = new Date(stage.completed_at).getTime() - new Date(stage.started_at).getTime();
       if (!isNaN(ms) && ms >= 0) duration = (ms / 1000).toFixed(1) + 's';
     }
+    var inProgress = stage.status === 'pending' && !!stage.started_at && !stage.completed_at;
     return {
       id: stage.name,
       number: ('0' + (idx + 1)).slice(-2),
       name: sfModuleLabel(stage.name),
-      description: duration || (stage.started_at ? 'em andamento' : 'pendente'),
-      status: stage.status
+      description: duration || (inProgress ? 'em andamento' : 'pendente'),
+      // schema real só persiste pending/done/error/blocked (server.js
+      // MISSION_STAGE_STATUSES) — 'active' é derivado aqui pro caso de uma
+      // missão interrompida no meio (started_at sem completed_at), nunca
+      // gravado como tal no backend.
+      status: inProgress ? 'active' : stage.status
     };
   }
 

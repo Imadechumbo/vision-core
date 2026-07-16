@@ -2,7 +2,7 @@
 
 **Parte da série de arquitetura — leia `MASTER_SPEC.md` e `VISION_CORE_NEXT_FRONTEND_SPEC.md` antes deste.**
 
-> Versão: 1.1.0 · Criado: 2026-07-09 · Atualizado: 2026-07-15 (window.vcComponents: metricCard/timeline/pipeline)
+> Versão: 1.2.0 · Criado: 2026-07-09 · Atualizado: 2026-07-16 (pipeline() conectado em Mission detail, next-clean-116/117)
 > Fonte: leitura direta de `frontend/vision-core-next.html` + `assets/vision-core-next-clean.{css,js}`. Todo componente aqui listado é `EXISTENTE` salvo aviso contrário — nenhum é aspiracional.
 
 ---
@@ -103,7 +103,7 @@ Documentado em `ATOMIC_CORE_SPEC.md` — não duplicado aqui.
 **Existe um componente genérico agora:** `window.vcComponents = { metricCard, metricCardGrid, timeline, pipeline }` (builders `createElement`, sem lib externa, mesmo padrão do `metricCharts`). CSS em `.vc-metric-card(-grid)`, `.vc-timeline(-item)`, `.vc-pipeline(--vertical|--horizontal, -step)`.
 - `metricCard({label, value, tier?, hint?})` — generaliza o antigo `.vc-metrics-dora-card`; usado por `renderMetricsDora` e pelos 3 cards DORA do `#vcAtomicSidebarExtras`. `.vc-metrics-agent-row` (dot+badge+nome+nota+chips+barra) **não** foi migrado — forma diferente demais de um card label+valor pra caber sem abstração forçada.
 - `timeline(items, {onSelect?, emptyLabel?})` — mapeia direto de `/api/mission/timeline` (`status:'DONE'|'PASS_GOLD'` vira `'done'`, mais nada — não fabrica item `'active'`/`'pending'` que os dados reais não têm). Usado por `loadMissionHistory` (Missions, 20 itens) e pelo `#vcAtomicSidebarExtras` (sidebar direita, 5 itens compactos, sem clique).
-- `pipeline({steps, orientation:'vertical'|'horizontal', selectedId?, onSelect?})` — **construído mas sem call site real ainda**. Não há hoje persistência de estágios por missão nem custo real por agente no backend (`cost_usd` é `null` hardcoded em `/api/metrics/agents`; ver `ROADMAP.md` Fase 2, "persistir estágios por missão"). Sidebar/Missions não recebem Pipeline até esse dado existir — preencher com dado fake violaria a regra anti-stub (`CLAUDE.md`). Pronto pra conectar assim que `mission-timeline.json` ganhar `stages[]`.
+- `pipeline({steps, orientation:'vertical'|'horizontal', selectedId?, onSelect?})` — conectado desde `next-clean-116` em Missions → detalhe de missão (`showMissionDetail()`), horizontal, quando `entry.stages` (persistido pelo SF Auto-Pilot desde `next-clean-115`) é array não-vazio; entradas de `/api/chat`/`/api/run-live` (sem `stages`) nunca fabricam pipeline. `stageToPipelineStep()` mapeia `stage.name`→label amigável via `sfModuleLabel()`, duração real de `started_at`/`completed_at`, e status: schema real só persiste `pending`/`done`/`error`/`blocked` (`MISSION_STAGE_STATUSES`, `server.js`) — o bucket visual `active` (âmbar) é **derivado no frontend**, nunca gravado no backend, só quando `pending` tem `started_at` sem `completed_at` (missão interrompida no meio). Número do passo vira ✓/✕ (unicode nativo, sem ícone/lib) quando `done`/`error|blocked`.
 **Checklist:** [x] mesma paleta de status usada em `statusTier()` (ok/warn/error) mais um bucket visual `pending` (`var(--muted)`, não é resultado, é ausência de início) · [x] nenhum dos três builders fabrica estado que o backend não forneceu.
 
 ## Tables
