@@ -12,6 +12,7 @@ const { encryptProviderKey, decryptProviderKey } = require('./provider-vault-cry
 const { resolveProviderKey, sortProvidersByEffectivePriority } = require('./provider-vault-routing');
 const { createGithubPullRequest } = require('./github-pr-adapter');
 const { appendHermesDecisionPair, updateHermesOutcome } = require('./hermes-dataset');
+const { VISION_CORE_FACTS_BLOCK, isUnsafeToArchive } = require('./vision-core-grounding');
 
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
@@ -1633,7 +1634,7 @@ app.all('/api/copilot', checkMissionQuota, async (req, res) => {
       const agentContext = activeAgent
         ? ` You are acting as the specialized agent "${activeAgent.name}" (role: ${activeAgent.role}). Start your response with [${activeAgent.name}].`
         : '';
-      const llmResult = await callLLM(prompt, { system: 'You are Vision Core Copilot AI. Be concise and technical. Respond in the same language as the user.' + agentContext });
+      const llmResult = await callLLM(prompt, { system: 'You are Vision Core Copilot AI. Be concise and technical. Respond in the same language as the user.' + agentContext + '\n\n' + VISION_CORE_FACTS_BLOCK });
       if (llmResult) { answer = llmResult.text; llmProvider = llmResult.provider; llmModel = llmResult.model; }
     } catch (e) {
       console.warn('[copilot] callLLM error:', e.message);
@@ -1694,6 +1695,7 @@ app.all('/api/hermes/analyze', async (req, res) => {
     try {
       const llmResult = await callLLM(message, {
         system: 'You are Hermes, the RCA (Root Cause Analysis) supervisor agent of Vision Core. Analyze the input and provide a concise technical diagnosis. Identify root cause, affected components, and recommended fix plan. Respond in the same language as the user.'
+          + '\n\n' + VISION_CORE_FACTS_BLOCK
       });
       if (llmResult) { answer = llmResult.text; llmProvider = llmResult.provider; llmModel = llmResult.model; }
     } catch (e) {
@@ -2181,7 +2183,14 @@ app.all('/api/openclaw/orchestrate', async (req, res) => {
       '}',
       'Return ONLY the JSON object, no markdown, no explanation.',
       'If you cannot decompose the mission, return:',
-      '{"mission_summary":"unclear","tasks":[],"risk_level":"high","pass_gold_required":true}'
+      '{"mission_summary":"unclear","tasks":[],"risk_level":"high","pass_gold_required":true}',
+      '',
+      VISION_CORE_FACTS_BLOCK,
+      '',
+      'If the mission is a question about Vision Core\'s own identity, architecture, model, or infrastructure',
+      '(not the user\'s code), answer using ONLY the facts above — still inside the same JSON structure.',
+      'If that answer is not covered by the facts above, return exactly:',
+      '{"mission_summary":"não tenho essa informação confirmada","tasks":[],"risk_level":"low","pass_gold_required":true}'
     ].join('\n');
 
     /* §129: busca contexto de missões anteriores no Archivist (best-effort) */
@@ -2202,13 +2211,18 @@ app.all('/api/openclaw/orchestrate', async (req, res) => {
         const raw = llmResult.text.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/i, '').trim();
         plan         = JSON.parse(raw);
         llm_provider = llmResult.provider;
-        /* §129: persiste plano da missão no Archivist (best-effort) */
-        archivistSave('openclaw-' + Date.now(), {
-          mission:   missionText.slice(0, 300),
-          plan,
-          provider:  llm_provider,
-          timestamp: now()
-        });
+        /* §129: persiste plano da missão no Archivist (best-effort) — nunca quando
+           a pergunta/resposta é sobre a identidade do próprio Vision Core ou quando
+           o modelo sinalizou incerteza (isUnsafeToArchive), pra não realimentar o
+           loop de autorreforço. Checa llmResult.text bruto, não o plan já parseado. */
+        if (!isUnsafeToArchive(missionText, llmResult.text)) {
+          archivistSave('openclaw-' + Date.now(), {
+            mission:   missionText.slice(0, 300),
+            plan,
+            provider:  llm_provider,
+            timestamp: now()
+          });
+        }
       }
     } catch (_e) {
       /* LLM failed or returned invalid JSON — fall through with plan=null */
@@ -2917,6 +2931,10 @@ app.post('/api/chat', async (req, res) => {
   const mode    = body.mode  || 'vision-geral';
   let   message = body.message || body.prompt || '';
   if (!message) return res.status(400).json({ ok: false, error: 'message_required', time: now() });
+  /* mensagem crua do usuário, capturada ANTES de qualquer mutação (toolFetchUrl
+     injeta conteúdo de URL, §44 MPEG comprime blocos [Arquivo: ...]) — usada só
+     pelo gate anti-autorreforço do Archivist mais abaixo, nunca pelo LLM. */
+  const rawMessage = message;
 
   /* §98-E — captura a resposta final do /api/chat (qualquer branch interno)
      via monkey-patch de res.json, em vez de editar cada return separadamente.
@@ -3092,6 +3110,10 @@ app.post('/api/chat', async (req, res) => {
     `  R5. confidence < 0.7 → BLOCKED_INPUT. Diagnóstico incerto não gera patch.`,
     `  R6. REGRA DE ASSETS: paths de imagem/SVG/font DEVEM existir na lista de assets fornecida.`,
     `  R7. Nenhum agente pode contornar o Confirm Gate (§8) — aprovação humana é obrigatória.`,
+    `  R8. Perguntas sobre a identidade/arquitetura do próprio Vision Core (SF, modelo usado,`,
+    `      infraestrutura) → responda SOMENTE com base no VISION_CORE_FACTS_BLOCK abaixo.`,
+    `      Se a informação pedida não estiver lá, responda literalmente "não tenho essa`,
+    `      informação confirmada" — nunca invente fatos sobre o próprio Vision Core.`,
     ``,
     `MODO ATUAL: ${mode}`,
     ``,
@@ -3412,10 +3434,12 @@ app.post('/api/chat', async (req, res) => {
      2. image-only: basePrompt + visionAddendum (visual description)
      3. code-only: basePrompt + fixModeInstructions (hermesDecisionMatrix)
      + §53: diffInstruction53 appended when [DIFF] block present (all paths)
-     + grounding real appended quando a pergunta é sobre fine-tuning do Hermes */
+     + grounding real appended quando a pergunta é sobre fine-tuning do Hermes
+     + VISION_CORE_FACTS_BLOCK sempre-on (todos os tópicos, não só fine-tuning) */
   const systemPrompt = (hasImage
     ? basePrompt + visionAddendum
-    : basePrompt + fixModeInstructions) + diffInstruction53 + groundingAddendum;
+    : basePrompt + fixModeInstructions) + diffInstruction53 + groundingAddendum
+    + '\n\n' + VISION_CORE_FACTS_BLOCK;
 
   /* ── §34: ensureHermesJson — re-prompt se mode=fix retornou texto livre ── */
   /* Chama callFn(extractPrompt) com o diagnóstico já gerado como contexto.   */
@@ -3530,13 +3554,18 @@ app.post('/api/chat', async (req, res) => {
         return r2.answer || '';
       } catch (_) { return ''; }
     });
-    /* §129: salva resumo da missão no Archivist após resposta (best-effort) */
-    archivistSave('hermes-' + Date.now(), {
-      query:     message.slice(0, 300),
-      summary:   finalAnswer.slice(0, 500),
-      mode,
-      timestamp: now()
-    });
+    /* §129: salva resumo da missão no Archivist após resposta (best-effort) — nunca
+       quando a pergunta é sobre a identidade do próprio Vision Core ou a resposta
+       veio com hedge (isUnsafeToArchive), pra não realimentar o loop de autorreforço
+       de alucinação. Checa a mensagem crua (rawMessage), não a versão mutada. */
+    if (!isUnsafeToArchive(rawMessage, finalAnswer)) {
+      archivistSave('hermes-' + Date.now(), {
+        query:     message.slice(0, 300),
+        summary:   finalAnswer.slice(0, 500),
+        mode,
+        timestamp: now()
+      });
+    }
     return sendOk(res, { answer: finalAnswer, provider: _h49result.provider_used, model: _h49result.model_used, mode, fetched_count: req._toolFetchCount || 0, fetched_urls: req._toolFetchUrls || [], anti_stub: true });
   }
 
