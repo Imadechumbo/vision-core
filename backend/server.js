@@ -10,6 +10,7 @@ const { runGoMission, streamGoMission, checkGoHealth, resolveGoBinary } = requir
 const { callHermes, readLowConfidenceLog, computeMemoryMetrics } = require('./hermes-rca');
 const { encryptProviderKey, decryptProviderKey } = require('./provider-vault-crypto');
 const { resolveProviderKey, sortProvidersByEffectivePriority } = require('./provider-vault-routing');
+const { extractUsage, computeCostUsd, recordAgentCost } = require('./llm-cost'); // DECISION-032
 const { createGithubPullRequest } = require('./github-pr-adapter');
 const { appendHermesDecisionPair, updateHermesOutcome } = require('./hermes-dataset');
 const { VISION_CORE_FACTS_BLOCK, isUnsafeToArchive } = require('./vision-core-grounding');
@@ -371,6 +372,7 @@ function providerList() {
 const crypto = require('crypto');
 const DB_ROOT = path.join(ROOT, 'data');
 const USERS_DB = path.join(DB_ROOT, 'users.json');
+const AGENT_COSTS_DB = path.join(DB_ROOT, 'agent-costs.json'); // DECISION-032 — ledger de custo real por agente
 const PROJECTS_DB = path.join(DB_ROOT, 'projects.json');
 const CHAT_CONVERSATIONS_DB = path.join(DB_ROOT, 'chat-conversations.json');
 const OPERATION_LOG_DB = path.join(DB_ROOT, 'operation-log.json');
@@ -770,7 +772,22 @@ async function callLLM(prompt, opts = {}) {
       if (!resp.ok) { console.warn(`[callLLM] ${p.id} http ${resp.status}`); continue; }
       const data = JSON.parse(resp.text);
       const text = p.extractText(data);
-      if (text) return { text, provider: p.id, model: p.model };
+      if (text) {
+        // DECISION-032 — usage/cost_usd são campos ADITIVOS: nunca alteram
+        // text/provider/model nem o comportamento de nenhum dos call sites
+        // existentes que só destructuram {text, provider, model}. opts.agent
+        // é opt-in (default undefined) — sem ele, nada é gravado no ledger,
+        // zero mudança de comportamento pros callers que não passarem esse campo.
+        const usage = extractUsage(p.id, data);
+        const cost_usd = computeCostUsd(p.id, usage.tokens_in, usage.tokens_out);
+        if (opts.agent && cost_usd !== null) {
+          try {
+            const ledger = readJsonFile(AGENT_COSTS_DB, {});
+            writeAndSyncS3(AGENT_COSTS_DB, recordAgentCost(ledger, opts.agent, Object.assign({}, usage, { cost_usd })));
+          } catch (e) { console.warn('[callLLM] agent cost ledger write failed:', e.message); }
+        }
+        return { text, provider: p.id, model: p.model, tokens_in: usage.tokens_in, tokens_out: usage.tokens_out, cost_usd };
+      }
     } catch (e) {
       console.warn(`[callLLM] ${p.id} failed: ${e.message}`);
     }
@@ -1634,7 +1651,7 @@ app.all('/api/copilot', checkMissionQuota, async (req, res) => {
       const agentContext = activeAgent
         ? ` You are acting as the specialized agent "${activeAgent.name}" (role: ${activeAgent.role}). Start your response with [${activeAgent.name}].`
         : '';
-      const llmResult = await callLLM(prompt, { system: 'You are Vision Core Copilot AI. Be concise and technical. Respond in the same language as the user.' + agentContext + '\n\n' + VISION_CORE_FACTS_BLOCK });
+      const llmResult = await callLLM(prompt, { agent: 'Hermes RCA', system: 'You are Vision Core Copilot AI. Be concise and technical. Respond in the same language as the user.' + agentContext + '\n\n' + VISION_CORE_FACTS_BLOCK });
       if (llmResult) { answer = llmResult.text; llmProvider = llmResult.provider; llmModel = llmResult.model; }
     } catch (e) {
       console.warn('[copilot] callLLM error:', e.message);
@@ -1694,6 +1711,7 @@ app.all('/api/hermes/analyze', async (req, res) => {
   if (message) {
     try {
       const llmResult = await callLLM(message, {
+        agent: 'Hermes RCA',
         system: 'You are Hermes, the RCA (Root Cause Analysis) supervisor agent of Vision Core. Analyze the input and provide a concise technical diagnosis. Identify root cause, affected components, and recommended fix plan. Respond in the same language as the user.'
           + '\n\n' + VISION_CORE_FACTS_BLOCK
       });
@@ -2203,6 +2221,7 @@ app.all('/api/openclaw/orchestrate', async (req, res) => {
 
     try {
       const llmResult = await callLLM(missionText, {
+        agent:      'OpenClaw',
         system:     _s129ocSystem,
         max_tokens: 600
       });
@@ -2778,9 +2797,15 @@ app.get('/api/metrics/agents', (req, res) => {
   const savedProviders = Object.keys(_providersStore);
   const activeProviders = [...new Set([...configuredProviders, ...savedProviders])];
   const goHealthy = fs.existsSync(resolveGoBinary ? resolveGoBinary() : path.join(ROOT, 'bin', 'vision-core')) || fs.existsSync(path.join(ROOT, 'go-core', 'main'));
+  // DECISION-032 — ledger real de custo por agente (callLLM grava aqui quando
+  // chamado com opts.agent). Só Hermes RCA e OpenClaw chamam LLM de verdade
+  // hoje (confirmado por leitura direta do código, não suposição) — Scanner/
+  // Aegis/Go Core/PASS GOLD continuam null porque genuinamente não chamam LLM,
+  // não é limitação da implementação.
+  const costLedger = readJsonFile(AGENT_COSTS_DB, {});
   const agents = [
-    { name: 'OpenClaw',    status: 'ok',               cost_usd: null, note: 'orchestration — no LLM cost' },
-    { name: 'Hermes RCA',  status: activeProviders.length ? 'ok' : 'no_provider', cost_usd: null, active_providers: activeProviders },
+    { name: 'OpenClaw',    status: 'ok',               cost_usd: costLedger['OpenClaw'] ? costLedger['OpenClaw'].cost_usd_total : null, note: 'maioria dos caminhos é roteamento puro; só decision=diagnose chama LLM' },
+    { name: 'Hermes RCA',  status: activeProviders.length ? 'ok' : 'no_provider', cost_usd: costLedger['Hermes RCA'] ? costLedger['Hermes RCA'].cost_usd_total : null, active_providers: activeProviders },
     { name: 'Scanner',     status: 'ok',               cost_usd: null, note: 'AST scan — no LLM cost' },
     { name: 'Aegis',       status: 'ok',               cost_usd: null, note: 'validation — no LLM cost' },
     { name: 'Go Core',     status: goHealthy ? 'ok' : 'binary_not_found', cost_usd: null },
