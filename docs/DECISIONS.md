@@ -76,6 +76,7 @@ Backend Node.js/Elastic Beanstalk permanece na AWS.
 Deploy de frontend é sempre manual via `bash bin/deploy-pages.sh`.
 **Por quê:** runner allocation do GitLab falha para este projeto, causa não resolvida e não vale mais investigar.
 **Como aplicar:** nunca sugerir "configurar o CI do GitLab" como solução — está descartado.
+**Fechamento definitivo (2026-07-17):** achado um Personal Access Token exposto em texto puro no remote git local `gitlab` (já expirado, confirmado via API) — remote removido (`git remote remove gitlab`). Na mesma limpeza, os artefatos mortos que só existiam pra sustentar esse caminho abandonado foram removidos: `.gitlab-ci.yml` (raiz) e `.github/workflows/mirror-to-gitlab.yml` (`if: false`, mirror pro GitLab que nada mais aciona). `.github/workflows/deploy-pages.yml` (também `if: false`) teve o comentário corrigido — não referencia mais `.gitlab-ci.yml` como "onde o deploy realmente acontece". Nenhum CI/deploy real foi afetado: `bin/deploy-pages.sh` (frontend) e `deploy-backend-eb.yml` (backend) não dependem de remote git nenhum, confirmado por leitura direta antes da remoção.
 
 ### DECISION-004 — Saneamento do pacote de deploy via `rm -f` explícito no script (substituída pela DECISION-027)
 Arquivos soltos de outras ferramentas (`next.html`, `atomic-core.html`, `_test_here.txt`, `assets/atomic-core.*`, `assets/vision-core-next.*`) são excluídos por linha `rm -f` explícita em `bin/deploy-pages.sh`, não movidos para outra pasta nem via `.cfpagesignore`.
