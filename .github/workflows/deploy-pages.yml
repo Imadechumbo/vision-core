@@ -1,7 +1,8 @@
-# §75 — Deploy migrado para GitLab CI (ver .gitlab-ci.yml)
-# GitHub mantido como backup; job desabilitado com if: false
-# Para reativar: remover "if: false" do job deploy abaixo
-name: Deploy to Cloudflare Pages [DISABLED — see .gitlab-ci.yml]
+# DECISION-003 — GitLab CI não é usado (runner allocation falha, não investigar de novo).
+# Deploy real de frontend é sempre manual via bash bin/deploy-pages.sh.
+# Job aqui fica desabilitado com if: false — não é backup de nada ativo.
+# Para reativar: remover "if: false" do job deploy abaixo.
+name: Deploy to Cloudflare Pages [DISABLED — deploy real é manual, ver bin/deploy-pages.sh]
 
 on:
   push:
