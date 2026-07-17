@@ -98,7 +98,7 @@ Fórmula: excluem-se as 5 capacidades explicitamente descartáveis. Cada complet
 | UX-001 | UX | shell/sidebar | real | real | sim | E2E | ✅ Completo | — | — | Next JS:408 |
 | UX-002 | UX | loading/erro/retry | real | irregular | sim | parcial | 🟡 Parcial | contratos API | P2 | Next JS:2057 |
 | UX-003 | UX | estados vazios | real | irregular | sim | parcial | 🟡 Parcial | dados | P3 | specs/E2E |
-| A11Y-001 | A11y | teclado/ARIA/motion | parcial | parcial | sim | sem gate dedicado | 🟡 Parcial | shell | P3 | VCMotion JS:18 |
+| A11Y-001 | A11y | teclado/ARIA/motion | parcial | real | sim | permanente | ✅ Completo | shell | — | **RESOLVIDO (2026-07-17):** `tests/e2e/vision-core-next-a11y.spec.mjs` (10 testes, permanente), cobrindo nomes acessíveis (regressão IMP-008), foco/Tab-trap/Escape do modal Smile, navegação por teclado até o composer, e o contrato `window.VCMotion` (SO sozinho não degrada; `setMode('reduced')` explícito é respeitado) |
 | PERF-001 | Performance | carga/polling | bundle | bundle+guards | sim | não | 🟡 Parcial | observabilidade | P3 | entradas HTML |
 | ATOMIC-001 | Atomic | widget/estados | real | real | sim | E2E | ✅ Completo | chat | — | Atomic spec |
 | ATOMIC-002 | Atomic | customização/retorno | não | real | sim | E2E | ✅ Completo | VCMotion | — | Next JS:51-275 |
