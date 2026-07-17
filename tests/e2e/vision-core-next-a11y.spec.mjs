@@ -110,6 +110,100 @@ test.describe('ARIA — nomes acessíveis (regressão IMP-008/TEST-002)', () => 
   });
 });
 
+// Regressão do achado real 2026-07-18: .vc-agent span/small mediam 3.43:1/3.62:1
+// reais (abaixo do mínimo WCAG AA 4.5:1) porque .vc-atomic-hud aplica
+// opacity:.76 ao grupo inteiro, fator que a cor original do texto não
+// compensava. Mede o contraste de verdade (screenshot real + canvas +
+// fórmula de luminância relativa do WCAG), não confia em getComputedStyle
+// sozinho — opacity de ancestral não aparece em getComputedStyle(el).color.
+test.describe('Contraste — Atomic Core (regressão achado 2026-07-18)', () => {
+  function relLum({ r, g, b }) {
+    const toLin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    return 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b);
+  }
+  function contrastRatio(c1, c2) {
+    const L1 = relLum(c1), L2 = relLum(c2);
+    const lighter = Math.max(L1, L2), darker = Math.min(L1, L2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  test('rótulo do agente mais escuro (archivist) e subtítulo têm contraste real >= 4.5:1', async ({ page }) => {
+    await page.goto(NEXT_URL());
+    await page.waitForSelector('[data-atomic-core]');
+    await page.waitForTimeout(400); // deixa a órbita assentar num frame estável
+
+    const el = page.locator('.vc-agent[data-agent="archivist"]');
+    const span = el.locator('span');
+    const small = el.locator('small');
+    const spanRect = await span.boundingBox();
+    const smallRect = await small.boundingBox();
+
+    // Amostra só o FUNDO real (canvas sobre screenshot — necessário porque
+    // gradient+backdrop-filter não aparecem em getComputedStyle). A cor do
+    // TEXTO vem de getComputedStyle (já resolve color-mix() pro valor final
+    // exato) — mais confiável que tentar achar "o pixel mais claro" no
+    // screenshot, que pega ruído de anti-aliasing/glow nas bordas do glifo
+    // (achado ao tentar essa abordagem: media 4.10-4.45:1 em vez do 5.73:1
+    // calculado, puro artefato de amostragem, não do fix em si).
+    const shot = await page.screenshot();
+    const shotB64 = shot.toString('base64');
+
+    const result = await page.evaluate(async ({ shotB64, spanRect, smallRect }) => {
+      const img = new Image();
+      await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = 'data:image/png;base64,' + shotB64; });
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width; canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const dpr = window.devicePixelRatio || 1;
+      function sampleBgNear(rect) {
+        const x = Math.max(0, Math.round((rect.x - 6) * dpr));
+        const y = Math.round((rect.y + rect.height / 2) * dpr);
+        const d = ctx.getImageData(x, y, 1, 1).data;
+        return { r: d[0], g: d[1], b: d[2] };
+      }
+      function parseRgb(str) {
+        // color-mix() resolve pra "color(srgb r g b)" (0..1), não "rgb()" —
+        // achado ao rodar este teste (regex de rgb() sozinho quebrava com
+        // TypeError, achou null).
+        const colorFn = str.match(/color\(srgb\s+([^)]+)\)/);
+        if (colorFn) {
+          const p = colorFn[1].trim().split(/\s+/).map((s) => parseFloat(s));
+          return { r: p[0] * 255, g: p[1] * 255, b: p[2] * 255, a: 1 };
+        }
+        const m = str.match(/rgba?\(([^)]+)\)/);
+        const p = m[1].split(',').map((s) => parseFloat(s.trim()));
+        return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 };
+      }
+      function compositeAlpha(fg, bg, alpha) {
+        return { r: fg.r * alpha + bg.r * (1 - alpha), g: fg.g * alpha + bg.g * (1 - alpha), b: fg.b * alpha + bg.b * (1 - alpha) };
+      }
+      const agentEl = document.querySelector('.vc-agent[data-agent="archivist"]');
+      const spanEl = agentEl.querySelector('span');
+      const smallEl = agentEl.querySelector('small');
+      const hudEl = document.querySelector('[data-atomic-core]');
+      const hudOpacity = parseFloat(getComputedStyle(hudEl).opacity) || 1;
+      const spanColor = parseRgb(getComputedStyle(spanEl).color);
+      const smallColor = parseRgb(getComputedStyle(smallEl).color);
+      const spanBg = sampleBgNear(spanRect);
+      const smallBg = sampleBgNear(smallRect);
+      return {
+        spanEffective: compositeAlpha(spanColor, spanBg, spanColor.a * hudOpacity),
+        spanBg,
+        smallEffective: compositeAlpha(smallColor, smallBg, smallColor.a * hudOpacity),
+        smallBg,
+        hudOpacity
+      };
+    }, { shotB64, spanRect, smallRect });
+
+    const spanRatio = contrastRatio(result.spanEffective, result.spanBg);
+    const smallRatio = contrastRatio(result.smallEffective, result.smallBg);
+
+    expect(spanRatio, `rótulo "archivist": ${spanRatio.toFixed(2)}:1 (mínimo 4.5:1, hud opacity ${result.hudOpacity})`).toBeGreaterThanOrEqual(4.5);
+    expect(smallRatio, `subtítulo "archivist": ${smallRatio.toFixed(2)}:1 (mínimo 4.5:1, hud opacity ${result.hudOpacity})`).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
 test.describe('Teclado — foco', () => {
   test('Tab alcança a navegação principal e o composer sem ficar preso fora de um modal', async ({ page }) => {
     await page.goto(NEXT_URL());
