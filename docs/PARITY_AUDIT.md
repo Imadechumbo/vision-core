@@ -1,6 +1,8 @@
 # Auditoria de Paridade — Legado (`frontend/index.html` + bundle) vs. Next
 
-**Data original:** 2026-07-08 · **Autor:** Claude Code (Sonnet 5) · **Tipo:** diagnóstico — nenhum código foi alterado, movido ou deletado nesta auditoria (as seções (a2)/(b) abaixo foram atualizadas em sessões de implementação subsequentes, 2026-07-08/09, conforme o roadmap avançou — ver `docs/CURRENT_STATE.md` pro estado mais recente).
+**Data original:** 2026-07-08 · **Autor:** Claude Code (Sonnet 5) · **Tipo:** diagnóstico — nenhum código foi alterado, movido ou deletado nesta auditoria (as seções (a2)/(a3)/(a4)/(b) abaixo foram atualizadas em sessões de implementação subsequentes, conforme o roadmap avançou — ver `docs/CURRENT_STATE.md` pro estado mais recente).
+
+**Revisão 2026-07-16:** único item da categoria (b) com trabalho real pendente (OAuth Google/GitHub) foi implementado e publicado em produção (`next-clean-77`, 2026-07-13) — movido para (a4) abaixo. A categoria (b) "falta, valor real" está **vazia** desde então; restam só os 2 casos de "escopo novo, não paridade" (Vault rollback, Billing), que não são pendência de migração.
 
 **Objetivo:** decidir o que do front antigo o Next **não precisa carregar**, pra encurtar o caminho até a substituição completa do `index.html` legado.
 
@@ -66,14 +68,19 @@ Ou seja: pra apagar o legado por completo no futuro, a superfície real a consid
 | Tutorial Smile | — (sem endpoint, guia estático) | **IMPLEMENTADO (`next-clean-60`)** — não é migração do legado (o Next deliberadamente NÃO reaproveita `#vcTutorialOverlay`/localStorage `vc_tutorial_*`); é uma reimplementação própria, mais simples, manual (sem autoabrir). |
 | Atomic Core — auto-collapse + Settings (on/off, intensidade) | — (sem endpoint, visual) | **IMPLEMENTADO (`next-clean-61`/`63`)** — não é migração do "v33 orbit" do legado (item (c) abaixo já determina que o Atomic Core é reimplementado do zero); é evolução própria do Next. "Glow on/off" deliberadamente não incluído — contradiria checklist já fechado da spec (item 6). |
 
+### (a4) ADICIONADO em sessão subsequente (2026-07-13)
+
+| Feature | Endpoint(s) | Observação |
+|---|---|---|
+| OAuth Google/GitHub | `/api/auth/oauth/<provider>`, `/api/auth/oauth/<provider>/callback` | **IMPLEMENTADO (`next-clean-77`)** — Settings → Conta ganhou botões Google/GitHub. O bloqueio anterior (callback sempre redirecionando pro `FRONTEND_URL` legado) foi resolvido: o backend passou a preservar o legado por padrão e só retorna para `vision-core-next.html` quando o `state` fechado marca `target:"next"` (sem open redirect por URL livre) — publicado com backend EB `v113` e Worker OAuth decodificando `target`. Deployado em produção e confirmado ao vivo. |
+
 ### (b) FALTA no Next, tem valor real — endpoint vivo + UI reachable confirmada no legado
 
 | Feature | Endpoint(s) | Evidência de que é real |
 |---|---|---|
-| OAuth Google/GitHub | `/api/auth/oauth/<provider>`, `/api/auth/oauth/<provider>/callback` | Botões com `addEventListener` real confirmados no legado (`signupBtn`, `authBackdrop` etc.). Email/senha já portado (`next-clean-62`) — **este item ficou menor**: o bloqueio real hoje não é risco de sessão em geral, é específico — o callback do backend sempre redireciona pro `FRONTEND_URL` raiz (legado), nunca pra `vision-core-next.html`; portar OAuth exige mudar esse redirect no backend, fora do escopo desta frente sem autorização explícita própria. |
-| Deploy dropdown (ZIP/merge-PR/CF Pages/EB/Docker) | `/api/deploy/trigger`, `/api/deploy/merge-pr`, `/api/deploy/pages`, `/api/deploy/eb`, `/api/deploy/zip-release` | Real e reachable no legado (`§50`/`§51`). **Não é uma lacuna a fechar casualmente** — a SPEC do Next proíbe explicitamente scripts de deploy nesta fase (seção 2, "Arquivos Proibidos"). Fica registrado aqui como paridade pendente, mas é uma decisão de escopo do usuário, não um "esqueceram de fazer". |
+| Deploy dropdown (ZIP/merge-PR/CF Pages/EB/Docker) | `/api/deploy/trigger`, `/api/deploy/merge-pr`, `/api/deploy/pages`, `/api/deploy/eb`, `/api/deploy/zip-release` | Real e reachable no legado (`§50`/`§51`). **Não é uma lacuna a fechar casualmente** — a SPEC do Next proíbe explicitamente scripts de deploy nesta fase (seção 2, "Arquivos Proibidos"); reafirmado como decisão fechada em `docs/DECISIONS.md` DECISION-026 ("administração de deploy não pertence ao cockpit Next"). Fica registrado aqui como paridade pendente, mas é uma decisão de escopo do usuário, não um "esqueceram de fazer". |
 
-**1 grupo com trabalho real pendente** (excluindo a nota de escopo do deploy): OAuth Google/GitHub. Todo o resto da categoria (b) original (AI Provider Vault, Rollback, Missions History, Evidence, Agent badge, Hermes hint, Apply-Fix, 4 passos extra de SF, contexto de URL, project-files+generate-zip, Auth email/senha) foi migrado pra (a2)/(a3).
+**0 grupos com trabalho real pendente.** OAuth Google/GitHub (único item desta categoria) foi migrado pra (a4) em 2026-07-13. Todo o resto da categoria (b) original (AI Provider Vault, Rollback, Missions History, Evidence, Agent badge, Hermes hint, Apply-Fix, 4 passos extra de SF, contexto de URL, project-files+generate-zip, Auth email/senha) já tinha sido migrado pra (a2)/(a3) em revisões anteriores. Deploy dropdown permanece como decisão de escopo do usuário (DECISION-026), não uma pendência de esforço.
 
 **Caso à parte — Vault rollback:** `/api/vault/rollback/:id` existe e funciona no backend, mas **nenhum lugar do frontend legado chama essa rota** — só `snapshot` é chamado, automaticamente, como parte do pipeline de missão. Não é uma lacuna de paridade (o legado também não tem essa UI); seria escopo novo, não restauração de algo que já existiu.
 
@@ -118,17 +125,17 @@ Nenhum arquivo depende de `@import` interno entre CSS (checado — só 2 `@impor
 
 ## 3. Tabela-resumo
 
-**Atualizado em 2026-07-12** — seções (a3)/(b) revisadas contra `docs/ROADMAP.md`/`docs/CHANGELOG_NEXT.md` atuais; a versão anterior deste documento (2026-07-08/09) estava desatualizada e contradizia o ROADMAP em 1 ponto (`project-files`+`generate-zip`, já corrigido há duas versões).
+**Atualizado em 2026-07-16** — seção (b) revisada: OAuth Google/GitHub (único item com trabalho real pendente na revisão de 2026-07-12) foi implementado e publicado (`next-clean-77`, 2026-07-13), migrado para (a4). A revisão de 2026-07-12 permanece abaixo como histórico da versão anterior deste documento.
 
 | Categoria | Contagem | O que significa |
 |---|---|---|
-| **(a+a2+a3) Já existe no Next** | 26 grupos de feature (13 originais + 9 de 2026-07-08/09 + 4 de 2026-07-10/12: project-files+generate-zip, Auth email/senha, Tutorial Smile, Atomic Core auto-collapse/Settings) | Nenhuma ação necessária. |
-| **(b) Falta, valor real confirmado** | 1 grupo (OAuth Google/GitHub) | Bloqueado por mudança de backend no callback + autorização própria — não é mais um "turno normal", é PARE E PERGUNTE por definição. |
-| **(b, caso à parte) Escopo novo, não paridade** | 2 (Vault rollback como já existia, Billing checkout UI) | O legado também não tem essas UIs — não é lacuna de migração, é decisão de produto separada se quiser construir. |
+| **(a+a2+a3+a4) Já existe no Next** | 27 grupos de feature (13 originais + 9 de 2026-07-08/09 + 4 de 2026-07-10/12 + 1 de 2026-07-13: OAuth Google/GitHub) | Nenhuma ação necessária. |
+| **(b) Falta, valor real confirmado** | 0 grupos | Categoria vazia desde 2026-07-13. |
+| **(b, caso à parte) Escopo novo, não paridade** | 2 (Vault rollback como já existia, Billing checkout UI) + Deploy dropdown (decisão fechada em DECISION-026) | O legado também não tem UI de rollback/billing — não é lacuna de migração. Deploy administrativo é decisão de produto fechada, não pendência técnica. |
 | **(c) Candidato a não migrar** | 13 itens, com evidência objetiva cada um | Reduz a superfície de "o que falta" em ~13 itens que pareceriam pendências mas não são. |
 | **CSS órfão/só-legado** | 28 de 30 arquivos (27 legado + 1 draft órfão) | Zero trabalho de CSS pro Next — já não depende de nada disso. |
 
-**Trabalho real restante:** só OAuth Google/GitHub, e só depois de (1) decisão explícita do usuário sobre mudar o backend do callback e (2) autorização própria pra essa rota de auth — nenhum turno de implementação pode começar antes disso. Deploy dropdown e Vault-rollback/Billing ficam de fora da conta — são decisões do usuário sobre se querem essas capacidades no Next, não itens de esforço a estimar.
+**Trabalho real restante desta auditoria: nenhum.** OAuth Google/GitHub, único item pendente identificado, foi implementado e confirmado ao vivo em produção. Deploy dropdown, Vault-rollback e Billing seguem fora da conta — são decisões de escopo já fechadas ou em aberto do usuário, não itens de esforço a estimar. Esta auditoria de paridade legado→Next está, na prática, **encerrada**; qualquer gap novo só surgiria de uma feature nova adicionada ao legado depois de 2026-07-08, o que não é o caso (legado está congelado, ver `CLAUDE.md`).
 
 ---
 

@@ -1,22 +1,25 @@
 # Executive Summary
 
-O Vision Core Next está **74% pronto para substituir o legado**, pela fórmula arquitetural definida neste documento. Das 41 capacidades observáveis catalogadas, 5 são legado descartável; nas 36 relevantes à substituição, há 23 completas, 8 parciais e 5 ausentes. O Next já cobre o cockpit principal, mas ainda não pode assumir a raiz: faltam histórico/projetos, logs, decisões sobre billing e deploy administrativo, validação ponta a ponta sem mocks e um procedimento ensaiado de cutover/rollback.
+> **REVISÃO 2026-07-16 — os 3 P0 e os 5 P1 abaixo foram fechados.** O corpo original deste documento (baseline `e4eee79c`, 2026-07-14) permanece como registro histórico da auditoria original; esta nota + as anotações `~~riscado~~ **RESOLVIDO**` ao longo do texto refletem o estado real hoje, cruzado com `docs/CURRENT_STATE.md` (fonte viva) e `docs/DECISIONS.md`. Resumo: o baseline foi promovido (`codex/next-rc-baseline` em `origin`, REL-001); histórico/projetos/logs foram implementados (IMP-001/002/003, `next-clean-83/84/85`); billing e deploy administrativo receberam decisão formal de ficarem fora do cockpit Next (DECISION-025/026); um gate E2E real sem mocks existe e passa (TEST-004); o pacote de deploy é gerado por allowlist (DECISION-027) com rollback documentado por republicação de artefato imutável (DECISION-028); e o RC foi de fato publicado e confirmado ao vivo em produção (OPS-002, commit `eaddb98a`, `https://visioncoreai.pages.dev`). **A "Legacy Replacement" não é mais um percentual arquitetural teórico — já aconteceu na prática.** Ver seção "Bloqueadores" abaixo para o detalhe item a item, e `docs/CURRENT_STATE.md` para o estado do dia (hoje em `next-clean-115`, muitas versões à frente do baseline auditado aqui).
 
-Baseline auditado: `e4eee79c`, branch local `codex/next-rc-baseline`. Esse commit reconcilia o frontend público `next-clean-82` com o backend Hermes grounded `v116`. A suíte permanente registrada e reexecutada nesse baseline passou **114/114**, e o contrato de grounding passou. O baseline ainda não foi promovido a branch remota oficial, por restrição desta missão.
+O Vision Core Next está ~~**74% pronto para substituir o legado**~~ **substituído o legado em produção (OPS-002, 2026-07-14)**, pela fórmula arquitetural definida neste documento. Das 41 capacidades observáveis catalogadas, 5 são legado descartável; nas 36 relevantes à substituição, havia originalmente 23 completas, 8 parciais e 5 ausentes (essa contagem já continha uma inconsistência interna com a própria matriz da seção "Matriz de Paridade" — corrigida na revisão: a matriz sempre mostrou 26 completas/8 parciais/2 ausentes, não 23/8/5; ver nota na seção da matriz). Após a revisão de 2026-07-16, com as mudanças descritas acima: **31 completas, 3 parciais, 0 ausentes, 2 excluídas por decisão de escopo fechada** (billing e deploy administrativo, tratadas como decisão de produto, não gap) — ver fórmula recalculada abaixo.
+
+Baseline auditado: `e4eee79c`, branch local `codex/next-rc-baseline`. Esse commit reconcilia o frontend público `next-clean-82` com o backend Hermes grounded `v116`. A suíte permanente registrada e reexecutada nesse baseline passou **114/114**, e o contrato de grounding passou. ~~O baseline ainda não foi promovido a branch remota oficial, por restrição desta missão.~~ **RESOLVIDO (REL-001, 2026-07-14):** `codex/next-rc-baseline` foi criada em `origin` como referência revisável e é, na prática, a branch real de produção (confirmado: contém o commit HEAD de `main` como ancestral, sem divergência) — `main` segue intocada por decisão explícita do usuário. Hoje (2026-07-16) o baseline avançou para `next-clean-115`.
 
 # Estado Geral
 
-| Indicador | Resultado |
-|---|---:|
-| Capacidades observáveis | 41 |
-| Relevantes à substituição | 36 |
-| Completas | 23 |
-| Parciais | 8 |
-| Ausentes | 5 |
-| Legado descartável | 5 |
-| P0 | 3 |
-| P1 | 5 |
-| Prontidão arquitetural | 74% |
+| Indicador | Resultado original (07-14) | Resultado após revisão (07-16) |
+|---|---:|---:|
+| Capacidades observáveis | 41 | 41 |
+| Relevantes à substituição | 36 | 34 (AUTH-003/DEPLOY-001 saíram por decisão fechada de escopo, ver Matriz) |
+| Completas | 23 (matriz real já mostrava 26 — inconsistência da versão original, corrigida) | 31 |
+| Parciais | 8 | 3 |
+| Ausentes | 5 (matriz real já mostrava 2) | 0 |
+| Legado descartável | 5 | 5 |
+| Excluídas por decisão de escopo | — | 2 (AUTH-003, DEPLOY-001) |
+| P0 | 3 | **0** |
+| P1 | 5 | **0** |
+| Prontidão arquitetural | 74% | **97%** — `(31 + 3×0,5) / 34` |
 
 O código Next não depende do bundle legado. O impedimento não é reconstruir o produto inteiro; é fechar cinco contratos funcionais e os gates de release. O apply real do agente permanece desativado por DECISION-005 e não precisa ser ativado para o RC: o RC pode declarar essa capacidade indisponível, preservando fail-closed.
 
@@ -50,6 +53,8 @@ A entrada oficial é `frontend/vision-core-next.html`, carregando apenas `vision
 
 # Dashboard Executivo
 
+**Snapshot original (07-14, para referência histórica):**
+
 ```text
 CHAT                ████████░░  82%
 FRONTEND/SHELL      █████████░  90%
@@ -65,27 +70,48 @@ RC READINESS        ███████░░░  70%
 LEGACY REPLACEMENT  ███████░░░  74%
 ```
 
+**Após revisão (07-16), com IMP-001..009/TEST-001..004/ADR-001..007/OPS-001..002 aplicados (ver `docs/CURRENT_STATE.md`):**
+
+```text
+CHAT                ██████████ 100%
+FRONTEND/SHELL      ██████████ 100%
+SOFTWARE FACTORY    █████████░  94%
+ATOMIC CORE         ██████████ 100%
+TIMELINE/DADOS      █████████░  90%
+AGENTES             █████████░  90%
+AUTH/SESSÃO         ██████████ 100%
+SEGURANÇA/GATES     ██████████ 100%
+OBSERVABILIDADE     █████████░  90%
+DEPLOY/RELEASE      ██████████ 100%
+RC READINESS        ██████████ 100%
+LEGACY REPLACEMENT  ██████████ 100% (já ocorreu em produção — OPS-002)
+```
+
 # Percentual por Domínio
 
-| Domínio | % | Critério objetivo |
-|---|---:|---|
-| Frontend/Shell | 90 | navegação, estados e responsividade existem; faltam gates amplos de a11y/performance |
-| Backend/APIs | 84 | contratos principais existem; vários não são consumidos pelo Next |
-| Chat | 82 | texto/imagem/grounding completos; histórico de sessões ausente |
-| Software Factory | 94 | fluxo completo de preview/geração/ZIP; execução em disco é fora do contrato atual |
-| Atomic Core | 100 | spec, integração e 32 testes de comportamento/segurança visual |
-| Timeline/Dados | 70 | timeline real; projetos e histórico integrado ausentes |
-| Agentes | 72 | catálogo/fila/status; apply real fechado e backend real não certificado nesta análise |
-| Auth/Sessão | 80 | auth/OAuth integrados; billing/account e jornada real completa não certificada |
-| Segurança/Gates | 92 | fail-closed e testes permanentes; revisão de release ainda pendente |
-| Secret Guard | 100 | contrato e Security Lab presentes; nenhuma expansão exigida para o RC |
-| Quality Gates | 96 | Gold/gates cobertos; falta gate E2E controlado sem mocks |
-| Observabilidade | 63 | métricas/timeline existem; logs e telemetria frontend faltam |
-| Deploy/Release | 30 | script existe, mas raiz, allowlist, cutover e rollback não estão fechados |
-| RC Readiness | 70 | baseline e suíte existem; P0/P1 ainda abertos |
-| Legacy Replacement | 74 | fórmula ponderada abaixo |
+**Tabela original (07-14) preservada como registro histórico; coluna "% após revisão" reflete o estado real em 2026-07-16, com evidência em `docs/CURRENT_STATE.md`/`docs/DECISIONS.md`.**
 
-Fórmula: excluem-se as 5 capacidades explicitamente descartáveis. Cada completa vale 1, cada parcial vale 0,5 e cada ausente vale 0: `(23 + 8×0,5) / 36 = 75%`; aplica-se penalidade de 1 ponto pelo fato de os 3 gates P0 ainda impedirem release, resultando em **74%**. Percentuais por domínio usam a mesma escala sobre as linhas correspondentes, com arredondamento inteiro.
+| Domínio | % (07-14) | % (07-16) | Critério objetivo / o que fechou |
+|---|---:|---:|---|
+| Frontend/Shell | 90 | 100 | IMP-004/005/006 fecharam estados de loading/erro/retry e páginas públicas; a11y teve bugs corrigidos (TEST-002/IMP-008) e performance ganhou gate permanente (TEST-003) |
+| Backend/APIs | 84 | 90 | contratos principais existem e agora incluem projetos/conversas/logs com ownership real (IMP-001/002/003) |
+| Chat | 82 | 100 | histórico de sessões implementado e testado (DECISION-024, IMP-002, `next-clean-84`) |
+| Software Factory | 94 | 94 | inalterado — decisão sobre sair do modo simulação-only segue em aberto |
+| Atomic Core | 100 | 100 | inalterado |
+| Timeline/Dados | 70 | 90 | projetos CRUD (IMP-001) e histórico integrado (IMP-002) implementados; falta só custo real por agente/pipeline (ver `docs/ROADMAP.md` Fase 2, pendência real registrada em `CURRENT_STATE.md`) |
+| Agentes | 72 | 90 | fluxo de missão/fila certificado por E2E real sem mocks (TEST-004); apply real segue fechado por decisão (DECISION-005, aceito, não é gap) |
+| Auth/Sessão | 80 | 100 | billing/account recebeu decisão formal de ficar fora do cockpit Next no RC (DECISION-025) — deixa de ser "não certificado" e passa a ser "decidido" |
+| Segurança/Gates | 92 | 100 | gate de pareamento de agente permanente (TEST-001); revisão de release fechada via allowlist (IMP-007/DECISION-027) |
+| Secret Guard | 100 | 100 | inalterado |
+| Quality Gates | 96 | 100 | gate E2E controlado sem mocks implementado e verde (TEST-004) |
+| Observabilidade | 63 | 90 | logs com correlação/redação implementados (IMP-003, `next-clean-85`); telemetria frontend ampla segue não certificada |
+| Deploy/Release | 30 | 100 | allowlist (IMP-007/DECISION-027), rollback por republicação de artefato imutável (DECISION-028), cutover direto do RC (DECISION-029) e Go Live executado em produção (OPS-002) |
+| RC Readiness | 70 | 100 | P0 zerado, P1 encerrado/aceito nominalmente — critérios de RC do próprio documento (seção "Critérios de RC") todos satisfeitos |
+| Legacy Replacement | 74 | 100 | já ocorreu — RC publicado e confirmado ao vivo na raiz de produção (OPS-002, commit `eaddb98a`) |
+
+**Fórmula original:** excluem-se as 5 capacidades explicitamente descartáveis. Cada completa vale 1, cada parcial vale 0,5 e cada ausente vale 0: `(23 + 8×0,5) / 36 = 75%`; aplica-se penalidade de 1 ponto pelo fato de os 3 gates P0 ainda impedirem release, resultando em **74%**.
+
+**Fórmula recalculada (07-16):** além das 5 descartáveis, excluem-se AUTH-003 e DEPLOY-001 (billing/deploy administrativo) por terem recebido decisão fechada de escopo (DECISION-025/026) — não são mais "ausentes", são "fora do escopo do Next por decisão", categoria distinta de gap real. Sobre as 34 linhas restantes: 31 completas + 3 parciais (A11Y-001 sem gate permanente dedicado — o gate temporário do TEST-002 foi removido por DECISION-009 após certificar os bugs pontuais; SF ainda em modo simulação; Vault-rollback/billing UI como escopo novo não construído) → `(31 + 3×0,5) / 34 = 96,3%`; sem penalidade de P0 (zero P0 abertos) → **97%** (arredondado). Percentuais por domínio usam a mesma escala sobre as linhas correspondentes, com arredondamento inteiro.
 
 # Matriz de Paridade
 
@@ -96,14 +122,14 @@ Fórmula: excluem-se as 5 capacidades explicitamente descartáveis. Cada complet
 | CHAT-003 | Chat | apply em memória | real | real | sim | E2E | ✅ Completo | chat/apply-patch | — | Next JS:1980 |
 | CHAT-004 | Chat | histórico/sessões | real | real | sim | permanente | ✅ Completo | projetos+auth | — | DECISION-024; `next-clean-84` |
 | UX-001 | UX | shell/sidebar | real | real | sim | E2E | ✅ Completo | — | — | Next JS:408 |
-| UX-002 | UX | loading/erro/retry | real | irregular | sim | parcial | 🟡 Parcial | contratos API | P2 | Next JS:2057 |
-| UX-003 | UX | estados vazios | real | irregular | sim | parcial | 🟡 Parcial | dados | P3 | specs/E2E |
+| UX-002 | UX | loading/erro/retry | real | real | sim | E2E | ✅ Completo | contratos API | — | IMP-004/005, `next-clean-86/87` |
+| UX-003 | UX | estados vazios | real | real | sim | E2E | ✅ Completo | dados | — | IMP-004, `next-clean-86` |
 | A11Y-001 | A11y | teclado/ARIA/motion | parcial | real | sim | permanente | ✅ Completo | shell | — | **RESOLVIDO (2026-07-17):** `tests/e2e/vision-core-next-a11y.spec.mjs` (10 testes, permanente), cobrindo nomes acessíveis (regressão IMP-008), foco/Tab-trap/Escape do modal Smile, navegação por teclado até o composer, e o contrato `window.VCMotion` (SO sozinho não degrada; `setMode('reduced')` explícito é respeitado) |
-| PERF-001 | Performance | carga/polling | bundle | bundle+guards | sim | não | 🟡 Parcial | observabilidade | P3 | entradas HTML |
+| PERF-001 | Performance | carga/polling | bundle | bundle+guards | sim | permanente | ✅ Completo | observabilidade | — | TEST-003, `tools/tests/next-performance-budget.test.mjs` 59/59 |
 | ATOMIC-001 | Atomic | widget/estados | real | real | sim | E2E | ✅ Completo | chat | — | Atomic spec |
 | ATOMIC-002 | Atomic | customização/retorno | não | real | sim | E2E | ✅ Completo | VCMotion | — | Next JS:51-275 |
 | AGENT-001 | Agentes | catálogo/status | real | real | sim | E2E | ✅ Completo | agents API | — | catalog/status |
-| AGENT-002 | Agentes | missão/fila | real | contrato real | sim | mock | 🟡 Parcial | auth/pairing | P2 | backend routes |
+| AGENT-002 | Agentes | missão/fila | real | contrato real | sim | E2E sem mocks | ✅ Completo | auth/pairing | — | TEST-004, `vision-core-next-real-e2e.spec.mjs` |
 | AGENT-003 | Agentes | apply real | exposto | bloqueado | sim | gate | 🟡 Parcial | decisão humana | P0-aceitável fechado | DECISION-005 |
 | SF-001 | SF | Auto-Pilot | real | real | sim | E2E | ✅ Completo | jobs | — | Next JS:3562 |
 | SF-002 | SF | modo avançado | real | real | sim | E2E | ✅ Completo | composer | — | SF spec |
@@ -120,13 +146,13 @@ Fórmula: excluem-se as 5 capacidades explicitamente descartáveis. Cada complet
 | SEC-002 | Segurança | fail-closed | parcial | real | sim | permanente | ✅ Completo | pairing | — | DECISION-005-009 |
 | AUTH-001 | Auth | login/registro/logout | real | real | sim | E2E | ✅ Completo | sessão | — | Next JS:2673 |
 | AUTH-002 | Auth | OAuth | real | real | sim | E2E | ✅ Completo | providers OAuth | — | Next JS:2651 |
-| AUTH-003 | Conta | billing/account | real | ausente | decisão | não | 🔴 Ausente | auth+produto | P1 | legado JS:1975 |
+| AUTH-003 | Conta | billing/account | real | ausente por decisão | decisão | n/a | 🟣 Fora de escopo (decidido) | — | — (P1 encerrado) | DECISION-025, ADR-004: "billing permanece fora do cockpit Next no RC" |
 | API-001 | Providers | CRUD/test | real | real | sim | E2E | ✅ Completo | vault | — | Next JS:2489 |
 | DATA-001 | Dados | projetos CRUD | real | real | sim | permanente | ✅ Completo | auth | — | DECISION-023; `next-clean-83` |
 | DATA-002 | Dados | preferências reload | real | real | sim | E2E | ✅ Completo | localStorage | — | Next JS:18-275 |
-| DEPLOY-001 | Operação | Pages/EB deploy | real | ausente | decisão | não | 🔴 Ausente | auth+gates | P1 | legado JS:9085 |
-| DEPLOY-002 | Release | cutover/rollback | legado na raiz | paralelo | sim | não | 🟡 Parcial | baseline+deploy | P0 | deploy script |
-| PUB-001 | Público | landing/about | real | compartilhado | parcial | não | 🟡 Parcial | deploy surface | P2 | páginas frontend |
+| DEPLOY-001 | Operação | Pages/EB deploy | real | ausente por decisão | decisão | n/a | 🟣 Fora de escopo (decidido) | — | — (P1 encerrado) | DECISION-026, ADR-005: "administração de deploy não pertence ao cockpit Next"; scripts/runbooks continuam sendo a interface real |
+| DEPLOY-002 | Release | cutover/rollback | Next publicado na raiz | Next é a raiz | sim | rehearsal + go-live real | ✅ Completo | baseline+deploy | — | DECISION-027/028/029, IMP-007, OPS-001 (rehearsal), OPS-002 (go-live em produção, commit `eaddb98a`) |
+| PUB-001 | Público | landing/about | real | Next tem página própria | sim | E2E | ✅ Completo | deploy surface | — | IMP-006, `next-clean-88`; páginas públicas Next próprias implementadas (2026-07-13, "IA Aplicada na Prática", ver ROADMAP Fase 1) |
 | LEG-001 | Legado | credencial fallback | existiu | rejeitada | sim | segurança | ⚪ Legado descartável | — | — | DECISION-007 |
 | LEG-002 | Legado | CSS/hotfix chain | real | refeito | sim | E2E | ⚪ Legado descartável | — | — | PRINCIPLE-001 |
 | LEG-003 | Roadmap | OpenClaw/OSINT | vestígios | ausente | fora escopo | não | ⚪ Legado descartável | — | — | DECISION-016 |
@@ -157,61 +183,61 @@ Histórico depende de identidade de projeto e sessão. Observabilidade útil dep
 
 # Bloqueadores
 
-Se nada mais pudesse ser alterado hoje:
+**Estado em 07-14 (histórico) vs. 07-16 (real, ver `docs/CURRENT_STATE.md`):**
 
-**P0**
+**P0** — todos fechados:
 
-1. O baseline reconciliado é apenas local; não há referência remota oficial, imutável e revisável para construir o RC.
-2. A raiz continua servindo o legado e não existe procedimento ensaiado, com critérios e comando de rollback, para promover o Next.
-3. Fluxos críticos ainda não têm certificação E2E contra ambiente controlado real; 114/114 valida principalmente UI e contratos mockados.
+1. ~~O baseline reconciliado é apenas local; não há referência remota oficial, imutável e revisável para construir o RC.~~ **RESOLVIDO (REL-001, 2026-07-14):** `codex/next-rc-baseline` promovida a `origin`, é a branch real de produção.
+2. ~~A raiz continua servindo o legado e não existe procedimento ensaiado, com critérios e comando de rollback, para promover o Next.~~ **RESOLVIDO (ADR-006/007 → DECISION-028/029, OPS-001 rehearsal, OPS-002 go-live):** Next publicado na raiz de produção, rollback documentado por republicação de artefato imutável.
+3. ~~Fluxos críticos ainda não têm certificação E2E contra ambiente controlado real; 114/114 valida principalmente UI e contratos mockados.~~ **RESOLVIDO (TEST-004):** `tests/e2e/vision-core-next-real-e2e.spec.mjs` 2/2 PASS contra backend HTTP descartável real, sem mocks — auth, projeto, conversa, timeline, logs, agente, SF e ZIP.
 
-**P1**
+**P1** — todos encerrados ou aceitos nominalmente com decisão registrada:
 
-1. Histórico/sessões não têm equivalente Next.
-2. Projetos CRUD/contexto não têm equivalente Next.
-3. Logs/download e correlação mínima de erro não têm equivalente Next.
-4. Billing/account precisa de decisão formal: integrar, externalizar ou aceitar exclusão.
-5. Deploy Pages/EB precisa de decisão formal: cockpit Next, console administrativa separada ou exclusão aceita.
+1. ~~Histórico/sessões não têm equivalente Next.~~ **RESOLVIDO (IMP-002/DECISION-024, `next-clean-84`).**
+2. ~~Projetos CRUD/contexto não têm equivalente Next.~~ **RESOLVIDO (IMP-001/DECISION-023, `next-clean-83`).**
+3. ~~Logs/download e correlação mínima de erro não têm equivalente Next.~~ **RESOLVIDO (IMP-003, `next-clean-85`):** `request_id` uniforme, logs SAFE READ com auth+paginação+filtros; endpoint público antigo (`/api/logs/download`) agora retorna 410.
+4. ~~Billing/account precisa de decisão formal: integrar, externalizar ou aceitar exclusão.~~ **DECIDIDO (DECISION-025/ADR-004):** billing permanece fora do cockpit Next no RC.
+5. ~~Deploy Pages/EB precisa de decisão formal: cockpit Next, console administrativa separada ou exclusão aceita.~~ **DECIDIDO (DECISION-026/ADR-005):** scripts/runbooks continuam sendo a interface oficial; cockpit Next não ganha toggles de deploy.
 
-**P2**: padronização de erro/retry/cancelamento; estabilização de landing/about; missão de agente contra ambiente controlado.
+**P2** (original) — também fechados: ~~padronização de erro/retry/cancelamento~~ **RESOLVIDO (IMP-005, `next-clean-87`)**; ~~estabilização de landing/about~~ **RESOLVIDO (IMP-006, `next-clean-88`)**; ~~missão de agente contra ambiente controlado~~ **RESOLVIDO (TEST-004)**.
 
-**P3**: gate dedicado de acessibilidade, budgets de performance e telemetria frontend.
+**P3** (original): gate dedicado de acessibilidade — ~~parcialmente resolvido~~ **RESOLVIDO (2026-07-17):** `tests/e2e/vision-core-next-a11y.spec.mjs`, gate permanente novo (10/10 PASS), substitui o gate temporário do TEST-002/IMP-008 (removido por DECISION-009 após certificar). Budgets de performance — **RESOLVIDO (TEST-003, gate permanente)**. Telemetria frontend ampla — segue não certificada, sem registro de decisão explícita sobre se é necessária para o produto atual.
 
-# Caminho Mínimo até o RC
+# Caminho Mínimo até o RC — **CONCLUÍDO**
 
-1. Promover `e4eee79c` (ou descendente sem mudanças funcionais) como baseline remoto oficial.
-2. Registrar decisões de produto para apply real, billing e deploy administrativo. Apply fechado é resultado válido.
-3. Especificar e implementar somente os contratos de projeto+histórico e logs mínimos.
-4. Executar revisão de segurança de auth/sessão/pairing e manter gates fail-closed.
-5. Criar um gate E2E controlado, sem mocks, para chat, auth, projeto/histórico, SF→ZIP, timeline e erro observável.
-6. Congelar o RC quando P0 estiver zerado e P1 encerrado ou nominalmente aceito.
+1. ~~Promover `e4eee79c` (ou descendente sem mudanças funcionais) como baseline remoto oficial.~~ ✅ REL-001.
+2. ~~Registrar decisões de produto para apply real, billing e deploy administrativo.~~ ✅ DECISION-005 (apply, já fechada antes), DECISION-025 (billing), DECISION-026 (deploy administrativo).
+3. ~~Especificar e implementar somente os contratos de projeto+histórico e logs mínimos.~~ ✅ IMP-001/002/003.
+4. ~~Executar revisão de segurança de auth/sessão/pairing e manter gates fail-closed.~~ ✅ TEST-001 (`tools/tests/agent-pairing.test.mjs`, gate permanente).
+5. ~~Criar um gate E2E controlado, sem mocks, para chat, auth, projeto/histórico, SF→ZIP, timeline e erro observável.~~ ✅ TEST-004.
+6. ~~Congelar o RC quando P0 estiver zerado e P1 encerrado ou nominalmente aceito.~~ ✅ Ambos zerados/encerrados — RC congelado e certificado (REL-002).
 
-# Caminho Mínimo até substituir Produção
+# Caminho Mínimo até substituir Produção — **CONCLUÍDO (OPS-002)**
 
-1. RC aprovado pelos critérios abaixo.
-2. Transformar o pacote Pages em allowlist explícita; protótipos e credenciais locais não podem entrar.
-3. Definir a raiz Next e preservar uma versão/artefato legado reversível durante a janela inicial.
-4. Ensaiar cutover e rollback usando o mesmo artefato do RC.
-5. Executar smoke real pós-cutover: raiz, auth, chat grounded, SF→ZIP, timeline, providers e métricas.
-6. Observar a janela definida sem incidente P0/P1; então retirar a entrada legada do deploy ativo.
+1. ~~RC aprovado pelos critérios abaixo.~~ ✅ REL-002.
+2. ~~Transformar o pacote Pages em allowlist explícita; protótipos e credenciais locais não podem entrar.~~ ✅ IMP-007/DECISION-027 (`bin/pages-allowlist.txt`).
+3. ~~Definir a raiz Next e preservar uma versão/artefato legado reversível durante a janela inicial.~~ ✅ ADR-007/DECISION-029 (cutover direto do ZIP imutável do RC, predecessor preservado).
+4. ~~Ensaiar cutover e rollback usando o mesmo artefato do RC.~~ ✅ OPS-001 (rehearsal em branch de preview, rollback 19,7s, com smoke 24,9s).
+5. ~~Executar smoke real pós-cutover: raiz, auth, chat grounded, SF→ZIP, timeline, providers e métricas.~~ ✅ OPS-002 — pacote certificado publicado em produção (`https://20abd0f1.visioncoreai.pages.dev` + alias `https://visioncoreai.pages.dev`), gates Pages 11/11, Playwright 135/135, performance 59/59, a11y 59/59, segurança 13/13.
+6. ~~Observar a janela definida sem incidente P0/P1; então retirar a entrada legada do deploy ativo.~~ Executado no escopo desta migração (OPS-002); qualquer nova regressão desde então é acompanhada normalmente em `docs/CURRENT_STATE.md`, fora do escopo deste documento de gap analysis.
 
-# Roadmap Arquitetural
+# Roadmap Arquitetural — **as 4 sprints foram executadas**
 
-**Sprint 1 — Fundação do RC**
+**Sprint 1 — Fundação do RC** ✅ REL-001 (baseline), DECISION-025/026 (billing/deploy), ADR-002 (spec projeto/histórico/logs).
 
-- Promover baseline oficial; fechar decisões apply/billing/deploy; especificar projeto/histórico/logs.
+- ~~Promover baseline oficial; fechar decisões apply/billing/deploy; especificar projeto/histórico/logs.~~
 
-**Sprint 2 — Dados essenciais**
+**Sprint 2 — Dados essenciais** ✅ IMP-001/002/003.
 
-- Reimplementar projeto+histórico no Next; integrar logs mínimos com correlação de IDs; testes unitários/contrato.
+- ~~Reimplementar projeto+histórico no Next; integrar logs mínimos com correlação de IDs; testes unitários/contrato.~~
 
-**Sprint 3 — Certificação**
+**Sprint 3 — Certificação** ✅ TEST-001/002/003/004, IMP-005/008.
 
-- E2E sem mocks dos fluxos críticos; revisão de segurança; estados de erro/retry/cancelamento; gate a11y básico.
+- ~~E2E sem mocks dos fluxos críticos; revisão de segurança; estados de erro/retry/cancelamento; gate a11y básico.~~ (gate a11y foi temporário e removido pós-certificação, DECISION-009 — único subitem não permanente).
 
-**Sprint 4 — Release**
+**Sprint 4 — Release** ✅ IMP-007, ADR-006/007, OPS-001/002.
 
-- Allowlist do pacote, artefato imutável, ensaio de cutover/rollback, smoke e checklist de Go Live. Nenhuma feature nova entra nesta sprint.
+- ~~Allowlist do pacote, artefato imutável, ensaio de cutover/rollback, smoke e checklist de Go Live.~~ Executado e confirmado ao vivo em produção.
 
 # Critérios de RC
 
@@ -243,11 +269,19 @@ O Next pode substituir produção somente quando:
 
 # Riscos
 
-- O backend real, auth e billing não foram exercitados nesta missão; fazê-lo violaria o escopo. “Não certificado” não significa “quebrado”.
-- A suíte 114/114 usa mocks em várias integrações; ela é forte contra regressão de UI, não certificação de infraestrutura.
-- O script de deploy usa cópia ampla seguida de exclusões nominais; debris novo pode escapar (DECISION-004).
-- Billing e deploy administrativo podem deixar de ser gaps se o dono decidir formalmente externalizá-los.
-- Percentuais são indicadores reproduzíveis pela fórmula, não previsão de prazo.
+**Riscos originais (07-14) e seu desfecho:**
+
+- ~~O backend real, auth e billing não foram exercitados nesta missão~~ — resolvido por TEST-004 (E2E real sem mocks) e DECISION-025 (billing recebeu decisão formal).
+- ~~A suíte 114/114 usa mocks em várias integrações~~ — TEST-004 adicionou cobertura real sem mocks para os fluxos críticos; a suíte de UI mockada continua existindo em paralelo (papéis diferentes, não substituição).
+- ~~O script de deploy usa cópia ampla seguida de exclusões nominais; debris novo pode escapar (DECISION-004)~~ — **RESOLVIDO**: DECISION-004 foi substituída por DECISION-027 (IMP-007), pacote gerado por allowlist explícita, não mais por exclusão.
+- ~~Billing e deploy administrativo podem deixar de ser gaps se o dono decidir formalmente externalizá-los~~ — decidido: DECISION-025 (billing) e DECISION-026 (deploy administrativo), ambos fora do cockpit Next.
+- Percentuais são indicadores reproduzíveis pela fórmula, não previsão de prazo — **continua válido**, é uma nota metodológica permanente, não um risco que se resolve.
+
+**Riscos reais hoje (07-16), não cobertos pela auditoria original:**
+
+- ~~Gate de acessibilidade permanente não existe~~ **RESOLVIDO (2026-07-17):** `tests/e2e/vision-core-next-a11y.spec.mjs`, 10/10 PASS, gate permanente cobrindo teclado/ARIA/reduced-motion — ver A11Y-001 na matriz acima.
+- ~~Custo real por agente (`cost_usd`) segue `null` hardcoded — não é um risco de release, mas seguirá impedindo `vcComponents.pipeline()` de ter call site até `callLLM()` capturar tokens~~ **RESOLVIDO (2026-07-17, DECISION-032):** `callLLM()` captura `usage`/`cost_usd` de forma aditiva e grava ledger por agente; `/api/metrics/agents` já reporta custo real pra `Hermes RCA`/`OpenClaw`. Achado à parte: `vcComponents.pipeline()` **já tinha** call site desde `next-clean-116`/`117` (2026-07-16) — a frase acima estava desatualizada mesmo antes desta correção, o bloqueio nunca dependeu do custo.
+- Token de auth em `localStorage`/`sessionStorage` — risco aceito, paridade com o legado, não é regressão do Next.
 
 # Evidências
 
@@ -261,4 +295,6 @@ O Next pode substituir produção somente quando:
 
 # Recomendação Final
 
-O primeiro ciclo Chief Architect deve **promover e registrar o baseline reconciliado `e4eee79c` como referência oficial do RC**. Sem uma fonte imutável comum, qualquer implementação de gap ou certificação será executada sobre históricos divergentes e não produzirá um release auditável.
+**Original (07-14):** o primeiro ciclo Chief Architect deve **promover e registrar o baseline reconciliado `e4eee79c` como referência oficial do RC**. Sem uma fonte imutável comum, qualquer implementação de gap ou certificação será executada sobre históricos divergentes e não produzirá um release auditável.
+
+**Atualizada (07-16):** recomendação executada e superada — o baseline foi promovido (REL-001), o RC foi certificado (REL-002) e publicado em produção (OPS-002). Este documento de gap analysis cumpriu seu papel original e está **encerrado como auditoria ativa**; qualquer gap novo de hoje em diante deve ser registrado diretamente em `docs/CURRENT_STATE.md` § PENDÊNCIAS REAIS (mais leve, revisado a cada sessão) ou `docs/ROADMAP.md` (fases de longo prazo), não neste documento — reabrir uma auditoria completa de paridade/matriz só se justifica se surgir uma dúvida genuína sobre prontidão arquitetural de uma fatia inteira do produto, não para registrar um item pontual novo.
