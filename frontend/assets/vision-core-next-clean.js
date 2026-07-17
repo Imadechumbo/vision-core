@@ -3931,7 +3931,7 @@
     return state === 'action' ? this.actionValues(elapsed) : this.idleValues(elapsed);
   };
 
-  Agent.prototype.place = function (elapsed) {
+  Agent.prototype.place = function (elapsed, updateGlow) {
     var value = this.values(elapsed);
     var isHighlighted = highlighted[this.name];
     var x = typeof value.x === 'number' ? value.x : CX + Math.cos(value.angle) * value.radius;
@@ -3940,10 +3940,20 @@
     this.node.style.opacity = Math.min(1, value.opacity + (isHighlighted ? .08 : 0)).toFixed(3);
     this.node.style.zIndex = value.layer + (isHighlighted ? 2 : 0);
     this.node.classList.toggle('is-highlighted', !!isHighlighted);
-    var glow = value.glow * this.glowWeight * (isHighlighted ? 1.45 : 1);
-    var glowPercent = Math.max(18, Math.min(84, glow));
-    var widePercent = Math.max(8, glowPercent - 18);
-    this.node.style.filter = 'drop-shadow(0 0 ' + (glow * .48).toFixed(1) + 'px color-mix(in srgb, var(--agent-glow-color, currentColor) ' + glowPercent.toFixed(0) + '%, transparent)) drop-shadow(0 0 ' + (glow * .92).toFixed(1) + 'px color-mix(in srgb, var(--agent-glow-color, currentColor) ' + widePercent.toFixed(0) + '%, transparent))';
+    // Achado real (2026-07-18): filter:drop-shadow() com color-mix() é a escrita
+    // mais cara deste loop (força recálculo de sombra por pixel, 2 camadas x 10
+    // agentes) -- medido via rAF timing real: 67% dos frames estourando o
+    // orçamento de 60fps, alguns >33ms (frame perdido, percebido como flicker).
+    // O brilho (glow) é um pulso lento e decorativo, não precisa da mesma
+    // cadência do transform/opacity -- atualiza a 1/3 da frequência (render()
+    // já throttla pra ~30fps; isso soma ~10fps só pro filter). Entre updates,
+    // o filter já escrito no frame anterior permanece (nunca some/pisca).
+    if (updateGlow) {
+      var glow = value.glow * this.glowWeight * (isHighlighted ? 1.45 : 1);
+      var glowPercent = Math.max(18, Math.min(84, glow));
+      var widePercent = Math.max(8, glowPercent - 18);
+      this.node.style.filter = 'drop-shadow(0 0 ' + (glow * .48).toFixed(1) + 'px color-mix(in srgb, var(--agent-glow-color, currentColor) ' + glowPercent.toFixed(0) + '%, transparent)) drop-shadow(0 0 ' + (glow * .92).toFixed(1) + 'px color-mix(in srgb, var(--agent-glow-color, currentColor) ' + widePercent.toFixed(0) + '%, transparent))';
+    }
   };
 
   var agents = Array.prototype.slice.call(root.querySelectorAll('[data-agent]')).map(function (node) {
@@ -3953,8 +3963,11 @@
   var raf = 0;
   var startTime = performance.now();
 
+  var renderTickCount = 0;
   function render(elapsed) {
-    agents.forEach(function (agent) { agent.place(elapsed); });
+    renderTickCount++;
+    var updateGlow = (renderTickCount % 3 === 0);
+    agents.forEach(function (agent) { agent.place(elapsed, updateGlow); });
     if (coreNode) {
       var scale = 1;
       if (!reduceMotion && state === 'action') scale = 1 + ((Math.sin(elapsed / 1200 * Math.PI * 2) + 1) / 2) * .04;
