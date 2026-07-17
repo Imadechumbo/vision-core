@@ -3821,6 +3821,7 @@
     this.phase = config.phase;
     this.glowColor = config.glowColor;
     this.glowWeight = config.glowWeight;
+    this.lastFilter = '';
     this.node.style.setProperty('--agent-glow-color', this.glowColor);
   }
 
@@ -3952,7 +3953,18 @@
       var glow = value.glow * this.glowWeight * (isHighlighted ? 1.45 : 1);
       var glowPercent = Math.max(18, Math.min(84, glow));
       var widePercent = Math.max(8, glowPercent - 18);
-      this.node.style.filter = 'drop-shadow(0 0 ' + (glow * .48).toFixed(1) + 'px color-mix(in srgb, var(--agent-glow-color, currentColor) ' + glowPercent.toFixed(0) + '%, transparent)) drop-shadow(0 0 ' + (glow * .92).toFixed(1) + 'px color-mix(in srgb, var(--agent-glow-color, currentColor) ' + widePercent.toFixed(0) + '%, transparent))';
+      // Achado real (2026-07-18, retomada): a% já é quantizada por
+      // .toFixed(0) -- em boa parte dos ticks o valor não muda de verdade
+      // (glow lento demais pra render a cada tick), então a string final
+      // sai idêntica à do tick anterior. Escrever style.filter de novo
+      // ainda assim força o navegador a invalidar e recompor a camada
+      // (mesmo sem mudança visual real) -- pular a escrita quando a string
+      // é igual corta esse custo sem alterar nenhum valor visível.
+      var nextFilter = 'drop-shadow(0 0 ' + (glow * .48).toFixed(1) + 'px color-mix(in srgb, var(--agent-glow-color, currentColor) ' + glowPercent.toFixed(0) + '%, transparent)) drop-shadow(0 0 ' + (glow * .92).toFixed(1) + 'px color-mix(in srgb, var(--agent-glow-color, currentColor) ' + widePercent.toFixed(0) + '%, transparent))';
+      if (nextFilter !== this.lastFilter) {
+        this.node.style.filter = nextFilter;
+        this.lastFilter = nextFilter;
+      }
     }
   };
 

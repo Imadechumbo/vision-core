@@ -1032,16 +1032,31 @@ a { color: inherit; text-decoration: none; }
 
 
 .vc-chat-content {
-  display: block;
+  /* Achado real (2026-07-18): .vc-chat-scroll é flex:1 1 auto e é esticado
+     pelo min-height:calc(100vh-116px) de .vc-chat-stage, mas .vc-chat-content
+     (display:block) nunca herdava essa altura extra -- sobrava um vão vazio
+     grande entre o fim das mensagens e o composer (medido: até ~372px numa
+     conversa curta em 1440x900). .vc-chat-stream já tinha justify-content:
+     end pra ancorar mensagens embaixo, só faltava a cadeia flex propagar a
+     altura disponível até ele. */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
   width: 100%;
   min-width: 0;
 }
 
-.vc-message-column { min-width: 0; }
+.vc-message-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
 
 .vc-chat-stream {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 14px;
   justify-content: end;
   width: 100%;
