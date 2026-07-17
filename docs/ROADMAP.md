@@ -133,13 +133,25 @@ Pendências registradas (achado real, 2026-07-13 — discussão mapeando MCP e F
 
 ## FASE 6 — Desktop
 
-**Estado:** EXISTENTE — Vision Agent Local já é um app Electron real e distribuído (`desktop-agent/`, build scripts win/mac/linux, tray+logs+report viewer), instalado via `VisionAgentSetup.exe` (`frontend/downloads/`).
+**Estado:** EXISTENTE — dois produtos reais e ativos, **não são a mesma coisa empacotada de duas formas.**
 
-**Objetivos:** esta consolidação não encontrou pendência registrada específica para o desktop agent além do que já está coberto pelo pareamento `agent_secret` (Fase 1, `ARCHITECTURE.md`).
+**Investigação concluída (2026-07-17), resolve o "gap de documentação real" registrado anteriormente nesta seção — comparação linha a linha de `desktop-agent/src/main.js` (291 linhas) + `preload.js` + `BUILD.md` vs. `frontend/downloads/vision-agent.js` (1352 linhas):**
 
-**Nota honesta:** existem **duas implementações do agente local** no repositório — `desktop-agent/` (Electron completo) e `frontend/downloads/vision-agent.js` (script Node standalone) — ambas parecem servir o mesmo papel (Vision Agent Local, porta 7070). Esta auditoria não confirmou se são a mesma coisa empacotada de duas formas ou implementações paralelas divergentes — **gap de documentação real**, não resolvido por suposição.
+| | `frontend/downloads/vision-agent.js` | `desktop-agent/` (→ `VisionAgentSetup.exe`) |
+|---|---|---|
+| **Natureza** | Script Node standalone (`node vision-agent.js <caminho>`), porta 7070 (health check) | App Electron completo (tray, BrowserWindow, notificações nativas) |
+| **O que faz de verdade** | Pipeline SDDF completo **local e real**: Scanner (varre disco), Hermes/askIA (`/api/chat` mode:fix), PatchEngine (escreve arquivo real + backup/rollback), Aegis (`node --check`/JSON.parse), GoCore (git add+commit local, nunca push automático), firewall de auto-modificação (§110, impede apontar pra si mesmo), dry-run real multi-arquivo (simulação em memória, sem escrita) | Chama só `/api/run-live` (sempre `mode:'dry-run'` hardcoded em `main.js:169`) e `/api/run-live-stream` (SSE) — **execução acontece no servidor**, nunca toca o disco da máquina do usuário. Também usa `/api/pass-gold/score` (report viewer) e `fetch-api` genérico via IPC. |
+| **Autenticação** | Pareamento real `agent_id`/`agent_secret` via `POST /api/agent/register`, persistido em `.vc-agent-credentials.json`, exigido pra missões de escrita real (`apply_patch`/`apply_patch_multi`/`git_push`/`git_revert`) | Token JWT colado manualmente em Config (`BUILD.md` §"Configurar") — **sem conceito de `agent_secret`**, `preload.js` não expõe nenhum IPC de pareamento |
+| **Como recebe trabalho** | Polling ativo: `GET /api/agent/mission/pending` a cada `POLL_MS` (3s default), despacha por `m.type` (`apply_patch`, `apply_patch_multi`, `git_push`, `git_revert`, `sf_dry_run_real`, default `executeMission`) | Usuário clica "iniciar missão" na UI; app faz 1 `POST /api/run-live` e escuta o SSE da resposta |
+| **Referenciado ativamente?** | Sim — `frontend/index.html:2218` (`<a ... href="downloads/vision-agent.js" download>`) e Next (`vision-core-next.html`) descreve conceitualmente o fluxo de pareamento `agent_secret`/dry-run que **só este script implementa** | Sim — `frontend/index.html:260,2217` (botão "BAIXAR AGENT" + link direto pro GitHub Release `VisionAgentSetup.exe`) |
 
-**Prioridade:** sem pendência ativa conhecida · **Estimativa:** —.
+**Conclusão real (decisão de arquitetura, agora documentada — antes estava ambígua):** são dois produtos complementares e propositalmente diferentes, não uma divergência a corrigir — `vision-agent.js` é o motor de execução real (o que `CLAUDE.md`/`ARCHITECTURE.md` chamam de "Vision Agent Local" no sentido de pareamento + PI Harness), e o app Electron é um **cliente de monitoramento/disparo remoto** ("Vision Agent Desktop" seria nome mais preciso), sem qualquer acesso a disco local do usuário.
+
+**Inconsistência real encontrada (não é a divergência que se temia, mas é um gap de UX/doc genuíno):** `frontend/index.html` apresenta os dois downloads lado a lado sob o mesmo rótulo "BAIXAR AGENT", como se fossem formatos alternativos da mesma ferramenta (GUI vs. CLI do mesmo agente) — não são. Um usuário que baixa só o `.exe` esperando o comportamento de "Vision Agent Local" descrito no Next (pareamento `agent_secret`, apply-patch real, dry-run real com firewall de auto-modificação) **não vai encontrar esse mecanismo no app Electron** — ele não existe lá. Isso não foi corrigido nesta missão (é investigação/documentação, não mudança de código/UI); fica como nota separada abaixo para decisão do usuário.
+
+**Nota separada para decisão do usuário (não código, só recomendação):** considerar, numa sessão futura autorizada, (a) renomear o app Electron na UI de download para deixar claro que é um painel de monitoramento remoto, não o executor local real, e/ou (b) adicionar uma linha de esclarecimento ao lado dos dois botões em `frontend/index.html` explicando a diferença real de capacidade. Nenhum arquivo de código foi alterado, movido ou deletado nesta investigação.
+
+**Prioridade:** sem pendência técnica ativa — o gap era de documentação/nomenclatura, agora resolvido; a nota de UX acima é opcional e depende de decisão do usuário. **Estimativa:** —.
 
 ---
 
