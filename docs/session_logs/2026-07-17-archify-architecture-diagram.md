@@ -250,9 +250,35 @@ render real de ponta a ponta). `project-infographic.test.mjs` 54/54 sem
 regressão (arquivo não tocado). Preview visual gerado e conferido (4
 componentes coloridos corretamente, hub-and-spoke, legenda legível).
 
+Commit `8605654e` aprovado e criado (não pushado ainda). Deploy EB pedido em
+seguida, com a mesma disciplina de 3 camadas do fix de topologia anterior —
+desta vez cobrindo os DOIS arquivos que mudaram (`server.js` E
+`tools/project-architecture-diagram.mjs`, não só o primeiro):
+
+1. Probe de resolução de import (`importToolsModule`), rodado dentro do zip
+   extraído `v5.9.70-standard-branch-diagram.zip`.
+2. Probe de ponta a ponta cobrindo os DOIS branches no mesmo diretório —
+   confirma que o branch complex não regrediu (`PROJETO_INFOGRAFICO.html`+
+   `PROJETO_DIAGRAMA.html` ainda saem certo) e que o branch standard produz
+   `PROJETO_DIAGRAMA.html` real (com `<svg>`) sem infográfico (esperado).
+3. Boot completo via `npm start` no diretório extraído, `/api/health` 200.
+
+Deploy real: `v5.9.70-standard-branch-diagram`, `Ok`/`Green`, `Status5xx:0`
+em múltiplas leituras, `/api/health` 200 confirmado. Sem rollback necessário.
+
+## Estado final desta linha de trabalho
+
+Investigação (Fase 1) → proposta (Fase 2) → implementação branch complex →
+incidente de deploy real (`llm-cost.js`, não relacionado ao Archify) →
+rollback → fix + redeploy → fix de topologia de `tools/` (`v5.9.69`) →
+extensão pro branch standard (`v5.9.70`). Os 2 branches do SF que geram
+`files[]` (`complex` e `standard`) agora produzem `PROJETO_DIAGRAMA.html`
+real em produção. `PROJETO_INFOGRAFICO.html` continua exclusivo do branch
+complex — decisão de escopo, não uma lacuna.
+
 ## Próximo comando recomendado
 
-Revisar o diff (`backend/server.js`, `tools/project-architecture-diagram.mjs`,
-`tools/tests/project-architecture-diagram.test.mjs`, docs) e, se aprovado,
-commitar. Deploy EB é decisão separada (mesma disciplina de sempre: boot
-local antes de subir, poll até Green, rollback imediato se algo destoar).
+Nenhum pendente nesta linha de trabalho. Decisão em aberto pro usuário,
+sem urgência: push do commit `8605654e` pra `origin` (feito localmente,
+deploy já está em produção a partir dele, mas o branch remoto ainda não
+reflete isso).
