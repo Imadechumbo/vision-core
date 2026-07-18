@@ -187,25 +187,33 @@ Pendências registradas (achado real, 2026-07-13 — discussão mapeando MCP e F
 
 ## FASE 9 — Enterprise
 
-**Estado:** PLANEJADO — nível atual de segurança **8.5/10**, meta **9/10** antes do lançamento Enterprise.
+**Estado:** PAUSADO POR DECISÃO DE PRODUTO — levantamento real concluído em 2026-07-18; retomar somente quando houver sinal concreto de demanda (ver DECISION-033).
 
 **Objetivos e critérios de aceite (por §, `docs/ENTERPRISE-SPEC.md`):**
 
 | Item | O quê | Estado |
 |---|---|---|
-| §155 | SSO Enterprise via OpenID Connect (`/api/auth/sso/start`/`/callback`, PKCE+HMAC state) | PLANEJADO |
-| §156 | Isolamento real multi-projeto (roles owner/editor/viewer, `/api/projects/:id/members`) | PLANEJADO |
+| §155 | SSO Enterprise via OpenID Connect (`/api/auth/sso/start`/`/callback`, PKCE+HMAC state) | FORA DO ESCOPO DA PRÓXIMA RETOMADA — sem demanda confirmada |
+| §156 | Multi-workspace com isolamento real (workspace/tenant, projetos, membros e roles owner/editor/viewer) | PRIORIDADE 1 — PAUSADO |
 | §157 | Workers Dashboard (`/api/workers/dashboard`) | PLANEJADO |
-| §158 | 2FA TOTP obrigatório Enterprise/opcional PRO (RFC 6238, `/api/auth/2fa/*`) | PLANEJADO |
+| §158 | 2FA TOTP obrigatório Enterprise/opcional PRO (RFC 6238, `/api/auth/2fa/*`) | PRIORIDADE 2 — PAUSADO |
 | §160 | Pentest OWASP ZAP — checklist pronto (`docs/PENTEST-CHECKLIST.md`), não executado ainda | PLANEJADO |
 
-**Gate de liberação declarado na spec:** "§155 + §156 + §158 + §160 (pentest) → lançamento ENTERPRISE liberado."
+**Levantamento de 2026-07-18 (código verificado, não só status documental):**
 
-**Dependências:** nenhuma técnica bloqueante — todos os 4 itens têm spec completa, é trabalho de implementação.
+- §155 é parcial: há cadastro de domínios em S3 e auto-upgrade para Enterprise no Google OAuth, mas não existem os endpoints OIDC genéricos, discovery, PKCE/JWKS nem vínculo domínio → workspace prometidos.
+- §156 tem fundação parcial: projetos e conversas já são isolados pelo owner autenticado, mas não existe entidade workspace/tenant, membership, roles compartilhadas, convites ou enforcement granular nas rotas.
+- §157 tem fundação parcial em `/api/metrics/agents` e no painel Métricas, mas não existe `/api/workers/dashboard`, histórico de 24h, agregação por projeto nem alertas conforme a spec.
+- §158 está em zero código: não há TOTP, fluxo de token parcial, backup codes, endpoints ou UI.
+- §160 possui apenas o checklist; o pentest ainda não foi executado.
 
-**Riscos:** pentest (§160) só pode rodar depois de §155/§156/§158 estarem no ar, senão testa uma superfície incompleta.
+**Decisão de escopo:** quando houver demanda real e a fase for retomada, atacar primeiro **multi-workspace (§156)** e **2FA (§158)**, em sub-features separadas. SSO (§155) fica fora por enquanto; Workers Dashboard e pentest permanecem no backlog da fase. O card Enterprise atual na UI (`Multi-Workspace · workers · SSO` / `Solicitar demonstração · Canal em breve`) permanece inalterado.
 
-**Prioridade:** ALTA quando o lançamento Enterprise for decidido pelo usuário · **Estimativa:** 4 itens de escopo médio-grande cada, sem estimativa de sessões declarada nas specs de origem.
+**Dependências:** multi-workspace vem antes dos vínculos Enterprise dependentes de tenant. É uma reestruturação de dados compartilhados — workspace/tenant, projetos, memberships, roles e autorização transversal — e não uma feature isolada. O núcleo de 2FA pode ser construído separadamente, mas sua obrigatoriedade por membro Enterprise depende desse modelo.
+
+**Riscos:** alto risco de IDOR/regressão ao alterar ownership e autorização em rotas compartilhadas; migração compatível dos projetos existentes; concorrência da persistência JSON/S3; lockout de contas no fluxo 2FA. O pentest (§160) só pode fechar o gate depois que a superfície efetivamente escolhida para lançamento estiver completa.
+
+**Prioridade:** PAUSADA até sinal real de demanda · **Ordem aprovada para retomada:** §156 multi-workspace → §158 2FA → reavaliar §155 SSO somente com demanda confirmada.
 
 ---
 
@@ -228,8 +236,9 @@ Decisão do usuário sobre qual fase priorizar a seguir — este documento não 
 
 | Data | Mudança |
 |---|---|
+| 2026-07-18 | Fase 9 investigada contra o código real; DECISION-033 pausa Enterprise e prioriza multi-workspace + 2FA antes de qualquer reavaliação de SSO. |
 | 2026-07-09 | Criação — primeiro roadmap consolidado das 9 fases. |
 
 ## Controle de versão
 
-**1.0.0** — 2026-07-09
+**1.1.0** — 2026-07-18
