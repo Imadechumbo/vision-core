@@ -1301,9 +1301,12 @@ a { color: inherit; text-decoration: none; }
 .vc-chat-onboarding > p { margin: 0 0 14px; color: #bdb4cf; }
 .vc-onboarding-plans { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
 .vc-plan-card { display: grid; gap: 5px; padding: 12px; border: 1px solid rgba(255,255,255,.09); border-radius: 10px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
-.vc-plan-card.is-selected { border-color: rgba(168,85,247,.7); background: rgba(168,85,247,.09); }
+.vc-plan-card.is-selected { border-color: rgba(168,85,247,.7); background: rgba(168,85,247,.09); box-shadow: 0 0 0 1px rgba(168,85,247,.2), 0 0 22px rgba(168,85,247,.16); }
 .vc-onboarding-plans span, .vc-onboarding-plans small { color: #9d94aa; font-size: 11px; line-height: 1.4; }
 .vc-plan-card:hover, .vc-plan-card:focus-visible { border-color: rgba(168,85,247,.5); }
+.vc-plan-badge { justify-self: start; margin-top: 3px; padding: 2px 7px; border-radius: 4px; font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-style: normal; }
+.vc-plan-badge.is-live { background: var(--green); color: var(--bg); }
+.vc-plan-badge.is-soon { background: rgba(250,204,21,.14); color: var(--warn); border: 1px solid rgba(250,204,21,.3); }
 .vc-plan-status { min-height: 17px; margin: 9px 0 0 !important; font-size: 11px; }
 .vc-onboarding-account { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
 .vc-onboarding-account p { margin: 0; color: #bdb4cf; font-size: 12px; }
