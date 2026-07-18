@@ -40,6 +40,15 @@ Nenhum componente de dashboard, gráfico, painel, monitor, timeline ou grid de m
 
 ---
 
+## Produto / Enterprise
+
+### DECISION-033 — Fase 9 pausada; multi-workspace e 2FA precedem qualquer retomada de SSO
+A Fase 9 permanece pausada até existir sinal real de demanda. Quando retomada, o primeiro escopo será multi-workspace (§156) e 2FA (§158), implementados e aprovados separadamente; SSO OIDC (§155) fica fora por enquanto e só será reavaliado diante de demanda confirmada. O card Enterprise atual permanece exatamente como está (`Multi-Workspace · workers · SSO` / `Solicitar demonstração · Canal em breve`), pois comunica capacidades futuras e indisponibilidade sem afirmar que já estão entregues.
+**Por quê:** a investigação de 2026-07-18 confirmou que as entregas não estão todas em zero código, mas nenhuma está completa conforme a spec: SSO tem apenas cadastro de domínio + auto-upgrade no Google OAuth; projetos já têm isolamento por owner, sem workspace/membros/roles; Métricas não é o Workers Dashboard prometido; 2FA está em zero código; e o pentest só tem checklist. Multi-workspace é invasivo porque reestrutura o modelo de dados e a autorização transversal — introduz tenant/workspace, memberships e roles sobre projetos, conversas, missões e demais recursos compartilhados — em vez de adicionar uma rota ou tela isolada. Sem demanda real, investir agora em OIDC genérico, provedores e gestão de secrets seria trabalho especulativo.
+**Como aplicar:** não implementar código Enterprise enquanto a fase estiver pausada. Ao surgir demanda, decidir primeiro o modelo workspace → projetos → memberships/roles e sua migração compatível; entregar multi-workspace em fatias pequenas; depois implementar o núcleo e a política de 2FA. Não iniciar SSO por antecipação. Workers Dashboard e pentest continuam no backlog da Fase 9 e serão replanejados conforme a superfície real de lançamento. Esta decisão qualifica a ordem antiga de `docs/ENTERPRISE-SPEC.md`; não declara nenhuma feature entregue e não autoriza alteração no card da UI.
+
+---
+
 ## Infraestrutura / Deploy
 
 ### DECISION-029 — Cutover publica o RC imutável diretamente na raiz
