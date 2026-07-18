@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const {
   appendHermesDecisionPair,
+  appendModoTotalRca,
   updateHermesOutcome,
   completeHermesExamples,
   redactValue
@@ -80,6 +81,47 @@ const entry = appendHermesDecisionPair(timelinePath, {
     payload: { ok: false, status: 'FAIL', message: 'failed' }
   });
   assert.equal(miss.updated, false);
+}
+
+{
+  const readyEntry = appendModoTotalRca(timelinePath, {
+    userId: 'u-1',
+    sintoma: 'Endpoint novo devolve 200 sem checar auth token=abc123456789',
+    causa: 'Guard de auth foi copiado de outro endpoint sem adaptar o middleware',
+    verificacao: 'node --check backend/server.js; curl -i sem header Authorization -> 401 confirmado',
+    achado: 'nenhum, guard corrigido e confirmado por curl real',
+    decisao: 'READY'
+  });
+  assert.equal(readyEntry.source, 'modo-total-rca');
+  assert.equal(readyEntry.hermes_dataset.decision.label, 'PASS');
+  assert.equal(readyEntry.hermes_dataset.outcome.status, 'success');
+  assert.notEqual(readyEntry.hermes_dataset.outcome.validated_at, null);
+  assert.doesNotMatch(JSON.stringify(readyEntry), /abc123456789/);
+
+  const needsFixEntry = appendModoTotalRca(timelinePath, {
+    userId: 'u-1',
+    sintoma: 'Endpoint aceita payload sem validar tamanho',
+    causa: 'validação de tamanho esquecida',
+    verificacao: 'teste com payload de 50MB -> travou o processo',
+    achado: 'falta guard de payloadLimit',
+    decisao: 'NEEDS_FIX'
+  });
+  assert.equal(needsFixEntry.hermes_dataset.decision.label, 'NEEDS_FIX');
+  assert.equal(needsFixEntry.hermes_dataset.outcome.status, 'failure');
+
+  assert.throws(() => appendModoTotalRca(timelinePath, {
+    sintoma: 'x', verificacao: 'y', decisao: 'BLOCKED_INPUT'
+  }), /decisao inesperada/);
+
+  const log = JSON.parse(fs.readFileSync(timelinePath, 'utf8'));
+  const bySource = {};
+  for (const e of log.entries) bySource[e.hermes_dataset.source] = (bySource[e.hermes_dataset.source] || 0) + 1;
+  assert.equal(bySource['modo-total-rca'], 2);
+  assert.equal(bySource['hermes-analyze'], 1);
+
+  const examples = completeHermesExamples(log.entries);
+  const modoTotalExamples = examples.filter((ex) => ex.source === 'modo-total-rca');
+  assert.equal(modoTotalExamples.length, 2, 'ambos os RCAs de modo-total já devem estar completos sem depender de run-live');
 }
 
 console.log('hermes-dataset-collector: PASS');

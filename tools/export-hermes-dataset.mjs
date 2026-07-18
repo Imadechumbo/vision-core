@@ -1,3 +1,6 @@
+// Uso: node tools/export-hermes-dataset.mjs [outPath] [sourceFilter]
+// sourceFilter opcional: 'hermes-analyze' (RCA de missão) ou 'modo-total-rca' (RCA do ciclo modo-total).
+// Sem sourceFilter, exporta as duas categorias juntas (comportamento default, inalterado).
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -7,6 +10,7 @@ const { HERMES_DATASET_SCHEMA_VERSION, completeHermesExamples } = require('../ba
 
 const root = process.cwd();
 const outPath = process.argv[2] || path.join(root, 'artifacts', 'hermes-dataset-candidate.jsonl');
+const sourceFilter = process.argv[3] || null;
 const reportPath = outPath.replace(/\.jsonl$/i, '.report.json');
 
 function readJson(file, fallback) {
@@ -21,9 +25,16 @@ function writeJsonl(file, rows) {
 function timelineRows() {
   const file = path.join(root, 'backend', 'data', 'mission-timeline.json');
   const entries = readJson(file, { entries: [] }).entries || [];
+  const examples = completeHermesExamples(entries);
+  const bySource = examples.reduce((acc, ex) => {
+    acc[ex.source] = (acc[ex.source] || 0) + 1;
+    return acc;
+  }, {});
+  const filtered = sourceFilter ? examples.filter((ex) => ex.source === sourceFilter) : examples;
   return {
     scanned: entries.length,
-    rows: completeHermesExamples(entries).map((example) => ({
+    by_source: bySource,
+    rows: filtered.map((example) => ({
       schema_version: HERMES_DATASET_SCHEMA_VERSION,
       source: example.source,
       source_id: example.id,
@@ -53,9 +64,11 @@ fs.writeFileSync(reportPath, JSON.stringify({
   schema_version: HERMES_DATASET_SCHEMA_VERSION,
   generated_at: new Date().toISOString(),
   output: path.relative(root, outPath),
+  source_filter: sourceFilter,
   scanned: {
     mission_timeline_entries: timeline.scanned,
-    vision_snapshots: snapshotCount()
+    vision_snapshots: snapshotCount(),
+    by_source: timeline.by_source
   },
   usable_examples: rows.length,
   rule: 'Exports only explicit hermes_dataset records with input + decision + real success/failure outcome. Pending outcomes and raw snapshots are intentionally excluded.',
@@ -63,6 +76,6 @@ fs.writeFileSync(reportPath, JSON.stringify({
   note: 'No training API is called. This script only transforms local data.'
 }, null, 2) + '\n', 'utf8');
 
-console.log(`Hermes dataset export: ${rows.length}/${timeline.scanned} usable timeline examples`);
+console.log(`Hermes dataset export: ${rows.length}/${timeline.scanned} usable timeline examples${sourceFilter ? ` (source=${sourceFilter})` : ''}`);
 console.log(`JSONL: ${outPath}`);
 console.log(`Report: ${reportPath}`);

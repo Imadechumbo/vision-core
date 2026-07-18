@@ -73,6 +73,45 @@ An example is usable only when all three are present:
 
 `outcome.status: "pending"` is not exported. Raw `.vision-snapshots` backup metadata is not enough by itself and is intentionally excluded by the exporter.
 
+## Second Collection Point — Modo Automação Total RCA
+
+`.claude/commands/modo-total.md` defines a separate RCA cycle the coding
+agent runs on its own work (Sintoma/Causa/Verificação/Achado/Decisão),
+unrelated to mission diagnosis. When that cycle reaches Decisão `READY`
+or `NEEDS_FIX`, it is persisted into the same `mission-timeline.json` /
+`entry.hermes_dataset` store via `appendModoTotalRca()` in
+`backend/hermes-dataset.js`, invoked through
+`tools/record-modo-total-rca.mjs`. `BLOCKED_INPUT` is never persisted —
+it means no real RCA was produced.
+
+This is a distinct category, not a mission record: `source:
+"modo-total-rca"` (vs. `"hermes-analyze"` for mission RCA). Same
+schema, same redaction (`redactString`/`redactValue`), same 90-day /
+500-entry retention — no field was added to or removed from the
+existing mission schema.
+
+Field mapping:
+
+| RCA field       | Dataset field                      |
+|-----------------|-------------------------------------|
+| Sintoma         | `input.message`                     |
+| Causa provável  | `context.causa_provavel`            |
+| Verificação     | `outcome.evidence`                  |
+| Achado          | `decision.diagnosis` (+ `recommended_fix` when NEEDS_FIX) |
+| Decisão         | `decision.label` (`READY`→`PASS`, `NEEDS_FIX`→`NEEDS_FIX`) |
+
+Unlike mission records, `outcome` is set at write time, not later via
+`/api/run-live`: `READY` → `status: "success"`, `NEEDS_FIX` → `status:
+"failure"`, with `outcome.evidence` holding the actual Verificação text
+(command/test/diff checked) instead of a run-live receipt. There is no
+"pending" state for this category — the verification is already real
+at RCA time, so the example is usable immediately.
+
+`tools/export-hermes-dataset.mjs` takes an optional second argument to
+export only one category: `node tools/export-hermes-dataset.mjs out.jsonl modo-total-rca`
+(or `hermes-analyze` for mission RCA only). No argument exports both,
+same as before this change.
+
 ## Fine-Tuning Threshold
 
-Do not start real fine-tuning with this dataset until there are at least a few dozen curated, labeled examples for a narrow evaluator. For Hermes itself, the healthier threshold is hundreds of examples with outcomes and failure feedback.
+Do not start real fine-tuning with this dataset until there are at least a few dozen curated, labeled examples for a narrow evaluator. For Hermes itself, the healthier threshold is hundreds of examples with outcomes and failure feedback. This applies to both collection points above — **no training job is authorized or implemented for either category**, this document only tracks how the raw data is collected and redacted.

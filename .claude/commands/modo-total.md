@@ -26,6 +26,16 @@ Só "READY" permite commit. "NEEDS_FIX" volta pra correção
 imediatamente, dentro do mesmo ciclo, sem esperar resposta do usuário.
 "BLOCKED_INPUT" cai automaticamente em PARE E PERGUNTE.
 
+Quando a Decisão for READY ou NEEDS_FIX, persistir o RCA no dataset do
+Hermes (categoria separada da missão, `source: modo-total-rca` — ver
+`docs/HERMES_FINE_TUNING_DATASET.md`):
+
+  node tools/record-modo-total-rca.mjs --sintoma="..." --causa="..." \
+    --verificacao="..." --achado="..." --decisao=READY|NEEDS_FIX
+
+BLOCKED_INPUT não gera RCA real (nada a persistir) — cai direto em
+PARE E PERGUNTE.
+
 ## CICLO (repete sem pausa entre itens/etapas)
 
 Seleção → Design mínimo → Execução → Hermes RCA adversarial (acima) →
