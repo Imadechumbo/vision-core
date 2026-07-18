@@ -98,7 +98,7 @@ Dois mecanismos distintos, não confundir:
 
 ## Segurança
 
-Ver `ARCHITECTURE.md` seção "Segurança" para o histórico de incidentes. Resumo backend-específico: CORS restrito, headers de segurança (HSTS/CSP/X-Frame-Options) planejados §153 (ver `ROADMAP.md`), rate limiting já ativo nas rotas de auth, webhook Hotmart verificado por HMAC obrigatório.
+Ver `ARCHITECTURE.md` seção "Segurança" para o histórico de incidentes. Resumo backend-específico: CORS restrito, headers de segurança (HSTS/CSP/X-Frame-Options/X-Content-Type-Options/Referrer-Policy/Permissions-Policy) **implementados e confirmados ao vivo em produção (§153, commit `6af95ae8`)** — não em `server.js`, no gateway Cloudflare Worker (`worker/src/index.js`, `addSecurityHeaders()`), que é a superfície real exposta ao navegador; ver `ROADMAP.md` Fase 2. Rate limiting já ativo nas rotas de auth, webhook Hotmart verificado por HMAC obrigatório.
 
 ## Rate Limit
 
@@ -156,7 +156,7 @@ Binário compilado (Windows + Linux), `cmd/vision-core/main.go`, invocado como s
 
 - Confirmar se `HOTMART_HOTTOK`/`AWS_S3_BUCKET` estão de fato configurados no EB atual (histórico marca como "pendente de reaplicar" desde a recriação do ambiente, §206/§146).
 - `backend/data/users.json` commitado no git com um hash de senha de teste — decisão de limpeza pendente do usuário (ver `ARCHITECTURE.md`).
-- Headers de segurança (HSTS/CSP/X-Frame-Options) — §153, ver `ROADMAP.md`.
+- ~~Headers de segurança (HSTS/CSP/X-Frame-Options) — §153~~ **RESOLVIDO (commit `6af95ae8`, confirmado ao vivo em 2026-07-18)** — ver `ROADMAP.md` Fase 2.
 
 ## Próximos passos
 
