@@ -63,7 +63,7 @@ function normalizeDecisionLabel(value, diagnosis) {
   return 'ANSWERED';
 }
 
-function buildDatasetRecord({ id, timestamp, source, userId, missionId, input, context, decision, provider, model }) {
+function buildDatasetRecord({ id, timestamp, source, userId, missionId, input, context, decision, provider, model, outcome }) {
   const redactedInput = redactValue(input || {});
   const redactedContext = redactValue(context || {});
   const diagnosis = redactValue(decision && (decision.diagnosis || decision.raw || decision.answer || ''));
@@ -85,7 +85,7 @@ function buildDatasetRecord({ id, timestamp, source, userId, missionId, input, c
       recommended_fix: redactValue(decision && decision.recommended_fix ? decision.recommended_fix : null),
       raw: redactValue(decision && decision.raw ? decision.raw : diagnosis)
     },
-    outcome: {
+    outcome: outcome || {
       status: 'pending',
       pass_gold: false,
       evidence: null,
@@ -95,8 +95,18 @@ function buildDatasetRecord({ id, timestamp, source, userId, missionId, input, c
   };
 }
 
-function appendHermesDecisionPair(timelinePath, params) {
+/** Push de um entry no timeline com o mesmo corte de retenção (90d / 500 entries) usado por todas as fontes de dataset. */
+function pushTimelineEntry(timelinePath, entry) {
   const log = readJson(timelinePath, { entries: [] });
+  log.entries = Array.isArray(log.entries) ? log.entries : [];
+  log.entries.push(entry);
+  const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+  log.entries = log.entries.filter(e => new Date(e.ts || 0).getTime() >= cutoff);
+  if (log.entries.length > 500) log.entries = log.entries.slice(-500);
+  writeJson(timelinePath, log);
+}
+
+function appendHermesDecisionPair(timelinePath, params) {
   const id = params.datasetId || makeDatasetId();
   const timestamp = params.timestamp || nowIso();
   const dataset = buildDatasetRecord({ ...params, id, timestamp });
@@ -114,12 +124,71 @@ function appendHermesDecisionPair(timelinePath, params) {
     dataset_only: true,
     hermes_dataset: dataset
   };
-  log.entries = Array.isArray(log.entries) ? log.entries : [];
-  log.entries.push(entry);
-  const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
-  log.entries = log.entries.filter(e => new Date(e.ts || 0).getTime() >= cutoff);
-  if (log.entries.length > 500) log.entries = log.entries.slice(-500);
-  writeJson(timelinePath, log);
+  pushTimelineEntry(timelinePath, entry);
+  return entry;
+}
+
+/**
+ * §modo-total — RCA do ciclo Sintoma/Causa/Verificação/Achado/Decisão (.claude/commands/modo-total.md).
+ * Categoria separada do RCA de missão: source: 'modo-total-rca' (missão usa 'hermes-analyze').
+ * Só READY e NEEDS_FIX são persistidos — BLOCKED_INPUT não produz um RCA real, cai em PARE E PERGUNTE.
+ * outcome é definido na hora (não fica 'pending' esperando /api/run-live): a Verificação já é evidência
+ * real checada pelo próprio ciclo, não existe uma "missão" separada que valide depois.
+ */
+function mapModoTotalLabel(decisao) {
+  const d = String(decisao || '').toUpperCase();
+  if (d === 'READY') return 'PASS';
+  if (d === 'NEEDS_FIX') return 'NEEDS_FIX';
+  throw new Error(`appendModoTotalRca: decisao inesperada "${decisao}" — só READY ou NEEDS_FIX podem ser persistidos aqui`);
+}
+
+function appendModoTotalRca(timelinePath, params) {
+  const label = mapModoTotalLabel(params.decisao);
+  const id = params.datasetId || makeDatasetId('mtr');
+  const timestamp = params.timestamp || nowIso();
+  const outcome = {
+    status: label === 'PASS' ? 'success' : 'failure',
+    pass_gold: false,
+    evidence: redactValue(params.verificacao || null),
+    validated_at: timestamp,
+    source: 'modo-total-cycle'
+  };
+  const dataset = buildDatasetRecord({
+    id,
+    timestamp,
+    source: 'modo-total-rca',
+    userId: params.userId,
+    missionId: params.missionId || id,
+    input: { message: params.sintoma || '', mode: 'modo-total' },
+    context: {
+      endpoint: 'modo-total-rca',
+      causa_provavel: params.causa || null
+    },
+    decision: {
+      label,
+      diagnosis: params.achado || '',
+      recommended_fix: label === 'NEEDS_FIX' ? (params.achado || null) : null,
+      raw: [params.sintoma, params.causa, params.verificacao, params.achado, params.decisao].filter(Boolean).join('\n')
+    },
+    provider: params.provider || 'claude-code-session',
+    model: params.model || 'modo-total-rca',
+    outcome
+  });
+  const entry = {
+    id,
+    user_id: params.userId || null,
+    ts: timestamp,
+    source: dataset.source,
+    input: redactString(params.sintoma || JSON.stringify(dataset.input)).slice(0, 200),
+    summary: redactString(dataset.decision.diagnosis).slice(0, 240),
+    status: label === 'PASS' ? 'MODO_TOTAL_READY' : 'MODO_TOTAL_NEEDS_FIX',
+    pass_gold: false,
+    agent: 'Hermes-ModoTotal',
+    mission_id: dataset.mission_id,
+    dataset_only: true,
+    hermes_dataset: dataset
+  };
+  pushTimelineEntry(timelinePath, entry);
   return entry;
 }
 
@@ -176,6 +245,7 @@ module.exports = {
   redactString,
   redactValue,
   appendHermesDecisionPair,
+  appendModoTotalRca,
   updateHermesOutcome,
   completeHermesExamples
 };
