@@ -1474,6 +1474,27 @@ a { color: inherit; text-decoration: none; }
   .vc-chat-onboarding:not([hidden]) { width: 100%; padding: 14px; }
   .vc-onboarding-actions { flex-direction: column; }
   .vc-smile-card { max-height: calc(100vh - 24px); overflow-y: auto; }
+
+  /* Achado real (2026-07-18): nesta faixa de largura o grid de planos vira
+     1 coluna (355px+) e os botões do composer quebram em 3 linhas (225px+),
+     então o composer sticky (bottom:18px) já nasce "grudado" acima da
+     posição real dos cards FREE/PRO/ENTERPRISE mesmo sem nenhum scroll —
+     violação real de regra dura #12 ("nada nasce escondido atrás do
+     composer"), medido com Playwright real contra 375x667/390x844 (0 nas
+     larguras ≥768px testadas). Testei tirar o sticky do composer durante o
+     onboarding, mas isso quebra um teste existente que trava o composer a
+     0-24px do rodapé nessa mesma largura (composer sempre alcançável é
+     requisito deliberado, não bug). Fix real: dar ao próprio onboarding um
+     teto de altura com scroll interno — mesmo padrão já usado por
+     .vc-smile-card nesta mesma media query — calculado a partir de
+     --vc-composer-height (var real, sincronizada via ResizeObserver em
+     vision-core-next-clean.js, não um chute fixo) + o espaço do header
+     acima do stage. Onboarding rola dentro da própria caixa; composer
+     nunca é coberto por ela. */
+  .vc-chat-onboarding:not([hidden]) {
+    max-height: calc(100vh - var(--vc-composer-height, 112px) - 375px);
+    overflow-y: auto;
+  }
 }
 
 /* Vision Core original eye/orb mark adapted from the production v23-eye logo. */
