@@ -128,8 +128,29 @@ zero overlap, legendas legíveis).
   este novo módulo — gap de documentação pré-existente (o infográfico já não
   estava lá antes desta sessão), fora do escopo desta tarefa.
 
+## Commit, push e deploy EB (2026-07-18)
+
+Commit `d30ace7d` aprovado e criado, pushado pra `origin/atomic-core-2x-hub-tuning`.
+Deploy EB pedido em seguida — narrativa completa do incidente real que
+aconteceu nesse deploy (causa raiz não relacionada ao Archify, rollback,
+fix, redeploy validado) está registrada em `docs/CURRENT_STATE.md` seção
+Backend, "INCIDENTE 2026-07-18" (registrado lá por pedido explícito do
+usuário, não duplicado aqui em detalhe — só o resumo): deploy `v5.9.67-archify-diagram`
+crashou 100% em produção por `require('./llm-cost')` nunca ter sido
+empacotado em nenhum zip de deploy anterior (gap pré-existente, não causado
+pelas mudanças desta sessão); rollback imediato pra `v5.9.66-chat-grounding-facts`;
+fix (`llm-cost.js` adicionado ao zip) validado com boot local antes de
+redeployar; `v5.9.68-archify-diagram` no ar, saudável, confirmado.
+
+**Estado real da feature em produção:** deployada, mas ainda não funcional —
+`tools/` continua fora do zip de deploy (decisão de escopo do usuário na
+Fase 2, não revisitada), então `PROJETO_DIAGRAMA.html`/`PROJETO_INFOGRAFICO.html`
+continuam sendo no-op silencioso best-effort em produção até uma correção de
+topologia de deploy futura e separada.
+
 ## Próximo comando recomendado
 
-Revisar o diff (`git diff backend/server.js`, `git status tools/`) e, se
-aprovado, pedir o commit explicitamente. Depois disso, decidir sobre deploy
-EB (separado, com aprovação própria).
+Decidir (sessão futura, com o usuário) se/quando vale corrigir a topologia de
+deploy (incluir `tools/` no zip + ajustar o import relativo) pra que o
+diagrama realmente apareça em produção — hoje ele só funciona localmente e em
+qualquer ambiente que rode a partir do repo completo.
