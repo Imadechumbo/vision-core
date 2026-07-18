@@ -14,6 +14,7 @@ Backend
 
 Software Factory
 ✔ OK (simulação/preview por design — nenhum módulo escreve em disco ou executa real)
+✔ (2026-07-17, **não commitado ainda** — aguardando aprovação) Diagrama de arquitetura via Archify vendorizado (`tools/vendor/archify/`, MIT, v2.11.0): novo módulo `tools/project-architecture-diagram.mjs`, determinístico (zero LLM, reusa o parser de `project-infographic.mjs`), anexa `PROJETO_DIAGRAMA.html` a `files[]` do branch `complexity==='complex'` de `/api/sf/project-files` — **aditivo**, `PROJETO_INFOGRAFICO.html` existente intocado. Fecha `docs/ROADMAP.md` Fase 3 (`PLANEJADO` → `IMPLEMENTADO`). Narrativa completa (investigação, bug real de largura de label encontrado/corrigido, testes) em `docs/session_logs/2026-07-17-archify-architecture-diagram.md`. Testes: `tools/tests/project-architecture-diagram.test.mjs` 38/38 PASS + `project-infographic.test.mjs` 54/54 sem regressão + suíte `vision-core-next-*.spec.mjs` 159/159 sem regressão. Próximo passo: aprovação do usuário pra commit; deploy EB é decisão separada.
 
 Atomic Core
 

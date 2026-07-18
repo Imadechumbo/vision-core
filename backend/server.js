@@ -5011,6 +5011,16 @@ app.post('/api/sf/project-files', (req, res) => {
         const { appendProjectInfographicFile } = await import('../tools/project-infographic.mjs');
         files = appendProjectInfographicFile(files, { name: description.slice(0, 120) });
       } catch (_) {}
+      // Diagrama de arquitetura via Archify (vendorizado em tools/vendor/archify,
+      // ver README lá) — aditivo, nunca substitui PROJETO_INFOGRAFICO.html acima.
+      // Mesmos dados já parseados do brief (stack), IR construído sem LLM.
+      // Best-effort: renderiza como processo filho com timeout próprio
+      // (project-architecture-diagram.mjs); falha/timeout nunca derruba a
+      // entrega do brief.
+      try {
+        const { appendProjectArchitectureDiagramFile } = await import('../tools/project-architecture-diagram.mjs');
+        files = appendProjectArchitectureDiagramFile(files, { name: description.slice(0, 120) });
+      } catch (_) {}
       const _prov = (llmBrief && llmBrief.provider) || 'local';
       sfJobs.set(jobId, { status: 'done', result: { files, total: files.length, provider: _prov, complexity: 'complex' }, error: null, ts: Date.now() });
       return;
