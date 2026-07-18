@@ -204,7 +204,6 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 
 # PENDÊNCIAS REAIS
 
-- Páginas públicas `about.html`/`landing.html` (Etapas 5-7) — escopo ainda indefinido, decisão de quando/o quê fica para quando chegar a vez (não é PARE E PERGUNTE, é ausência de spec concreta)
 - AI Provider Vault Fase D(b) — conectar `sf-agent-orchestrator.mjs` ao vault (decisão de arquitetura em aberto)
 - SF-Agent-Orchestrator Fase 2 — bloqueado por cota de API, smoke test real incompleto
 - `vc-secret-guard` Fase 2 (hooks locais) — precisa nova aprovação explícita do usuário
@@ -264,7 +263,7 @@ Governança arquitetural (`docs/DECISIONS.md`): `ARCHITECTURAL PRINCIPLE-001` a 
 
 # CONTEXTO PARA O PRÓXIMO AGENTE
 
-Backlog do Next (Fase 1 do ROADMAP) após `next-clean-77`: páginas públicas Etapas 5-7 já implementadas (2026-07-13, "IA Aplicada na Prática" — ver ROADMAP Fase 1, este parágrafo estava desatualizado). Timeline estilo LionClaw: "persistir estágios por missão" resolvido (`v5.9.65-mission-stages`); ~~"custo real por agente" segue bloqueado~~ **RESOLVIDO (2026-07-17, DECISION-032)**; ~~`vcComponents.pipeline()` construído mas sem call site~~ **já conectado desde `next-clean-116`/`117`** — ambos corrigidos nesta sessão, ver § PENDÊNCIAS REAIS. Antes de assumir "nada mais a fazer", releia `docs/ROADMAP.md` fase por fase e confirme por `grep` no código — não presuma (achado real desta mesma sessão: este parágrafo específico já tinha ficado stale de novo em relação ao resto do arquivo).
+Backlog do Next (Fase 1 do ROADMAP) após `next-clean-77`: páginas públicas Etapas 5-7 ("IA Aplicada na Prática") — **implementadas (commit `c93533b4`, 2026-07-13) e confirmadas ao vivo em produção (2026-07-18)**, revalidação real feita nesta sessão: `frontend/about.html`/`frontend/landing.html` contêm a seção (`grep -i` — cuidado, o texto real não usa cedilha/acento: "IA APLICADA NA PRATICA"), ambos os arquivos estão em `bin/pages-allowlist.txt` (logo incluídos em todo deploy via `bin/deploy-pages.sh`), e `https://visioncoreai.pages.dev/about.html`/`landing.html` confirmados servindo a seção real via fetch direto. Timeline estilo LionClaw: "persistir estágios por missão" resolvido (`v5.9.65-mission-stages`); ~~"custo real por agente" segue bloqueado~~ **RESOLVIDO (2026-07-17, DECISION-032)**; ~~`vcComponents.pipeline()` construído mas sem call site~~ **já conectado desde `next-clean-116`/`117`**. Antes de assumir "nada mais a fazer", releia `docs/ROADMAP.md` fase por fase e confirme por `grep`/fetch real — não presuma; este arquivo já teve mais de uma entrada ficar desatualizada depois de resolvida (achado recorrente, não é hipotético).
 
 Documentação segue sistema de continuidade: este arquivo fica pequeno e reflete só o estado atual; `docs/CHANGELOG_NEXT.md` guarda um bloco curto por versão; investigação/narrativa longa vai para `docs/session_logs/YYYY-MM-DD-nome.md`. Nunca copie logs de terminal, JSON completo ou diffs grandes de volta para este arquivo — achado real desta sessão: as seções TESTES/CONTEXTO tinham ficado stale por várias sessões (ainda citavam `next-clean-59`/"Next não tem auth") porque só as seções de topo eram atualizadas a cada entrega; revise o arquivo inteiro, não só a seção que parece relevante, ao fechar qualquer item.
 
