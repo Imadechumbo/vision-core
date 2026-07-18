@@ -230,6 +230,7 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 
 # RISCOS CONHECIDOS
 
+- **BLOQUEANTE PARA COBRAR PRO — quota FREE contornável por visitante anônimo:** missões anônimas contornam a quota FREE porque `checkMissionQuota` libera requisições sem usuário (`backend/server.js`, `if (!user) return next()`). Exigir autenticação ou quota server-side para visitantes antes de cobrar PRO de verdade.
 - Token de auth em `localStorage`/`sessionStorage` — exposto a XSS, risco aceito (paridade com o legado, não é regressão do Next)
 - `backend/data/users.json` tem hash de senha de teste no histórico git — ação de rotação pendente do usuário, fora do alcance deste repo
 - OAuth Google/GitHub no Next implementado e publicado em `next-clean-77`
