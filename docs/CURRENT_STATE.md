@@ -78,7 +78,9 @@ Anterior: `v5.9.69-tools-topology-fix` (2026-07-18) — corrigiu o gap de topolo
 
 Último Deploy Pages
 
-`82a49a98.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados ao vivo servindo `next-clean-127` (fix do overlap composer/cards de plano no mobile, commits `ef04bf74`+`a528e330`). Confirmado via PowerShell `Invoke-WebRequest` — HTTP 200 nos dois; alias bateu cache de edge stale na 1ª leitura (`next-clean-126`), propagou depois de ~11s de retry. Validação funcional real pós-deploy: screenshot Playwright contra a URL de produção em 375x667/390x844 confirma zero overlap, composer continua a 18px do rodapé (alcançável). `codex/next-rc-baseline`/`main` já tinham esses commits sincronizados antes do deploy.
+`26505006.visioncoreai.pages.dev` (Production) + alias principal `visioncoreai.pages.dev`, ambos confirmados ao vivo — `about.html`/`landing.html` com o registro público do fix de overlap (commit `08046b4c`), `vision-core-next.html` seguindo `next-clean-127`. Confirmado via PowerShell `Invoke-WebRequest`: HTTP 200 nos 3 arquivos, card novo presente em `about.html`, linha `next-clean-127` presente em `landing.html`. `codex/next-rc-baseline`/`main` já tinham esses commits sincronizados antes do deploy.
+
+Anterior: `82a49a98.visioncoreai.pages.dev` + alias, `next-clean-127` (fix do overlap composer/cards de plano no mobile, commits `ef04bf74`+`a528e330`) — alias bateu cache de edge stale na 1ª leitura (`next-clean-126`), propagou depois de ~11s de retry. Validação funcional real pós-deploy: screenshot Playwright contra a URL de produção em 375x667/390x844 confirmou zero overlap, composer a 18px do rodapé (alcançável).
 
 Anterior: `4c3d9380.visioncoreai.pages.dev` + alias, `next-clean-126` (copy do card PRO — "Quality Gate real no GitHub" / "Enforcement já validado em produção · Compra em breve" — commits `2ae48314`+`0c6d0f70`).
 
