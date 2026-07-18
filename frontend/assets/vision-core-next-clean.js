@@ -172,6 +172,7 @@
   var prRepoInput = document.getElementById('vcPrRepo');
   var prBranchInput = document.getElementById('vcPrBranch');
   var prTitleInput = document.getElementById('vcPrTitle');
+  var prMissionIdInput = document.getElementById('vcPrMissionId');
   var prBodyInput = document.getElementById('vcPrBody');
   var prActionsEl = document.getElementById('vcPrActions');
   var prStatusEl = document.getElementById('vcPrStatus');
@@ -817,15 +818,15 @@
   }
 
   // GitHub PR — ação real e irreversível (cria branch+commit+PR de verdade
-  // via /api/github/create-pr). NUNCA dispara sozinha: exige os 3 campos
+  // via /api/github/create-pr). NUNCA dispara sozinha: exige os 4 campos
   // obrigatórios preenchidos + uma confirmação extra (segundo clique) antes
   // do fetch real. Guard contra duplo-clique via prRequestInFlight.
   var prConfirmPending = false;
   var prRequestInFlight = false;
 
   function prFieldsValid() {
-    return !!(prRepoInput && prBranchInput && prTitleInput &&
-      prRepoInput.value.trim() && prBranchInput.value.trim() && prTitleInput.value.trim());
+    return !!(prRepoInput && prBranchInput && prTitleInput && prMissionIdInput &&
+      prRepoInput.value.trim() && prBranchInput.value.trim() && prTitleInput.value.trim() && prMissionIdInput.value.trim());
   }
 
   function resetPrConfirm() {
@@ -865,6 +866,7 @@
     var repo = prRepoInput.value.trim();
     var baseBranch = prBranchInput.value.trim() || 'main';
     var title = prTitleInput.value.trim();
+    var missionId = prMissionIdInput.value.trim();
     var prBody = prBodyInput ? prBodyInput.value.trim() : '';
     var headBranch = 'vc-next-pr-' + Date.now();
 
@@ -873,7 +875,7 @@
 
     apiRequest('/api/github/create-pr', {
       method: 'POST',
-      body: { repo: repo, base_branch: baseBranch, head_branch: headBranch, title: title, body: prBody, files: [] }
+      body: { repo: repo, base_branch: baseBranch, head_branch: headBranch, title: title, body: prBody, mission_id: missionId, files: [] }
     }).then(function (data) {
       prRequestInFlight = false;
       renderPrActions();
@@ -895,6 +897,7 @@
       if (prRepoInput) prRepoInput.value = '';
       if (prBranchInput) prBranchInput.value = 'main';
       if (prTitleInput) prTitleInput.value = '';
+      if (prMissionIdInput) prMissionIdInput.value = '';
       if (prBodyInput) prBodyInput.value = '';
       renderPrActions();
     }).catch(function (err) {
@@ -906,7 +909,7 @@
     });
   }
 
-  [prRepoInput, prBranchInput, prTitleInput].forEach(function (el) {
+  [prRepoInput, prBranchInput, prTitleInput, prMissionIdInput].forEach(function (el) {
     if (!el) return;
     el.addEventListener('input', function () {
       if (!prRequestInFlight && !prConfirmPending) renderPrActions();

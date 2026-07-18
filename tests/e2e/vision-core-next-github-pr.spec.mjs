@@ -51,8 +51,9 @@ async function openGithubPrWithFields(page, { repo = 'owner/repo', title = 'Fix 
   await openGithubTab(page);
   await page.locator('#vcPrRepo').fill(repo);
   // #vcPrBranch already ships with value="main" in the HTML — prFieldsValid()
-  // only needs repo+branch+title non-empty, so branch is valid untouched.
+  // requires repo+branch+title+mission ID, so branch is valid untouched.
   await page.locator('#vcPrTitle').fill(title);
+  await page.locator('#vcPrMissionId').fill('mission-pass-gold-1');
 }
 
 test('panel hidden by default, visible only under the GitHub tab', async ({ page }) => {
@@ -73,6 +74,8 @@ test('create button disabled until repo+branch+title filled, confirm appears onl
   await page.locator('#vcPrRepo').fill('owner/repo');
   await expect(createBtn).toBeDisabled();
   await page.locator('#vcPrTitle').fill('Fix bug');
+  await expect(createBtn).toBeDisabled();
+  await page.locator('#vcPrMissionId').fill('mission-pass-gold-1');
   await expect(createBtn).toBeEnabled();
 
   await createBtn.click();
@@ -128,6 +131,7 @@ test('fast double-click on confirm fires exactly one POST /api/github/create-pr 
   await expect(page.locator('#vcPrRepo')).toHaveValue('');
   await expect(page.locator('#vcPrBranch')).toHaveValue('main');
   await expect(page.locator('#vcPrTitle')).toHaveValue('');
+  await expect(page.locator('#vcPrMissionId')).toHaveValue('');
 });
 
 test('error response re-enables the create flow and does not leave the panel stuck on the busy button', async ({ page }) => {

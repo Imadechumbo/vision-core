@@ -16,6 +16,7 @@ const { appendHermesDecisionPair, updateHermesOutcome } = require('./hermes-data
 const { VISION_CORE_FACTS_BLOCK, isUnsafeToArchive } = require('./vision-core-grounding');
 const { normalizeUserPlan } = require('./user-plan');
 const { missionQuota } = require('./mission-quota');
+const { evaluateGithubQualityGate } = require('./github-quality-gate');
 
 // Import de módulo ESM local em tools/ (server.js é CommonJS; tools/ é ESM,
 // por isso import() dinâmico em vez de require()). O caminho relativo certo
@@ -1528,6 +1529,9 @@ function appendMissionTimeline(userId, entry) {
       summary: entry.summary ? String(entry.summary).slice(0, 240) : null,
       status: entry.status || (entry.pass_gold ? 'PASS_GOLD' : 'DONE'),
       pass_gold: entry.pass_gold === true,
+      promotion_allowed: entry.promotion_allowed === true,
+      evidence_receipt_id: entry.evidence_receipt_id || null,
+      evidence_source: entry.evidence_source || null,
       agent: entry.agent || null,
       mission_id: entry.mission_id || null,
       stages: sanitizeMissionStages(entry.stages)
@@ -1536,7 +1540,7 @@ function appendMissionTimeline(userId, entry) {
     const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
     log.entries = log.entries.filter(e => new Date(e.ts).getTime() >= cutoff);
     if (log.entries.length > 500) log.entries = log.entries.slice(-500);
-    writeJsonFile(MISSION_TIMELINE_PATH, log);
+    writeAndSyncS3(MISSION_TIMELINE_PATH, log);
   } catch (err) { console.warn('[timeline §98-E] append failed', err.message); }
 }
 
@@ -1983,13 +1987,18 @@ app.all('/api/run-live', checkMissionQuota, async (req, res) => {
   const _origJson98e2 = res.json.bind(res);
   res.json = function (payload) {
     if (_tlUser98e2 && payload) {
+      const receipt = normalizeEvidenceReceipt(payload);
+      const passGoldVerified = Boolean(passGoldCandidateFromResult(payload) && receipt && typeof receipt === 'object' && receipt.source === 'go-core');
       appendMissionTimeline(_tlUser98e2.id, {
         source: 'run-live',
         input,
         summary: Array.isArray(payload.summary) ? payload.summary.join(' ') : (payload.summary || payload.message || null),
-        pass_gold: payload.pass_gold === true,
+        pass_gold: passGoldVerified,
+        promotion_allowed: passGoldVerified,
+        evidence_receipt_id: passGoldVerified ? receipt.id : null,
+        evidence_source: passGoldVerified ? receipt.source : null,
         mission_id: payload.mission_id || null,
-        status: payload.pass_gold === true ? 'PASS_GOLD' : (payload.status || (payload.ok === false ? 'FAIL' : 'DONE'))
+        status: passGoldVerified ? 'PASS_GOLD' : (payload.status || (payload.ok === false ? 'FAIL' : 'DONE'))
       });
     }
     if (payload) {
@@ -4144,9 +4153,17 @@ app.post('/api/deploy/merge-pr', async (req, res) => {
 });
 
 /* GitHub create-pr: REST por default, MCP opcional via adapter. */
-app.post('/api/github/create-pr', async (req, res) => {
+app.post('/api/github/create-pr', requireVisionAuth, async (req, res) => {
   try {
     const body = normalizeBody(req);
+    const timeline = readJsonFile(MISSION_TIMELINE_PATH, { entries: [] });
+    const qualityGate = evaluateGithubQualityGate({
+      plan: req.visionUser.plan,
+      userId: req.visionUser.id,
+      missionId: String(body.mission_id || '').trim(),
+      entries: timeline.entries
+    });
+    if (!qualityGate.ok) return res.status(qualityGate.status).json({ ...qualityGate, anti_stub: true, time: now() });
     const result = await createGithubPullRequest({
       repo:       (body.repo        || '').trim(),
       baseBranch: (body.base_branch || '').trim(),
@@ -4162,7 +4179,7 @@ app.post('/api/github/create-pr', async (req, res) => {
     if (!result.ok) return res.status(result.status || 500).json(result);
 
     console.log(`[github/create-pr] PR criado: ${result.pr_url} (branch: ${result.branch}, mode: ${result.mode || 'rest'})`);
-    return res.json(result);
+    return res.json({ ...result, quality_gate: qualityGate });
 
   } catch (err) {
     console.error('[github/create-pr] error:', err.message);
@@ -5113,6 +5130,7 @@ if (S3_BUCKET) {
   _s3LoadSync(CHAT_CONVERSATIONS_DB);
   _s3LoadSync(OPERATION_LOG_DB);
   _s3LoadSync(MISSION_LOG_PATH);
+  _s3LoadSync(MISSION_TIMELINE_PATH);
   _s3LoadSync(BLACKLIST_FILE); // §152: blacklist do S3 antes de aceitar requests
   _s3LoadSync(SSO_DOMAINS_FILE); // §155: SSO domains do S3
   _s3LoadSync(PROVIDERS_VAULT_FILE); // AI Provider Vault: config principal do S3

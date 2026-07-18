@@ -121,7 +121,7 @@ No Vision Core Next, estes payloads estruturados devem ser visualizados graficam
 | Método | Rota | Payload | Resposta | Notas |
 |---|---|---|---|---|
 | GET | `/api/github/status` | — | `{configured, policy}` | — |
-| POST | `/api/github/create-pr` | `{repo, branch, title, body?}` | `{pr_url, ...}` | **Irreversível** — cria branch+commit+PR real |
+| POST | `/api/github/create-pr` | `{repo, base_branch, head_branch, title, body?, files?, mission_id}` | `{pr_url, quality_gate, ...}` | **Auth + PRO/Enterprise + evidência PASS GOLD do Go Core obrigatórios. Irreversível** — cria branch+commit+PR real |
 
 ## Software Factory
 
