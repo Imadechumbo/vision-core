@@ -828,6 +828,12 @@
           <div style="font-size:11px;color:#64748b">— Next, VISION_CORE_NEXT_FRONTEND_SPEC.md "Bloqueio de segurança", tests/e2e/vision-core-next-agent-apply.spec.mjs, 4/4 PASS</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">🔓</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"O plano FREE tem limite de 5 missões/mês, mas visitante sem sessão nenhuma rodava missão de graça, sem limite, porque <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>checkMissionQuota</code> simplesmente deixava passar quem não tinha usuário autenticado. O primeiro fix (checar <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>req.socket.remoteAddress</code>) parecia certo no código mas não fechava nada de verdade: o EB roda nginx como reverse proxy na própria instância, e todo tráfego externo chega ao Node via <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>127.0.0.1</code> — confirmado com uma chamada real, de fora, sem autenticação, que executou uma missão completa em produção. Só fechou de verdade depois de <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>app.set('trust proxy', 1)</code> + <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>req.ip</code>, validado reproduzindo a topologia real com um proxy simulado (bypass direto passa, cliente externo sintético recebe 401, tentativa de forjar <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>X-Forwarded-For: 127.0.0.1</code> pelo próprio cliente continua bloqueada) e depois confirmado ao vivo contra a URL pública."</div>
+          <div style="font-size:11px;color:#64748b">— Tier PRO, commits 6aa69379/e6aa5e95, EB v5.9.72-trust-proxy-fix, validação real de produção (401 externo confirmado), PASS após 2ª tentativa</div>
+        </div>
+
       </div>
 
     </div>
