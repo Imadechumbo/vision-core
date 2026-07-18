@@ -220,7 +220,7 @@ Todos os itens até `next-clean-73` estão deployados e confirmados ao vivo. `ma
 
 # PRÓXIMA PRIORIDADE
 
-Fechar a Onda 1 independente: ADR-003/004/005 e IMP-006 estão Ready; TEST-002/003 também podem certificar o baseline atual. Próximo item: ADR-003, formalizando no backlog a decisão já vigente DECISION-005 (Apply permanece fechado). Comando inicial recomendado: `rg -n "ADR-003|DECISION-005|AGENT_APPLY_ENABLED" docs backend frontend tests/e2e/vision-core-next-agent-apply.spec.mjs`.
+~~Fechar a Onda 1 independente... Próximo item: ADR-003...~~ **CORREÇÃO DE REGISTRO (2026-07-18):** achado real — ADR-003 já estava aprovado e formalizado há sessões em `docs/VISION_CORE_IMPLEMENTATION_MASTER_PLAN.md` (linhas 61-69, "Aprovado: permanecer fechado no RC, conforme DECISION-005") e reconciliado com `docs/DECISIONS.md` DECISION-005; o próprio `CURRENT_STATE.md` já registrava isso mais acima (linha ~148), só esta nota não tinha sido atualizada depois. Dashboard do backlog V2 (mesmo documento): 23/26 itens concluídos, os 3 restantes são OPS de cutover de produção bloqueados por dependência — não é "próximo passo pequeno". Revalidado ao vivo nesta sessão: `AGENT_APPLY_ENABLED=false` intacto no código, `tests/e2e/vision-core-next-agent-apply.spec.mjs` 4/4 PASS. Nada a fazer aqui além desta correção de registro. **Próxima prioridade real:** headers de segurança §153 (`docs/ROADMAP.md` Fase 2 — Backend), em andamento nesta sessão.
 
 ---
 
