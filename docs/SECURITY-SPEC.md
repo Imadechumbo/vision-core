@@ -14,7 +14,7 @@
 - Audit log: todas ações críticas em S3 com timestamp/IP/user_agent (§154)
 
 ### Transporte
-- HSTS, CSP, X-Frame-Options, X-Content-Type-Options no gateway (§153)
+- HSTS, CSP, X-Frame-Options, X-Content-Type-Options no gateway (§153 ✅ DONE — commit `6af95ae8`, `worker/src/index.js`, confirmado ao vivo em produção)
 - HTTPS forçado em todos os endpoints
 
 ### Billing
