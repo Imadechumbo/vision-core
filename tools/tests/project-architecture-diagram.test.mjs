@@ -10,8 +10,10 @@ import { fileURLToPath } from 'node:url';
 import {
   mapLayerToComponentType,
   buildArchitectureIR,
+  buildArchitectureIRFromFiles,
   renderArchitectureDiagram,
   appendProjectArchitectureDiagramFile,
+  appendProjectArchitectureDiagramFileFromFiles,
 } from '../project-architecture-diagram.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -160,6 +162,68 @@ assert(resultFallback === filesFallback, '[D-06] brief sem stack -> inalterado')
 const filesNoBrief = [{ name: 'docs/adr/0001-stack-decision.md', content: '# ADR' }];
 const resultNoBrief = appendProjectArchitectureDiagramFile(filesNoBrief, { name: 'Z' }, { rendererPath });
 assert(resultNoBrief === filesNoBrief, '[D-07] nenhum CLAUDE_CODE_BRIEF.md -> inalterado, não quebra');
+
+console.log('\n[Suite E] buildArchitectureIRFromFiles — branch standard (sem brief, infere por caminho de arquivo)');
+
+// Formato PROMPT1 (12 arquivos, backend/server.js) — caminhos exatos do prompt.
+const FILES_PROMPT1 = [
+  { name: 'src/index.js', content: 'x' },
+  { name: 'src/config/env.js', content: 'x' },
+  { name: 'src/routes/auth.js', content: 'x' },
+  { name: 'src/middleware/auth.js', content: 'x' },
+  { name: 'src/models/user.js', content: 'x' },
+  { name: 'Dockerfile', content: 'x' },
+  { name: '.env.example', content: 'x' },
+  { name: 'public/index.html', content: 'x' },
+  { name: 'public/js/app.js', content: 'x' },
+  { name: 'README.md', content: 'x' },
+  { name: 'docs/openapi.yaml', content: 'x' },
+  { name: 'docs/SECURITY.md', content: 'x' },
+];
+const irPrompt1 = buildArchitectureIRFromFiles(FILES_PROMPT1, { name: 'App Prompt1' });
+assert(irPrompt1 !== null, '[E-01] formato PROMPT1 (12 arquivos) produz IR não-nulo');
+assert(irPrompt1.components.length === 4, '[E-02] 4 componentes: frontend/backend/security/infra (Dockerfile presente)');
+assert(irPrompt1.components.some((c) => c.type === 'cloud' && c.label === 'Docker'), '[E-03] Dockerfile presente -> componente "cloud" (infra)');
+assert(irPrompt1.components.every((c) => Array.isArray(c.size)), '[E-04] mesma finalização (grid/size/hub) do branch complex é reaplicada');
+
+// Formato PROMPT2 (fallback, 6 arquivos) — sem Dockerfile, com package.json.
+const FILES_PROMPT2 = [
+  { name: 'package.json', content: 'x' },
+  { name: 'src/index.js', content: 'x' },
+  { name: 'src/routes/auth.js', content: 'x' },
+  { name: 'src/middleware/auth.js', content: 'x' },
+  { name: 'public/index.html', content: 'x' },
+  { name: 'README.md', content: 'x' },
+];
+const irPrompt2 = buildArchitectureIRFromFiles(FILES_PROMPT2, { name: 'App Prompt2' });
+assert(irPrompt2 !== null, '[E-05] formato PROMPT2 (fallback, 6 arquivos) produz IR não-nulo');
+assert(irPrompt2.components.length === 3, '[E-06] 3 componentes: frontend/backend/security — sem Dockerfile, sem infra');
+assert(!irPrompt2.components.some((c) => c.id === 'infra'), '[E-07] Dockerfile ausente -> nenhum componente infra (nunca inventa)');
+assert(irPrompt2.components.filter((c) => c.id === 'backend').length === 1,
+  '[E-08] package.json + src/index.js ambos presentes -> 1 único componente backend, não duplica caixa');
+
+const irEmpty = buildArchitectureIRFromFiles([{ name: 'random-file.txt', content: 'x' }], { name: 'X' });
+assert(irEmpty === null, '[E-09] nenhum caminho-marcador conhecido -> null (degradação graciosa)');
+
+console.log('\n[Suite F] appendProjectArchitectureDiagramFileFromFiles — branch standard, aditivo, best-effort');
+
+const resultStandard = appendProjectArchitectureDiagramFileFromFiles(FILES_PROMPT1, { name: 'App Prompt1' }, { rendererPath });
+assert(resultStandard.length === FILES_PROMPT1.length + 1, '[F-01] anexa exatamente 1 arquivo novo');
+assert(resultStandard.some((f) => f.name === 'PROJETO_DIAGRAMA.html'), '[F-02] arquivo novo se chama PROJETO_DIAGRAMA.html (mesmo nome do branch complex)');
+const diagramStandard = resultStandard.find((f) => f.name === 'PROJETO_DIAGRAMA.html');
+assert(diagramStandard.content.includes('<svg'), '[F-03] render real via processo filho produz HTML com <svg>');
+assert(FILES_PROMPT1.length === 12, '[F-04] array de entrada não é mutado in-place');
+
+const resultStandardNoMarkers = appendProjectArchitectureDiagramFileFromFiles(
+  [{ name: 'random-file.txt', content: 'x' }], { name: 'X' }, { rendererPath }
+);
+assert(resultStandardNoMarkers.length === 1 && resultStandardNoMarkers[0].name === 'random-file.txt',
+  '[F-05] nenhum marcador conhecido -> inalterado, não quebra');
+
+const resultStandardBrokenRenderer = appendProjectArchitectureDiagramFileFromFiles(
+  FILES_PROMPT1, { name: 'X' }, { rendererPath: brokenRendererPath }
+);
+assert(resultStandardBrokenRenderer === FILES_PROMPT1, '[F-06] render falhando -> entrega segue sem o diagrama (best-effort real)');
 
 console.log(`\nproject-architecture-diagram: ${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

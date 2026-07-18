@@ -3,11 +3,20 @@
  * project-architecture-diagram.mjs
  *
  * Gera um diagrama de arquitetura (HTML autocontido, SVG) do PROJETO
- * ESPECIFICO a partir do mesmo CLAUDE_CODE_BRIEF.md que alimenta
- * project-infographic.mjs (branch complexity==='complex' — ver
- * backend/server.js). ADITIVO: nunca troca nada do infográfico existente,
- * é um artefato novo e separado (PROJETO_DIAGRAMA.html) entregue lado a
- * lado com PROJETO_INFOGRAFICO.html.
+ * ESPECIFICO. Duas fontes de dado, uma por branch do SF
+ * (backend/server.js, POST /api/sf/project-files):
+ *   - branch complexity==='complex': a partir do CLAUDE_CODE_BRIEF.md que
+ *     tambem alimenta project-infographic.mjs (secao "STACK JUSTIFICADA").
+ *   - branch complexity==='standard': NAO existe brief nem tabela de stack
+ *     — os arquivos vêm de PROMPT1/PROMPT2 (backend/server.js), que fixam
+ *     os MESMOS caminhos de arquivo independente da descricao do usuario
+ *     (Node.js+Express, JWT, HTML/JS vanilla, Docker quando PROMPT1
+ *     completa as 12 arquivos). Presenca desses caminhos-marcador em
+ *     files[] e a fonte de verdade — mesmo principio de "nunca inventar",
+ *     so que aplicado a nome de arquivo em vez de linha de tabela.
+ * ADITIVO em ambos os casos: nunca troca nada do infográfico existente
+ * (que so existe no branch complex), é um artefato novo e separado
+ * (PROJETO_DIAGRAMA.html) entregue lado a lado com o resto de files[].
  *
  * Reusa splitSections/parseStackTable de project-infographic.mjs — mesmo
  * parser, mesmo contrato de formato do brief, zero duplicação.
@@ -72,40 +81,26 @@ function sanitizeId(label, index, seen) {
 }
 
 /**
- * buildArchitectureIR — funcao pura, zero I/O, zero LLM.
+ * finalizeArchitectureIR — pedaço compartilhado entre as duas fontes de dado
+ * (brief do branch complex, marcadores de arquivo do branch standard):
+ * grid/row/col, largura de caixa uniforme dimensionada pelo maior label
+ * real, topologia "hub-and-spoke" e o envelope do IR. Funcao pura, zero I/O.
  *
- * @param {string} briefMarkdown — conteudo do CLAUDE_CODE_BRIEF.md.
- * @param {{name?: string}} projectMeta — nome do projeto.
- * @returns {object|null} JSON IR pronto pro schema "architecture" do
- *   Archify, ou `null` se o brief nao tiver secao de stack (degradacao
- *   graciosa, mesmo padrao do infografico).
+ * @param {{id: string, type: string, label: string, sublabel?: string}[]} components
+ *   já com id sanitizado e type mapeado — só falta layout/size/connections.
+ * @param {{name?: string}} projectMeta
+ * @returns {object} JSON IR pronto pro schema "architecture" do Archify.
  */
-export function buildArchitectureIR(briefMarkdown, projectMeta = {}) {
-  const sections = splitSections(briefMarkdown);
-  const stackSection = sections['stack justificada'];
-  if (!stackSection) return null;
-
-  const stackRows = parseStackTable(stackSection).filter((r) => r.tech);
-  if (!stackRows.length) return null;
-
+function finalizeArchitectureIR(components, projectMeta) {
   // SKILL.md do Archify recomenda ate 12 nos por diagrama architecture
   // antes de a legibilidade cair — mesmo limite aplicado aqui.
-  const rows = stackRows.slice(0, 12);
-  const seenIds = new Set();
-  const components = rows.map((row, index) => {
-    const sublabel = row.layer ? String(row.layer).slice(0, 40) : null;
-    return {
-      id: sanitizeId(row.tech, index, seenIds),
-      type: mapLayerToComponentType(row.layer),
-      label: String(row.tech).slice(0, 60),
-      ...(sublabel ? { sublabel } : {}),
-    };
-  });
+  const capped = components.slice(0, 12);
 
-  // components.length é sempre >=1 aqui (early-return acima cobre 0 linhas),
-  // então Math.min nunca zera — sem fallback morto.
-  const cols = Math.min(components.length, 4);
-  components.forEach((c, index) => {
+  // capped.length é sempre >=1 aqui (os dois builders fazem early-return
+  // antes de chegar aqui com 0 componentes), então Math.min nunca zera —
+  // sem fallback morto.
+  const cols = Math.min(capped.length, 4);
+  capped.forEach((c, index) => {
     c.row = Math.floor(index / cols);
     c.col = index % cols;
   });
@@ -121,18 +116,18 @@ export function buildArchitectureIR(briefMarkdown, projectMeta = {}) {
   // render-architecture.mjs — se essa constante mudar lá numa atualização
   // futura do vendoring, atualizar aqui também.
   const BOX_HEIGHT = 60; // mesmo default (layout.defaultH) do renderer vendorizado
-  const boxWidth = Math.max(120, ...components.map((c) => Math.ceil(textUnits(c.label) * 6.6) + 16));
-  components.forEach((c) => { c.size = [boxWidth, BOX_HEIGHT]; });
+  const boxWidth = Math.max(120, ...capped.map((c) => Math.ceil(textUnits(c.label) * 6.6) + 16));
+  capped.forEach((c) => { c.size = [boxWidth, BOX_HEIGHT]; });
 
   // Topologia fixa "hub-and-spoke": backend (ou frontend, na ausencia) e o
   // hub que se conecta a cada outro componente. Nao tenta inferir fluxo de
   // dados real — e a mesma renuncia deliberada do infografico ("nunca
   // sintetiza narrativa que nao existe literalmente no brief"), aplicada
   // aqui a conexoes em vez de prosa.
-  const hub = components.find((c) => c.type === 'backend')
-    || components.find((c) => c.type === 'frontend')
-    || components[0];
-  const connections = components
+  const hub = capped.find((c) => c.type === 'backend')
+    || capped.find((c) => c.type === 'frontend')
+    || capped[0];
+  const connections = capped
     .filter((c) => c.id !== hub.id)
     .map((c) => ({ from: hub.id, to: c.id }));
 
@@ -143,9 +138,75 @@ export function buildArchitectureIR(briefMarkdown, projectMeta = {}) {
     diagram_type: 'architecture',
     meta: { title: `${projectName} — Arquitetura` },
     layout: { mode: 'grid', cols, cellW: boxWidth, gapX: 30 },
-    components,
+    components: capped,
     connections,
   };
+}
+
+/**
+ * buildArchitectureIR — branch complex. Funcao pura, zero I/O, zero LLM.
+ *
+ * @param {string} briefMarkdown — conteudo do CLAUDE_CODE_BRIEF.md.
+ * @param {{name?: string}} projectMeta — nome do projeto.
+ * @returns {object|null} JSON IR, ou `null` se o brief nao tiver secao de
+ *   stack (degradacao graciosa, mesmo padrao do infografico).
+ */
+export function buildArchitectureIR(briefMarkdown, projectMeta = {}) {
+  const sections = splitSections(briefMarkdown);
+  const stackSection = sections['stack justificada'];
+  if (!stackSection) return null;
+
+  const stackRows = parseStackTable(stackSection).filter((r) => r.tech);
+  if (!stackRows.length) return null;
+
+  const seenIds = new Set();
+  const components = stackRows.map((row, index) => {
+    const sublabel = row.layer ? String(row.layer).slice(0, 40) : null;
+    return {
+      id: sanitizeId(row.tech, index, seenIds),
+      type: mapLayerToComponentType(row.layer),
+      label: String(row.tech).slice(0, 60),
+      ...(sublabel ? { sublabel } : {}),
+    };
+  });
+
+  return finalizeArchitectureIR(components, projectMeta);
+}
+
+// Caminhos-marcador do branch standard (backend/server.js PROMPT1/PROMPT2)
+// — fixos pelos prompts, independentes da descricao do usuario. Ordem
+// importa pro layout (frontend->backend->seguranca->infra, mesma leitura
+// esquerda->direita de um diagrama tipico). 1 marcador por id: se mais de
+// um caminho apontar pro mesmo componente (ex: src/index.js OU
+// package.json = backend), o primeiro achado ganha, nunca duplica caixa.
+const STANDARD_BRANCH_MARKERS = [
+  { id: 'frontend', type: 'frontend', label: 'Frontend (HTML/JS)', paths: ['public/index.html'] },
+  { id: 'backend', type: 'backend', label: 'Node.js + Express', paths: ['src/index.js', 'package.json'] },
+  { id: 'security', type: 'security', label: 'JWT Auth', paths: ['src/middleware/auth.js'] },
+  { id: 'infra', type: 'cloud', label: 'Docker', paths: ['Dockerfile'] },
+];
+
+/**
+ * buildArchitectureIRFromFiles — branch standard. Funcao pura, zero I/O,
+ * zero LLM. Sem brief nem tabela de stack pra parsear — infere só pela
+ * PRESENÇA de caminho de arquivo conhecido em files[], nunca pelo
+ * conteúdo (mesmo principio de "nunca inventar" do branch complex,
+ * aplicado a um dado estruturalmente diferente).
+ *
+ * @param {{name: string, content: string}[]} files — files[] já finalizado
+ *   pelo endpoint /api/sf/project-files (branch standard).
+ * @param {{name?: string}} projectMeta
+ * @returns {object|null} JSON IR, ou `null` se nenhum marcador conhecido
+ *   bateu (ex: LLM fugiu inteiramente do formato de caminho esperado).
+ */
+export function buildArchitectureIRFromFiles(files, projectMeta = {}) {
+  const names = new Set((files || []).map((f) => f.name));
+  const components = STANDARD_BRANCH_MARKERS
+    .filter((marker) => marker.paths.some((p) => names.has(p)))
+    .map((marker) => ({ id: marker.id, type: marker.type, label: marker.label }));
+  if (!components.length) return null;
+
+  return finalizeArchitectureIR(components, projectMeta);
 }
 
 /**
@@ -189,6 +250,22 @@ export function appendProjectArchitectureDiagramFile(files, projectMeta = {}, op
   const briefFile = (files || []).find((f) => f.name && f.name.includes('CLAUDE_CODE_BRIEF'));
   if (!briefFile) return files;
   const ir = buildArchitectureIR(briefFile.content, projectMeta);
+  if (!ir) return files;
+  const html = renderArchitectureDiagram(ir, options);
+  if (!html) return files;
+  return [...files, { name: 'PROJETO_DIAGRAMA.html', content: html }];
+}
+
+/**
+ * appendProjectArchitectureDiagramFileFromFiles — mesma decisao de
+ * "quando anexar o diagrama" que appendProjectArchitectureDiagramFile,
+ * mas pro branch standard (sem brief — infere direto de files[], ver
+ * buildArchitectureIRFromFiles). Mesmo nome de arquivo final
+ * (PROJETO_DIAGRAMA.html), mesmo best-effort, mesma imutabilidade do
+ * array de entrada.
+ */
+export function appendProjectArchitectureDiagramFileFromFiles(files, projectMeta = {}, options = {}) {
+  const ir = buildArchitectureIRFromFiles(files, projectMeta);
   if (!ir) return files;
   const html = renderArchitectureDiagram(ir, options);
   if (!html) return files;
