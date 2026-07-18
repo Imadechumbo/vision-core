@@ -148,9 +148,56 @@ Fase 2, não revisitada), então `PROJETO_DIAGRAMA.html`/`PROJETO_INFOGRAFICO.ht
 continuam sendo no-op silencioso best-effort em produção até uma correção de
 topologia de deploy futura e separada.
 
+## Fix de topologia de deploy (2026-07-18, pedido explícito do usuário)
+
+Usuário pediu pra corrigir a topologia agora. Implementação:
+
+- `backend/server.js` ganhou `importToolsModule(relativeFile)` — tenta
+  `../tools/x` (layout local/dev, backend/server.js um nível abaixo da raiz
+  do repo) e cai pra `./tools/x` (layout achatado do zip EB, tools/ ao lado
+  de server.js) se o primeiro falhar. Os 2 call sites existentes
+  (`project-infographic.mjs`, `project-architecture-diagram.mjs`) passaram a
+  usar essa função em vez de `import('../tools/...')` direto.
+- Deploy (`_deploy_tools_topology_fix_eb.py`) inclui **só os 15 arquivos de
+  `tools/` realmente importados em runtime** — descobri no caminho que
+  `tools/` é o diretório geral de scripts do projeto inteiro (dezenas de
+  scripts de deploy antigos em `tools/_archive/`), copiar a pasta inteira
+  teria sido um erro real (bloat + vazamento de tooling interna irrelevante
+  pra produção). Allowlist: `project-infographic.mjs`,
+  `project-architecture-diagram.mjs`, `tools/vendor/archify/**` (13 arquivos).
+
+**Validação em 3 camadas antes do deploy real** (disciplina reforçada depois
+do incidente do `llm-cost.js`):
+1. Probe isolado de `importToolsModule` (cópia exata da função) rodado
+   literalmente dentro do zip extraído — confirma que os 2 `import()`
+   resolvem no layout achatado real, não numa aproximação.
+2. Probe de ponta a ponta: brief sintético → `appendProjectInfographicFile`
+   → `appendProjectArchitectureDiagramFile`, rodado no mesmo diretório —
+   confirma que `PROJETO_INFOGRAFICO.html` E `PROJETO_DIAGRAMA.html` (com
+   `<svg>` real) saem do pipeline completo, não só que os módulos carregam.
+3. Boot completo via `npm start` na pasta extraída, `/api/health` 200 local.
+
+Deploy real: `v5.9.69-tools-topology-fix`, `Ok`/`Green`, `Status5xx:0`.
+
+**Confirmação final com chamada real em produção** (aprovada explicitamente
+pelo usuário, gasta tokens de LLM real — não fiz sem perguntar): `POST
+/api/sf/project-files` com descrição de domínio regulado (prontuário médico +
+certificado digital + cadeia de custódia judicial) → job completou
+`complexity:"complex"` → `files[]` incluiu `PROJETO_INFOGRAFICO.html`
+(15.897 bytes) e `PROJETO_DIAGRAMA.html` (50.918 bytes, `<svg>` real, 11
+componentes categorizados corretamente por camada — screenshot conferido).
+Isso prova que o `child_process` que o Archify usa pra renderizar roda de
+verdade na instância EC2 (Amazon Linux), não só no Windows local — risco que
+a simulação local sozinha não cobria.
+
+**Estado final:** feature 100% funcional em produção, não só deployada.
+Commits: `52401cc1` (docs do incidente anterior, já commitado antes deste
+fix) + o fix de topologia em si (commit pendente de confirmação do usuário
+nesta sessão — ver próximo comando).
+
 ## Próximo comando recomendado
 
-Decidir (sessão futura, com o usuário) se/quando vale corrigir a topologia de
-deploy (incluir `tools/` no zip + ajustar o import relativo) pra que o
-diagrama realmente apareça em produção — hoje ele só funciona localmente e em
-qualquer ambiente que rode a partir do repo completo.
+Revisar `git diff backend/server.js` (helper `importToolsModule` + 2 call
+sites) e `git status` (novo script `_deploy_tools_topology_fix_eb.py`,
+`docs/CURRENT_STATE.md`, `docs/ROADMAP.md`, este session log) — se aprovado,
+commitar e (separadamente) decidir sobre push.
