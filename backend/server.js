@@ -5062,6 +5062,15 @@ app.post('/api/sf/project-files', (req, res) => {
     // §191g: injetar templates determinísticos se LLM não gerou
     if (!files.some(f => f.name.includes('adr'))) files.push({ name: 'docs/adr/0001-stack-decision.md', content: '# ADR 0001: Stack Decision\n\n## Status\nAccepted\n\n## Context\nProjeto: ' + description.slice(0, 120) + '\nNecessita de autenticacao segura, API REST, persistencia de dados e deploy containerizado.\n\n## Decision\nNode.js + Express: ecossistema maduro, npm extenso, ideal para APIs REST.\nJWT: autenticacao stateless, adequado para APIs distribuidas.\nMongoose/PostgreSQL: schema definido, validacao, migrations.\nDocker: portabilidade, deploy consistente entre ambientes.\n\n## Consequences\n- Curva de aprendizado baixa para desenvolvedores JavaScript\n- JWT requer blacklist para revogacao antes da expiracao\n- Docker adiciona overhead mas garante reproducibilidade\n\n## Alternatives Considered\n- Python/FastAPI: rejeitado -- ecossistema JS preferido para consistencia\n- Sessions: rejeitado -- nao adequado para arquitetura stateless\n- SQLite: rejeitado -- nao adequado para producao concorrente\n' });
     if (!files.some(f => f.name.includes('semgrep'))) files.push({ name: '.semgrep/semgrep.yaml', content: 'rules:\n  - id: no-hardcoded-secrets\n    languages: [javascript, typescript]\n    message: Hardcoded secret detected. Use environment variables instead.\n    severity: ERROR\n    pattern-either:\n      - pattern: PASSWORD = "..."\n      - pattern: SECRET = "..."\n      - pattern: API_KEY = "..."\n\n  - id: no-sql-injection\n    languages: [javascript, typescript]\n    message: Potential SQL injection. Use parameterized queries.\n    severity: ERROR\n    pattern: db.query("..." + INPUT)\n\n  - id: no-path-traversal\n    languages: [javascript, typescript]\n    message: Potential path traversal. Validate file paths from user input.\n    severity: ERROR\n    pattern: path.join(DIR, REQ_PARAM)\n\n  - id: express-helmet-missing\n    languages: [javascript, typescript]\n    message: Express app should use helmet() for security headers.\n    severity: WARNING\n    pattern: app.use(express.json())\n' });
+    // Diagrama de arquitetura via Archify — branch standard não tem brief
+    // nem tabela de stack (ver PROMPT1/PROMPT2 acima); infere direto dos
+    // caminhos de arquivo presentes em files[] (buildArchitectureIRFromFiles,
+    // tools/project-architecture-diagram.mjs). Mesmo padrão aditivo/best-effort
+    // do branch complex.
+    try {
+      const { appendProjectArchitectureDiagramFileFromFiles } = await importToolsModule('project-architecture-diagram.mjs');
+      files = appendProjectArchitectureDiagramFileFromFiles(files, { name: description.slice(0, 120) });
+    } catch (_) {}
     const _provider = (llm1 && llm1.provider) || 'local';
     sfJobs.set(jobId, { status: 'done', result: { files, total: files.length, provider: _provider, complexity: 'standard' }, error: null, ts: Date.now() });
   })().catch(e => sfJobs.set(jobId, { status: 'error', result: null, error: e.message, ts: Date.now() }));

@@ -195,9 +195,64 @@ Commits: `52401cc1` (docs do incidente anterior, já commitado antes deste
 fix) + o fix de topologia em si (commit pendente de confirmação do usuário
 nesta sessão — ver próximo comando).
 
+Commit `2b9e2162` aprovado, pushado. Feature confirmada funcional em
+produção via chamada real (`v5.9.69-tools-topology-fix`).
+
+## Extensão pro branch standard (2026-07-18, pedido explícito do usuário)
+
+Escopo original (Fase 2) era só o branch `complex` — única fonte de dado
+estruturado até então (brief com tabela "STACK JUSTIFICADA"). Usuário pediu
+pra estender pro branch `standard` (a maioria dos projetos gerados pelo SF).
+
+**Achado central:** o branch `standard` não tem brief nem tabela — os
+arquivos vêm direto de PROMPT1 (12 arquivos)/PROMPT2 (fallback, 6 arquivos),
+ambos em `backend/server.js`. Mas esses prompts FIXAM os mesmos caminhos de
+arquivo independente da descrição do usuário — a stack já é essencialmente
+fixa por design (Node.js+Express, JWT, HTML/JS vanilla, Docker só quando
+PROMPT1 completa). Isso torna a extração determinística mais simples que no
+branch complex: em vez de parsear uma tabela markdown livre, basta checar
+PRESENÇA de caminho de arquivo conhecido em `files[]` — mesmo princípio de
+"nunca inventar" do branch complex, aplicado a um dado estruturalmente
+diferente.
+
+**Implementação (`tools/project-architecture-diagram.mjs`):**
+- Refatorado: extraída `finalizeArchitectureIR(components, projectMeta)` —
+  pedaço compartilhado (grid/row/col, largura de caixa dimensionada pelo
+  maior label, hub-and-spoke, envelope do IR) que antes vivia só dentro de
+  `buildArchitectureIR`. Ambos os builders (brief-based e file-based) chamam
+  essa função — zero duplicação de lógica de layout.
+- `STANDARD_BRANCH_MARKERS`: tabela de 4 marcadores (`public/index.html`→
+  frontend, `src/index.js`/`package.json`→backend, `src/middleware/auth.js`→
+  security, `Dockerfile`→infra/cloud). 1 componente por id mesmo se múltiplos
+  caminhos baterem (ex: PROMPT2 tem `package.json` E `src/index.js`, ambos
+  mapeiam pra "backend" — não duplica caixa).
+- `buildArchitectureIRFromFiles(files, projectMeta)` — função pura, retorna
+  `null` se nenhum marcador bateu (degradação graciosa).
+- `appendProjectArchitectureDiagramFileFromFiles(files, projectMeta, options)`
+  — glue aditivo/best-effort, mesmo padrão do branch complex, mesmo nome de
+  arquivo final (`PROJETO_DIAGRAMA.html`).
+- `backend/server.js`: 1 bloco `try/catch` novo no branch standard, logo
+  antes do `sfJobs.set(..., complexity:'standard')` — mesmo padrão.
+
+**Decisão de escopo tomada sem perguntar (proporcional, documentada aqui):**
+`PROJETO_INFOGRAFICO.html` (o infográfico, não o diagrama) continua exclusivo
+do branch complex — ele depende de seções do brief (compliance, riscos,
+módulos numerados) que simplesmente não existem no branch standard; estender
+ele exigiria inventar uma fonte de dado nova, fora do que foi pedido
+("estender ISSO" = o diagrama Archify, que foi o trabalho desta sessão).
+
+**Testes:** `tools/tests/project-architecture-diagram.test.mjs` ampliado
+38→53 (Suite E: `buildArchitectureIRFromFiles` cobrindo formato PROMPT1 com
+Dockerfile, formato PROMPT2 sem Dockerfile, dedupe de componente
+backend, degradação graciosa sem marcador nenhum; Suite F:
+`appendProjectArchitectureDiagramFileFromFiles` aditivo/best-effort,
+render real de ponta a ponta). `project-infographic.test.mjs` 54/54 sem
+regressão (arquivo não tocado). Preview visual gerado e conferido (4
+componentes coloridos corretamente, hub-and-spoke, legenda legível).
+
 ## Próximo comando recomendado
 
-Revisar `git diff backend/server.js` (helper `importToolsModule` + 2 call
-sites) e `git status` (novo script `_deploy_tools_topology_fix_eb.py`,
-`docs/CURRENT_STATE.md`, `docs/ROADMAP.md`, este session log) — se aprovado,
-commitar e (separadamente) decidir sobre push.
+Revisar o diff (`backend/server.js`, `tools/project-architecture-diagram.mjs`,
+`tools/tests/project-architecture-diagram.test.mjs`, docs) e, se aprovado,
+commitar. Deploy EB é decisão separada (mesma disciplina de sempre: boot
+local antes de subir, poll até Green, rollback imediato se algo destoar).
