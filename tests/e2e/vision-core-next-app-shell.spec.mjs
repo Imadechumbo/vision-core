@@ -317,19 +317,19 @@ test('Security Lab: Safe Status panel issues GET-only requests to the fixed allo
   await expect(viz).toContainText('Últimas verificações');
 });
 
-// DECISION-022 (2026-07-13): cabecalho generico ("VISION CORE" + tags de
-// versao + status do agente) so aparece em Chat -- qualquer outra aba mostra
-// um cabecalho curto reaproveitando featureMap[key].title/.status (mesmo
-// texto ja usado em #vcFeatureTitle/#vcFeatureStatus, nunca copy nova).
-test('generic header + Atomic Core only on chat; other tabs get a short role-specific header instead', async ({ page }) => {
+// DECISION-022 (2026-07-13): status do agente + Atomic Core so aparecem em
+// Chat -- qualquer outra aba mostra um cabecalho curto reaproveitando
+// featureMap[key].title/.status (mesmo texto ja usado em
+// #vcFeatureTitle/#vcFeatureStatus, nunca copy nova). O bloco de logo
+// duplicado ("VISION CORE" dentro do conteudo, #vcBrandLockup) foi removido
+// nesta sessao -- ja existe fixo no sidebar, nunca precisou de toggle por aba.
+test('agent status + Atomic Core only on chat; other tabs get a short role-specific header instead', async ({ page }) => {
   await page.goto(NEXT_URL);
 
-  await expect(page.locator('#vcBrandLockup')).toBeVisible();
   await expect(page.locator('#vcAgentBadge')).toBeVisible();
   await expect(page.locator('#vcPageHead')).toBeHidden();
 
   await page.locator('a[data-feature="missions"]').click();
-  await expect(page.locator('#vcBrandLockup')).toBeHidden();
   await expect(page.locator('#vcAgentBadge')).toBeHidden();
   await expect(page.locator('#vcPageHead')).toBeVisible();
   await expect(page.locator('#vcPageHeadTitle')).toHaveText('Missions');
@@ -340,7 +340,6 @@ test('generic header + Atomic Core only on chat; other tabs get a short role-spe
   await expect(page.locator('#vcPageHeadStatus')).toHaveText('SAFE READ');
 
   await page.locator('[data-feature="chat"]').click();
-  await expect(page.locator('#vcBrandLockup')).toBeVisible();
   await expect(page.locator('#vcAgentBadge')).toBeVisible();
   await expect(page.locator('#vcPageHead')).toBeHidden();
 });
@@ -349,7 +348,7 @@ test('Software Factory gets the short role header and no Atomic Core in both mod
   await page.goto(NEXT_URL);
   await page.locator('[data-feature="factory"]').first().click();
 
-  await expect(page.locator('#vcBrandLockup')).toBeHidden();
+  await expect(page.locator('#vcAgentBadge')).toBeHidden();
   await expect(page.locator('[data-atomic-core]')).toHaveClass(/is-collapsed/);
   await expect(page.locator('#vcPageHeadTitle')).toHaveText('Software Factory');
   await expect(page.locator('#vcFeaturePanel')).toBeHidden();
@@ -382,7 +381,7 @@ test('short-header pages do not reserve the old Atomic Core / chat intro vertica
     if (advanced) await page.locator('[data-sf-mode="advanced"]').click();
     await page.waitForTimeout(100);
     return page.evaluate(() => {
-      const head = document.querySelector('#vcPageHead:not([hidden]), #vcBrandLockup:not([hidden])');
+      const head = document.querySelector('#vcPageHead:not([hidden]), #vcAgentBadge:not([hidden])');
       const panel = document.querySelector('#factory:not([hidden]), #vcFeaturePanel:not([hidden]), #vcChatHero:not([hidden])');
       const atomic = document.querySelector('[data-atomic-core]');
       const stream = document.querySelector('#vcChatStream');
