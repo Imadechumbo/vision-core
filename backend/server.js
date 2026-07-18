@@ -14,6 +14,7 @@ const { extractUsage, computeCostUsd, recordAgentCost } = require('./llm-cost');
 const { createGithubPullRequest } = require('./github-pr-adapter');
 const { appendHermesDecisionPair, updateHermesOutcome } = require('./hermes-dataset');
 const { VISION_CORE_FACTS_BLOCK, isUnsafeToArchive } = require('./vision-core-grounding');
+const { normalizeUserPlan } = require('./user-plan');
 
 // Import de módulo ESM local em tools/ (server.js é CommonJS; tools/ é ESM,
 // por isso import() dinâmico em vez de require()). O caminho relativo certo
@@ -398,7 +399,7 @@ for (const dir of [DB_ROOT, VAULT_ROOT, path.join(VAULT_ROOT, 'Missions'), path.
 
 function readJsonFile(file, fallback) { try { return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : fallback; } catch (err) { console.warn('[ANTI-STUB] readJsonFile failed', file, err.message); return fallback; } }
 function writeJsonFile(file, data) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8'); }
-function publicUser(u) { return u ? { id: u.id, email: u.email, name: u.name || '', plan: u.plan || 'free', created_at: u.created_at, last_login: u.last_login || null } : null; }
+function publicUser(u) { return u ? { id: u.id, email: u.email, name: u.name || '', plan: normalizeUserPlan(u.plan), created_at: u.created_at, last_login: u.last_login || null } : null; }
 // §151 — scrypt (memory-hard) para novos hashes; PBKDF2 mantido para migração de usuários existentes
 // Formato scrypt: '$scrypt$N$salt_hex$hash_hex'
 // Formato legado: 'salt_hex:pbkdf2_hex'
