@@ -15,6 +15,22 @@ const { createGithubPullRequest } = require('./github-pr-adapter');
 const { appendHermesDecisionPair, updateHermesOutcome } = require('./hermes-dataset');
 const { VISION_CORE_FACTS_BLOCK, isUnsafeToArchive } = require('./vision-core-grounding');
 
+// Import de módulo ESM local em tools/ (server.js é CommonJS; tools/ é ESM,
+// por isso import() dinâmico em vez de require()). O caminho relativo certo
+// muda com o layout do bundle: local/dev tem backend/server.js um nível
+// abaixo da raiz do repo, tools/ é irmã de backend/ -> '../tools/x'. O zip
+// de deploy do EB é "achatado" (server.js na raiz do bundle, sem pasta
+// backend/) -> tools/ precisa estar ao lado de server.js -> './tools/x'.
+// Tenta os dois, local primeiro — sem detecção prévia de ambiente, é o
+// próprio import() que decide qual caminho existe.
+async function importToolsModule(relativeFile) {
+  try {
+    return await import('../tools/' + relativeFile);
+  } catch (_) {
+    return await import('./tools/' + relativeFile);
+  }
+}
+
 const app = express();
 const PORT = Number(process.env.PORT || 8080);
 const ROOT = process.cwd();
@@ -5008,7 +5024,7 @@ app.post('/api/sf/project-files', (req, res) => {
       // infográfico nunca derruba a entrega do brief em si (mesmo padrão
       // dos agentes best-effort do SF — Archivist/Hermes em §195).
       try {
-        const { appendProjectInfographicFile } = await import('../tools/project-infographic.mjs');
+        const { appendProjectInfographicFile } = await importToolsModule('project-infographic.mjs');
         files = appendProjectInfographicFile(files, { name: description.slice(0, 120) });
       } catch (_) {}
       // Diagrama de arquitetura via Archify (vendorizado em tools/vendor/archify,
@@ -5018,7 +5034,7 @@ app.post('/api/sf/project-files', (req, res) => {
       // (project-architecture-diagram.mjs); falha/timeout nunca derruba a
       // entrega do brief.
       try {
-        const { appendProjectArchitectureDiagramFile } = await import('../tools/project-architecture-diagram.mjs');
+        const { appendProjectArchitectureDiagramFile } = await importToolsModule('project-architecture-diagram.mjs');
         files = appendProjectArchitectureDiagramFile(files, { name: description.slice(0, 120) });
       } catch (_) {}
       const _prov = (llmBrief && llmBrief.provider) || 'local';
