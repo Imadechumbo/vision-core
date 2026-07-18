@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="vc-api-base-url" content="https://visioncore-api-gateway.weiganlight.workers.dev">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-121">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-121" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-122">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-122" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded" data-atomic-sidebar-state="expanded">
@@ -54,6 +54,7 @@
           <div class="vc-nav-group-items">
             <a href="about.html" target="_blank" rel="noopener"><i aria-hidden="true">I</i><span>Sobre o Vision Core</span></a>
             <a href="landing.html" target="_blank" rel="noopener"><i aria-hidden="true">T</i><span>Trajetória e Transparência</span></a>
+            <a href="landing.html#download-agent" target="_blank" rel="noopener"><i aria-hidden="true">D</i><span>Baixar Vision Agent Local</span></a>
           </div>
         </details>
 
@@ -144,6 +145,41 @@
             <button type="button" class="vc-plan-card" data-plan-card="pro" data-plan="pro" aria-pressed="false"><strong>PRO</strong><span>Missões ilimitadas · GitHub e Quality Gates</span><small>Tenho interesse · Disponível em breve</small></button>
             <button type="button" class="vc-plan-card" data-plan-card="enterprise" data-plan="enterprise" aria-pressed="false"><strong>ENTERPRISE</strong><span>Multi-Workspace · workers · SSO</span><small>Solicitar demonstração · Canal em breve</small></button>
           </div>
+          <section class="vc-copilot-compare" aria-label="Diferencial frente a outros copilotos">
+            <p class="vc-kicker">DIFERENCIAL</p>
+            <h2>Copiloto com sistema adversarial.</h2>
+            <p class="vc-copilot-compare-lead">Outros copilotos pedem ao mesmo modelo que criou o erro para verificar se o erro foi corrigido. Nós não.</p>
+            <blockquote class="vc-copilot-compare-quote">Verificadores matemáticos determinísticos independentes confirmam a correção antes de qualquer avaliação por linguagem natural. O LLM é a última voz — nunca a única.</blockquote>
+            <div class="vc-copilot-compare-cards">
+              <div class="vc-differentiator-card">
+                <strong>Verificação Determinística</strong>
+                <span>Antes de qualquer LLM opinar, verificadores matemáticos proprietários confirmam a correção. Não interpretam. Não opinam. Não alucinam.</span>
+              </div>
+              <div class="vc-differentiator-card">
+                <strong>Agente Auditor Separado</strong>
+                <span>O sistema que cria o patch nunca é o mesmo que o valida. Um agente especializado com papel oposto questiona a correção em múltiplas dimensões.</span>
+              </div>
+              <div class="vc-differentiator-card">
+                <strong>Memória de Aprendizado</strong>
+                <span>O auditor não esquece. Cada erro detectado vira barreira futura. O sistema fica mais rigoroso a cada missão — não começa do zero.</span>
+              </div>
+            </div>
+            <div class="vc-copilot-compare-table-wrap">
+              <table class="vc-copilot-compare-table">
+                <thead>
+                  <tr><th>Capacidade</th><th>Copilot</th><th>Cursor</th><th>Vision Core</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Sugestão de patch</td><td class="is-yes">✓</td><td class="is-yes">✓</td><td class="is-yes">✓</td></tr>
+                  <tr><td>Verificação determinística independente</td><td class="is-no">✗</td><td class="is-no">✗</td><td class="is-yes">✓</td></tr>
+                  <tr><td>Agente auditor separado do gerador</td><td class="is-no">✗</td><td class="is-no">✗</td><td class="is-yes">✓</td></tr>
+                  <tr><td>Memória de erros e acertos</td><td class="is-no">✗</td><td class="is-no">✗</td><td class="is-yes">✓</td></tr>
+                  <tr><td>Sistema que aprende entre missões</td><td class="is-no">✗</td><td class="is-no">✗</td><td class="is-yes">✓</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="vc-copilot-compare-footnote">A implementação detalhada de cada camada é proprietária.</p>
+          </section>
           <p class="vc-plan-status" id="vcPlanStatus" role="status" aria-live="polite">Free selecionado.</p>
           <div class="vc-onboarding-account" id="vcOnboardingAccount">
             <p id="vcOnboardingAccountCopy">Entre para salvar Workspaces, conversas e histórico.</p>
