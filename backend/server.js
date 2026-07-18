@@ -1556,9 +1556,21 @@ function getMissionTimeline(userId, limit) {
   } catch { return []; }
 }
 
+// Verdadeiro só quando o socket TCP em si (não header, não spoofável remotamente)
+// veio de loopback — usado pra permitir o autoteste interno do PI Harness
+// (tools/pi-harness.mjs, gate D4) chamar /api/run-live sem sessão a partir do
+// próprio host, sem reabrir a brecha de missão anônima em produção.
+function isLoopbackRequest(req) {
+  const addr = req.socket && req.socket.remoteAddress;
+  return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
+}
+
 function checkMissionQuota(req, res, next) {
   const user = getAuthUser(req);
-  if (!user) return next(); // unauthenticated — pass through, may fail elsewhere
+  if (!user) {
+    if (isLoopbackRequest(req)) return next(); // ver isLoopbackRequest acima
+    return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
+  }
   const quota = missionQuota(user.plan, getMissionCount(user.id), process.env.FREE_MISSION_LIMIT);
   if (quota.unlimited) return next();
   if (!quota.allowed) {
