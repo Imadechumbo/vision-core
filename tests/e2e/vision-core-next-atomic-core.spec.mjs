@@ -246,7 +246,10 @@ test('Atomic Core sidebar collapses to 78px, restores to 252px, and persists', a
   await page.goto(NEXT_URL());
   await page.locator('#vcPrompt').fill('Validar painel colapsável');
   await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
-  await expect(page.locator('.vc-message-assistant')).toBeVisible();
+  // /api/chat não é mockado neste teste (chamada real ao Worker Gateway de
+  // produção) — timeout padrão de 5s do Playwright é apertado demais pra
+  // uma resposta real de LLM; achado real, não regressão de código.
+  await expect(page.locator('.vc-message-assistant')).toBeVisible({ timeout: 20000 });
   const shell = page.locator('.vc-app-shell');
   const rail = page.locator('#vcAtomicSidebar');
   const toggle = page.locator('#vcAtomicPanelToggle');
@@ -267,7 +270,7 @@ test('Atomic Core sidebar collapses to 78px, restores to 252px, and persists', a
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await page.locator('#vcPrompt').fill('Validar restauração do painel');
   await page.locator('#vcComposer').evaluate((form) => form.requestSubmit());
-  await expect(page.locator('.vc-message-assistant')).toBeVisible();
+  await expect(page.locator('.vc-message-assistant')).toBeVisible({ timeout: 20000 });
   await toggle.click();
   await expect(shell).toHaveAttribute('data-atomic-sidebar-state', 'expanded');
   await expect(rail).toHaveCSS('width', '252px');
