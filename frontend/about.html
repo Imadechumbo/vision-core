@@ -834,6 +834,12 @@
           <div style="font-size:11px;color:#64748b">— Tier PRO, commits 6aa69379/e6aa5e95, EB v5.9.72-trust-proxy-fix, validação real de produção (401 externo confirmado), PASS após 2ª tentativa</div>
         </div>
 
+        <div style="background:#0a0f1a;border:1px solid #1e293b;border-radius:14px;padding:20px">
+          <div style="font-size:28px;margin-bottom:10px">📱</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.6;margin-bottom:10px">"Validação visual real (screenshot Playwright contra a URL de produção, não só grep local) revelou que em telas ≤420px o composer sticky já nascia grudado por cima dos cards FREE/PRO/ENTERPRISE no primeiro paint, sem nenhum scroll — o grid de planos empilha em 1 coluna e os botões do composer quebram em 3 linhas nessa largura, então o composer não precisa nem de scroll pra cobrir os cards. Tentei desligar o <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>position:sticky</code> durante o onboarding, mas isso quebrava um teste existente que exige o composer sempre alcançável perto do rodapé no mobile — requisito deliberado, não bug. Fix real: o onboarding ganhou <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>max-height</code> calculado a partir da altura real do composer (variável já sincronizada por um <code style='background:#1e293b;padding:1px 5px;border-radius:3px'>ResizeObserver</code> existente) e rola dentro da própria caixa em vez de nascer atrás dele — nos aparelhos mais curtos isso deixa só o título visível sem rolar (a matemática não fecha de outro jeito nesse tamanho de tela), mas nunca mais escondido em silêncio."</div>
+          <div style="font-size:11px;color:#64748b">— Next, commit ef04bf74, next-clean-127, 3 screenshots reais (375x667/390x844/375x812) confirmados sem overlap, 159/159 PASS</div>
+        </div>
+
       </div>
 
     </div>
