@@ -15,6 +15,7 @@ const { createGithubPullRequest } = require('./github-pr-adapter');
 const { appendHermesDecisionPair, updateHermesOutcome } = require('./hermes-dataset');
 const { VISION_CORE_FACTS_BLOCK, isUnsafeToArchive } = require('./vision-core-grounding');
 const { normalizeUserPlan } = require('./user-plan');
+const { missionQuota } = require('./mission-quota');
 
 // Import de módulo ESM local em tools/ (server.js é CommonJS; tools/ é ESM,
 // por isso import() dinâmico em vez de require()). O caminho relativo certo
@@ -1465,18 +1466,19 @@ function getMissionCount(userId) {
   try {
     const log = readJsonFile(MISSION_LOG_PATH, { missions: [] });
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    return log.missions.filter(m => m.user_id === userId && new Date(m.ts).getTime() >= cutoff).length;
+    return (Array.isArray(log.missions) ? log.missions : []).filter(m => m.user_id === userId && new Date(m.ts).getTime() >= cutoff).length;
   } catch { return 0; }
 }
 
 function logMission(userId, type) {
   try {
     const log = readJsonFile(MISSION_LOG_PATH, { missions: [] });
+    if (!Array.isArray(log.missions)) log.missions = [];
     log.missions.push({ user_id: userId, ts: now(), type: type || 'mission' });
     // Keep only 90 days
     const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
     log.missions = log.missions.filter(m => new Date(m.ts).getTime() >= cutoff);
-    writeJsonFile(MISSION_LOG_PATH, log);
+    writeAndSyncS3(MISSION_LOG_PATH, log);
   } catch {}
 }
 
@@ -1553,14 +1555,13 @@ function getMissionTimeline(userId, limit) {
 function checkMissionQuota(req, res, next) {
   const user = getAuthUser(req);
   if (!user) return next(); // unauthenticated — pass through, may fail elsewhere
-  if (user.plan && user.plan !== 'free') return next(); // PRO/ENTERPRISE = unlimited
-  const count = getMissionCount(user.id);
-  const LIMIT = parseInt(process.env.FREE_MISSION_LIMIT || '5', 10);
-  if (count >= LIMIT) {
+  const quota = missionQuota(user.plan, getMissionCount(user.id), process.env.FREE_MISSION_LIMIT);
+  if (quota.unlimited) return next();
+  if (!quota.allowed) {
     return res.status(429).json({
       ok: false, error: 'mission_quota_exceeded', plan: 'free',
-      used: count, limit: LIMIT, reset: 'em 30 dias',
-      upgrade_hint: 'Faça upgrade para PRO ($9,99/mês) para missões ilimitadas',
+      used: quota.used, limit: quota.limit, reset: 'em 30 dias',
+      upgrade_hint: 'O plano PRO oferece missões ilimitadas',
       anti_stub: true, time: now()
     });
   }
@@ -1570,11 +1571,8 @@ function checkMissionQuota(req, res, next) {
 
 app.get('/api/mission/quota', (req, res) => {
   const user = getAuthUser(req);
-  if (!user) return sendOk(res, { plan: 'free', used: 0, limit: 5, remaining: 5, authenticated: false, anti_stub: true });
-  if (user.plan && user.plan !== 'free') return sendOk(res, { plan: user.plan, used: null, limit: null, unlimited: true, anti_stub: true });
-  const used = getMissionCount(user.id);
-  const limit = parseInt(process.env.FREE_MISSION_LIMIT || '5', 10);
-  return sendOk(res, { plan: 'free', used, limit, remaining: Math.max(0, limit - used), anti_stub: true });
+  const quota = missionQuota(user ? user.plan : 'free', user ? getMissionCount(user.id) : 0, process.env.FREE_MISSION_LIMIT);
+  return sendOk(res, { plan: quota.plan, used: quota.used, limit: quota.limit, remaining: quota.remaining, unlimited: quota.unlimited, authenticated: Boolean(user), anti_stub: true });
 });
 
 /* §98-E — historico de missoes (so para autenticados; anonimo usa cache local) */
@@ -5114,6 +5112,7 @@ if (S3_BUCKET) {
   _s3LoadSync(PROJECTS_DB);
   _s3LoadSync(CHAT_CONVERSATIONS_DB);
   _s3LoadSync(OPERATION_LOG_DB);
+  _s3LoadSync(MISSION_LOG_PATH);
   _s3LoadSync(BLACKLIST_FILE); // §152: blacklist do S3 antes de aceitar requests
   _s3LoadSync(SSO_DOMAINS_FILE); // §155: SSO domains do S3
   _s3LoadSync(PROVIDERS_VAULT_FILE); // AI Provider Vault: config principal do S3
