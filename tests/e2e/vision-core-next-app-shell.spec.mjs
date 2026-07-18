@@ -75,7 +75,7 @@ test('empty chat onboarding uses real OAuth, honest plans, and leaves after firs
   await expect(onboarding).toBeVisible();
   await expect(page.locator('#vcOnboardingGoogle')).toHaveAttribute('href', `${API}/api/auth/oauth/google?return_to=next`);
   await expect(onboarding).toContainText('5 missões por mês');
-  await expect(onboarding).toContainText('Disponível em breve');
+  await expect(onboarding).toContainText('Compra em breve');
   await expect(onboarding).not.toContainText(/R\$|US\$|checkout/i);
   await page.locator('#vcOnboardingStart').click();
   await expect(page.locator('#vcPrompt')).toBeFocused();
