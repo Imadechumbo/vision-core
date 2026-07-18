@@ -204,6 +204,7 @@ for (const viewport of [
       const atomic = document.querySelector('[data-atomic-core]');
       const atomicRect = atomic.getBoundingClientRect();
       const composer = document.querySelector('#vcComposer').getBoundingClientRect();
+      const plans = document.querySelector('.vc-onboarding-plans').getBoundingClientRect();
       return {
         overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
         onboardingLeft: onboarding.left,
@@ -211,7 +212,17 @@ for (const viewport of [
         viewportWidth: document.documentElement.clientWidth,
         atomicVisible: getComputedStyle(atomic).display !== 'none',
         overlapsAtomic: onboarding.left < atomicRect.right && onboarding.right > atomicRect.left && onboarding.top < atomicRect.bottom && onboarding.bottom > atomicRect.top,
-        composerWidth: composer.width
+        composerWidth: composer.width,
+        // Achado real 2026-07-18: composer sticky cobria os cards FREE/PRO/
+        // ENTERPRISE em telas curtas/estreitas (375x667, 390x844) já no
+        // primeiro paint, sem nenhum scroll — regra dura #12 violada. Fix:
+        // #vcChatOnboarding ganha max-height+overflow:auto nessa faixa de
+        // largura (mesmo padrão de .vc-smile-card), então .vc-onboarding-
+        // plans pode ter geometria "não clipada" maior que a caixa — o que
+        // importa é se a própria caixa visível (que corta o conteúdo antes
+        // de chegar no composer) invade o composer, não a geometria crua
+        // do grid de planos por trás do clip.
+        composerOverlapsPlans: composer.top < Math.min(plans.bottom, onboarding.bottom)
       };
     });
     expect(layout.overflow).toBe(false);
@@ -219,6 +230,7 @@ for (const viewport of [
     expect(layout.onboardingRight).toBeLessThanOrEqual(layout.viewportWidth);
     expect(layout.composerWidth).toBeGreaterThan(0);
     if (layout.atomicVisible) expect(layout.overlapsAtomic).toBe(false);
+    expect(layout.composerOverlapsPlans).toBe(false);
   });
 }
 
