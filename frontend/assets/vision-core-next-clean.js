@@ -161,7 +161,6 @@
   var featureTitle = document.getElementById('vcFeatureTitle');
   var featureBody = document.getElementById('vcFeatureBody');
   var featureStatus = document.getElementById('vcFeatureStatus');
-  var brandLockupEl = document.getElementById('vcBrandLockup');
   var pageHeadEl = document.getElementById('vcPageHead');
   var pageHeadTitleEl = document.getElementById('vcPageHeadTitle');
   var pageHeadStatusEl = document.getElementById('vcPageHeadStatus');
@@ -708,13 +707,12 @@
     if (featureBody) featureBody.textContent = feature.text;
     if (featureStatus) featureStatus.textContent = feature.status;
     if (featureClose) featureClose.hidden = activeFeature === 'chat';
-    // DECISION-022: cabecalho generico (marca + status do agente) e o
-    // decagono so pertencem ao Chat -- qualquer outra aba mostra um
-    // cabecalho curto reaproveitando featureMap[key].title/.status (mesmo
-    // texto ja usado em #vcFeatureTitle/#vcFeatureStatus, nao inventa copy).
+    // DECISION-022: status do agente e o decagono so pertencem ao Chat --
+    // qualquer outra aba mostra um cabecalho curto reaproveitando
+    // featureMap[key].title/.status (mesmo texto ja usado em
+    // #vcFeatureTitle/#vcFeatureStatus, nao inventa copy).
     var isChatTab = activeFeature === 'chat';
     if (isChatTab) renderAtomicSidebarExtras();
-    if (brandLockupEl) brandLockupEl.hidden = !isChatTab;
     if (agentBadgeEl) agentBadgeEl.hidden = !isChatTab;
     if (pageHeadEl) pageHeadEl.hidden = isChatTab;
     if (pageHeadTitleEl) pageHeadTitleEl.textContent = feature.title;
@@ -5194,7 +5192,7 @@
   'use strict';
 
   var eyes = Array.prototype.slice.call(document.querySelectorAll('.vc-eye-logo')).map(function (logo) {
-    return { logo: logo, trigger: logo.closest('.vc-side-brand, .vc-brand-lockup') || logo, eye: logo.querySelector('.vc-eye') };
+    return { logo: logo, trigger: logo.closest('.vc-side-brand') || logo, eye: logo.querySelector('.vc-eye') };
   }).filter(function (target) { return target.eye; });
   if (!eyes.length) return;
 

@@ -99,18 +99,15 @@ a { color: inherit; text-decoration: none; }
   gap: 8px;
 }
 
-.vc-side-brand,
-.vc-brand-lockup {
+.vc-side-brand {
   display: flex;
   align-items: center;
   gap: 13px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
-.vc-side-brand { flex: 1 1 auto; }
-
 .vc-side-brand strong,
-.vc-brand-copy strong,
 .vc-side-copy strong {
   display: block;
   font-size: 15px;
@@ -120,7 +117,6 @@ a { color: inherit; text-decoration: none; }
 }
 
 .vc-side-brand small,
-.vc-brand-copy small,
 .vc-side-copy small {
   display: block;
   margin-top: 3px;
@@ -376,14 +372,10 @@ a { color: inherit; text-decoration: none; }
 [data-state="error"] { color: #f87171; }
 [data-state="success"] { color: var(--green); }
 
-.vc-brand-copy { min-width: 0; }
-.vc-brand-copy strong { font-size: 22px; }
-
-/* DECISION-022: cabecalho generico + Atomic Core so aparecem em Chat;
-   regra dura #13 (CLAUDE.md) -- .vc-brand-lockup/.vc-agent-badge ja
-   declaram display fora de qualquer gate [hidden], entao o gate precisa
-   de especificidade de ID pra vencer, independente da ordem no arquivo. */
-#vcBrandLockup[hidden],
+/* DECISION-022: status do agente + Atomic Core so aparecem em Chat;
+   regra dura #13 (CLAUDE.md) -- .vc-agent-badge ja declara display fora
+   de qualquer gate [hidden], entao o gate precisa de especificidade de ID
+   pra vencer, independente da ordem no arquivo. */
 #vcAgentBadge[hidden],
 #vcPageHead[hidden] { display: none; }
 
@@ -1435,7 +1427,6 @@ a { color: inherit; text-decoration: none; }
   .vc-project-context { width: 100%; margin-left: 0; flex-wrap: wrap; }
   .vc-user-menu { margin-left: auto; }
   .vc-project-context span { max-width: none; }
-  .vc-brand-copy small { white-space: normal; line-height: 1.45; }
   .vc-chat-stage { padding-top: 14px; }
   .vc-safe-status-row { grid-template-columns: 1fr; }
   .vc-atomic-hud { opacity: calc(.48 * var(--atomic-intensity)); }
@@ -1467,11 +1458,6 @@ a { color: inherit; text-decoration: none; }
   perspective: 500px;
 }
 
-.vc-eye-logo-large {
-  width: 74px;
-  height: 48px;
-}
-
 .vc-eye {
   position: relative;
   width: 54px;
@@ -1486,12 +1472,6 @@ a { color: inherit; text-decoration: none; }
   transform-origin: center;
 }
 
-.vc-eye-logo-large .vc-eye {
-  width: 68px;
-  height: 40px;
-  box-shadow: 0 0 26px rgba(168, 85, 247, .62), 0 0 86px rgba(124, 58, 237, .28), inset 0 0 18px rgba(255, 255, 255, .07);
-}
-
 .vc-pupil {
   width: 18px;
   height: 18px;
@@ -1501,11 +1481,6 @@ a { color: inherit; text-decoration: none; }
   transition: transform .25s ease;
   position: relative;
   z-index: 1;
-}
-
-.vc-eye-logo-large .vc-pupil {
-  width: 22px;
-  height: 22px;
 }
 
 .vc-app-shell[data-sidebar-state="collapsed"] .vc-eye-logo {
@@ -2135,21 +2110,18 @@ a { color: inherit; text-decoration: none; }
 
 .vc-eye.is-blinking .eye-lid-top,
 .vc-eye-logo:hover .eye-lid-top,
-.vc-side-brand:hover .eye-lid-top,
-.vc-brand-lockup:hover .eye-lid-top {
+.vc-side-brand:hover .eye-lid-top {
   transform: translateY(0);
 }
 
 .vc-eye.is-blinking .eye-lid-bottom,
 .vc-eye-logo:hover .eye-lid-bottom,
-.vc-side-brand:hover .eye-lid-bottom,
-.vc-brand-lockup:hover .eye-lid-bottom {
+.vc-side-brand:hover .eye-lid-bottom {
   transform: translateY(0);
 }
 
 .vc-eye-logo:hover .vc-eye,
 .vc-side-brand:hover .vc-eye,
-.vc-brand-lockup:hover .vc-eye,
 .vc-eye-logo:focus-visible .vc-eye {
   box-shadow: 0 0 30px rgba(168, 85, 247, .76), 0 0 92px rgba(124, 58, 237, .32), inset 0 0 16px rgba(255, 255, 255, .08);
 }
