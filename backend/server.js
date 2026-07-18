@@ -35,6 +35,14 @@ async function importToolsModule(relativeFile) {
 }
 
 const app = express();
+// EB (Node.js/AL2023) roda nginx como reverse proxy local na mesma instância —
+// todo tráfego externo chega ao processo Node via 127.0.0.1, então
+// req.socket.remoteAddress nunca reflete o IP real do cliente. trust proxy=1
+// confia só 1 hop (o próprio nginx local) e faz req.ip usar o X-Forwarded-For
+// que o nginx anexa, ignorando qualquer XFF que o cliente tente forjar antes
+// desse hop. Sem proxy no caminho (harness local falando direto com o processo
+// Node), não há XFF nenhum e req.ip cai pro socket real (127.0.0.1) mesmo assim.
+app.set('trust proxy', 1);
 const PORT = Number(process.env.PORT || 8080);
 const ROOT = process.cwd();
 const MEMORY_ROOT = path.join(ROOT, 'memory');
@@ -1556,13 +1564,17 @@ function getMissionTimeline(userId, limit) {
   } catch { return []; }
 }
 
-// Verdadeiro só quando o socket TCP em si (não header, não spoofável remotamente)
-// veio de loopback — usado pra permitir o autoteste interno do PI Harness
-// (tools/pi-harness.mjs, gate D4) chamar /api/run-live sem sessão a partir do
-// próprio host, sem reabrir a brecha de missão anônima em produção.
+// Verdadeiro só quando o cliente real (via req.ip, que respeita trust proxy —
+// ver app.set('trust proxy', 1) acima) é loopback — usado pra permitir o
+// autoteste interno do PI Harness (tools/pi-harness.mjs, gate D4) chamar
+// /api/run-live sem sessão a partir do próprio host, sem reabrir a brecha de
+// missão anônima em produção. NÃO usar req.socket.remoteAddress direto: no EB,
+// nginx roda como reverse proxy local e todo tráfego externo chega ao Node
+// via 127.0.0.1, o que faria isto sempre dar verdadeiro (achado real,
+// confirmado em produção — ver docs/CURRENT_STATE.md).
 function isLoopbackRequest(req) {
-  const addr = req.socket && req.socket.remoteAddress;
-  return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
+  const ip = req.ip;
+  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
 }
 
 function checkMissionQuota(req, res, next) {
