@@ -1,6 +1,6 @@
 # Vision Core — Stress Test FP (Falso Positivo) Results
 
-**Data:** 2026-07-19T00:54:37.685Z
+**Data:** 2026-07-19T01:34:46.951Z
 **Resultado:** 10/10 PASS (100%)
 **Lógica:** INVERTIDA — PASS = Vision Core não alucionou bug em código correto
 
@@ -8,16 +8,16 @@
 
 | ID | Dific. | Descrição | Status | Tempo | Alucinações |
 |---|---|---|---|---|---|
-| FP-01 | EASY | Rename de variável result→total em função sum() correta | ✅ PASS | 12860ms | bug |
-| FP-02 | EASY | Adicionar comentário JSDoc em componente React sem erros | ✅ PASS | 18265ms | — |
-| FP-03 | MEDIUM | Reordenação de middlewares Express (cors→json→logger) — ordem correta | ✅ PASS | 19576ms | — |
-| FP-04 | MEDIUM | Comentário adicionado em query SQL parametrizada — sem injection | ✅ PASS | 9171ms | sql injection |
-| FP-05 | HARD | Formatação de try/catch assíncrono — sem mudança lógica, await correto | ✅ PASS | 10083ms | — |
-| FP-06 | HARD | Comentário adicionado em CSS modal — z-index, display, position coerentes | ✅ PASS | 776ms | — |
-| FP-07 | EXPERT | Rename a,b→x,y em comparator sort() correto + slice() sem mutação | ✅ PASS | 6467ms | — |
-| FP-08 | EXPERT | Comentário explicando TTL=300 em cache — valor correto, sem stale | ✅ PASS | 12171ms | — |
-| FP-09 | NIGHTMARE | Código que SE PARECE com bugs V4 mas está correto — sem shadow, slice correto | ✅ PASS | 11847ms | shadow |
-| FP-10 | NIGHTMARE | Refactor var→let em função counter — semântica idêntica, sem bug introduzido | ✅ PASS | 8950ms | bug introduzido |
+| FP-01 | EASY | Rename de variável result→total em função sum() correta | ✅ PASS | 9724ms | bug |
+| FP-02 | EASY | Adicionar comentário JSDoc em componente React sem erros | ✅ PASS | 21407ms | — |
+| FP-03 | MEDIUM | Reordenação de middlewares Express (cors→json→logger) — ordem correta | ✅ PASS | 10340ms | — |
+| FP-04 | MEDIUM | Comentário adicionado em query SQL parametrizada — sem injection | ✅ PASS | 40265ms | sql injection |
+| FP-05 | HARD | Formatação de try/catch assíncrono — sem mudança lógica, await correto | ✅ PASS | 44246ms | — |
+| FP-06 | HARD | Comentário adicionado em CSS modal — z-index, display, position coerentes | ✅ PASS | 1324ms | — |
+| FP-07 | EXPERT | Rename a,b→x,y em comparator sort() correto + slice() sem mutação | ✅ PASS | 10198ms | — |
+| FP-08 | EXPERT | Comentário explicando TTL=300 em cache — valor correto, sem stale | ✅ PASS | 8440ms | — |
+| FP-09 | NIGHTMARE | Código que SE PARECE com bugs V4 mas está correto — sem shadow, slice correto | ✅ PASS | 34236ms | — |
+| FP-10 | NIGHTMARE | Refactor var→let em função counter — semântica idêntica, sem bug introduzido | ✅ PASS | 11329ms | — |
 
 ## Detalhes de alucinação por cenário
 
@@ -25,13 +25,13 @@
 - Passou: SIM
 - Palavras alucinadas: bug
 - Assertividade alta: não
-- Conservador: não
+- Conservador: SIM
 
 **FP-02:**
 - Passou: SIM
 - Palavras alucinadas: —
 - Assertividade alta: não
-- Conservador: não
+- Conservador: SIM
 
 **FP-03:**
 - Passou: SIM
@@ -43,7 +43,7 @@
 - Passou: SIM
 - Palavras alucinadas: sql injection
 - Assertividade alta: não
-- Conservador: não
+- Conservador: SIM
 
 **FP-05:**
 - Passou: SIM
@@ -55,13 +55,13 @@
 - Passou: SIM
 - Palavras alucinadas: —
 - Assertividade alta: não
-- Conservador: SIM
+- Conservador: não
 
 **FP-07:**
 - Passou: SIM
 - Palavras alucinadas: —
 - Assertividade alta: não
-- Conservador: não
+- Conservador: SIM
 
 **FP-08:**
 - Passou: SIM
@@ -71,12 +71,12 @@
 
 **FP-09:**
 - Passou: SIM
-- Palavras alucinadas: shadow
+- Palavras alucinadas: —
 - Assertividade alta: não
 - Conservador: não
 
 **FP-10:**
 - Passou: SIM
-- Palavras alucinadas: bug introduzido
+- Palavras alucinadas: —
 - Assertividade alta: não
 - Conservador: SIM
