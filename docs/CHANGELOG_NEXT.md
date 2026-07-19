@@ -4,6 +4,13 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-131 (2026-07-19, produção)
+
+- Painéis de menu fora do Chat deixam de herdar a largura estreita reservada ao layout com Atomic Core.
+- `.vc-chat-stage` e `#vcFeaturePanel` agora usam a largura útil completa nas abas de menu, enquanto a coluna do Atomic Core permanece fora do layout fora de Chat.
+- Commit confirmado: `662ccacd` (`fix(next): let menu panels use full content width`), com `frontend/vision-core-next.html` servindo CSS/JS em `?v=next-clean-131`.
+- Alias produtivo `visioncoreai.pages.dev` confirmado via HTTP servindo `next-clean-131`.
+
 ## next-clean-109 (2026-07-15, produção)
 
 - No Chat ativo, HUD avançou até restarem `12,36px` antes da scrollbar real (`clientWidth`), dentro do intervalo seguro 8–16px; zero legendas cortadas ou overflow.
