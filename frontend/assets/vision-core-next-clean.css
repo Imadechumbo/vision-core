@@ -45,7 +45,10 @@ a { color: inherit; text-decoration: none; }
 
 .vc-app-shell[data-sidebar-state="collapsed"] { --sidebar-width: 78px; }
 .vc-app-shell[data-atomic-sidebar-state="collapsed"] { --atomic-sidebar-width: 78px; }
-.vc-app-shell[data-active-feature]:not([data-active-feature="chat"]) { --atomic-sidebar-width: 0px; }
+.vc-app-shell[data-active-feature]:not([data-active-feature="chat"]) {
+  --atomic-sidebar-width: 0px;
+  transition: none;
+}
 
 .vc-sidebar {
   position: sticky;

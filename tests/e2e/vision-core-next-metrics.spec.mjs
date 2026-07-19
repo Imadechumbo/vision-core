@@ -64,6 +64,32 @@ async function mockMetrics(page, { agents, dora, summary, memory, status } = {})
   await Promise.all(routes);
 }
 
+async function expectAtomicRailOutOfLayout(page, expectedFeature) {
+  const state = await page.evaluate(() => {
+    const rect = (node) => {
+      const box = node.getBoundingClientRect();
+      return { width: box.width, right: box.right };
+    };
+    const shell = document.querySelector('.vc-app-shell');
+    const sidebar = document.getElementById('vcAtomicSidebar');
+    const hud = document.querySelector('[data-atomic-core]');
+    const main = document.querySelector('.vc-main');
+    return {
+      activeFeature: shell.getAttribute('data-active-feature'),
+      sidebarDisplay: getComputedStyle(sidebar).display,
+      sidebarWidth: rect(sidebar).width,
+      hudDisplay: getComputedStyle(hud).display,
+      hudWidth: rect(hud).width,
+      mainRightGap: document.documentElement.clientWidth - rect(main).right
+    };
+  });
+  expect(state.activeFeature).toBe(expectedFeature);
+  expect(state.sidebarDisplay).toBe('none');
+  expect(state.sidebarWidth).toBe(0);
+  expect(state.hudDisplay).toBe('none');
+  expect(state.hudWidth).toBe(0);
+  expect(Math.abs(state.mainRightGap)).toBeLessThanOrEqual(1);
+}
 const EMPTY_DORA = {
   ok: true,
   deployment_frequency: 'sem dados PASS-GOLD',
@@ -295,6 +321,7 @@ test('(g) Agents safe-read renders charts instead of raw JSON as the main respon
   await page.getByRole('button', { name: 'Métricas agentes' }).click();
 
   await expect(page.locator('#vcFeatureViz')).toBeVisible();
+  await expectAtomicRailOutOfLayout(page, 'agents');
   await expect(page.locator('#vcFeatureViz .vc-metric-chart[aria-label]')).toHaveCount(4);
   await expect(page.locator('#vcFeatureViz')).toContainText('Status dos agentes');
   await expect(page.locator('.vc-message-assistant').last()).toContainText('2 agente(s) reportado(s). Veja o gráfico no painel.');
@@ -357,6 +384,7 @@ test('(h) Tools marketplace safe-read renders status charts', async ({ page }) =
   await page.getByRole('button', { name: 'Marketplace' }).click();
 
   await expect(page.locator('#vcFeatureViz')).toBeVisible();
+  await expectAtomicRailOutOfLayout(page, 'tools');
   await expect(page.locator('#vcFeatureViz')).toContainText('Tools por status');
   await expect(page.locator('#vcFeatureViz .vc-metric-chart[aria-label]')).toHaveCount(2);
 });
@@ -377,6 +405,7 @@ test('(i) Security history safe-read renders charts without leaking secrets', as
   await page.getByRole('button', { name: 'Histórico security' }).click();
 
   await expect(page.locator('#vcFeatureViz')).toBeVisible();
+  await expectAtomicRailOutOfLayout(page, 'tools');
   await expect(page.locator('#vcFeatureViz')).toContainText('Eventos fixados vs pendentes');
   await expect(page.locator('#vcFeatureViz .vc-metric-chart[aria-label]')).toHaveCount(2);
   await expect(page.locator('body')).not.toContainText('sk-');
