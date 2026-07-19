@@ -50,11 +50,30 @@ const intent2 = sf.createSfExecutionIntent({
 });
 assert.equal(intent.intent_hash, intent2.intent_hash, 'intent_hash is idempotent across retries');
 
+const intentMap = new Map();
+const queuedIntent = { ...intent, status: 'queued', queued_at_ms: 1000, created_at_ms: 1000 };
+intentMap.set(intent.intent_hash, queuedIntent);
+const duplicateActive = intentMap.get(intent2.intent_hash);
+assert.equal(duplicateActive.mission_id, 'sf_create_fixed', 'duplicate active intent returns the original mission');
+assert.equal(sf.canRetrySfIntent(duplicateActive), false, 'active duplicate is not retried/re-enqueued');
+assert.equal(sf.findSfIntentByMission(intentMap, 'sf_create_fixed'), queuedIntent, 'intent lookup by mission works');
+
+const staleIntent = { ...queuedIntent, status: 'queued', queued_at_ms: 1000, created_at_ms: 1000, receipt: {} };
+const staleMap = new Map([[intent.intent_hash, staleIntent]]);
+sf.markStaleSfIntents(staleMap, { nowMs: 1000 + (11 * 60 * 1000), timeoutMs: 10 * 60 * 1000 });
+assert.equal(staleIntent.status, 'timeout_cleanup_required', 'agent silence is marked as timeout cleanup required');
+assert.equal(staleIntent.receipt.cleanup_required, true, 'timeout receipt requires cleanup');
+assert.equal(sf.canRetrySfIntent(staleIntent), true, 'timed-out intent can be retried');
+const retryIntent = sf.prepareSfIntentRetry({ ...intent2, target_root: 'VisionCoreProjects/new-target' }, staleIntent);
+assert.equal(retryIntent.retry_of, 'sf_create_fixed', 'retry records the timed-out mission');
+assert.equal(retryIntent.target_root, staleIntent.target_root, 'retry reuses target root so Agent can clean partial leftovers');
+
 const serverSource = fs.readFileSync(path.resolve('backend/server.js'), 'utf8');
 const endpointStart = serverSource.indexOf("app.post('/api/sf/execute-project'");
 const endpointEnd = serverSource.indexOf("app.get('/api/sf/execution-intent", endpointStart);
 assert(endpointStart > -1 && endpointEnd > endpointStart, 'SF execute-project endpoint exists');
 const endpointSource = serverSource.slice(endpointStart, endpointEnd);
+assert(serverSource.includes('canRetrySfIntent,'), 'server imports retry helper');
 assert(endpointSource.includes('isSfRealExecutionEnabled()'), 'endpoint is guarded by SF_REAL_EXECUTION_ENABLED');
 assert(endpointSource.includes('verifyAgentSecret(agentId, agentSecret)'), 'endpoint requires paired agent secret');
 assert(endpointSource.includes("type: 'sf_create_project'"), 'endpoint enqueues SF mission type');
@@ -70,6 +89,45 @@ try {
   assert.equal(root.target.startsWith(fs.realpathSync(tmp)), true, 'target stays inside configured projects root');
   assert.equal(agent.ensureDedicatedSfRoot('../escape').ok, false, 'logical traversal target rejected');
   assert.equal(agent.safeSfFilePath(root.target, '../escape.js'), null, 'file traversal rejected');
+
+  const interruptedRoot = agent.ensureDedicatedSfRoot('VisionCoreProjects/demo-interrupt');
+  assert.equal(interruptedRoot.ok, true, 'interrupted target root accepted');
+  const abandonedPartial = interruptedRoot.target + '.partial-crash1234567';
+  fs.mkdirSync(path.join(abandonedPartial, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(abandonedPartial, 'src', 'half-written.js'), 'console.log("half");\n', 'utf8');
+  const recovered = await agent.sfCreateProjectMission({
+    id: 'mission-retry-after-crash',
+    type: 'sf_create_project',
+    target_root: 'VisionCoreProjects/demo-interrupt',
+    intent_hash: 'crash1234567890',
+    audit_mode: 'deterministic',
+    audit_receipt: { deploy_allowed: false },
+    deploy_allowed: false,
+    committed: false,
+    files: [{ name: 'src/index.js', content: 'console.log("recovered");\n' }]
+  });
+  assert.equal(recovered.ok, true, 'retry after interrupted write succeeds');
+  assert.equal(recovered.rollback_performed, true, 'abandoned partial folder is cleaned before retry');
+  assert.equal(fs.existsSync(abandonedPartial), false, 'abandoned partial folder removed');
+  assert(fs.existsSync(path.join(tmp, 'demo-interrupt', 'src', 'index.js')), 'retry writes final project');
+
+  const finalCrashDir = path.join(tmp, 'demo-final-crash');
+  fs.mkdirSync(path.join(finalCrashDir, 'src'), { recursive: true });
+  fs.writeFileSync(path.join(finalCrashDir, 'src', 'already-written.js'), 'console.log("existing");\n', 'utf8');
+  const finalCrashRetry = await agent.sfCreateProjectMission({
+    id: 'mission-retry-after-final-crash',
+    type: 'sf_create_project',
+    target_root: 'VisionCoreProjects/demo-final-crash',
+    intent_hash: 'finalcrash123',
+    audit_mode: 'deterministic',
+    audit_receipt: { deploy_allowed: false },
+    deploy_allowed: false,
+    committed: false,
+    files: [{ name: 'src/index.js', content: 'console.log("should-not-overwrite");\n' }]
+  });
+  assert.equal(finalCrashRetry.ok, false, 'retry after final-folder crash fails closed');
+  assert.equal(finalCrashRetry.action, 'sf_create_project_target_exists', 'existing final folder is never overwritten');
+  assert.equal(fs.existsSync(path.join(finalCrashDir, 'src', 'index.js')), false, 'retry does not add files to existing final folder');
 
   const result = await agent.sfCreateProjectMission({
     id: 'mission-ok',
