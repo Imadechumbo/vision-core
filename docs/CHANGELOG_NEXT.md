@@ -4,11 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
-## next-clean-132 (2026-07-19, nao deployado)
+## next-clean-132 (2026-07-19, produção)
 
 - Software Factory ganhou ponte fail-closed de execucao local real via Vision Agent Local: backend cria execution intent idempotente, flag nova `SF_REAL_EXECUTION_ENABLED=false` por padrao, mission type `sf_create_project`, target logico dedicado `VisionCoreProjects/<slug>-<mission_id>`, Ponytail Audit deterministico obrigatorio e LLM opcional (`deterministic_llm` default).
 - Agent escreve somente em pasta nova dedicada, valida arquivos, deixa diff staged (`git init` + `git add .`) e nunca comita/deploya. Falha limpa `.partial` abandonado em retry pos-timeout; pasta final ja existente falha fechado sem overwrite.
-- Teste novo `tools/tests/sf-real-execution.test.mjs`: contrato/flag/idempotencia/path traversal/timeout + escrita real em `%TEMP%` + staged diff sem commit + rollback de JS invalido.
+- Teste novo `tools/tests/sf-real-execution.test.mjs`: contrato/flag/idempotencia/path traversal/timeout + escrita real em `%TEMP%` + staged diff sem commit + rollback de JS invalido. Deploy confirmado: Pages `2f77b405.visioncoreai.pages.dev`, EB `v5.9.73-sf-real-execution`, flag `SF_REAL_EXECUTION_ENABLED` ausente/false em produção.
 ## next-clean-109 (2026-07-15, produção)
 
 - No Chat ativo, HUD avançou até restarem `12,36px` antes da scrollbar real (`clientWidth`), dentro do intervalo seguro 8–16px; zero legendas cortadas ou overflow.
