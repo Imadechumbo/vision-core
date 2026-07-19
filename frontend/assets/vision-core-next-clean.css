@@ -422,6 +422,36 @@ a { color: inherit; text-decoration: none; }
   padding-bottom: 160px; /* fallback if ResizeObserver is unsupported/unavailable; JS keeps this in sync with the real composer height */
 }
 
+/* Achado real (2026-07-19, retomada de investigação anterior travada por
+   erro de ambiente): o fix de "vao vazio" da PRINCIPLE-004 acima (cbf489e3,
+   2026-07-17) reduziu o vao de 372px pra ~167px mas nunca chegou a 0 --
+   nunca houve teste permanente travando a distancia final, entao ficou
+   assim. Causa raiz medida via Playwright (nao estimada): o composer ja
+   participa do fluxo normal do documento como IRMAO de #vcChatScroll
+   dentro de .vc-chat-stage (flex column) -- .vc-chat-stage.min-height
+   ja reserva o espaco real do composer via flex:1 1 auto em
+   #vcChatScroll, sozinho. O ResizeObserver acima soma
+   composer.offsetHeight+24px como padding-bottom DENTRO de #vcChatScroll
+   por cima disso -- reserva o espaco do composer 2 vezes. Testado e
+   confirmado com Playwright real (nao so simulado) em 4 larguras
+   (320/390/820/1440px) x resposta curta/longa: zerar esse padding produz
+   gap consistente de 24px (a folga real do proprio `.vc-composer{bottom:
+   18px}` + padding da mensagem) sem NENHUM overlap em nenhum cenario --
+   inclusive o caso extremo mobile onde os botoes do composer quebram em
+   varias linhas (offsetHeight bem maior), que preocupava por poder
+   "puxar" o composer sticky pra cima do texto: sem overlap la tambem,
+   contanto que a regra já esteja no CSS desde o carregamento da pagina
+   (testar injetando a regra DEPOIS que a pagina ja rolou produz uma
+   sobreposicao falsa-positiva -- artefato de teste, scroll suave ja
+   calculado pro layout antigo, nao reproduz o comportamento real de
+   producao). Escopo: só a aba Chat já iniciada (onboarding escondido) --
+   a tela de onboarding e as outras abas (Missions/Metricas/etc, que
+   reusam a mesma #vcFeaturePanel dentro de .vc-chat-stage) mantêm o
+   buffer original intacto, sem risco de regressão ali. */
+.vc-app-shell[data-active-feature="chat"] #vcChatScroll:has(#vcChatOnboarding[hidden]) {
+  padding-bottom: 0 !important;
+}
+
 .vc-kicker {
   margin: 0 0 12px;
   color: var(--violet-2);
