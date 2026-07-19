@@ -105,6 +105,8 @@ O Modo Avançado interpreta a missão que já está no composer/chat principal e
 
 O Agent processa o mission type `sf_create_project`: resolve o alvo dentro de `VC_PROJECTS_ROOT` ou `~/VisionCoreProjects`, bloqueia `../`, path absoluto e escape por realpath, escreve primeiro em pasta `.partial`, valida conteudo, renomeia para a pasta final, roda `git init` + `git add .` para deixar diff staged e nunca cria commit. Falha antes ou durante a escrita remove somente a pasta dedicada calculada e retorna `rollback_performed:true` quando a limpeza acontece.
 
+Se o Agent cair depois que a pasta final ja existe, o estado correto e fail-closed: sf_create_project_target_exists. O Next deve mostrar recuperacao segura ao usuario: revisar/copiar o caminho, marcar como revisado ou tentar novamente em uma nova pasta dedicada. Nunca sobrescrever a pasta existente automaticamente.
+
 Timeline/receipt registra `intent_created`, `agent_paired`, `audit_deterministic_*`, `audit_llm_*`, `files_written`, `rollback_performed` e `ready_for_manual_review`/falha. Deploy, PR, pasta livre escolhida pelo usuario e commit automatico permanecem fora de escopo.
 
 ## Versionamento

@@ -222,3 +222,70 @@ test('starting a new Auto-Pilot run resets a previous file list and hides the ZI
   await expect(page.locator('#vcSfZipActions')).toBeHidden();
   await expect(page.locator('#vcSfFilesStatus')).toHaveText('');
 });
+
+test('SF local execution target_exists recovery offers a new dedicated folder, never overwrite', async ({ page }) => {
+  await runToFinalPanel(page, 'app com pasta travada');
+
+  await page.route(`${API}/api/sf/project-files`, async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, job_id: 'pf-job-recovery' }) });
+  });
+  await page.route(`${API}/api/sf/job/pf-job-recovery`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, status: 'done', result: null, files: [{ name: 'src/index.js', content: 'console.log("ok")' }], provider: 'mock' })
+    });
+  });
+  await page.locator('#vcSfFilesBtn').click();
+  await expect(page.locator('#vcSfRealExec')).toBeVisible({ timeout: 5_000 });
+
+  const requests = [];
+  await page.route(`${API}/api/sf/execute-project`, async (route) => {
+    const body = route.request().postDataJSON();
+    requests.push(body);
+    const suffix = requests.length === 1 ? 'locked' : 'retry';
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        intent: { intent_hash: `intent-${suffix}`, mission_id: `mission-${suffix}`, status: 'queued', target_root: `VisionCoreProjects/demo-${suffix}` },
+        receipt: { committed: false, target_root: `VisionCoreProjects/demo-${suffix}` },
+        queued: true
+      })
+    });
+  });
+  await page.route(`${API}/api/sf/execution-intent/intent-locked`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        intent: { intent_hash: 'intent-locked', status: 'sf_create_project_target_exists', target_root: 'VisionCoreProjects/demo-locked' },
+        receipt: { target_root: 'VisionCoreProjects/demo-locked' },
+        agent_result: { ok: false, action: 'sf_create_project_target_exists', target_root: 'VisionCoreProjects/demo-locked' }
+      })
+    });
+  });
+  await page.route(`${API}/api/sf/execution-intent/intent-retry`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, intent: { intent_hash: 'intent-retry', status: 'queued', target_root: 'VisionCoreProjects/demo-retry' }, receipt: { target_root: 'VisionCoreProjects/demo-retry' }, agent_result: null })
+    });
+  });
+
+  await page.locator('#vcSfAgentId').fill('agent-test');
+  await page.locator('#vcSfAgentSecret').fill('secret-test');
+  await page.locator('#vcSfExecuteLocalBtn').click();
+
+  await expect(page.locator('#vcSfRecovery')).toBeVisible({ timeout: 5_000 });
+  await expect(page.locator('#vcSfRecovery')).toContainText('nao sobrescreveu nada');
+  await expect(page.locator('#vcSfRecoveryPath')).toContainText('VisionCoreProjects/demo-locked');
+
+  await page.locator('#vcSfRetryNewTargetBtn').click();
+  await expect.poll(() => requests.length).toBe(2);
+  expect(requests[1].project_id).not.toBe(requests[0].project_id);
+  expect(requests[1].project_id).toContain('retry-1');
+  await expect(page.locator('#vcSfRecovery')).toBeHidden();
+});

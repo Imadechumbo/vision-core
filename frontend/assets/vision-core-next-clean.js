@@ -1193,7 +1193,12 @@
       return r.text().then(function (text) {
         var data = null;
         try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { raw: text }; }
-        if (!r.ok) throw new Error((data && (data.error || data.message)) || ('HTTP ' + r.status));
+        if (!r.ok) {
+          var err = new Error((data && (data.error || data.message)) || ('HTTP ' + r.status));
+          err.status = r.status;
+          err.data = data;
+          throw err;
+        }
         return data;
       });
     });
@@ -2403,7 +2408,12 @@
       return r.text().then(function (text) {
         var data = null;
         try { data = text ? JSON.parse(text) : {}; } catch (_) { data = null; }
-        if (!r.ok) throw new Error((data && (data.error || data.message)) || ('HTTP ' + r.status));
+        if (!r.ok) {
+          var err = new Error((data && (data.error || data.message)) || ('HTTP ' + r.status));
+          err.status = r.status;
+          err.data = data;
+          throw err;
+        }
         return data;
       });
     }).then(function (data) {
@@ -4230,7 +4240,16 @@
   var sfAgentSecretInput = document.getElementById('vcSfAgentSecret');
   var sfExecuteLocalBtn = document.getElementById('vcSfExecuteLocalBtn');
   var sfExecuteStatus = document.getElementById('vcSfExecuteStatus');
+  var sfRecovery = document.getElementById('vcSfRecovery');
+  var sfRecoveryText = document.getElementById('vcSfRecoveryText');
+  var sfRecoveryPath = document.getElementById('vcSfRecoveryPath');
+  var sfCopyTargetBtn = document.getElementById('vcSfCopyTargetBtn');
+  var sfRetryNewTargetBtn = document.getElementById('vcSfRetryNewTargetBtn');
+  var sfMarkReviewedBtn = document.getElementById('vcSfMarkReviewedBtn');
   var sfGeneratedFiles = null;
+  var sfExecutionRetryNonce = 0;
+  var sfExecutionPollTimer = null;
+  var sfLastRecoveryTarget = '';
   var sfFilesInFlight = false;
   var sfZipInFlight = false;
   var sfAdvancedPanel = document.getElementById('vcSfAdvancedPanel');
@@ -4884,6 +4903,8 @@
     if (sfFilesList) { sfFilesList.textContent = ''; sfFilesList.hidden = true; }
     if (sfZipActions) sfZipActions.hidden = true;
     if (sfRealExec) sfRealExec.hidden = true;
+    hideSfRecovery();
+    sfExecutionRetryNonce = 0;
     if (sfExecuteStatus) sfExecuteStatus.textContent = '';
     setAsyncStatus(sfFilesStatus, 'empty', '');
     if (sfFilesBtn) { sfFilesBtn.disabled = false; sfFilesBtn.textContent = 'Gerar Lista de Arquivos'; }
@@ -5094,6 +5115,61 @@
     });
   }
 
+  function hideSfRecovery() {
+    if (sfExecutionPollTimer) {
+      clearTimeout(sfExecutionPollTimer);
+      sfExecutionPollTimer = null;
+    }
+    sfLastRecoveryTarget = '';
+    if (sfRecovery) sfRecovery.hidden = true;
+    if (sfRecoveryPath) sfRecoveryPath.textContent = '';
+  }
+
+  function isSfTargetLocked(data) {
+    var result = data && data.agent_result ? data.agent_result : data;
+    var action = result && result.action ? result.action : '';
+    var status = data && data.intent && data.intent.status ? data.intent.status : '';
+    return action === 'sf_create_project_target_exists' || status === 'sf_create_project_target_exists';
+  }
+
+  function showSfRecovery(data) {
+    var result = data && data.agent_result ? data.agent_result : data;
+    var intent = data && data.intent ? data.intent : {};
+    var receipt = data && data.receipt ? data.receipt : {};
+    var target = (result && (result.target_root || result.target_path)) || receipt.target_root || intent.target_root || '';
+    sfLastRecoveryTarget = target;
+    if (sfRecoveryText) sfRecoveryText.textContent = 'A pasta dedicada ja existe com conteudo. O Agent falhou fechado e nao sobrescreveu nada.';
+    if (sfRecoveryPath) sfRecoveryPath.textContent = target || 'Caminho nao informado pelo Agent.';
+    if (sfRecovery) sfRecovery.hidden = false;
+    if (sfExecuteStatus) sfExecuteStatus.textContent = 'Pasta travada detectada. Revise manualmente ou tente em uma nova pasta.';
+  }
+
+  function handleSfExecutionState(data) {
+    if (isSfTargetLocked(data)) {
+      showSfRecovery(data);
+      return true;
+    }
+    var intent = data && data.intent ? data.intent : null;
+    if (intent && intent.status === 'ready_for_manual_review' && sfExecuteStatus) {
+      sfExecuteStatus.textContent = 'Projeto criado. Diff staged para revisao manual; nenhum commit automatico.';
+      return true;
+    }
+    return false;
+  }
+
+  function pollSfExecutionIntent(hash, remaining) {
+    if (!hash || remaining <= 0) return;
+    if (sfExecutionPollTimer) clearTimeout(sfExecutionPollTimer);
+    sfExecutionPollTimer = setTimeout(function () {
+      apiRequest('/api/sf/execution-intent/' + encodeURIComponent(hash), { method: 'GET' })
+        .then(function (data) {
+          if (!handleSfExecutionState(data)) pollSfExecutionIntent(hash, remaining - 1);
+        })
+        .catch(function () {
+          pollSfExecutionIntent(hash, remaining - 1);
+        });
+    }, 1500);
+  }
   function readSfAuditMode() {
     var checked = document.querySelector('input[name="vcSfAuditMode"]:checked');
     return checked ? checked.value : 'deterministic_llm';
@@ -5113,9 +5189,12 @@
     if (sfExecuteLocalBtn) sfExecuteLocalBtn.disabled = true;
     if (sfExecuteStatus) sfExecuteStatus.textContent = 'Criando intent segura...';
     try {
+      hideSfRecovery();
+      var projectId = currentSfJobId || ('sf-' + Date.now());
+      if (sfExecutionRetryNonce > 0) projectId += '-retry-' + sfExecutionRetryNonce;
       var payload = {
         description: getSfMissionText(),
-        project_id: currentSfJobId || ('sf-' + Date.now()),
+        project_id: projectId,
         agent_id: agentId,
         agent_secret: agentSecret,
         audit_mode: readSfAuditMode(),
@@ -5131,8 +5210,11 @@
       }
       addSystemLog('SF_REAL_EXECUTION queued', response && response.intent ? response.intent.mission_id : 'pending');
       appendAssistantMessage('Software Factory criou uma intent local segura. O Vision Agent Local vai aplicar em uma pasta dedicada, deixar o diff staged e retornar o recibo na timeline.');
+      if (response && response.intent && response.intent.intent_hash) pollSfExecutionIntent(response.intent.intent_hash, 20);
     } catch (err) {
-      if (sfExecuteStatus) sfExecuteStatus.textContent = (err && err.message) ? err.message : 'Falha ao criar intent.';
+      if (err && err.data && isSfTargetLocked(err.data)) {
+        showSfRecovery(err.data);
+      } else if (sfExecuteStatus) sfExecuteStatus.textContent = (err && err.message) ? err.message : 'Falha ao criar intent.';
     } finally {
       if (sfExecuteLocalBtn) sfExecuteLocalBtn.disabled = false;
     }
@@ -5173,6 +5255,16 @@
   if (sfFilesBtn) sfFilesBtn.addEventListener('click', requestSfProjectFiles);
   if (sfZipBtn) sfZipBtn.addEventListener('click', requestSfZipDownload);
   if (sfExecuteLocalBtn) sfExecuteLocalBtn.addEventListener('click', requestSfLocalExecution);
+  if (sfRetryNewTargetBtn) sfRetryNewTargetBtn.addEventListener('click', function () {
+    sfExecutionRetryNonce += 1;
+    requestSfLocalExecution();
+  });
+  if (sfMarkReviewedBtn) sfMarkReviewedBtn.addEventListener('click', hideSfRecovery);
+  if (sfCopyTargetBtn) sfCopyTargetBtn.addEventListener('click', function () {
+    if (!sfLastRecoveryTarget) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(sfLastRecoveryTarget).catch(function () {});
+    if (sfExecuteStatus) sfExecuteStatus.textContent = 'Caminho copiado para revisao manual.';
+  });
   if (sfSuggestBtn) sfSuggestBtn.addEventListener('click', function () { sfSuggestAdvanced(true); });
   if (sfAcceptStackBtn) sfAcceptStackBtn.addEventListener('click', sfAcceptSuggestion);
   if (sfResetStackBtn) sfResetStackBtn.addEventListener('click', sfResetSelection);

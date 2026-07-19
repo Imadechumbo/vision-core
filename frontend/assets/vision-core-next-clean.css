@@ -3043,3 +3043,35 @@ a { color: inherit; text-decoration: none; }
     text-align: left;
   }
 }
+
+.vc-sf-recovery:not([hidden]) {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(251, 191, 36, .24);
+  border-radius: 10px;
+  background: rgba(120, 53, 15, .16);
+}
+.vc-sf-recovery p { margin: 0; color: #d7c7a4; font-size: 12px; }
+.vc-sf-recovery code {
+  display: block;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(18, 14, 28, .72);
+  color: #f8fafc;
+  white-space: normal;
+  word-break: break-word;
+}
+.vc-sf-recovery-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.vc-sf-recovery-actions button {
+  min-height: 32px;
+  border: 1px solid rgba(251, 191, 36, .26);
+  border-radius: 999px;
+  background: rgba(24, 20, 31, .84);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.vc-sf-recovery-actions button:hover { border-color: rgba(251, 191, 36, .48); }
