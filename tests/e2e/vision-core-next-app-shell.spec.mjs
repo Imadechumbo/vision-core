@@ -405,7 +405,9 @@ test('short-header pages do not reserve the old Atomic Core / chat intro vertica
         streamDisplay: getComputedStyle(stream).display,
         scrollDisplay: getComputedStyle(scroll).display,
         featurePanelHidden: featurePanel.hidden,
-        internalHeadDisplay: getComputedStyle(document.querySelector('#vcFeaturePanel > .vc-feature-head')).display
+        internalHeadDisplay: getComputedStyle(document.querySelector('#vcFeaturePanel > .vc-feature-head')).display,
+        stageWidth: Math.round(document.querySelector('.vc-chat-stage').getBoundingClientRect().width),
+        panelWidth: Math.round(panel.getBoundingClientRect().width)
       };
     });
   }
@@ -425,6 +427,9 @@ test('short-header pages do not reserve the old Atomic Core / chat intro vertica
     expect(result.internalHeadDisplay, `${target[0]} should not duplicate the short header inside the panel`).toBe('none');
     expect(result.featurePanelHidden, `${target[0]} generic feature panel visibility`).toBe(target[0] === 'factory');
     expect(result.scrollDisplay, `${target[0]} scroll container visibility`).toBe(target[0] === 'factory' ? 'none' : 'flex');
+    if (target[0] !== 'factory') {
+      expect(result.panelWidth, `${target[0]} should use the menu content width, not leave a dead right gutter`).toBeGreaterThanOrEqual(result.stageWidth - 2);
+    }
   }
 
   const chat = await gapFor('chat');
