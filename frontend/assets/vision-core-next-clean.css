@@ -2092,6 +2092,56 @@ a { color: inherit; text-decoration: none; }
 .vc-sf-files-actions button:disabled { opacity: .5; cursor: not-allowed; }
 .vc-sf-files-actions button:not(:disabled):hover { background: rgba(6, 78, 59, .3); }
 .vc-sf-files-status { font-size: 11px; color: #9db8ac; }
+.vc-sf-real-exec:not([hidden]) {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(52, 211, 153, .18);
+  border-radius: var(--radius);
+  background: rgba(6, 78, 59, .08);
+}
+.vc-sf-real-exec p { margin: 0; color: #bdb4cf; font-size: 12px; }
+.vc-sf-real-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.vc-sf-real-grid label,
+.vc-sf-audit-mode label {
+  display: grid;
+  gap: 5px;
+  color: #958aa7;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.vc-sf-real-grid input {
+  min-height: 34px;
+  border: 1px solid rgba(216, 180, 254, .16);
+  border-radius: 8px;
+  background: rgba(18, 14, 28, .78);
+  color: #f8fafc;
+  padding: 0 10px;
+}
+.vc-sf-audit-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.vc-sf-audit-mode legend { color: #34d399; font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.vc-sf-audit-mode label { display: flex; align-items: center; gap: 6px; }
+#vcSfExecuteLocalBtn {
+  width: fit-content;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid rgba(52, 211, 153, .35);
+  border-radius: 999px;
+  background: rgba(6, 78, 59, .22);
+  color: #d1fae5;
+  font-size: 11px;
+  font-weight: 780;
+}
+#vcSfExecuteLocalBtn:disabled { opacity: .5; cursor: not-allowed; }
 .vc-sf-files-list:not([hidden]) {
   display: grid;
   gap: 4px;

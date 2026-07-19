@@ -99,6 +99,14 @@ O Modo Avançado interpreta a missão que já está no composer/chat principal e
 - **Dry-Run real** (`sf_dry_run_real`, Caminho B Fase 2a) — única ação desta frente que sai do preview puro e enfileira uma execução real no Vision Agent Local, **sempre em modo simulação** (nunca escreve em disco). Banner de risco não-dismissable, confirmação dupla obrigatória, polling com timeout de 5min, botão de "cancelar acompanhamento" (só para de perguntar, não cancela remotamente — sem endpoint de cancelamento).
 - **`apply_patch`/`apply_patch_multi` reais** (Caminho B Fase 2b) — genuinamente irreversível, **fail-closed por design** (`AGENT_APPLY_ENABLED=false`), documentado em `VISION_CORE_NEXT_FRONTEND_SPEC.md` seção "Bloqueio de segurança". Não é parte do fluxo normal de Software Factory — é uma ação separada dentro da aba Missions.
 
+## Execucao local real via Vision Agent Local
+
+`POST /api/sf/execute-project` e a ponte aditiva entre os arquivos gerados por `project-files` e o Vision Agent Local. Ela e **fail-closed**: `SF_REAL_EXECUTION_ENABLED=false` por padrao retorna `sf_real_execution_disabled` antes de enfileirar qualquer missao. Quando ativada explicitamente, o backend exige sessao, `agent_id` + `agent_secret` pareados, deriva `target_root` server-side (`VisionCoreProjects/<slug>-<mission_id>`), calcula `intent_hash` idempotente, roda `validateAgentOutput()` como auditoria deterministica obrigatoria e, se `audit_mode:'deterministic_llm'`, roda segunda opiniao LLM que so pode reprovar ou confirmar. O frontend nao fornece `writes_disk`, `real_execution_allowed` nem `deploy_allowed` como autoridade.
+
+O Agent processa o mission type `sf_create_project`: resolve o alvo dentro de `VC_PROJECTS_ROOT` ou `~/VisionCoreProjects`, bloqueia `../`, path absoluto e escape por realpath, escreve primeiro em pasta `.partial`, valida conteudo, renomeia para a pasta final, roda `git init` + `git add .` para deixar diff staged e nunca cria commit. Falha antes ou durante a escrita remove somente a pasta dedicada calculada e retorna `rollback_performed:true` quando a limpeza acontece.
+
+Timeline/receipt registra `intent_created`, `agent_paired`, `audit_deterministic_*`, `audit_llm_*`, `files_written`, `rollback_performed` e `ready_for_manual_review`/falha. Deploy, PR, pasta livre escolhida pelo usuario e commit automatico permanecem fora de escopo.
+
 ## Versionamento
 
 Cache-bust do frontend (`?v=next-clean-N`) segue o mesmo do resto do Next — sem versionamento próprio da feature Software Factory.

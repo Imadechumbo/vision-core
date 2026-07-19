@@ -1271,6 +1271,149 @@ async function sfDryRunRealMission(m) {
 }
 
 /* ── Polling loop ─────────────────────────────────────────────── */
+function isPathInsideStrict(parent, child) {
+  var rel = path.relative(parent, child);
+  return rel === '' || (!!rel && !rel.startsWith('..') && !path.isAbsolute(rel));
+}
+
+function ensureDedicatedSfRoot(logicalTargetRoot) {
+  var raw = String(logicalTargetRoot || '').replace(/\\/g, '/').trim();
+  var prefix = 'VisionCoreProjects/';
+  if (!raw.startsWith(prefix) || raw.slice(prefix.length).includes('/')) {
+    return { ok: false, error: 'target_root precisa ser VisionCoreProjects/<pasta-dedicada>' };
+  }
+  var base = path.resolve(process.env.VC_PROJECTS_ROOT || path.join(os.homedir(), 'VisionCoreProjects'));
+  fs.mkdirSync(base, { recursive: true });
+  var baseReal = fs.realpathSync(base);
+  var target = path.resolve(baseReal, raw.slice(prefix.length));
+  if (!isPathInsideStrict(baseReal, target)) return { ok: false, error: 'target_root escapou da pasta VisionCoreProjects' };
+  return { ok: true, base: baseReal, target: target };
+}
+
+function safeSfFilePath(targetRoot, name) {
+  var raw = String(name || '').replace(/\\/g, '/').trim();
+  if (!raw || raw.indexOf('\0') !== -1 || raw.startsWith('/') || /^[A-Za-z]:\//.test(raw)) return null;
+  var normalized = path.posix.normalize(raw).replace(/^\.\//, '');
+  if (!normalized || normalized === '.' || normalized === '..' || normalized.startsWith('../')) return null;
+  var full = path.resolve(targetRoot, normalized);
+  return isPathInsideStrict(targetRoot, full) ? { rel: normalized, full: full } : null;
+}
+
+function removeDedicatedDir(dir, base) {
+  var resolved = path.resolve(dir);
+  if (!isPathInsideStrict(base, resolved)) return false;
+  try { fs.rmSync(resolved, { recursive: true, force: true }); return true; }
+  catch (_) { return false; }
+}
+
+async function sfCreateProjectMission(m) {
+  var log = [];
+  var steps = [];
+  var rollbackPerformed = false;
+  function step(agent, ok, detail) {
+    steps.push({ agent: agent, ok: ok, detail: detail });
+    log.push(agent + ': ' + (ok ? 'ok' : 'fail') + ' ' + detail);
+    console.log('  > ' + agent + ': ' + detail);
+  }
+
+  if (!m.audit_receipt || m.audit_receipt.deploy_allowed !== false || m.deploy_allowed === true || m.committed === true) {
+    step('PonytailAudit', false, 'receipt ausente/invalido ou deploy/commit solicitado');
+    return { mission_id: m.id, ok: false, pass_gold: false, action: 'sf_create_project_blocked_audit', output: 'Execucao bloqueada: receipt de auditoria invalido.', log: log, steps: steps, sddf: SDDF_BASELINE };
+  }
+  if (!Array.isArray(m.files) || !m.files.length) {
+    step('Resolver', false, 'files[] ausente');
+    return { mission_id: m.id, ok: false, pass_gold: false, action: 'sf_create_project_failed', output: 'files[] ausente.', log: log, steps: steps, sddf: SDDF_BASELINE };
+  }
+
+  var root = ensureDedicatedSfRoot(m.target_root || m.target_path);
+  step('TargetLock', root.ok, root.ok ? root.target : root.error);
+  if (!root.ok) return { mission_id: m.id, ok: false, pass_gold: false, action: 'sf_create_project_blocked_path', output: root.error, log: log, steps: steps, sddf: SDDF_BASELINE };
+
+  var partial = root.target + '.partial-' + String(m.intent_hash || m.id).slice(0, 12);
+  if (fs.existsSync(partial)) {
+    rollbackPerformed = removeDedicatedDir(partial, root.base);
+    step('Rollback', rollbackPerformed, 'partial anterior removido antes de nova tentativa');
+  }
+  if (fs.existsSync(root.target)) {
+    var existing = [];
+    try { existing = fs.readdirSync(root.target); } catch (_) {}
+    if (existing.length) {
+      step('TargetLock', false, 'pasta final ja existe com conteudo: ' + root.target);
+      return { mission_id: m.id, ok: false, pass_gold: false, action: 'sf_create_project_target_exists', output: 'Pasta dedicada ja existe com conteudo. Nada foi escrito.', target_root: root.target, log: log, steps: steps, sddf: SDDF_BASELINE };
+    }
+  }
+
+  var resolvedFiles = [];
+  for (var i = 0; i < m.files.length; i++) {
+    var item = m.files[i];
+    var r = safeSfFilePath(partial, item.name || item.path || item.file);
+    if (!r) {
+      step('TargetLock', false, 'arquivo invalido: ' + (item && (item.name || item.path || item.file)));
+      return { mission_id: m.id, ok: false, pass_gold: false, action: 'sf_create_project_blocked_path', output: 'Arquivo invalido/path traversal detectado. Nada foi escrito.', log: log, steps: steps, sddf: SDDF_BASELINE };
+    }
+    resolvedFiles.push({ rel: r.rel, full: r.full, content: String(item.content || '') });
+  }
+
+  try {
+    fs.mkdirSync(partial, { recursive: true });
+    for (var j = 0; j < resolvedFiles.length; j++) {
+      var f = resolvedFiles[j];
+      var validation = validatePatchContent(f.content, path.extname(f.rel).toLowerCase());
+      step('Aegis', validation.ok, f.rel + ': ' + (validation.ok ? 'PASS' : validation.error));
+      if (!validation.ok) throw new Error('validacao falhou em ' + f.rel + ': ' + validation.error);
+      fs.mkdirSync(path.dirname(f.full), { recursive: true });
+      fs.writeFileSync(f.full, f.content, 'utf8');
+    }
+    fs.renameSync(partial, root.target);
+    step('PatchEngine', true, resolvedFiles.length + ' arquivo(s) escritos em pasta dedicada');
+
+    var init = spawnSync('git', ['init'], { cwd: root.target, encoding: 'utf8', timeout: 10000 });
+    if (init.status !== 0) throw new Error('git init falhou: ' + (init.stderr || init.stdout || '').trim());
+    var add = spawnSync('git', ['add', '.'], { cwd: root.target, encoding: 'utf8', timeout: 10000 });
+    if (add.status !== 0) throw new Error('git add falhou: ' + (add.stderr || add.stdout || '').trim());
+    step('Git', true, 'diff staged para revisao manual; commit automatico=false');
+
+    return {
+      mission_id: m.id,
+      ok: true,
+      pass_gold: false,
+      action: 'sf_project_created',
+      files_written: resolvedFiles.length,
+      rollback_performed: rollbackPerformed,
+      target_root: root.target,
+      audit_mode: m.audit_mode || 'deterministic_llm',
+      intent_hash: m.intent_hash || null,
+      committed: false,
+      deploy_allowed: false,
+      output: 'Projeto criado localmente em ' + root.target + '\nArquivos staged para revisao manual. Nenhum commit automatico foi criado.',
+      files: resolvedFiles.map(function(f) { return f.rel; }),
+      manifest: resolvedFiles.map(function(f) { return { name: f.rel, bytes: Buffer.byteLength(f.content, 'utf8') }; }),
+      log: log,
+      steps: steps,
+      sddf: Object.assign({}, SDDF_BASELINE, { deploy_allowed: false, commit: 'manual' })
+    };
+  } catch (e) {
+    rollbackPerformed = removeDedicatedDir(partial, root.base) || rollbackPerformed;
+    rollbackPerformed = removeDedicatedDir(root.target, root.base) || rollbackPerformed;
+    step('Rollback', rollbackPerformed, 'limpeza da pasta dedicada apos falha');
+    return {
+      mission_id: m.id,
+      ok: false,
+      pass_gold: false,
+      action: 'sf_create_project_rollback',
+      output: 'Falha ao criar projeto: ' + e.message,
+      error: e.message,
+      rollback_performed: rollbackPerformed,
+      target_root: root.target,
+      intent_hash: m.intent_hash || null,
+      committed: false,
+      deploy_allowed: false,
+      log: log,
+      steps: steps,
+      sddf: SDDF_BASELINE
+    };
+  }
+}
 function poll() {
   var pendingUrl = WORKER + '/api/agent/mission/pending?agent_id=' + encodeURIComponent(AGENT_ID) +
     '&agent_secret=' + encodeURIComponent(AGENT_SECRET);
@@ -1291,6 +1434,7 @@ function poll() {
                     m.type === 'apply_patch'       ? applyPatchMission      :
                     m.type === 'apply_patch_multi' ? applyPatchMultiMission :
                     m.type === 'sf_dry_run_real'   ? sfDryRunRealMission    :
+                    m.type === 'sf_create_project' ? sfCreateProjectMission :
                     executeMission;
       handler(m).then(function(result) {
         console.log('Ação  : ' + result.action);
@@ -1347,5 +1491,8 @@ module.exports = {
   simulatePatch:            simulatePatch,
   validatePatchContent:     validatePatchContent,
   scanExternalProject:      scanExternalProject,
-  resolveTargetFileInRoot:  resolveTargetFileInRoot
+  resolveTargetFileInRoot:  resolveTargetFileInRoot,
+  ensureDedicatedSfRoot:    ensureDedicatedSfRoot,
+  safeSfFilePath:           safeSfFilePath,
+  sfCreateProjectMission:   sfCreateProjectMission
 };
