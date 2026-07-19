@@ -99,6 +99,8 @@ SESSION_SECRET                # OBRIGATÓRIO desde INCIDENTE-4 — boot falha se
 PROVIDER_VAULT_SECRET         # cifra o AI Provider Vault (ver docs/ARCHITECTURE.md)
 HOTMART_HOTTOK                # PENDENTE — não configurado ainda
 AWS_S3_BUCKET=vision-core-data-prod
+SF_REAL_EXECUTION_ENABLED=false      # fail-closed; habilita a ponte real do SF somente quando explicitamente true
+SF_REAL_EXECUTION_ALLOWED_AGENTS     # allowlist CSV de agent_id; ausente/vazia bloqueia todos os Agents mesmo com a flag principal true
 ```
 
 **Fallback de LLM (`callLLM()`):** OpenRouter → Anthropic → Groq → DeepSeek → Gemini → Cerebras. Todas as env vars reais (chaves de LLM/OAuth/Stripe/Hotmart) foram migradas na recriação do EB — não listadas aqui por serem segredos.

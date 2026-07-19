@@ -9,6 +9,15 @@ function isSfRealExecutionEnabled(env = process.env) {
   return String(env.SF_REAL_EXECUTION_ENABLED || '').toLowerCase() === 'true';
 }
 
+function isSfRealExecutionAgentAllowed(agentId, env = process.env) {
+  const allowed = String(env.SF_REAL_EXECUTION_ALLOWED_AGENTS || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+  if (!allowed.length) return false;
+  return allowed.includes(String(agentId || '').trim());
+}
+
 function normalizeAuditMode(value) {
   return VALID_AUDIT_MODES.has(value) ? value : 'deterministic_llm';
 }
@@ -212,6 +221,7 @@ function publicIntent(intent) {
 
 module.exports = {
   isSfRealExecutionEnabled,
+  isSfRealExecutionAgentAllowed,
   normalizeAuditMode,
   safeRelativeFileName,
   normalizeSfFiles,
