@@ -383,6 +383,12 @@
   var secretGuardCard = document.getElementById('vcSecretGuardCard');
   var activeFeature = 'chat';
   var lastFeatureTrigger = null;
+  // Bumped on every tab switch. Async work kicked off from one tab (action
+  // buttons, metrics polling) captures the generation at request time and
+  // checks it again before rendering — a response that lands after the user
+  // already navigated elsewhere is discarded instead of drawing its panel
+  // over whatever tab is now active (real overlap bug, live screenshot).
+  var navGeneration = 0;
   var lastChatMissionText = '';
   var metricsWide = false;
 
@@ -680,7 +686,9 @@
     if (window.setAtomicCoreState) window.setAtomicCoreState('action');
     if (window.highlightAtomicAgents) window.highlightAtomicAgents(feature.agents || []);
     appendMessage('pending', feature.title.toUpperCase(), 'Consultando ' + action.path + '...');
+    var requestGeneration = navGeneration;
     apiRequest(action.path).then(function (data) {
+      if (requestGeneration !== navGeneration) return;
       // Order matters: appendMessage() scrolls the new chat bubble into view
       // itself — call it BEFORE renderFeatureActionViz() so the chart's own
       // scrollIntoView() (inside showFeatureViz) runs last and wins, leaving
@@ -688,6 +696,7 @@
       appendMessage('assistant', action.label.toUpperCase(), summarizeResult(data));
       renderFeatureActionViz(action, data);
     }).catch(function (err) {
+      if (requestGeneration !== navGeneration) return;
       hideFeatureViz();
       appendMessage('error', action.label.toUpperCase(), err && err.message ? err.message : String(err));
     }).then(function () {
@@ -696,6 +705,7 @@
   }
 
   function selectFeature(key, announce) {
+    navGeneration += 1;
     var feature = featureMap[key] || featureMap.chat;
     activeFeature = featureMap[key] ? key : 'chat';
     if (activeFeature !== 'chat' && revealController.cancel) revealController.cancel();
@@ -2239,10 +2249,12 @@
     var results = { agents: null, dora: null, summary: null, memory: null, status: null };
     var failures = 0;
     var pending = 5;
+    var requestGeneration = navGeneration;
 
     function settle() {
       pending -= 1;
       if (pending > 0) return;
+      if (requestGeneration !== navGeneration) return;
       setMetricsLoading(false);
       if (failures === 5) {
         if (metricsSourceBadge) { metricsSourceBadge.textContent = 'FALLBACK LOCAL'; metricsSourceBadge.className = 'vc-metrics-source is-fallback'; }
