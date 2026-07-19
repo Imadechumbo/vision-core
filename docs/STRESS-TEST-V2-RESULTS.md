@@ -1,6 +1,6 @@
 # Vision Core — Stress Test V2 Results
 
-Data: 2026-07-19T14:51:25.318Z
+Data: 2026-07-19T16:12:21.330Z
 Vision Core URL: http://vision-core-prod.eba-pdk6anxy.us-east-1.elasticbeanstalk.com
 Dashboard: http://localhost:3100
 
@@ -12,7 +12,7 @@ Dashboard: http://localhost:3100
 | PASS | 15 |
 | FAIL | 0 |
 | Taxa de acerto | 100% |
-| Tempo médio | 7197ms |
+| Tempo médio | 3366ms |
 
 ## Por Bloco
 
@@ -26,152 +26,152 @@ Dashboard: http://localhost:3100
 ## Resultados Detalhados
 
 ### STRESS-11 — Bug em 2 arquivos JS — capas somem + menu quebrado
-**Bloco:** A | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 1075ms
+**Bloco:** A | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 1080ms
 **Sintoma:** capas somem E menu mobile não abre
 **Esperadas:** LOCAL_REAL_COVERS, menu, menuToggle, múltiplos
-**Encontradas:** menu, menuToggle
+**Encontradas:** LOCAL_REAL_COVERS, menu, menuToggle
 ```
-```json {   "diagnosis": "Linhas comentadas introduzidas erroneamente causam perda de funcionalidade (comentário stray em games-2026-feature.js e desativação de menuToggle em main.js).",   "files": [     {       "file": "front/assets/js/games-2026-fe
+```json {   "diagnosis": "Dois bugs introduzidos: (1) linha de comentário vazia \"// \" inserida antes de LOCAL_REAL_COVERS em games-2026-feature.js, gerando código desnecessário; (2) linha de menuToggle comentada em main.js, desativando funcionalida
 ```
 
 
 ### STRESS-12 — Bug JS + CSS — rank errado + cor vermelho
-**Bloco:** A | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 1162ms
+**Bloco:** A | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 952ms
 **Sintoma:** GTA VI some da lista + cor do site vira vermelha
 **Esperadas:** rank, accent, color, CSS
 **Encontradas:** rank, accent, CSS
 ```
-```json {   "diagnosis": "Dois bugs introduzidos: (1) rank de \"Grand Theft Auto VI\" alterado de 1 para 99, quebrando ordem de ranking; (2) cor de accent CSS alterada de verde (#2dd881) para vermelho (#ff0000), afetando identidade visual.",   "files
+```json {   "diagnosis": "Dois bugs introduzidos: rank do GTA VI alterado de 1 para 99; cor accent alterada de verde (#2dd881) para vermelho (#ff0000).",   "files": [     {       "file": "front/assets/js/games-2026-feature.js",       "fix_type": "cod
 ```
 
 
 ### STRESS-13 — Bug em 3 arquivos — capas + ranking + cor
-**Bloco:** A | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 78635ms
+**Bloco:** A | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 14640ms
 **Sintoma:** capas somem + rankings errados + cor vermelha
 **Esperadas:** múltiplos, LOCAL_REAL_COVERS, rank, accent
-**Encontradas:** múltiplos, LOCAL_REAL_COVERS, rank, accent
+**Encontradas:** LOCAL_REAL_COVERS, rank, accent
 ```
-```json {   "diagnosis": "Múltiplos bugs identificados: em 'games-2026-feature.js', a constante LOCAL_REAL_COVERS foi indevidamente redefinida como 'undefined' movendo seu conteúdo para '_UNUSED_'; em 'games-hub.js', o campo 'rank' do criador 'HadesP
+```json {   "diagnosis": "Três arquivos corrompidos por alterações acidentais: (1) games-2026-feature.js: LOCAL_REAL_COVERS anulada com undefined e variável _UNUSED_ inútil, quebrando getLocalRealCover; (2) games-hub.js: rank do primeiro criador alte
 ```
 
 
 ### STRESS-14 — display:none no body — página em branco
-**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** EASY | **Tempo:** 1036ms
+**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** EASY | **Tempo:** 1160ms
 **Sintoma:** página completamente branca — body oculto
 **Esperadas:** display, none, body, visibilidade
 **Encontradas:** display, none, body, visibilidade
 ```
-```json {   "diagnosis": "display: none; was introduced in the body selector, hiding the entire page; remove the line.",   "file": "front/assets/css/styles.css",   "fix_type": "code_patch",   "patch": {     "search": "display: none;",     "replace": 
+```json {   "diagnosis": "display: none; ocultou todo o conteúdo do body, removendo a visibilidade da página",   "file": "front/assets/css/styles.css",   "fix_type": "code_patch",   "patch": {     "search": "display: none;",     "replace": ""   },   
 ```
 
 
 ### STRESS-15 — Cor primária --accent: verde → vermelho
-**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 1047ms
+**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 1072ms
 **Sintoma:** botões e destaques vermelhos em vez de verdes
 **Esperadas:** accent, #ff0000, #2dd881, CSS
 **Encontradas:** accent, #ff0000, #2dd881, CSS
 ```
-```json {   "diagnosis": "Variable --accent was changed from the intended green #2dd881 to red #ff0000, causing theme inconsistency.",   "file": "front/assets/css/styles.css",   "fix_type": "code_patch",   "patch": {     "search": "--accent: #ff0000;
+```json {   "diagnosis": "Variável CSS --accent foi alterada de #2dd881 (verde) para #ff0000 (vermelho), impactando as cores de destaque do site.",   "file": "front/assets/css/styles.css",   "fix_type": "code_patch",   "patch": {     "search": "  --a
 ```
 
 
 ### STRESS-16 — z-index: -1 em main/header — header some atrás
-**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 846ms
+**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 712ms
 **Sintoma:** header e nav somem atrás do grid de fundo
 **Esperadas:** z-index, -1, main, header
 **Encontradas:** z-index, -1, main, header
 ```
-```json {   "diagnosis": "z-index definido como -1 em main, header, footer e .topbar faz com que esses elementos fiquem abaixo do conteúdo, provocando sobreposição errada e invisibilidade.",   "file": "front/assets/css/styles.css",   "fix_type": "cod
+```json {   "diagnosis": "z-index definido como -1 para main, header, footer e .topbar, fazendo esses elementos ficarem atrás de outros e quebrando o layout; o valor correto é 1",   "file": "front/assets/css/styles.css",   "fix_type": "code_patch",  
 ```
 
 
 ### STRESS-17 — Largura máx --max: 0px — layout colapsa
-**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 666ms
+**Bloco:** B | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 735ms
 **Sintoma:** todo conteúdo colapsa para largura zero
 **Esperadas:** --max, 0px, 1440px, CSS
 **Encontradas:** --max, 0px, 1440px, CSS
 ```
-```json {   "diagnosis": "variável CSS --max foi alterada para 0px, impedindo o container de expandir corretamente",   "file": "front/assets/css/styles.css",   "fix_type": "code_patch",   "patch": {     "search": "  --max: 0px;",     "replace": "  --
+```json {   "diagnosis": "Variable --max set to 0px breaks responsive layout; should be 1440px.",   "file": "front/assets/css/styles.css",   "fix_type": "code_patch",   "patch": {     "search": "  --max: 0px;",     "replace": "  --max: 1440px;"   }, 
 ```
 
 
 ### STRESS-18 — Rota GET /cover retorna 404 em vez de dados
-**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** EASY | **Tempo:** 981ms
+**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** EASY | **Tempo:** 805ms
 **Sintoma:** endpoint /cover retorna 404 para todos os jogos
 **Esperadas:** 404, rota, cover, payload
-**Encontradas:** 404, rota, payload
+**Encontradas:** 404, rota, cover, payload
 ```
-```json {   "diagnosis": "Retorno incorreto da rota: a linha que devolve a cobertura do jogo foi substituída por um erro 404, impedindo o cliente de receber o payload esperado.",   "file": "backend/src/routes/gamesRoutes.js",   "fix_type": "code_patc
+```json {   "diagnosis": "Resposta incorreta retorna 404 e mensagem de erro, impedindo a entrega do payload esperado",   "file": "backend/src/routes/gamesRoutes.js",   "fix_type": "code_patch",   "patch": {     "search": "return res.status(404).json(
 ```
 
 
 ### STRESS-19 — REQUEST_TIMEOUT_MS = 0 — todas requests falham
-**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 1140ms
+**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** MEDIUM | **Tempo:** 12630ms
 **Sintoma:** timeout zero — requests de capa todas falham
 **Esperadas:** timeout, 0, REQUEST_TIMEOUT, falha
-**Encontradas:** timeout, 0, REQUEST_TIMEOUT, falha
+**Encontradas:** timeout, 0, REQUEST_TIMEOUT
 ```
-```json {   "diagnosis": "REQUEST_TIMEOUT_MS foi definido como 0, fazendo com que as requisições expirassem imediatamente.",   "file": "backend/src/services/gameCoverService.js",   "fix_type": "code_patch",   "patch": {     "search": "const REQUEST_T
+```json {   "diagnosis": "O timeout da requisição foi alterado de 12 segundos (12000ms) para 0ms, fazendo com que o `AbortController` dispare o aborto instantaneamente antes de qualquer resposta HTTP ser recebida. Isso quebra todas as chamadas `fetch
 ```
 
 
 ### STRESS-20 — API_BASE_URL → localhost — sem dados em produção
-**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 844ms
+**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** HARD | **Tempo:** 1163ms
 **Sintoma:** sem dados — API apontando para localhost em produção
 **Esperadas:** API_BASE_URL, localhost, produção, URL
 **Encontradas:** API_BASE_URL, localhost, produção, URL
 ```
-```json {   "diagnosis": "API_BASE_URL foi alterado para http://localhost:3000, desviando o endpoint da produção",   "file": "front/assets/js/runtime-config.js",   "fix_type": "code_patch",   "patch": {     "search": "  API_BASE_URL: \"http://localho
+```json {   "diagnosis": "API_BASE_URL aponta para localhost em ambiente de produção, provocando falha nas requisições de API.",   "file": "front/assets/js/runtime-config.js",   "fix_type": "code_patch",   "patch": {     "search": "  API_BASE_URL: \"
 ```
 
 
 ### STRESS-21 — Condição de validação invertida — if (!query) → if (query)
-**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 881ms
+**Bloco:** C | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 629ms
 **Sintoma:** queries válidas bloqueadas; queries vazias passam
 **Esperadas:** condição, invertida, query, validação
 **Encontradas:** condição, invertida, query, validação
 ```
-```json {   "diagnosis": "Condição invertida impede validação correta de parâmetro obrigatório 'q', retornando erro 400 quando query está presente ao invés de ausente.",   "file": "backend/src/routes/gamesRoutes.js",   "fix_type": "code_patch",   "pa
+```json {   "diagnosis": "Condição invertida impede validação de parâmetro obrigatório 'q'. Linha 7 contém if (query) { ao invés de if (!query) {.",   "file": "backend/src/routes/gamesRoutes.js",   "fix_type": "code_patch",   "patch": {     "search":
 ```
 
 
 ### STRESS-22 — Descrição do Analista Técnico zerada
-**Bloco:** D | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 855ms
+**Bloco:** D | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 870ms
 **Sintoma:** tooltip do agente técnico aparece completamente vazia
 **Esperadas:** desc, vazio, descrição, Analista
 **Encontradas:** desc, vazio, descrição, Analista
 ```
-```json {   "diagnosis": "Campo desc foi alterado para string vazia, removendo a descrição do agente 'Analista Técnico'",   "file": "front/assets/js/main.js",   "fix_type": "code_patch",   "patch": {     "search": "      desc: '',",     "replace": " 
+```json {   "diagnosis": "desc field was cleared, removing the description for the Analista Técnico agent, causing missing text on the site.",   "file": "front/assets/js/main.js",   "fix_type": "code_patch",   "patch": {     "search": "desc: '',",   
 ```
 
 
 ### STRESS-23 — HERMES_AGENT comentado — referência undefined
-**Bloco:** D | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 1734ms
+**Bloco:** D | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 11523ms
 **Sintoma:** HERMES_AGENT undefined — erros no console
 **Esperadas:** HERMES_AGENT, comentad, ReferenceError, undefined
-**Encontradas:** HERMES_AGENT, comentad
+**Encontradas:** HERMES_AGENT, comentad, ReferenceError
 ```
-```json {   "diagnosis":  "Hermes Agent foi comentado, removendo-o da execução do código.",   "file":       "front/assets/js/main.js",   "fix_type":   "code_patch",   "patch":      { "search": "// const HERMES_AGENT = { name: \"Hermes — Strategic Mem
+```json {   "diagnosis": "A variável `HERMES_AGENT` foi comentada (linha original desabilitada), o que pode causar ReferenceError se for referenciada em qualquer parte do código ou quebrar a intenção do projeto.",   "file": "front/assets/js/main.js",
 ```
 
 
 ### STRESS-24 — ACCEPTANCE_THRESHOLD 0.7 → 7 — nenhuma capa aceita
-**Bloco:** D | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 16159ms
+**Bloco:** D | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 1561ms
 **Sintoma:** threshold impossível — zero capas aceitas
 **Esperadas:** ACCEPTANCE_THRESHOLD, threshold, 0.7, 7
 **Encontradas:** ACCEPTANCE_THRESHOLD, threshold, 0.7, 7
 ```
-```json {   "diagnosis": "O valor de ACCEPTANCE_THRESHOLD foi alterado de 0.7 (float) para 7 (int) no código atual, fazendo com que a comparação `confidence >= threshold` em scoreGameCoverCandidate nunca seja atendida, pois confidence está entre 0 e 
+```json {   "diagnosis": "Threshold default alterado de 0.7 para 7, fazendo o limiar de aceitação de capas ser excessivamente alto e impedindo a aceitação de candidatos válidos.",   "file": "backend/src/services/gameCoverService.js",   "fix_type": "c
 ```
 
 
 ### STRESS-25 — import resolveGameCover comentado — ReferenceError
-**Bloco:** D | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 890ms
+**Bloco:** D | **Status:** ✅ PASS | **Dificuldade:** EXPERT | **Tempo:** 963ms
 **Sintoma:** ReferenceError: resolveGameCover is not defined
 **Esperadas:** import, resolveGameCover, undefined, ReferenceError
 **Encontradas:** import, resolveGameCover, ReferenceError
 ```
-```json {   "diagnosis": "A linha de importação de clearGameCoverCache e resolveGameCover foi comentada, impossibilitando o uso das funções nos endpoints e causando ReferenceError.",   "file": "backend/src/routes/gamesRoutes.js",   "fix_type": "code_
+```json {   "diagnosis": "Importação de clearGameCoverCache e resolveGameCover está comentada, provocando ReferenceError ao usar essas funções nas rotas",   "file": "backend/src/routes/gamesRoutes.js",   "fix_type": "code_patch",   "patch": {     "se
 ```
 
 
