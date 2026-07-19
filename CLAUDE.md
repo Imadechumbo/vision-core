@@ -111,7 +111,7 @@ AWS_S3_BUCKET=vision-core-data-prod
 
 **Frontend (Vision Core Next — cockpit unificado):** sidebar fixa persistente entre Chat e Software Factory; chat funcional real (`POST /api/chat`); Software Factory Auto-Pilot + Modo Avançado com arquiteto visual local; GitHub PR com confirmação dupla; Executar Missão (Caminho A patch seguro + Caminho B dry-run real); Atomic Core (widget de identidade, ver `docs/ATOMIC_CORE_SPEC.md`); Métricas com gráficos nativos (sem lib externa); Security Lab; Vault-rollback; Tools-apply-fix; tutoriais contextuais por seção. Detalhe de cada feature, com achados de contrato de API verificados por leitura direta do backend, vive em `docs/CHANGELOG_NEXT.md` (por versão) e `docs/session_logs/` (narrativa completa).
 
-**Não implementado ainda:** autenticação/login/OAuth própria do Vision Core Next (depende do frontend legado); ver `docs/CURRENT_STATE.md` para a lista completa de pendências ativas.
+**Pendências ativas do Next:** ver `docs/CURRENT_STATE.md` e `docs/ROADMAP.md`. Auth email/senha do Next já foi implementado em `next-clean-62`; OAuth Google/GitHub do Next já foi implementado em `next-clean-77`.
 
 ---
 
