@@ -150,6 +150,47 @@ function buildAuditEvidence(intent) {
   };
 }
 
+
+function findSfIntentByMission(intentMap, missionId) {
+  for (const intent of intentMap.values()) {
+    if (intent.mission_id === missionId) return intent;
+  }
+  return null;
+}
+
+function markStaleSfIntents(intentMap, { nowMs = Date.now(), timeoutMs = 10 * 60 * 1000 } = {}) {
+  const stale = [];
+  for (const intent of intentMap.values()) {
+    if (intent.status === 'queued' || intent.status === 'in_progress') {
+      const started = intent.queued_at_ms || intent.created_at_ms || 0;
+      if (started && nowMs - started > timeoutMs) {
+        intent.status = 'timeout_cleanup_required';
+        intent.receipt = Object.assign({}, intent.receipt || {}, {
+          outcome: 'timeout_cleanup_required',
+          reason: 'agent_timeout_before_result',
+          rollback_performed: false,
+          cleanup_required: true
+        });
+        stale.push(intent);
+      }
+    }
+  }
+  return stale;
+}
+
+function canRetrySfIntent(intent) {
+  return !!intent && intent.status === 'timeout_cleanup_required';
+}
+
+function prepareSfIntentRetry(intent, previousIntent) {
+  if (!canRetrySfIntent(previousIntent)) return intent;
+  return Object.assign(intent, {
+    retry_of: previousIntent.mission_id,
+    previous_status: previousIntent.status,
+    target_root: previousIntent.target_root,
+    target_path: previousIntent.target_path || previousIntent.target_root
+  });
+}
 function publicIntent(intent) {
   return {
     id: intent.id,
@@ -161,6 +202,7 @@ function publicIntent(intent) {
     intent_hash: intent.intent_hash,
     audit_mode: intent.audit_mode,
     status: intent.status,
+    retry_of: intent.retry_of || null,
     created_at: intent.created_at,
     file_count: intent.files.length,
     deploy_allowed: false,
@@ -176,5 +218,9 @@ module.exports = {
   createSfExecutionIntent,
   buildAuditClaims,
   buildAuditEvidence,
-  publicIntent
+  publicIntent,
+  findSfIntentByMission,
+  markStaleSfIntents,
+  canRetrySfIntent,
+  prepareSfIntentRetry
 };

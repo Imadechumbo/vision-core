@@ -22,7 +22,11 @@ const {
   createSfExecutionIntent,
   buildAuditClaims,
   buildAuditEvidence,
-  publicIntent
+  publicIntent,
+  findSfIntentByMission,
+  markStaleSfIntents,
+  canRetrySfIntent,
+  prepareSfIntentRetry
 } = require('./sf-real-execution');
 
 // Import de módulo ESM local em tools/ (server.js é CommonJS; tools/ é ESM,
@@ -4772,28 +4776,11 @@ const sfExecutionIntents = new Map(); // intent_hash -> execution intent
 const SF_REAL_INTENT_TIMEOUT_MS = 10 * 60 * 1000;
 
 function findSfExecutionIntentByMission(missionId) {
-  for (const intent of sfExecutionIntents.values()) {
-    if (intent.mission_id === missionId) return intent;
-  }
-  return null;
+  return findSfIntentByMission(sfExecutionIntents, missionId);
 }
 
 function markStaleSfExecutionIntents() {
-  const t = Date.now();
-  for (const intent of sfExecutionIntents.values()) {
-    if (intent.status === 'queued' || intent.status === 'in_progress') {
-      const started = intent.queued_at_ms || intent.created_at_ms || 0;
-      if (started && t - started > SF_REAL_INTENT_TIMEOUT_MS) {
-        intent.status = 'timeout_cleanup_required';
-        intent.receipt = Object.assign({}, intent.receipt || {}, {
-          outcome: 'timeout_cleanup_required',
-          reason: 'agent_timeout_before_result',
-          rollback_performed: false,
-          cleanup_required: true
-        });
-      }
-    }
-  }
+  return markStaleSfIntents(sfExecutionIntents, { nowMs: Date.now(), timeoutMs: SF_REAL_INTENT_TIMEOUT_MS });
 }
 
 async function runSfDeterministicAudit(intent) {
@@ -5248,12 +5235,16 @@ app.post('/api/sf/execute-project', requireVisionAuth, async (req, res) => {
 
   markStaleSfExecutionIntents();
   const existing = sfExecutionIntents.get(intent.intent_hash);
-  if (existing) {
+  if (existing && !canRetrySfIntent(existing)) {
     return sendOk(res, { intent: publicIntent(existing), idempotent: true, receipt: sfExecutionReceipt(existing), anti_stub: true });
+  }
+  if (existing && canRetrySfIntent(existing)) {
+    intent = prepareSfIntentRetry(intent, existing);
   }
 
   intent.created_at_ms = Date.now();
   intent.stages = ['intent_created', 'agent_paired'];
+  if (intent.retry_of) intent.stages.push('retry_after_timeout');
 
   const deterministic = await runSfDeterministicAudit(intent);
   intent.audit_deterministic = deterministic;
