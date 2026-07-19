@@ -116,7 +116,7 @@ graph LR
 
 ```
 vc-secret-guard scan [--path <dir>] [--format json|text] [--policy <file>]   EXISTENTE (Fase 1)
-vc-secret-guard verify-cloud --provider aws-eb [...]                         EXISTENTE (missão pontual 2026-07-10, read-only)
+vc-secret-guard verify-cloud --provider aws-eb [...]                         NÃO IMPLEMENTADO — missão 2026-07-10 foi ad-hoc, fora do crate
 vc-secret-guard watch [--path <dir>] [--policy <file>]                       PLANEJADO — stub, código 2
 vc-secret-guard install-hooks [--path <repo>]                                PLANEJADO — stub, código 2
 vc-secret-guard report [--since <duration>] [--format json|md]               PLANEJADO — stub, código 2
@@ -125,20 +125,12 @@ vc-secret-guard policy [show|validate|init]                                  PLA
 
 Stubs imprimem "planejado" e saem com código 2 — nunca fingem sucesso.
 
-### `verify-cloud` (missão única autorizada em 2026-07-10)
+### `verify-cloud` (missão histórica, não implementada no crate)
 
-Comando read-only para verificar metadados de variáveis de ambiente no AWS
-Elastic Beanstalk. Ele chama apenas `describe-configuration-settings`, nunca
-`update-environment`, `setenv`, deploy, rollback, ou qualquer operação de
-escrita. Saída permitida: nome da variável, presença, vazio/não-vazio,
-tamanho, mínimo esperado, compliance, severidade e nota segura. Saída proibida:
-valor, prefixo, sufixo, hash, amostra, eco parcial, ou stderr bruto da AWS CLI.
+A verificação read-only de metadados do AWS Elastic Beanstalk feita em 2026-07-10 foi uma missão pontual/ad-hoc, não um subcomando real commitado em `vc-secret-guard`. O estado verificado do crate é: `vc-secret-guard/src/lib.rs` despacha apenas `scan` como comando real; `watch`, `install-hooks`, `report` e `policy` são stubs; `verify-cloud` cai em `comando desconhecido`.
 
-Variáveis mínimas cobertas: `PROVIDER_VAULT_SECRET`, `SESSION_SECRET` e
-`JWT_SECRET` (legado/não usado por `backend/server.js`). A política também
-verifica itens de segurança/configuração ligados ao boot ou superfície pública:
-`AWS_S3_BUCKET`, `HOTMART_HOTTOK`, OAuth, Stripe e `GITHUB_TOKEN`. `--strict`
-transforma warnings em exit code `1`; sem `--strict`, apenas `critical` falha.
+Se `verify-cloud` virar produto no futuro, a spec original continua válida como contrato de segurança: chamar apenas `describe-configuration-settings`, nunca `update-environment`, `setenv`, deploy, rollback ou escrita; permitir só metadados redigidos (nome da variável, presença, vazio/não-vazio, tamanho, mínimo esperado, compliance, severidade e nota segura); proibir valor, prefixo, sufixo, hash, amostra, eco parcial ou stderr bruto da AWS CLI. Variáveis mínimas: `PROVIDER_VAULT_SECRET`, `SESSION_SECRET`, `JWT_SECRET` legado, `AWS_S3_BUCKET`, `HOTMART_HOTTOK`, OAuth, Stripe e `GITHUB_TOKEN`.
+
 
 ## 6. Detecção por categorias (nunca lista fixa de strings)
 
@@ -215,6 +207,7 @@ Nenhum destes foi suprimido/allowlistado — os corrigidos abaixo permanecem vis
 - CI sem toolchain Rust — `cargo test` roda só localmente.
 - `high_entropy_blob`: 53 achados restantes no dogfood (meta era <50) — breakdown completo em `docs/CURRENT_STATE.md`, maioria é limitação consciente do allowlist (sem glob `**` recursivo).
 - Fase 2 (hooks) sem data — aguardando aprovação.
+- `verify-cloud` como subcomando real segue não implementado; decidir primeiro se vale transformar a missão ad-hoc de 2026-07-10 em produto do crate.
 
 ## Próximos passos
 
