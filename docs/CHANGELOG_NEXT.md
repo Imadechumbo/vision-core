@@ -4,6 +4,11 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
+## next-clean-132 (2026-07-19, nao deployado)
+
+- Software Factory ganhou ponte fail-closed de execucao local real via Vision Agent Local: backend cria execution intent idempotente, flag nova `SF_REAL_EXECUTION_ENABLED=false` por padrao, mission type `sf_create_project`, target logico dedicado `VisionCoreProjects/<slug>-<mission_id>`, Ponytail Audit deterministico obrigatorio e LLM opcional (`deterministic_llm` default).
+- Agent escreve somente em pasta nova dedicada, valida arquivos, deixa diff staged (`git init` + `git add .`) e nunca comita/deploya. Falha limpa a pasta dedicada e retorna `rollback_performed` quando aplicavel.
+- Teste novo `tools/tests/sf-real-execution.test.mjs`: contrato/flag/path traversal/idempotencia + escrita real em `%TEMP%` + staged diff sem commit + rollback de JS invalido.
 ## next-clean-131 (2026-07-19, produção)
 
 - Painéis de menu fora do Chat deixam de herdar a largura estreita reservada ao layout com Atomic Core.

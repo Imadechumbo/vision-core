@@ -17,6 +17,13 @@ const { VISION_CORE_FACTS_BLOCK, isUnsafeToArchive } = require('./vision-core-gr
 const { normalizeUserPlan } = require('./user-plan');
 const { missionQuota } = require('./mission-quota');
 const { evaluateGithubQualityGate } = require('./github-quality-gate');
+const {
+  isSfRealExecutionEnabled,
+  createSfExecutionIntent,
+  buildAuditClaims,
+  buildAuditEvidence,
+  publicIntent
+} = require('./sf-real-execution');
 
 // Import de módulo ESM local em tools/ (server.js é CommonJS; tools/ é ESM,
 // por isso import() dinâmico em vez de require()). O caminho relativo certo
@@ -3768,6 +3775,23 @@ app.post('/api/agent/mission/result', (req, res) => {
      auth, e devolveria o segredo em texto puro pra qualquer um que soubesse o mission_id. */
   const { agent_secret, ...safeBody } = body;
   agentQueueDB.storeResult(body.mission_id, { ...safeBody, received_at: now() });
+  const sfIntent = findSfExecutionIntentByMission(body.mission_id);
+  if (sfIntent) {
+    sfIntent.agent_result = { ...safeBody, received_at: now() };
+    sfIntent.status = body.ok ? 'ready_for_manual_review' : (body.action || 'agent_failed');
+    sfIntent.stages = sfIntent.stages || [];
+    if (body.rollback_performed) sfIntent.stages.push('rollback_performed');
+    if (body.files_written || body.action === 'sf_project_created') sfIntent.stages.push('files_written');
+    sfIntent.stages.push(body.ok ? 'ready_for_manual_review' : 'agent_failed');
+    sfIntent.receipt = Object.assign({}, sfIntent.receipt || {}, {
+      outcome: body.ok ? 'success' : 'failure',
+      reason: body.error || body.output || null,
+      files_written: body.files_written || 0,
+      rollback_performed: Boolean(body.rollback_performed),
+      target_root: body.target_root || sfIntent.target_root,
+      audit_mode: sfIntent.audit_mode
+    });
+  }
   return sendOk(res, { received: true, mission_id: body.mission_id });
 });
 
@@ -4744,7 +4768,77 @@ app.post('/api/diff/preview', (req, res) => {
 // ── SF Modules 02-09 — §84 B5: async + callLLM() real ────────
 // §182 — jobs assíncronos para steps de longa duração (gold-gate)
 const sfJobs = new Map(); // jobId → {status, result, error, ts}
+const sfExecutionIntents = new Map(); // intent_hash -> execution intent
+const SF_REAL_INTENT_TIMEOUT_MS = 10 * 60 * 1000;
 
+function findSfExecutionIntentByMission(missionId) {
+  for (const intent of sfExecutionIntents.values()) {
+    if (intent.mission_id === missionId) return intent;
+  }
+  return null;
+}
+
+function markStaleSfExecutionIntents() {
+  const t = Date.now();
+  for (const intent of sfExecutionIntents.values()) {
+    if (intent.status === 'queued' || intent.status === 'in_progress') {
+      const started = intent.queued_at_ms || intent.created_at_ms || 0;
+      if (started && t - started > SF_REAL_INTENT_TIMEOUT_MS) {
+        intent.status = 'timeout_cleanup_required';
+        intent.receipt = Object.assign({}, intent.receipt || {}, {
+          outcome: 'timeout_cleanup_required',
+          reason: 'agent_timeout_before_result',
+          rollback_performed: false,
+          cleanup_required: true
+        });
+      }
+    }
+  }
+}
+
+async function runSfDeterministicAudit(intent) {
+  const { validateAgentOutput } = await importToolsModule('hermes/mission-supervisor.mjs');
+  const claims = buildAuditClaims(intent);
+  const evidence = buildAuditEvidence(intent);
+  const result = validateAgentOutput(claims, evidence);
+  return { ok: !!(result && result.ok), claims, evidence, result };
+}
+
+async function runSfLlmAudit(intent) {
+  const prompt = [
+    'Audite uma intent do Software Factory antes de escrita local real.',
+    'Responda somente JSON: {"decision":"APPROVE"|"REJECT","reason":"..."}.',
+    'Rejeite se houver path traversal, deploy, commit automatico, ou escrita fora de pasta dedicada.',
+    JSON.stringify({
+      target_root: intent.target_root,
+      audit_mode: intent.audit_mode,
+      deploy_allowed: false,
+      committed: false,
+      files: intent.files.map(f => f.name)
+    })
+  ].join('\n\n');
+  const llm = await callLLM(prompt, {
+    agent: 'SF Ponytail Audit',
+    max_tokens: 300,
+    system: 'Voce e um auditor adversarial de seguranca. Seja conservador. JSON puro.'
+  });
+  let parsed = null;
+  try { parsed = JSON.parse((llm && llm.text || '').trim()); } catch (_) {}
+  const ok = !!(parsed && parsed.decision === 'APPROVE');
+  return { ok, provider: llm && llm.provider || null, model: llm && llm.model || null, raw: llm && llm.text || '', decision: parsed };
+}
+
+function sfExecutionReceipt(intent) {
+  return {
+    audit_mode: intent.audit_mode,
+    intent_hash: intent.intent_hash,
+    target_root: intent.target_root,
+    file_count: intent.files.length,
+    deploy_allowed: false,
+    committed: false,
+    stages: intent.stages || []
+  };
+}
 // §191 — SF Professional Identity: prompts reescritos para projetos profissionais com governança, segurança e specs formais
 const SF_GENERATORS = {
   'mission-composer': async (ctx) => {
@@ -5118,6 +5212,103 @@ app.post('/api/sf/project-files', (req, res) => {
 });
 
 // §181 — SF generate-zip: monta ZIP em memória a partir de files[]
+// SF real execution: cria intent e enfileira escrita local via Vision Agent Local.
+// Fail-closed: SF_REAL_EXECUTION_ENABLED precisa estar explicitamente true.
+app.post('/api/sf/execute-project', requireVisionAuth, async (req, res) => {
+  const body = normalizeBody(req);
+  if (!isSfRealExecutionEnabled()) {
+    return res.status(403).json({
+      ok: false,
+      error: 'sf_real_execution_disabled',
+      sf_real_execution_enabled: false,
+      flags: { writes_disk: false, real_execution_allowed: false, deploy_allowed: false },
+      anti_stub: true,
+      time: now()
+    });
+  }
+
+  const agentId = getRequestAgentId(req, body);
+  const agentSecret = getRequestAgentSecret(req, body);
+  if (!agentId) return res.status(400).json({ ok: false, error: 'agent_id_required', anti_stub: true, time: now() });
+  if (!verifyAgentSecret(agentId, agentSecret)) {
+    return res.status(401).json({ ok: false, error: 'agent_pairing_required', anti_stub: true, time: now() });
+  }
+
+  let intent;
+  try {
+    intent = createSfExecutionIntent({
+      body: Object.assign({}, body, { agent_id: agentId }),
+      user: req.visionUser,
+      now: now(),
+      makeMissionId: () => `sf_create_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`
+    });
+  } catch (e) {
+    return res.status(400).json({ ok: false, error: e.code || e.message || 'invalid_sf_execution_intent', anti_stub: true, time: now() });
+  }
+
+  markStaleSfExecutionIntents();
+  const existing = sfExecutionIntents.get(intent.intent_hash);
+  if (existing) {
+    return sendOk(res, { intent: publicIntent(existing), idempotent: true, receipt: sfExecutionReceipt(existing), anti_stub: true });
+  }
+
+  intent.created_at_ms = Date.now();
+  intent.stages = ['intent_created', 'agent_paired'];
+
+  const deterministic = await runSfDeterministicAudit(intent);
+  intent.audit_deterministic = deterministic;
+  if (!deterministic.ok) {
+    intent.status = 'audit_deterministic_failed';
+    intent.stages.push('audit_deterministic_failed');
+    sfExecutionIntents.set(intent.intent_hash, intent);
+    return res.status(422).json({ ok: false, error: 'audit_deterministic_failed', audit: deterministic.result, intent: publicIntent(intent), anti_stub: true, time: now() });
+  }
+  intent.stages.push('audit_deterministic_passed');
+
+  if (intent.audit_mode === 'deterministic_llm') {
+    const llmAudit = await runSfLlmAudit(intent);
+    intent.audit_llm = llmAudit;
+    if (!llmAudit.ok) {
+      intent.status = 'audit_llm_failed';
+      intent.stages.push('audit_llm_failed');
+      sfExecutionIntents.set(intent.intent_hash, intent);
+      return res.status(422).json({ ok: false, error: 'audit_llm_failed', audit: llmAudit.decision || llmAudit.raw || null, intent: publicIntent(intent), anti_stub: true, time: now() });
+    }
+    intent.stages.push('audit_llm_passed');
+  } else {
+    intent.stages.push('audit_llm_skipped');
+  }
+
+  intent.status = 'queued';
+  intent.queued_at_ms = Date.now();
+  sfExecutionIntents.set(intent.intent_hash, intent);
+
+  agentQueueDB.push({
+    id: intent.mission_id,
+    type: 'sf_create_project',
+    input: intent.description || 'Criar projeto gerado pelo Software Factory',
+    agent_id: intent.agent_id,
+    target_root: intent.target_root,
+    target_path: intent.target_path,
+    intent_hash: intent.intent_hash,
+    audit_mode: intent.audit_mode,
+    audit_receipt: sfExecutionReceipt(intent),
+    files: intent.files,
+    deploy_allowed: false,
+    committed: false,
+    queued_at: now()
+  });
+
+  return sendOk(res, { intent: publicIntent(intent), queued: true, receipt: sfExecutionReceipt(intent), anti_stub: true });
+});
+
+app.get('/api/sf/execution-intent/:hash', requireVisionAuth, (req, res) => {
+  markStaleSfExecutionIntents();
+  const intent = sfExecutionIntents.get(req.params.hash) || findSfExecutionIntentByMission(req.params.hash);
+  if (!intent) return res.status(404).json({ ok: false, error: 'intent_not_found', anti_stub: true, time: now() });
+  if (intent.user_id !== req.visionUser.id) return res.status(403).json({ ok: false, error: 'forbidden', anti_stub: true, time: now() });
+  return sendOk(res, { intent: publicIntent(intent), receipt: sfExecutionReceipt(intent), agent_result: intent.agent_result || null, anti_stub: true });
+});
 app.post('/api/sf/generate-zip', (req, res) => {
   const body = normalizeBody(req);
   const files = body.files;

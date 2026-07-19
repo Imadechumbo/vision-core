@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="vc-api-base-url" content="https://visioncore-api-gateway.weiganlight.workers.dev">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-131">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-131" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-132">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-132" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded" data-atomic-sidebar-state="expanded">
@@ -685,6 +685,25 @@
             <div class="vc-sf-files-list" id="vcSfFilesList" aria-label="Arquivos gerados" hidden></div>
             <div class="vc-sf-files-actions" id="vcSfZipActions" hidden>
               <button type="button" id="vcSfZipBtn">Baixar ZIP</button>
+            </div>
+            <div class="vc-sf-real-exec" id="vcSfRealExec" hidden>
+              <p class="vc-kicker">EXECUCAO LOCAL</p>
+              <p>Cria uma pasta nova dedicada via Vision Agent Local. Nunca faz commit automatico nem deploy.</p>
+              <div class="vc-sf-real-grid">
+                <label>Agent ID
+                  <input type="text" id="vcSfAgentId" placeholder="agent_id pareado" autocomplete="off">
+                </label>
+                <label>Agent Secret
+                  <input type="password" id="vcSfAgentSecret" placeholder="agent_secret" autocomplete="off">
+                </label>
+              </div>
+              <fieldset class="vc-sf-audit-mode">
+                <legend>Ponytail Audit</legend>
+                <label><input type="radio" name="vcSfAuditMode" value="deterministic_llm" checked> Deterministico + LLM</label>
+                <label><input type="radio" name="vcSfAuditMode" value="deterministic"> Deterministico apenas</label>
+              </fieldset>
+              <button type="button" id="vcSfExecuteLocalBtn">Criar projeto local</button>
+              <p class="vc-sf-files-status" id="vcSfExecuteStatus" aria-live="polite"></p>
             </div>
           </section>
           <form class="vc-sf-composer" id="vcSfComposer">

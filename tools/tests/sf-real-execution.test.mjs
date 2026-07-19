@@ -1,0 +1,117 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { spawnSync } from 'node:child_process';
+
+const require = createRequire(import.meta.url);
+const sf = require('../../backend/sf-real-execution.js');
+const agent = require('../../frontend/downloads/vision-agent.js');
+
+console.log('[sf-real] backend contract');
+
+assert.equal(sf.isSfRealExecutionEnabled({}), false, 'SF_REAL_EXECUTION_ENABLED default false');
+assert.equal(sf.isSfRealExecutionEnabled({ SF_REAL_EXECUTION_ENABLED: 'true' }), true, 'flag true only when explicit');
+assert.equal(sf.normalizeAuditMode(), 'deterministic_llm', 'default audit is deterministic+LLM');
+assert.equal(sf.normalizeAuditMode('deterministic'), 'deterministic', 'deterministic mode accepted');
+assert.equal(sf.safeRelativeFileName('../x.js'), null, 'path traversal rejected');
+assert.equal(sf.safeRelativeFileName('/x.js'), null, 'absolute path rejected');
+assert.equal(sf.safeRelativeFileName('src/index.js'), 'src/index.js', 'relative file accepted');
+
+const intent = sf.createSfExecutionIntent({
+  body: {
+    description: 'Meu SaaS de tarefas',
+    project_id: 'tarefas',
+    agent_id: 'agent-test',
+    audit_mode: 'deterministic',
+    files: [{ name: 'src/index.js', content: 'console.log("ok");\n' }]
+  },
+  user: { id: 'user-test' },
+  now: '2026-07-19T00:00:00.000Z',
+  makeMissionId: () => 'sf_create_fixed'
+});
+assert.equal(intent.target_root, 'VisionCoreProjects/tarefas-sf_create_fixed', 'backend derives dedicated logical target');
+assert.equal(intent.deploy_allowed, false, 'deploy remains false');
+assert.equal(intent.committed, false, 'commit remains manual');
+assert.equal(intent.real_execution_allowed, true, 'server-side intent can authorize real execution after flag/pairing');
+
+const intent2 = sf.createSfExecutionIntent({
+  body: {
+    description: 'Meu SaaS de tarefas',
+    project_id: 'tarefas',
+    agent_id: 'agent-test',
+    audit_mode: 'deterministic',
+    files: [{ name: 'src/index.js', content: 'console.log("ok");\n' }]
+  },
+  user: { id: 'user-test' },
+  now: '2026-07-19T00:00:01.000Z',
+  makeMissionId: () => 'sf_create_other'
+});
+assert.equal(intent.intent_hash, intent2.intent_hash, 'intent_hash is idempotent across retries');
+
+const serverSource = fs.readFileSync(path.resolve('backend/server.js'), 'utf8');
+const endpointStart = serverSource.indexOf("app.post('/api/sf/execute-project'");
+const endpointEnd = serverSource.indexOf("app.get('/api/sf/execution-intent", endpointStart);
+assert(endpointStart > -1 && endpointEnd > endpointStart, 'SF execute-project endpoint exists');
+const endpointSource = serverSource.slice(endpointStart, endpointEnd);
+assert(endpointSource.includes('isSfRealExecutionEnabled()'), 'endpoint is guarded by SF_REAL_EXECUTION_ENABLED');
+assert(endpointSource.includes('verifyAgentSecret(agentId, agentSecret)'), 'endpoint requires paired agent secret');
+assert(endpointSource.includes("type: 'sf_create_project'"), 'endpoint enqueues SF mission type');
+assert(!/body\.(writes_disk|real_execution_allowed|deploy_allowed)/.test(endpointSource), 'endpoint does not trust execution flags from client payload');
+
+console.log('[sf-real] agent target lock');
+
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vc-sf-real-'));
+process.env.VC_PROJECTS_ROOT = tmp;
+try {
+  const root = agent.ensureDedicatedSfRoot('VisionCoreProjects/demo-one');
+  assert.equal(root.ok, true, 'dedicated root accepted');
+  assert.equal(root.target.startsWith(fs.realpathSync(tmp)), true, 'target stays inside configured projects root');
+  assert.equal(agent.ensureDedicatedSfRoot('../escape').ok, false, 'logical traversal target rejected');
+  assert.equal(agent.safeSfFilePath(root.target, '../escape.js'), null, 'file traversal rejected');
+
+  const result = await agent.sfCreateProjectMission({
+    id: 'mission-ok',
+    type: 'sf_create_project',
+    target_root: 'VisionCoreProjects/demo-one',
+    intent_hash: 'abc123',
+    audit_mode: 'deterministic',
+    audit_receipt: { deploy_allowed: false },
+    deploy_allowed: false,
+    committed: false,
+    files: [
+      { name: 'package.json', content: '{"name":"demo-one","version":"1.0.0"}\n' },
+      { name: 'src/index.js', content: 'console.log("hello");\n' }
+    ]
+  });
+  assert.equal(result.ok, true, 'agent writes generated project');
+  assert.equal(result.committed, false, 'agent never commits automatically');
+  assert.equal(result.files_written, 2, 'writes both files');
+  assert(fs.existsSync(path.join(tmp, 'demo-one', 'src', 'index.js')), 'created file exists');
+  const staged = spawnSync('git', ['diff', '--cached', '--name-only'], { cwd: path.join(tmp, 'demo-one'), encoding: 'utf8' });
+  assert.equal(staged.status, 0, 'git staged diff is readable');
+  assert(staged.stdout.includes('src/index.js'), 'generated file is staged');
+  const commits = spawnSync('git', ['rev-list', '--count', 'HEAD'], { cwd: path.join(tmp, 'demo-one'), encoding: 'utf8' });
+  assert.notEqual(commits.status, 0, 'repo has no automatic commit');
+
+  const failed = await agent.sfCreateProjectMission({
+    id: 'mission-fail',
+    type: 'sf_create_project',
+    target_root: 'VisionCoreProjects/demo-fail',
+    intent_hash: 'bad123',
+    audit_mode: 'deterministic',
+    audit_receipt: { deploy_allowed: false },
+    deploy_allowed: false,
+    committed: false,
+    files: [{ name: 'src/broken.js', content: 'function broken( {\n' }]
+  });
+  assert.equal(failed.ok, false, 'invalid JS fails closed');
+  assert.equal(failed.rollback_performed, true, 'rollback cleanup runs');
+  assert.equal(fs.existsSync(path.join(tmp, 'demo-fail')), false, 'failed target folder removed');
+} finally {
+  fs.rmSync(tmp, { recursive: true, force: true });
+  delete process.env.VC_PROJECTS_ROOT;
+}
+
+console.log('[sf-real] PASS');

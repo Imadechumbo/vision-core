@@ -120,7 +120,7 @@ Cache-bust `?v=next-clean-N` sempre sincronizado nos três lugares (`<link>`, `<
 |---|---|
 | GET em endpoints de status/leitura | `apply_patch` real via Vision Agent Local (gate `AGENT_APPLY_ENABLED=false`) |
 | `POST /api/chat` (chat livre, sem quota) | POST destrutivo sem confirmação dupla |
-| `POST /api/sf/*` com job_id polling | Deploy (CF Pages, EB) a partir da UI |
+| `POST /api/sf/*` com job_id polling; `/api/sf/execute-project` so com flag server-side + Agent pareado | Deploy (CF Pages, EB) a partir da UI |
 | `POST /api/github/create-pr` (confirmação dupla) | Missão paga (`/api/run-live`) |
 | `POST /api/vault/rollback/:id` (confirmação dupla) | Escrita em disco fora do fluxo de Apply-Fix confirmado |
 | `POST /api/security/apply-fix` (confirmação dupla) | — |
@@ -334,6 +334,10 @@ O contrato oficial `POST /api/chat` retorna JSON completo, sem stream. O fronten
 No Chat, o Atomic Core é um indicador periférico `sticky` limitado por `#vcChatScroll`, próximo ao canto inferior direito e acima do composer. Ele não é `fixed`, não pertence ao viewport global, não cria scroll interno e reduz escala/detalhe em viewports estreitos.
 
 ---
+
+## Bloqueio de seguranca - Software Factory execucao local real
+
+A ponte `POST /api/sf/execute-project` existe para criar projeto gerado pelo SF em pasta local nova dedicada via Vision Agent Local, mas nasce fail-closed: `SF_REAL_EXECUTION_ENABLED=false` por padrao. O frontend nao decide `writes_disk`, `real_execution_allowed` nem `deploy_allowed`; essas flags sao derivadas no backend/Agent. O modo padrao do Ponytail Audit e `deterministic_llm`; a checagem deterministica via `validateAgentOutput()` e obrigatoria e nao pode ser desligada. O Agent deixa os arquivos staged para revisao manual (`git init` + `git add .`) e nunca comita, nunca faz PR e nunca faz deploy.
 
 ## Bloqueio de segurança — Executar Missão Fase 2b (`apply_patch` real)
 

@@ -4225,6 +4225,11 @@
   var sfFilesList = document.getElementById('vcSfFilesList');
   var sfZipActions = document.getElementById('vcSfZipActions');
   var sfZipBtn = document.getElementById('vcSfZipBtn');
+  var sfRealExec = document.getElementById('vcSfRealExec');
+  var sfAgentIdInput = document.getElementById('vcSfAgentId');
+  var sfAgentSecretInput = document.getElementById('vcSfAgentSecret');
+  var sfExecuteLocalBtn = document.getElementById('vcSfExecuteLocalBtn');
+  var sfExecuteStatus = document.getElementById('vcSfExecuteStatus');
   var sfGeneratedFiles = null;
   var sfFilesInFlight = false;
   var sfZipInFlight = false;
@@ -4878,6 +4883,8 @@
     sfGeneratedFiles = null;
     if (sfFilesList) { sfFilesList.textContent = ''; sfFilesList.hidden = true; }
     if (sfZipActions) sfZipActions.hidden = true;
+    if (sfRealExec) sfRealExec.hidden = true;
+    if (sfExecuteStatus) sfExecuteStatus.textContent = '';
     setAsyncStatus(sfFilesStatus, 'empty', '');
     if (sfFilesBtn) { sfFilesBtn.disabled = false; sfFilesBtn.textContent = 'Gerar Lista de Arquivos'; }
     appendSfLog('warn', 'SAFE real_execution_allowed=false deploy_allowed=false writes_disk=false');
@@ -5073,6 +5080,11 @@
       renderSfFilesList(files);
       setAsyncStatus(sfFilesStatus, 'success', files.length + ' arquivo(s) gerado(s).');
       if (sfZipActions) sfZipActions.hidden = false;
+      if (sfRealExec) {
+        sfRealExec.hidden = false;
+        if (sfAgentIdInput && !sfAgentIdInput.value && agentApplyAgentIdInput) sfAgentIdInput.value = agentApplyAgentIdInput.value || '';
+        if (sfAgentSecretInput && !sfAgentSecretInput.value && agentApplyAgentSecretInput) sfAgentSecretInput.value = agentApplyAgentSecretInput.value || '';
+      }
     }).catch(function (err) {
       setAsyncStatus(sfFilesStatus, 'error', 'Erro: ' + (err && err.message ? err.message : String(err)));
     }).then(function () {
@@ -5082,6 +5094,49 @@
     });
   }
 
+  function readSfAuditMode() {
+    var checked = document.querySelector('input[name="vcSfAuditMode"]:checked');
+    return checked ? checked.value : 'deterministic_llm';
+  }
+
+  async function requestSfLocalExecution() {
+    if (!sfGeneratedFiles || !sfGeneratedFiles.length) {
+      if (sfExecuteStatus) sfExecuteStatus.textContent = 'Gere os arquivos primeiro.';
+      return;
+    }
+    var agentId = sfAgentIdInput ? sfAgentIdInput.value.trim() : '';
+    var agentSecret = sfAgentSecretInput ? sfAgentSecretInput.value.trim() : '';
+    if (!agentId || !agentSecret) {
+      if (sfExecuteStatus) sfExecuteStatus.textContent = 'Informe Agent ID e Agent Secret pareados.';
+      return;
+    }
+    if (sfExecuteLocalBtn) sfExecuteLocalBtn.disabled = true;
+    if (sfExecuteStatus) sfExecuteStatus.textContent = 'Criando intent segura...';
+    try {
+      var payload = {
+        description: getSfMissionText(),
+        project_id: currentSfJobId || ('sf-' + Date.now()),
+        agent_id: agentId,
+        agent_secret: agentSecret,
+        audit_mode: readSfAuditMode(),
+        files: sfGeneratedFiles
+      };
+      var response = await apiRequest('/api/sf/execute-project', {
+        method: 'POST',
+        body: payload
+      });
+      var receipt = response && response.receipt ? response.receipt : {};
+      if (sfExecuteStatus) {
+        sfExecuteStatus.textContent = 'Intent enfileirada. Commit manual: ' + (receipt.committed === false ? 'sim' : 'pendente') + '.';
+      }
+      addSystemLog('SF_REAL_EXECUTION queued', response && response.intent ? response.intent.mission_id : 'pending');
+      appendAssistantMessage('Software Factory criou uma intent local segura. O Vision Agent Local vai aplicar em uma pasta dedicada, deixar o diff staged e retornar o recibo na timeline.');
+    } catch (err) {
+      if (sfExecuteStatus) sfExecuteStatus.textContent = (err && err.message) ? err.message : 'Falha ao criar intent.';
+    } finally {
+      if (sfExecuteLocalBtn) sfExecuteLocalBtn.disabled = false;
+    }
+  }
   function requestSfZipDownload() {
     if (sfZipInFlight || !sfGeneratedFiles || !sfGeneratedFiles.length) return;
     sfZipInFlight = true;
@@ -5117,6 +5172,7 @@
 
   if (sfFilesBtn) sfFilesBtn.addEventListener('click', requestSfProjectFiles);
   if (sfZipBtn) sfZipBtn.addEventListener('click', requestSfZipDownload);
+  if (sfExecuteLocalBtn) sfExecuteLocalBtn.addEventListener('click', requestSfLocalExecution);
   if (sfSuggestBtn) sfSuggestBtn.addEventListener('click', function () { sfSuggestAdvanced(true); });
   if (sfAcceptStackBtn) sfAcceptStackBtn.addEventListener('click', sfAcceptSuggestion);
   if (sfResetStackBtn) sfResetStackBtn.addEventListener('click', sfResetSelection);
