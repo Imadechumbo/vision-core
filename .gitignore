@@ -20,3 +20,9 @@ backend/data/*.json
 bin/vision-core
 bin/vision-core.exe
 docs/PASS-GOLD-SPEC-INTERNA.md
+
+# Vision Agent Local rodando a partir da raiz do repo (copia local de execucao +
+# credenciais de pareamento reais geradas em runtime — nunca versionar)
+/vision-agent.js
+/vision-agent.cjs
+/.vc-agent-credentials.json
