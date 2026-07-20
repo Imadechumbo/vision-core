@@ -615,33 +615,62 @@ function _s3LoadSync(localPath) {
 
 // Fire-and-forget: sincroniza S3 após escrever local
 function _s3PutAsync(localPath, data) {
-  if (!S3_BUCKET) return;
+  if (!S3_BUCKET) return Promise.resolve();
   const key = _s3Key(localPath);
   // §146 fix 2026-07-20: Date.now() sozinho colide entre escritas concorrentes pra stores
   // diferentes (mesmo milissegundo => mesmo arquivo temp => uma sobrescreve a outra antes do
   // "aws s3 cp" da primeira ler o conteudo, subindo o dado errado pra chave errada). Achado
   // real em producao: chat-conversations.json continha conteudo de operation-log.json.
   const tmp = path.join(require('os').tmpdir(), 'vc146_' + Date.now() + '_' + crypto.randomBytes(6).toString('hex') + '.json');
-  fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf8', (err) => {
-    if (err) return;
-    _exec146(`aws s3 cp "${tmp}" "s3://${S3_BUCKET}/${key}"`,
-      { timeout: 30000 }, (err2) => {
-        fs.unlink(tmp, () => {});
-        if (err2) console.warn('[s3] §146 put failed:', key, err2.message.slice(0,60));
-      });
+  // §157: retorna Promise (antes fire-and-forget puro) — sem isso, uploads concorrentes
+  // pra MESMA store podiam terminar fora de ordem (o upload de um snapshot mais antigo
+  // terminando DEPOIS de um mais novo apaga o mais novo no S3, mesmo com o disco local
+  // ja correto). atomicStoreUpdate aguarda essa promise antes de liberar a proxima
+  // operacao da fila, garantindo que os uploads terminem na mesma ordem dos writes.
+  return new Promise((resolve) => {
+    fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf8', (err) => {
+      if (err) return resolve();
+      _exec146(`aws s3 cp "${tmp}" "s3://${S3_BUCKET}/${key}"`,
+        { timeout: 30000 }, (err2) => {
+          fs.unlink(tmp, () => {});
+          if (err2) console.warn('[s3] §146 put failed:', key, err2.message.slice(0,60));
+          resolve();
+        });
+    });
   });
 }
 
-// Drop-in replacement: escreve local + sincroniza S3 (fire-and-forget)
+// Drop-in replacement: escreve local + sincroniza S3. Retorna a Promise do upload —
+// callers existentes que nao usam atomicStoreUpdate continuam fire-and-forget,
+// ignorando o retorno (comportamento inalterado pra eles).
 function writeAndSyncS3(localPath, data) {
   writeJsonFile(localPath, data);
-  _s3PutAsync(localPath, data);
+  return _s3PutAsync(localPath, data);
+}
+
+// §157 — serializa leitura-modificacao-escrita por store: sem isso, duas
+// requisicoes concorrentes na MESMA store leem o mesmo estado e a escrita que
+// termina por ultimo apaga a da outra (achado real, ver docs/CURRENT_STATE.md
+// RISCOS CONHECIDOS — 2 de 3 execucoes perderam 1 usuario em 4 registros
+// concorrentes). Ambiente EB confirmado single-instance (sem load balancer),
+// entao a corrida e so intra-processo — uma fila em memoria por store basta,
+// sem necessidade de escrita condicional no S3 (ETag).
+const _storeWriteQueues = new Map(); // storeKey (caminho local) -> promise da fila
+function atomicStoreUpdate(storeKey, fallback, mutatorFn) {
+  const prevTask = _storeWriteQueues.get(storeKey) || Promise.resolve();
+  const task = prevTask.then(async () => {
+    const db = readJsonFile(storeKey, fallback);
+    const { write = true, value } = mutatorFn(db) || {};
+    if (write) await writeAndSyncS3(storeKey, db);
+    return value;
+  });
+  _storeWriteQueues.set(storeKey, task.catch(() => {})); // erro nao trava a fila permanentemente
+  return task;
 }
 
 function operationLog(req, userId, event) {
   try {
-    const db = readJsonFile(OPERATION_LOG_DB, { entries: [] });
-    db.entries.push({
+    const entry = {
       id: makeId('log'),
       ts: now(),
       request_id: req.requestId,
@@ -651,10 +680,13 @@ function operationLog(req, userId, event) {
       job_id: event.job_id || null,
       event: String(event.event || 'operation').slice(0, 80),
       status: String(event.status || 'ok').slice(0, 24)
-    });
-    const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
-    db.entries = db.entries.filter(entry => new Date(entry.ts).getTime() >= cutoff).slice(-10000);
-    writeAndSyncS3(OPERATION_LOG_DB, db);
+    };
+    atomicStoreUpdate(OPERATION_LOG_DB, { entries: [] }, (db) => {
+      db.entries.push(entry);
+      const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+      db.entries = db.entries.filter(e => new Date(e.ts).getTime() >= cutoff).slice(-10000);
+      return { write: true };
+    }).catch(error => console.warn('[operation-log] write failed:', error.message));
   } catch (error) { console.warn('[operation-log] write failed:', error.message); }
 }
 
@@ -664,10 +696,11 @@ function auditLog(action, req, extra = {}) {
     const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
               || (req.connection && req.connection.remoteAddress) || 'unknown';
     const entry = { ts: new Date().toISOString(), action, ip, ua: req.headers['user-agent'] || '', ...extra };
-    const log = readJsonFile(AUDIT_LOG_FILE, { entries: [] });
-    log.entries.push(entry);
-    if (log.entries.length > 10000) log.entries = log.entries.slice(-10000);
-    writeAndSyncS3(AUDIT_LOG_FILE, log);
+    atomicStoreUpdate(AUDIT_LOG_FILE, { entries: [] }, (log) => {
+      log.entries.push(entry);
+      if (log.entries.length > 10000) log.entries = log.entries.slice(-10000);
+      return { write: true };
+    }).catch(e => console.error('[§154] auditLog falhou:', e.message));
   } catch(e) { console.error('[§154] auditLog falhou:', e.message); }
 }
 
@@ -825,8 +858,12 @@ async function callLLM(prompt, opts = {}) {
         const cost_usd = computeCostUsd(p.id, usage.tokens_in, usage.tokens_out);
         if (opts.agent && cost_usd !== null) {
           try {
-            const ledger = readJsonFile(AGENT_COSTS_DB, {});
-            writeAndSyncS3(AGENT_COSTS_DB, recordAgentCost(ledger, opts.agent, Object.assign({}, usage, { cost_usd })));
+            await atomicStoreUpdate(AGENT_COSTS_DB, {}, (ledger) => {
+              // recordAgentCost retorna objeto novo (estilo imutavel) — copia
+              // pra dentro da MESMA referencia que a fila vai gravar.
+              Object.assign(ledger, recordAgentCost(ledger, opts.agent, Object.assign({}, usage, { cost_usd })));
+              return { write: true };
+            });
           } catch (e) { console.warn('[callLLM] agent cost ledger write failed:', e.message); }
         }
         return { text, provider: p.id, model: p.model, tokens_in: usage.tokens_in, tokens_out: usage.tokens_out, cost_usd };
@@ -917,7 +954,7 @@ app.get('/api/runtime/contracts', (req, res) => sendOk(res, {
 
 /* V4.0 ANTI-STUB ROUTES — real logic, no ok:true-only stubs */
 // §149: 5 tentativas/IP/hora no register, 10/IP/15min no login
-app.all('/api/auth/register', rateLimitMiddleware('register', 5, 60 * 60 * 1000), (req, res) => {
+app.all('/api/auth/register', rateLimitMiddleware('register', 5, 60 * 60 * 1000), async (req, res) => {
   const body  = normalizeBody(req);
   const email = String(body.email || '').trim().toLowerCase();
   if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ ok: false, error: 'valid_email_required', time: now() });
@@ -932,17 +969,30 @@ app.all('/api/auth/register', rateLimitMiddleware('register', 5, 60 * 60 * 1000)
   const rawPw = (provided && provided.length >= 8)
     ? provided
     : crypto.randomBytes(8).toString('hex'); // 16 chars hex, único por usuário
-  const db = readJsonFile(USERS_DB, { users: [] });
-  if (db.users.some(u => u.email === email)) return res.status(409).json({ ok: false, error: 'email_already_registered', time: now() });
-  const user = { id: makeId('usr'), email, name: body.name || '', password_hash: hashPassword(rawPw), plan: 'free', created_at: now(), last_login: null };
-  db.users.push(user); writeAndSyncS3(USERS_DB, db);
-  auditLog('register', req, { email }); // §154
-  const token = signSession({ uid: user.id, exp: Date.now() + 24 * 60 * 60 * 1000 });
-  res.setHeader('Set-Cookie', `vision_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`);
-  return sendOk(res, { user: publicUser(user), token, token_type: 'session', persisted: true, generated_password: rawPw, anti_stub: true });
+  const passwordHash = hashPassword(rawPw); // fora da fila: nao depende de estado compartilhado
+  try {
+    // §157: checar duplicidade + criar usuario dentro da MESMA operacao atomica —
+    // sem isso, 2 registros concorrentes com o mesmo email podiam passar os 2 pelo
+    // check "ja existe" antes de qualquer um escrever (mesma classe de corrida).
+    const outcome = await atomicStoreUpdate(USERS_DB, { users: [] }, (db) => {
+      if (db.users.some(u => u.email === email)) return { write: false, value: { error: 'email_already_registered' } };
+      const user = { id: makeId('usr'), email, name: body.name || '', password_hash: passwordHash, plan: 'free', created_at: now(), last_login: null };
+      db.users.push(user);
+      return { write: true, value: { user } };
+    });
+    if (outcome.error) return res.status(409).json({ ok: false, error: outcome.error, time: now() });
+    const user = outcome.user;
+    auditLog('register', req, { email }); // §154
+    const token = signSession({ uid: user.id, exp: Date.now() + 24 * 60 * 60 * 1000 });
+    res.setHeader('Set-Cookie', `vision_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`);
+    return sendOk(res, { user: publicUser(user), token, token_type: 'session', persisted: true, generated_password: rawPw, anti_stub: true });
+  } catch (err) {
+    console.error('[auth/register]', err.message);
+    return res.status(500).json({ ok: false, error: 'internal_error', time: now() });
+  }
 });
 
-app.all('/api/auth/login', rateLimitMiddleware('login', 10, 15 * 60 * 1000), (req, res) => {
+app.all('/api/auth/login', rateLimitMiddleware('login', 10, 15 * 60 * 1000), async (req, res) => {
   const body = normalizeBody(req);
   const email = String(body.email || '').trim().toLowerCase();
   const password = String(body.password || '');
@@ -955,15 +1005,25 @@ app.all('/api/auth/login', rateLimitMiddleware('login', 10, 15 * 60 * 1000), (re
     auditLog('auth_fallback_credential_rejected', req, { route: '/api/auth/login' });
     return res.status(400).json({ ok: false, error: 'fallback_credential_rejected', time: now() });
   }
-  const db = readJsonFile(USERS_DB, { users: [] });
-  const user = db.users.find(u => u.email === email);
-  if (!user || !verifyPassword(password, user.password_hash)) { auditLog('login_fail', req, { email }); return res.status(401).json({ ok: false, error: 'invalid_credentials', time: now() }); } // §154
-  // §151: migrar hash legado para scrypt automaticamente no primeiro login bem-sucedido
-  if (user.password_hash && !user.password_hash.startsWith('$scrypt$')) {
-    user.password_hash = hashPassword(password);
-    console.log('[§151] hash migrado para scrypt:', email);
+  let outcome;
+  try {
+    outcome = await atomicStoreUpdate(USERS_DB, { users: [] }, (db) => {
+      const user = db.users.find(u => u.email === email);
+      if (!user || !verifyPassword(password, user.password_hash)) return { write: false, value: { error: 'invalid_credentials' } };
+      // §151: migrar hash legado para scrypt automaticamente no primeiro login bem-sucedido
+      if (user.password_hash && !user.password_hash.startsWith('$scrypt$')) {
+        user.password_hash = hashPassword(password);
+        console.log('[§151] hash migrado para scrypt:', email);
+      }
+      user.last_login = now();
+      return { write: true, value: { user } };
+    });
+  } catch (err) {
+    console.error('[auth/login]', err.message);
+    return res.status(500).json({ ok: false, error: 'internal_error', time: now() });
   }
-  user.last_login = now(); writeAndSyncS3(USERS_DB, db);
+  if (outcome.error) { auditLog('login_fail', req, { email }); return res.status(401).json({ ok: false, error: 'invalid_credentials', time: now() }); } // §154
+  const user = outcome.user;
   auditLog('login_ok', req, { email }); // §154
   const token = signSession({ uid: user.id, exp: Date.now() + 24 * 60 * 60 * 1000 });
   res.setHeader('Set-Cookie', `vision_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`);
@@ -1014,16 +1074,17 @@ app.get('/api/vault/snapshots', (req, res) => {
   }
 });
 
-app.post('/api/vault/rollback/:snapshotId', (req, res) => {
+app.post('/api/vault/rollback/:snapshotId', async (req, res) => {
   try {
     const { snapshotId } = req.params;
     const file = path.join(SNAPSHOTS_DIR, `${snapshotId}.json`);
     if (!fs.existsSync(file)) return res.status(404).json({ ok: false, error: 'snapshot_not_found', snapshot_id: snapshotId, time: now() });
     const snapshot = JSON.parse(fs.readFileSync(file, 'utf8'));
     if (snapshot.state && snapshot.state.projects) {
-      const projectsDb = readJsonFile(PROJECTS_DB, { projects: [] });
-      projectsDb.projects = snapshot.state.projects;
-      writeAndSyncS3(PROJECTS_DB, projectsDb);
+      await atomicStoreUpdate(PROJECTS_DB, { projects: [] }, (projectsDb) => {
+        projectsDb.projects = snapshot.state.projects;
+        return { write: true };
+      });
     }
     return sendOk(res, { rolled_back: true, snapshot_id: snapshotId, restored_at: now(), label: snapshot.label, anti_stub: true });
   } catch (err) {
@@ -1123,23 +1184,24 @@ app.get('/api/auth/oauth/google/callback', async (req, res) => {
 
     const email = payload.email;
     const name = payload.name || email.split('@')[0];
-    const db = readJsonFile(USERS_DB, { users: [] });
-    let user = db.users.find(u => u.email === email);
-    if (!user) {
-      user = { id: makeId('usr'), email, name, plan: 'free', oauth_provider: 'google', oauth_id: payload.sub, created_at: now(), last_login: now() };
-      db.users.push(user);
-    } else {
-      user.last_login = now();
-      if (!user.oauth_provider) user.oauth_provider = 'google';
-    }
-    // §155: SSO ENTERPRISE — domínio corporativo → plan='enterprise' automático
-    const ssoDomain = isSsoDomain(email);
-    if (ssoDomain && user.plan !== 'enterprise') {
-      user.plan = 'enterprise';
-      console.log('[§155] SSO ENTERPRISE auto-upgrade:', email.split('@')[1]);
-      auditLog('sso_enterprise_login', req, { domain: email.split('@')[1] }); // §154: não logar email completo
-    }
-    writeAndSyncS3(USERS_DB, db);
+    const user = await atomicStoreUpdate(USERS_DB, { users: [] }, (db) => {
+      let u = db.users.find(u => u.email === email);
+      if (!u) {
+        u = { id: makeId('usr'), email, name, plan: 'free', oauth_provider: 'google', oauth_id: payload.sub, created_at: now(), last_login: now() };
+        db.users.push(u);
+      } else {
+        u.last_login = now();
+        if (!u.oauth_provider) u.oauth_provider = 'google';
+      }
+      // §155: SSO ENTERPRISE — domínio corporativo → plan='enterprise' automático
+      const ssoDomain = isSsoDomain(email);
+      if (ssoDomain && u.plan !== 'enterprise') {
+        u.plan = 'enterprise';
+        console.log('[§155] SSO ENTERPRISE auto-upgrade:', email.split('@')[1]);
+        auditLog('sso_enterprise_login', req, { domain: email.split('@')[1] }); // §154: não logar email completo
+      }
+      return { write: true, value: u };
+    });
     auditLog('oauth_login', req, { email, provider: 'google' }); // §154
     const token = signSession({ uid: user.id, exp: Date.now() + 24 * 60 * 60 * 1000 });
     return res.redirect(oauthRedirect(state, `oauth-success&token=${encodeURIComponent(token)}&plan=${user.plan}&email=${encodeURIComponent(email)}`));
@@ -1204,16 +1266,17 @@ app.get('/api/auth/oauth/github/callback', async (req, res) => {
     if (!email) return res.redirect(oauthRedirect(state, 'oauth-error=no_email'));
 
     const name = ghUser.name || ghUser.login || email.split('@')[0];
-    const db = readJsonFile(USERS_DB, { users: [] });
-    let user = db.users.find(u => u.email === email);
-    if (!user) {
-      user = { id: makeId('usr'), email, name, plan: 'free', oauth_provider: 'github', oauth_id: String(ghUser.id), github_login: ghUser.login, created_at: now(), last_login: now() };
-      db.users.push(user);
-    } else {
-      user.last_login = now();
-      if (!user.github_login) user.github_login = ghUser.login;
-    }
-    writeAndSyncS3(USERS_DB, db);
+    const user = await atomicStoreUpdate(USERS_DB, { users: [] }, (db) => {
+      let u = db.users.find(u => u.email === email);
+      if (!u) {
+        u = { id: makeId('usr'), email, name, plan: 'free', oauth_provider: 'github', oauth_id: String(ghUser.id), github_login: ghUser.login, created_at: now(), last_login: now() };
+        db.users.push(u);
+      } else {
+        u.last_login = now();
+        if (!u.github_login) u.github_login = ghUser.login;
+      }
+      return { write: true, value: u };
+    });
     auditLog('oauth_login', req, { email, provider: 'github' }); // §154
     const token = signSession({ uid: user.id, exp: Date.now() + 24 * 60 * 60 * 1000 });
     return res.redirect(oauthRedirect(state, `oauth-success&token=${encodeURIComponent(token)}&plan=${user.plan}&email=${encodeURIComponent(email)}`));
@@ -1244,7 +1307,7 @@ app.get('/api/projects', (req, res) => {
 });
 
 // DECISION-023 — o cliente nunca escolhe ownership.
-app.post('/api/projects', (req, res) => {
+app.post('/api/projects', async (req, res) => {
   const user = getAuthUser(req);
   if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
   const body = normalizeBody(req);
@@ -1254,11 +1317,18 @@ app.post('/api/projects', (req, res) => {
   if (Object.prototype.hasOwnProperty.call(body, 'user_id')) {
     return res.status(400).json({ ok: false, error: 'project_owner_not_assignable', time: now() });
   }
-  const db = readJsonFile(PROJECTS_DB, { projects: [] });
-  if (!Array.isArray(db.projects)) db.projects = [];
-  const project = { id: makeId('proj'), name, created_at: now(), user_id: user.id };
-  db.projects.push(project);
-  writeAndSyncS3(PROJECTS_DB, db);
+  let project;
+  try {
+    project = await atomicStoreUpdate(PROJECTS_DB, { projects: [] }, (db) => {
+      if (!Array.isArray(db.projects)) db.projects = [];
+      const p = { id: makeId('proj'), name, created_at: now(), user_id: user.id };
+      db.projects.push(p);
+      return { write: true, value: p };
+    });
+  } catch (err) {
+    console.error('[projects/create]', err.message);
+    return res.status(500).json({ ok: false, error: 'internal_error', time: now() });
+  }
   operationLog(req, user.id, { project_id: project.id, event: 'project.created' });
   return sendOk(res, { project, anti_stub: true });
 });
@@ -1269,11 +1339,14 @@ function ownedProject(userId, projectId) {
   return Array.isArray(db.projects) && db.projects.some(project => project.id === projectId && project.user_id === userId);
 }
 
-function readConversations() {
-  const db = readJsonFile(CHAT_CONVERSATIONS_DB, { conversations: [] });
+function applyConversationsCutoff(db) {
   const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
   db.conversations = (Array.isArray(db.conversations) ? db.conversations : []).filter(item => new Date(item.updated_at).getTime() >= cutoff);
   return db;
+}
+
+function readConversations() {
+  return applyConversationsCutoff(readJsonFile(CHAT_CONVERSATIONS_DB, { conversations: [] }));
 }
 
 app.get('/api/chat/conversations', (req, res) => {
@@ -1291,7 +1364,7 @@ app.get('/api/chat/conversations', (req, res) => {
   return sendOk(res, { conversations, total: owned.length, next_offset: offset + conversations.length < owned.length ? offset + conversations.length : null, anti_stub: true });
 });
 
-app.post('/api/chat/conversations', (req, res) => {
+app.post('/api/chat/conversations', async (req, res) => {
   const user = getAuthUser(req);
   if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
   const body = normalizeBody(req);
@@ -1299,9 +1372,16 @@ app.post('/api/chat/conversations', (req, res) => {
   if (!ownedProject(user.id, projectId)) return res.status(404).json({ ok: false, error: 'project_not_found', time: now() });
   const timestamp = now();
   const conversation = { id: makeId('chat'), user_id: user.id, project_id: projectId, title: String(body.title || 'Nova conversa').trim().slice(0, 120) || 'Nova conversa', created_at: timestamp, updated_at: timestamp, messages: [] };
-  const db = readConversations();
-  db.conversations.push(conversation);
-  writeAndSyncS3(CHAT_CONVERSATIONS_DB, db);
+  try {
+    await atomicStoreUpdate(CHAT_CONVERSATIONS_DB, { conversations: [] }, (db) => {
+      applyConversationsCutoff(db);
+      db.conversations.push(conversation);
+      return { write: true };
+    });
+  } catch (err) {
+    console.error('[chat/conversations/create]', err.message);
+    return res.status(500).json({ ok: false, error: 'internal_error', time: now() });
+  }
   operationLog(req, user.id, { project_id: projectId, event: 'conversation.created' });
   return sendOk(res, { conversation: { ...conversation, messages: undefined }, anti_stub: true });
 });
@@ -1314,32 +1394,51 @@ app.get('/api/chat/conversations/:id', (req, res) => {
   return sendOk(res, { conversation, anti_stub: true });
 });
 
-app.post('/api/chat/conversations/:id/messages', (req, res) => {
+app.post('/api/chat/conversations/:id/messages', async (req, res) => {
   const user = getAuthUser(req);
   if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
   const body = normalizeBody(req);
   if (!['user', 'assistant'].includes(body.role)) return res.status(400).json({ ok: false, error: 'message_role_invalid', time: now() });
   const content = String(body.content || '').trim();
   if (!content) return res.status(400).json({ ok: false, error: 'message_content_required', time: now() });
-  const db = readConversations();
-  const conversation = db.conversations.find(item => item.id === req.params.id && item.user_id === user.id);
-  if (!conversation || !ownedProject(user.id, conversation.project_id)) return res.status(404).json({ ok: false, error: 'conversation_not_found', time: now() });
   const message = { id: makeId('msg'), role: body.role, content: content.slice(0, 20000), created_at: now() };
-  conversation.messages.push(message);
-  conversation.updated_at = message.created_at;
-  writeAndSyncS3(CHAT_CONVERSATIONS_DB, db);
-  operationLog(req, user.id, { project_id: conversation.project_id, event: `message.${body.role}.saved` });
+  let outcome;
+  try {
+    outcome = await atomicStoreUpdate(CHAT_CONVERSATIONS_DB, { conversations: [] }, (db) => {
+      applyConversationsCutoff(db);
+      const conversation = db.conversations.find(item => item.id === req.params.id && item.user_id === user.id);
+      if (!conversation || !ownedProject(user.id, conversation.project_id)) return { write: false, value: { error: 'conversation_not_found' } };
+      conversation.messages.push(message);
+      conversation.updated_at = message.created_at;
+      return { write: true, value: { conversation } };
+    });
+  } catch (err) {
+    console.error('[chat/conversations/messages]', err.message);
+    return res.status(500).json({ ok: false, error: 'internal_error', time: now() });
+  }
+  if (outcome.error) return res.status(404).json({ ok: false, error: outcome.error, time: now() });
+  operationLog(req, user.id, { project_id: outcome.conversation.project_id, event: `message.${body.role}.saved` });
   return sendOk(res, { message, anti_stub: true });
 });
 
-app.delete('/api/chat/conversations/:id', (req, res) => {
+app.delete('/api/chat/conversations/:id', async (req, res) => {
   const user = getAuthUser(req);
   if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', time: now() });
-  const db = readConversations();
-  const index = db.conversations.findIndex(item => item.id === req.params.id && item.user_id === user.id);
-  if (index === -1) return res.status(404).json({ ok: false, error: 'conversation_not_found', time: now() });
-  const [deleted] = db.conversations.splice(index, 1);
-  writeAndSyncS3(CHAT_CONVERSATIONS_DB, db);
+  let deleted;
+  try {
+    const outcome = await atomicStoreUpdate(CHAT_CONVERSATIONS_DB, { conversations: [] }, (db) => {
+      applyConversationsCutoff(db);
+      const index = db.conversations.findIndex(item => item.id === req.params.id && item.user_id === user.id);
+      if (index === -1) return { write: false, value: { error: 'conversation_not_found' } };
+      const [removed] = db.conversations.splice(index, 1);
+      return { write: true, value: { deleted: removed } };
+    });
+    if (outcome.error) return res.status(404).json({ ok: false, error: outcome.error, time: now() });
+    deleted = outcome.deleted;
+  } catch (err) {
+    console.error('[chat/conversations/delete]', err.message);
+    return res.status(500).json({ ok: false, error: 'internal_error', time: now() });
+  }
   operationLog(req, user.id, { project_id: deleted.project_id, event: 'conversation.deleted' });
   return sendOk(res, { deleted: true, anti_stub: true });
 });
@@ -1372,7 +1471,7 @@ function verifyHotmartWebhook(req) {
 }
 
 // §144 — Hotmart webhook (PURCHASE_COMPLETE → user.plan = 'pro')
-app.post('/api/billing/hotmart-webhook', (req, res) => {
+app.post('/api/billing/hotmart-webhook', async (req, res) => {
   try {
     // §150: verificar autenticidade antes de processar
     const auth = verifyHotmartWebhook(req);
@@ -1389,28 +1488,29 @@ app.post('/api/billing/hotmart-webhook', (req, res) => {
     const email = body.data && body.data.buyer && body.data.buyer.email;
     if (!email) return res.json({ ok: true, skipped: 'no_email' });
 
-    const db   = readJsonFile(USERS_DB, { users: [] });
-    const user = Array.isArray(db.users) ? db.users.find(u => u.email === email) : null;
-    if (!user) return res.json({ ok: true, skipped: 'user_not_found' });
-
     const cancelEvents  = ['PURCHASE_CANCELED', 'PURCHASE_REFUNDED', 'SUBSCRIPTION_CANCELLATION'];
     const approveEvents = ['PURCHASE_COMPLETE', 'PURCHASE_APPROVED', 'PURCHASE_BILLET_PRINTED'];
 
-    if (approveEvents.includes(event)) {
-      user.plan            = 'pro';
-      user.plan_updated_at = now();
-      user.hotmart_event   = event;
-    } else if (cancelEvents.includes(event)) {
-      user.plan            = 'free';
-      user.plan_updated_at = now();
-      user.hotmart_event   = event;
-    }
+    const outcome = await atomicStoreUpdate(USERS_DB, { users: [] }, (db) => {
+      const user = Array.isArray(db.users) ? db.users.find(u => u.email === email) : null;
+      if (!user) return { write: false, value: { skipped: 'user_not_found' } };
+      if (approveEvents.includes(event)) {
+        user.plan            = 'pro';
+        user.plan_updated_at = now();
+        user.hotmart_event   = event;
+      } else if (cancelEvents.includes(event)) {
+        user.plan            = 'free';
+        user.plan_updated_at = now();
+        user.hotmart_event   = event;
+      }
+      return { write: true, value: { plan: user.plan } };
+    });
+    if (outcome.skipped) return res.json({ ok: true, skipped: outcome.skipped });
 
-    writeAndSyncS3(USERS_DB, db);
-    if (approveEvents.includes(event)) auditLog('plan_upgrade', req, { email, plan: user.plan, event }); // §154
-    if (cancelEvents.includes(event)) auditLog('plan_downgrade', req, { email, plan: user.plan, event }); // §154
-    console.log('[hotmart-webhook] event:', event, 'email:', email, 'plan:', user.plan);
-    return res.json({ ok: true, plan: user.plan, anti_stub: true });
+    if (approveEvents.includes(event)) auditLog('plan_upgrade', req, { email, plan: outcome.plan, event }); // §154
+    if (cancelEvents.includes(event)) auditLog('plan_downgrade', req, { email, plan: outcome.plan, event }); // §154
+    console.log('[hotmart-webhook] event:', event, 'email:', email, 'plan:', outcome.plan);
+    return res.json({ ok: true, plan: outcome.plan, anti_stub: true });
   } catch (err) {
     console.error('[hotmart-webhook] error:', err.message);
     return res.status(500).json({ ok: false, error: err.message });
@@ -1496,15 +1596,14 @@ function getMissionCount(userId) {
 }
 
 function logMission(userId, type) {
-  try {
-    const log = readJsonFile(MISSION_LOG_PATH, { missions: [] });
+  atomicStoreUpdate(MISSION_LOG_PATH, { missions: [] }, (log) => {
     if (!Array.isArray(log.missions)) log.missions = [];
     log.missions.push({ user_id: userId, ts: now(), type: type || 'mission' });
     // Keep only 90 days
     const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
     log.missions = log.missions.filter(m => new Date(m.ts).getTime() >= cutoff);
-    writeAndSyncS3(MISSION_LOG_PATH, log);
-  } catch {}
+    return { write: true };
+  }).catch(() => {});
 }
 
 /* ── §98-E MISSION TIMELINE — historico persistido de missoes (por usuario) ──
@@ -1542,8 +1641,7 @@ function sanitizeMissionStages(rawStages) {
 
 function appendMissionTimeline(userId, entry) {
   if (!userId) return;
-  try {
-    const log = readJsonFile(MISSION_TIMELINE_PATH, { entries: [] });
+  atomicStoreUpdate(MISSION_TIMELINE_PATH, { entries: [] }, (log) => {
     log.entries.push({
       id: makeId('mt'),
       user_id: userId,
@@ -1564,8 +1662,8 @@ function appendMissionTimeline(userId, entry) {
     const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
     log.entries = log.entries.filter(e => new Date(e.ts).getTime() >= cutoff);
     if (log.entries.length > 500) log.entries = log.entries.slice(-500);
-    writeAndSyncS3(MISSION_TIMELINE_PATH, log);
-  } catch (err) { console.warn('[timeline §98-E] append failed', err.message); }
+    return { write: true };
+  }).catch(err => console.warn('[timeline §98-E] append failed', err.message));
 }
 
 function getMissionTimeline(userId, limit) {
@@ -2559,21 +2657,26 @@ app.get('/api/audit-log', (req, res) => {
 });
 
 // §159 — LGPD: direito ao esquecimento
-app.delete('/api/auth/me', (req, res) => {
+app.delete('/api/auth/me', async (req, res) => {
   try {
     const token = (String(req.headers.authorization || '')).replace('Bearer ', '');
     const session = verifySession(token);
     if (!session) return res.status(401).json({ ok: false, error: 'unauthorized', anti_stub: true });
-    const db = readJsonFile(USERS_DB, { users: [] });
-    const idx = db.users.findIndex(u => u.id === session.uid);
-    if (idx === -1) return res.status(404).json({ ok: false, error: 'user_not_found', anti_stub: true });
-    const email = db.users[idx].email;
+    const userOutcome = await atomicStoreUpdate(USERS_DB, { users: [] }, (db) => {
+      const idx = db.users.findIndex(u => u.id === session.uid);
+      if (idx === -1) return { write: false, value: { error: 'user_not_found' } };
+      const removedEmail = db.users[idx].email;
+      db.users.splice(idx, 1);
+      return { write: true, value: { email: removedEmail } };
+    });
+    if (userOutcome.error) return res.status(404).json({ ok: false, error: userOutcome.error, anti_stub: true });
+    const email = userOutcome.email;
     if (session.jti) revokeToken(session.jti); // §152: invalidar token antes de deletar
-    db.users.splice(idx, 1);
-    writeAndSyncS3(USERS_DB, db);
-    const conversationsDb = readConversations();
-    conversationsDb.conversations = conversationsDb.conversations.filter(item => item.user_id !== session.uid);
-    writeAndSyncS3(CHAT_CONVERSATIONS_DB, conversationsDb);
+    await atomicStoreUpdate(CHAT_CONVERSATIONS_DB, { conversations: [] }, (conversationsDb) => {
+      applyConversationsCutoff(conversationsDb);
+      conversationsDb.conversations = conversationsDb.conversations.filter(item => item.user_id !== session.uid);
+      return { write: true };
+    });
     auditLog('account_deleted', req, { email }); // §154
     console.log('[§159] conta deletada (LGPD):', email);
     return res.json({ ok: true, message: 'account_deleted', email_deleted: email, anti_stub: true });
@@ -2645,9 +2748,13 @@ async function ensureStripeCustomer(stripe, user) {
   return customer.id;
 }
 function updateUserPlan(userId, plan, extra = {}) {
-  const users = readJsonFile(USERS_DB, { users: [] });
-  const user = users.users.find(u => u.id === userId);
-  if (user) { user.plan = plan || user.plan || 'free'; user.billing = { ...(user.billing || {}), ...extra, updated_at: now() }; writeAndSyncS3(USERS_DB, users); }
+  atomicStoreUpdate(USERS_DB, { users: [] }, (users) => {
+    const user = users.users.find(u => u.id === userId);
+    if (!user) return { write: false };
+    user.plan = plan || user.plan || 'free';
+    user.billing = { ...(user.billing || {}), ...extra, updated_at: now() };
+    return { write: true };
+  }).catch(e => console.warn('[billing] updateUserPlan falhou:', e.message));
 }
 app.post('/api/billing/create-checkout-session', requireVisionAuth, async (req, res) => {
   const stripe = getStripeClient(); if (!stripe) return billingUnavailable(res);
