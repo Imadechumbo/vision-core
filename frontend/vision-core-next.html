@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="vc-api-base-url" content="https://visioncore-api-gateway.weiganlight.workers.dev">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-132">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-132" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-133">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-133" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded" data-atomic-sidebar-state="expanded">
@@ -704,6 +704,16 @@
               </fieldset>
               <button type="button" id="vcSfExecuteLocalBtn">Criar projeto local</button>
               <p class="vc-sf-files-status" id="vcSfExecuteStatus" aria-live="polite"></p>
+              <div class="vc-sf-recovery" id="vcSfRecovery" hidden>
+                <p class="vc-kicker">RECUPERACAO SEGURA</p>
+                <p id="vcSfRecoveryText">A pasta dedicada ja existe com conteudo. Nada foi sobrescrito.</p>
+                <code id="vcSfRecoveryPath"></code>
+                <div class="vc-sf-recovery-actions">
+                  <button type="button" id="vcSfCopyTargetBtn">Copiar caminho</button>
+                  <button type="button" id="vcSfRetryNewTargetBtn">Tentar em nova pasta</button>
+                  <button type="button" id="vcSfMarkReviewedBtn">Marcar revisado</button>
+                </div>
+              </div>
             </div>
           </section>
           <form class="vc-sf-composer" id="vcSfComposer">

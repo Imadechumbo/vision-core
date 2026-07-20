@@ -13,6 +13,10 @@ console.log('[sf-real] backend contract');
 
 assert.equal(sf.isSfRealExecutionEnabled({}), false, 'SF_REAL_EXECUTION_ENABLED default false');
 assert.equal(sf.isSfRealExecutionEnabled({ SF_REAL_EXECUTION_ENABLED: 'true' }), true, 'flag true only when explicit');
+assert.equal(sf.isSfRealExecutionAgentAllowed('agent-test', {}), false, 'missing SF_REAL_EXECUTION_ALLOWED_AGENTS denies all agents');
+assert.equal(sf.isSfRealExecutionAgentAllowed('agent-test', { SF_REAL_EXECUTION_ALLOWED_AGENTS: '' }), false, 'empty allowlist denies all agents');
+assert.equal(sf.isSfRealExecutionAgentAllowed('agent-test', { SF_REAL_EXECUTION_ALLOWED_AGENTS: 'agent-other' }), false, 'agent outside allowlist is denied');
+assert.equal(sf.isSfRealExecutionAgentAllowed('agent-test', { SF_REAL_EXECUTION_ALLOWED_AGENTS: ' agent-other, agent-test ' }), true, 'agent inside comma allowlist is allowed');
 assert.equal(sf.normalizeAuditMode(), 'deterministic_llm', 'default audit is deterministic+LLM');
 assert.equal(sf.normalizeAuditMode('deterministic'), 'deterministic', 'deterministic mode accepted');
 assert.equal(sf.safeRelativeFileName('../x.js'), null, 'path traversal rejected');
@@ -76,6 +80,8 @@ const endpointSource = serverSource.slice(endpointStart, endpointEnd);
 assert(serverSource.includes('canRetrySfIntent,'), 'server imports retry helper');
 assert(endpointSource.includes('isSfRealExecutionEnabled()'), 'endpoint is guarded by SF_REAL_EXECUTION_ENABLED');
 assert(endpointSource.includes('verifyAgentSecret(agentId, agentSecret)'), 'endpoint requires paired agent secret');
+assert(endpointSource.includes('isSfRealExecutionAgentAllowed(agentId)'), 'endpoint requires agent allowlist after pairing');
+assert(endpointSource.includes('sf_real_execution_agent_not_allowed'), 'endpoint reports allowlist denial distinctly');
 assert(endpointSource.includes("type: 'sf_create_project'"), 'endpoint enqueues SF mission type');
 assert(!/body\.(writes_disk|real_execution_allowed|deploy_allowed)/.test(endpointSource), 'endpoint does not trust execution flags from client payload');
 

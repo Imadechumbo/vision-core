@@ -4,11 +4,16 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
-## next-clean-132 (2026-07-19, nao deployado)
+## next-clean-133 (2026-07-19, produção)
+
+- Software Factory ganhou UX de recuperacao para `sf_create_project_target_exists`: quando o Vision Agent Local falha fechado porque a pasta final dedicada ja existe com conteudo, o Next mostra caminho, orienta revisao manual e oferece nova tentativa em outra pasta dedicada. Nenhum overwrite automatico foi introduzido.
+- O fluxo agora preserva payload de erro em `apiRequest`, faz polling de `GET /api/sf/execution-intent/:hash` apos enfileirar a intent e muda o `project_id` na nova tentativa (`-retry-N`) para criar target novo em vez de reusar a pasta travada. Deploy Pages confirmado: `89c37d8b.visioncoreai.pages.dev` + alias principal servindo `next-clean-133`.
+## next-clean-132 (2026-07-19, produção)
 
 - Software Factory ganhou ponte fail-closed de execucao local real via Vision Agent Local: backend cria execution intent idempotente, flag nova `SF_REAL_EXECUTION_ENABLED=false` por padrao, mission type `sf_create_project`, target logico dedicado `VisionCoreProjects/<slug>-<mission_id>`, Ponytail Audit deterministico obrigatorio e LLM opcional (`deterministic_llm` default).
-- Agent escreve somente em pasta nova dedicada, valida arquivos, deixa diff staged (`git init` + `git add .`) e nunca comita/deploya. Falha limpa a pasta dedicada e retorna `rollback_performed` quando aplicavel.
-- Teste novo `tools/tests/sf-real-execution.test.mjs`: contrato/flag/path traversal/idempotencia + escrita real em `%TEMP%` + staged diff sem commit + rollback de JS invalido.
+- Agent escreve somente em pasta nova dedicada, valida arquivos, deixa diff staged (`git init` + `git add .`) e nunca comita/deploya. Falha limpa `.partial` abandonado em retry pos-timeout; pasta final ja existente falha fechado sem overwrite.
+- Teste novo `tools/tests/sf-real-execution.test.mjs`: contrato/flag/idempotencia/path traversal/timeout + escrita real em `%TEMP%` + staged diff sem commit + rollback de JS invalido. Deploy confirmado: Pages `2f77b405.visioncoreai.pages.dev`, EB `v5.9.73-sf-real-execution`, flag `SF_REAL_EXECUTION_ENABLED` ausente/false em produção.
+- Follow-up de segurança deployado no EB `v118-e630202430552467925fc8f71980d025acd2a8bf`: execução real do SF agora também exige `SF_REAL_EXECUTION_ALLOWED_AGENTS` (CSV de `agent_id`, ausente/vazia bloqueia todos), retornando `sf_real_execution_agent_not_allowed` para Agent fora da allowlist. As env vars de execução real seguem ausentes em produção; nada foi ativado.
 ## next-clean-131 (2026-07-19, produção)
 
 - Painéis de menu fora do Chat deixam de herdar a largura estreita reservada ao layout com Atomic Core.

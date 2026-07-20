@@ -19,6 +19,7 @@ const { missionQuota } = require('./mission-quota');
 const { evaluateGithubQualityGate } = require('./github-quality-gate');
 const {
   isSfRealExecutionEnabled,
+  isSfRealExecutionAgentAllowed,
   createSfExecutionIntent,
   buildAuditClaims,
   buildAuditEvidence,
@@ -5219,6 +5220,20 @@ app.post('/api/sf/execute-project', requireVisionAuth, async (req, res) => {
   if (!agentId) return res.status(400).json({ ok: false, error: 'agent_id_required', anti_stub: true, time: now() });
   if (!verifyAgentSecret(agentId, agentSecret)) {
     return res.status(401).json({ ok: false, error: 'agent_pairing_required', anti_stub: true, time: now() });
+  }
+
+  if (!isSfRealExecutionAgentAllowed(agentId)) {
+    return res.status(403).json({
+      ok: false,
+      error: 'sf_real_execution_agent_not_allowed',
+      sf_real_execution_enabled: true,
+      sf_real_execution_agent_allowed: false,
+      agent_id: agentId,
+      reason: 'agent_not_in_allowlist',
+      flags: { writes_disk: false, real_execution_allowed: false, deploy_allowed: false },
+      anti_stub: true,
+      time: now()
+    });
   }
 
   let intent;
