@@ -24,6 +24,11 @@ const path = require('path');
 
 let _db     = null;
 let _dbPath = null;
+let _onSaveHook = null; // §157-SF: server.js injeta o upload real pro S3 aqui
+
+// Chamado a cada _save() com (dbPath, buffer) — server.js e quem sabe falar
+// com S3 (AWS_S3_BUCKET/aws CLI), este modulo so avisa que o arquivo mudou.
+function setSyncHook(fn) { _onSaveHook = fn; }
 
 /* ── init ──────────────────────────────────────────────────── */
 async function init(dataDir) {
@@ -68,6 +73,7 @@ function _save() {
   try {
     const buf = Buffer.from(_db.export());
     fs.writeFileSync(_dbPath, buf);       /* synchronous flush — crash-safe */
+    if (_onSaveHook) _onSaveHook(_dbPath, buf);
   } catch (e) {
     console.error('[agent-queue-db] _save failed:', e.message);
   }
@@ -140,4 +146,4 @@ function getResult(mission_id) {
   return JSON.parse(payload);
 }
 
-module.exports = { init, push, shift, shiftForAgent, length, storeResult, getResult };
+module.exports = { init, push, shift, shiftForAgent, length, storeResult, getResult, setSyncHook };

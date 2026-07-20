@@ -648,6 +648,52 @@ function writeAndSyncS3(localPath, data) {
   return _s3PutAsync(localPath, data);
 }
 
+// §157-SF: variantes binary-safe de _s3LoadSync/_s3PutAsync pro SQLite da
+// fila do agente (agent-queue.sqlite) — as versoes acima fazem JSON.parse/
+// stringify e leem com encoding:'utf8', o que corrompe um binario. Mesmo
+// key/prefixo (_s3Key), so sem passar pelo JSON.
+function _s3LoadRawSync(localPath) {
+  if (!S3_BUCKET) return;
+  const key = _s3Key(localPath);
+  try {
+    const { execSync } = require('child_process');
+    const content = execSync(`aws s3 cp "s3://${S3_BUCKET}/${key}" -`,
+      { timeout: 15000, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 50 * 1024 * 1024 }); // sem encoding -> Buffer
+    fs.mkdirSync(path.dirname(localPath), { recursive: true });
+    fs.writeFileSync(localPath, content);
+    console.log('[s3] §157-SF loaded (raw)', key);
+  } catch (e) {
+    console.log('[s3] §157-SF no data for (raw)', key, '—', e.message.slice(0, 60));
+  }
+}
+
+function _s3PutRawAsync(localPath, buffer) {
+  if (!S3_BUCKET) return Promise.resolve();
+  const key = _s3Key(localPath);
+  const tmp = path.join(require('os').tmpdir(), 'vc157sf_' + Date.now() + '_' + crypto.randomBytes(6).toString('hex') + '.bin');
+  return new Promise((resolve) => {
+    fs.writeFile(tmp, buffer, (err) => {
+      if (err) return resolve();
+      _exec146(`aws s3 cp "${tmp}" "s3://${S3_BUCKET}/${key}"`, { timeout: 30000 }, (err2) => {
+        fs.unlink(tmp, () => {});
+        if (err2) console.warn('[s3] §157-SF raw put failed:', key, err2.message.slice(0, 60));
+        resolve();
+      });
+    });
+  });
+}
+
+// Serializa os uploads do SQLite (mesmo motivo do §157 pra JSON: uploads
+// concorrentes pra MESMA chave podem terminar fora de ordem e reverter um
+// snapshot mais novo). So existe 1 arquivo aqui, entao uma fila simples basta.
+let _agentQueueS3SyncChain = Promise.resolve();
+function syncAgentQueueSqliteToS3(localPath, buffer) {
+  _agentQueueS3SyncChain = _agentQueueS3SyncChain
+    .then(() => _s3PutRawAsync(localPath, buffer))
+    .catch(() => {});
+  return _agentQueueS3SyncChain;
+}
+
 // §157 — serializa leitura-modificacao-escrita por store: sem isso, duas
 // requisicoes concorrentes na MESMA store leem o mesmo estado e a escrita que
 // termina por ultimo apaga a da outra (achado real, ver docs/CURRENT_STATE.md
@@ -3803,9 +3849,15 @@ app.get('/api/auth/status', (req, res) => {
 });
 
 /* ── Vision Agent Local endpoints ──────────────────────────── */
-/* §112: fila e resultados persistidos em SQLite via agent-queue-db.js    */
-/* (anteriormente array/objeto em memória — perdia tudo no restart do EB) */
+/* §112: fila e resultados persistidos em SQLite via agent-queue-db.js
+   (anteriormente array/objeto em memória — perdia tudo no restart do EB).
+   §157-SF: SQLite sozinho so protege contra crash do processo (kill -9),
+   não contra um restart real de ambiente do EB, que apaga /var/app/current
+   inteiro — mesma classe do bug já corrigido pra agentPairings. Fix: pull
+   do S3 no boot + upload apos cada _save() (ver setSyncHook logo abaixo). */
 const agentQueueDB = require('./agent-queue-db');
+const AGENT_QUEUE_SQLITE_PATH = path.join(DB_ROOT, 'agent-queue.sqlite');
+agentQueueDB.setSyncHook((dbPath, buf) => syncAgentQueueSqliteToS3(dbPath, buf));
 
 app.post('/api/agent/mission/queue', (req, res) => {
   const body        = normalizeBody(req);
@@ -3919,6 +3971,7 @@ app.post('/api/agent/mission/result', (req, res) => {
       target_root: body.target_root || sfIntent.target_root,
       audit_mode: sfIntent.audit_mode
     });
+    syncSfExecutionIntentsToS3();
   }
   return sendOk(res, { received: true, mission_id: body.mission_id });
 });
@@ -4896,15 +4949,27 @@ app.post('/api/diff/preview', (req, res) => {
 // ── SF Modules 02-09 — §84 B5: async + callLLM() real ────────
 // §182 — jobs assíncronos para steps de longa duração (gold-gate)
 const sfJobs = new Map(); // jobId → {status, result, error, ts}
-const sfExecutionIntents = new Map(); // intent_hash -> execution intent
+const SF_EXECUTION_INTENTS_DB = path.join(DB_ROOT, 'sf-execution-intents.json');
+// §157-SF: sfExecutionIntents era 100% em memória — qualquer restart do EB
+// apagava toda intent em voo, sem deixar rastro (404 intent_not_found no
+// proximo poll). Mesma classe do bug ja corrigido pra agentPairings, nunca
+// estendida pra ca. Mesmo padrao exato: pull do S3 antes de construir o Map.
+_s3LoadSync(SF_EXECUTION_INTENTS_DB);
+const sfExecutionIntents = new Map(Object.entries(readJsonFile(SF_EXECUTION_INTENTS_DB, {}))); // intent_hash -> execution intent
 const SF_REAL_INTENT_TIMEOUT_MS = 10 * 60 * 1000;
+
+function syncSfExecutionIntentsToS3() {
+  writeAndSyncS3(SF_EXECUTION_INTENTS_DB, Object.fromEntries(sfExecutionIntents));
+}
 
 function findSfExecutionIntentByMission(missionId) {
   return findSfIntentByMission(sfExecutionIntents, missionId);
 }
 
 function markStaleSfExecutionIntents() {
-  return markStaleSfIntents(sfExecutionIntents, { nowMs: Date.now(), timeoutMs: SF_REAL_INTENT_TIMEOUT_MS });
+  const stale = markStaleSfIntents(sfExecutionIntents, { nowMs: Date.now(), timeoutMs: SF_REAL_INTENT_TIMEOUT_MS });
+  if (stale.length) syncSfExecutionIntentsToS3();
+  return stale;
 }
 
 async function runSfDeterministicAudit(intent) {
@@ -5390,6 +5455,7 @@ app.post('/api/sf/execute-project', requireVisionAuth, async (req, res) => {
     intent.status = 'audit_deterministic_failed';
     intent.stages.push('audit_deterministic_failed');
     sfExecutionIntents.set(intent.intent_hash, intent);
+    syncSfExecutionIntentsToS3();
     return res.status(422).json({ ok: false, error: 'audit_deterministic_failed', audit: deterministic.result, intent: publicIntent(intent), anti_stub: true, time: now() });
   }
   intent.stages.push('audit_deterministic_passed');
@@ -5401,6 +5467,7 @@ app.post('/api/sf/execute-project', requireVisionAuth, async (req, res) => {
       intent.status = 'audit_llm_failed';
       intent.stages.push('audit_llm_failed');
       sfExecutionIntents.set(intent.intent_hash, intent);
+      syncSfExecutionIntentsToS3();
       return res.status(422).json({ ok: false, error: 'audit_llm_failed', audit: llmAudit.decision || llmAudit.raw || null, intent: publicIntent(intent), anti_stub: true, time: now() });
     }
     intent.stages.push('audit_llm_passed');
@@ -5411,6 +5478,7 @@ app.post('/api/sf/execute-project', requireVisionAuth, async (req, res) => {
   intent.status = 'queued';
   intent.queued_at_ms = Date.now();
   sfExecutionIntents.set(intent.intent_hash, intent);
+  syncSfExecutionIntentsToS3();
 
   agentQueueDB.push({
     id: intent.mission_id,
@@ -5480,6 +5548,7 @@ if (S3_BUCKET) {
   _s3LoadSync(PROVIDERS_VAULT_FILE); // AI Provider Vault: config principal do S3
   _s3LoadSync(AGENT_COSTS_DB); // achado 2026-07-20: gravava no S3 mas nunca lia de volta, resetava a cada restart
   _s3LoadSync(AUDIT_LOG_FILE); // achado 2026-07-20: mesma lacuna — historico de auditoria se perdia a cada restart
+  _s3LoadRawSync(AGENT_QUEUE_SQLITE_PATH); // achado 2026-07-20 (sessão seguinte): SQLite so sobrevivia a crash, não a restart de ambiente
   console.log('[s3] §146 startup load done');
 }
 _loadBlacklist(); // §152: carregar blacklist do arquivo local (pode já ter sido baixada do S3)
