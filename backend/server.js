@@ -2793,10 +2793,14 @@ function getRequestAgentSecret(req, body) {
 }
 /* §207: pareamento por agente — agent_id sozinho não autenticava nada (hash não-secreto de
    hostname+pasta, sem checagem nenhuma nas rotas). agent_secret é o segredo real, gerado só
-   aqui, nunca adivinhável. Em memória (reseta a cada redeploy do EB) — mesmo padrão já usado
-   por agentQueueDB/sfJobs neste arquivo; persistência em S3 fica para quando isso for
-   realmente ligado em produção (AGENT_APPLY_ENABLED continua false até lá). */
-const agentPairings = new Map(); // agent_id -> agent_secret
+   aqui, nunca adivinhável. Persistido em disco (mesmo padrão de USERS_DB) — antes vivia só em
+   memória e resetava a cada restart do EB (inclusive restart disparado por uma simples mudança
+   de env var), invalidando pareamentos ativos e forçando o Agent Local a se re-registrar com
+   um agent_id novo toda vez, o que nunca convergia com SF_REAL_EXECUTION_ALLOWED_AGENTS (achado
+   real durante o 1º teste supervisionado, 2026-07-20). Sem TTL/revogação — pareamento persiste
+   indefinidamente até edição manual do arquivo; ver docs/CURRENT_STATE.md pendência de segurança. */
+const AGENT_PAIRINGS_DB = path.join(DB_ROOT, 'agent-pairings.json');
+const agentPairings = new Map(Object.entries(readJsonFile(AGENT_PAIRINGS_DB, {}))); // agent_id -> agent_secret
 function verifyAgentSecret(agentId, secret) {
   if (!agentId || !secret) return false;
   const expected = agentPairings.get(agentId);
@@ -2809,6 +2813,7 @@ app.post('/api/agent/register', (req, res) => {
   const agentId = makeId('agent');
   const secret  = crypto.randomBytes(24).toString('hex');
   agentPairings.set(agentId, secret);
+  writeAndSyncS3(AGENT_PAIRINGS_DB, Object.fromEntries(agentPairings));
   return sendOk(res, { agent_id: agentId, agent_secret: secret, status: 'registered', anti_stub: true });
 });
 app.all('/api/agent/heartbeat', (req, res) => {

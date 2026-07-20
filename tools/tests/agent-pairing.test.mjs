@@ -6,9 +6,12 @@ import { resolve } from 'node:path';
 const ROOT = resolve(process.cwd());
 const DB = resolve(ROOT, 'data', 'agent-queue.sqlite');
 const backup = existsSync(DB) ? readFileSync(DB) : null;
+const PAIRINGS_DB = resolve(ROOT, 'data', 'agent-pairings.json');
+const pairingsBackup = existsSync(PAIRINGS_DB) ? readFileSync(PAIRINGS_DB) : null;
 const PORT = 18738;
 const BASE = `http://127.0.0.1:${PORT}`;
 let passed = 0;
+let serverLog = '';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -25,28 +28,36 @@ async function request(path, { method = 'GET', body } = {}) {
   return { status: response.status, body: await response.json() };
 }
 
-const child = spawn(process.execPath, ['--no-deprecation', 'backend/server.js'], {
-  cwd: ROOT,
-  env: {
-    ...process.env,
-    PORT: String(PORT),
-    AWS_S3_BUCKET: '',
-    SESSION_SECRET: 'agent-pairing-test-session-secret-32chars',
-    PROVIDER_VAULT_SECRET: 'agent-pairing-test-vault-secret-32chars',
-  },
-  stdio: ['ignore', 'pipe', 'pipe'],
-});
-let serverLog = '';
-child.stdout.on('data', (data) => { serverLog += data; });
-child.stderr.on('data', (data) => { serverLog += data; });
-
-try {
+async function spawnServer() {
+  const proc = spawn(process.execPath, ['--no-deprecation', 'backend/server.js'], {
+    cwd: ROOT,
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      AWS_S3_BUCKET: '',
+      SESSION_SECRET: 'agent-pairing-test-session-secret-32chars',
+      PROVIDER_VAULT_SECRET: 'agent-pairing-test-vault-secret-32chars',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  proc.stdout.on('data', (data) => { serverLog += data; });
+  proc.stderr.on('data', (data) => { serverLog += data; });
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
-    try { if ((await fetch(BASE + '/api/health')).ok) break; } catch {}
+    try { if ((await fetch(BASE + '/api/health')).ok) return proc; } catch {}
     await new Promise((resolveWait) => setTimeout(resolveWait, 200));
   }
+  throw new Error('server did not become healthy in time');
+}
 
+async function killServer(proc) {
+  proc.kill('SIGTERM');
+  await new Promise((resolveWait) => proc.once('exit', resolveWait));
+}
+
+let child = await spawnServer();
+
+try {
   const a = await request('/api/agent/register', { method: 'POST' });
   const b = await request('/api/agent/register', { method: 'POST' });
   assert(a.status === 200 && b.status === 200, 'dois agentes registram pares distintos');
@@ -80,14 +91,29 @@ try {
 
   const status = await request('/api/agent/status');
   assert(status.status === 200 && status.body.connected === true && status.body.agent_id === a.body.agent_id, 'status reflete o último polling autenticado');
+
+  // Achado real 2026-07-20: agentPairings vivia só em memória, então qualquer restart do
+  // processo (no EB, disparado até por uma simples mudança de env var) apagava o pareamento
+  // ativo — o Agent Local reagia se re-registrando sozinho com um agent_id novo, que nunca
+  // convergia com a allowlist configurada. Este bloco simula exatamente esse cenário: mata o
+  // processo, sobe um novo (recarregando agentPairings do disco) e confirma que o par antigo
+  // continua válido sem nenhum re-registro.
+  await killServer(child);
+  child = await spawnServer();
+  const pendingAfterRestart = await request(`/api/agent/mission/pending?agent_id=${a.body.agent_id}&agent_secret=${a.body.agent_secret}`);
+  assert(pendingAfterRestart.status === 200, 'pareamento sobrevive a restart do processo (sem novo /register)');
+  const reRegisterAttempt = await request('/api/agent/mission/pending?agent_id=' + a.body.agent_id + '&agent_secret=wrong-secret-simulating-fresh-pairing');
+  assert(reRegisterAttempt.status === 401, 'secret errado continua rejeitado após restart (persistência não afrouxa a checagem)');
+
   console.log(`\n${passed}/${passed} PASS`);
 } catch (error) {
   console.error(error.message);
   if (serverLog) console.error(serverLog.slice(-2000));
   process.exitCode = 1;
 } finally {
-  child.kill('SIGTERM');
-  await new Promise((resolveWait) => child.once('exit', resolveWait));
+  await killServer(child);
   if (backup) writeFileSync(DB, backup);
   else if (existsSync(DB)) unlinkSync(DB);
+  if (pairingsBackup) writeFileSync(PAIRINGS_DB, pairingsBackup);
+  else if (existsSync(PAIRINGS_DB)) unlinkSync(PAIRINGS_DB);
 }
