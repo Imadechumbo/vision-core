@@ -135,7 +135,45 @@ function createSfExecutionIntent({ body, user, now, makeMissionId }) {
   };
 }
 
+// §157-SF: unico ponto real deste gate que pode genuinamente reprovar algo —
+// deploy/merge/tag/stable/pass_gold/real_evidence/file_changed continuam
+// false porque, nesta fase (intent pre-execucao, antes do Agent Local
+// escrever qualquer coisa), nao existe ainda deploy/merge/evidencia real/
+// diff — false ali e o valor HONESTO, nao um rubber-stamp disfarcado. O gap
+// real e diferente: nada nunca examinava o CONTEUDO dos arquivos em si.
+// Heuristica deliberadamente simples (regex): sobe a barra pra payload
+// descuidado/ingenuo (LLM alucinando uma API key real, tutorial colado com
+// curl|sh) — NAO e defesa contra um payload adversarial deliberadamente
+// ofuscado pra escapar de string-matching (base64, concatenacao, etc.).
+// Ver auto-revisao em docs/CURRENT_STATE.md.
+const SF_SECRET_PATTERNS = [
+  /-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----/,
+  /AKIA[0-9A-Z]{16}/, // AWS access key id
+  /(api[_-]?key|secret|token)\s*[:=]\s*['"][A-Za-z0-9_\-]{16,}['"]/i,
+  /password\s*[:=]\s*['"][^'"]{6,}['"]/i
+];
+const SF_DANGEROUS_PATTERNS = [
+  /rm\s+-rf\s+\/\s*($|["'\n])/, // rm -rf / (wipe de raiz, nao um path relativo comum)
+  /(curl|wget)[^\n]{0,80}\|\s*(sh|bash)\b/i // padrao classico de pipe-to-shell
+];
+
+function scanFileContentRisk(files) {
+  const secretFiles = [];
+  const dangerousFiles = [];
+  for (const f of files) {
+    const content = String((f && f.content) || '');
+    if (SF_SECRET_PATTERNS.some((p) => p.test(content))) secretFiles.push(f.name);
+    if (SF_DANGEROUS_PATTERNS.some((p) => p.test(content))) dangerousFiles.push(f.name);
+  }
+  return {
+    ok: secretFiles.length === 0 && dangerousFiles.length === 0,
+    secretFiles,
+    dangerousFiles
+  };
+}
+
 function buildAuditClaims(intent) {
+  const contentRisk = scanFileContentRisk(intent.files);
   return {
     sf_create_project: true,
     files_planned: intent.files.length,
@@ -145,7 +183,9 @@ function buildAuditClaims(intent) {
     stable: false,
     pass_gold: false,
     real_evidence: false,
-    file_changed: false
+    file_changed: false,
+    contains_hardcoded_secret: contentRisk.secretFiles.length > 0,
+    contains_dangerous_command: contentRisk.dangerousFiles.length > 0
   };
 }
 
@@ -155,7 +195,8 @@ function buildAuditEvidence(intent) {
     target_root: intent.target_root,
     deploy_allowed: false,
     write_scope: 'dedicated_new_project_folder',
-    files_planned: intent.files.map(f => f.name)
+    files_planned: intent.files.map(f => f.name),
+    content_risk: scanFileContentRisk(intent.files)
   };
 }
 
@@ -226,6 +267,7 @@ module.exports = {
   safeRelativeFileName,
   normalizeSfFiles,
   createSfExecutionIntent,
+  scanFileContentRisk,
   buildAuditClaims,
   buildAuditEvidence,
   publicIntent,

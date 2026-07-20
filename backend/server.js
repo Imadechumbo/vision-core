@@ -4976,8 +4976,21 @@ async function runSfDeterministicAudit(intent) {
   const { validateAgentOutput } = await importToolsModule('hermes/mission-supervisor.mjs');
   const claims = buildAuditClaims(intent);
   const evidence = buildAuditEvidence(intent);
-  const result = validateAgentOutput(claims, evidence);
-  return { ok: !!(result && result.ok), claims, evidence, result };
+  const genericResult = validateAgentOutput(claims, evidence);
+  // §157-SF: validateAgentOutput() e generico (test_pass/ci_green/deploy/etc.),
+  // nao conhece os campos content_risk-derivados que so fazem sentido pra SF
+  // create-project — checado aqui, nao dentro daquela funcao compartilhada
+  // (usada tambem por tools/pi-harness.mjs e tools/sf-agent-orchestrator.mjs;
+  // mudar o comportamento dela mudaria auditoria de outros tipos de missao).
+  const contentRisk = evidence.content_risk;
+  const errors = (genericResult && genericResult.errors ? genericResult.errors.slice() : []);
+  if (contentRisk && !contentRisk.ok) {
+    if (contentRisk.secretFiles.length) errors.push(`possivel segredo/credencial hardcoded em: ${contentRisk.secretFiles.join(', ')}`);
+    if (contentRisk.dangerousFiles.length) errors.push(`comando perigoso (rm -rf /, curl|sh) detectado em: ${contentRisk.dangerousFiles.join(', ')}`);
+  }
+  const ok = !!(genericResult && genericResult.ok) && !!(contentRisk && contentRisk.ok);
+  const result = Object.assign({}, genericResult, { ok, errors });
+  return { ok, claims, evidence, result };
 }
 
 async function runSfLlmAudit(intent) {

