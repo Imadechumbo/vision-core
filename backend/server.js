@@ -617,7 +617,11 @@ function _s3LoadSync(localPath) {
 function _s3PutAsync(localPath, data) {
   if (!S3_BUCKET) return;
   const key = _s3Key(localPath);
-  const tmp = path.join(require('os').tmpdir(), 'vc146_' + Date.now() + '.json');
+  // §146 fix 2026-07-20: Date.now() sozinho colide entre escritas concorrentes pra stores
+  // diferentes (mesmo milissegundo => mesmo arquivo temp => uma sobrescreve a outra antes do
+  // "aws s3 cp" da primeira ler o conteudo, subindo o dado errado pra chave errada). Achado
+  // real em producao: chat-conversations.json continha conteudo de operation-log.json.
+  const tmp = path.join(require('os').tmpdir(), 'vc146_' + Date.now() + '_' + crypto.randomBytes(6).toString('hex') + '.json');
   fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf8', (err) => {
     if (err) return;
     _exec146(`aws s3 cp "${tmp}" "s3://${S3_BUCKET}/${key}"`,
@@ -5367,6 +5371,8 @@ if (S3_BUCKET) {
   _s3LoadSync(BLACKLIST_FILE); // §152: blacklist do S3 antes de aceitar requests
   _s3LoadSync(SSO_DOMAINS_FILE); // §155: SSO domains do S3
   _s3LoadSync(PROVIDERS_VAULT_FILE); // AI Provider Vault: config principal do S3
+  _s3LoadSync(AGENT_COSTS_DB); // achado 2026-07-20: gravava no S3 mas nunca lia de volta, resetava a cada restart
+  _s3LoadSync(AUDIT_LOG_FILE); // achado 2026-07-20: mesma lacuna — historico de auditoria se perdia a cada restart
   console.log('[s3] §146 startup load done');
 }
 _loadBlacklist(); // §152: carregar blacklist do arquivo local (pode já ter sido baixada do S3)
