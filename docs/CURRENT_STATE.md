@@ -7,7 +7,7 @@
 # ESTADO DO SISTEMA
 
 Frontend Next
-✔ OK — `next-clean-133` implementado localmente: UX de recuperacao segura para pasta travada do SF (`sf_create_project_target_exists`), sem overwrite automatico; deploy frontend pendente nesta rodada.
+✔ OK — `next-clean-133` deployado e confirmado em producao: UX de recuperacao segura para pasta travada do SF (`sf_create_project_target_exists`), sem overwrite automatico; alias e deployment especifico servem o recovery panel.
 
 Backend
 ✔ OK — EB `v118-e630202430552467925fc8f71980d025acd2a8bf`, Ready/Green (allowlist server-side do SF deployada; `SF_REAL_EXECUTION_ENABLED` e `SF_REAL_EXECUTION_ALLOWED_AGENTS` seguem ausentes, então execução real continua fail-closed até ativação manual supervisionada).

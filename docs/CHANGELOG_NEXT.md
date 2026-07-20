@@ -4,10 +4,10 @@ Histórico resumido por versão (`?v=next-clean-N`). Um bloco curto por versão 
 
 Formato: mais recente no topo.
 
-## next-clean-133 (2026-07-19, pendente de deploy frontend)
+## next-clean-133 (2026-07-19, produção)
 
 - Software Factory ganhou UX de recuperacao para `sf_create_project_target_exists`: quando o Vision Agent Local falha fechado porque a pasta final dedicada ja existe com conteudo, o Next mostra caminho, orienta revisao manual e oferece nova tentativa em outra pasta dedicada. Nenhum overwrite automatico foi introduzido.
-- O fluxo agora preserva payload de erro em `apiRequest`, faz polling de `GET /api/sf/execution-intent/:hash` apos enfileirar a intent e muda o `project_id` na nova tentativa (`-retry-N`) para criar target novo em vez de reusar a pasta travada.
+- O fluxo agora preserva payload de erro em `apiRequest`, faz polling de `GET /api/sf/execution-intent/:hash` apos enfileirar a intent e muda o `project_id` na nova tentativa (`-retry-N`) para criar target novo em vez de reusar a pasta travada. Deploy Pages confirmado: `89c37d8b.visioncoreai.pages.dev` + alias principal servindo `next-clean-133`.
 ## next-clean-132 (2026-07-19, produção)
 
 - Software Factory ganhou ponte fail-closed de execucao local real via Vision Agent Local: backend cria execution intent idempotente, flag nova `SF_REAL_EXECUTION_ENABLED=false` por padrao, mission type `sf_create_project`, target logico dedicado `VisionCoreProjects/<slug>-<mission_id>`, Ponytail Audit deterministico obrigatorio e LLM opcional (`deterministic_llm` default).
