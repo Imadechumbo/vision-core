@@ -2793,13 +2793,20 @@ function getRequestAgentSecret(req, body) {
 }
 /* §207: pareamento por agente — agent_id sozinho não autenticava nada (hash não-secreto de
    hostname+pasta, sem checagem nenhuma nas rotas). agent_secret é o segredo real, gerado só
-   aqui, nunca adivinhável. Persistido em disco (mesmo padrão de USERS_DB) — antes vivia só em
-   memória e resetava a cada restart do EB (inclusive restart disparado por uma simples mudança
-   de env var), invalidando pareamentos ativos e forçando o Agent Local a se re-registrar com
-   um agent_id novo toda vez, o que nunca convergia com SF_REAL_EXECUTION_ALLOWED_AGENTS (achado
-   real durante o 1º teste supervisionado, 2026-07-20). Sem TTL/revogação — pareamento persiste
-   indefinidamente até edição manual do arquivo; ver docs/CURRENT_STATE.md pendência de segurança. */
+   aqui, nunca adivinhável. Persistido via S3 (mesmo padrão de USERS_DB/_s3LoadSync/_s3PutAsync)
+   — 1ª tentativa desta entrega só gravava em disco local e não sobreviveu a um restart real do
+   EB: log da instância confirmou "Renaming /var/app/staging/ to /var/app/current/" em TODA
+   atualização de ambiente, inclusive só de env var — o diretório da app é descartado e
+   re-extraído do zip a cada vez, então qualquer arquivo criado em runtime que não passe pelo
+   ciclo S3 se perde. USERS_DB sobrevive porque é sincronizado do S3 pra disco local ANTES de
+   `app.listen()` (bloco perto de `_s3LoadSync(USERS_DB)`); agentPairings precisa do mesmo pull
+   aqui, síncrono, antes do Map ser construído (module-level, lido uma única vez — diferente de
+   USERS_DB, que é relido do disco a cada request). Achado real durante o 1º teste supervisionado,
+   2026-07-20: 4 agent_id diferentes gerados em sequência antes desta causa raiz ser confirmada.
+   Sem TTL/revogação — pareamento persiste indefinidamente até edição manual do arquivo; ver
+   docs/CURRENT_STATE.md pendência de segurança. */
 const AGENT_PAIRINGS_DB = path.join(DB_ROOT, 'agent-pairings.json');
+_s3LoadSync(AGENT_PAIRINGS_DB); // pull antes de construir o Map — mesma ordem exigida por USERS_DB etc.
 const agentPairings = new Map(Object.entries(readJsonFile(AGENT_PAIRINGS_DB, {}))); // agent_id -> agent_secret
 function verifyAgentSecret(agentId, secret) {
   if (!agentId || !secret) return false;
