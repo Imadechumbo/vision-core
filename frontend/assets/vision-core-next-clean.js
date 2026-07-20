@@ -5144,6 +5144,21 @@
     if (sfExecuteStatus) sfExecuteStatus.textContent = 'Pasta travada detectada. Revise manualmente ou tente em uma nova pasta.';
   }
 
+  // §157-SF: mensagem especifica por desfecho real de sfCreateProjectMission
+  // (vision-agent.js:1309-1416) + estados so-do-backend (timeout/intent perdida).
+  // Sucesso e pasta-travada tem tratamento proprio (ready_for_manual_review /
+  // isSfTargetLocked) — este mapa cobre todo o resto, que antes caia em silencio.
+  var SF_OUTCOME_MESSAGES = {
+    sf_create_project_blocked_audit: 'Execucao bloqueada: recibo de auditoria ausente ou invalido. Nada foi escrito.',
+    sf_create_project_failed: 'Falha: lista de arquivos ausente ou invalida. Nada foi escrito.',
+    sf_create_project_blocked_path: 'Execucao bloqueada: caminho de arquivo invalido (possivel path traversal). Nada foi escrito.',
+    sf_create_project_rollback: 'Falha durante a escrita — rollback executado, nada ficou pela metade.',
+    agent_failed: 'O Agent Local reportou falha ao executar a missao.',
+    timeout_cleanup_required: 'O Agent Local nao respondeu a tempo (10 min). A intent expirou — tente novamente.',
+    audit_deterministic_failed: 'Auditoria deterministica reprovou a intent. Nada foi enfileirado para o Agent.',
+    audit_llm_failed: 'Auditoria por LLM reprovou a intent. Nada foi enfileirado para o Agent.'
+  };
+
   function handleSfExecutionState(data) {
     if (isSfTargetLocked(data)) {
       showSfRecovery(data);
@@ -5154,18 +5169,42 @@
       sfExecuteStatus.textContent = 'Projeto criado. Diff staged para revisao manual; nenhum commit automatico.';
       return true;
     }
+    if (intent && intent.status === 'timeout_cleanup_required') {
+      if (sfExecuteStatus) sfExecuteStatus.textContent = SF_OUTCOME_MESSAGES.timeout_cleanup_required;
+      return true;
+    }
+    var result = data && data.agent_result ? data.agent_result : null;
+    var nonTerminalStatuses = { queued: true, intent_created: true };
+    var action = result && result.action ? result.action : (intent && !nonTerminalStatuses[intent.status] ? intent.status : '');
+    if (action) {
+      if (sfExecuteStatus) sfExecuteStatus.textContent = SF_OUTCOME_MESSAGES[action] || ('Falha: ' + action + (result && result.output ? ' — ' + result.output : ''));
+      return true;
+    }
     return false;
   }
 
+  // §157-SF: 40 tentativas x 1.5s = 60s (dobrado do valor original de 30s, que
+  // presumia sucesso quase-instantaneo). Valor provisorio — Item 4 desta sessao
+  // mede o tempo real ponta a ponta contra producao e reajusta se precisar.
+  var SF_EXECUTION_POLL_ATTEMPTS = 40;
+
   function pollSfExecutionIntent(hash, remaining) {
-    if (!hash || remaining <= 0) return;
+    if (!hash) return;
     if (sfExecutionPollTimer) clearTimeout(sfExecutionPollTimer);
+    if (remaining <= 0) {
+      if (sfExecuteStatus) sfExecuteStatus.textContent = 'Ainda processando — demorou mais que o esperado. Verifique se o Vision Agent Local esta pareado e rodando, ou confira novamente em instantes.';
+      return;
+    }
     sfExecutionPollTimer = setTimeout(function () {
       apiRequest('/api/sf/execution-intent/' + encodeURIComponent(hash), { method: 'GET' })
         .then(function (data) {
           if (!handleSfExecutionState(data)) pollSfExecutionIntent(hash, remaining - 1);
         })
-        .catch(function () {
+        .catch(function (err) {
+          if (err && err.status === 404) {
+            if (sfExecuteStatus) sfExecuteStatus.textContent = 'Intent nao encontrada — provavelmente expirou ou o backend reiniciou antes do Agent Local responder. Tente novamente.';
+            return;
+          }
           pollSfExecutionIntent(hash, remaining - 1);
         });
     }, 1500);
@@ -5190,10 +5229,19 @@
     if (sfExecuteStatus) sfExecuteStatus.textContent = 'Criando intent segura...';
     try {
       hideSfRecovery();
-      var projectId = currentSfJobId || ('sf-' + Date.now());
+      // achado real 2026-07-20: `currentSfJobId` nunca foi declarado em lugar
+      // nenhum (introduzido em 83860e8f3, 2026-07-19) — todo clique em "Criar
+      // projeto local" lancava ReferenceError aqui, capturado pelo catch()
+      // abaixo, antes mesmo da chamada de rede acontecer.
+      var projectId = 'sf-' + Date.now();
       if (sfExecutionRetryNonce > 0) projectId += '-retry-' + sfExecutionRetryNonce;
       var payload = {
-        description: getSfMissionText(),
+        // achado real 2026-07-20: `getSfMissionText()` tambem nunca foi
+        // declarada em lugar nenhum (mesmo commit 83860e8f3) — mesmo padrao
+        // do bug de `currentSfJobId` acima. `sfLastDescription` e a mesma
+        // variavel que os endpoints irmaos (project-files/generate-zip) ja
+        // usam pra essa finalidade (linhas ~5087/5284).
+        description: sfLastDescription,
         project_id: projectId,
         agent_id: agentId,
         agent_secret: agentSecret,
@@ -5208,13 +5256,25 @@
       if (sfExecuteStatus) {
         sfExecuteStatus.textContent = 'Intent enfileirada. Commit manual: ' + (receipt.committed === false ? 'sim' : 'pendente') + '.';
       }
-      addSystemLog('SF_REAL_EXECUTION queued', response && response.intent ? response.intent.mission_id : 'pending');
-      appendAssistantMessage('Software Factory criou uma intent local segura. O Vision Agent Local vai aplicar em uma pasta dedicada, deixar o diff staged e retornar o recibo na timeline.');
-      if (response && response.intent && response.intent.intent_hash) pollSfExecutionIntent(response.intent.intent_hash, 20);
+      // achado real 2026-07-20: `addSystemLog`/`appendAssistantMessage` tambem
+      // nunca foram declaradas em lugar nenhum (mesmo commit 3e69bf69f) — mesmo
+      // padrao dos 2 bugs acima. `appendSfLog`/`appendSfMsg` sao as funcoes reais
+      // equivalentes ja usadas pelo resto do painel SF (linhas ~4487/4470).
+      appendSfLog('ok', 'SF_REAL_EXECUTION queued mission=' + (response && response.intent ? response.intent.mission_id : 'pending'));
+      appendSfMsg('assistant', 'Software Factory criou uma intent local segura. O Vision Agent Local vai aplicar em uma pasta dedicada, deixar o diff staged e retornar o recibo na timeline.');
+      if (response && response.intent && response.intent.intent_hash) pollSfExecutionIntent(response.intent.intent_hash, SF_EXECUTION_POLL_ATTEMPTS);
     } catch (err) {
       if (err && err.data && isSfTargetLocked(err.data)) {
         showSfRecovery(err.data);
-      } else if (sfExecuteStatus) sfExecuteStatus.textContent = (err && err.message) ? err.message : 'Falha ao criar intent.';
+      } else if (sfExecuteStatus) {
+        var errCode = err && err.data && err.data.error;
+        var friendly = {
+          sf_real_execution_disabled: 'Execucao real desativada no backend (SF_REAL_EXECUTION_ENABLED=false).',
+          sf_real_execution_agent_not_allowed: 'Este Agent ID nao esta na allowlist de execucao real.',
+          agent_pairing_required: 'Agent ID/Secret invalidos ou nao pareados.'
+        };
+        sfExecuteStatus.textContent = (errCode && (friendly[errCode] || SF_OUTCOME_MESSAGES[errCode])) || (err && err.message) || 'Falha ao criar intent.';
+      }
     } finally {
       if (sfExecuteLocalBtn) sfExecuteLocalBtn.disabled = false;
     }
