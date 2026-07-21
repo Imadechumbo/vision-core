@@ -4,6 +4,7 @@ const { ProviderRegistry, ModelRegistry } = require('./multiproviders-domain');
 const { LegacyCompatibilityBridge } = require('./multiproviders-legacy-bridge');
 const { MultiProvidersRuntimeState } = require('./multiproviders-runtime-state');
 const { MultiProvidersRouter } = require('./multiproviders-router');
+const { MultiProvidersAdapterHost } = require('./multiproviders-adapters');
 
 const providerRegistry = new ProviderRegistry();
 const modelRegistry = new ModelRegistry(providerRegistry);
@@ -14,6 +15,7 @@ const legacyBridge = new LegacyCompatibilityBridge({
 });
 const runtimeState = new MultiProvidersRuntimeState({ providerRegistry, modelRegistry });
 const router = new MultiProvidersRouter({ providerRegistry, modelRegistry, runtimeState });
+const adapterHost = new MultiProvidersAdapterHost({ providerRegistry, modelRegistry, runtimeState, router });
 
 function syncLegacyCatalog(source, descriptors) {
   const receipt = legacyBridge.sync(descriptors);
@@ -32,6 +34,7 @@ module.exports = {
   legacyBridge,
   runtimeState,
   router,
+  adapterHost,
   syncLegacyCatalog,
   tenant_id: 'vision-core-system',
 };

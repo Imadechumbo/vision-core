@@ -203,7 +203,15 @@ class ProviderRegistry {
     if (provider.status === 'registered' || provider.status === 'disabled') provider.status = 'configured';
     return this.register(provider, { expected_configuration_version: expectedConfigurationVersion });
   }
-  transition(tenantId, id, nextStatus, { expected_status = null } = {}) {
+  setCapabilities(tenantId, id, capabilities, expectedConfigurationVersion) {
+    const key = scopeKey(tenantId, id);
+    const provider = this.providers.get(key);
+    if (!provider) throw new MultiProvidersError('provider_not_found');
+    if (provider.versions.configuration !== requiredString(expectedConfigurationVersion, 'expected_configuration_version')) throw new MultiProvidersError('version_conflict');
+    provider.capabilities = requiredArray(capabilities, 'capabilities').map(normalizeCapability);
+    provider.updated_at = new Date().toISOString();
+    return clone(provider);
+  }  transition(tenantId, id, nextStatus, { expected_status = null } = {}) {
     const key = scopeKey(tenantId, id);
     const provider = this.providers.get(key);
     if (!provider) throw new MultiProvidersError('provider_not_found');
@@ -251,7 +259,21 @@ class ModelRegistry {
     const scope = requiredString(tenantId, 'tenant_id');
     return [...this.models.values()].filter(value => value.tenant_id === scope).map(clone);
   }
-  addAlias(tenantId, alias, target) {
+  setCapabilities(tenantId, id, capabilities, expectedModelVersion) {
+    const key = scopeKey(tenantId, id);
+    const model = this.models.get(key);
+    if (!model) throw new MultiProvidersError('model_not_found');
+    if (model.model_version !== requiredString(expectedModelVersion, 'expected_model_version')) throw new MultiProvidersError('version_conflict');
+    model.capabilities = requiredArray(capabilities, 'capabilities').map(normalizeCapability);
+    return clone(model);
+  }
+  setOfferingCapabilities(tenantId, providerId, modelId, deployment, capabilities) {
+    const key = JSON.stringify([requiredString(tenantId, 'tenant_id'), requiredString(providerId, 'provider_id'), requiredString(modelId, 'model_id'), deployment || 'default']);
+    const offering = this.offerings.get(key);
+    if (!offering) throw new MultiProvidersError('offering_not_found');
+    offering.capabilities = requiredArray(capabilities, 'capabilities').map(normalizeCapability);
+    return clone(offering);
+  }  addAlias(tenantId, alias, target) {
     this.addAliases(tenantId, [{ alias, target }]);
   }
   addAliases(tenantId, entries) {
