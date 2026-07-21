@@ -40,6 +40,60 @@ Nenhum componente de dashboard, gráfico, painel, monitor, timeline ou grid de m
 
 ---
 
+## MultiProviders / Arquitetura oficial
+
+### ADR-043 — Health é temporal, verificável e fail-closed
+Sem observação válida, health é `unknown`; cadastro, configuração, localização ou sucesso antigo nunca equivalem a `healthy`.
+**Por quê:** false health transforma ausência de evidência em tráfego e mascara indisponibilidade.
+**Como aplicar:** toda observação inclui fonte, razão, `checked_at` e expiração; routing avalia o snapshot conforme policy.
+
+### ADR-042 — Routing é policy-driven, explicável e sem fallback nominal
+Seleção manual ou automática usa requisitos e policy identificada/versionada; nenhum Provider é default ou fallback por nome.
+**Por quê:** prioridade hardcoded cria Provider privilegiado e vendor lock invisível.
+**Como aplicar:** filtrar requisitos duros antes de ordenar; retornar razões e `no_eligible_route`; failover é nova decisão limitada e auditada.
+
+### ADR-041 — Provider Registry e Model Registry são autoridades separadas
+Provider responde quem executa; Model Registry responde quais modelos existem; a relação é muitos-para-muitos por offering.
+**Por quê:** misturar Provider e Model duplica identidades e acopla catálogo a executor.
+**Como aplicar:** Providers referenciam Model IDs; ofertas conectam ambos sem copiar a definição canônica do Model.
+
+### ADR-040 — Todo Provider implementa um contrato comum e neutro
+Colibri, OpenAI, Claude, Ollama, LM Studio e qualquer Provider futuro obedecem ao mesmo contrato de domínio.
+**Por quê:** contrato específico para a primeira integração torna exceção em arquitetura permanente.
+**Como aplicar:** adapters normalizam transporte e erros; nenhuma extensão de vendor altera invariantes comuns.
+
+### ADR-039 — MultiProviders possui quatro superfícies normativas
+MultiProviders é composto somente por Provider Contract, Provider Registry, Model Registry e Routing; health, discovery, benchmark, lifecycle e failover pertencem a essas superfícies.
+**Por quê:** módulos separados para cada mecanismo aumentariam estado, integração e documentação sem responsabilidade independente.
+**Como aplicar:** não criar serviço/registry paralelo sem evidência e nova decisão arquitetural.
+
+### ADR-038 — Arquitetura oficial consolidada
+Software Factory → MultiProviders → Vision AI Installer → Vision Blueprint é a cadeia oficial, com Hermes e Ponytail como governança transversal.
+**Por quê:** uma ordem única impede iniciativas paralelas e dependências invertidas.
+**Como aplicar:** concluir cada SPEC antes de implementação ou da fase seguinte.
+
+### ADR-037 — Ferramentas externas são apenas inspiração
+GSD e Archify não fornecem diretórios, arquitetura, contratos ou código ao Vision Core Next.
+**Por quê:** inspiração não autoriza importar dívida ou ownership externo.
+**Como aplicar:** preservar apenas conceitos avaliados e redesenhados sob specs próprias.
+
+### ADR-036 — Cadeia Software Factory → MultiProviders → Installer → Blueprint
+Software Factory planeja; MultiProviders descreve execução; Installer materializa Provider; Blueprint representa a arquitetura.
+**Por quê:** limites explícitos evitam duplicar registro, instalação e visualização.
+**Como aplicar:** cada integração atravessa apenas seu contrato público futuro.
+
+### ADR-035 — Vision Blueprint permanece documental
+Vision Blueprint é implementação própria e permanece sem runtime nesta baseline.
+**Por quê:** diagramas não devem ganhar execução implícita nem depender de Archify.
+**Como aplicar:** nesta fase registrar apenas futuras views Providers, Models, Routing, Health e Failover.
+
+### ADR-034 — Software Factory Planning Layer permanece documental
+O Planning Layer define intenção e plano, mas não instala Provider, executa modelo ou escreve runtime.
+**Por quê:** planejamento e execução possuem riscos e evidências distintos.
+**Como aplicar:** nenhuma SPEC do Planning Layer autoriza código funcional.
+
+---
+
 ## Produto / Enterprise
 
 ### DECISION-033 — Fase 9 pausada; multi-workspace e 2FA precedem qualquer retomada de SSO

@@ -11,6 +11,7 @@ Este arquivo explica **qual documento consultar, quando, e quem consulta**. Não
 2. CLAUDE.md                              ← regras permanentes, convenções, arquitetura resumida
 3. docs/VISION_CORE_NEXT_FRONTEND_SPEC.md ← o que construir no frontend ativo, regras duras de UI
 4. docs/SOFTWARE_FACTORY_SPEC.md          ← feature de geração de projetos (se a tarefa tocar SF)
+5. docs/MULTIPROVIDERS_SPEC.md            ← Providers/Models/Routing (se a tarefa tocar MultiProviders)
 5. docs/ARCHITECTURE.md                   ← arquitetura completa, "Duas Camadas", pilares, fluxo
 6. docs/DECISIONS.md                      ← decisões fechadas — não reabrir sem motivo novo
 ```
@@ -37,6 +38,7 @@ Só então altere código. Depois de 1-6, consulte sob demanda:
 | `CLAUDE.md` | Protocolo de revezamento, stack/URLs, arquitetura resumida, convenções permanentes, variáveis de ambiente (nomes), pointers para os demais docs | Narrativa de sessão, commits, hashes de deploy, git log/status, payloads | Todo agente | Sempre, no início de toda sessão |
 | `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` | O que construir no Next, regras duras de UI | Estado de sessão | Quem for tocar frontend | Antes de editar `frontend/vision-core-next.html` ou os assets Next |
 | `docs/SOFTWARE_FACTORY_SPEC.md` | Feature de geração de projetos (produto) | Governança interna (Camada 2) | Quem for tocar Software Factory | Antes de editar SF |
+| `docs/MULTIPROVIDERS_SPEC.md` | Raiz normativa de MultiProviders | Implementação e detalhes de vendor | Quem tocar Providers, Models ou Routing | Antes de qualquer mudança nessa camada |
 | `docs/ARCHITECTURE.md` (parte da série `MASTER_SPEC.md`) | Missão, pilares, "Duas Camadas", componentes físicos, segurança, deploy, CI, boas práticas | Estado do dia-a-dia, decisões numeradas (ficam em `DECISIONS.md`) | Todo agente, uma vez por sessão nova | Ao começar a trabalhar num componente que não conhece bem |
 | `docs/DECISIONS.md` | Catálogo permanente de princípios arquiteturais (`ARCHITECTURAL PRINCIPLE-NNN`) e decisões fechadas (`DECISION-NNN`), uma vez cada, com por-quê e como-aplicar | Estado atual, narrativa de sessão | Todo agente antes de propor mudar algo que "parece" já decidido | Ao considerar reabrir/questionar um comportamento existente |
 | `docs/MASTER_SPEC.md` | Índice da série de 10 documentos de arquitetura de produto | Conteúdo duplicado dos 9 documentos que referencia | Quem quer o mapa completo da arquitetura | Ao precisar de um componente específico (Atomic Core, Backend, Secret Guard, etc.) |

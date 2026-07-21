@@ -27,6 +27,7 @@ Estes 10 documentos (este + os 9 abaixo) são agora a **única fonte oficial de 
 5.  VC_SECRET_GUARD_RUST_SPEC.md          ← 4ª peça do stack (Rust, local, spec+protótipo)
 6.  ATOMIC_CORE_SPEC.md                   ← identidade visual (widget, não motor de execução)
 7.  SOFTWARE_FACTORY_SPEC.md              ← feature de produto (geração de projetos)
+8.  MULTIPROVIDERS_SPEC.md                ← arquitetura neutra de Providers, Models e Routing
 8.  UI_COMPONENT_LIBRARY.md               ← catálogo de componentes visuais do Next
 9.  API_CONTRACT.md                       ← contrato de endpoints reais
 10. ROADMAP.md                            ← fases futuras, o que é ideia vs. compromisso
@@ -64,6 +65,7 @@ Só então altere código.
 | 4 | [`VC_SECRET_GUARD_RUST_SPEC.md`](./VC_SECRET_GUARD_RUST_SPEC.md) | Núcleo local de detecção de segredos (Rust) | EM IMPLEMENTAÇÃO (Fase 1.5/6 fechada) |
 | 5 | [`ATOMIC_CORE_SPEC.md`](./ATOMIC_CORE_SPEC.md) | Widget de identidade visual (SVG/CSS, agentes orbitando) | EXISTENTE |
 | 6 | [`SOFTWARE_FACTORY_SPEC.md`](./SOFTWARE_FACTORY_SPEC.md) | Feature de geração de projetos (Auto-Pilot/Modo Avançado) | EXISTENTE (simulação) |
+| 10 | [`MULTIPROVIDERS_SPEC.md`](./MULTIPROVIDERS_SPEC.md) | Provider Contract, Provider Registry, Model Registry e Routing | SPEC_PHASE_1_COMPLETE |
 | 7 | [`UI_COMPONENT_LIBRARY.md`](./UI_COMPONENT_LIBRARY.md) | Catálogo de componentes visuais reutilizáveis do Next | EXISTENTE (documentação de código já escrito) |
 | 8 | [`API_CONTRACT.md`](./API_CONTRACT.md) | Contrato de endpoints reais do backend | EXISTENTE |
 | 9 | [`ROADMAP.md`](./ROADMAP.md) | Fases futuras por prioridade/risco/dependência | PLANEJADO / IDEIA FUTURA |

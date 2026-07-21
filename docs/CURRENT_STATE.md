@@ -1,5 +1,15 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-21 — MultiProviders SPEC Phase 1 concluída (documental)
+
+Objetivo: especificar MultiProviders sem implementação. Criados MULTIPROVIDERS_SPEC.md, PROVIDER_CONTRACT_SPEC.md, PROVIDER_REGISTRY_SPEC.md, MODEL_REGISTRY_SPEC.md, MULTIPROVIDERS_ROUTING_SPEC.md, MULTIPROVIDERS_HERMES_RCA.md e MULTIPROVIDERS_TEST_PLAN.md. ADR-034 a ADR-038, fornecidos como baseline da sessão mas ausentes nesta worktree, foram materializados em DECISIONS.md; ADR-039 a ADR-043 fecham limites, contrato, registries, routing e health.
+
+Hermes: RCA adversarial concluído; risco dominante é o primeiro Provider virar arquitetura implícita. Ponytail: sete gates normativos definidos; nenhuma superfície separada para health/discovery/benchmark/failover. Colibri não integrado. Vision AI Installer e Vision Blueprint não alterados funcionalmente. Nenhum runtime, Tauri, Rust, endpoint, frontend, deploy ou código funcional criado.
+
+Validação documental: git diff --check PASS; 18/18 campos do Provider presentes; 6/6 referências normativas resolvidas; gates Hermes/Ponytail encontrados. Working tree já estava suja antes desta missão com artefatos, dados e arquivos alheios; não modificar, limpar, incluir ou atribuir esses itens a esta entrega.
+
+Próximo comando recomendado: git diff --check -- docs/DECISIONS.md docs/MASTER_SPEC.md docs/README_DOCUMENTATION.md docs/ARCHITECTURE.md docs/CURRENT_STATE.md docs/MULTIPROVIDERS_SPEC.md docs/PROVIDER_CONTRACT_SPEC.md docs/PROVIDER_REGISTRY_SPEC.md docs/MODEL_REGISTRY_SPEC.md docs/MULTIPROVIDERS_ROUTING_SPEC.md docs/MULTIPROVIDERS_HERMES_RCA.md docs/MULTIPROVIDERS_TEST_PLAN.md
+
 **Único documento carregado automaticamente no início de cada sessão, junto com `CLAUDE.md`.** Documento vivo de revezamento entre agentes (Codex / Claude Code / OpenCode / Omnigent). Ordem de leitura completa em `docs/README_DOCUMENTATION.md`. Histórico completo e narrativas de sessão vivem em `docs/session_logs/` e `docs/CHANGELOG_NEXT.md`; decisões fechadas vivem em `docs/DECISIONS.md` — este arquivo é só o estado atual, mantenha-o pequeno (~200 linhas).
 
 ---
