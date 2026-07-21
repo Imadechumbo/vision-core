@@ -4957,7 +4957,7 @@ app.post('/api/architect/interpret', async (req, res) => {
 });
 
 /* §80 — AGENTS MODES */
-const _agentModesStore = {};
+const _agentModesStore = Object.create(null);
 
 app.get('/api/agents/modes', (req, res) => {
   return sendOk(res, { modes: _agentModesStore, time: now() });
@@ -4968,20 +4968,6 @@ app.get('/api/agents/modes', (req, res) => {
 // security/aegis) afeta detectActiveAgent() pra TODOS os usuários do sistema, não
 // só quem chamou a rota. Mesma categoria do vault: não é preferência por-usuário,
 // precisa de requireVisionAdmin, não só sessão.
-app.post('/api/agents/:id/mode', requireVisionAdmin, (req, res) => {
-  const agentId = req.params.id;
-  const body    = normalizeBody(req);
-  const mode    = String(body.mode || 'AUTO').toUpperCase();
-  const valid   = ['OFF', 'AUTO', 'ON'];
-  if (!valid.includes(mode)) {
-    return res.status(400).json({ ok: false, error: 'invalid_mode', valid, time: now() });
-  }
-  _agentModesStore[agentId] = mode;
-  auditLog('agent_mode_changed', req, { agent_id: agentId, mode, admin_email: req.visionUser.email }); // §154 — desligar security/aegis remotamente é grave, precisa de rastro
-  console.log(`[agents] ${agentId} → ${mode}`);
-  return sendOk(res, { ok: true, agent_id: agentId, mode, time: now() });
-});
-
 const _AGENTS_CATALOG = [
   { id: 'hermes',      name: 'Hermes RCA',     role: 'Supervisor RCA',               method: 'CONVERSA', default_mode: 'AUTO', keywords: ['rca','root cause','causa raiz','diagnostico','diagnóstico'] },
   { id: 'aegis',       name: 'Aegis',           role: 'Validação de sintaxe',         method: 'CONVERSA', default_mode: 'AUTO', keywords: ['sintaxe','lint','syntax','validacao','validação'] },
@@ -4999,6 +4985,37 @@ const _AGENTS_CATALOG = [
   { id: 'locator',     name: 'Locator',         role: 'Busca em codebase',            method: 'CONVERSA', default_mode: 'AUTO', keywords: ['onde fica','localizar','encontrar arquivo','buscar codigo','buscar código'] },
   { id: 'memory',      name: 'Memory Agent',    role: 'Contexto de sessão',           method: 'CONVERSA', default_mode: 'AUTO', keywords: ['lembrar','memoria','memória','contexto anterior','sessao anterior'] },
 ];
+const _AGENT_MODE_IDS = new Set(_AGENTS_CATALOG.map((agent) => agent.id));
+const _AGENT_MODE_ID_RE = /^[a-z][a-z0-9_-]{1,48}$/;
+
+function validateAgentModeId(rawAgentId) {
+  const agentId = String(rawAgentId || '');
+  if (!_AGENT_MODE_ID_RE.test(agentId)) {
+    return { ok: false, status: 400, error: 'invalid_agent_id' };
+  }
+  if (!_AGENT_MODE_IDS.has(agentId)) {
+    return { ok: false, status: 404, error: 'unknown_agent_id' };
+  }
+  return { ok: true, agentId };
+}
+
+app.post('/api/agents/:id/mode', requireVisionAdmin, (req, res) => {
+  const agentCheck = validateAgentModeId(req.params.id);
+  if (!agentCheck.ok) {
+    return res.status(agentCheck.status).json({ ok: false, error: agentCheck.error, time: now() });
+  }
+  const agentId = agentCheck.agentId;
+  const body    = normalizeBody(req);
+  const mode    = String(body.mode || 'AUTO').toUpperCase();
+  const valid   = ['OFF', 'AUTO', 'ON'];
+  if (!valid.includes(mode)) {
+    return res.status(400).json({ ok: false, error: 'invalid_mode', valid, time: now() });
+  }
+  _agentModesStore[agentId] = mode;
+  auditLog('agent_mode_changed', req, { agent_id: agentId, mode, admin_email: req.visionUser.email }); // �154 � desligar security/aegis remotamente � grave, precisa de rastro
+  console.log('[agents] ' + agentId + ' -> ' + mode);
+  return sendOk(res, { ok: true, agent_id: agentId, mode, time: now() });
+});
 
 // §98-D: detecta agente especializado com base em keywords da mensagem + modo ativo
 function detectActiveAgent(message) {

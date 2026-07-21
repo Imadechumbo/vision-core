@@ -106,6 +106,18 @@ try {
   const adminChange = await request(baseA, '/api/agents/security/mode', { method: 'POST', body: { mode: 'OFF' }, token: admin.token });
   assert(adminChange.status === 200 && adminChange.body.ok === true, 'admin real (role:admin, caminho antigo) muda o modo com sucesso');
 
+  const unknownAgentAttempt = await request(baseA, '/api/agents/not-real/mode', { method: 'POST', body: { mode: 'OFF' }, token: admin.token });
+  assert(unknownAgentAttempt.status === 404 && unknownAgentAttempt.body.error === 'unknown_agent_id', 'admin n„o consegue criar modo para agent_id inexistente ó sÛ cat·logo real È aceito');
+
+  const uppercaseAgentAttempt = await request(baseA, '/api/agents/Security/mode', { method: 'POST', body: { mode: 'OFF' }, token: admin.token });
+  assert(uppercaseAgentAttempt.status === 400 && uppercaseAgentAttempt.body.error === 'invalid_agent_id', 'agent_id com casing diferente È rejeitado em vez de normalizado silenciosamente');
+
+  const encodedTraversalAttempt = await request(baseA, '/api/agents/security%2F..%2Fauth/mode', { method: 'POST', body: { mode: 'OFF' }, token: admin.token });
+  assert(encodedTraversalAttempt.status === 400 && encodedTraversalAttempt.body.error === 'invalid_agent_id', 'agent_id com slash codificado/traversal È rejeitado antes de tocar o estado global');
+
+  const objectKeyAttempt = await request(baseA, '/api/agents/constructor/mode', { method: 'POST', body: { mode: 'OFF' }, token: admin.token });
+  assert(objectKeyAttempt.status === 404 && objectKeyAttempt.body.error === 'unknown_agent_id', 'agent_id com chave perigosa de objeto n„o cria entrada fora do cat·logo');
+
   const catalogAfter = await request(baseA, '/api/agents/catalog', { token: admin.token });
   const securityAgent = catalogAfter.body.agents.find((a) => a.id === 'security');
   assert(securityAgent && securityAgent.current_mode === 'OFF', 'estado real persistido ‚Äî lido de volta via GET /api/agents/catalog, n√£o s√≥ a resposta do POST');
