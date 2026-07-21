@@ -39,6 +39,15 @@ function optionalNumber(value, field) {
   if (typeof value !== 'number' || !Number.isFinite(value)) throw new MultiProvidersError('invalid_field', { field });
   return value;
 }
+function assertNoSecrets(value, path = 'root') {
+  if (!value || typeof value !== 'object') return;
+  for (const [key, child] of Object.entries(value)) {
+    if (['key', 'api_key', 'token', 'secret', 'password', 'authorization'].includes(key.toLowerCase())) {
+      throw new MultiProvidersError('secret_field_forbidden', { field: path + '.' + key });
+    }
+    assertNoSecrets(child, path + '.' + key);
+  }
+}
 function clone(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 }
@@ -73,6 +82,7 @@ function normalizeHealth(input) {
 }
 function normalizeCapability(input) {
   if (!input || typeof input !== 'object') throw new MultiProvidersError('invalid_capability');
+  assertNoSecrets(input, 'capability');
   const availability = input.availability || 'unknown';
   if (!['unknown', 'unsupported', 'declared', 'validated', 'degraded'].includes(availability)) {
     throw new MultiProvidersError('invalid_capability_availability', { availability });
@@ -90,6 +100,7 @@ function normalizeCapability(input) {
 }
 function normalizeProvider(input) {
   if (!input || typeof input !== 'object') throw new MultiProvidersError('invalid_provider');
+  assertNoSecrets(input, 'provider');
   const known = new Set(['id','tenant_id','display_name','vendor','transport','location','models','capabilities','health','status','latency','cost','privacy','context','reasoning','streaming','tools','multimodal','versions','configuration_ref','evidence','created_at','updated_at','extensions']);
   const extensions = clone(requiredObject(input.extensions || {}, 'extensions'));
   for (const [key, value] of Object.entries(input)) if (!known.has(key)) extensions[key] = clone(value);
@@ -124,6 +135,7 @@ function normalizeProvider(input) {
 }
 function normalizeModel(input) {
   if (!input || typeof input !== 'object') throw new MultiProvidersError('invalid_model');
+  assertNoSecrets(input, 'model');
   const lifecycle = input.lifecycle || 'known';
   if (!MODEL_STATES.includes(lifecycle)) throw new MultiProvidersError('invalid_model_lifecycle', { lifecycle });
   return {
@@ -313,6 +325,7 @@ module.exports = {
   normalizeProvider,
   normalizeModel,
   normalizeCapability,
+  assertNoSecrets,
   ProviderRegistry,
   ModelRegistry,
 };

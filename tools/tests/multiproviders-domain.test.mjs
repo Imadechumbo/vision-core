@@ -84,7 +84,16 @@ test('provider contract rejects missing required identity', () => {
   delete value.vendor;
   throwsCode(() => normalizeProvider(value), 'invalid_field');
 });
-test('boolean health is forbidden', () => {
+test('secret fields are forbidden recursively but credential references are allowed', () => {
+  throwsCode(
+    () => normalizeProvider(provider('tenant-a', 'p1', { extensions: { nested: { api_key: 'forbidden' } } })),
+    'secret_field_forbidden',
+  );
+  assert.equal(
+    normalizeProvider(provider('tenant-a', 'p1', { transport: { credential_ref: 'vault://credential-a' } })).transport.credential_ref,
+    'vault://credential-a',
+  );
+});test('boolean health is forbidden', () => {
   throwsCode(() => normalizeProvider(provider('tenant-a', 'p1', { health: true })), 'boolean_health_forbidden');
 });
 test('provider and health state vocabularies remain separate', () => {
