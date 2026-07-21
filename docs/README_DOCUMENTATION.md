@@ -29,6 +29,10 @@ Só então altere código. Depois de 1-6, consulte sob demanda:
 
 ---
 
+### Vision AI Installer
+
+Leia `VISION_AI_INSTALLER_SPEC.md` → `VISION_AI_INSTALLER_ARCHITECTURE.md` → `VISION_AI_INSTALLER_SECURITY.md` → `VISION_AI_INSTALLER_HERMES_RCA.md` → `VISION_AI_INSTALLER_RUNBOOK.md` → `VISION_AI_INSTALLER_TEST_PLAN.md`. Estado atual: Fase 0, sem código funcional.
+
 ## Responsabilidade de cada arquivo
 
 | Arquivo | O que contém | O que NUNCA contém | Quem consulta | Quando |

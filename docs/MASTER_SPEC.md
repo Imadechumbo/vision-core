@@ -70,6 +70,10 @@ Só então altere código.
 
 ---
 
+### Extensão oficial — Vision AI Installer
+
+O Vision AI Installer foi registrado na Fase 0 como a camada oficial de provisionamento e operação de runtimes/modelos locais. Fonte: [`VISION_AI_INSTALLER_SPEC.md`](./VISION_AI_INSTALLER_SPEC.md), com arquitetura, segurança, RCA Hermes, runbook e testes em documentos irmãos. Estado: **PLANEJADO**, zero Tauri/Rust funcional.
+
 ## Convenção de estado (obrigatória em todo documento desta série)
 
 | Marca | Significado |

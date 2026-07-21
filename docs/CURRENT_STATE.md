@@ -6,6 +6,8 @@
 
 # ESTADO DO SISTEMA
 
+**VISION AI INSTALLER — FASE 0 registrada em worktree isolada (2026-07-21). Correção de `test:pages-package` integrada em commit separado; sem push/deploy.** Produto registrado como camada oficial de provisionamento e operação de runtimes/modelos locais, distinto de Vision Agent Local/Desktop e Software Factory. Criados spec, arquitetura, threat model, RCA Hermes, runbook e plano de testes; About marcado “Em desenvolvimento”. Hermes: `READY_FOR_SPEC_ONLY`. PONYTAIL-VAI-001: `NOT_RUN` (nenhuma instalação ocorreu). Integração com Vision Core: `BLOCKED_CONTRACT`, pois o backend atual não possui registro local OpenAI-compatible temporário/reversível; nenhum endpoint ou backend foi alterado. Próximo passo após revisão humana: aprovar ou rejeitar a Fase 1 (skeleton Tauri/Rust, ainda sem download real).
+
 Frontend Next
 ⚠ `next-clean-133` ainda ao vivo em produção — `next-clean-134` (fix de feedback de execução do SF, commit `c051519b`) está commitado/pushado mas **NÃO deployado**: `bash bin/deploy-pages.sh` bloqueado por OAuth do Wrangler expirado + refresh_token também rejeitado (400). Precisa de `wrangler login` interativo ou `CLOUDFLARE_API_TOKEN` novo — ver ENTREGA 2026-07-20 (fila de fechamento do SF) abaixo.
 

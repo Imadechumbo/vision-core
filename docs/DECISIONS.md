@@ -49,6 +49,12 @@ A Fase 9 permanece pausada até existir sinal real de demanda. Quando retomada, 
 
 ---
 
+### DECISION-033 — Vision AI Installer é a camada oficial de provisionamento local
+
+**Status:** Aprovada na Fase 0 (2026-07-21).
+
+O Vision AI Installer provisiona, valida e opera runtimes/modelos locais e, quando existir contrato seguro, conecta-os ao Vision Core. Não substitui Vision Agent Local, Vision Agent Desktop, Software Factory, Codex, Claude Code ou providers cloud. V0.1 fica limitada a Windows 11 x64, NVIDIA, Colibri e GLM-5.2. Integração real permanece bloqueada até contrato explícito, autenticado, localhost-only e reversível. Fonte detalhada: `VISION_AI_INSTALLER_SPEC.md`.
+
 ## Infraestrutura / Deploy
 
 ### DECISION-029 — Cutover publica o RC imutável diretamente na raiz

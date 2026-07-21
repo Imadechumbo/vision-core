@@ -292,6 +292,12 @@ Unifica os dois sistemas de credencial de LLM do produto (env vars do EB vs. a t
 
 ---
 
+## Vision AI Installer (PLANEJADO)
+
+Camada desktop de provisionamento e operação de runtimes/modelos locais. Não substitui Vision Agent Local, Vision Agent Desktop, Software Factory ou providers cloud. A V0.1 é Windows 11 x64 + NVIDIA + Colibri + GLM-5.2; nenhum código Tauri/Rust existe nesta fase. Arquitetura oficial em `VISION_AI_INSTALLER_ARCHITECTURE.md`.
+
+O conector com o Vision Core está `BLOCKED_CONTRACT`: os endpoints atuais não oferecem registro temporário, reversível e OpenAI-compatible para uma base URL localhost. Nenhum endpoint foi inventado.
+
 ## Documentação
 
 Esta série de 10 documentos (`MASTER_SPEC.md` + 9) é a fonte de arquitetura. `CLAUDE.md`/`docs/CURRENT_STATE.md` são o estado operacional vivo. `docs/SDDF_SPEC.md`, `docs/HERMES_MISSION_SUPERVISOR.md`, `docs/PI_HARNESS_AUTONOMOUS_MISSION_RUNNER.md` são a fonte canônica da Camada 2. `docs/LEGACY_DESIGN_REFERENCE.md` é a fonte de herança visual legado→Next. Os demais ~80 arquivos em `docs/` são specs de detalhe (`GIT-PROVIDER-SPEC.md`, `ENTERPRISE-SPEC.md`, `PENTEST-CHECKLIST.md`, `SF-SPEC-LIBRARY.md`) ou recibos de evidência datados de execuções passadas (`STRESS-TEST-*`, `real-local-patch-*`, `one-real-tag-*`) — não reescritos por esta consolidação, referenciados quando relevante.
