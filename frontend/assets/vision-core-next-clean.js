@@ -335,6 +335,10 @@
   var vaultSnapshotList = document.getElementById('vcVaultSnapshotList');
   var vaultActions = document.getElementById('vcVaultActions');
   var vaultStatus = document.getElementById('vcVaultStatus');
+  var agentPairingsPanel = document.getElementById('vcAgentPairingsPanel');
+  var agentPairingsList = document.getElementById('vcAgentPairingsList');
+  var agentPairingsActions = document.getElementById('vcAgentPairingsActions');
+  var agentPairingsStatus = document.getElementById('vcAgentPairingsStatus');
   var missionHistory = document.getElementById('vcMissionHistory');
   var missionHistoryList = document.getElementById('vcMissionHistoryList');
   var missionDetail = document.getElementById('vcMissionDetail');
@@ -396,7 +400,7 @@
     chat: { title: 'Chat', status: 'READY', agents: ['hermes'], text: 'Chat livre conectado ao endpoint real /api/chat.', actions: [{ label: 'Checar API', path: '/api/health' }] },
     missions: { title: 'Missions', status: 'PATCH + DRY-RUN + APPLY BLOQUEADO', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'passGold'], text: 'Gerar Patch roda o pipeline real de diagnóstico + apply-patch, sem escrever nada sozinho — só gera diff para download. Dry-Run Real (abaixo) enfileira execução real no Vision Agent Local, em modo simulação (nunca escreve no disco). Apply-patch real via agente aparece abaixo, mas o botão fica bloqueado até existir token de pareamento real por agente (agent_id sozinho não autentica ninguém).', actions: [{ label: 'Quota', path: '/api/mission/quota' }, { label: 'Agent local', path: '/api/agent/status' }] },
     factory: { title: 'Software Factory', status: 'ATIVO', agents: ['openclaw', 'pi', 'hermes'], text: 'Descreva o projeto em linguagem simples. O Arquiteto analisa e gera a estrutura automaticamente via API real.', actions: [] },
-    agents: { title: 'Agentes', status: 'SAFE READ', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }, { label: 'Métricas agentes', path: '/api/metrics/agents' }] },
+    agents: { title: 'Agentes', status: 'SAFE READ + REVOGAÇÃO', agents: ['hermes', 'scanner', 'patchEngine', 'aegis', 'goCore', 'github'], text: 'Status real dos agentes sem executar missão. Vision Agent Local pareado com esta conta pode ser revogado abaixo.', actions: [{ label: 'Status agent', path: '/api/agent/status' }, { label: 'Catálogo', path: '/api/agents/catalog' }, { label: 'Métricas agentes', path: '/api/metrics/agents' }] },
     logs: { title: 'Logs', status: 'SAFE READ', agents: ['archivist'], text: 'Eventos operacionais redigidos e correlacionados por Workspace.', actions: [] },
     github: { title: 'GitHub', status: 'PR c/ CONFIRMAÇÃO', agents: ['github'], text: 'Criação de PR real disponível abaixo — exige formulário completo + confirmação dupla antes de disparar.', actions: [{ label: 'Status GitHub', path: '/api/github/status' }] },
     vault: { title: 'Vault', status: 'ROLLBACK DISPONÍVEL', agents: ['aegis', 'archivist'], text: 'Snapshots do banco de projetos e rollback. Rollback sobrescreve o estado atual — confirmação dupla obrigatória.', actions: [{ label: 'Snapshots', path: '/api/vault/snapshots' }] },
@@ -755,6 +759,10 @@
     if (vaultRollback) {
       vaultRollback.hidden = activeFeature !== 'vault';
       if (activeFeature === 'vault') { if (vaultStatus) vaultStatus.textContent = ''; loadVaultSnapshots(); }
+    }
+    if (agentPairingsPanel) {
+      agentPairingsPanel.hidden = activeFeature !== 'agents';
+      if (activeFeature === 'agents') { if (agentPairingsStatus) agentPairingsStatus.textContent = ''; loadAgentPairings(); }
     }
     if (metricsPanel) {
       metricsPanel.hidden = activeFeature !== 'metrics';
@@ -3563,6 +3571,80 @@
       renderVaultActions();
     }).then(function () {
       if (window.resetAtomicCore) window.resetAtomicCore();
+    });
+  }
+
+  var agentPairingRevokePending = null;
+  var agentPairingRevokeInFlight = false;
+
+  function loadAgentPairings() {
+    if (!agentPairingsList) return;
+    apiRequest('/api/agent/pairings').then(function (data) {
+      var pairings = data && data.pairings;
+      agentPairingsList.textContent = '';
+      agentPairingRevokePending = null;
+      renderAgentPairingsActions();
+      if (!pairings || !pairings.length) {
+        agentPairingsList.textContent = 'Nenhum Vision Agent Local pareado com esta conta.';
+        return;
+      }
+      pairings.forEach(function (p) {
+        var item = document.createElement('div');
+        item.className = 'vc-vault-item';
+        var label = document.createElement('strong');
+        label.textContent = p.agent_id;
+        var meta = document.createElement('span');
+        meta.textContent = 'Último uso: ' + (p.last_used_at || '—');
+        var actBtn = document.createElement('button');
+        actBtn.type = 'button';
+        actBtn.textContent = 'Revogar';
+        actBtn.addEventListener('click', function () {
+          agentPairingRevokePending = p;
+          if (agentPairingsStatus) agentPairingsStatus.textContent = 'Revogar "' + p.agent_id + '" — confirme no botão abaixo.';
+          renderAgentPairingsActions();
+        });
+        item.appendChild(label);
+        item.appendChild(meta);
+        item.appendChild(actBtn);
+        agentPairingsList.appendChild(item);
+      });
+    }).catch(function () {
+      if (agentPairingsList) agentPairingsList.textContent = 'Erro ao carregar pareamentos.';
+    });
+  }
+
+  function renderAgentPairingsActions() {
+    if (!agentPairingsActions) return;
+    renderConfirmOrBusy(agentPairingsActions, {
+      busy: agentPairingRevokeInFlight,
+      busyLabel: 'Revogando...',
+      confirmPending: !!agentPairingRevokePending,
+      confirmLabel: agentPairingRevokePending ? 'Confirmar revogação de "' + agentPairingRevokePending.agent_id + '"' : '',
+      onConfirm: submitAgentPairingRevoke,
+      onCancel: function () {
+        agentPairingRevokePending = null;
+        if (agentPairingsStatus) agentPairingsStatus.textContent = '';
+        renderAgentPairingsActions();
+      }
+    });
+  }
+
+  function submitAgentPairingRevoke() {
+    if (agentPairingRevokeInFlight || !agentPairingRevokePending) return;
+    var agentId = agentPairingRevokePending.agent_id;
+    agentPairingRevokeInFlight = true;
+    if (agentPairingsStatus) agentPairingsStatus.textContent = 'Revogando...';
+    renderAgentPairingsActions();
+    apiRequest('/api/agent/unregister', { method: 'POST', body: { agent_id: agentId } }).then(function () {
+      agentPairingRevokeInFlight = false;
+      agentPairingRevokePending = null;
+      if (agentPairingsStatus) agentPairingsStatus.textContent = 'Pareamento revogado: ' + agentId;
+      renderAgentPairingsActions();
+      loadAgentPairings();
+    }).catch(function (err) {
+      agentPairingRevokeInFlight = false;
+      if (agentPairingsStatus) agentPairingsStatus.textContent = 'Erro ao revogar: ' + (err && err.message ? err.message : String(err));
+      renderAgentPairingsActions();
     });
   }
 

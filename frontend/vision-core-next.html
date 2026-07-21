@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="vc-api-base-url" content="https://visioncore-api-gateway.weiganlight.workers.dev">
   <title>Vision Core Next</title>
-  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-134">
-  <script src="assets/vision-core-next-clean.js?v=next-clean-134" defer></script>
+  <link rel="stylesheet" href="assets/vision-core-next-clean.css?v=next-clean-135">
+  <script src="assets/vision-core-next-clean.js?v=next-clean-135" defer></script>
 </head>
 <body>
   <div class="vc-app-shell" data-sidebar-state="expanded" data-atomic-sidebar-state="expanded">
@@ -470,6 +470,14 @@
             <div class="vc-vault-snapshots" id="vcVaultSnapshotList" aria-live="polite"></div>
             <div class="vc-vault-actions" id="vcVaultActions"></div>
             <p class="vc-vault-status" id="vcVaultStatus" aria-live="polite"></p>
+          </div>
+
+          <div class="vc-vault-rollback" id="vcAgentPairingsPanel" hidden>
+            <h4>Agentes — Vision Agent Local pareados</h4>
+            <p class="vc-vault-banner" role="alert">Revogar encerra o acesso do agente imediatamente — ele precisa se registrar de novo para voltar a receber missões.</p>
+            <div class="vc-vault-snapshots" id="vcAgentPairingsList" aria-live="polite"></div>
+            <div class="vc-vault-actions" id="vcAgentPairingsActions"></div>
+            <p class="vc-vault-status" id="vcAgentPairingsStatus" aria-live="polite"></p>
           </div>
 
           <div class="vc-mission-history" id="vcMissionHistory" hidden>

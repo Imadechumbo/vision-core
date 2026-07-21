@@ -3084,6 +3084,15 @@ app.post('/api/agent/unregister', (req, res) => {
   auditLog('agent_unregister', req, { agent_id: agentId, via });
   return sendOk(res, { agent_id: agentId, status: 'unregistered', via, anti_stub: true });
 });
+// Lista só os pareamentos reivindicados pelo usuário da sessão — nunca todos
+// (mesmo princípio de escopo por user_id do fix do vault do Obsidian). Nunca
+// retorna agent_secret.
+app.get('/api/agent/pairings', requireVisionAuth, (req, res) => {
+  const pairings = [...agentPairings.entries()]
+    .filter(([, p]) => p.user_id === req.visionUser.id)
+    .map(([agentId, p]) => ({ agent_id: agentId, created_at: p.created_at, last_used_at: p.last_used_at ? new Date(p.last_used_at).toISOString() : null }));
+  return sendOk(res, { pairings, count: pairings.length, anti_stub: true });
+});
 app.all('/api/agent/heartbeat', (req, res) => {
   const body = normalizeBody(req);
   const agentId = getRequestAgentId(req, body);
