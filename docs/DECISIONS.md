@@ -42,6 +42,11 @@ Nenhum componente de dashboard, gráfico, painel, monitor, timeline ou grid de m
 
 ## MultiProviders / Arquitetura oficial
 
+### ADR-050 — Ponte legada usa um único composition root e é obrigatoriamente temporária
+
+**Contexto:** providerList, callLLM e Hermes possuíam catálogos independentes; migrá-los de uma vez para adapters/policy futuros misturaria R3 com R4–R6. **Alternativas:** manter catálogos sem autoridade canônica; copiar dados para registries por caller; executar cutover total imediato. **Decisão:** um singleton de processo possui exatamente um Provider Registry, um Model Registry e uma Legacy Compatibility Bridge. Callers traduzem metadata sem segredos e só executam identidades aceitas; transport e ordem permanecem legados até suas fases. Incompatibilidades geram receipt/log redigido. **Consequências:** identidade canônica existe sem big-bang, mas estado ainda é volátil e a ponte não pode virar adapter/router permanente. Sua retirada é gate R10. **Evidência:** e88b5196; suites multiproviders-legacy-bridge e multiproviders-legacy-wiring.
+
+
 ### ADR-049 — Provider Vault global é admin-only até existir ownership canônico
 O vault atual permanece uma configuração operacional global e somente administradores explícitos podem ler, testar ou mutar seu estado.
 **Por quê:** não existe modelo Workspace canônico nesta branch; inventar ownership parcial criaria isolamento falso, enquanto sessão comum sobre singleton global permite controle cross-tenant.

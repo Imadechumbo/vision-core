@@ -1,5 +1,18 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-21 — MultiProviders R3 Legacy Compatibility Bridge complete
+
+Status: MULTIPROVIDERS_R3_COMPLETE.
+
+O runtime possui agora um único composition root em memória para Provider Registry, Model Registry e Legacy Compatibility Bridge. providerList(), callLLM() e callHermes() traduzem seus catálogos antes do uso; identidades rejeitadas pelo Registry não executam. Descritores de transport continuam legados e temporários até R6; prioridade/fallback continuam legados até R5. Nenhum comportamento útil foi removido.
+
+A ponte não aceita key/api_key/token/secret, não inventa Model para catálogo Provider-only, não promove além de configured, não ressuscita removed, preserva offerings anteriores, registra missing/incompatibilities, emite log redigido e deduplica/limita receipts. ADR-050 fixa composition root único e retirada obrigatória da ponte.
+
+Testes: domínio 22/22; bridge 12/12; wiring 15/15; vault routing 18/18; crypto 16/16; endpoints 23/23; security 23/23; callLLM 12/12; admin auth 12/12; admin residuals 40/40; rc-security-hardening PASS; diff-check PASS. Hermes R3 PASS. Ponytail R3 PASS.
+
+Commit funcional: e88b5196. Nenhum push/deploy. Artefatos preexistentes continuam fora dos commits. Próximo passo automático após commit documental: R4 Capability, Health and Lifecycle Runtime.
+
+---
 ## 2026-07-21 — MultiProviders R2 Canonical Foundation complete
 
 Status: MULTIPROVIDERS_R2_COMPLETE.

@@ -161,3 +161,23 @@ Arquivo funcional: backend/multiproviders-domain.js. Teste: tools/tests/multipro
 | No Non-Idempotent Retry | nenhum retry/I/O | módulo puro | NOT_APPLICABLE | gate crítico R5/R6 |
 
 Verdicto Ponytail R2: PASS. Nenhum gate relevante está FAIL ou NO_EVIDENCE. NOT_APPLICABLE corresponde estritamente a comportamento ainda fora do escopo R2, não a ausência de teste de uma função implementada. A solução permanece em um módulo funcional e uma suíte, sem dependência, framework, adapter ou camada especulativa.
+## R3 — Testes e Ponytail
+
+Focados: multiproviders-domain 22/22; multiproviders-legacy-bridge 12/12; multiproviders-legacy-wiring 15/15. Regressões: vault routing 18/18; crypto 16/16; endpoints 23/23; security 23/23; callLLM 12/12; admin 12/12 + 40/40; hardening PASS; diff-check PASS.
+
+| Gate R3 | Intenção | Evidência | Arquivos/testes | Resultado | Risco/correção |
+|---|---|---|---|---|---|
+| No Legacy as Canon | bridge não define domínio | imports somente domain; metadata neutra | legacy-bridge + 12 testes | PASS | retirar em R10 |
+| No Duplicate Registry | uma autoridade em processo | composition root singleton compartilhado | runtime + wiring | PASS | persistência multi-processo futura |
+| No Hidden Default Provider | defaults não entram no core | source_ref e offerings explícitas | server/Hermes + wiring | PASS | ordem ainda legada até R5 |
+| No Silent Fallback | rejeição observável | receipt + log redigido | runtime + wiring | PASS | monitor externo futuro |
+| No Compatibility Leak | segredo/função fora do contrato | rejeição de key/api_key/token/secret | bridge tests | PASS | adapters absorvem transport em R6 |
+| No Permanent Bridge | retirada tem gate | ADR-050 + R10 | roadmap/docs | PASS | dívida controlada, não indefinida |
+| No Cross-Tenant Provider State | scope preservado | bridges tenant-scoped | bridge test | PASS | runtime atual usa tenant sistema |
+| No Discovery Trust Escalation | legado não vira ready | máximo configured | bridge tests | PASS | R4 valida readiness |
+| No Orphan Model/Provider | offering íntegra | registries validam ambos | domain/bridge tests | PASS | nenhum |
+| No Secret Exposure | metadata redigida | snapshots/logs sem segredo | bridge/wiring tests | PASS | nenhum |
+| No Provider Special Case | core não ramifica | casos ficam nos callers legados | domain search | PASS | remover callers em R6/R10 |
+| No Transport Assumption | bridge usa tipo legacy neutro | endpoint é referência | bridge/wiring | PASS | transport real em R6 |
+
+Verdicto Ponytail R3: PASS. Não foi criada persistência, framework, base, endpoint novo, adapter prematuro ou abstraction layer além da ponte e composition root necessários. Gates de Health, policy/failover e adapter permanecem NOT_APPLICABLE nesta fase e serão obrigatórios em R4–R6.

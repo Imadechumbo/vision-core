@@ -148,3 +148,48 @@ Registry ainda é in-memory e não está composto como autoridade única do proc
 ### VEREDITO
 
 PASS para o escopo R2. Nenhum detalhe do primeiro Provider contaminou o contrato. Autoriza documentação/commit R2; não afirma runtime canônico ativo.
+## R3 — Legacy Characterization and Compatibility Bridge
+
+### SISTEMA ANALISADO
+
+providerList, callLLM, Hermes PROVIDER_REGISTRY, composition root canônico e Legacy Compatibility Bridge.
+
+### OBJETIVO
+
+Fazer identidade e relação Provider–Model convergirem no Registry canônico sem promover arrays, transports, defaults ou fallback legados a arquitetura oficial.
+
+### HIPÓTESE DE FALHA
+
+A ponte viraria um terceiro Registry permanente, copiaria segredo/função para o contrato, esconderia Provider incompatível, ressuscitaria identidade removida ou perderia Model útil durante divergência entre callers.
+
+### CAUSAS RAIZ
+
+Três catálogos históricos independentes, defaults de Model divergentes, Provider local especial no Hermes e ausência anterior de composição canônica compartilhada.
+
+### VETORES
+
+Singleton duplicado; bridge por caller; key/token em snapshot; provider-only inventando Model; overwrite destrutivo; missing tratado como delete; incompatibilidade silenciosa; receipt infinito; execução de ID rejeitado.
+
+### EVIDÊNCIAS
+
+Um único multiproviders-runtime instancia os dois Registries e a ponte. Os três callers usam o mesmo sync. A ponte rejeita campos de segredo, filtra execução por IDs traduzidos, preserva ofertas antigas, não deleta missing, não revive removed, registra incompatibilidades redigidas e limita receipts a 100. Suites: bridge 12/12 e wiring 15/15; regressões completas aprovadas.
+
+### IMPACTO
+
+Sem os controles, a migração poderia vazar credencial, cruzar autoridades, alterar fallback útil ou tornar a camada temporária impossível de remover.
+
+### DETECÇÃO
+
+Testes estáticos de wiring/segredo; testes puros de idempotência, tenant, missing, mudança de Model, configuração tardia e terminalidade; regressões dos endpoints e routers.
+
+### PREVENÇÃO
+
+Composition root único; bridge sem I/O; referências em vez de segredo; source_ref explícito; receipts redigidos; nenhuma remoção automática; transport e routing fora do contrato.
+
+### RISCO RESIDUAL
+
+Estado canônico é volátil por processo e não coordena múltiplas instâncias. Routing e transport continuam legados e hardcoded até R5/R6. O catálogo Hermes ainda possui Provider local como detalhe legado, não como arquitetura canônica. A ponte deve ser removida em R10.
+
+### VEREDITO
+
+PASS. A ponte é explícita, observável, limitada e reversível; legado é adaptado, não canonizado.
