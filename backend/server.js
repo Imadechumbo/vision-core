@@ -416,8 +416,26 @@ const PROJECTS_DB = path.join(DB_ROOT, 'projects.json');
 const CHAT_CONVERSATIONS_DB = path.join(DB_ROOT, 'chat-conversations.json');
 const OPERATION_LOG_DB = path.join(DB_ROOT, 'operation-log.json');
 const PROVIDERS_VAULT_FILE = path.join(DB_ROOT, 'ai-providers-vault.json');
+// Cada usuário grava só no próprio subdiretório (VAULT_ROOT/<user_id>/...) —
+// achado real de auditoria adversarial (2026-07-20): um vault plano e
+// compartilhado deixava qualquer usuário autenticado baixar relatórios de
+// missão de TODOS os outros usuários via download-vault, mesmo depois de
+// exigir login. PASS-GOLD fica aninhado por usuário também; /api/dora-metrics
+// segue agregando entre todos via walkVaultFiles (filtra por nome de pasta,
+// não por caminho fixo, então funciona nos dois layouts sem caso especial).
 const VAULT_ROOT = path.join(MEMORY_ROOT, 'obsidian', 'VisionCoreVault');
-for (const dir of [DB_ROOT, VAULT_ROOT, path.join(VAULT_ROOT, 'Missions'), path.join(VAULT_ROOT, 'Incidents'), path.join(VAULT_ROOT, 'PASS-GOLD'), path.join(VAULT_ROOT, 'Projects')]) fs.mkdirSync(dir, { recursive: true });
+for (const dir of [DB_ROOT, VAULT_ROOT]) fs.mkdirSync(dir, { recursive: true });
+function userVaultDir(userId) { return path.join(VAULT_ROOT, safeSlug(userId, 'unknown')); }
+function walkVaultFiles(dir) {
+  const files = [];
+  if (!fs.existsSync(dir)) return files;
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fp = path.join(dir, ent.name);
+    if (ent.isDirectory()) files.push(...walkVaultFiles(fp));
+    else files.push(fp);
+  }
+  return files;
+}
 
 function readJsonFile(file, fallback) { try { return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : fallback; } catch (err) { console.warn('[ANTI-STUB] readJsonFile failed', file, err.message); return fallback; } }
 function writeJsonFile(file, data) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8'); }
@@ -1097,7 +1115,7 @@ app.post('/api/vault/snapshot', (req, res) => {
         users_count: (() => { try { return readJsonFile(USERS_DB, { users: [] }).users.length; } catch { return 0; } })(),
         projects: (() => { try { return readJsonFile(PROJECTS_DB, { projects: [] }).projects; } catch { return []; } })(),
         providers: providerList(),
-        vault_files: (() => { const files = []; try { ['Missions','Incidents','PASS-GOLD','Projects'].forEach(d => { const fp = path.join(VAULT_ROOT, d); if (fs.existsSync(fp)) files.push(...fs.readdirSync(fp).map(f => `${d}/${f}`)); }); } catch {} return files; })()
+        vault_files: (() => { try { return walkVaultFiles(VAULT_ROOT).map(fp => path.relative(VAULT_ROOT, fp).replace(/\\/g, '/')); } catch { return []; } })()
       }
     };
     fs.writeFileSync(path.join(SNAPSHOTS_DIR, `${id}.json`), JSON.stringify(snapshot, null, 2), 'utf8');
@@ -1609,22 +1627,23 @@ app.all('/api/hermes/compression', (req, res) => {
   return sendOk(res, { original_chars: text.length, compressed_chars: compressed.length, compressed_context: compressed || '—', anti_stub: true });
 });
 
-app.get('/api/obsidian/status', (req, res) => {
-  const files = [];
-  if (fs.existsSync(VAULT_ROOT)) for (const dir of ['Missions','Incidents','PASS-GOLD','Projects']) { const full = path.join(VAULT_ROOT, dir); if (fs.existsSync(full)) files.push(...fs.readdirSync(full).map(f => `${dir}/${f}`)); }
-  return sendOk(res, { connected: true, mode: 'local_markdown_export', vault_root: path.relative(ROOT, VAULT_ROOT), files_count: files.length, recent_files: files.slice(-10), anti_stub: true });
+app.get('/api/obsidian/status', requireVisionAuth, (req, res) => {
+  const myVault = userVaultDir(req.visionUser.id);
+  const files = walkVaultFiles(myVault).map(fp => path.relative(myVault, fp));
+  return sendOk(res, { connected: true, mode: 'local_markdown_export', vault_root: path.relative(ROOT, myVault), files_count: files.length, recent_files: files.slice(-10), anti_stub: true });
 });
-app.all('/api/obsidian/export-mission', (req, res) => {
+app.all('/api/obsidian/export-mission', requireVisionAuth, (req, res) => {
   const body = normalizeBody(req); const missionId = body.mission_id || body.id || makeId('mission'); const md = markdownMissionReport({ ...body, mission_id: missionId });
-  const file = path.join(VAULT_ROOT, 'Missions', `${safeSlug(missionId)}.md`); fs.writeFileSync(file, md, 'utf8');
-  if (body.pass_gold === true) fs.writeFileSync(path.join(VAULT_ROOT, 'PASS-GOLD', `${safeSlug(missionId)}.md`), md, 'utf8');
+  const myVault = userVaultDir(req.visionUser.id);
+  const missionsDir = path.join(myVault, 'Missions'); fs.mkdirSync(missionsDir, { recursive: true });
+  const file = path.join(missionsDir, `${safeSlug(missionId)}.md`); fs.writeFileSync(file, md, 'utf8');
+  if (body.pass_gold === true) { const passGoldDir = path.join(myVault, 'PASS-GOLD'); fs.mkdirSync(passGoldDir, { recursive: true }); fs.writeFileSync(path.join(passGoldDir, `${safeSlug(missionId)}.md`), md, 'utf8'); }
   return sendOk(res, { exported: true, format: 'markdown', file: path.relative(ROOT, file), bytes: Buffer.byteLength(md), anti_stub: true });
 });
-app.get('/api/obsidian/download-vault', (req, res) => {
-  const files = [];
-  function walk(dir) { for (const ent of fs.readdirSync(dir, { withFileTypes: true })) { const fp = path.join(dir, ent.name); if (ent.isDirectory()) walk(fp); else files.push({ name: path.relative(VAULT_ROOT, fp), data: fs.readFileSync(fp) }); } }
-  if (fs.existsSync(VAULT_ROOT)) walk(VAULT_ROOT);
-  if (!files.length) files.push({ name: 'README.md', data: '# VisionCoreVault\n\nVault inicial sem missões exportadas ainda.\n' });
+app.get('/api/obsidian/download-vault', requireVisionAuth, (req, res) => {
+  const myVault = userVaultDir(req.visionUser.id);
+  const files = walkVaultFiles(myVault).map(fp => ({ name: path.relative(myVault, fp), data: fs.readFileSync(fp) }));
+  if (!files.length) files.push({ name: 'README.md', data: '# VisionCoreVault\n\nVault pessoal vazio — nenhuma missão exportada ainda.\n' });
   const zip = makeZip(files);
   res.setHeader('Content-Type', 'application/zip'); res.setHeader('Content-Disposition', 'attachment; filename="VisionCoreVault.zip"'); res.setHeader('X-Anti-Stub', 'true'); return res.status(200).send(zip);
 });
@@ -3182,7 +3201,10 @@ app.get('/api/metrics/memory', (req, res) => {
 });
 app.get('/api/dora-metrics', async (req, res) => {
   try {
-    const passGoldDir = path.join(VAULT_ROOT, 'PASS-GOLD');
+    // PASS-GOLD agora vive aninhado por usuário (VAULT_ROOT/<uid>/PASS-GOLD) —
+    // filtra por nome de pasta em vez de caminho fixo, então cobre o layout
+    // novo e (se sobrar algo) o layout plano legado sem caso especial.
+    const passGoldFiles = walkVaultFiles(VAULT_ROOT).filter(fp => path.basename(path.dirname(fp)) === 'PASS-GOLD');
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
     let deploysLast30 = 0;
     let totalVersions = 0;
@@ -3190,11 +3212,8 @@ app.get('/api/dora-metrics', async (req, res) => {
     let mttrMs = null;
     let leadTimeHours = null;
 
-    if (fs.existsSync(passGoldDir)) {
-      const files = fs.readdirSync(passGoldDir);
-      for (const f of files) {
-        try { const stat = fs.statSync(path.join(passGoldDir, f)); if (stat.mtimeMs >= thirtyDaysAgo) deploysLast30++; totalVersions++; } catch {}
-      }
+    for (const fp of passGoldFiles) {
+      try { const stat = fs.statSync(fp); if (stat.mtimeMs >= thirtyDaysAgo) deploysLast30++; totalVersions++; } catch {}
     }
 
     const deployLogPath = path.join(DB_ROOT, 'deploy-log.json');
