@@ -1087,7 +1087,48 @@
       </div>
     </div>
 
-    <!-- ── BLOCO 2.6: SECURITY LAB — vc-secret-guard ─────────────── -->
+    <!-- ── BLOCO 2.6: PONYTAIL AUDIT ──────────────────────────────── -->
+    <div style="max-width:900px;margin:0 auto 56px">
+      <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <h3 style="font-size:18px;font-weight:700;color:#fff;margin:0">PONYTAIL AUDIT — revisão adversarial interna</h3>
+        <div style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;color:#86efac;letter-spacing:1px">MÉTODO INTERNO — EM USO</div>
+      </div>
+
+      <div style="background:#0a0f1a;border:1px solid rgba(56,189,248,0.25);border-radius:14px;padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#7dd3fc;margin-bottom:10px">🔍 O que é</div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.8">
+            Uma segunda opinião real, de um modelo diferente do que implementou a mudança, aplicada antes de qualquer correção de segurança ou lógica sensível ser considerada fechada — não é o mesmo modelo relendo o próprio trabalho.
+          </div>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#7dd3fc;margin-bottom:10px">⚙️ Como funciona, na prática</div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.8">
+            O código real da mudança (o diff, não uma descrição em prosa) é enviado numa chamada real ao endpoint de chat do próprio Vision Core — usando a infraestrutura do próprio produto pra rodar a revisão — e bate num modelo diferente do que escreveu o código, com uma pergunta adversarial específica: existe algum jeito de burlar essa checagem? Existe algum caminho que ainda vaza dado entre usuários? Que efeito colateral não foi considerado?
+          </div>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#7dd3fc;margin-bottom:10px">🎯 Por que pega o que a auto-revisão não pega</div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.8">
+            Quem escreve uma correção tem viés de ancoragem — tende a confirmar a própria lógica, não questionar a premissa. Um segundo modelo, sem esse viés, examina a solução pronta com olhos livres da decisão original.
+          </div>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#7dd3fc;margin-bottom:10px">⚠️ Limites, declarados com a mesma honestidade que o método exige de tudo mais</div>
+          <div style="font-size:13px;color:#94a3b8;line-height:1.8">
+            Ainda é um modelo de linguagem respondendo — pode errar, pode não identificar tudo. Funciona melhor com perguntas específicas do que com "está tudo bem?" genérico. Não substitui teste determinístico real: um confirma que o comportamento esperado acontece, o outro tenta ativamente achar o que não foi pensado.
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <span style="font-size:11px;color:#64748b">Achado real:</span>
+        <code style="background:#1e293b;padding:2px 6px;border-radius:4px;color:#a5b4fc;font-size:11px">/api/obsidian/*</code>
+        <span style="font-size:11px;color:#4ade80;margin-left:4px">✅ commit 5bbe7c03 — a correção inicial fechava autenticação, a auditoria adversarial apontou que faltava isolamento por usuário, fechado na mesma sessão</span>
+      </div>
+    </div>
+
+    <!-- ── BLOCO 2.7: SECURITY LAB — vc-secret-guard ─────────────── -->
     <div hidden style="max-width:900px;margin:0 auto 56px">
       <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <h3 style="font-size:18px;font-weight:700;color:#fff;margin:0">SECURITY LAB — vc-secret-guard</h3>
