@@ -2964,21 +2964,106 @@ function getRequestAgentSecret(req, body) {
    docs/CURRENT_STATE.md pendência de segurança. */
 const AGENT_PAIRINGS_DB = path.join(DB_ROOT, 'agent-pairings.json');
 _s3LoadSync(AGENT_PAIRINGS_DB); // pull antes de construir o Map — mesma ordem exigida por USERS_DB etc.
-const agentPairings = new Map(Object.entries(readJsonFile(AGENT_PAIRINGS_DB, {}))); // agent_id -> agent_secret
+// §208: TTL + revogação (achado real, ver docs/CURRENT_STATE.md PENDÊNCIAS REAIS —
+// agent_secret vazado ficava válido pra sempre). 30 dias parado, não arbitrário: o
+// heartbeat real é GET /api/agent/mission/pending, que o Vision Agent Local chama a
+// cada ~3s enquanto está rodando (VC_POLL_MS) — um agente ativo nunca chega perto do
+// TTL, só expira quem foi genuinamente abandonado por um mês inteiro. Renovado só ali
+// (touchAgentPairing), não em todo verifyAgentSecret — os demais call sites (queue,
+// result, execute-project) continuam side-effect-free como antes.
+const AGENT_PAIRING_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+// valor persistido migrou de string pura (secret) pra {secret,user_id,created_at,
+// last_used_at} — entradas gravadas antes do §208 são strings; migradas aqui como
+// "recém-ativas" (last_used_at=agora) pra não expirar pareamentos reais de produção
+// no primeiro boot pós-deploy só por terem sido registrados há mais de 30 dias.
+const agentPairings = new Map(Object.entries(readJsonFile(AGENT_PAIRINGS_DB, {})).map(([id, value]) => {
+  if (typeof value === 'string') return [id, { secret: value, user_id: null, created_at: null, last_used_at: Date.now() }];
+  return [id, value];
+}));
+let _agentPairingsS3Chain = Promise.resolve();
+// mesma razão do §157 (agent-queue.sqlite): renovação de TTL acontece a cada poll
+// (alta frequência por agente ativo) — sem serializar o upload, dois uploads
+// concorrentes do MESMO snapshot completo podiam terminar fora de ordem e reverter
+// uma renovação/registro mais novo.
+function syncAgentPairingsToS3() {
+  _agentPairingsS3Chain = _agentPairingsS3Chain
+    .then(() => writeAndSyncS3(AGENT_PAIRINGS_DB, Object.fromEntries(agentPairings)))
+    .catch(() => {});
+  return _agentPairingsS3Chain;
+}
+// §208, achado real na revisão adversarial (Ponytail/LLM, ver docs/CURRENT_STATE.md):
+// um pareamento nunca reivindicado (user_id null) não pode ser revogado pela via
+// owner (não existe dono real pra autorizar) — se o secret vazar ANTES de alguém
+// reivindicar, ninguém consegue matá-lo antes do TTL natural. Mitigação: TTL bem
+// mais curto pra quem ainda não foi reivindicado (48h — tempo de sobra pro fluxo
+// real de "registrar → colar no painel → primeira missão SF", mas fecha a janela
+// de um secret vazado e nunca usado ficando válido por até 30 dias à toa).
+const AGENT_PAIRING_UNCLAIMED_TTL_MS = 48 * 60 * 60 * 1000;
 function verifyAgentSecret(agentId, secret) {
   if (!agentId || !secret) return false;
-  const expected = agentPairings.get(agentId);
-  if (!expected) return false;
-  const a = Buffer.from(expected);
+  const pairing = agentPairings.get(agentId);
+  if (!pairing) return false;
+  const ttl = pairing.user_id ? AGENT_PAIRING_TTL_MS : AGENT_PAIRING_UNCLAIMED_TTL_MS;
+  if (Date.now() - (pairing.last_used_at || 0) > ttl) return false; // expirado por inatividade
+  const a = Buffer.from(pairing.secret);
   const b = Buffer.from(secret);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+// Renova o TTL — chamado só por GET /api/agent/mission/pending (o heartbeat real).
+function touchAgentPairing(agentId) {
+  const pairing = agentPairings.get(agentId);
+  if (!pairing) return;
+  pairing.last_used_at = Date.now();
+  syncAgentPairingsToS3();
+}
+// Vincula o dono na primeira vez que uma sessão real de usuário e um agent_secret
+// válido aparecem juntos numa requisição (hoje só /api/sf/execute-project combina
+// os dois) — nunca sobrescreve um dono já vinculado. Ver /api/agent/unregister pro
+// motivo de precisar de um dono: revogação por sessão (secret perdido/vazado) exige
+// saber de quem é o pareamento.
+function claimAgentPairingOwner(agentId, userId) {
+  const pairing = agentPairings.get(agentId);
+  if (!pairing || pairing.user_id || !userId) return;
+  pairing.user_id = userId;
+  syncAgentPairingsToS3();
 }
 app.post('/api/agent/register', (req, res) => {
   const agentId = makeId('agent');
   const secret  = crypto.randomBytes(24).toString('hex');
-  agentPairings.set(agentId, secret);
-  writeAndSyncS3(AGENT_PAIRINGS_DB, Object.fromEntries(agentPairings));
+  agentPairings.set(agentId, { secret, user_id: null, created_at: now(), last_used_at: Date.now() });
+  syncAgentPairingsToS3();
   return sendOk(res, { agent_id: agentId, agent_secret: secret, status: 'registered', anti_stub: true });
+});
+// §208: revoga um pareamento antes do TTL natural. Dois caminhos de autorização:
+// (1) dono real (sessão do usuário que já usou este agent_secret com sucesso em
+//     /api/sf/execute-project) — funciona mesmo sem o secret em mãos (o cenário
+//     real é "vazou/perdi o secret", não "ainda tenho o secret e quero trocar").
+// (2) o próprio agente, com o secret válido — auto-revogação voluntária ao encerrar
+//     de forma limpa (o Vision Agent Local não carrega sessão de usuário nenhuma).
+// Um agente comprometido que se auto-revoga não apaga evidência nenhuma (auditLog é
+// append-only, guarda "via" e a identidade que agiu) — só encerra o próprio acesso
+// futuro, não é uma forma de escapar de detecção.
+// Pareamento nunca reivindicado (user_id null) não pode ser revogado por sessão —
+// não existe dono real pra autorizar; expira sozinho pelo TTL se ficar abandonado.
+app.post('/api/agent/unregister', (req, res) => {
+  const body = normalizeBody(req);
+  const agentId = getRequestAgentId(req, body);
+  if (!agentId) return res.status(400).json({ ok: false, error: 'agent_id_required', anti_stub: true, time: now() });
+  const pairing = agentPairings.get(agentId);
+  if (!pairing) return res.status(404).json({ ok: false, error: 'agent_not_registered', anti_stub: true, time: now() });
+  const agentSecret = getRequestAgentSecret(req, body);
+  let via = null;
+  if (agentSecret && verifyAgentSecret(agentId, agentSecret)) {
+    via = 'self';
+  } else {
+    const sessionUser = getAuthUser(req);
+    if (sessionUser && pairing.user_id && sessionUser.id === pairing.user_id) via = 'owner';
+  }
+  if (!via) return res.status(403).json({ ok: false, error: 'agent_unregister_not_authorized', anti_stub: true, time: now() });
+  agentPairings.delete(agentId);
+  syncAgentPairingsToS3();
+  auditLog('agent_unregister', req, { agent_id: agentId, via });
+  return sendOk(res, { agent_id: agentId, status: 'unregistered', via, anti_stub: true });
 });
 app.all('/api/agent/heartbeat', (req, res) => {
   const body = normalizeBody(req);
@@ -3937,6 +4022,7 @@ app.get('/api/agent/mission/pending', (req, res) => {
   if (agentId && !verifyAgentSecret(agentId, agentSecret)) {
     return res.status(401).json({ ok: false, error: 'agent_pairing_required', time: now() });
   }
+  if (agentId) touchAgentPairing(agentId); // §208: heartbeat real, renova o TTL
   _agentLastSeenAt = Date.now(); /* §105: todo poll real atualiza presenca p/ /api/agent/status */
   if (agentId) _agentLastAgentId = agentId;
   const mission = agentQueueDB.shiftForAgent ? agentQueueDB.shiftForAgent(agentId) : agentQueueDB.shift();
@@ -5422,6 +5508,11 @@ app.post('/api/sf/execute-project', requireVisionAuth, async (req, res) => {
   if (!verifyAgentSecret(agentId, agentSecret)) {
     return res.status(401).json({ ok: false, error: 'agent_pairing_required', anti_stub: true, time: now() });
   }
+  // §208: única rota hoje que combina sessão real de usuário + agent_secret válido —
+  // é o sinal natural de "este agente é meu". Reivindica antes do gate de allowlist
+  // de propósito: mesmo que SF_REAL_EXECUTION_ALLOWED_AGENTS ainda não inclua este
+  // agente, provar controle do secret já autoriza revogar depois via sessão.
+  claimAgentPairingOwner(agentId, req.visionUser.id);
 
   if (!isSfRealExecutionAgentAllowed(agentId)) {
     return res.status(403).json({
