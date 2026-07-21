@@ -42,10 +42,30 @@ Nenhum componente de dashboard, gráfico, painel, monitor, timeline ou grid de m
 
 ## MultiProviders / Arquitetura oficial
 
-### ADR-043 — Health é temporal, verificável e fail-closed
+### ADR-048 — Identidade de Model é separada de alias, deployment e endpoint
+Família, Model canônico, variante, versão e quantização qualificam identidade; alias apenas referencia essa identidade, enquanto identificador de Provider, deployment, snapshot e endpoint pertencem à offering.
+**Por quê:** misturar nomes operacionais com identidade cria colisões, órfãos e perda de versão.
+**Como aplicar:** alias escopado, acíclico e não ambíguo; offering só referencia Model e Provider registrados.
+
+### ADR-047 — Provider Lifecycle é uniforme e separado de Health
+Todo Provider segue `discovered -> registered -> configured -> validated -> ready`, com `disabled` e `removed`; degraded/offline são Health.
+**Por quê:** lifecycle especial ou misturado com disponibilidade impede elegibilidade consistente.
+**Como aplicar:** nenhuma origem, Vendor ou location pula transições; rotação/expiração exige revalidação.
+
+### ADR-045 — Transport é detalhe operacional e não define Provider
+Transport configura comunicação, mas não determina identidade, capability, location ou privacy.
+**Por quê:** transformar SDK, protocolo ou marca em arquitetura cria vendor lock e inferências falsas.
+**Como aplicar:** tipos neutros e configuráveis; propriedades normativas dependem de evidência própria.
+
+### ADR-044 — Capabilities são declaradas e validadas, nunca presumidas
+Capability possui identidade, versão, estado, limitações, escopo e evidência temporal; nomes de Provider, Vendor ou Model não provam suporte.
+**Por quê:** presunção nominal produz routing incompatível e false capability.
+**Como aplicar:** negociação usa capability efetiva Provider+Model; requisito obrigatório desconhecido elimina candidato.
+
+### ADR-043 — Health é temporal, escopado, verificável e fail-closed
 Sem observação válida, health é `unknown`; cadastro, configuração, localização ou sucesso antigo nunca equivalem a `healthy`.
 **Por quê:** false health transforma ausência de evidência em tráfego e mascara indisponibilidade.
-**Como aplicar:** toda observação inclui fonte, razão, `checked_at` e expiração; routing avalia o snapshot conforme policy.
+**Como aplicar:** toda observação inclui fonte, razão, escopo, `checked_at` e expiração; nenhum escopo propaga saúde a outro; routing avalia o snapshot conforme policy.
 
 ### ADR-042 — Routing é policy-driven, explicável e sem fallback nominal
 Seleção manual ou automática usa requisitos e policy identificada/versionada; nenhum Provider é default ou fallback por nome.

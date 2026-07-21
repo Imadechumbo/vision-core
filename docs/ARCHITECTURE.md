@@ -110,9 +110,9 @@ Princípios arquiteturais permanentes vivem exclusivamente em `docs/DECISIONS.md
 
 ## Arquitetura geral (Camada 1)
 
-### MultiProviders (SPEC Phase 1)
+### MultiProviders (SPEC Phase 1 + 1.1)
 
-MultiProviders é a camada neutra entre consumidores/Software Factory e executores de IA. Possui quatro superfícies normativas: Provider Contract, Provider Registry, Model Registry e Routing. local e cloud são atributos do Provider; Model e Provider possuem identidades independentes e relação muitos-para-muitos. A arquitetura completa está em MULTIPROVIDERS_SPEC.md e ADR-039 a ADR-043. Nesta fase não existe autorização de implementação.
+MultiProviders é a camada neutra entre consumidores/Software Factory e executores de IA. Possui quatro superfícies normativas: Provider Contract, Provider Registry, Model Registry e Routing. local e cloud são atributos do Provider; Model e Provider possuem identidades independentes e relação muitos-para-muitos. A arquitetura completa está em MULTIPROVIDERS_SPEC.md e ADR-039 a ADR-045 e ADR-047 a ADR-048. Capability, Health, Lifecycle, Discovery, Transport, Cost, Privacy, Alias, Version e Benchmark permanecem contratos internos, não módulos. Não existe autorização de implementação.
 
 ```mermaid
 graph LR

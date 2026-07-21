@@ -36,3 +36,10 @@ A oferta referencia `model_id` e `provider_id` e pode declarar nome remoto, vers
 ## Lifecycle
 
 Estados mínimos: `known`, `available`, `deprecated`, `retired`. `available` significa que existe ao menos uma oferta registrada, não que algum Provider esteja saudável agora.
+
+
+## Phase 1.1 — Identidade, variante, alias e deployment
+
+A identidade separa `family`, Model canônico, `variant`, `model_version` e `quantization`. Provider identifier, deployment, endpoint e snapshot pertencem à offering, não à identidade canônica.
+
+`resolve_alias(alias, scope)` resolve cadeia acíclica para exatamente um ID canônico ou falha. Alias é escopado, não pode sobrescrever identidade canônica, formar ciclo, ser ambíguo ou virar fonte de verdade. Dois Models distintos nunca compartilham ID canônico; versão não pode ser descartada na offering. Model sem definição canônica é órfão e não recebe offering; Model sem offering continua conhecido, mas indisponível. Provider sem registro é órfão e não recebe offering.

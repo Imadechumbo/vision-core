@@ -56,3 +56,30 @@ O módulo possui quatro superfícies normativas e nenhuma outra:
 ## Critério de conclusão da SPEC
 
 A Phase 1 documental termina quando os contratos, invariantes, decisões, RCA adversarial, filtros Ponytail e plano de testes estiverem coerentes e não houver código funcional. Implementação exige fase e autorização novas.
+
+
+## Phase 1.1 — Refinamento arquitetural
+
+Status: `SPEC_PHASE_1_1_COMPLETE`. A Phase 1 permanece normativa; esta seção fecha lacunas sem autorizar implementação.
+
+Capability, Health, Lifecycle, Discovery, Transport, Cost, Privacy, Alias, Version e Benchmark não são módulos. São contratos ou metadados internos das quatro superfícies:
+
+| Conceito | Owner normativo |
+|---|---|
+| Capability, Transport, Health, Cost, Privacy e versões do Provider | Provider Contract |
+| Discovery, Lifecycle, observações de Health e Benchmark | Provider Registry |
+| Identidade, variante, alias, deployment e versão de Model | Model Registry |
+| Capability Negotiation, policies, classificação e failover | Routing |
+
+Invariantes Phase 1.1:
+
+- Capability é declarada, descoberta ou validada; nunca presumida por nome.
+- Health é temporal, escopado e fail-closed; nunca booleano.
+- Transport não define capability, location ou privacy.
+- Custo desconhecido não é zero; privacy não deriva de local/cloud.
+- Discovery não eleva confiança nem readiness.
+- Cada dimensão de versão possui identidade própria.
+- Benchmark é evidência contextual; não health nem decisão autônoma.
+- Installer futuro entrega metadados comuns e solicita `register()`; instalar não significa READY.
+- Blueprint futuro poderá representar Providers, Models, Capabilities, Routing, Health, Lifecycle, Discovery e Failover, sem runtime.
+- Phase 2 continua bloqueada até autorização explícita.

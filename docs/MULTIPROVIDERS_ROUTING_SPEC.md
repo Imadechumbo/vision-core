@@ -32,3 +32,24 @@ A decisão contém `provider_id`, `model_id`, `offering_version`, `policy_id`, `
 ## Falhas explícitas
 
 `model_unknown`, `manual_provider_ineligible`, `capability_unavailable`, `privacy_policy_unsatisfied`, `budget_unsatisfied`, `health_unavailable`, `no_eligible_route` e `routing_policy_invalid`.
+
+
+## Phase 1.1 — Capability Negotiation
+
+Registry fornece candidatos e evidências; Routing compara requisitos com capabilities efetivas da combinação Provider+Model. Capability obrigatória desconhecida, não suportada ou incompatível elimina candidato. Opcional não elimina. Preferida influencia classificação somente depois dos requisitos duros. Degradação controlada exige regra explícita da policy, alternativa compatível e explicação; nunca transforma `unknown` em suportada. Fallback é proibido quando viola capability obrigatória, privacy, budget, health ou idempotência.
+
+## Phase 1.1 — Sequência normativa refinada
+
+1. Validar requisitos e policy.
+2. Resolver identidade canônica do Model sem alias ambíguo.
+3. Localizar offerings e Providers candidatos.
+4. Eliminar lifecycle inelegível e incompatibilidades de capability/contexto.
+5. Eliminar Health ausente, vencido ou inválido.
+6. Aplicar restrições obrigatórias de privacy, custo, localização, exclusão e disponibilidade.
+7. Aplicar policies e afinidades sem violar restrições.
+8. Classificar usando evidência comparável de prioridade, custo, latência e benchmark válido.
+9. Selecionar candidato ou falhar explicitamente.
+10. Registrar explicação, evidência e confiança.
+11. Preparar somente candidatos de failover ainda compatíveis.
+
+A saída inclui versões relevantes, requisitos/capabilities negociados, candidatos rejeitados e razões, evidência e confiança. Confiança baixa nunca relaxa requisito duro. Não há pesos, Provider padrão ou privilégio por Vendor/location nesta SPEC.

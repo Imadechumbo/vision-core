@@ -39,3 +39,27 @@ O maior risco não é “um Provider falhar”; é o primeiro Provider integrado
 ## Veredito Hermes
 
 SPEC aprovada somente sob arquitetura neutra de quatro superfícies. Qualquer adapter especial, registry duplicado, inferência de health/privacy por localização ou fallback nominal reabre o RCA antes da implementação.
+
+
+## Phase 1.1 — RCA adversarial específica
+
+Esta análise complementa a Phase 1; não repete o risco genérico de acoplamento.
+
+| Falha | Causa | Sintoma/impacto | Detecção | Prevenção/gate |
+|---|---|---|---|---|
+| Capability inferida ou falsa | nome substitui evidência | rota incompatível | capability sem source/validated_at | No Capability Assumption |
+| Health booleano/congelado | ausência de TTL/escopo | tráfego para alvo inválido | ONLINE vencido ou sem evidence | No Boolean Health; No Stale Health |
+| Provider online, Model indisponível | propagação indevida de escopo | falha tardia | health Provider usado para offering | No False Health |
+| Transport vira arquitetura | SDK/protocolo define domínio | vendor lock | branch/type por marca | No Transport Logic |
+| Alias circular/ambíguo | alias vira identidade | Model errado ou loop | resolução não termina/não é única | No Alias Loop |
+| Versão misturada | campo version genérico | compatibilidade falsa | dimensões ausentes | No Version Mixing |
+| Model/Provider órfão | offering sem identidade registrada | catálogo inconsistente | referência sem owner | No Orphan Model/Provider |
+| Benchmark como health/global | contexto/validade descartados | ranking falso | benchmark sem workload/validity | No Benchmark as Health |
+| Custo desconhecido vira zero | ausência tratada como número | budget violado | unknown participa como 0 | No Unknown Cost as Zero |
+| Privacy por location | local/cloud vira proxy | policy enganosa | dimensão sem evidência | No Privacy by Location |
+| Discovery eleva confiança | descoberta auto-registra/ativa | alvo não validado elegível | salto para READY | No Discovery Trust Escalation |
+| Lifecycle ignorado | routing consulta apenas health | disabled/removed recebe tráfego | candidato inelegível presente | No Lifecycle Bypass |
+| Failover incompatível | retry ignora requisitos | capability/privacy violada | fallback fora do conjunto filtrado | No Incompatible Failover |
+| Latência antiga | observação sem validade | classificação obsoleta | timestamp/validity ausente | No Stale Health |
+
+Riscos residuais: taxonomia pode exigir extensão após evidência de Providers reais; comparabilidade de benchmark depende de workloads futuros; regras de idempotência variam por operação; fontes externas podem mentir. Phase 2 só pode iniciar após revisão desta RCA, aceite explícito dos riscos residuais e transformação dos gates aplicáveis em evidência executável.

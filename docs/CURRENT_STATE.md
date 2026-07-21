@@ -1,5 +1,20 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-21 — MultiProviders SPEC Phase 1.1 concluída
+
+Status: `SPEC_PHASE_1_1_COMPLETE`.
+
+Phase 1 permanece concluída. Phase 1.1 refinou Capability Contract/Negotiation, Health temporal escopado, lifecycle uniforme, discovery sem trust escalation, Transport neutro, Cost/Privacy dimensionais, identidade/alias de Model, versões separadas, Benchmark contextual e Routing explicável. ADR-043 foi refinado; ADR-044, ADR-045, ADR-047 e ADR-048 foram criados; ADR-046 não foi duplicado porque seu conteúdo já pertence ao ADR-043.
+
+Hermes RCA Phase 1.1 concluída com riscos residuais explícitos. Ponytail Audit: 21/21 gates documentados com intenção, violação, evidência, PASS, FAIL e teste futuro. Validação: `git diff --check` PASS; padrões proibidos ausentes; referências/ADRs/gates verificados. Nenhum teste funcional criado.
+
+Nenhuma implementação iniciada. Colibri não integrado. Installer e Blueprint não alterados funcionalmente. Nenhum adapter, endpoint, serviço, banco, cache, fila, persistência, runtime, Tauri, Rust, frontend, backend funcional ou deploy criado. Nenhum push executado. Commit documental único criado com mensagem `docs: refine multiproviders architecture phase 1.1`; após ele, a branch fica dois commits à frente do remoto. Alterações preexistentes não relacionadas permanecem preservadas e fora do commit.
+
+Phase 2 não iniciada e bloqueada até autorização explícita e aceite dos riscos residuais da RCA.
+
+Próximo passo: PARAR. Aguardar autorização explícita para qualquer implementação da Phase 2.
+
+---
 ## 2026-07-21 — MultiProviders SPEC Phase 1 concluída (documental)
 
 Objetivo: especificar MultiProviders sem implementação. Criados MULTIPROVIDERS_SPEC.md, PROVIDER_CONTRACT_SPEC.md, PROVIDER_REGISTRY_SPEC.md, MODEL_REGISTRY_SPEC.md, MULTIPROVIDERS_ROUTING_SPEC.md, MULTIPROVIDERS_HERMES_RCA.md e MULTIPROVIDERS_TEST_PLAN.md. ADR-034 a ADR-038, fornecidos como baseline da sessão mas ausentes nesta worktree, foram materializados em DECISIONS.md; ADR-039 a ADR-043 fecham limites, contrato, registries, routing e health.

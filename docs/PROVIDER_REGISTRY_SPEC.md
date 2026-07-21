@@ -49,3 +49,20 @@ Health é observado por probes compatíveis com o transporte configurado, mas no
 - Vision AI Installer: após sucesso comprovado, solicita `register()`; o Registry ainda valida.
 - Routing: consome snapshots elegíveis, nunca tabelas internas ou adapters.
 - Vision Blueprint: consome uma view somente leitura futura.
+
+
+## Phase 1.1 — Provider Lifecycle
+
+Estados normativos mínimos: `discovered`, `registered`, `configured`, `validated`, `ready`, `disabled`, `removed`. `degraded` e `offline` pertencem a Health: um Provider pode permanecer `ready` mas temporariamente inelegível.
+
+Fluxo normal: `discovered -> registered -> configured -> validated -> ready`. `disabled` é decisão administrativa; `offline` é observação. `removed` é identidade conhecida e terminal; não descoberto é ausência de registro. Retorno de `disabled` exige configuração válida e revalidação. Rotação de configuração/credencial ou mudança incompatível de versão leva a `configured`; expiração de credencial invalida readiness. Pular registro, configuração ou validação é proibido. Nenhum Provider recebe lifecycle especial.
+
+## Phase 1.1 — Discovery Contract
+
+Discovery produz candidato com fonte, confiança, identidade proposta, validade e evidência. Fontes possíveis: manual, Installer, importação, ambiente, serviço/rede local, catálogo administrado, plugin ou integração futura. Deduplicação usa identidade estável e evidência; conflito permanece explícito. Desaparecimento expira a descoberta, não remove automaticamente o registro. Redescoberta atualiza evidência sem elevar lifecycle.
+
+Nenhuma descoberta cria confiança, configuração, validação ou READY; `register()` é explícito e ainda aplica validação e segurança. Instalação concluída apenas permite ao Installer solicitar `ProviderRegistry.register()`.
+
+## Phase 1.1 — Benchmark Contract
+
+Benchmark contém escopo, métrica, unidade, ambiente, workload, timestamp/validade, Model, Provider, Transport, configuration version, hardware, amostra, erro, benchmark version e critérios de comparabilidade. Resultado vencido não representa desempenho atual; benchmark não prova disponibilidade, não se generaliza entre Models/hardware e não decide Routing sozinho.
