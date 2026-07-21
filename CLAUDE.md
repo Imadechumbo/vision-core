@@ -158,7 +158,7 @@ Catálogo completo em `docs/DECISIONS.md` — não reabrir sem novo motivo regis
 
 ---
 
-- **Vision AI Installer:** produto oficial planejado para provisionar runtimes/modelos locais. Fase 0 somente; zero Tauri/Rust funcional. Não confundir com Vision Agent Local/Desktop. Fonte: `docs/VISION_AI_INSTALLER_SPEC.md`; integração real `BLOCKED_CONTRACT` até contrato local reversível.
+- **Vision AI Installer:** produto oficial planejado para provisionar runtimes/modelos locais. Baseline documental da Fase 0: `4ee490f2401b6f22a2bc79e5f855cdf0a044cd9b` (`origin/codex/vision-ai-installer-phase0`); zero Tauri/Rust funcional e nenhum deploy. Não confundir com Vision Agent Local/Desktop. Fonte: `docs/VISION_AI_INSTALLER_SPEC.md`; integração real `BLOCKED_CONTRACT` até contrato local reversível.
 
 ## SISTEMA DE DOCUMENTAÇÃO — POLÍTICA PERMANENTE (vale para todo agente: Claude Code, Codex, OpenCode, Omnigent, ChatGPT ou qualquer outro)
 
