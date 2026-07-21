@@ -4963,7 +4963,12 @@ app.get('/api/agents/modes', (req, res) => {
   return sendOk(res, { modes: _agentModesStore, time: now() });
 });
 
-app.post('/api/agents/:id/mode', (req, res) => {
+// Achado 2026-07-21 (sessão seguinte ao fix do vault): _agentModesStore é estado
+// global em memória, sem user_id — ligar/desligar um agente (inclusive
+// security/aegis) afeta detectActiveAgent() pra TODOS os usuários do sistema, não
+// só quem chamou a rota. Mesma categoria do vault: não é preferência por-usuário,
+// precisa de requireVisionAdmin, não só sessão.
+app.post('/api/agents/:id/mode', requireVisionAdmin, (req, res) => {
   const agentId = req.params.id;
   const body    = normalizeBody(req);
   const mode    = String(body.mode || 'AUTO').toUpperCase();
@@ -4972,6 +4977,7 @@ app.post('/api/agents/:id/mode', (req, res) => {
     return res.status(400).json({ ok: false, error: 'invalid_mode', valid, time: now() });
   }
   _agentModesStore[agentId] = mode;
+  auditLog('agent_mode_changed', req, { agent_id: agentId, mode, admin_email: req.visionUser.email }); // §154 — desligar security/aegis remotamente é grave, precisa de rastro
   console.log(`[agents] ${agentId} → ${mode}`);
   return sendOk(res, { ok: true, agent_id: agentId, mode, time: now() });
 });
