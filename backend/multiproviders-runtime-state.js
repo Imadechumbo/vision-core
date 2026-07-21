@@ -34,7 +34,7 @@ function healthKey(tenantId, target) {
   let identity;
   if (scope === 'provider') identity = [requiredString(target.provider_id, 'provider_id')];
   if (scope === 'transport') identity = [requiredString(target.provider_id, 'provider_id'), requiredString(target.transport_id, 'transport_id')];
-  if (scope === 'model') identity = [requiredString(target.model_id, 'model_id')];
+  if (scope === 'model') identity = [target.provider_id || null, requiredString(target.model_id, 'model_id')];
   if (scope === 'capability') {
     if (!target.provider_id && !target.model_id) throw new MultiProvidersError('capability_owner_required');
     identity = [target.provider_id || null, target.model_id || null, requiredString(target.capability_id, 'capability_id')];
@@ -151,13 +151,13 @@ class MultiProvidersRuntimeState {
     return JSON.parse(JSON.stringify(value));
   }
 
-  resolveCapability(tenantId, providerId, modelId, capabilityId) {
+  resolveCapability(tenantId, providerId, modelId, capabilityId, deployment = 'default') {
     const provider = this.providerRegistry.get(tenantId, providerId);
     const model = this.modelRegistry.get(tenantId, modelId);
     if (!provider) throw new MultiProvidersError('orphan_provider');
     if (!model) throw new MultiProvidersError('orphan_model');
     const offering = this.modelRegistry.listOfferings(tenantId, modelId)
-      .find(item => item.provider_id === providerId);
+      .find(item => item.provider_id === providerId && (item.deployment || 'default') === deployment);
     if (!offering) throw new MultiProvidersError('offering_not_found');
     const now = this.clock();
     const scopes = {
@@ -169,17 +169,17 @@ class MultiProvidersRuntimeState {
     return { capability_id: capabilityId, scopes, satisfied };
   }
 
-  eligibility(tenantId, providerId, modelId, requiredCapabilities = []) {
+  eligibility(tenantId, providerId, modelId, requiredCapabilities = [], { deployment = 'default' } = {}) {
     const provider = this.providerRegistry.get(tenantId, providerId);
     if (!provider) throw new MultiProvidersError('orphan_provider');
     if (!this.modelRegistry.get(tenantId, modelId)) throw new MultiProvidersError('orphan_model');
     const reasons = [];
     if (provider.status !== 'ready') reasons.push('provider_not_ready');
     const providerHealth = this.effectiveHealth(tenantId, { scope: 'provider', provider_id: providerId });
-    const modelHealth = this.effectiveHealth(tenantId, { scope: 'model', model_id: modelId });
+    const modelHealth = this.effectiveHealth(tenantId, { scope: 'model', provider_id: providerId, model_id: modelId });
     if (!['online', 'degraded'].includes(providerHealth.status)) reasons.push('provider_health_' + providerHealth.status);
     if (!['online', 'degraded'].includes(modelHealth.status)) reasons.push('model_health_' + modelHealth.status);
-    const capabilities = requiredCapabilities.map(id => this.resolveCapability(tenantId, providerId, modelId, id));
+    const capabilities = requiredCapabilities.map(id => this.resolveCapability(tenantId, providerId, modelId, id, deployment));
     if (capabilities.some(item => !item.satisfied)) reasons.push('capability_not_validated');
     return {
       eligible: reasons.length === 0,

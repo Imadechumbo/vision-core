@@ -106,6 +106,7 @@ class LegacyCompatibilityBridge {
       endpoint_ref: legacy.endpoint_ref || null,
       versions: provider.versions,
       capabilities: [capability],
+      context_limits: { status: 'unknown' },
     } : null;
     return { provider, model, offering, configured: Boolean(legacy.configured) };
   }

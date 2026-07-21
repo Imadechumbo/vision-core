@@ -196,7 +196,7 @@ test('Provider ready and online does not mask Model unknown', () => {
 test('ready Provider plus scoped Health and validated capabilities is eligible', () => {
   const { runtime } = setup();
   const providerHealth = online('provider', { provider_id: 'provider-a' });
-  const modelHealth = online('model', { model_id: 'model-a' });
+  const modelHealth = online('model', { provider_id: 'provider-a', model_id: 'model-a' });
   runtime.observeHealth('tenant-a', providerHealth.target, providerHealth.observation);
   runtime.observeHealth('tenant-a', modelHealth.target, modelHealth.observation);
   const result = runtime.eligibility('tenant-a', 'provider-a', 'model-a', ['chat']);
@@ -206,7 +206,7 @@ test('ready Provider plus scoped Health and validated capabilities is eligible',
 test('lifecycle disabled bypass is impossible even with online Health', () => {
   const { runtime, providers } = setup();
   const providerHealth = online('provider', { provider_id: 'provider-a' });
-  const modelHealth = online('model', { model_id: 'model-a' });
+  const modelHealth = online('model', { provider_id: 'provider-a', model_id: 'model-a' });
   runtime.observeHealth('tenant-a', providerHealth.target, providerHealth.observation);
   runtime.observeHealth('tenant-a', modelHealth.target, modelHealth.observation);
   providers.transition('tenant-a', 'provider-a', 'disabled', { expected_status: 'ready' });

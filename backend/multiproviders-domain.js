@@ -297,6 +297,7 @@ class ModelRegistry {
       endpoint_ref: offering.endpoint_ref || null,
       versions: normalizeVersions(requiredObject(offering.versions, 'offering.versions')),
       capabilities: Array.isArray(offering.capabilities) ? offering.capabilities.map(normalizeCapability) : [],
+      context_limits: clone(requiredObject(offering.context_limits || {}, 'offering.context_limits')),
     };
     this.offerings.set(key, normalized);
     const modelKey = scopeKey(tenantId, modelId);

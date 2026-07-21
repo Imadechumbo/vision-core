@@ -17,7 +17,7 @@ console.log('=== MultiProviders legacy runtime wiring ===');
 
 check(runtime.includes('const providerRegistry = new ProviderRegistry()'), 'composition root owns one Provider Registry');
 check(runtime.includes('const modelRegistry = new ModelRegistry(providerRegistry)'), 'composition root owns one Model Registry bound to Provider Registry');
-check(runtime.includes('const legacyBridge = new LegacyCompatibilityBridge'), 'composition root owns one compatibility bridge');check(runtime.includes('const runtimeState = new MultiProvidersRuntimeState'), 'composition root owns one Health/Capability runtime bound to the same registries');check(runtime.includes("'[multiproviders:legacy] incompatible catalog entries'"), 'incompatibilities are logged with a redacted stable event');
+check(runtime.includes('const legacyBridge = new LegacyCompatibilityBridge'), 'composition root owns one compatibility bridge');check(runtime.includes('const runtimeState = new MultiProvidersRuntimeState'), 'composition root owns one Health/Capability runtime bound to the same registries');check(runtime.includes('const router = new MultiProvidersRouter'), 'composition root owns one policy router bound to runtime-state');check(runtime.includes("'[multiproviders:legacy] incompatible catalog entries'"), 'incompatibilities are logged with a redacted stable event');
 check(server.includes("require('./multiproviders-runtime')"), 'callLLM imports canonical runtime composition');
 check(hermes.includes("require('./multiproviders-runtime')"), 'Hermes imports the same canonical runtime composition');
 check(server.includes("source_ref: 'server.providerList'"), 'Provider endpoint catalog is characterized without changing its response');
