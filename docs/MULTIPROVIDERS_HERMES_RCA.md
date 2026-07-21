@@ -283,3 +283,48 @@ Engine ainda não executa tráfego real porque R6 não certificou adapter/Health
 ### VEREDITO
 
 PASS. O router não escolhe resposta apenas disponível; escolhe somente candidato comprovadamente compatível ou retorna no_eligible_route.
+## R6 — First Neutral Provider Adapter
+
+### SISTEMA ANALISADO
+
+Adapter Host, adapter contract, InMemoryReferenceAdapter, onboarding, certification, credential resolution e invoke.
+
+### OBJETIVO
+
+Provar o boundary comum antes de qualquer Provider real, sem permitir que primeiro Vendor/transport vire arquitetura ou default.
+
+### HIPÓTESE DE FALHA
+
+Adapter vazaria segredo, registraria estado parcial, promoveria READY sem probe, esconderia erro nativo, faria retry implícito ou seria selecionado apenas por existir.
+
+### CAUSAS RAIZ
+
+Sem precedente neutro, primeira integração real tenderia a misturar cadastro, auth, transport, Health, retry e routing num caso especial.
+
+### VETORES
+
+Método ausente; duplicate adapter; description com segredo; segundo Model inválido; credential indisponível; probe timeout/inválido; streaming implícito; native error; cross-tenant binding; global default.
+
+### EVIDÊNCIAS
+
+17/17 testes. Preflight em registries descartáveis impede mutação parcial. Reference adapter não é instanciado no composition root. Credential só existe na stack do probe/invoke. Probe único certifica scopes/capabilities antes de READY. Timeout aborta e não repete. Router seleciona somente após certification.
+
+### IMPACTO
+
+Falha criaria vendor lock, falsa prontidão, vazamento, estado órfão, dupla execução ou privilégio do primeiro Provider.
+
+### DETECÇÃO
+
+Contract suite, static search nominal, call counts, timeout, secret scan, tenant duplicate IDs, binding conflict e serialização do host sem credential.
+
+### PREVENÇÃO
+
+Interface mínima describe/probe/invoke; referências em repouso; preflight; lifecycle explícito; error categories neutras; registro explícito do adapter; zero default por presença.
+
+### RISCO RESIDUAL
+
+Referência in-memory não prova protocolo externo. AbortSignal depende do adapter cooperar para encerrar trabalho subjacente, embora o host retorne timeout e nunca faça retry implícito. Colibri R7 exige evidência oficial local e mesma suíte sem core change.
+
+### VEREDITO
+
+PASS. O primeiro adapter não recebeu privilégio e não contaminou o core.

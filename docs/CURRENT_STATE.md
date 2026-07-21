@@ -1,5 +1,18 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-21 — MultiProviders R6 First Neutral Provider Adapter complete
+
+Status: MULTIPROVIDERS_R6_COMPLETE.
+
+Criados Adapter Host comum e InMemoryReferenceAdapter. Escolha: zero rede/segredo externo, transporte controlado, mock determinístico, suporte a timeout/streaming/error injection e nenhuma preferência comercial. O reference adapter não é registrado no composition root, não vira default e não altera contratos para um Vendor.
+
+Onboarding faz preflight integral antes de mutar o estado, registra Provider/Models/Offerings e para em CONFIGURED. Certification resolve credential_ref efemeramente, executa probe único, grava Health escopado/capabilities validadas e só então transita VALIDATED→READY. Execute usa router canônico, timeout/AbortSignal, erro neutro, streaming explícito e zero retry implícito.
+
+Testes: adapter 17/17; router 24/24; runtime-state 14/14; domain 23/23; bridge 12/12; wiring 19/19; endpoints 23/23; security 23/23; callLLM 12/12; vault routing 18/18; hardening PASS; diff-check PASS. Hermes R6 PASS. Ponytail R6 PASS. ADR-051. Commit funcional 35b40250. Nenhum push/deploy.
+
+Risco residual: adapter é referência de conformidade, não integração externa. Colibri R7 deve passar a mesma interface/suíte; detalhes oficiais de protocolo/endpoint/credencial de Colibri precisam existir localmente, sem busca/acesso externo. Próximo passo automático após commit documental: investigar evidência Colibri local para R7.
+
+---
 ## 2026-07-21 — MultiProviders R5 Policy Routing and Compatible Failover complete
 
 Status: MULTIPROVIDERS_R5_COMPLETE.

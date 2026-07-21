@@ -221,3 +221,23 @@ Focados: router 24/24; domain 23/23; runtime-state 14/14; bridge 12/12; wiring 1
 | No Secret Exposure | request redigível | secret fields falham | PASS | nenhum |
 
 Verdicto Ponytail R5: PASS. Um engine puro sem dependency, DSL, pesos arbitrários, banco, queue, endpoint ou framework. Benchmark scoring e cutover foram deliberadamente evitados por falta de evidência/adapters.
+## R6 — Testes e Ponytail
+
+Focados: adapters 17/17; router 24/24; runtime-state 14/14; domain 23/23; bridge 12/12; wiring 19/19. Regressões legadas/segurança: 23/23 endpoints, 23/23 security, 12/12 callLLM, 18/18 routing, hardening PASS; diff-check PASS.
+
+| Gate R6 | Intenção | Evidência | Resultado | Risco/correção |
+|---|---|---|---|---|
+| No First Provider Privilege | primeiro não vira default | composition root não instancia reference | PASS | nenhum |
+| No Adapter Contract Leak | detalhes fora do core | describe/probe/invoke | PASS | Colibri usa extensions/adapter |
+| No Vendor Field in Core | Vendor só atributo | busca nominal | PASS | nenhum |
+| No Transport Assumption | host usa interface | memory é implementação teste | PASS | protocolo real isolado |
+| No Default by Presence | registro explícito | wiring test | PASS | nenhum |
+| No Secret Exposure | refs/credential efêmera | secret tests/serialization | PASS | nenhum |
+| No False Health | probe obrigatório | invalid/timeout não READY | PASS | nenhum |
+| No Install Equals Ready | onboarding para CONFIGURED | lifecycle test | PASS | R8 reutiliza |
+| No Non-Idempotent Retry | host nunca repete | call count=1 | PASS | failover fica no router |
+| No Duplicate Registry | host usa composition root | wiring | PASS | scratch registries são preflight descartável |
+| No Partial State | preflight integral | segundo Model inválido | PASS | nenhum |
+| No Cross-Tenant State | bindings escopados | tenant test | PASS | nenhum |
+
+Verdicto Ponytail R6: PASS. Interface mínima e stdlib; zero SDK, HTTP client, DI framework, plugin system, banco, scheduler ou Provider comercial. O preflight descartável é validação, não segunda autoridade.

@@ -340,3 +340,6 @@ Health/Lifecycle e Capability passam de NOT_READY para CONDITIONAL: runtime puro
 ## Implementation delta — R5 (2026-07-21)
 
 Routing/Failover passa de NOT_READY para CONDITIONAL: engine canônica pura e composta existe, com receipts e failover safety. Não é ainda autoridade da execução real porque nenhum adapter/probe certificou Provider READY; forçar cutover agora eliminaria todos os candidatos ou inventaria Health. O router legado permanece isolado pela bridge até R6 e só pode ser removido em R10 após equivalência.
+## Implementation delta — R6 (2026-07-21)
+
+Adapter boundary passa a READY para conformance: host comum e reference adapter comprovam onboarding, preflight, credential reference, Models, capabilities, scoped Health, lifecycle, routing, timeout, streaming, errors e tenant isolation. Não existe adapter externo nem cutover do legado; isso evita que disponibilidade comercial ou Colibri definam o core. R7 pode implementar Colibri somente sem mudar o contrato/suíte comum.
