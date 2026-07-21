@@ -2698,13 +2698,30 @@ function requireVisionAuth(req, res, next) {
 }
 // Achado 2026-07-21 (P0): vault snapshot/rollback operam sobre PROJECTS_DB inteiro
 // (todos os usuários), não por-usuário — não basta exigir sessão, precisa do mesmo
-// gate de role já usado em /api/audit-log e /api/sso/domains. Sem nenhum usuário com
-// role:'admin' hoje, fica fail-closed pra todo mundo até um role real ser atribuído
-// (mesmo espírito de SF_REAL_EXECUTION_ALLOWED_AGENTS vazio bloqueando tudo).
+// gate de role já usado em /api/audit-log e /api/sso/domains.
+// Bootstrap de admin (2026-07-21, sessão seguinte): não existe endpoint de
+// auto-promoção de propósito (reabriria a mesma superfície que este gate fecha) —
+// role:'admin' só é atribuível hoje por edição manual de users.json, que não é um
+// fluxo operacional real no EB. ADMIN_ALLOWED_EMAILS resolve isso pelo mesmo padrão
+// já usado em SF_REAL_EXECUTION_ALLOWED_AGENTS: allowlist controlada pelo operador
+// via env var, checada dinamicamente na sessão — sem persistir role nenhum. Env var
+// ausente/vazia = fail-closed pra todo mundo, mesmo espírito. Convive com
+// role:'admin' (OR, não substitui) porque o campo já existe em users.json e uma UI
+// de gestão de roles real pode vir a escrevê-lo no futuro sem precisar tocar aqui de novo.
+function isAdminAllowedEmail(email, env = process.env) {
+  const allowed = String(env.ADMIN_ALLOWED_EMAILS || '')
+    .split(',')
+    .map(s => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (!allowed.length) return false;
+  return allowed.includes(String(email || '').trim().toLowerCase());
+}
 function requireVisionAdmin(req, res, next) {
   const user = getAuthUser(req);
   if (!user) return res.status(401).json({ ok:false, error:'not_authenticated', time: now() });
-  if (user.role !== 'admin') return res.status(403).json({ ok:false, error:'forbidden', anti_stub: true });
+  if (user.role !== 'admin' && !isAdminAllowedEmail(user.email)) {
+    return res.status(403).json({ ok:false, error:'forbidden', anti_stub: true });
+  }
   req.visionUser = user;
   return next();
 }

@@ -101,6 +101,7 @@ HOTMART_HOTTOK                # PENDENTE — não configurado ainda
 AWS_S3_BUCKET=vision-core-data-prod
 SF_REAL_EXECUTION_ENABLED=false      # fail-closed; habilita a ponte real do SF somente quando explicitamente true
 SF_REAL_EXECUTION_ALLOWED_AGENTS     # allowlist CSV de agent_id; ausente/vazia bloqueia todos os Agents mesmo com a flag principal true
+ADMIN_ALLOWED_EMAILS                 # allowlist CSV de e-mail; concede requireVisionAdmin (Vault, /api/agents/:id/mode) sem precisar de role:'admin' em users.json; ausente/vazia = fail-closed pra todo mundo (mesmo espírito de SF_REAL_EXECUTION_ALLOWED_AGENTS)
 ```
 
 **Fallback de LLM (`callLLM()`):** OpenRouter → Anthropic → Groq → DeepSeek → Gemini → Cerebras. Todas as env vars reais (chaves de LLM/OAuth/Stripe/Hotmart) foram migradas na recriação do EB — não listadas aqui por serem segredos.
