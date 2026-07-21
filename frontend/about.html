@@ -1091,7 +1091,7 @@
     <div style="max-width:900px;margin:0 auto 56px">
       <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <h3 style="font-size:18px;font-weight:700;color:#fff;margin:0">PONYTAIL AUDIT — revisão adversarial interna</h3>
-        <div style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;color:#86efac;letter-spacing:1px">MÉTODO INTERNO — EM USO</div>
+        <div style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;color:#86efac;letter-spacing:1px">MÉTODO INTERNO — BLOCKED_INPUT</div>
       </div>
 
       <div style="background:#0a0f1a;border:1px solid rgba(56,189,248,0.25);border-radius:14px;padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:24px">
@@ -1122,9 +1122,9 @@
       </div>
 
       <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-        <span style="font-size:11px;color:#64748b">Achado real:</span>
-        <code style="background:#1e293b;padding:2px 6px;border-radius:4px;color:#a5b4fc;font-size:11px">/api/obsidian/*</code>
-        <span style="font-size:11px;color:#4ade80;margin-left:4px">✅ commit 5bbe7c03 — a correção inicial fechava autenticação, a auditoria adversarial apontou que faltava isolamento por usuário, fechado na mesma sessão</span>
+        <span style="font-size:11px;color:#64748b">Estado desta validacao:</span>
+        <code style="background:#1e293b;padding:2px 6px;border-radius:4px;color:#a5b4fc;font-size:11px">BLOCKED_INPUT</code>
+        <span style="font-size:11px;color:#4ade80;margin-left:4px">Tres tentativas reais via /api/chat retornaram HTTP 200, mas nenhuma produziu aprovacao LLM valida. O resultado nao foi tratado como aprovacao; as hipoteses adversariais foram cobertas por testes deterministicos Hermes, e o gate LLM real permanece pendente/bloqueado.</span>
       </div>
     </div>
 
