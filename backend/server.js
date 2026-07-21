@@ -1098,7 +1098,7 @@ app.all('/api/auth/login', rateLimitMiddleware('login', 10, 15 * 60 * 1000), asy
 const SNAPSHOTS_DIR = path.join(DB_ROOT, 'snapshots');
 fs.mkdirSync(SNAPSHOTS_DIR, { recursive: true });
 
-app.post('/api/vault/snapshot', (req, res) => {
+app.post('/api/vault/snapshot', requireVisionAdmin, (req, res) => {
   try {
     const body = normalizeBody(req);
     const id = `snap_${Date.now()}_${makeId('s')}`;
@@ -1125,7 +1125,7 @@ app.post('/api/vault/snapshot', (req, res) => {
   }
 });
 
-app.get('/api/vault/snapshots', (req, res) => {
+app.get('/api/vault/snapshots', requireVisionAdmin, (req, res) => {
   try {
     const files = fs.existsSync(SNAPSHOTS_DIR) ? fs.readdirSync(SNAPSHOTS_DIR).filter(f => f.endsWith('.json')) : [];
     const snapshots = files.map(f => {
@@ -1138,7 +1138,7 @@ app.get('/api/vault/snapshots', (req, res) => {
   }
 });
 
-app.post('/api/vault/rollback/:snapshotId', async (req, res) => {
+app.post('/api/vault/rollback/:snapshotId', requireVisionAdmin, async (req, res) => {
   try {
     const { snapshotId } = req.params;
     const file = path.join(SNAPSHOTS_DIR, `${snapshotId}.json`);
@@ -1150,6 +1150,7 @@ app.post('/api/vault/rollback/:snapshotId', async (req, res) => {
         return { write: true };
       });
     }
+    auditLog('vault_rollback', req, { snapshot_id: snapshotId, admin_email: req.visionUser.email }); // §154 — escrita destrutiva, precisa de rastro
     return sendOk(res, { rolled_back: true, snapshot_id: snapshotId, restored_at: now(), label: snapshot.label, anti_stub: true });
   } catch (err) {
     return res.status(500).json({ ok: false, error: 'rollback_failed', message: err.message, time: now() });
@@ -2049,7 +2050,7 @@ app.post('/api/security/suggest-fixes', async (req, res) => {
 var _s136SecurityHistory = [];
 
 // POST /api/security/history — registra evento de scan/fix/rescan
-app.post('/api/security/history', (req, res) => {
+app.post('/api/security/history', requireVisionAuth, (req, res) => {
   const body = normalizeBody(req);
   const event = {
     timestamp:        body.timestamp || now(),
@@ -2067,7 +2068,7 @@ app.post('/api/security/history', (req, res) => {
 });
 
 // GET /api/security/history — retorna últimos 50 eventos
-app.get('/api/security/history', (req, res) => {
+app.get('/api/security/history', requireVisionAuth, (req, res) => {
   return sendOk(res, { history: _s136SecurityHistory.slice(-50), total: _s136SecurityHistory.length, anti_stub: true });
 });
 
@@ -2692,6 +2693,18 @@ const BILLING_DB = path.join(DB_ROOT, 'billing.json');
 function requireVisionAuth(req, res, next) {
   const user = getAuthUser(req);
   if (!user) return res.status(401).json({ ok:false, error:'not_authenticated', time: now() });
+  req.visionUser = user;
+  return next();
+}
+// Achado 2026-07-21 (P0): vault snapshot/rollback operam sobre PROJECTS_DB inteiro
+// (todos os usuários), não por-usuário — não basta exigir sessão, precisa do mesmo
+// gate de role já usado em /api/audit-log e /api/sso/domains. Sem nenhum usuário com
+// role:'admin' hoje, fica fail-closed pra todo mundo até um role real ser atribuído
+// (mesmo espírito de SF_REAL_EXECUTION_ALLOWED_AGENTS vazio bloqueando tudo).
+function requireVisionAdmin(req, res, next) {
+  const user = getAuthUser(req);
+  if (!user) return res.status(401).json({ ok:false, error:'not_authenticated', time: now() });
+  if (user.role !== 'admin') return res.status(403).json({ ok:false, error:'forbidden', anti_stub: true });
   req.visionUser = user;
   return next();
 }
