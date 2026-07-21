@@ -10,6 +10,7 @@ const { runGoMission, streamGoMission, checkGoHealth, resolveGoBinary } = requir
 const { callHermes, readLowConfidenceLog, computeMemoryMetrics } = require('./hermes-rca');
 const { encryptProviderKey, decryptProviderKey } = require('./provider-vault-crypto');
 const { resolveProviderKey, sortProvidersByEffectivePriority } = require('./provider-vault-routing');
+const { syncLegacyCatalog: syncLegacyMultiProviders } = require('./multiproviders-runtime');
 const { extractUsage, computeCostUsd, recordAgentCost } = require('./llm-cost'); // DECISION-032
 const { createGithubPullRequest } = require('./github-pr-adapter');
 const { appendHermesDecisionPair, updateHermesOutcome } = require('./hermes-dataset');
@@ -392,7 +393,7 @@ function providerList() {
     ['openai', 'OPENAI']
   ];
 
-  return providers.map(([id, prefix]) => {
+  const result = providers.map(([id, prefix]) => {
     const key = resolveApiKey(prefix);
     const hasPrimary   = Boolean(process.env[`${prefix}_API_KEY`]);
     const hasSecondary = Boolean(process.env[`${prefix}_API_KEY_2`]);
@@ -405,6 +406,19 @@ function providerList() {
       model: process.env[`${prefix}_MODEL`] || ''
     };
   });
+  syncLegacyMultiProviders('server.providerList', result.map(provider => ({
+    id: provider.id,
+    display_name: provider.id,
+    vendor: provider.id,
+    configured: provider.configured,
+    endpoint_ref: 'legacy-provider://' + provider.id,
+    configuration_ref: 'legacy-config://' + provider.id,
+    transport_type: 'legacy',
+    source_ref: 'server.providerList',
+    execution_ref: null,
+    ...(provider.model ? { model: provider.model } : {}),
+  })));
+  return result;
 }
 
 /* VISION CORE V4.0 ANTI-STUB REAL CORE */
@@ -898,11 +912,26 @@ async function callLLM(prompt, opts = {}) {
     }
   ];
 
+  const canonicalReceipt = syncLegacyMultiProviders('server.callLLM', providers.map(provider => ({
+    id: provider.id,
+    display_name: provider.id,
+    vendor: provider.id,
+    model: provider.model,
+    configured: Boolean(provider.key),
+    endpoint_ref: 'legacy-provider://' + provider.id,
+    configuration_ref: 'legacy-config://' + provider.id,
+    transport_type: 'legacy',
+    source_ref: 'server.callLLM',
+    execution_ref: 'callLLM:' + provider.id,
+  })));
+  const canonicalProviderIds = new Set(canonicalReceipt.translated.map(item => item.provider_id));
+
   // Fase D(a): a ordem de fallback é a prioridade EFETIVA (vault, só quando
   // status:'connected' pra aquele provider — senão a posição no array acima,
   // idêntica à ordem de sempre). Vault vazio/sem status connected em nenhum
   // provider = orderedProviders tem exatamente a mesma ordem de `providers`.
-  const orderedProviders = sortProvidersByEffectivePriority(providers, _providersStore);
+  const orderedProviders = sortProvidersByEffectivePriority(providers, _providersStore)
+    .filter(provider => canonicalProviderIds.has(provider.id));
 
   for (const p of orderedProviders) {
     if (!p.key) continue;

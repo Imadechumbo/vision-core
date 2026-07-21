@@ -2,6 +2,7 @@
 
 const fs   = require('fs');
 const path = require('path');
+const { syncLegacyCatalog: syncLegacyMultiProviders } = require('./multiproviders-runtime');
 
 /**
  * §49 — HERMES MULTI-PROVIDER FALLBACK
@@ -329,6 +330,26 @@ async function callHermes(systemPrompt, userMessage, opts) {
   } catch (e) {
     console.log('[HERMES §72] memory lookup falhou (não bloqueante): ' + e.message);
   }
+
+  const canonicalReceipt = syncLegacyMultiProviders('hermes-rca.callHermes', order
+    .filter(id => Boolean(PROVIDER_REGISTRY[id]))
+    .map(id => {
+      const cfg = PROVIDER_REGISTRY[id];
+      return {
+        id,
+        display_name: cfg.name || id,
+        vendor: id,
+        model: cfg.model(),
+        configured: cfg.apiKeyEnv ? Boolean(process.env[cfg.apiKeyEnv]) : true,
+        endpoint_ref: 'legacy-provider://' + id,
+        configuration_ref: 'legacy-config://' + id,
+        transport_type: 'legacy',
+        source_ref: 'hermes-rca.callHermes',
+        execution_ref: 'callHermes:' + id,
+      };
+    }));
+  const canonicalProviderIds = new Set(canonicalReceipt.translated.map(item => item.provider_id));
+  order = order.filter(id => !PROVIDER_REGISTRY[id] || canonicalProviderIds.has(id));
 
   for (let i = 0; i < order.length; i++) {
     const id  = order[i];
