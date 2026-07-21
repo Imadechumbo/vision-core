@@ -1,144 +1,76 @@
-# MULTIPROVIDERS IMPLEMENTATION ROADMAP
+# MULTIPROVIDERS — IMPLEMENTATION ROADMAP
 
-> Factual roadmap derived from `VISION_CORE_ARCHITECTURE_GAP_REPORT.md`. It does not authorize implementation. Phase numbers here are roadmap-local; Phase 2 remains unstarted.
+> Status: EXECUTING · Autoridade: roadmap autônomo aprovado em 2026-07-21.
+> Push e deploy permanecem proibidos. Cada fase exige testes, Hermes, Ponytail, documentação e commit antes do avanço automático.
 
-## Rules common to every phase
+## Sequência oficial
 
-One objective, one atomic commit, no deploy/push without separate authority. Entry requires clean scoped diff and written approval. Exit requires tests, Hermes review, Ponytail gates, evidence receipt and updated handoff. Rollback is commit revert plus restoration of the prior read path; no destructive migration. Forbidden throughout: frontend legacy reuse, Provider-specific domain contracts, secrets in logs, automatic production activation and mixing unrelated worktrees.
+1. R1 — Security and Ownership Hardening — COMPLETE (78f16578)
+2. R2 — Canonical MultiProviders Foundation — COMPLETE (f4ed60ff)
+3. R3 — Legacy Characterization and Compatibility Bridge
+4. R4 — Capability, Health and Lifecycle Runtime
+5. R5 — Policy Routing and Compatible Failover
+6. R6 — First Neutral Provider Adapter
+7. R7 — Colibri Integration
+8. R8 — Installer Bridge
+9. R9 — Blueprint Read Model
+10. R10 — Certification and Legacy Retirement
+11. R11 — Release Candidate Readiness
 
-## R1 — Provider security and ownership boundary — COMPLETE (2026-07-21)
+## Gates permanentes
 
-- Objective/motive: decide and enforce who may read/mutate global Provider configuration before building on it.
-- Requirements/dependencies: Gap Report security findings; human decision on admin vs workspace ownership.
-- Probable files: provider route middleware/tests, security docs; no registry yet.
-- Allowed/forbidden: auth/authorization only; no Provider adapter/routing rewrite.
-- Risks/Hermes/Ponytail: lockout or cross-tenant mutation; No Global Provider Mutation.
-- Tests: anonymous, normal user, admin/owner, tenant isolation, metadata redaction.
-- Entry/exit: ownership decision approved → all provider routes follow it and legacy behavior is characterized.
-- Rollback/evidence/commit/authority: revert middleware; auth matrix receipt; `fix(security): bind provider configuration authority`; explicit approval required.
+Cada fase segue: investigar → planejar → implementar → testar → Hermes → Ponytail → documentar → commit. Avanço é automático somente sem risco crítico, falha obrigatória, segredo/acesso externo, mudança destrutiva, incompatibilidade de SPEC, conflito de ADR, worktree insegura, decisão pública ausente, push ou deploy.
 
-## R2 — Legacy provider characterization
+## R1 — Security and Ownership Hardening — COMPLETE
 
-- Objective/motive: freeze current `callLLM`, vault priority, Hermes router, status and failure semantics before replacement.
-- Requirements/dependencies: R1; no production calls by default.
-- Probable files: new focused tests around existing modules; minimal seams only if testability requires.
-- Allowed/forbidden: tests and reversible extraction; no new domain or behavior change.
-- Risks/Hermes/Ponytail: tests may canonize bugs; mark expected legacy contradictions explicitly.
-- Tests: order, missing keys, vendor parsing, timeout, all-failed, priority, stale status, duplicate routers.
-- Entry/exit: security boundary stable → deterministic legacy contract suite.
-- Rollback/evidence/commit/authority: remove tests/seam; baseline receipt; `test(providers): characterize legacy routing`; approval required.
+Superfície Provider/Vault global restrita a admin; endpoints protegidos; status conectado expira; segredo Gemini saiu de URLs; regressões de autenticação, redaction e fail-closed aprovadas. Evidência detalhada em CURRENT_STATE.md, MULTIPROVIDERS_HERMES_RCA.md, MULTIPROVIDERS_TEST_PLAN.md e ADR-049.
 
-## R3 — Neutral domain contracts
+## R2 — Canonical MultiProviders Foundation — COMPLETE
 
-- Objective/motive: implement language-level Provider, Model offering, Capability, Health, Transport, Cost, Privacy, Version and normalized result/error contracts.
-- Requirements/dependencies: R2 and Phase 1/1.1 specs.
-- Probable files: one small domain module plus contract tests.
-- Allowed/forbidden: pure data/validation only; no I/O, registry, Vendor or endpoint.
-- Risks/Hermes/Ponytail: abstraction explosion; four normative surfaces, fictitious examples.
-- Tests: valid/invalid, unknown fields, version compatibility, redaction, no Vendor strings.
-- Entry/exit: legacy baseline green → pure contract suite green.
-- Rollback/evidence/commit/authority: delete isolated module; contract matrix; `feat(multiproviders): add neutral domain contracts`; Phase 2 authorization required.
+Materializar Provider Contract, Provider Registry, Model Registry e ProviderModelOffering neutros, tenant-scoped e independentes do runtime legado. Inclui versionamento explícito, lifecycle, discovery/configuration references, deduplicação idempotente, aliases acíclicos/não ambíguos, proteção de órfãos e extensões desconhecidas isoladas. Não inclui transport I/O, routing, persistência, probes, adapter real ou cutover.
 
-## R4 — Provider and Model registries
+Saída entregue: domínio puro e suíte 22/22; Hermes PASS; Ponytail PASS; commit funcional f4ed60ff. O runtime legado permanece deliberadamente desconectado até R3.
 
-- Objective/motive: create one authoritative Provider Registry and canonical Model Registry with offerings.
-- Requirements/dependencies: R3; persistence decision explicit.
-- Probable files: two cohesive modules, storage adapter, tests.
-- Allowed/forbidden: registry APIs and legacy read adapter; no routing, discovery scanner or UI.
-- Risks/Hermes/Ponytail: duplicate authorities, orphan entities, migration loss.
-- Tests: idempotency, optimistic version, aliases, offerings, orphan rejection, lifecycle eligibility.
-- Entry/exit: contracts stable → one writable authority each; legacy state readable without destructive migration.
-- Rollback/evidence/commit/authority: switch reads back to legacy; snapshots/compat receipt; `feat(multiproviders): add authoritative registries`; approval required.
+## R3 — Legacy Characterization and Compatibility Bridge
 
-## R5 — Capability, Health and lifecycle resolution
+Caracterizar callLLM(), Vault, routers, fallback, models, custos, streaming, retries, endpoints e estado local. Traduzir legado para contratos canônicos por ponte temporária, observável e removível; Registry canônico passa a autoridade sem duplicação silenciosa. Preservar apenas comportamento seguro comprovado.
 
-- Objective/motive: add evidence-based capabilities, scoped TTL Health and uniform lifecycle.
-- Requirements/dependencies: R4.
-- Probable files: registry-owned evaluators and tests.
-- Allowed/forbidden: deterministic state evaluation; no probes tied to Vendor, routing or UI.
-- Risks/Hermes/Ponytail: false ONLINE, scope propagation, lifecycle bypass.
-- Tests: TTL, transitions, Provider online/Model offline, declared vs validated capability.
-- Entry/exit: registries authoritative → expired evidence becomes UNKNOWN and eligibility is deterministic.
-- Rollback/evidence/commit/authority: disable evaluator behind internal composition boundary; state-transition receipt; `feat(multiproviders): resolve capabilities health lifecycle`; approval required.
+## R4 — Capability, Health and Lifecycle Runtime
 
-## R6 — Discovery and configuration intake
+Resolver capabilities por evidência e escopo; Health temporal com TTL; lifecycle uniforme e elegibilidade determinística. Health não propaga entre Provider, Transport, Model, Capability, Credential ou Endpoint. A discrepância do pedido que lista degraded/offline em lifecycle é resolvida pela SPEC Phase 1.1: ambos pertencem exclusivamente a Health.
 
-- Objective/motive: normalize manual/env/Installer candidates without trust escalation.
-- Requirements/dependencies: R4/R5; source trust rules.
-- Probable files: discovery intake + configuration references + tests.
-- Allowed/forbidden: candidate metadata/dedup/conflicts; no network scan, secret storage rewrite or auto-READY.
-- Risks/Hermes/Ponytail: identity collision, discovery trust escalation.
-- Tests: duplicate/conflict/disappearance/redetection, secret redaction, explicit registration.
-- Entry/exit: lifecycle enforced → discovery can never skip validation.
-- Rollback/evidence/commit/authority: disable intake; candidate ledger; `feat(multiproviders): add safe discovery intake`; approval required.
+## R5 — Policy Routing and Compatible Failover
 
-## R7 — Transport adapter boundary
+Implementar requisitos, candidatos, filtros obrigatórios, policy, ranking determinístico, receipt e failover compatível. Sem Provider hardcoded, prioridade oculta, custo desconhecido como zero, privacidade inferida por localização ou retry não idempotente.
 
-- Objective/motive: move vendor HTTP/auth/body/parsing behind a common Transport adapter interface while preserving behavior.
-- Requirements/dependencies: R2/R3/R4; first adapter must be fictitious/in-memory.
-- Probable files: adapter interface, fake adapter, compatibility wrappers, tests.
-- Allowed/forbidden: transport I/O boundary; no Colibri, policy routing or frontend.
-- Risks/Hermes/Ponytail: first real Provider defines interface, secret leakage, hidden Vendor semantics.
-- Tests: fake adapter contract, timeout, auth redaction, streaming declaration, normalized errors.
-- Entry/exit: contracts/registries stable → fake and one compatibility wrapper pass same suite.
-- Rollback/evidence/commit/authority: route legacy callers directly again; parity receipt; `refactor(multiproviders): isolate transport adapters`; approval required.
+## R6 — First Neutral Provider Adapter
 
-## R8 — Policy routing, compatible failover and metadata
+Escolher por testabilidade e menor risco, nunca preferência comercial. O adapter não altera core, não vira default e passa suíte comum. Colibri permanece proibido nesta fase.
 
-- Objective/motive: replace array order with explainable candidate filtering/ranking using capabilities, Health, cost, privacy and comparable benchmark.
-- Requirements/dependencies: R5/R7; policy schema approved.
-- Probable files: pure router/policy module, decision receipts, tests.
-- Allowed/forbidden: deterministic policy engine; no arbitrary weights, default Vendor or production cutover.
-- Risks/Hermes/Ponytail: incompatible failover, unknown cost as zero, privacy by location.
-- Tests: manual/automatic, hard constraints, ties, exclusions, affinity, confidence, idempotency/failover.
-- Entry/exit: evidence model complete → every route/failure has reproducible receipt.
-- Rollback/evidence/commit/authority: keep legacy route selected; golden decision corpus; `feat(multiproviders): add policy routing receipts`; approval required.
+## R7 — Colibri Integration
 
-## R9 — Installer bridge and first neutral real adapter
+Somente após certificação R6. Colibri usa contrato e suíte comuns, sem Manager/Registry/Contract/lifecycle/default próprios e sem mudança Provider-specific no core.
 
-- Objective/motive: connect successful installation to explicit registration, then certify one non-Colibri adapter without changing domain.
-- Requirements/dependencies: R6/R7/R8; Installer SPEC available in this branch.
-- Probable files: Installer bridge, one adapter, contract/integration tests.
-- Allowed/forbidden: `register()` handoff and one adapter; no auto-READY, Blueprint or Colibri.
-- Risks/Hermes/Ponytail: installation implies trust, adapter special cases.
-- Tests: install→discovered/registered, failed install, revalidation, adapter parity.
-- Entry/exit: bridge contract approved → installed Provider remains non-ready until validated; adapter changes no core file.
-- Rollback/evidence/commit/authority: disable bridge/adapter registration; install receipt; separate atomic commits if bridge and adapter cannot remain one objective; explicit approval.
+## R8 — Installer Bridge
 
-## R10 — Colibri adapter and Blueprint read model
+Após instalação comprovada: discovery → ProviderRegistry.register() → configured → validated → ready. Instalação/registro não implica confiança, Health ou routing. Rollback limpa apenas estado incompleto próprio.
 
-- Objective/motive: add Colibri as ordinary Provider and expose read-only architecture state for future Blueprint diagrams.
-- Requirements/dependencies: R9 certified; Colibri official protocol evidence; routing receipts stable.
-- Probable files: Colibri adapter/plugin, read-model projector, tests; frontend only under separate Blueprint approval.
-- Allowed/forbidden: common adapter and read-only projection; no Colibri contract fields in core, no operational controls in Blueprint.
-- Risks/Hermes/Ponytail: dominant first-party special case, stale visualization.
-- Tests: common adapter suite, Provider swap, projection consistency, secret omission.
-- Entry/exit: neutral adapter precedent exists → Colibri passes unchanged suite; read model matches registries/receipts.
-- Rollback/evidence/commit/authority: unregister adapter/read model; conformance receipt; separate commits; explicit Colibri and Blueprint approvals.
+## R9 — Blueprint Read Model
 
-## R11 — Certification and controlled legacy retirement
+Projetar view tenant-scoped e redigida de Providers, Models, capabilities, Health, lifecycle, routing, receipts, failover, discovery e versions. Blueprint lê; nunca escreve, roteia ou duplica autoridade.
 
-- Objective/motive: prove parity/security and remove duplicate routing only after all consumers migrate.
-- Requirements/dependencies: R1–R10; production release authorization separate.
-- Probable files: certification suites, migration switches, removal of legacy arrays/Hermes duplicate router, release docs.
-- Allowed/forbidden: deletion only with import/call-site proof; no deploy in implementation commit.
-- Risks/Hermes/Ponytail: hidden consumer, rollback loss, tests validating obsolete behavior.
-- Tests: full contract/E2E/security/load/fault injection, shadow decisions, rollback drill.
-- Entry/exit: zero unknown consumers and parity window accepted → one router/registry authority, legacy removable.
-- Rollback/evidence/commit/authority: restore compatibility path from prior commit; certification packet; `refactor(multiproviders): retire legacy routing`; human release approval required.
+## R10 — Certification and Legacy Retirement
 
-## Dependency summary
+Executar certificação acumulada. Retirar segundo router, fallback, catálogos/defaults e bridges apenas com equivalência, zero consumidores desconhecidos e rollback provado. Remoções ficam em commits próprios.
 
-```mermaid
-flowchart LR
- R1 --> R2 --> R3 --> R4 --> R5 --> R6
- R3 --> R7
- R5 --> R8
- R7 --> R8
- R6 --> R9
- R8 --> R9 --> R10 --> R11
-```
+## R11 — Release Candidate Readiness
 
-## Authorization state
+Validar arquitetura, segurança, testes, performance, rollback, documentação, integridade, riscos e Go/No-Go. Produzir pacote de evidência sem push/deploy. MULTIPROVIDERS_IMPLEMENTATION_COMPLETE somente com R1–R11 completas e nenhum gate crítico aberto.
 
-All phases are proposals. None is started or authorized by this document. The next human decision should approve, reject or revise **R1 only**; approval must not be interpreted as approval for R2–R11.
+## Dependências
+
+R1 → R2 → R3 → R4 → R5 → R6 → R7 → R8 → R9 → R10 → R11
+
+## Estado de autorização
+
+O roadmap completo foi explicitamente autorizado para execução autônoma. Isso não autoriza push, deploy, acesso externo, segredos, migração irreversível, exclusão de dados nem mudança destrutiva. Qualquer condição de parada preserva o checkpoint e encerra antes da fase seguinte.

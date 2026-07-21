@@ -114,3 +114,50 @@ Gates equivalentes foram consolidados; cada linha define o futuro teste mínimo.
 | No Implicit Admin | PASS | role explícita ou allowlist; env vazia falha fechado |
 
 Teste futuro permanente: `provider-security-boundary.test.mjs` mais suites existentes de vault/routing/admin.
+
+## R2 — Testes executados
+
+Comando: node tools/tests/multiproviders-domain.test.mjs
+
+Resultado: 22/22 PASS. Regressões: provider security 23/23; vault routing 18/18; endpoints 23/23; crypto 16/16; callLLM wiring 12/12; agent admin auth 12/12; admin residuals 40/40; rc-security-hardening PASS. Git diff --check PASS. Cobertura: contrato válido/inválido, metadados obrigatórios, Health não booleano, separação Health/lifecycle, extensões, neutralidade nominal, tenant isolation inclusive colisão composta, idempotência/deduplicação, optimistic version, discovery sem promoção, configuration reference, lifecycle, Models, aliases em cadeia/ciclo/ambiguidade/colisão, offerings, órfãos, disponibilidade e remoção terminal.
+
+## R2 — Ponytail Audit global
+
+Arquivo funcional: backend/multiproviders-domain.js. Teste: tools/tests/multiproviders-domain.test.mjs. Correção em qualquer FAIL seria obrigatória antes do commit.
+
+| Gate | Intenção | Evidência | Resultado | Risco residual / correção |
+|---|---|---|---|---|
+| No Provider Special Case | core neutro | busca nominal + provider fictício | PASS | adapter futuro deve usar extensions |
+| No Model Coupling | Model não escolhe executor | offering explícita | PASS | R3 não pode inferir por nome |
+| No Hardcoded Provider | nenhum default nominal | zero nomes conhecidos no módulo | PASS | composição futura sob teste |
+| No Transport Assumption | domínio não presume protocolo | transport é objeto opaco | PASS | validação operacional em R4/R6 |
+| No Vendor Lock | Vendor é dado | nenhum branch/SDK | PASS | adapters fora do core |
+| No False Health | registro não prova Health | unknown explícito | PASS | expiração efetiva em R4 |
+| No Duplicate Registry | uma classe autoritativa por catálogo | ProviderRegistry e ModelRegistry únicos | PASS | composition root em R3 |
+| No Capability Assumption | evidência, não nome | capability_id/version/availability | PASS | resolução efetiva em R4 |
+| No Boolean Health | estados expressivos | boolean rejeitado por teste | PASS | nenhum |
+| No Version Mixing | dimensões separadas | versions + model/capability version | PASS | completar dimensões runtime em R3/R4 |
+| No Transport Logic | transport não decide domínio | zero branch por transport | PASS | adapters isolados em R6 |
+| No Alias Loop | resolução finita | ciclo em batch falha e rollback | PASS | persistência futura deve preservar atomicidade |
+| No Stale Health | expiração temporal | contrato possui valid_until/ttl | NOT_APPLICABLE | evaluator pertence a R4 |
+| No Orphan Model | offering íntegra | orphan_model testado | PASS | bridge não pode autocriar |
+| No Orphan Provider | offering íntegra | orphan_provider testado | PASS | bridge não pode autocriar |
+| No Benchmark as Health | owners separados | benchmark ausente do foundation | NOT_APPLICABLE | implementar separado em fase própria |
+| No Unknown Cost as Zero | incerteza preservada | cost obrigatório, sem ranking | PASS | policy R5 deve interpretar unknown |
+| No Privacy by Location | dimensões separadas | location e privacy independentes | PASS | policy R5 sem inferência |
+| No Discovery Trust Escalation | discovery não confia | candidato não vira registro | PASS | R3/R8 preservam gate |
+| No Lifecycle Bypass | elegibilidade respeita estado | transições/terminal testados | PASS | routing ainda não existe |
+| No Incompatible Failover | fallback preserva requisitos | failover ausente | NOT_APPLICABLE | obrigatório em R5 |
+| No Global Provider Mutation | sem singleton global | instâncias puras sem binding runtime | PASS | composição única em R3 |
+| No Cross-Tenant Provider State | isolamento de owner | IDs iguais/compostos por tenant | PASS | persistência futura sob teste |
+| No Legacy as Canon | legado não define domínio | módulo sem imports legados | PASS | bridge R3 temporária |
+| No Silent Fallback | falha explícita | erros categorizados; sem routing | PASS | routing R5 exige receipt |
+| No Hidden Default Provider | nenhum default | busca nominal | PASS | bridge deve expor defaults legados |
+| No First Provider Privilege | primeiro adapter não existe | foundation fictícia | NOT_APPLICABLE | gate crítico R6 |
+| No Adapter Contract Leak | nenhum adapter | domínio puro | NOT_APPLICABLE | suite comum R6 |
+| No Install Equals Ready | Installer ausente | discovery permanece candidato | PASS | bridge R8 valida antes de ready |
+| No UI as Source of Truth | zero UI/read model | registries são domínio | PASS | gate crítico R9 |
+| No Secret Exposure | somente configuration_ref | nenhum campo de segredo | PASS | bridge deve redigir |
+| No Non-Idempotent Retry | nenhum retry/I/O | módulo puro | NOT_APPLICABLE | gate crítico R5/R6 |
+
+Verdicto Ponytail R2: PASS. Nenhum gate relevante está FAIL ou NO_EVIDENCE. NOT_APPLICABLE corresponde estritamente a comportamento ainda fora do escopo R2, não a ausência de teste de uma função implementada. A solução permanece em um módulo funcional e uma suíte, sem dependência, framework, adapter ou camada especulativa.

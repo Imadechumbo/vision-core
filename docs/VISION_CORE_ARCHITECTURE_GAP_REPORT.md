@@ -327,3 +327,7 @@ Comandos: `git branch --show-current`, `git status --short`, `git log --oneline 
 | Security | forte em várias bordas | gaps Provider | sim | ownership | alto | CONDITIONAL |
 | Tests | amplo | MultiProviders ausente | plano | suites novas | alto | CONDITIONAL |
 | Release | amplo | operações manuais | sim | certificação MP | médio | CONDITIONAL |
+
+## Implementation delta — R2 (2026-07-21)
+
+A fundação canônica agora existe isoladamente em backend/multiproviders-domain.js: contratos neutros, Provider Registry, Model Registry, offerings, tenant scope, versões, lifecycle, discovery/configuration references, aliases e orphan protection. Portanto Provider Contract e Registries passam de NOT_READY para PARTIAL: o domínio puro existe e tem suíte própria, mas ainda não é autoridade do runtime, não possui persistência e não traduz o legado. Routing, Health runtime, adapters, Installer e Blueprint permanecem NOT_READY. R3 deve criar somente a ponte de compatibilidade e provar o cutover de autoridade; não pode copiar arrays/branches legados para o domínio.

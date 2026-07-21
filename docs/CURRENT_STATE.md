@@ -1,5 +1,18 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-21 — MultiProviders R2 Canonical Foundation complete
+
+Status: MULTIPROVIDERS_R2_COMPLETE.
+
+Implementados em módulo puro e ainda não conectado ao runtime legado: Provider Contract neutro; Provider Registry tenant-scoped; Model Registry tenant-scoped; relação muitos-para-muitos por ProviderModelOffering; lifecycle explícito; versionamento otimista; discovery sem trust escalation; configuration reference sem segredo; aliases acíclicos/não ambíguos; órfãos bloqueados; extensões desconhecidas isoladas.
+
+Teste focado: 22/22 PASS em tools/tests/multiproviders-domain.test.mjs. Regressões: provider security 23/23, vault routing 18/18, endpoints 23/23, crypto 16/16, callLLM wiring 12/12, agent admin auth 12/12, admin residuals 40/40 e rc-security-hardening PASS. Revisão contra as SPECs removeu incremento numérico presumido de versão, defaults silenciosos, colisão de chaves, delete destrutivo de identidade, transition sem compare-and-set, offering sem versão e overwrite de aliases. Hermes R2 PASS. Ponytail R2 PASS.
+
+Arquivos funcionais commitados: backend/multiproviders-domain.js e tools/tests/multiproviders-domain.test.mjs no commit f4ed60ff. Documentação R2 alinhada em commit separado. Nenhum adapter, Provider real, routing, probe, persistência, runtime, Installer, Blueprint ou Colibri conectado. Nenhum push/deploy.
+
+Próximo passo automático após o commit documental: iniciar R3 Legacy Characterization and Compatibility Bridge, começando por inventário somente leitura dos consumidores legados.
+
+---
 ## 2026-07-21 — MultiProviders R1 Security and Ownership complete
 
 Status: `MULTIPROVIDERS_R1_COMPLETE`.

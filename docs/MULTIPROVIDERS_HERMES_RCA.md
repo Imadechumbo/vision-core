@@ -102,3 +102,49 @@ Vault continua global por decisão mínima; falta de admin configurado bloqueia 
 ### VEREDITO
 
 PASS. R1 pode encerrar; não autoriza R2 sem commit e handoff.
+
+## R2 — Canonical MultiProviders Foundation
+
+### SISTEMA ANALISADO
+
+Provider Contract, Provider Registry, Model Registry, alias graph, ProviderModelOffering, lifecycle, discovery e configuration reference em backend/multiproviders-domain.js.
+
+### OBJETIVO
+
+Criar o núcleo canônico tenant-scoped sem permitir que detalhes do primeiro Provider, Model, Vendor, Transport ou runtime legado definam a arquitetura.
+
+### HIPÓTESE DE FALHA
+
+O primeiro executor contaminaria campos, defaults e identidade; chaves compostas vazariam tenants; aliases escolheriam silenciosamente; versões seriam misturadas; uma offering órfã confundiria Model com executor.
+
+### CAUSAS RAIZ
+
+Defaults permissivos, identidade construída por concatenação, versão tratada como número, alias sobrescrevível e ausência de vínculo explícito muitos-para-muitos foram encontrados durante a revisão e removidos antes do gate.
+
+### VETORES
+
+Provider nominal no core; endpoint/auth obrigatórios; local/cloud como discriminator; Model selecionando Provider; chave tenant:id colidindo; update sem versão esperada; alias circular/ambíguo; offering sem entidade; discovery promovendo lifecycle; propriedade desconhecida alterando semântica.
+
+### EVIDÊNCIAS
+
+Busca estática não encontra nomes de Providers/Models privilegiados no módulo. Chaves usam tuplas serializadas. Register idêntico é idempotente; conflito exige versão esperada. Discovery só produz evidência. Configuration recebe referência e versão seguinte explícita. Aliases possuem rollback atômico, detecção de ciclo e ambiguidade. Offering exige Provider e Model canônicos. Teste puro: 22/22 PASS.
+
+### IMPACTO
+
+Uma falha permitiria cross-tenant lookup, falsa identidade, executor implícito, configuração perdida ou catálogo inconsistente antes mesmo da migração.
+
+### DETECÇÃO
+
+Contract/negative tests, busca nominal, colisões adversariais de IDs, transições inválidas, conflitos otimistas, ciclos, ambiguidade e órfãos.
+
+### PREVENÇÃO
+
+Validação fail-closed; ownership em tenant_id; Provider e Model separados; offering explícita; lifecycle e Health separados; extensões isoladas; nenhuma I/O ou Vendor branch no domínio.
+
+### RISCO RESIDUAL
+
+Registry ainda é in-memory e não está composto como autoridade única do processo; persistência, concorrência real e bridge pertencem a R3. Health temporal efetivo e capabilities por escopo pertencem a R4. O módulo não pode receber tráfego até essas fases.
+
+### VEREDITO
+
+PASS para o escopo R2. Nenhum detalhe do primeiro Provider contaminou o contrato. Autoriza documentação/commit R2; não afirma runtime canônico ativo.
