@@ -1,5 +1,20 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-21 — Investigação arquitetural brownfield concluída
+
+Status: `ARCHITECTURE_INVESTIGATION_COMPLETE`.
+
+Branch `atomic-core-2x-hub-tuning`. Escopo somente leitura/documentação: codebase, runtime, fluxos, MultiProviders, Installer, Blueprint, Software Factory, segurança, testes, legado, Hermes e Ponytail. Criados `VISION_CORE_ARCHITECTURE_GAP_REPORT.md` e `MULTIPROVIDERS_IMPLEMENTATION_ROADMAP.md`.
+
+Achado dominante: existe multi-provider funcional legado, mas não a arquitetura MultiProviders Phase 1/1.1. `callLLM()`, Provider Vault, status endpoints e `hermes-rca.js` formam autoridades acopladas/duplicadas, com Vendor/Model/endpoints/fallback hardcoded, local especial e Health sem TTL/escopo. Riscos críticos de prontidão: vault global mutável por qualquer usuário autenticado, metadata/status runtime sem autenticação, ausência de registries canônicos e failover incompatível com capabilities/policies.
+
+Readiness: Core/Chat/Auth/Agents/Software Factory CONDITIONAL; MultiProviders/Provider Contract/Registries/Routing/Installer/Blueprint NOT_READY. Roadmap recomendado: 11 fases, começando por security ownership e caracterização do legado; Colibri apenas na décima fase local do roadmap, depois de um adapter neutro certificado.
+
+Nenhum código funcional alterado; nenhum Provider ou Colibri integrado; Phase 2 não iniciada; nenhum bug corrigido; nenhum legado apagado; nenhuma dependência instalada; nenhum deploy ou push. Commit documental único criado com mensagem `docs: map architecture gaps before multiproviders implementation`; após ele a branch fica três commits à frente do remoto. Mudanças/artefatos preexistentes permanecem fora do commit.
+
+Próximo passo: PARAR. Revisão humana do Gap Report e roadmap; eventual autorização deve alcançar somente R1, nunca as demais fases implicitamente.
+
+---
 ## 2026-07-21 — MultiProviders SPEC Phase 1.1 concluída
 
 Status: `SPEC_PHASE_1_1_COMPLETE`.

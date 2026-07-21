@@ -63,6 +63,8 @@ Cada fato tem **um dono**. Se você está prestes a escrever a mesma informaçã
 
 - `docs/SDDF_SPEC.md` (raiz do repo, não em `docs/`), `docs/HERMES_MISSION_SUPERVISOR.md`, `docs/PI_HARNESS_AUTONOMOUS_MISSION_RUNNER.md`, `docs/PASS-GOLD-SPEC-INTERNA.md` — fonte canônica da Camada 2 (governança interna).
 - `docs/LEGACY_DESIGN_REFERENCE.md` — herança visual legado→Next.
+- `docs/VISION_CORE_ARCHITECTURE_GAP_REPORT.md` — mapa brownfield factual; leia antes de planejar implementação MultiProviders.
+- `docs/MULTIPROVIDERS_IMPLEMENTATION_ROADMAP.md` — fases propostas derivadas dos gaps; não autoriza execução.
 - `docs/GIT-PROVIDER-SPEC.md`, `docs/ENTERPRISE-SPEC.md`, `docs/PENTEST-CHECKLIST.md`, `docs/SF-SPEC-LIBRARY.md`, `docs/SECURITY-SPEC.md` — specs de detalhe por área.
 - ~60 arquivos de recibo de evidência datados (`STRESS-TEST-*`, `real-local-patch-*`, `one-real-tag-*`, `local-execution-*`, `controlled-runtime-*`) — registros de execuções passadas específicas, não documentação viva. Consultar por nome quando precisar da evidência de um teste específico.
 
