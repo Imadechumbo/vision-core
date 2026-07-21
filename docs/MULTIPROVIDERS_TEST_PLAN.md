@@ -99,3 +99,18 @@ Gates equivalentes foram consolidados; cada linha define o futuro teste mínimo.
 - Benchmark: validade, contexto, workload, comparabilidade e independência de Health/Routing.
 - Routing: manual/automático, requisitos, health, custo, privacy, exclusão, afinidade, failover, explicação, confiança e nenhum Provider privilegiado.
 - Hermes: Phase 2 bloqueada até revisão do RCA e aceite dos riscos residuais.
+
+
+## R1 — Ponytail Results
+
+| Gate | Resultado | Evidência |
+|---|---|---|
+| No Global Provider Mutation | PASS | usuário comum 403 em save/delete/test/default |
+| No Cross-Tenant Provider State | PASS | superfície global restrita a admin; nenhum tenant comum lê/lista |
+| No Anonymous Provider Mutation | PASS | 401 em toda mutação |
+| No Secret in URL | PASS | três caminhos Gemini migrados para header |
+| No Secret in Logs | PASS | busca estática e respostas mascaradas |
+| No Stale Connected Status | PASS | TTL de cinco minutos + teste de expiração |
+| No Implicit Admin | PASS | role explícita ou allowlist; env vazia falha fechado |
+
+Teste futuro permanente: `provider-security-boundary.test.mjs` mais suites existentes de vault/routing/admin.

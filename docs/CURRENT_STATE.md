@@ -1,5 +1,18 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-21 — MultiProviders R1 Security and Ownership complete
+
+Status: `MULTIPROVIDERS_R1_COMPLETE`.
+
+R1 fechou a superfície global de Providers com autoridade admin-only (ADR-049): rotas Provider, runtime Provider/status e scanner AST exigem `requireVisionAdmin`; sessão comum recebe 403 e anônimo 401. Status `connected` só influencia chave/prioridade por cinco minutos; timestamp ausente, futuro, inválido ou vencido falha para env/default. Três caminhos Gemini deixaram de carregar chave na URL e usam `x-goog-api-key`. Vault continua global deliberadamente até existir ownership canônico.
+
+Testes: sintaxe 4/4; provider routing 18/18; provider security boundary 23/23; provider endpoints 23/23; crypto 16/16; callLLM wiring 12/12; admin regression 12/12; rc-security-hardening PASS. Hermes R1 PASS. Ponytail R1 7/7 PASS. Nenhum segredo, push ou deploy.
+
+Arquivos funcionais: `backend/server.js`, `backend/provider-vault-routing.js`. Testes: `provider-security-boundary.test.mjs`, `provider-vault-routing.test.mjs`, `provider-vault-endpoints.test.mjs`, `rc-security-hardening.test.mjs`. Documentação/ADR atualizados. Alterações preexistentes permanecem fora do commit.
+
+Commit esperado: `fix(security): enforce provider ownership boundaries`. Próximo passo automático, somente após commit limpo: iniciar R2 Canonical MultiProviders Foundation.
+
+---
 ## 2026-07-21 — Investigação arquitetural brownfield concluída
 
 Status: `ARCHITECTURE_INVESTIGATION_COMPLETE`.

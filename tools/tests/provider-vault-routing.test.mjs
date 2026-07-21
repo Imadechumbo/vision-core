@@ -20,7 +20,9 @@ function assert(c, m) {
 }
 
 const decryptOk = (enc) => 'decrypted:' + enc; // fake — simula decrypt bem-sucedido
-const decryptFails = () => ''; // fake — simula rotação de chave-mestra (INCERTEZA CONHECIDA em provider-vault-crypto.js)
+const decryptFails = () => ''; // simulates master-key rotation failure
+const fresh = new Date().toISOString();
+const stale = new Date(Date.now() - 10 * 60 * 1000).toISOString();
 
 console.log('=== provider-vault-routing ===\n');
 
@@ -29,16 +31,16 @@ assert(resolveProviderKey('openai', 'env-key-123', {}, decryptOk) === 'env-key-1
 assert(resolveProviderKey('openai', 'env-key-123', { openai: { status: 'untested', api_key_encrypted: 'enc' } }, decryptOk) === 'env-key-123', 'vault status=untested → NÃO desloca env var');
 assert(resolveProviderKey('openai', 'env-key-123', { openai: { status: 'error', api_key_encrypted: 'enc' } }, decryptOk) === 'env-key-123', 'vault status=error → NÃO desloca env var');
 assert(resolveProviderKey('openai', 'env-key-123', { openai: { status: 'http_401', api_key_encrypted: 'enc' } }, decryptOk) === 'env-key-123', 'vault status=http_401 → NÃO desloca env var');
-assert(resolveProviderKey('openai', 'env-key-123', { openai: { status: 'connected', api_key_encrypted: 'enc' } }, decryptOk) === 'decrypted:enc', 'vault status=connected → VENCE sobre env var');
-assert(resolveProviderKey('openai', 'env-key-123', { openai: { status: 'connected', api_key_encrypted: 'enc' } }, decryptFails) === 'env-key-123', 'vault connected mas decrypt falha (rotação de chave-mestra) → degrada pra env var, nunca quebra');
-assert(resolveProviderKey('openai', '', { openai: { status: 'connected', api_key_encrypted: 'enc' } }, decryptOk) === 'decrypted:enc', 'vault connected funciona mesmo sem nenhuma env var configurada');
+assert(resolveProviderKey('openai', 'env-key-123', { openai: { status: 'connected', last_tested_at: fresh, api_key_encrypted: 'enc' } }, decryptOk) === 'decrypted:enc', 'vault status=connected → VENCE sobre env var');
+assert(resolveProviderKey('openai', 'env-key-123', { openai: { status: 'connected', last_tested_at: fresh, api_key_encrypted: 'enc' } }, decryptFails) === 'env-key-123', 'vault connected mas decrypt falha (rotação de chave-mestra) → degrada pra env var, nunca quebra');
+assert(resolveProviderKey('openai', '', { openai: { status: 'connected', last_tested_at: fresh, api_key_encrypted: 'enc' } }, decryptOk) === 'decrypted:enc', 'vault connected funciona mesmo sem nenhuma env var configurada');
 assert(resolveProviderKey('openai', '', {}, decryptOk) === '', 'sem vault e sem env var → string vazia (provider fica de fora do fallback, comportamento já existente)');
 
 console.log('\n[ effectiveProviderPriority — regra 2: prioridade só conta com status connected ]');
 assert(effectiveProviderPriority(3, 'groq', {}) === 3, 'sem vault → prioridade-default (posição no array)');
 assert(effectiveProviderPriority(3, 'groq', { groq: { status: 'untested', priority: 1 } }) === 3, 'vault untested com prioridade setada → IGNORADA, usa default');
-assert(effectiveProviderPriority(3, 'groq', { groq: { status: 'connected', priority: 1 } }) === 1, 'vault connected com prioridade → substitui a default');
-assert(effectiveProviderPriority(3, 'groq', { groq: { status: 'connected' } }) === 3, 'vault connected SEM priority definida → cai pro default (não quebra com undefined)');
+assert(effectiveProviderPriority(3, 'groq', { groq: { status: 'connected', last_tested_at: fresh, priority: 1 } }) === 1, 'vault connected com prioridade → substitui a default');
+assert(effectiveProviderPriority(3, 'groq', { groq: { status: 'connected', last_tested_at: fresh } }) === 3, 'vault connected SEM priority definida → cai pro default (não quebra com undefined)');
 
 console.log('\n[ sortProvidersByEffectivePriority — comportamento default idêntico ao atual quando vault vazio ]');
 const baseProviders = [
@@ -56,7 +58,7 @@ const baseProviders = [
   // groq (índice 3, prioridade-default mais baixa) testado e conectado com
   // prioridade -1 → precisa bater até o 0 do openrouter (default mais alto
   // do array) pra provar que realmente vai pro topo, não só empatar com ele.
-  const store = { groq: { status: 'connected', priority: -1 } };
+  const store = { groq: { status: 'connected', last_tested_at: fresh, priority: -1 } };
   const sorted = sortProvidersByEffectivePriority(baseProviders, store);
   assert(sorted[0].id === 'groq', 'groq com vault connected + prioridade -1 → vai pro topo do fallback, à frente até do default mais alto (openrouter)');
   assert(typeof sorted[0].tag === 'string', 'demais campos da entrada original (ex: tag) são preservados após o sort');
@@ -68,5 +70,6 @@ const baseProviders = [
   assert(sorted.map(p => p.id).join(',') === 'openrouter,openai,anthropic,groq', 'vault com status!=connected → ordem permanece idêntica à original mesmo com priority setada');
 }
 
+assert(resolveProviderKey('openai', 'env-key-123', { openai: { status: 'connected', last_tested_at: stale, api_key_encrypted: 'enc' } }, decryptOk) === 'env-key-123', 'stale connected status falls back safely');
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

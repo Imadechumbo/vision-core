@@ -6,7 +6,7 @@
 
 One objective, one atomic commit, no deploy/push without separate authority. Entry requires clean scoped diff and written approval. Exit requires tests, Hermes review, Ponytail gates, evidence receipt and updated handoff. Rollback is commit revert plus restoration of the prior read path; no destructive migration. Forbidden throughout: frontend legacy reuse, Provider-specific domain contracts, secrets in logs, automatic production activation and mixing unrelated worktrees.
 
-## R1 — Provider security and ownership boundary
+## R1 — Provider security and ownership boundary — COMPLETE (2026-07-21)
 
 - Objective/motive: decide and enforce who may read/mutate global Provider configuration before building on it.
 - Requirements/dependencies: Gap Report security findings; human decision on admin vs workspace ownership.

@@ -17,29 +17,30 @@
 //      (tools/tests/provider-vault-routing.test.mjs) — zero Express, zero
 //      decriptação real, zero rede.
 //
-// LIMITAÇÃO CONHECIDA — não bloqueia esta implementação, só documentada
-// (pedido explícito do humano nesta rodada):
-//   status:'connected' não expira sozinho. Se a chave salva no vault for
-//   revogada no provedor DEPOIS do teste, o vault continua achando que está
-//   tudo bem até alguém clicar "Testar" de novo manualmente — não existe
-//   verificação periódica nem TTL. Isso não é pior que o comportamento atual
-//   das env vars (que também nunca são reverificadas), mas é um gap real:
-//   uma chave revogada com status:'connected' antigo ainda vence sobre uma
-//   env var funcional, e só um teste manual novo corrige isso.
+// Connected status is trusted only within DEFAULT_PROVIDER_STATUS_TTL_MS; stale or
+// malformed timestamps fail closed to the environment-key/default-priority path.
 // ---------------------------------------------------------------------------
 
-function resolveProviderKey(providerId, envKey, providersStore, decryptFn) {
+const DEFAULT_PROVIDER_STATUS_TTL_MS = 5 * 60 * 1000;
+
+function hasFreshConnectedStatus(vaultEntry, nowMs = Date.now(), ttlMs = DEFAULT_PROVIDER_STATUS_TTL_MS) {
+  if (!vaultEntry || vaultEntry.status !== 'connected' || !vaultEntry.last_tested_at) return false;
+  const testedAt = Date.parse(vaultEntry.last_tested_at);
+  return Number.isFinite(testedAt) && nowMs - testedAt >= 0 && nowMs - testedAt <= ttlMs;
+}
+
+function resolveProviderKey(providerId, envKey, providersStore, decryptFn, nowMs = Date.now()) {
   const vaultEntry = providersStore && providersStore[providerId];
-  if (vaultEntry && vaultEntry.status === 'connected' && vaultEntry.api_key_encrypted) {
+  if (hasFreshConnectedStatus(vaultEntry, nowMs) && vaultEntry.api_key_encrypted) {
     const decrypted = decryptFn(vaultEntry.api_key_encrypted);
     if (decrypted) return decrypted; // vault vence — já provou que conecta
   }
   return envKey || ''; // comportamento de hoje, inalterado
 }
 
-function effectiveProviderPriority(defaultIndex, providerId, providersStore) {
+function effectiveProviderPriority(defaultIndex, providerId, providersStore, nowMs = Date.now()) {
   const vaultEntry = providersStore && providersStore[providerId];
-  if (vaultEntry && vaultEntry.status === 'connected' && typeof vaultEntry.priority === 'number') {
+  if (hasFreshConnectedStatus(vaultEntry, nowMs) && typeof vaultEntry.priority === 'number') {
     return vaultEntry.priority;
   }
   return defaultIndex; // default: ordem hardcoded atual do array do callLLM
@@ -54,4 +55,4 @@ function sortProvidersByEffectivePriority(providers, providersStore) {
     .sort((a, b) => a.priority - b.priority);
 }
 
-module.exports = { resolveProviderKey, effectiveProviderPriority, sortProvidersByEffectivePriority };
+module.exports = { DEFAULT_PROVIDER_STATUS_TTL_MS, hasFreshConnectedStatus, resolveProviderKey, effectiveProviderPriority, sortProvidersByEffectivePriority };

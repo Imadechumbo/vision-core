@@ -19,8 +19,11 @@ import { resolve } from 'path';
 
 const ROOT = resolve(process.cwd());
 const VAULT_FILE = resolve(ROOT, 'data', 'ai-providers-vault.json');
+const USERS_FILE = resolve(ROOT, 'data', 'users.json');
 const PORT = 18734; // porta alta, improvável de colidir
 const BASE = `http://127.0.0.1:${PORT}`;
+const ADMIN_EMAIL = `provider-vault-admin-${Date.now()}@example.com`;
+let adminToken = '';
 
 let passed = 0, failed = 0;
 function assert(c, m) {
@@ -31,7 +34,7 @@ function assert(c, m) {
 function apiCall(path, body) {
   return fetch(`${BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
     body: JSON.stringify(body || {}),
   }).then(r => r.json().then(json => ({ status: r.status, body: json })));
 }
@@ -50,6 +53,8 @@ async function waitForHealth(timeoutMs = 15000) {
 
 const preExisted = existsSync(VAULT_FILE);
 const preExistedContent = preExisted ? readFileSync(VAULT_FILE, 'utf8') : null;
+const usersPreExisted = existsSync(USERS_FILE);
+const usersPreExistedContent = usersPreExisted ? readFileSync(USERS_FILE, 'utf8') : null;
 
 // Remove chaves de provider reais do ambiente do processo filho — esta
 // máquina de dev tem GROQ_API_KEY/OPENROUTER_API_KEY reais no shell (usadas
@@ -63,6 +68,7 @@ const childEnv = {
   AWS_S3_BUCKET: '',
   SESSION_SECRET: 'provider-vault-test-session-secret-32chars-min',
   PROVIDER_VAULT_SECRET: 'provider-vault-test-vault-secret-32chars-min',
+  ADMIN_ALLOWED_EMAILS: ADMIN_EMAIL,
 };
 for (const prefix of ['OPENROUTER', 'OPENAI', 'ANTHROPIC', 'GROQ', 'DEEPSEEK', 'GEMINI']) {
   delete childEnv[`${prefix}_API_KEY`];
@@ -83,6 +89,10 @@ try {
   assert(up, 'backend real sobe e responde /api/health dentro de 15s');
   if (!up) throw new Error('backend did not start:\n' + serverLog.slice(-2000));
 
+  const registration = await fetch(`${BASE}/api/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: ADMIN_EMAIL, password: 'Test1234!Secure', name: 'Provider Vault Admin' }) }).then(r => r.json());
+  adminToken = registration.token;
+  assert(Boolean(adminToken), 'admin allowlisted autentica para operar o vault global');
+
   // --- salvar um provider com chave real ---
   const save1 = await apiCall('/api/providers/save', { provider: 'openai', api_key: 'sk-test-1234567890abcdef', model: 'gpt-4o-mini', priority: 2 });
   assert(save1.status === 200 && save1.body.saved === true, 'POST /save cria entrada nova');
@@ -90,7 +100,7 @@ try {
   assert(JSON.stringify(save1.body).indexOf('sk-test-1234567890abcdef') === -1, 'chave completa NUNCA aparece na resposta de /save');
 
   // --- listar ---
-  let list = await fetch(`${BASE}/api/providers/list`).then(r => r.json());
+  let list = await fetch(`${BASE}/api/providers/list`, { headers: { 'Authorization': `Bearer ${adminToken}` } }).then(r => r.json());
   const openaiEntry = list.providers.find(p => p.provider === 'openai');
   assert(!!openaiEntry, '/list mostra o provider salvo');
   assert(openaiEntry.api_key_masked === 'sk-t****cdef', '/list mostra chave mascarada');
@@ -103,14 +113,14 @@ try {
   // --- atualização parcial (só prioridade) preserva a chave ---
   const save2 = await apiCall('/api/providers/save', { provider: 'openai', priority: 1 });
   assert(save2.status === 200 && save2.body.priority === 1, 'atualização parcial muda a prioridade');
-  list = await fetch(`${BASE}/api/providers/list`).then(r => r.json());
+  list = await fetch(`${BASE}/api/providers/list`, { headers: { 'Authorization': `Bearer ${adminToken}` } }).then(r => r.json());
   const openaiAfter = list.providers.find(p => p.provider === 'openai');
   assert(openaiAfter.api_key_masked === 'sk-t****cdef', 'atualização parcial (sem api_key) PRESERVA a chave mascarada existente');
   assert(openaiAfter.has_key === true, 'atualização parcial PRESERVA has_key=true (não apaga a chave real)');
 
   // --- segundo provider, para testar ordenação por prioridade ---
   await apiCall('/api/providers/save', { provider: 'anthropic', api_key: 'sk-ant-zzzz999988887777', priority: 5 });
-  list = await fetch(`${BASE}/api/providers/list`).then(r => r.json());
+  list = await fetch(`${BASE}/api/providers/list`, { headers: { 'Authorization': `Bearer ${adminToken}` } }).then(r => r.json());
   const order = list.providers.map(p => p.provider);
   assert(order.indexOf('openai') < order.indexOf('anthropic'), '/list retorna ordenado por prioridade ascendente (openai=1 antes de anthropic=5)');
 
@@ -124,7 +134,7 @@ try {
   // o que importa aqui é que o endpoint NÃO trava e devolve uma resposta.
   const testWithVaultKey = await apiCall('/api/providers/test', { provider: 'openai' });
   assert(testWithVaultKey.status === 200 && typeof testWithVaultKey.body.status === 'string', '/test com chave do vault (openai) responde sem travar, mesmo com chave inválida/rede fechada');
-  list = await fetch(`${BASE}/api/providers/list`).then(r => r.json());
+  list = await fetch(`${BASE}/api/providers/list`, { headers: { 'Authorization': `Bearer ${adminToken}` } }).then(r => r.json());
   const openaiTested = list.providers.find(p => p.provider === 'openai');
   assert(openaiTested.last_tested_at !== null, '/test grava last_tested_at real na entrada testada');
   assert(openaiTested.status !== 'untested', 'status sai de untested após rodar o teste');
@@ -132,7 +142,7 @@ try {
   // --- remover ---
   const del = await apiCall('/api/providers/delete', { provider: 'anthropic' });
   assert(del.status === 200 && del.body.deleted === true, '/delete remove a entrada');
-  list = await fetch(`${BASE}/api/providers/list`).then(r => r.json());
+  list = await fetch(`${BASE}/api/providers/list`, { headers: { 'Authorization': `Bearer ${adminToken}` } }).then(r => r.json());
   assert(!list.providers.some(p => p.provider === 'anthropic'), 'entrada removida não aparece mais em /list');
 
   const delMissing = await apiCall('/api/providers/delete', { provider: 'nao-existe' });
@@ -147,6 +157,14 @@ try {
       fs.writeFileSync(VAULT_FILE, preExistedContent, 'utf8');
     } else if (existsSync(VAULT_FILE)) {
       unlinkSync(VAULT_FILE);
+    }
+  } catch {}
+  try {
+    if (usersPreExisted) {
+      const fs = await import('fs');
+      fs.writeFileSync(USERS_FILE, usersPreExistedContent, 'utf8');
+    } else if (existsSync(USERS_FILE)) {
+      unlinkSync(USERS_FILE);
     }
   } catch {}
 }

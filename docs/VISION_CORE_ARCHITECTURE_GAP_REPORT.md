@@ -170,9 +170,9 @@ sequenceDiagram
 
 | Severity | Finding | Evidence/impact | Future phase |
 |---|---|---|---|
-| HIGH | Global Provider vault mutable by any authenticated user | save/delete/test routes use `requireVisionAuth`, not admin/owner; one user can affect all routing | Security prerequisite |
-| MEDIUM | Runtime Provider metadata/status readable without auth | `/api/runtime/providers`, `/api/runtime/provider-status` expose config flags, base URL/model/env names | Security prerequisite |
-| MEDIUM | Health status can remain trusted without TTL | vault `connected` persists; routing helper documents no expiry | Domain/Health |
+| RESOLVED-R1 | Global Provider vault was mutable by any authenticated user | save/delete/test routes use `requireVisionAuth`, not admin/owner; one user can affect all routing | Security prerequisite |
+| RESOLVED-R1 | Runtime Provider metadata/status was readable without auth | `/api/runtime/providers`, `/api/runtime/provider-status` expose config flags, base URL/model/env names | Security prerequisite |
+| RESOLVED-R1 | Health status could remain trusted without TTL | vault `connected` persists; routing helper documents no expiry | Domain/Health |
 | MEDIUM | Vendor endpoints and Gemini key in query URL | logs/proxies may expose query material if mishandled | Transport |
 | MEDIUM | Scanner AST route appears unauthenticated | scans bounded repo paths and may expose structure | Security review |
 | LOW | Provider default route reports input/default but does not establish authoritative policy | misleading control surface | Routing cleanup |

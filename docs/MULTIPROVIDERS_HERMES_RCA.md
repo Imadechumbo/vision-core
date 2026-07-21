@@ -63,3 +63,42 @@ Esta análise complementa a Phase 1; não repete o risco genérico de acoplament
 | Latência antiga | observação sem validade | classificação obsoleta | timestamp/validity ausente | No Stale Health |
 
 Riscos residuais: taxonomia pode exigir extensão após evidência de Providers reais; comparabilidade de benchmark depende de workloads futuros; regras de idempotência variam por operação; fontes externas podem mentir. Phase 2 só pode iniciar após revisão desta RCA, aceite explícito dos riscos residuais e transformação dos gates aplicáveis em evidência executável.
+
+
+## R1 — Security and Ownership Hardening
+
+### SISTEMA ANALISADO
+
+Provider Vault global, runtime Provider/status, scanner AST, status de conexão e transportes Gemini.
+
+### OBJETIVO
+
+Impedir observação/mutação anônima ou cross-tenant e retirar segredo de URLs antes do domínio canônico.
+
+### HIPÓTESE DE FALHA
+
+Sessão comum controlaria o singleton global; status antigo venceria configuração válida; URLs/logs poderiam carregar chave.
+
+### CAUSAS RAIZ
+
+Autorização baseada apenas em sessão, estado global sem owner, connected sem TTL e autenticação Gemini em query string.
+
+### VETORES E EVIDÊNCIAS
+
+- Todas as rotas Provider/runtime/scanner retornam 401 anônimo e 403 usuário comum.
+- Somente role admin ou ADMIN_ALLOWED_EMAILS opera o vault.
+- Status connected sem timestamp ou com mais de cinco minutos falha para env/prioridade default.
+- Busca e teste estático confirmam ausência de `?key=` Gemini; header dedicado é usado.
+- Respostas continuam mascarando credenciais.
+
+### IMPACTO / DETECÇÃO / PREVENÇÃO
+
+Impacto anterior: controle global e vazamento de metadata/segredo. Detecção: integração real e busca estática. Prevenção: `requireVisionAdmin`, TTL central, redaction preservada e testes permanentes.
+
+### RISCO RESIDUAL
+
+Vault continua global por decisão mínima; falta de admin configurado bloqueia a operação (fail-closed). Workspace ownership só pode surgir com modelo canônico futuro.
+
+### VEREDITO
+
+PASS. R1 pode encerrar; não autoriza R2 sem commit e handoff.

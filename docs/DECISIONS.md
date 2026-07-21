@@ -42,6 +42,11 @@ Nenhum componente de dashboard, gráfico, painel, monitor, timeline ou grid de m
 
 ## MultiProviders / Arquitetura oficial
 
+### ADR-049 — Provider Vault global é admin-only até existir ownership canônico
+O vault atual permanece uma configuração operacional global e somente administradores explícitos podem ler, testar ou mutar seu estado.
+**Por quê:** não existe modelo Workspace canônico nesta branch; inventar ownership parcial criaria isolamento falso, enquanto sessão comum sobre singleton global permite controle cross-tenant.
+**Como aplicar:** todas as rotas Provider/runtime sensíveis e scanner AST usam `requireVisionAdmin`; role admin ou `ADMIN_ALLOWED_EMAILS` são as únicas autoridades. Estado connected expira em cinco minutos. Um futuro vault por workspace exige modelo de ownership e ADR substituto, nunca relaxamento silencioso.
+
 ### ADR-048 — Identidade de Model é separada de alias, deployment e endpoint
 Família, Model canônico, variante, versão e quantização qualificam identidade; alias apenas referencia essa identidade, enquanto identificador de Provider, deployment, snapshot e endpoint pertencem à offering.
 **Por quê:** misturar nomes operacionais com identidade cria colisões, órfãos e perda de versão.

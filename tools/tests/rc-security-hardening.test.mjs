@@ -26,8 +26,8 @@ for (const route of [
   const escaped = route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   assert.match(
     server,
-    new RegExp(`app\\.(?:get|all)\\('${escaped}',\\s*requireVisionAuth,`),
-    `${route} must require auth`
+    new RegExp(`app\\.(?:get|all)\\('${escaped}',\\s*requireVisionAdmin,`),
+    `${route} must require admin`
   );
 }
 

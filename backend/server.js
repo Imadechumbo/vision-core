@@ -892,8 +892,8 @@ async function callLLM(prompt, opts = {}) {
       url: `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || 'gemini-1.5-flash'}:generateContent`,
       model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
       buildBody: (model) => JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: maxTokens } }),
-      authHeaders: (key) => { /* Gemini uses query param — handled via url override */ return {}; },
-      urlOverride: (key) => `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || 'gemini-1.5-flash'}:generateContent?key=${key}`,
+      authHeaders: (key) => ({ 'x-goog-api-key': key }),
+
       extractText: (data) => data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text
     }
   ];
@@ -1590,10 +1590,10 @@ app.get('/api/billing/hotmart-checkout', (req, res) => {
   return res.json({ ok: true, checkout_url: url, anti_stub: true });
 });
 
-app.get('/api/runtime/providers', (req, res) => sendOk(res, { providers: providerList().concat([{ id: 'local', configured: Boolean(process.env.OLLAMA_BASE_URL), base_url: process.env.OLLAMA_BASE_URL || '', model: process.env.OLLAMA_MODEL || '' }]), default: process.env.DEFAULT_AI_PROVIDER || 'auto', anti_stub: true }));
-app.get('/api/runtime/provider-status', async (req, res) => sendOk(res, { providers: await providerStatus(), checked_env: ['OLLAMA_BASE_URL','OPENROUTER_API_KEY','GROQ_API_KEY','GEMINI_API_KEY','DEEPSEEK_API_KEY','OPENAI_API_KEY'], anti_stub: true }));
+app.get('/api/runtime/providers', requireVisionAdmin, (req, res) => sendOk(res, { providers: providerList().concat([{ id: 'local', configured: Boolean(process.env.OLLAMA_BASE_URL), base_url: process.env.OLLAMA_BASE_URL || '', model: process.env.OLLAMA_MODEL || '' }]), default: process.env.DEFAULT_AI_PROVIDER || 'auto', anti_stub: true }));
+app.get('/api/runtime/provider-status', requireVisionAdmin, async (req, res) => sendOk(res, { providers: await providerStatus(), checked_env: ['OLLAMA_BASE_URL','OPENROUTER_API_KEY','GROQ_API_KEY','GEMINI_API_KEY','DEEPSEEK_API_KEY','OPENAI_API_KEY'], anti_stub: true }));
 
-app.all('/api/scanner/ast', (req, res) => {
+app.all('/api/scanner/ast', requireVisionAdmin, (req, res) => {
   try { const body = normalizeBody(req); const report = scanAst(body.path || req.query.path || body.file || req.query.file); return sendOk(res, { scanner: 'AST', parser: '@babel/parser', ...report, anti_stub: true }); }
   catch (err) { return res.status(500).json({ ok: false, error: err.message, endpoint: '/api/scanner/ast', time: now() }); }
 });
@@ -2541,7 +2541,7 @@ app.get('/api/memory/patterns', (req, res) => sendOk(res, { patterns: fs.readdir
 /* stub morto removido em 2026-06-01 — duplicata causava dead code após primeira match Express */
 
 /* PROVIDERS */
-app.get('/api/providers', requireVisionAuth, (req, res) => sendOk(res, { providers: providerList(), default: process.env.DEFAULT_AI_PROVIDER || 'auto' }));
+app.get('/api/providers', requireVisionAdmin, (req, res) => sendOk(res, { providers: providerList(), default: process.env.DEFAULT_AI_PROVIDER || 'auto' }));
 
 // §<AI-VAULT-CONFIG-PRINCIPAL> — /save aceita atualização PARCIAL de
 // propósito: a tela de "Providers Configurados" reenvia só {provider,
@@ -2549,7 +2549,7 @@ app.get('/api/providers', requireVisionAuth, (req, res) => sendOk(res, { provide
 // volta pro frontend depois de salva — só api_key_masked). Por isso, quando
 // body.api_key vem vazio, preservamos api_key_encrypted/api_key_masked
 // existentes em vez de apagar a chave já salva.
-app.all('/api/providers/save', requireVisionAuth, (req, res) => {
+app.all('/api/providers/save', requireVisionAdmin, (req, res) => {
   const body = normalizeBody(req);
   const provider = body.provider || 'auto';
   const existing = _providersStore[provider] || {};
@@ -2583,7 +2583,7 @@ app.all('/api/providers/save', requireVisionAuth, (req, res) => {
 });
 
 // Nunca inclui api_key nem api_key_encrypted — só o indicador mascarado.
-app.get('/api/providers/list', requireVisionAuth, (req, res) => {
+app.get('/api/providers/list', requireVisionAdmin, (req, res) => {
   const list = Object.values(_providersStore)
     .map(p => ({
       provider:       p.provider,
@@ -2600,7 +2600,7 @@ app.get('/api/providers/list', requireVisionAuth, (req, res) => {
   return sendOk(res, { providers: list, time: now() });
 });
 
-app.all('/api/providers/delete', requireVisionAuth, (req, res) => {
+app.all('/api/providers/delete', requireVisionAdmin, (req, res) => {
   const body = normalizeBody(req);
   const provider = body.provider || '';
   if (!provider || !_providersStore[provider]) {
@@ -2611,7 +2611,7 @@ app.all('/api/providers/delete', requireVisionAuth, (req, res) => {
   return sendOk(res, { deleted: true, provider, providers_count: Object.keys(_providersStore).length });
 });
 
-app.all('/api/providers/test', requireVisionAuth, async (req, res) => {
+app.all('/api/providers/test', requireVisionAdmin, async (req, res) => {
   const body       = normalizeBody(req);
   const provider   = body.provider || 'auto';
   const vaultEntry = _providersStore[provider];
@@ -2645,8 +2645,8 @@ app.all('/api/providers/test', requireVisionAuth, async (req, res) => {
       testUrl     = 'https://api.anthropic.com/v1/models';
       testHeaders = { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' };
     } else if (provider === 'gemini') {
-      testUrl     = `https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`;
-      testHeaders = {};
+      testUrl     = 'https://generativelanguage.googleapis.com/v1/models';
+      testHeaders = { 'x-goog-api-key': apiKey };
     } else if (provider === 'groq') {
       testUrl     = 'https://api.groq.com/openai/v1/models';
       testHeaders = { 'Authorization': `Bearer ${apiKey}` };
@@ -2685,7 +2685,7 @@ app.all('/api/providers/test', requireVisionAuth, async (req, res) => {
     return sendOk(res, { provider, status: 'error', connected: false, error: err.message, latency_ms: Date.now()-t0, time: now() });
   }
 });
-app.all('/api/providers/default', requireVisionAuth, (req, res) => sendOk(res, { default: normalizeBody(req).provider || process.env.DEFAULT_AI_PROVIDER || 'auto' }));
+app.all('/api/providers/default', requireVisionAdmin, (req, res) => sendOk(res, { default: normalizeBody(req).provider || process.env.DEFAULT_AI_PROVIDER || 'auto' }));
 
 
 /* VISION CORE V4.3.1 ENTERPRISE BILLING ROUTES — real Stripe, mounted in primary runtime. */
@@ -3886,11 +3886,11 @@ app.post('/api/chat', async (req, res) => {
     const geminiTimeout = message.length > 45000 ? 90000 : 45000;
     if (GEMINI_KEY && !GEMINI_KEY.includes('placeholder')) {
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
         const userParts = [{ text: message }, { inline_data: { mime_type: imageMime, data: imageB64 } }];
         const r = await fetch(url, {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
           body: JSON.stringify({
             system_instruction: { parts: [{ text: systemPrompt }] },
             contents: [{ role: 'user', parts: userParts }]
@@ -3902,9 +3902,9 @@ app.post('/api/chat', async (req, res) => {
           const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
           if (answer) {
             const finalAnswer = await ensureHermesJson(answer, async (prompt) => {
-              const url2 = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+              const url2 = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
               const r2 = await fetch(url2, {
-                method: 'POST', headers: { 'content-type': 'application/json' },
+                method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': GEMINI_KEY },
                 body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }),
                 signal: AbortSignal.timeout(20000)
               });
@@ -5012,7 +5012,7 @@ app.post('/api/agents/:id/mode', requireVisionAdmin, (req, res) => {
     return res.status(400).json({ ok: false, error: 'invalid_mode', valid, time: now() });
   }
   _agentModesStore[agentId] = mode;
-  auditLog('agent_mode_changed', req, { agent_id: agentId, mode, admin_email: req.visionUser.email }); // �154 � desligar security/aegis remotamente � grave, precisa de rastro
+  auditLog('agent_mode_changed', req, { agent_id: agentId, mode, admin_email: req.visionUser.email }); // �154 � desligar security/aegis remotamente � grave, precisa de rastro
   console.log('[agents] ' + agentId + ' -> ' + mode);
   return sendOk(res, { ok: true, agent_id: agentId, mode, time: now() });
 });
