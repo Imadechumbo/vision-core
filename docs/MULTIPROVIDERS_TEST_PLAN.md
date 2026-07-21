@@ -241,3 +241,15 @@ Focados: adapters 17/17; router 24/24; runtime-state 14/14; domain 23/23; bridge
 | No Cross-Tenant State | bindings escopados | tenant test | PASS | nenhum |
 
 Verdicto Ponytail R6: PASS. Interface mínima e stdlib; zero SDK, HTTP client, DI framework, plugin system, banco, scheduler ou Provider comercial. O preflight descartável é validação, não segunda autoridade.
+## R7 — Ponytail blocker audit
+
+| Gate R7 | Resultado | Evidência |
+|---|---|---|
+| No Colibri Special Case | NO_EVIDENCE | nenhum adapter/protocolo local para testar |
+| No Colibri Contract Leak | NO_EVIDENCE | contrato operacional ausente |
+| No Colibri Privilege | PASS | nenhum registro/default/código criado |
+| No Provider-Specific Core Change | PASS | core intacto após busca |
+| No Parallel Architecture | PASS | nenhuma arquitetura Colibri criada |
+| Evidence Before Change | FAIL_BLOCKER | detalhes oficiais ausentes |
+
+Verdicto: PARAR. Os NO_EVIDENCE são críticos para R7 e não podem ser convertidos em PASS por mock ou suposição. R6 permanece PASS; R7 não iniciou implementação; R8 proibida.

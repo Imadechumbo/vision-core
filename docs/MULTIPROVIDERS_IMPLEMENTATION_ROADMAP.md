@@ -11,7 +11,7 @@
 4. R4 — Capability, Health and Lifecycle Runtime — COMPLETE (91b59cb8)
 5. R5 — Policy Routing and Compatible Failover — COMPLETE (1401a81f)
 6. R6 — First Neutral Provider Adapter — COMPLETE (35b40250)
-7. R7 — Colibri Integration
+7. R7 — Colibri Integration — BLOCKED: no local protocol evidence
 8. R8 — Installer Bridge
 9. R9 — Blueprint Read Model
 10. R10 — Certification and Legacy Retirement
@@ -47,9 +47,9 @@ Implementar requisitos, candidatos, filtros obrigatórios, policy, ranking deter
 
 Escolher por testabilidade e menor risco, nunca preferência comercial. O adapter não altera core, não vira default e passa suíte comum. Colibri permanece proibido nesta fase. Escolhido adapter de referência in-memory, injetável, sem rede/segredo e não registrado por default; suíte comum 17/17.
 
-## R7 — Colibri Integration
+## R7 — Colibri Integration — BLOCKED
 
-Somente após certificação R6. Colibri usa contrato e suíte comuns, sem Manager/Registry/Contract/lifecycle/default próprios e sem mudança Provider-specific no core.
+Somente após certificação R6. Colibri usa contrato e suíte comuns, sem Manager/Registry/Contract/lifecycle/default próprios e sem mudança Provider-specific no core. R6 está certificada, porém a árvore não contém protocolo/runtime/testes Colibri. Parada obrigatória antes de implementação; R8 não inicia.
 
 ## R8 — Installer Bridge
 

@@ -328,3 +328,48 @@ Referência in-memory não prova protocolo externo. AbortSignal depende do adapt
 ### VEREDITO
 
 PASS. O primeiro adapter não recebeu privilégio e não contaminou o core.
+## R7 — Colibri Integration — BLOCKER RCA
+
+### SISTEMA ANALISADO
+
+Evidência Colibri disponível localmente no repositório.
+
+### OBJETIVO
+
+Determinar se Colibri pode implementar o adapter comum sem hipótese, acesso externo, segredo ou mudança de core.
+
+### HIPÓTESE DE FALHA
+
+Uma integração baseada apenas no nome copiaria HTTP/auth/modelos de outro Provider ou criaria contrato paralelo fictício.
+
+### CAUSAS RAIZ
+
+Nenhuma documentação de protocolo, endpoint, auth, Models, capabilities, Health, errors, streaming ou versão Colibri está presente nesta worktree.
+
+### VETORES
+
+Endpoint inventado; OpenAI-compatibility presumida; credential shape presumido; Model hardcoded; Health falso; Colibri default; teste que valida mock em vez do Provider real.
+
+### EVIDÊNCIAS
+
+Busca read-only por Colibri retorna somente governança/Specs/relatórios/testes negativos. Gap Report registra Colibri/LM Studio ABSENT. Não há arquivo com implementação ou contrato operacional.
+
+### IMPACTO
+
+Prosseguir criaria vendor lock, falsa integração e dívida estrutural, violando Specification First e Evidence Before Change.
+
+### DETECÇÃO
+
+rg global na árvore atual e confronto com checklist R7/R6.
+
+### PREVENÇÃO
+
+Parar antes de código. Exigir evidência oficial local/versionada e aplicar sem mudanças ao contrato/suíte comum.
+
+### RISCO RESIDUAL
+
+R7–R11 permanecem incompletas. R8 não pode ultrapassar R7 na sequência oficial. Nenhum risco de produção foi introduzido porque não houve implementação.
+
+### VEREDITO
+
+BLOCKED / NO_EVIDENCE. Condição obrigatória de parada: necessidade de acesso externo ou decisão pública ausente.

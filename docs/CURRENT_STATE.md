@@ -1,5 +1,24 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-21 — MultiProviders R7 blocked before implementation
+
+Status: MULTIPROVIDERS_R7_BLOCKED_NO_LOCAL_COLIBRI_EVIDENCE.
+
+Ponto exato: R6 foi concluída e commitada. R7 iniciou somente com investigação read-only. O comando rg -n -i "colibri" no repositório encontrou apenas SPECs, ADRs, roadmap, relatórios e testes que proíbem special case; nenhum arquivo/runtime/protocolo/config/endpoint/auth/model/capability/Health/teste Colibri existe. O Gap Report já registrava Colibri como ABSENT.
+
+Nenhum arquivo funcional R7 foi criado ou alterado. Nenhum adapter Colibri, Manager, Registry, Contract, default, endpoint, secret, rede, push ou deploy. R8 não foi iniciada. Implementar R7 agora exigiria evidência externa ou inventar detalhes públicos, duas condições explícitas de parada.
+
+Última unidade segura: R6 COMPLETE. Commits: 35b40250 funcional e 1d9675f3 documental. Testes R6: adapters 17/17; router 24/24; runtime-state 14/14; domain 23/23; bridge 12/12; wiring 19/19; endpoints 23/23; security 23/23; callLLM 12/12; vault routing 18/18; hardening PASS.
+
+Arquivos alterados neste checkpoint: somente CURRENT_STATE, Implementation Roadmap, Hermes RCA e Test Plan. Artefatos preexistentes continuam preservados e fora dos commits.
+
+Desbloqueio necessário: fornecer documentação/protocolo oficial Colibri local e versionado, contendo ao menos transport, endpoint discovery/configuration, auth reference, model discovery/identity, request/response, streaming, errors, timeout, Health probe, capability evidence e versão. Não fornecer segredo real.
+
+Próximo comando recomendado após adicionar a evidência local: rg -n -i "colibri" docs backend tools
+
+PARAR. Não iniciar R8.
+
+---
 ## 2026-07-21 — MultiProviders R6 First Neutral Provider Adapter complete
 
 Status: MULTIPROVIDERS_R6_COMPLETE.
