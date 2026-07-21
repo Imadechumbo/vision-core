@@ -9,7 +9,7 @@
 2. R2 — Canonical MultiProviders Foundation — COMPLETE (f4ed60ff)
 3. R3 — Legacy Characterization and Compatibility Bridge — COMPLETE (e88b5196)
 4. R4 — Capability, Health and Lifecycle Runtime — COMPLETE (91b59cb8)
-5. R5 — Policy Routing and Compatible Failover
+5. R5 — Policy Routing and Compatible Failover — COMPLETE (1401a81f)
 6. R6 — First Neutral Provider Adapter
 7. R7 — Colibri Integration
 8. R8 — Installer Bridge
@@ -39,9 +39,9 @@ Caracterizar callLLM(), Vault, routers, fallback, models, custos, streaming, ret
 
 Resolver capabilities por evidência e escopo; Health temporal com TTL; lifecycle uniforme e elegibilidade determinística. Health não propaga entre Provider, Transport, Model, Capability, Credential ou Endpoint. A discrepância do pedido que lista degraded/offline em lifecycle é resolvida pela SPEC Phase 1.1: ambos pertencem exclusivamente a Health. Entregue por runtime-state puro compartilhando os registries canônicos; probes permanecem responsabilidade dos adapters.
 
-## R5 — Policy Routing and Compatible Failover
+## R5 — Policy Routing and Compatible Failover — COMPLETE
 
-Implementar requisitos, candidatos, filtros obrigatórios, policy, ranking determinístico, receipt e failover compatível. Sem Provider hardcoded, prioridade oculta, custo desconhecido como zero, privacidade inferida por localização ou retry não idempotente.
+Implementar requisitos, candidatos, filtros obrigatórios, policy, ranking determinístico, receipt e failover compatível. Sem Provider hardcoded, prioridade oculta, custo desconhecido como zero, privacidade inferida por localização ou retry não idempotente. Entregue como engine pura no composition root; cutover de execução aguarda adapter/probes R6 e legacy retirement R10.
 
 ## R6 — First Neutral Provider Adapter
 

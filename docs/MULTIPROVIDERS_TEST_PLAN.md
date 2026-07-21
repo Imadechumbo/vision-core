@@ -201,3 +201,23 @@ Focados: multiproviders-runtime-state 14/14; domain 23/23; bridge 12/12; wiring 
 | No Model Coupling | offering explícita | resolveCapability exige IDs | PASS | nenhum |
 
 Verdicto Ponytail R4: PASS. Um módulo puro e uma suíte; zero probe fictício, scheduler, banco, endpoint, dependency ou framework. Routing/failover, benchmark e adapter permanecem NOT_APPLICABLE até suas fases.
+## R5 — Testes e Ponytail
+
+Focados: router 24/24; domain 23/23; runtime-state 14/14; bridge 12/12; wiring 17/17. Regressões: endpoints 23/23; security 23/23; callLLM 12/12; vault routing 18/18; hardening PASS; diff-check PASS.
+
+| Gate R5 | Intenção | Evidência | Resultado | Risco/correção |
+|---|---|---|---|---|
+| No Hardcoded Provider | nenhum nome/default | busca estática | PASS | adapter R6 não vira default |
+| No Hidden Priority | policy explícita/versionada | invalid priority falha | PASS | nenhum |
+| No Unknown Cost as Zero | unknown não é grátis | null + cost_unknown | PASS | nenhum |
+| No Privacy by Location | dimensões explícitas | local com retenção reprova | PASS | nenhum |
+| No Benchmark as Health | owners separados | benchmark extremo não muda route | PASS | ranking futuro exige comparabilidade |
+| No Incompatible Failover | só elegíveis | plan deriva candidates filtrados | PASS | cutover futuro deve usar receipt |
+| No Silent Routing | decisão explicada | candidates/reasons/receipt | PASS | persistência futura |
+| No Non-Idempotent Retry | side effects protegidos | matriz failover | PASS | nenhum |
+| No Stale Health | runtime eligibility | stale vira unknown | PASS | nenhum |
+| No Lifecycle Bypass | READY obrigatório | runtime-state | PASS | nenhum |
+| No Model Coupling | offering explícita | candidates por model_id | PASS | nenhum |
+| No Secret Exposure | request redigível | secret fields falham | PASS | nenhum |
+
+Verdicto Ponytail R5: PASS. Um engine puro sem dependency, DSL, pesos arbitrários, banco, queue, endpoint ou framework. Benchmark scoring e cutover foram deliberadamente evitados por falta de evidência/adapters.

@@ -238,3 +238,48 @@ Sem probes/adapters reais, nenhuma observação canônica é produzida automatic
 ### VEREDITO
 
 PASS. Nenhum Health booleano/falso/vencido, capability presumida, propagação de escopo ou bypass de lifecycle foi aceito.
+## R5 — Policy Routing and Compatible Failover
+
+### SISTEMA ANALISADO
+
+MultiProvidersRouter, candidate filtering/ranking, route receipts e failover safety.
+
+### OBJETIVO
+
+Selecionar somente oferta compatível com requisitos obrigatórios e explicar seleção/falha sem Provider nominal ou fallback silencioso.
+
+### HIPÓTESE DE FALHA
+
+Resposta disponível porém incompatível venceria por preço/default; unknown seria tratado como zero; privacy seria inferida por local; retry repetiria side effect ou stream parcial.
+
+### CAUSAS RAIZ
+
+Fallback legado por ordem não possui requirements/receipts; metadata incompleta podia parecer comparável; eligibility e retry safety antes não participavam de uma decisão comum.
+
+### VETORES
+
+Priority inválida; tie por ordem de registro; cost/latency sem source/window/validity; location como privacy; context ignorado; benchmark como Health; capability/Health/lifecycle bypass; receipt reautorizado; retry budget excedido.
+
+### EVIDÊNCIAS
+
+24/24 testes cobrem manual/automatic, tie, priority, affinity, cost, privacy, latency, context, benchmark isolation, eligibility, no route, receipt, secret rejection e failover. Source contém zero nomes de Providers/Models privilegiados. Regressões legadas aprovadas.
+
+### IMPACTO
+
+Falha pode violar custo, privacidade, contexto, capability, disponibilidade ou duplicar efeitos externos.
+
+### DETECÇÃO
+
+Candidate reasons completos, receipt determinístico, constraints negativas, duas ordens de registro, metadata stale/incompleta e matriz de operação/error category.
+
+### PREVENÇÃO
+
+Filtrar antes de ordenar; unknown fica null/ineligível sob constraint; policy version obrigatória; tie lexical neutro; failover só entre elegíveis e exige receipt+estado atual seguros.
+
+### RISCO RESIDUAL
+
+Engine ainda não executa tráfego real porque R6 não certificou adapter/Health READY. Pesos sofisticados, benchmark ranking e persistência de receipts não foram inventados. O fallback legado só sai em R10.
+
+### VEREDITO
+
+PASS. O router não escolhe resposta apenas disponível; escolhe somente candidato comprovadamente compatível ou retorna no_eligible_route.

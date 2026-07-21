@@ -1,5 +1,18 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-21 — MultiProviders R5 Policy Routing and Compatible Failover complete
+
+Status: MULTIPROVIDERS_R5_COMPLETE.
+
+Router puro e composto implementa manual/automatic, requirements, ProviderModelOffering candidates, capability/Health/lifecycle hard filters, privacy dimensional, custo/latência comparáveis, contexto, prioridade explícita, exclusions, affinity, tie-break determinístico, no_eligible_route e receipt reproduzível. Unknown/incompleto nunca vira custo zero, baixa latência ou privacy satisfeita. Benchmark não altera Health nem decisão.
+
+Failover contém somente candidatos já elegíveis e é proibido para operação não idempotente, side effects, streaming iniciado, tools executadas, retry budget esgotado e erros fora das categorias transport/rate_limit/capacity/model_unavailable/timeout/provider_error. O receipt original não pode ser reautorizado por argumentos posteriores.
+
+Testes: router 24/24; domínio 23/23; runtime-state 14/14; bridge 12/12; wiring 17/17; endpoints 23/23; security 23/23; callLLM 12/12; vault routing 18/18; hardening PASS; diff-check PASS. Hermes R5 PASS. Ponytail R5 PASS. Commit funcional 1401a81f. Nenhum push/deploy.
+
+Cutover de callLLM/Hermes não foi forçado: Providers legados ainda não possuem adapter/probes/evidence READY canônicos. R6 deve certificar primeiro adapter neutro; retirada do fallback legado continua R10. Próximo passo automático após commit documental: R6 First Neutral Provider Adapter.
+
+---
 ## 2026-07-21 — MultiProviders R4 Capability, Health and Lifecycle Runtime complete
 
 Status: MULTIPROVIDERS_R4_COMPLETE.

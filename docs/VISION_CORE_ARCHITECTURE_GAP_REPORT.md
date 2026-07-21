@@ -337,3 +337,6 @@ Provider Registry e Model Registry passam a autoridade de identidade em processo
 ## Implementation delta — R4 (2026-07-21)
 
 Health/Lifecycle e Capability passam de NOT_READY para CONDITIONAL: runtime puro, temporal, tenant-scoped e composto com os registries existe; eligibility combina lifecycle, Health Provider/Model e capabilities Provider×Model×Offering. Não há probes canônicos nem persistência de observações, deliberadamente reservados aos adapters/persistência futuros. O status legado de providerStatus não é promovido automaticamente a evidência canônica. Routing permanece NOT_READY até R5.
+## Implementation delta — R5 (2026-07-21)
+
+Routing/Failover passa de NOT_READY para CONDITIONAL: engine canônica pura e composta existe, com receipts e failover safety. Não é ainda autoridade da execução real porque nenhum adapter/probe certificou Provider READY; forçar cutover agora eliminaria todos os candidatos ou inventaria Health. O router legado permanece isolado pela bridge até R6 e só pode ser removido em R10 após equivalência.
