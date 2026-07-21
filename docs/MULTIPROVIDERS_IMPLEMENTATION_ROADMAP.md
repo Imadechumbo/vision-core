@@ -8,7 +8,7 @@
 1. R1 — Security and Ownership Hardening — COMPLETE (78f16578)
 2. R2 — Canonical MultiProviders Foundation — COMPLETE (f4ed60ff)
 3. R3 — Legacy Characterization and Compatibility Bridge — COMPLETE (e88b5196)
-4. R4 — Capability, Health and Lifecycle Runtime
+4. R4 — Capability, Health and Lifecycle Runtime — COMPLETE (91b59cb8)
 5. R5 — Policy Routing and Compatible Failover
 6. R6 — First Neutral Provider Adapter
 7. R7 — Colibri Integration
@@ -35,9 +35,9 @@ Saída entregue: domínio puro e suíte 22/22; Hermes PASS; Ponytail PASS; commi
 
 Caracterizar callLLM(), Vault, routers, fallback, models, custos, streaming, retries, endpoints e estado local. Traduzir legado para contratos canônicos por ponte temporária, observável e removível; Registry canônico passa a autoridade sem duplicação silenciosa. Preservar apenas comportamento seguro comprovado. Entregue por composition root único, receipts limitados, incompatibilidades redigidas e filtros canônicos em providerList/callLLM/Hermes. Transport/routing permanecem legados por sequência deliberada.
 
-## R4 — Capability, Health and Lifecycle Runtime
+## R4 — Capability, Health and Lifecycle Runtime — COMPLETE
 
-Resolver capabilities por evidência e escopo; Health temporal com TTL; lifecycle uniforme e elegibilidade determinística. Health não propaga entre Provider, Transport, Model, Capability, Credential ou Endpoint. A discrepância do pedido que lista degraded/offline em lifecycle é resolvida pela SPEC Phase 1.1: ambos pertencem exclusivamente a Health.
+Resolver capabilities por evidência e escopo; Health temporal com TTL; lifecycle uniforme e elegibilidade determinística. Health não propaga entre Provider, Transport, Model, Capability, Credential ou Endpoint. A discrepância do pedido que lista degraded/offline em lifecycle é resolvida pela SPEC Phase 1.1: ambos pertencem exclusivamente a Health. Entregue por runtime-state puro compartilhando os registries canônicos; probes permanecem responsabilidade dos adapters.
 
 ## R5 — Policy Routing and Compatible Failover
 

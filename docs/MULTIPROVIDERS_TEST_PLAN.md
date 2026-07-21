@@ -181,3 +181,23 @@ Focados: multiproviders-domain 22/22; multiproviders-legacy-bridge 12/12; multip
 | No Transport Assumption | bridge usa tipo legacy neutro | endpoint é referência | bridge/wiring | PASS | transport real em R6 |
 
 Verdicto Ponytail R3: PASS. Não foi criada persistência, framework, base, endpoint novo, adapter prematuro ou abstraction layer além da ponte e composition root necessários. Gates de Health, policy/failover e adapter permanecem NOT_APPLICABLE nesta fase e serão obrigatórios em R4–R6.
+## R4 — Testes e Ponytail
+
+Focados: multiproviders-runtime-state 14/14; domain 23/23; bridge 12/12; wiring 16/16. Regressões: endpoints 23/23; security 23/23; callLLM 12/12; routing 18/18; hardening PASS; diff-check PASS.
+
+| Gate R4 | Intenção | Evidência | Resultado | Risco/correção |
+|---|---|---|---|---|
+| No Capability Assumption | nomes não provam suporte | intersection Provider×Model×Offering | PASS | R6 adapters devem produzir evidence |
+| No Boolean Health | estado expressivo | boolean rejeitado | PASS | nenhum |
+| No False Health | ONLINE exige source/evidence/validity | negative tests | PASS | probes futuros |
+| No Stale Health | vencimento vira UNKNOWN | relógio injetado/TTL | PASS | persistência futura preserva validity |
+| No Lifecycle Bypass | disabled/removed inelegível | eligibility + transitions | PASS | R5 deve consumir API |
+| No Scope Propagation | escopos independentes | Provider online, demais unknown | PASS | nenhum |
+| No Evidence-Free Ready | READY separado de Health | eligibility exige ambos | PASS | bridge continua máximo configured |
+| No Secret Exposure | evidence segura | rejeição recursiva | PASS | nenhum |
+| No Duplicate Registry | mesmo composition root | wiring 16/16 | PASS | ledger é contrato interno, não Registry |
+| No Version Mixing | capability_version separada | contrato e tests | PASS | health_schema version futura |
+| No Provider Special Case | zero nome/vendor no runtime-state | busca estrutural | PASS | nenhum |
+| No Model Coupling | offering explícita | resolveCapability exige IDs | PASS | nenhum |
+
+Verdicto Ponytail R4: PASS. Um módulo puro e uma suíte; zero probe fictício, scheduler, banco, endpoint, dependency ou framework. Routing/failover, benchmark e adapter permanecem NOT_APPLICABLE até suas fases.

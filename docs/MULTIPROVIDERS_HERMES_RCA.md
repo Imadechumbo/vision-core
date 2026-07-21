@@ -193,3 +193,48 @@ Estado canônico é volátil por processo e não coordena múltiplas instâncias
 ### VEREDITO
 
 PASS. A ponte é explícita, observável, limitada e reversível; legado é adaptado, não canonizado.
+## R4 — Capability, Health and Lifecycle Runtime
+
+### SISTEMA ANALISADO
+
+MultiProvidersRuntimeState, Health ledger escopado, capability evidence, Provider lifecycle e eligibility.
+
+### OBJETIVO
+
+Impedir que disponibilidade, capability ou lifecycle sejam presumidos, propagados ou persistidos além da validade da evidência.
+
+### HIPÓTESE DE FALHA
+
+Provider ONLINE mascararia Model offline; data inválida pareceria fresca; READY seria inferido de configuração; disabled receberia tráfego; evidence carregaria segredo.
+
+### CAUSAS RAIZ
+
+Health legado era status solto sem escopo/TTL; capabilities eram implícitas em nomes/descritores; consumers não tinham decisão unificada de eligibility.
+
+### VETORES
+
+Boolean Health; timestamp futuro/inválido; TTL zero; evidence ausente; propagação Provider→Model/Credential/Endpoint; capability validada sem período; scope collision; lifecycle bypass; secret em evidence.
+
+### EVIDÊNCIAS
+
+Seis escopos usam identidades compostas. Missing/stale retorna UNKNOWN. Datas inválidas/futuras e métricas negativas falham. Capability validated/degraded exige source/evidence/validated_at/valid_until frescos. Eligibility exige READY, Provider/Model online ou degraded e intersection validada. Testes 14/14 mais domínio 23/23 e regressões.
+
+### IMPACTO
+
+Uma falha rotearia para Model/capability indisponível, manteria Health eterno, violaria disable administrativo ou vazaria credencial por observabilidade.
+
+### DETECÇÃO
+
+Relógio injetado, testes de expiração, non-propagation, owner collision, órfãos, evidência inválida, disabled/recovery e busca de campos de segredo.
+
+### PREVENÇÃO
+
+Fail-closed UNKNOWN; chaves por scope/owner; evidence temporal; lifecycle separado; segredo rejeitado recursivamente; runtime composto com os mesmos Registries.
+
+### RISCO RESIDUAL
+
+Sem probes/adapters reais, nenhuma observação canônica é produzida automaticamente. Ledger é volátil por processo. DEGRADED permanece elegível tecnicamente; policy R5 decide restrições adicionais. Persistência de Health não foi criada para evitar verdade eterna sem contrato de storage.
+
+### VEREDITO
+
+PASS. Nenhum Health booleano/falso/vencido, capability presumida, propagação de escopo ou bypass de lifecycle foi aceito.

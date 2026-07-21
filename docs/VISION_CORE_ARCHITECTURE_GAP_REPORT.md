@@ -334,3 +334,6 @@ A fundação canônica agora existe isoladamente em backend/multiproviders-domai
 ## Implementation delta — R3 (2026-07-21)
 
 Provider Registry e Model Registry passam a autoridade de identidade em processo para os três catálogos legados: endpoint Provider-only, callLLM e Hermes. A ponte traduz metadata, Models e offerings; segredos e funções de execução ficam fora do contrato. Incompatibilidades e desaparecimentos possuem receipts; nenhum registro é apagado. Readiness de Registries/compatibility sobe para CONDITIONAL: autoridade em memória e wiring existem, mas persistência e concorrência multi-processo não foram introduzidas. Routing, transports e probes continuam deliberadamente legados até R4–R6; a ponte deve ser retirada em R10.
+## Implementation delta — R4 (2026-07-21)
+
+Health/Lifecycle e Capability passam de NOT_READY para CONDITIONAL: runtime puro, temporal, tenant-scoped e composto com os registries existe; eligibility combina lifecycle, Health Provider/Model e capabilities Provider×Model×Offering. Não há probes canônicos nem persistência de observações, deliberadamente reservados aos adapters/persistência futuros. O status legado de providerStatus não é promovido automaticamente a evidência canônica. Routing permanece NOT_READY até R5.

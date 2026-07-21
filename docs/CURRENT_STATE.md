@@ -1,5 +1,18 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-21 — MultiProviders R4 Capability, Health and Lifecycle Runtime complete
+
+Status: MULTIPROVIDERS_R4_COMPLETE.
+
+Runtime puro e composto com os registries canônicos implementa Health temporal nos escopos Provider, Transport, Model, Capability, Credential e Endpoint; observação ausente/vencida vira UNKNOWN; nenhuma propagação entre escopos. Capability validated/degraded exige source, evidence, validated_at e valid_until válidos. Eligibility exige Provider READY, Health válido de Provider e Model e interseção validada Provider × Model × Offering.
+
+Lifecycle continua conforme Phase 1.1: discovered, registered, configured, validated, ready, disabled, removed. Degraded/offline pertencem somente a Health. Disabled não recebe bypass e recovery exige configured → validated → ready. Evidence/extensions rejeitam campos de segredo recursivamente; credential_ref permanece permitido.
+
+Testes: domínio 23/23; runtime-state 14/14; bridge 12/12; wiring 16/16; endpoints 23/23; security 23/23; callLLM 12/12; vault routing 18/18; hardening PASS; diff-check PASS. Hermes R4 PASS. Ponytail R4 PASS. Commit funcional 91b59cb8. Nenhum push/deploy.
+
+Risco residual: ainda não existem probes canônicos; adapters R6 produzirão observações. Routing R5 será o primeiro consumidor da eligibility canônica. Próximo passo automático após commit documental: R5 Policy Routing and Compatible Failover.
+
+---
 ## 2026-07-21 — MultiProviders R3 Legacy Compatibility Bridge complete
 
 Status: MULTIPROVIDERS_R3_COMPLETE.
