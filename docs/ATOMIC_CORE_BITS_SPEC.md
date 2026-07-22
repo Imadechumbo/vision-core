@@ -2,9 +2,10 @@
 
 **Parte da série de arquitetura — leia `MASTER_SPEC.md`, `ARCHITECTURE.md` e `docs/ATOMIC_CORE_SPEC.md` (spec da versão atual) antes deste.**
 
-> Versão: 1.0.0 · Criado: 2026-07-21
-> Fase 1 (esta spec) fechada. Fase 2 (protótipo isolado) ainda não autorizada — nenhuma implementação da versão nova foi feita nesta sessão.
-> **Atomic Core é área protegida (`docs/ATOMIC_CORE_SPEC.md` seção "Área protegida") — qualquer implementação real desta spec exige aprovação explícita do usuário, mesmo depois da spec aprovada.**
+> Versão: 1.1.0 · Criado: 2026-07-21 · Atualizado: 2026-07-22
+> Fase 1 (esta spec) fechada. Fase 2 (protótipo isolado) ainda não autorizada — nenhuma implementação da versão nova foi feita.
+> **Atualização 2026-07-22:** a causa raiz de performance encontrada na seção 1.4 (`backdrop-filter` em `.vc-composer`) foi corrigida — ver `docs/CURRENT_STATE.md` e seção 3.2 abaixo. `.vc-composer`/`.vc-sidebar` não fazem parte da área protegida do Atomic Core (`docs/ATOMIC_CORE_SPEC.md` § Escopo), então esse fix não precisou do gate de aprovação do widget em si. A versão "bits" continua **puramente estética** a partir de agora, sem urgência de performance pendente.
+> **Atomic Core em si é área protegida (`docs/ATOMIC_CORE_SPEC.md` seção "Área protegida") — qualquer implementação real da versão bits exige aprovação explícita do usuário, mesmo depois da spec aprovada.**
 
 ---
 
@@ -153,8 +154,8 @@ A forma exata como o glow é renderizado (CSS `filter:drop-shadow()` vs. sprite/
 
 **Decisão registrada, não implementada:** tratar como **dois problemas com escopos e prazos diferentes**, não misturar:
 
-1. **Fix de performance real (curto prazo, fora desta spec):** revisar `contain: paint` no `.vc-composer` (mitigação parcial de 2026-07-15) e considerar (a) `contain: paint` também no `.vc-sidebar` esquerda, (b) avaliar se o `backdrop-filter` é essencial visualmente nesses dois elementos ou pode ser substituído por um fundo sólido/semitransparente sem blur nesses dois pontos específicos, (c) medir de novo depois. **Não faz parte desta spec** (é fix da versão atual, fora do escopo "não tocar na versão atual" — precisa de aprovação separada do usuário antes de qualquer mudança real, e é candidato a ficar registrado em `docs/CURRENT_STATE.md` como achado desta sessão, não implementado).
-2. **Versão "bits" (esta spec, Fase 2+):** Opção **B (DOM/sprite sheet)** é a recomendada quando/se a Fase 2 for autorizada — preserva a estrutura de 10 nós individuais (compatível com `highlightAtomicAgents()`/`--agent-color`/acessibilidade), remove a escrita de `filter` calculada em JS a cada tick (mesmo não sendo o gargalo dominante hoje, é custo real não-zero e puramente decorativo, seção 1.4) e não contradiz a regra dura "nunca Canvas" sem uma sessão de decisão dedicada (mudar essa regra em `docs/ATOMIC_CORE_SPEC.md` exigiria justificativa própria, e a medição real não a sustenta sozinha — Opção A fica descartada por ora, não porque Canvas seja tecnicamente pior, mas porque não há evidência de que resolveria o problema real medido).
+1. **Fix de performance real (curto prazo, fora desta spec) — RESOLVIDO 2026-07-22, ver `docs/CURRENT_STATE.md`.** `backdrop-filter: blur(18px)` removido de `.vc-composer` (`vision-core-next-clean.css:1145`), `background` subiu de `rgba(8,7,13,.82)` para `rgba(8,7,13,.99)` pra compensar a perda do efeito de vidro fosco. `.vc-sidebar` esquerda foi deixado **intocado** — medição real mostrou que remover o `backdrop-filter` de qualquer um dos dois isoladamente já elimina 100% dos frames >33ms nesse ambiente, então o fix mais conservador (só o composer, que é o mais próximo do HUD e o que tem a nota histórica de 2026-07-15) foi suficiente sem precisar tocar o segundo elemento. Alternativas de blur reduzido (6px/3px) foram testadas e descartadas — não eliminam o custo de forma confiável. Validado com e2e (34/34 Atomic Core + 21/21 App Shell, zero regressão) e revisão adversarial real via `/api/chat` produção.
+2. **Versão "bits" (esta spec, Fase 2+):** com o problema de performance real já resolvido no item 1, esta spec **volta a ser puramente estética** — não há mais nenhum problema de performance mensurável pendente que a versão bits precise resolver. Opção **B (DOM/sprite sheet)** continua a recomendação para quando/se a Fase 2 for autorizada, mas agora por mérito estético/arquitetural (preserva a estrutura de 10 nós individuais, remove a escrita de `filter` calculada em JS a cada tick — custo real não-zero mas menor, puramente decorativo) e não mais por urgência de performance. Opção A (Canvas) segue descartada pelos mesmos motivos da seção anterior.
 
 ---
 
@@ -200,7 +201,8 @@ Nenhuma fase além da 1 está autorizada por este documento.
 | Data | Mudança |
 |---|---|
 | 2026-07-21 | Criação — diagnóstico real + spec da versão bits. |
+| 2026-07-22 | Fix real de performance aplicado (`.vc-composer`, fora da área protegida do Atomic Core) — seção 3.2 e nota de topo atualizadas. Spec passa a ser puramente estética a partir daqui. Nenhuma mudança na versão atual do Atomic Core em si (widget protegido intocado). |
 
 ## Controle de versão
 
-**1.0.0** — 2026-07-21
+**1.1.0** — 2026-07-22

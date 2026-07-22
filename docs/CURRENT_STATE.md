@@ -1,5 +1,29 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-22 — Fix real: `backdrop-filter` removido do composer (causa do "pesado e piscando")
+
+Status: `ATOMIC_CORE_COMPOSER_BACKDROP_FILTER_FIX_COMMITTED_NOT_DEPLOYED`.
+
+Escopo: só `.vc-composer` (`frontend/assets/vision-core-next-clean.css:1135-1163`) — fora da área protegida do Atomic Core (`docs/ATOMIC_CORE_SPEC.md` § Escopo define a área protegida como `window.AtomicCoreNext`/`.vc-atomic-hud`, confirmado por leitura direta antes de tocar em qualquer CSS, não presumido). Nenhuma mudança no widget do Atomic Core em si, nenhuma mudança em `.vc-sidebar` (decisão explícita, ver abaixo).
+
+**Fix:** `backdrop-filter: blur(18px)` removido de `.vc-composer`; `background` subiu de `rgba(8,7,13,.82)` para `rgba(8,7,13,.99)` pra compensar a perda do efeito de vidro fosco. `contain:paint` mantido (não depende do backdrop-filter que saiu, continua útil por si só).
+
+**Decisão de design (Passo 1, antes de codar):** testadas 3 alternativas reais antes de escolher — (1) reduzir o raio do blur pra 6px: ainda deixava ~5% dos frames >33ms, não é confiável; (2) reduzir pra 3px: ficou **pior** que o baseline (11% >33ms, pico de 50ms) — blur pequeno não escala linearmente com o custo, achado real não previsto; (3) remoção completa + background mais opaco: única opção que zerou os frames >33ms de forma repetível. Testado também remover só `.vc-sidebar` isoladamente vs. só `.vc-composer` isoladamente vs. os dois — qualquer um dos dois sozinho já elimina o custo nesse ambiente, então o fix ficou restrito só ao `.vc-composer` (mais próximo do HUD, com a nota histórica de 2026-07-15) — `.vc-sidebar` esquerda permanece com `backdrop-filter:blur(18px)` intocado, efeito de vidro fosco preservado onde não tem custo demonstrado.
+
+**Gate determinístico (Hermes):**
+- Medição real, metodologia idêntica à sessão anterior (`docs/ATOMIC_CORE_BITS_SPEC.md` § 1.3) — A/B intercalado na mesma sessão de página, 5 rodadas por variante: baseline (código real, via `git stash`) 17,85ms médio / 8,3% frames >33ms / pico 33,4ms → depois do fix 16,55ms médio / **0% frames >33ms** / pico **16,8ms**. Comparação adicional via `git stash`/`git stash pop` no arquivo real (não só override simulado) confirmou a mesma direção, com mais ruído (ambiente headless não-interleaved, variância já documentada em sessões anteriores — reportado honestamente, não escondido).
+- **Checagem visual real (Passo 2.3):** screenshot Playwright do bounding box exato do composer (não uma área maior ao redor) — limpo, sem vazamento de texto. **Achado no caminho, corrigido no mesmo passo:** um crop inicial que incluía ~3px acima do elemento real pareceu mostrar "texto vazando" através do fundo — investigação (bounding box exato via `getComputedStyle`, mais teste com 25 mensagens reais injetadas e roladas por baixo do composer sticky, cenário real da nota de 2026-07-15) confirmou que não era vazamento nenhum, só conteúdo da página genuinamente acima do elemento capturado por engano no crop. `background` subiu de `.94` (1ª tentativa) pra `.99` (valor final) por precaução extra antes dessa descoberta — mantido em `.99` por não ter custo (opacidade não é filtro, não tem custo de performance) mesmo depois de confirmar que `.94` já era suficiente.
+- `tests/e2e/vision-core-next-atomic-core.spec.mjs` 34/34 PASS, `tests/e2e/vision-core-next-app-shell.spec.mjs` (cobre o composer) 21/21 PASS — zero regressão.
+
+**Gate adversarial (Ponytail/LLM real via `/api/chat` produção, `cerebras/gpt-oss-120b`, diff real colado, request_id `9d7605eb-e606-43a2-bf36-982d57935198`):** 4 perguntas diretas (contraste, mobile, dark/light mode, outros problemas). Contraste e mobile: sem problema, confirmado. **Dark/light mode:** o modelo apontou o `rgba` hardcoded como risco de conflito com um tema light — triagem real (não corrigido às cegas): `:root{color-scheme:dark}` no topo do CSS, zero ocorrência de `prefers-color-scheme`/`data-theme`/toggle de tema em todo o arquivo (grep confirmado) — Vision Core Next é dark-only por design, sem tema light existente, e o valor anterior (`rgba(8,7,13,.82)`) já era igualmente hardcoded — **não é um problema novo introduzido por este fix**, é o mesmo padrão já presente em todo o arquivo. Outros pontos levantados (modo high-contrast do SO, impressão/PDF) são reais mas pré-existentes (o composer já ignorava `forced-colors` antes desta mudança) e de prioridade muito baixa pra uma SPA de chat — registrados aqui, não endereçados nesta sessão por não fazerem parte do pedido.
+
+Não deployado ainda — código pronto, testado localmente, commit isolado. Push/deploy seguem o fluxo normal de aprovação (sem urgência de segurança, é performance).
+
+`docs/ATOMIC_CORE_BITS_SPEC.md` atualizado (1.0.0→1.1.0): seção 3.2 e nota de topo revisadas — o problema de performance que motivou a spec está resolvido; a versão "bits" (Fase 2+, ainda não autorizada) volta a ser puramente estética, sem urgência de performance pendente.
+
+Próximo passo permitido: aguardar decisão do usuário sobre push/deploy deste fix. Fase 2 da spec bits continua exigindo aprovação explícita separada (área protegida do Atomic Core).
+
+---
 ## 2026-07-21 — Atomic Core: diagnóstico real de performance + spec da versão "bits"
 
 Status: `ATOMIC_CORE_BITS_SPEC_COMPLETE_NO_IMPLEMENTATION`.

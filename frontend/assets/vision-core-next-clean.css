@@ -1142,18 +1142,26 @@ a { color: inherit; text-decoration: none; }
   padding: 12px;
   border: 1px solid rgba(216, 180, 254, .16);
   border-radius: 14px;
-  background: rgba(8, 7, 13, .82);
+  background: rgba(8, 7, 13, .99);
   box-shadow: 0 22px 70px rgba(0, 0, 0, .35);
-  /* contain:paint (achado real, 2026-07-15 -- agentes "piscando"): a rail
-     do Atomic Core agora fica no canto inferior direito, perto/atrás do
-     composer -- o backdrop-filter precisa reamostrar o que está atrás
-     dele, e com o HUD animando 10 agentes todo frame ali perto, essa
-     reamostragem custou caro o bastante pra derrubar o frame rate pela
-     metade em teste controlado (A/B isolando só essa propriedade). paint
-     containment isola o composer da necessidade de reagir a mudanças de
-     pintura fora da própria caixa. */
+  /* Achado real 2026-07-15: com o HUD do Atomic Core animando 10 agentes
+     todo frame perto/atrás deste composer sticky, o backdrop-filter daqui
+     custava caro o bastante pra derrubar o frame rate pela metade -- o
+     fix daquela sessão (contain:paint) reduziu mas não eliminou (ver
+     docs/ATOMIC_CORE_BITS_SPEC.md, medição real 2026-07-21).
+     Fix real 2026-07-22 (docs/CURRENT_STATE.md): backdrop-filter removido
+     -- A/B real mostrou que reduzir o raio do blur (6px/3px) não elimina o
+     custo de forma confiável (6px ainda deixava ~5% dos frames >33ms;
+     3px chegou a ficar PIOR que o baseline, pico de 50ms), só a remoção
+     completa zera os frames >33ms de forma repetível. background subiu de
+     .82 pra .99 de opacidade pra compensar a perda do efeito de vidro
+     fosco. Checado com screenshot real (crop exato do bounding box do
+     elemento, não da área ao redor) e com mensagens reais injetadas e
+     scrolladas por baixo do composer sticky (cenário real da nota de
+     2026-07-15 abaixo): sem vazamento de texto legível através do fundo.
+     contain:paint mantido -- não
+     depende do backdrop-filter que saiu, continua útil por si só. */
   contain: paint;
-  backdrop-filter: blur(18px);
 }
 
 .vc-composer textarea {
