@@ -1,5 +1,35 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-22 — Atomic Core: causa real da piscada do widget encontrada (diagnóstico, zero implementação)
+
+Status: `ATOMIC_CORE_WIDGET_FLICKER_ROOT_CAUSE_FOUND_AWAITING_APPROVAL`.
+
+Escopo: só diagnóstico do widget em si (`window.AtomicCoreNext`/`.vc-atomic-hud`) — área protegida confirmada em `docs/ATOMIC_CORE_SPEC.md` § Escopo antes de tocar em qualquer coisa. **Zero implementação de fix real.** Confirmado com o usuário: mesmo com `next-clean-136` (fix do `backdrop-filter` do composer/sidebar) ao vivo e hard refresh feito, a piscada do decágono continua — esperado, porque aquele fix era de um componente vizinho, nunca deveria ter resolvido isto.
+
+**As duas hipóteses testadas em paralelo, com evidência real (Playwright/Chromium, MutationObserver nos writes reais de `style`, não estimativa):**
+
+**Hipótese A (engasgo de frame) — DESCARTADA com medição real.** Timing de frame via rAF, 6s cada, focado no widget: idle 16,62ms médio / **0% frames >33ms** / pico 16,8ms; action 16,62ms médio / **0% frames >33ms** / pico 16,8ms. O fix do composer/sidebar da sessão anterior já eliminou o engasgo de frame também aqui (o widget não tinha problema de performance próprio à parte — o custo que sobrava era todo dos vizinhos).
+
+**Hipótese B (flash/pulso mal calibrado) — CONFIRMADA com medição real.** Leitura de `Agent.prototype.place()` (`vision-core-next-clean.js` ~linha 4040) encontrou candidato real: o boost de `highlighted` (`+.08` opacidade, `+.035` escala, `×1.45` glow) é aplicado como **degrau instantâneo, sem nenhuma interpolação** — muda de um valor pro outro num único frame. `startAtomicSequence()` (mesmo arquivo, ~linha 4215) alterna qual agente está `highlighted` a cada **1800ms** (`ATOMIC_STEP_MS`) durante o estado Action — e Action é o estado ativo durante **qualquer missão real** (achado real: 5 call sites de produção chamam `startAtomicSequence()` — chat, Software Factory, dry-run, apply-fix, GitHub PR — não é um caso raro).
+
+Medido diretamente via `MutationObserver` no atributo `style` real do nó `hermes` (não reconstruído de pixel/vídeo):
+- **Baseline em regime estável** (Action rodando, sem ciclo de highlight): delta médio de opacidade entre frames consecutivos = `0.0015`, delta máximo = `0.004`. Suave, imperceptível.
+- **No instante exato da transição de highlight** (`startAtomicSequence()` real rodando): opacidade salta `0.875 → 0.795` (delta `0.08`) em **0,7ms** entre dois writes reais — **20-53× maior** que o delta máximo/médio do regime estável. Escala salta `0.807 → 0.772` (delta `0.035`), batendo exatamente com o boost do código.
+- **Achado adicional, agrava o efeito:** o componente de glow (brilho) não acompanha a mesma transição — por causa do throttle separado (`updateGlow = renderTickCount % 3 === 0`, já existente desde 2026-07-18 pra reduzir custo de `filter`), o brilho real só "alcança" o novo valor até ~65ms **depois** da opacidade/escala já terem saltado. Ou seja, não é um único degrau limpo — é um degrau de opacidade/escala seguido de um segundo ajuste de brilho fora de sincronia, mais perceptível como "piscar" do que um snap único simultâneo seria.
+
+**Conclusão:** a piscada é a Hipótese B — real, intencional-mas-mal-calibrada, não um bug de performance. Ela se repete a cada 1,8s durante qualquer operação ativa (exatamente quando o usuário está olhando o widget), o que explica por que persiste mesmo com o fix de performance da sessão anterior.
+
+**Alternativas de correção comparadas (não implementadas — decisão fica com o usuário):**
+1. **Interpolar o boost de `highlighted` ao longo de ~200-300ms** (reutilizando o mesmo padrão de easing já usado pra transição Action→Idle, `easeInOutQuad`, em `returning`) em vez de aplicar `+.08`/`+.035`/`×1.45` como valor fixo 0/1. **Recomendação**, por reaproveitar arquitetura já existente no arquivo, não introduzir paradigma novo.
+2. **Sincronizar o brilho com a mesma transição** — forçar `updateGlow=true` no frame exato em que `highlighted` muda, em vez de esperar o próximo tick do throttle de 1/3. Resolve o sub-achado do desalinhamento de ~65ms. Combina bem com a opção 1, não é excludente.
+3. Só desacelerar `ATOMIC_STEP_MS` (hoje 1800ms) — reduz a frequência do degrau, mas não resolve a qualidade do degrau em si (continua instantâneo, só mais espaçado). Insuficiente sozinho.
+4. Remover o boost de `highlighted` inteiramente — eliminaria a piscada por completo, mas também elimina o único sinal visual de "qual agente está ativo agora", que é o propósito central do widget (`docs/ATOMIC_CORE_SPEC.md` § Objetivo). Considerada e não recomendada por esse motivo, registrada aqui por transparência de que foi avaliada.
+
+**Nenhuma mudança de código feita nesta sessão.** Scripts de medição temporários (`atomic-core-flicker-probe.tmp.mjs`, `atomic-core-highlight-probe.tmp.mjs`), removidos ao final, nunca commitados — mesmo padrão das 2 sessões anteriores.
+
+**Pedido de aprovação explícita (regra da própria área protegida, `docs/ATOMIC_CORE_SPEC.md` § Área protegida):** implementar a opção 1 (+ opcionalmente 2) exige aprovação separada do usuário antes de qualquer código real, mesmo a causa estando confirmada com evidência e o fix parecendo simples.
+
+---
 ## 2026-07-22 — Deploy de frontend (Cloudflare Pages) concluído: `next-clean-136` ao vivo
 
 Status: `PAGES_DEPLOY_next-clean-136_LIVE_CONFIRMED`.
