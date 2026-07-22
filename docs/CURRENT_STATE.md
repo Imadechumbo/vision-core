@@ -1,5 +1,29 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-21 — MultiProviders R7 Operational Certification iniciada
+
+Status: MULTIPROVIDERS_R7_1_BLOCKED_NO_LOCAL_COLIBRI_MODEL_ARTIFACT.
+
+Escopo: somente produção de evidência local. Nenhuma integração, Provider Adapter, arquitetura, contrato, MultiProviders, SPEC ou ADR foi alterado. R8 não foi iniciada.
+
+| Microetapa | Critério de entrada | Evidência objetiva de saída | Veredito atual |
+|---|---|---|---|
+| R7.1 Model Artifact | diretório local legível com modelo Colibri completo | `config.json` válido, `tokenizer.json` e shards safetensors completos/validados | BLOCK — `D:\AI\models` existe e contém zero arquivos |
+| R7.2 Startup | R7.1 PASS; `glm.exe` e servidor presentes | processo inicia com modelo real, fica pronto e encerra controladamente | BLOCK — entrada R7.1 ausente |
+| R7.3 Health | R7.2 PASS | resposta real de `GET /health`, status/body/timestamp capturados | BLOCK — entrada R7.2 ausente |
+| R7.4 Model Discovery | R7.2 PASS | resposta real de `GET /v1/models` coerente com o model ID carregado | BLOCK — entrada R7.2 ausente |
+| R7.5 Inference | R7.3 e R7.4 PASS | request/response real de chat não-streaming com usage e model ID | BLOCK — entradas ausentes |
+| R7.6 Streaming | R7.5 PASS | stream SSE real, frames válidos, `[DONE]` e usage final | BLOCK — entrada R7.5 ausente |
+| R7.7 Timeout | R7.2 PASS | timeout real controlado, status/error shape e ausência de falso sucesso | BLOCK — entrada R7.2 ausente |
+| R7.8 HTTP Errors | R7.2 PASS | erros reais para auth/model/request inválidos e saturação aplicável | BLOCK — entrada R7.2 ausente |
+
+Testes documentais: `glm.exe`, `openai_server.py`, `coli`, `doctor.py`, `download_fp8.py` e Makefile presentes; checkout Colibri permanece no commit `44e489b196c9b7876b3d37a0570ebf1c6f90f54c`; `doctor.py` exige `config.json`, `tokenizer.json` e shards válidos; contagem de `D:\AI\models`: 0. Nenhum processo `glm`, `coli` ou Python de download foi encontrado.
+
+Hermes: PASS para a parada adversarial. Presença de binário e endpoints no código não autoriza declarar startup, Health, discovery ou inferência sem modelo real. Ponytail: PASS; um checkpoint, um arquivo, zero harness/mock/adapter. PASS GOLD: NOT_APPLICABLE — não houve candidato de promoção.
+
+Próximo passo permitido: repetir somente R7.1 quando um model artifact local completo existir. PARAR. Não iniciar R7.2 nem R8.
+
+---
 ## 2026-07-21 — Engineering Governance Pipeline formalizado
 
 Status: ADR-052_APPROVED_DOC_ONLY.
