@@ -1,5 +1,26 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-21 — Atomic Core: diagnóstico real de performance + spec da versão "bits"
+
+Status: `ATOMIC_CORE_BITS_SPEC_COMPLETE_NO_IMPLEMENTATION`.
+
+Escopo: só diagnóstico + spec (`docs/ATOMIC_CORE_BITS_SPEC.md`). Nenhuma mudança persistida na versão atual do Atomic Core, nenhuma implementação da versão bits. Trilho independente do MultiProviders/Colibri, pode avançar em paralelo.
+
+**Achado real, com medição, não suposição:** sintoma reportado ("pesado e piscando") **não** é dominado hoje pelo `filter:drop-shadow()` por-agente já mitigado em 2026-07-18 (throttle+memoização) — A/B intercalado real (Playwright+Chromium headless, rAF timing real, 5 rodadas por variante) mostrou remover esse filter ou seu `will-change` **não melhora de forma consistente**. A causa dominante remanescente é `backdrop-filter: blur(18px)` em `.vc-composer` (`vision-core-next-clean.css:1156`) e `.vc-sidebar` esquerda (`:63`) — elementos vizinhos ao HUD, já parcialmente mitigados em 2026-07-15 com `contain:paint` no composer (achado já registrado em comentário no próprio CSS), mas a mitigação não elimina o custo: removendo `backdrop-filter` de qualquer um dos dois (isolado), 0% dos frames ficaram acima de 33ms e o máximo caiu de 33,4ms pro baseline pra 16,8ms — resultado idêntico nas 3 variantes de remoção testadas (composer só, sidebar só, os dois). Trace real via CDP (6s, categorias `devtools.timeline`) confirmou volume de DOM (10 agentes, 67 nós) e `UpdateLayoutTree` não são o gargalo (<1% do tempo). Script de medição era temporário (`atomic-core-perf-probe.tmp.mjs`, raiz do repo durante a execução), **removido ao final, nunca commitado** — mesmo padrão de scripts de validação pontual já usado pelo projeto.
+
+**Ressalva registrada na própria spec:** ambiente headless/sandboxado sem GPU real — sinal de `% frames >33ms`/máximo é limpo e repetível, mas pode diferir numa máquina real do usuário (mesma ressalva já registrada pelo projeto em 2026-07-18).
+
+**Decisão registrada na spec, não implementada:** o fix de performance real (`backdrop-filter` nos vizinhos) e a versão "bits" (estética pixel/blocado) são **dois trabalhos separados** — o primeiro é um fix pontual fora do escopo desta sessão (mexe na versão atual, área protegida, precisa de aprovação própria); o segundo é a spec entregue aqui. Entre Canvas (opção A) e DOM/sprite-sheet com `steps()` (opção B), a spec recomenda **B** para a Fase 2 — preserva a estrutura de 10 nós individuais e a regra dura existente "nunca Canvas/WebGL" (`docs/ATOMIC_CORE_SPEC.md`), e nenhuma das duas opções ataca a causa raiz real encontrada (que é externa ao widget).
+
+Movimento/escala/coreografia da versão atual documentados como requisito não-negociável na spec (geometria por agente, 3 padrões de Idle, 3 de Action, transição de Retorno, `reduceMotion`, `highlighted`, `is-collapsed`) — critério de aceite explícito para qualquer implementação futura.
+
+`docs/ATOMIC_CORE_SPEC.md` ganhou uma linha de pendência apontando pra spec nova (versão 1.1.0→1.1.1) — nenhum outro conteúdo alterado.
+
+Hermes: não aplicável (sessão sem implementação de código de produção). Ponytail: PASS — spec + 2 linhas de pendência/histórico em doc existente, nenhuma abstração nova, script de medição descartável e nunca commitado.
+
+Próximo passo permitido: Fase 2 (protótipo isolado) só com aprovação explícita do usuário — Atomic Core é área protegida. Fix pontual de `backdrop-filter` na versão atual (fora desta spec) também depende de aprovação separada antes de qualquer mudança real.
+
+---
 ## 2026-07-21 — MultiProviders R7 Operational Certification iniciada
 
 Status: MULTIPROVIDERS_R7_1_BLOCKED_NO_LOCAL_COLIBRI_MODEL_ARTIFACT.

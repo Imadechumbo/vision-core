@@ -163,6 +163,7 @@ O Atomic Core **nunca** é a fonte de verdade de nenhum dado — é sempre um es
 
 - Máquina de 4 estados (THINKING/EXECUTING com partículas/deslocamento) — IDEIA FUTURA, sem implementação.
 - Configuração de intensidade visual (discreto/normal/ativo) — Etapa 3 do roadmap de Settings, não implementada.
+- Versão visual "bits" (pixel/blocado), spec-only — ver `docs/ATOMIC_CORE_BITS_SPEC.md` (2026-07-21). Diagnóstico real encontrou a causa dominante do "pesado/piscando" fora do widget (`backdrop-filter` em `.vc-composer`/`.vc-sidebar`, não no Atomic Core em si) — fix de performance da versão atual e a versão bits em si são dois trabalhos separados, nenhum implementado ainda.
 
 ## Próximos passos
 
@@ -175,7 +176,8 @@ Ver `ROADMAP.md`, Fase 1 (Frontend) e Fase 5 (IA/experiência).
 | 2026-07-09 (v47/v48) | Correção de acoplamento de reduced-motion, depois inversão completa (SO nunca degrada por padrão, `VCMotion` como fonte de verdade). |
 | 2026-07-09 | Criação deste documento consolidado. |
 | 2026-07-15 | Sidebar direita canônica 252/78px; HUD dimensionado para a rail e removido do grid fluido do Chat. |
+| 2026-07-21 | Pendência registrada: spec da versão "bits" + diagnóstico real de performance, ver `docs/ATOMIC_CORE_BITS_SPEC.md`. Nenhuma mudança na versão atual. |
 
 ## Controle de versão
 
-**1.1.0** — 2026-07-15
+**1.1.1** — 2026-07-21
