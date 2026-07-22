@@ -265,6 +265,8 @@ GitHub Actions roda a suíte Playwright + gera `docs/CI-LAST-RUN.md`/`STRESS-TES
 
 Vigente desde 2026-07-08, texto completo em `CLAUDE.md`. Resumo:
 
+O Engineering Governance Pipeline e a separação normativa entre Process Governance, testes determinísticos, Hermes, Ponytail e PASS GOLD estão definidos exclusivamente em `docs/DECISIONS.md`, ADR-052. Executores são substituíveis e não possuem autoridade sobre o processo.
+
 1. Antes de começar: ler `CLAUDE.md` → spec relevante (esta série de 10) → `docs/CURRENT_STATE.md`.
 2. Ao terminar uma etapa ou antes de bater limite de uso: atualizar os três.
 3. Toda tarefa termina com: arquivos alterados, testes feitos (comando + resultado), pendências, próximo comando recomendado. Commit sempre — nunca deixar a working tree suja entre tarefas.

@@ -40,6 +40,20 @@ Nenhum componente de dashboard, gráfico, painel, monitor, timeline ou grid de m
 
 ---
 
+## Governança de engenharia
+
+### ADR-052 — Engineering Governance Pipeline
+
+O processo oficial de engenharia separa cinco responsabilidades que pertencem ao projeto, nunca ao executor: **Process Governance** conduz roadmap, estado, sequência, stop conditions, continuidade e handoff; **testes determinísticos** provam comportamento observável; **Hermes** executa revisão adversarial de SPEC, ADR, contratos, premissas, bypasses, riscos, efeitos colaterais e causa raiz; **Ponytail** elimina complexidade, duplicação, dependências e abstrações desnecessárias; **PASS GOLD** autoriza promoção somente com evidência, autoridade, rastreabilidade e critérios satisfeitos.
+
+**Contexto:** a governança madura já existia, mas sua relação estava distribuída entre SDDF, PI Harness, Hermes, PASS GOLD, handoffs e auditorias Ponytail. Isso permitia confundir correção, arquitetura, minimalidade e promoção, além de associar autoridade ao agente em execução. **Alternativas:** manter responsabilidades implícitas; criar um novo framework; consolidar o contrato no catálogo existente. **Decisão:** consolidar o contrato aqui, sem novo runtime, serviço ou documento. GSD permanece apenas inspiração metodológica conforme ADR-037; a autoridade de Process Governance é do Vision Core e do mantenedor humano, não de ferramenta externa. O pipeline obrigatório é `implementação → testes → Hermes → Ponytail → PASS GOLD → CURRENT_STATE → commit`, governado transversalmente por Process Governance.
+
+**Consequências:** Codex, Claude Code, Colibri, Gemini, OpenCode e qualquer executor futuro são implementadores substituíveis. Nenhum pode alterar SPEC, ADR, governança ou este pipeline por iniciativa própria; pode identificar inconsistências e propor RFC/ADR, mas a decisão final é humana. Testes não decidem arquitetura ou simplificação. Hermes não implementa nem fabrica evidência. Ponytail não é autoridade de segurança nem substitui Hermes. PASS GOLD não implementa. A autonomia continua válida dentro de escopo autorizado e para nas stop conditions vigentes. Princípio permanente: **troca-se a IA; nunca o processo**.
+
+**Como aplicar:** toda implementação registra evidência das etapas aplicáveis antes do commit. Gates não aplicáveis são marcados explicitamente, sem checklist ornamental. Mudanças de governança exigem nova decisão humana; documentos operacionais apenas apontam para esta ADR, sem duplicá-la.
+
+---
+
 ## MultiProviders / Arquitetura oficial
 
 ### ADR-051 — Primeiro adapter certificado é referência in-memory e nunca default

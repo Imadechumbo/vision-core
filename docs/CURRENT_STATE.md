@@ -1,5 +1,17 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-21 — Engineering Governance Pipeline formalizado
+
+Status: ADR-052_APPROVED_DOC_ONLY.
+
+ADR-052 consolida cinco responsabilidades independentes: Process Governance, testes determinísticos, Hermes, Ponytail e PASS GOLD. Pipeline oficial: implementação → testes → Hermes → Ponytail → PASS GOLD → CURRENT_STATE → commit. GSD permanece inspiração conforme ADR-037; a governança pertence ao Vision Core e ao mantenedor humano. Executores futuros são implementadores substituíveis, sem autoridade para modificar o processo por iniciativa própria.
+
+Somente documentação alterada: `docs/DECISIONS.md`, `docs/ARCHITECTURE.md` e `docs/CURRENT_STATE.md`. `docs/README_DOCUMENTATION.md` não precisou mudar: já define `DECISIONS.md` como proprietário exclusivo de decisões permanentes. Nenhum código, runtime, SPEC, deploy ou push.
+
+Hermes: PASS com reconciliação ADR-037; GSD não recebeu ownership externo. Ponytail: PASS; nenhuma nova camada, framework ou documento foi criado, e ponteiros substituem duplicação.
+
+---
+
 ## 2026-07-21 — MultiProviders R7 blocked before implementation
 
 Status: MULTIPROVIDERS_R7_BLOCKED_NO_LOCAL_COLIBRI_EVIDENCE.
