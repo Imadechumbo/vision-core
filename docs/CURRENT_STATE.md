@@ -1,5 +1,18 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-22 — Deploy de frontend (Cloudflare Pages): cache-bust corrigido, autenticação Wrangler pendente
+
+Status: `PAGES_DEPLOY_BLOCKED_WRANGLER_AUTH`.
+
+**Achado real, corrigido:** o commit `b8ac51b6` (fix do `backdrop-filter` do composer, sessão anterior) não incrementou o cache-bust em `frontend/vision-core-next.html` — ficou em `next-clean-135`, igual ao commit anterior (`d64e507a`, painel Agentes), violando a convenção do projeto (cada commit isolado que toca o Next precisa de cache-bust incrementado). Sem risco funcional prático para o deploy pendente (produção ainda servia `next-clean-134`; `135` nunca tinha ido ao ar, então nenhum navegador tinha esse número em cache) — mas a lacuna de processo foi corrigida antes de publicar: `next-clean-135` → `next-clean-136` (só os 2 atributos `?v=` em `vision-core-next.html`, nenhum outro arquivo referencia o número).
+
+**Deploy pendente, confirmado antes de publicar (não presumido):** produção está em `next-clean-134` (checado via `Invoke-WebRequest` real contra `visioncoreai.pages.dev`). Este deploy leva 3 commits de frontend acumulados desde então — `c051519b` (fix de feedback do SF), `d64e507a` (painel Agentes: listar/revogar pareamentos) e `b8ac51b6` (fix do `backdrop-filter` do composer) — mais o bump de cache-bust desta entrada. Backend/EB (fixes de segurança do Vault/Obsidian/admin) **fica fora desta sessão**, por escopo explícito.
+
+**Bloqueado:** nem `CLOUDFLARE_API_TOKEN` está setado na sessão de terminal atual, nem o `wrangler` está autenticado (`wrangler whoami` → `Not logged in` / refresh token `400 Bad Request`, mesmo padrão já documentado em sessões anteriores). Aguardando o usuário configurar o token nesta mesma sessão de terminal (não persiste entre sessões, por design do shell) ou rodar `wrangler login` interativo (não pode ser feito por um agente).
+
+Próximo passo permitido: assim que a autenticação estiver resolvida, rodar `bash bin/deploy-pages.sh` e validar com evidência real (curl/grep no conteúdo servido) que `next-clean-136` está ao vivo e que `backdrop-filter: blur(18px)` não aparece mais no `.vc-composer` do CSS publicado.
+
+---
 ## 2026-07-22 — Fix real: `backdrop-filter` removido do composer (causa do "pesado e piscando")
 
 Status: `ATOMIC_CORE_COMPOSER_BACKDROP_FILTER_FIX_COMMITTED_NOT_DEPLOYED`.
