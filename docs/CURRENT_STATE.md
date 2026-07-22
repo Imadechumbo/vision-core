@@ -12,21 +12,21 @@ Hermes: PASS com reconciliação ADR-037; GSD não recebeu ownership externo. Po
 
 ---
 
-## 2026-07-21 — MultiProviders R7 blocked before implementation
+## 2026-07-21 — MultiProviders R7 reclassificada antes da implementação
 
-Status: MULTIPROVIDERS_R7_BLOCKED_NO_LOCAL_COLIBRI_EVIDENCE.
+Status: MULTIPROVIDERS_R7_BLOCKED_NO_LOCAL_COLIBRI_MODEL_ARTIFACT.
 
-Ponto exato: R6 foi concluída e commitada. R7 iniciou somente com investigação read-only. O comando rg -n -i "colibri" no repositório encontrou apenas SPECs, ADRs, roadmap, relatórios e testes que proíbem special case; nenhum arquivo/runtime/protocolo/config/endpoint/auth/model/capability/Health/teste Colibri existe. O Gap Report já registrava Colibri como ABSENT.
+Ponto exato: R6 permanece concluída e commitada. A investigação read-only de R7 localizou o checkout versionado `D:\AI\colibri` no commit `44e489b196c9b7876b3d37a0570ebf1c6f90f54c`, o runtime compilado `D:\AI\colibri\c\glm.exe` (1.109.362 bytes; SHA-256 `F979A41D50885BE704EDF371495E10086266E819C82F9437FFDA7819E2C325A3`), a estrutura do projeto, Makefiles/scripts e o servidor `openai_server.py`.
 
-Nenhum arquivo funcional R7 foi criado ou alterado. Nenhum adapter Colibri, Manager, Registry, Contract, default, endpoint, secret, rede, push ou deploy. R8 não foi iniciada. Implementar R7 agora exigiria evidência externa ou inventar detalhes públicos, duas condições explícitas de parada.
+Critérios agora satisfeitos: evidência local e versionada do projeto; runtime compilado e executável presente; transport HTTP/OpenAI-compatible documentado; configuração por host/port/model/model-id/API key; endpoints `GET /v1/models`, `GET /v1/models/{model}`, `POST /v1/chat/completions`, `POST /v1/completions` e `GET /health`; JSON, SSE streaming, erros 429 e timeout; model identity configurável; scripts de build, doctor, download, run, chat, serve, stop, bench, convert, web e testes.
 
-Última unidade segura: R6 COMPLETE. Commits: 35b40250 funcional e 1d9675f3 documental. Testes R6: adapters 17/17; router 24/24; runtime-state 14/14; domain 23/23; bridge 12/12; wiring 19/19; endpoints 23/23; security 23/23; callLLM 12/12; vault routing 18/18; hardening PASS.
+Bloqueio restante: `D:\AI\models` existe, mas está vazio. Sem artefato real de modelo, o servidor não pode carregar o engine; portanto não há evidência operacional local de startup, model discovery, Health real, inferência, streaming, erro e timeout contra o runtime/modelo reais. O bloqueio anterior `MULTIPROVIDERS_R7_BLOCKED_NO_LOCAL_COLIBRI_EVIDENCE` está invalidado e foi substituído pelo bloqueio específico de model artifact ausente.
 
-Arquivos alterados neste checkpoint: somente CURRENT_STATE, Implementation Roadmap, Hermes RCA e Test Plan. Artefatos preexistentes continuam preservados e fora dos commits.
+Nenhum arquivo funcional R7 foi criado ou alterado. Nenhum adapter Colibri, Manager, Registry, Contract, arquitetura, default, endpoint, secret, rede, push ou deploy. R8 não foi iniciada. Última unidade segura continua R6 COMPLETE.
 
-Desbloqueio necessário: fornecer documentação/protocolo oficial Colibri local e versionado, contendo ao menos transport, endpoint discovery/configuration, auth reference, model discovery/identity, request/response, streaming, errors, timeout, Health probe, capability evidence e versão. Não fornecer segredo real.
+Testes documentais: PASS para existência/hash do executável, checkout/commit, estrutura, scripts e confronto entre `docs/api.md`, `c/coli` e `c/openai_server.py`; BLOCKED para prova operacional real dependente do modelo ausente. Hermes: PASS na reclassificação e BLOCKED para implementação — código e documentação provam um candidato de transporte, não Health verdadeiro. Ponytail: PASS — somente este estado foi atualizado; nenhuma SPEC, ADR, arquitetura, roadmap, contrato ou implementação foi tocada.
 
-Próximo comando recomendado após adicionar a evidência local: rg -n -i "colibri" docs backend tools
+Desbloqueio necessário: disponibilizar localmente um model artifact Colibri válido e então produzir evidência controlada de startup, `GET /v1/models`, `GET /health`, inferência não-streaming/streaming e falhas/timeout reais, sem criar adapter por suposição.
 
 PARAR. Não iniciar R8.
 
