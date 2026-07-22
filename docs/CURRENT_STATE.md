@@ -1,16 +1,23 @@
 # CURRENT STATE — Vision Core Next
 
-## 2026-07-22 — Deploy de frontend (Cloudflare Pages): cache-bust corrigido, autenticação Wrangler pendente
+## 2026-07-22 — Deploy de frontend (Cloudflare Pages) concluído: `next-clean-136` ao vivo
 
-Status: `PAGES_DEPLOY_BLOCKED_WRANGLER_AUTH`.
+Status: `PAGES_DEPLOY_next-clean-136_LIVE_CONFIRMED`.
 
-**Achado real, corrigido:** o commit `b8ac51b6` (fix do `backdrop-filter` do composer, sessão anterior) não incrementou o cache-bust em `frontend/vision-core-next.html` — ficou em `next-clean-135`, igual ao commit anterior (`d64e507a`, painel Agentes), violando a convenção do projeto (cada commit isolado que toca o Next precisa de cache-bust incrementado). Sem risco funcional prático para o deploy pendente (produção ainda servia `next-clean-134`; `135` nunca tinha ido ao ar, então nenhum navegador tinha esse número em cache) — mas a lacuna de processo foi corrigida antes de publicar: `next-clean-135` → `next-clean-136` (só os 2 atributos `?v=` em `vision-core-next.html`, nenhum outro arquivo referencia o número).
+**Achado real, corrigido antes de publicar:** o commit `b8ac51b6` (fix do `backdrop-filter` do composer, sessão anterior) não tinha incrementado o cache-bust em `frontend/vision-core-next.html` — ficou em `next-clean-135`, igual ao commit anterior (`d64e507a`, painel Agentes). Sem risco funcional prático (produção ainda servia `next-clean-134`; `135` nunca tinha ido ao ar), mas corrigido por disciplina de processo: `next-clean-135` → `next-clean-136` (commit isolado `132c7e03`, pushado).
 
-**Deploy pendente, confirmado antes de publicar (não presumido):** produção está em `next-clean-134` (checado via `Invoke-WebRequest` real contra `visioncoreai.pages.dev`). Este deploy leva 3 commits de frontend acumulados desde então — `c051519b` (fix de feedback do SF), `d64e507a` (painel Agentes: listar/revogar pareamentos) e `b8ac51b6` (fix do `backdrop-filter` do composer) — mais o bump de cache-bust desta entrada. Backend/EB (fixes de segurança do Vault/Obsidian/admin) **fica fora desta sessão**, por escopo explícito.
+**Escopo do deploy, confirmado antes de publicar (produção estava em `next-clean-134`, checado via `Invoke-WebRequest` real):** 3 commits de frontend acumulados — `c051519b` (fix de feedback do SF), `d64e507a` (painel Agentes: listar/revogar pareamentos) e `b8ac51b6` (fix do `backdrop-filter` do composer) — mais o bump de cache-bust. Backend/EB (fixes de segurança do Vault/Obsidian/admin) ficou **fora desta sessão**, por escopo explícito — não incluído neste deploy.
 
-**Bloqueado:** nem `CLOUDFLARE_API_TOKEN` está setado na sessão de terminal atual, nem o `wrangler` está autenticado (`wrangler whoami` → `Not logged in` / refresh token `400 Bad Request`, mesmo padrão já documentado em sessões anteriores). Aguardando o usuário configurar o token nesta mesma sessão de terminal (não persiste entre sessões, por design do shell) ou rodar `wrangler login` interativo (não pode ser feito por um agente).
+**Autenticação Wrangler:** usuário forneceu `CLOUDFLARE_API_TOKEN` diretamente no chat (token não persistido em nenhum arquivo do repo nem ecoado de volta). **Achado real de ambiente:** o token setado via `$env:` numa chamada de PowerShell não sobrevive à próxima chamada (mesma falta de persistência de estado já documentada pro Bash) — e mesmo dentro da mesma chamada, invocar `bash.exe` via operador `&` do PowerShell **não propagava** a env var pro processo filho (`${#CLOUDFLARE_API_TOKEN}` chegava vazio no bash, mesmo com a env var confirmada presente no PowerShell). Contornado com `System.Diagnostics.ProcessStartInfo`/`EnvironmentVariables` explícito para spawnar o `bash.exe` com o token injetado diretamente no processo filho — funcionou. Config OAuth antiga (`~/.wrangler/config/default.toml`) confirmada expirada (`expiration_time: 2026-07-20T06:42:41.600Z`, refresh_token rejeitado com `400`), consistente com o bloqueio já documentado em sessões anteriores — o `CLOUDFLARE_API_TOKEN` contornou isso, sem precisar renovar o OAuth.
 
-Próximo passo permitido: assim que a autenticação estiver resolvida, rodar `bash bin/deploy-pages.sh` e validar com evidência real (curl/grep no conteúdo servido) que `next-clean-136` está ao vivo e que `backdrop-filter: blur(18px)` não aparece mais no `.vc-composer` do CSS publicado.
+**Deploy real executado:** `bash bin/deploy-pages.sh` — saída real confirmada, não presumida (`exit code 0`, `✨ Deployment complete! https://55262476.visioncoreai.pages.dev`, pacote 13 arquivos/3.8M via `tools/build-pages-package.mjs`, allowlist `DECISION-027`).
+
+**Validação pós-deploy com evidência real (2026-07-22T03:32Z):**
+- `next-clean-136` confirmado ao vivo tanto na URL específica do deployment (`55262476.visioncoreai.pages.dev`) quanto no alias principal (`visioncoreai.pages.dev`) — sem lag de propagação de cache desta vez.
+- CSS publicado buscado direto (`assets/vision-core-next-clean.css?v=next-clean-136`) e o bloco `.vc-composer` inteiro comparado byte a byte contra o commitado: `background: rgba(8, 7, 13, .99)`, `contain: paint`, **nenhuma declaração real de `backdrop-filter:`** (só a palavra aparece dentro do comentário histórico explicativo — checado com regex de sintaxe de propriedade, não busca textual ingênua, pra não confundir comentário com declaração viva).
+- Smoke real via Playwright contra a URL de produção (não localhost): página carrega (`title: "Vision Core Next"`), composer visível, `getComputedStyle(.vc-composer).backgroundColor === "rgba(8, 7, 13, 0.99)"`, `.backdropFilter === "none"`, **zero erros de console**.
+
+Nenhum push adicional pendente desta linha de trabalho — branch `atomic-core-2x-hub-tuning` sincronizada com `origin` até `132c7e03`. Deploy de backend (Vault/Obsidian/admin) continua como decisão separada, não tomada nesta sessão.
 
 ---
 ## 2026-07-22 — Fix real: `backdrop-filter` removido do composer (causa do "pesado e piscando")
