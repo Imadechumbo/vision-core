@@ -1,5 +1,27 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-23 — LEGACY_AUDIT: push + deploy dos achados A/B/C — confirmado ao vivo em produção
+
+Status: `LEGACY_AUDIT_ACHADOS_A_B_C_DEPLOYED_LIVE_CONFIRMED`.
+
+Terceira sessão do dia. Usuário autorizou explicitamente push + deploy dos 4 commits de segurança (`5520c84d`, `56982bfa`, `bba72bf3`, `9e8dc098`). Autorização de fazer não dispensou validação técnica normal — 2 achados de escopo real, ambos resolvidos com decisão explícita do usuário antes de agir, não presumidos.
+
+**Achado de escopo 1 — push:** `atomic-core-2x-hub-tuning` local estava 20 commits à frente de `origin`, 16 deles trabalho não relacionado (Atomic Core "bits", MultiProviders R10) já commitado antes desta sessão. Um `git push` simples publicaria tudo. Usuário escolheu isolar: branch nova `fix/legacy-audit-security-abc` criada a partir de `origin/atomic-core-2x-hub-tuning`, os 4 commits cherry-picked (1 conflito real em `docs/CURRENT_STATE.md` — resolvido mantendo só a entrada nova, sem trazer as entradas das sessões não relacionadas; verificado byte-a-byte contra o conteúdo original de `origin` depois). Pushado e confirmado via `git ls-remote` (SHA real bate). A branch local `atomic-core-2x-hub-tuning` (com os outros 16 commits) não foi tocada — segue local, não pushada, disponível pra decisão separada futura.
+
+**Achado de escopo 2 — deploy:** `vision-core-prod` não recebia deploy desde 2026-07-21 (`v119-7a662e48...`, confirmado via `describe-environments` real) — 23 commits atrás de `origin`, 2 deles também tocando `server.js` (`e88b5196` refactor MultiProviders, `78f16578` outro fix de segurança já pushado anteriormente mas nunca deployado). Um deploy real publica o `server.js` inteiro, não commits isolados — "deployar os 3 fixes" não mapeava limpo pra uma ação. Usuário escolheu deploy cirúrgico: baixado o bundle S3 exato da versão realmente deployada (`aws elasticbeanstalk describe-application-versions` + `s3 cp`, não presumido de um zip local desatualizado), confirmado `server.js` dentro do bundle bate byte-a-byte com o commit `7a662e48`, os 3 fixes aplicados diretamente nesse arquivo (mesmos patches, contexto ao redor confirmado idêntico antes de cada edit), sintaxe validada, os 3 testes novos rodados contra esse arquivo exato via troca temporária local (26/26 PASS) antes de qualquer coisa subir. Zip final = bundle real de produção com `server.js` trocado, mais nada. Produção ganhou exatamente A+B+C — sem o refactor MultiProviders nem o outro fix de segurança pendente, escopo idêntico ao autorizado.
+
+**Deploy real:** `aws s3 cp` + `create-application-version` + `update-environment`, versão `legacy-audit-abc-2026-07-23`. Poll real do status até `Ready`/`Green` (3 checagens, ~30s). `frontend/` não tocado por nenhum dos 4 commits — sem deploy de Pages.
+
+**Confirmação pós-deploy — chamadas reais contra produção (gateway `visioncore-api-gateway.weiganlight.workers.dev`), não presumida:**
+- `POST /api/agent/mission/push` sem `agent_id` → `400 agent_id_required_for_git_push`.
+- `POST /api/deploy/zip-release` sem sessão → `401 not_authenticated` (primeiro gate de `requireVisionAdmin`).
+- `POST /api/security/apply-fix` sem sessão → `401 not_authenticated`.
+- **Fluxo legítimo confirmado, não só o caminho de rejeição:** agente real registrado em produção via `/api/agent/register`, `POST /api/agent/mission/push` com `agent_id`+`agent_secret` corretos → `200 {"ok":true,"queued":true,"action":"push_enqueued"}` — o gate não quebrou o caso de uso real. Agente de teste revogado depois (`/api/agent/unregister`, `200`), sem resíduo em produção.
+
+**Detalhe completo (achados, fixes, testes, revisão adversarial) em `docs/LEGACY_AUDIT.md`.** Nada mais pendente desses 3 achados — limitações residuais já documentadas (verificação real de `aegis_ok`, allowlist de `repo`, TOCTOU de symlink em apply-fix) continuam registradas como pendência consciente, não é regressão nem tarefa esquecida.
+
+---
+
 ## 2026-07-23 — LEGACY_AUDIT: 3 rotas críticas sem auth no backend compartilhado corrigidas — não deployado
 
 Status: `LEGACY_AUDIT_ACHADOS_A_B_C_CORRIGIDOS_NOT_DEPLOYED`.
