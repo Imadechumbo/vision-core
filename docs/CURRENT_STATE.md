@@ -1,5 +1,25 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-23 — LEGACY_AUDIT: 3 rotas críticas sem auth no backend compartilhado corrigidas — não deployado
+
+Status: `LEGACY_AUDIT_ACHADOS_A_B_C_CORRIGIDOS_NOT_DEPLOYED`.
+
+Sessão seguinte à investigação original (`docs/LEGACY_AUDIT.md`, mesmo dia). 3 achados de segurança reais corrigidos em `backend/server.js`, cada um com checagem de exploração prévia real (log do EB), gate determinístico novo e revisão adversarial real (Ponytail via `/api/chat` produção, diff colado) — sem bypass encontrado em nenhum dos 3. Detalhe completo de cada achado, evidência e limitações residuais em `docs/LEGACY_AUDIT.md`; decisão de arquitetura registrada em `docs/DECISIONS.md` DECISION-034.
+
+**Achado A** — `POST /api/agent/mission/push`/`revert` enfileiravam `git push origin HEAD`/`git reset --hard HEAD~1` sem nenhum gate (a missão nunca carregava `agent_id`, ficava fora do pareamento `agent_secret` que `apply_patch` já tinha). `docs/ROADMAP.md:146` documentava essa proteção como já existente — não estava; corrigido junto com o código. Fix: mesmo gate de `apply_patch` replicado. `tools/tests/agent-mission-push-revert-auth.test.mjs` novo, 16/16 PASS.
+
+**Achado B** — `POST /api/deploy/zip-release`/`merge-pr`/`trigger` sem auth nenhuma, usam `GITHUB_TOKEN` privilegiado do servidor pra abrir PR/mergear/disparar deploy real em `repo` arbitrário do cliente, gateadas só por um `aegis_ok` boolean que o próprio cliente escreve (2 das 3 nem rodavam Aegis antes de mandar `true`, achado por leitura direta do `vision-core-bundle.js`). Fix: `requireVisionAdmin` (mesmo critério de `/api/vault/*`/`/api/agents/:id/mode` — efeito sistêmico + credencial privilegiada). **Limitações residuais conscientes, não resolvidas:** `aegis_ok` continua sem verificação server-side real; `repo` continua sem allowlist mesmo pra admin autenticado — ambas exigem decisão de produto que não me cabia presumir. `tools/tests/deploy-routes-admin-auth.test.mjs` novo, 6/6 PASS.
+
+**Achado C** — `POST /api/security/apply-fix` escrevia arquivo real na instância de produção do EB (`fs.writeFileSync`) só protegida por checagem de path traversal, sem auth. Fix: `requireVisionAuth` (qualquer conta autenticada — feature de produto, não admin-only). A dupla confirmação que o Next já mostra continua como UX, agora com controle real atrás. Achado residual pré-existente (fora de escopo, não corrigido): possível TOCTOU via symlink na checagem de path traversal original. `tools/tests/apply-fix-auth.test.mjs` novo, 4/4 PASS.
+
+**Checagem de exploração prévia (real, não presumida):** bundle de log real do EB (`vision-core-prod`, `aws elasticbeanstalk retrieve-environment-info --info-type bundle`), cobertura 2026-07-04 a 2026-07-23 (~19 dias). Zero hits nas 5 rotas de A+B. `apply-fix` (C): 2 hits em 2026-07-08, `Referer: http://localhost:3001/` (dev local), ambos `404` — consistente com teste do próprio desenvolvedor, não exploração real. Sem evidência de abuso em nenhum dos 3 achados.
+
+**Regressão:** `npm run test:syntax` 204 arquivos OK. Os 3 testes novos (16/16+6/6+4/4) + testes de segurança adjacentes existentes sem quebra: `agent-pairings-list` 6/6, `agent-mode-admin-auth` 12/12, `agent-mode-admin-residuals` 40/40, `vault-rollback-auth` 13/13, `obsidian-vault-auth` 10/10, `sf-real-execution` PASS. `agent-pairing.test.mjs` falha num teste de TTL (`Unexpected end of JSON input`) — confirmado via `git stash` que essa falha já existe contra o `server.js` sem as mudanças desta sessão (pré-existente, não é regressão introduzida aqui).
+
+**Commits isolados por achado** (A, B, C separados) — hashes reais preenchidos após o commit. **Não deployado ainda** — código pronto, testado, aguardando autorização explícita do usuário pra push/deploy, dada a gravidade (escrita destrutiva/execução git sem controle, deploy real com token privilegiado, escrita em produção — todos ativos hoje em produção sem os fixes).
+
+---
+
 ## 2026-07-22 — Atomic Core: causa real da piscada do widget encontrada (diagnóstico, zero implementação)
 
 Status: `ATOMIC_CORE_WIDGET_FLICKER_ROOT_CAUSE_FOUND_AWAITING_APPROVAL`.
