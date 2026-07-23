@@ -4160,13 +4160,29 @@ app.get('/api/agent/mission/result/:id', (req, res) => {
   return sendOk(res, result);
 });
 
-/* Aprovação humana — push e revert via fila (SDDF: deploy_allowed=false, necessita autorização) */
+/* Aprovação humana — push e revert via fila (SDDF: deploy_allowed=false, necessita autorização).
+   §LEGACY_AUDIT achado A (2026-07-23): o comentário acima presumia que "necessita autorização"
+   já estava implementado — não estava. Estas 2 rotas nunca setavam agent_id na missão, então
+   ficavam fora do gate de agent_secret que /api/agent/mission/queue já aplica a apply_patch/
+   apply_patch_multi (§207/DECISION-006) e caíam na fila anônima que qualquer Vision Agent Local
+   em polling sem pareamento também consome. Mesmo gate replicado aqui — git_push/git_revert são
+   mais perigosos que apply_patch (reset --hard descarta trabalho não commitado; push manda
+   código sem revisão), não menos, então não faz sentido eles terem ficado com padrão mais fraco. */
 app.post('/api/agent/mission/push', (req, res) => {
-  const body    = normalizeBody(req);
+  const body        = normalizeBody(req);
+  const agentId     = getRequestAgentId(req, body);
+  const agentSecret = getRequestAgentSecret(req, body);
+  if (!agentId) {
+    return res.status(400).json({ ok: false, error: 'agent_id_required_for_git_push', time: now() });
+  }
+  if (!verifyAgentSecret(agentId, agentSecret)) {
+    return res.status(401).json({ ok: false, error: 'agent_pairing_required', time: now() });
+  }
   const mission = {
     id:          `push_${Date.now()}_${Math.random().toString(16).slice(2,6)}`,
     input:       'git push origin HEAD',
     type:        'git_push',
+    agent_id:    agentId,
     origin_id:   body.mission_id || null,
     file:        body.file  || null,
     hash:        body.hash  || null,
@@ -4177,11 +4193,20 @@ app.post('/api/agent/mission/push', (req, res) => {
 });
 
 app.post('/api/agent/mission/revert', (req, res) => {
-  const body    = normalizeBody(req);
+  const body        = normalizeBody(req);
+  const agentId     = getRequestAgentId(req, body);
+  const agentSecret = getRequestAgentSecret(req, body);
+  if (!agentId) {
+    return res.status(400).json({ ok: false, error: 'agent_id_required_for_git_revert', time: now() });
+  }
+  if (!verifyAgentSecret(agentId, agentSecret)) {
+    return res.status(401).json({ ok: false, error: 'agent_pairing_required', time: now() });
+  }
   const mission = {
     id:          `revert_${Date.now()}_${Math.random().toString(16).slice(2,6)}`,
     input:       'git reset --hard HEAD~1',
     type:        'git_revert',
+    agent_id:    agentId,
     origin_id:   body.mission_id || null,
     file:        body.file  || null,
     hash:        body.hash  || null,
