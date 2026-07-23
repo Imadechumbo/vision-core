@@ -2104,7 +2104,12 @@ app.get('/api/security/history', requireVisionAuth, (req, res) => {
 // POST /api/security/apply-fix — §135: aplica fix.after em arquivo real do filesystem
 // Input:  { violation: {file, line, rule_id}, fix: {after, suggestion}, project_root? }
 // Output: { ok, file, line, before, after, diff_preview, backup_created }
-app.post('/api/security/apply-fix', async (req, res) => {
+// §LEGACY_AUDIT achado C (2026-07-23): rota escrevia em disco real na instância de produção
+// (project_root default = ROOT, a própria árvore do app) só protegida por checagem de path
+// traversal, sem autenticação nenhuma. requireVisionAuth fecha o acesso anônimo — a "dupla
+// confirmação" que o Next já mostra antes de chamar (CLAUDE.md regra #6) sempre foi só UX
+// client-side, nunca um controle real; agora existe um controle real por trás dela também.
+app.post('/api/security/apply-fix', requireVisionAuth, async (req, res) => {
   try {
     const body = normalizeBody(req);
     const { violation, fix, project_root } = body;
