@@ -4388,8 +4388,17 @@ app.post('/api/chat/apply-patch', async (req, res) => {
 /* ── §46 /api/deploy/zip-release — push arquivo corrigido + abrir PR GitHub ──
    Input:  { patched_content, file_path, repo, branch, commit_message, aegis_ok }
    Output: { ok, pr_url, branch }
-   Guard:  aegis_ok=false → 403 — nunca abre PR sem PASS GOLD               */
-app.post('/api/deploy/zip-release', async (req, res) => {
+   Guard:  aegis_ok=false → 403 — nunca abre PR sem PASS GOLD
+   §LEGACY_AUDIT achado B (2026-07-23): rota não tinha nenhuma autenticação — usa o
+   GITHUB_TOKEN privilegiado do servidor pra abrir branch+commit+PR em `repo` arbitrário
+   enviado pelo cliente. `aegis_ok` continua sendo um boolean simplesmente relayado pelo
+   cliente (Aegis real roda em /api/chat/apply-patch numa requisição anterior e separada;
+   esta rota não tem como verificar que o valor recebido corresponde a uma execução real —
+   limitação conhecida, documentada aqui em vez de escondida, não corrigida nesta sessão).
+   requireVisionAdmin fecha o acesso não autenticado (o problema principal); `repo` arbitrário
+   por um admin já autenticado e a integridade do relay de aegis_ok ficam como pendência
+   registrada em docs/LEGACY_AUDIT.md — decisão de escopo pro usuário, não presumida aqui. */
+app.post('/api/deploy/zip-release', requireVisionAdmin, async (req, res) => {
   try {
     const body           = normalizeBody(req);
     const patchedContent = body.patched_content || '';
@@ -4516,8 +4525,11 @@ app.post('/api/deploy/zip-release', async (req, res) => {
   }
 });
 
-/* ── §50 /api/deploy/merge-pr — squash merge de PR aprovado via AEGIS ─── */
-app.post('/api/deploy/merge-pr', async (req, res) => {
+/* ── §50 /api/deploy/merge-pr — squash merge de PR aprovado via AEGIS ───
+   §LEGACY_AUDIT achado B (2026-07-23): sem auth, `repo`+`pull_number` arbitrários do
+   cliente, `aegis_ok` é boolean relayado sem verificação real (mesma limitação documentada
+   em /api/deploy/zip-release). requireVisionAdmin fecha o acesso não autenticado. */
+app.post('/api/deploy/merge-pr', requireVisionAdmin, async (req, res) => {
   try {
     const body       = normalizeBody(req);
     const repo       = body.repo;
@@ -4619,8 +4631,12 @@ app.post('/api/github/create-pr', requireVisionAuth, async (req, res) => {
   }
 });
 
-/* ── §51 /api/deploy/trigger — auto-deploy pós-merge via GitHub Actions ── */
-app.post('/api/deploy/trigger', async (req, res) => {
+/* ── §51 /api/deploy/trigger — auto-deploy pós-merge via GitHub Actions ──
+   §LEGACY_AUDIT achado B (2026-07-23): sem auth, dispara workflow real via GitHub Actions
+   dispatch em `repo` arbitrário do cliente, `aegis_ok` é boolean relayado sem verificação
+   real (mesma limitação documentada em /api/deploy/zip-release). requireVisionAdmin fecha
+   o acesso não autenticado. */
+app.post('/api/deploy/trigger', requireVisionAdmin, async (req, res) => {
   try {
     const body        = normalizeBody(req);
     const repo        = body.repo;
