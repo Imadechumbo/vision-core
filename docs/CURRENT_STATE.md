@@ -1,5 +1,24 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — Auditoria estratégica (GSD+Ponytail) Top 10, item 9: durabilidade da memória do Archivist — investigação, sem fix
+
+Status: `ARCHIVIST_MEMORY_NO_S3_BACKUP_CONFIRMED_NOT_FIXED`.
+
+Item 9 do Top 10 — só investigação, por definição da missão. Nenhuma mudança de comportamento de produção feita.
+
+**Achado confirmado por leitura direta de `backend/server.js` (não presumido):** a memória do Archivist (`memory/incidents/`, `memory/patterns/`, `memory/obsidian/VisionCoreVault/`, todas sob `MEMORY_ROOT = path.join(ROOT, 'memory')`, linha 61) é persistida **só em filesystem local**, sem nenhum caminho de backup/sync para S3:
+- `saveMarkdown()` (`server.js:132-158`) escreve via `fs.writeFileSync` puro — nenhuma chamada a `_s3PutAsync` nessa função nem em qualquer helper que ela chama.
+- O bloco de boot que faz pull do S3 antes de aceitar requests (`server.js:5754-5765`, `_s3LoadSync(USERS_DB)`, `PROJECTS_DB`, `CHAT_CONVERSATIONS_DB`, `MISSION_LOG_PATH`, `MISSION_TIMELINE_PATH`, `BLACKLIST_FILE`, `SSO_DOMAINS_FILE`, `PROVIDERS_VAULT_FILE`, `AGENT_COSTS_DB`, `AUDIT_LOG_FILE`, `AGENT_QUEUE_SQLITE_PATH`) **não inclui `MEMORY_ROOT` nem nenhum subcaminho de `memory/`** — grep confirma zero ocorrência de `MEMORY_ROOT`/`memory` nesse bloco de 12 linhas.
+- Grep geral de `memory` em `server.js` (60 ocorrências revisadas) não encontrou nenhuma outra rota de sync S3 para esse diretório — as únicas menções de S3 no arquivo são para as bases de dados já listadas acima (`USERS_DB` etc.), padrão diferente do Archivist.
+
+**Risco real, não novo (já mapeado na auditoria estratégica desta sessão, item 9 do Top 10):** em ambiente AWS Elastic Beanstalk, instâncias podem ser substituídas/recriadas (`_deploy_eb_recreate.py` já existe no repo para esse cenário exato — ver `CLAUDE.md` seção Deploy). Se isso acontecer, `memory/incidents/*.md`, `memory/patterns/*.md` e o Obsidian Vault (`memory/obsidian/VisionCoreVault/`) são perdidos sem aviso — não há erro, não há log de falha, a aplicação simplesmente reinicia com memória vazia.
+
+**Não implementado nesta sessão, por definição do escopo:** nenhum backup foi adicionado. Decisão de implementar (ou não) fica para o mantenedor humano, dado que mexer em `_s3LoadSync`/`_s3PutAsync`/boot sequence é mudança de comportamento de produção — fora do escopo desta investigação.
+
+**Testes:** nenhum — item é investigação pura (grep + leitura), sem código alterado.
+
+---
+
 ## 2026-07-24 — Auditoria estratégica (GSD+Ponytail) Top 10, item 2: Ponytail-governança documentado como sem runtime por design
 
 Status: `PONYTAIL_NO_RUNTIME_BY_DESIGN_DOCUMENTED`.
