@@ -1,5 +1,19 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — Pendências Aegis vs. porta: bloqueio de porta corrigido primeiro
+
+Investigação comparativa concluída. `/api/aegis/validate` tem um único consumidor rastreado: o Auto-Pilot do bundle legado (`frontend/assets/vision-core-bundle.js`), depois que os sete passos já terminaram. O retorno hardcoded altera o status visual e tenta criar um snapshot, mas não participa dos gates reais de deploy/merge nem do Vision Core Next. A decisão de remover ou implementar scan real permanece congelada; não há evidência nova que justifique ampliar o runtime Go/empacotamento agora.
+
+Risco mais imediato escolhido: `tests/e2e/vision-core-next-real-e2e.spec.mjs` usava `WEB_PORT=7070`, a porta oficial do Vision Agent Local. O servidor HTTP descartável do teste agora usa `listen(0)` e monta a URL a partir da porta efêmera realmente atribuída, eliminando a colisão sem alterar o backend ou o contrato coberto.
+
+Validação: `node --check tests/e2e/vision-core-next-real-e2e.spec.mjs` PASS. O gate Playwright iniciou o setup com a porta efêmera, mas a execução visual não pôde ser concluída neste WSL: primeiro faltava o Chromium (instalado), depois o binário parou por biblioteca do host ausente (`libnspr4.so`); `npx playwright install-deps chromium` tentou usar `sudo` e foi bloqueado por falta de credencial interativa. Não houve falha `EADDRINUSE`. Artefatos gerados pelas tentativas foram restaurados e não entram no commit.
+
+Próximo comando recomendado em host com dependências Playwright instaladas:
+
+`npx playwright test tests/e2e/vision-core-next-real-e2e.spec.mjs --workers=1 --retries=0`
+
+---
+
 ## 2026-07-24 — Top 10 Grupo B, item 3: Aegis (`/api/aegis/validate`) congelado
 
 Status: `AEGIS_STUB_FROZEN_PENDING_CONSUMER_INVESTIGATION`.

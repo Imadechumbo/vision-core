@@ -13,9 +13,8 @@ const FRONTEND = resolve(ROOT, 'frontend');
 const DATA_FILES = ['users.json', 'projects.json', 'chat-conversations.json', 'operation-log.json', 'mission-timeline.json', 'token-blacklist.json', 'audit-log.json', 'agent-queue.sqlite'].map((name) => resolve(ROOT, 'data', name));
 const backups = DATA_FILES.map((file) => ({ file, bytes: existsSync(file) ? readFileSync(file) : null }));
 const API_PORT = 18740;
-const WEB_PORT = 7070;
 const API = `http://127.0.0.1:${API_PORT}`;
-const NEXT_URL = `http://127.0.0.1:${WEB_PORT}/vision-core-next.html`;
+let nextUrl;
 const evidenceDir = resolve(ROOT, 'artifacts', 'next-rc-e2e');
 let backend;
 let web;
@@ -54,7 +53,7 @@ test.beforeAll(async () => {
   const html = readFileSync(resolve(FRONTEND, 'vision-core-next.html'), 'utf8')
     .replace('content="https://visioncore-api-gateway.weiganlight.workers.dev"', `content="${API}"`);
   web = createServer((request, response) => {
-    const pathname = new URL(request.url, NEXT_URL).pathname;
+    const pathname = new URL(request.url, nextUrl).pathname;
     if (pathname === '/vision-core-next.html') {
       response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       response.end(html);
@@ -67,7 +66,10 @@ test.beforeAll(async () => {
       response.end(bytes);
     } catch { response.writeHead(404).end(); }
   });
-  await new Promise((done) => web.listen(WEB_PORT, '127.0.0.1', done));
+  await new Promise((done) => web.listen(0, '127.0.0.1', done));
+  const address = web.address();
+  if (!address || typeof address === 'string') throw new Error('test web server did not expose a TCP port');
+  nextUrl = `http://127.0.0.1:${address.port}/vision-core-next.html`;
 });
 
 test.afterAll(async () => {
@@ -95,7 +97,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('real UI covers auth, project, grounded refusal, history, logs and agent status', async ({ page }) => {
-  await page.goto(NEXT_URL);
+  await page.goto(nextUrl);
   await page.locator('a[data-feature="settings"]').click();
   const email = `next-real-${Date.now()}@example.invalid`;
   await page.locator('#vcAccountEmail').fill(email);
@@ -142,7 +144,7 @@ test('real UI covers auth, project, grounded refusal, history, logs and agent st
 });
 
 test('real SF project-files job produces a real ZIP', async ({ page }) => {
-  await page.goto(NEXT_URL);
+  await page.goto(nextUrl);
   const result = await page.evaluate(async (api) => {
     const queued = await (await fetch(`${api}/api/sf/project-files`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
