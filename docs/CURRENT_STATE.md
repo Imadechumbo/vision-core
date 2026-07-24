@@ -1,5 +1,19 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — Top 10 Grupo B, item 5: PI Harness/Ponytail — nota de decisão em ARCHITECTURE.md
+
+Status: `PI_HARNESS_PONYTAIL_MANUAL_DECISION_DOCUMENTED`.
+
+Decisão do mantenedor (Grupo B): Ponytail permanece manual por design — não construir módulo/runtime de Ponytail em `pi-harness.mjs` nem em lugar nenhum. Decisão cobre só o elo Ponytail; os outros dois elos que faltam no PI Harness frente ao pipeline ADR-052 (escrever `CURRENT_STATE.md`, rodar `git commit`) **não foram decididos nesta rodada** — registrado como não decidido, não como resolvido.
+
+**Correção aplicada:** nota adicionada em `docs/ARCHITECTURE.md`, logo após o parágrafo "Ferramenta compartilhada pelas duas camadas" (seção Camada 2), no mesmo padrão de reconciliação já usado nos itens 2 e 6 desta auditoria (nota anexada, sem reescrever texto existente). Cita a mesma frase literal da ADR-052 já usada no item 2 ("consolidar o contrato aqui, sem novo runtime, serviço ou documento") e deixa explícito que CURRENT_STATE/commit continuam em aberto.
+
+**`tools/pi-harness.mjs` não editado:** avaliei o header do arquivo (linhas 1-22, box ASCII "REGRAS ABSOLUTAS") — já contém "NUNCA commit/push/merge/deploy/tag automático nesta fase", que é consistente com (não contradiz) o elo commit ficar em aberto. Um comentário adicional ali seria redundante com a nota em `ARCHITECTURE.md`; optei por não mexer no box decorativo para um ganho de clareza marginal.
+
+**Testes:** nenhum — mudança de texto em Markdown, sem código executável.
+
+---
+
 ## 2026-07-24 — Auditoria estratégica (GSD+Ponytail) Top 10, item 6: 6 suítes MultiProviders (109 testes) adicionadas ao `test:quick`
 
 Status: `MULTIPROVIDERS_SUITES_WIRED_INTO_CI_CHAIN_PENDING_UNRELATED_HANG_FIX`.
