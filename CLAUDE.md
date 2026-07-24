@@ -63,7 +63,7 @@ Ambos são orquestrados pelos agentes reais da tabela abaixo, não simulações.
 | **PASS GOLD** | Final Authorizer — só promove com evidência real (5 gates booleanos obrigatórios + score ponderado de 6 dimensões) | `pass-gold-engine.js` |
 | **Archivist** | Memory Guard — memória de missões, aprendizado entre sessões | `/api/archivist/learn`, `/api/memory/search` |
 | **GitHub Agent** | Canal — abre PR real após missão/geração concluída | `/api/github/create-pr` |
-| **Reserve Agents** (Memory/Locator/Security/Validator/Architect) | Fallback quando agente primário falha — pré-registrado, não implementado | — |
+| **Reserve Agents** (Memory/Locator/Security/Validator/Architect) | Persona cosmética via catálogo (`_AGENTS_CATALOG`) + injeção de prompt (`detectActiveAgent()`), sem lógica de execução ou fallback real distinta — não é "fallback quando agente primário falha", isso não existe no código | `/api/copilot` |
 
 ---
 

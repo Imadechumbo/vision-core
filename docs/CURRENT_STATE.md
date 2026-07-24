@@ -1,5 +1,19 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — Auditoria estratégica (GSD+Ponytail) Top 10, item 10: descrição dos Reserve Agents corrigida em CLAUDE.md
+
+Status: `RESERVE_AGENTS_DESCRIPTION_FIXED`.
+
+Item 10 do Top 10. `CLAUDE.md:66` descrevia os Reserve Agents (Memory/Locator/Security/Validator/Architect) como "Fallback quando agente primário falha — pré-registrado, não implementado". A auditoria estratégica desta sessão encontrou que a frase é imprecisa: existe código real, só que cosmético.
+
+**Verificação direta do código antes de editar:** `backend/server.js:5000-5016` (`_AGENTS_CATALOG`) — catálogo real com `architect`, `locator`, `memory`, `security` (entre outros ids não citados na tabela antiga do CLAUDE.md). `detectActiveAgent()` (`server.js:5050-5061`) faz correspondência de keywords e retorna `{id, name, role}`, chamado a partir de `/api/copilot` (`server.js:1893`) para injetar persona no system prompt do LLM (`server.js:1903-1906`: `You are acting as the specialized agent "${activeAgent.name}"...`). Nenhuma lógica de execução própria por agente, nenhum mecanismo de "fallback quando o agente primário falha" encontrado no código (grep por esse padrão não retornou nada).
+
+**Correção aplicada** (`CLAUDE.md:66`): "Fallback quando agente primário falha — pré-registrado, não implementado" → "Persona cosmética via catálogo (`_AGENTS_CATALOG`) + injeção de prompt (`detectActiveAgent()`), sem lógica de execução ou fallback real distinta — não é 'fallback quando agente primário falha', isso não existe no código". Coluna de endpoint corrigida de `—` para `/api/copilot` (é onde o catálogo é de fato consumido).
+
+**Testes:** mudança de texto em Markdown, sem código executável.
+
+---
+
 ## 2026-07-24 — Auditoria estratégica (GSD+Ponytail) Top 10, item 9: durabilidade da memória do Archivist — investigação, sem fix
 
 Status: `ARCHIVIST_MEMORY_NO_S3_BACKUP_CONFIRMED_NOT_FIXED`.
