@@ -328,6 +328,8 @@ Comandos: `git branch --show-current`, `git status --short`, `git log --oneline 
 | Tests | amplo | MultiProviders ausente | plano | suites novas | alto | CONDITIONAL |
 | Release | amplo | operações manuais | sim | certificação MP | médio | CONDITIONAL |
 
+**Nota (2026-07-24, posterior a esta investigação):** a coluna "Ausente" da linha Ponytail ("executable gates") não é mais um gap em aberto — `docs/DECISIONS.md` ADR-052 (posterior a este relatório) decidiu explicitamente "consolidar o contrato aqui, sem novo runtime, serviço ou documento": Ponytail é revisão metodológica por design, não um executor de gates a ser construído. Não reabrir sem nova decisão registrada em ADR.
+
 ## Implementation delta — R2 (2026-07-21)
 
 A fundação canônica agora existe isoladamente em backend/multiproviders-domain.js: contratos neutros, Provider Registry, Model Registry, offerings, tenant scope, versões, lifecycle, discovery/configuration references, aliases e orphan protection. Portanto Provider Contract e Registries passam de NOT_READY para PARTIAL: o domínio puro existe e tem suíte própria, mas ainda não é autoridade do runtime, não possui persistência e não traduz o legado. Routing, Health runtime, adapters, Installer e Blueprint permanecem NOT_READY. R3 deve criar somente a ponte de compatibilidade e provar o cutover de autoridade; não pode copiar arrays/branches legados para o domínio.

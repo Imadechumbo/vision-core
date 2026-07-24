@@ -1,5 +1,21 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — Auditoria estratégica (GSD+Ponytail) Top 10, item 2: Ponytail-governança documentado como sem runtime por design
+
+Status: `PONYTAIL_NO_RUNTIME_BY_DESIGN_DOCUMENTED`.
+
+Pipeline adversarial, item 2 do Top 10. Achado da auditoria: `docs/VISION_CORE_ARCHITECTURE_GAP_REPORT.md:326` (matriz de prontidão, brownfield, dated 2026-07-21) lista a linha `Ponytail | plugin/docs | gates sem runtime | sim | executable gates | médio | CONDITIONAL` — coluna "Ausente" tratando "executable gates" como um gap em aberto a ser construído. Esse relatório é anterior à ADR-052 (commitada no mesmo dia, mas depois) e ficou desatualizado sobre esse ponto especificamente: `docs/DECISIONS.md` ADR-052 decide explicitamente "consolidar o contrato aqui, **sem novo runtime, serviço ou documento**" — Ponytail nunca deveria ganhar um executor de gates, não é um gap pendente.
+
+**Varredura completa antes de decidir onde editar:** grep de "Ponytail" em todo `docs/*.md` (44 ocorrências, ~15 arquivos). A maioria é narrativa histórica legítima (session logs, entradas antigas de `CURRENT_STATE.md`, `MULTIPROVIDERS_TEST_PLAN.md`) usando "Ponytail" corretamente como processo de revisão aplicado por rodada — não editada, por não ser ambígua nem exigir correção retroativa de registro histórico. `docs/ARCHITECTURE.md:268` já aponta corretamente para ADR-052. `docs/DECISIONS.md` (ADR-038, DECISION-030) são decisões fechadas — não reabertas sem motivo novo. O único lugar com ambiguidade real de "Ponytail como gap de implementação" era o relatório citado acima.
+
+**Correção aplicada:** nota adicionada logo após a tabela em `docs/VISION_CORE_ARCHITECTURE_GAP_REPORT.md` (após linha 329), citando a frase literal da ADR-052 e deixando explícito que a coluna "Ausente" daquela linha não é mais um gap em aberto. Evidência histórica da tabela em si não foi reescrita (seria destruir registro de investigação datado) — só uma nota de reconciliação posterior foi anexada, seguindo o mesmo padrão já usado em `docs/CURRENT_STATE.md` para achados descartados.
+
+**Testes:** mudança de texto em Markdown, sem código executável.
+
+**Ponytail:** uma nota, um arquivo, nenhuma reestruturação, nenhuma reescrita de evidência histórica.
+
+---
+
 ## 2026-07-24 — Auditoria estratégica (GSD+Ponytail) Top 10, item 1: contagem de gates PASS GOLD corrigida em CLAUDE.md/ARCHITECTURE.md
 
 Status: `PASS_GOLD_GATE_COUNT_DOCS_FIXED`.
