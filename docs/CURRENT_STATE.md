@@ -1,5 +1,25 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — Top 10 Grupo B, item 8: MultiProviders R7-R10 pausado formalmente
+
+Status: `MULTIPROVIDERS_R7_R10_PAUSED_BY_MAINTAINER_DECISION`.
+
+Decisão explícita do mantenedor: pausar formalmente o avanço do roadmap MultiProviders para R7-R10 — não é abandono, é pausa registrada, retomável quando houver necessidade real ou o bloqueio de R7 for resolvido. Nenhum código tocado nesta etapa.
+
+**Contexto que motivou a decisão (achado da auditoria estratégica, não reaberto aqui):** Router (`multiproviders-router.js`), Adapter Host (`multiproviders-adapters.js`) e Registry (`multiproviders-domain.js`) — as 4 superfícies normativas de ADR-039 — existem como código real e testado (89 testes: domain 23/23, adapters 17/17, router 24/24, runtime-state 14/14, legacy-bridge 12/12, legacy-wiring 19/19), mas **sem uso real em produção** — só a ponte legada (`syncLegacyCatalog`, `multiproviders-legacy-bridge.js`) está no caminho de execução real de `callLLM()`/`callHermes()`. R7 (Colibri) já está `BLOCKED` por dependência externa ao repositório: `D:\AI\models` (fora do controle do Vision Core) está vazio — sem artefato de modelo, o runtime `glm.exe` não carrega, e as 8 microetapas R7.1-R7.8 não passam (documentado em entradas de 2026-07-21 mais abaixo neste arquivo).
+
+**Decisão registrada:**
+- Router/Adapter Host/Registry permanecem como estão — código testado, não removido, não avançado.
+- R7 continua bloqueado por dependência externa (não é um problema deste repositório a resolver sozinho).
+- R8 (Installer Bridge), R9 (Blueprint Read Model) e R10 (Certification and Legacy Retirement) — todos dependentes de R7 — pausados junto, não teria sentido avançá-los pulando R7 sem mudar a ordem do roadmap (o que seria decisão arquitetural própria, não coberta por esta pausa).
+- `docs/MULTIPROVIDERS_IMPLEMENTATION_ROADMAP.md` atualizado (linha de status + R7-R10 na sequência oficial) para refletir a pausa — evita o mesmo tipo de divergência documental que esta auditoria inteira existiu para corrigir (roadmap dizendo "EXECUTING" enquanto a decisão real já é outra).
+
+**Retomada:** exige decisão humana explícita nova — nenhum agente deve reabrir R7-R10 por iniciativa própria.
+
+**Testes:** nenhum — mudança de texto em Markdown, sem código executável.
+
+---
+
 ## 2026-07-24 — Top 10 Grupo B, item 7: `/api/pass-gold/score` chama `pass-gold-engine.js` de fato
 
 Status: `PASS_GOLD_SCORE_ENDPOINT_REAL_EVALUATION_IMPLEMENTED`.

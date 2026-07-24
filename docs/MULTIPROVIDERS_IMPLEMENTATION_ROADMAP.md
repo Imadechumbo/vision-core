@@ -1,6 +1,6 @@
 # MULTIPROVIDERS — IMPLEMENTATION ROADMAP
 
-> Status: EXECUTING · Autoridade: roadmap autônomo aprovado em 2026-07-21.
+> Status: R1-R6 EXECUTED, **R7-R10 PAUSADO formalmente em 2026-07-24** (decisão do mantenedor — ver `docs/CURRENT_STATE.md`, entrada "Top 10 Grupo B, item 8"). Não é abandono, é pausa registrada, retomável quando R7 deixar de estar bloqueado ou houver necessidade real. Não retomar avanço automático sem nova decisão explícita. Autoridade original: roadmap autônomo aprovado em 2026-07-21.
 > Push e deploy permanecem proibidos. Cada fase exige testes, Hermes, Ponytail, documentação e commit antes do avanço automático.
 
 ## Sequência oficial
@@ -11,10 +11,10 @@
 4. R4 — Capability, Health and Lifecycle Runtime — COMPLETE (91b59cb8)
 5. R5 — Policy Routing and Compatible Failover — COMPLETE (1401a81f)
 6. R6 — First Neutral Provider Adapter — COMPLETE (35b40250)
-7. R7 — Colibri Integration — BLOCKED: no local protocol evidence
-8. R8 — Installer Bridge
-9. R9 — Blueprint Read Model
-10. R10 — Certification and Legacy Retirement
+7. R7 — Colibri Integration — BLOCKED: no local protocol evidence; **avanço PAUSADO formalmente 2026-07-24**
+8. R8 — Installer Bridge — **PAUSADO formalmente 2026-07-24**, depende de R7
+9. R9 — Blueprint Read Model — **PAUSADO formalmente 2026-07-24**, depende de R7/R8
+10. R10 — Certification and Legacy Retirement — **PAUSADO formalmente 2026-07-24**, depende de R7-R9
 11. R11 — Release Candidate Readiness
 
 ## Gates permanentes
