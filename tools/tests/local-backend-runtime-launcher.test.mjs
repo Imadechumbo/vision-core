@@ -71,10 +71,21 @@ console.log('\n[Suite C] Server absent');
 // ─── Suite D: Port busy ───────────────────────────────────────────
 console.log('\n[Suite D] Port busy');
 {
-  // Start a simple listener on a port, then try to launch on same port
+  // Start a simple listener on a port, then try to launch on same port.
+  // launchLocalBackend's own health probe (_waitHealthy) polls this port with
+  // fetch() for ~3s trying to decide whether it's a healthy backend already
+  // running there (§131) — since this dummy server never speaks HTTP, some of
+  // those probe connections never close on their own, and srv.close() would
+  // hang forever waiting for them. Track and force-destroy them so cleanup is
+  // deterministic regardless of how many the probe leaves dangling.
   const net  = await import('net');
   const port = 19998;
   const srv  = net.createServer();
+  const openSockets = new Set();
+  srv.on('connection', sock => {
+    openSockets.add(sock);
+    sock.on('close', () => openSockets.delete(sock));
+  });
   await new Promise(r => srv.listen(port, '127.0.0.1', r));
   try {
     const dir = mkdtempSync(join(tmpdir(), 'launcher-port-'));
@@ -91,7 +102,10 @@ console.log('\n[Suite D] Port busy');
     assert(r.promotion_allowed === false,                              '[D-04] promotion=false');
     rmSync(dir, { recursive: true, force: true });
   } finally {
-    await new Promise(r => srv.close(r));
+    await new Promise(r => {
+      srv.close(r);
+      for (const sock of openSockets) sock.destroy();
+    });
   }
 }
 

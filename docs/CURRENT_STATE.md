@@ -1,5 +1,24 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — Bug do `exit 13` em `test:quick` corrigido (item 6 do Top 10, causa raiz achada e resolvida)
+
+Status: `LOCAL_BACKEND_LAUNCHER_PORT_BUSY_HANG_FIXED_NEW_UNRELATED_BLOCKER_FOUND`.
+
+Fecha (parcialmente — ver achado novo abaixo) a pendência aberta na entrada "Top 10 Grupo A, item 6" (mais abaixo neste arquivo): `npm run test:quick` travava com `exit 13` em `tools/tests/local-backend-runtime-launcher.test.mjs`, Suite D ("Port busy"), warning `Detected unsettled top-level await ... srv.close(r)`.
+
+**Causa raiz confirmada com evidência real (script de diagnóstico descartável, não commitado), não suposta:** a Suite D sobe um `net.createServer()` cru (sem handler HTTP) pra simular "porta ocupada" e chama `launchLocalBackend({..., port})`. O launcher real (`tools/local-backend-runtime-launcher.mjs`, lógica §131 "porta ocupada mas pode ser um backend já saudável") não só checa se a porta está ocupada (`_isPortBusy`) — ele também tenta `fetch('http://127.0.0.1:<porta>/api/health')` repetidamente por ~3s (`_waitHealthy`) pra decidir se é um backend de verdade já rodando ali. Como o servidor-dummy da Suite D nunca fala HTTP, cada tentativa de fetch nunca recebe resposta; a instrumentação do diagnóstico mostrou **7 conexões TCP aceitas pelo servidor-dummy, só 4 fechadas — 3 ficaram penduradas**, e `srv.close()` da Suite D esperava essas 3 conexões fecharem pra sempre (comportamento documentado do Node: `server.close()` só resolve depois que todas as conexões ativas terminam).
+
+**Fix aplicado (`tools/tests/local-backend-runtime-launcher.test.mjs`, Suite D):** rastrear os sockets aceitos pelo servidor-dummy num `Set` e destruí-los manualmente no `finally`, junto com `srv.close()` — não um `setTimeout`/aumento de timeout que só mascara o problema. Escolhido em vez de `server.closeAllConnections()` (API HTTP-only desde Node 18.2 — **confirmado por teste real que `net.Server` cru não tem esse método**, `TypeError: srv.closeAllConnections is not a function`) porque a Suite D usa `net.createServer()`, não `http.createServer()`. A simulação de "porta ocupada" continua exatamente igual — nenhuma cobertura de teste removida, só a limpeza ficou determinística independente de quantas conexões o health-probe real deixar penduradas.
+
+**Validação:**
+- Arquivo isolado: `node tools/tests/local-backend-runtime-launcher.test.mjs` → **43/43 PASS, exit 0** (antes: exit 13, travava).
+- `npm run test:quick` completo (redirecionamento real pra arquivo, não pipe, mesmo cuidado das sessões anteriores): **progrediu de verdade** — passou por dezenas de suítes que antes nunca eram alcançadas (`local-backend-runtime-launcher: 43 passed, 0 failed` confirmado dentro da cadeia completa, seguido de mais ~30 suítes até `manual-release-request-authority-binding: 129 passed, 0 failed`).
+- **Achado novo, não relacionado a este fix, não corrigido nesta sessão (fora de escopo, reportado como pedido):** a cadeia agora quebra em `tools/tests/run-live-mission-contract.test.mjs`, Suite E ("Stub response") — `[E-01] stub marker → BLOCKED_STUB` e `[E-03] mock → BLOCKED_STUB` falham (52 passed, **2 failed**), `test:quick` termina com `EXIT_CODE=1` (não mais 13, não mais hang — falha determinística e rápida). As suítes MultiProviders e `pass-gold-score-endpoint` (cabeadas no fim da cadeia, itens 6 e 7 do Top 10) **ainda não foram alcançadas** nesta execução, porque `run-live-mission-contract` vem antes delas na ordem do `test:quick`. Não investigado a fundo — não é trivial nem diretamente relacionado ao bug de porta corrigido aqui; fica pendência separada pra sessão futura.
+
+**Nada tocado fora do escopo:** `docs/STRESS-TEST-ARCH-E2E-RESULTS.json` (sujeira pré-existente na working tree, provável conversão de line-endings) e `data/audit-log.json` (artefato de runtime não rastreado) confirmados fora do commit desta entrada — `git diff --cached --stat` checado antes de commitar.
+
+---
+
 ## 2026-07-24 — Pendências Aegis vs. porta: bloqueio de porta corrigido primeiro
 
 Investigação comparativa concluída. `/api/aegis/validate` tem um único consumidor rastreado: o Auto-Pilot do bundle legado (`frontend/assets/vision-core-bundle.js`), depois que os sete passos já terminaram. O retorno hardcoded altera o status visual e tenta criar um snapshot, mas não participa dos gates reais de deploy/merge nem do Vision Core Next. A decisão de remover ou implementar scan real permanece congelada; não há evidência nova que justifique ampliar o runtime Go/empacotamento agora.
