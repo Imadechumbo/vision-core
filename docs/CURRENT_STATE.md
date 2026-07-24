@@ -1,5 +1,21 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — `test:prepush`/`test:certify` validados de ponta a ponta (`test:quick` + `test:full` + `test:go`, todos exit 0)
+
+Status: `TEST_PREPUSH_CERTIFY_FULL_CHAIN_GREEN`.
+
+Fecha a pendência deixada na entrada anterior ("`test:quick` completa 100%..."): faltava confirmar os outros dois componentes de `test:prepush`/`test:certify` (`test:prepush = test:postmerge && test:full && test:go`; `test:certify = test:prepush`) que não tinham sido rodados nesta sessão. Só investigação/validação — nenhuma mudança de código, nenhum bug encontrado.
+
+**Rodados com redirecionamento real (não pipe), em paralelo, cada um em background:**
+- `npm run test:go` (`cd go-core && go test ./... && go build ./...`) — **exit code 0**, todos os pacotes Go (`internal/*`, ~53 pacotes) `ok` (a maioria cached, `remediationharness` 0.576s e `validator` 0.449s rodados de fato), build limpo.
+- `npm run test:full` (`tools/tests/pi-harness.test.mjs`) — **exit code 0**, **1730 passed, 0 failed**.
+
+**Conclusão:** com `test:quick` (confirmado 100% verde na entrada anterior, incluindo MultiProviders e `pass-gold-score-endpoint`) + `test:go` + `test:full` todos verdes, `test:prepush` e `test:certify` estão validados de ponta a ponta pela primeira vez nesta sessão — não é mais necessário presumir que esses comandos passam, há evidência real e recente.
+
+**Testes:** só execução dos comandos já existentes, nenhum arquivo de teste alterado nesta entrada.
+
+---
+
 ## 2026-07-24 — `test:quick` completa 100% de ponta a ponta pela primeira vez — item 6/7 do Top 10 finalmente confirmados na cadeia real
 
 Status: `TEST_QUICK_FULL_CHAIN_GREEN_EXIT_0`.
