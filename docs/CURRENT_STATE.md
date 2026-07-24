@@ -1,5 +1,44 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — Auditoria estratégica (GSD+Ponytail) Top 10, item 1: contagem de gates PASS GOLD corrigida em CLAUDE.md/ARCHITECTURE.md
+
+Status: `PASS_GOLD_GATE_COUNT_DOCS_FIXED`.
+
+Pipeline adversarial (Implementador → Hermes RCA → Ponytail → Testes → CURRENT_STATE → commit), item 1 do Top 10 da auditoria estratégica desta sessão. Achado da auditoria: `CLAUDE.md` (2 ocorrências, linhas 63 e 113) e `docs/ARCHITECTURE.md` (2 ocorrências, linhas 56 e 83) citavam contagens de gates do PASS GOLD que não batiam com o código real de nenhum dos dois runtimes que descrevem.
+
+**Verificação direta do código antes de editar:** `backend/pass-gold-engine.js:202-210` — exatamente 5 gates booleanos (`gate_build_passed`, `gate_snapshot_exists`, `gate_confidence_ok`, `gate_risk_acceptable`, `gate_no_security_findings`), mais o score ponderado de 6 dimensões já documentado corretamente em `ARCHITECTURE.md:74` (`WEIGHTS`, `pass-gold-engine.js:90-97`) — sem numeração `D0-D7` neste arquivo. `tools/pi-harness.mjs:654-674` (`computeStrictPassGoldCandidate()`, comentário próprio do código "V27.1: All 16 strict gates must pass") — 16 condições booleanas contadas uma a uma no `Boolean(...)`, não 13.
+
+**Correções aplicadas (nenhum número "médio" — cada doc reflete o runtime que cita):**
+- `CLAUDE.md:63` — tabela de módulos: "D0-D7, 20+ gates" → "5 gates booleanos obrigatórios + score ponderado de 6 dimensões" (`pass-gold-engine.js`).
+- `CLAUDE.md:113` — "PASS GOLD (D0-D7, 20+ gates)" → "PASS GOLD (5 gates booleanos + score de 6 dimensões, `pass-gold-engine.js`)".
+- `docs/ARCHITECTURE.md:56` (diagrama Mermaid Camada 2) — "D0-D8, 13 gates PASS GOLD booleanos" → "D0-D8, 16 gates PASS GOLD booleanos".
+- `docs/ARCHITECTURE.md:74` (PASS GOLD produto) — passou a citar também os 5 gates booleanos nominalmente (`build_passed`, `snapshot_exists`, `confidence_ok`, `risk_acceptable`, `no_security_findings`), que antes só apareciam nos testes/código, não na doc.
+- `docs/ARCHITECTURE.md:83` (PASS GOLD governança) — "13 gates obrigatórios (D0-Preflight até D8-Report)" → "16 gates obrigatórios (`computeStrictPassGoldCandidate()`, V27.1 strict) ao longo das fases D0-Preflight até D8-Report".
+
+**Testes:** mudança é só de texto em Markdown, sem código executável — nenhuma suíte automatizada cobre prosa de doc. Validação foi a própria leitura direta do código-fonte citada acima (evidência antes da alteração, não depois).
+
+**Ponytail:** menor diff possível — só os números e a linha nominal de gates trocados, nenhuma reestruturação de seção, nenhum novo documento.
+
+---
+
+## 2026-07-24 — Ordens de leitura divergentes consolidadas (AGENTS.md/CLAUDE.md/README_DOCUMENTATION.md)
+
+Status: `DOC_READING_ORDER_CONSOLIDATED`.
+
+Duas auditorias (Codex) confirmaram três ordens de leitura diferentes definidas em três arquivos: `AGENTS.md` (CLAUDE → frontend spec → `docs/CURRENT_HANDOFF.md`), `CLAUDE.md` (CLAUDE → frontend spec → `docs/CURRENT_STATE.md`) e `docs/README_DOCUMENTATION.md` (`CURRENT_STATE` → CLAUDE → frontend spec → specs condicionais → ARCHITECTURE → DECISIONS). Achado mais grave: `AGENTS.md` apontava pra `docs/CURRENT_HANDOFF.md`, arquivo que não existe mais — renomeado pra `CURRENT_STATE.md` em DECISION-018 (`docs/DECISIONS.md`), ponteiro nunca atualizado.
+
+Confirmado antes de editar: `docs/CURRENT_HANDOFF.md` não existe (busca no repo); `docs/MASTER_SPEC.md:36` já tinha a menção correta (histórica, não um ponteiro quebrado); `AGENTS.md` era o único ponteiro realmente quebrado.
+
+**Root cause, não só o sintoma:** `AGENTS.md` e `CLAUDE.md` duplicavam a lista de ordem de leitura em vez de apontar pra `docs/README_DOCUMENTATION.md` — exatamente o que a "Regra de ouro contra duplicação" do próprio README_DOCUMENTATION.md diz pra não fazer. Fix aplicado na raiz: `AGENTS.md` e `CLAUDE.md` agora referenciam `docs/README_DOCUMENTATION.md` como dono único da ordem completa (com um resumo mínimo local pra não exigir pulo de arquivo toda vez), em vez de manter cada um sua própria lista. `docs/README_DOCUMENTATION.md` já era a ordem canônica (`CURRENT_STATE` → CLAUDE → frontend spec → specs condicionais → ARCHITECTURE → DECISIONS) e não precisou de mudança.
+
+Commit isolado `e9b2009b`, pushado pra `origin/atomic-core-2x-hub-tuning` (autorização do usuário recebida antes do push).
+
+**Achados extras, fora do escopo desta sessão, não corrigidos (aprovação do usuário: deixar pra depois):**
+- `docs/README_DOCUMENTATION.md:13-14` — dois itens numerados "5." na lista de ordem (`MULTIPROVIDERS_SPEC.md` e `ARCHITECTURE.md`).
+- `docs/MASTER_SPEC.md:20-42` — uma quarta lista de ordem de leitura independente (`0a/0b` + série de 10 docs + `11/12`), que duplica a ordem do README (violando a mesma regra de ouro) e tem numeração duplicada própria (dois itens "8.").
+
+---
+
 ## 2026-07-24 — SF-Agent-Orchestrator Fase 2: pausado aguardando reset de cota (decisão do usuário)
 
 Decisão explícita do usuário em 2026-07-24: SF-Agent-Orchestrator Fase 2 (smoke test real do Claude Agent SDK, bloqueado por cota de API Anthropic esgotada) fica pausado esperando o reset natural da cota. Não usar `ANTHROPIC_API_KEY` própria, não tentar contornar. Sem próximo passo até a cota resetar.

@@ -60,7 +60,7 @@ Ambos são orquestrados pelos agentes reais da tabela abaixo, não simulações.
 | **Patch Engine** | Aplica fix real no disco — backup antes de escrever, diff real | `/api/security/apply-fix` |
 | **Aegis** | Security Gate — scanner de secrets/vulnerabilidades (Go Core) | `/api/aegis/validate`, `/api/security/*` |
 | **Go Core** | Runtime Truth — evidência real de execução (compilado Windows+Linux) | binário Go |
-| **PASS GOLD** | Final Authorizer — só promove com evidência real (D0-D7, 20+ gates) | `pass-gold-engine.js` |
+| **PASS GOLD** | Final Authorizer — só promove com evidência real (5 gates booleanos obrigatórios + score ponderado de 6 dimensões) | `pass-gold-engine.js` |
 | **Archivist** | Memory Guard — memória de missões, aprendizado entre sessões | `/api/archivist/learn`, `/api/memory/search` |
 | **GitHub Agent** | Canal — abre PR real após missão/geração concluída | `/api/github/create-pr` |
 | **Reserve Agents** (Memory/Locator/Security/Validator/Architect) | Fallback quando agente primário falha — pré-registrado, não implementado | — |
@@ -110,7 +110,7 @@ ADMIN_ALLOWED_EMAILS                 # allowlist CSV de e-mail; concede requireV
 
 ## O QUE ESTÁ IMPLEMENTADO (capacidades atuais, não changelog)
 
-**Backend (`server.js`):** auth completo (login/register/me, OAuth Google+GitHub, rate limiting, scrypt com auto-migração de PBKDF2 legado, JWT rotation+blacklist, audit log, LGPD, SSO Enterprise); Mission (`/api/copilot`, `/api/run-live`, `/api/agent/mission/queue`); Vault (snapshot/rollback real, S3); SF (múltiplos módulos via `callLLM()` multi-provider + AI Provider Vault); Security (Scanner real, Aegis Go Core, PatchEngine com backup); Billing (Hotmart HMAC-verificado); S3 persistence layer; PI Harness staging real + Go Core compilado; PASS GOLD (D0-D7, 20+ gates).
+**Backend (`server.js`):** auth completo (login/register/me, OAuth Google+GitHub, rate limiting, scrypt com auto-migração de PBKDF2 legado, JWT rotation+blacklist, audit log, LGPD, SSO Enterprise); Mission (`/api/copilot`, `/api/run-live`, `/api/agent/mission/queue`); Vault (snapshot/rollback real, S3); SF (múltiplos módulos via `callLLM()` multi-provider + AI Provider Vault); Security (Scanner real, Aegis Go Core, PatchEngine com backup); Billing (Hotmart HMAC-verificado); S3 persistence layer; PI Harness staging real + Go Core compilado; PASS GOLD (5 gates booleanos + score de 6 dimensões, `pass-gold-engine.js`).
 
 **Frontend (Vision Core Next — cockpit unificado):** sidebar fixa persistente entre Chat e Software Factory; chat funcional real (`POST /api/chat`); Software Factory Auto-Pilot + Modo Avançado com arquiteto visual local; GitHub PR com confirmação dupla; Executar Missão (Caminho A patch seguro + Caminho B dry-run real); Atomic Core (widget de identidade, ver `docs/ATOMIC_CORE_SPEC.md`); Métricas com gráficos nativos (sem lib externa); Security Lab; Vault-rollback; Tools-apply-fix; tutoriais contextuais por seção. Detalhe de cada feature, com achados de contrato de API verificados por leitura direta do backend, vive em `docs/CHANGELOG_NEXT.md` (por versão) e `docs/session_logs/` (narrativa completa).
 
