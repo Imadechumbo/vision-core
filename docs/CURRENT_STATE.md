@@ -1,5 +1,23 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — Auditoria estratégica (GSD+Ponytail) Top 10, item 6: 6 suítes MultiProviders (109 testes) adicionadas ao `test:quick`
+
+Status: `MULTIPROVIDERS_SUITES_WIRED_INTO_CI_CHAIN_PENDING_UNRELATED_HANG_FIX`.
+
+Item 6 do Top 10. Antes de decidir onde encaixar, confirmado (não presumido) o que cada script cobre: `test:quick` é a cadeia rápida de unit tests; `test:postmerge = test:quick`; `test:prepush = test:postmerge && test:full && test:go`; `test:certify = test:prepush`. Ou seja, os 4 scripts citados no item já herdam de `test:quick` — adicionar lá cobre os 4 automaticamente, sem duplicar a chamada em cada um.
+
+**Mudança em `package.json`:** 6 novos scripts (`test:multiproviders-domain-unit`, `-adapters-unit`, `-router-unit`, `-runtime-state-unit`, `-legacy-bridge-unit`, `-legacy-wiring-unit`), apontando para os arquivos já existentes em `tools/tests/multiproviders-*.test.mjs` (achado da auditoria: existiam mas não estavam em nenhum script `test:*`). Todos os 6 encadeados ao final de `test:quick`.
+
+**Testes — cada suíte rodada isolada antes de encadear, todas 100%:** domain 23/23, adapters 17/17, router 24/24, runtime-state 14/14, legacy-bridge 12/12, legacy-wiring 19/19 — **109 testes, 0 falha**.
+
+**Achado inesperado, fora do escopo do item 6 — reportado ao usuário, não corrigido:** `npm run test:quick` completo **não chega** nas minhas 6 novas entradas hoje — quebra antes, em `tools/tests/local-backend-runtime-launcher.test.mjs` (Suite D "Port busy"), com `exit code 13` e `Warning: Detected unsettled top-level await ... await new Promise(r => srv.close(r))` (linha 94). **Confirmado pré-existente, não causado por esta sessão:** rodei esse arquivo isolado, sem depender da minha mudança em `package.json` — mesmo `exit code 13`, mesmo warning. Nenhum arquivo que esse teste toca foi editado nesta sessão. Causa aparente: o teste sobe um servidor real para simular "porta ocupada" e `srv.close()` nunca resolve se sobrou conexão keep-alive aberta.
+
+**Decisão de escopo:** perguntei ao usuário como proceder (commitar como está / consertar o hang agora / segurar sem commit); sem resposta em 60s, segui a opção mais conservadora que eu mesmo recomendei — commitar a mudança como está (wiring correto, validado isoladamente) e registrar o bug pré-existente como achado separado, sem expandir escopo para consertá-lo agora. Working tree limpa ao final, sem nada pendurado sem commit.
+
+**Pendência real para quem pegar isso depois:** `test:quick`/`test:postmerge`/`test:prepush`/`test:certify` estão travados hoje nesse teste, independente de MultiProviders — vale investigação própria antes de confiar num "PASS" real de qualquer um desses 4 comandos.
+
+---
+
 ## 2026-07-24 — Auditoria estratégica (GSD+Ponytail) Top 10, item 10: descrição dos Reserve Agents corrigida em CLAUDE.md
 
 Status: `RESERVE_AGENTS_DESCRIPTION_FIXED`.
