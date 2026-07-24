@@ -1,5 +1,27 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — `run-live-mission-contract.test.mjs` Suite E corrigido (teste desatualizado, não regressão) — cadeia progride mais, novo bloqueio achado
+
+Status: `RUN_LIVE_STUB_DETECTION_TEST_UPDATED_NEW_UNRELATED_BLOCKER_MISSION_QUOTA`.
+
+Continuação da entrada anterior ("Bug do `exit 13`..."): com o hang de porta corrigido, `test:quick` chegava mais longe e quebrava em `tools/tests/run-live-mission-contract.test.mjs`, Suite E, `[E-01]`/`[E-03]` (2/54 falhas).
+
+**Passo 1 — baseline fresca:** reproduzido isolado antes de qualquer mudança — `52 passed, 2 failed`, exit 1, idêntico ao achado dentro da cadeia (descarta causa (c), dependência de ordem/ambiente).
+
+**Passo 2 — causa raiz confirmada com evidência, não suposta:** `tools/run-live-mission-contract.mjs` (`_isStubBody()`, linhas 70-85) tem um comentário `§131` explícito: *"Check stub markers only in STRING VALUES, not field names. The field name 'backend_stub' is a legitimate response field... checking the full JSON string would incorrectly flag real responses. Known safe boolean fields: backend_stub:false = NOT a stub."* `git log` confirma essa lógica foi introduzida no commit `a2b36940` ("feat(§131): PASS GOLD completo"), **2026-06-23 — mais de um mês antes desta sessão**, uma mudança de produção deliberada e documentada, não uma regressão recente. `git log` do arquivo de teste (`tools/tests/run-live-mission-contract.test.mjs`) mostra que ele **não foi tocado nesse commit nem depois** — os casos `[E-01]` (`{stub:true, mission_id:'x'}`) e `[E-03]` (`{mock:true}`) testavam campos com **valor booleano**, exatamente o padrão que o `§131` passou a excluir de propósito (só valores string dispara o gate). **Causa (b) confirmada: teste desatualizado, não regressão** — nunca foi pego antes porque o hang de porta bloqueava a cadeia bem antes de chegar aqui.
+
+**Passo 3 — decisão:** corrigido o teste diretamente (autorizado pela própria missão para causa (b)), sem tocar em `tools/run-live-mission-contract.mjs` (código de produção, correto como está). `[E-01]`/`[E-03]` reescritos pra usar marcadores de stub em **valor string** de verdade (`{status:'stub',...}`, `{note:'mock response',...}`) — o que o gate realmente deveria pegar. Adicionados `[E-05]`/`[E-06]`, provando explicitamente o caso que o `§131` corrigiu: `{backend_stub:false, mission_id:'mission-real-abc-999', runtime:'node'}` não é falso-positivo e chega em `RUNLIVE_READY`.
+
+**Passo 4 — validação:**
+- Isolado: `tools/tests/run-live-mission-contract.test.mjs` → **56/56 PASS, exit 0** (antes: 52/54, exit 1).
+- `npm run test:quick` completo (redirecionamento real): `run-live-mission-contract: 56 passed, 0 failed` confirmado dentro da cadeia. Progrediu muito mais longe — de ~30 suítes alcançadas na tentativa anterior pra mais de 60 (até `unlock-review-ledger`, `user-plan-schema`). **Ainda não chega nas suítes MultiProviders nem no `pass-gold-score-endpoint`** (itens 6/7 do Top 10) — quebra antes, em `tools/tests/mission-quota.test.mjs`.
+
+**Achado novo, fora do escopo desta sessão, não investigado a fundo nem corrigido — reportado, não decidido:** `tools/tests/mission-quota.test.mjs` crasha (`AssertionError` não capturado, processo morre) porque o regex `/writeAndSyncS3\(MISSION_LOG_PATH, log\)/` não bate mais contra `backend/server.js`. Confirmado por leitura direta: `MISSION_LOG_PATH` (`server.js:1683`) hoje é persistido via `atomicStoreUpdate(MISSION_LOG_PATH, { missions: [] }, (log) => {...})` (`server.js:1694`), não mais via uma chamada direta `writeAndSyncS3(MISSION_LOG_PATH, log)` — `writeAndSyncS3` ainda existe no arquivo (`server.js:678`, usado em outros pontos), então não é remoção da função, é troca de padrão de chamada só para esse dado específico. **Não determinado se `atomicStoreUpdate` ainda sincroniza pra S3 por dentro (refactor seguro) ou se essa mudança perdeu o sync real do mission log (regressão de produto)** — isso é exatamente "mudança de comportamento em código de produção real" que a missão pediu pra eu parar e reportar, não decidir sozinho. Reproduz isolado, `exit 1` (não hang).
+
+**Testes:** `run-live-mission-contract.test.mjs` isolado 56/56 PASS (evidência acima). `mission-quota.test.mjs` não tocado.
+
+---
+
 ## 2026-07-24 — Bug do `exit 13` em `test:quick` corrigido (item 6 do Top 10, causa raiz achada e resolvida)
 
 Status: `LOCAL_BACKEND_LAUNCHER_PORT_BUSY_HANG_FIXED_NEW_UNRELATED_BLOCKER_FOUND`.

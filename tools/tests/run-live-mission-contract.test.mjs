@@ -86,19 +86,34 @@ console.log('\n[Suite D] Invalid JSON');
 }
 
 // ─── Suite E: Stub response ───────────────────────────────────────
+// §131 (tools/run-live-mission-contract.mjs a2b36940, 2026-06-23) scoped stub
+// detection to STRING VALUES only, deliberately excluding field names/booleans
+// — "backend_stub" is a legitimate real field name, and checking the raw JSON
+// (or boolean-valued keys) for the substring "stub" false-positived on real
+// RUNLIVE_READY responses. E-01/E-03 below test real string-value markers
+// (what the gate is actually meant to catch); E-05 proves the false-positive
+// this fix removed stays fixed.
 console.log('\n[Suite E] Stub response');
 {
-  const r = validateRunLiveContract({ http_status: 200, body_raw: JSON.stringify({ stub: true, mission_id: 'x' }) });
-  assert(r.run_live_status === 'RUNLIVE_BLOCKED_STUB', '[E-01] stub marker → BLOCKED_STUB');
+  const r = validateRunLiveContract({ http_status: 200, body_raw: JSON.stringify({ status: 'stub', mission_id: 'x' }) });
+  assert(r.run_live_status === 'RUNLIVE_BLOCKED_STUB', '[E-01] stub marker in string value → BLOCKED_STUB');
   assert(r.deploy_allowed  === false,                 '[E-02] deploy=false');
 }
 {
-  const r = validateRunLiveContract({ http_status: 200, body_raw: JSON.stringify({ mock: true }) });
-  assert(r.run_live_status === 'RUNLIVE_BLOCKED_STUB', '[E-03] mock → BLOCKED_STUB');
+  const r = validateRunLiveContract({ http_status: 200, body_raw: JSON.stringify({ note: 'mock response', mission_id: 'y' }) });
+  assert(r.run_live_status === 'RUNLIVE_BLOCKED_STUB', '[E-03] mock marker in string value → BLOCKED_STUB');
 }
 {
   const r = validateRunLiveContract({ http_status: 200, body_raw: JSON.stringify({ env: 'fake' }) });
   assert(r.run_live_status === 'RUNLIVE_BLOCKED_STUB', '[E-04] fake env → BLOCKED_STUB');
+}
+{
+  // §131: a real response legitimately carries backend_stub:false (boolean) —
+  // must NOT be treated as a stub marker just because the field name contains "stub".
+  const body = JSON.stringify({ backend_stub: false, mission_id: 'mission-real-abc-999', runtime: 'node' });
+  const r = validateRunLiveContract({ http_status: 200, body_raw: body });
+  assert(r.run_live_status !== 'RUNLIVE_BLOCKED_STUB', '[E-05] backend_stub:false (boolean field) does NOT false-positive as stub');
+  assert(r.run_live_status === 'RUNLIVE_READY',         '[E-06] real response with backend_stub:false reaches RUNLIVE_READY');
 }
 
 // ─── Suite F: Missing / fake mission_id ──────────────────────────
