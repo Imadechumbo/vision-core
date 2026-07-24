@@ -1,5 +1,25 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — Top 10 Grupo B, item 3: Aegis (`/api/aegis/validate`) congelado
+
+Status: `AEGIS_STUB_FROZEN_PENDING_CONSUMER_INVESTIGATION`.
+
+Decisão explícita do mantenedor: pausar a decisão sobre o item 3 (Aegis) — nem remover, nem implementar, nem investigar mais por ora. `/api/aegis/validate` (`server.js:2521`) continua exatamente como está: stub hardcoded que sempre retorna `verdict:'PASS'`.
+
+**Por que congelado, não decidido:** falta um dado — quem realmente consome `/api/aegis/validate` hoje (algum frontend, algum outro endpoint interno, ou ninguém no caminho real) — que precisa de investigação própria antes de escolher entre remover o endpoint decorativo ou implementar o scan real. Essa investigação fica para uma sessão futura dedicada, não para agora.
+
+**Não é uma lacuna de segurança ativa conhecida:** o gate real que protege deploy — checagem de sintaxe inline em `server.js:4258-4276` (`node --check`, não o Aegis stub) — não depende de `/api/aegis/validate` e continua gateando `/api/deploy/pr` e `/api/deploy/merge-pr` normalmente, independente desta pausa.
+
+**Pendência real para retomar no futuro:**
+1. Investigar quem consome `/api/aegis/validate` hoje.
+2. Só depois decidir entre: (a) remover o endpoint decorativo (esforço baixo), ou (b) implementar o scan real — exigiria subcomando Go novo dedicado (hoje o único CLI real, `vision-core mission`, embute o scanner dentro de um pipeline de 11 etapas não isolável) + mudança no empacotamento de deploy do EB (não há evidência de que o binário Go seja hoje empacotado no deploy do backend Node) — nenhum dos dois investigado a fundo ainda.
+
+**Não reabrir por iniciativa própria de nenhum agente** — exige decisão humana explícita, como as demais pausas registradas nesta auditoria (ver item 8, MultiProviders R7-R10, logo abaixo).
+
+**Testes:** nenhum — mudança de texto em Markdown, sem código executável.
+
+---
+
 ## 2026-07-24 — Top 10 Grupo B, item 8: MultiProviders R7-R10 pausado formalmente
 
 Status: `MULTIPROVIDERS_R7_R10_PAUSED_BY_MAINTAINER_DECISION`.
