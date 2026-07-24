@@ -1,5 +1,11 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — SF-Agent-Orchestrator Fase 2: pausado aguardando reset de cota (decisão do usuário)
+
+Decisão explícita do usuário em 2026-07-24: SF-Agent-Orchestrator Fase 2 (smoke test real do Claude Agent SDK, bloqueado por cota de API Anthropic esgotada) fica pausado esperando o reset natural da cota. Não usar `ANTHROPIC_API_KEY` própria, não tentar contornar. Sem próximo passo até a cota resetar.
+
+---
+
 ## 2026-07-23/24 — MultiProviders R2-R6 deployado em produção; validação comportamental real confirma comportamento correto
 
 Status: `MULTIPROVIDERS_R2_R6_DEPLOYED_BEHAVIORAL_VALIDATION_PASS`.
