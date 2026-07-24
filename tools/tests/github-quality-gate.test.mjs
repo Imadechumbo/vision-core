@@ -19,7 +19,14 @@ assert.equal(evaluateGithubQualityGate({ plan: 'pro', userId: 'u1', missionId: '
 assert.equal(evaluateGithubQualityGate({ plan: 'enterprise', userId: 'u1', missionId: 'm1', entries: [evidence] }).ok, true);
 assert.match(serverSource, /app\.post\('\/api\/github\/create-pr', requireVisionAuth/);
 assert.match(serverSource, /const passGoldVerified = Boolean\(passGoldCandidateFromResult\(payload\)/);
-assert.match(serverSource, /writeAndSyncS3\(MISSION_TIMELINE_PATH, log\)/);
+// 838f618a (2026-07-20, "fix(s3): serialize read-modify-write per store to
+// close concurrent lost-update race") replaced the direct
+// writeAndSyncS3(MISSION_TIMELINE_PATH, log) call with atomicStoreUpdate(), a
+// serialized queue wrapper that still calls writeAndSyncS3(storeKey, db)
+// internally (backend/server.js:742) — same fix as mission-quota.test.mjs,
+// the S3 sync guarantee itself didn't change.
+assert.match(serverSource, /atomicStoreUpdate\(MISSION_TIMELINE_PATH,/);
+assert.match(serverSource, /function atomicStoreUpdate[\s\S]{0,300}?writeAndSyncS3\(storeKey, db\)/);
 assert.match(serverSource, /_s3LoadSync\(MISSION_TIMELINE_PATH\)/);
 
-console.log('github-quality-gate: 11 passed, 0 failed');
+console.log('github-quality-gate: 12 passed, 0 failed');

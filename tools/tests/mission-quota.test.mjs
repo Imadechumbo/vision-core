@@ -20,7 +20,14 @@ assert.equal(missionQuota('free', 2, '3').limit, 3);
 assert.equal(missionQuota('free', 5, 'invalid').limit, 5);
 assert.match(serverSource, /app\.all\('\/api\/copilot', checkMissionQuota/);
 assert.match(serverSource, /app\.all\('\/api\/run-live', checkMissionQuota/);
-assert.match(serverSource, /writeAndSyncS3\(MISSION_LOG_PATH, log\)/);
+// 838f618a (2026-07-20, "fix(s3): serialize read-modify-write per store to
+// close concurrent lost-update race") replaced the direct
+// writeAndSyncS3(MISSION_LOG_PATH, log) call with atomicStoreUpdate(), a
+// serialized queue wrapper that still calls writeAndSyncS3(storeKey, db)
+// internally (backend/server.js:742) — the S3 sync guarantee itself didn't
+// change, only how concurrent writes to the same store are ordered.
+assert.match(serverSource, /atomicStoreUpdate\(MISSION_LOG_PATH,/);
+assert.match(serverSource, /function atomicStoreUpdate[\s\S]{0,300}?writeAndSyncS3\(storeKey, db\)/);
 assert.match(serverSource, /_s3LoadSync\(MISSION_LOG_PATH\)/);
 
-console.log('mission-quota: 14 passed, 0 failed');
+console.log('mission-quota: 15 passed, 0 failed');

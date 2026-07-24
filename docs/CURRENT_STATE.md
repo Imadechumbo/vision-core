@@ -1,5 +1,26 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — `test:quick` completa 100% de ponta a ponta pela primeira vez — item 6/7 do Top 10 finalmente confirmados na cadeia real
+
+Status: `TEST_QUICK_FULL_CHAIN_GREEN_EXIT_0`.
+
+Fecha de vez a sequência de bugs pré-existentes descoberta a partir do item 6 do Top 10 (hang de porta → `run-live-mission-contract` desatualizado → `mission-quota`/`github-quality-gate` desatualizados, todos documentados nas entradas abaixo). **`npm run test:quick` agora roda 100% de ponta a ponta, `exit code 0`** — confirmado com redirecionamento real (não pipe), não pressuposto.
+
+**Achado final, mesma causa raiz do `run-live-mission-contract` (838f618a, 2026-07-20, "fix(s3): serialize read-modify-write per store to close concurrent lost-update race"):** depois de `mission-quota.test.mjs` corrigido, a cadeia avançou e quebrou de novo em `tools/tests/github-quality-gate.test.mjs` — mesmo padrão exato: `assert.match(serverSource, /writeAndSyncS3\(MISSION_TIMELINE_PATH, log\)/)` não batia mais, porque `MISSION_TIMELINE_PATH` (assim como `MISSION_LOG_PATH`) passou a ser escrito via `atomicStoreUpdate(MISSION_TIMELINE_PATH, ...)` (`server.js:1739`) desde o mesmo commit `838f618a` — `atomicStoreUpdate` chama `writeAndSyncS3(storeKey, db)` por dentro (`server.js:742`), o sync real pro S3 nunca foi perdido, só passou a ser serializado contra corrida de concorrência.
+
+**Verificação preventiva antes de rodar a cadeia de novo:** `grep -rln "writeAndSyncS3(" tools/tests/*.test.mjs` confirmou que só esses 2 arquivos (`mission-quota.test.mjs`, `github-quality-gate.test.mjs`) tinham esse padrão de asserção — nenhum outro teste ficou com a mesma pendência escondida.
+
+**Fix aplicado nos dois arquivos, mesmo padrão:** trocada a asserção literal `writeAndSyncS3(<STORE>, log)` por duas novas — `atomicStoreUpdate(<STORE>,` (prova que a escrita passa pelo wrapper serializado) + um regex multi-linha limitado (`{0,300}`) provando que `atomicStoreUpdate` chama `writeAndSyncS3(storeKey, db)` por dentro (prova que o sync real continua garantido). `_s3LoadSync(<STORE>)` (leitura no boot) não mudou, mantido sem alteração.
+
+**Validação:**
+- `mission-quota.test.mjs` isolado: 15/15 PASS (antes: crash não capturado).
+- `github-quality-gate.test.mjs` isolado: 12/12 PASS (antes: crash não capturado).
+- `npm run test:quick` completo, redirecionamento real: **exit code 0**, todas as suítes rodaram, incluindo as adicionadas nos itens 6/7 do Top 10 desta auditoria: `multiproviders-domain 23/23`, `multiproviders-adapters 17/17`, `multiproviders-router 24/24`, `multiproviders-runtime-state 14/14`, `multiproviders-legacy-bridge 12/12`, `multiproviders-legacy-wiring 19/19`, `pass-gold-score-endpoint 13/13`. **Confirmado pela primeira vez, dentro da cadeia real de CI, não só isolado.**
+
+**Pendência que resta:** `test:postmerge = test:quick` (herda o mesmo resultado). `test:prepush`/`test:certify` (= `test:postmerge && test:full && test:go`) ainda não foram validados nesta sessão — `test:full` (`pi-harness.test.mjs`) e `test:go` (`cd go-core && go test ./... && go build ./...`) não foram rodados aqui, ficam para confirmação futura se alguém precisar confiar num `test:certify` 100% verde.
+
+---
+
 ## 2026-07-24 — `run-live-mission-contract.test.mjs` Suite E corrigido (teste desatualizado, não regressão) — cadeia progride mais, novo bloqueio achado
 
 Status: `RUN_LIVE_STUB_DETECTION_TEST_UPDATED_NEW_UNRELATED_BLOCKER_MISSION_QUOTA`.
