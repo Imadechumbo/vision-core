@@ -1,5 +1,27 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-23 — MultiProviders R2-R6 + `e88b5196`: investigação de deploy concluída, decisão pendente
+
+Status: `MULTIPROVIDERS_R2_R6_DEPLOY_INVESTIGATION_COMPLETE_DECISION_PENDING`.
+
+Escopo: só investigação + testes locais (revertidos ao final). Nenhum deploy, push ou implementação nova de MultiProviders. Objetivo era dar informação suficiente pra decidir o deploy de `e88b5196`, não decidir.
+
+**Correção de premissa da sessão anterior — a cadeia real é 5 commits, não 4:** `e88b5196` requer diretamente `multiproviders-domain.js`, que não veio nele — veio de `f4ed60ff` ("add canonical domain contracts", round R2), commit não mencionado na sessão anterior. Confirmado por `git merge-base --is-ancestor`: `f4ed60ff` **não é ancestral de `78f16578`** (o que está rodando em produção hoje) — produção não tem nenhum arquivo `multiproviders-*.js`, nem o domínio base. Cadeia completa: `f4ed60ff` (R2, domínio) → `e88b5196` (R3, ponte legada) → `91b59cb8` (R4, health/lifecycle) → `1401a81f` (R5, router) → `35b40250` (R6, adapter). R7 (integração Colibri) nunca virou código funcional — segue bloqueada por falta de model artifact local (`docs/CURRENT_STATE.md`, entrada de 2026-07-21), fora desta decisão.
+
+**Evidência de teste — nenhum dos 5 está sem prova real:** todos já tinham Hermes PASS + Ponytail PASS + suíte de teste documentada por round nas entradas de 2026-07-21 (R2 a R6, mais abaixo neste arquivo). Rodei de novo as 6 suítes MultiProviders (`multiproviders-domain` 23/23, `multiproviders-adapters` 17/17, `multiproviders-router` 24/24, `multiproviders-runtime-state` 14/14, `multiproviders-legacy-bridge` 12/12, `multiproviders-legacy-wiring` 19/19) e as 4 suítes de segurança (`provider-security-boundary` 23/23, `provider-vault-routing` 18/18, `provider-vault-endpoints` 23/23, `rc-security-hardening` PASS) contra o estado combinado atual (os 5 commits + `78f16578` juntos, `git log` local confirma ambos como ancestrais de HEAD) — zero falha.
+
+**Risco real, achado por leitura direta do diff — overlap com as rotas que `78f16578` acabou de proteger:** `e88b5196` não é módulo novo isolado. Modifica diretamente `providerList()` e `callLLM()` em `server.js`, e `callHermes()` em `hermes-rca.js` — as mesmas funções centrais de seleção de provider que `78f16578` acabou de gatear com `requireVisionAdmin`. Insere um filtro real na cadeia de fallback: `orderedProviders = ...filter(provider => canonicalProviderIds.has(provider.id))` — um provider só sobrevive no fallback de `callLLM`/`callHermes` se a ponte legada (`multiproviders-legacy-bridge.js`) o traduzir com sucesso pra Registry canônica. Não há conflito de merge (aplica limpo, confirmado), mas é mudança de comportamento real na seleção de provider em produção — não é adição neutra de código morto.
+
+**Boot confirmado seguro, não presumido:** `server.js` requerido de verdade localmente (env vars mínimas setadas: `SESSION_SECRET`, `PROVIDER_VAULT_SECRET`) com os 5 commits + `78f16578` combinados — bootou completo até o log normal de inicialização (`SERVIDOR VISION CORE V2.9.10...`), **zero `Cannot find module`**. Resolve a preocupação original de boot quebrado. Artefato de teste (`data/audit-log.json`, criado pelo boot local) removido depois, working tree confirmada limpa.
+
+**Sem staleness:** nenhum commit entre `35b40250` (R6, o mais recente da série) e a tip atual de `origin` toca `server.js`, `hermes-rca.js` ou qualquer `multiproviders-*.js` — a recomendação não fica desatualizada hoje.
+
+**Recomendação (não decisão — fica com o usuário):** esperar sessão dedicada ao MultiProviders pro deploy, não empacotar com outra tarefa. Motivo: boot já está resolvido e testado; o que falta é que essa é a primeira vez que o filtro de seleção de provider roda contra tráfego real — merece validação pós-deploy dedicada, no mesmo padrão que a sessão de `78f16578` já fez (confirmar comportamento real em produção, não só suíte local). Risco de deixar pendente é baixo — código só existe no histórico do git, não roda em lugar nenhum.
+
+Nenhuma mudança de código, commit, push ou deploy feita nesta sessão.
+
+---
+
 ## 2026-07-23 — Limpeza de commits locais (Atomic Core "bits" + MultiProviders R10) + deploy de `78f16578`
 
 Status: `LOCAL_CLEANUP_DONE_78F16578_DEPLOYED_E88B5196_PENDING`.
