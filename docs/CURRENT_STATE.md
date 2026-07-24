@@ -70,7 +70,7 @@ Status: `LOCAL_CLEANUP_DONE_78F16578_DEPLOYED_E88B5196_PENDING`.
 
 ## 2026-07-22 — Atomic Core: causa real da piscada do widget encontrada (diagnóstico, zero implementação)
 
-Status: `ATOMIC_CORE_WIDGET_FLICKER_ROOT_CAUSE_FOUND_AWAITING_APPROVAL`.
+Status: `ATOMIC_CORE_WIDGET_FLICKER_ROOT_CAUSE_FOUND_DISCARDED_NOT_PRIORITIZED` (atualizado 2026-07-24 — decisão explícita do usuário: descartar por ora, não implementar nenhuma das alternativas abaixo, não retomar por iniciativa própria de um agente). Diagnóstico abaixo preservado como está — só o status mudou.
 
 Escopo: só diagnóstico do widget em si (`window.AtomicCoreNext`/`.vc-atomic-hud`) — área protegida confirmada em `docs/ATOMIC_CORE_SPEC.md` § Escopo antes de tocar em qualquer coisa. **Zero implementação de fix real.** Confirmado com o usuário: mesmo com `next-clean-136` (fix do `backdrop-filter` do composer/sidebar) ao vivo e hard refresh feito, a piscada do decágono continua — esperado, porque aquele fix era de um componente vizinho, nunca deveria ter resolvido isto.
 
@@ -96,6 +96,8 @@ Medido diretamente via `MutationObserver` no atributo `style` real do nó `herme
 **Nenhuma mudança de código feita nesta sessão.** Scripts de medição temporários (`atomic-core-flicker-probe.tmp.mjs`, `atomic-core-highlight-probe.tmp.mjs`), removidos ao final, nunca commitados — mesmo padrão das 2 sessões anteriores.
 
 **Pedido de aprovação explícita (regra da própria área protegida, `docs/ATOMIC_CORE_SPEC.md` § Área protegida):** implementar a opção 1 (+ opcionalmente 2) exige aprovação separada do usuário antes de qualquer código real, mesmo a causa estando confirmada com evidência e o fix parecendo simples.
+
+**Descartado (2026-07-24):** decisão explícita do usuário — não implementar nenhuma das 4 alternativas por ora, não é prioridade. Diagnóstico acima continua válido caso o item seja retomado no futuro, mas nenhum agente deve reabrir ou propor isso de novo por conta própria.
 
 ---
 ## 2026-07-22 — Deploy de frontend (Cloudflare Pages) concluído: `next-clean-136` ao vivo
