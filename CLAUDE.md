@@ -3,7 +3,7 @@
 
 > **Este arquivo contém só regras permanentes, arquitetura resumida e convenções.** Estado do dia-a-dia, sessão atual, histórico e narrativa de investigação NÃO vivem mais aqui — foram movidos para não inflar o contexto carregado automaticamente em toda sessão. Ver `docs/README_DOCUMENTATION.md` para a ordem de leitura completa e o mapa de qual documento consultar para cada tipo de informação.
 >
-> **Leitura mínima antes de qualquer ação:** este arquivo + `docs/CURRENT_STATE.md` (o que a última sessão estava fazendo agora mesmo). Para arquitetura/vocabulário mais profundo, `docs/MASTER_SPEC.md` é a raiz de uma série de 10 documentos (`ARCHITECTURE.md`, `VISION_CORE_NEXT_FRONTEND_SPEC.md`, `VISION_CORE_BACKEND_SPEC.md`, `VC_SECRET_GUARD_RUST_SPEC.md`, `ATOMIC_CORE_SPEC.md`, `SOFTWARE_FACTORY_SPEC.md`, `UI_COMPONENT_LIBRARY.md`, `API_CONTRACT.md`, `ROADMAP.md`).
+> **Leitura mínima antes de qualquer ação:** `docs/CURRENT_STATE.md` (o que a última sessão estava fazendo agora mesmo) + este arquivo. Para arquitetura/vocabulário mais profundo, `docs/MASTER_SPEC.md` é a raiz de uma série de 10 documentos (`ARCHITECTURE.md`, `VISION_CORE_NEXT_FRONTEND_SPEC.md`, `VISION_CORE_BACKEND_SPEC.md`, `VC_SECRET_GUARD_RUST_SPEC.md`, `ATOMIC_CORE_SPEC.md`, `SOFTWARE_FACTORY_SPEC.md`, `UI_COMPONENT_LIBRARY.md`, `API_CONTRACT.md`, `ROADMAP.md`).
 
 ---
 
@@ -11,7 +11,7 @@
 
 Vision Core Next é construído por múltiplos agentes revezando (cada um até seu próprio limite de uso), sem gate humano por etapa — o usuário só faz teste manual de aprovação no final. Isso só funciona se todo agente seguir isto:
 
-1. **Antes de começar, leia nesta ordem:** `CLAUDE.md` (este arquivo) → `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` (o que construir e regras duras de UI) → `docs/CURRENT_STATE.md` (o que o agente anterior estava fazendo agora mesmo). Ordem completa e o resto da documentação em `docs/README_DOCUMENTATION.md`.
+1. **Antes de começar, leia nesta ordem:** `docs/CURRENT_STATE.md` (o que o agente anterior estava fazendo agora mesmo) → `CLAUDE.md` (este arquivo) → `docs/VISION_CORE_NEXT_FRONTEND_SPEC.md` (o que construir e regras duras de UI). Ordem completa, com specs condicionais, em `docs/README_DOCUMENTATION.md`.
 2. **Ao terminar uma etapa OU antes de bater o limite de uso, atualize `docs/CURRENT_STATE.md`.** Obrigatório mesmo em parada abrupta — é o único documento que garante que o próximo agente não perde o fio. Se o processo for interrompido sem aviso, o handoff pode ficar desatualizado; o agente seguinte deve tratar isso como sinal de alerta, não como ausência de trabalho.
 3. **Toda tarefa pequena termina com:** arquivos alterados, testes feitos (comando + resultado), pendências, e o próximo comando recomendado (literal, copiável). **Commit sempre.** Nunca deixar a working tree suja entre tarefas, nunca deployar código que não foi commitado antes — essa combinação foi a causa raiz de um incidente real de gate de segurança reaberto sem rede de segurança (ver `docs/DECISIONS.md` DECISION-005).
 4. **Gates de segurança só mudam com aprovação do usuário registrada por escrito em `docs/CURRENT_STATE.md`.** Vale para `AGENT_APPLY_ENABLED` e qualquer flag equivalente que decida entre leitura segura e escrita/execução real. `tests/e2e/vision-core-next-agent-apply.spec.mjs` é a trava de regressão desse gate — **deve continuar passando em todo handoff**; se um agente precisar tocá-lo, o motivo tem que estar explícito no handoff.
