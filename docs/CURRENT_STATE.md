@@ -1,5 +1,21 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-24 — Top 10 Grupo B, item 7: `/api/pass-gold/score` chama `pass-gold-engine.js` de fato
+
+Status: `PASS_GOLD_SCORE_ENDPOINT_REAL_EVALUATION_IMPLEMENTED`.
+
+Decisão do mantenedor: substituir o retorno hardcoded `PENDING_EVIDENCE`/`final:100` por uma chamada real a `evaluate()` de `backend/pass-gold-engine.js`.
+
+**Confirmado antes de integrar, não presumido:** assinatura real de `evaluate(input)` (`pass-gold-engine.js:117-128`) — espera `confidence, risk, aegis_ok, original_content, patched_content, patch, fix_type, original_lines, diagnosis`, os mesmos campos já usados pelo único outro consumidor real do engine (`/api/chat/apply-patch`, `server.js:4338-4354`). Quem consome `/api/pass-gold/score` hoje: só o frontend legado (`vision-core-clean-runtime.js:4092`, `vision-core-bundle.js:5314-5331`) — zero uso no Next ativo, confirmado por grep. É uma chamada `GET` sem body, usada como "status geral do backend" num dashboard de relatório final — nunca recebeu inputs de patch específico.
+
+**Achado central:** não existe, em lugar nenhum do repositório, um registro persistido do último resultado real de `evaluate()` (os arquivos `vault/<uid>/PASS-GOLD/*.md` são só exports de markdown de missão, sem os campos estruturados que `evaluate()` precisa) — logo não havia como "adivinhar" inputs reais para uma chamada `GET` sem parâmetros.
+
+**Implementação (`server.js:3322-3354`):** o endpoint agora aceita os mesmos campos de `evaluate()` como query params. Sem `original_content`/`patched_content` (o caso do consumidor legado real, hoje) → responde `status:'NO_EVIDENCE'`, `final:null`, `pass_gold:false`, com `pass_gold_reason` explicando o que falta — **falha de forma clara, não mais um hardcoded silencioso**. Com os campos presentes → chama `evaluate()` de verdade e devolve o resultado real (`final`, `level`, `verdict`, `gates`, `dimensions`), mais `promotion_allowed: result.pass_gold` (campo que o consumidor legado já lia mas `evaluate()` nunca teve — mapeado 1:1 pra manter compatibilidade sem inventar semântica nova).
+
+**Teste novo** (`tools/tests/pass-gold-score-endpoint.test.mjs`, integração real contra `backend/server.js` de verdade, porta isolada 18744) — não só o caminho feliz: sem evidência → `NO_EVIDENCE` explícito; patch ruim (risk=high, aegis_ok=false) → score calculado real, diferente de 100, `pass_gold=false`, gates refletindo os inputs; patch bom (risk=low, aegis_ok=true) → score maior que o do patch ruim, prova que o valor realmente varia com o input em vez de ser fixo. **13/13 PASS.** Script `test:pass-gold-score-endpoint-unit` adicionado ao `package.json` e encadeado em `test:quick` (mesmo padrão do item 6).
+
+---
+
 ## 2026-07-24 — Top 10 Grupo B, item 5: PI Harness/Ponytail — nota de decisão em ARCHITECTURE.md
 
 Status: `PI_HARNESS_PONYTAIL_MANUAL_DECISION_DOCUMENTED`.

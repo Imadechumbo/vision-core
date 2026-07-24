@@ -3319,7 +3319,38 @@ app.get('/api/dora-metrics', async (req, res) => {
     return res.status(500).json({ ok: false, error: 'dora_metrics_failed', message: err.message, time: now() });
   }
 });
-app.get('/api/pass-gold/score', (req, res) => sendOk(res, { final: 100, status: 'PENDING_EVIDENCE', pass_gold: false, promotion_allowed: false, pass_gold_reason: 'evidence receipt required from Go Core' }));
+app.get('/api/pass-gold/score', (req, res) => {
+  const q = req.query || {};
+  if (q.original_content == null || q.patched_content == null) {
+    return sendOk(res, {
+      final: null,
+      status: 'NO_EVIDENCE',
+      pass_gold: false,
+      promotion_allowed: false,
+      pass_gold_reason: 'no patch evidence supplied — pass original_content and patched_content as query params (optionally confidence, risk, aegis_ok, patch, fix_type, diagnosis) to score a real patch',
+      anti_stub: true
+    });
+  }
+  try {
+    const { evaluate } = require('./pass-gold-engine');
+    let patch = null;
+    if (q.patch) { try { patch = JSON.parse(q.patch); } catch (_e) { patch = null; } }
+    const result = evaluate({
+      confidence:       q.confidence != null ? Number(q.confidence) : 0,
+      risk:             q.risk || 'medium',
+      aegis_ok:         q.aegis_ok === 'true',
+      original_content: q.original_content,
+      patched_content:  q.patched_content,
+      patch,
+      fix_type:         q.fix_type || 'code_patch',
+      original_lines:   String(q.original_content).split('\n').length,
+      diagnosis:        q.diagnosis || ''
+    });
+    return sendOk(res, { ...result, promotion_allowed: result.pass_gold, anti_stub: true });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'pass_gold_score_failed', message: err.message, time: now() });
+  }
+});
 app.get('/api/logs', (req, res) => {
   const user = getAuthUser(req);
   if (!user) return res.status(401).json({ ok: false, error: 'not_authenticated', request_id: req.requestId, time: now() });
