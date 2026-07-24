@@ -1,5 +1,33 @@
 # CURRENT STATE — Vision Core Next
 
+## 2026-07-23/24 — MultiProviders R2-R6 deployado em produção; validação comportamental real confirma comportamento correto
+
+Status: `MULTIPROVIDERS_R2_R6_DEPLOYED_BEHAVIORAL_VALIDATION_PASS`.
+
+Sessão dedicada, autorizada explicitamente pelo usuário antes de qualquer ação de deploy real (confirmação pedida e recebida antes de rodar os comandos `aws`). Segue a investigação da entrada anterior (correção de premissa: 5 commits, não 4 — `f4ed60ff` também não estava em produção).
+
+**Passo 1 — revalidação antes de deployar, não confiar na investigação de dias atrás:** os 5 commits (`f4ed60ff`, `e88b5196`, `91b59cb8`, `1401a81f`, `35b40250`) e `78f16578` confirmados idênticos e ainda ancestrais de HEAD (`git cat-file -e` + `git merge-base --is-ancestor`). Working tree tinha uma entrada de doc não commitada da sessão de investigação anterior — commitada isolada (`e948c7c3`) antes de prosseguir, pra não misturar escopo. 10 suítes (6 MultiProviders + 4 segurança) rodadas de novo, zero falha.
+
+**Passo 2 — deploy com o mesmo rigor da sessão do `78f16578`:** bundle S3 real da versão rodando em produção baixado (`vision-core-78f16578.zip`, resolvido via `describe-application-versions`, não presumido). **Achado real corrigido no processo:** o `server.js`/`hermes-rca.js` reais em produção têm os 3 fixes A/B/C (`LEGACY_AUDIT achado A/B/C`) que não existem no commit local `78f16578` — vivem numa branch separada (`fix/legacy-audit-security-abc`) e foram stackados em produção via patch manual na sessão anterior. Copiar o `server.js` do HEAD local por cima teria revertido A/B/C silenciosamente — em vez disso, isolado o diff que só `e88b5196` introduz nesses 2 arquivos (confirmado por `git show --stat` nos 5 commits: só `e88b5196` toca `server.js`/`hermes-rca.js`, os outros 4 só adicionam/tocam arquivos `multiproviders-*.js` novos) e aplicado via `patch -p2` sobre os arquivos reais de produção — aplicou limpo, sem fuzz, as 5 marcações A/B/C confirmadas intactas depois. Os 6 arquivos `multiproviders-*.js` (versão combinada dos 5 commits) copiados por cima como adição pura.
+
+Boot local do bundle exato que seria deployado (não a cópia do repo) — **primeira tentativa falhou com erro de `path-to-regexp` num route `/api/api/*` pré-existente**; investigado antes de reportar como problema real: era resolução de módulo pegando o `node_modules` errado (raiz do projeto, express 5.x) por não haver `node_modules` dentro do bundle extraído — corrigido linkando o `backend/node_modules` real (express 4.22.1, o que roda em produção de fato); com o `node_modules` certo, bootou limpo, zero `Cannot find module`. Zip final montado via Python (`zipfile`, mesmo padrão dos scripts de deploy do projeto — `zip` CLI não disponível no ambiente), confirmado sem `node_modules` vazado (202 arquivos, 264.714 bytes).
+
+Deploy real: `aws s3 cp` (upload) → `create-application-version` (`multiproviders-r2-r6-2026-07-23`) → `update-environment`. Confirmado `Ready`/`Green` (~25s de update, sem rollback automático disparado).
+
+**Passo 3 — validação comportamental real, o motivo desta sessão existir separada:** `providerList()`/`callLLM()`/`callHermes()` não são endpoints diretos — testados via as duas rotas reais que os invocam sem gate de auth: `POST /api/hermes/analyze` (usa `callLLM`) e `POST /api/architect/interpret` (usa `callHermes`). Ambas chamadas reais contra produção, via gateway:
+- `/api/hermes/analyze`: `llm_provider: "openrouter"`, `llm_model: "deepseek/deepseek-v4-flash"`, resposta real correta — bate com a ordem de fallback documentada em `CLAUDE.md` (OpenRouter primeiro).
+- `/api/architect/interpret`: `provider_used: "cerebras"`, `mode: "LLM_REAL"`, `exec_real: "OK"`, classificação real e coerente pro prompt enviado.
+- Log tail da instância EC2 puxado via `request-environment-info`/`retrieve-environment-info` (`info-type tail`) — **zero linha `[multiproviders:legacy] incompatible catalog entries`** (o warning que a ponte emitiria se algum provider real não traduzisse pra Registry canônica) — nenhum provider desapareceu silenciosamente do fallback. Única linha de "erro" no log é `[HERMES §49] Anthropic falhou (HTTP 401) — tentando Cerebras` — comportamento pré-existente (chave Anthropic com problema, não relacionado a este deploy) que na verdade prova o oposto do risco temido: o fallback continuou funcionando corretamente através do filtro novo, avançou pro próximo provider elegível sem travar.
+- **Checagem de sustentação** (~4min depois do deploy, não só validação única e sair): `describe-environments` ainda `Ready`/`Green`/`HealthStatus: Ok`; nova chamada real a `/api/hermes/analyze` — mesmo resultado consistente (`openrouter`/`deepseek-v4-flash`, resposta correta).
+
+**Plano de rollback que existia mas não foi necessário:** `78f16578-provider-boundaries-2026-07-23` continua registrada como Application Version no EB — reversão seria um único `update-environment --version-label` de volta, sem re-upload. Não usado.
+
+**Versão em produção agora:** `multiproviders-r2-r6-2026-07-23`, `Ready`/`Green`. Artefatos de deploy temporários (`.deploy-scratch/`, zip, bundle extraído, patches) removidos ao final, nunca commitados — mesmo padrão de scripts descartáveis já usado pelo projeto.
+
+Escopo fora desta sessão, como definido: R7 (Colibri) continua bloqueada por falta de model artifact local, não tocada. Nenhum outro trilho de trabalho iniciado.
+
+---
+
 ## 2026-07-23 — MultiProviders R2-R6 + `e88b5196`: investigação de deploy concluída, decisão pendente
 
 Status: `MULTIPROVIDERS_R2_R6_DEPLOY_INVESTIGATION_COMPLETE_DECISION_PENDING`.
